@@ -42,4 +42,4 @@ yarn-error.log*
 next-env.d.ts
 
 # reference
-/reference-pt-1
+# /reference-pt-1

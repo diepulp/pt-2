@@ -19,7 +19,7 @@
         "--project-ref=vaicxfihdldgepzryhpd"
       ],
       "env": {
-        "SUPABASE_ACCESS_TOKEN": "sbp_d6484ab325b61bbaa8d3fd5b6704ec53843f7028"
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
       }
     },
     "shadcn": {
