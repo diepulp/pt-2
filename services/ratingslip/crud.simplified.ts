@@ -60,7 +60,7 @@ export function createRatingSlipCrudService(
         // ✅ UUID generation still needed (no DB default)
         const id = crypto.randomUUID();
 
-        // ✅ Simplified: Only 2 optional fields instead of 5
+        // ✅ Simplified: Only 3 optional fields instead of 6
         const insertData: Database["public"]["Tables"]["ratingslip"]["Insert"] =
           {
             id,

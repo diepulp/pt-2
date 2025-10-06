@@ -80,15 +80,11 @@ describe("RatingSlip Service - Create RatingSlip", () => {
         gameSettings: { game: "roulette" },
         startTime: new Date().toISOString(),
         seatNumber: 3,
-        cashIn: 500,
-        chipsBrought: 100,
       });
 
       expect(result.success).toBe(true);
       expect(result.error).toBeNull();
       expect(result.data?.seat_number).toBe(3);
-      expect(result.data?.cash_in).toBe(500);
-      expect(result.data?.chips_brought).toBe(100);
     });
   });
 
@@ -278,7 +274,7 @@ describe("RatingSlip Service - Update RatingSlip", () => {
       expect(result.data?.average_bet).toBe(50.0);
     });
 
-    it("should update rating slip end time and chips taken", async () => {
+    it("should update rating slip end time", async () => {
       // Create a rating slip first
       const createResult = await ratingSlipService.create({
         playerId: testPlayerId,
@@ -286,22 +282,19 @@ describe("RatingSlip Service - Update RatingSlip", () => {
         averageBet: 25.0,
         gameSettings: { game: "craps" },
         startTime: new Date().toISOString(),
-        chipsBrought: 100,
       });
       expect(createResult.success).toBe(true);
       const ratingSlipId = createResult.data!.id;
 
-      // Update end time and chips taken
+      // Update end time
       const endTime = new Date().toISOString();
       const result = await ratingSlipService.update(ratingSlipId, {
         endTime: endTime,
-        chipsTaken: 150,
       });
 
       expect(result.success).toBe(true);
       expect(result.error).toBeNull();
       expect(result.data?.end_time).toBeDefined();
-      expect(result.data?.chips_taken).toBe(150);
     });
   });
 
