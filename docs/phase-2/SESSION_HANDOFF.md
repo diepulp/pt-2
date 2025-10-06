@@ -81,13 +81,67 @@
 - Violations identified: `@/types/database-rebuilt`, `services/x/types.ts`, `@deprecated` code
 - Mining strategy: Time-box ≤4h, One-Violation Rule (rewrite if ANY violation)
 
-### 🔄 Next Steps (Day 3)
+### 🔄 Current Agenda (Day 3)
 
-**Immediate: Commit RatingSlip Service + Agent Reports**
-- Run eslint/prettier
-- Commit with Rule of Three completion metrics
+**Status**: RatingSlip simplification complete ✅ + Bounded context integrity established ✅
 
-**PT-1 Mining Ready (Agent Analysis Complete)**
+---
+
+#### **Immediate Priority: Domain Separation Implementation**
+
+**Context**: RatingSlip KISS/YAGNI audit revealed domain coupling violation
+- RatingSlip was mixing **performance metrics** (average bet, points) with **financial tracking** (cash in/out, chips)
+- Simplification applied: removed financial fields from RatingSlip
+- **Next**: Create PlayerFinancialService to own financial domain
+
+**Service Responsibility Matrix Created** ✅
+- [docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md](~/docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md)
+- Defines bounded contexts: Identity, Location, Session, Performance, Finance
+- Data flow patterns: RatingSlip ↔ Player ↔ Casino ↔ PlayerFinancial
+- Anti-patterns documented (cross-domain ownership, service-to-service calls)
+
+---
+
+#### **Next Implementation: PlayerFinancialService**
+
+**Purpose**: Own financial transactions separate from performance tracking
+
+**Scope**:
+1. Create `services/player-financial/` module following template
+2. Schema: `player_financial_transaction` table
+   - Fields: cash_in, chips_brought, chips_taken, transaction_type, reconciliation_status
+   - References: player_id, visit_id, rating_slip_id (optional)
+3. CRUD operations: create(), getById(), getByVisitId(), getByPlayerId()
+4. Test coverage >80%
+
+**Bounded Context**: "What money/chips moved in/out?" (NOT "how well did player perform?")
+
+**Estimated Time**: 45-60 minutes (template proven at 40-45min avg)
+
+---
+
+#### **After PlayerFinancialService: Integration Layer**
+
+**Aggregate Query Pattern** (client/action layer orchestration):
+```typescript
+// Example: Get complete session summary
+async function getSessionSummary(visitId: string) {
+  const [visit, ratingSlips, financials] = await Promise.all([
+    visitService.getById(visitId),
+    ratingSlipService.getByVisitId(visitId),
+    playerFinancialService.getByVisitId(visitId),
+  ]);
+
+  return {
+    performance: aggregate(ratingSlips),  // Points, time, avg bet
+    financials: aggregate(financials),     // Cash flow, net change
+  };
+}
+```
+
+---
+
+#### **PT-1 Mining: Deferred Until Core Services Complete**
 
 Two expert agents have analyzed PT-1 code in parallel:
 
@@ -95,26 +149,23 @@ Two expert agents have analyzed PT-1 code in parallel:
 - Status: Full rewrite required (~8h)
 - Violations: 2 critical (`ReturnType`, `any[]`)
 - Business Value: HIGH (multi-word search + relevance scoring)
-- Report available for implementation
 
 **Agent 2: queries.ts Analysis**
 - Status: Adapt with confidence (~8.75h)
 - Violations: 1 minor (`ReturnType` export only)
 - Compliance: 90/100 (exceeds PT-2 threshold)
-- Report available for mechanical fixes
 
-**Recommended Next Action:**
-1. **Commit current state** (3 services complete)
-2. **Implement PT-1 patterns** using agent blueprints (search.ts → rewrite, queries.ts → adapt)
-3. **Apply patterns to Visit/RatingSlip** (extend all services with search/query capabilities)
+**Decision**: Defer PT-1 mining until PlayerFinancialService complete
+- Reason: Bounded context integrity > advanced features
+- Core CRUD layer must be solid before adding search/query complexity
 
-### 📅 Week 1 Roadmap
+### 📅 Week 1 Roadmap (Updated)
 
 - **Day 1** ✅: Player create() + documentation locked (3h)
 - **Day 2** ✅: Player update()+getById() + Visit full CRUD (4h total, Visit: 45min)
-- **Day 3** 🔄: RatingSlip Service OR PT-1 mining
-- **Day 4** (2-4h): Complete remaining CRUD services or PT-1 integration
-- **Day 5** (2h): Integration tests + end-of-week audit
+- **Day 3** ✅: RatingSlip Service + KISS/YAGNI simplification + Bounded context design (3h)
+- **Day 4** 🔄: PlayerFinancialService implementation (1h) + Integration patterns (1-2h)
+- **Day 5** (2-4h): Aggregate queries + PT-1 mining (search/queries) OR remaining CRUD services
 
 **Velocity Metrics (Rule of Three Complete):**
 - Player Service (first implementation): ~3 hours for full CRUD
@@ -148,10 +199,14 @@ Two expert agents have analyzed PT-1 code in parallel:
 ### 📂 Critical Files Reference
 
 **Implementation:**
-- [services/player/](~/services/player/) - Current implementation
+- [services/player/](~/services/player/) - Identity domain
+- [services/visit/](~/services/visit/) - Session domain
+- [services/ratingslip/](~/services/ratingslip/) - Performance domain (simplified ✅)
 - [reference-pt-1/services/player/](~/reference-pt-1/services/player/) - PT-1 source for mining
 
 **Documentation:**
+- [docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md](~/docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md) - **Bounded context model**
+- [docs/phase-2/ratingslip-simplification-analysis.md](~/docs/phase-2/ratingslip-simplification-analysis.md) - KISS/YAGNI audit
 - [docs/patterns/SERVICE_TEMPLATE_QUICK.md](~/docs/patterns/SERVICE_TEMPLATE_QUICK.md) - **Use this for implementation**
 - [docs/patterns/SERVICE_TEMPLATE.md](~/docs/patterns/SERVICE_TEMPLATE.md) - Full spec
 - [docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](~/docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) - Architecture
@@ -161,25 +216,32 @@ Two expert agents have analyzed PT-1 code in parallel:
 
 ### 💡 Quick Start Next Session
 
-**Option A: Visit Service (Recommended)**
+**Recommended: PlayerFinancialService Implementation**
+
 ```bash
-# Verify player service still passing
+# Verify all existing services still passing
 npm test __tests__/services/player/player-service.test.ts
+npm test __tests__/services/visit/visit-service.test.ts
+npm test __tests__/services/ratingslip/ratingslip-service.test.ts
 
-# Create visit service following template
-mkdir -p services/visit __tests__/services/visit
-# Copy template pattern from player service
+# Review bounded context model
+cat docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md
+
+# Create PlayerFinancialService following template
+mkdir -p services/player-financial __tests__/services/player-financial
+
+# Schema review: Check if player_financial_transaction table exists
+# If not, create migration following docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md schema
+
 # Start with create() slice following TDD approach
+# Reference: services/ratingslip/ (most recent, similar complexity)
 ```
 
-**Option B: PT-1 Mining**
-```bash
-# Review PT-1 search module
-cat reference-pt-1/services/player/search.ts
-
-# Check for violations before mining
-# Apply One-Violation Rule: ANY violation → full rewrite
-```
+**Key Constraints**:
+- Financial domain only: cash_in, chips_brought, chips_taken
+- No performance metrics (those belong to RatingSlip)
+- References: player_id, visit_id, rating_slip_id (optional)
+- Bounded context: "What money/chips moved in/out?"
 
 ### 🚨 Anti-Pattern Guardrails
 
@@ -196,33 +258,36 @@ Before writing ANY code:
 
 ---
 
-## Resume Prompt (Day 3)
+## Resume Prompt (Day 4)
 
 ```
-Phase 2 Player Service - CRUD Complete. Choose next vertical slice:
+Phase 2 Service Layer - Bounded Context Integrity Established
 
 Current state:
-- Player Service Slice 1 ✅: create() with duplicate detection
-- Player Service Slice 2 ✅: update() + getById() with error mapping
-- All tests passing (8/8) ✅
-- Template documentation locked ✅
-- Shared infrastructure ready for reuse ✅
+- Player, Visit, RatingSlip services complete ✅ (Rule of Three validated)
+- RatingSlip simplified (KISS/YAGNI applied) ✅
+- Service Responsibility Matrix created ✅
+- Bounded contexts defined: Identity, Location, Session, Performance, Finance ✅
+- All tests passing (Player: 8/8, Visit: 10/10, RatingSlip: 10/10) ✅
 
-Option A (Recommended): Visit Service Slice 1
-- Apply template to new domain
-- Validate pattern velocity
-- Leverage shared/ infrastructure
-- Time: 1-2h (faster with template)
+Current Agenda:
+- Implement PlayerFinancialService (financial domain separation)
+- Financial fields removed from RatingSlip need proper home
+- Maintain bounded context: "What money/chips moved in/out?"
 
-Option B: PT-1 Mining
-- Mine reference-pt-1/services/player/search.ts + queries.ts
-- Apply One-Violation Rule
-- Time: 4h time-box
+Next Task: PlayerFinancialService Implementation
+1. Schema design: player_financial_transaction table
+   - Fields: cash_in, chips_brought, chips_taken, transaction_type, reconciliation_status
+   - References: player_id, visit_id, rating_slip_id (optional link)
+2. CRUD: create(), getById(), getByVisitId(), getByPlayerId()
+3. Test coverage >80%
+4. Time: 45-60 minutes (template proven)
 
 Reference:
+- Service Responsibility Matrix: docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md
 - Template: docs/patterns/SERVICE_TEMPLATE_QUICK.md
-- Player implementation: services/player/ (reference for Visit)
-- Shared infrastructure: services/shared/
+- RatingSlip simplification: docs/phase-2/ratingslip-simplification-analysis.md
+- Pattern: services/player/ OR services/ratingslip/
 
-Decision point: Visit first (validate template) OR mine PT-1 (add complexity)?
+Decision point: Start PlayerFinancialService implementation?
 ```
