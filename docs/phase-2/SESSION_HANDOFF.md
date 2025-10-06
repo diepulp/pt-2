@@ -1,10 +1,25 @@
-# Phase 2 Session Handoff - Player Service Implementation
+# Phase 2 Session Handoff - Service Layer Implementation
 
 > **Date**: 2025-10-06
-> **Status**: Slice 2 Complete, CRUD Operations Full Coverage
-> **Context Window**: 43k/200k tokens used
+> **Status**: Player + Visit CRUD Complete, Template Velocity Validated ✅
+> **Context Window**: 86k/200k tokens used
 
 ## Current State
+
+### ✅ Completed (Day 2 - Visit Service)
+
+**Visit Service Full CRUD - Template Velocity Test**
+- [services/visit/crud.ts](~/services/visit/crud.ts) - Complete CRUD: create(), update(), getById()
+  - `create()`: 23503 → FOREIGN_KEY_VIOLATION (player_id, casino_id)
+  - `getById()`: PGRST116 → NOT_FOUND
+  - `update()`: PGRST116 → NOT_FOUND, supports checkOutDate, mode, status
+- [services/visit/index.ts](~/services/visit/index.ts) - Explicit VisitService interface
+- [__tests__/services/visit/visit-service.test.ts](~/__tests__/services/visit/visit-service.test.ts) - 10/10 tests passing
+  - Create: happy path (required + optional fields) + foreign key violations
+  - GetById: happy path + not found
+  - Update: status/checkOutDate/mode + not found
+- **Velocity**: ~45 minutes from scaffold to all tests passing (vs Player: ~3 hours)
+- **Template effectiveness**: 4x faster with locked pattern
 
 ### ✅ Completed (Day 1-2)
 
@@ -46,26 +61,34 @@
 
 ### 🔄 Next Steps (Day 3)
 
-**Option A: PT-1 Mining - Search & Queries (4h time-box)**
-- Mine [reference-pt-1/services/player/search.ts](~/reference-pt-1/services/player/search.ts)
-- Mine [reference-pt-1/services/player/queries.ts](~/reference-pt-1/services/player/queries.ts)
-- Apply One-Violation Rule: Rewrite if ANY violation found
-- Integrate into player service following template
+**Immediate: Commit Visit Service**
+- Run eslint/prettier
+- Commit with velocity metrics
 
-**Option B: Visit Service Slice 1 (TDD create())**
-- Create [services/visit/](~/services/visit/) following player template
-- Leverage existing shared infrastructure
-- Test velocity improvement from locked patterns
+**Option A: RatingSlip Service (Validate 3rd Domain)**
+- Apply template to RatingSlip (complex domain with business logic)
+- Test pattern with computed fields (theo, points calculation)
+- Estimate: 1-2h with template
 
-**Recommended**: Option B - Visit Service to validate template effectiveness before PT-1 mining
+**Option B: PT-1 Mining - Player Search/Queries**
+- Mine reference-pt-1/services/player/search.ts + queries.ts
+- Apply One-Violation Rule
+- Time-box: 4h
+
+**Recommended**: Option A - RatingSlip to complete "Rule of Three" validation before generalizing patterns
 
 ### 📅 Week 1 Roadmap
 
-- **Day 1** ✅: `create()` + documentation locked
-- **Day 2** ✅: `update()` + `getById()` (Player CRUD complete - 8/8 tests passing)
-- **Day 3** 🔄: Visit Service Slice 1 OR PT-1 mining (search.ts + queries.ts)
-- **Day 4** (4h): Complete Visit CRUD OR mine remaining PT-1 modules
+- **Day 1** ✅: Player create() + documentation locked (3h)
+- **Day 2** ✅: Player update()+getById() + Visit full CRUD (4h total, Visit: 45min)
+- **Day 3** 🔄: RatingSlip Service OR PT-1 mining
+- **Day 4** (2-4h): Complete remaining CRUD services or PT-1 integration
 - **Day 5** (2h): Integration tests + end-of-week audit
+
+**Velocity Metrics:**
+- Player Service (first): 3 hours for full CRUD
+- Visit Service (template): 45 minutes for full CRUD
+- **4x improvement** with locked template
 
 ### 🎯 Success Criteria
 

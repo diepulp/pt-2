@@ -12,6 +12,9 @@ import { createPlayerService } from "@/services/player";
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+// Test casino ID from database
+const TEST_CASINO_ID = "550e8400-e29b-41d4-a716-446655440010";
+
 describe("Visit Service - Create Visit", () => {
   let supabase: SupabaseClient<Database>;
   let visitService: ReturnType<typeof createVisitService>;
@@ -37,7 +40,7 @@ describe("Visit Service - Create Visit", () => {
     it("should create a visit with required fields", async () => {
       const result = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001", // Assuming casino exists
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
       });
 
@@ -45,7 +48,7 @@ describe("Visit Service - Create Visit", () => {
       expect(result.error).toBeNull();
       expect(result.data).toBeDefined();
       expect(result.data?.player_id).toBe(testPlayerId);
-      expect(result.data?.casino_id).toBe("00000000-0000-0000-0000-000000000001");
+      expect(result.data?.casino_id).toBe(TEST_CASINO_ID);
       expect(result.data?.id).toBeDefined();
       expect(result.data?.mode).toBeDefined(); // Should have default value
       expect(result.data?.status).toBeDefined(); // Should have default value
@@ -54,7 +57,7 @@ describe("Visit Service - Create Visit", () => {
     it("should create a visit with optional mode and status", async () => {
       const result = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
         mode: "RATED",
         status: "ONGOING",
@@ -73,7 +76,7 @@ describe("Visit Service - Create Visit", () => {
 
       const result = await visitService.create({
         playerId: nonExistentPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
       });
 
@@ -126,7 +129,7 @@ describe("Visit Service - Get By Id", () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
       });
       expect(createResult.success).toBe(true);
@@ -183,7 +186,7 @@ describe("Visit Service - Update Visit", () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
         status: "ONGOING",
       });
@@ -205,7 +208,7 @@ describe("Visit Service - Update Visit", () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
       });
       expect(createResult.success).toBe(true);
@@ -219,14 +222,19 @@ describe("Visit Service - Update Visit", () => {
 
       expect(result.success).toBe(true);
       expect(result.error).toBeNull();
-      expect(result.data?.check_out_date).toBe(checkOutDate);
+      expect(result.data?.check_out_date).toBeDefined();
+      // Postgres may return timestamp with different timezone format
+      expect(new Date(result.data!.check_out_date!).getTime()).toBeCloseTo(
+        new Date(checkOutDate).getTime(),
+        -3, // Within 1 second
+      );
     });
 
     it("should update visit mode", async () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: "00000000-0000-0000-0000-000000000001",
+        casinoId: TEST_CASINO_ID,
         checkInDate: new Date().toISOString(),
         mode: "UNRATED",
       });
