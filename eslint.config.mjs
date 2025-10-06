@@ -20,7 +20,7 @@ const eslintConfig = [
       '.swc/**',
       '.qodo/**',
       '.cursor/**',
-      'database.types.ts', // Generated file, exclude from linting
+      'types/database.types.ts', // Generated file, exclude from linting
       'cypress/**/*.{js,ts}', // Exclude Cypress files from main config
     ],
   },
@@ -62,8 +62,46 @@ const eslintConfig = [
       'plugin:jsx-a11y/recommended',
       'plugin:prettier/recommended',
     ],
-    plugins: ['@typescript-eslint', 'react', 'import', 'jsx-a11y', 'prettier'],
+    plugins: ['@typescript-eslint', 'react', 'import', 'jsx-a11y', 'prettier', 'no-only-tests'],
     rules: {
+      // ===================================================================
+      // PRD Section 4: Anti-Pattern Guardrails
+      // ===================================================================
+
+      // Forbid Supabase client creation in components/stores
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'CallExpression[callee.name="createClient"]',
+          message: 'Do not create Supabase clients in components or stores. Use createServerClient or createBrowserClient from utils/supabase.',
+        },
+      ],
+
+      // Ban console.* in production code (allow in tests)
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+
+      // Forbid 'as any' type casting
+      '@typescript-eslint/no-explicit-any': 'error',
+
+      // Ban test.only and describe.only to prevent accidental CI failures
+      'no-only-tests/no-only-tests': 'error',
+
+      // Service layer type enforcement
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/services/*/index'],
+              message: 'Do not use ReturnType inference. Import explicit interfaces from service modules.',
+            },
+          ],
+        },
+      ],
+
+      // ===================================================================
+      // Standard Rules
+      // ===================================================================
       'import/no-cycle': 'warn',
       'import/no-self-import': 'warn',
       'import/no-unused-modules': 'warn',
@@ -88,17 +126,13 @@ const eslintConfig = [
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-empty-object-type': 'off',
       'react/no-unescaped-entities': 'off',
-      'no-console': 'off',
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
-      // Relaxed rules to prevent build failures
-      '@typescript-eslint/no-explicit-any': 'off',
+      // Note: no-console and no-explicit-any are enforced above in anti-pattern section
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/ban-ts-comment': 'off',
-      'no-console': 'off',
       // Disable accessibility rules that prevent build
       'jsx-a11y/heading-has-content': 'off',
       'jsx-a11y/anchor-is-valid': 'off',
