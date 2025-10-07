@@ -20,7 +20,7 @@ export interface PlayerFinancialTransactionCreateDTO {
   cashIn?: number | null;
   chipsBrought?: number | null;
   chipsTaken?: number | null;
-  transactionType: Database["public"]["Enums"]["TransactionType"];
+  transactionType: Database["public"]["Enums"]["transactiontype"];
   netChange?: number | null;
   notes?: string | null;
   transactionTime?: string;
@@ -30,7 +30,7 @@ export interface PlayerFinancialTransactionUpdateDTO {
   cashIn?: number | null;
   chipsBrought?: number | null;
   chipsTaken?: number | null;
-  reconciliationStatus?: Database["public"]["Enums"]["ReconciliationStatus"];
+  reconciliationStatus?: Database["public"]["Enums"]["reconciliationstatus"];
   netChange?: number | null;
   notes?: string | null;
   reconciledAt?: string | null;
@@ -57,7 +57,7 @@ export type PlayerFinancialTransactionDTO = Pick<
 
 export function createPlayerFinancialCrudService(
   supabase: SupabaseClient<Database>,
-) {
+): PlayerFinancialCrudService {
   return {
     create: async (
       data: PlayerFinancialTransactionCreateDTO,
@@ -353,7 +353,7 @@ export function createPlayerFinancialCrudService(
     },
 
     listByReconciliationStatus: async (
-      status: Database["public"]["Enums"]["ReconciliationStatus"],
+      status: Database["public"]["Enums"]["reconciliationstatus"],
       limit: number = 100,
       offset: number = 0,
     ): Promise<ServiceResult<PlayerFinancialTransactionDTO[]>> => {
@@ -396,6 +396,28 @@ export function createPlayerFinancialCrudService(
   };
 }
 
-export type PlayerFinancialCrudService = ReturnType<
-  typeof createPlayerFinancialCrudService
->;
+// ✅ Explicit interface - NOT ReturnType inference
+export interface PlayerFinancialCrudService {
+  create(
+    data: PlayerFinancialTransactionCreateDTO,
+  ): Promise<ServiceResult<PlayerFinancialTransactionDTO>>;
+  getById(id: string): Promise<ServiceResult<PlayerFinancialTransactionDTO>>;
+  update(
+    id: string,
+    data: PlayerFinancialTransactionUpdateDTO,
+  ): Promise<ServiceResult<PlayerFinancialTransactionDTO>>;
+  delete(id: string): Promise<ServiceResult<void>>;
+  listByPlayer(
+    playerId: string,
+    limit?: number,
+    offset?: number,
+  ): Promise<ServiceResult<PlayerFinancialTransactionDTO[]>>;
+  listByVisit(
+    visitId: string,
+  ): Promise<ServiceResult<PlayerFinancialTransactionDTO[]>>;
+  listByReconciliationStatus(
+    status: Database["public"]["Enums"]["reconciliationstatus"],
+    limit?: number,
+    offset?: number,
+  ): Promise<ServiceResult<PlayerFinancialTransactionDTO[]>>;
+}
