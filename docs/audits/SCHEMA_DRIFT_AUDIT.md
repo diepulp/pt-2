@@ -126,28 +126,42 @@ supabase gen types typescript --local
 
 ---
 
-## Recommendations
+## Decision
 
-### Immediate Actions
+**✅ CHOSEN: Option B - Maintain Dual Type Files**
 
-**Option A: Standardize on Remote Types (Recommended)**
-```bash
-# Replace local types with remote types
-cp types/remote/database.types.ts types/database.types.ts
+See [ADR-001: Dual Database Type Strategy](../architecture/ADR-001-dual-database-type-strategy.md) for complete rationale.
 
-# Update import paths if needed
-git commit -m "Sync local types with remote schema"
-```
+### Summary of Decision
+
+**Local Types** (`types/database.types.ts`):
+- Generated from local Supabase instance
+- Used by service layer, hooks, components
+- Fast iteration, no remote dependency
+- Disposable database, safe experimentation
+
+**Remote Types** (`types/remote/database.types.ts`):
+- Generated from production Supabase project
+- Used for production validation only
+- Includes GraphQL schema + PostgREST metadata
+- Validates deployment correctness
 
 **Benefits**:
-- Future-proof for GraphQL usage
-- PostgREST version compatibility
-- Single source of truth
+- Fast local development iteration
+- Safe migration testing (local reset freely)
+- Clear separation: development vs production
+- Team independence (no blocking on shared remote)
 
-**Option B: Keep Local Types (If GraphQL Not Needed)**
-- Current setup works for REST API only
-- No immediate action required
-- Document decision in ADR
+**Trade-offs**:
+- Manual sync discipline required
+- Dual type file maintenance
+- Team workflow training needed
+
+**Quick Reference**: See [Database Type Workflow Guide](../workflows/DATABASE_TYPE_WORKFLOW.md) for daily usage.
+
+---
+
+## Implementation
 
 ### Long-term Solutions
 

@@ -155,11 +155,11 @@
 │ VisitService     │ → Returns: visit_id
 └────┬─────────────┘
      │
-     ├─────────────────────┬─────────────────────┐
-     │                     │                     │
-     │ 3a. Create         │ 3b. Create          │
-     │ RatingSlip         │ Financial Tx        │
-     ▼                     ▼                     │
+     ├─────────────────────┬────────────────────┐
+     │                     │                    │
+     │ 3a. Create          │ 3b. Create         │
+     │ RatingSlip          │ Financial Tx       │
+     ▼                     ▼                    │
 ┌──────────────────┐  ┌──────────────────────┐  │
 │ RatingSlipSvc    │  │ PlayerFinancialSvc   │  │
 │ (Performance)    │  │ (Money tracking)     │  │
@@ -168,8 +168,8 @@
 │ • points         │  │ • chips_brought      │  │
 │ • time_played    │  │ • chips_taken        │  │
 └──────────────────┘  └──────────────────────┘  │
-                                                 │
-                                                 ▼
+                                                │
+                                                ▼
                         ┌──────────────────────────────┐
                         │  Aggregated Session Report   │
                         │  • Performance metrics       │

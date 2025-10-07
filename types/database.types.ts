@@ -7,31 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never;
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
-        Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
   public: {
     Tables: {
       accrual_history: {
@@ -956,6 +931,85 @@ export type Database = {
           },
         ];
       };
+      player_financial_transaction: {
+        Row: {
+          cash_in: number | null;
+          chips_brought: number | null;
+          chips_taken: number | null;
+          created_at: string;
+          id: string;
+          net_change: number | null;
+          notes: string | null;
+          player_id: string;
+          rating_slip_id: string | null;
+          reconciled_at: string | null;
+          reconciliation_status: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time: string;
+          transaction_type: Database["public"]["Enums"]["transactiontype"];
+          updated_at: string;
+          version: number | null;
+          visit_id: string;
+        };
+        Insert: {
+          cash_in?: number | null;
+          chips_brought?: number | null;
+          chips_taken?: number | null;
+          created_at?: string;
+          id?: string;
+          net_change?: number | null;
+          notes?: string | null;
+          player_id: string;
+          rating_slip_id?: string | null;
+          reconciled_at?: string | null;
+          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time?: string;
+          transaction_type: Database["public"]["Enums"]["transactiontype"];
+          updated_at?: string;
+          version?: number | null;
+          visit_id: string;
+        };
+        Update: {
+          cash_in?: number | null;
+          chips_brought?: number | null;
+          chips_taken?: number | null;
+          created_at?: string;
+          id?: string;
+          net_change?: number | null;
+          notes?: string | null;
+          player_id?: string;
+          rating_slip_id?: string | null;
+          reconciled_at?: string | null;
+          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time?: string;
+          transaction_type?: Database["public"]["Enums"]["transactiontype"];
+          updated_at?: string;
+          version?: number | null;
+          visit_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "ratingslip";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       player_loyalty: {
         Row: {
           achievements: Json | null;
@@ -1319,7 +1373,7 @@ export type Database = {
           game_settings: Json;
           game_settings_id?: string | null;
           gaming_table_id?: string | null;
-          id: string;
+          id?: string;
           pause_intervals?: Json | null;
           playerId: string;
           points?: number;
@@ -2155,6 +2209,7 @@ export type Database = {
         | "other";
       MtlDirection: "cash_in" | "cash_out";
       RatingSlipStatus: "OPEN" | "CLOSED" | "PAUSED";
+      reconciliationstatus: "PENDING" | "RECONCILED" | "DISCREPANCY";
       ReportFormat: "PDF" | "CSV" | "JSON";
       ReportType: "SHIFT_SUMMARY" | "DAILY_OVERVIEW" | "CUSTOM";
       RewardStatus: "PENDING" | "ISSUED" | "REDEEMED" | "EXPIRED";
@@ -2169,6 +2224,7 @@ export type Database = {
         | "money_order"
         | "chips"
         | "other";
+      transactiontype: "DEPOSIT" | "WITHDRAWAL" | "EXCHANGE" | "ADJUSTMENT";
       VisitMode: "RATED" | "UNRATED";
       VisitStatus: "ONGOING" | "COMPLETED" | "CANCELED";
     };
@@ -2299,9 +2355,6 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       AlertType: ["CTR", "MTL", "VARIANCE", "BREAK_OVERDUE", "SECURITY"],
@@ -2326,6 +2379,7 @@ export const Constants = {
       MtlArea: ["pit", "cage", "slot", "poker", "kiosk", "sportsbook", "other"],
       MtlDirection: ["cash_in", "cash_out"],
       RatingSlipStatus: ["OPEN", "CLOSED", "PAUSED"],
+      reconciliationstatus: ["PENDING", "RECONCILED", "DISCREPANCY"],
       ReportFormat: ["PDF", "CSV", "JSON"],
       ReportType: ["SHIFT_SUMMARY", "DAILY_OVERVIEW", "CUSTOM"],
       RewardStatus: ["PENDING", "ISSUED", "REDEEMED", "EXPIRED"],
@@ -2341,6 +2395,7 @@ export const Constants = {
         "chips",
         "other",
       ],
+      transactiontype: ["DEPOSIT", "WITHDRAWAL", "EXCHANGE", "ADJUSTMENT"],
       VisitMode: ["RATED", "UNRATED"],
       VisitStatus: ["ONGOING", "COMPLETED", "CANCELED"],
     },

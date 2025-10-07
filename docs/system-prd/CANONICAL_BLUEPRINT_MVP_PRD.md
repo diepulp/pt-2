@@ -186,6 +186,11 @@
 - Ban global real-time managers (connection pools, optimistic/offline singletons); enforce hook-scoped subscriptions with automated tests.
 - Ban service-layer factories that cache or mutate global state (e.g., `ServiceFactory` performance caches); service creation stays pure and request-scoped.
 - Ban bulk library imports (HeroUI/Lucide) and dev console logging in production paths.
+- **Schema Consistency: Enforce UUID Primary Keys Universally**:
+  - **Anti-Pattern**: Mixed ID types (TEXT vs UUID) across domain tables create implicit technical debt through casting overhead, type-unsafe joins, and ORM friction.
+  - **Violation Discovered**: `ratingslip.id` was TEXT while all other domain tables used UUID, requiring explicit `::text`/`::uuid` casts in foreign key relationships and audit logs.
+  - **Resolution**: Migrated to UUID ([20251006234000_migrate_ratingslip_id_to_uuid.sql](../../supabase/migrations/20251006234000_migrate_ratingslip_id_to_uuid.sql)) achieving zero-cast schema consistency.
+  - **Enforcement**: All new domain tables MUST use `UUID PRIMARY KEY DEFAULT gen_random_uuid()`. Pre-migration schema audits required for inherited TEXT-based IDs.
 
 ## 5. Deployment & Release Management
 
