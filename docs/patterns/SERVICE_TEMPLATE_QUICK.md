@@ -23,6 +23,11 @@ Before writing ANY service code:
 ## File Structure (Copy This)
 
 ```
+__tests__/                          # ✅ Root-level tests (Standard)
+└── services/
+    └── {domain}/
+        └── {domain}-service.test.ts
+
 services/
 ├── shared/
 │   ├── types.ts                    # ServiceResult, ServiceError
@@ -31,10 +36,10 @@ services/
 │
 └── {domain}/
     ├── index.ts                    # Factory + interface
-    ├── crud.ts                     # CRUD operations
-    └── __tests__/
-        └── {domain}-service.test.ts
+    └── crud.ts                     # CRUD operations
 ```
+
+**Test Location**: Use `__tests__/services/{domain}/` (NOT `services/{domain}/__tests__/`)
 
 **Rule of Three**: Don't add `business.ts` or `queries.ts` until 3rd occurrence.
 
@@ -45,9 +50,9 @@ services/
 ### 1. Write Test First (TDD)
 
 ```typescript
-// __tests__/x-service.test.ts
+// __tests__/services/x/x-service.test.ts
 describe("X Service", () => {
-  let xService: ReturnType<typeof createXService>;
+  let xService: XService;  // ✅ Use exported interface type
 
   beforeEach(() => {
     const supabase = createClient<Database>(url, key);
@@ -181,11 +186,12 @@ if (error.code === "23505") {
 ## Quick Commands
 
 ```bash
-# Copy Player template
-cp -r services/player services/{domain}
+# Create service structure
+mkdir -p services/{domain}
+mkdir -p __tests__/services/{domain}
 
 # Run tests
-npm test services/{domain}
+npm test __tests__/services/{domain}
 
 # Type check
 npx tsc --noEmit
@@ -193,6 +199,8 @@ npx tsc --noEmit
 # Full audit
 npm test && npx tsc --noEmit
 ```
+
+**Note**: Casino and TableContext services currently have co-located tests (`services/*/__ tests__/`). This is an **inconsistency** that will be migrated. See [TEST_LOCATION_INCONSISTENCY.md](../architecture/TEST_LOCATION_INCONSISTENCY.md) for details.
 
 ---
 
@@ -212,9 +220,9 @@ npm test && npx tsc --noEmit
 **Live Example**: [services/player/](../../services/player/)
 
 Copy patterns from:
-- [index.ts](../../services/player/index.ts) - Factory structure
-- [crud.ts](../../services/player/crud.ts) - CRUD operations
-- [__tests__/player-service.test.ts](../../__tests__/services/player/player-service.test.ts) - Test patterns
+- [services/player/index.ts](../../services/player/index.ts) - Factory structure
+- [services/player/crud.ts](../../services/player/crud.ts) - CRUD operations
+- [__tests__/services/player/player-service.test.ts](../../__tests__/services/player/player-service.test.ts) - ✅ Test location (root-level)
 
 ---
 
