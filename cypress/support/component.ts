@@ -12,7 +12,7 @@ import '@testing-library/cypress/add-commands'
 // Alternatively you can use CommonJS syntax:
 // require('./commands')
 
-import { mount } from 'cypress/react18'
+import { mount } from 'cypress/react'
 
 // Augment the Cypress namespace to include type definitions for your custom command.
 declare global {

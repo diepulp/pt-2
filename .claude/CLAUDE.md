@@ -4,6 +4,7 @@
 
 See `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` for complete architecture specification.
 see `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for service layer architecture standards and diagram
+See `docs/INDEX.md` for documentation index
 
 ## Critical Standards (Quick Reference)
 
