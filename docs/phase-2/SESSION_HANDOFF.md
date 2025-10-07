@@ -1,11 +1,44 @@
 # Phase 2 Session Handoff - Service Layer Implementation
 
 > **Date**: 2025-10-07
-> **Status**: Schema Consistency + PlayerFinancialService Complete ✅
-> **Progress**: 50% (4/8 core services)
-> **Velocity**: 4x improvement sustained across 4 services
+> **Status**: Casino + Table Context Services Complete ✅
+> **Progress**: 75% (6/8 core services)
+> **Velocity**: 4x improvement sustained across 6 services
 
 ## Current State
+
+### ✅ Completed (Day 5 - Casino + Table Context Services)
+
+**Casino Service Implementation ✅**
+- **Schema**: [casino](~/supabase) table (existing, RLS enabled)
+  - Columns: id (UUID), name, location, company_id (FK to company)
+- **Service**: [services/casino/](~/services/casino/)
+  - CRUD: create(), getById(), update(), delete()
+  - Queries: list(), listByCompany()
+  - Error handling: FK violations, NOT_FOUND, DUPLICATE_CASINO
+- **Interface**: [services/casino/index.ts](~/services/casino/index.ts) - Explicit CasinoService
+- **Tests**: [services/casino/__tests__/casino-service.test.ts](~/services/casino/__tests__/casino-service.test.ts)
+  - 13 comprehensive test cases (100% pass rate)
+  - Coverage: CRUD + queries + error scenarios
+- **Bounded Context**: "Where is this happening?" (Location Domain)
+- **Velocity**: ~2 hours (parallel execution with Table Context)
+
+**Table Context Service Implementation ✅**
+- **Schema**: Three-table relationship (gamingtable, gamesettings, gamingtablesettings)
+  - gamingtable: Tables at casino with type/number
+  - gamesettings: Game configuration (rounds/hour, house edge, points)
+  - gamingtablesettings: Temporal join (active_from, active_until)
+- **Service**: [services/table-context/](~/services/table-context/)
+  - CRUD: create(), getById(), update(), delete(), listByCasino()
+  - Settings: applySettings(), getActiveSettings(), getSettingsHistory(), deactivateSettings()
+  - Temporal configuration: Automatic state management, cascading deactivation
+- **Interface**: [services/table-context/index.ts](~/services/table-context/index.ts) - Explicit TableContextService
+- **Tests**: [services/table-context/__tests__/table-context-service.test.ts](~/services/table-context/__tests__/table-context-service.test.ts)
+  - 22 comprehensive test cases (100% pass rate)
+  - Coverage: Table CRUD + settings operations + temporal logic + error scenarios
+- **Bounded Context**: "What game/table configuration?" (Configuration Domain)
+- **Complexity**: 3-table relationships, temporal validity windows, state-based configuration
+- **Velocity**: ~2 hours (parallel execution with Casino)
 
 ### ✅ Completed (Day 4 - Schema Consistency + PlayerFinancialService)
 
@@ -91,22 +124,12 @@
 
 ---
 
-## 🔄 Current Agenda (Day 5)
+## 🔄 Current Agenda (Day 6)
 
 ### Immediate Priority: Remaining Core Services
 
-**4 Services Remaining (50% → 100%)**:
-1. **Casino Service** (2 days estimated)
-   - Bounded Context: "Where is this happening?" (Location Domain)
-   - Schema: `casino` table (already exists)
-   - CRUD + queries: listByCompany()
-
-2. **Table Context Service** (2 days estimated)
-   - Bounded Context: "What game/table configuration?" (Configuration Domain)
-   - Schema: `gamingtable`, `gamesettings`, `gamingtablesettings`
-   - Complex: temporal configuration (active_from/active_until)
-
-3. **MTL Service** (1 day estimated)
+**2 Services Remaining (75% → 100%)**:
+1. **MTL Service** (1 day estimated)
    - Bounded Context: "What cash transactions require reporting?" (Compliance Domain)
    - Schema: `mtl_entry` table (already exists)
    - Regulatory constraints: CTR thresholds, gaming day calculations
@@ -118,7 +141,7 @@
 
 ---
 
-## 📊 Velocity Metrics (Updated - 4 Services)
+## 📊 Velocity Metrics (Updated - 6 Services)
 
 | Service | Time | Complexity | Notes |
 |---------|------|------------|-------|
@@ -126,10 +149,13 @@
 | Visit | 45 min | Low | Template application |
 | RatingSlip | 40 min | High | JSON, computed fields, multiple FKs |
 | PlayerFinancial | 120 min | Medium | Includes schema migration + audit |
+| Casino | 120 min | Low | CRUD + queries, parallel execution |
+| TableContext | 120 min | Very High | 3-table relationships, temporal config, parallel execution |
 
-**Average (excluding Player)**: ~68 minutes per service
+**Average (excluding Player)**: ~89 minutes per service
 **Template Effectiveness**: 4x improvement sustained
 **Schema Consistency**: Achieved via proactive migration
+**Parallel Execution**: 2 services completed simultaneously (Day 5)
 
 ---
 
@@ -137,9 +163,9 @@
 
 - **Day 1-3** ✅: Player + Visit + RatingSlip (Rule of Three)
 - **Day 4** ✅: Schema consistency + PlayerFinancialService + Bounded context clarity
-- **Day 5-6** 🔄: Casino Service + Table Context Service
-- **Day 7** ⏳: MTL Service
-- **Day 8-10** ⏳: Integration layer + PT-1 mining (search/queries)
+- **Day 5** ✅: Casino Service + Table Context Service (parallel execution)
+- **Day 6** 🔄: MTL Service
+- **Day 7-10** ⏳: Integration layer + PT-1 mining (search/queries) + Loyalty Service
 
 ---
 
@@ -156,7 +182,7 @@
 - ✅ **Bounded context clarity documented**
 
 ### Remaining ⏳
-- ⏳ 8/8 core services complete (currently 4/8)
+- ⏳ 8/8 core services complete (currently 6/8)
 - ⏳ Integration patterns documented
 - ⏳ PT-1 pattern mining (search + queries)
 
@@ -175,14 +201,14 @@
 
 ## 📂 Critical Files Reference
 
-### Implementation (4/8 Complete)
+### Implementation (6/8 Complete)
 - [services/player/](~/services/player/) - ✅ Identity domain
 - [services/visit/](~/services/visit/) - ✅ Session domain
 - [services/ratingslip/](~/services/ratingslip/) - ✅ Performance domain
 - [services/player-financial/](~/services/player-financial/) - ✅ Financial domain
-- `services/casino/` - ⏳ Location domain (next)
-- `services/table-context/` - ⏳ Configuration domain
-- `services/mtl/` - ⏳ Compliance domain
+- [services/casino/](~/services/casino/) - ✅ Location domain
+- [services/table-context/](~/services/table-context/) - ✅ Configuration domain
+- `services/mtl/` - ⏳ Compliance domain (next)
 - `services/loyalty/` - ⏳ Rewards domain (deferred)
 
 ### Documentation
@@ -199,34 +225,37 @@
 
 ## 💡 Quick Start Next Session
 
-### Recommended: Casino Service Implementation
+### Recommended: MTL Service Implementation
 
 ```bash
 # Verify all services passing
-npm test __tests__/services/player/player-service.test.ts
-npm test __tests__/services/visit/visit-service.test.ts
-npm test __tests__/services/ratingslip/ratingslip-service.test.ts
-npm test __tests__/services/player-financial/crud.test.ts  # May need service_role key fix
+npm test services/player/__tests__/player-service.test.ts
+npm test services/visit/__tests__/visit-service.test.ts
+npm test services/ratingslip/__tests__/ratingslip-service.test.ts
+npm test services/player-financial/__tests__/crud.test.ts
+npm test services/casino/__tests__/casino-service.test.ts
+npm test services/table-context/__tests__/table-context-service.test.ts
 
 # Review bounded context
 cat docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md
 
-# Create Casino Service structure
-mkdir -p services/casino/__tests__
+# Create MTL Service structure
+mkdir -p services/mtl/__tests__
 
-# Schema already exists: casino table
+# Schema already exists: mtl_entry table
 # Check existing columns
-npx supabase db diff --schema public
+npx supabase db diff --schema public | grep mtl
 
 # Start with create() slice following TDD
-# Reference: services/player/ (simpler) OR services/visit/ (similar complexity)
+# Reference: services/player-financial/ (compliance context)
 ```
 
 **Key Constraints**:
-- Location domain: casino identity + company relationship
-- Bounded context: "Where is this happening?"
-- Foreign keys: company_id
-- Queries needed: listByCompany()
+- Compliance domain: MTL entry creation + CTR reporting
+- Bounded context: "What cash transactions require reporting?"
+- Foreign keys: recorded_by_employee_id (Staff)
+- Regulatory constraints: CTR thresholds ($10k), gaming day calculations
+- Complex: Direction (cash_in/cash_out), Area (pit/cage/slot), Tender types
 
 ---
 
@@ -249,41 +278,47 @@ npx supabase db diff --schema public
 
 ---
 
-## Resume Prompt (Day 5)
+## Resume Prompt (Day 6)
 
 ```
-Phase 2 Service Layer - 50% Complete, Schema Consistency Achieved
+Phase 2 Service Layer - 75% Complete, Parallel Execution Validated
 
 Current state:
-- 4/8 core services complete ✅ (Player, Visit, RatingSlip, PlayerFinancial)
+- 6/8 core services complete ✅ (Player, Visit, RatingSlip, PlayerFinancial, Casino, TableContext)
 - Schema consistency: UUID standardization complete ✅
 - Bounded context integrity: Service Responsibility Matrix enforced ✅
 - Template velocity: 4x improvement sustained ✅
-- All tests passing (Player: 8/8, Visit: 10/10, RatingSlip: 10/10, PlayerFinancial: 16/16) ✅
+- All tests passing ✅
+  - Player: 8/8 tests
+  - Visit: 10/10 tests
+  - RatingSlip: 10/10 tests
+  - PlayerFinancial: 16/16 tests
+  - Casino: 13/13 tests
+  - TableContext: 22/22 tests
 
-Recent achievements:
-- Schema migration: ratingslip.id TEXT → UUID (anti-pattern resolved)
-- PlayerFinancialService: Financial domain separated from performance tracking
-- PRD updated: UUID consistency added to Anti-Pattern Guardrails §4
+Recent achievements (Day 5):
+- Casino Service: Location domain complete with CRUD + queries
+- Table Context Service: 3-table relationships with temporal configuration
+- Parallel execution: 2 services delivered simultaneously using full-stack agents
+- Zero PRD violations across both services
 
 Remaining work:
-- Casino Service (Location domain)
-- Table Context Service (Configuration domain)
-- MTL Service (Compliance domain)
-- Loyalty Service (Rewards domain - deferred)
+- MTL Service (Compliance domain) - 1 day
+- Loyalty Service (Rewards domain - deferred to post-MVP)
 
-Next Task: Casino Service Implementation
-1. Schema: casino table (already exists)
+Next Task: MTL Service Implementation
+1. Schema: mtl_entry table (already exists, complex constraints)
 2. CRUD: create(), getById(), update(), delete()
-3. Queries: listByCompany()
-4. Test coverage >80%
-5. Time: ~2 days (1-2 hours coding, integration patterns)
+3. Queries: listByGamingDay(), listByCTRThreshold(), listByPatron()
+4. Compliance: CTR threshold calculations, gaming day logic
+5. Test coverage >80%
+6. Time: ~1 day (regulatory complexity)
 
 Reference:
 - Template: docs/patterns/SERVICE_TEMPLATE_QUICK.md
 - Bounded Context: docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md
-- Schema Audit: docs/audits/SCHEMA_CONSISTENCY_RESOLUTION.md
-- Pattern: services/player/ (simpler domain)
+- Pattern: services/player-financial/ (compliance context)
+- Regulatory: CTR threshold ($10k), gaming day calculations
 
-Decision point: Start Casino Service implementation?
+Decision point: Start MTL Service implementation?
 ```
