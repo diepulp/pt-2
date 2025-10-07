@@ -1,21 +1,27 @@
 # PT-2 MVP Production Roadmap
 
-> **Version**: 1.0.0
-> **Date**: 2025-10-06
-> **Status**: Draft for Evaluation
-> **Context**: Post-Phase 2 Service Layer Foundation (Rule of Three Complete)
+> **Version**: 1.1.0
+> **Date**: 2025-10-07
+> **Status**: Phase 2 - 75% Complete
+> **Context**: 6/8 Core Services Complete + Test Standardization
 
 ---
 
 ## Executive Summary
 
-**Current State**: Foundation complete with 3 proven services (Player, Visit, RatingSlip) using controlled hybrid refactor model.
+**Current State**: 6/8 core services complete (Player, Visit, RatingSlip, PlayerFinancial, Casino, TableContext) with proven template velocity (4x improvement). Test location standardization achieved via ADR-002.
 
-**Gap Analysis**: Service layer established, but missing UI layer, real-time infrastructure, compliance workflows, and production hardening.
+**Recent Achievements**:
+- Parallel service deployment validated (Casino + TableContext in 2 hours)
+- Schema consistency: UUID standardization complete
+- Test infrastructure: 100% consistency across all services
+- Bounded context integrity: Service Responsibility Matrix enforced
+
+**Gap Analysis**: Service layer 75% complete. Remaining: MTL Service + Loyalty Service. Missing UI layer, real-time infrastructure, compliance workflows, and production hardening.
 
 **Target**: Production-ready Casino Tracker MVP with core domains operational.
 
-**Timeline**: 8-10 weeks from current state to MVP launch.
+**Timeline**: 7-9 weeks from current state to MVP launch (adjusted for progress).
 
 ---
 
@@ -25,7 +31,7 @@
 |-------|--------|------------|------------------|
 | **Phase 0** | ✅ Complete | 100% | CI/CD, Testing, Security Skeleton, RLS |
 | **Phase 1** | ✅ Complete | 100% | JWT helpers, Audit logging, Compliance tables |
-| **Phase 2** | 🔄 In Progress | 40% | Service Layer (3/8 services), Template locked |
+| **Phase 2** | 🔄 In Progress | 75% | Service Layer (6/8 services), Template locked, Test standards (ADR-002) |
 | **Phase 3** | ⏳ Pending | 0% | UI Layer, Real-time, State Management |
 | **Phase 4** | ⏳ Pending | 0% | Compliance Workflows, MTL, Reporting |
 | **Phase 5** | ⏳ Pending | 0% | Performance, Bundle Optimization, Production Hardening |
@@ -37,27 +43,39 @@
 **Target**: Complete all core domain services with PRD compliance
 
 ### Completed (Week 1) ✅
-- ✅ Player Service CRUD (create, update, getById)
-- ✅ Visit Service CRUD (create, update, getById)
-- ✅ RatingSlip Service CRUD (create, update, getById)
+- ✅ Player Service CRUD (create, update, getById) - 8 tests
+- ✅ Visit Service CRUD (create, update, getById) - 10 tests
+- ✅ RatingSlip Service CRUD (create, update, getById) - 10 tests
 - ✅ SERVICE_TEMPLATE.md canonical documentation
 - ✅ Shared infrastructure (operation-wrapper, types, utils)
 - ✅ Test coverage >80% for all services
-- ✅ **Velocity Validated**: 5x improvement with template (Player: 3h → Template avg: 42min)
+- ✅ **Velocity Validated**: 4x improvement with template (Player: 3h → Template avg: 89min)
+
+### Completed (Week 2) ✅
+- ✅ PlayerFinancial Service - 16 tests
+  - Transaction CRUD with constraint validation
+  - Queries: listByPlayer(), listByVisit(), listByReconciliationStatus()
+  - Schema migration + UUID consistency achieved
+- ✅ Casino Service - 13 tests
+  - Casino CRUD + FK violation handling
+  - Queries: list(), listByCompany()
+  - Location domain bounded context
+- ✅ TableContext Service - 22 tests
+  - 3-table relationships (gamingtable, gamesettings, gamingtablesettings)
+  - Temporal configuration with active_from/active_until
+  - Settings operations with cascading deactivation
+  - Configuration domain bounded context
+- ✅ Test Location Standardization (ADR-002)
+  - All services migrated to root-level `__tests__/services/`
+  - 100% consistency achieved
+  - Documentation updated
 
 ### In Progress (Week 2) 🔄
-**Immediate: Complete Remaining CRUD Services**
-- Casino Service (2 days)
-  - Casino settings CRUD
-  - Gaming table configuration
-  - Table-to-casino relationships
-- Table Context Service (2 days)
-  - Table lifecycle (open, close)
-  - Inventory management basics
-  - State transitions
-- MTL Service (1 day)
+**Immediate: Remaining Core Services**
+- MTL Service (1 day) - Compliance domain
   - Transaction logging CRUD
-  - Basic CTR threshold tracking
+  - CTR threshold tracking
+  - Gaming day calculations
 
 **PT-1 Pattern Mining (3 days)**
 - **Agent Analysis Complete** ✅:
@@ -71,20 +89,24 @@
   - MTL: transaction search, compliance queries
 
 ### Remaining (Week 3)
-- Notes Service (1 day)
-- Compliance Service (1 day)
-- Staff Auth Service (1 day) - Role-based operations
-- Integration smoke tests (1 day)
+- MTL Service completion (0.5 day)
+- Loyalty Service (1 day) - Deferred to post-MVP per gap analysis
+- PT-1 Pattern Mining - Search/Query capabilities (2 days)
+  - Apply proven patterns to all 6 services
+  - Multi-word search with relevance scoring
+  - JOIN patterns for complex queries
+- Integration smoke tests (0.5 day)
 - End-of-week audit + documentation (1 day)
 
 **Phase 2 Completion**: End of Week 3 (Est: 2025-10-27)
 
 **Deliverables**:
-- ✅ 8/8 core services with explicit interfaces
+- ✅ 7/8 core services with explicit interfaces (Loyalty deferred)
 - ✅ Search + query capabilities across all domains
 - ✅ ServiceResult pattern enforced
 - ✅ Zero PRD violations
 - ✅ Test coverage >80%
+- ✅ Test location standardization (ADR-002)
 
 ---
 
@@ -458,6 +480,7 @@ graph LR
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-06
+**Document Version**: 1.1.0
+**Last Updated**: 2025-10-07
 **Next Review**: End of Phase 2 (2025-10-27)
+**Progress**: Phase 2 - 75% Complete (6/8 services)

@@ -1,7 +1,7 @@
 # PT-2 Architecture Gap Analysis
 
-> **Date**: 2025-10-06
-> **Context**: Post-Phase 2 Service Layer Foundation
+> **Date**: 2025-10-07
+> **Context**: Phase 2 Service Layer - 75% Complete (6/8 services)
 > **Purpose**: Identify missing architectural components for production readiness
 
 ---
@@ -9,13 +9,18 @@
 ## Gap Summary
 
 ### ✅ Implemented (Strong Foundation)
-- Service layer with explicit interfaces
-- Shared infrastructure (operation-wrapper, types, utils)
-- Database schema with RLS
-- JWT helpers + audit logging skeleton
-- CI/CD with quality gates
-- Testing infrastructure (Jest + Cypress)
-- Anti-pattern enforcement (ESLint)
+- **Service layer** with explicit interfaces (6/8 complete)
+  - Player, Visit, RatingSlip, PlayerFinancial, Casino, TableContext ✅
+  - MTL (in progress), Loyalty (deferred to post-MVP)
+- **Shared infrastructure** (operation-wrapper, types, utils)
+- **Database schema** with RLS + UUID consistency
+- **JWT helpers** + audit logging skeleton
+- **CI/CD** with quality gates
+- **Testing infrastructure** (Jest + Cypress) - 79/79 tests passing
+- **Anti-pattern enforcement** (ESLint + pre-commit hooks)
+- **Test location standard** (ADR-002) - Root-level `__tests__/services/`
+- **Bounded context integrity** - Service Responsibility Matrix
+- **Template velocity** - 4x improvement validated (89min avg)
 
 ### ❌ Missing Critical Components
 
@@ -310,10 +315,13 @@ docs/operations/
 
 ## Remediation Plan
 
-### Week 2 (Current) - Finish Services
-- Complete Casino, Table Context, MTL CRUD services
-- Apply PT-1 search/query patterns
-- Lock all service layer templates
+### Week 2 (Current) - Finish Services ✅ 75% Complete
+- ✅ Complete Casino Service (CRUD + queries)
+- ✅ Complete Table Context Service (3-table relationships, temporal config)
+- ✅ Test location standardization (ADR-002)
+- 🔄 Complete MTL Service CRUD (in progress)
+- ⏳ Apply PT-1 search/query patterns (Week 3)
+- ⏳ Lock all service layer templates (Week 3)
 
 ### Week 3 - State Management Foundation (P0)
 - Implement React Query config
@@ -368,5 +376,6 @@ docs/operations/
 
 ---
 
-**Last Updated**: 2025-10-06
+**Last Updated**: 2025-10-07
 **Next Review**: End of Week 3 (Phase 2 completion)
+**Current Progress**: Phase 2 - 75% (6/8 services complete)
