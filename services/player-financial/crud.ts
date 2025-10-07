@@ -252,20 +252,20 @@ export function createPlayerFinancialCrudService(
       return executeOperation<void>(
         "delete_player_financial_transaction",
         async () => {
-          const { error } = await supabase
+          const { data, error, count } = await supabase
             .from("player_financial_transaction")
-            .delete()
+            .delete({ count: "exact" })
             .eq("id", id);
 
           if (error) {
-            if (error.code === "PGRST116") {
-              throw {
-                code: "NOT_FOUND",
-                message: "Financial transaction not found",
-                details: error,
-              };
-            }
             throw error;
+          }
+
+          if (count === 0) {
+            throw {
+              code: "NOT_FOUND",
+              message: "Financial transaction not found",
+            };
           }
         },
       );

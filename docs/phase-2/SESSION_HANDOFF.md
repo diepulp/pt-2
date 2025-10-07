@@ -203,10 +203,10 @@
 
 ```bash
 # Verify all services passing
-npm test services/player/__tests__
-npm test services/visit/__tests__
-npm test services/ratingslip/__tests__
-npm test services/player-financial/__tests__  # May need service_role key fix
+npm test __tests__/services/player/player-service.test.ts
+npm test __tests__/services/visit/visit-service.test.ts
+npm test __tests__/services/ratingslip/ratingslip-service.test.ts
+npm test __tests__/services/player-financial/crud.test.ts  # May need service_role key fix
 
 # Review bounded context
 cat docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md

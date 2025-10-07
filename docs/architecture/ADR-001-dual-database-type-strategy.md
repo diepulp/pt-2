@@ -79,7 +79,7 @@ import type { Database } from "@/types/remote/database.types";
 2. Apply to local DB: supabase db reset
 3. Generate types: npm run db:types
 4. Implement service layer with fresh types
-5. Run tests against local DB
+5. Run tests against local DB (tests use their own .env.test)
 6. Commit when ready
 
 # No network latency, no remote quota usage, full control

@@ -6,26 +6,37 @@
 import { describe, it, expect, beforeEach } from '@jest/globals'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-import { createPlayerService } from '@/services/player'
-import { createVisitService } from '@/services/visit'
-import type { Database } from '@/types/database.types'
+import { createPlayerService } from '../../../services/player'
+import { createVisitService } from '../../../services/visit'
+import type { Database } from '../../../types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Test casino ID from database
-const TEST_CASINO_ID = '550e8400-e29b-41d4-a716-446655440010'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 describe('Visit Service - Create Visit', () => {
   let supabase: SupabaseClient<Database>
   let visitService: ReturnType<typeof createVisitService>
   let playerService: ReturnType<typeof createPlayerService>
   let testPlayerId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     visitService = createVisitService(supabase)
     playerService = createPlayerService(supabase)
+
+    // Create a test casino for visit tests
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino Visit ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create a test player for visit tests
     const playerResult = await playerService.create({
@@ -41,15 +52,18 @@ describe('Visit Service - Create Visit', () => {
     it('should create a visit with required fields', async () => {
       const result = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
       })
 
+      if (!result.success) {
+        console.error('Visit create failed:', JSON.stringify(result.error, null, 2))
+      }
       expect(result.success).toBe(true)
       expect(result.error).toBeNull()
       expect(result.data).toBeDefined()
       expect(result.data?.player_id).toBe(testPlayerId)
-      expect(result.data?.casino_id).toBe(TEST_CASINO_ID)
+      expect(result.data?.casino_id).toBe(testCasinoId)
       expect(result.data?.id).toBeDefined()
       expect(result.data?.mode).toBeDefined() // Should have default value
       expect(result.data?.status).toBeDefined() // Should have default value
@@ -58,7 +72,7 @@ describe('Visit Service - Create Visit', () => {
     it('should create a visit with optional mode and status', async () => {
       const result = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
         mode: 'RATED',
         status: 'ONGOING',
@@ -77,7 +91,7 @@ describe('Visit Service - Create Visit', () => {
 
       const result = await visitService.create({
         playerId: nonExistentPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
       })
 
@@ -109,11 +123,25 @@ describe('Visit Service - Get By Id', () => {
   let visitService: ReturnType<typeof createVisitService>
   let playerService: ReturnType<typeof createPlayerService>
   let testPlayerId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     visitService = createVisitService(supabase)
     playerService = createPlayerService(supabase)
+
+    // Create test casino
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino GetById ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create a test player
     const playerResult = await playerService.create({
@@ -130,7 +158,7 @@ describe('Visit Service - Get By Id', () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
       })
       expect(createResult.success).toBe(true)
@@ -166,11 +194,25 @@ describe('Visit Service - Update Visit', () => {
   let visitService: ReturnType<typeof createVisitService>
   let playerService: ReturnType<typeof createPlayerService>
   let testPlayerId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     visitService = createVisitService(supabase)
     playerService = createPlayerService(supabase)
+
+    // Create test casino
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino Update ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create a test player
     const playerResult = await playerService.create({
@@ -187,7 +229,7 @@ describe('Visit Service - Update Visit', () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
         status: 'ONGOING',
       })
@@ -209,7 +251,7 @@ describe('Visit Service - Update Visit', () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
       })
       expect(createResult.success).toBe(true)
@@ -235,7 +277,7 @@ describe('Visit Service - Update Visit', () => {
       // Create a visit first
       const createResult = await visitService.create({
         playerId: testPlayerId,
-        casinoId: TEST_CASINO_ID,
+        casinoId: testCasinoId,
         checkInDate: new Date().toISOString(),
         mode: 'UNRATED',
       })

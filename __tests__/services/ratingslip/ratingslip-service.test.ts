@@ -6,16 +6,13 @@
 import { describe, it, expect, beforeEach } from '@jest/globals'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
-import { createPlayerService } from '@/services/player'
-import { createRatingSlipService } from '@/services/ratingslip'
-import { createVisitService } from '@/services/visit'
-import type { Database } from '@/types/database.types'
+import { createPlayerService } from '../../../services/player'
+import { createRatingSlipService } from '../../../services/ratingslip'
+import { createVisitService } from '../../../services/visit'
+import type { Database } from '../../../types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-// Test casino ID from database
-const TEST_CASINO_ID = '550e8400-e29b-41d4-a716-446655440010'
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 describe('RatingSlip Service - Create RatingSlip', () => {
   let supabase: SupabaseClient<Database>
@@ -24,12 +21,26 @@ describe('RatingSlip Service - Create RatingSlip', () => {
   let visitService: ReturnType<typeof createVisitService>
   let testPlayerId: string
   let testVisitId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     ratingSlipService = createRatingSlipService(supabase)
     playerService = createPlayerService(supabase)
     visitService = createVisitService(supabase)
+
+    // Create test casino
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino RatingSlip ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create test player
     const playerResult = await playerService.create({
@@ -43,7 +54,7 @@ describe('RatingSlip Service - Create RatingSlip', () => {
     // Create test visit
     const visitResult = await visitService.create({
       playerId: testPlayerId,
-      casinoId: TEST_CASINO_ID,
+      casinoId: testCasinoId,
       checkInDate: new Date().toISOString(),
     })
     expect(visitResult.success).toBe(true)
@@ -131,12 +142,26 @@ describe('RatingSlip Service - Get By Id', () => {
   let visitService: ReturnType<typeof createVisitService>
   let testPlayerId: string
   let testVisitId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     ratingSlipService = createRatingSlipService(supabase)
     playerService = createPlayerService(supabase)
     visitService = createVisitService(supabase)
+
+    // Create test casino
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino GetById ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create test player and visit
     const playerResult = await playerService.create({
@@ -149,7 +174,7 @@ describe('RatingSlip Service - Get By Id', () => {
 
     const visitResult = await visitService.create({
       playerId: testPlayerId,
-      casinoId: TEST_CASINO_ID,
+      casinoId: testCasinoId,
       checkInDate: new Date().toISOString(),
     })
     expect(visitResult.success).toBe(true)
@@ -202,12 +227,26 @@ describe('RatingSlip Service - Update RatingSlip', () => {
   let visitService: ReturnType<typeof createVisitService>
   let testPlayerId: string
   let testVisitId: string
+  let testCasinoId: string
 
   beforeEach(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     ratingSlipService = createRatingSlipService(supabase)
     playerService = createPlayerService(supabase)
     visitService = createVisitService(supabase)
+
+    // Create test casino
+    const casinoResult = await supabase
+      .from('casino')
+      .insert({
+        name: `Test Casino Update ${Date.now()}`,
+        location: 'Test Location',
+      })
+      .select('id')
+      .single()
+
+    expect(casinoResult.error).toBeNull()
+    testCasinoId = casinoResult.data!.id
 
     // Create test player and visit
     const playerResult = await playerService.create({
@@ -220,7 +259,7 @@ describe('RatingSlip Service - Update RatingSlip', () => {
 
     const visitResult = await visitService.create({
       playerId: testPlayerId,
-      casinoId: TEST_CASINO_ID,
+      casinoId: testCasinoId,
       checkInDate: new Date().toISOString(),
     })
     expect(visitResult.success).toBe(true)

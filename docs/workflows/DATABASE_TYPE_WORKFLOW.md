@@ -59,7 +59,7 @@ supabase migration new add_player_preferences
 supabase db reset
 
 # 4. Regenerate local types
-npm run db:types
+npm run db:types-local
 
 # 5. Implement feature using new types
 # services/player/preferences.ts now has PlayerPreferences types

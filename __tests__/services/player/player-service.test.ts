@@ -10,14 +10,14 @@ import { createPlayerService } from '../../../services/player'
 import type { Database } from '../../../types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 describe('Player Service - Create Player', () => {
   let supabase: SupabaseClient<Database>
   let playerService: ReturnType<typeof createPlayerService>
 
   beforeEach(() => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     playerService = createPlayerService(supabase)
   })
 
@@ -71,7 +71,7 @@ describe('Player Service - Get By Id', () => {
   let playerService: ReturnType<typeof createPlayerService>
 
   beforeEach(() => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     playerService = createPlayerService(supabase)
   })
 
@@ -117,7 +117,7 @@ describe('Player Service - Update Player', () => {
   let playerService: ReturnType<typeof createPlayerService>
 
   beforeEach(() => {
-    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey)
+    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
     playerService = createPlayerService(supabase)
   })
 

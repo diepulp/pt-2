@@ -14,10 +14,10 @@ import type {
 } from '../../../services/player-financial/crud'
 
 // Test configuration
-const supabaseUrl = process.env.SUPABASE_URL || 'http://127.0.0.1:54321'
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321'
 const supabaseKey =
-  process.env.SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0'
+  process.env.SUPABASE_SERVICE_ROLE_KEY ||
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU'
 
 describe('PlayerFinancial CRUD Service', () => {
   let supabase: ReturnType<typeof createClient<Database>>
@@ -143,7 +143,7 @@ describe('PlayerFinancial CRUD Service', () => {
       expect(result.success).toBe(true)
       expect(result.data).toBeDefined()
       expect(result.data?.player_id).toBe(testPlayerId)
-      expect(result.data?.cash_in).toBe('500.00')
+      expect(result.data?.cash_in).toBe(500)
       expect(result.data?.transaction_type).toBe('DEPOSIT')
       expect(result.data?.reconciliation_status).toBe('PENDING')
 
@@ -166,7 +166,7 @@ describe('PlayerFinancial CRUD Service', () => {
       expect(result.success).toBe(true)
       expect(result.data?.chips_brought).toBe(1000)
       expect(result.data?.chips_taken).toBe(1500)
-      expect(result.data?.net_change).toBe('500.00')
+      expect(result.data?.net_change).toBe(500)
 
       testTransactionId = result.data!.id
     })
@@ -273,7 +273,7 @@ describe('PlayerFinancial CRUD Service', () => {
       const result = await service.update(testTransactionId, updateData)
 
       expect(result.success).toBe(true)
-      expect(result.data?.net_change).toBe('-50.00')
+      expect(result.data?.net_change).toBe(-50)
       expect(result.data?.notes).toBe('Adjusted for discrepancy')
     })
 
