@@ -1,9 +1,8 @@
-import { Card, CardBody } from '@heroui/card'
-import { Database } from 'lucide-react'
-import { Divider } from '@heroui/divider'
-import { Link as HeroUILink } from '@heroui/link'
-
-import Link from 'next/link'
+import { Card, CardBody } from "@heroui/card";
+import { Divider } from "@heroui/divider";
+import { Link as HeroUILink } from "@heroui/link";
+import { Database } from "lucide-react";
+import Link from "next/link";
 
 export function Footer() {
   return (
@@ -266,5 +265,5 @@ export function Footer() {
         </Card>
       </div>
     </footer>
-  )
+  );
 }

@@ -4,6 +4,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js'
+
 import { Database } from '../../types/database.types'
 
 export type MockSupabaseClient = Partial<SupabaseClient<Database>>
@@ -27,13 +28,13 @@ export function createMockSupabaseClient(): MockSupabaseClient {
     in: jest.fn().mockReturnThis(),
     is: jest.fn().mockReturnThis(),
     single: jest.fn().mockResolvedValue({ data: mockData, error: mockError }),
-    maybeSingle: jest.fn().mockResolvedValue({ data: mockData, error: mockError }),
+    maybeSingle: jest
+      .fn()
+      .mockResolvedValue({ data: mockData, error: mockError }),
     limit: jest.fn().mockReturnThis(),
     order: jest.fn().mockReturnThis(),
     range: jest.fn().mockReturnThis(),
-    then: jest.fn((resolve) =>
-      resolve({ data: mockData, error: mockError })
-    ),
+    then: jest.fn((resolve) => resolve({ data: mockData, error: mockError })),
   })
 
   return {
@@ -67,7 +68,7 @@ export function createMockSupabaseClient(): MockSupabaseClient {
 export function mockServiceFactory<T>(
   factory: (client: SupabaseClient<Database>) => T,
   mockData?: any,
-  mockError?: any
+  mockError?: any,
 ): { service: T; mockClient: MockSupabaseClient } {
   const mockClient = createMockSupabaseClient()
   const service = factory(mockClient as SupabaseClient<Database>)

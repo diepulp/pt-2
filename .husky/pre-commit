@@ -1,1 +1,5 @@
+# Run service layer anti-pattern checks first
+.husky/pre-commit-service-check.sh
+
+# Run standard lint-staged
 npm run lint-staged

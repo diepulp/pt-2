@@ -1,59 +1,58 @@
-'use client'
+"use client";
 
-import { Avatar } from '@heroui/avatar'
-import { Quote, Star } from 'lucide-react'
-import { Card, CardBody, CardFooter, CardHeader } from '@heroui/card'
-import { Chip } from '@heroui/chip'
-import { motion, useInView } from 'motion/react'
-
-import { useRef } from 'react'
+import { Avatar } from "@heroui/avatar";
+import { Card, CardBody, CardFooter, CardHeader } from "@heroui/card";
+import { Chip } from "@heroui/chip";
+import { Quote, Star } from "lucide-react";
+import { motion, useInView } from "motion/react";
+import { useRef } from "react";
 
 const testimonials = [
   {
     quote:
-      'CasinoTrack Pro has revolutionized how we engage with our players. The data insights have helped us create targeted promotions that significantly increased player retention.',
-    author: 'Sarah Johnson',
-    role: 'Director of Player Relations',
-    company: 'Grand Palace Casino',
+      "CasinoTrack Pro has revolutionized how we engage with our players. The data insights have helped us create targeted promotions that significantly increased player retention.",
+    author: "Sarah Johnson",
+    role: "Director of Player Relations",
+    company: "Grand Palace Casino",
     rating: 5,
   },
   {
     quote:
       "The player tracking capabilities are unmatched. We've seen a 45% increase in player satisfaction and a 30% boost in loyalty program participation since implementing the system.",
-    author: 'Michael Chen',
-    role: 'VP of Operations',
-    company: 'Royal Diamond Resort',
+    author: "Michael Chen",
+    role: "VP of Operations",
+    company: "Royal Diamond Resort",
     rating: 5,
   },
   {
     quote:
       "The ROI we've experienced with CasinoTrack Pro exceeded our expectations. The personalized marketing alone has paid for the entire system many times over.",
-    author: 'David Rodriguez',
-    role: 'Chief Marketing Officer',
-    company: 'Golden Sands Casino',
+    author: "David Rodriguez",
+    role: "Chief Marketing Officer",
+    company: "Golden Sands Casino",
     rating: 5,
   },
   {
     quote:
-      'Integration was seamless with our existing systems. The support team was outstanding throughout the entire process, and the results speak for themselves.',
-    author: 'Jennifer Williams',
-    role: 'IT Director',
-    company: 'Silver Star Entertainment',
+      "Integration was seamless with our existing systems. The support team was outstanding throughout the entire process, and the results speak for themselves.",
+    author: "Jennifer Williams",
+    role: "IT Director",
+    company: "Silver Star Entertainment",
     rating: 5,
   },
   {
     quote:
-      'Our player retention has increased dramatically since implementing CasinoTrack Pro. The analytics tools give us insights we never had before.',
-    author: 'Robert Turner',
-    role: 'General Manager',
-    company: 'Emerald Coast Resort',
+      "Our player retention has increased dramatically since implementing CasinoTrack Pro. The analytics tools give us insights we never had before.",
+    author: "Robert Turner",
+    role: "General Manager",
+    company: "Emerald Coast Resort",
     rating: 5,
   },
-]
+];
 
 export function TestimonialsSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, amount: 0.2 })
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -63,7 +62,7 @@ export function TestimonialsSection() {
         staggerChildren: 0.1,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -72,7 +71,7 @@ export function TestimonialsSection() {
       opacity: 1,
       transition: { duration: 0.5 },
     },
-  }
+  };
 
   return (
     <section id="testimonials" className="py-24 bg-muted/20">
@@ -80,7 +79,7 @@ export function TestimonialsSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
+          animate={isInView ? "visible" : "hidden"}
           variants={containerVariants}
           className="space-y-12"
         >
@@ -132,13 +131,13 @@ export function TestimonialsSection() {
                       <div className="flex items-center gap-3">
                         <Avatar
                           name={testimonial.author
-                            .split(' ')
+                            .split(" ")
                             .map((n) => n[0])
-                            .join('')}
+                            .join("")}
                           size="md"
                           classNames={{
-                            base: 'bg-gradient-to-br from-primary to-secondary',
-                            name: 'text-white font-semibold',
+                            base: "bg-gradient-to-br from-primary to-secondary",
+                            name: "text-white font-semibold",
                           }}
                         />
                         <div className="flex flex-col">
@@ -195,5 +194,5 @@ export function TestimonialsSection() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

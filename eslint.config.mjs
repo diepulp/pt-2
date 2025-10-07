@@ -1,16 +1,19 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { dirname } from 'path'
+import { fileURLToPath } from 'url'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+import { FlatCompat } from '@eslint/eslintrc'
+
+import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
-});
+})
 
 const eslintConfig = [
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
+  ...compat.extends('next/core-web-vitals', 'next/typescript'),
   {
     ignores: [
       'node_modules/**',
@@ -23,6 +26,64 @@ const eslintConfig = [
       'types/database.types.ts', // Generated file, exclude from linting
       'cypress/**/*.{js,ts}', // Exclude Cypress files from main config
     ],
+  },
+  // Service layer specific configuration - PRD §3.3 Service Layer Standards
+  {
+    files: ['services/**/*.ts', 'services/**/*.tsx'],
+    plugins: {
+      'custom-rules': {
+        rules: {
+          'no-return-type-inference': noReturnTypeInference,
+        },
+      },
+    },
+    rules: {
+      // Enable custom rule for ReturnType detection
+      'custom-rules/no-return-type-inference': 'error',
+      // Require explicit return types for service factories
+      '@typescript-eslint/explicit-function-return-type': [
+        'error',
+        {
+          allowExpressions: false,
+          allowTypedFunctionExpressions: true,
+          allowHigherOrderFunctions: false,
+        },
+      ],
+
+      // Ban ReturnType inference patterns (PRD §3.3: Ban ReturnType<typeof createXService>)
+      'no-restricted-syntax': [
+        'error',
+        {
+          // Simpler pattern: catch any type alias with ReturnType in services
+          selector:
+            'ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name="ReturnType"]',
+          message:
+            'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3). Define explicit interface: export interface XService { methodName(): ReturnType }',
+        },
+      ],
+
+      // Ban @deprecated code patterns
+      'no-warning-comments': [
+        'error',
+        {
+          terms: ['@deprecated'],
+          location: 'start',
+        },
+      ],
+
+      // Forbid global state in services
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'globalThis',
+          message:
+            'Service factories must be pure and stateless. No global state allowed.',
+        },
+      ],
+
+      // No console in services (use structured logging)
+      'no-console': 'error',
+    },
   },
   // Cypress-specific configuration
   {
@@ -62,20 +123,18 @@ const eslintConfig = [
       'plugin:jsx-a11y/recommended',
       'plugin:prettier/recommended',
     ],
-    plugins: ['@typescript-eslint', 'react', 'import', 'jsx-a11y', 'prettier', 'no-only-tests'],
+    plugins: [
+      '@typescript-eslint',
+      'react',
+      'import',
+      'jsx-a11y',
+      'prettier',
+      'no-only-tests',
+    ],
     rules: {
       // ===================================================================
       // PRD Section 4: Anti-Pattern Guardrails
       // ===================================================================
-
-      // Forbid Supabase client creation in components/stores
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'CallExpression[callee.name="createClient"]',
-          message: 'Do not create Supabase clients in components or stores. Use createServerClient or createBrowserClient from utils/supabase.',
-        },
-      ],
 
       // Ban console.* in production code (allow in tests)
       'no-console': ['error', { allow: ['warn', 'error'] }],
@@ -86,14 +145,23 @@ const eslintConfig = [
       // Ban test.only and describe.only to prevent accidental CI failures
       'no-only-tests/no-only-tests': 'error',
 
-      // Service layer type enforcement
+      // Service layer type enforcement + Supabase client restrictions
       'no-restricted-imports': [
         'error',
         {
+          paths: [
+            {
+              name: '@supabase/supabase-js',
+              importNames: ['createClient'],
+              message:
+                'Do not use createClient from @supabase/supabase-js directly. Use createClient from lib/supabase/server or lib/supabase/client.',
+            },
+          ],
           patterns: [
             {
               group: ['**/services/*/index'],
-              message: 'Do not use ReturnType inference. Import explicit interfaces from service modules.',
+              message:
+                'Do not use ReturnType inference. Import explicit interfaces from service modules.',
             },
           ],
         },
@@ -179,6 +247,6 @@ const eslintConfig = [
       },
     },
   }),
-];
+]
 
-export default eslintConfig;
+export default eslintConfig

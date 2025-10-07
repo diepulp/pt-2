@@ -1,13 +1,12 @@
-'use client'
+"use client";
 
-import { Button } from '@heroui/button'
-import { ChevronDown, Database } from 'lucide-react'
+import { Button } from "@heroui/button";
 import {
   Dropdown,
   DropdownItem,
   DropdownMenu,
   DropdownTrigger,
-} from '@heroui/dropdown'
+} from "@heroui/dropdown";
 import {
   Navbar,
   NavbarBrand,
@@ -16,26 +15,26 @@ import {
   NavbarMenu,
   NavbarMenuItem,
   NavbarMenuToggle,
-} from '@heroui/navbar'
-import { motion } from 'motion/react'
+} from "@heroui/navbar";
+import { ChevronDown, Database } from "lucide-react";
+import { motion } from "motion/react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 
-import Link from 'next/link'
-import { useEffect, useState } from 'react'
-
-import { ThemeToggle } from '@/components/landing-page/theme-toggle'
-import { ThemeSwitcher } from '@/components/theme-switcher'
+import { ThemeToggle } from "@/components/landing-page/theme-toggle";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 
 export function HeroNavbar() {
-  const [isScrolled, setIsScrolled] = useState(false)
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
+      setIsScrolled(window.scrollY > 10);
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   const navVariants = {
     hidden: { opacity: 0, y: -20 },
@@ -44,14 +43,14 @@ export function HeroNavbar() {
       y: 0,
       transition: { duration: 0.5 },
     },
-  }
+  };
 
   const menuItems = [
-    { name: 'Features', href: '#features' },
-    { name: 'Benefits', href: '#benefits' },
-    { name: 'Testimonials', href: '#testimonials' },
-    { name: 'Pricing', href: '#pricing' },
-  ]
+    { name: "Features", href: "#features" },
+    { name: "Benefits", href: "#benefits" },
+    { name: "Testimonials", href: "#testimonials" },
+    { name: "Pricing", href: "#pricing" },
+  ];
 
   return (
     <motion.div initial="hidden" animate="visible" variants={navVariants}>
@@ -59,8 +58,8 @@ export function HeroNavbar() {
         onMenuOpenChange={setIsMenuOpen}
         className={`transition-all duration-300 ${
           isScrolled
-            ? 'backdrop-blur-md bg-background/90 border-b'
-            : 'bg-transparent'
+            ? "backdrop-blur-md bg-background/90 border-b"
+            : "bg-transparent"
         }`}
         maxWidth="xl"
         position="sticky"
@@ -69,7 +68,7 @@ export function HeroNavbar() {
       >
         <NavbarContent>
           <NavbarMenuToggle
-            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             className="sm:hidden"
           />
           <NavbarBrand>
@@ -101,7 +100,7 @@ export function HeroNavbar() {
               aria-label="Features"
               className="w-[340px]"
               itemClasses={{
-                base: 'gap-4',
+                base: "gap-4",
               }}
             >
               <DropdownItem
@@ -182,8 +181,8 @@ export function HeroNavbar() {
         </NavbarMenu>
       </Navbar>
     </motion.div>
-  )
+  );
 }
 
 // Export with the original name for compatibility
-export { HeroNavbar as Navbar }
+export { HeroNavbar as Navbar };

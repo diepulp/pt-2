@@ -40,18 +40,26 @@ module.exports = {
           },
         ],
 
-        // Ban ReturnType inference patterns
+        // Ban ReturnType inference patterns (PRD §3.3: Ban ReturnType<typeof createXService>)
         "no-restricted-syntax": [
           "error",
           {
+            // Detect: export type XService = ReturnType<typeof createXService>
+            selector:
+              "TSTypeAliasDeclaration > TSTypeReference[typeName.name='ReturnType'] > TSTypeParameterInstantiation > TSTypeQuery[exprName.name=/.*Service$/]",
+            message:
+              "ANTI-PATTERN: ReturnType<typeof createXService> is banned (PRD §3.3). Define explicit interface instead: export interface XService { ... }",
+          },
+          {
+            // Detect: direct typeof queries without ReturnType wrapper
             selector: "TSTypeQuery[exprName.name=/^create.*Service$/]",
             message:
-              "Do not use ReturnType<typeof createXService>. Define explicit interfaces instead.",
+              "ANTI-PATTERN: Direct typeof inference for services is banned. Define explicit interfaces.",
           },
           {
             selector: "ClassDeclaration[decorators]",
             message:
-              "Do not use class-based services. Use functional factories instead.",
+              "ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.",
           },
         ],
 

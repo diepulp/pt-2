@@ -26,10 +26,7 @@ function AllTheProviders({ children }: { children: ReactNode }) {
   )
 }
 
-export function customRender(
-  ui: ReactElement,
-  options?: CustomRenderOptions
-) {
+export function customRender(ui: ReactElement, options?: CustomRenderOptions) {
   return render(ui, { wrapper: AllTheProviders, ...options })
 }
 

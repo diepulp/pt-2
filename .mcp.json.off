@@ -5,11 +5,10 @@
       "args": [],
       "env": {}
     },
+    
     "context7": {
-      "type": "stdio",
-      "command": "npx @context7/mcp",
-      "args": [],
-      "env": {}
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     },
     "morphllm-fast-apply": {
       "type": "stdio",
@@ -60,6 +59,23 @@
       ],
       "env": {}
     },
+      "supabase": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only",
+        "--project-ref=vaicxfihdldgepzryhpd"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
     "tavily": {
       "type": "stdio",
       "command": "npx",

@@ -1,8 +1,9 @@
 "use client";
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
+
+import { Button } from "@/components/ui/button";
+import { createBrowserComponentClient } from "@/lib/supabase/client";
 
 export function LogoutButton() {
   const router = useRouter();

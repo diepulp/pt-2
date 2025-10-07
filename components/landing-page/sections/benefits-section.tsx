@@ -1,27 +1,26 @@
-'use client'
+"use client";
 
-import { Button } from '@heroui/button'
-import { ArrowRight, CheckCircle } from 'lucide-react'
-import { Card, CardBody } from '@heroui/card'
-import { Chip } from '@heroui/chip'
-import { motion, useInView } from 'motion/react'
-
-import Image from 'next/image'
-import Link from 'next/link'
-import { useRef } from 'react'
+import { Button } from "@heroui/button";
+import { Card, CardBody } from "@heroui/card";
+import { Chip } from "@heroui/chip";
+import { ArrowRight, CheckCircle } from "lucide-react";
+import { motion, useInView } from "motion/react";
+import Image from "next/image";
+import Link from "next/link";
+import { useRef } from "react";
 
 const benefits = [
-  'Increase player retention by up to 40%',
-  'Grow player lifetime value by 35%',
-  'Reduce operational costs by 25%',
-  'Boost marketing ROI by targeting high-value players',
-  'Enhance customer experience with personalized rewards',
-  'Make data-driven decisions with comprehensive analytics',
-]
+  "Increase player retention by up to 40%",
+  "Grow player lifetime value by 35%",
+  "Reduce operational costs by 25%",
+  "Boost marketing ROI by targeting high-value players",
+  "Enhance customer experience with personalized rewards",
+  "Make data-driven decisions with comprehensive analytics",
+];
 
 export function BenefitsSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, amount: 0.2 })
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -31,7 +30,7 @@ export function BenefitsSection() {
         staggerChildren: 0.1,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -40,7 +39,7 @@ export function BenefitsSection() {
       opacity: 1,
       transition: { duration: 0.5 },
     },
-  }
+  };
 
   const imageVariants = {
     hidden: { scale: 0.9, opacity: 0 },
@@ -49,7 +48,7 @@ export function BenefitsSection() {
       opacity: 1,
       transition: { duration: 0.7 },
     },
-  }
+  };
 
   return (
     <section id="benefits" className="py-24 relative overflow-hidden">
@@ -61,7 +60,7 @@ export function BenefitsSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
+          animate={isInView ? "visible" : "hidden"}
           variants={containerVariants}
           className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
         >
@@ -158,5 +157,5 @@ export function BenefitsSection() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,72 +1,71 @@
-'use client'
+"use client";
 
-import { Button } from '@heroui/button'
-import { CheckCircle, ChevronRight } from 'lucide-react'
-import { Card, CardBody, CardFooter, CardHeader } from '@heroui/card'
-import { Chip } from '@heroui/chip'
-import { Divider } from '@heroui/divider'
-import { motion, useInView } from 'motion/react'
-
-import Link from 'next/link'
-import { useRef } from 'react'
+import { Button } from "@heroui/button";
+import { Card, CardBody, CardFooter, CardHeader } from "@heroui/card";
+import { Chip } from "@heroui/chip";
+import { Divider } from "@heroui/divider";
+import { CheckCircle, ChevronRight } from "lucide-react";
+import { motion, useInView } from "motion/react";
+import Link from "next/link";
+import { useRef } from "react";
 
 const plans = [
   {
-    name: 'Starter',
-    price: '$1,999',
+    name: "Starter",
+    price: "$1,999",
     description:
-      'Perfect for small casinos getting started with player tracking',
-    period: 'per month',
+      "Perfect for small casinos getting started with player tracking",
+    period: "per month",
     features: [
-      'Player tracking for up to 5,000 players',
-      'Basic rewards management',
-      'Standard analytics dashboard',
-      'Email support',
-      'Data export capabilities',
+      "Player tracking for up to 5,000 players",
+      "Basic rewards management",
+      "Standard analytics dashboard",
+      "Email support",
+      "Data export capabilities",
     ],
     highlighted: false,
-    buttonText: 'Get Started',
+    buttonText: "Get Started",
   },
   {
-    name: 'Professional',
-    price: '$3,999',
-    description: 'Comprehensive solution for medium-sized operations',
-    period: 'per month',
+    name: "Professional",
+    price: "$3,999",
+    description: "Comprehensive solution for medium-sized operations",
+    period: "per month",
     features: [
-      'Player tracking for up to 25,000 players',
-      'Advanced rewards management',
-      'Comprehensive analytics dashboard',
-      'Email campaigns',
-      '24/7 priority support',
-      'API access for integrations',
-      'Event management tools',
+      "Player tracking for up to 25,000 players",
+      "Advanced rewards management",
+      "Comprehensive analytics dashboard",
+      "Email campaigns",
+      "24/7 priority support",
+      "API access for integrations",
+      "Event management tools",
     ],
     highlighted: true,
-    buttonText: 'Most Popular',
+    buttonText: "Most Popular",
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    description: 'Tailored solutions for large casino operations',
-    period: 'contact for pricing',
+    name: "Enterprise",
+    price: "Custom",
+    description: "Tailored solutions for large casino operations",
+    period: "contact for pricing",
     features: [
-      'Unlimited player tracking',
-      'Custom rewards programs',
-      'Advanced predictive analytics',
-      'Full marketing suite',
-      'Dedicated account manager',
-      'Custom integrations',
-      'On-site training and support',
-      'High availability infrastructure',
+      "Unlimited player tracking",
+      "Custom rewards programs",
+      "Advanced predictive analytics",
+      "Full marketing suite",
+      "Dedicated account manager",
+      "Custom integrations",
+      "On-site training and support",
+      "High availability infrastructure",
     ],
     highlighted: false,
-    buttonText: 'Contact Sales',
+    buttonText: "Contact Sales",
   },
-]
+];
 
 export function PricingSection() {
-  const ref = useRef(null)
-  const isInView = useInView(ref, { once: true, amount: 0.2 })
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, amount: 0.2 });
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -76,7 +75,7 @@ export function PricingSection() {
         staggerChildren: 0.1,
       },
     },
-  }
+  };
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
@@ -85,7 +84,7 @@ export function PricingSection() {
       opacity: 1,
       transition: { duration: 0.5 },
     },
-  }
+  };
 
   return (
     <section id="pricing" className="py-24">
@@ -93,7 +92,7 @@ export function PricingSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
+          animate={isInView ? "visible" : "hidden"}
           variants={containerVariants}
           className="space-y-12"
         >
@@ -117,13 +116,13 @@ export function PricingSection() {
             {plans.map((plan, index) => (
               <motion.div key={index} variants={itemVariants}>
                 <Card
-                  className={`h-full ${plan.highlighted ? 'border-2 border-primary' : ''}`}
-                  shadow={plan.highlighted ? 'lg' : 'md'}
+                  className={`h-full ${plan.highlighted ? "border-2 border-primary" : ""}`}
+                  shadow={plan.highlighted ? "lg" : "md"}
                   radius="lg"
                   classNames={{
                     base: plan.highlighted
-                      ? 'bg-gradient-to-br from-primary/5 to-secondary/5'
-                      : '',
+                      ? "bg-gradient-to-br from-primary/5 to-secondary/5"
+                      : "",
                   }}
                 >
                   <CardHeader className="pb-4">
@@ -167,8 +166,8 @@ export function PricingSection() {
                     <Button
                       as={Link}
                       href="#contact"
-                      color={plan.highlighted ? 'primary' : 'default'}
-                      variant={plan.highlighted ? 'solid' : 'flat'}
+                      color={plan.highlighted ? "primary" : "default"}
+                      variant={plan.highlighted ? "solid" : "flat"}
                       className="w-full group"
                       size="lg"
                       endContent={
@@ -191,5 +190,5 @@ export function PricingSection() {
         </motion.div>
       </div>
     </section>
-  )
+  );
 }

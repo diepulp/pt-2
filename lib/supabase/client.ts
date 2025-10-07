@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { createBrowserClient } from '@supabase/ssr'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from '@/types/database.types'
+import type { Database } from "@/types/database.types";
 
-let browserInstance: SupabaseClient<Database> | null = null
+let browserInstance: SupabaseClient<Database> | null = null;
 
 /**
  * Create a Supabase client for Client Components
@@ -13,7 +13,7 @@ let browserInstance: SupabaseClient<Database> | null = null
  * @returns SupabaseClient
  */
 export function createBrowserComponentClient(): SupabaseClient<Database> {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     // Return a more complete mock client for build-time/server-side rendering
     const mockClient = {
       from: () => ({
@@ -25,14 +25,17 @@ export function createBrowserComponentClient(): SupabaseClient<Database> {
       }),
       auth: {
         getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-        getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+        getSession: () =>
+          Promise.resolve({ data: { session: null }, error: null }),
         signOut: () => Promise.resolve({ error: null }),
-        onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+        onAuthStateChange: () => ({
+          data: { subscription: { unsubscribe: () => {} } },
+        }),
       },
       channel: () => ({
         on: () => ({ subscribe: () => ({}) }),
         unsubscribe: () => {},
-        subscribe: () => Promise.resolve('SUBSCRIBED'),
+        subscribe: () => Promise.resolve("SUBSCRIBED"),
       }),
       rpc: () => Promise.resolve({ data: null, error: null }),
       storage: {
@@ -47,21 +50,21 @@ export function createBrowserComponentClient(): SupabaseClient<Database> {
           unsubscribe: () => {},
         }),
       },
-    }
+    };
 
-    return mockClient as unknown as SupabaseClient<Database>
+    return mockClient as unknown as SupabaseClient<Database>;
   }
 
   if (browserInstance) {
-    return browserInstance
+    return browserInstance;
   }
 
   browserInstance = createBrowserClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  ) satisfies SupabaseClient<Database>
+  ) satisfies SupabaseClient<Database>;
 
-  return browserInstance
+  return browserInstance;
 }
 
 // export function createBrowserComponentClient() {
@@ -74,5 +77,5 @@ export function createBrowserComponentClient(): SupabaseClient<Database> {
 
 // Optional: Add method to cleanup the client instance if needed
 export function cleanupClientInstance() {
-  browserInstance = null
+  browserInstance = null;
 }
