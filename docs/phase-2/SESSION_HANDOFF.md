@@ -17,7 +17,7 @@
   - Queries: list(), listByCompany()
   - Error handling: FK violations, NOT_FOUND, DUPLICATE_CASINO
 - **Interface**: [services/casino/index.ts](~/services/casino/index.ts) - Explicit CasinoService
-- **Tests**: [services/casino/__tests__/casino-service.test.ts](~/services/casino/__tests__/casino-service.test.ts)
+- **Tests**: [__tests__/services/casino/casino-service.test.ts](~/__tests__/services/casino/casino-service.test.ts)
   - 13 comprehensive test cases (100% pass rate)
   - Coverage: CRUD + queries + error scenarios
 - **Bounded Context**: "Where is this happening?" (Location Domain)
@@ -33,12 +33,21 @@
   - Settings: applySettings(), getActiveSettings(), getSettingsHistory(), deactivateSettings()
   - Temporal configuration: Automatic state management, cascading deactivation
 - **Interface**: [services/table-context/index.ts](~/services/table-context/index.ts) - Explicit TableContextService
-- **Tests**: [services/table-context/__tests__/table-context-service.test.ts](~/services/table-context/__tests__/table-context-service.test.ts)
+- **Tests**: [__tests__/services/table-context/table-context-service.test.ts](~/__tests__/services/table-context/table-context-service.test.ts)
   - 22 comprehensive test cases (100% pass rate)
   - Coverage: Table CRUD + settings operations + temporal logic + error scenarios
 - **Bounded Context**: "What game/table configuration?" (Configuration Domain)
 - **Complexity**: 3-table relationships, temporal validity windows, state-based configuration
 - **Velocity**: ~2 hours (parallel execution with Casino)
+
+**Test Location Standardization ✅**
+- **Problem**: Test location inconsistency (4 services root-level, 2 co-located)
+- **Resolution**: Established formal standard via [ADR-002](~/docs/architecture/ADR-002-test-location-standard.md)
+- **Migration**: Moved Casino + TableContext tests from `services/*/__tests__/` → `__tests__/services/`
+- **Documentation**: Updated [SERVICE_TEMPLATE_QUICK.md](~/docs/patterns/SERVICE_TEMPLATE_QUICK.md)
+- **Analysis**: [TEST_LOCATION_INCONSISTENCY.md](~/docs/architecture/TEST_LOCATION_INCONSISTENCY.md)
+- **Outcome**: 100% consistency across all 6 services, aligned with Jest/Next.js conventions
+- **Key Decision**: Test location is orthogonal to vertical slicing (verified via sequential analysis)
 
 ### ✅ Completed (Day 4 - Schema Consistency + PlayerFinancialService)
 
@@ -196,6 +205,7 @@
 4. **Bounded Context Integrity**: Service Responsibility Matrix enforced
 5. **Schema Consistency**: UUID standardization (anti-pattern prevention)
 6. **Proactive Migration**: Address inconsistencies during nascent phase
+7. **Test Location Standard**: Root-level `__tests__/services/` (ADR-002), orthogonal to vertical slicing
 
 ---
 
@@ -216,6 +226,8 @@
 - [docs/audits/SCHEMA_CONSISTENCY_RESOLUTION.md](~/docs/audits/SCHEMA_CONSISTENCY_RESOLUTION.md) - **UUID migration analysis**
 - [docs/patterns/SERVICE_TEMPLATE_QUICK.md](~/docs/patterns/SERVICE_TEMPLATE_QUICK.md) - **Implementation guide**
 - [docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md](~/docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md) - Anti-patterns §4
+- [docs/architecture/ADR-002-test-location-standard.md](~/docs/architecture/ADR-002-test-location-standard.md) - **Test location standard**
+- [docs/architecture/TEST_LOCATION_INCONSISTENCY.md](~/docs/architecture/TEST_LOCATION_INCONSISTENCY.md) - **Test inconsistency analysis**
 
 ### Migrations
 - [20251006234000_migrate_ratingslip_id_to_uuid.sql](~/supabase/migrations/20251006234000_migrate_ratingslip_id_to_uuid.sql) - Schema consistency
@@ -229,18 +241,19 @@
 
 ```bash
 # Verify all services passing
-npm test services/player/__tests__/player-service.test.ts
-npm test services/visit/__tests__/visit-service.test.ts
-npm test services/ratingslip/__tests__/ratingslip-service.test.ts
-npm test services/player-financial/__tests__/crud.test.ts
-npm test services/casino/__tests__/casino-service.test.ts
-npm test services/table-context/__tests__/table-context-service.test.ts
+npm test __tests__/services/player/player-service.test.ts
+npm test __tests__/services/visit/visit-service.test.ts
+npm test __tests__/services/ratingslip/ratingslip-service.test.ts
+npm test __tests__/services/player-financial/crud.test.ts
+npm test __tests__/services/casino/casino-service.test.ts
+npm test __tests__/services/table-context/table-context-service.test.ts
 
 # Review bounded context
 cat docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md
 
-# Create MTL Service structure
-mkdir -p services/mtl/__tests__
+# Create MTL Service structure (NOTE: tests go in __tests__/)
+mkdir -p services/mtl
+mkdir -p __tests__/services/mtl
 
 # Schema already exists: mtl_entry table
 # Check existing columns
@@ -301,6 +314,7 @@ Recent achievements (Day 5):
 - Table Context Service: 3-table relationships with temporal configuration
 - Parallel execution: 2 services delivered simultaneously using full-stack agents
 - Zero PRD violations across both services
+- Test location standardization: Achieved 100% consistency (ADR-002), tests migrated to root-level
 
 Remaining work:
 - MTL Service (Compliance domain) - 1 day
