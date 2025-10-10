@@ -8,7 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
 import type { ServiceResult } from "@/services/shared/types";
 
-import { withServerAction } from "../with-server-action-wrapper";
+import { withServerAction } from "@/lib/server-actions/with-server-action-wrapper";
 
 describe("withServerAction", () => {
   let mockSupabase: SupabaseClient<Database>;
