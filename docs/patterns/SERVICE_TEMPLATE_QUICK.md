@@ -200,8 +200,6 @@ npx tsc --noEmit
 npm test && npx tsc --noEmit
 ```
 
-**Note**: Casino and TableContext services currently have co-located tests (`services/*/__ tests__/`). This is an **inconsistency** that will be migrated. See [TEST_LOCATION_INCONSISTENCY.md](../architecture/TEST_LOCATION_INCONSISTENCY.md) for details.
-
 ---
 
 ## Time Estimates

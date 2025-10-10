@@ -1,52 +1,68 @@
-# PT-2 Next Steps & Vertical Slice Recommendations
+# PT-2 Next Steps & Hybrid Architecture Implementation
 
-> **Date**: 2025-10-07
-> **Context**: Phase 2 - 75% Complete (6/8 services)
-> **Purpose**: Actionable roadmap for completing Phase 2 and transitioning to Phase 3
+> **Date**: 2025-10-10 (Updated)
+> **Context**: Phase 2 - 87.5% Complete (7/8 services, MTL done)
+> **Purpose**: Actionable roadmap with HORIZONTAL→VERTICAL→HORIZONTAL pattern
+> **Strategy**: [BALANCED_ARCHITECTURE_QUICK.md](../patterns/BALANCED_ARCHITECTURE_QUICK.md)
 
 ---
 
 ## Executive Summary
 
-**Current Achievement**: 6/8 core services complete with 79/79 tests passing. Template velocity validated at 4x improvement. Test infrastructure standardized via ADR-002.
+**Current Achievement**: 7/8 core services complete with 98/98 tests passing. Template velocity validated at 4x improvement sustained. MTL Service (Compliance domain) delivered with CTR aggregation. Hybrid architecture strategy formalized.
 
-**Immediate Priority**: Complete MTL Service (Compliance domain), then transition to Phase 3 UI layer with state management foundation.
+**Immediate Priority**: Week 3 integration testing, then transition to Phase 3 with HORIZONTAL state management foundation enabling VERTICAL UI delivery.
 
-**Critical Path**: Service layer → State management → UI components → Real-time infrastructure → Production hardening
+**Critical Path**: HORIZONTAL infrastructure → VERTICAL features → HORIZONTAL hardening
+
+**Hybrid Pattern**:
+- **Week 2 (HORIZONTAL)**: Complete ALL service infrastructure → enables Phase 3
+- **Week 3 (HORIZONTAL)**: React Query + Zustand for ALL domains → enables vertical UI
+- **Weeks 4-5 (VERTICAL)**: Player → Visit → RatingSlip UI (one domain at a time)
+- **Weeks 6-8 (HORIZONTAL)**: Performance, security, deployment across ALL domains
 
 ---
 
 ## Phase 2 Completion (Week 3)
 
-### Priority 1: MTL Service (Compliance Domain) - 1 Day
+### ✅ Completed: MTL Service (Compliance Domain) - Day 6
 
 **Bounded Context**: "What cash transactions require regulatory reporting?"
 
-**Implementation Scope**:
+**Implementation Delivered**:
 ```
 services/mtl/
-├── index.ts           # Explicit MTLService interface
-├── crud.ts            # Transaction CRUD operations
-└── queries.ts         # Compliance queries
+├── index.ts           # ✅ Explicit MTLService interface
+├── crud.ts            # ✅ Transaction CRUD operations
+└── queries.ts         # ✅ Compliance queries with CTR aggregation
 
 __tests__/services/mtl/
-└── mtl-service.test.ts  # Comprehensive test coverage
+└── mtl-service.test.ts  # ✅ 19/19 tests passing
 ```
 
-**Key Operations**:
-- **CRUD**: create(), getById(), update(), delete()
-- **Queries**:
-  - listByGamingDay() - Gaming day calculation logic
+**Delivered Operations**:
+- **CRUD**: ✅ create(), getById(), update(), delete()
+- **Queries**: ✅
+  - listByGamingDay() - Gaming day filtering
   - listByCTRThreshold() - $10k threshold detection
   - listByPatron() - Patron transaction history
-  - getPendingCTRReports() - Unprocessed reporting queue
+  - listByArea() - Area-specific compliance
+  - getPendingCTRReports() - Patron+direction aggregation logic
 
-**Regulatory Constraints**:
-- CTR threshold: $10,000 cash in/out
-- Gaming day: 6am-6am cycle
-- Direction: cash_in, cash_out
-- Area: pit, cage, slot
-- Tender types: cash, check, chip
+**Regulatory Implementation**:
+- ✅ CTR threshold: $10,000 aggregation by patron+direction
+- ✅ Gaming day: Date-based filtering
+- ✅ Direction: cash_in, cash_out (MtlDirection enum)
+- ✅ Area: pit, cage, slot, poker, kiosk, sportsbook, other (MtlArea enum)
+- ✅ Tender types: cash, cashier_check, tito, money_order, chips, other (TenderType enum)
+
+**Velocity**: ~2 hours (includes compliance query implementation)
+
+---
+
+### Priority 1: Loyalty Service (Rewards Domain) - 1 Day
+
+**Bounded Context**: "What rewards/points does player have?"
 
 **Complexity**: Medium-High (regulatory logic, gaming day calculations, compliance rules)
 
@@ -192,19 +208,30 @@ getTransactionsByArea(area: string, dateRange: DateRange): Promise<ServiceResult
 
 ---
 
-## Phase 3: UI Layer & State Management (Weeks 4-6)
+## Phase 3: UI Layer & State Management (Weeks 3-5)
+
+> **Hybrid Strategy Applied**: Week 1 HORIZONTAL → Weeks 2-3 VERTICAL → Integrated real-time
 
 ### Critical Blockers Resolved by Phase 2
-✅ Service layer complete with explicit interfaces
+✅ Service layer complete with explicit interfaces (7/8 services, 87.5%)
 ✅ ServiceResult pattern for error handling
 ✅ Typed Supabase clients
 ✅ Test infrastructure proven
+✅ Hybrid architecture strategy formalized
 
-### Phase 3 Vertical Slice Strategy
+---
 
-**Week 4: State Management Foundation** (3 days)
+### Week 3: State Management Foundation (HORIZONTAL)
 
-#### Vertical Slice 1: React Query Infrastructure
+**Goal**: Infrastructure setup affecting ALL domains
+
+> **Pattern**: HORIZONTAL infrastructure (Days 1-2) → VERTICAL application (Days 3-5)
+
+---
+
+#### Days 1-2: HORIZONTAL Infrastructure Setup
+
+**React Query Configuration** - **Affects ALL domains**:
 ```
 lib/
 └── query-client.ts              # React Query configuration
@@ -218,7 +245,23 @@ Configuration:
 
 **Key Decision**: React Query for ALL remote state (server data), Zustand ONLY for ephemeral UI state.
 
-#### Vertical Slice 2: Query Hook Template
+**Server Action Wrapper** - **Affects ALL actions**:
+
+**Zustand UI Store Pattern** - **Affects ALL UI state**:
+- Modal/dialog visibility
+- Selected IDs (ephemeral)
+- Navigation state
+- **Never server data**
+
+**Rationale**: HORIZONTAL infrastructure enables ALL vertical UI slices in Weeks 4-5
+
+---
+
+#### Days 3-5: VERTICAL Domain Application
+
+**Goal**: Apply infrastructure to Player, Visit, RatingSlip domains
+
+#### Query Hook Template (HORIZONTAL Reusable Pattern)
 ```typescript
 // hooks/shared/use-service-query.ts
 export function useServiceQuery<T>(
@@ -415,9 +458,13 @@ export const useUIStore = create<UIState>((set) => ({
 
 ---
 
-**Week 5: Domain UI Components** (5 days)
+---
 
-#### Vertical Slice 8: Player Domain UI
+### Week 4: Player Management UI (VERTICAL)
+
+**Goal**: Complete Player domain feature (full-stack delivery)
+
+#### Player Domain UI (VERTICAL Slice)
 
 **Component Architecture**:
 ```
@@ -484,29 +531,62 @@ export function PlayerListClient({ players: initialPlayers }: PlayerListClientPr
 }
 ```
 
-**Estimated Effort**: 2 days (Player domain complete)
+**Deliverables**:
+- Working Player Management UI (search, CRUD, real-time)
+- Independently testable and deployable feature
 
-#### Vertical Slice 9: Visit Domain UI
+**Estimated Effort**: 5 days (full-stack Player feature)
+
+---
+
+### Week 5: Visit & RatingSlip UI (VERTICAL)
+
+**Goal**: Complete Visit and RatingSlip domain features
+
+#### Visit Domain UI (VERTICAL Slice)
 - visit-form.tsx (start visit workflow)
 - visit-list.tsx (active/historical visits)
-- visit-detail.tsx (visit lifecycle actions)
+- visit-detail.tsx (lifecycle actions)
 - visit-status-badge.tsx (status display)
+- Real-time visit updates
 
 **Estimated Effort**: 2 days
 
-#### Vertical Slice 10: RatingSlip Domain UI
+#### RatingSlip Domain UI (VERTICAL Slice)
 - rating-form.tsx (create/update ratings)
 - rating-list.tsx (by table/player)
 - rating-detail.tsx (rating details)
 - point-display.tsx (point calculations)
+- Real-time rating updates
 
 **Estimated Effort**: 2 days
 
-**Total Week 5 Effort**: 5 days (overlapping work on different domains)
+**Integration Testing** (1 day):
+- Visit lifecycle workflows
+- Rating slip creation flows
+- Cross-domain interactions
+
+**Deliverables**:
+- Working Visit Tracking UI (lifecycle, real-time)
+- Working RatingSlip UI (rating, points, real-time)
 
 ---
 
-**Week 6: Real-Time Infrastructure** (5 days)
+### Phase 3 Summary: Hybrid Pattern Applied
+
+**HORIZONTAL Week** (Week 3):
+- React Query + Zustand infrastructure → ALL domains benefit
+
+**VERTICAL Weeks** (Weeks 4-5):
+- Player feature → Complete, user-facing
+- Visit feature → Complete, user-facing
+- RatingSlip feature → Complete, user-facing
+
+**Real-Time**: Integrated per domain (not separate HORIZONTAL phase)
+
+---
+
+**Week 6: Real-Time Infrastructure** (DEFERRED - integrated in Weeks 4-5)
 
 #### Vertical Slice 11: Real-Time Channel Wrapper
 ```typescript
@@ -760,14 +840,17 @@ export function PlayerListClient() {
 
 ## References
 
+- [BALANCED_ARCHITECTURE_QUICK.md](../patterns/BALANCED_ARCHITECTURE_QUICK.md) - **Hybrid strategy decision framework**
 - [SESSION_HANDOFF.md](../phase-2/SESSION_HANDOFF.md) - Current implementation state
-- [ARCHITECTURE_GAPS.md](./ARCHITECTURE_GAPS.md) - Detailed gap analysis
-- [MVP_PRODUCTION_ROADMAP.md](./MVP_PRODUCTION_ROADMAP.md) - Full roadmap
+- [ARCHITECTURE_GAPS.md](./ARCHITECTURE_GAPS.md) - Detailed gap analysis with HORIZONTAL/VERTICAL categorization
+- [MVP_PRODUCTION_ROADMAP.md](./MVP_PRODUCTION_ROADMAP.md) - Full roadmap with hybrid pattern
 - [SERVICE_TEMPLATE_QUICK.md](../patterns/SERVICE_TEMPLATE_QUICK.md) - Service implementation guide
 - [ADR-002](../architecture/ADR-002-test-location-standard.md) - Test location standard
 
 ---
 
-**Document Version**: 1.0.0
-**Last Updated**: 2025-10-07
+**Document Version**: 1.1.0
+**Last Updated**: 2025-10-10
 **Next Review**: End of Week 3 (Phase 2 completion)
+**Current Progress**: Phase 2 - 87.5% (7/8 services complete, MTL done)
+**Strategy**: HORIZONTAL infrastructure → VERTICAL features → HORIZONTAL hardening

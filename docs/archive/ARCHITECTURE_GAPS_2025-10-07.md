@@ -1,44 +1,22 @@
 # PT-2 Architecture Gap Analysis
 
-> **Date**: 2025-10-10
-> **Context**: Phase 2 Service Layer - 87.5% Complete (7/8 services, MTL complete)
+> **Date**: 2025-10-07
+> **Context**: Phase 2 Service Layer - 75% Complete (6/8 services)
 > **Purpose**: Identify missing architectural components for production readiness
-> **Strategy**: Hybrid Architecture (HORIZONTAL layers + VERTICAL delivery)
-
----
-
-## Architecture Strategy
-
-**Decision Framework**: [BALANCED_ARCHITECTURE_QUICK.md](../patterns/BALANCED_ARCHITECTURE_QUICK.md)
-
-**Core Principle**: *"Horizontal layers for technical architecture, vertical slices for feature delivery"*
-
-### When to Use Each Approach
-
-| Approach | When to Use | Timeline | Example |
-|----------|-------------|----------|---------|
-| **HORIZONTAL** | ALL domains (>5 services) affected | 1-3 days | React Query setup, executeOperation wrapper |
-| **VERTICAL** | Single domain, user-facing feature | 1 week | Player Management UI, Visit Tracking |
-| **HYBRID** | 2-3 domains, orchestration needed | 2-3 days | Visit start flow (Player + Casino + Visit) |
-
-**Current Phase Strategy**:
-- **Week 2 (HORIZONTAL)**: Complete infrastructure foundation (all services, shared utilities)
-- **Weeks 3-5 (VERTICAL)**: Deliver features one domain at a time (Player → Visit → RatingSlip)
-- **Weeks 6-8 (HORIZONTAL)**: Harden across all domains (performance, security, real-time)
 
 ---
 
 ## Gap Summary
 
 ### ✅ Implemented (Strong Foundation)
-- **Service layer** with explicit interfaces (7/8 complete - 87.5%)
-  - Player, Visit, RatingSlip, PlayerFinancial, Casino, TableContext, MTL ✅
-  - Loyalty (deferred to post-MVP)
+- **Service layer** with explicit interfaces (6/8 complete)
+  - Player, Visit, RatingSlip, PlayerFinancial, Casino, TableContext ✅
+  - MTL (in progress), Loyalty (deferred to post-MVP)
 - **Shared infrastructure** (operation-wrapper, types, utils)
 - **Database schema** with RLS + UUID consistency
 - **JWT helpers** + audit logging skeleton
 - **CI/CD** with quality gates
-- **Testing infrastructure** (Jest + Cypress) - 98/98 tests passing
+- **Testing infrastructure** (Jest + Cypress) - 79/79 tests passing
 - **Anti-pattern enforcement** (ESLint + pre-commit hooks)
 - **Test location standard** (ADR-002) - Root-level `__tests__/services/`
 - **Bounded context integrity** - Service Responsibility Matrix
@@ -64,11 +42,7 @@
 
 ## Detailed Gap Analysis
 
-> **Gap Categorization**: Each gap is marked as HORIZONTAL (affects all services) or VERTICAL (domain-specific)
-
-### 1. State Management Layer (Phase 3 Blocker) - **HORIZONTAL**
-
-**Approach**: HORIZONTAL infrastructure setup affecting all domains
+### 1. State Management Layer (Phase 3 Blocker)
 
 **Current State**: Services exist, no consumption layer
 
@@ -106,9 +80,7 @@ store/
 
 ---
 
-### 2. Server Actions Layer (Phase 3 Blocker) - **HORIZONTAL + VERTICAL**
-
-**Approach**: HORIZONTAL wrapper + VERTICAL domain-specific actions
+### 2. Server Actions Layer (Phase 3 Blocker)
 
 **Current State**: Minimal server actions (player-create only)
 
@@ -142,9 +114,7 @@ app/actions/
 
 ---
 
-### 3. Real-Time Infrastructure (Phase 3 Critical) - **HORIZONTAL**
-
-**Approach**: HORIZONTAL infrastructure + domain-specific hooks
+### 3. Real-Time Infrastructure (Phase 3 Critical)
 
 **Current State**: No real-time infrastructure
 
@@ -173,9 +143,7 @@ lib/realtime/
 
 ---
 
-### 4. UI Component Layer (Phase 3 Blocker) - **VERTICAL**
-
-**Approach**: VERTICAL delivery per domain (Player week 1, Visit week 2, etc.)
+### 4. UI Component Layer (Phase 3 Blocker)
 
 **Current State**: Minimal UI (player-form only)
 
@@ -347,114 +315,43 @@ docs/operations/
 
 ## Remediation Plan
 
-> **Strategy Pattern**: HORIZONTAL → VERTICAL → HORIZONTAL
-
-### Week 2 (HORIZONTAL Infrastructure) - ✅ 87.5% Complete
-**Goal**: Complete ALL service layer infrastructure
-
+### Week 2 (Current) - Finish Services ✅ 75% Complete
 - ✅ Complete Casino Service (CRUD + queries)
 - ✅ Complete Table Context Service (3-table relationships, temporal config)
-- ✅ Complete MTL Service (compliance domain with CTR aggregation)
 - ✅ Test location standardization (ADR-002)
-- ⏳ Integration testing (Week 3)
+- 🔄 Complete MTL Service CRUD (in progress)
+- ⏳ Apply PT-1 search/query patterns (Week 3)
+- ⏳ Lock all service layer templates (Week 3)
 
-**Hybrid Principle**: When infrastructure affects ALL services, do it HORIZONTALLY before vertical feature delivery
+### Week 3 - State Management Foundation (P0)
+- Implement React Query config
+- Build query/mutation hook templates
+- Create Zustand UI stores
+- Server action wrapper + domain actions
 
----
+### Week 4 - Real-Time Infrastructure (P0)
+- Build `use-supabase-channel` wrapper
+- Implement invalidation scheduler
+- Domain-specific real-time hooks
+- Memory leak prevention testing
 
-### Week 3 (HORIZONTAL State Foundation) - P0 Blocker
-**Goal**: React Query + Zustand infrastructure for ALL domains
+### Week 5 - UI Component Layer (P0)
+- Player domain UI complete
+- Visit domain UI complete
+- RatingSlip domain UI complete
+- Dynamic import optimization
 
-**HORIZONTAL Setup** (2 days):
-- React Query configuration (`lib/query-client.ts`)
-- Query wrapper template (`hooks/shared/use-service-query.ts`)
-- Server action wrapper (`lib/actions/with-server-action-wrapper.ts`)
-- Zustand UI store pattern
+### Week 6 - Performance & Security (P1)
+- Lighthouse CI setup
+- Bundle analysis automation
+- RLS policy completion
+- Security advisor audit
 
-**VERTICAL Application** (3 days):
-- Player domain: queries, mutations, actions
-- Visit domain: queries, mutations, actions
-- RatingSlip domain: queries, mutations, actions
-
-**Rationale**: Foundation enables ALL vertical UI slices in Weeks 4-5
-
----
-
-### Weeks 4-5 (VERTICAL Feature Delivery) - P0 Critical
-**Goal**: Ship complete domain features one at a time
-
-**Week 4: Player Management (VERTICAL)**
-- Player UI components (list, form, detail, search)
-- Real-time player updates
-- E2E player workflows
-- **Deliverable**: Working Player Management feature
-
-**Week 5: Visit Tracking + RatingSlip (VERTICAL)**
-- Visit UI components (start, end, lifecycle)
-- RatingSlip UI components (create, list, point display)
-- Real-time visit/rating updates
-- **Deliverable**: Working Visit + Rating features
-
-**Rationale**: One domain at a time, full-stack delivery, user-visible progress
-
----
-
-### Week 6 (HORIZONTAL Real-Time Infrastructure) - P0 Critical
-**Goal**: Real-time infrastructure across ALL domains
-
-**HORIZONTAL Implementation** (3 days):
-- Channel wrapper (`hooks/shared/use-supabase-channel.ts`)
-- Invalidation scheduler (`lib/realtime/invalidation-scheduler.ts`)
-- Memory leak prevention patterns
-
-**VERTICAL Application** (2 days):
-- Player real-time hooks
-- Visit real-time hooks
-- RatingSlip real-time hooks
-- TableContext real-time hooks
-
-**Rationale**: Apply proven pattern to ALL domains simultaneously
-
----
-
-### Week 7-8 (HORIZONTAL Hardening) - P1 Production Readiness
-**Goal**: Production hardening across ALL domains
-
-**Week 7: Performance + Security (HORIZONTAL)**
-- Bundle optimization (affects ALL routes)
-- Lighthouse CI (ALL pages)
-- RLS policy completion (ALL tables)
-- Security advisor audit (ALL endpoints)
-
-**Week 8: Observability + Deployment (HORIZONTAL)**
-- Structured logging (ALL services)
-- Telemetry infrastructure (ALL actions)
-- Deployment automation (ALL environments)
-- Rollback procedures (ALL migrations)
-
-**Rationale**: Production concerns affect entire system, not individual features
-
----
-
-## Hybrid Strategy Success Metrics
-
-### HORIZONTAL Success Criteria
-- React Query config: Used by 100% of domain hooks
-- Service layer: 7/8 services complete (87.5%)
-- Real-time infrastructure: <1s latency across ALL domains
-- Performance: LCP ≤2.5s on ALL pages
-- Security: Zero RLS violations across ALL tables
-
-### VERTICAL Success Criteria
-- Player feature: 100% functional (search, CRUD, real-time)
-- Visit feature: 100% functional (lifecycle, tracking)
-- RatingSlip feature: 100% functional (rating, points)
-- Each feature: Independently deployable and testable
-
-### Decision Framework Adoption
-- Team uses BALANCED_ARCHITECTURE_QUICK.md for ALL decisions
-- Clear HORIZONTAL vs VERTICAL categorization in commits
-- ADRs document when and why each approach was chosen
+### Week 7 - Observability & Deployment (P1)
+- Structured logging implementation
+- Telemetry infrastructure
+- Deployment automation
+- Rollback procedures
 
 ---
 
@@ -472,7 +369,6 @@ docs/operations/
 
 ## References
 
-- [BALANCED_ARCHITECTURE_QUICK.md](../patterns/BALANCED_ARCHITECTURE_QUICK.md) - **Hybrid strategy decision framework**
 - [CANONICAL_BLUEPRINT_MVP_PRD.md](../system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md) - Architecture requirements
 - [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) - Service patterns
 - [controlled-hybrid-refactor-model.md](../patterns/controlled-hybrid-refactor-model.md) - Implementation strategy
@@ -480,6 +376,6 @@ docs/operations/
 
 ---
 
-**Last Updated**: 2025-10-10
+**Last Updated**: 2025-10-07
 **Next Review**: End of Week 3 (Phase 2 completion)
-**Current Progress**: Phase 2 - 87.5% (7/8 services complete, MTL done)
+**Current Progress**: Phase 2 - 75% (6/8 services complete)

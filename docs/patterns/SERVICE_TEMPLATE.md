@@ -41,8 +41,7 @@ services/
     ├── crud.ts                     # CRUD operations module
     ├── business.ts                 # Business logic (if needed)
     ├── queries.ts                  # Complex queries (if needed)
-    └── __tests__/
-        └── {domain}-service.test.ts
+    └── 
 ```
 
 **Rule of Three**: Don't create `business.ts` or `queries.ts` until 3rd instance of pattern.
