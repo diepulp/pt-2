@@ -18,12 +18,17 @@ import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 import { createCasinoService, type CasinoService } from '@/services/casino'
-import { createPlayerService, type PlayerService } from '@/services/player'
-import { createVisitService, type VisitService } from '@/services/visit'
-import { createRatingSlipService, type RatingSlipService } from '@/services/ratingslip'
-import { createTableContextService, type TableContextService } from '@/services/table-context'
 import { createMTLService, type MTLService } from '@/services/mtl'
-
+import { createPlayerService, type PlayerService } from '@/services/player'
+import {
+  createRatingSlipService,
+  type RatingSlipService,
+} from '@/services/ratingslip'
+import {
+  createTableContextService,
+  type TableContextService,
+} from '@/services/table-context'
+import { createVisitService, type VisitService } from '@/services/visit'
 import type { Database } from '@/types/database.types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -331,7 +336,9 @@ describe('Service Integration Smoke Tests', () => {
       expect(result.error).toBeNull()
       // Note: Database may return timestamp in slightly different format
       expect(result.data?.check_out_date).toBeDefined()
-      expect(new Date(result.data!.check_out_date!).getTime()).toBe(new Date(checkOutDate).getTime())
+      expect(new Date(result.data!.check_out_date!).getTime()).toBe(
+        new Date(checkOutDate).getTime(),
+      )
     })
   })
 
@@ -580,7 +587,9 @@ describe('Service Integration Smoke Tests', () => {
         .single()
 
       if (staffResult.error) {
-        throw new Error(`Failed to create staff: ${JSON.stringify(staffResult.error)}`)
+        throw new Error(
+          `Failed to create staff: ${JSON.stringify(staffResult.error)}`,
+        )
       }
       testEmployeeId = staffResult.data!.id
     })
@@ -770,7 +779,9 @@ describe('Service Integration Smoke Tests', () => {
         .single()
 
       if (staffResult.error) {
-        throw new Error(`Failed to create workflow staff: ${JSON.stringify(staffResult.error)}`)
+        throw new Error(
+          `Failed to create workflow staff: ${JSON.stringify(staffResult.error)}`,
+        )
       }
 
       // 7. Create MTL Entry
@@ -893,7 +904,9 @@ describe('Service Integration Smoke Tests', () => {
       expect(result.error).toBeDefined()
       // Note: Error code might be 23502 (NOT NULL violation) instead of 23503 (FK violation)
       // when casino_id doesn't exist. Both indicate data integrity issues.
-      expect(['FOREIGN_KEY_VIOLATION', '23502', '23503']).toContain(result.error?.code)
+      expect(['FOREIGN_KEY_VIOLATION', '23502', '23503']).toContain(
+        result.error?.code,
+      )
       expect(result.data).toBeNull()
     })
 
@@ -916,7 +929,9 @@ describe('Service Integration Smoke Tests', () => {
       expect(result.success).toBe(false)
       expect(result.error).toBeDefined()
       // Note: Error code might be 23502 (NOT NULL violation) instead of 23503 (FK violation)
-      expect(['FOREIGN_KEY_VIOLATION', '23502', '23503']).toContain(result.error?.code)
+      expect(['FOREIGN_KEY_VIOLATION', '23502', '23503']).toContain(
+        result.error?.code,
+      )
     })
 
     it('should handle unique violation - duplicate player email', async () => {
@@ -1004,7 +1019,9 @@ describe('Service Integration Smoke Tests', () => {
     })
 
     it('should return correct ServiceResult structure on error', async () => {
-      const result = await casinoService.getById('00000000-0000-0000-0000-000000000000')
+      const result = await casinoService.getById(
+        '00000000-0000-0000-0000-000000000000',
+      )
 
       expect(result).toHaveProperty('data')
       expect(result).toHaveProperty('error')

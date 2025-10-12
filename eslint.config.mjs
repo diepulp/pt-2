@@ -170,7 +170,7 @@ const eslintConfig = [
       // ===================================================================
       // Standard Rules
       // ===================================================================
-      'import/no-cycle': 'warn',
+      'import/no-cycle': 'error',
       'import/no-self-import': 'warn',
       'import/no-unused-modules': 'warn',
       '@typescript-eslint/no-require-imports': 'warn',

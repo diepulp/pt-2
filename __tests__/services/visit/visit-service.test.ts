@@ -57,7 +57,10 @@ describe('Visit Service - Create Visit', () => {
       })
 
       if (!result.success) {
-        console.error('Visit create failed:', JSON.stringify(result.error, null, 2))
+        console.error(
+          'Visit create failed:',
+          JSON.stringify(result.error, null, 2),
+        )
       }
       expect(result.success).toBe(true)
       expect(result.error).toBeNull()
