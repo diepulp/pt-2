@@ -17,6 +17,9 @@ export interface PlayerService {
   create(data: PlayerCreateDTO): Promise<ServiceResult<PlayerDTO>>;
   getById(id: string): Promise<ServiceResult<PlayerDTO>>;
   update(id: string, data: PlayerUpdateDTO): Promise<ServiceResult<PlayerDTO>>;
+  delete(id: string): Promise<ServiceResult<void>>;
+  list(): Promise<ServiceResult<PlayerDTO[]>>;
+  search(query: string): Promise<ServiceResult<PlayerDTO[]>>;
 }
 
 // ✅ Typed factory with explicit interface return

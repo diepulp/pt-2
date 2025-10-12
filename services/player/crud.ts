@@ -122,5 +122,66 @@ export function createPlayerCrudService(supabase: SupabaseClient<Database>) {
         return player;
       });
     },
+
+    delete: async (id: string): Promise<ServiceResult<void>> => {
+      return executeOperation<void>("delete_player", async () => {
+        const { error } = await supabase.from("player").delete().eq("id", id);
+
+        if (error) {
+          // Check for not found error (PGRST116)
+          if (error.code === "PGRST116") {
+            throw {
+              code: "NOT_FOUND",
+              message: "Player not found",
+              details: error,
+            };
+          }
+          // Check for foreign key violation (23503)
+          if (error.code === "23503") {
+            throw {
+              code: "FOREIGN_KEY_VIOLATION",
+              message: "Cannot delete player with related records",
+              details: error,
+            };
+          }
+          throw error;
+        }
+
+        return undefined as void;
+      });
+    },
+
+    list: async (): Promise<ServiceResult<PlayerDTO[]>> => {
+      return executeOperation<PlayerDTO[]>("list_players", async () => {
+        const { data: players, error } = await supabase
+          .from("player")
+          .select("id, email, firstName, lastName")
+          .order("lastName", { ascending: true });
+
+        if (error) {
+          throw error;
+        }
+
+        return players || [];
+      });
+    },
+
+    search: async (query: string): Promise<ServiceResult<PlayerDTO[]>> => {
+      return executeOperation<PlayerDTO[]>("search_players", async () => {
+        const searchTerm = `%${query}%`;
+        const { data: players, error } = await supabase
+          .from("player")
+          .select("id, email, firstName, lastName")
+          .or(
+            `firstName.ilike.${searchTerm},lastName.ilike.${searchTerm},email.ilike.${searchTerm}`,
+          );
+
+        if (error) {
+          throw error;
+        }
+
+        return players || [];
+      });
+    },
   };
 }
