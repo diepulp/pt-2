@@ -15,6 +15,7 @@ describe("queryClient", () => {
     const defaults = queryClient.getDefaultOptions();
 
     expect(defaults.queries?.staleTime).toBe(1000 * 60 * 5); // 5 minutes
+    expect(defaults.queries?.gcTime).toBe(1000 * 60 * 30); // 30 minutes
     expect(defaults.queries?.refetchOnWindowFocus).toBe(false);
     expect(defaults.queries?.retry).toBe(1);
   });

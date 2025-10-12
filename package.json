@@ -8,7 +8,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "lint-staged": "lint-staged",
-    "db:types": "npx supabase gen types typescript --project-id vaicxfihdldgepzryhpd --schema public > types/database.types.ts",
+    "db:types": "npx supabase gen types typescript --project-id vaicxfihdldgepzryhpd --schema public > types/remote/database.types.ts",
     "db:types-local": "npx supabase gen types typescript --local public > types/database.types.ts",
     "analyze": "ANALYZE=true next build",
     "test": "jest",

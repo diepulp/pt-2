@@ -6,6 +6,7 @@ See `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` for complete architecture s
 see `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for service layer architecture standards and diagram
 See `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md` for for vertical vs horizontal slicing decisions
 See `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md` for bounded context integrity
+See `docs/adr/ADR-003-state-management-strategy.md` for state management strategy
 See `docs/INDEX.md` for documentation index
 
 ## Critical Standards (Quick Reference)
