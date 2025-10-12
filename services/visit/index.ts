@@ -10,13 +10,21 @@ import type { Database } from "@/types/database.types";
 import type { ServiceResult } from "../shared/types";
 
 import { createVisitCrudService } from "./crud";
-import type { VisitCreateDTO, VisitUpdateDTO, VisitDTO } from "./crud";
+import type {
+  VisitCreateDTO,
+  VisitUpdateDTO,
+  VisitDTO,
+  VisitFilters,
+} from "./crud";
 
 // ✅ Explicit interface - NOT ReturnType inference
 export interface VisitService {
   create(data: VisitCreateDTO): Promise<ServiceResult<VisitDTO>>;
   getById(id: string): Promise<ServiceResult<VisitDTO>>;
   update(id: string, data: VisitUpdateDTO): Promise<ServiceResult<VisitDTO>>;
+  delete(id: string): Promise<ServiceResult<void>>;
+  list(filters?: VisitFilters): Promise<ServiceResult<VisitDTO[]>>;
+  search(query: string): Promise<ServiceResult<VisitDTO[]>>;
 }
 
 // ✅ Typed factory with explicit interface return
@@ -32,4 +40,4 @@ export function createVisitService(
 
 // ✅ Export explicit type
 export type VisitServiceType = VisitService;
-export type { VisitCreateDTO, VisitUpdateDTO, VisitDTO };
+export type { VisitCreateDTO, VisitUpdateDTO, VisitDTO, VisitFilters };

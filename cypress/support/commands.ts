@@ -45,6 +45,80 @@ Cypress.Commands.add('tab', { prevSubject: 'element' }, (subject) => {
   cy.wrap(subject).trigger('keydown', { key: 'Tab', code: 'Tab', keyCode: 9 })
 })
 
+// Custom command to create a visit
+Cypress.Commands.add(
+  'createVisit',
+  (visitData: {
+    playerId: string
+    casinoId: string
+    status?: string
+    mode?: string
+  }) => {
+    cy.visit('/visits')
+    cy.contains('button', 'Create Visit').click()
+
+    // Fill out the form
+    cy.get('select[name="playerId"]').select(visitData.playerId)
+    cy.get('select[name="casinoId"]').select(visitData.casinoId)
+
+    if (visitData.status) {
+      cy.get('select[name="status"]').select(visitData.status)
+    }
+
+    if (visitData.mode) {
+      cy.get('select[name="mode"]').select(visitData.mode)
+    }
+
+    // Submit the form
+    cy.contains('button', 'Save').click()
+    cy.contains('Visit created successfully', { timeout: 10000 }).should('be.visible')
+  }
+)
+
+// Custom command to generate unique test visit data
+Cypress.Commands.add('generateTestVisit', () => {
+  return {
+    playerId: Cypress.env('TEST_PLAYER_ID') || 'test-player-id',
+    casinoId: Cypress.env('TEST_CASINO_ID') || 'test-casino-id',
+    checkInDate: new Date().toISOString(),
+    status: 'ONGOING',
+    mode: 'UNRATED',
+  }
+})
+
+// Custom command to end a visit (set check-out date)
+Cypress.Commands.add('endVisit', (visitId: string) => {
+  cy.visit('/visits')
+
+  // Find the visit row and click edit
+  cy.get(`[data-visit-id="${visitId}"]`).within(() => {
+    cy.get('button[aria-label="Edit visit"]').click()
+  })
+
+  // Click end visit button
+  cy.contains('button', 'End Visit').click()
+  cy.contains('button', 'Confirm').click()
+
+  // Verify success
+  cy.contains('Visit ended successfully', { timeout: 10000 }).should('be.visible')
+})
+
+// Custom command to delete a visit
+Cypress.Commands.add('deleteVisit', (visitId: string) => {
+  cy.visit('/visits')
+
+  // Find the visit row and click delete
+  cy.get(`[data-visit-id="${visitId}"]`).within(() => {
+    cy.get('button[aria-label="Delete visit"]').click()
+  })
+
+  // Confirm deletion
+  cy.contains('button', 'Delete').click()
+
+  // Verify success
+  cy.contains('Visit deleted successfully', { timeout: 10000 }).should('be.visible')
+})
+
 declare global {
   namespace Cypress {
     interface Chainable {
@@ -56,6 +130,21 @@ declare global {
       }): Chainable<void>
       generateTestPlayer(): { email: string; firstName: string; lastName: string }
       tab(): Chainable<JQuery<HTMLElement>>
+      createVisit(visitData: {
+        playerId: string
+        casinoId: string
+        status?: string
+        mode?: string
+      }): Chainable<void>
+      generateTestVisit(): {
+        playerId: string
+        casinoId: string
+        checkInDate: string
+        status: string
+        mode: string
+      }
+      endVisit(visitId: string): Chainable<void>
+      deleteVisit(visitId: string): Chainable<void>
     }
   }
 }

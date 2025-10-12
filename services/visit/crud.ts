@@ -24,6 +24,13 @@ export interface VisitUpdateDTO {
   status?: Database["public"]["Enums"]["VisitStatus"];
 }
 
+export interface VisitFilters {
+  playerId?: string;
+  casinoId?: string;
+  status?: Database["public"]["Enums"]["VisitStatus"];
+  mode?: Database["public"]["Enums"]["VisitMode"];
+}
+
 export type VisitDTO = Pick<
   Database["public"]["Tables"]["visit"]["Row"],
   | "id"
@@ -128,6 +135,90 @@ export function createVisitCrudService(supabase: SupabaseClient<Database>) {
         }
 
         return visit;
+      });
+    },
+
+    /**
+     * Delete a visit by ID
+     * @param id - Visit UUID
+     * @returns ServiceResult<void>
+     */
+    delete: async (id: string): Promise<ServiceResult<void>> => {
+      return executeOperation<void>("delete_visit", async () => {
+        const { error } = await supabase.from("visit").delete().eq("id", id);
+
+        if (error) {
+          // Check for FK violation (related records exist)
+          if (error.code === "23503") {
+            throw {
+              code: "FOREIGN_KEY_VIOLATION",
+              message:
+                "Cannot delete visit with related records (rating slips, rewards, etc.)",
+              details: error,
+            };
+          }
+          throw error;
+        }
+      });
+    },
+
+    /**
+     * List all visits with optional filters
+     * @param filters - Optional filter criteria
+     * @returns ServiceResult<VisitDTO[]>
+     */
+    list: async (
+      filters?: VisitFilters,
+    ): Promise<ServiceResult<VisitDTO[]>> => {
+      return executeOperation<VisitDTO[]>("list_visits", async () => {
+        let query = supabase
+          .from("visit")
+          .select(
+            "id, player_id, casino_id, check_in_date, check_out_date, mode, status",
+          )
+          .order("check_in_date", { ascending: false });
+
+        // Apply filters
+        if (filters?.playerId) query = query.eq("player_id", filters.playerId);
+        if (filters?.casinoId) query = query.eq("casino_id", filters.casinoId);
+        if (filters?.status) query = query.eq("status", filters.status);
+        if (filters?.mode) query = query.eq("mode", filters.mode);
+
+        const { data, error } = await query;
+
+        if (error) throw error;
+        return data || [];
+      });
+    },
+
+    /**
+     * Search visits by player information
+     * @param query - Search query string
+     * @returns ServiceResult<VisitDTO[]>
+     */
+    search: async (query: string): Promise<ServiceResult<VisitDTO[]>> => {
+      return executeOperation<VisitDTO[]>("search_visits", async () => {
+        const { data, error } = await supabase
+          .from("visit")
+          .select(
+            `
+            id,
+            player_id,
+            casino_id,
+            check_in_date,
+            check_out_date,
+            mode,
+            status,
+            player:player_id (firstName, lastName, email)
+          `,
+          )
+          .or(
+            `player.firstName.ilike.%${query}%,player.lastName.ilike.%${query}%,player.email.ilike.%${query}%`,
+          )
+          .order("check_in_date", { ascending: false });
+
+        if (error) throw error;
+        return data || [];
       });
     },
   };
