@@ -14,47 +14,6 @@ export type Database = {
   };
   public: {
     Tables: {
-      accrual_history: {
-        Row: {
-          created_at: string;
-          event_id: string;
-          id: string;
-          points: number;
-          promo_applied: boolean;
-          promo_details: Json | null;
-          raw_theo: number | null;
-          session_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          event_id: string;
-          id?: string;
-          points: number;
-          promo_applied?: boolean;
-          promo_details?: Json | null;
-          raw_theo?: number | null;
-          session_id: string;
-        };
-        Update: {
-          created_at?: string;
-          event_id?: string;
-          id?: string;
-          points?: number;
-          promo_applied?: boolean;
-          promo_details?: Json | null;
-          raw_theo?: number | null;
-          session_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "accrual_history_session_id_fkey";
-            columns: ["session_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       AuditLog: {
         Row: {
           action: string;
@@ -602,56 +561,87 @@ export type Database = {
         };
         Relationships: [];
       };
-      LoyaltyLedger: {
+      loyalty_ledger: {
         Row: {
-          balance_after: number;
-          description: string;
-          direction: Database["public"]["Enums"]["LedgerDirection"];
+          created_at: string;
+          event_type: string | null;
           id: string;
-          metadata: Json | null;
           player_id: string;
-          points: number;
-          transaction_date: string;
+          points_change: number;
+          rating_slip_id: string | null;
+          reason: string | null;
+          session_id: string | null;
+          source: string;
+          transaction_type: string;
           visit_id: string | null;
         };
         Insert: {
-          balance_after: number;
-          description: string;
-          direction: Database["public"]["Enums"]["LedgerDirection"];
+          created_at?: string;
+          event_type?: string | null;
           id?: string;
-          metadata?: Json | null;
           player_id: string;
-          points: number;
-          transaction_date?: string;
+          points_change: number;
+          rating_slip_id?: string | null;
+          reason?: string | null;
+          session_id?: string | null;
+          source?: string;
+          transaction_type: string;
           visit_id?: string | null;
         };
         Update: {
-          balance_after?: number;
-          description?: string;
-          direction?: Database["public"]["Enums"]["LedgerDirection"];
+          created_at?: string;
+          event_type?: string | null;
           id?: string;
-          metadata?: Json | null;
           player_id?: string;
-          points?: number;
-          transaction_date?: string;
+          points_change?: number;
+          rating_slip_id?: string | null;
+          reason?: string | null;
+          session_id?: string | null;
+          source?: string;
+          transaction_type?: string;
           visit_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "LoyaltyLedger_player_id_fkey";
+            foreignKeyName: "loyalty_ledger_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "LoyaltyLedger_visit_id_fkey";
+            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "ratingslip";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "loyalty_ledger_visit_id_fkey";
             columns: ["visit_id"];
             isOneToOne: false;
             referencedRelation: "visit";
             referencedColumns: ["id"];
           },
         ];
+      };
+      loyalty_tier: {
+        Row: {
+          multiplier: number;
+          threshold_points: number;
+          tier: string;
+        };
+        Insert: {
+          multiplier?: number;
+          threshold_points: number;
+          tier: string;
+        };
+        Update: {
+          multiplier?: number;
+          threshold_points?: number;
+          tier?: string;
+        };
+        Relationships: [];
       };
       mtl_entry: {
         Row: {
@@ -936,49 +926,113 @@ export type Database = {
           },
         ];
       };
+      player_financial_transaction: {
+        Row: {
+          cash_in: number | null;
+          chips_brought: number | null;
+          chips_taken: number | null;
+          created_at: string;
+          id: string;
+          net_change: number | null;
+          notes: string | null;
+          player_id: string;
+          rating_slip_id: string | null;
+          reconciled_at: string | null;
+          reconciliation_status: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time: string;
+          transaction_type: Database["public"]["Enums"]["transactiontype"];
+          updated_at: string;
+          version: number | null;
+          visit_id: string;
+        };
+        Insert: {
+          cash_in?: number | null;
+          chips_brought?: number | null;
+          chips_taken?: number | null;
+          created_at?: string;
+          id?: string;
+          net_change?: number | null;
+          notes?: string | null;
+          player_id: string;
+          rating_slip_id?: string | null;
+          reconciled_at?: string | null;
+          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time?: string;
+          transaction_type: Database["public"]["Enums"]["transactiontype"];
+          updated_at?: string;
+          version?: number | null;
+          visit_id: string;
+        };
+        Update: {
+          cash_in?: number | null;
+          chips_brought?: number | null;
+          chips_taken?: number | null;
+          created_at?: string;
+          id?: string;
+          net_change?: number | null;
+          notes?: string | null;
+          player_id?: string;
+          rating_slip_id?: string | null;
+          reconciled_at?: string | null;
+          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
+          transaction_time?: string;
+          transaction_type?: Database["public"]["Enums"]["transactiontype"];
+          updated_at?: string;
+          version?: number | null;
+          visit_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "ratingslip";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       player_loyalty: {
         Row: {
-          achievements: Json | null;
-          benefits: Json | null;
           created_at: string | null;
+          current_balance: number | null;
           id: string;
-          milestones: Json | null;
+          lifetime_points: number | null;
           player_id: string;
-          points_balance: number | null;
-          points_earned_total: number | null;
-          points_redeemed_total: number | null;
           tier: string;
-          tier_expires_at: string | null;
           tier_progress: number | null;
           updated_at: string | null;
         };
         Insert: {
-          achievements?: Json | null;
-          benefits?: Json | null;
           created_at?: string | null;
+          current_balance?: number | null;
           id?: string;
-          milestones?: Json | null;
+          lifetime_points?: number | null;
           player_id: string;
-          points_balance?: number | null;
-          points_earned_total?: number | null;
-          points_redeemed_total?: number | null;
           tier?: string;
-          tier_expires_at?: string | null;
           tier_progress?: number | null;
           updated_at?: string | null;
         };
         Update: {
-          achievements?: Json | null;
-          benefits?: Json | null;
           created_at?: string | null;
+          current_balance?: number | null;
           id?: string;
-          milestones?: Json | null;
+          lifetime_points?: number | null;
           player_id?: string;
-          points_balance?: number | null;
-          points_earned_total?: number | null;
-          points_redeemed_total?: number | null;
           tier?: string;
-          tier_expires_at?: string | null;
           tier_progress?: number | null;
           updated_at?: string | null;
         };
@@ -1282,7 +1336,6 @@ export type Database = {
           id: string;
           pause_intervals: Json | null;
           playerId: string;
-          points: number;
           seat_number: number | null;
           start_time: string;
           status: Database["public"]["Enums"]["RatingSlipStatus"];
@@ -1299,10 +1352,9 @@ export type Database = {
           game_settings: Json;
           game_settings_id?: string | null;
           gaming_table_id?: string | null;
-          id: string;
+          id?: string;
           pause_intervals?: Json | null;
           playerId: string;
-          points?: number;
           seat_number?: number | null;
           start_time: string;
           status?: Database["public"]["Enums"]["RatingSlipStatus"];
@@ -1322,7 +1374,6 @@ export type Database = {
           id?: string;
           pause_intervals?: Json | null;
           playerId?: string;
-          points?: number;
           seat_number?: number | null;
           start_time?: string;
           status?: Database["public"]["Enums"]["RatingSlipStatus"];
@@ -1759,13 +1810,20 @@ export type Database = {
     };
     Functions: {
       close_player_session: {
-        Args: {
-          p_chips_taken: number;
-          p_end_time?: string;
-          p_points?: number;
-          p_rating_slip_id: string;
-          p_visit_id: string;
-        };
+        Args:
+          | {
+              p_chips_taken: number;
+              p_end_time?: string;
+              p_points?: number;
+              p_rating_slip_id: string;
+              p_visit_id: string;
+            }
+          | {
+              p_chips_taken: number;
+              p_end_time?: string;
+              p_rating_slip_id: string;
+              p_visit_id: string;
+            };
         Returns: Json;
       };
       close_visit: {
@@ -2048,6 +2106,13 @@ export type Database = {
         Args: { "": unknown };
         Returns: unknown;
       };
+      increment_player_loyalty: {
+        Args: { p_delta_points: number; p_player_id: string };
+        Returns: {
+          current_balance: number;
+          tier: string;
+        }[];
+      };
       jwt_get_role: {
         Args: Record<PropertyKey, never>;
         Returns: Database["public"]["Enums"]["StaffRole"];
@@ -2135,6 +2200,7 @@ export type Database = {
         | "other";
       MtlDirection: "cash_in" | "cash_out";
       RatingSlipStatus: "OPEN" | "CLOSED" | "PAUSED";
+      reconciliationstatus: "PENDING" | "RECONCILED" | "DISCREPANCY";
       ReportFormat: "PDF" | "CSV" | "JSON";
       ReportType: "SHIFT_SUMMARY" | "DAILY_OVERVIEW" | "CUSTOM";
       RewardStatus: "PENDING" | "ISSUED" | "REDEEMED" | "EXPIRED";
@@ -2149,6 +2215,7 @@ export type Database = {
         | "money_order"
         | "chips"
         | "other";
+      transactiontype: "DEPOSIT" | "WITHDRAWAL" | "EXCHANGE" | "ADJUSTMENT";
       VisitMode: "RATED" | "UNRATED";
       VisitStatus: "ONGOING" | "COMPLETED" | "CANCELED";
     };
@@ -2303,6 +2370,7 @@ export const Constants = {
       MtlArea: ["pit", "cage", "slot", "poker", "kiosk", "sportsbook", "other"],
       MtlDirection: ["cash_in", "cash_out"],
       RatingSlipStatus: ["OPEN", "CLOSED", "PAUSED"],
+      reconciliationstatus: ["PENDING", "RECONCILED", "DISCREPANCY"],
       ReportFormat: ["PDF", "CSV", "JSON"],
       ReportType: ["SHIFT_SUMMARY", "DAILY_OVERVIEW", "CUSTOM"],
       RewardStatus: ["PENDING", "ISSUED", "REDEEMED", "EXPIRED"],
@@ -2318,6 +2386,7 @@ export const Constants = {
         "chips",
         "other",
       ],
+      transactiontype: ["DEPOSIT", "WITHDRAWAL", "EXCHANGE", "ADJUSTMENT"],
       VisitMode: ["RATED", "UNRATED"],
       VisitStatus: ["ONGOING", "COMPLETED", "CANCELED"],
     },
