@@ -5,7 +5,7 @@
  * Includes CRITICAL idempotency tests for financial integrity
  */
 
-import { createLoyaltyCrudService } from '@/services/loyalty/crud'
+import { createLoyaltyCrudService } from '../../../services/loyalty/crud'
 import { supabase, createTestPlayer, cleanupTestData } from './test-utils'
 
 describe('Loyalty CRUD Service', () => {
@@ -99,7 +99,7 @@ describe('Loyalty CRUD Service', () => {
     })
 
     it('prevents duplicate GAMEPLAY points for same rating_slip_id', async () => {
-      const ratingSlipId = 'rating-slip-789'
+      const ratingSlipId = '550e8400-e29b-41d4-a716-446655440000'
 
       // First accrual
       const result1 = await crudService.createLedgerEntry({
@@ -109,6 +109,7 @@ describe('Loyalty CRUD Service', () => {
         points_change: 750,
         transaction_type: 'GAMEPLAY',
         reason: `Points from rating slip ${ratingSlipId}`,
+        source: 'system',
       })
 
       expect(result1.success).toBe(true)
@@ -121,6 +122,7 @@ describe('Loyalty CRUD Service', () => {
         points_change: 750,
         transaction_type: 'GAMEPLAY',
         reason: `Points from rating slip ${ratingSlipId}`,
+        source: 'system',
       })
 
       expect(result2.success).toBe(true) // Soft success
@@ -188,7 +190,11 @@ describe('Loyalty CRUD Service', () => {
       // Create new player without loyalty
       const { data: newPlayer } = await supabase
         .from('player')
-        .insert({ name: 'New Player' })
+        .insert({
+          firstName: 'New',
+          lastName: 'Player',
+          email: `newplayer-${Date.now()}@test.com`,
+        })
         .select('id')
         .single()
 
@@ -315,7 +321,7 @@ describe('Loyalty CRUD Service', () => {
   })
 
   describe('createLedgerEntry', () => {
-    it('creates ledger entry with all fields', async () => {
+    it('creates ledger entry with all required fields', async () => {
       const entry = {
         player_id: testPlayerId,
         points_change: 500,
@@ -323,9 +329,7 @@ describe('Loyalty CRUD Service', () => {
         reason: 'Test gameplay',
         source: 'system',
         event_type: 'RATING_SLIP_FINALIZED',
-        session_id: 'session-123',
-        rating_slip_id: 'slip-456',
-        visit_id: 'visit-789',
+        session_id: '550e8400-e29b-41d4-a716-446655440001',
       }
 
       const result = await crudService.createLedgerEntry(entry)
