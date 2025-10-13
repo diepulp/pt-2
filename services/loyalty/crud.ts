@@ -176,7 +176,7 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
 
           if (error) {
             // Handle idempotency: duplicate (session_id, transaction_type, source)
-            if (error.code === "23505") {
+            if (error.code === "23505" && entry.session_id) {
               // Soft success: fetch existing entry
               const { data: existing, error: fetchError } = await supabase
                 .from("loyalty_ledger")
