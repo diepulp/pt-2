@@ -26,6 +26,10 @@ jobs:
       - name: Type check
         run: npm run type-check
 
+      - name: Schema Verification
+        run: npm test schema-verification
+        continue-on-error: false
+
       - name: Unit & Integration tests
         run: npm run test:ci
 

@@ -7,6 +7,7 @@ see `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for service layer ar
 See `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md` for for vertical vs horizontal slicing decisions
 See `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md` for bounded context integrity
 See `docs/adr/ADR-003-state-management-strategy.md` for state management strategy
+See `docs/integrity/INTEGRITY_FRAMEWORK.md` for automated guardrails and enforcement
 See `docs/INDEX.md` for documentation index
 
 ## Critical Standards (Quick Reference)
@@ -23,6 +24,8 @@ See `docs/INDEX.md` for documentation index
 - Single source: `types/database.types.ts`
 - No manual table type redefinitions
 - Use Pick/Omit/mapped types only
+- **CRITICAL**: Run `npm run db:types` after every migration
+- **CRITICAL**: Schema verification test MUST pass before merge
 
 ### Real-Time
 
