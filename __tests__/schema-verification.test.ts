@@ -124,6 +124,37 @@ describe("Schema Verification", () => {
       // If this compiles, the schema is correct
       expect(validFields.length).toBe(9);
     });
+
+    it("should enforce bounded context separation - RatingSlip returns telemetry only", () => {
+      type RatingSlipRow = Database["public"]["Tables"]["ratingslip"]["Row"];
+
+      // ✅ RatingSlip should contain ONLY telemetry fields
+      const telemetryFields: (keyof RatingSlipRow)[] = [
+        "id",
+        "playerId",
+        "visit_id",
+        "gaming_table_id",
+        "average_bet",
+        "accumulated_seconds",
+        "start_time",
+        "end_time",
+        "status",
+        "game_settings",
+        "pause_intervals",
+        "seat_number",
+        "version",
+      ];
+
+      expect(telemetryFields.length).toBeGreaterThan(0);
+
+      // ❌ Loyalty concerns should NOT exist in RatingSlip
+      // @ts-expect-error - loyalty concern handled by LoyaltyService
+      const _loyaltyViolation1: keyof RatingSlipRow = "points";
+      // @ts-expect-error - loyalty concern handled by LoyaltyService
+      const _loyaltyViolation2: keyof RatingSlipRow = "points_earned";
+      // @ts-expect-error - loyalty concern handled by LoyaltyService
+      const _loyaltyViolation3: keyof RatingSlipRow = "tier";
+    });
   });
 
   describe("Type Generation Freshness Check", () => {

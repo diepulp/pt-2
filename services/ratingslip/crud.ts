@@ -32,6 +32,7 @@ export interface RatingSlipUpdateDTO {
 }
 
 // ✅ Simplified DTO: Only expose what clients need
+// ✅ Phase 6: Pure telemetry - NO loyalty concerns (points removed)
 export type RatingSlipDTO = Pick<
   Database["public"]["Tables"]["ratingslip"]["Row"],
   | "id"
@@ -39,7 +40,7 @@ export type RatingSlipDTO = Pick<
   | "visit_id"
   | "gaming_table_id"
   | "average_bet"
-  | "points"
+  // REMOVED: "points" - loyalty concern, handled by LoyaltyService
   | "status"
   | "start_time"
   | "end_time"
@@ -83,7 +84,7 @@ export function createRatingSlipCrudService(
           .from("ratingslip")
           .insert(insertData)
           .select(
-            "id, playerId, visit_id, gaming_table_id, average_bet, points, status, start_time, end_time, seat_number, accumulated_seconds",
+            "id, playerId, visit_id, gaming_table_id, average_bet, status, start_time, end_time, seat_number, accumulated_seconds",
           )
           .single();
 
@@ -111,7 +112,7 @@ export function createRatingSlipCrudService(
           const { data: ratingSlip, error } = await supabase
             .from("ratingslip")
             .select(
-              "id, playerId, visit_id, gaming_table_id, average_bet, points, status, start_time, end_time, seat_number, accumulated_seconds",
+              "id, playerId, visit_id, gaming_table_id, average_bet, status, start_time, end_time, seat_number, accumulated_seconds",
             )
             .eq("id", id)
             .single();
@@ -160,7 +161,7 @@ export function createRatingSlipCrudService(
           .update(updateData)
           .eq("id", id)
           .select(
-            "id, playerId, visit_id, gaming_table_id, average_bet, points, status, start_time, end_time, seat_number, accumulated_seconds",
+            "id, playerId, visit_id, gaming_table_id, average_bet, status, start_time, end_time, seat_number, accumulated_seconds",
           )
           .single();
 

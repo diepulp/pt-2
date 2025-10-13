@@ -79,7 +79,8 @@ describe('RatingSlip Service - Create RatingSlip', () => {
       expect(result.data?.average_bet).toBe(25.0)
       expect(result.data?.id).toBeDefined()
       expect(result.data?.status).toBeDefined() // Should have default value
-      expect(result.data?.points).toBeDefined() // Should have default value
+      expect(result.data?.accumulated_seconds).toBeDefined() // Should have default value
+      // Note: points removed - loyalty concern handled by LoyaltyService
     })
 
     it('should create a rating slip with optional fields', async () => {
