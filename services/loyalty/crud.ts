@@ -19,21 +19,16 @@ import type { ServiceResult } from "../shared/types";
 export type PlayerLoyaltyRow =
   Database["public"]["Tables"]["player_loyalty"]["Row"];
 export type LoyaltyLedgerRow =
-  Database["public"]["Tables"]["LoyaltyLedger"]["Row"];
+  Database["public"]["Tables"]["loyalty_ledger"]["Row"];
 
 export type PlayerLoyaltyDTO = Pick<
   PlayerLoyaltyRow,
   | "id"
   | "player_id"
-  | "points_balance"
-  | "points_earned_total"
-  | "points_redeemed_total"
+  | "current_balance"
+  | "lifetime_points"
   | "tier"
-  | "tier_expires_at"
   | "tier_progress"
-  | "achievements"
-  | "benefits"
-  | "milestones"
   | "created_at"
   | "updated_at"
 >;
@@ -41,45 +36,43 @@ export type PlayerLoyaltyDTO = Pick<
 export interface PlayerLoyaltyCreateDTO {
   player_id: string;
   tier?: string;
-  points_balance?: number;
-  points_earned_total?: number;
-  points_redeemed_total?: number;
+  current_balance?: number;
+  lifetime_points?: number;
   tier_progress?: number;
 }
 
 export interface PlayerLoyaltyUpdateDTO {
-  points_balance?: number;
-  points_earned_total?: number;
-  points_redeemed_total?: number;
+  current_balance?: number;
+  lifetime_points?: number;
   tier?: string;
-  tier_expires_at?: string | null;
   tier_progress?: number;
-  achievements?: Database["public"]["Tables"]["player_loyalty"]["Update"]["achievements"];
-  benefits?: Database["public"]["Tables"]["player_loyalty"]["Update"]["benefits"];
-  milestones?: Database["public"]["Tables"]["player_loyalty"]["Update"]["milestones"];
 }
 
 export type LoyaltyLedgerDTO = Pick<
   LoyaltyLedgerRow,
   | "id"
   | "player_id"
-  | "transaction_date"
-  | "points"
-  | "direction"
-  | "description"
-  | "balance_after"
-  | "metadata"
+  | "created_at"
+  | "points_change"
+  | "reason"
+  | "transaction_type"
+  | "event_type"
+  | "source"
+  | "session_id"
+  | "rating_slip_id"
   | "visit_id"
 >;
 
 export interface LoyaltyLedgerCreateDTO {
   player_id: string;
-  points: number;
-  direction: "CREDIT" | "DEBIT";
-  description: string;
-  balance_after: number;
+  points_change: number;
+  transaction_type: string;
+  reason: string;
+  source?: string;
+  event_type?: string | null;
+  session_id?: string | null;
+  rating_slip_id?: string | null;
   visit_id?: string | null;
-  metadata?: Database["public"]["Tables"]["LoyaltyLedger"]["Insert"]["metadata"];
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -106,24 +99,18 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
             .insert({
               player_id: playerId,
               tier: "BRONZE",
-              points_balance: 0,
-              points_earned_total: 0,
-              points_redeemed_total: 0,
+              current_balance: 0,
+              lifetime_points: 0,
               tier_progress: 0,
             })
             .select(
               `
               id,
               player_id,
-              points_balance,
-              points_earned_total,
-              points_redeemed_total,
+              current_balance,
+              lifetime_points,
               tier,
-              tier_expires_at,
               tier_progress,
-              achievements,
-              benefits,
-              milestones,
               created_at,
               updated_at
             `,
@@ -158,26 +145,30 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
         "loyalty_create_ledger_entry",
         async () => {
           const { data, error } = await supabase
-            .from("LoyaltyLedger")
+            .from("loyalty_ledger")
             .insert({
               player_id: entry.player_id,
-              points: entry.points,
-              direction: entry.direction,
-              description: entry.description,
-              balance_after: entry.balance_after,
+              points_change: entry.points_change,
+              transaction_type: entry.transaction_type,
+              reason: entry.reason,
+              source: entry.source || "system",
+              event_type: entry.event_type || null,
+              session_id: entry.session_id || null,
+              rating_slip_id: entry.rating_slip_id || null,
               visit_id: entry.visit_id || null,
-              metadata: entry.metadata || null,
             })
             .select(
               `
               id,
               player_id,
-              transaction_date,
-              points,
-              direction,
-              description,
-              balance_after,
-              metadata,
+              created_at,
+              points_change,
+              reason,
+              transaction_type,
+              event_type,
+              source,
+              session_id,
+              rating_slip_id,
               visit_id
             `,
             )
@@ -214,15 +205,10 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
               `
               id,
               player_id,
-              points_balance,
-              points_earned_total,
-              points_redeemed_total,
+              current_balance,
+              lifetime_points,
               tier,
-              tier_expires_at,
               tier_progress,
-              achievements,
-              benefits,
-              milestones,
               created_at,
               updated_at
             `,
@@ -262,15 +248,10 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
               `
               id,
               player_id,
-              points_balance,
-              points_earned_total,
-              points_redeemed_total,
+              current_balance,
+              lifetime_points,
               tier,
-              tier_expires_at,
               tier_progress,
-              achievements,
-              benefits,
-              milestones,
               created_at,
               updated_at
             `,

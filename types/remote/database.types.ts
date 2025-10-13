@@ -1810,21 +1810,13 @@ export type Database = {
     };
     Functions: {
       close_player_session: {
-        Args:
-          | {
-              p_chips_taken: number;
-              p_end_time?: string;
-              p_points?: number;
-              p_rating_slip_id: string;
-              p_visit_id: string;
-            }
-          | {
-              p_chips_taken: number;
-              p_end_time?: string;
-              p_rating_slip_id: string;
-              p_visit_id: string;
-            };
-        Returns: Json;
+        Args: {
+          p_chips_taken: number;
+          p_end_time?: string;
+          p_rating_slip_id: string;
+          p_visit_id: string;
+        };
+        Returns: undefined;
       };
       close_visit: {
         Args: {

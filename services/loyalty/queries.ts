@@ -22,7 +22,7 @@ import type { PlayerLoyaltyDTO, LoyaltyLedgerDTO } from "./crud";
 export interface TransactionHistoryOptions {
   limit?: number;
   offset?: number;
-  direction?: "CREDIT" | "DEBIT";
+  transactionType?: string;
   startDate?: string;
   endDate?: string;
 }
@@ -63,15 +63,10 @@ export function createLoyaltyQueriesService(
               `
               id,
               player_id,
-              points_balance,
-              points_earned_total,
-              points_redeemed_total,
+              current_balance,
+              lifetime_points,
               tier,
-              tier_expires_at,
               tier_progress,
-              achievements,
-              benefits,
-              milestones,
               created_at,
               updated_at
             `,
@@ -112,15 +107,10 @@ export function createLoyaltyQueriesService(
               `
               id,
               player_id,
-              points_balance,
-              points_earned_total,
-              points_redeemed_total,
+              current_balance,
+              lifetime_points,
               tier,
-              tier_expires_at,
               tier_progress,
-              achievements,
-              benefits,
-              milestones,
               created_at,
               updated_at
             `,
@@ -158,34 +148,36 @@ export function createLoyaltyQueriesService(
         "loyalty_get_transaction_history",
         async () => {
           let query = supabase
-            .from("LoyaltyLedger")
+            .from("loyalty_ledger")
             .select(
               `
               id,
               player_id,
-              transaction_date,
-              points,
-              direction,
-              description,
-              balance_after,
-              metadata,
+              created_at,
+              points_change,
+              reason,
+              transaction_type,
+              event_type,
+              source,
+              session_id,
+              rating_slip_id,
               visit_id
             `,
             )
             .eq("player_id", playerId)
-            .order("transaction_date", { ascending: false });
+            .order("created_at", { ascending: false });
 
           // Apply filters
-          if (options?.direction) {
-            query = query.eq("direction", options.direction);
+          if (options?.transactionType) {
+            query = query.eq("transaction_type", options.transactionType);
           }
 
           if (options?.startDate) {
-            query = query.gte("transaction_date", options.startDate);
+            query = query.gte("created_at", options.startDate);
           }
 
           if (options?.endDate) {
-            query = query.lte("transaction_date", options.endDate);
+            query = query.lte("created_at", options.endDate);
           }
 
           // Apply pagination
@@ -225,7 +217,7 @@ export function createLoyaltyQueriesService(
         async () => {
           const { data, error } = await supabase
             .from("player_loyalty")
-            .select("tier, points_earned_total, tier_progress")
+            .select("tier, lifetime_points, tier_progress")
             .eq("player_id", playerId)
             .single();
 
@@ -240,7 +232,7 @@ export function createLoyaltyQueriesService(
           }
 
           const currentTier = data.tier as LoyaltyTier;
-          const pointsEarnedTotal = data.points_earned_total || 0;
+          const pointsEarnedTotal = data.lifetime_points || 0;
 
           // Calculate next tier and points needed
           const tierConfig = LOYALTY_TIERS[currentTier];

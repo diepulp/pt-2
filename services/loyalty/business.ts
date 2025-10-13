@@ -277,11 +277,11 @@ export function createLoyaltyBusinessService(
 
           // 4. Calculate new balance
           const newBalance =
-            (currentLoyalty.points_balance || 0) + pointsEarned;
+            (currentLoyalty.current_balance || 0) + pointsEarned;
 
           // 5. Calculate new lifetime total
           const newLifetimeTotal =
-            (currentLoyalty.points_earned_total || 0) + pointsEarned;
+            (currentLoyalty.lifetime_points || 0) + pointsEarned;
 
           // 6. Check for tier progression
           const newTier = calculateTier(newLifetimeTotal);
@@ -290,21 +290,16 @@ export function createLoyaltyBusinessService(
           // 7. Create ledger entry (source of truth)
           const ledgerResult = await crudService.createLedgerEntry({
             player_id: input.playerId,
-            points: pointsEarned,
-            direction: "CREDIT",
-            description: input.ratingSlipId
+            points_change: pointsEarned,
+            transaction_type: "GAMEPLAY",
+            reason: input.ratingSlipId
               ? `Points earned from rating slip ${input.ratingSlipId}`
               : "Points earned from gameplay",
-            balance_after: newBalance,
+            source: "system",
+            event_type: "RATING_SLIP_FINALIZED",
+            session_id: input.ratingSlipId || null,
+            rating_slip_id: input.ratingSlipId || null,
             visit_id: input.visitId || null,
-            metadata: {
-              rating_slip_id: input.ratingSlipId,
-              average_bet: input.averageBet,
-              duration_seconds: input.durationSeconds,
-              total_rounds: totalRounds,
-              game_type: input.gameSettings.name || "Unknown",
-              tier_at_accrual: currentTier,
-            },
           });
 
           if (!ledgerResult.success || !ledgerResult.data) {
@@ -318,8 +313,8 @@ export function createLoyaltyBusinessService(
           const updateResult = await crudService.updatePlayerLoyalty(
             input.playerId,
             {
-              points_balance: newBalance,
-              points_earned_total: newLifetimeTotal,
+              current_balance: newBalance,
+              lifetime_points: newLifetimeTotal,
               tier: newTier,
               tier_progress: newTierProgress,
             },
@@ -366,7 +361,7 @@ export function createLoyaltyBusinessService(
           }
 
           const currentLoyalty = loyaltyResult.data;
-          const lifetimePoints = currentLoyalty.points_earned_total || 0;
+          const lifetimePoints = currentLoyalty.lifetime_points || 0;
 
           // 2. Calculate new tier and progress
           const newTier = calculateTier(lifetimePoints);

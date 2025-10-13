@@ -25,8 +25,8 @@ Event Flow:
 ```mermaid
 flowchart LR
   RS[RatingSlipService] -->|RatingSlipCompletedEvent| L[LoyaltyService]
-  L --> LL[(LoyaltyLedger)]
-  L --> PL[(PlayerLoyalty)]
+  L --> LL[(loyalty_ledger)]
+  L --> PL[(player_loyalty)]
   L -->|emit PointsAccrued| Analytics/Marketing
 ```
 ✅ Ownership Summary
@@ -61,7 +61,7 @@ You might double point values for a promotion or add multipliers by tier —
 none of which should require altering the RatingSlip domain.
 
 Auditability demands a clear owner of value assignment.
-The LoyaltyLedger must represent why and how many points were granted — that’s not a gameplay concern.
+The loyalty_ledger table must represent why and how many points were granted — that's not a gameplay concern.
 
 Domain Interaction Model
 ```mermaid
@@ -71,7 +71,7 @@ flowchart LR
   end
   subgraph Loyalty Context
     L[Loyalty Service]
-    LL[(LoyaltyLedger)]
+    LL[(loyalty_ledger)]
   end
   RS -- emits --> "RatingSlipCompletedEvent {playerId, avgBet, duration}"| L
   L --> LL
@@ -89,7 +89,7 @@ services/
     ├── crud.ts                # CRUD for ledger, balance, tiers
     ├── business.ts            # <-- point calculation lives here
     ├── queries.ts             # getBalance(), getTierProgress(), etc.
-    ├── models.ts              # LoyaltyLedger, PlayerLoyalty types
+    ├── models.ts              # loyalty_ledger, player_loyalty types
     └── translation/
         └── telemetry-mapper.ts # ACL for mapping RatingSlip data → Loyalty input DTO
 business.ts:        
