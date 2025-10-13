@@ -175,6 +175,37 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
             .single();
 
           if (error) {
+            // Handle idempotency: duplicate (session_id, transaction_type, source)
+            if (error.code === "23505") {
+              // Soft success: fetch existing entry
+              const { data: existing, error: fetchError } = await supabase
+                .from("loyalty_ledger")
+                .select(
+                  `
+                  id,
+                  player_id,
+                  created_at,
+                  points_change,
+                  reason,
+                  transaction_type,
+                  event_type,
+                  source,
+                  session_id,
+                  rating_slip_id,
+                  visit_id
+                `,
+                )
+                .eq("session_id", entry.session_id)
+                .eq("transaction_type", entry.transaction_type)
+                .eq("source", entry.source || "system")
+                .single();
+
+              if (fetchError || !existing) {
+                throw error; // Original error if can't fetch existing
+              }
+
+              return existing; // Return existing entry (idempotent)
+            }
             throw error;
           }
 
