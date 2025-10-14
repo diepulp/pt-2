@@ -41,3 +41,9 @@ See `docs/INDEX.md` for documentation index
 - ❌ `console.*` in production
 - ❌ Deprecated code marked `@deprecated`
 - ❌ `as any` type casting
+
+### DB Workflow
+
+- all migrations are ran against the local db
+- do not use psql, it Doesn’t trigger cache reload — must run NOTIFY pgrst, 'reload schema'; manually
+- Apply migrations via **npx supabase migration** up or **npx supabase db reset**
