@@ -418,6 +418,7 @@
   });
   ```
 - [ ] Register `POINTS_UPDATE_REQUESTED` handler (manual rewards)
+- [ ] Ensure canonical ledger metadata on writes (`transaction_type='GAMEPLAY'`/`event_type='RATINGS_SLIP_COMPLETED'` for closures, `transaction_type='MANUAL_BONUS' | 'PROMOTION'`/`event_type='POINTS_UPDATE_REQUESTED'` for manual updates)
 - [ ] Add error handling and retry logic
 - [ ] Add structured logging for observability (use canonical schema):
   ```typescript
@@ -452,9 +453,10 @@
     });
   }
   ```
-- [ ] Expose `calculateAndAssignPoints` for direct calls (fallback)
+- [ ] Expose synchronous `calculateAndAssignPointsFallback` server action so RatingSlip can bypass the dispatcher when feature-flagged or degraded
 - [ ] Add rate limiting for `manualReward` (prevent abuse)
 - [ ] Add audit logging (staff_id, reason required)
+- [ ] Add tests covering dispatcher path vs fallback path behaviour
 
 ### Track 1 (T1): RatingSlip Integration - 3h (PARALLEL after T0.1 complete)
 **Owner**: TypeScript Pro (Agent 2)
@@ -502,24 +504,29 @@
 #### Task 2.1.2: RatingSlip Server Actions (1h)
 - [ ] **File**: `app/actions/ratingslip-actions.ts`
 - [ ] Update `completeRatingSlip()` action:
-  ```typescript
-  export async function completeRatingSlip(slipId: string) {
-    return withServerAction('complete_rating_slip', async (supabase) => {
-      // 1. End RatingSlip session (emits event)
-      const telemetry = await ratingSlipService.endSession(supabase, slipId);
+```typescript
+export async function completeRatingSlip(slipId: string) {
+  return withServerAction('complete_rating_slip', async (supabase) => {
+      // 1. End RatingSlip session (emits event + awaits loyalty handler)
+      const result = await ratingSlipService.endSession(supabase, slipId);
 
-      // 2. Await loyalty processing (via event or direct call)
-      // Event-driven: No need to wait, return telemetry
-      // Synchronous: Call loyalty directly for immediate response
+      // 2. Guard against dispatcher bypass by invoking fallback when needed
+      const loyalty = result.data.loyalty
+        ?? await loyaltyActions.calculateAndAssignPointsFallback({
+          ratingSlipId: slipId,
+          playerId: result.data.telemetry.playerId,
+          visitId: result.data.telemetry.visitId
+        });
 
       return {
         success: true,
-        data: { telemetry: telemetry.data }
+        data: { telemetry: result.data.telemetry, loyalty }
       };
     });
   }
   ```
 - [ ] Add integration test: Completion → ledger entry created
+- [ ] Add integration test: Dispatcher disabled → fallback action returns loyalty result + ledger row
 - [ ] Verify cache invalidation for `['ratingslip']` key
 
 #### Task 2.1.3: Integration Testing (30 min)
@@ -542,7 +549,8 @@
 - [ ] **T0 Events**: `RATINGS_SLIP_COMPLETED` handler functional
 - [ ] **T0 Events**: `POINTS_UPDATE_REQUESTED` handler functional
 - [ ] **T0 Events**: Event replay proves idempotency
-- [ ] **T1 Integration**: RatingSlip completion creates ledger entry
+- [ ] **T1 Integration**: RatingSlip completion (dispatcher path) returns loyalty payload + ledger entry
+- [ ] **T1 Integration**: Fallback `calculateAndAssignPoints` action returns loyalty payload + ledger entry when dispatcher disabled
 - [ ] **T1 Integration**: Manual reward action creates ledger entry
 - [ ] **T2 MTL**: Hooks implemented with cache strategies
 - [ ] **All Tracks**: Integration tests pass

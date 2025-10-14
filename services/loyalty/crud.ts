@@ -61,6 +61,12 @@ export type LoyaltyLedgerDTO = Pick<
   | "session_id"
   | "rating_slip_id"
   | "visit_id"
+  | "staff_id"
+  | "balance_before"
+  | "balance_after"
+  | "tier_before"
+  | "tier_after"
+  | "correlation_id"
 >;
 
 export interface LoyaltyLedgerCreateDTO {
@@ -73,6 +79,26 @@ export interface LoyaltyLedgerCreateDTO {
   session_id?: string | null;
   rating_slip_id?: string | null;
   visit_id?: string | null;
+  staff_id?: string | null;
+  correlation_id?: string | null;
+}
+
+/**
+ * Enhanced RPC result from increment_player_loyalty
+ * Matches Wave 2 schema hardening RPC signature
+ */
+export interface IncrementPlayerLoyaltyResult {
+  player_id: string;
+  balance_before: number;
+  balance_after: number;
+  tier_before: string;
+  tier_after: string;
+  current_balance: number;
+  lifetime_points: number;
+  tier: string;
+  tier_progress: number;
+  updated_at: string;
+  row_locked: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────
@@ -134,9 +160,10 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
 
     /**
      * Create ledger entry (transaction record)
+     * Wave 2 Enhanced: Calls increment_player_loyalty RPC and stores before/after snapshots
      *
      * @param entry - Ledger entry data
-     * @returns ServiceResult with created entry
+     * @returns ServiceResult with created entry including audit trail
      */
     createLedgerEntry: async (
       entry: LoyaltyLedgerCreateDTO,
@@ -144,6 +171,29 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
       return executeOperation<LoyaltyLedgerDTO>(
         "loyalty_create_ledger_entry",
         async () => {
+          // Step 1: Call enhanced RPC to get before/after snapshots
+          const { data: rpcResult, error: rpcError } = await supabase.rpc(
+            "increment_player_loyalty",
+            {
+              p_player_id: entry.player_id,
+              p_delta_points: entry.points_change,
+            },
+          );
+
+          if (rpcError) {
+            throw rpcError;
+          }
+
+          // RPC returns array with single result
+          const loyaltyUpdate = (
+            rpcResult as IncrementPlayerLoyaltyResult[]
+          )[0];
+
+          if (!loyaltyUpdate) {
+            throw new Error("increment_player_loyalty RPC returned no result");
+          }
+
+          // Step 2: Insert ledger entry with before/after snapshots
           const { data, error } = await supabase
             .from("loyalty_ledger")
             .insert({
@@ -156,6 +206,12 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
               session_id: entry.session_id || null,
               rating_slip_id: entry.rating_slip_id || null,
               visit_id: entry.visit_id || null,
+              staff_id: entry.staff_id || null,
+              correlation_id: entry.correlation_id || null,
+              balance_before: loyaltyUpdate.balance_before,
+              balance_after: loyaltyUpdate.balance_after,
+              tier_before: loyaltyUpdate.tier_before,
+              tier_after: loyaltyUpdate.tier_after,
             })
             .select(
               `
@@ -169,7 +225,13 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
               source,
               session_id,
               rating_slip_id,
-              visit_id
+              visit_id,
+              staff_id,
+              balance_before,
+              balance_after,
+              tier_before,
+              tier_after,
+              correlation_id
             `,
             )
             .single();
@@ -192,7 +254,13 @@ export function createLoyaltyCrudService(supabase: SupabaseClient<Database>) {
                   source,
                   session_id,
                   rating_slip_id,
-                  visit_id
+                  visit_id,
+                  staff_id,
+                  balance_before,
+                  balance_after,
+                  tier_before,
+                  tier_after,
+                  correlation_id
                 `,
                 )
                 .eq("session_id", entry.session_id)
