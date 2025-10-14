@@ -123,17 +123,30 @@ export async function completeRatingSlip(
     });
 
     try {
-      // 1. Fetch rating slip data
-      const slipResult = await ratingSlipService.getById(slipId);
-      if (!slipResult.success || !slipResult.data) {
+      // 1. Fetch rating slip data (need full row for game_settings)
+      const { data: slip, error: slipError } = await supabase
+        .from("ratingslip")
+        .select("*")
+        .eq("id", slipId)
+        .single();
+
+      if (slipError || !slip) {
         logOperation("error", "complete_rating_slip_failed", {
           slip_id: slipId,
           reason: "slip_not_found",
         });
-        return slipResult as ServiceResult<RatingSlipCompletionResult>;
+        return {
+          success: false,
+          data: null,
+          error: {
+            code: "NOT_FOUND",
+            message: "Rating slip not found",
+          },
+          status: 404,
+          timestamp: new Date().toISOString(),
+          requestId: correlationId ?? "unknown",
+        };
       }
-
-      const slip = slipResult.data;
 
       // Validate slip is not already closed
       if (slip.status === "CLOSED") {
@@ -147,6 +160,25 @@ export async function completeRatingSlip(
           error: {
             code: "INVALID_STATE",
             message: "Rating slip is already closed",
+          },
+          status: 400,
+          timestamp: new Date().toISOString(),
+          requestId: correlationId ?? "unknown",
+        };
+      }
+
+      // Validate required fields
+      if (!slip.visit_id) {
+        logOperation("error", "complete_rating_slip_failed", {
+          slip_id: slipId,
+          reason: "missing_visit_id",
+        });
+        return {
+          success: false,
+          data: null,
+          error: {
+            code: "INVALID_STATE",
+            message: "Rating slip missing visit_id",
           },
           status: 400,
           timestamp: new Date().toISOString(),
@@ -171,15 +203,24 @@ export async function completeRatingSlip(
         throw rpcError;
       }
 
-      // 3. Calculate and assign points (DIRECT SERVICE CALL, idempotent via rating_slip_id)
+      // 3. Convert game_settings from Json to GameSettings
+      const gameSettings = slip.game_settings as unknown as {
+        house_edge: number;
+        average_rounds_per_hour: number;
+        point_multiplier: number | null;
+        points_conversion_rate: number | null;
+        seats_available: number | null;
+        name?: string;
+      };
+
+      // 4. Calculate and assign points (DIRECT SERVICE CALL, idempotent via rating_slip_id)
       const loyaltyResult = await loyaltyService.accruePointsFromSlip({
         playerId: slip.playerId,
         ratingSlipId: slipId,
         visitId: slip.visit_id,
         averageBet: slip.average_bet,
         durationSeconds: slip.accumulated_seconds,
-        gameSettings:
-          slip.game_settings as Database["public"]["Tables"]["ratingslip"]["Row"]["game_settings"],
+        gameSettings,
       });
 
       if (!loyaltyResult.success || !loyaltyResult.data) {
@@ -210,15 +251,19 @@ export async function completeRatingSlip(
         };
       }
 
-      // 4. Emit telemetry for observability
-      emitTelemetry("RATING_SLIP_COMPLETED", {
+      // 5. Emit telemetry for observability
+      emitTelemetry({
+        eventType: "RATING_SLIP_COMPLETED",
+        timestamp: new Date().toISOString(),
+        correlationId: correlationId ?? null,
         playerId: slip.playerId,
-        sessionId: slipId,
-        correlationId: correlationId ?? undefined,
-        pointsEarned: loyaltyResult.data.pointsEarned,
-        tier: loyaltyResult.data.tier,
-        averageBet: slip.average_bet,
-        durationSeconds: slip.accumulated_seconds,
+        metadata: {
+          sessionId: slipId,
+          pointsEarned: loyaltyResult.data.pointsEarned,
+          tier: loyaltyResult.data.tier,
+          averageBet: slip.average_bet,
+          durationSeconds: slip.accumulated_seconds,
+        },
       });
 
       logOperation("info", "complete_rating_slip_success", {
@@ -227,10 +272,24 @@ export async function completeRatingSlip(
         new_tier: loyaltyResult.data.tier,
       });
 
+      // 6. Create RatingSlipDTO from full row
+      const ratingSlipDTO: RatingSlipDTO = {
+        id: slip.id,
+        playerId: slip.playerId,
+        visit_id: slip.visit_id,
+        gaming_table_id: slip.gaming_table_id,
+        average_bet: slip.average_bet,
+        status: slip.status,
+        start_time: slip.start_time,
+        end_time: slip.end_time,
+        seat_number: slip.seat_number,
+        accumulated_seconds: slip.accumulated_seconds,
+      };
+
       return {
         success: true,
         data: {
-          ratingSlip: slip,
+          ratingSlip: ratingSlipDTO,
           loyalty: loyaltyResult.data,
         },
         error: null,
@@ -395,15 +454,24 @@ export async function recoverSlipLoyalty(
         };
       }
 
-      // 3. Accrue points using deterministic key (rating_slip_id)
+      // 3. Convert game_settings from Json to GameSettings
+      const gameSettings = slip.game_settings as unknown as {
+        house_edge: number;
+        average_rounds_per_hour: number;
+        point_multiplier: number | null;
+        points_conversion_rate: number | null;
+        seats_available: number | null;
+        name?: string;
+      };
+
+      // 4. Accrue points using deterministic key (rating_slip_id)
       const loyaltyResult = await loyaltyService.accruePointsFromSlip({
         ratingSlipId: slipId,
         playerId: slip.playerId,
         visitId: slip.visit_id,
         averageBet: slip.average_bet,
         durationSeconds: slip.accumulated_seconds,
-        gameSettings:
-          slip.game_settings as Database["public"]["Tables"]["ratingslip"]["Row"]["game_settings"],
+        gameSettings,
       });
 
       if (loyaltyResult.success) {
@@ -414,13 +482,17 @@ export async function recoverSlipLoyalty(
         });
 
         // Emit telemetry for recovered loyalty
-        emitTelemetry("RATING_SLIP_COMPLETED", {
-          playerId: slip.playerId,
-          sessionId: slipId,
+        emitTelemetry({
+          eventType: "RATING_SLIP_COMPLETED",
+          timestamp: new Date().toISOString(),
           correlationId,
-          pointsEarned: loyaltyResult.data?.pointsEarned,
-          tier: loyaltyResult.data?.tier,
-          recovered: true,
+          playerId: slip.playerId,
+          metadata: {
+            sessionId: slipId,
+            pointsEarned: loyaltyResult.data?.pointsEarned,
+            tier: loyaltyResult.data?.tier,
+            recovered: true,
+          },
         });
       } else {
         logOperation("error", "recover_slip_loyalty_failed", {

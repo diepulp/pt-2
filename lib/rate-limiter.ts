@@ -145,7 +145,7 @@ function cleanupExpiredEntries(): void {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000; // 1 hour
 
-  for (const [key, entry] of rateLimitStore.entries()) {
+  for (const [key, entry] of Array.from(rateLimitStore.entries())) {
     const age = now - entry.windowStart;
     if (age > maxAge) {
       rateLimitStore.delete(key);

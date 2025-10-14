@@ -216,20 +216,28 @@ export async function manualReward(
       // The service handles 23505 conflicts and returns existing entry
       const isIdempotent = false; // TODO: Service should indicate this
 
-      if (!ledgerResult.success) {
-        return ledgerResult as ServiceResult<ManualRewardResult>;
+      if (!ledgerResult.success || !ledgerResult.data) {
+        return {
+          data: null,
+          error: ledgerResult.error,
+          success: false,
+          status: ledgerResult.status,
+          timestamp: ledgerResult.timestamp,
+          requestId: ledgerResult.requestId,
+        };
       }
 
       // 6. Return success with complete audit trail
+      const ledgerData = ledgerResult.data;
       return {
         data: {
-          ledgerId: ledgerResult.data.id,
-          playerId: ledgerResult.data.player_id,
-          pointsChange: ledgerResult.data.points_change,
-          balanceBefore: ledgerResult.data.balance_before ?? 0,
-          balanceAfter: ledgerResult.data.balance_after ?? 0,
-          tierBefore: ledgerResult.data.tier_before ?? "UNKNOWN",
-          tierAfter: ledgerResult.data.tier_after ?? "UNKNOWN",
+          ledgerId: ledgerData.id,
+          playerId: ledgerData.player_id,
+          pointsChange: ledgerData.points_change,
+          balanceBefore: ledgerData.balance_before ?? 0,
+          balanceAfter: ledgerData.balance_after ?? 0,
+          tierBefore: ledgerData.tier_before ?? "UNKNOWN",
+          tierAfter: ledgerData.tier_after ?? "UNKNOWN",
           idempotencyKey,
           correlationId: getCorrelationId() ?? correlationId,
           isIdempotent,

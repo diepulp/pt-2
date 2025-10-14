@@ -161,7 +161,13 @@ export function createLoyaltyQueriesService(
               source,
               session_id,
               rating_slip_id,
-              visit_id
+              visit_id,
+              staff_id,
+              balance_before,
+              balance_after,
+              tier_before,
+              tier_after,
+              correlation_id
             `,
             )
             .eq("player_id", playerId)

@@ -583,6 +583,9 @@ export type Database = {
       };
       loyalty_ledger: {
         Row: {
+          balance_after: number | null;
+          balance_before: number | null;
+          correlation_id: string | null;
           created_at: string;
           event_type: string | null;
           id: string;
@@ -592,10 +595,16 @@ export type Database = {
           reason: string | null;
           session_id: string | null;
           source: string;
+          staff_id: string | null;
+          tier_after: string | null;
+          tier_before: string | null;
           transaction_type: string;
           visit_id: string | null;
         };
         Insert: {
+          balance_after?: number | null;
+          balance_before?: number | null;
+          correlation_id?: string | null;
           created_at?: string;
           event_type?: string | null;
           id?: string;
@@ -605,10 +614,16 @@ export type Database = {
           reason?: string | null;
           session_id?: string | null;
           source?: string;
+          staff_id?: string | null;
+          tier_after?: string | null;
+          tier_before?: string | null;
           transaction_type: string;
           visit_id?: string | null;
         };
         Update: {
+          balance_after?: number | null;
+          balance_before?: number | null;
+          correlation_id?: string | null;
           created_at?: string;
           event_type?: string | null;
           id?: string;
@@ -618,6 +633,9 @@ export type Database = {
           reason?: string | null;
           session_id?: string | null;
           source?: string;
+          staff_id?: string | null;
+          tier_after?: string | null;
+          tier_before?: string | null;
           transaction_type?: string;
           visit_id?: string | null;
         };
@@ -2121,8 +2139,17 @@ export type Database = {
       increment_player_loyalty: {
         Args: { p_delta_points: number; p_player_id: string };
         Returns: {
+          balance_after: number;
+          balance_before: number;
           current_balance: number;
+          lifetime_points: number;
+          player_id: string;
+          row_locked: boolean;
           tier: string;
+          tier_after: string;
+          tier_before: string;
+          tier_progress: number;
+          updated_at: string;
         }[];
       };
       jwt_get_role: {
