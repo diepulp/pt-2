@@ -17,6 +17,10 @@
         "ide-assistant"
       ],
       "env": {}
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
     }
   }
 }

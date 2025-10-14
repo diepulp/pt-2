@@ -12,6 +12,10 @@ See `docs/INDEX.md` for documentation index
 
 ## Critical Standards (Quick Reference)
 
+### Over-Engineering Guardrail
+
+See `docs/patterns/OVER_ENGINEERING_GUARDRAIL.md`
+
 ### Service Layer
 
 - Use functional factories, not classes
@@ -45,5 +49,17 @@ See `docs/INDEX.md` for documentation index
 ### DB Workflow
 
 - all migrations are ran against the local db
-- do not use psql, it Doesn’t trigger cache reload — must run NOTIFY pgrst, 'reload schema'; manually
+- do not use psql, it Doesn't trigger cache reload — must run NOTIFY pgrst, 'reload schema'
 - Apply migrations via **npx supabase migration** up or **npx supabase db reset**
+
+### Migration Naming Convention
+
+- **REQUIRED**: All migration files MUST follow `YYYYMMDDHHMMSS_description.sql` pattern
+- Use actual file creation timestamp: `date +"%Y%m%d%H%M%S"`
+- ❌ DO NOT use simplified patterns like `YYYYMMDD000001` or `YYYYMMDD_description`
+- ✅ Example: `20251014134942_mtl_schema_enhancements.sql`
+- See `docs/patterns/MTL_MIGRATION_TIMESTAMP_FIX.md` for historical corrections
+
+### UI
+
+- The de-facto standard for UI is shadcn UI library and the respective registries provided by the Shadcn MCP server

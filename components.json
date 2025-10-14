@@ -17,5 +17,12 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "iconLibrary": "lucide"
+  "iconLibrary": "lucide",
+  "registries": {
+    "@aceternity": "https://ui.aceternity.com/registry{name}.json",
+    "@originui": "https://originui.com/registry{name}.json",
+    "@shadcnui-blocks": "https://shadcnui-blocks.comregistry{name}.json",
+    "@kokonutui": "https://kokonutui.com/r/{name}.json",
+    "@tweakcn": "https://tweakcn.com/registry{name}.json"
+  }
 }

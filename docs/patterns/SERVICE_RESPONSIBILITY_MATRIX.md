@@ -1,9 +1,11 @@
 # Service Responsibility Matrix - Bounded Context Integrity
 
-> **Version**: 2.0.0 (with Loyalty Context)
-> **Date**: 2025-10-12
-> **Status**: CANONICAL - Phase 6 Architecture with Loyalty Service
-> **Previous Version**: [v1.0 Pre-Loyalty (2025-10-06)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v1.0_pre-loyalty_2025-10-06.md)
+> **Version**: 2.1.0 (with Loyalty & MTL Contexts)
+> **Date**: 2025-10-14
+> **Status**: CANONICAL - Phase 6+ Architecture with Loyalty & MTL Services
+> **Previous Versions**:
+> - [v2.0.0 Loyalty (2025-10-12)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v2.0_loyalty_2025-10-12.md)
+> - [v1.0 Pre-Loyalty (2025-10-06)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v1.0_pre-loyalty_2025-10-06.md)
 > **Purpose**: Maintain bounded context integrity across all service domains
 
 ---
@@ -12,7 +14,8 @@
 
 | Version | Date | Changes | Rationale |
 |---------|------|---------|-----------|
-| **2.0.0** | 2025-10-12 | Added Loyalty service bounded context, clarified point calculation ownership, updated integration patterns | Phase 6 requires Loyalty for point calculation policy (reward vs measurement separation) |
+| **2.1.0** | 2025-10-14 | Added MTL (Compliance) service bounded context, enhanced cross-domain correlation with rating_slip_id/visit_id, added audit note immutability pattern | Phase 6+ requires AML/CTR compliance tracking with contextual enrichment from Loyalty and RatingSlip domains |
+| 2.0.0 | 2025-10-12 | Added Loyalty service bounded context, clarified point calculation ownership, updated integration patterns | Phase 6 requires Loyalty for point calculation policy (reward vs measurement separation) |
 | 1.0.0 | 2025-10-06 | Initial version post-RatingSlip simplification, established Performance vs Finance separation | Bounded context integrity after domain coupling analysis |
 
 ---
@@ -31,48 +34,58 @@
 ## Updated Bounded Context Map
 
 ```
-┌────────────────────────────────────────────────────────────────────────┐
-│                          CASINO TRACKER SYSTEM                          │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐           │
-│  │   IDENTITY   │     │   LOCATION   │     │   FINANCE    │           │
-│  │   CONTEXT    │     │   CONTEXT    │     │   CONTEXT    │           │
-│  │              │     │              │     │              │           │
-│  │   Player     │────▶│   Casino     │     │   Player     │           │
-│  │   Service    │     │   Service    │     │   Financial  │           │
-│  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘           │
-│         │                    │                    │                    │
-│         │                    │                    │                    │
-│         ▼                    ▼                    ▼                    │
-│  ┌───────────────────────────────────────────────────────────────┐    │
-│  │            SESSION CONTEXT (Aggregate Root)                    │    │
-│  │                                                                 │    │
-│  │  ┌──────────────┐        ┌──────────────┐                     │    │
-│  │  │    Visit     │───────▶│  RatingSlip  │─────┐               │    │
-│  │  │   Service    │        │   Service    │     │               │    │
-│  │  │              │        │ (Telemetry)  │     │               │    │
-│  │  └──────────────┘        └──────────────┘     │               │    │
-│  │                                                │               │    │
-│  └────────────────────────────────────────────────┼───────────────┘    │
-│                                                   │                    │
-│         ┌─────────────────────────────────────────┘                    │
-│         │ Emits: RatingSlipCompletedEvent                              │
-│         │ (telemetry data: avgBet, duration, gameSettings)             │
-│         ▼                                                              │
-│  ┌──────────────┐                                                     │
-│  │   REWARD     │                                                     │
-│  │   CONTEXT    │  ◀─── "What is this gameplay worth?"                │
-│  │              │                                                     │
-│  │   Loyalty    │  • Interprets telemetry                             │
-│  │   Service    │  • Applies reward policy                            │
-│  │              │  • Calculates points                                │
-│  └──────┬───────┘  • Stores in LoyaltyLedger                          │
-│         │          • Updates tier progression                         │
-│         │                                                              │
-│         └──────────▶ Updates RatingSlip.points (denormalized cache)   │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────────────────┐
+│                          CASINO TRACKER SYSTEM                              │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐               │
+│  │   IDENTITY   │     │   LOCATION   │     │   FINANCE    │               │
+│  │   CONTEXT    │     │   CONTEXT    │     │   CONTEXT    │               │
+│  │              │     │              │     │              │               │
+│  │   Player     │────▶│   Casino     │     │   Player     │               │
+│  │   Service    │     │   Service    │     │   Financial  │               │
+│  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘               │
+│         │                    │                    │                        │
+│         │                    │                    │                        │
+│         ▼                    ▼                    ▼                        │
+│  ┌───────────────────────────────────────────────────────────────┐        │
+│  │            SESSION CONTEXT (Aggregate Root)                    │        │
+│  │                                                                 │        │
+│  │  ┌──────────────┐        ┌──────────────┐                     │        │
+│  │  │    Visit     │───────▶│  RatingSlip  │─────┐               │        │
+│  │  │   Service    │        │   Service    │     │               │        │
+│  │  │              │        │ (Telemetry)  │     │               │        │
+│  │  └──────────────┘        └──────────────┘     │               │        │
+│  │                                                │               │        │
+│  └────────────────────────────────────────────────┼───────────────┘        │
+│                                                   │                        │
+│         ┌─────────────────────────────────────────┘                        │
+│         │ Emits: RatingSlipCompletedEvent                                  │
+│         │ (telemetry data: avgBet, duration, gameSettings)                 │
+│         ▼                                                                  │
+│  ┌──────────────┐                    ┌─────────────────┐                  │
+│  │   REWARD     │                    │   COMPLIANCE    │                  │
+│  │   CONTEXT    │                    │    CONTEXT      │                  │
+│  │              │  ◀────┐            │                 │                  │
+│  │   Loyalty    │       │            │      MTL        │                  │
+│  │   Service    │       └────────────│    Service      │                  │
+│  │              │  Read-only         │                 │                  │
+│  └──────┬───────┘  correlation       └────────┬────────┘                  │
+│         │          (contextual               │                            │
+│         │           enrichment)              │                            │
+│         │                                    │                            │
+│         │  • Interprets telemetry           │  • Cash transaction log    │
+│         │  • Applies reward policy          │  • Gaming day calculation  │
+│         │  • Calculates points              │  • Threshold detection     │
+│         │  • Stores in LoyaltyLedger        │  • AML/CTR compliance      │
+│         │  • Updates tier progression       │  • Immutable audit trail   │
+│         │                                    │                            │
+│         └──────────▶ Updates RatingSlip.points (denormalized cache)       │
+│                                                                            │
+│         Both services read from Session/Telemetry context (read-only)     │
+│         MTL reads from Loyalty for contextual enrichment (compliance only) │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -82,11 +95,12 @@
 | Domain | Service | Owns | References | Aggregates | Responsibilities |
 |--------|---------|------|------------|------------|------------------|
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | – | • Visits<br>• RatingSlips<br>• Loyalty | Identity management |
-| **Location** | `CasinoService` | • Casino details<br>• Tables<br>• Game configs | – | • Visits<br>• RatingSlips | Venue management |
-| **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • RatingSlips<br>• Financials | Session lifecycle |
+| **Location** | `CasinoService` | • Casino details<br>• Tables<br>• Game configs<br>• **Casino settings**<br>• Gaming day config | – | • Visits<br>• RatingSlips<br>• MTL entries | Venue management & configuration |
+| **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • RatingSlips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• **points** (cache) | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** 🆕 | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• RatingSlip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
 | **Finance** | `PlayerFinancialService` | • Cash in/out<br>• Chips tracking<br>• Reconciliation | • Player (FK)<br>• Visit (FK)<br>• RatingSlip (FK) | – | Financial tracking |
+| **Compliance** 🆕 | `MTLService` | • **Cash transaction log**<br>• MTL entries (immutable)<br>• Audit notes<br>• Gaming day calculation<br>• Threshold detection<br>• Compliance exports | • Player (FK, optional)<br>• Casino (FK)<br>• Staff (FK)<br>• RatingSlip (FK, optional)<br>• Visit (FK, optional) | • Daily aggregates<br>• Threshold monitoring<br>• CTR/Watchlist detection | **AML/CTR compliance tracking** |
 
 ---
 
@@ -159,6 +173,146 @@ CREATE TABLE loyalty_tier (
   multiplier NUMERIC(3,2) NOT NULL DEFAULT 1.0,
   benefits JSONB
 );
+```
+
+---
+
+## MTL Service (NEW) - Compliance Context
+
+### ✅ MTLService (AML/CTR Compliance Engine)
+
+**OWNS:**
+- **Cash transaction logging** (immutable, write-once records)
+- `mtl_entry` table (source of truth for all monetary transactions)
+- `mtl_audit_note` table (append-only audit trail)
+- `casino_settings` table (gaming day configuration, thresholds)
+- Gaming day calculation logic (trigger-based)
+- Threshold detection rules (watchlist >= $3k, CTR >= $10k)
+- Compliance export generation (CSV reports)
+- Aggregation views (`mtl_patron_aggregates`, `mtl_threshold_monitor`, `mtl_compliance_context`)
+
+**REFERENCES:**
+- `player_id` - Patron identification (when carded)
+- `casino_id` - Venue context
+- `recorded_by_employee_id` - Staff accountability
+- `rating_slip_id` - Session context (optional)
+- `visit_id` - Visit context (optional)
+
+**READS (Contextual Enrichment):**
+- `RatingSlip` - Session telemetry for behavioral correlation
+- `Visit` - Session boundaries
+- `Player` - Identity resolution
+- `Loyalty Ledger` - Reward activity correlation (for compliance analysis)
+- `Staff` - Audit trail and access control
+
+**DOES NOT OWN:**
+- ❌ Player identity → `PlayerService`
+- ❌ Staff management → `StaffService`
+- ❌ Visit sessions → `VisitService`
+- ❌ Gaming telemetry → `RatingSlipService`
+- ❌ Loyalty rewards → `LoyaltyService`
+
+**BOUNDED CONTEXT**: "What cash/monetary transactions occurred for AML/CTR compliance?"
+
+**KEY PRINCIPLES:**
+- **Immutability**: Write-once entries, append-only audit notes
+- **Read-Only Correlation**: Never writes to other domains (Loyalty, RatingSlip, etc.)
+- **5+ Year Retention**: Long-term compliance archival
+- **Gaming Day Normalization**: Automatic calculation via trigger
+- **Threshold Detection**: Automated watchlist and CTR alerts
+
+### Schema (Enhanced for Cross-Domain Correlation)
+
+```sql
+-- Core compliance transaction log (immutable)
+CREATE TABLE mtl_entry (
+  id BIGSERIAL PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+
+  -- Patron identification (flexible for carded/uncarded)
+  patron_id TEXT REFERENCES player(id),  -- When carded
+  person_name TEXT,                      -- When uncarded
+  person_last_name TEXT,
+  person_description TEXT,
+
+  -- Transaction details
+  direction "MtlDirection" NOT NULL,     -- cash_in | cash_out
+  area "MtlArea" NOT NULL,               -- pit | cage | slot | poker | kiosk
+  tender_type "TenderType" NOT NULL DEFAULT 'cash',
+  amount DECIMAL(12,2) NOT NULL CHECK (amount > 0),
+
+  -- Location context
+  table_number TEXT,
+  location_note TEXT,
+
+  -- Timing
+  event_time TIMESTAMPTZ NOT NULL,
+  gaming_day DATE NOT NULL,              -- Auto-calculated via trigger
+
+  -- Accountability
+  recorded_by_employee_id UUID NOT NULL REFERENCES "Staff"(id),
+  recorded_by_signature TEXT NOT NULL,
+  notes TEXT,                            -- Legacy field (use mtl_audit_note instead)
+
+  -- Cross-domain correlation (NEW)
+  rating_slip_id UUID REFERENCES ratingslip(id),
+  visit_id UUID REFERENCES visit(id),
+  correlation_id TEXT,                   -- For distributed tracing
+  idempotency_key TEXT UNIQUE,          -- Duplicate prevention
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
+-- Append-only audit notes (enforces immutability)
+CREATE TABLE mtl_audit_note (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  mtl_entry_id BIGINT NOT NULL REFERENCES mtl_entry(id),
+  note TEXT NOT NULL CHECK (length(trim(note)) > 0),
+  created_by UUID NOT NULL REFERENCES "Staff"(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Casino configuration
+CREATE TABLE casino_settings (
+  id TEXT PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  timezone TEXT NOT NULL DEFAULT 'America/Los_Angeles',
+  gaming_day_start TEXT NOT NULL DEFAULT '06:00',
+  watchlist_floor DECIMAL(10,2) NOT NULL DEFAULT 3000,
+  ctr_threshold DECIMAL(10,2) NOT NULL DEFAULT 10000,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+```
+
+### Contextual Enrichment View
+
+```sql
+-- Read-only view for compliance analysis
+CREATE VIEW mtl_compliance_context AS
+SELECT
+  m.*,
+  -- Session context (from RatingSlip)
+  r.average_bet as session_avg_bet,
+  r.accumulated_seconds as session_duration_seconds,
+  -- Visit context
+  v.check_in_date, v.check_out_date,
+  -- Player identification
+  p.first_name, p.last_name, p.card_number,
+  -- Loyalty correlation (for compliance oversight)
+  l.points_change, l.transaction_type as loyalty_tx_type,
+  l.staff_id as loyalty_staff_id,
+  -- Threshold status
+  tm.threshold_status, tm.proximity_status,
+  tm.watchlist_percentage, tm.ctr_percentage
+FROM mtl_entry m
+LEFT JOIN ratingslip r ON m.rating_slip_id = r.id
+LEFT JOIN visit v ON m.visit_id = v.id
+LEFT JOIN player p ON m.patron_id = p.id::text
+LEFT JOIN loyalty_ledger l ON l.rating_slip_id = m.rating_slip_id
+LEFT JOIN mtl_threshold_monitor tm ON tm.casino_id = m.casino_id
+  AND tm.gaming_day = m.gaming_day;
 ```
 
 ---

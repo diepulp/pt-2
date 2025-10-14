@@ -3,8 +3,8 @@
  * Tests manual reward server action with guardrails
  */
 
-import { manualReward, getRateLimitInfo } from '@/app/actions/loyalty-actions';
-import { resetRateLimit } from '@/lib/rate-limiter';__tests__/lib/rate-limiter.test.ts
+import { manualReward, getRateLimitInfo } from '/home/diepulp/projects/pt-2/app/actions/loyalty-actions.ts';
+import { resetRateLimit } from '/home/diepulp/projects/pt-2/lib/rate-limiter.ts';
 
 // Mock dependencies
 jest.mock('@/lib/supabase/server', () => ({
