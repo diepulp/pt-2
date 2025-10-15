@@ -18,6 +18,8 @@
  * - Handles 23505 conflicts gracefully (soft success)
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import {
   generateCorrelationId,
   setCorrelationId,
@@ -29,6 +31,7 @@ import { withServerAction } from "@/lib/server-actions/with-server-action-wrappe
 import { createClient } from "@/lib/supabase/server";
 import { createLoyaltyCrudService } from "@/services/loyalty/crud";
 import type { ServiceResult } from "@/services/shared/types";
+import type { Database } from "@/types/database.types";
 
 /**
  * Manual Reward Input DTO
@@ -58,20 +61,78 @@ export interface ManualRewardResult {
 
 /**
  * Permission check for loyalty operations
- * TODO: Replace with actual permission service in Wave 3
+ * Phase 6 Wave 3 Track 1: Direct staff_permissions query
  *
- * @param userId - Staff user ID
- * @param permission - Permission to check (e.g., 'loyalty:award')
- * @returns true if permitted
+ * @param supabase - Supabase client
+ * @param staffId - Staff user ID
+ * @param capability - Capability to check (e.g., 'loyalty:award')
+ * @returns ServiceResult indicating if permission granted
  */
 async function checkPermission(
-  userId: string,
-  permission: string,
-): Promise<boolean> {
-  // PLACEHOLDER: Wave 3 will implement actual permission checking
-  // For now, allow all authenticated users
-  // TODO: Implement actual RBAC checks against staff_permissions table
-  return true;
+  supabase: SupabaseClient<Database>,
+  staffId: string,
+  capability: string,
+): Promise<ServiceResult<boolean>> {
+  const { data, error } = await supabase
+    .from("staff_permissions")
+    .select("capabilities")
+    .eq("staff_id", staffId)
+    .single();
+
+  if (error) {
+    // No permissions record found - deny by default
+    if (error.code === "PGRST116") {
+      return {
+        success: false,
+        data: null,
+        error: {
+          code: "FORBIDDEN",
+          message: `Staff member has no permissions configured`,
+        },
+        status: 403,
+        timestamp: new Date().toISOString(),
+        requestId: generateCorrelationId(),
+      };
+    }
+
+    // Database error
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "PERMISSION_CHECK_FAILED",
+        message: error.message,
+        details: error,
+      },
+      status: 500,
+      timestamp: new Date().toISOString(),
+      requestId: generateCorrelationId(),
+    };
+  }
+
+  const hasPermission = data.capabilities.includes(capability);
+  if (!hasPermission) {
+    return {
+      success: false,
+      data: null,
+      error: {
+        code: "FORBIDDEN",
+        message: `Missing required capability: ${capability}`,
+      },
+      status: 403,
+      timestamp: new Date().toISOString(),
+      requestId: generateCorrelationId(),
+    };
+  }
+
+  return {
+    success: true,
+    data: true,
+    error: null,
+    status: 200,
+    timestamp: new Date().toISOString(),
+    requestId: generateCorrelationId(),
+  };
 }
 
 /**
@@ -144,18 +205,19 @@ export async function manualReward(
   return withServerAction(
     async () => {
       // 1. Permission check
-      const hasPermission = await checkPermission(staffId, "loyalty:award");
-      if (!hasPermission) {
+      const permissionResult = await checkPermission(
+        supabase,
+        staffId,
+        "loyalty:award",
+      );
+      if (!permissionResult.success) {
         return {
           data: null,
-          error: {
-            code: "FORBIDDEN",
-            message: "Missing required permission: loyalty:award",
-          },
+          error: permissionResult.error,
           success: false,
-          status: 403,
-          timestamp: new Date().toISOString(),
-          requestId: correlationId,
+          status: permissionResult.status,
+          timestamp: permissionResult.timestamp,
+          requestId: permissionResult.requestId,
         };
       }
 
@@ -312,4 +374,127 @@ export async function getRateLimitInfo(): Promise<
     timestamp: new Date().toISOString(),
     requestId: generateCorrelationId(),
   };
+}
+
+/**
+ * Player Loyalty DTO (Read-Only)
+ */
+export interface PlayerLoyaltyDTO {
+  id: string;
+  playerId: string;
+  tier: string;
+  currentBalance: number;
+  lifetimePoints: number;
+  tierProgress: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * Get Player Loyalty Server Action (READ-ONLY)
+ *
+ * Fetches player loyalty data for display purposes only.
+ * This is a READ-ONLY operation - MTL domain cannot mutate loyalty data.
+ *
+ * @param playerId - Player UUID
+ * @returns ServiceResult with loyalty data
+ *
+ * @example
+ * ```typescript
+ * const result = await getPlayerLoyalty('player-uuid');
+ * if (result.success) {
+ *   console.log('Tier:', result.data.tier);
+ *   console.log('Balance:', result.data.currentBalance);
+ * }
+ * ```
+ */
+export async function getPlayerLoyalty(
+  playerId: string,
+): Promise<ServiceResult<PlayerLoyaltyDTO>> {
+  const supabase = await createClient();
+
+  // Get session for auth
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  if (!session?.user) {
+    return {
+      data: null,
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      },
+      success: false,
+      status: 401,
+      timestamp: new Date().toISOString(),
+      requestId: generateCorrelationId(),
+    };
+  }
+
+  return withServerAction(
+    async () => {
+      // Fetch player loyalty data
+      const { data: loyalty, error } = await supabase
+        .from("player_loyalty")
+        .select("*")
+        .eq("player_id", playerId)
+        .single();
+
+      if (error) {
+        if (error.code === "PGRST116") {
+          // No rows returned
+          return {
+            data: null,
+            error: {
+              code: "NOT_FOUND",
+              message: `Player loyalty not found for player: ${playerId}`,
+            },
+            success: false,
+            status: 404,
+            timestamp: new Date().toISOString(),
+            requestId: generateCorrelationId(),
+          };
+        }
+
+        return {
+          data: null,
+          error: {
+            code: "DATABASE_ERROR",
+            message: error.message,
+            details: error,
+          },
+          success: false,
+          status: 500,
+          timestamp: new Date().toISOString(),
+          requestId: generateCorrelationId(),
+        };
+      }
+
+      return {
+        data: {
+          id: loyalty.id,
+          playerId: loyalty.player_id,
+          tier: loyalty.tier,
+          currentBalance: loyalty.current_balance ?? 0,
+          lifetimePoints: loyalty.lifetime_points ?? 0,
+          tierProgress: loyalty.tier_progress ?? 0,
+          createdAt: loyalty.created_at ?? new Date().toISOString(),
+          updatedAt: loyalty.updated_at ?? new Date().toISOString(),
+        },
+        error: null,
+        success: true,
+        status: 200,
+        timestamp: new Date().toISOString(),
+        requestId: generateCorrelationId(),
+      };
+    },
+    supabase,
+    {
+      action: "loyalty.get_player_loyalty",
+      userId: session.user.id,
+      entity: "player_loyalty",
+      metadata: { playerId },
+    },
+  );
 }

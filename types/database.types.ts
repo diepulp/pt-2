@@ -1816,6 +1816,35 @@ export type Database = {
         };
         Relationships: [];
       };
+      staff_permissions: {
+        Row: {
+          capabilities: string[];
+          created_at: string;
+          staff_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          capabilities?: string[];
+          created_at?: string;
+          staff_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          capabilities?: string[];
+          created_at?: string;
+          staff_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "staff_permissions_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: true;
+            referencedRelation: "Staff";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       TableInventorySlip: {
         Row: {
           closedAt: string | null;

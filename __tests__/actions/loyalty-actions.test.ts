@@ -61,6 +61,130 @@ describe('Loyalty Actions', () => {
       expect(result.error?.code).toBe('UNAUTHORIZED');
     });
 
+    it('checks staff_permissions table for loyalty:award capability', async () => {
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: {
+          session: {
+            user: { id: 'test-staff-id' },
+          },
+        },
+      });
+
+      // Mock from() to create a query builder
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['loyalty:award'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
+      });
+
+      mockLoyaltyService.createLedgerEntry.mockResolvedValue({
+        success: true,
+        data: {
+          id: 'ledger-123',
+          player_id: 'player-123',
+          points_change: 100,
+          balance_before: 500,
+          balance_after: 600,
+          tier_before: 'BRONZE',
+          tier_after: 'SILVER',
+        },
+      });
+
+      await manualReward(validInput);
+
+      // Verify permission check was made
+      expect(mockFrom).toHaveBeenCalledWith('staff_permissions');
+      expect(mockSelect).toHaveBeenCalledWith('capabilities');
+      expect(mockEq).toHaveBeenCalledWith('staff_id', 'test-staff-id');
+    });
+
+    it('returns 403 FORBIDDEN when staff lacks loyalty:award capability', async () => {
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: {
+          session: {
+            user: { id: 'test-staff-id' },
+          },
+        },
+      });
+
+      // Mock permission check to return wrong capability
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['some:other:permission'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
+      });
+
+      const result = await manualReward(validInput);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe(403);
+      expect(result.error?.code).toBe('FORBIDDEN');
+      expect(result.error?.message).toContain('loyalty:award');
+    });
+
+    it('returns 403 FORBIDDEN when staff has no permissions record', async () => {
+      mockSupabase.auth.getSession.mockResolvedValue({
+        data: {
+          session: {
+            user: { id: 'test-staff-id' },
+          },
+        },
+      });
+
+      // Mock permission check to return PGRST116 (no rows)
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'No rows found' },
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
+      });
+
+      const result = await manualReward(validInput);
+
+      expect(result.success).toBe(false);
+      expect(result.status).toBe(403);
+      expect(result.error?.code).toBe('FORBIDDEN');
+      expect(result.error?.message).toContain('no permissions configured');
+    });
+
     it('enforces rate limiting', async () => {
       mockSupabase.auth.getSession.mockResolvedValue({
         data: {
@@ -68,6 +192,26 @@ describe('Loyalty Actions', () => {
             user: { id: 'test-staff-id' },
           },
         },
+      });
+
+      // Mock permission check to allow access
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['loyalty:award'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
       });
 
       mockLoyaltyService.createLedgerEntry.mockResolvedValue({
@@ -103,6 +247,26 @@ describe('Loyalty Actions', () => {
             user: { id: 'test-staff-id' },
           },
         },
+      });
+
+      // Mock permission check
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['loyalty:award'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
       });
 
       let capturedSessionId1: string | undefined;
@@ -160,6 +324,26 @@ describe('Loyalty Actions', () => {
         },
       });
 
+      // Mock permission check
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['loyalty:award'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
+      });
+
       mockLoyaltyService.createLedgerEntry.mockResolvedValue({
         success: true,
         data: {
@@ -196,6 +380,26 @@ describe('Loyalty Actions', () => {
             user: { id: 'test-staff-id' },
           },
         },
+      });
+
+      // Mock permission check
+      const mockFrom = jest.fn().mockReturnThis();
+      const mockSelect = jest.fn().mockReturnThis();
+      const mockEq = jest.fn().mockReturnThis();
+      const mockSingle = jest.fn().mockResolvedValue({
+        data: { capabilities: ['loyalty:award'] },
+        error: null,
+      });
+
+      mockSupabase.from = mockFrom;
+      mockFrom.mockReturnValue({
+        select: mockSelect,
+      });
+      mockSelect.mockReturnValue({
+        eq: mockEq,
+      });
+      mockEq.mockReturnValue({
+        single: mockSingle,
       });
 
       let capturedEntry: any;
