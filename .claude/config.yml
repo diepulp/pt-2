@@ -1,0 +1,49 @@
+# Claude Code Configuration for PT-2
+# Auto-loads memory files at session start
+
+memory:
+  auto_load:
+    - .claude/memory/project-context.memory.md
+    - .claude/memory/anti-patterns.memory.md
+    - .claude/memory/architecture-decisions.memory.md
+    - .claude/memory/phase-status.memory.md
+    - .claude/memory/service-catalog.memory.md
+    - .claude/memory/domain-glossary.memory.md
+
+  # Memory file metadata
+  version: "1.0.0"
+  last_updated: "2025-10-17"
+
+  # Total memory footprint target: <5k words (from 203k docs)
+  # Actual: ~3.5k words across 6 files
+  # Load time target: <10 seconds
+
+  notes: |
+    These memory files provide essential context for all PT-2 development work:
+
+    1. project-context: Tech stack, constraints, current status
+    2. anti-patterns: Critical violations to avoid (enforcement checklist)
+    3. architecture-decisions: ADR summaries and key decisions
+    4. phase-status: Current work, completed phases, next steps
+    5. service-catalog: All 7 services with operations and patterns
+    6. domain-glossary: Canonical terminology and definitions
+
+    Memory files replace the need to load 203k-word documentation on every session,
+    reducing context load time from 2-5 minutes to <10 seconds.
+
+# Project-specific settings
+project:
+  name: "PT-2 Casino Tracker"
+  phase: "Phase 6 Wave 3 Complete"
+  status: "~75% MVP Complete"
+
+settings:
+  # Prefer reading memory files over full documentation
+  context_strategy: "memory_first"
+
+  # Update memory files when major milestones occur
+  memory_refresh_triggers:
+    - "Phase completion"
+    - "New ADR accepted"
+    - "Service implementation complete"
+    - "Major architectural change"

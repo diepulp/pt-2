@@ -1,14 +1,23 @@
 # PT-2 Architecture Standards
 
-<!-- Reference the full PRD -->
+<!-- Auto-load Memory Files (Phase 1 Agentic Workflow) -->
+<!-- These 6 memory files provide compressed context from 203k-word documentation -->
 
-See `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` for complete architecture specification.
-see `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for service layer architecture standards and diagram
-See `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md` for for vertical vs horizontal slicing decisions
-See `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md` for bounded context integrity
-See `docs/adr/ADR-003-state-management-strategy.md` for state management strategy
-See `docs/integrity/INTEGRITY_FRAMEWORK.md` for automated guardrails and enforcement
-See `docs/INDEX.md` for documentation index
+@.claude/memory/project-context.memory.md
+@.claude/memory/anti-patterns.memory.md
+@.claude/memory/architecture-decisions.memory.md
+@.claude/memory/phase-status.memory.md
+@.claude/memory/service-catalog.memory.md
+@.claude/memory/domain-glossary.memory.md
+
+<!-- Full Documentation References (use when memory files insufficient) -->
+<!-- PRD: docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md -->
+<!-- Service Architecture: docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md -->
+<!-- Patterns: docs/patterns/BALANCED_ARCHITECTURE_QUICK.md -->
+<!-- Bounded Contexts: docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md -->
+<!-- State Management: docs/adr/ADR-003-state-management-strategy.md -->
+<!-- Integrity: docs/integrity/INTEGRITY_FRAMEWORK.md -->
+<!-- Index: docs/INDEX.md -->
 
 ## Critical Standards (Quick Reference)
 
