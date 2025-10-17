@@ -30,12 +30,20 @@ PT-2's memory infrastructure provides compressed, session-ready context from 203
 
 ### Integration Point
 
-**Primary Mechanism**: `.claude/CLAUDE.md` (auto-loaded every session)
+**Primary Mechanism**: `/load-memory` slash command (manual, reliable)
+
+```bash
+# At session start, run:
+/load-memory
+```
+
+**Experimental**: `.claude/CLAUDE.md` @ references (auto-load, under investigation)
 
 ```markdown
 # PT-2 Architecture Standards
 
-<!-- Auto-load Memory Files -->
+<!-- Note: @ auto-load mechanism under investigation -->
+<!-- Use /load-memory command for reliable loading -->
 @.claude/memory/project-context.memory.md
 @.claude/memory/anti-patterns.memory.md
 @.claude/memory/architecture-decisions.memory.md
@@ -44,19 +52,25 @@ PT-2's memory infrastructure provides compressed, session-ready context from 203
 @.claude/memory/domain-glossary.memory.md
 ```
 
-**Backup Mechanism**: `/load-memory` slash command (manual trigger)
-
 ---
 
 ## How It Works
 
 ### Session Startup
 
-1. User starts new Claude Code session
-2. Claude Code auto-loads `.claude/CLAUDE.md`
-3. `@` references trigger memory file reads
-4. All 6 files loaded in <10 seconds
-5. Agent has full project context immediately
+**Recommended Workflow**:
+
+1. Start new Claude Code session
+2. **Run `/load-memory` command** (loads all 6 files in <5s)
+3. Agent has full project context immediately
+4. Begin work with immediate access to patterns, status, and standards
+
+**Alternative** (experimental, not guaranteed):
+
+1. Start new Claude Code session
+2. Claude Code may auto-load `.claude/CLAUDE.md` with `@` references
+3. If auto-load works, context available immediately
+4. If not, run `/load-memory` as fallback
 
 ### During Session
 
@@ -82,24 +96,27 @@ Agent has immediate access to:
 
 ### For Users
 
-**Normal Session** (auto-load working):
+**Recommended Session Startup** (reliable, <5 seconds):
 ```bash
-# Start session - memory files load automatically
+# 1. Start session
 claude-code
 
-# Ask questions immediately - no setup needed
+# 2. Load memory context
+/load-memory
+
+# 3. Ask questions immediately - context ready
 "What's the service layer architecture?"
 "What anti-patterns should I avoid?"
 "What's the current phase status?"
 ```
 
-**If Auto-load Fails**:
+**Quick Validation**:
 ```bash
-# Manually trigger load
-/load-memory
+# Ask a test question to confirm memory loaded
+"What's the current phase status?"
 
-# Confirm context loaded
-"Can you see the memory context?"
+# If agent answers immediately without reading files: ✅ Memory loaded
+# If agent says "Let me read the files first": ❌ Run /load-memory
 ```
 
 ### For Agents

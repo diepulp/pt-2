@@ -212,7 +212,7 @@ scope: all_agents
 # Project Context Memory
 
 ## Tech Stack
-- **Framework**: Next.js 14 (App Router)
+- **Framework**: Next.js 15 (App Router)
 - **Database**: Supabase (PostgreSQL + RLS)
 - **State**: React Query + Zustand
 - **Testing**: Jest + Cypress + React Testing Library
