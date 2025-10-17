@@ -1,14 +1,22 @@
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import {
+  AlertCircle,
   ArrowLeftRight,
   CircleDollarSign,
   Clock3,
   Coins,
+  Gift,
+  Loader2,
   UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
+import { completeRatingSlip } from "@/app/actions/ratingslip-actions";
+import { Progress } from "@/components/landing-page/ui/progress";
+import { ManualRewardDialog } from "@/components/loyalty/manual-reward-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +36,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useServiceMutation } from "@/hooks/shared/use-service-mutation";
+import { toast } from "@/hooks/ui";
+import type { ServiceError } from "@/services/shared/types";
 type RatingSlipStatus = "OPEN" | "CLOSED";
 
 type RatingSlipPlayer = {
+  id: string;
   name: string;
   membershipId?: string | null;
   tier?: string | null;
@@ -97,6 +109,9 @@ export function RatingSlipModal({
   onMovePlayer,
   onCloseSession,
 }: RatingSlipModalProps) {
+  const queryClient = useQueryClient();
+  const [showManualReward, setShowManualReward] = useState(false);
+
   const baselineDraft = useMemo(() => defaultDraft(snapshot), [snapshot]);
   const [draft, setDraft] = useState<RatingSlipFormDraft>(baselineDraft);
 
@@ -105,6 +120,55 @@ export function RatingSlipModal({
       setDraft(baselineDraft);
     }
   }, [open, baselineDraft]);
+
+  const {
+    mutate: closeSlip,
+    isPending: isClosing,
+    data: completionResult,
+    error: loyaltyError,
+  } = useServiceMutation(completeRatingSlip, {
+    onSuccess: (result) => {
+      onCloseSession?.(draft);
+
+      queryClient.invalidateQueries({ queryKey: ["rating-slip"] });
+      queryClient.invalidateQueries({
+        queryKey: ["loyalty", "player", snapshot.player.id],
+      });
+
+      toast({ title: "Session closed successfully" });
+      toast({
+        title: `Earned ${result.loyalty.pointsEarned} loyalty points!`,
+      });
+
+      if (
+        result.loyalty.ledgerEntry.tier_after !==
+        result.loyalty.ledgerEntry.tier_before
+      ) {
+        toast({
+          title: `🎉 Tier upgraded to ${result.loyalty.tier}!`,
+        });
+      }
+
+      setTimeout(() => onOpenChange(false), 2000);
+    },
+    onError: (error) => {
+      const serviceError = (error as Error & { details?: ServiceError })
+        .details;
+      if (serviceError?.code === "PARTIAL_COMPLETION") {
+        toast({
+          title: "Error",
+          description: `Session closed but loyalty processing failed. Contact support with ID: ${(serviceError as ServiceError & { metadata?: { correlationId?: string } }).metadata?.correlationId}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: error.message || "Failed to close session",
+          variant: "destructive",
+        });
+      }
+    },
+  });
 
   const updateDraft = <K extends keyof RatingSlipFormDraft>(
     key: K,
@@ -130,6 +194,10 @@ export function RatingSlipModal({
       const iso = adjusted.toISOString().slice(0, 16);
       return { ...prev, startTime: iso };
     });
+  };
+
+  const handleCloseSession = () => {
+    closeSlip(snapshot.id);
   };
 
   const statusVariant = snapshot.status === "OPEN" ? "secondary" : "outline";
@@ -333,16 +401,78 @@ export function RatingSlipModal({
                 {snapshot.currentPoints?.toLocaleString() ?? "0"}
               </p>
             </div>
+
+            {snapshot.status === "OPEN" && (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => setShowManualReward(true)}
+              >
+                <Gift className="size-4" />
+                Issue Bonus Points
+              </Button>
+            )}
+
+            {completionResult && (
+              <div className="space-y-2 rounded-lg border border-green-500/20 bg-green-50/50 p-3">
+                <p className="text-sm font-semibold text-green-900">
+                  Session Complete
+                </p>
+                <div className="space-y-1 text-sm text-green-800">
+                  <p>
+                    Points Earned:{" "}
+                    <strong>+{completionResult.loyalty.pointsEarned}</strong>
+                  </p>
+                  <p>
+                    New Balance:{" "}
+                    <strong>{completionResult.loyalty.newBalance}</strong>
+                  </p>
+                  <p>
+                    Tier: <strong>{completionResult.loyalty.tier}</strong>
+                  </p>
+                  {completionResult.loyalty.ledgerEntry.tier_after && (
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">
+                        Tier Progress
+                      </p>
+                      <Progress value={50} className="h-2" />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {loyaltyError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Loyalty Error</AlertTitle>
+                <AlertDescription>
+                  {loyaltyError.message}
+                  {(
+                    (loyaltyError as Error & { details?: ServiceError })
+                      .details as ServiceError & {
+                      metadata?: { correlationId?: string };
+                    }
+                  )?.metadata?.correlationId && (
+                    <div className="mt-1 text-xs opacity-80">
+                      Correlation ID:{" "}
+                      {
+                        (
+                          (loyaltyError as Error & { details?: ServiceError })
+                            .details as ServiceError & {
+                            metadata?: { correlationId?: string };
+                          }
+                        ).metadata?.correlationId
+                      }
+                    </div>
+                  )}
+                </AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2 text-sm text-muted-foreground">
-              <p>
-                Connect these actions to the new service endpoints once
-                available:
-              </p>
-              <ul className="list-disc space-y-1 pl-4">
-                <li>Persist wager and cash-in adjustments</li>
-                <li>Handle player moves with optimistic updates</li>
-                <li>Finalize the session and compute earned points</li>
-              </ul>
+              <p>Session tracking and loyalty integration active.</p>
             </div>
           </aside>
         </section>
@@ -365,12 +495,34 @@ export function RatingSlipModal({
           <Button
             type="button"
             variant="destructive"
-            onClick={() => onCloseSession?.(draft)}
+            onClick={handleCloseSession}
+            disabled={isClosing || snapshot.status === "CLOSED"}
           >
-            Close Session
+            {isClosing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Closing...
+              </>
+            ) : (
+              "Close Session"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      <ManualRewardDialog
+        open={showManualReward}
+        onOpenChange={setShowManualReward}
+        playerId={snapshot.player.id}
+        playerName={snapshot.player.name}
+        currentBalance={snapshot.currentPoints ?? 0}
+        currentTier={snapshot.player.tier ?? "BRONZE"}
+        onSuccess={(result) => {
+          queryClient.invalidateQueries({
+            queryKey: ["loyalty", "player", snapshot.player.id],
+          });
+        }}
+      />
     </Dialog>
   );
 }

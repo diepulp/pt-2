@@ -1,0 +1,15 @@
+MTL Migration Post-Timestamp Correction 2025-10-14 timestamp standardization migrations
+
+Issues Database Reset migration timestamps revealed dependency mismatch
+
+Issue 1: Migration Dependency Order foreign key constraint "player_financial_transaction_rating_slip_id (SQLSTATE 42804)\_slip_id incompatible uuid text `create_player_financial_transaction migration (00:02:57 BEFORE_ratingslip_id_to_uuid financial transaction table create FK.id UUID TEXT `20251007000257_create_player_financial_transaction.sql UUID `20251007003008_migrate_ratingslip_id_to_uuid.sql UUID Dependency `migrate_ratingslip_id_to_uuid first `create_player_financial_transaction UUID Solution timestamps match logical dependency order_migrate_create_transaction.sql timestamps dependency order file creation time
+
+Issue 2: Column Name Mismatches MTL Migration Problem 1: Visit Table Column Names column.check_in_time (SQLSTATE 42703) MTL migration_in_time_out_time visit table uses_in_date_date_in_time_out_time_in_date_out_date Problem 2: Player Table Column Names column p.first_name (SQLSTATE 42703) MTL migration snake_case_name player Staff tables use camelCase Player table `firstName Staff table `firstName `lastName (camelCase Visit table `check_in_date_out_date (snake_case RatingSlip table `average_bet `accumulated_seconds (snake_case columns_name_name_number AFTER columnsfirst_name staff_first.last_name staff AFTER staff BEFORE (mtl_entry_notes 'staff_name.first_name.last_name AFTER 'staff_name Quoted required camelCase columns PostgreSQL
+
+Files Modified Migration Timestamp Swaps `20251007000257_migrate_ratingslip_uuid 003008) `20251007003008_create_player_financial_transaction.sql 000257) MTL Migration Schema Fixes/migrations/20251014134942_mtl_schema_enhancements.sql Line 153-154_in_time_date Line 158-159 `first_name Line 174-175_name Line `first_name Documentation Updates/patterns/SERVICE_RESPONSIBILITY_MATRIX.md Line 300_in_time_date
+
+Migration Order-names migration filenames valid migrations 19 Database Reset reset 20251007000257_migrate 20251007003008_transaction 20251012185626_6_corrections 20251012191318_drop 20251013014128_loyalty_rpc 20251013233420_wave_2_schema_hardening 20251014134942_schema_enhancements migrations applied
+
+Lessons Learned Dependency Order Chronological creation conflicts swap timestamps order goal database state not historical accuracy Schema Naming Inconsistency mixed naming conventions.average Document naming conventions errors Test Migrations Early supabase db reset migrations Dependency order issues Column name mismatches Type incompatibilities Missing references Quoted Identifiers camelCase double quotes
+
+Migration 19 migrations 20250828011313 20250920003818 20250920004037_id 20250920004252_validation 20250920060318 20250920161500 20250921120000_notes 20251006012817_helpers_rls_log_scaffold 20251007000257_id 20251007003008_transaction 20251007110110 20251012185626_6_corrections 20251012191318 20251013014128_loyalty 20251013233420_2_hardening 20251014134942 migrations db:types TypeScript types

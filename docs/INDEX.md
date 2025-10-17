@@ -18,6 +18,7 @@
 ### For Architects
 - **[Canonical Blueprint MVP PRD](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md)** - Complete architecture spec
 - **[Service Layer Architecture](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)** - Service patterns + anti-patterns
+- **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - ⭐ Transform documentation to systematic AI workflows
 - **[MVP Production Roadmap](roadmap/MVP_PRODUCTION_ROADMAP.md)** - 10-week path to production with hybrid strategy
 - **[Architecture Gaps](roadmap/ARCHITECTURE_GAPS.md)** - Missing components with HORIZONTAL/VERTICAL labels
 - **[Bounded Contexts](phase-2/SERVICE_RESPONSIBILITY_MATRIX.md)** - Service responsibility matrix
@@ -216,6 +217,12 @@ audits/
 3. Check common scenarios table for similar decisions
 4. Document in ADR if non-obvious or team-impacting
 
+### "I want to optimize AI agent workflows"
+1. **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - ⭐ Complete transformation plan
+2. Understand memory files, chatmodes, workflow prompts
+3. Review implementation roadmap (5 phases)
+4. Start with Phase 1 (memory infrastructure)
+
 ---
 
 ## 🔍 Finding Information
@@ -225,6 +232,7 @@ audits/
 | Topic | Primary Document | Supporting Docs |
 |-------|-----------------|-----------------|
 | **Architecture Strategy** | [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ | [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md), [EVALUATION_FRAMEWORK.md](architecture/slicing/EVALUATION_FRAMEWORK.md) |
+| **AI Workflow Optimization** | [Agentic Workflow Strategy](agentic-workflow-strategy.md) ⭐ | [GitHub Agentic Primitives](https://github.blog/ai-and-ml/github-copilot/how-to-build-reliable-ai-workflows-with-agentic-primitives-and-context-engineering/) |
 | **Service Layer** | [SERVICE_TEMPLATE_QUICK.md](patterns/SERVICE_TEMPLATE_QUICK.md) | [PRD §3.3](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#33-service-layer), [Architecture Diagram](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) |
 | **Database Types** | [DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md) | [ADR-001](architecture/ADR-001-dual-database-type-strategy.md), [Schema Drift Audit](audits/SCHEMA_DRIFT_AUDIT.md) |
 | **Testing** | [TESTING_SETUP.md](phase-0/TESTING_SETUP.md) | [PRD §3.10](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#310-testing--cicd), [ADR-002](architecture/ADR-002-test-location-standardization.md) |
@@ -280,13 +288,15 @@ audits/
 - ⏳ **Audits**: Started (schema drift only)
 - ⏳ **Phase Docs**: Phases 0-2 documented, 3-5 pending
 
-### Recent Additions (2025-10-10)
-- ✅ **[BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - Hybrid strategy decision framework
-- ✅ **[CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md)** - Full architectural analysis
-- ✅ **[UPDATE_SUMMARY.md](architecture/slicing/UPDATE_SUMMARY.md)** - Roadmap alignment tracking
-- ✅ All roadmap docs updated with HORIZONTAL/VERTICAL labels
+### Recent Additions
+- ✅ **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - AI workflow optimization plan (2025-10-17)
+- ✅ **[BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - Hybrid strategy decision framework (2025-10-10)
+- ✅ **[CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md)** - Full architectural analysis (2025-10-10)
+- ✅ **[UPDATE_SUMMARY.md](architecture/slicing/UPDATE_SUMMARY.md)** - Roadmap alignment tracking (2025-10-10)
+- ✅ All roadmap docs updated with HORIZONTAL/VERTICAL labels (2025-10-10)
 
 ### Upcoming Documentation Needs
+- **Agentic Infrastructure**: Memory files, chatmodes, workflow prompts (Phase 1-5 from strategy)
 - **Phase 3**: React Query setup guide, server action patterns, Zustand stores
 - **Phase 4**: Compliance workflows, MTL reporting, real-time patterns
 - **Phase 5**: Performance optimization, deployment procedures

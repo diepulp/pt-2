@@ -4,6 +4,7 @@
  */
 
 import { createClient } from '@supabase/supabase-js'
+
 import type { Database } from '@/types/database.types'
 
 // Use local Supabase for tests with service role to bypass RLS

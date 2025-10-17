@@ -12,32 +12,31 @@
  * - Edge cases: date bucketing for idempotency
  */
 
-import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { describe, it, expect, beforeEach, afterEach } from '@jest/globals'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
 
 // Note: Server actions import Next.js cookies(), which doesn't work in tests
 // We'll test the underlying services directly instead of the server actions
-import { createLoyaltyBusinessService } from '@/services/loyalty/business';
-import { createRatingSlipCrudService } from '@/services/ratingslip/crud';
-import { resetRateLimit } from '@/lib/rate-limiter';
-import { createCasinoService } from '@/services/casino';
-import { createPlayerService } from '@/services/player';
-import { createVisitService } from '@/services/visit';
-import { createRatingSlipCrudService } from '@/services/ratingslip/crud';
-import { createTableContextService } from '@/services/table-context';
-import type { Database } from '@/types/database.types';
+import { resetRateLimit } from '@/lib/rate-limiter'
+import { createCasinoService } from '@/services/casino'
+import { createLoyaltyBusinessService } from '@/services/loyalty/business'
+import { createPlayerService } from '@/services/player'
+import { createRatingSlipCrudService } from '@/services/ratingslip/crud'
+import { createTableContextService } from '@/services/table-context'
+import { createVisitService } from '@/services/visit'
+import type { Database } from '@/types/database.types'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
 
 // Test data cleanup helpers
 const testDataIds: {
-  casinos: string[];
-  players: string[];
-  visits: string[];
-  ratingSlips: string[];
-  gamingTables: string[];
-  staff: string[];
+  casinos: string[]
+  players: string[]
+  visits: string[]
+  ratingSlips: string[]
+  gamingTables: string[]
+  staff: string[]
 } = {
   casinos: [],
   players: [],
@@ -45,14 +44,14 @@ const testDataIds: {
   ratingSlips: [],
   gamingTables: [],
   staff: [],
-};
+}
 
 // ============================================================================
 // Test Suite Setup & Teardown
 // ============================================================================
 
 describe('RatingSlip → Loyalty Integration Tests', () => {
-  let supabase: SupabaseClient<Database>;
+  let supabase: SupabaseClient<Database>
 
   beforeEach(() => {
     supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
@@ -60,18 +59,18 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
         persistSession: false,
         autoRefreshToken: false,
       },
-    });
-  });
+    })
+  })
 
   afterEach(() => {
     // Clean up tracked IDs
-    testDataIds.casinos = [];
-    testDataIds.players = [];
-    testDataIds.visits = [];
-    testDataIds.ratingSlips = [];
-    testDataIds.gamingTables = [];
-    testDataIds.staff = [];
-  });
+    testDataIds.casinos = []
+    testDataIds.players = []
+    testDataIds.visits = []
+    testDataIds.ratingSlips = []
+    testDataIds.gamingTables = []
+    testDataIds.staff = []
+  })
 
   // ============================================================================
   // Helper Functions
@@ -81,27 +80,27 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
    * Create a complete test scenario with casino, player, visit, and gaming table
    */
   async function createTestScenario() {
-    const casinoService = createCasinoService(supabase);
-    const playerService = createPlayerService(supabase);
-    const visitService = createVisitService(supabase);
-    const tableService = createTableContextService(supabase);
+    const casinoService = createCasinoService(supabase)
+    const playerService = createPlayerService(supabase)
+    const visitService = createVisitService(supabase)
+    const tableService = createTableContextService(supabase)
 
     // Create casino
     const casinoResult = await casinoService.create({
       name: `Integration Test Casino ${Date.now()}`,
       location: 'Test Location',
-    });
-    const casinoId = casinoResult.data!.id;
-    testDataIds.casinos.push(casinoId);
+    })
+    const casinoId = casinoResult.data!.id
+    testDataIds.casinos.push(casinoId)
 
     // Create player with loyalty balance initialized
     const playerResult = await playerService.create({
       email: `integration-test-${Date.now()}@example.com`,
       firstName: 'Integration',
       lastName: 'Test',
-    });
-    const playerId = playerResult.data!.id;
-    testDataIds.players.push(playerId);
+    })
+    const playerId = playerResult.data!.id
+    testDataIds.players.push(playerId)
 
     // Initialize player loyalty balance
     await supabase.from('player_loyalty_balance').insert({
@@ -109,7 +108,7 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       current_balance: 0,
       lifetime_points: 0,
       tier: 'BRONZE',
-    });
+    })
 
     // Create gaming table
     const tableResult = await tableService.create({
@@ -117,20 +116,20 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       name: `Test Table ${Date.now()}`,
       tableNumber: `T-${Date.now()}`,
       type: 'BLACKJACK',
-    });
-    const tableId = tableResult.data!.id;
-    testDataIds.gamingTables.push(tableId);
+    })
+    const tableId = tableResult.data!.id
+    testDataIds.gamingTables.push(tableId)
 
     // Create visit
     const visitResult = await visitService.create({
       casinoId,
       playerId,
       checkInDate: new Date().toISOString(),
-    });
-    const visitId = visitResult.data!.id;
-    testDataIds.visits.push(visitId);
+    })
+    const visitId = visitResult.data!.id
+    testDataIds.visits.push(visitId)
 
-    return { casinoId, playerId, visitId, tableId };
+    return { casinoId, playerId, visitId, tableId }
   }
 
   /**
@@ -141,7 +140,7 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
     visitId: string,
     tableId: string,
   ) {
-    const ratingSlipService = createRatingSlipCrudService(supabase);
+    const ratingSlipService = createRatingSlipCrudService(supabase)
 
     const result = await ratingSlipService.create({
       playerId,
@@ -157,25 +156,25 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
         seats_available: 6,
         name: 'Blackjack',
       },
-    });
+    })
 
-    const slipId = result.data!.id;
-    testDataIds.ratingSlips.push(slipId);
+    const slipId = result.data!.id
+    testDataIds.ratingSlips.push(slipId)
 
     // Simulate gameplay duration
     await supabase
       .from('ratingslip')
       .update({ accumulated_seconds: 3600 }) // 1 hour
-      .eq('id', slipId);
+      .eq('id', slipId)
 
-    return slipId;
+    return slipId
   }
 
   /**
    * Create a test staff member for manual rewards
    */
   async function createTestStaff() {
-    const now = new Date().toISOString();
+    const now = new Date().toISOString()
     const staffResult = await supabase
       .from('Staff')
       .insert({
@@ -187,24 +186,24 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
         updatedAt: now,
       })
       .select('id')
-      .single();
+      .single()
 
     if (!staffResult.data) {
       throw new Error(
         `Failed to create staff: ${staffResult.error?.message || 'Unknown error'}`,
-      );
+      )
     }
 
-    const staffId = staffResult.data.id;
-    testDataIds.staff.push(staffId);
+    const staffId = staffResult.data.id
+    testDataIds.staff.push(staffId)
 
     // Create staff permissions with loyalty:award capability
     await supabase.from('staff_permissions').insert({
       staff_id: staffId,
       capabilities: ['loyalty:award'],
-    });
+    })
 
-    return staffId;
+    return staffId
   }
 
   // ============================================================================
@@ -212,43 +211,43 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
   // ============================================================================
 
   it('completeRatingSlip creates ledger entry and updates tier', async () => {
-    const { playerId, visitId, tableId } = await createTestScenario();
-    const slipId = await createTestRatingSlip(playerId, visitId, tableId);
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
 
     // Get initial balance
     const { data: initialBalance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(initialBalance?.current_balance).toBe(0);
-    expect(initialBalance?.tier).toBe('BRONZE');
+    expect(initialBalance?.current_balance).toBe(0)
+    expect(initialBalance?.tier).toBe('BRONZE')
 
     // Close the rating slip
     const { data: slip } = await supabase
       .from('ratingslip')
       .select('*')
       .eq('id', slipId)
-      .single();
+      .single()
 
     await supabase.rpc('close_player_session', {
       p_rating_slip_id: slipId,
       p_visit_id: visitId,
       p_chips_taken: 0,
       p_end_time: new Date().toISOString(),
-    });
+    })
 
     // Accrue loyalty points using the service
-    const loyaltyService = createLoyaltyBusinessService(supabase);
+    const loyaltyService = createLoyaltyBusinessService(supabase)
     const gameSettings = slip!.game_settings as unknown as {
-      house_edge: number;
-      average_rounds_per_hour: number;
-      point_multiplier: number | null;
-      points_conversion_rate: number | null;
-      seats_available: number | null;
-      name?: string;
-    };
+      house_edge: number
+      average_rounds_per_hour: number
+      point_multiplier: number | null
+      points_conversion_rate: number | null
+      seats_available: number | null
+      name?: string
+    }
 
     const result = await loyaltyService.accruePointsFromSlip({
       playerId,
@@ -257,12 +256,12 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       averageBet: slip!.average_bet,
       durationSeconds: slip!.accumulated_seconds,
       gameSettings,
-    });
+    })
 
     // Verify success
-    expect(result.success).toBe(true);
-    expect(result.data).toBeDefined();
-    expect(result.data?.pointsEarned).toBeGreaterThan(0);
+    expect(result.success).toBe(true)
+    expect(result.data).toBeDefined()
+    expect(result.data?.pointsEarned).toBeGreaterThan(0)
 
     // Verify ledger entry created
     const { data: ledgerEntry } = await supabase
@@ -270,76 +269,76 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       .select('*')
       .eq('rating_slip_id', slipId)
       .eq('transaction_type', 'GAMEPLAY')
-      .single();
+      .single()
 
-    expect(ledgerEntry).toBeDefined();
-    expect(ledgerEntry?.player_id).toBe(playerId);
-    expect(ledgerEntry?.points_change).toBeGreaterThan(0);
-    expect(ledgerEntry?.balance_before).toBe(0);
-    expect(ledgerEntry?.balance_after).toBe(ledgerEntry?.points_change);
-    expect(ledgerEntry?.tier_before).toBe('BRONZE');
+    expect(ledgerEntry).toBeDefined()
+    expect(ledgerEntry?.player_id).toBe(playerId)
+    expect(ledgerEntry?.points_change).toBeGreaterThan(0)
+    expect(ledgerEntry?.balance_before).toBe(0)
+    expect(ledgerEntry?.balance_after).toBe(ledgerEntry?.points_change)
+    expect(ledgerEntry?.tier_before).toBe('BRONZE')
 
     // Verify balance updated
     const { data: updatedBalance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(updatedBalance?.current_balance).toBe(ledgerEntry?.points_change);
-    expect(updatedBalance?.lifetime_points).toBe(ledgerEntry?.points_change);
-  });
+    expect(updatedBalance?.current_balance).toBe(ledgerEntry?.points_change)
+    expect(updatedBalance?.lifetime_points).toBe(ledgerEntry?.points_change)
+  })
 
   // ============================================================================
   // Test 2: Idempotency - Duplicate Completion
   // ============================================================================
 
   it('duplicate completeRatingSlip returns same result', async () => {
-    const { playerId, visitId, tableId } = await createTestScenario();
-    const slipId = await createTestRatingSlip(playerId, visitId, tableId);
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
 
     // First completion
-    const firstResult = await completeRatingSlip(slipId);
-    expect(firstResult.success).toBe(true);
+    const firstResult = await completeRatingSlip(slipId)
+    expect(firstResult.success).toBe(true)
 
-    const firstPoints = firstResult.data?.loyalty.pointsEarned;
-    const firstBalance = firstResult.data?.loyalty.newBalance;
+    const firstPoints = firstResult.data?.loyalty.pointsEarned
+    const firstBalance = firstResult.data?.loyalty.newBalance
 
     // Second attempt (should fail with INVALID_STATE since slip is already CLOSED)
-    const secondResult = await completeRatingSlip(slipId);
-    expect(secondResult.success).toBe(false);
-    expect(secondResult.error?.code).toBe('INVALID_STATE');
-    expect(secondResult.error?.message).toContain('already closed');
+    const secondResult = await completeRatingSlip(slipId)
+    expect(secondResult.success).toBe(false)
+    expect(secondResult.error?.code).toBe('INVALID_STATE')
+    expect(secondResult.error?.message).toContain('already closed')
 
     // Verify only ONE ledger entry exists
     const { data: ledgerEntries } = await supabase
       .from('loyalty_ledger')
       .select('*')
       .eq('rating_slip_id', slipId)
-      .eq('transaction_type', 'GAMEPLAY');
+      .eq('transaction_type', 'GAMEPLAY')
 
-    expect(ledgerEntries?.length).toBe(1);
+    expect(ledgerEntries?.length).toBe(1)
 
     // Verify balance unchanged
     const { data: balance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(balance?.current_balance).toBe(firstBalance);
-  });
+    expect(balance?.current_balance).toBe(firstBalance)
+  })
 
   // ============================================================================
   // Test 3: Manual Reward - Staff Action
   // ============================================================================
 
   it('manualReward creates MANUAL_BONUS ledger entry', async () => {
-    const { playerId } = await createTestScenario();
-    const staffId = await createTestStaff();
+    const { playerId } = await createTestScenario()
+    const staffId = await createTestStaff()
 
     // Reset rate limit for staff
-    resetRateLimit(staffId);
+    resetRateLimit(staffId)
 
     // Mock session for staff
     jest
@@ -351,18 +350,18 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
             data: { session: { user: { id: staffId } } },
           }),
         },
-      });
+      })
 
     const result = await manualReward({
       playerId,
       pointsChange: 100,
       reason: 'Birthday bonus',
       sequence: 1,
-    });
+    })
 
     // Verify success
-    expect(result.success).toBe(true);
-    expect(result.data?.pointsChange).toBe(100);
+    expect(result.success).toBe(true)
+    expect(result.data?.pointsChange).toBe(100)
 
     // Verify ledger entry with MANUAL_BONUS
     const { data: ledgerEntry } = await supabase
@@ -370,35 +369,35 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       .select('*')
       .eq('player_id', playerId)
       .eq('transaction_type', 'MANUAL_BONUS')
-      .single();
+      .single()
 
-    expect(ledgerEntry).toBeDefined();
-    expect(ledgerEntry?.staff_id).toBe(staffId);
-    expect(ledgerEntry?.points_change).toBe(100);
+    expect(ledgerEntry).toBeDefined()
+    expect(ledgerEntry?.staff_id).toBe(staffId)
+    expect(ledgerEntry?.points_change).toBe(100)
     expect(ledgerEntry?.balance_after).toBe(
       (ledgerEntry?.balance_before ?? 0) + 100,
-    );
+    )
 
     // Verify balance updated
     const { data: balance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(balance?.current_balance).toBe(ledgerEntry?.balance_after);
-  });
+    expect(balance?.current_balance).toBe(ledgerEntry?.balance_after)
+  })
 
   // ============================================================================
   // Test 4: Rate Limiting - Manual Reward Enforcement
   // ============================================================================
 
   it('manualReward enforces 10 requests/min limit', async () => {
-    const { playerId } = await createTestScenario();
-    const staffId = await createTestStaff();
+    const { playerId } = await createTestScenario()
+    const staffId = await createTestStaff()
 
     // Reset rate limit
-    resetRateLimit(staffId);
+    resetRateLimit(staffId)
 
     // Mock session
     jest
@@ -410,7 +409,7 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
             data: { session: { user: { id: staffId } } },
           }),
         },
-      });
+      })
 
     // Exhaust rate limit (10 requests)
     for (let i = 0; i < 10; i++) {
@@ -419,8 +418,8 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
         pointsChange: 10,
         reason: `Bonus ${i}`,
         sequence: i,
-      });
-      expect(result.success).toBe(true);
+      })
+      expect(result.success).toBe(true)
     }
 
     // 11th request should be rate limited
@@ -429,42 +428,42 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       pointsChange: 10,
       reason: 'Bonus 11',
       sequence: 11,
-    });
+    })
 
-    expect(result.success).toBe(false);
-    expect(result.status).toBe(429);
-    expect(result.error?.code).toBe('RATE_LIMIT_EXCEEDED');
-  }, 30000); // Increase timeout for rate limiting test
+    expect(result.success).toBe(false)
+    expect(result.status).toBe(429)
+    expect(result.error?.code).toBe('RATE_LIMIT_EXCEEDED')
+  }, 30000) // Increase timeout for rate limiting test
 
   // ============================================================================
   // Test 5: Performance - <500ms Requirement
   // ============================================================================
 
   it('completeRatingSlip completes in <500ms', async () => {
-    const { playerId, visitId, tableId } = await createTestScenario();
-    const slipId = await createTestRatingSlip(playerId, visitId, tableId);
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
 
     // Measure performance
-    const startTime = Date.now();
-    const result = await completeRatingSlip(slipId);
-    const duration = Date.now() - startTime;
+    const startTime = Date.now()
+    const result = await completeRatingSlip(slipId)
+    const duration = Date.now() - startTime
 
     // Verify success
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(true)
 
     // Verify performance requirement
-    expect(duration).toBeLessThan(500);
+    expect(duration).toBeLessThan(500)
 
-    console.log(`✅ Performance: completeRatingSlip completed in ${duration}ms`);
-  });
+    console.log(`✅ Performance: completeRatingSlip completed in ${duration}ms`)
+  })
 
   // ============================================================================
   // Test 6: Saga Recovery - Partial Completion
   // ============================================================================
 
   it('recoverSlipLoyalty handles partial completion', async () => {
-    const { playerId, visitId, tableId } = await createTestScenario();
-    const slipId = await createTestRatingSlip(playerId, visitId, tableId);
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
 
     // Manually close the slip without loyalty accrual to simulate partial completion
     await supabase.rpc('close_player_session', {
@@ -472,24 +471,24 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       p_visit_id: visitId,
       p_chips_taken: 0,
       p_end_time: new Date().toISOString(),
-    });
+    })
 
     // Verify slip is CLOSED
     const { data: closedSlip } = await supabase
       .from('ratingslip')
       .select('status')
       .eq('id', slipId)
-      .single();
+      .single()
 
-    expect(closedSlip?.status).toBe('CLOSED');
+    expect(closedSlip?.status).toBe('CLOSED')
 
     // Attempt recovery
-    const correlationId = `recovery-${Date.now()}`;
-    const recoveryResult = await recoverSlipLoyalty(slipId, correlationId);
+    const correlationId = `recovery-${Date.now()}`
+    const recoveryResult = await recoverSlipLoyalty(slipId, correlationId)
 
     // Verify recovery success
-    expect(recoveryResult.success).toBe(true);
-    expect(recoveryResult.data?.pointsEarned).toBeGreaterThan(0);
+    expect(recoveryResult.success).toBe(true)
+    expect(recoveryResult.data?.pointsEarned).toBeGreaterThan(0)
 
     // Verify ledger entry created
     const { data: ledgerEntry } = await supabase
@@ -497,40 +496,40 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       .select('*')
       .eq('rating_slip_id', slipId)
       .eq('transaction_type', 'GAMEPLAY')
-      .single();
+      .single()
 
-    expect(ledgerEntry).toBeDefined();
-    expect(ledgerEntry?.correlation_id).toBe(correlationId);
+    expect(ledgerEntry).toBeDefined()
+    expect(ledgerEntry?.correlation_id).toBe(correlationId)
 
     // Attempt recovery again (should be idempotent)
-    const secondRecovery = await recoverSlipLoyalty(slipId, correlationId);
-    expect(secondRecovery.success).toBe(true);
+    const secondRecovery = await recoverSlipLoyalty(slipId, correlationId)
+    expect(secondRecovery.success).toBe(true)
     expect(secondRecovery.data?.pointsEarned).toBe(
       recoveryResult.data?.pointsEarned,
-    );
+    )
 
     // Verify still only ONE ledger entry
     const { data: allEntries } = await supabase
       .from('loyalty_ledger')
       .select('*')
-      .eq('rating_slip_id', slipId);
+      .eq('rating_slip_id', slipId)
 
-    expect(allEntries?.length).toBe(1);
-  });
+    expect(allEntries?.length).toBe(1)
+  })
 
   // ============================================================================
   // Test 7: Concurrency - Race Conditions
   // ============================================================================
 
   it('concurrent operations maintain balance integrity', async () => {
-    const { playerId, visitId, tableId } = await createTestScenario();
-    const staffId = await createTestStaff();
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const staffId = await createTestStaff()
 
     // Create rating slip
-    const slipId = await createTestRatingSlip(playerId, visitId, tableId);
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
 
     // Reset rate limit
-    resetRateLimit(staffId);
+    resetRateLimit(staffId)
 
     // Mock session
     jest
@@ -542,7 +541,7 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
             data: { session: { user: { id: staffId } } },
           }),
         },
-      });
+      })
 
     // Start concurrent operations
     const [slipResult, manualResult] = await Promise.all([
@@ -553,44 +552,44 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
         reason: 'Concurrent bonus',
         sequence: 1,
       }),
-    ]);
+    ])
 
     // Both should succeed
-    expect(slipResult.success).toBe(true);
-    expect(manualResult.success).toBe(true);
+    expect(slipResult.success).toBe(true)
+    expect(manualResult.success).toBe(true)
 
-    const slipPoints = slipResult.data?.loyalty.pointsEarned ?? 0;
-    const manualPoints = manualResult.data?.pointsChange ?? 0;
+    const slipPoints = slipResult.data?.loyalty.pointsEarned ?? 0
+    const manualPoints = manualResult.data?.pointsChange ?? 0
 
     // Verify final balance is sum of both operations
     const { data: finalBalance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(finalBalance?.current_balance).toBe(slipPoints + manualPoints);
+    expect(finalBalance?.current_balance).toBe(slipPoints + manualPoints)
 
     // Verify both ledger entries exist
     const { data: ledgerEntries } = await supabase
       .from('loyalty_ledger')
       .select('*')
       .eq('player_id', playerId)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
 
-    expect(ledgerEntries?.length).toBe(2);
-  });
+    expect(ledgerEntries?.length).toBe(2)
+  })
 
   // ============================================================================
   // Test 8: Idempotency Edge Case - Date Bucketing
   // ============================================================================
 
   it('manual reward idempotency uses date bucketing', async () => {
-    const { playerId } = await createTestScenario();
-    const staffId = await createTestStaff();
+    const { playerId } = await createTestScenario()
+    const staffId = await createTestStaff()
 
     // Reset rate limit
-    resetRateLimit(staffId);
+    resetRateLimit(staffId)
 
     // Mock session
     jest
@@ -602,7 +601,7 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
             data: { session: { user: { id: staffId } } },
           }),
         },
-      });
+      })
 
     // Issue first reward
     const firstResult = await manualReward({
@@ -610,9 +609,9 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       pointsChange: 100,
       reason: 'Test reward',
       sequence: 1,
-    });
+    })
 
-    expect(firstResult.success).toBe(true);
+    expect(firstResult.success).toBe(true)
 
     // Issue duplicate within same day (should be idempotent)
     const duplicateResult = await manualReward({
@@ -620,9 +619,9 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       pointsChange: 100,
       reason: 'Test reward',
       sequence: 1,
-    });
+    })
 
-    expect(duplicateResult.success).toBe(true);
+    expect(duplicateResult.success).toBe(true)
 
     // Verify only ONE ledger entry for the duplicate
     const { data: todayEntries } = await supabase
@@ -630,18 +629,140 @@ describe('RatingSlip → Loyalty Integration Tests', () => {
       .select('*')
       .eq('player_id', playerId)
       .eq('transaction_type', 'MANUAL_BONUS')
-      .eq('staff_id', staffId);
+      .eq('staff_id', staffId)
 
     // Should have only 1 entry due to idempotency
-    expect(todayEntries?.length).toBe(1);
+    expect(todayEntries?.length).toBe(1)
 
     // Verify balance reflects single operation
     const { data: balance } = await supabase
       .from('player_loyalty_balance')
       .select('*')
       .eq('player_id', playerId)
-      .single();
+      .single()
 
-    expect(balance?.current_balance).toBe(100);
-  });
-});
+    expect(balance?.current_balance).toBe(100)
+  })
+
+  // ============================================================================
+  // Test 9: Full Workflow - Manual Reward → Close Session → Verify Accumulation
+  // ============================================================================
+
+  it('manual reward during session updates balance and accumulates with gameplay points on close', async () => {
+    const { playerId, visitId, tableId } = await createTestScenario()
+    const staffId = await createTestStaff()
+    const slipId = await createTestRatingSlip(playerId, visitId, tableId)
+
+    // Reset rate limit for staff
+    resetRateLimit(staffId)
+
+    // Get initial balance
+    const { data: initialBalance } = await supabase
+      .from('player_loyalty_balance')
+      .select('*')
+      .eq('player_id', playerId)
+      .single()
+
+    expect(initialBalance?.current_balance).toBe(0)
+
+    // Step 1: Issue manual reward while session is OPEN
+    const loyaltyService = createLoyaltyCrudService(supabase)
+    const manualRewardResult = await loyaltyService.createLedgerEntry({
+      player_id: playerId,
+      points_change: 500,
+      transaction_type: 'MANUAL_BONUS',
+      reason: 'High roller bonus during session',
+      source: 'manual',
+      event_type: 'POINTS_UPDATE_REQUESTED',
+      session_id: `manual-reward-${Date.now()}`,
+      staff_id: staffId,
+      correlation_id: `correlation-${Date.now()}`,
+    })
+
+    expect(manualRewardResult.success).toBe(true)
+    expect(manualRewardResult.data?.points_change).toBe(500)
+
+    // Verify balance updated with manual reward
+    const { data: balanceAfterManual } = await supabase
+      .from('player_loyalty_balance')
+      .select('*')
+      .eq('player_id', playerId)
+      .single()
+
+    expect(balanceAfterManual?.current_balance).toBe(500)
+
+    // Step 2: Close session (should add gameplay points on top of manual reward)
+    const { data: slip } = await supabase
+      .from('ratingslip')
+      .select('*')
+      .eq('id', slipId)
+      .single()
+
+    await supabase.rpc('close_player_session', {
+      p_rating_slip_id: slipId,
+      p_visit_id: visitId,
+      p_chips_taken: 0,
+      p_end_time: new Date().toISOString(),
+    })
+
+    // Accrue loyalty points from gameplay
+    const loyaltyBusinessService = createLoyaltyBusinessService(supabase)
+    const gameSettings = slip!.game_settings as unknown as {
+      house_edge: number
+      average_rounds_per_hour: number
+      point_multiplier: number | null
+      points_conversion_rate: number | null
+      seats_available: number | null
+      name?: string
+    }
+
+    const accrualResult = await loyaltyBusinessService.accruePointsFromSlip({
+      playerId,
+      ratingSlipId: slipId,
+      visitId,
+      averageBet: slip!.average_bet,
+      durationSeconds: slip!.accumulated_seconds,
+      gameSettings,
+    })
+
+    expect(accrualResult.success).toBe(true)
+    expect(accrualResult.data?.pointsEarned).toBeGreaterThan(0)
+
+    const gameplayPoints = accrualResult.data!.pointsEarned
+
+    // Step 3: Verify final balance is sum of manual + gameplay points
+    const { data: finalBalance } = await supabase
+      .from('player_loyalty_balance')
+      .select('*')
+      .eq('player_id', playerId)
+      .single()
+
+    expect(finalBalance?.current_balance).toBe(500 + gameplayPoints)
+    expect(finalBalance?.lifetime_points).toBe(500 + gameplayPoints)
+
+    // Verify TWO ledger entries exist (one manual, one gameplay)
+    const { data: ledgerEntries } = await supabase
+      .from('loyalty_ledger')
+      .select('*')
+      .eq('player_id', playerId)
+      .order('created_at', { ascending: true })
+
+    expect(ledgerEntries?.length).toBe(2)
+
+    // First entry should be manual bonus
+    expect(ledgerEntries![0].transaction_type).toBe('MANUAL_BONUS')
+    expect(ledgerEntries![0].points_change).toBe(500)
+    expect(ledgerEntries![0].staff_id).toBe(staffId)
+
+    // Second entry should be gameplay
+    expect(ledgerEntries![1].transaction_type).toBe('GAMEPLAY')
+    expect(ledgerEntries![1].points_change).toBe(gameplayPoints)
+    expect(ledgerEntries![1].rating_slip_id).toBe(slipId)
+
+    // Verify cumulative balance tracking
+    expect(ledgerEntries![0].balance_before).toBe(0)
+    expect(ledgerEntries![0].balance_after).toBe(500)
+    expect(ledgerEntries![1].balance_before).toBe(500)
+    expect(ledgerEntries![1].balance_after).toBe(500 + gameplayPoints)
+  })
+})

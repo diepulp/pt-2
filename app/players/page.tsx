@@ -16,6 +16,7 @@ const demoSnapshot: RatingSlipSnapshot = {
   id: "rs-1001",
   status: "OPEN",
   player: {
+    id: "player-demo-001",
     name: "Jordan Avery",
     membershipId: "LV-2048",
     tier: "Black Diamond",

@@ -6,6 +6,7 @@
  */
 
 import { createLoyaltyCrudService } from '../../../services/loyalty/crud'
+
 import { supabase, createTestPlayer, cleanupTestData } from './test-utils'
 
 describe('Loyalty CRUD Service', () => {

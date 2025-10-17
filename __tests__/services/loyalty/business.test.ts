@@ -12,6 +12,7 @@ import {
   LOYALTY_TIERS,
   type PointsCalculationInput,
 } from '@/services/loyalty/business'
+
 import { createMockGameSettings } from './test-utils'
 
 describe('calculatePoints', () => {

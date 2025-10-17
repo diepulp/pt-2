@@ -1,0 +1,129 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+Token indices sequence length is longer than the specified maximum sequence length for this model (957 > 512). Running this sequence through the model will result in indexing errors
+Split into 83 sections
+Compressing chunk 1 (section 1, 133 tokens)... ✓
+Compressing chunk 2 (section 2, 364 tokens)... ✓
+Compressing chunk 3 (section 3, 182 tokens)... ✓
+Compressing chunk 4 (section 4, 439 tokens)... ✓
+Section 5 (957 tokens) → splitting...
+  Split into 3 subsections
+Compressing chunk 5 (section 5.1)... ✓
+Compressing chunk 6 (section 5.2)... ✓
+Compressing chunk 7 (section 5.3)... ✓
+Compressing chunk 8 (section 6, 235 tokens)... ✓
+Compressing chunk 9 (section 7, 77 tokens)... ✓
+Compressing chunk 10 (section 8, 116 tokens)... ✓
+Compressing chunk 11 (section 9, 88 tokens)... ✓
+Compressing chunk 12 (section 10, 76 tokens)... ✓
+Section 11 (547 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 13 (section 11.1)... ✓
+Compressing chunk 14 (section 11.2)... ✓
+Compressing chunk 15 (section 12, 66 tokens)... ✓
+Compressing chunk 16 (section 13, 91 tokens)... ✓
+Compressing chunk 17 (section 14, 203 tokens)... ✓
+Compressing chunk 18 (section 15, 99 tokens)... ✓
+Compressing chunk 19 (section 16, 290 tokens)... ✓
+Section 17 (538 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 20 (section 17.1)... ✓
+Compressing chunk 21 (section 17.2)... ✓
+Compressing chunk 22 (section 18, 49 tokens)... ✓
+Compressing chunk 23 (section 19, 303 tokens)... ✓
+Compressing chunk 24 (section 20, 15 tokens)... ✓
+Compressing chunk 25 (section 21, 56 tokens)... ✓
+Compressing chunk 26 (section 22, 139 tokens)... ✓
+Compressing chunk 27 (section 23, 34 tokens)... ✓
+Compressing chunk 28 (section 24, 178 tokens)... ✓
+Section 25 (544 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 29 (section 25.1)... ✓
+Compressing chunk 30 (section 25.2)... ✓
+Section 26 (488 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 31 (section 26.1)... ✓
+Compressing chunk 32 (section 26.2)... ✓
+Compressing chunk 33 (section 27, 325 tokens)... ✓
+Compressing chunk 34 (section 28, 46 tokens)... ✓
+Compressing chunk 35 (section 29, 122 tokens)... ✓
+Compressing chunk 36 (section 30, 377 tokens)... ✓
+Compressing chunk 37 (section 31, 43 tokens)... ✓
+Compressing chunk 38 (section 32, 139 tokens)... ✓
+Compressing chunk 39 (section 33, 325 tokens)... ✓
+Compressing chunk 40 (section 34, 335 tokens)... ✓
+Compressing chunk 41 (section 35, 134 tokens)... ✓
+Compressing chunk 42 (section 36, 255 tokens)... ✓
+Compressing chunk 43 (section 37, 268 tokens)... ✓
+Compressing chunk 44 (section 38, 134 tokens)... ✓
+Compressing chunk 45 (section 39, 110 tokens)... ✓
+Compressing chunk 46 (section 40, 122 tokens)... ✓
+Section 41 (457 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 47 (section 41.1)... ✓
+Compressing chunk 48 (section 41.2)... ✓
+Compressing chunk 49 (section 42, 366 tokens)... ✓
+Compressing chunk 50 (section 43, 148 tokens)... ✓
+Compressing chunk 51 (section 44, 116 tokens)... ✓
+Compressing chunk 52 (section 45, 105 tokens)... ✓
+Compressing chunk 53 (section 46, 323 tokens)... ✓
+Compressing chunk 54 (section 47, 47 tokens)... ✓
+Compressing chunk 55 (section 48, 71 tokens)... ✓
+Compressing chunk 56 (section 49, 190 tokens)... ✓
+Section 50 (1310 tokens) → splitting...
+  Split into 4 subsections
+Compressing chunk 57 (section 50.1)... ✓
+Compressing chunk 58 (section 50.2)... ✓
+Compressing chunk 59 (section 50.3)... ✓
+Compressing chunk 60 (section 50.4)... ✓
+Compressing chunk 61 (section 51, 16 tokens)... ✓
+Compressing chunk 62 (section 52, 15 tokens)... ✓
+Compressing chunk 63 (section 53, 12 tokens)... ✓
+Compressing chunk 64 (section 54, 12 tokens)... ✓
+Compressing chunk 65 (section 55, 13 tokens)... ✓
+Section 56 (697 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 66 (section 56.1)... ✓
+Compressing chunk 67 (section 56.2)... ✓
+Section 57 (1939 tokens) → splitting...
+  Split into 6 subsections
+Compressing chunk 68 (section 57.1)... ✓
+Compressing chunk 69 (section 57.2)... ✓
+Compressing chunk 70 (section 57.3)... ✓
+Compressing chunk 71 (section 57.4)... ✓
+Compressing chunk 72 (section 57.5)... ✓
+Compressing chunk 73 (section 57.6)... ✓
+Section 58 (814 tokens) → splitting...
+  Split into 2 subsections
+Compressing chunk 74 (section 58.1)... ✓
+Compressing chunk 75 (section 58.2)... ✓
+Compressing chunk 76 (section 59, 400 tokens)... ✓
+Compressing chunk 77 (section 60, 356 tokens)... ✓
+Compressing chunk 78 (section 61, 390 tokens)... ✓
+Compressing chunk 79 (section 62, 350 tokens)... ✓
+Compressing chunk 80 (section 63, 375 tokens)... ✓
+Compressing chunk 81 (section 64, 68 tokens)... ✓
+Compressing chunk 82 (section 65, 20 tokens)... ✓
+Compressing chunk 83 (section 66, 19 tokens)... ✓
+Compressing chunk 84 (section 67, 19 tokens)... ✓
+Compressing chunk 85 (section 68, 105 tokens)... ✓
+Compressing chunk 86 (section 69, 13 tokens)... ✓
+Compressing chunk 87 (section 70, 29 tokens)... ✓
+Compressing chunk 88 (section 71, 17 tokens)... ✓
+Compressing chunk 89 (section 72, 15 tokens)... ✓
+Compressing chunk 90 (section 73, 96 tokens)... ✓
+Compressing chunk 91 (section 74, 13 tokens)... ✓
+Compressing chunk 92 (section 75, 24 tokens)... ✓
+Compressing chunk 93 (section 76, 24 tokens)... ✓
+Compressing chunk 94 (section 77, 78 tokens)... ✓
+Compressing chunk 95 (section 78, 15 tokens)... ✓
+Compressing chunk 96 (section 79, 33 tokens)... ✓
+Compressing chunk 97 (section 80, 20 tokens)... ✓
+Compressing chunk 98 (section 81, 15 tokens)... ✓
+Compressing chunk 99 (section 82, 60 tokens)... ✓
+Compressing chunk 100 (section 83, 62 tokens)... ✓
+
+✅ Compression complete.
+Original: 7605 words
+Compressed: 2746 words
+Reduction: 63.9%
+Output written to docs/agentic-workflow-strategy-compressed.md

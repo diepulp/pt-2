@@ -1,0 +1,19 @@
+Phase 2025-10-02 Sections 3.10 4-Patterns
+
+Phase 0 safety PT-2 development CI/CD Pipeline GitHub Actions workflow/workflows Quality gates lint type-check test build e2e Runtime <5min <2min tests Pipeline runs push/PR Pre-Commit Hooks Husky integration Lint-staged Auto-format lint staged files Commits blocked if linting fails Testing Infrastructure + React Testing.config Mock Supabase client custom render helpers Scripts \*\*Cypress.config Custom commands Testing Library integration Scripts Tests run coverage reporting enabled Anti-Pattern Enforcement `console.log production type `test.onlyaccidents Supabase client creation ReturnType inference services Layer.eslintrc-services.js Class-based services functional factories Default exports named exports Global real-time managers-scoped subscriptions@deprecated code Explicit return types service factories Lint fails anti violations Security Skeleton (Phase 1)/migrations File `20251002010000_enable_rls.sql Enable RLS core tables owner policy `20251002020000_jwt_helpers.sql_role_get_role() stub_audit_log_scaffold_log table trigger_compliance_table_stubs `mtl_entry_settings [supabase/migrations/README.mdMigrations documented execute Supabase Dashboard psql run db:types regenerate
+
+File Inventory Configuration Files/workflows/ci.yml pipeline/pre-commit lint-staged.config.js global setup cypress.config eslint.config.mjs rules-services.js layer rules Test Infrastructure utils supabase-mock client factory test-helpers RTL render example.test Demo test cypress e2e specs Phase 2) fixtures Test data support commands Custom commands component test setup e2e Migrations Skeleton supabase/migrations_enable_rls_helpers_log README.md Execution guide verification queries Documentation docs/phase-0 minimalistic-phase-0.md security-skeleton TESTING_SETUP.md Testing guide PHASE_0_SUMMARY
+
+Acceptance Criteria Compliance Phase CI Foundation CI workflow 4 quality gates lint type-check test build Pre-commit hooks Husky Lint-staged feedback npm scripts Phase Security Skeleton RLS tables policy-only JWT helper_log_entry_settings tables scaffolded executes migrations Types regenerated Testing Anti-Patterns Next.js React Testing Library Cypress E2E framework ESLint anti-pattern rules Service layer linting rules Coverage reporting CI test types
+
+Included Complex-environment CI pipelines workflow RLS role matrices expanded Phase 2) audit triggers Phase MTL business logic Additional table policies beyond 2 Phase 0 not fortress protect Security hardens features built
+
+Next Steps Action Required Phase 2) Security Navigate https://supabase/dashboard/sql Run migrations Copy/paste SQL/migrations Run verification queries/README.md Check RLS enabled policies enums created db:types 0/CD testing infrastructure security skeleton CI Check GitHub Actions Review coverage report set up Codecov Phase 2 Preparation Delete/example.test.ts Write TDD slice Player Visit Rating Slip Follow service testing matrix_SETUP.md
+
+Verification Checklist Phase CI workflow passes main branch Pre-commit blocks commits test errors Security migrations Supabase tables Git history clean Phase 0 commit Codecov integration configured anti ESLint rules Development environment
+
+Success Metrics CI runtime <5min <2min tests Pre-commit feedback <10sec Anti-pattern enforcement 100% errors growth Fast feedback Clear error messages Minimal configuration <60 lines testing migration guide
+
+References [CANONICAL_BLUEPRINT_MVP_PRD.md Section 3.10 Testing CI/CD Section 4: Anti-Pattern Guardrails_LAYER_ARCHITECTURE_DIAGRAM.md_SETUP \*\*Migration/migrations/README.md
+
+Team Notes Phase 0 Fast feedback Quality gates Security baseline audit scaffolding Anti-pattern prevention Complex security policies audit logic test coverage Phase 2+ avoid premature optimization purpose PRD requirements 0 migration Phase 2: TDD Vertical Slice Rating
