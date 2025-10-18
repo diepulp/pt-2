@@ -1,0 +1,14 @@
+# Python dependencies for memory file compression script
+# Install with: pip install -r scripts/requirements-compress.txt
+
+# LLMLingua - Prompt compression library
+llmlingua>=0.2.0
+
+# Transformers - Required by LLMLingua
+transformers>=4.30.0
+
+# PyTorch - Required by LLMLingua (CPU version for compatibility)
+torch>=2.0.0
+
+# Optional: Accelerate for faster model loading
+# accelerate>=0.20.0
