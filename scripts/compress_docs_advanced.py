@@ -20,7 +20,7 @@ Options:
     --input-dir PATH       Input directory (default: docs)
     --output-dir PATH      Output directory (default: docs-compressed)
     --rate FLOAT           Compression rate (default: 0.35)
-    --max-chunk-words INT  Maximum words per chunk (default: 350)
+    --max-chunk-words INT  Maximum words per chunk (default: 200, ~260 tokens)
     --dry-run              Show what would be compressed without writing
     --validate             Validate compressed files after compression
     --verbose              Enable detailed logging
@@ -168,6 +168,17 @@ def count_words(text: str) -> int:
     return len(text.split())
 
 
+def estimate_tokens(text: str) -> int:
+    """
+    Estimate token count from word count (conservative).
+
+    LLMLingua-2 has 512 token limit. Using conservative ratio:
+    1 word ≈ 1.3 tokens (safer than assuming 1:1 or 0.75 ratio)
+    """
+    word_count = count_words(text)
+    return int(word_count * 1.3)
+
+
 def should_skip_file(file_path: Path, skip_patterns: List[str]) -> bool:
     """Check if file should be skipped based on patterns."""
     file_name = file_path.name
@@ -255,6 +266,14 @@ def compress_chunk(
     """
     logger = logging.getLogger(__name__)
 
+    # Safety check - warn if approaching 512 token limit
+    estimated_tokens = estimate_tokens(chunk)
+    if estimated_tokens > 450:
+        logger.warning(
+            f"Chunk {chunk_num} has ~{estimated_tokens} estimated tokens (approaching 512 limit). "
+            f"Consider reducing max_chunk_words."
+        )
+
     try:
         result = compressor.compress_prompt(
             chunk,
@@ -270,24 +289,36 @@ def compress_chunk(
         stats = {
             'original_words': original_words,
             'compressed_words': compressed_words,
+            'estimated_tokens': estimated_tokens,
             'reduction_percent': round(reduction, 1)
         }
 
         if verbose:
             logger.debug(
                 f"Chunk {chunk_num}/{total_chunks}: "
-                f"{original_words} → {compressed_words} words ({reduction:.1f}%)"
+                f"{original_words} words (~{estimated_tokens} tokens) → "
+                f"{compressed_words} words ({reduction:.1f}%)"
             )
 
         return result['compressed_prompt'], True, stats
 
     except Exception as e:
-        logger.error(f"Chunk {chunk_num}/{total_chunks} failed: {str(e)[:100]}")
+        error_msg = str(e)
+        logger.error(f"Chunk {chunk_num}/{total_chunks} failed: {error_msg[:100]}")
+
+        # Check if it's the token limit error
+        if "sequence length" in error_msg.lower() or "512" in error_msg:
+            logger.error(
+                f"  → TOKEN LIMIT ERROR: Chunk has ~{estimated_tokens} tokens. "
+                f"Reduce --max-chunk-words (current default: 200)"
+            )
+
         return chunk, False, {
             'original_words': count_words(chunk),
             'compressed_words': count_words(chunk),
+            'estimated_tokens': estimated_tokens,
             'reduction_percent': 0.0,
-            'error': str(e)[:100]
+            'error': error_msg[:100]
         }
 
 
@@ -598,8 +629,8 @@ def main():
     parser.add_argument(
         "--max-chunk-words",
         type=int,
-        default=350,
-        help="Maximum words per chunk (default: 350)"
+        default=200,
+        help="Maximum words per chunk (default: 200, ~260 tokens)"
     )
 
     parser.add_argument(
