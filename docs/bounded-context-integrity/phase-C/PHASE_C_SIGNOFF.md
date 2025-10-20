@@ -55,7 +55,7 @@ Phase C (MTL Patron UUID Migration) is **100% complete** with all validation gat
 - ✅ **Zero Orphaned References**: 0 patron_uuid values without corresponding player.id
 - ✅ **Zero Invalid UUIDs**: 0 rows with malformed patron_id values
 
-**Migration**: `supabase/migrations/20251020121000_phase_c1_add_patron_uuid.sql`
+**Migration**: `supabase/migrations/20251020020220_phase_c1_add_patron_uuid.sql`
 **Commit**: (previous session)
 
 #### C.2.2: Generated Column Conversion
@@ -100,7 +100,7 @@ Phase C (MTL Patron UUID Migration) is **100% complete** with all validation gat
 - ✅ **Automated Job**: `pg_cron` job scheduled (hourly) and active
 - ✅ **Zero Critical Alerts**: No alerts logged in 48-hour observation window (waived for pre-production)
 
-**Migration**: `supabase/migrations/20251020120000_phase_c0_validation_infrastructure.sql`
+**Migration**: `supabase/migrations/20251020015036_phase_c0_validation_infrastructure.sql`
 **Commit**: (previous session)
 
 ---
@@ -294,13 +294,13 @@ grep -rn '\.eq("patron_id"' services/mtl/
 
 ### Database Migrations
 
-1. ✅ **`20251020120000_phase_c0_validation_infrastructure.sql`**
+1. ✅ **`20251020015036_phase_c0_validation_infrastructure.sql`**
    - Alert tracking table
    - Validation function (backfill check)
    - Cutover gate function
    - pg_cron job (hourly monitoring)
 
-2. ✅ **`20251020121000_phase_c1_add_patron_uuid.sql`**
+2. ✅ **`20251020020220_phase_c1_add_patron_uuid.sql`**
    - patron_uuid UUID column (nullable)
    - Foreign key to player(id)
    - Parity constraint (patron_id ↔ patron_uuid)

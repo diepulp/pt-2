@@ -41,7 +41,7 @@ SELECT 'OVERALL_DECISION'::text AS gate_name, ..., gr.can_proceed
 FROM gate_results gr;
 ```
 
-**Lines Changed**: `supabase/migrations/20251020120000_phase_c0_validation_infrastructure.sql:163-174`
+**Lines Changed**: `supabase/migrations/20251020015036_phase_c0_validation_infrastructure.sql:163-174`
 
 ---
 
@@ -65,7 +65,7 @@ SUM(gr.failing_count) AS failing_count
 SUM(gr.failing_count)::bigint AS failing_count
 ```
 
-**Line Changed**: `supabase/migrations/20251020120000_phase_c0_validation_infrastructure.sql:172`
+**Line Changed**: `supabase/migrations/20251020015036_phase_c0_validation_infrastructure.sql:172`
 
 ---
 
@@ -204,4 +204,4 @@ mtl_entry: {
 
 - [PHASE_C_PROGRESS_REPORT.md](./PHASE_C_PROGRESS_REPORT.md) - Full progress details
 - [BASELINE_AUDIT.md](./BASELINE_AUDIT.md) - Pre-migration state
-- Migration file: `supabase/migrations/20251020120000_phase_c0_validation_infrastructure.sql`
+- Migration file: `supabase/migrations/20251020015036_phase_c0_validation_infrastructure.sql`

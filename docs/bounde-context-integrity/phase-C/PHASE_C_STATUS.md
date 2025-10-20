@@ -33,7 +33,7 @@ Phase C migration is **50% complete** with validation infrastructure and UUID co
 
 ## ✅ Phase C.0: Validation Infrastructure (Complete)
 
-**Migration**: `20251020120000_phase_c0_validation_infrastructure.sql`
+**Migration**: `20251020015036_phase_c0_validation_infrastructure.sql`
 **Completed**: 2025-10-20
 **Status**: ✅ Deployed and operational
 
@@ -105,7 +105,7 @@ SELECT * FROM check_phase_c1_cutover_gate();
 
 ## ✅ Phase C.1: Add patron_uuid Column (Complete)
 
-**Migration**: `20251020121000_phase_c1_add_patron_uuid.sql`
+**Migration**: `20251020020220_phase_c1_add_patron_uuid.sql`
 **Completed**: 2025-10-20
 **Status**: ✅ Deployed with full relational integrity
 
@@ -465,8 +465,8 @@ ALTER TABLE mtl_entry ALTER COLUMN patron_id SET NOT NULL;
 - [RESPONSIBILITY_MATRIX_REMEDIATION_WORKFLOW.md](../RESPONSIBILITY_MATRIX_REMEDIATION_WORKFLOW.md) - Phase C specification (lines 220-781)
 - [BASELINE_AUDIT.md](./BASELINE_AUDIT.md) - Pre-migration baseline state
 - [PHASE_C_FIX_SUMMARY.md](./PHASE_C_FIX_SUMMARY.md) - SQL debugging resolution
-- Migration: `supabase/migrations/20251020120000_phase_c0_validation_infrastructure.sql`
-- Migration: `supabase/migrations/20251020121000_phase_c1_add_patron_uuid.sql`
+- Migration: `supabase/migrations/20251020015036_phase_c0_validation_infrastructure.sql`
+- Migration: `supabase/migrations/20251020020220_phase_c1_add_patron_uuid.sql`
 
 ---
 
