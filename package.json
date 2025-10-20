@@ -19,7 +19,10 @@
     "cypress:headless": "cypress run",
     "e2e": "start-server-and-test dev http://localhost:3000 cypress",
     "e2e:headless": "start-server-and-test dev http://localhost:3000 cypress:headless",
-    "prepare": "husky"
+    "prepare": "husky",
+    "parse:schema": "node scripts/parse_schema_identifiers.js",
+    "validate:ownership": "node scripts/detect_ownership_conflicts.js",
+    "validate:matrix-schema": "npm run parse:schema && npm run validate:ownership && node scripts/validate_matrix_schema.js"
   },
   "dependencies": {
     "@heroui/react": "^2.8.4",
@@ -105,6 +108,7 @@
     "tailwindcss": "^4.1.13",
     "tailwindcss-animate": "^1.0.7",
     "ts-jest": "^29.4.4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

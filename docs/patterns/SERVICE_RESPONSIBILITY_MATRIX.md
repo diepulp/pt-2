@@ -123,14 +123,15 @@
 
 | Domain | Service | Owns | References | Aggregates | Responsibilities |
 |--------|---------|------|------------|------------|------------------|
-| **Foundational** 🆕 | `CasinoService` | • Casino registry<br>• **CasinoSettings** (timezone, gaming day)<br>• **Compliance thresholds** (CTR, watchlist)<br>• Game config templates<br>• Staff & access control<br>• Corporate grouping<br>• Audit logs<br>• Reports | • Company (FK, corporate parent) | • All operational domains<br>• Policy inheritance<br>• Configuration distribution | **Root authority for property management & global policy** |
+| **Foundational** 🆕 | `CasinoService` | • Casino registry<br>• **casino_settings** (EXCLUSIVE WRITE)<br>• **Timezone & gaming day** (temporal authority)<br>• **Compliance thresholds** (CTR, watchlist)<br>• Game config templates<br>• Staff & access control<br>• Corporate grouping<br>• Audit logs<br>• Reports | • Company (FK, corporate parent) | • All operational domains<br>• Policy inheritance<br>• Configuration distribution | **Root temporal authority & global policy** |
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• RatingSlips<br>• Loyalty | Identity management |
 | **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** |
 | **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • RatingSlips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• **points** (cache) | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** 🆕 | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• RatingSlip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
 | **Finance** | `PlayerFinancialService` | • Cash in/out<br>• Chips tracking<br>• Reconciliation | • Player (FK)<br>• Visit (FK)<br>• RatingSlip (FK) | – | Financial tracking |
-| **Compliance** 🆕 | `MTLService` | • **Cash transaction log**<br>• MTL entries (immutable)<br>• Audit notes<br>• Gaming day calculation<br>• Threshold detection<br>• Compliance exports | • Player (FK, optional)<br>• Casino (FK)<br>• Staff (FK)<br>• RatingSlip (FK, optional)<br>• Visit (FK, optional) | • Daily aggregates<br>• Threshold monitoring<br>• CTR/Watchlist detection | **AML/CTR compliance tracking** |
+| **Compliance** 🆕 | `MTLService` | • **Cash transaction log**<br>• `mtl_entry` (immutable)<br>• `mtl_audit_note` (append-only)<br>• Gaming day calculation (trigger)<br>• Threshold detection<br>• Compliance exports | • `casino_settings` (READ-ONLY via trigger)<br>• Player (FK, optional)<br>• Casino (FK)<br>• Staff (FK)<br>• RatingSlip (FK, optional)<br>• Visit (FK, optional) | • Daily aggregates<br>• Threshold monitoring<br>• CTR/Watchlist detection | **AML/CTR compliance tracking** |
+| **Observability** 🆕 | `PerformanceService` | • `performance_metrics` (time-series)<br>• `performance_alerts`<br>• `performance_thresholds`<br>• `performance_config`<br>• Alert generation (trigger-based) | • No FK dependencies<br>• Optional metadata correlation<br>• Observes all domains (read-only) | • MTL transaction volume<br>• System performance trends<br>• Threshold breach detection | **Real-time monitoring & alerting** |
 
 ---
 
@@ -140,7 +141,10 @@
 
 **OWNS:**
 - **Casino registry** (master records for licensed gaming establishments)
-- **CasinoSettings** (timezone, gaming day start, compliance thresholds)
+- **casino_settings** table (EXCLUSIVE WRITE - Single temporal authority)
+  - Timezone configuration (all temporal calculations inherit this)
+  - Gaming day start time (defines day boundaries for all domains)
+  - Compliance thresholds (CTR floor $10k, watchlist floor $3k)
 - `casino` table (canonical casino identity)
 - `company` table (corporate ownership hierarchy)
 - `gamesettings` table (game configuration templates)
@@ -148,8 +152,6 @@
 - `playercasino` table (player enrollment associations)
 - `AuditLog` table (cross-domain event logging)
 - `Report` table (administrative reports)
-- Compliance threshold configuration (CTR floor $10k, watchlist floor $3k)
-- Timezone and gaming day calculation logic
 - Access control and authorization policies
 
 **PROVIDES TO (All Downstream Contexts):**
@@ -435,13 +437,16 @@ CREATE TABLE loyalty_tier (
 - **Cash transaction logging** (immutable, write-once records)
 - `mtl_entry` table (source of truth for all monetary transactions)
 - `mtl_audit_note` table (append-only audit trail)
-- `casino_settings` table (gaming day configuration, thresholds)
-- Gaming day calculation logic (trigger-based)
+- Gaming day calculation logic (trigger-based, reads from casino_settings)
 - Threshold detection rules (watchlist >= $3k, CTR >= $10k)
 - Compliance export generation (CSV reports)
 - Aggregation views (`mtl_patron_aggregates`, `mtl_threshold_monitor`, `mtl_compliance_context`)
 
 **REFERENCES:**
+- `casino_settings` - **READ-ONLY via database trigger** (temporal authority pattern)
+  - `timezone` - Converts UTC to local casino time
+  - `gaming_day_start` - Defines day boundaries (default 06:00)
+  - `watchlist_floor` / `ctr_threshold` - Used in aggregation views
 - `player_id` - Patron identification (when carded)
 - `casino_id` - Venue context
 - `recorded_by_employee_id` - Staff accountability
@@ -564,6 +569,178 @@ LEFT JOIN loyalty_ledger l ON l.rating_slip_id = m.rating_slip_id
 LEFT JOIN mtl_threshold_monitor tm ON tm.casino_id = m.casino_id
   AND tm.gaming_day = m.gaming_day;
 ```
+
+---
+
+## Performance Service (NEW) - Monitoring & Observability Context
+
+### ✅ PerformanceService (Real-Time Monitoring Read-Model)
+
+**OWNS:**
+- **Application performance monitoring** (telemetry collection for frontend/backend)
+- `performance_metrics` table (time-series metric storage)
+- `performance_alerts` table (alert generation and tracking)
+- `performance_thresholds` table (threshold configuration)
+- `performance_config` table (monitoring configuration)
+- Alert generation logic (automated threshold breach detection)
+- Performance metric aggregation and analysis
+- Real-time monitoring triggers
+
+**REFERENCES:**
+- No direct FK relationships to business entities (isolated monitoring domain)
+- Optionally correlates via `user_session` or `page_path` metadata
+
+**CONSUMED ENTITIES (Read-Only Derived Metrics):**
+- `mtl_performance_metrics` (VIEW) - MTL transaction volume and throughput monitoring
+- All operational contexts indirectly via telemetry instrumentation
+
+**DOES NOT OWN:**
+- ❌ Business entities (Casino, Player, Visit, RatingSlip, etc.) → Respective domain services
+- ❌ MTL transaction data → `MTLService`
+- ❌ Table operational state → `TableContextService`
+- ❌ Source system metrics → Only observes, never modifies
+
+**BOUNDED CONTEXT**: "How is the system performing and where are bottlenecks?"
+
+**KEY PRINCIPLES:**
+- **Read-Model Pattern**: Consumes telemetry, never writes to source domains
+- **Decoupled Monitoring**: No FK dependencies on business tables
+- **Automated Alerting**: Trigger-based threshold detection
+- **Time-Series Focus**: Optimized for metric aggregation and trending
+- **Non-Intrusive**: Observability without business logic coupling
+
+### Primary Responsibilities
+
+| Area | Implementation | Description |
+|------|----------------|-------------|
+| **Metric Collection** | `performance_metrics` | Record application performance metrics (API latency, page load, query duration) |
+| **Alert Management** | `performance_alerts` | Generate and track performance degradation alerts |
+| **Threshold Configuration** | `performance_thresholds` | Define warning/critical thresholds per metric type |
+| **Monitoring Config** | `performance_config` | Configure target/warning values for performance KPIs |
+| **Automated Detection** | `check_performance_thresholds()` trigger | Real-time threshold breach detection |
+| **Alert Creation** | `create_performance_alert()` RPC | Programmatic alert generation |
+| **Alert Resolution** | `resolve_performance_alert()` RPC | Mark alerts as resolved |
+| **MTL Observability** | `mtl_performance_metrics` VIEW | Monitor MTL transaction volume/throughput |
+
+### Schema (Core Entities)
+
+```sql
+-- Application performance metrics (time-series)
+CREATE TABLE "performance_metrics" (
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "timestamp" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "metric_type" "MetricType" NOT NULL, -- 'page_load', 'api_call', 'query', etc.
+  "metric_name" TEXT NOT NULL,
+  "value" DECIMAL(10,2) NOT NULL,
+  "metadata" JSONB DEFAULT '{}',
+  "user_session" TEXT,
+  "page_path" TEXT,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Performance alerts
+CREATE TABLE "performance_alerts" (
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "alert_type" "AlertTypePerf" NOT NULL,
+  "severity" "Severity" NOT NULL,
+  "metric_type" "MetricType" NOT NULL,
+  "metric_name" TEXT NOT NULL,
+  "threshold_value" DECIMAL(10,2),
+  "actual_value" DECIMAL(10,2),
+  "message" TEXT NOT NULL,
+  "metadata" JSONB DEFAULT '{}',
+  "resolved_at" TIMESTAMPTZ,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Threshold configuration
+CREATE TABLE "performance_thresholds" (
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "metric_type" "MetricType" NOT NULL,
+  "metric_name" TEXT NOT NULL,
+  "warning_threshold" DECIMAL(10,2) NOT NULL,
+  "critical_threshold" DECIMAL(10,2) NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT true,
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Monitoring configuration
+CREATE TABLE "performance_config" (
+  "id" UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  "metric_name" TEXT NOT NULL,
+  "target_value" DECIMAL(10,2) NOT NULL,
+  "warning_value" DECIMAL(10,2) NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT true,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### Read-Only Derived Metrics
+
+```sql
+-- MTL transaction performance monitoring (READ-ONLY)
+CREATE OR REPLACE VIEW mtl_performance_metrics AS
+SELECT
+  gaming_day,
+  casino_id,
+  COUNT(*) as transaction_count,
+  AVG(amount) as avg_amount,
+  MAX(amount) as max_amount,
+  COUNT(DISTINCT COALESCE(patron_id, CONCAT(person_name, person_last_name))) as unique_patrons,
+  COUNT(*) / 24.0 as avg_transactions_per_hour,
+  CASE
+    WHEN COUNT(*) > 2000 THEN 'high_volume'
+    WHEN COUNT(*) > 1000 THEN 'normal_volume'
+    ELSE 'low_volume'
+  END as volume_status
+FROM mtl_entry
+WHERE gaming_day >= CURRENT_DATE - INTERVAL '7 days'
+GROUP BY gaming_day, casino_id;
+```
+
+### Integration Boundaries
+
+| Partner Context | Relationship | Data Flow | Description |
+|-----------------|--------------|-----------|-------------|
+| **Casino** | Referential (metadata) | ← | Uses timezone for metric normalization (via metadata correlation) |
+| **TableContext** | Observer (read-only) | ← | Monitors table operation latency and alert frequency |
+| **MTL** | Observer (read-only) | ← | Consumes transaction volume metrics via `mtl_performance_metrics` view |
+| **RatingSlip** | Observer (read-only) | ← | Monitors rating slip creation/completion latency |
+| **All Services** | Telemetry consumer | ← | Receives instrumentation from all operational domains |
+
+### Anti-Patterns (DO NOT)
+
+```typescript
+// ❌ BAD: Performance service modifying source data
+async function recordMetric(metric: PerformanceMetric) {
+  await supabase.from('performance_metrics').insert(metric);
+
+  // ❌ VIOLATION: Writing to business tables
+  if (metric.value > 5000) {
+    await supabase.from('mtl_entry').update({
+      flagged_for_review: true
+    });
+  }
+}
+
+// ✅ GOOD: Pure monitoring, no side effects
+async function recordMetric(metric: PerformanceMetric) {
+  await supabase.from('performance_metrics').insert(metric);
+  // Trigger handles alert generation automatically
+  // No writes to other domains
+}
+```
+
+### Verification Checklist
+
+- [x] **Read-Model Compliance**: Performance tables have NO FK constraints to business entities
+- [x] **No Write Violations**: No INSERT/UPDATE statements to Casino, Player, Visit, RatingSlip, MTL, Loyalty, or TableContext tables
+- [x] **Derived Metrics Only**: `mtl_performance_metrics` is a VIEW (read-only)
+- [x] **Boundary Isolation**: Performance schema is self-contained with no bidirectional relationships
+- [x] **Alert Autonomy**: Alert generation is trigger-based, requires no external service calls
+- [x] **Time-Series Optimization**: Indexes on `timestamp`, `metric_type` for fast aggregation
 
 ---
 
@@ -1131,6 +1308,7 @@ async function completeRatingSlip(id: string) {
 
 ## References
 
+- [APPENDIX A: Schema Identifier Reference](../bounded-context-integrity/APPENDIX_A_SCHEMA_IDENTIFIER_REFERENCE.md) - Complete table-to-service mapping with naming conventions
 - [CASINO_SERVICE_RESPONSIBILITY.MD](./CASINO_SERVICE_RESPONSIBILITY.MD) - Casino bounded context specification
 - [TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md](./TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md) - TableContext bounded context specification
 - [LOYALTY_SERVICE_HANDOFF.md](../../docs/LOYALTY_SERVICE_HANDOFF.md) - Conceptual design
