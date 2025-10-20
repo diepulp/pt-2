@@ -1533,9 +1533,6 @@ export type Database = {
         Row: {
           accumulated_seconds: number;
           average_bet: number;
-          cash_in: number | null;
-          chips_brought: number | null;
-          chips_taken: number | null;
           end_time: string | null;
           game_settings: Json;
           game_settings_id: string | null;
@@ -1552,9 +1549,6 @@ export type Database = {
         Insert: {
           accumulated_seconds?: number;
           average_bet: number;
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
           end_time?: string | null;
           game_settings: Json;
           game_settings_id?: string | null;
@@ -1571,9 +1565,6 @@ export type Database = {
         Update: {
           accumulated_seconds?: number;
           average_bet?: number;
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
           end_time?: string | null;
           game_settings?: Json;
           game_settings_id?: string | null;
