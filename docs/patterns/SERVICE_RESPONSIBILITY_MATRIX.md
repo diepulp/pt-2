@@ -1,9 +1,11 @@
 # Service Responsibility Matrix - Bounded Context Integrity
 
-> **Version**: 2.1.0 (with Loyalty & MTL Contexts)
-> **Date**: 2025-10-14
-> **Status**: CANONICAL - Phase 6+ Architecture with Loyalty & MTL Services
+> **Version**: 2.3.0 (Complete Bounded Context Map)
+> **Date**: 2025-10-19
+> **Status**: CANONICAL - Complete Architecture with Foundational, Operational, Reward & Compliance Services
 > **Previous Versions**:
+> - [v2.2.0 TableContext (2025-10-19)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v2.2_tablecontext_2025-10-19.md)
+> - [v2.1.0 MTL (2025-10-14)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v2.1_mtl_2025-10-14.md)
 > - [v2.0.0 Loyalty (2025-10-12)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v2.0_loyalty_2025-10-12.md)
 > - [v1.0 Pre-Loyalty (2025-10-06)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v1.0_pre-loyalty_2025-10-06.md)
 > **Purpose**: Maintain bounded context integrity across all service domains
@@ -14,7 +16,9 @@
 
 | Version | Date | Changes | Rationale |
 |---------|------|---------|-----------|
-| **2.1.0** | 2025-10-14 | Added MTL (Compliance) service bounded context, enhanced cross-domain correlation with rating_slip_id/visit_id, added audit note immutability pattern | Phase 6+ requires AML/CTR compliance tracking with contextual enrichment from Loyalty and RatingSlip domains |
+| **2.3.0** | 2025-10-19 | Added Casino (Foundational) service bounded context for property management, global configuration, timezone/gaming-day logic, staff management, and policy thresholds | Establishes Casino as the root authority for all operational domains, providing configuration inheritance and compliance policy to TableContext, MTL, RatingSlip, Loyalty, and Performance |
+| 2.2.0 | 2025-10-19 | Added TableContext (Operational) service bounded context for gaming table lifecycle, configuration, dealer rotation, inventory tracking, and operational telemetry | Establishes clear ownership of table-level operational concerns and provides structured context for RatingSlip, MTL, and Performance domains |
+| 2.1.0 | 2025-10-14 | Added MTL (Compliance) service bounded context, enhanced cross-domain correlation with rating_slip_id/visit_id, added audit note immutability pattern | Phase 6+ requires AML/CTR compliance tracking with contextual enrichment from Loyalty and RatingSlip domains |
 | 2.0.0 | 2025-10-12 | Added Loyalty service bounded context, clarified point calculation ownership, updated integration patterns | Phase 6 requires Loyalty for point calculation policy (reward vs measurement separation) |
 | 1.0.0 | 2025-10-06 | Initial version post-RatingSlip simplification, established Performance vs Finance separation | Bounded context integrity after domain coupling analysis |
 
@@ -38,12 +42,34 @@
 │                          CASINO TRACKER SYSTEM                              │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
+│  ┌────────────────────────────────────────────────────────────────┐        │
+│  │               FOUNDATIONAL CONTEXT (Root Authority)             │        │
+│  │                                                                 │        │
+│  │  ┌──────────────┐                                              │        │
+│  │  │   Casino     │  • Property registry                         │        │
+│  │  │   Service    │  • Timezone & gaming day                     │        │
+│  │  │              │  • Compliance thresholds (CTR, watchlist)    │        │
+│  │  │              │  • Staff & access control                    │        │
+│  │  │              │  • Corporate grouping                        │        │
+│  │  │              │  • Game config templates                     │        │
+│  │  │              │  • Audit oversight                           │        │
+│  │  └──────┬───────┘                                              │        │
+│  │         │                                                       │        │
+│  └─────────┼───────────────────────────────────────────────────────┘        │
+│            │ Provides configuration & policy to all contexts               │
+│            ▼                                                                │
 │  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐               │
-│  │   IDENTITY   │     │   LOCATION   │     │   FINANCE    │               │
+│  │   IDENTITY   │     │ OPERATIONAL  │     │   FINANCE    │               │
 │  │   CONTEXT    │     │   CONTEXT    │     │   CONTEXT    │               │
 │  │              │     │              │     │              │               │
-│  │   Player     │────▶│   Casino     │     │   Player     │               │
+│  │   Player     │     │ TableContext │     │   Player     │               │
 │  │   Service    │     │   Service    │     │   Financial  │               │
+│  │              │     │              │     │              │               │
+│  │              │     │ • Tables     │     │              │               │
+│  │              │     │ • Dealers    │     │              │               │
+│  │              │     │ • Fills/drops│     │              │               │
+│  │              │     │ • Chip counts│     │              │               │
+│  │              │     │ • Alerts     │     │              │               │
 │  └──────┬───────┘     └──────┬───────┘     └──────┬───────┘               │
 │         │                    │                    │                        │
 │         │                    │                    │                        │
@@ -54,8 +80,8 @@
 │  │  ┌──────────────┐        ┌──────────────┐                     │        │
 │  │  │    Visit     │───────▶│  RatingSlip  │─────┐               │        │
 │  │  │   Service    │        │   Service    │     │               │        │
-│  │  │              │        │ (Telemetry)  │     │               │        │
-│  │  └──────────────┘        └──────────────┘     │               │        │
+│  │  │              │        │ (Telemetry)  │◀────┼─── Table      │        │
+│  │  └──────────────┘        └──────────────┘     │    context    │        │
 │  │                                                │               │        │
 │  └────────────────────────────────────────────────┼───────────────┘        │
 │                                                   │                        │
@@ -65,25 +91,28 @@
 │         ▼                                                                  │
 │  ┌──────────────┐                    ┌─────────────────┐                  │
 │  │   REWARD     │                    │   COMPLIANCE    │                  │
-│  │   CONTEXT    │                    │    CONTEXT      │                  │
-│  │              │  ◀────┐            │                 │                  │
-│  │   Loyalty    │       │            │      MTL        │                  │
-│  │   Service    │       └────────────│    Service      │                  │
-│  │              │  Read-only         │                 │                  │
-│  └──────┬───────┘  correlation       └────────┬────────┘                  │
-│         │          (contextual               │                            │
-│         │           enrichment)              │                            │
-│         │                                    │                            │
-│         │  • Interprets telemetry           │  • Cash transaction log    │
-│         │  • Applies reward policy          │  • Gaming day calculation  │
-│         │  • Calculates points              │  • Threshold detection     │
-│         │  • Stores in LoyaltyLedger        │  • AML/CTR compliance      │
-│         │  • Updates tier progression       │  • Immutable audit trail   │
-│         │                                    │                            │
+│  │   CONTEXT    │                    │    CONTEXT      │◀─── Fills/drops  │
+│  │              │  ◀────┐            │                 │     chip counts  │
+│  │   Loyalty    │       │            │      MTL        │   ◀─ Casino      │
+│  │   Service    │       └────────────│    Service      │      thresholds  │
+│  │              │  Read-only         │                 │      gaming day  │
+│  │              │  correlation       │ • CTR threshold │                  │
+│  └──────┬───────┘  (contextual       │ • Watchlist     │                  │
+│         │           enrichment)      │ • Gaming day    │                  │
+│         │                            │ • Audit trail   │                  │
+│         │  • Interprets telemetry    │                 │                  │
+│         │  • Applies reward policy   └─────────────────┘                  │
+│         │  • Calculates points                                            │
+│         │  • Stores in LoyaltyLedger                                      │
+│         │  • Updates tier progression                                     │
+│         │                                                                  │
 │         └──────────▶ Updates RatingSlip.points (denormalized cache)       │
 │                                                                            │
-│         Both services read from Session/Telemetry context (read-only)     │
-│         MTL reads from Loyalty for contextual enrichment (compliance only) │
+│  Key Relationships:                                                        │
+│  • Casino → All contexts (configuration & policy inheritance)             │
+│  • TableContext → RatingSlip, MTL (operational telemetry)                 │
+│  • Session/Telemetry → Loyalty, MTL (read-only consumption)              │
+│  • Loyalty → MTL (contextual enrichment for compliance oversight)         │
 │                                                                            │
 └────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -94,13 +123,234 @@
 
 | Domain | Service | Owns | References | Aggregates | Responsibilities |
 |--------|---------|------|------------|------------|------------------|
-| **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | – | • Visits<br>• RatingSlips<br>• Loyalty | Identity management |
-| **Location** | `CasinoService` | • Casino details<br>• Tables<br>• Game configs<br>• **Casino settings**<br>• Gaming day config | – | • Visits<br>• RatingSlips<br>• MTL entries | Venue management & configuration |
+| **Foundational** 🆕 | `CasinoService` | • Casino registry<br>• **CasinoSettings** (timezone, gaming day)<br>• **Compliance thresholds** (CTR, watchlist)<br>• Game config templates<br>• Staff & access control<br>• Corporate grouping<br>• Audit logs<br>• Reports | • Company (FK, corporate parent) | • All operational domains<br>• Policy inheritance<br>• Configuration distribution | **Root authority for property management & global policy** |
+| **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• RatingSlips<br>• Loyalty | Identity management |
+| **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** |
 | **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • RatingSlips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• **points** (cache) | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** 🆕 | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• RatingSlip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
 | **Finance** | `PlayerFinancialService` | • Cash in/out<br>• Chips tracking<br>• Reconciliation | • Player (FK)<br>• Visit (FK)<br>• RatingSlip (FK) | – | Financial tracking |
 | **Compliance** 🆕 | `MTLService` | • **Cash transaction log**<br>• MTL entries (immutable)<br>• Audit notes<br>• Gaming day calculation<br>• Threshold detection<br>• Compliance exports | • Player (FK, optional)<br>• Casino (FK)<br>• Staff (FK)<br>• RatingSlip (FK, optional)<br>• Visit (FK, optional) | • Daily aggregates<br>• Threshold monitoring<br>• CTR/Watchlist detection | **AML/CTR compliance tracking** |
+
+---
+
+## Casino Service (NEW) - Foundational Context
+
+### ✅ CasinoService (Root Authority & Global Policy)
+
+**OWNS:**
+- **Casino registry** (master records for licensed gaming establishments)
+- **CasinoSettings** (timezone, gaming day start, compliance thresholds)
+- `casino` table (canonical casino identity)
+- `company` table (corporate ownership hierarchy)
+- `gamesettings` table (game configuration templates)
+- `Staff` table (staff registry and access control)
+- `playercasino` table (player enrollment associations)
+- `AuditLog` table (cross-domain event logging)
+- `Report` table (administrative reports)
+- Compliance threshold configuration (CTR floor $10k, watchlist floor $3k)
+- Timezone and gaming day calculation logic
+- Access control and authorization policies
+
+**PROVIDES TO (All Downstream Contexts):**
+- **TableContext**: Casino ID linkage, game config templates, staff authorization
+- **Visit**: Casino jurisdiction, timezone for session timestamps, gaming day boundaries
+- **RatingSlip**: Casino settings for gameplay telemetry normalization
+- **MTL**: Gaming day start time, compliance thresholds (CTR, watchlist), timezone
+- **Loyalty**: Casino-specific tier rules and point multipliers (future)
+- **Performance**: Timezone and threshold normalization for metrics
+- **Audit/Compliance**: Centralized audit logging and regulatory reporting
+
+**DOES NOT OWN:**
+- ❌ Table operational state → `TableContextService`
+- ❌ Player sessions → `VisitService`
+- ❌ Gameplay telemetry → `RatingSlipService`
+- ❌ Cash transactions → `MTLService`
+- ❌ Reward calculations → `LoyaltyService`
+
+**BOUNDED CONTEXT**: "What are the operational parameters and policy boundaries of this casino property?"
+
+**KEY PRINCIPLES:**
+- **Root Authority**: All contexts inherit configuration and policy from Casino
+- **Immutable Identity**: Casino properties are stable, foundational entities
+- **Policy Distribution**: Thresholds and rules flow downstream, never upstream
+- **Timezone Normalization**: Single source of truth for temporal calculations
+- **Corporate Hierarchy**: Company grouping for multi-property operations
+
+### Primary Responsibilities
+
+| Area | Implementation | Description |
+|------|----------------|-------------|
+| **Casino Registry** | `casino` | Maintain canonical records for each licensed property |
+| **Corporate Grouping** | `company` | Manage ownership hierarchies and brand grouping |
+| **Global Configuration** | `CasinoSettings` | Persist timezone, gaming day start, compliance thresholds |
+| **Game Templates** | `gamesettings` | Provide base configuration applied to gaming tables |
+| **Staff Management** | `Staff` | Manage staff identities, roles, and access permissions |
+| **Player Enrollment** | `playercasino` | Record player-to-casino associations for loyalty tracking |
+| **Audit Oversight** | `AuditLog` | Log all regulated operations under casino scope |
+| **Reporting** | `Report` | Generate operational reports (financial, regulatory, performance) |
+
+### Schema (Core Entities)
+
+```sql
+-- Casino master registry
+CREATE TABLE casino (
+  id TEXT PRIMARY KEY,
+  company_id TEXT REFERENCES company(id),
+  name TEXT NOT NULL,
+  address TEXT,
+  city TEXT,
+  state TEXT,
+  zip TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
+-- Corporate ownership
+CREATE TABLE company (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  legal_name TEXT,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Casino configuration (policy & thresholds)
+CREATE TABLE "CasinoSettings" (
+  id TEXT PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  timezone TEXT NOT NULL DEFAULT 'America/Los_Angeles',
+  gaming_day_start TEXT NOT NULL DEFAULT '06:00',
+
+  -- Compliance thresholds (consumed by MTL)
+  watchlist_floor DECIMAL(10,2) NOT NULL DEFAULT 3000,
+  ctr_threshold DECIMAL(10,2) NOT NULL DEFAULT 10000,
+
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
+-- Game configuration templates (consumed by TableContext)
+CREATE TABLE gamesettings (
+  id UUID PRIMARY KEY,
+  casino_id TEXT REFERENCES casino(id),
+  name TEXT NOT NULL,
+  game_type TEXT NOT NULL,
+  house_edge DECIMAL(5,2),
+  average_rounds_per_hour INTEGER,
+  points_conversion_rate DECIMAL(10,2) DEFAULT 10.0,
+  point_multiplier DECIMAL(3,2) DEFAULT 1.0,
+  seats_available INTEGER DEFAULT 7,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Staff registry and access control
+CREATE TABLE "Staff" (
+  id UUID PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  first_name TEXT NOT NULL,
+  last_name TEXT NOT NULL,
+  role TEXT NOT NULL,
+  employee_id TEXT UNIQUE,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ
+);
+
+-- Player enrollment associations
+CREATE TABLE playercasino (
+  id UUID PRIMARY KEY,
+  player_id UUID NOT NULL REFERENCES player(id),
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  enrolled_date DATE,
+  status TEXT DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE(player_id, casino_id)
+);
+
+-- Cross-domain audit logging
+CREATE TABLE "AuditLog" (
+  id UUID PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  action TEXT NOT NULL,
+  performed_by UUID REFERENCES "Staff"(id),
+  changes JSONB,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Administrative reports
+CREATE TABLE "Report" (
+  id UUID PRIMARY KEY,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  report_type TEXT NOT NULL,
+  date_range DATERANGE,
+  data JSONB,
+  generated_by UUID REFERENCES "Staff"(id),
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+```
+
+### Integration Boundaries
+
+| Partner Context | Relationship | Data Flow | Description |
+|-----------------|--------------|-----------|-------------|
+| **TableContext** | Referential + Config source | → | Provides casino_id, game templates, staff authorization |
+| **Player** | Referential | ←→ | Player enrollment associations via playercasino |
+| **Visit** | Referential + Policy source | → | Provides casino jurisdiction, timezone, gaming day boundaries |
+| **RatingSlip** | Referential | → | Inherits casino settings for telemetry normalization |
+| **Loyalty** | Policy source | → | Provides casino-specific tier rules (future enhancement) |
+| **MTL** | Policy source | → | Provides gaming day start, CTR/watchlist thresholds, timezone |
+| **Performance** | Referential + Normalization | → | Uses timezone and thresholds for metric calculations |
+| **Audit/Compliance** | Observer | ← | Receives events from all domains for centralized logging |
+| **Staff/Auth** | Referential | ←→ | Role-based access control within casino jurisdiction |
+
+### Configuration Inheritance Pattern
+
+```typescript
+// Example: MTL Service consuming Casino configuration
+export async function recordMtlEntry(
+  supabase: SupabaseClient<Database>,
+  entry: MtlEntryInput
+): Promise<ServiceResult<MtlEntry>> {
+
+  // 1. Fetch casino configuration
+  const { data: casinoSettings } = await supabase
+    .from('CasinoSettings')
+    .select('timezone, gaming_day_start, watchlist_floor, ctr_threshold')
+    .eq('casino_id', entry.casino_id)
+    .single();
+
+  // 2. Calculate gaming day using casino timezone and start time
+  const gamingDay = calculateGamingDay(
+    entry.event_time,
+    casinoSettings.timezone,
+    casinoSettings.gaming_day_start
+  );
+
+  // 3. Insert MTL entry with inherited configuration
+  const { data: mtlEntry } = await supabase
+    .from('mtl_entry')
+    .insert({
+      ...entry,
+      gaming_day: gamingDay,
+      // Thresholds applied in downstream aggregation views
+    })
+    .select()
+    .single();
+
+  return { success: true, data: mtlEntry };
+}
+```
+
+### Key Architectural Patterns
+
+1. **Configuration Cascade**: Casino → CasinoSettings → All operational contexts
+2. **Timezone Authority**: Single source for all temporal calculations
+3. **Threshold Policy**: Compliance thresholds defined once, applied everywhere
+4. **Staff Authorization**: Casino-scoped access control for all operations
+5. **Audit Centralization**: All domain events logged under casino scope
 
 ---
 
@@ -314,6 +564,156 @@ LEFT JOIN loyalty_ledger l ON l.rating_slip_id = m.rating_slip_id
 LEFT JOIN mtl_threshold_monitor tm ON tm.casino_id = m.casino_id
   AND tm.gaming_day = m.gaming_day;
 ```
+
+---
+
+## TableContext Service (NEW) - Operational Context
+
+### ✅ TableContextService (Operational Telemetry & Lifecycle)
+
+**OWNS:**
+- **Table lifecycle management** (provision, activate, deactivate)
+- `gamingtable` table (canonical registry)
+- `gamingtablesettings` table (configuration)
+- `DealerRotation` table (dealer assignments and rotations)
+- `ChipCountEvent` table (chip verifications)
+- `FillSlip` table (chip/cash fills)
+- `DropEvent` table (cash removal events)
+- `TableInventorySlip` table (aggregated inventory)
+- `BreakAlert` table (operational alerts)
+- `KeyControlLog` table (secure custody tracking)
+- Performance metrics export (uptime, rotations, alert frequency)
+
+**REFERENCES:**
+- `casino_id` - Venue linkage
+- `staff_id` - Dealer identity for rotations
+- `table_id` - Gaming table reference
+
+**PROVIDES TO (Downstream Consumers):**
+- **RatingSlip**: Current table, dealer, and settings metadata snapshot
+- **MTL**: Fill/drop/chip-count events with table context
+- **Performance**: Table-level metrics, rotation durations, alert frequencies
+- **Audit/Compliance**: KeyControlLog and operational event trails
+
+**DOES NOT OWN:**
+- ❌ Player sessions → `VisitService`
+- ❌ Gameplay telemetry (bets, time) → `RatingSlipService`
+- ❌ Reward calculations → `LoyaltyService`
+- ❌ Compliance aggregation → `MTLService`
+
+**BOUNDED CONTEXT**: "What is the operational state and activity of this gaming table?"
+
+**KEY PRINCIPLES:**
+- **Derived Context**: No dedicated `table_context` table; context is derived from related entities sharing `table_id`
+- **Event-Based**: Table events (fills, drops, rotations) published for downstream consumption
+- **Configuration Management**: Centralized table and game settings
+- **Operational Telemetry**: Structured logs for compliance and performance analysis
+
+### Primary Responsibilities
+
+| Area | Implementation | Description |
+|------|----------------|-------------|
+| **Table Lifecycle** | `gamingtable` | Provision, activate, deactivate gaming tables |
+| **Configuration** | `gamingtablesettings` | Manage per-table or template game settings |
+| **Dealer Management** | `DealerRotation` | Record rotations and track duty cycles |
+| **Inventory Logging** | `FillSlip`, `DropEvent`, `ChipCountEvent`, `TableInventorySlip` | Structured logs for compliance |
+| **Alerting** | `BreakAlert` | Generate and acknowledge operational alerts |
+| **Security** | `KeyControlLog` | Log secure key control operations |
+| **Performance Export** | Derived views | Emit table activity metrics |
+| **RatingSlip Integration** | Aggregated query | Provide table/settings snapshot |
+| **MTL Hooks** | Event triggers | Publish transactional events for AML/CTR |
+
+### Schema (Core Entities)
+
+```sql
+-- Canonical table registry
+CREATE TABLE gamingtable (
+  id UUID PRIMARY KEY,
+  table_number TEXT NOT NULL,
+  casino_id TEXT NOT NULL REFERENCES casino(id),
+  pit TEXT,
+  status TEXT NOT NULL DEFAULT 'active',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Game configuration
+CREATE TABLE gamingtablesettings (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  game_type TEXT NOT NULL,
+  min_bet DECIMAL(10,2),
+  max_bet DECIMAL(10,2),
+  rotation_interval INTEGER,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Dealer rotations
+CREATE TABLE "DealerRotation" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  dealer_id UUID REFERENCES "Staff"(id),
+  start_time TIMESTAMPTZ NOT NULL,
+  end_time TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Inventory events
+CREATE TABLE "FillSlip" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  amount DECIMAL(12,2) NOT NULL,
+  event_time TIMESTAMPTZ NOT NULL,
+  staff_id UUID REFERENCES "Staff"(id)
+);
+
+CREATE TABLE "DropEvent" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  amount DECIMAL(12,2) NOT NULL,
+  event_time TIMESTAMPTZ NOT NULL,
+  staff_id UUID REFERENCES "Staff"(id)
+);
+
+CREATE TABLE "ChipCountEvent" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  chip_count DECIMAL(12,2) NOT NULL,
+  discrepancy DECIMAL(12,2),
+  event_time TIMESTAMPTZ NOT NULL,
+  staff_id UUID REFERENCES "Staff"(id)
+);
+
+-- Operational alerts
+CREATE TABLE "BreakAlert" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  alert_type TEXT NOT NULL,
+  threshold_minutes INTEGER,
+  acknowledged BOOLEAN DEFAULT false,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Security tracking
+CREATE TABLE "KeyControlLog" (
+  id UUID PRIMARY KEY,
+  table_id UUID REFERENCES gamingtable(id),
+  key_type TEXT NOT NULL,
+  action TEXT NOT NULL, -- 'checkout', 'return'
+  staff_id UUID REFERENCES "Staff"(id),
+  event_time TIMESTAMPTZ NOT NULL
+);
+```
+
+### Integration Boundaries
+
+| Partner Context | Relationship | Data Flow | Description |
+|-----------------|--------------|-----------|-------------|
+| **Casino** | Referential | ←→ | Provides `casino_id` linkage for tables |
+| **Staff** | Referential | ←→ | Dealer identity and authorization for rotations |
+| **RatingSlip** | Upstream consumer | → | Consumes current table, dealer, and settings metadata |
+| **MTL** | Downstream consumer | → | Consumes fill/drop/chip-count events |
+| **Performance** | Downstream consumer | → | Receives table-level metrics, rotation durations, alert frequencies |
+| **Audit/Compliance** | Observer | → | Receives KeyControlLog and operational events |
 
 ---
 
@@ -731,6 +1131,8 @@ async function completeRatingSlip(id: string) {
 
 ## References
 
+- [CASINO_SERVICE_RESPONSIBILITY.MD](./CASINO_SERVICE_RESPONSIBILITY.MD) - Casino bounded context specification
+- [TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md](./TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md) - TableContext bounded context specification
 - [LOYALTY_SERVICE_HANDOFF.md](../../docs/LOYALTY_SERVICE_HANDOFF.md) - Conceptual design
 - [POINTS_CALCULATION_DEPENDENCY_ANALYSIS.md](../../docs/architecture/POINTS_CALCULATION_DEPENDENCY_ANALYSIS.md) - Technical validation
 - [SERVICE_TEMPLATE.md](./SERVICE_TEMPLATE.md) - Implementation pattern
@@ -738,7 +1140,8 @@ async function completeRatingSlip(id: string) {
 
 ---
 
-**Document Version**: 1.0.0
+**Document Version**: 2.3.0
 **Created**: 2025-10-12
+**Last Updated**: 2025-10-19 (Added Casino and TableContext Services)
 **Status**: Architecture Decision - Ready for Implementation
-**Next Action**: Update Phase 6 workflow to include Loyalty service as Wave 0
+**Next Action**: Complete bounded context map with all foundational, operational, reward, and compliance services

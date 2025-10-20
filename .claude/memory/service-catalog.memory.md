@@ -1,26 +1,26 @@
 # Service Catalog
 
-**Last Updated**: 2025-10-17
-**Status**: 7/8 services complete (Loyalty optional)
-**Source**: Service implementations in `services/` directory
+**Last Updated**: 2025-10-17 (Corrected after codebase audit - see SERVICE_CATALOG_AUDIT_REPORT.md)
+**Status**: 8/8 services complete
+**Source**: Actual service implementations verified via symbolic code analysis
 **Purpose**: Quick reference for all implemented services, their operations, and patterns
 
 ---
 
 ## Service Overview
 
-| Service         | Status      | Files | Tests | Purpose                      |
-| --------------- | ----------- | ----- | ----- | ---------------------------- |
-| Player          | ✅ Complete | 2     | 100%  | Player identity and profile  |
-| Casino          | ✅ Complete | 3     | 100%  | Casino properties and tables |
-| Visit           | ✅ Complete | 2     | 100%  | Check-in/out tracking        |
-| RatingSlip      | ✅ Complete | 2     | 100%  | Gameplay telemetry           |
-| TableContext    | ✅ Complete | 4     | 100%  | Table lifecycle management   |
-| MTL             | ✅ Complete | 3     | 100%  | Money transaction logging    |
-| PlayerFinancial | ✅ Complete | 2     | 100%  | Financial transactions       |
-| Loyalty         | ⏳ Optional | 4     | 100%  | Loyalty points (post-MVP)    |
+| Service         | Status      | Files | Tests | Purpose                                 |
+| --------------- | ----------- | ----- | ----- | --------------------------------------- |
+| Player          | ✅ Complete | 2     | 1     | Player identity and profile             |
+| Casino          | ✅ Complete | 2     | 1     | Casino properties management            |
+| Visit           | ✅ Complete | 2     | 1     | Visit tracking and search               |
+| RatingSlip      | ✅ Complete | 2     | 1     | Gameplay telemetry (minimal CRUD)       |
+| TableContext    | ✅ Complete | 4     | 1     | Gaming tables + settings management     |
+| MTL             | ✅ Complete | 3     | 1     | Money transaction logging + CTR         |
+| PlayerFinancial | ✅ Complete | 2     | 1     | Financial transactions + reconciliation |
+| Loyalty         | ✅ Complete | 4     | 3     | Loyalty points + tier management        |
 
-**Total**: 7 production services, 1 optional service
+**Total**: 8 production services (all complete and production-ready)
 
 ---
 
@@ -500,79 +500,66 @@ type PlayerFinancialCreateDTO = Pick<
 
 ---
 
-### 8. Loyalty Service (Optional)
+### 8. Loyalty Service
 
-**Purpose**: Loyalty points and tier management
+**Purpose**: Loyalty points accrual from gameplay, tier management, and transaction ledger
 
 **Location**: `services/loyalty/`
 **Structure**: `index.ts` + `crud.ts` + `business.ts` + `queries.ts`
-**Tests**: `__tests__/services/loyalty/loyalty-service.test.ts`
-**Status**: ⏳ Optional (post-MVP), read-only integration in MTL UI
+**Tests**: `__tests__/services/loyalty/crud.test.ts`, `business.test.ts`, `rpc.test.ts`
+**Status**: ✅ **PRODUCTION-READY** (fully implemented with RatingSlip integration)
 
 **Core Operations**:
 
 ```typescript
 interface LoyaltyService {
-  // CRUD
-  create(data: LoyaltyCreateDTO): Promise<ServiceResult<LoyaltyDTO>>;
-  getById(id: string): Promise<ServiceResult<LoyaltyDTO>>;
-  update(
-    id: string,
-    data: LoyaltyUpdateDTO,
-  ): Promise<ServiceResult<LoyaltyDTO>>;
-  delete(id: string): Promise<ServiceResult<void>>;
+  // ACCRUAL OPERATIONS
+  accruePointsFromSlip(
+    input: AccruePointsInput,
+  ): Promise<ServiceResult<AccruePointsResult>>;
+  createLedgerEntry(
+    entry: LoyaltyLedgerCreateDTO,
+  ): Promise<ServiceResult<LoyaltyLedgerDTO>>;
 
-  // Business Logic
-  awardPoints(
+  // QUERY OPERATIONS
+  getBalance(playerId: string): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+  getTier(playerId: string): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+  getTransactionHistory(
     playerId: string,
-    points: number,
-    reason: string,
-  ): Promise<ServiceResult<LoyaltyDTO>>;
-  deductPoints(
-    playerId: string,
-    points: number,
-    reason: string,
-  ): Promise<ServiceResult<LoyaltyDTO>>;
-  calculateTier(points: number): string;
+    options?: TransactionHistoryOptions,
+  ): Promise<ServiceResult<LoyaltyLedgerDTO[]>>;
+  getTierProgress(playerId: string): Promise<ServiceResult<TierProgressDTO>>;
 
-  // Queries
-  getByPlayer(playerId: string): Promise<ServiceResult<LoyaltyDTO>>;
-  listByTier(tier: string): Promise<ServiceResult<LoyaltyDTO[]>>;
+  // TIER MANAGEMENT
+  updateTier(playerId: string): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+  initializePlayerLoyalty(
+    playerId: string,
+  ): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+
+  // PLAYER LOYALTY MANAGEMENT
+  getPlayerLoyalty(playerId: string): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+  updatePlayerLoyalty(
+    playerId: string,
+    updates: PlayerLoyaltyUpdateDTO,
+  ): Promise<ServiceResult<PlayerLoyaltyDTO>>;
 }
 ```
 
-**Key DTOs**:
+**Key Features**:
 
-```typescript
-type LoyaltyDTO = Pick<
-  Database["public"]["Tables"]["player_loyalty"]["Row"],
-  | "id"
-  | "playerId"
-  | "currentBalance"
-  | "lifetimePoints"
-  | "tier"
-  | "tierProgress"
->;
+- **RatingSlip Integration**: Automatically accrues points based on gameplay telemetry (average bet, duration, game settings)
+- **Ledger-Based Accounting**: All point changes tracked in `loyalty_ledger` for audit trail
+- **Tier Progression**: Automatic tier updates based on point thresholds
+- **Transaction History**: Full history of points earned/redeemed with pagination
 
-type LoyaltyCreateDTO = Pick<
-  Database["public"]["Tables"]["player_loyalty"]["Insert"],
-  "playerId" | "currentBalance" | "lifetimePoints"
->;
-```
-
-**Bounded Context**: Loyalty tracking (points, tiers, rewards)
+**Bounded Context**: Loyalty point accrual, tier calculation, transaction ledger
 
 **React Query Keys**:
 
-- `['loyalty', 'player', playerId]` (read-only in MTL)
-- `['loyalty', 'tier', tier]`
-
-**Special Notes**:
-
-- **Read-Only Boundary**: MTL UI can only read loyalty data via `usePlayerLoyalty` hook
-- No mutation hooks allowed in MTL components
-- Boundary enforced by automated verification script
-- Full CRUD available in dedicated Loyalty UI (post-MVP)
+- `['loyalty', 'balance', playerId]`
+- `['loyalty', 'tier', playerId]`
+- `['loyalty', 'transactions', playerId]`
+- `['loyalty', 'progress', playerId]`
 
 ---
 
@@ -584,13 +571,13 @@ type LoyaltyCreateDTO = Pick<
 Player (root entity)
   ├─> Visit (player checks in)
   │     └─> RatingSlip (gameplay during visit)
-  │           └─> TableContext (rating slip tracks table session)
-  │                 └─> MTL (transactions during table session)
-  ├─> PlayerFinancial (player financial history)
-  └─> Loyalty (player loyalty points) [optional]
+  │           ├─> TableContext (rating slip tracks table session)
+  │           │     └─> MTL (transactions during table session)
+  │           └─> Loyalty (rating slip triggers point accrual)
+  └─> PlayerFinancial (player financial history)
 
 Casino (root entity)
-  ├─> Table (casino has tables)
+  ├─> GamingTable (casino has tables)
   └─> Visit (player visits casino)
 ```
 
@@ -888,7 +875,7 @@ describe("PlayerService", () => {
 - `services/table-context/` - TableContext service
 - `services/mtl/` - MTL service
 - `services/player-financial/` - PlayerFinancial service
-- `services/loyalty/` - Loyalty service (optional)
+- `services/loyalty/` - Loyalty service
 
 **Test Suites**:
 

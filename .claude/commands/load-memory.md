@@ -64,4 +64,5 @@ After loading all files, confirm:
 If memory files are missing or corrupted, fall back to:
 
 - Full PRD: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+-
 - Documentation index: `docs/INDEX.md`
