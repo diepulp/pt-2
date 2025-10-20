@@ -1,7 +1,7 @@
 # Responsibility Matrix Remediation Workflow
 
 **Version**: 2.0.0 (Lean Edition)
-**Status**: Ready for Execution
+**Status**: Phase B kickoff pending — Phase A sign-off captured in [PHASE_A_SIGNOFF.md](./phase-A/PHASE_A_SIGNOFF.md)
 **Created**: 2025-10-20
 **Target Completion**: 4-5 weeks
 **Source Audit**: [RESPONSIBILIY_MATRIX_AUDIT.md](./RESPONSIBILIY_MATRIX_AUDIT.md)
@@ -27,6 +27,8 @@ This workflow addresses 8 critical inconsistencies identified in the SERVICE_RES
 
 **Total Timeline**: 4-5 weeks (vs 7-10 weeks in original plan)
 
+Phase A exit criteria met on 2025-10-20; see [PHASE_A_SIGNOFF.md](./phase-A/PHASE_A_SIGNOFF.md) for evidence.
+
 ---
 
 ## Issue → Phase Mapping
@@ -45,6 +47,8 @@ This workflow addresses 8 critical inconsistencies identified in the SERVICE_RES
 ---
 
 ## Phase A: Decide & Document (1 week)
+
+**Status**: ✅ Completed — see [PHASE_A_SIGNOFF.md](./phase-A/PHASE_A_SIGNOFF.md).
 
 ### Objective
 Update Responsibility Matrix with all documentation fixes in a single PR: schema appendix, ownership resolution, temporal authority, performance context.
@@ -129,102 +133,87 @@ npm run validate:matrix-schema  # Must pass before merge
 
 ## Phase B: Boundaries (1 week)
 
-### Objective
-Resolve financial data ownership, decide RatingSlip strategy, document Visit interface.
+**Status**: Pending kickoff — Phase A completion recorded in [PHASE_A_SIGNOFF.md](./phase-A/PHASE_A_SIGNOFF.md) with all exit gates met.  
+**Decision Anchor**: Execute against [ADR-006: RatingSlip Financial Field Removal](../adr/ADR-006-rating-slip-field-removal.md). If removal is rejected, produce an ADR-006 addendum documenting the sanctioned denormalization contract.
+
+### Context
+- Issues **#3** (Telemetry/finance boundary erosion) and **#4** (Visit financial aggregation ambiguity) remain unresolved.
+- Phase A delivered automated validation and clarified non-financial ownership; monetary data duplication persists between `ratingslip` and `player_financial_transaction`.
+- Casino-defined timezone + gaming-day boundaries constrain how financial data is aggregated and reported across services.
+
+### Objectives
+- Establish a single owning service for every monetary attribute in the matrix.
+- Determine and document the RatingSlip financial field strategy using ADR-006 guardrails.
+- Capture the Visit ↔ PlayerFinancial read-model contract and anti-responsibilities.
+- Preserve <100 ms p95 query performance for financial aggregation paths.
+
+### Implementation (ADR-006 Template + [Phase-B Considerations](./phase-B/considerations.md))
+1. **Financial Ownership Inventory (Days 1-2)**
+   - Parse `types/database.types.ts` and the matrix to enumerate financial columns.
+   - Produce the `Financial Data Ownership Table` within `SERVICE_RESPONSIBILITY_MATRIX.md` (new subsection or appendix entry).
+   - For each field, assign authoritative service, remediation action, and cross-check with audit issue mapping.
+   - Flag any fields lacking idempotency protection and plan a `(visit_id, event_type, idempotency_key)` unique constraint update per considerations guidance.
+2. **Two-Phase RatingSlip Transition (Days 2-4)**
+   - Review ADR-006 with Database Lead and confirm removal or provide addendum rationale.
+   - **Phase 1 — Compatibility Layer**
+     - Add plain views `visit_financial_summary`, `visit_financial_summary_gd`, and `ratingslip_with_financials` mirroring ADR-006 definitions.
+     - Embed the aggregation contract in documentation: allowed event types `{cash_in, chips_brought, chips_taken, reversal}`, reversals as negative movements, append-only writes (no `UPDATE`/`DELETE`), alignment to Casino gaming-day/timezone.
+     - Add CHECK/ENUM constraints guaranteeing only sanctioned event types and persist idempotency key requirements.
+     - Introduce unique constraint `(visit_id, event_type, idempotency_key)` (nullable-safe) to guard against double posts.
+     - Add indexes to `player_financial_transaction` (`visit_id`, `player_id`, `rating_slip_id`, `created_at DESC`).
+     - Expose primary keys in views (forward `ratingslip.id` as `id`) for PostgREST/Supabase consumers.
+     - Update grants, RLS policies, and contract tests before switching readers; enforce “Visit role cannot write PFT”.
+     - Run pre-drop CI guard (code search + SQL lint) ensuring no new references rely on legacy columns outside the view.
+   - **Phase 2 — Column Removal**
+     - After consumers migrate (validated via logs/grep inventory), drop `cash_in`, `chips_brought`, `chips_taken` from `ratingslip`.
+     - Maintain compatibility view for one release cycle; plan rollback path to rehydrate columns from `visit_financial_summary` if needed.
+   - **If denormalization retained**:
+     - Publish ADR-006 addendum detailing sync mechanism, reconciliation cadence, append-only enforcement, idempotency guardrails, and monitoring obligations.
+3. **Visit ↔ PlayerFinancial Interface Documentation (Day 4)**
+   - Update Visit and PlayerFinancial sections in the matrix with the read-only consumption contract.
+   - Include SQL snippet for the aggregation views and list anti-patterns (Visit never writes ledger tables) with explicit event-type semantics, reversal handling, and gaming-day alignment guidance.
+   - Record ownership responsibilities for maintaining the view (PlayerFinancial) vs consuming data (Visit).
+4. **Security & Interface Hardening (Day 4)**
+   - Re-affirm that `player_financial_transaction` RLS policies cover all consumer roles; add policy tests showing Visit role denied direct table access yet allowed through the views.
+   - Alter views to run as security barriers where supported (`ALTER VIEW ... SET (security_barrier = true);`) and set `security_invoker` explicitly if required.
+   - Grant read access explicitly: `GRANT SELECT ON ratingslip_with_financials, visit_financial_summary, visit_financial_summary_gd TO reporting_reader;` and revoke default privileges from unintended roles.
+   - Validate GraphQL/PostgREST exposure; if auto-generation fails, plan RPC/REST contract fallback.
+5. **Validation & Performance Harness (Day 5)**
+   - Run `npm run validate:matrix-schema` (must exit 0).
+   - Store canonical queries in `.validation/queries.sql`, capture matching `EXPLAIN (ANALYZE, BUFFERS)` output, and include pg_stat_statements deltas in the PR.
+   - Execute the lightweight pgbench/k6 scenario (10–20 representative queries) to confirm thresholds: p95 ≤ 100 ms, mean ≤ 40 ms, plan avoids sequential scans over `player_financial_transaction` exceeding 1,000 rows.
 
 ### Deliverables
+- `Financial Data Ownership Table` appended to `SERVICE_RESPONSIBILITY_MATRIX.md`.
+- Updated Visit and PlayerFinancial matrix sections documenting the interface contract.
+- ADR-006 confirmation (or addendum) merged alongside workflow updates.
+- `.validation/queries.sql`, `EXPLAIN (ANALYZE, BUFFERS)` artifacts, pg_stat_statements deltas, and pgbench/k6 harness notes attached to the PR.
+- `.validation/rls_visit_read_contract.sql` results and CI guard outputs proving no legacy `ratingslip` column consumers remain.
+- Migration scripts `supabase/migrations/20251019234325_phase_b_financial_views_phase1.sql` (views/indexes/grants) and `supabase/migrations/20251019234330_phase_b_financial_views_phase2.sql` (column drops) with rollback notes.
 
-**Addresses**: Issues #3, #4
-**Effort**: 1 week (5 business days)
-**Owner**: Architecture Team + Database Team
-**Output**: Financial Ownership Table + ADR-006 (if removal chosen) + Matrix updates
+### Exit & Success Criteria
+- ✅ Every monetary field has one authoritative service and remediation action documented.
+- ✅ RatingSlip two-phase transition executed or planned with migration scripts, guards, and rollback path.
+- ✅ Visit ↔ PlayerFinancial interface section details responsibilities, event semantics, and gaming-day alignment.
+- ✅ `npm run validate:matrix-schema` passes and security contract tests (no Visit writes to PFT) succeed.
+- ✅ Compatibility views sustain p95 ≤ 100 ms, mean ≤ 40 ms, with no Seq Scan over `player_financial_transaction` > 1,000 rows.
+- ✅ Architecture Lead and Database Lead approve the Phase B PR checklist with harness artifacts attached.
 
-### Tasks
+### Rollback
+- Retain compatibility views so legacy queries continue working if column removal must be reversed.
+- If fields were removed, rollback by re-adding nullable columns to `ratingslip` and backfilling from `visit_financial_summary`.
+- Keep index changes reversible; drop unused indexes during rollback if they introduce regressions.
 
-#### 1. Financial Data Ownership Table (Days 1-2)
-Inventory all monetary fields and assign single owning service.
+### Deprecation & Follow-Up
+- Track consumers of `ratingslip_with_financials`; schedule deprecation once all migrate to direct joins.
+- Produce a consumer inventory (usage logs or repo `rg` report) and attach it to the Phase B PR for visibility.
+- Open Phase C preparation tasks (UUID migration readiness) after benchmarks and documentation land.
 
-**Output**:
-```markdown
-## Financial Data Ownership Table
-
-| Field | Current Location | Owner | Decision | Rationale |
-|-------|------------------|-------|----------|-----------|
-| cash_in | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
-| chips_brought | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
-| chips_taken | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
-```
-
-**Decision Framework**:
-- **Telemetry**: Derived metrics, performance data, read-only caches
-- **Financial**: Monetary transactions, balances, reconciliation data
-
-#### 2. RatingSlip Decision: Remove vs Denormalize (Days 2-3)
-**Choose one**:
-- **Option A (Preferred)**: Remove financial fields from `ratingslip`
-  - Provide compatibility **VIEW** (not materialized) for existing queries
-  - Add indexes to `player_financial_transaction` for performance
-  - Defer materialization until p95 query time >100ms
-- **Option B**: Keep fields with documented denormalization pattern
-  - Requires ADR justifying business need
-  - Must document sync mechanism and consistency guarantees
-
-**If Option A chosen**:
-```sql
--- Compatibility view (not materialized by default)
-CREATE VIEW ratingslip_with_financials AS
-SELECT r.*, pft.cash_in, pft.chips_brought, pft.chips_taken
-FROM ratingslip r
-LEFT JOIN player_financial_transaction pft ON r.visit_id = pft.visit_id;
-
--- Indexes for performance
-CREATE INDEX idx_pft_visit_id ON player_financial_transaction(visit_id);
-```
-
-**ADR-006 only if removal chosen**:
-```markdown
-# ADR-006: RatingSlip Financial Field Removal
-
-## Decision
-Remove cash_in, chips_brought, chips_taken from `ratingslip`.
-
-## Implementation
-1. Create compatibility view (plain view, not materialized)
-2. Add indexes to player_financial_transaction
-3. Update queries to use view or join directly
-4. Promote to materialized view only if p95 >100ms
-
-## Rollback
-View preserves exact same schema, zero breaking changes.
-```
-
-#### 3. Visit-to-Finance Interface (Day 4)
-Document read-model pattern for visit financial aggregates.
-
-**Output Section in Matrix**:
-```markdown
-### Visit ↔ PlayerFinancial Interface
-
-**Visit Service**: READS financial aggregates (via view), NEVER writes
-**PlayerFinancialService**: WRITES source transactions, MAINTAINS views
-
-**View Pattern** (start with plain view + indexes):
-CREATE VIEW visit_financial_summary AS
-SELECT visit_id, SUM(cash_in) as total_cash_in, ...
-FROM player_financial_transaction
-GROUP BY visit_id;
-```
-
-### Phase B Success Criteria (PR Checklist)
-
-- ✅ Financial Ownership Table: Every monetary field → one owning service
-- ✅ RatingSlip decision documented (removal OR denormalization with ADR)
-- ✅ Compatibility view provided if removal chosen
-- ✅ Visit interface pattern documented (plain view by default)
-- ✅ Performance benchmarked (<100ms p95 for views)
-- ✅ One owner + one reviewer sign-off
-
-**Approval**: Architecture lead + Database lead (no ARB multi-gate)
+### Owners & Coordination
+- **Owner**: Architecture Lead (matrix updates, ADR alignment, documentation).
+- **Co-Owner**: Database Lead (migrations, views, performance benchmarks).
+- **Support**: Finance domain SME (reconciliation review) and Observability team (benchmark tooling).
+- **Communication**: Daily PR comment updates; final sign-off recorded via the Phase B checklist.
 
 ---
 
