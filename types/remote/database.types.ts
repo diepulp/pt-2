@@ -635,6 +635,13 @@ export type Database = {
             referencedColumns: ["id"];
           },
           {
+            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "ratingslip_with_financials";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "loyalty_ledger_visit_id_fkey";
             columns: ["visit_id"];
             isOneToOne: false;
@@ -950,7 +957,9 @@ export type Database = {
           chips_brought: number | null;
           chips_taken: number | null;
           created_at: string;
+          event_type: Database["public"]["Enums"]["financial_event_type"];
           id: string;
+          idempotency_key: string | null;
           net_change: number | null;
           notes: string | null;
           player_id: string;
@@ -968,7 +977,9 @@ export type Database = {
           chips_brought?: number | null;
           chips_taken?: number | null;
           created_at?: string;
+          event_type: Database["public"]["Enums"]["financial_event_type"];
           id?: string;
+          idempotency_key?: string | null;
           net_change?: number | null;
           notes?: string | null;
           player_id: string;
@@ -986,7 +997,9 @@ export type Database = {
           chips_brought?: number | null;
           chips_taken?: number | null;
           created_at?: string;
+          event_type?: Database["public"]["Enums"]["financial_event_type"];
           id?: string;
+          idempotency_key?: string | null;
           net_change?: number | null;
           notes?: string | null;
           player_id?: string;
@@ -1012,6 +1025,13 @@ export type Database = {
             columns: ["rating_slip_id"];
             isOneToOne: false;
             referencedRelation: "ratingslip";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "ratingslip_with_financials";
             referencedColumns: ["id"];
           },
           {
@@ -1344,9 +1364,6 @@ export type Database = {
         Row: {
           accumulated_seconds: number;
           average_bet: number;
-          cash_in: number | null;
-          chips_brought: number | null;
-          chips_taken: number | null;
           end_time: string | null;
           game_settings: Json;
           game_settings_id: string | null;
@@ -1363,9 +1380,6 @@ export type Database = {
         Insert: {
           accumulated_seconds?: number;
           average_bet: number;
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
           end_time?: string | null;
           game_settings: Json;
           game_settings_id?: string | null;
@@ -1382,9 +1396,6 @@ export type Database = {
         Update: {
           accumulated_seconds?: number;
           average_bet?: number;
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
           end_time?: string | null;
           game_settings?: Json;
           game_settings_id?: string | null;
@@ -1825,6 +1836,88 @@ export type Database = {
         };
         Relationships: [];
       };
+      ratingslip_with_financials: {
+        Row: {
+          average_bet: number | null;
+          cash_in: number | null;
+          chips_brought: number | null;
+          chips_taken: number | null;
+          end_time: string | null;
+          financial_transaction_count: number | null;
+          game_settings: Json | null;
+          gaming_table_id: string | null;
+          id: string | null;
+          last_transaction_at: string | null;
+          seat_number: number | null;
+          start_time: string | null;
+          visit_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "ratingslip_gaming_table_id_fkey";
+            columns: ["gaming_table_id"];
+            isOneToOne: false;
+            referencedRelation: "gamingtable";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ratingslip_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      visit_financial_summary: {
+        Row: {
+          last_transaction_at: string | null;
+          total_cash_in: number | null;
+          total_chips_brought: number | null;
+          total_chips_taken: number | null;
+          transaction_count: number | null;
+          visit_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      visit_financial_summary_gd: {
+        Row: {
+          casino_id: string | null;
+          gaming_day: string | null;
+          gaming_day_start: string | null;
+          last_transaction_at: string | null;
+          timezone: string | null;
+          total_cash_in: number | null;
+          total_chips_brought: number | null;
+          total_chips_taken: number | null;
+          transaction_count: number | null;
+          visit_id: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "visit_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
     };
     Functions: {
       close_player_session: {
@@ -2199,6 +2292,11 @@ export type Database = {
         | "error_spike"
         | "performance_degradation";
       CountType: "INITIAL" | "PERIODIC" | "CLOSING";
+      financial_event_type:
+        | "CASH_IN"
+        | "CHIPS_BROUGHT"
+        | "CHIPS_TAKEN"
+        | "REVERSAL";
       Gender: "M" | "F";
       InventorySlipType: "OPEN" | "CLOSE";
       KeyAction: "CHECKOUT" | "RETURN";
@@ -2375,6 +2473,12 @@ export const Constants = {
         "performance_degradation",
       ],
       CountType: ["INITIAL", "PERIODIC", "CLOSING"],
+      financial_event_type: [
+        "CASH_IN",
+        "CHIPS_BROUGHT",
+        "CHIPS_TAKEN",
+        "REVERSAL",
+      ],
       Gender: ["M", "F"],
       InventorySlipType: ["OPEN", "CLOSE"],
       KeyAction: ["CHECKOUT", "RETURN"],
