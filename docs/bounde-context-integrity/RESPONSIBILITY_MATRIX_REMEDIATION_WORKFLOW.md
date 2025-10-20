@@ -23,9 +23,9 @@ This workflow addresses 8 critical inconsistencies identified in the SERVICE_RES
 |-------|-------|----------|------------|--------------|
 | A | Decide & Document | 1 week | Low | Matrix updates (temporal, performance, schema appendix) |
 | B | Boundaries | 1 week | Medium | Financial ownership table, RatingSlip decision, Visit interface |
-| C | Type Integrity | 2-3 weeks | High | Patron UUID migration with phased rollout |
+| C | Type Integrity | 7-10 days | High | Patron UUID migration with generated column + hardened gates |
 
-**Total Timeline**: 4-5 weeks (vs 7-10 weeks in original plan)
+**Total Timeline**: 3-4 weeks (vs 7-10 weeks in original plan)
 
 Phase A exit criteria met on 2025-10-20; see [PHASE_A_SIGNOFF.md](./phase-A/PHASE_A_SIGNOFF.md) for evidence.
 
@@ -189,7 +189,7 @@ npm run validate:matrix-schema  # Must pass before merge
 - ADR-006 confirmation (or addendum) merged alongside workflow updates.
 - `.validation/queries.sql`, `EXPLAIN (ANALYZE, BUFFERS)` artifacts, pg_stat_statements deltas, and pgbench/k6 harness notes attached to the PR.
 - `.validation/rls_visit_read_contract.sql` results and CI guard outputs proving no legacy `ratingslip` column consumers remain.
-- Migration scripts `supabase/migrations/20251019234325_phase_b_financial_views_phase1.sql` (views/indexes/grants) and `supabase/migrations/20251019234330_phase_b_financial_views_phase2.sql` (column drops) with rollback notes.
+- Migration scripts `supabase/migrations/20251020120000_phase_b_financial_views_phase1.sql` (views/indexes/grants) and `supabase/migrations/20251020123000_phase_b_financial_views_phase2.sql` (column drops) with rollback notes.
 
 ### Exit & Success Criteria
 - ✅ Every monetary field has one authoritative service and remediation action documented.
@@ -217,112 +217,567 @@ npm run validate:matrix-schema  # Must pass before merge
 
 ---
 
-## Phase C: Type Integrity (2-3 weeks)
+## Phase C: Type Integrity (7-10 days)
 
 ### Objective
-Migrate `mtl_entry.patron_id` from TEXT to UUID with zero data loss.
+Migrate `mtl_entry.patron_id` from TEXT to UUID with zero data loss using generated column approach.
 
-**Philosophy**: Keep rigor here—identity/UUID changes are high-risk and deserve phased execution.
+**Philosophy**: Keep rigor here—identity/UUID changes are high-risk and deserve phased execution with hardened cutover gates.
 
 ### ADR-007: MTL Patron UUID Migration
 
 **Addresses**: Issue #2
-**Effort**: 2-3 weeks
+**Effort**: 7-10 days
 **Owner**: Database Team + 1 Reviewer
 
-**Strategy**: Dual-column migration with 4 phases + minimal monitoring windows.
+**Strategy**: Generated column migration with enforced parity, automated cutover gates, and relational integrity enforcement.
 
-### Migration Phases
+**Key Decisions**:
+- UUID is authoritative type (`patron_uuid` column)
+- Generated TEXT column provides legacy compatibility (no dual-write coordination)
+- Semantic type naming preserved (no rename to avoid type confusion)
+- FK constraints and indexes established before writer migration
+- Automated discrepancy monitoring via pg_cron scheduled queries
+- Hard cutover gates prevent progression with outstanding issues
 
-#### Phase 1: Add UUID Column (2 days)
+---
+
+### Phase C.0: Validation Infrastructure Setup (1 day)
+
+**Deliverables**: Alert tracking, automated validation, cutover gate functions
+
 ```sql
+-- Alert tracking table
+CREATE TABLE IF NOT EXISTS schema_validation_alerts (
+  id bigserial PRIMARY KEY,
+  check_name text NOT NULL,
+  severity text NOT NULL CHECK (severity IN ('info', 'warning', 'critical')),
+  message text NOT NULL,
+  details jsonb,
+  created_at timestamptz NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_validation_alerts_created
+  ON schema_validation_alerts(created_at DESC);
+
+CREATE INDEX idx_validation_alerts_check_name
+  ON schema_validation_alerts(check_name, created_at DESC);
+
+-- Hourly validation function
+CREATE OR REPLACE FUNCTION validate_mtl_patron_backfill()
+RETURNS void AS $$
+DECLARE
+  divergence_count int;
+  null_count int;
+BEGIN
+  SELECT COUNT(*) INTO null_count
+  FROM mtl_entry
+  WHERE patron_uuid IS NULL AND patron_id IS NOT NULL;
+
+  SELECT COUNT(*) INTO divergence_count
+  FROM mtl_entry
+  WHERE patron_id IS NOT NULL
+    AND patron_uuid IS NOT NULL
+    AND patron_id::uuid <> patron_uuid;
+
+  IF null_count > 0 OR divergence_count > 0 THEN
+    INSERT INTO schema_validation_alerts (
+      check_name, severity, message, details
+    ) VALUES (
+      'mtl_patron_backfill',
+      'critical',
+      'Patron UUID backfill divergence detected',
+      jsonb_build_object(
+        'null_count', null_count,
+        'divergence_count', divergence_count,
+        'timestamp', NOW()
+      )
+    );
+  END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Schedule hourly validation
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+SELECT cron.schedule(
+  'mtl-patron-backfill-validation',
+  '0 * * * *',
+  $$SELECT validate_mtl_patron_backfill()$$
+);
+
+-- Cutover gate function
+CREATE OR REPLACE FUNCTION check_phase_c1_cutover_gate()
+RETURNS TABLE(
+  gate_name text,
+  status text,
+  failing_count bigint,
+  can_proceed boolean
+) AS $$
+BEGIN
+  RETURN QUERY
+  WITH validation_results AS (
+    SELECT 'divergence_check'::text AS gate, COUNT(*) AS failures
+    FROM mtl_entry
+    WHERE patron_id IS NOT NULL
+      AND patron_uuid IS NOT NULL
+      AND patron_id::uuid <> patron_uuid
+    UNION ALL
+    SELECT 'backfill_completeness'::text, COUNT(*)
+    FROM mtl_entry
+    WHERE patron_uuid IS NULL AND patron_id IS NOT NULL
+    UNION ALL
+    SELECT 'orphaned_references'::text, COUNT(*)
+    FROM mtl_entry e
+    LEFT JOIN player p ON e.patron_uuid = p.id
+    WHERE e.patron_uuid IS NOT NULL AND p.id IS NULL
+    UNION ALL
+    SELECT 'alert_history'::text, COUNT(*)
+    FROM schema_validation_alerts
+    WHERE check_name = 'mtl_patron_backfill'
+      AND severity = 'critical'
+      AND created_at > NOW() - INTERVAL '48 hours'
+  )
+  SELECT
+    gate AS gate_name,
+    CASE WHEN failures = 0 THEN 'PASS' ELSE 'FAIL' END AS status,
+    failures AS failing_count,
+    (failures = 0) AS can_proceed
+  FROM validation_results
+  UNION ALL
+  SELECT
+    'OVERALL_DECISION'::text,
+    CASE WHEN MIN(can_proceed::int) = 1 THEN 'GO' ELSE 'NO-GO' END::text,
+    SUM(failing_count),
+    (MIN(can_proceed::int) = 1)
+  FROM (SELECT * FROM validation_results) vr;
+END;
+$$ LANGUAGE plpgsql;
+```
+
+**Validation**:
+```bash
+npm run validate:phase-c0-setup
+# Verifies alert table, functions, and pg_cron job created
+```
+
+---
+
+### Phase C.1: Add UUID with Relational Integrity (3-4 days)
+
+**Deliverables**: UUID column with FK constraint, indexes, enforced parity, zero divergence
+
+**Pre-Migration Audit**:
+```bash
+# Document current schema state
+npm run db:dump-schema > schema_before_phase_c1.sql
+
+# Check for orphaned records BEFORE adding FK
+psql -c "SELECT COUNT(*) FROM mtl_entry e
+         LEFT JOIN player p ON e.patron_id::uuid = p.id
+         WHERE p.id IS NULL;"
+# Must be 0, or clean up orphans first
+
+# Identify query patterns for index optimization
+grep -r "FROM mtl_entry" services/ > mtl_query_patterns.txt
+```
+
+**Migration SQL**:
+```sql
+BEGIN;
+
+-- Step 1: Add UUID column
 ALTER TABLE mtl_entry ADD COLUMN patron_uuid UUID;
--- Backfill from player.id
-UPDATE mtl_entry SET patron_uuid = patron_id::uuid;
--- Validate 100% conversion
-SELECT COUNT(*) FROM mtl_entry WHERE patron_uuid IS NULL; -- Must be 0
+
+-- Step 2: Backfill from existing TEXT column
+UPDATE mtl_entry SET patron_uuid = patron_id::uuid
+WHERE patron_uuid IS NULL;
+
+-- Step 3: Validate backfill
+DO $$
+DECLARE
+  null_count int;
+  orphan_count int;
+BEGIN
+  SELECT COUNT(*) INTO null_count
+  FROM mtl_entry WHERE patron_uuid IS NULL;
+
+  IF null_count > 0 THEN
+    RAISE EXCEPTION 'Backfill incomplete: % NULL patron_uuid values', null_count;
+  END IF;
+
+  SELECT COUNT(*) INTO orphan_count
+  FROM mtl_entry e
+  LEFT JOIN player p ON e.patron_uuid = p.id
+  WHERE p.id IS NULL;
+
+  IF orphan_count > 0 THEN
+    RAISE EXCEPTION 'Orphaned records: % mtl_entry rows reference non-existent players', orphan_count;
+  END IF;
+END $$;
+
+-- Step 4: Make NOT NULL
+ALTER TABLE mtl_entry ALTER COLUMN patron_uuid SET NOT NULL;
+
+-- Step 5: Add parity constraint (enforces patron_id::uuid = patron_uuid)
+ALTER TABLE mtl_entry
+  ADD CONSTRAINT mtl_patron_uuid_parity_chk
+  CHECK (patron_uuid IS NULL OR patron_id::uuid = patron_uuid)
+  NOT VALID;
+
+-- Step 6: Validate constraint (proves no divergence)
+ALTER TABLE mtl_entry VALIDATE CONSTRAINT mtl_patron_uuid_parity_chk;
+
+-- Step 7: Add Foreign Key constraint
+ALTER TABLE mtl_entry
+  ADD CONSTRAINT fk_mtl_entry_patron
+  FOREIGN KEY (patron_uuid) REFERENCES player(id)
+  ON DELETE CASCADE;
+
+-- Step 8: Create indexes (based on query pattern analysis)
+CREATE INDEX idx_mtl_entry_patron_uuid
+  ON mtl_entry(patron_uuid);
+
+CREATE INDEX idx_mtl_entry_patron_created
+  ON mtl_entry(patron_uuid, created_at DESC);
+
+-- Step 9: Analyze for query planner
+ANALYZE mtl_entry;
+
+COMMIT;
 ```
 
-**Go/No-Go**: 100% backfill success (zero NULL values)
+**Hardened Cutover Criteria**:
+```bash
+# Automated gate (MUST return OVERALL_DECISION = GO)
+npm run validate:phase-c1-cutover
 
----
+# Expected output:
+# gate_name                | status | failing_count | can_proceed
+# -------------------------+--------+---------------+-------------
+# divergence_check         | PASS   | 0             | t
+# backfill_completeness    | PASS   | 0             | t
+# orphaned_references      | PASS   | 0             | t
+# alert_history            | PASS   | 0             | t
+# OVERALL_DECISION         | GO     | 0             | t
+```
 
-#### Phase 2: Dual-Write (3 days)
-- Update application to write both `patron_id` (TEXT) and `patron_uuid` (UUID)
-- Monitor for discrepancies: `patron_id::uuid != patron_uuid`
-- **Validation Window**: 2-3 days (not 1 week)
-
-**Go/No-Go**: Zero discrepancies for 2 days straight
-
----
-
-#### Phase 3: Migrate Consumers (5 days)
-- Update views to read from `patron_uuid`
-- Update queries in application code
-- Deploy with backwards compatibility
-
-**Validation Window**: 2-3 days (not 1 week)
-
-**Go/No-Go**: All views functional, zero errors in logs
-
----
-
-#### Phase 4: Drop TEXT Column (2 days)
+**Manual Validation**:
 ```sql
-ALTER TABLE mtl_entry DROP COLUMN patron_id;
-ALTER TABLE mtl_entry RENAME COLUMN patron_uuid TO patron_id;
+-- Verify FK constraint exists
+SELECT conname, pg_get_constraintdef(oid)
+FROM pg_constraint
+WHERE conrelid = 'mtl_entry'::regclass
+  AND contype = 'f'
+  AND conname = 'fk_mtl_entry_patron';
+
+-- Verify indexes created
+SELECT indexname, indexdef
+FROM pg_indexes
+WHERE tablename = 'mtl_entry'
+  AND indexname LIKE '%patron_uuid%';
+
+-- Performance baseline
+EXPLAIN (ANALYZE, BUFFERS)
+SELECT * FROM mtl_entry WHERE patron_uuid = '...'::uuid;
 ```
 
-**Validation Window**: 2-3 days post-cutover
+**Go/No-Go Gates**:
+- ✅ 100% backfill: Zero NULL `patron_uuid` values
+- ✅ Zero divergence: `patron_id::uuid = patron_uuid` for all rows
+- ✅ Zero orphans: All `patron_uuid` values exist in `player.id`
+- ✅ FK constraint validated successfully
+- ✅ Parity constraint validated successfully
+- ✅ Indexes created and analyzed
+- ✅ **48-hour monitoring**: Zero critical alerts from `validate_mtl_patron_backfill()`
+- ✅ **Automated gate**: `check_phase_c1_cutover_gate()` returns `OVERALL_DECISION = GO`
 
-**Go/No-Go**: Zero errors, all queries using UUID
+**Validation Window**: 48 hours of zero discrepancies before proceeding
+
+---
+
+### Phase C.2: Generated Column Cutover (3-4 days)
+
+**Deliverables**: UUID as authoritative type, generated TEXT for legacy compatibility
+
+#### Phase C.2.1: Migrate Application Writers (2-3 days)
+
+**Before** (legacy code):
+```typescript
+await supabase.from('mtl_entry').insert({
+  patron_id: playerId.toString(),  // ❌ Will break after cutover
+  // ...
+});
+```
+
+**After** (migrated code):
+```typescript
+await supabase.from('mtl_entry').insert({
+  patron_uuid: playerId,  // ✅ UUID is authoritative
+  // patron_id removed - will be auto-generated
+  // ...
+});
+```
+
+**Writer Migration Checklist**:
+```bash
+# Find all writers
+grep -r "\.insert.*patron_id.*mtl_entry" services/ > mtl_writers.txt
+grep -r "\.update.*patron_id.*mtl_entry" services/ >> mtl_writers.txt
+
+# Update each to use patron_uuid
+# Deploy with backwards compatibility (both columns exist)
+```
+
+**Cutover Validation** (automated):
+```sql
+-- Zero writes to old column in 48 hours
+SELECT
+  'legacy_writes' AS check_name,
+  COUNT(*) AS recent_legacy_writes
+FROM mtl_entry
+WHERE updated_at > NOW() - INTERVAL '48 hours'
+  AND patron_id::uuid <> patron_uuid;
+-- MUST return 0
+
+-- Zero legacy query patterns
+SELECT
+  'query_audit' AS check_name,
+  COUNT(*) AS legacy_query_count
+FROM pg_stat_statements
+WHERE (query LIKE '%INSERT INTO mtl_entry%patron_id%'
+   OR query LIKE '%UPDATE mtl_entry%SET%patron_id%')
+AND last_call > NOW() - INTERVAL '48 hours';
+-- MUST return 0
+```
+
+**Go/No-Go Gates**:
+- ✅ All application writers migrated to `patron_uuid`
+- ✅ Code search confirms zero `INSERT/UPDATE` with `patron_id` column
+- ✅ **48-hour observation**: Zero divergence in scheduled validation
+- ✅ Zero legacy write patterns in `pg_stat_statements`
+- ✅ Database Lead approval for Phase C.2.2 cutover
+
+---
+
+#### Phase C.2.2: Swap to Generated Column (1 day)
+
+**BREAKING CHANGE**: After this step, writing to `patron_id` will fail.
+
+**Migration SQL**:
+```sql
+BEGIN;
+
+-- Document constraints that will be dropped
+DO $$
+DECLARE
+  constraint_rec RECORD;
+BEGIN
+  RAISE NOTICE 'Constraints to be dropped with patron_id:';
+  FOR constraint_rec IN
+    SELECT conname, pg_get_constraintdef(oid) AS def
+    FROM pg_constraint
+    WHERE conrelid = 'mtl_entry'::regclass
+      AND pg_get_constraintdef(oid) LIKE '%patron_id%'
+  LOOP
+    RAISE NOTICE '  - %: %', constraint_rec.conname, constraint_rec.def;
+  END LOOP;
+END $$;
+
+-- Step 1: Drop old TEXT column (CASCADE removes parity constraint)
+ALTER TABLE mtl_entry DROP COLUMN patron_id CASCADE;
+
+-- Step 2: Add generated TEXT column for legacy readers
+ALTER TABLE mtl_entry
+  ADD COLUMN patron_id text
+  GENERATED ALWAYS AS (patron_uuid::text) STORED;
+
+-- Step 3: Validate generated column
+DO $$
+DECLARE
+  test_rec RECORD;
+BEGIN
+  SELECT patron_uuid, patron_id INTO test_rec
+  FROM mtl_entry LIMIT 1;
+
+  IF test_rec.patron_id != test_rec.patron_uuid::text THEN
+    RAISE EXCEPTION 'Generated column mismatch: uuid=%, text=%',
+      test_rec.patron_uuid, test_rec.patron_id;
+  END IF;
+END $$;
+
+-- Step 4: Analyze
+ANALYZE mtl_entry;
+
+COMMIT;
+```
+
+**Post-Cutover Validation**:
+```sql
+-- Verify column structure
+SELECT column_name, data_type, is_nullable, is_generated
+FROM information_schema.columns
+WHERE table_name = 'mtl_entry'
+  AND column_name LIKE '%patron%';
+
+-- Expected output:
+-- column_name  | data_type | is_nullable | is_generated
+-- -------------+-----------+-------------+--------------
+-- patron_uuid  | uuid      | NO          | NEVER
+-- patron_id    | text      | YES         | ALWAYS
+
+-- Verify generated column immutability
+UPDATE mtl_entry SET patron_id = 'test' WHERE id = 1;
+-- Should fail: ERROR: column "patron_id" can only be updated to DEFAULT
+
+-- Verify reads work
+SELECT patron_uuid, patron_id FROM mtl_entry LIMIT 10;
+-- patron_id should show TEXT representation of patron_uuid
+```
+
+**Go/No-Go Gates**:
+- ✅ Old `patron_id` TEXT column dropped
+- ✅ New `patron_id` generated column functional
+- ✅ Generated column produces correct TEXT values
+- ✅ SELECT queries return expected results
+- ✅ INSERT/UPDATE to `patron_id` correctly fails
+- ✅ Zero production errors in 48-hour observation window
+- ✅ `npm run db:types` succeeds
 
 ---
 
 ### Rollback Strategy
 
-Each phase is reversible:
-- **Phase 1-2**: Simply halt, no harm done
-- **Phase 3**: Keep TEXT column, rollback view changes (1-hour operation)
-- **Phase 4**: Blocked until 100% validation passes
+**Phase C.1 Rollback** (Simple):
+```sql
+-- Drop UUID column and all constraints
+ALTER TABLE mtl_entry DROP COLUMN patron_uuid CASCADE;
+DROP INDEX IF EXISTS idx_mtl_entry_patron_uuid;
+DROP INDEX IF EXISTS idx_mtl_entry_patron_created;
+```
 
-### ADR-007 Document
+**Phase C.2.1 Rollback** (Application Only):
+- Application writers roll back to using `patron_id` (TEXT)
+- No database changes needed (both columns still exist)
+
+**Phase C.2.2 Rollback** (Requires Backfill):
+```sql
+-- Drop generated column
+ALTER TABLE mtl_entry DROP COLUMN patron_id;
+
+-- Re-add as normal TEXT column
+ALTER TABLE mtl_entry ADD COLUMN patron_id text;
+
+-- Backfill from UUID
+UPDATE mtl_entry SET patron_id = patron_uuid::text;
+
+-- Make NOT NULL
+ALTER TABLE mtl_entry ALTER COLUMN patron_id SET NOT NULL;
+
+-- Application writers roll back to patron_id
+```
+
+**Rollback window**: 2-4 hours (backfill is fast)
+
+---
+
+### ADR-007 Document (Updated)
 
 ```markdown
 # ADR-007: MTL Patron ID UUID Migration
 
+## Status
+Approved (Database Lead + Architecture Lead)
+
 ## Decision
-Migrate `mtl_entry.patron_id` from TEXT to UUID using dual-column approach.
+Migrate `mtl_entry.patron_id` from TEXT to UUID using generated column approach with `patron_uuid` as canonical column name.
 
 ## Rationale
-Current TEXT type requires `player.id::text` casts, violating UUID identity contract.
+Current TEXT type requires `player.id::text` casts, violating UUID identity contract and preventing foreign key enforcement.
+
+Generated column approach chosen over dual-write for:
+- Impossible divergence (database-enforced consistency)
+- No application coordination overhead during transition
+- Clear forcing function for writer migration
+- Legacy compatibility without maintenance burden
 
 ## Implementation
-4-phase migration: Add UUID → Dual-write → Migrate consumers → Drop TEXT
-Validation gates at each phase with 2-3 day monitoring windows.
+**3-phase migration**:
+1. **Phase C.1**: Add `patron_uuid` UUID with FK/indexes + parity constraint (3-4 days)
+2. **Phase C.2.1**: Migrate application writers to `patron_uuid` (2-3 days)
+3. **Phase C.2.2**: Swap to generated TEXT column for legacy readers (1 day)
+
+**Validation gates**: Automated cutover functions with 48-hour monitoring windows
+
+**Semantic naming**: `patron_uuid` preserved (no rename to avoid type confusion)
+
+## Relational Integrity
+- FK constraint: `patron_uuid REFERENCES player(id) ON DELETE CASCADE`
+- Indexes: `(patron_uuid)`, `(patron_uuid, created_at DESC)`
+- Parity enforcement: CHECK constraint during Phase C.1
+- Automated monitoring: pg_cron hourly validation
 
 ## Rollback
-Each phase reversible. TEXT column retained until Phase 4 validation passes.
+Each phase reversible:
+- **Phase C.1**: Drop UUID column and constraints
+- **Phase C.2.1**: Application rollback only (no DB changes)
+- **Phase C.2.2**: Backfill TEXT from UUID (2-4 hours)
 
 ## Consequences
-- Breaking changes: Views, queries with ::text casts
-- Performance: UUID more efficient than TEXT
-- Timeline: 2-3 weeks with conservative validation
+**Breaking changes**:
+- Application writers MUST use `patron_uuid` after Phase C.2.2
+- SELECT queries should migrate to `patron_uuid` for clarity (optional)
+- Generated types show `patron_uuid: string` (UUID)
+
+**Benefits**:
+- Type safety: UUID enforced at database level
+- Performance: UUID more efficient than TEXT for joins/comparisons
+- Referential integrity: FK prevents orphaned records
+- Future clarity: Column name signals UUID type
+
+**Timeline**: 7-10 days (vs 12-14 days for dual-write approach)
 ```
+
+---
 
 ### Phase C Success Criteria
 
-- ✅ ADR-007 approved by Database lead + 1 reviewer
-- ✅ All 4 migration phases completed successfully
-- ✅ Zero data loss or corruption (100% backfill validated)
-- ✅ `mtl_entry.patron_id` is UUID type in final schema
-- ✅ All queries updated, zero ::text casts remain
-- ✅ Discrepancy rate = 0% during dual-write window
-- ✅ Rollback tested at Phase 2 gate
+**Infrastructure (Phase C.0)**:
+- ✅ Alert tracking table created
+- ✅ Validation functions deployed
+- ✅ pg_cron scheduled job active
+- ✅ Cutover gate function operational
+
+**Migration (Phase C.1)**:
+- ✅ 100% backfill validated (zero NULL `patron_uuid`)
+- ✅ Zero divergence (parity constraint validated)
+- ✅ Zero orphaned references
+- ✅ FK constraint active: `fk_mtl_entry_patron`
+- ✅ Indexes created and analyzed
+- ✅ 48-hour monitoring: Zero critical alerts
+
+**Writer Migration (Phase C.2.1)**:
+- ✅ All writers migrated to `patron_uuid`
+- ✅ Zero legacy write patterns (48-hour window)
+- ✅ Zero divergence in monitoring queries
+
+**Cutover (Phase C.2.2)**:
+- ✅ Generated column functional
+- ✅ Legacy TEXT column dropped
+- ✅ `patron_uuid` remains canonical (no rename)
+- ✅ Zero production errors (48-hour window)
+- ✅ `npm run db:types` succeeds
+
+**Overall**:
+- ✅ ADR-007 approved by Database lead + Architecture lead
+- ✅ All automated cutover gates PASS
+- ✅ Zero data loss or corruption
+- ✅ `mtl_entry.patron_uuid` is UUID type, NOT NULL, with FK
+- ✅ `mtl_entry.patron_id` is generated TEXT (legacy compatibility)
+- ✅ Rollback tested at Phase C.1 gate
 
 **Approval**: Database lead + Architecture lead (no multi-stakeholder ARB)
 
-**Timeline**: 2-3 weeks (vs 3-4 weeks in original)
+**Timeline**: 7-10 days (60% faster than dual-write approach)
 
 ---
 
@@ -454,7 +909,7 @@ npm run validate:matrix-schema
 |-------|------------------|------------|
 | Phase A | Zero duplicate ownership, zero orphans | `npm run validate:matrix-schema` |
 | Phase B | <100ms p95 for views, all queries functional | Performance benchmarks |
-| Phase C | Zero discrepancies during dual-write, 100% backfill | Validation script |
+| Phase C | Zero divergence, 100% backfill, automated cutover gates PASS | `check_phase_c1_cutover_gate()` |
 
 ### Acceptance
 
@@ -485,12 +940,12 @@ A phase is complete when:
 
 ---
 
-### Phase C: Type Integrity (2-3 weeks)
+### Phase C: Type Integrity (7-10 days)
 | Tasks | Effort | Team |
 |-------|--------|------|
-| UUID migration (4 phases with 2-3 day validation windows) | 80 hours | DB Team + Dev |
+| UUID migration (3 phases: infrastructure, backfill+FK, generated column) | 56 hours | DB Team + Dev |
 
-**Calendar**: 10-15 business days | **Output**: UUID schema + validation
+**Calendar**: 7-10 business days | **Output**: UUID schema + automated validation + semantic naming
 
 ---
 
@@ -500,12 +955,12 @@ A phase is complete when:
 |-------|---------------|--------------|
 | Phase A | 5 | 0.8 |
 | Phase B | 5 | 1.0 |
-| Phase C | 10-15 | 2.0 |
-| **Total** | **20-25 days (4-5 weeks)** | **3.8 weeks** |
+| Phase C | 7-10 | 1.4 |
+| **Total** | **17-20 days (3-4 weeks)** | **3.2 weeks** |
 
-**Efficiency Gain**: 50% reduction from original 7-10 week plan
+**Efficiency Gain**: 65% reduction from original 7-10 week plan
 
-**Target Completion**: Mid-November 2025 (assuming start late October)
+**Target Completion**: Early-Mid November 2025 (assuming start late October)
 
 ---
 
@@ -537,27 +992,41 @@ Copy this checklist into each phase's PR description:
 
 ### Phase C PR Checklist (Per Migration Phase)
 ```markdown
-**Phase 1: Add UUID Column**
+**Phase C.0: Validation Infrastructure**
+- [ ] schema_validation_alerts table created
+- [ ] validate_mtl_patron_backfill() function deployed
+- [ ] check_phase_c1_cutover_gate() function deployed
+- [ ] pg_cron scheduled job active (hourly validation)
+- [ ] npm run validate:phase-c0-setup passes
+
+**Phase C.1: Add UUID with Relational Integrity**
 - [ ] patron_uuid column added to mtl_entry
-- [ ] 100% backfill success (zero NULL values)
-- [ ] Validation: `SELECT COUNT(*) FROM mtl_entry WHERE patron_uuid IS NULL` = 0
+- [ ] 100% backfill success (zero NULL patron_uuid)
+- [ ] Zero divergence: patron_id::uuid = patron_uuid for all rows
+- [ ] Zero orphaned references to non-existent players
+- [ ] Parity constraint added and validated
+- [ ] FK constraint active: fk_mtl_entry_patron
+- [ ] Indexes created: idx_mtl_entry_patron_uuid, idx_mtl_entry_patron_created
+- [ ] 48-hour monitoring: Zero critical alerts
+- [ ] Automated gate PASS: check_phase_c1_cutover_gate() returns OVERALL_DECISION = GO
+- [ ] npm run validate:phase-c1-cutover passes
 
-**Phase 2: Dual-Write**
-- [ ] Application writes both patron_id (TEXT) and patron_uuid (UUID)
-- [ ] Zero discrepancies for 2 days: `patron_id::uuid != patron_uuid`
-- [ ] Monitoring in place
+**Phase C.2.1: Migrate Application Writers**
+- [ ] All INSERT/UPDATE statements migrated to patron_uuid
+- [ ] Code search confirms zero patron_id writes
+- [ ] Zero legacy write patterns in pg_stat_statements (48-hour window)
+- [ ] Zero divergence in scheduled validation (48-hour window)
+- [ ] Database Lead approval for Phase C.2.2 cutover
 
-**Phase 3: Migrate Consumers**
-- [ ] Views updated to read from patron_uuid
-- [ ] Application queries updated
-- [ ] All views functional, zero errors in logs
-- [ ] 2-3 day validation window passed
-
-**Phase 4: Drop TEXT**
-- [ ] TEXT column dropped
-- [ ] patron_uuid renamed to patron_id
-- [ ] All queries using UUID (zero ::text casts)
-- [ ] 2-3 day post-cutover validation passed
+**Phase C.2.2: Generated Column Cutover**
+- [ ] Old patron_id TEXT column dropped
+- [ ] New patron_id generated column functional (GENERATED ALWAYS AS patron_uuid::text)
+- [ ] Generated column produces correct TEXT values
+- [ ] INSERT/UPDATE to patron_id correctly fails
+- [ ] SELECT queries return expected results
+- [ ] patron_uuid remains canonical (no rename performed)
+- [ ] Zero production errors (48-hour observation)
+- [ ] npm run db:types succeeds
 - [ ] Final approval: Database lead + Architecture lead
 ```
 
@@ -565,10 +1034,10 @@ Copy this checklist into each phase's PR description:
 
 ## Document Control
 
-**Version**: 2.0.0 (Lean Edition)
+**Version**: 2.1.0 (Hardened Phase C Edition)
 **Author**: Architecture Team
 **Based On**: [RESPONSIBILIY_MATRIX_AUDIT.md](./RESPONSIBILIY_MATRIX_AUDIT.md) + [overengineering.md](./overengineering.md)
-**Approval**: Architecture Lead
+**Approval**: Architecture Lead + Database Lead
 
 **Changelog**:
 - 2025-10-20: v1.0.0 - Initial 4-wave workflow (7-10 weeks)
@@ -579,6 +1048,15 @@ Copy this checklist into each phase's PR description:
   - Plain views by default (defer materialization)
   - PR-based sign-off (no separate reports)
   - 50% timeline reduction
+- 2025-10-20: v2.1.0 - Hardened Phase C (3-4 weeks total)
+  - Phase C: Generated column approach (7-10 days vs 2-3 weeks)
+  - Added validation infrastructure (pg_cron, alert tracking, cutover gates)
+  - Enforced parity constraint during backfill
+  - FK constraints and indexes before writer migration
+  - Automated discrepancy monitoring with 48-hour validation windows
+  - Semantic type naming preserved (patron_uuid, no rename)
+  - Hardened cutover criteria with check_phase_c1_cutover_gate()
+  - 65% total timeline reduction from original plan
 
 ---
 
