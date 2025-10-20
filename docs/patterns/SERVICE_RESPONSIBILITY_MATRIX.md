@@ -16,6 +16,7 @@
 
 | Version | Date | Changes | Rationale |
 |---------|------|---------|-----------|
+| **2.4.0** | 2025-10-20 | Phase B financial bounded context integrity: PlayerFinancial exclusive write authority, 3 aggregation views (`visit_financial_summary`, `visit_financial_summary_gd`, `ratingslip_with_financials`), RatingSlip financial field deprecation, Visit read-only consumption pattern | Phase B resolves duplicate financial write authority, establishes read-model pattern for Visit service, documents temporal authority (Casino → PlayerFinancial), prepares RatingSlip migration (Phase B.2) |
 | **2.3.0** | 2025-10-19 | Added Casino (Foundational) service bounded context for property management, global configuration, timezone/gaming-day logic, staff management, and policy thresholds | Establishes Casino as the root authority for all operational domains, providing configuration inheritance and compliance policy to TableContext, MTL, RatingSlip, Loyalty, and Performance |
 | 2.2.0 | 2025-10-19 | Added TableContext (Operational) service bounded context for gaming table lifecycle, configuration, dealer rotation, inventory tracking, and operational telemetry | Establishes clear ownership of table-level operational concerns and provides structured context for RatingSlip, MTL, and Performance domains |
 | 2.1.0 | 2025-10-14 | Added MTL (Compliance) service bounded context, enhanced cross-domain correlation with rating_slip_id/visit_id, added audit note immutability pattern | Phase 6+ requires AML/CTR compliance tracking with contextual enrichment from Loyalty and RatingSlip domains |
@@ -129,7 +130,7 @@
 | **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • RatingSlips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• **points** (cache) | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** 🆕 | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• RatingSlip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
-| **Finance** | `PlayerFinancialService` | • Cash in/out<br>• Chips tracking<br>• Reconciliation | • Player (FK)<br>• Visit (FK)<br>• RatingSlip (FK) | – | Financial tracking |
+| **Finance** | `PlayerFinancialService` | • `player_financial_transaction` (OWNS - append-only)<br>• **Financial event types** (CASH_IN, CHIPS_BROUGHT, CHIPS_TAKEN, REVERSAL)<br>• Idempotency enforcement<br>• **PROVIDES**: 3 aggregation views<br>  - `visit_financial_summary`<br>  - `visit_financial_summary_gd`<br>  - `ratingslip_with_financials` (transitional) | • Player (FK)<br>• Visit (FK - READ-ONLY via views)<br>• RatingSlip (FK - compatibility view)<br>• Casino (FK - temporal authority for gaming day) | • Visit consumes financial summaries (READ-ONLY)<br>• MTL references gaming-day aggregates | **Financial ledger (single source of truth)** |
 | **Compliance** 🆕 | `MTLService` | • **Cash transaction log**<br>• `mtl_entry` (immutable)<br>• `mtl_audit_note` (append-only)<br>• Gaming day calculation (trigger)<br>• Threshold detection<br>• Compliance exports | • `casino_settings` (READ-ONLY via trigger)<br>• Player (FK, optional)<br>• Casino (FK)<br>• Staff (FK)<br>• RatingSlip (FK, optional)<br>• Visit (FK, optional) | • Daily aggregates<br>• Threshold monitoring<br>• CTR/Watchlist detection | **AML/CTR compliance tracking** |
 | **Observability** 🆕 | `PerformanceService` | • `performance_metrics` (time-series)<br>• `performance_alerts`<br>• `performance_thresholds`<br>• `performance_config`<br>• Alert generation (trigger-based) | • No FK dependencies<br>• Optional metadata correlation<br>• Observes all domains (read-only) | • MTL transaction volume<br>• System performance trends<br>• Threshold breach detection | **Real-time monitoring & alerting** |
 
@@ -1308,7 +1309,9 @@ async function completeRatingSlip(id: string) {
 
 ## References
 
-- [APPENDIX A: Schema Identifier Reference](../bounded-context-integrity/APPENDIX_A_SCHEMA_IDENTIFIER_REFERENCE.md) - Complete table-to-service mapping with naming conventions
+- [APPENDIX A: Schema Identifier Reference](../bounded-context-integrity/phase-A/APPENDIX_A_SCHEMA_IDENTIFIER_REFERENCE.md) - Complete table-to-service mapping with naming conventions
+- [APPENDIX B: Financial Data Ownership Table](../bounde-context-integrity/phase-B/FINANCIAL_DATA_OWNERSHIP_TABLE.md) - Phase B financial column inventory and ownership boundaries
+- [Visit ↔ PlayerFinancial Interface Contract](../bounde-context-integrity/phase-B/VISIT_PLAYERFINANCIAL_INTERFACE.md) - Read-model pattern for financial aggregation
 - [CASINO_SERVICE_RESPONSIBILITY.MD](./CASINO_SERVICE_RESPONSIBILITY.MD) - Casino bounded context specification
 - [TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md](./TABLE_CONTEXT_SERVICE_RESPONSIBILITY_MATRIX.md) - TableContext bounded context specification
 - [LOYALTY_SERVICE_HANDOFF.md](../../docs/LOYALTY_SERVICE_HANDOFF.md) - Conceptual design
@@ -1318,8 +1321,13 @@ async function completeRatingSlip(id: string) {
 
 ---
 
-**Document Version**: 2.3.0
+**Document Version**: 2.4.0
 **Created**: 2025-10-12
-**Last Updated**: 2025-10-19 (Added Casino and TableContext Services)
+**Last Updated**: 2025-10-20 (Phase B: Financial bounded context integrity - PlayerFinancial ownership clarified)
 **Status**: Architecture Decision - Ready for Implementation
-**Next Action**: Complete bounded context map with all foundational, operational, reward, and compliance services
+**Phase B Changes**:
+- PlayerFinancial service owns `player_financial_transaction` (exclusive write authority)
+- 3 financial aggregation views provide read-only access to Visit/MTL services
+- RatingSlip financial fields deprecated (Phase B.2 migration pending)
+- Visit service consumes financial data via views (never writes)
+- Temporal authority pattern: Casino OWNS gaming-day config, PlayerFinancial REFERENCES
