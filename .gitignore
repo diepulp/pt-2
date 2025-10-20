@@ -41,5 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# validation outputs
+/.validation
+
 # reference
 # /reference-pt-1

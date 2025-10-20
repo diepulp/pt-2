@@ -153,6 +153,7 @@ Inventory all monetary fields and assign single owning service.
 | cash_in | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
 | chips_brought | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
 | chips_taken | ratingslip, player_financial_transaction | PlayerFinancialService | Remove from ratingslip | Finance ledger is source of truth |
+| cash_out*   | player_financial_transaction (planned?)   | PlayerFinancialService | N/A (ensure in PFT only)    | Symmetry for reconciliation                 |
 ```
 
 **Decision Framework**:
