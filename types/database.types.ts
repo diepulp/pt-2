@@ -619,13 +619,6 @@ export type Database = {
             foreignKeyName: "loyalty_ledger_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "loyalty_ledger_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -704,21 +697,7 @@ export type Database = {
             foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey";
             columns: ["mtl_entry_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey";
-            columns: ["mtl_entry_id"];
-            isOneToOne: false;
             referencedRelation: "mtl_entry";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey";
-            columns: ["mtl_entry_id"];
-            isOneToOne: false;
-            referencedRelation: "mtl_entry_with_notes";
             referencedColumns: ["id"];
           },
         ];
@@ -803,13 +782,6 @@ export type Database = {
           visit_id?: string | null;
         };
         Relationships: [
-          {
-            foreignKeyName: "fk_mtl_entry_patron";
-            columns: ["patron_uuid"];
-            isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
           {
             foreignKeyName: "fk_mtl_entry_patron";
             columns: ["patron_uuid"];
@@ -1122,13 +1094,6 @@ export type Database = {
             foreignKeyName: "player_financial_transaction_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "player_financial_transaction_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1187,13 +1152,6 @@ export type Database = {
           updated_at?: string | null;
         };
         Relationships: [
-          {
-            foreignKeyName: "player_loyalty_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: true;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
           {
             foreignKeyName: "player_loyalty_player_id_fkey";
             columns: ["player_id"];
@@ -1261,13 +1219,6 @@ export type Database = {
             foreignKeyName: "player_notes_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "player_notes_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1325,13 +1276,6 @@ export type Database = {
             foreignKeyName: "player_preferences_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: true;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "player_preferences_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: true;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1373,13 +1317,6 @@ export type Database = {
             foreignKeyName: "player_recommendations_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: true;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "player_recommendations_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: true;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1410,13 +1347,6 @@ export type Database = {
             foreignKeyName: "playercasino_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "playercasino_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1442,13 +1372,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "language";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "playerlanguage_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
           },
           {
             foreignKeyName: "playerlanguage_player_id_fkey";
@@ -1491,13 +1414,6 @@ export type Database = {
           visit_id?: string | null;
         };
         Relationships: [
-          {
-            foreignKeyName: "playerReward_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
           {
             foreignKeyName: "playerReward_player_id_fkey";
             columns: ["player_id"];
@@ -1584,13 +1500,6 @@ export type Database = {
             isOneToOne: false;
             referencedRelation: "gamingtable";
             referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ratingslip_playerId_fkey";
-            columns: ["playerId"];
-            isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
           },
           {
             foreignKeyName: "ratingslip_playerId_fkey";
@@ -1980,13 +1889,6 @@ export type Database = {
             foreignKeyName: "visit_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
-            referencedRelation: "mtl_compliance_context";
-            referencedColumns: ["player_uuid"];
-          },
-          {
-            foreignKeyName: "visit_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
@@ -1994,221 +1896,6 @@ export type Database = {
       };
     };
     Views: {
-      mtl_compliance_context: {
-        Row: {
-          amount: number | null;
-          area: Database["public"]["Enums"]["MtlArea"] | null;
-          casino_id: string | null;
-          correlation_id: string | null;
-          created_at: string | null;
-          ctr_percentage: number | null;
-          direction: Database["public"]["Enums"]["MtlDirection"] | null;
-          event_time: string | null;
-          gaming_day: string | null;
-          id: number | null;
-          idempotency_key: string | null;
-          location_note: string | null;
-          loyalty_balance_after: number | null;
-          loyalty_balance_before: number | null;
-          loyalty_ledger_id: string | null;
-          loyalty_reason: string | null;
-          loyalty_source: string | null;
-          loyalty_staff_id: string | null;
-          loyalty_tier_after: string | null;
-          loyalty_tier_before: string | null;
-          loyalty_transaction_type: string | null;
-          notes: string | null;
-          patron_id: string | null;
-          person_description: string | null;
-          person_last_name: string | null;
-          person_name: string | null;
-          player_first_name: string | null;
-          player_last_name: string | null;
-          player_uuid: string | null;
-          points_change: number | null;
-          proximity_status: string | null;
-          rating_slip_id: string | null;
-          recorded_by_employee_id: string | null;
-          recorded_by_signature: string | null;
-          session_avg_bet: number | null;
-          session_duration_seconds: number | null;
-          session_status:
-            | Database["public"]["Enums"]["RatingSlipStatus"]
-            | null;
-          staff_first_name: string | null;
-          staff_last_name: string | null;
-          staff_role: Database["public"]["Enums"]["StaffRole"] | null;
-          table_number: string | null;
-          tender_type: Database["public"]["Enums"]["TenderType"] | null;
-          threshold_status: string | null;
-          updated_at: string | null;
-          visit_check_in: string | null;
-          visit_check_out: string | null;
-          visit_id: string | null;
-          watchlist_percentage: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip_with_financials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_recorded_by_employee_id_fkey";
-            columns: ["recorded_by_employee_id"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      mtl_daily_summary: {
-        Row: {
-          area_breakdown: Json | null;
-          casino_id: string | null;
-          ctr_candidates: number | null;
-          gaming_day: string | null;
-          total_cash_in: number | null;
-          total_cash_out: number | null;
-          total_transactions: number | null;
-          unique_patrons: number | null;
-          watchlist_candidates: number | null;
-        };
-        Relationships: [];
-      };
-      mtl_entry_with_notes: {
-        Row: {
-          amount: number | null;
-          area: Database["public"]["Enums"]["MtlArea"] | null;
-          audit_notes: Json | null;
-          casino_id: string | null;
-          correlation_id: string | null;
-          created_at: string | null;
-          direction: Database["public"]["Enums"]["MtlDirection"] | null;
-          event_time: string | null;
-          gaming_day: string | null;
-          id: number | null;
-          idempotency_key: string | null;
-          location_note: string | null;
-          notes: string | null;
-          patron_id: string | null;
-          person_description: string | null;
-          person_last_name: string | null;
-          person_name: string | null;
-          rating_slip_id: string | null;
-          recorded_by_employee_id: string | null;
-          recorded_by_signature: string | null;
-          table_number: string | null;
-          tender_type: Database["public"]["Enums"]["TenderType"] | null;
-          updated_at: string | null;
-          visit_id: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip_with_financials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_recorded_by_employee_id_fkey";
-            columns: ["recorded_by_employee_id"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      mtl_patron_aggregates: {
-        Row: {
-          cash_in_count: number | null;
-          cash_in_total: number | null;
-          cash_out_count: number | null;
-          cash_out_total: number | null;
-          casino_id: string | null;
-          first_transaction_time: string | null;
-          gaming_day: string | null;
-          last_transaction_time: string | null;
-          max_direction_total: number | null;
-          patron_id: string | null;
-          patron_key: string | null;
-          person_description: string | null;
-          person_last_name: string | null;
-          person_name: string | null;
-          transaction_count: number | null;
-        };
-        Relationships: [];
-      };
-      mtl_performance_metrics: {
-        Row: {
-          avg_amount: number | null;
-          avg_transactions_per_hour: number | null;
-          casino_id: string | null;
-          gaming_day: string | null;
-          max_amount: number | null;
-          transaction_count: number | null;
-          unique_patrons: number | null;
-          volume_status: string | null;
-        };
-        Relationships: [];
-      };
-      mtl_threshold_monitor: {
-        Row: {
-          cash_in_count: number | null;
-          cash_in_total: number | null;
-          cash_out_count: number | null;
-          cash_out_total: number | null;
-          casino_id: string | null;
-          ctr_percentage: number | null;
-          ctr_threshold: number | null;
-          first_transaction_time: string | null;
-          gaming_day: string | null;
-          last_transaction_time: string | null;
-          max_direction_total: number | null;
-          patron_id: string | null;
-          patron_key: string | null;
-          person_description: string | null;
-          person_last_name: string | null;
-          person_name: string | null;
-          proximity_status: string | null;
-          threshold_status: string | null;
-          transaction_count: number | null;
-          watchlist_floor: number | null;
-          watchlist_percentage: number | null;
-        };
-        Relationships: [];
-      };
       ratingslip_with_financials: {
         Row: {
           average_bet: number | null;
