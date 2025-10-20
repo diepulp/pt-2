@@ -51,7 +51,7 @@ export type MTLEntryDTO = Pick<
   Database["public"]["Tables"]["mtl_entry"]["Row"],
   | "id"
   | "casino_id"
-  | "patron_id"
+  | "patron_uuid"
   | "person_name"
   | "person_last_name"
   | "person_description"
@@ -84,7 +84,7 @@ export function createMTLCrudService(supabase: SupabaseClient<Database>) {
           .from("mtl_entry")
           .insert({
             casino_id: data.casinoId,
-            patron_id: data.patronId,
+            patron_uuid: data.patronId,
             person_name: data.personName,
             person_last_name: data.personLastName,
             person_description: data.personDescription,
@@ -104,7 +104,7 @@ export function createMTLCrudService(supabase: SupabaseClient<Database>) {
             `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,
@@ -163,7 +163,7 @@ export function createMTLCrudService(supabase: SupabaseClient<Database>) {
             `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,
@@ -210,7 +210,7 @@ export function createMTLCrudService(supabase: SupabaseClient<Database>) {
       return executeOperation<MTLEntryDTO>("mtl_update", async () => {
         const updateData: Record<string, unknown> = {};
 
-        if (data.patronId !== undefined) updateData.patron_id = data.patronId;
+        if (data.patronId !== undefined) updateData.patron_uuid = data.patronId;
         if (data.personName !== undefined)
           updateData.person_name = data.personName;
         if (data.personLastName !== undefined)
@@ -238,7 +238,7 @@ export function createMTLCrudService(supabase: SupabaseClient<Database>) {
             `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,

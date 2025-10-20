@@ -39,7 +39,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
               `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,
@@ -91,7 +91,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
             `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,
@@ -110,7 +110,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
             updated_at
           `,
           )
-          .eq("patron_id", patronId)
+          .eq("patron_uuid", patronId)
           .order("event_time", { ascending: true });
 
         if (gamingDay) {
@@ -141,7 +141,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
     ): Promise<
       ServiceResult<
         Array<{
-          patron_id: string;
+          patron_uuid: string;
           person_name: string | null;
           person_last_name: string | null;
           gaming_day: string;
@@ -157,7 +157,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
           .from("mtl_entry")
           .select(
             `
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             gaming_day,
@@ -167,7 +167,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
           )
           .eq("gaming_day", gamingDay)
           .eq("casino_id", casinoId)
-          .not("patron_id", "is", null);
+          .not("patron_uuid", "is", null);
 
         if (error) {
           throw error;
@@ -177,7 +177,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
         const aggregated = new Map<
           string,
           {
-            patron_id: string;
+            patron_uuid: string;
             person_name: string | null;
             person_last_name: string | null;
             gaming_day: string;
@@ -188,7 +188,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
         >();
 
         for (const entry of data || []) {
-          const key = `${entry.patron_id}-${entry.direction}`;
+          const key = `${entry.patron_uuid}-${entry.direction}`;
           const existing = aggregated.get(key);
 
           if (existing) {
@@ -196,7 +196,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
             existing.transaction_count += 1;
           } else {
             aggregated.set(key, {
-              patron_id: entry.patron_id!,
+              patron_uuid: entry.patron_uuid!,
               person_name: entry.person_name,
               person_last_name: entry.person_last_name,
               gaming_day: entry.gaming_day,
@@ -233,7 +233,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
               `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,
@@ -285,7 +285,7 @@ export function createMTLQueriesService(supabase: SupabaseClient<Database>) {
             `
             id,
             casino_id,
-            patron_id,
+            patron_uuid,
             person_name,
             person_last_name,
             person_description,

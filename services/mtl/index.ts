@@ -48,7 +48,7 @@ export interface MTLService {
   ): Promise<
     ServiceResult<
       Array<{
-        patron_id: string;
+        patron_uuid: string;
         person_name: string | null;
         person_last_name: string | null;
         gaming_day: string;

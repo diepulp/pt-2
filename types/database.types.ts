@@ -7,31 +7,6 @@ export type Json =
   | Json[];
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never;
-    };
-    Views: {
-      [_ in never]: never;
-    };
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json;
-          operationName?: string;
-          query?: string;
-          variables?: Json;
-        };
-        Returns: Json;
-      };
-    };
-    Enums: {
-      [_ in never]: never;
-    };
-    CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
   public: {
     Tables: {
       AuditLog: {
@@ -763,6 +738,7 @@ export type Database = {
           location_note: string | null;
           notes: string | null;
           patron_id: string | null;
+          patron_uuid: string | null;
           person_description: string | null;
           person_last_name: string | null;
           person_name: string | null;
@@ -788,6 +764,7 @@ export type Database = {
           location_note?: string | null;
           notes?: string | null;
           patron_id?: string | null;
+          patron_uuid?: string | null;
           person_description?: string | null;
           person_last_name?: string | null;
           person_name?: string | null;
@@ -813,6 +790,7 @@ export type Database = {
           location_note?: string | null;
           notes?: string | null;
           patron_id?: string | null;
+          patron_uuid?: string | null;
           person_description?: string | null;
           person_last_name?: string | null;
           person_name?: string | null;
@@ -825,6 +803,20 @@ export type Database = {
           visit_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "fk_mtl_entry_patron";
+            columns: ["patron_uuid"];
+            isOneToOne: false;
+            referencedRelation: "mtl_compliance_context";
+            referencedColumns: ["player_uuid"];
+          },
+          {
+            foreignKeyName: "fk_mtl_entry_patron";
+            columns: ["patron_uuid"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "mtl_entry_rating_slip_id_fkey";
             columns: ["rating_slip_id"];
@@ -1746,6 +1738,33 @@ export type Database = {
           },
         ];
       };
+      schema_validation_alerts: {
+        Row: {
+          check_name: string;
+          created_at: string;
+          details: Json | null;
+          id: number;
+          message: string;
+          severity: string;
+        };
+        Insert: {
+          check_name: string;
+          created_at?: string;
+          details?: Json | null;
+          id?: number;
+          message: string;
+          severity: string;
+        };
+        Update: {
+          check_name?: string;
+          created_at?: string;
+          details?: Json | null;
+          id?: number;
+          message?: string;
+          severity?: string;
+        };
+        Relationships: [];
+      };
       ShiftHandover: {
         Row: {
           fromDealerId: string;
@@ -2274,6 +2293,15 @@ export type Database = {
       };
     };
     Functions: {
+      check_phase_c1_cutover_gate: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          can_proceed: boolean;
+          failing_count: number;
+          gate_name: string;
+          status: string;
+        }[];
+      };
       close_player_session: {
         Args: {
           p_chips_taken: number;
@@ -2629,6 +2657,10 @@ export type Database = {
         };
         Returns: Json;
       };
+      validate_mtl_patron_backfill: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
       validate_visit_seat_availability: {
         Args: {
           p_exclude_player_id?: string;
@@ -2817,9 +2849,6 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       AlertType: ["CTR", "MTL", "VARIANCE", "BREAK_OVERDUE", "SECURITY"],
