@@ -1570,6 +1570,33 @@ export type Database = {
           },
         ];
       };
+      schema_validation_alerts: {
+        Row: {
+          check_name: string;
+          created_at: string;
+          details: Json | null;
+          id: number;
+          message: string;
+          severity: string;
+        };
+        Insert: {
+          check_name: string;
+          created_at?: string;
+          details?: Json | null;
+          id?: number;
+          message: string;
+          severity: string;
+        };
+        Update: {
+          check_name?: string;
+          created_at?: string;
+          details?: Json | null;
+          id?: number;
+          message?: string;
+          severity?: string;
+        };
+        Relationships: [];
+      };
       ShiftHandover: {
         Row: {
           fromDealerId: string;
@@ -1920,6 +1947,15 @@ export type Database = {
       };
     };
     Functions: {
+      check_phase_c1_cutover_gate: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          can_proceed: boolean;
+          failing_count: number;
+          gate_name: string;
+          status: string;
+        }[];
+      };
       close_player_session: {
         Args: {
           p_chips_taken: number;
@@ -2274,6 +2310,10 @@ export type Database = {
           p_staff_id: string;
         };
         Returns: Json;
+      };
+      validate_mtl_patron_backfill: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
       };
       validate_visit_seat_availability: {
         Args: {

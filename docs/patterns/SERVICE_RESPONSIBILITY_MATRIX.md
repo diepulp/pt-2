@@ -10,6 +10,20 @@
 > - [v1.0 Pre-Loyalty (2025-10-06)](../../archive/SERVICE_RESPONSIBILITY_MATRIX_v1.0_pre-loyalty_2025-10-06.md)
 > **Purpose**: Maintain bounded context integrity across all service domains
 
+> **Contract Policy (Canonical)**
+> - Source of truth: **This SRM** (matrix-first). Schema MUST mirror this document.
+> - Naming: **lower_snake_case** for tables/columns/enums; no quoted CamelCase.
+> - IDs: **uuid** for all PKs/FKs. Text IDs allowed only as secondary business keys.
+> - JSON: allowed only for **extensible metadata**; anything used in FKs/RLS/analytics must be a first-class column.
+> - Ownership: Records that depend on casino policy MUST carry `casino_id` and (where applicable) `gaming_day`.
+> - RLS: Policies derive from ownership in this SRM and must be shipped with each schema change.
+> **Conventions**
+>   **Identifiers**
+> - All primary keys are `uuid default gen_random_uuid()`; all foreign keys reference `uuid`.
+> - Business keys (`employee_id`, `table_label`, etc.) are `text` with unique constraints as needed.
+
+
+
 ---
 
 ## Version History
