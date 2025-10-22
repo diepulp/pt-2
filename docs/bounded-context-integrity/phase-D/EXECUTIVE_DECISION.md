@@ -1,4 +1,5 @@
-Final stance
+## Executive Decision
+`In a DDD-aligned SDLC, bounded contexts dictate the schema. You capture the domain’s language and ownership in the SRM, freeze that contract, then realize it as SQL. Your CI enforces the direction of truth with a matrix↔schema diff and regenerated types. That’s how you keep PT-2 from drifting back into “Prisma ghosts” and CamelCase entropy while staying nimble in early stages`
 
 Matrix-first contract. Schema conforms to the matrix.
 We will intentionally break/rename to land on a single, boring truth: lower_snake_case schema that exactly matches the bounded contexts in the matrix.

@@ -34,101 +34,78 @@ export type Database = {
   };
   public: {
     Tables: {
-      AuditLog: {
+      audit_log: {
         Row: {
           action: string;
+          actor_id: string | null;
+          casino_id: string | null;
+          created_at: string;
           details: Json | null;
-          entity: string;
-          entityId: string;
+          domain: string;
           id: string;
-          timestamp: string;
-          userId: string;
         };
         Insert: {
           action: string;
+          actor_id?: string | null;
+          casino_id?: string | null;
+          created_at?: string;
           details?: Json | null;
-          entity: string;
-          entityId: string;
+          domain: string;
           id?: string;
-          timestamp?: string;
-          userId: string;
         };
         Update: {
           action?: string;
+          actor_id?: string | null;
+          casino_id?: string | null;
+          created_at?: string;
           details?: Json | null;
-          entity?: string;
-          entityId?: string;
+          domain?: string;
           id?: string;
-          timestamp?: string;
-          userId?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "AuditLog_userId_fkey";
-            columns: ["userId"];
+            foreignKeyName: "audit_log_actor_id_fkey";
+            columns: ["actor_id"];
             isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      BreakAlert: {
-        Row: {
-          alertTime: string;
-          dealerId: string;
-          id: string;
-          message: string;
-          tableId: string;
-        };
-        Insert: {
-          alertTime?: string;
-          dealerId: string;
-          id?: string;
-          message: string;
-          tableId: string;
-        };
-        Update: {
-          alertTime?: string;
-          dealerId?: string;
-          id?: string;
-          message?: string;
-          tableId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "BreakAlert_dealerId_fkey";
-            columns: ["dealerId"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "BreakAlert_tableId_fkey";
-            columns: ["tableId"];
+            foreignKeyName: "audit_log_casino_id_fkey";
+            columns: ["casino_id"];
             isOneToOne: false;
-            referencedRelation: "gamingtable";
+            referencedRelation: "casino";
             referencedColumns: ["id"];
           },
         ];
       };
       casino: {
         Row: {
+          address: Json | null;
           company_id: string | null;
+          created_at: string;
           id: string;
-          location: string;
+          location: string | null;
           name: string;
+          status: string;
         };
         Insert: {
+          address?: Json | null;
           company_id?: string | null;
+          created_at?: string;
           id?: string;
-          location: string;
+          location?: string | null;
           name: string;
+          status?: string;
         };
         Update: {
+          address?: Json | null;
           company_id?: string | null;
+          created_at?: string;
           id?: string;
-          location?: string;
+          location?: string | null;
           name?: string;
+          status?: string;
         };
         Relationships: [
           {
@@ -145,7 +122,7 @@ export type Database = {
           casino_id: string;
           created_at: string;
           ctr_threshold: number;
-          gaming_day_start: string;
+          gaming_day_start_time: string;
           id: string;
           timezone: string;
           updated_at: string;
@@ -155,8 +132,8 @@ export type Database = {
           casino_id: string;
           created_at?: string;
           ctr_threshold?: number;
-          gaming_day_start?: string;
-          id: string;
+          gaming_day_start_time?: string;
+          id?: string;
           timezone?: string;
           updated_at?: string;
           watchlist_floor?: number;
@@ -165,310 +142,120 @@ export type Database = {
           casino_id?: string;
           created_at?: string;
           ctr_threshold?: number;
-          gaming_day_start?: string;
+          gaming_day_start_time?: string;
           id?: string;
           timezone?: string;
           updated_at?: string;
           watchlist_floor?: number;
         };
-        Relationships: [];
-      };
-      ChipCountEvent: {
-        Row: {
-          countDetails: Json;
-          countedById: string;
-          countType: Database["public"]["Enums"]["CountType"];
-          gamingTableId: string;
-          id: string;
-          timestamp: string;
-        };
-        Insert: {
-          countDetails: Json;
-          countedById: string;
-          countType: Database["public"]["Enums"]["CountType"];
-          gamingTableId: string;
-          id?: string;
-          timestamp?: string;
-        };
-        Update: {
-          countDetails?: Json;
-          countedById?: string;
-          countType?: Database["public"]["Enums"]["CountType"];
-          gamingTableId?: string;
-          id?: string;
-          timestamp?: string;
-        };
         Relationships: [
           {
-            foreignKeyName: "ChipCountEvent_countedById_fkey";
-            columns: ["countedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ChipCountEvent_gamingTableId_fkey";
-            columns: ["gamingTableId"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
+            foreignKeyName: "casino_settings_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: true;
+            referencedRelation: "casino";
             referencedColumns: ["id"];
           },
         ];
       };
       company: {
         Row: {
+          created_at: string;
           id: string;
+          legal_name: string | null;
           name: string;
         };
         Insert: {
+          created_at?: string;
           id?: string;
+          legal_name?: string | null;
           name: string;
         };
         Update: {
+          created_at?: string;
           id?: string;
+          legal_name?: string | null;
           name?: string;
         };
         Relationships: [];
       };
-      ComplianceAlert: {
+      dealer_rotation: {
         Row: {
-          alertType: Database["public"]["Enums"]["AlertType"];
-          description: string;
+          casino_id: string;
+          ended_at: string | null;
           id: string;
-          relatedEventId: string | null;
-          resolvedAt: string | null;
-          triggeredAt: string;
+          staff_id: string | null;
+          started_at: string;
+          table_id: string;
         };
         Insert: {
-          alertType: Database["public"]["Enums"]["AlertType"];
-          description: string;
+          casino_id: string;
+          ended_at?: string | null;
           id?: string;
-          relatedEventId?: string | null;
-          resolvedAt?: string | null;
-          triggeredAt?: string;
+          staff_id?: string | null;
+          started_at?: string;
+          table_id: string;
         };
         Update: {
-          alertType?: Database["public"]["Enums"]["AlertType"];
-          description?: string;
+          casino_id?: string;
+          ended_at?: string | null;
           id?: string;
-          relatedEventId?: string | null;
-          resolvedAt?: string | null;
-          triggeredAt?: string;
-        };
-        Relationships: [];
-      };
-      DealerRotation: {
-        Row: {
-          dealerId: string;
-          id: string;
-          shiftEnd: string;
-          shiftStart: string;
-          tableStringId: string;
-        };
-        Insert: {
-          dealerId: string;
-          id?: string;
-          shiftEnd: string;
-          shiftStart: string;
-          tableStringId: string;
-        };
-        Update: {
-          dealerId?: string;
-          id?: string;
-          shiftEnd?: string;
-          shiftStart?: string;
-          tableStringId?: string;
+          staff_id?: string | null;
+          started_at?: string;
+          table_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "DealerRotation_dealerId_fkey";
-            columns: ["dealerId"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      DropEvent: {
-        Row: {
-          actualPulledAt: string | null;
-          amount: number;
-          gamingTableId: string;
-          id: string;
-          recordedById: string;
-          scheduledAt: string;
-          variance: number | null;
-        };
-        Insert: {
-          actualPulledAt?: string | null;
-          amount: number;
-          gamingTableId: string;
-          id?: string;
-          recordedById: string;
-          scheduledAt: string;
-          variance?: number | null;
-        };
-        Update: {
-          actualPulledAt?: string | null;
-          amount?: number;
-          gamingTableId?: string;
-          id?: string;
-          recordedById?: string;
-          scheduledAt?: string;
-          variance?: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "DropEvent_gamingTableId_fkey";
-            columns: ["gamingTableId"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "DropEvent_recordedById_fkey";
-            columns: ["recordedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      FillSlip: {
-        Row: {
-          approvedAt: string | null;
-          approvedById: string | null;
-          casinoId: string;
-          createdAt: string;
-          createdById: string;
-          denominations: Json;
-          gamingTableId: string;
-          id: string;
-        };
-        Insert: {
-          approvedAt?: string | null;
-          approvedById?: string | null;
-          casinoId: string;
-          createdAt?: string;
-          createdById: string;
-          denominations: Json;
-          gamingTableId: string;
-          id?: string;
-        };
-        Update: {
-          approvedAt?: string | null;
-          approvedById?: string | null;
-          casinoId?: string;
-          createdAt?: string;
-          createdById?: string;
-          denominations?: Json;
-          gamingTableId?: string;
-          id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "FillSlip_approvedById_fkey";
-            columns: ["approvedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "FillSlip_casinoId_fkey";
-            columns: ["casinoId"];
+            foreignKeyName: "dealer_rotation_casino_id_fkey";
+            columns: ["casino_id"];
             isOneToOne: false;
             referencedRelation: "casino";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "FillSlip_createdById_fkey";
-            columns: ["createdById"];
+            foreignKeyName: "dealer_rotation_staff_id_fkey";
+            columns: ["staff_id"];
             isOneToOne: false;
-            referencedRelation: "Staff";
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "FillSlip_gamingTableId_fkey";
-            columns: ["gamingTableId"];
+            foreignKeyName: "dealer_rotation_table_id_fkey";
+            columns: ["table_id"];
             isOneToOne: false;
-            referencedRelation: "gamingtable";
+            referencedRelation: "gaming_table";
             referencedColumns: ["id"];
           },
         ];
       };
-      gamesettings: {
+      game_settings: {
         Row: {
-          average_rounds_per_hour: number;
-          created_at: string | null;
-          house_edge: number;
+          casino_id: string;
+          game_type: Database["public"]["Enums"]["game_type"];
           id: string;
-          name: string;
-          point_multiplier: number | null;
-          points_conversion_rate: number | null;
-          seats_available: number | null;
-          updated_at: string | null;
-          version: number;
+          max_bet: number | null;
+          min_bet: number | null;
+          rotation_interval_minutes: number | null;
         };
         Insert: {
-          average_rounds_per_hour: number;
-          created_at?: string | null;
-          house_edge: number;
+          casino_id: string;
+          game_type: Database["public"]["Enums"]["game_type"];
           id?: string;
-          name: string;
-          point_multiplier?: number | null;
-          points_conversion_rate?: number | null;
-          seats_available?: number | null;
-          updated_at?: string | null;
-          version: number;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
         };
         Update: {
-          average_rounds_per_hour?: number;
-          created_at?: string | null;
-          house_edge?: number;
+          casino_id?: string;
+          game_type?: Database["public"]["Enums"]["game_type"];
           id?: string;
-          name?: string;
-          point_multiplier?: number | null;
-          points_conversion_rate?: number | null;
-          seats_available?: number | null;
-          updated_at?: string | null;
-          version?: number;
-        };
-        Relationships: [];
-      };
-      gamingtable: {
-        Row: {
-          casino_id: string | null;
-          created_at: string | null;
-          description: string | null;
-          id: string;
-          name: string;
-          table_number: string;
-          type: string;
-          updated_at: string | null;
-        };
-        Insert: {
-          casino_id?: string | null;
-          created_at?: string | null;
-          description?: string | null;
-          id?: string;
-          name: string;
-          table_number: string;
-          type: string;
-          updated_at?: string | null;
-        };
-        Update: {
-          casino_id?: string | null;
-          created_at?: string | null;
-          description?: string | null;
-          id?: string;
-          name?: string;
-          table_number?: string;
-          type?: string;
-          updated_at?: string | null;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
         };
         Relationships: [
           {
-            foreignKeyName: "gamingtable_casino_id_fkey";
+            foreignKeyName: "game_settings_casino_id_fkey";
             columns: ["casino_id"];
             isOneToOne: false;
             referencedRelation: "casino";
@@ -476,170 +263,146 @@ export type Database = {
           },
         ];
       };
-      gamingtablesettings: {
+      gaming_table: {
         Row: {
-          active_from: string;
-          active_until: string | null;
-          description: string | null;
-          game_settings_id: string;
-          gaming_table_id: string;
+          casino_id: string;
+          created_at: string;
           id: string;
-          is_active: boolean;
+          label: string;
+          pit: string | null;
+          status: Database["public"]["Enums"]["table_status"];
+          type: Database["public"]["Enums"]["game_type"];
         };
         Insert: {
-          active_from: string;
-          active_until?: string | null;
-          description?: string | null;
-          game_settings_id: string;
-          gaming_table_id: string;
+          casino_id: string;
+          created_at?: string;
           id?: string;
-          is_active?: boolean;
+          label: string;
+          pit?: string | null;
+          status?: Database["public"]["Enums"]["table_status"];
+          type: Database["public"]["Enums"]["game_type"];
+        };
+        Update: {
+          casino_id?: string;
+          created_at?: string;
+          id?: string;
+          label?: string;
+          pit?: string | null;
+          status?: Database["public"]["Enums"]["table_status"];
+          type?: Database["public"]["Enums"]["game_type"];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "gaming_table_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      gaming_table_settings: {
+        Row: {
+          active_from: string;
+          active_to: string | null;
+          casino_id: string;
+          id: string;
+          max_bet: number | null;
+          min_bet: number | null;
+          rotation_interval_minutes: number | null;
+          table_id: string;
+        };
+        Insert: {
+          active_from?: string;
+          active_to?: string | null;
+          casino_id: string;
+          id?: string;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
+          table_id: string;
         };
         Update: {
           active_from?: string;
-          active_until?: string | null;
-          description?: string | null;
-          game_settings_id?: string;
-          gaming_table_id?: string;
+          active_to?: string | null;
+          casino_id?: string;
           id?: string;
-          is_active?: boolean;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
+          table_id?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "gamingtablesettings_game_settings_id_fkey";
-            columns: ["game_settings_id"];
+            foreignKeyName: "gaming_table_settings_casino_id_fkey";
+            columns: ["casino_id"];
             isOneToOne: false;
-            referencedRelation: "gamesettings";
+            referencedRelation: "casino";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "gamingtablesettings_gaming_table_id_fkey";
-            columns: ["gaming_table_id"];
+            foreignKeyName: "gaming_table_settings_table_id_fkey";
+            columns: ["table_id"];
             isOneToOne: false;
-            referencedRelation: "gamingtable";
+            referencedRelation: "gaming_table";
             referencedColumns: ["id"];
           },
         ];
-      };
-      KeyControlLog: {
-        Row: {
-          action: Database["public"]["Enums"]["KeyAction"];
-          authorizedById: string | null;
-          id: string;
-          keyIdentifier: string;
-          performedById: string;
-          timestamp: string;
-        };
-        Insert: {
-          action: Database["public"]["Enums"]["KeyAction"];
-          authorizedById?: string | null;
-          id?: string;
-          keyIdentifier: string;
-          performedById: string;
-          timestamp?: string;
-        };
-        Update: {
-          action?: Database["public"]["Enums"]["KeyAction"];
-          authorizedById?: string | null;
-          id?: string;
-          keyIdentifier?: string;
-          performedById?: string;
-          timestamp?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "KeyControlLog_authorizedById_fkey";
-            columns: ["authorizedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "KeyControlLog_performedById_fkey";
-            columns: ["performedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      language: {
-        Row: {
-          group_name: string | null;
-          id: string;
-          name: string;
-        };
-        Insert: {
-          group_name?: string | null;
-          id?: string;
-          name: string;
-        };
-        Update: {
-          group_name?: string | null;
-          id?: string;
-          name?: string;
-        };
-        Relationships: [];
       };
       loyalty_ledger: {
         Row: {
-          balance_after: number | null;
-          balance_before: number | null;
-          correlation_id: string | null;
+          average_bet: number | null;
+          casino_id: string;
           created_at: string;
-          event_type: string | null;
+          duration_seconds: number | null;
+          game_type: Database["public"]["Enums"]["game_type"] | null;
           id: string;
+          idempotency_key: string | null;
           player_id: string;
-          points_change: number;
+          points_earned: number;
           rating_slip_id: string | null;
-          reason: string | null;
-          session_id: string | null;
-          source: string;
+          reason: Database["public"]["Enums"]["loyalty_reason"];
           staff_id: string | null;
-          tier_after: string | null;
-          tier_before: string | null;
-          transaction_type: string;
           visit_id: string | null;
         };
         Insert: {
-          balance_after?: number | null;
-          balance_before?: number | null;
-          correlation_id?: string | null;
+          average_bet?: number | null;
+          casino_id: string;
           created_at?: string;
-          event_type?: string | null;
+          duration_seconds?: number | null;
+          game_type?: Database["public"]["Enums"]["game_type"] | null;
           id?: string;
+          idempotency_key?: string | null;
           player_id: string;
-          points_change: number;
+          points_earned: number;
           rating_slip_id?: string | null;
-          reason?: string | null;
-          session_id?: string | null;
-          source?: string;
+          reason?: Database["public"]["Enums"]["loyalty_reason"];
           staff_id?: string | null;
-          tier_after?: string | null;
-          tier_before?: string | null;
-          transaction_type: string;
           visit_id?: string | null;
         };
         Update: {
-          balance_after?: number | null;
-          balance_before?: number | null;
-          correlation_id?: string | null;
+          average_bet?: number | null;
+          casino_id?: string;
           created_at?: string;
-          event_type?: string | null;
+          duration_seconds?: number | null;
+          game_type?: Database["public"]["Enums"]["game_type"] | null;
           id?: string;
+          idempotency_key?: string | null;
           player_id?: string;
-          points_change?: number;
+          points_earned?: number;
           rating_slip_id?: string | null;
-          reason?: string | null;
-          session_id?: string | null;
-          source?: string;
+          reason?: Database["public"]["Enums"]["loyalty_reason"];
           staff_id?: string | null;
-          tier_after?: string | null;
-          tier_before?: string | null;
-          transaction_type?: string;
           visit_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "loyalty_ledger_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "loyalty_ledger_player_id_fkey";
             columns: ["player_id"];
@@ -651,14 +414,14 @@ export type Database = {
             foreignKeyName: "loyalty_ledger_rating_slip_id_fkey";
             columns: ["rating_slip_id"];
             isOneToOne: false;
-            referencedRelation: "ratingslip";
+            referencedRelation: "rating_slip";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
+            foreignKeyName: "loyalty_ledger_staff_id_fkey";
+            columns: ["staff_id"];
             isOneToOne: false;
-            referencedRelation: "ratingslip_with_financials";
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
           {
@@ -670,54 +433,29 @@ export type Database = {
           },
         ];
       };
-      loyalty_tier: {
-        Row: {
-          multiplier: number;
-          threshold_points: number;
-          tier: string;
-        };
-        Insert: {
-          multiplier?: number;
-          threshold_points: number;
-          tier: string;
-        };
-        Update: {
-          multiplier?: number;
-          threshold_points?: number;
-          tier?: string;
-        };
-        Relationships: [];
-      };
       mtl_audit_note: {
         Row: {
           created_at: string;
-          created_by: string;
           id: string;
-          mtl_entry_id: number;
+          mtl_entry_id: string;
           note: string;
+          staff_id: string | null;
         };
         Insert: {
           created_at?: string;
-          created_by: string;
           id?: string;
-          mtl_entry_id: number;
+          mtl_entry_id: string;
           note: string;
+          staff_id?: string | null;
         };
         Update: {
           created_at?: string;
-          created_by?: string;
           id?: string;
-          mtl_entry_id?: number;
+          mtl_entry_id?: string;
           note?: string;
+          staff_id?: string | null;
         };
         Relationships: [
-          {
-            foreignKeyName: "mtl_audit_note_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
           {
             foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey";
             columns: ["mtl_entry_id"];
@@ -725,90 +463,65 @@ export type Database = {
             referencedRelation: "mtl_entry";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "mtl_audit_note_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
+          },
         ];
       };
       mtl_entry: {
         Row: {
           amount: number;
-          area: Database["public"]["Enums"]["MtlArea"];
+          area: string | null;
           casino_id: string;
-          correlation_id: string | null;
           created_at: string;
-          direction: Database["public"]["Enums"]["MtlDirection"];
-          event_time: string;
-          gaming_day: string;
-          id: number;
+          direction: string;
+          id: string;
           idempotency_key: string | null;
-          location_note: string | null;
-          notes: string | null;
-          patron_id: string | null;
-          patron_uuid: string | null;
-          person_description: string | null;
-          person_last_name: string | null;
-          person_name: string | null;
+          patron_uuid: string;
           rating_slip_id: string | null;
-          recorded_by_employee_id: string;
-          recorded_by_signature: string;
-          table_number: string | null;
-          tender_type: Database["public"]["Enums"]["TenderType"];
-          updated_at: string;
+          staff_id: string | null;
           visit_id: string | null;
         };
         Insert: {
           amount: number;
-          area: Database["public"]["Enums"]["MtlArea"];
+          area?: string | null;
           casino_id: string;
-          correlation_id?: string | null;
           created_at?: string;
-          direction: Database["public"]["Enums"]["MtlDirection"];
-          event_time: string;
-          gaming_day: string;
-          id?: number;
+          direction: string;
+          id?: string;
           idempotency_key?: string | null;
-          location_note?: string | null;
-          notes?: string | null;
-          patron_id?: string | null;
-          patron_uuid?: string | null;
-          person_description?: string | null;
-          person_last_name?: string | null;
-          person_name?: string | null;
+          patron_uuid: string;
           rating_slip_id?: string | null;
-          recorded_by_employee_id: string;
-          recorded_by_signature: string;
-          table_number?: string | null;
-          tender_type?: Database["public"]["Enums"]["TenderType"];
-          updated_at?: string;
+          staff_id?: string | null;
           visit_id?: string | null;
         };
         Update: {
           amount?: number;
-          area?: Database["public"]["Enums"]["MtlArea"];
+          area?: string | null;
           casino_id?: string;
-          correlation_id?: string | null;
           created_at?: string;
-          direction?: Database["public"]["Enums"]["MtlDirection"];
-          event_time?: string;
-          gaming_day?: string;
-          id?: number;
+          direction?: string;
+          id?: string;
           idempotency_key?: string | null;
-          location_note?: string | null;
-          notes?: string | null;
-          patron_id?: string | null;
-          patron_uuid?: string | null;
-          person_description?: string | null;
-          person_last_name?: string | null;
-          person_name?: string | null;
+          patron_uuid?: string;
           rating_slip_id?: string | null;
-          recorded_by_employee_id?: string;
-          recorded_by_signature?: string;
-          table_number?: string | null;
-          tender_type?: Database["public"]["Enums"]["TenderType"];
-          updated_at?: string;
+          staff_id?: string | null;
           visit_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "fk_mtl_entry_patron";
+            foreignKeyName: "mtl_entry_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "mtl_entry_patron_uuid_fkey";
             columns: ["patron_uuid"];
             isOneToOne: false;
             referencedRelation: "player";
@@ -818,21 +531,14 @@ export type Database = {
             foreignKeyName: "mtl_entry_rating_slip_id_fkey";
             columns: ["rating_slip_id"];
             isOneToOne: false;
-            referencedRelation: "ratingslip";
+            referencedRelation: "rating_slip";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
+            foreignKeyName: "mtl_entry_staff_id_fkey";
+            columns: ["staff_id"];
             isOneToOne: false;
-            referencedRelation: "ratingslip_with_financials";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "mtl_entry_recorded_by_employee_id_fkey";
-            columns: ["recorded_by_employee_id"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
+            referencedRelation: "staff";
             referencedColumns: ["id"];
           },
           {
@@ -844,277 +550,108 @@ export type Database = {
           },
         ];
       };
-      performance_alerts: {
-        Row: {
-          actual_value: number | null;
-          alert_type: Database["public"]["Enums"]["AlertTypePerf"];
-          created_at: string;
-          id: string;
-          message: string;
-          metadata: Json | null;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          resolved_at: string | null;
-          severity: Database["public"]["Enums"]["Severity"];
-          threshold_value: number | null;
-        };
-        Insert: {
-          actual_value?: number | null;
-          alert_type: Database["public"]["Enums"]["AlertTypePerf"];
-          created_at?: string;
-          id?: string;
-          message: string;
-          metadata?: Json | null;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          resolved_at?: string | null;
-          severity: Database["public"]["Enums"]["Severity"];
-          threshold_value?: number | null;
-        };
-        Update: {
-          actual_value?: number | null;
-          alert_type?: Database["public"]["Enums"]["AlertTypePerf"];
-          created_at?: string;
-          id?: string;
-          message?: string;
-          metadata?: Json | null;
-          metric_name?: string;
-          metric_type?: Database["public"]["Enums"]["MetricType"];
-          resolved_at?: string | null;
-          severity?: Database["public"]["Enums"]["Severity"];
-          threshold_value?: number | null;
-        };
-        Relationships: [];
-      };
-      performance_config: {
-        Row: {
-          created_at: string;
-          enabled: boolean;
-          id: string;
-          metric_name: string;
-          target_value: number;
-          updated_at: string;
-          warning_value: number;
-        };
-        Insert: {
-          created_at?: string;
-          enabled?: boolean;
-          id?: string;
-          metric_name: string;
-          target_value: number;
-          updated_at?: string;
-          warning_value: number;
-        };
-        Update: {
-          created_at?: string;
-          enabled?: boolean;
-          id?: string;
-          metric_name?: string;
-          target_value?: number;
-          updated_at?: string;
-          warning_value?: number;
-        };
-        Relationships: [];
-      };
-      performance_metrics: {
-        Row: {
-          created_at: string;
-          id: string;
-          metadata: Json | null;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          page_path: string | null;
-          timestamp: string;
-          user_session: string | null;
-          value: number;
-        };
-        Insert: {
-          created_at?: string;
-          id?: string;
-          metadata?: Json | null;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          page_path?: string | null;
-          timestamp?: string;
-          user_session?: string | null;
-          value: number;
-        };
-        Update: {
-          created_at?: string;
-          id?: string;
-          metadata?: Json | null;
-          metric_name?: string;
-          metric_type?: Database["public"]["Enums"]["MetricType"];
-          page_path?: string | null;
-          timestamp?: string;
-          user_session?: string | null;
-          value?: number;
-        };
-        Relationships: [];
-      };
-      performance_thresholds: {
-        Row: {
-          created_at: string;
-          critical_threshold: number;
-          enabled: boolean;
-          id: string;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          updated_at: string;
-          warning_threshold: number;
-        };
-        Insert: {
-          created_at?: string;
-          critical_threshold: number;
-          enabled?: boolean;
-          id?: string;
-          metric_name: string;
-          metric_type: Database["public"]["Enums"]["MetricType"];
-          updated_at?: string;
-          warning_threshold: number;
-        };
-        Update: {
-          created_at?: string;
-          critical_threshold?: number;
-          enabled?: boolean;
-          id?: string;
-          metric_name?: string;
-          metric_type?: Database["public"]["Enums"]["MetricType"];
-          updated_at?: string;
-          warning_threshold?: number;
-        };
-        Relationships: [];
-      };
       player: {
         Row: {
-          address: Json | null;
-          company_id: string | null;
-          dob: string | null;
-          documentNumber: string | null;
-          email: string;
-          expirationDate: string | null;
-          eyeColor: string | null;
-          firstName: string;
-          gender: Database["public"]["Enums"]["Gender"] | null;
-          height: string | null;
+          birth_date: string | null;
+          created_at: string;
+          first_name: string;
           id: string;
-          issueDate: string | null;
-          issuingState: string | null;
-          lastName: string;
-          middleName: string | null;
-          phone_number: string | null;
-          weight: string | null;
+          last_name: string;
         };
         Insert: {
-          address?: Json | null;
-          company_id?: string | null;
-          dob?: string | null;
-          documentNumber?: string | null;
-          email: string;
-          expirationDate?: string | null;
-          eyeColor?: string | null;
-          firstName: string;
-          gender?: Database["public"]["Enums"]["Gender"] | null;
-          height?: string | null;
+          birth_date?: string | null;
+          created_at?: string;
+          first_name: string;
           id?: string;
-          issueDate?: string | null;
-          issuingState?: string | null;
-          lastName: string;
-          middleName?: string | null;
-          phone_number?: string | null;
-          weight?: string | null;
+          last_name: string;
         };
         Update: {
-          address?: Json | null;
-          company_id?: string | null;
-          dob?: string | null;
-          documentNumber?: string | null;
-          email?: string;
-          expirationDate?: string | null;
-          eyeColor?: string | null;
-          firstName?: string;
-          gender?: Database["public"]["Enums"]["Gender"] | null;
-          height?: string | null;
+          birth_date?: string | null;
+          created_at?: string;
+          first_name?: string;
           id?: string;
-          issueDate?: string | null;
-          issuingState?: string | null;
-          lastName?: string;
-          middleName?: string | null;
-          phone_number?: string | null;
-          weight?: string | null;
+          last_name?: string;
+        };
+        Relationships: [];
+      };
+      player_casino: {
+        Row: {
+          casino_id: string;
+          enrolled_at: string;
+          player_id: string;
+          status: string;
+        };
+        Insert: {
+          casino_id: string;
+          enrolled_at?: string;
+          player_id: string;
+          status?: string;
+        };
+        Update: {
+          casino_id?: string;
+          enrolled_at?: string;
+          player_id?: string;
+          status?: string;
         };
         Relationships: [
           {
-            foreignKeyName: "player_company_id_fkey";
-            columns: ["company_id"];
+            foreignKeyName: "player_casino_casino_id_fkey";
+            columns: ["casino_id"];
             isOneToOne: false;
-            referencedRelation: "company";
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_casino_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
             referencedColumns: ["id"];
           },
         ];
       };
       player_financial_transaction: {
         Row: {
-          cash_in: number | null;
-          chips_brought: number | null;
-          chips_taken: number | null;
+          amount: number;
+          casino_id: string;
           created_at: string;
-          event_type: Database["public"]["Enums"]["financial_event_type"];
+          gaming_day: string | null;
           id: string;
-          idempotency_key: string | null;
-          net_change: number | null;
-          notes: string | null;
           player_id: string;
           rating_slip_id: string | null;
-          reconciled_at: string | null;
-          reconciliation_status: Database["public"]["Enums"]["reconciliationstatus"];
-          transaction_time: string;
-          transaction_type: Database["public"]["Enums"]["transactiontype"];
-          updated_at: string;
-          version: number | null;
-          visit_id: string;
+          tender_type: string | null;
+          visit_id: string | null;
         };
         Insert: {
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
+          amount: number;
+          casino_id: string;
           created_at?: string;
-          event_type: Database["public"]["Enums"]["financial_event_type"];
+          gaming_day?: string | null;
           id?: string;
-          idempotency_key?: string | null;
-          net_change?: number | null;
-          notes?: string | null;
           player_id: string;
           rating_slip_id?: string | null;
-          reconciled_at?: string | null;
-          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
-          transaction_time?: string;
-          transaction_type: Database["public"]["Enums"]["transactiontype"];
-          updated_at?: string;
-          version?: number | null;
-          visit_id: string;
+          tender_type?: string | null;
+          visit_id?: string | null;
         };
         Update: {
-          cash_in?: number | null;
-          chips_brought?: number | null;
-          chips_taken?: number | null;
+          amount?: number;
+          casino_id?: string;
           created_at?: string;
-          event_type?: Database["public"]["Enums"]["financial_event_type"];
+          gaming_day?: string | null;
           id?: string;
-          idempotency_key?: string | null;
-          net_change?: number | null;
-          notes?: string | null;
           player_id?: string;
           rating_slip_id?: string | null;
-          reconciled_at?: string | null;
-          reconciliation_status?: Database["public"]["Enums"]["reconciliationstatus"];
-          transaction_time?: string;
-          transaction_type?: Database["public"]["Enums"]["transactiontype"];
-          updated_at?: string;
-          version?: number | null;
-          visit_id?: string;
+          tender_type?: string | null;
+          visit_id?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "player_financial_transaction_player_id_fkey";
             columns: ["player_id"];
@@ -1126,14 +663,7 @@ export type Database = {
             foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
             columns: ["rating_slip_id"];
             isOneToOne: false;
-            referencedRelation: "ratingslip";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
-            columns: ["rating_slip_id"];
-            isOneToOne: false;
-            referencedRelation: "ratingslip_with_financials";
+            referencedRelation: "rating_slip";
             referencedColumns: ["id"];
           },
           {
@@ -1147,314 +677,110 @@ export type Database = {
       };
       player_loyalty: {
         Row: {
-          created_at: string | null;
-          current_balance: number | null;
-          id: string;
-          lifetime_points: number | null;
+          balance: number;
+          casino_id: string;
           player_id: string;
-          tier: string;
-          tier_progress: number | null;
-          updated_at: string | null;
+          preferences: Json;
+          tier: string | null;
+          updated_at: string;
         };
         Insert: {
-          created_at?: string | null;
-          current_balance?: number | null;
-          id?: string;
-          lifetime_points?: number | null;
+          balance?: number;
+          casino_id: string;
           player_id: string;
-          tier?: string;
-          tier_progress?: number | null;
-          updated_at?: string | null;
+          preferences?: Json;
+          tier?: string | null;
+          updated_at?: string;
         };
         Update: {
-          created_at?: string | null;
-          current_balance?: number | null;
-          id?: string;
-          lifetime_points?: number | null;
+          balance?: number;
+          casino_id?: string;
           player_id?: string;
-          tier?: string;
-          tier_progress?: number | null;
-          updated_at?: string | null;
+          preferences?: Json;
+          tier?: string | null;
+          updated_at?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "player_loyalty_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "player_loyalty_player_id_fkey";
             columns: ["player_id"];
-            isOneToOne: true;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      player_notes: {
-        Row: {
-          category: string;
-          content: string;
-          created_at: string | null;
-          created_by: string;
-          id: string;
-          is_flagged: boolean;
-          is_private: boolean;
-          player_id: string;
-          priority: string;
-          tags: string[] | null;
-          title: string;
-          updated_at: string | null;
-          updated_by: string;
-        };
-        Insert: {
-          category?: string;
-          content: string;
-          created_at?: string | null;
-          created_by: string;
-          id?: string;
-          is_flagged?: boolean;
-          is_private?: boolean;
-          player_id: string;
-          priority?: string;
-          tags?: string[] | null;
-          title: string;
-          updated_at?: string | null;
-          updated_by: string;
-        };
-        Update: {
-          category?: string;
-          content?: string;
-          created_at?: string | null;
-          created_by?: string;
-          id?: string;
-          is_flagged?: boolean;
-          is_private?: boolean;
-          player_id?: string;
-          priority?: string;
-          tags?: string[] | null;
-          title?: string;
-          updated_at?: string | null;
-          updated_by?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "player_notes_created_by_fkey";
-            columns: ["created_by"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "player_notes_player_id_fkey";
-            columns: ["player_id"];
             isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
-          {
-            foreignKeyName: "player_notes_updated_by_fkey";
-            columns: ["updated_by"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
         ];
       };
-      player_preferences: {
+      rating_slip: {
         Row: {
-          accessibility_needs: Json | null;
-          communication_preferences: Json | null;
-          created_at: string | null;
-          id: string;
-          notes: string | null;
-          player_id: string;
-          preferred_games: string[] | null;
-          preferred_limits: Json | null;
-          preferred_tables: string[] | null;
-          special_requests: string[] | null;
-          updated_at: string | null;
-        };
-        Insert: {
-          accessibility_needs?: Json | null;
-          communication_preferences?: Json | null;
-          created_at?: string | null;
-          id?: string;
-          notes?: string | null;
-          player_id: string;
-          preferred_games?: string[] | null;
-          preferred_limits?: Json | null;
-          preferred_tables?: string[] | null;
-          special_requests?: string[] | null;
-          updated_at?: string | null;
-        };
-        Update: {
-          accessibility_needs?: Json | null;
-          communication_preferences?: Json | null;
-          created_at?: string | null;
-          id?: string;
-          notes?: string | null;
-          player_id?: string;
-          preferred_games?: string[] | null;
-          preferred_limits?: Json | null;
-          preferred_tables?: string[] | null;
-          special_requests?: string[] | null;
-          updated_at?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "player_preferences_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: true;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      player_recommendations: {
-        Row: {
-          created_at: string | null;
-          game_recommendations: Json | null;
-          id: string;
-          last_updated: string | null;
-          personalized_offers: Json | null;
-          player_id: string;
-          promotion_recommendations: Json | null;
-          table_recommendations: Json | null;
-        };
-        Insert: {
-          created_at?: string | null;
-          game_recommendations?: Json | null;
-          id?: string;
-          last_updated?: string | null;
-          personalized_offers?: Json | null;
-          player_id: string;
-          promotion_recommendations?: Json | null;
-          table_recommendations?: Json | null;
-        };
-        Update: {
-          created_at?: string | null;
-          game_recommendations?: Json | null;
-          id?: string;
-          last_updated?: string | null;
-          personalized_offers?: Json | null;
-          player_id?: string;
-          promotion_recommendations?: Json | null;
-          table_recommendations?: Json | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "player_recommendations_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: true;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      playercasino: {
-        Row: {
+          average_bet: number | null;
           casino_id: string;
+          end_time: string | null;
+          game_settings: Json | null;
+          id: string;
           player_id: string;
+          policy_snapshot: Json | null;
+          start_time: string;
+          status: string;
+          table_id: string | null;
+          visit_id: string | null;
         };
         Insert: {
+          average_bet?: number | null;
           casino_id: string;
+          end_time?: string | null;
+          game_settings?: Json | null;
+          id?: string;
           player_id: string;
+          policy_snapshot?: Json | null;
+          start_time?: string;
+          status?: string;
+          table_id?: string | null;
+          visit_id?: string | null;
         };
         Update: {
+          average_bet?: number | null;
           casino_id?: string;
+          end_time?: string | null;
+          game_settings?: Json | null;
+          id?: string;
           player_id?: string;
+          policy_snapshot?: Json | null;
+          start_time?: string;
+          status?: string;
+          table_id?: string | null;
+          visit_id?: string | null;
         };
         Relationships: [
           {
-            foreignKeyName: "playercasino_casino_id_fkey";
+            foreignKeyName: "rating_slip_casino_id_fkey";
             columns: ["casino_id"];
             isOneToOne: false;
             referencedRelation: "casino";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "playercasino_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      playerlanguage: {
-        Row: {
-          language_id: string;
-          player_id: string;
-        };
-        Insert: {
-          language_id: string;
-          player_id: string;
-        };
-        Update: {
-          language_id?: string;
-          player_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "playerlanguage_language_id_fkey";
-            columns: ["language_id"];
-            isOneToOne: false;
-            referencedRelation: "language";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "playerlanguage_player_id_fkey";
-            columns: ["player_id"];
-            isOneToOne: false;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      playerReward: {
-        Row: {
-          details: Json | null;
-          expires_at: string | null;
-          id: string;
-          issued_at: string;
-          player_id: string;
-          reward_id: string;
-          status: Database["public"]["Enums"]["RewardStatus"];
-          visit_id: string | null;
-        };
-        Insert: {
-          details?: Json | null;
-          expires_at?: string | null;
-          id?: string;
-          issued_at?: string;
-          player_id: string;
-          reward_id: string;
-          status?: Database["public"]["Enums"]["RewardStatus"];
-          visit_id?: string | null;
-        };
-        Update: {
-          details?: Json | null;
-          expires_at?: string | null;
-          id?: string;
-          issued_at?: string;
-          player_id?: string;
-          reward_id?: string;
-          status?: Database["public"]["Enums"]["RewardStatus"];
-          visit_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "playerReward_player_id_fkey";
+            foreignKeyName: "rating_slip_player_id_fkey";
             columns: ["player_id"];
             isOneToOne: false;
             referencedRelation: "player";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "playerReward_reward_id_fkey";
-            columns: ["reward_id"];
+            foreignKeyName: "rating_slip_table_id_fkey";
+            columns: ["table_id"];
             isOneToOne: false;
-            referencedRelation: "reward";
+            referencedRelation: "gaming_table";
             referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "playerReward_visit_id_fkey";
+            foreignKeyName: "rating_slip_visit_id_fkey";
             columns: ["visit_id"];
             isOneToOne: false;
             referencedRelation: "visit";
@@ -1462,414 +788,78 @@ export type Database = {
           },
         ];
       };
-      ratingslip: {
+      report: {
         Row: {
-          accumulated_seconds: number;
-          average_bet: number;
-          end_time: string | null;
-          game_settings: Json;
-          game_settings_id: string | null;
-          gaming_table_id: string | null;
-          id: string;
-          pause_intervals: Json | null;
-          playerId: string;
-          seat_number: number | null;
-          start_time: string;
-          status: Database["public"]["Enums"]["RatingSlipStatus"];
-          version: number;
-          visit_id: string | null;
-        };
-        Insert: {
-          accumulated_seconds?: number;
-          average_bet: number;
-          end_time?: string | null;
-          game_settings: Json;
-          game_settings_id?: string | null;
-          gaming_table_id?: string | null;
-          id?: string;
-          pause_intervals?: Json | null;
-          playerId: string;
-          seat_number?: number | null;
-          start_time: string;
-          status?: Database["public"]["Enums"]["RatingSlipStatus"];
-          version?: number;
-          visit_id?: string | null;
-        };
-        Update: {
-          accumulated_seconds?: number;
-          average_bet?: number;
-          end_time?: string | null;
-          game_settings?: Json;
-          game_settings_id?: string | null;
-          gaming_table_id?: string | null;
-          id?: string;
-          pause_intervals?: Json | null;
-          playerId?: string;
-          seat_number?: number | null;
-          start_time?: string;
-          status?: Database["public"]["Enums"]["RatingSlipStatus"];
-          version?: number;
-          visit_id?: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "ratingslip_game_settings_id_fkey";
-            columns: ["game_settings_id"];
-            isOneToOne: false;
-            referencedRelation: "gamesettings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ratingslip_gaming_table_id_fkey";
-            columns: ["gaming_table_id"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ratingslip_playerId_fkey";
-            columns: ["playerId"];
-            isOneToOne: false;
-            referencedRelation: "player";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ratingslip_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      Report: {
-        Row: {
-          format: Database["public"]["Enums"]["ReportFormat"];
-          generatedAt: string;
-          generatedById: string;
+          casino_id: string | null;
+          generated_at: string;
           id: string;
           name: string;
-          parameters: Json;
-          type: Database["public"]["Enums"]["ReportType"];
+          payload: Json;
         };
         Insert: {
-          format: Database["public"]["Enums"]["ReportFormat"];
-          generatedAt?: string;
-          generatedById: string;
+          casino_id?: string | null;
+          generated_at?: string;
           id?: string;
           name: string;
-          parameters: Json;
-          type: Database["public"]["Enums"]["ReportType"];
+          payload: Json;
         };
         Update: {
-          format?: Database["public"]["Enums"]["ReportFormat"];
-          generatedAt?: string;
-          generatedById?: string;
+          casino_id?: string | null;
+          generated_at?: string;
           id?: string;
           name?: string;
-          parameters?: Json;
-          type?: Database["public"]["Enums"]["ReportType"];
+          payload?: Json;
         };
         Relationships: [
           {
-            foreignKeyName: "Report_generatedById_fkey";
-            columns: ["generatedById"];
+            foreignKeyName: "report_casino_id_fkey";
+            columns: ["casino_id"];
             isOneToOne: false;
-            referencedRelation: "Staff";
+            referencedRelation: "casino";
             referencedColumns: ["id"];
           },
         ];
       };
-      reward: {
+      staff: {
         Row: {
           casino_id: string | null;
           created_at: string;
-          criteria: Json;
-          description: string | null;
-          expiry_duration: number | null;
+          email: string | null;
+          employee_id: string | null;
+          first_name: string;
           id: string;
-          issuance_limit: number | null;
-          name: string;
-          type: Database["public"]["Enums"]["RewardType"];
-          updated_at: string;
+          last_name: string;
+          role: Database["public"]["Enums"]["staff_role"];
+          status: Database["public"]["Enums"]["staff_status"];
         };
         Insert: {
           casino_id?: string | null;
           created_at?: string;
-          criteria: Json;
-          description?: string | null;
-          expiry_duration?: number | null;
+          email?: string | null;
+          employee_id?: string | null;
+          first_name: string;
           id?: string;
-          issuance_limit?: number | null;
-          name: string;
-          type: Database["public"]["Enums"]["RewardType"];
-          updated_at?: string;
+          last_name: string;
+          role?: Database["public"]["Enums"]["staff_role"];
+          status?: Database["public"]["Enums"]["staff_status"];
         };
         Update: {
           casino_id?: string | null;
           created_at?: string;
-          criteria?: Json;
-          description?: string | null;
-          expiry_duration?: number | null;
+          email?: string | null;
+          employee_id?: string | null;
+          first_name?: string;
           id?: string;
-          issuance_limit?: number | null;
-          name?: string;
-          type?: Database["public"]["Enums"]["RewardType"];
-          updated_at?: string;
+          last_name?: string;
+          role?: Database["public"]["Enums"]["staff_role"];
+          status?: Database["public"]["Enums"]["staff_status"];
         };
         Relationships: [
           {
-            foreignKeyName: "reward_casino_id_fkey";
+            foreignKeyName: "staff_casino_id_fkey";
             columns: ["casino_id"];
             isOneToOne: false;
             referencedRelation: "casino";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      RFIDChipMovement: {
-        Row: {
-          chipSerial: string;
-          eventType: Database["public"]["Enums"]["RFIDEvent"];
-          gamingTableId: string | null;
-          id: string;
-          location: string;
-          staffId: string | null;
-          timestamp: string;
-        };
-        Insert: {
-          chipSerial: string;
-          eventType: Database["public"]["Enums"]["RFIDEvent"];
-          gamingTableId?: string | null;
-          id?: string;
-          location: string;
-          staffId?: string | null;
-          timestamp?: string;
-        };
-        Update: {
-          chipSerial?: string;
-          eventType?: Database["public"]["Enums"]["RFIDEvent"];
-          gamingTableId?: string | null;
-          id?: string;
-          location?: string;
-          staffId?: string | null;
-          timestamp?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "RFIDChipMovement_gamingTableId_fkey";
-            columns: ["gamingTableId"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "RFIDChipMovement_staffId_fkey";
-            columns: ["staffId"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      schema_validation_alerts: {
-        Row: {
-          check_name: string;
-          created_at: string;
-          details: Json | null;
-          id: number;
-          message: string;
-          severity: string;
-        };
-        Insert: {
-          check_name: string;
-          created_at?: string;
-          details?: Json | null;
-          id?: number;
-          message: string;
-          severity: string;
-        };
-        Update: {
-          check_name?: string;
-          created_at?: string;
-          details?: Json | null;
-          id?: number;
-          message?: string;
-          severity?: string;
-        };
-        Relationships: [];
-      };
-      ShiftHandover: {
-        Row: {
-          fromDealerId: string;
-          gamingTableId: string;
-          id: string;
-          shiftEnd: string;
-          shiftStart: string;
-          signedByFrom: string;
-          signedByTo: string;
-          timestamp: string;
-          toDealerId: string;
-        };
-        Insert: {
-          fromDealerId: string;
-          gamingTableId: string;
-          id?: string;
-          shiftEnd: string;
-          shiftStart: string;
-          signedByFrom: string;
-          signedByTo: string;
-          timestamp?: string;
-          toDealerId: string;
-        };
-        Update: {
-          fromDealerId?: string;
-          gamingTableId?: string;
-          id?: string;
-          shiftEnd?: string;
-          shiftStart?: string;
-          signedByFrom?: string;
-          signedByTo?: string;
-          timestamp?: string;
-          toDealerId?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "ShiftHandover_fromDealerId_fkey";
-            columns: ["fromDealerId"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ShiftHandover_gamingTableId_fkey";
-            columns: ["gamingTableId"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ShiftHandover_toDealerId_fkey";
-            columns: ["toDealerId"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      Staff: {
-        Row: {
-          createdAt: string;
-          email: string;
-          firstName: string;
-          id: string;
-          lastName: string;
-          role: Database["public"]["Enums"]["StaffRole"];
-          updatedAt: string;
-        };
-        Insert: {
-          createdAt?: string;
-          email: string;
-          firstName: string;
-          id?: string;
-          lastName: string;
-          role: Database["public"]["Enums"]["StaffRole"];
-          updatedAt: string;
-        };
-        Update: {
-          createdAt?: string;
-          email?: string;
-          firstName?: string;
-          id?: string;
-          lastName?: string;
-          role?: Database["public"]["Enums"]["StaffRole"];
-          updatedAt?: string;
-        };
-        Relationships: [];
-      };
-      staff_permissions: {
-        Row: {
-          capabilities: string[];
-          created_at: string;
-          staff_id: string;
-          updated_at: string;
-        };
-        Insert: {
-          capabilities?: string[];
-          created_at?: string;
-          staff_id: string;
-          updated_at?: string;
-        };
-        Update: {
-          capabilities?: string[];
-          created_at?: string;
-          staff_id?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "staff_permissions_staff_id_fkey";
-            columns: ["staff_id"];
-            isOneToOne: true;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      TableInventorySlip: {
-        Row: {
-          closedAt: string | null;
-          closedById: string | null;
-          finalCount: Json | null;
-          gamingTableId: string;
-          id: string;
-          initialCount: Json;
-          openedAt: string;
-          openedById: string;
-          slipType: Database["public"]["Enums"]["InventorySlipType"];
-        };
-        Insert: {
-          closedAt?: string | null;
-          closedById?: string | null;
-          finalCount?: Json | null;
-          gamingTableId: string;
-          id?: string;
-          initialCount: Json;
-          openedAt?: string;
-          openedById: string;
-          slipType: Database["public"]["Enums"]["InventorySlipType"];
-        };
-        Update: {
-          closedAt?: string | null;
-          closedById?: string | null;
-          finalCount?: Json | null;
-          gamingTableId?: string;
-          id?: string;
-          initialCount?: Json;
-          openedAt?: string;
-          openedById?: string;
-          slipType?: Database["public"]["Enums"]["InventorySlipType"];
-        };
-        Relationships: [
-          {
-            foreignKeyName: "TableInventorySlip_closedById_fkey";
-            columns: ["closedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "TableInventorySlip_gamingTableId_fkey";
-            columns: ["gamingTableId"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "TableInventorySlip_openedById_fkey";
-            columns: ["openedById"];
-            isOneToOne: false;
-            referencedRelation: "Staff";
             referencedColumns: ["id"];
           },
         ];
@@ -1877,30 +867,24 @@ export type Database = {
       visit: {
         Row: {
           casino_id: string;
-          check_in_date: string;
-          check_out_date: string | null;
+          ended_at: string | null;
           id: string;
-          mode: Database["public"]["Enums"]["VisitMode"];
           player_id: string;
-          status: Database["public"]["Enums"]["VisitStatus"];
+          started_at: string;
         };
         Insert: {
           casino_id: string;
-          check_in_date: string;
-          check_out_date?: string | null;
+          ended_at?: string | null;
           id?: string;
-          mode?: Database["public"]["Enums"]["VisitMode"];
           player_id: string;
-          status?: Database["public"]["Enums"]["VisitStatus"];
+          started_at?: string;
         };
         Update: {
           casino_id?: string;
-          check_in_date?: string;
-          check_out_date?: string | null;
+          ended_at?: string | null;
           id?: string;
-          mode?: Database["public"]["Enums"]["VisitMode"];
           player_id?: string;
-          status?: Database["public"]["Enums"]["VisitStatus"];
+          started_at?: string;
         };
         Relationships: [
           {
@@ -1921,518 +905,52 @@ export type Database = {
       };
     };
     Views: {
-      ratingslip_with_financials: {
-        Row: {
-          average_bet: number | null;
-          cash_in: number | null;
-          chips_brought: number | null;
-          chips_taken: number | null;
-          end_time: string | null;
-          financial_transaction_count: number | null;
-          game_settings: Json | null;
-          gaming_table_id: string | null;
-          id: string | null;
-          last_transaction_at: string | null;
-          seat_number: number | null;
-          start_time: string | null;
-          visit_id: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "ratingslip_gaming_table_id_fkey";
-            columns: ["gaming_table_id"];
-            isOneToOne: false;
-            referencedRelation: "gamingtable";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "ratingslip_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      visit_financial_summary: {
-        Row: {
-          last_transaction_at: string | null;
-          total_cash_in: number | null;
-          total_chips_brought: number | null;
-          total_chips_taken: number | null;
-          transaction_count: number | null;
-          visit_id: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      visit_financial_summary_gd: {
-        Row: {
-          casino_id: string | null;
-          gaming_day: string | null;
-          gaming_day_start: string | null;
-          last_transaction_at: string | null;
-          timezone: string | null;
-          total_cash_in: number | null;
-          total_chips_brought: number | null;
-          total_chips_taken: number | null;
-          transaction_count: number | null;
-          visit_id: string | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey";
-            columns: ["visit_id"];
-            isOneToOne: false;
-            referencedRelation: "visit";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "visit_casino_id_fkey";
-            columns: ["casino_id"];
-            isOneToOne: false;
-            referencedRelation: "casino";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
+      [_ in never]: never;
     };
     Functions: {
-      check_phase_c1_cutover_gate: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          can_proceed: boolean;
-          failing_count: number;
-          gate_name: string;
-          status: string;
-        }[];
+      compute_gaming_day: {
+        Args: { gstart: string; ts: string };
+        Returns: string;
       };
-      close_player_session: {
+      rpc_create_financial_txn: {
         Args: {
-          p_chips_taken: number;
-          p_end_time?: string;
-          p_rating_slip_id: string;
-          p_visit_id: string;
-        };
-        Returns: undefined;
-      };
-      close_visit: {
-        Args: {
-          p_auto_close_slips?: boolean;
-          p_idempotency_key?: string;
-          p_staff_id: string;
-          p_visit_id: string;
-        };
-        Returns: Json;
-      };
-      convert_unrated_to_rated: {
-        Args: {
-          p_idempotency_key?: string;
-          p_seat_number?: number;
-          p_staff_id: string;
-          p_table_id: string;
-          p_visit_id: string;
-        };
-        Returns: Json;
-      };
-      create_performance_alert: {
-        Args: {
-          p_actual_value?: number;
-          p_alert_type: string;
-          p_message?: string;
-          p_metadata?: Json;
-          p_metric_name: string;
-          p_metric_type: string;
-          p_severity: string;
-          p_threshold_value?: number;
+          p_amount: number;
+          p_casino_id: string;
+          p_created_at?: string;
+          p_player_id: string;
+          p_rating_slip_id?: string;
+          p_tender_type?: string;
+          p_visit_id?: string;
         };
         Returns: string;
       };
-      gbt_bit_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_bool_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_bool_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_bpchar_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_bytea_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_cash_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_cash_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_date_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_date_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_decompress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_enum_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_enum_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_float4_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_float4_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_float8_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_float8_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_inet_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int2_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int2_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int4_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int4_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int8_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_int8_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_intv_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_intv_decompress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_intv_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_macad_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_macad_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_macad8_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_macad8_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_numeric_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_oid_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_oid_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_text_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_time_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_time_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_timetz_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_ts_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_ts_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_tstz_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_uuid_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_uuid_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_var_decompress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbt_var_fetch: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey_var_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey_var_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey16_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey16_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey2_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey2_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey32_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey32_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey4_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey4_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey8_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gbtreekey8_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      get_permissions_by_role: {
-        Args: { staff_role: string };
-        Returns: Json;
-      };
-      gtrgm_compress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gtrgm_decompress: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gtrgm_in: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      gtrgm_options: {
-        Args: { "": unknown };
-        Returns: undefined;
-      };
-      gtrgm_out: {
-        Args: { "": unknown };
-        Returns: unknown;
-      };
-      increment_player_loyalty: {
-        Args: { p_delta_points: number; p_player_id: string };
+      rpc_issue_mid_session_reward: {
+        Args: {
+          p_casino_id: string;
+          p_idempotency_key?: string;
+          p_player_id: string;
+          p_points: number;
+          p_rating_slip_id: string;
+          p_reason?: Database["public"]["Enums"]["loyalty_reason"];
+          p_staff_id: string;
+        };
         Returns: {
           balance_after: number;
-          balance_before: number;
-          current_balance: number;
-          lifetime_points: number;
-          player_id: string;
-          row_locked: boolean;
-          tier: string;
-          tier_after: string;
-          tier_before: string;
-          tier_progress: number;
-          updated_at: string;
+          ledger_id: string;
         }[];
-      };
-      jwt_get_role: {
-        Args: Record<PropertyKey, never>;
-        Returns: Database["public"]["Enums"]["StaffRole"];
-      };
-      populate_staff_claims: {
-        Args: { user_email: string };
-        Returns: Json;
-      };
-      refresh_user_claims: {
-        Args: { user_email: string };
-        Returns: Json;
-      };
-      resolve_performance_alert: {
-        Args: { alert_id: string };
-        Returns: boolean;
-      };
-      set_limit: {
-        Args: { "": number };
-        Returns: number;
-      };
-      show_limit: {
-        Args: Record<PropertyKey, never>;
-        Returns: number;
-      };
-      show_trgm: {
-        Args: { "": string };
-        Returns: string[];
-      };
-      start_rated_visit: {
-        Args: {
-          p_average_bet?: number;
-          p_casino_id: string;
-          p_game_settings_id?: string;
-          p_idempotency_key?: string;
-          p_player_id: string;
-          p_seat_number?: number;
-          p_staff_id: string;
-          p_table_id: string;
-        };
-        Returns: Json;
-      };
-      start_unrated_visit: {
-        Args: {
-          p_casino_id: string;
-          p_idempotency_key?: string;
-          p_player_id: string;
-          p_staff_id: string;
-        };
-        Returns: Json;
-      };
-      validate_mtl_patron_backfill: {
-        Args: Record<PropertyKey, never>;
-        Returns: undefined;
-      };
-      validate_visit_seat_availability: {
-        Args: {
-          p_exclude_player_id?: string;
-          p_seat_number: number;
-          p_table_id: string;
-        };
-        Returns: Json;
       };
     };
     Enums: {
-      AlertType: "CTR" | "MTL" | "VARIANCE" | "BREAK_OVERDUE" | "SECURITY";
-      AlertTypePerf:
-        | "threshold_breach"
-        | "sla_violation"
-        | "error_spike"
-        | "performance_degradation";
-      CountType: "INITIAL" | "PERIODIC" | "CLOSING";
-      financial_event_type:
-        | "CASH_IN"
-        | "CHIPS_BROUGHT"
-        | "CHIPS_TAKEN"
-        | "REVERSAL";
-      Gender: "M" | "F";
-      InventorySlipType: "OPEN" | "CLOSE";
-      KeyAction: "CHECKOUT" | "RETURN";
-      LedgerDirection: "CREDIT" | "DEBIT";
-      MetricType:
-        | "page_load"
-        | "api_response"
-        | "ui_interaction"
-        | "resource_load"
-        | "error";
-      MtlArea:
-        | "pit"
-        | "cage"
-        | "slot"
-        | "poker"
-        | "kiosk"
-        | "sportsbook"
-        | "other";
-      MtlDirection: "cash_in" | "cash_out";
-      RatingSlipStatus: "OPEN" | "CLOSED" | "PAUSED";
-      reconciliationstatus: "PENDING" | "RECONCILED" | "DISCREPANCY";
-      ReportFormat: "PDF" | "CSV" | "JSON";
-      ReportType: "SHIFT_SUMMARY" | "DAILY_OVERVIEW" | "CUSTOM";
-      RewardStatus: "PENDING" | "ISSUED" | "REDEEMED" | "EXPIRED";
-      RewardType: "MATCH_PLAY_LEVEL" | "MEAL_COMPLIMENTARY";
-      RFIDEvent: "IN" | "OUT";
-      Severity: "low" | "medium" | "high" | "critical";
-      StaffRole: "DEALER" | "SUPERVISOR" | "PIT_BOSS" | "AUDITOR";
-      TenderType:
-        | "cash"
-        | "cashier_check"
-        | "tito"
-        | "money_order"
-        | "chips"
-        | "other";
-      transactiontype: "DEPOSIT" | "WITHDRAWAL" | "EXCHANGE" | "ADJUSTMENT";
-      VisitMode: "RATED" | "UNRATED";
-      VisitStatus: "ONGOING" | "COMPLETED" | "CANCELED";
+      game_type: "blackjack" | "poker" | "roulette" | "baccarat";
+      loyalty_reason:
+        | "mid_session"
+        | "session_end"
+        | "manual_adjustment"
+        | "promotion"
+        | "correction";
+      staff_role: "dealer" | "pit_boss" | "admin";
+      staff_status: "active" | "inactive";
+      table_status: "inactive" | "active" | "closed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -2566,53 +1084,17 @@ export const Constants = {
   },
   public: {
     Enums: {
-      AlertType: ["CTR", "MTL", "VARIANCE", "BREAK_OVERDUE", "SECURITY"],
-      AlertTypePerf: [
-        "threshold_breach",
-        "sla_violation",
-        "error_spike",
-        "performance_degradation",
+      game_type: ["blackjack", "poker", "roulette", "baccarat"],
+      loyalty_reason: [
+        "mid_session",
+        "session_end",
+        "manual_adjustment",
+        "promotion",
+        "correction",
       ],
-      CountType: ["INITIAL", "PERIODIC", "CLOSING"],
-      financial_event_type: [
-        "CASH_IN",
-        "CHIPS_BROUGHT",
-        "CHIPS_TAKEN",
-        "REVERSAL",
-      ],
-      Gender: ["M", "F"],
-      InventorySlipType: ["OPEN", "CLOSE"],
-      KeyAction: ["CHECKOUT", "RETURN"],
-      LedgerDirection: ["CREDIT", "DEBIT"],
-      MetricType: [
-        "page_load",
-        "api_response",
-        "ui_interaction",
-        "resource_load",
-        "error",
-      ],
-      MtlArea: ["pit", "cage", "slot", "poker", "kiosk", "sportsbook", "other"],
-      MtlDirection: ["cash_in", "cash_out"],
-      RatingSlipStatus: ["OPEN", "CLOSED", "PAUSED"],
-      reconciliationstatus: ["PENDING", "RECONCILED", "DISCREPANCY"],
-      ReportFormat: ["PDF", "CSV", "JSON"],
-      ReportType: ["SHIFT_SUMMARY", "DAILY_OVERVIEW", "CUSTOM"],
-      RewardStatus: ["PENDING", "ISSUED", "REDEEMED", "EXPIRED"],
-      RewardType: ["MATCH_PLAY_LEVEL", "MEAL_COMPLIMENTARY"],
-      RFIDEvent: ["IN", "OUT"],
-      Severity: ["low", "medium", "high", "critical"],
-      StaffRole: ["DEALER", "SUPERVISOR", "PIT_BOSS", "AUDITOR"],
-      TenderType: [
-        "cash",
-        "cashier_check",
-        "tito",
-        "money_order",
-        "chips",
-        "other",
-      ],
-      transactiontype: ["DEPOSIT", "WITHDRAWAL", "EXCHANGE", "ADJUSTMENT"],
-      VisitMode: ["RATED", "UNRATED"],
-      VisitStatus: ["ONGOING", "COMPLETED", "CANCELED"],
+      staff_role: ["dealer", "pit_boss", "admin"],
+      staff_status: ["active", "inactive"],
+      table_status: ["inactive", "active", "closed"],
     },
   },
 } as const;

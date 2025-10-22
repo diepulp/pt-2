@@ -30,7 +30,7 @@ create table casino (
 create table casino_settings (
   id uuid primary key default gen_random_uuid(),
   casino_id uuid not null unique references casino(id) on delete cascade,
-  gaming_day_start interval not null default interval '06:00:00',
+  gaming_day_start_time time not null default time '06:00',
   timezone text not null default 'America/Los_Angeles',
   watchlist_floor numeric(12,2) not null default 3000,
   ctr_threshold numeric(12,2) not null default 10000,
@@ -48,6 +48,24 @@ create table staff (
   role staff_role not null default 'dealer',
   status staff_status not null default 'active',
   created_at timestamptz not null default now()
+);
+
+create table audit_log (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid references casino(id) on delete set null,
+  domain text not null,
+  actor_id uuid references staff(id) on delete set null,
+  action text not null,
+  details jsonb,
+  created_at timestamptz not null default now()
+);
+
+create table report (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid references casino(id) on delete cascade,
+  name text not null,
+  payload jsonb not null,
+  generated_at timestamptz not null default now()
 );
 
 -- Identity & session context
@@ -183,10 +201,12 @@ create table player_financial_transaction (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references player(id) on delete cascade,
   casino_id uuid not null references casino(id) on delete cascade,
+  visit_id uuid references visit(id) on delete set null,
+  rating_slip_id uuid references rating_slip(id) on delete set null,
   amount numeric not null,
   tender_type text,
   created_at timestamptz not null default now(),
-  gaming_day date not null
+  gaming_day date
 );
 
 create index ix_fin_txn_player_time
@@ -205,28 +225,66 @@ returns trigger language plpgsql as $$
 declare
   gstart interval;
 begin
-  select gaming_day_start into gstart
+  select coalesce(gaming_day_start_time::interval, interval '06:00:00') into gstart
     from casino_settings
    where casino_id = new.casino_id;
 
-  if gstart is null then
-    gstart := interval '06:00:00';
-  end if;
-
-  new.gaming_day := compute_gaming_day(new.created_at, gstart);
+  new.gaming_day := compute_gaming_day(coalesce(new.created_at, now()), gstart);
   return new;
 end;
 $$;
 
 create trigger trg_fin_gaming_day
-before insert or update on player_financial_transaction
-for each row execute function set_fin_txn_gaming_day();
+  before insert or update on player_financial_transaction
+  for each row execute function set_fin_txn_gaming_day();
+
+create or replace function rpc_create_financial_txn(
+  p_casino_id uuid,
+  p_player_id uuid,
+  p_amount numeric,
+  p_tender_type text default null,
+  p_created_at timestamptz default now(),
+  p_visit_id uuid default null,
+  p_rating_slip_id uuid default null
+) returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_id uuid;
+begin
+  insert into player_financial_transaction (
+    player_id,
+    casino_id,
+    visit_id,
+    rating_slip_id,
+    amount,
+    tender_type,
+    created_at
+  ) values (
+    p_player_id,
+    p_casino_id,
+    p_visit_id,
+    p_rating_slip_id,
+    p_amount,
+    p_tender_type,
+    coalesce(p_created_at, now())
+  )
+  returning id into v_id;
+
+  return v_id;
+end;
+$$;
 
 -- Compliance context
 create table mtl_entry (
   id uuid primary key default gen_random_uuid(),
   patron_uuid uuid not null references player(id) on delete cascade,
   casino_id uuid not null references casino(id) on delete cascade,
+  staff_id uuid references staff(id) on delete set null,
+  rating_slip_id uuid references rating_slip(id) on delete set null,
+  visit_id uuid references visit(id) on delete set null,
   amount numeric not null,
   direction text not null,
   area text,
@@ -240,6 +298,14 @@ create unique index ux_mtl_entry_idem
 
 create index ix_mtl_casino_time
   on mtl_entry (casino_id, created_at desc);
+
+create table mtl_audit_note (
+  id uuid primary key default gen_random_uuid(),
+  mtl_entry_id uuid not null references mtl_entry(id) on delete cascade,
+  staff_id uuid references staff(id) on delete set null,
+  note text not null,
+  created_at timestamptz not null default now()
+);
 
 -- Table context invariants
 create or replace function assert_table_context_casino()

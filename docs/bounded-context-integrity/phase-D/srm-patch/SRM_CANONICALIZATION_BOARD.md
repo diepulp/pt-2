@@ -9,9 +9,12 @@
 
 ## Schema Baseline
 - [x] Draft `supabase/migrations/00000000000000_baseline_srm.sql` from canonical DDL
-- [ ] Add `supabase/seed.sql` with minimal non-sensitive seed data
-- [ ] Validate baseline via `supabase db reset`
-  - Plan: once baseline migration is committed, run `supabase db reset` locally against the dev database, confirm migration applies cleanly, and capture output for SRM_CANONICAL_ROLLUP.md.
+- [x] Add `supabase/seed.sql` with minimal non-sensitive seed data (player + rating slip + finance/MTL workflow)
+- [x] Validate baseline via `supabase db reset`
+  - Result: ran `supabase db reset` after baseline commit; applied migration cleanly (see SRM_CANONICAL_ROLLUP.md for log). Next: re-run to confirm seeds load.
+- [ ] Regenerate types after Docker access (pending)
+- [x] Define `rpc_create_financial_txn` in SRM + baseline migration for gaming day trigger workflow
+- [x] Store casino gaming day boundary as `time` and adjust triggers/constraints for Supabase type alignment
 
 ## CI & Tooling
 - [ ] Implement `scripts/gen_types.sh` (types regeneration gate)

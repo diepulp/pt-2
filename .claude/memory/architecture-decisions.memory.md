@@ -12,6 +12,7 @@ This document summarizes the 5 major Architecture Decision Records (ADRs) that g
 
 **Quick Reference**:
 
+- ADR-000: SRM Canonical contract
 - ADR-001: Dual database type strategy (local + remote)
 - ADR-002: Test location standardization (root-level)
 - ADR-003: State management strategy (React Query + Zustand)
