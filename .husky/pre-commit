@@ -1,25 +1,8 @@
-# Run service layer anti-pattern checks first
-.husky/pre-commit-service-check.sh
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
 
-# Schema verification for database-related changes
-if git diff --cached --name-only | grep -qE "(migrations|types/database\.types\.ts|services/.*/(crud|queries|business)\.ts)"; then
-  echo "🔍 Schema-related changes detected - running verification..."
-  npm test schema-verification --silent || {
-    echo ""
-    echo "❌ Schema verification failed!"
-    echo ""
-    echo "This usually means:"
-    echo "  1. Database types are out of sync with schema"
-    echo "  2. Service DTOs reference non-existent fields"
-    echo ""
-    echo "To fix:"
-    echo "  npm run db:types"
-    echo "  npm test schema-verification"
-    echo ""
-    exit 1
-  }
-  echo "✅ Schema verification passed"
-fi
+# API route sanity checks (replaces legacy service guardrails)
+.husky/pre-commit-api-sanity.sh || exit 1
 
-# Run standard lint-staged
+# Run lint-staged for all staged files
 npm run lint-staged
