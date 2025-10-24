@@ -3,6 +3,7 @@ import { fileURLToPath } from 'url'
 
 import { FlatCompat } from '@eslint/eslintrc'
 
+import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js'
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -25,6 +26,7 @@ const eslintConfig = [
       '.cursor/**',
       'types/database.types.ts', // Generated file, exclude from linting
       'cypress/**/*.{js,ts}', // Exclude Cypress files from main config
+      'scripts/**', // Utility scripts are executed via node without linting
     ],
   },
   // Service layer specific configuration - PRD §3.3 Service Layer Standards
@@ -34,12 +36,15 @@ const eslintConfig = [
       'custom-rules': {
         rules: {
           'no-return-type-inference': noReturnTypeInference,
+          'no-manual-dto-interfaces': noManualDTOInterfaces,
         },
       },
     },
     rules: {
       // Enable custom rule for ReturnType detection
       'custom-rules/no-return-type-inference': 'error',
+      // Enable custom rule for manual DTO prevention (SRM canonical standard)
+      'custom-rules/no-manual-dto-interfaces': 'error',
       // Require explicit return types for service factories
       '@typescript-eslint/explicit-function-return-type': [
         'error',
@@ -59,6 +64,20 @@ const eslintConfig = [
             'ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name="ReturnType"]',
           message:
             'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3). Define explicit interface: export interface XService { methodName(): ReturnType }',
+        },
+        {
+          // Ban manual DTO interfaces (SRM canonical standard)
+          selector:
+            'ExportNamedDeclaration > TSInterfaceDeclaration[id.name=/.*DTO$/]',
+          message:
+            'ANTI-PATTERN: Manual DTO interfaces banned (SRM canonical). Use type alias: export type XCreateDTO = Pick<Database["public"]["Tables"]["x"]["Insert"], "field1" | "field2">',
+        },
+        {
+          // Ban DTO-like interfaces with common suffixes
+          selector:
+            'ExportNamedDeclaration > TSInterfaceDeclaration[id.name=/.*(?:Create|Update|Response|Request)DTO$/]',
+          message:
+            'ANTI-PATTERN: DTO interfaces must be type aliases derived from Database types. This ensures automatic schema sync.',
         },
       ],
 
