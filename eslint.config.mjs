@@ -228,10 +228,10 @@ const eslintConfig = [
       'react/no-unknown-property': 'off',
       '@next/next/no-img-element': 'off',
       'prettier/prettier': [
-        'warn',
+        'error',
         {
           trailingComma: 'all',
-          semi: false,
+          semi: true,
           tabWidth: 2,
           singleQuote: true,
           printWidth: 80,

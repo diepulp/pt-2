@@ -5,7 +5,8 @@
     "build": "next build",
     "start": "next start",
     "type-check": "tsc --noEmit --strict",
-    "lint": "eslint .",
+    "lint": "eslint . --fix",
+    "lint:check": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "lint-staged": "lint-staged",
     "db:types": "npx supabase gen types typescript --project-id vaicxfihdldgepzryhpd --schema public > types/remote/database.types.ts",
@@ -80,6 +81,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@modelcontextprotocol/server-sequential-thinking": "^2025.7.1",
     "@next/bundle-analyzer": "^15.5.4",
     "@playwright/test": "^1.56.0",
     "@tailwindcss/postcss": "^4.1.13",
