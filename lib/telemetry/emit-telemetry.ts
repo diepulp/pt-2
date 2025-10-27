@@ -11,7 +11,7 @@
  * 3. Future: OpenTelemetry integration for distributed tracing
  */
 
-import { getCorrelationId } from "@/lib/correlation";
+import { getCorrelationId } from '@/lib/correlation';
 
 /**
  * Canonical telemetry event schema
@@ -24,7 +24,7 @@ export interface TelemetryEvent {
   playerId?: string; // Player UUID (if applicable)
   staffId?: string; // Staff UUID (if applicable)
   metadata?: Record<string, unknown>; // Additional context
-  severity?: "debug" | "info" | "warn" | "error"; // Event severity
+  severity?: 'debug' | 'info' | 'warn' | 'error'; // Event severity
 }
 
 /**
@@ -58,22 +58,22 @@ export function emitTelemetry(event: TelemetryEvent): void {
     ...event,
     correlationId: event.correlationId ?? getCorrelationId(),
     timestamp: event.timestamp || new Date().toISOString(),
-    severity: event.severity || "info",
+    severity: event.severity || 'info',
   };
 
   // Development: Structured console logging
-  if (process.env.NODE_ENV !== "production") {
-    const logLevel = enrichedEvent.severity || "info";
+  if (process.env.NODE_ENV !== 'production') {
+    const logLevel = enrichedEvent.severity || 'info';
 
     // Use appropriate console method based on severity
-    if (logLevel === "error") {
-      console.error("[TELEMETRY]", JSON.stringify(enrichedEvent, null, 2));
-    } else if (logLevel === "warn") {
-      console.warn("[TELEMETRY]", JSON.stringify(enrichedEvent, null, 2));
+    if (logLevel === 'error') {
+      console.error('[TELEMETRY]', JSON.stringify(enrichedEvent, null, 2));
+    } else if (logLevel === 'warn') {
+      console.warn('[TELEMETRY]', JSON.stringify(enrichedEvent, null, 2));
     } else {
       // info/debug - structured logging for observability
       // eslint-disable-next-line no-console
-      console.log("[TELEMETRY]", JSON.stringify(enrichedEvent, null, 2));
+      console.log('[TELEMETRY]', JSON.stringify(enrichedEvent, null, 2));
     }
     return;
   }
@@ -84,7 +84,7 @@ export function emitTelemetry(event: TelemetryEvent): void {
 
   // Fallback: console logging for production (minimal impact)
   // eslint-disable-next-line no-console
-  console.log("[TELEMETRY]", JSON.stringify(enrichedEvent));
+  console.log('[TELEMETRY]', JSON.stringify(enrichedEvent));
 }
 
 /**
@@ -106,6 +106,6 @@ export function emitLoyaltyEvent(
     correlationId: getCorrelationId(),
     playerId,
     metadata,
-    severity: "info",
+    severity: 'info',
   });
 }

@@ -395,6 +395,11 @@ $ npx supabase db reset
 - [Phase A Sign-Off](./phase-A/PHASE_A_SIGNOFF.md) - Documentation & validation (v1.1.0)
 - [Phase B Sign-Off](./phase-B/PHASE_B_COMPLETION_SIGNOFF.md) - Financial boundaries (v1.0.0)
 - [Phase C Sign-Off](./phase-C/PHASE_C_SIGNOFF.md) - Type integrity (v1.0.0)
+- [Phase D Sign-Off](./phase-D/PHASE_D_SIGNOFF.md) - Canonical SRM & baseline migration (v1.0.0)
+
+### Post-Canonization Next Steps
+
+- [SRM Post-Canonization Next Steps](./phase-D/POST_CANONIZATION_NEXT_STEPS.md) - Service refactors, downstream consumers, and type-system tasks to complete after Phase D.
 
 ### Canonical Matrix
 

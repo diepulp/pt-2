@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   ratingSlipId: z.string().uuid(),
@@ -18,18 +18,18 @@ const routeParamsSchema = z.object({
 const ratingSlipUpdateSchema = z.object({
   average_bet: z.number().min(0).nullable().optional(),
   end_time: z.string().optional(),
-  status: z.enum(["open", "paused", "closed"]).optional(),
-  policy_snapshot: z.record(z.any()).nullable().optional(),
+  status: z.enum(['open', 'paused', 'closed']).optional(),
+  policy_snapshot: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { ratingSlipId: string } },
+  segmentData: { params: Promise<{ ratingSlipId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const idempotencyKey = requireIdempotencyKey(request);
     void idempotencyKey; // TODO: Use when invoking RatingSlipService.update
 

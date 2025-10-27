@@ -1,25 +1,21 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
 
 /**
- * React Query client configuration for PT-2
- *
- * Configuration rationale:
- * - staleTime: 5 minutes - balances freshness with reduced network requests
- * - gcTime: 30 minutes - keeps warm caches available while bounding memory
- * - refetchOnWindowFocus: false - prevents unnecessary refetches in casino context
- * - queries.retry: 1 - single retry for transient failures
- * - mutations.retry: 0 - no retries for mutations to prevent duplicate operations
+ * Returns a QueryClient configured with the canonical defaults.
+ * Keep this in sync with docs/patterns/HOOKS_STANDARD.md.
  */
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 5, // 5 minutes
-      gcTime: 1000 * 60 * 30, // 30 minutes
-      refetchOnWindowFocus: false,
-      retry: 1,
+export const makeQueryClient = () =>
+  new QueryClient({
+    defaultOptions: {
+      queries: {
+        staleTime: 300_000, // 5 minutes
+        gcTime: 30 * 60_000, // 30 minutes
+        retry: 2,
+      },
+      mutations: {
+        retry: 0,
+      },
     },
-    mutations: {
-      retry: 0,
-    },
-  },
-});
+  });
+
+export const queryClient = makeQueryClient();

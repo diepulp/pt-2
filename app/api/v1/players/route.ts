@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const playerCreateSchema = z.object({
   first_name: z.string().min(1),
@@ -18,7 +18,7 @@ const playerCreateSchema = z.object({
   casino_enrollment: z
     .object({
       casino_id: z.string().uuid(),
-      status: z.enum(["active", "inactive"]).default("active"),
+      status: z.enum(['active', 'inactive']).default('active'),
     })
     .optional(),
 });

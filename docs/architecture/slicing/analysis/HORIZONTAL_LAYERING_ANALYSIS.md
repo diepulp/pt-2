@@ -1472,7 +1472,7 @@ Week 9+: Remaining Domains & Optimization
 - **Status**: Recommended for Adoption
 - **Review Date**: 2025-10-23 (2 weeks)
 - **Related Documents**:
-  - `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+  - `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
   - `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
   - `docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md`
   - `docs/architecture/FEATURE_BASED_HORIZONTAL_LAYERING_ANALYSIS.md` (original)

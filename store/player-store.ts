@@ -1,19 +1,19 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
 /**
  * Player status filter options
  */
-type PlayerStatusFilter = "all" | "active" | "inactive" | "vip";
+type PlayerStatusFilter = 'all' | 'active' | 'inactive' | 'vip';
 
 /**
  * Sort field options for player list
  */
-type PlayerSortField = "name" | "lastVisit" | "totalPoints" | "tier";
+type PlayerSortField = 'name' | 'lastVisit' | 'totalPoints' | 'tier';
 
 /**
  * Sort direction
  */
-type SortDirection = "asc" | "desc";
+type SortDirection = 'asc' | 'desc';
 
 /**
  * Player UI Store Interface
@@ -33,7 +33,7 @@ interface PlayerUIStore {
   itemsPerPage: number;
 
   // View mode state
-  viewMode: "grid" | "list" | "table";
+  viewMode: 'grid' | 'list' | 'table';
 
   // Selected players (for bulk actions)
   selectedPlayerIds: Set<string>;
@@ -51,7 +51,7 @@ interface PlayerUIStore {
   setItemsPerPage: (items: number) => void;
 
   // View mode actions
-  setViewMode: (mode: "grid" | "list" | "table") => void;
+  setViewMode: (mode: 'grid' | 'list' | 'table') => void;
 
   // Selection actions
   togglePlayerSelection: (playerId: string) => void;
@@ -66,13 +66,13 @@ interface PlayerUIStore {
  * Initial state values
  */
 const initialState = {
-  searchQuery: "",
-  statusFilter: "all" as PlayerStatusFilter,
-  sortBy: "lastVisit" as PlayerSortField,
-  sortDirection: "desc" as SortDirection,
+  searchQuery: '',
+  statusFilter: 'all' as PlayerStatusFilter,
+  sortBy: 'lastVisit' as PlayerSortField,
+  sortDirection: 'desc' as SortDirection,
   currentPage: 1,
   itemsPerPage: 25,
-  viewMode: "table" as "grid" | "list" | "table",
+  viewMode: 'table' as 'grid' | 'list' | 'table',
   selectedPlayerIds: new Set<string>(),
 };
 
@@ -106,19 +106,19 @@ export const usePlayerUIStore = create<PlayerUIStore>((set) => ({
       // If same field, toggle direction instead
       if (state.sortBy === field) {
         return {
-          sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
+          sortDirection: state.sortDirection === 'asc' ? 'desc' : 'asc',
         };
       }
       // New field, default to descending
       return {
         sortBy: field,
-        sortDirection: "desc",
+        sortDirection: 'desc',
       };
     }),
 
   toggleSortDirection: () =>
     set((state) => ({
-      sortDirection: state.sortDirection === "asc" ? "desc" : "asc",
+      sortDirection: state.sortDirection === 'asc' ? 'desc' : 'asc',
     })),
 
   // Pagination actions

@@ -1,16 +1,16 @@
-'use client'
+'use client';
 
-import * as SwitchPrimitives from '@radix-ui/react-switch'
-import * as React from 'react'
+import * as SwitchPrimitives from '@radix-ui/react-switch';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 const Switch = ({
   ref,
   className,
   ...props
 }: React.ComponentPropsWithoutRef<typeof SwitchPrimitives.Root> & {
-  ref?: React.Ref<React.ElementRef<typeof SwitchPrimitives.Root>>
+  ref?: React.Ref<React.ElementRef<typeof SwitchPrimitives.Root>>;
 }) => (
   <SwitchPrimitives.Root
     className={cn(
@@ -26,7 +26,7 @@ const Switch = ({
       )}
     />
   </SwitchPrimitives.Root>
-)
-Switch.displayName = SwitchPrimitives.Root.displayName
+);
+Switch.displayName = SwitchPrimitives.Root.displayName;
 
-export { Switch }
+export { Switch };

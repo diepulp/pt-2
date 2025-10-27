@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -7,17 +7,17 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const ratingSlipCreateSchema = z.object({
   player_id: z.string().uuid(),
   casino_id: z.string().uuid(),
   visit_id: z.string().uuid().optional(),
   table_id: z.string().uuid().optional(),
-  game_settings: z.record(z.any()).nullable().optional(),
+  game_settings: z.record(z.string(), z.any()).nullable().optional(),
   average_bet: z.number().min(0).nullable().optional(),
-  policy_snapshot: z.record(z.any()).nullable().optional(),
+  policy_snapshot: z.record(z.string(), z.any()).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {

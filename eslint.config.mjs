@@ -1,17 +1,17 @@
-import { dirname } from 'path'
-import { fileURLToPath } from 'url'
+import { dirname } from 'path';
+import { fileURLToPath } from 'url';
 
-import { FlatCompat } from '@eslint/eslintrc'
+import { FlatCompat } from '@eslint/eslintrc';
 
-import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js'
-import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js'
+import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
+import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const compat = new FlatCompat({
   baseDirectory: __dirname,
-})
+});
 
 const eslintConfig = [
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
@@ -266,6 +266,6 @@ const eslintConfig = [
       },
     },
   }),
-]
+];
 
-export default eslintConfig
+export default eslintConfig;

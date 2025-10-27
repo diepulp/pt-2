@@ -683,10 +683,10 @@ Context engineering with scope-based loading:
 - GitHub Blog: "Building Reliable AI Workflows with Agentic Primitives"
 
 ### PT-2 Documentation
-- `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` - Complete PRD
-- `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md` - Architecture framework
+- `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` - Complete PRD
+- `20-architecture/BALANCED_ARCHITECTURE_QUICK.md` - Architecture framework
 - `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md` - Service boundaries
-- `docs/patterns/OVER_ENGINEERING_GUARDRAIL.md` - Scope prevention
+- `70-governance/OVER_ENGINEERING_GUARDRAIL.md` - Scope prevention
 - `docs/adr/*.md` - Architecture Decision Records
 
 ---

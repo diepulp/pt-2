@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -7,8 +7,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const midSessionRewardSchema = z.object({
   casino_id: z.string().uuid(),
@@ -18,11 +18,11 @@ const midSessionRewardSchema = z.object({
   points: z.number().int().positive(),
   reason: z
     .enum([
-      "mid_session",
-      "session_end",
-      "manual_adjustment",
-      "promotion",
-      "correction",
+      'mid_session',
+      'session_end',
+      'manual_adjustment',
+      'promotion',
+      'correction',
     ])
     .optional(),
   idempotency_key: z.string().optional(),

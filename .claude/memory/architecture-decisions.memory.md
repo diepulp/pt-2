@@ -1,7 +1,7 @@
 # Architecture Decisions
 
 **Last Updated**: 2025-10-17
-**Source**: ADRs in `docs/adr/`
+**Source**: ADRs in `docs/80-adrs`
 **Purpose**: Key architectural decisions and their rationale
 
 ---
@@ -12,7 +12,7 @@ This document summarizes the 5 major Architecture Decision Records (ADRs) that g
 
 **Quick Reference**:
 
-- ADR-000: SRM Canonical contract
+  [ADR-000: SRM Canonical contract](@/docs/80-adrs/ADR-000-matrix-as-contract.md)
 - ADR-001: Dual database type strategy (local + remote)
 - ADR-002: Test location standardization (root-level)
 - ADR-003: State management strategy (React Query + Zustand)

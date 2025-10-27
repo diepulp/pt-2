@@ -1,17 +1,17 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
   errorResponse,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const tableQuerySchema = z.object({
   casino_id: z.string().uuid(),
-  status: z.enum(["inactive", "active", "closed"]).optional(),
+  status: z.enum(['inactive', 'active', 'closed']).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });

@@ -538,7 +538,7 @@ Before proceeding to Phase 1 (Memory Extraction):
   "description": "Service layer pattern inconsistency",
   "sources": [
     {
-      "file": "docs/patterns/SERVICE_TEMPLATE.md",
+      "file": "70-governance/SERVICE_TEMPLATE.md",
       "line": 45,
       "statement": "Services can be implemented as classes or functions",
       "date_modified": "2025-09-15"

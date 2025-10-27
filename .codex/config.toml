@@ -1,65 +1,58 @@
 model = "gpt-5-codex"
-# ~/.codex/config.toml  (or $CODEX_HOME/config.toml)
 
-# Example: set your default trust level for the current project.
-# Codex doesn't have nested per-project blocks; keep this file per project by using $CODEX_HOME.
-
+# Mark this workspace trusted (project-local config means you usually don't need a projects map)
 [projects."/home/diepulp/projects/pt-2"]
 trust_level = "trusted"
 
+[sandbox]
+mode = "workspace-write"
+# Everything MCP can read must be listed here:
+allowed_paths   = ["/home/diepulp/projects/pt-2"]
+writable_roots  = ["/home/diepulp/projects/pt-2"]
+
+[approvals]
+policy = "on-request"
 
 # --- MCP servers (stdio) ---
 
+# Useful thinking tools
 [mcp_servers.sequential_thinking]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+command = "/home/diepulp/projects/pt-2/node_modules/.bin/mcp-server-sequential-thinking"
+args    = []
 
-
-#[mcp_servers.puppeteer]
-#command = "npx"
-#args    = ["-y", "@modelcontextprotocol/server-puppeteer"]
-
-#[mcp_servers.magic]
-#command = "npx"
-#args    = ["-y", "@magicuidesign/mcp@latest"]
-
-[mcp_servers.playwright]
-command = "npx"
-args = ["-y", "@playwright/mcp@latest"]
-
-#[mcp_servers.supabase]
-#command = "npx"
-#args    = ["-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref=vaicxfihdldgepzryhpd"]
-# Prefer passing secrets via environment when launching Codex (see notes below)
-## [mcp_servers.supabase.env]
-##[mcp_servers.supabase.env]
-SUPABASE_ACCESS_TOKEN = "${SUPABASE_ACCESS_TOKEN}"
-
-
+# Filesystem **rooted in this project**
 
 [mcp_servers.filesystem]
 command = "npx"
-args    = ["-y", "@modelcontextprotocol/server-filesystem", "/home/diepulp/pt-1"]
+args    = ["-y", "@modelcontextprotocol/server-filesystem", "/home/diepulp/projects/pt-2"]
 
-# --- Context7 (HTTP/SSE) ---
-# Codex can't talk HTTP/SSE MCP directly. Use an stdio<->SSE proxy like `mcp-proxy`.
-# Replace the server below with the proxy invocation:
-#   npm i -g mcp-proxy   # once
+# Playwright (optional)
+#[mcp_servers.playwright]
+#command = "npx"
+#args    = ["@playwright/mcp@latest"]
+
+# Shadcn helper (optional)
+
+#[mcp_servers.shadcn]
+#command = "npx"
+#args    = ["shadcn@latest", "mcp"]
+
+# Context7 via npx (works if your proxy or package exposes stdio)
 
 [mcp_servers.context7]
-args = ["-y", "@upstash/context7-mcp"]
-command = "npx"
-# If the endpoint is plain SSE (not StreamableHTTP), drop the --transport flag.
-# To add auth, use: ... "--headers", "Authorization", "Bearer <TOKEN>"
+command = "/home/diepulp/.nvm/versions/node/v24.4.1/bin/context7-mcp"
+args    = []
 
-[mcp_servers.shadcn]
-command = "npx"
-args = ["-y", shadcn@latest", "mcp"]
+# Supabase MCP (disabled by default: uncomment to use)
 
-#[mcp_servers.supabase]
-#command = "npx"
-#args    = ["-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref=vaicxfihdldgepzryhpd"]
-#Prefer passing secrets via environment when launching Codex (see notes below)
-## [mcp_servers.supabase.env]
-##[mcp_servers.supabase.env]
-#SUPABASE_ACCESS_TOKEN = "${SUPABASE_ACCESS_TOKEN}"
+# [mcp_servers.supabase]
+# command = "npx"
+# args    = ["-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref=vaicxfihdldgepzryhpd"]
+# [mcp_servers.supabase.env]
+# SUPABASE_ACCESS_TOKEN = "${SUPABASE_ACCESS_TOKEN}"
+
+# SERENA
+
+[mcp_servers.serena]
+command = "uvx"
+args = ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "codex"]

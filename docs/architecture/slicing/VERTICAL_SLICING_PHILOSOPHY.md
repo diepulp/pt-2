@@ -81,7 +81,7 @@ Phase 1	Identify CRUD endpoints lacking vertical integration	Inventory document 
 Phase 2	For each CRUD function, create minimal server action + hook	1:1 mapping coverage
 Phase 3	Incrementally introduce UI components consuming hooks	MVP-visible features
 Phase 4	Add slice-level integration tests	Cohesion validation
-Phase 5	Document and standardize patterns	Update this doc and `docs/patterns/SERVICE_TEMPLATE.md`
+Phase 5	Document and standardize patterns	Update this doc and `70-governance/SERVICE_TEMPLATE.md`
 
 11. Anti-Patterns
 

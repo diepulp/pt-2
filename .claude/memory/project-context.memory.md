@@ -10,7 +10,7 @@
 
 ### Core Framework
 
-- Next.js 14 (App Router)
+- Next.js 15 (App Router)
 - TypeScript (strict mode)
 - React 19
 
@@ -36,7 +36,7 @@
 ### UI
 
 - shadcn/ui + Radix UI primitives
-- Tailwind CSS
+- Tailwind CSS v4
 - HeroUI components
 
 ### Build & Tooling

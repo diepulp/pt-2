@@ -1810,9 +1810,9 @@ it('user can check in, create rating slip, record transaction, and check out', a
 
 - **Service Responsibility Matrix**: `/home/diepulp/projects/pt-2/docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md`
 - **Service Layer Architecture**: `/home/diepulp/projects/pt-2/docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
-- **Canonical Blueprint PRD**: `/home/diepulp/projects/pt-2/docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+- **Canonical Blueprint PRD**: `/home/diepulp/projects/pt-2/10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
 - **Vertical Slicing Philosophy**: `/home/diepulp/projects/pt-2/docs/architecture/slicing/VERTICAL_SLICING_PHILOSOPHY.md`
-- **Service Template**: `/home/diepulp/projects/pt-2/docs/patterns/SERVICE_TEMPLATE.md`
+- **Service Template**: `/home/diepulp/projects/pt-2/70-governance/SERVICE_TEMPLATE.md`
 
 ---
 

@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic';
 
-import { Navbar } from "./navbar";
-import { HeroSection } from "./sections/hero-section";
+import { Navbar } from './navbar';
+import { HeroSection } from './sections/hero-section';
 
 // Lazy load below-the-fold sections with no SSR
 const FeaturesSection = dynamic(
   () =>
-    import("./sections/features-section").then((mod) => ({
+    import('./sections/features-section').then((mod) => ({
       default: mod.FeaturesSection,
     })),
   {
@@ -19,7 +19,7 @@ const FeaturesSection = dynamic(
 
 const BenefitsSection = dynamic(
   () =>
-    import("./sections/benefits-section").then((mod) => ({
+    import('./sections/benefits-section').then((mod) => ({
       default: mod.BenefitsSection,
     })),
   {
@@ -30,7 +30,7 @@ const BenefitsSection = dynamic(
 
 const TestimonialsSection = dynamic(
   () =>
-    import("./sections/testimonials-section").then((mod) => ({
+    import('./sections/testimonials-section').then((mod) => ({
       default: mod.TestimonialsSection,
     })),
   {
@@ -41,7 +41,7 @@ const TestimonialsSection = dynamic(
 
 const PricingSection = dynamic(
   () =>
-    import("./sections/pricing-section").then((mod) => ({
+    import('./sections/pricing-section').then((mod) => ({
       default: mod.PricingSection,
     })),
   {
@@ -52,7 +52,7 @@ const PricingSection = dynamic(
 
 const ContactSection = dynamic(
   () =>
-    import("./sections/contact-section").then((mod) => ({
+    import('./sections/contact-section').then((mod) => ({
       default: mod.ContactSection,
     })),
   {
@@ -62,7 +62,7 @@ const ContactSection = dynamic(
 );
 
 const Footer = dynamic(
-  () => import("./footer").then((mod) => ({ default: mod.Footer })),
+  () => import('./footer').then((mod) => ({ default: mod.Footer })),
   {
     ssr: false,
     loading: () => <div className="h-32" />,

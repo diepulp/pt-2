@@ -46,3 +46,6 @@ next-env.d.ts
 
 # reference
 # /reference-pt-1
+
+# OpenAPI generated clients
+/generated

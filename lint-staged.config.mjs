@@ -16,17 +16,17 @@ export default {
       'package.json',
       'package-lock.json',
       'components/landing-page/ui/', // shadcn/ui generated components
-    ]
+    ];
 
     const filteredFiles = filenames.filter(
       (file) => !ignoredPatterns.some((pattern) => file.includes(pattern)),
-    )
+    );
 
-    if (filteredFiles.length === 0) return []
+    if (filteredFiles.length === 0) return [];
 
     return [
       `eslint --fix ${filteredFiles.join(' ')}`,
       `prettier --write ${filteredFiles.join(' ')}`,
-    ]
+    ];
   },
-}
+};

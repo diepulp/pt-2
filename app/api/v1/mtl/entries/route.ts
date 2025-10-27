@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const mtlEntryCreateSchema = z.object({
   casino_id: z.string().uuid(),
@@ -18,7 +18,7 @@ const mtlEntryCreateSchema = z.object({
   rating_slip_id: z.string().uuid().optional(),
   visit_id: z.string().uuid().optional(),
   amount: z.number(),
-  direction: z.enum(["in", "out"]),
+  direction: z.enum(['in', 'out']),
   area: z.string().optional(),
   idempotency_key: z.string().optional(),
   created_at: z.string().optional(),

@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 /**
  * Test page to verify React Query setup
@@ -9,10 +9,10 @@ import { useQuery } from "@tanstack/react-query";
  */
 export default function ReactQueryTestPage() {
   const { data, isLoading, error } = useQuery({
-    queryKey: ["test-query"],
+    queryKey: ['test-query'],
     queryFn: async () => {
       await new Promise((resolve) => setTimeout(resolve, 500));
-      return "Hello React Query!";
+      return 'Hello React Query!';
     },
   });
 

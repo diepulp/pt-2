@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   entryId: z.string().uuid(),
@@ -22,12 +22,12 @@ const mtlAuditNoteCreateSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  context: { params: { entryId: string } },
+  segmentData: { params: Promise<{ entryId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const idempotencyKey = requireIdempotencyKey(request);
     void idempotencyKey; // TODO: Use when invoking MtlService.appendAuditNote
 

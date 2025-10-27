@@ -1460,7 +1460,7 @@ Week 4: "MVP DEPLOYED TO PRODUCTION" ✅ (users can use it)
 ## Appendix B: References
 
 **Internal Documentation**:
-- `/home/diepulp/projects/pt-2/docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+- `/home/diepulp/projects/pt-2/10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
 - `/home/diepulp/projects/pt-2/docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
 - `/home/diepulp/projects/pt-2/docs/phase-2/SERVICE_RESPONSIBILITY_MATRIX.md`
 - `/home/diepulp/projects/pt-2/docs/roadmap/NEXT_STEPS_REPORT.md`

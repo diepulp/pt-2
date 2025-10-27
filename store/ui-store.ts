@@ -1,9 +1,9 @@
-import { create } from "zustand";
+import { create } from 'zustand';
 
 /**
  * Modal configuration types
  */
-type ModalType = "create" | "edit" | "delete" | "confirm" | null;
+type ModalType = 'create' | 'edit' | 'delete' | 'confirm' | null;
 
 interface ModalState {
   isOpen: boolean;
@@ -26,7 +26,7 @@ interface UIStore {
   toastQueue: Array<{
     id: string;
     message: string;
-    type: "success" | "error" | "info";
+    type: 'success' | 'error' | 'info';
   }>;
 
   // Actions
@@ -34,7 +34,7 @@ interface UIStore {
   closeModal: () => void;
   toggleSidebar: () => void;
   setSidebarOpen: (open: boolean) => void;
-  addToast: (message: string, type: "success" | "error" | "info") => void;
+  addToast: (message: string, type: 'success' | 'error' | 'info') => void;
   removeToast: (id: string) => void;
 }
 

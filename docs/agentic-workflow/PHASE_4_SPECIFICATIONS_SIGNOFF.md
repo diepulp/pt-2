@@ -497,7 +497,7 @@ Create a **specification blueprint system** that produces unambiguous, implement
 ```markdown
 ## References
 - **Service Template**: `docs/patterns/SERVICE_TEMPLATE_QUICK.md`
-- **Architecture**: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` §3.3
+- **Architecture**: `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` §3.3
 - **Related ADRs**: ADR-002-service-layer-architecture
 ```
 
@@ -780,7 +780,7 @@ Phase 4 (Specification Files) is **COMPLETE** and **APPROVED** for production us
 - **Service Template**: `docs/patterns/SERVICE_TEMPLATE_QUICK.md`
 - **Anti-Patterns**: `docs/patterns/ANTI_PATTERNS_CHECKLIST.md`
 - **Service Matrix**: `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md`
-- **ADR Template**: `docs/adr/ADR-000-template.md`
+- **ADR Template**: `80-adrs/ADR-000-template.md`
 
 ### External Resources
 

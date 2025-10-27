@@ -11,7 +11,7 @@ export {
   selectModal,
   selectSidebarOpen,
   selectToastQueue,
-} from "./ui-store";
+} from './ui-store';
 
 // Player UI Store
 export {
@@ -21,4 +21,4 @@ export {
   selectPlayerPagination,
   selectPlayerSelection,
   selectPlayerViewMode,
-} from "./player-store";
+} from './player-store';

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { Card, CardBody, CardHeader } from "@heroui/card";
-import { Chip } from "@heroui/chip";
+import { Card, CardBody, CardHeader } from '@heroui/card';
+import { Chip } from '@heroui/chip';
 import {
   BarChart3,
   Calendar,
@@ -11,74 +11,74 @@ import {
   Sparkles,
   Trophy,
   Users,
-} from "lucide-react";
-import { motion, useInView } from "motion/react";
-import { useRef } from "react";
+} from 'lucide-react';
+import { motion, useInView } from 'motion/react';
+import { useRef } from 'react';
 
 const features = [
   {
-    title: "Player Tracking",
+    title: 'Player Tracking',
     description:
-      "Track every aspect of player behavior, from games played to time spent and betting patterns.",
+      'Track every aspect of player behavior, from games played to time spent and betting patterns.',
     icon: Users,
-    chipColor: "primary" as const,
-    iconClass: "text-primary",
+    chipColor: 'primary' as const,
+    iconClass: 'text-primary',
   },
   {
-    title: "Rewards Management",
+    title: 'Rewards Management',
     description:
-      "Create customizable rewards programs that automatically track points and distribute benefits.",
+      'Create customizable rewards programs that automatically track points and distribute benefits.',
     icon: Trophy,
-    chipColor: "secondary" as const,
-    iconClass: "text-secondary",
+    chipColor: 'secondary' as const,
+    iconClass: 'text-secondary',
   },
   {
-    title: "Analytics Dashboard",
+    title: 'Analytics Dashboard',
     description:
-      "Visualize key performance metrics and player data with customizable real-time dashboards.",
+      'Visualize key performance metrics and player data with customizable real-time dashboards.',
     icon: BarChart3,
-    chipColor: "success" as const,
-    iconClass: "text-success",
+    chipColor: 'success' as const,
+    iconClass: 'text-success',
   },
   {
-    title: "Email Campaigns",
+    title: 'Email Campaigns',
     description:
-      "Design targeted email campaigns based on player behavior and preferences.",
+      'Design targeted email campaigns based on player behavior and preferences.',
     icon: Mail,
-    chipColor: "warning" as const,
-    iconClass: "text-warning",
+    chipColor: 'warning' as const,
+    iconClass: 'text-warning',
   },
   {
-    title: "Event Management",
+    title: 'Event Management',
     description:
-      "Schedule and manage promotional events, tournaments, and special occasions.",
+      'Schedule and manage promotional events, tournaments, and special occasions.',
     icon: Calendar,
-    chipColor: "danger" as const,
-    iconClass: "text-danger",
+    chipColor: 'danger' as const,
+    iconClass: 'text-danger',
   },
   {
-    title: "Data Integration",
+    title: 'Data Integration',
     description:
-      "Seamless integration with existing casino management systems and third-party applications.",
+      'Seamless integration with existing casino management systems and third-party applications.',
     icon: Database,
-    chipColor: "primary" as const,
-    iconClass: "text-primary",
+    chipColor: 'primary' as const,
+    iconClass: 'text-primary',
   },
   {
-    title: "Predictive Analytics",
+    title: 'Predictive Analytics',
     description:
-      "Leverage AI to predict player behavior and optimize marketing efforts.",
+      'Leverage AI to predict player behavior and optimize marketing efforts.',
     icon: PieChart,
-    chipColor: "secondary" as const,
-    iconClass: "text-secondary",
+    chipColor: 'secondary' as const,
+    iconClass: 'text-secondary',
   },
   {
-    title: "Personalization Engine",
+    title: 'Personalization Engine',
     description:
-      "Create personalized experiences for each player based on their preferences and history.",
+      'Create personalized experiences for each player based on their preferences and history.',
     icon: Sparkles,
-    chipColor: "success" as const,
-    iconClass: "text-success",
+    chipColor: 'success' as const,
+    iconClass: 'text-success',
   },
 ];
 
@@ -114,7 +114,7 @@ export function FeaturesSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          animate={isInView ? 'visible' : 'hidden'}
           variants={containerVariants}
           className="space-y-12"
         >

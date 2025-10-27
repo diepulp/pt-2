@@ -1,9 +1,9 @@
-'use client'
+'use client';
 
-import * as ProgressPrimitive from '@radix-ui/react-progress'
-import * as React from 'react'
+import * as ProgressPrimitive from '@radix-ui/react-progress';
+import * as React from 'react';
 
-import { cn } from '@/lib/utils'
+import { cn } from '@/lib/utils';
 
 const Progress = ({
   ref,
@@ -11,7 +11,7 @@ const Progress = ({
   value,
   ...props
 }: React.ComponentPropsWithoutRef<typeof ProgressPrimitive.Root> & {
-  ref?: React.Ref<React.ElementRef<typeof ProgressPrimitive.Root>>
+  ref?: React.Ref<React.ElementRef<typeof ProgressPrimitive.Root>>;
 }) => (
   <ProgressPrimitive.Root
     ref={ref}
@@ -26,7 +26,7 @@ const Progress = ({
       style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
     />
   </ProgressPrimitive.Root>
-)
-Progress.displayName = ProgressPrimitive.Root.displayName
+);
+Progress.displayName = ProgressPrimitive.Root.displayName;
 
-export { Progress }
+export { Progress };

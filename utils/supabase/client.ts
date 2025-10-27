@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 let browserInstance: SupabaseClient<Database> | null = null;
 
@@ -13,7 +13,7 @@ let browserInstance: SupabaseClient<Database> | null = null;
  * @returns SupabaseClient
  */
 export function createBrowserComponentClient(): SupabaseClient<Database> {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     // Return a more complete mock client for build-time/server-side rendering
     const mockClient = {
       from: () => ({
@@ -35,7 +35,7 @@ export function createBrowserComponentClient(): SupabaseClient<Database> {
       channel: () => ({
         on: () => ({ subscribe: () => ({}) }),
         unsubscribe: () => {},
-        subscribe: () => Promise.resolve("SUBSCRIBED"),
+        subscribe: () => Promise.resolve('SUBSCRIBED'),
       }),
       rpc: () => Promise.resolve({ data: null, error: null }),
       storage: {

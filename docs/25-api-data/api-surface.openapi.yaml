@@ -1,0 +1,1229 @@
+openapi: 3.1.0
+info:
+  title: PT-2 API Surface (MVP)
+  version: 1.0.0-mvp
+  description: |
+    Canonical PT-2 API contract distilled from `docs/api-route-catalogue/API_SURFACE_MVP.md`
+    and aligned with the Service Template / Server Actions architecture. All responses are
+    wrapped in the `ServiceHttpResult<T>` envelope emitted by `lib/http/service-response.ts`.
+servers:
+  - url: https://pt-2.local/api/v1
+    description: Local development (prepend with project base URL in other environments)
+security:
+  - bearerAuth: []
+paths:
+  /casinos/{casino_id}:
+    get:
+      summary: Get casino details
+      description: Returns foundational casino metadata for the given identifier.
+      tags: [Casino]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CasinoId'
+      responses:
+        '200':
+          description: Casino found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Casino'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /casinos/{casino_id}/settings:
+    patch:
+      summary: Update casino settings
+      description: Mutates timezone and policy thresholds for a casino. Requires Idempotency-Key.
+      tags: [Casino]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CasinoId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CasinoSettingsPatch'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CasinoSettings'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+  /casinos/{casino_id}/staff:
+    get:
+      summary: List casino staff
+      description: Paginates staff records for a casino with optional role/status filtering.
+      tags: [Casino]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CasinoId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/StaffStatus'
+          required: false
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/StaffRole'
+          required: false
+      responses:
+        '200':
+          description: Staff page
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/StaffList'
+  /players:
+    post:
+      summary: Create player
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerCreate'
+      responses:
+        '200':
+          description: Player created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Player'
+    get:
+      summary: List players
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Player list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PlayerList'
+  /players/{player_id}:
+    get:
+      summary: Get player
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+      responses:
+        '200':
+          description: Player detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Player'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      summary: Update player
+      tags: [Player]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/PlayerId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlayerUpdate'
+      responses:
+        '200':
+          description: Player updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Player'
+  /visits:
+    post:
+      summary: Start visit
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitStart'
+      responses:
+        '200':
+          description: Visit started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+    get:
+      summary: List visits
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: player_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/VisitStatus'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Visit list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/VisitList'
+  /visits/{visit_id}:
+    get:
+      summary: Get visit
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VisitId'
+      responses:
+        '200':
+          description: Visit detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+  /visits/{visit_id}/end:
+    post:
+      summary: Close visit
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VisitId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitEnd'
+      responses:
+        '200':
+          description: Visit closed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+  /visits/{visit_id}/rating-slips:
+    get:
+      summary: List rating slips for a visit
+      tags: [RatingSlip]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VisitId'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Rating slips for visit
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RatingSlipList'
+  /rating-slips:
+    post:
+      summary: Create rating slip
+      tags: [RatingSlip]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingSlipCreate'
+      responses:
+        '200':
+          description: Rating slip created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RatingSlip'
+  /rating-slips/{rating_slip_id}:
+    patch:
+      summary: Update rating slip
+      tags: [RatingSlip]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RatingSlipId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingSlipUpdate'
+      responses:
+        '200':
+          description: Rating slip updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RatingSlip'
+  /rating-slips/{rating_slip_id}/close:
+    post:
+      summary: Close rating slip
+      tags: [RatingSlip]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/RatingSlipId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RatingSlipClose'
+      responses:
+        '200':
+          description: Rating slip closed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/RatingSlip'
+  /table-context/tables:
+    get:
+      summary: List tables
+      tags: [TableContext]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TableStatus'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Tables
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/TableList'
+  /table-context/tables/{table_id}:
+    get:
+      summary: Get table
+      tags: [TableContext]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TableId'
+      responses:
+        '200':
+          description: Table detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Table'
+  /table-context/dealer-rotations:
+    post:
+      summary: Start dealer rotation
+      tags: [TableContext]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DealerRotationCreate'
+      responses:
+        '200':
+          description: Rotation started
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DealerRotation'
+  /loyalty/mid-session-reward:
+    post:
+      summary: Issue mid-session reward
+      tags: [Loyalty]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MidSessionReward'
+      responses:
+        '200':
+          description: Reward issued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MidSessionRewardResult'
+  /loyalty/balances:
+    get:
+      summary: Get player loyalty balance
+      tags: [Loyalty]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: player_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+      responses:
+        '200':
+          description: Loyalty balance
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoyaltyBalance'
+  /loyalty/ledger:
+    get:
+      summary: List loyalty ledger entries
+      tags: [Loyalty]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: player_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: rating_slip_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Loyalty ledger entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/LoyaltyLedgerList'
+  /finance/transactions:
+    post:
+      summary: Create financial transaction
+      tags: [Finance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FinancialTransactionCreate'
+      responses:
+        '200':
+          description: Transaction recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FinancialTransactionCreated'
+    get:
+      summary: List financial transactions
+      tags: [Finance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: player_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: gaming_day
+          in: query
+          schema:
+            type: string
+            format: date
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Transaction list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FinancialTransactionList'
+  /finance/transactions/{transaction_id}:
+    get:
+      summary: Get financial transaction
+      tags: [Finance]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TransactionId'
+      responses:
+        '200':
+          description: Transaction detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/FinancialTransaction'
+  /mtl/entries:
+    post:
+      summary: Create MTL entry
+      tags: [MTL]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MtlEntryCreate'
+      responses:
+        '200':
+          description: Entry recorded
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MtlEntry'
+    get:
+      summary: List MTL entries
+      tags: [MTL]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: casino_id
+          in: query
+          required: true
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: patron_uuid
+          in: query
+          schema:
+            $ref: '#/components/schemas/UUID'
+        - name: min_amount
+          in: query
+          schema:
+            type: number
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Entry list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MtlEntryList'
+  /mtl/entries/{entry_id}:
+    get:
+      summary: Get MTL entry
+      tags: [MTL]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MtlEntryId'
+      responses:
+        '200':
+          description: Entry detail
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MtlEntry'
+  /mtl/entries/{entry_id}/audit-notes:
+    post:
+      summary: Append MTL audit note
+      tags: [MTL]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/MtlEntryId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MtlAuditNoteCreate'
+      responses:
+        '200':
+          description: Audit note appended
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/MtlAuditNote'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    CasinoId:
+      name: casino_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    PlayerId:
+      name: player_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    VisitId:
+      name: visit_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    RatingSlipId:
+      name: rating_slip_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    TableId:
+      name: table_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    TransactionId:
+      name: transaction_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    MtlEntryId:
+      name: entry_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/UUID'
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      schema:
+        type: string
+      description: Unique key per mutating request to guarantee idempotency.
+    Cursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+      description: Base64 cursor token from previous page.
+    Limit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+  responses:
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ServiceHttpResultBase'
+              - type: object
+                properties:
+                  data:
+                    nullable: true
+                  error:
+                    example: Record not found
+                  code:
+                    enum: ['NOT_FOUND']
+    ValidationError:
+      description: Validation failed
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/ServiceHttpResultBase'
+              - type: object
+                properties:
+                  code:
+                    enum: ['VALIDATION_ERROR']
+  schemas:
+    ServiceHttpResultBase:
+      type: object
+      required: [ok, code, status, requestId, durationMs, timestamp]
+      properties:
+        ok:
+          type: boolean
+        code:
+          type: string
+          enum: ['OK','VALIDATION_ERROR','NOT_FOUND','UNIQUE_VIOLATION','FOREIGN_KEY_VIOLATION','UNAUTHORIZED','FORBIDDEN','INTERNAL_ERROR']
+        status:
+          type: integer
+        requestId:
+          type: string
+        durationMs:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        error:
+          type: string
+          nullable: true
+        details:
+          description: Additional structured error context.
+          nullable: true
+    UUID:
+      type: string
+      format: uuid
+    Casino:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        name: { type: string }
+        location: { type: string, nullable: true }
+        status: { type: string }
+        address: { type: object, additionalProperties: true, nullable: true }
+        company_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        created_at: { type: string }
+    CasinoSettings:
+      type: object
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        timezone: { type: string }
+        gaming_day_start_time: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        watchlist_floor: { type: number }
+        ctr_threshold: { type: number }
+        updated_at: { type: string }
+    CasinoSettingsPatch:
+      type: object
+      properties:
+        timezone: { type: string }
+        gaming_day_start_time: { type: string, pattern: '^\\d{2}:\\d{2}$' }
+        watchlist_floor: { type: number, minimum: 0 }
+        ctr_threshold: { type: number, minimum: 0 }
+    StaffRole:
+      type: string
+      enum: [dealer, pit_boss, admin]
+    StaffStatus:
+      type: string
+      enum: [active, inactive]
+    Staff:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        first_name: { type: string }
+        last_name: { type: string }
+        email: { type: string, format: email, nullable: true }
+        employee_id: { type: string, nullable: true }
+        role: { $ref: '#/components/schemas/StaffRole' }
+        status: { $ref: '#/components/schemas/StaffStatus' }
+        created_at: { type: string }
+    StaffList:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Staff'
+        next_cursor:
+          type: string
+          nullable: true
+    Player:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        first_name: { type: string }
+        last_name: { type: string }
+        birth_date: { type: string, nullable: true }
+        created_at: { type: string }
+    PlayerCreate:
+      type: object
+      required: [first_name, last_name]
+      properties:
+        first_name: { type: string, minLength: 1 }
+        last_name: { type: string, minLength: 1 }
+        birth_date: { type: string }
+        casino_enrollment:
+          type: object
+          properties:
+            casino_id: { $ref: '#/components/schemas/UUID' }
+            status:
+              type: string
+              enum: [active, inactive]
+          required: [casino_id]
+    PlayerUpdate:
+      allOf:
+        - $ref: '#/components/schemas/PlayerCreate'
+      description: Partial updates allowed; at least one field required.
+    PlayerList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Player' }
+        next_cursor: { type: string, nullable: true }
+    Visit:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        started_at: { type: string }
+        ended_at: { type: string, nullable: true }
+    VisitStart:
+      type: object
+      required: [player_id, casino_id]
+      properties:
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        started_at: { type: string }
+    VisitEnd:
+      type: object
+      properties:
+        ended_at: { type: string }
+    VisitList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Visit' }
+        next_cursor: { type: string, nullable: true }
+    VisitStatus:
+      type: string
+      enum: [open, closed]
+    RatingSlip:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        table_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        game_settings: { type: object, additionalProperties: true, nullable: true }
+        average_bet: { type: number, nullable: true }
+        start_time: { type: string }
+        end_time: { type: string, nullable: true }
+        status:
+          type: string
+          enum: [open, paused, closed]
+        policy_snapshot: { type: object, additionalProperties: true, nullable: true }
+    RatingSlipCreate:
+      type: object
+      required: [player_id, casino_id]
+      properties:
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        visit_id: { $ref: '#/components/schemas/UUID' }
+        table_id: { $ref: '#/components/schemas/UUID' }
+        game_settings: { type: object, additionalProperties: true, nullable: true }
+        average_bet: { type: number, minimum: 0, nullable: true }
+        policy_snapshot: { type: object, additionalProperties: true, nullable: true }
+    RatingSlipUpdate:
+      type: object
+      properties:
+        average_bet: { type: number, minimum: 0, nullable: true }
+        end_time: { type: string }
+        status:
+          type: string
+          enum: [open, paused, closed]
+        policy_snapshot: { type: object, additionalProperties: true, nullable: true }
+    RatingSlipClose:
+      type: object
+      properties:
+        end_time: { type: string }
+    RatingSlipList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/RatingSlip' }
+        next_cursor: { type: string, nullable: true }
+    Table:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        label: { type: string }
+        pit: { type: string, nullable: true }
+        type: { $ref: '#/components/schemas/GameType' }
+        status: { $ref: '#/components/schemas/TableStatus' }
+        created_at: { type: string }
+    TableList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Table' }
+        next_cursor: { type: string, nullable: true }
+    GameType:
+      type: string
+      enum: [blackjack, poker, roulette, baccarat]
+    TableStatus:
+      type: string
+      enum: [inactive, active, closed]
+    DealerRotation:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        table_id: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        started_at: { type: string }
+        ended_at: { type: string, nullable: true }
+    DealerRotationCreate:
+      type: object
+      required: [casino_id, table_id]
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        table_id: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID' }
+        started_at: { type: string }
+    MidSessionReward:
+      type: object
+      required: [casino_id, player_id, rating_slip_id, staff_id, points]
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        rating_slip_id: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID' }
+        points: { type: integer, minimum: 1 }
+        reason: { $ref: '#/components/schemas/LoyaltyReason' }
+        idempotency_key: { type: string }
+    MidSessionRewardResult:
+      type: object
+      properties:
+        ledger_id: { $ref: '#/components/schemas/UUID' }
+        balance_after: { type: integer }
+    LoyaltyReason:
+      type: string
+      enum: [mid_session, session_end, manual_adjustment, promotion, correction]
+    LoyaltyBalance:
+      type: object
+      properties:
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        balance: { type: integer }
+        tier: { type: string, nullable: true }
+        preferences: { type: object, additionalProperties: true }
+        updated_at: { type: string }
+    LoyaltyLedgerEntry:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        rating_slip_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        staff_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        points_earned: { type: integer }
+        reason: { $ref: '#/components/schemas/LoyaltyReason' }
+        idempotency_key: { type: string, nullable: true }
+        average_bet: { type: number, nullable: true }
+        duration_seconds: { type: integer, nullable: true }
+        game_type: { $ref: '#/components/schemas/GameType', nullable: true }
+        created_at: { type: string }
+    LoyaltyLedgerList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/LoyaltyLedgerEntry' }
+        next_cursor: { type: string, nullable: true }
+    FinancialTransactionCreate:
+      type: object
+      required: [casino_id, player_id, amount]
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        amount: { type: number }
+        tender_type: { type: string }
+        created_at: { type: string }
+        visit_id: { $ref: '#/components/schemas/UUID' }
+        rating_slip_id: { $ref: '#/components/schemas/UUID' }
+    FinancialTransactionCreated:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+    FinancialTransaction:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID' }
+        visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        rating_slip_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        amount: { type: number }
+        tender_type: { type: string, nullable: true }
+        created_at: { type: string }
+        gaming_day: { type: string, nullable: true }
+    FinancialTransactionList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/FinancialTransaction' }
+        next_cursor: { type: string, nullable: true }
+    MtlEntryCreate:
+      type: object
+      required: [casino_id, patron_uuid, amount, direction]
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        patron_uuid: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID' }
+        rating_slip_id: { $ref: '#/components/schemas/UUID' }
+        visit_id: { $ref: '#/components/schemas/UUID' }
+        amount: { type: number }
+        direction: { $ref: '#/components/schemas/MtlDirection' }
+        area: { type: string }
+        idempotency_key: { type: string }
+        created_at: { type: string }
+    MtlDirection:
+      type: string
+      enum: [in, out]
+    MtlEntry:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        patron_uuid: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        rating_slip_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        amount: { type: number }
+        direction: { $ref: '#/components/schemas/MtlDirection' }
+        area: { type: string, nullable: true }
+        created_at: { type: string }
+        idempotency_key: { type: string, nullable: true }
+    MtlEntryList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/MtlEntry' }
+        next_cursor: { type: string, nullable: true }
+    MtlAuditNoteCreate:
+      type: object
+      required: [staff_id, note]
+      properties:
+        staff_id: { $ref: '#/components/schemas/UUID' }
+        note: { type: string, minLength: 1 }
+    MtlAuditNote:
+      type: object
+      properties:
+        id: { $ref: '#/components/schemas/UUID' }
+        mtl_entry_id: { $ref: '#/components/schemas/UUID' }
+        staff_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        note: { type: string }
+        created_at: { type: string }

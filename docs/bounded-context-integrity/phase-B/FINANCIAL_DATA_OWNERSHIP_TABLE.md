@@ -366,7 +366,7 @@ NOTIFY pgrst, 'reload schema';
 
 - **Phase B Workflow**: `PHASE_B_IMPLEMENTATION_WORKFLOW.md`
 - **Service Responsibility Matrix**: `SERVICE_RESPONSIBILITY_MATRIX.md`
-- **ADR-006**: `docs/adr/ADR-006-rating-slip-field-removal.md`
+- **ADR-006**: `80-adrs/ADR-006-rating-slip-field-removal.md`
 - **Migration Phase 1**: `supabase/migrations/20251019234325_phase_b_financial_views_phase1.sql`
 - **Migration Phase 2**: `supabase/migrations/20251019234330_phase_b_financial_views_phase2.sql`
 

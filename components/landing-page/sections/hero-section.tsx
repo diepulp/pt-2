@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { Avatar, AvatarGroup } from "@heroui/avatar";
-import { Button } from "@heroui/button";
-import { Card, CardBody } from "@heroui/card";
-import { ArrowRight, ChevronRight } from "lucide-react";
-import { motion } from "motion/react";
-import Image from "next/image";
-import Link from "next/link";
+import { Avatar, AvatarGroup } from '@heroui/avatar';
+import { Button } from '@heroui/button';
+import { Card, CardBody } from '@heroui/card';
+import { ArrowRight, ChevronRight } from 'lucide-react';
+import { motion } from 'motion/react';
+import Image from 'next/image';
+import Link from 'next/link';
 
 export function HeroSection() {
   const containerVariants = {
@@ -25,7 +25,7 @@ export function HeroSection() {
     visible: {
       y: 0,
       opacity: 1,
-      transition: { duration: 0.3, ease: "easeOut" as const },
+      transition: { duration: 0.3, ease: 'easeOut' as const },
     },
   };
 
@@ -112,29 +112,29 @@ export function HeroSection() {
                   name="TD"
                   size="md"
                   classNames={{
-                    base: "bg-gradient-to-br from-orange-400 to-red-400",
-                    name: "text-white font-bold text-xs",
+                    base: 'bg-gradient-to-br from-orange-400 to-red-400',
+                    name: 'text-white font-bold text-xs',
                   }}
                 />
                 <Avatar
                   name="MR"
                   size="md"
                   classNames={{
-                    base: "bg-gradient-to-br from-teal-400 to-cyan-400",
-                    name: "text-white font-bold text-xs",
+                    base: 'bg-gradient-to-br from-teal-400 to-cyan-400',
+                    name: 'text-white font-bold text-xs',
                   }}
                 />
                 <Avatar
                   name="CV"
                   size="md"
                   classNames={{
-                    base: "bg-gradient-to-br from-blue-400 to-purple-400",
-                    name: "text-white font-bold text-xs",
+                    base: 'bg-gradient-to-br from-blue-400 to-purple-400',
+                    name: 'text-white font-bold text-xs',
                   }}
                 />
               </AvatarGroup>
               <p className="text-sm text-foreground/70">
-                Trusted by{" "}
+                Trusted by{' '}
                 <span className="font-bold text-foreground">100+</span> casinos
                 worldwide
               </p>

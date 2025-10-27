@@ -571,7 +571,7 @@ Extract essential architectural knowledge from 203k-word documentation into <5k-
 - `.claude/memory/` - All memory files
 
 ### Source Documentation
-- `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` - Complete PRD
+- `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` - Complete PRD
 - `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` - Service architecture
 - `docs/adr/*.md` - Architecture Decision Records (5 total)
 - `docs/patterns/*.md` - Architecture patterns

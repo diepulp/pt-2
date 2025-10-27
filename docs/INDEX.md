@@ -1,178 +1,240 @@
 # PT-2 Documentation Index
 
-> **Project**: Casino Tracker V2 (Clean Rebuild)
-> **Status**: Phase 2 - Service Layer Foundation (87.5% Complete)
-> **Last Updated**: 2025-10-10
-> **Architecture Strategy**: Hybrid Model (HORIZONTAL layers + VERTICAL delivery)
+**Last Updated**: 2025-10-25
+**Taxonomy Version**: 1.0 (SDLC-Aligned)
+**Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
+**Reference**: [SDLC_DOCS_TAXONOMY.md](patterns/SDLC_DOCS_TAXONOMY.md)
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Navigation (SDLC Taxonomy)
+
+| Category | Folder | Owner | Purpose | Phase |
+|----------|--------|-------|---------|-------|
+| Vision & Scope | [00-vision/](00-vision/) | Product | Problem, goals, non-goals | Inception, Discovery |
+| Product Requirements | [10-prd/](10-prd/) | Product | User stories, acceptance criteria | All phases |
+| Architecture | [20-architecture/](20-architecture/) | Architecture | SRM, diagrams, NFRs | Design, Build, Operate |
+| API & Data | [25-api-data/](25-api-data/) | Backend | OpenAPI, DTOs, schema | Design → Evolve |
+| Security & RBAC | [30-security/](30-security/) | Security | RLS, RBAC, threat model | Design → Evolve |
+| Quality & Testing | [40-quality/](40-quality/) | QA | Test strategy, coverage | Discovery → Evolve |
+| Operations | [50-ops/](50-ops/) | SRE | Observability, runbooks, SLOs | Design → Evolve |
+| Release | [60-release/](60-release/) | Release Mgr | Release notes, rollout | Design → Evolve |
+| Governance | [70-governance/](70-governance/) | Eng Lead | Standards, patterns | All phases |
+| ADRs | [80-adrs/](80-adrs/) | Various | Decision records | All phases |
+
+---
+
+## 📚 Quick Start by Role
 
 ### For Developers
-- **[Database Type Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)** - Daily database + type management
-- **[Service Template Quick Reference](patterns/SERVICE_TEMPLATE_QUICK.md)** - 2-page implementation guide
-- **[Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - ⭐ HORIZONTAL vs VERTICAL decision framework (10-min read)
-- **[Phase 2 Session Handoff](phase-2/SESSION_HANDOFF.md)** - Current implementation status
+1. **[Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md)** ⭐ HORIZONTAL vs VERTICAL decision (10-min)
+2. **[Service Template](70-governance/)** → SERVICE_TEMPLATE.md - Implementation guide
+3. **[Hooks Standard](70-governance/)** → HOOKS_STANDARD.md - React Query v5 patterns
+4. **[Database Type Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)** - Daily DB management
 
 ### For Architects
-- **[Canonical Blueprint MVP PRD](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md)** - Complete architecture spec
-- **[Service Layer Architecture](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)** - Service patterns + anti-patterns
-- **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - ⭐ Transform documentation to systematic AI workflows
-- **[MVP Production Roadmap](roadmap/MVP_PRODUCTION_ROADMAP.md)** - 10-week path to production with hybrid strategy
-- **[Architecture Gaps](roadmap/ARCHITECTURE_GAPS.md)** - Missing components with HORIZONTAL/VERTICAL labels
-- **[Bounded Contexts](phase-2/SERVICE_RESPONSIBILITY_MATRIX.md)** - Service responsibility matrix
+1. **[Service Responsibility Matrix](20-architecture/)** → SRM v3.0.2 - Canonical bounded contexts
+2. **[Service Layer Diagram](20-architecture/)** → Architecture patterns + anti-patterns
+3. **[API Surface](25-api-data/)** → API_SURFACE_MVP.md - Endpoint catalogue
+4. **[ADRs](80-adrs/)** → Decision history and rationale
+
+### For Product Managers
+1. **[MVP Roadmap](10-prd/)** → SDLC_MVP_ROADMAP.md - 10-week delivery plan
+2. **[Canonical PRD](10-prd/)** → CANONICAL_BLUEPRINT_MVP_PRD.md - Complete spec
+3. **[Release Plans](60-release/)** → Phased delivery strategy
+
 ---
 
-## 📁 Documentation Structure
+## 🗂️ Document Registry (By Category)
 
-### System Architecture
-```
-system-prd/
-├── CANONICAL_BLUEPRINT_MVP_PRD.md              # Complete PRD (§1-7)
-└── SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md       # Service patterns + mermaid diagrams
-```
+### 00-vision/ - Vision & Scope
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| - | *To be populated* | - | - |
+
+**Purpose**: Problem statement, goals, non-goals, success metrics
+
+---
+
+### 10-prd/ - Product Requirements
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| PRD-001 | SDLC MVP Roadmap | Draft | `system-prd/SDLC_MVP_ROADMAP.md` |
+| PRD-002 | Canonical Blueprint MVP | Accepted | `system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` |
+
+**Purpose**: User stories, acceptance criteria, release goals
 
 **Key Sections**:
 - PRD §3.3: Service Layer Standards
 - PRD §4: Anti-Pattern Guardrails
-- Architecture Diagram: Proven PT-1 patterns
+- PRD §3.10: Testing & CI/CD
 
 ---
 
-### Patterns & Templates
-```
-patterns/
-├── SERVICE_TEMPLATE.md                         # 500+ line canonical reference
-├── SERVICE_TEMPLATE_QUICK.md                   # 2-page operational guide
-├── BALANCED_ARCHITECTURE_QUICK.md              # ⭐ Hybrid strategy decision framework (10-min read)
-└── controlled-hybrid-refactor-model.md         # TDD + PT-1 mining strategy
-```
+### 20-architecture/ - Architecture & System Patterns
 
-**Use Cases**:
-- **Architectural decisions**: Start with `BALANCED_ARCHITECTURE_QUICK.md` (HORIZONTAL vs VERTICAL)
-- **Implementing new service**: Use `SERVICE_TEMPLATE_QUICK.md`
-- **Understanding rationale**: Reference `SERVICE_TEMPLATE.md`
-- **PT-1 migration decisions**: Follow `controlled-hybrid-refactor-model.md`
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| ARCH-001 | Service Responsibility Matrix v3.0.2 | Accepted | `patterns/SERVICE_RESPONSIBILITY_MATRIX.md` |
+| ARCH-002 | Service Layer Architecture Diagram v1.0 | Accepted | `system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
+| ARCH-003 | Balanced Architecture Quick Reference | Accepted | `patterns/BALANCED_ARCHITECTURE_QUICK.md` |
 
----
+**Purpose**: Bounded contexts, system diagrams, integration contracts, NFRs
 
-### Workflows
-```
-workflows/
-└── DATABASE_TYPE_WORKFLOW.md                   # Local vs remote DB type management
-```
-
-**Daily Tasks**:
-- Regenerate types after migrations
-- Deploy migrations to remote
-- Sync local DB with team
+**Key Documents**:
+- **SRM**: Canonical matrix-first contract (snake_case, UUID-based)
+- **Service Layer Diagram**: Visual patterns + anti-patterns with mermaid
+- **Balanced Architecture**: HORIZONTAL vs VERTICAL decision framework
 
 ---
 
-### Roadmaps
-```
-roadmap/
-├── MVP_PRODUCTION_ROADMAP.md                   # 10-week timeline with hybrid strategy
-├── ARCHITECTURE_GAPS.md                        # Missing components (HORIZONTAL/VERTICAL labeled)
-└── NEXT_STEPS_REPORT.md                        # Immediate actions with pattern application
-```
+### 25-api-data/ - API & Data Contracts
 
-**Planning Resources**:
-- **Roadmap**: Phase-by-phase deliverables + HORIZONTAL/VERTICAL rhythm
-- **Gaps**: P0 blockers categorized by approach (HORIZONTAL/VERTICAL/HYBRID)
-- **Next Steps**: Week-by-week hybrid pattern application
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| API-001 | API Surface MVP | Accepted | `api-route-catalogue/API_SURFACE_MVP.md` |
+| API-002 | DTO Canonical Standard | Accepted | `patterns/DTO_CANONICAL_STANDARD.md` |
+| API-003 | Real-time Events Map | Accepted | `patterns/REAL_TIME_EVENTS_MAP.md` |
+| API-004 | OpenAPI Specification | Draft | `api-route-catalogue/api-surface.openapi.yaml` |
 
----
+**Purpose**: REST API contracts, DTOs, database schema, event contracts
 
-### Architecture Decisions
-```
-architecture/
-├── ADR-001-dual-database-type-strategy.md      # Local + remote type file rationale
-├── ADR-002-test-location-standardization.md    # Root-level test location standard
-└── slicing/
-    ├── CONSENSUS_SYNTHESIS.md                  # Hybrid strategy full analysis (3-hour read)
-    ├── EVALUATION_FRAMEWORK.md                 # Decision matrices (reference only)
-    └── UPDATE_SUMMARY.md                       # Roadmap alignment summary (2025-10-10)
-```
-
-**ADR Format**:
-- Context & problem statement
-- Considered options
-- Decision outcome + detailed rationale
-- Compliance with PRD
-
-**Slicing Strategy Docs**:
-- **Daily Use**: [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) (10-min read)
-- **Deep Dive**: [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md) (3-hour read)
-- **Team Scaling**: [EVALUATION_FRAMEWORK.md](architecture/slicing/EVALUATION_FRAMEWORK.md) (reference)
+**Standards**:
+- DTOs derived from `Database` types using Pick/Omit/Partial
+- OpenAPI specs for all `/api/v1/**` endpoints
+- Real-time event contracts for Supabase channels
 
 ---
 
-### Phase Documentation
-```
-phase-0/
-├── COMPLETED.md                                # Phase 0 summary
-├── TESTING_SETUP.md                            # Jest + Cypress setup
-├── DATABASE_WORKFLOW.md                        # Migration workflow
-└── PHASE_0_SUMMARY.md                          # Detailed implementation
+### 30-security/ - Security & RBAC
 
-phase-1/
-└── security-skeleton.md                        # RLS + JWT + Audit setup
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| - | *To be extracted from SRM* | - | - |
 
-phase-2/
-├── SESSION_HANDOFF.md                          # Current status (Week 1 complete)
-├── player-vertical-slice.md                    # Player service TDD approach
-└── controlled-hybrid-refactor-model.md         # → Moved to patterns/
-```
+**Purpose**: RLS policies, RBAC matrix, threat model, secrets handling
 
-**Phase Status**:
-- **Phase 0**: ✅ Complete (CI/CD, Testing, Security)
-- **Phase 1**: ✅ Complete (RLS, JWT, Compliance)
-- **Phase 2**: 🔄 87.5% (7/8 services, MTL complete, 98/98 tests passing)
-- **Phase 3**: ⏳ Next (HORIZONTAL state mgmt → VERTICAL UI delivery)
-- **Phase 4-5**: ⏳ Pending (Compliance workflows, Production hardening)
+**Current Coverage**:
+- RLS patterns embedded in SRM (casino-scoped tables)
+- Casino-scoped security model (to be documented)
 
 ---
 
-### Audits & Analysis
-```
-audits/
-├── SCHEMA_DRIFT_AUDIT.md                       # Local vs remote type analysis
-└── SCHEMA_DRIFT_SUMMARY.md                     # Executive summary + decision
-```
+### 40-quality/ - Quality & Testing
 
-**Audit Types**:
-- **Schema Drift**: Type file consistency validation
-- **PRD Compliance**: Anti-pattern detection (future)
-- **Performance**: Bundle size + Lighthouse (future)
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| QA-001 | Testing Setup | Accepted | `phase-0/TESTING_SETUP.md` |
+
+**Purpose**: Test strategy, coverage goals, quality gates, performance budgets
+
+**Testing Standards**:
+- Unit tests: Typed test doubles, 80% coverage minimum
+- Integration tests: Local Supabase with RLS enabled
+- E2E tests: Cypress (opt-in)
 
 ---
 
-## 🎯 Current Focus (Phase 2 → Phase 3 Transition)
+### 50-ops/ - Operations & Reliability
 
-### ✅ Completed (Weeks 1-2)
-- ✅ Schema Consistency Migration (ratingslip.id: TEXT → UUID)
-- ✅ PlayerFinancialService (CRUD + comprehensive tests)
-- ✅ Casino Service (CRUD + queries)
-- ✅ Table Context Service (3-table relationships, temporal config)
-- ✅ MTL Service (compliance queries, CTR aggregation)
-- ✅ Bounded Context Clarity ([Service Responsibility Matrix](phase-2/SERVICE_RESPONSIBILITY_MATRIX.md))
-- ✅ Hybrid Architecture Strategy Formalized ([BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md))
-- ✅ Test Location Standardization (ADR-002 - root-level `__tests__/services/`)
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| - | *To be documented* | - | - |
 
-### This Week (Week 3 - HORIZONTAL)
-- Integration smoke tests
-- React Query + Zustand infrastructure setup
-- Server action wrapper pattern
-- Loyalty Service (optional, deferred to post-MVP if time constrained)
+**Purpose**: Observability, runbooks, SLIs/SLOs, incident process
 
-### Next 3 Weeks (VERTICAL Feature Delivery)
-- **Week 4**: Player Management UI (complete DB → UI)
-- **Week 5**: Visit Tracking UI (complete DB → UI)
-- **Week 6**: RatingSlip Creation UI (complete DB → UI)
+**Patterns**:
+- Audit logging (embedded in SERVER_ACTIONS_ARCHITECTURE.md)
+- Error mapping (PG → domain codes)
+- Telemetry patterns (to be documented)
 
-### Phase 2 Completion Status
+---
+
+### 60-release/ - Change & Release
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| REL-001 | Migration Naming Standard | Accepted | `patterns/MIGRATION_NAMING_STANDARD.md` |
+
+**Purpose**: Versioning, release notes, rollout/rollback, deprecation
+
+**Standards**:
+- Migration format: `YYYYMMDDHHMMSS_description.sql`
+- Deprecation policy embedded in SRM
+- Release phases in SDLC roadmap
+
+---
+
+### 70-governance/ - Governance & Process
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| GOV-001 | Service Template v1.2 | Accepted | `patterns/SERVICE_TEMPLATE.md` |
+| GOV-002 | Over-Engineering Guardrail | Accepted | `patterns/OVER_ENGINEERING_GUARDRAIL.md` |
+| GOV-003 | Hooks Standard | Accepted | `patterns/HOOKS_STANDARD.md` |
+| GOV-004 | DTO Canonical Standard | Accepted | `patterns/DTO_CANONICAL_STANDARD.md` |
+| GOV-005 | Frontend Canonical Standard | Accepted | `patterns/FRONT_END_CANONICAL_STANDARD.md` |
+| GOV-006 | Server Actions Architecture v1.2 | Accepted | `patterns/SERVER_ACTIONS_ARCHITECTURE.md` |
+
+**Purpose**: SDLC policy, coding standards, anti-patterns, contribution guide
+
+**Standards**:
+- Functional factories (not classes)
+- Explicit interfaces (ban `ReturnType<>`)
+- DTO derivation from `Database` types
+- React Query v5 patterns with key factories
+
+---
+
+### 80-adrs/ - Architecture Decision Records
+
+| ID | Title | Status | Date | Supersedes |
+|----|-------|--------|------|------------|
+| ADR-000 | Matrix as Contract | Accepted | - | - |
+| ADR-003 | State Management Strategy | Accepted | - | - |
+| ADR-004 | Real-time Strategy | Accepted | - | - |
+| ADR-007 | API Surface Catalogue | Accepted | - | - |
+| ADR-008 | Service Layer Architecture | Accepted | - | - |
+| ADR-009 | Balanced Architecture Intake | Accepted | - | - |
+| ADR-010 | DTO Compliance Gate | Accepted | - | - |
+| ADR-011 | Over-Engineering Guardrail | Accepted | - | - |
+
+**Location**: `adr/`
+
+---
+
+## 🔍 "Where to Find" Cheatsheet
+
+| Question | Category | Document |
+|----------|----------|----------|
+| "Why did we choose X?" | ADRs | [80-adrs/](80-adrs/) |
+| "How should bounded contexts talk?" | ARCH | [SRM](patterns/SERVICE_RESPONSIBILITY_MATRIX.md) |
+| "What are the endpoints?" | API/DATA | [API Surface](25-api-data/) |
+| "Who can read/write this table?" | SEC/RBAC | [30-security/](30-security/) |
+| "What tests must pass?" | QA | [40-quality/](40-quality/) |
+| "How do we debug in prod?" | OPS | [50-ops/](50-ops/) Runbooks |
+| "How do we ship safely?" | REL | [60-release/](60-release/) |
+| "What are coding standards?" | GOV | [70-governance/](70-governance/) |
+| "Should this be HORIZONTAL or VERTICAL?" | ARCH | [Balanced Architecture](patterns/BALANCED_ARCHITECTURE_QUICK.md) |
+
+---
+
+## 📊 Current Project Status
+
+### Phase Completion
+
+| Phase | Status | Approach | Completion | Key Docs |
+|-------|--------|----------|------------|----------|
+| **Phase 0** | ✅ Complete | HORIZONTAL | 100% | [COMPLETED.md](phase-0/COMPLETED.md) |
+| **Phase 1** | ✅ Complete | HORIZONTAL | 100% | [security-skeleton.md](phase-1/security-skeleton.md) |
+| **Phase 2** | 🔄 In Progress | HORIZONTAL | 87.5% | [SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md) |
+| **Phase 3** | ⏳ Next | H → V | 0% | Week 3: State (H), Weeks 4-6: UI (V) |
+| **Phase 4** | ⏳ Pending | V + HYBRID | 0% | Compliance workflows |
+| **Phase 5** | ⏳ Pending | HORIZONTAL | 0% | Production hardening |
+
+### Service Layer Status (Phase 2)
 - ✅ 7/8 core services complete (87.5%)
 - ✅ 98/98 tests passing
 - ✅ Zero PRD violations
@@ -181,210 +243,127 @@ audits/
 
 ---
 
-## 📚 Key Documents by Use Case
+## 📖 Learning Paths
 
-### "I need to implement a new service"
-1. **[SERVICE_TEMPLATE_QUICK.md](patterns/SERVICE_TEMPLATE_QUICK.md)** - Start here
-2. **[Player Service](../services/player/)** - Reference implementation
-3. **[Player Tests](../__tests__/services/player/)** - Test examples
-4. **[PRD §3.3](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#33-service-layer)** - Standards
+### New Developer (4 hours)
+1. [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
+2. [Canonical PRD](10-prd/) §1-4 (30 min)
+3. [Service Layer Diagram](20-architecture/) (15 min)
+4. [Player Service Implementation](../services/player/) (30 min)
+5. [Database Workflow](workflows/DATABASE_TYPE_WORKFLOW.md) (30 min)
+6. [Build test service](70-governance/) using template (2h)
 
-### "I need to write a migration"
-1. **[DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md)** - Step-by-step guide
-2. **[DATABASE_WORKFLOW.md](phase-0/DATABASE_WORKFLOW.md)** - Migration basics
-3. **[ADR-001](architecture/ADR-001-dual-database-type-strategy.md)** - Local vs remote strategy
-
-### "I need to understand the architecture"
-1. **[BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - ⭐ Decision framework (10-min read)
-2. **[CANONICAL_BLUEPRINT_MVP_PRD.md](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md)** - Complete spec
-3. **[SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)** - Visual patterns
-4. **[MVP_PRODUCTION_ROADMAP.md](roadmap/MVP_PRODUCTION_ROADMAP.md)** - Implementation plan with hybrid strategy
-
-### "I need to check project status"
-1. **[SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md)** - Current implementation state
-2. **[MVP_PRODUCTION_ROADMAP.md](roadmap/MVP_PRODUCTION_ROADMAP.md)** - Timeline + milestones
-3. **[ARCHITECTURE_GAPS.md](roadmap/ARCHITECTURE_GAPS.md)** - Missing components
-
-### "I need to understand a past decision"
-1. **[ADR-001](architecture/ADR-001-dual-database-type-strategy.md)** - Dual type file strategy
-2. **[ADR-002](architecture/ADR-002-test-location-standardization.md)** - Root-level test location
-3. **[CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md)** - Hybrid strategy rationale
-4. **Future ADRs** - Real-time strategy, state management, etc.
-
-### "I need to make an architectural decision"
-1. **[BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - ⭐ Start here (10-min read)
-2. Use the 4-second rule: "1 domain? VERTICAL. ALL domains? HORIZONTAL."
-3. Check common scenarios table for similar decisions
-4. Document in ADR if non-obvious or team-impacting
-
-### "I want to optimize AI agent workflows"
-1. **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - ⭐ Complete transformation plan
-2. Understand memory files, chatmodes, workflow prompts
-3. Review implementation roadmap (5 phases)
-4. Start with Phase 1 (memory infrastructure)
+### Architect/Tech Lead (2.5 hours)
+1. [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
+2. [Complete PRD](10-prd/) (1h)
+3. [MVP Roadmap](10-prd/) (30 min)
+4. [Architecture Gaps](roadmap/ARCHITECTURE_GAPS.md) (30 min)
+5. [ADRs](80-adrs/) review (30 min)
+6. Optional: [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md) (3h)
 
 ---
 
-## 🔍 Finding Information
+## 🔄 Reorganization Status
 
-### By Topic
+### ✅ Phase 1: Structure Created (2025-10-25)
+- [x] Create SDLC taxonomy folder structure
+- [x] Add README to each category
+- [x] Update INDEX.md with taxonomy
 
-| Topic | Primary Document | Supporting Docs |
-|-------|-----------------|-----------------|
-| **Architecture Strategy** | [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ | [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md), [EVALUATION_FRAMEWORK.md](architecture/slicing/EVALUATION_FRAMEWORK.md) |
-| **AI Workflow Optimization** | [Agentic Workflow Strategy](agentic-workflow-strategy.md) ⭐ | [GitHub Agentic Primitives](https://github.blog/ai-and-ml/github-copilot/how-to-build-reliable-ai-workflows-with-agentic-primitives-and-context-engineering/) |
-| **Service Layer** | [SERVICE_TEMPLATE_QUICK.md](patterns/SERVICE_TEMPLATE_QUICK.md) | [PRD §3.3](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#33-service-layer), [Architecture Diagram](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) |
-| **Database Types** | [DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md) | [ADR-001](architecture/ADR-001-dual-database-type-strategy.md), [Schema Drift Audit](audits/SCHEMA_DRIFT_AUDIT.md) |
-| **Testing** | [TESTING_SETUP.md](phase-0/TESTING_SETUP.md) | [PRD §3.10](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#310-testing--cicd), [ADR-002](architecture/ADR-002-test-location-standardization.md) |
-| **Anti-Patterns** | [PRD §4](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#4-anti-pattern-guardrails) | [Architecture Diagram](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) |
-| **Roadmap** | [MVP_PRODUCTION_ROADMAP.md](roadmap/MVP_PRODUCTION_ROADMAP.md) | [ARCHITECTURE_GAPS.md](roadmap/ARCHITECTURE_GAPS.md), [NEXT_STEPS_REPORT.md](roadmap/NEXT_STEPS_REPORT.md) |
-| **Migrations** | [DATABASE_WORKFLOW.md](phase-0/DATABASE_WORKFLOW.md) | [DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md) |
+### ✅ Phase 2: Document Migration (2025-10-25)
+- [x] Move PRD documents to `10-prd/` (2 docs)
+- [x] Move architecture documents to `20-architecture/` (2 docs)
+- [x] Move API documents to `25-api-data/` (8 docs)
+- [x] Move release docs to `60-release/` (1 doc)
+- [x] Move governance docs to `70-governance/` (5 docs)
+- [x] Organize ADRs in `80-adrs/` (12 ADRs)
+- [x] Create MIGRATION_SUMMARY.md
 
-### By Phase
+**Total**: 39 documents migrated successfully
+**Report**: See [MIGRATION_SUMMARY.md](MIGRATION_SUMMARY.md)
 
-| Phase | Status | Approach | Key Docs |
-|-------|--------|----------|----------|
-| **Phase 0** | ✅ Complete | HORIZONTAL | [COMPLETED.md](phase-0/COMPLETED.md), [TESTING_SETUP.md](phase-0/TESTING_SETUP.md) |
-| **Phase 1** | ✅ Complete | HORIZONTAL | [security-skeleton.md](phase-1/security-skeleton.md) |
-| **Phase 2** | 🔄 87.5% | HORIZONTAL | [SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md), [SERVICE_RESPONSIBILITY_MATRIX.md](phase-2/SERVICE_RESPONSIBILITY_MATRIX.md) |
-| **Phase 3** | ⏳ Next | HORIZONTAL → VERTICAL | Week 3: State mgmt (H), Weeks 4-6: Player/Visit/RatingSlip UI (V) |
-| **Phase 4** | ⏳ Pending | VERTICAL + HYBRID | [Roadmap Week 7-8](roadmap/MVP_PRODUCTION_ROADMAP.md#phase-4-compliance--workflows-weeks-7-8) |
-| **Phase 5** | ⏳ Pending | HORIZONTAL | [Roadmap Week 9-10](roadmap/MVP_PRODUCTION_ROADMAP.md#phase-5-production-hardening-weeks-9-10) |
+### ✅ Phase 3 - Priority 1: Link Updates & Cleanup (2025-10-26)
+- [x] Scan all documents for broken internal links
+- [x] Update references to migrated documents (35+ files)
+- [x] Validate cross-references between docs (15+ links)
+- [x] Remove empty legacy folders (adr/, api-route-catalogue/, system-prd/)
+- [x] Create Phase 3 report
 
----
+**Total**: 17 path patterns fixed across 35+ files
+**Report**: See [PHASE_3_LINK_UPDATES_REPORT.md](PHASE_3_LINK_UPDATES_REPORT.md)
 
-## 🎓 Learning Path
+### ⏳ Phase 3 - Priority 2: Front Matter (Pending)
+- [ ] Add YAML front matter to all migrated documents
+- [ ] Include: id, title, owner, status, created, last_review
+- [ ] Add affects/references cross-links
 
-### New Developer Onboarding
-1. Read [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
-2. Read [CANONICAL_BLUEPRINT_MVP_PRD.md](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md) §1-4 (30 min)
-3. Review [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (15 min)
-4. Study [Player Service Implementation](../services/player/) (30 min)
-5. Follow [DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md) tutorial (30 min)
-6. Implement a test service using [SERVICE_TEMPLATE_QUICK.md](patterns/SERVICE_TEMPLATE_QUICK.md) (2h)
-
-**Total**: ~4 hours to productive contribution
-
-### Architect/Tech Lead Onboarding
-1. Read [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
-2. Read complete [PRD](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md) (1h)
-3. Review [MVP Production Roadmap](roadmap/MVP_PRODUCTION_ROADMAP.md) (30 min)
-4. Analyze [Architecture Gaps](roadmap/ARCHITECTURE_GAPS.md) (30 min)
-5. Study [ADR-001](architecture/ADR-001-dual-database-type-strategy.md) + [ADR-002](architecture/ADR-002-test-location-standardization.md) (30 min)
-6. Review current [Session Handoff](phase-2/SESSION_HANDOFF.md) (15 min)
-7. Optional: [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md) for deep dive (3h)
-
-**Total**: ~2.5 hours to architectural understanding (+ 3h optional deep dive)
-
----
-
-## 📊 Documentation Health
-
-### Coverage by Category
-- ✅ **Architecture**: Complete (PRD, diagrams, ADRs, hybrid strategy)
-- ✅ **Patterns**: Complete (templates, hybrid model, decision framework)
-- ✅ **Workflows**: Partial (database types complete, others pending)
-- ✅ **Roadmap**: Updated (hybrid strategy integrated, 2025-10-10)
-- ⏳ **Audits**: Started (schema drift only)
-- ⏳ **Phase Docs**: Phases 0-2 documented, 3-5 pending
-
-### Recent Additions
-- ✅ **[Agentic Workflow Strategy](agentic-workflow-strategy.md)** - AI workflow optimization plan (2025-10-17)
-- ✅ **[BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md)** - Hybrid strategy decision framework (2025-10-10)
-- ✅ **[CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md)** - Full architectural analysis (2025-10-10)
-- ✅ **[UPDATE_SUMMARY.md](architecture/slicing/UPDATE_SUMMARY.md)** - Roadmap alignment tracking (2025-10-10)
-- ✅ All roadmap docs updated with HORIZONTAL/VERTICAL labels (2025-10-10)
-
-### Upcoming Documentation Needs
-- **Agentic Infrastructure**: Memory files, chatmodes, workflow prompts (Phase 1-5 from strategy)
-- **Phase 3**: React Query setup guide, server action patterns, Zustand stores
-- **Phase 4**: Compliance workflows, MTL reporting, real-time patterns
-- **Phase 5**: Performance optimization, deployment procedures
-- **ADRs**: State management strategy (Week 3), real-time strategy (Week 6), security patterns (Week 7)
-
----
-
-## 🔗 External References
-
-### Supabase Documentation
-- [Local Development](https://supabase.com/docs/guides/cli/local-development)
-- [Type Generation](https://supabase.com/docs/guides/api/rest/generating-types)
-- [RLS Policies](https://supabase.com/docs/guides/auth/row-level-security)
-
-### Next.js Documentation
-- [App Router](https://nextjs.org/docs/app)
-- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)
-
-### Testing Documentation
-- [Jest](https://jestjs.io/docs/getting-started)
-- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
-- [Cypress](https://docs.cypress.io/guides/overview/why-cypress)
+### ⏳ Phase 4: Automation & Maintenance (Pending)
+- [ ] Add docs review checkbox to PR template
+- [ ] Schedule weekly docs review cadence
+- [ ] Create CODEOWNERS for doc categories
+- [ ] Setup automated link checking (GitHub Actions)
 
 ---
 
 ## 📝 Document Maintenance
 
 ### Review Schedule
-- **Weekly**: [SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md) - Updated after each session
-- **Phase End**: Phase summary docs (COMPLETED.md style)
-- **Monthly**: [MVP_PRODUCTION_ROADMAP.md](roadmap/MVP_PRODUCTION_ROADMAP.md) - Timeline adjustments
-- **Quarterly**: [PRD](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md) - Architecture refinements
+- **Weekly**: Session handoffs, status updates
+- **Phase End**: Phase summary docs
+- **Monthly**: Roadmap timeline adjustments
+- **Quarterly**: PRD architecture refinements
 
-### Document Owners
-- **PRD**: Tech Lead
-- **Roadmap**: Product + Tech Lead
-- **Templates**: Senior Developers
-- **Workflows**: DevOps + Developers
-- **ADRs**: Architecture Team
+### Ownership (RACI)
+
+| Category | Owner | Approvers | Consulted |
+|----------|-------|-----------|-----------|
+| Vision | Product | Eng Lead | Architecture, QA |
+| PRD | Product | Eng Lead | Architecture, QA |
+| ARCH | Architecture | Eng Lead | Security, Product |
+| API/DATA | Backend | Architecture | Frontend, QA |
+| SEC/RBAC | Security | Architecture | Backend |
+| QA | QA Lead | Eng Lead | All teams |
+| OPS | SRE | Eng Lead | Backend |
+| REL | Release Mgr | Eng Lead | Product, QA |
+| GOV | Eng Lead | Architecture | All teams |
+| ADR | Author | Architecture | Affected teams |
+
+---
+
+## 🔗 External References
+
+### Supabase
+- [Local Development](https://supabase.com/docs/guides/cli/local-development)
+- [Type Generation](https://supabase.com/docs/guides/api/rest/generating-types)
+- [RLS Policies](https://supabase.com/docs/guides/auth/row-level-security)
+
+### Next.js
+- [App Router](https://nextjs.org/docs/app)
+- [Server Actions](https://nextjs.org/docs/app/building-your-application/data-fetching/server-actions-and-mutations)
+
+### React Query
+- [TanStack Query v5](https://tanstack.com/query/latest)
+- [Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)
+
+### Testing
+- [Jest](https://jestjs.io/docs/getting-started)
+- [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 
 ---
 
 ## 🆘 Need Help?
 
 ### Common Questions
-1. **"Should this be HORIZONTAL or VERTICAL?"** → [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐
-2. **"Which type file do I import?"** → [DATABASE_TYPE_WORKFLOW.md](workflows/DATABASE_TYPE_WORKFLOW.md)
-3. **"How do I write a service?"** → [SERVICE_TEMPLATE_QUICK.md](patterns/SERVICE_TEMPLATE_QUICK.md)
-4. **"What's the anti-pattern rule?"** → [PRD §4](system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md#4-anti-pattern-guardrails)
-5. **"When is MVP done?"** → [MVP_PRODUCTION_ROADMAP.md](roadmap/MVP_PRODUCTION_ROADMAP.md)
-6. **"Where are we now?"** → [SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md)
-
-### Document Not Found?
-Check if it's:
-- In the wrong phase folder
-- Renamed (check git history)
-- Not yet created (see roadmap for planned docs)
-- In parent project (reference-pt-1/)
+1. **"Should this be HORIZONTAL or VERTICAL?"** → [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐
+2. **"Which type file do I import?"** → [Database Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)
+3. **"How do I write a service?"** → [Service Template](70-governance/)
+4. **"What's the anti-pattern rule?"** → [PRD §4](10-prd/) or [Over-Engineering Guardrail](70-governance/)
+5. **"When is MVP done?"** → [MVP Roadmap](10-prd/)
+6. **"Where are we now?"** → [Session Handoff](phase-2/SESSION_HANDOFF.md)
 
 ---
 
-**Index Version**: 1.2.0
-**Last Updated**: 2025-10-10
+**Index Version**: 2.0.0 (SDLC Taxonomy)
+**Last Updated**: 2025-10-25
 **Maintained By**: Development Team
-**Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
-
----
-
-## 📦 Recent Updates (v1.2.0 - 2025-10-10)
-
-### Hybrid Architecture Strategy Formalized
-- **Framework**: [BALANCED_ARCHITECTURE_QUICK.md](patterns/BALANCED_ARCHITECTURE_QUICK.md) - 10-min decision guide
-- **Full Analysis**: [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md) - Architect perspectives
-- **Roadmap Alignment**: All docs updated with HORIZONTAL/VERTICAL labels
-- **Core Principle**: "Horizontal layers for technical architecture, vertical slices for feature delivery"
-
-### MTL Service Complete (Phase 2 - 87.5%)
-- **Implementation**: [services/mtl/](../services/mtl/)
-- **Bounded Context**: "What cash transactions require regulatory reporting?"
-- **Features**: CTR aggregation, compliance queries
-- **Test Coverage**: 98/98 tests passing (100%)
-
-### Test Location Standardization (ADR-002)
-- **Decision**: Root-level `__tests__/services/{domain}/` pattern
-- **Migration**: Casino, TableContext, MTL tests moved
-- **Consistency**: All services now follow same pattern
-
-### Previous Updates (v1.1.0)
-- ✅ Schema Consistency (ratingslip.id: TEXT → UUID)
-- ✅ PlayerFinancialService (16 test cases)
-- ✅ Bounded Context Clarity (Service Responsibility Matrix)
+**Next Review**: Weekly

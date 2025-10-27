@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -7,28 +7,28 @@ import {
   parseParams,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   casinoId: z.string().uuid(),
 });
 
 const staffListQuerySchema = z.object({
-  status: z.enum(["active", "inactive"]).optional(),
-  role: z.enum(["dealer", "pit_boss", "admin"]).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
+  role: z.enum(['dealer', 'pit_boss', 'admin']).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 export async function GET(
   request: NextRequest,
-  context: { params: { casinoId: string } },
+  segmentData: { params: Promise<{ casinoId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const query = parseQuery(request, staffListQuerySchema);
 
     const supabase = await createClient();

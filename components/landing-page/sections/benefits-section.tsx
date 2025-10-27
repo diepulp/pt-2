@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { Button } from "@heroui/button";
-import { Card, CardBody } from "@heroui/card";
-import { Chip } from "@heroui/chip";
-import { ArrowRight, CheckCircle } from "lucide-react";
-import { motion, useInView } from "motion/react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRef } from "react";
+import { Button } from '@heroui/button';
+import { Card, CardBody } from '@heroui/card';
+import { Chip } from '@heroui/chip';
+import { ArrowRight, CheckCircle } from 'lucide-react';
+import { motion, useInView } from 'motion/react';
+import Image from 'next/image';
+import Link from 'next/link';
+import { useRef } from 'react';
 
 const benefits = [
-  "Increase player retention by up to 40%",
-  "Grow player lifetime value by 35%",
-  "Reduce operational costs by 25%",
-  "Boost marketing ROI by targeting high-value players",
-  "Enhance customer experience with personalized rewards",
-  "Make data-driven decisions with comprehensive analytics",
+  'Increase player retention by up to 40%',
+  'Grow player lifetime value by 35%',
+  'Reduce operational costs by 25%',
+  'Boost marketing ROI by targeting high-value players',
+  'Enhance customer experience with personalized rewards',
+  'Make data-driven decisions with comprehensive analytics',
 ];
 
 export function BenefitsSection() {
@@ -60,7 +60,7 @@ export function BenefitsSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? "visible" : "hidden"}
+          animate={isInView ? 'visible' : 'hidden'}
           variants={containerVariants}
           className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
         >

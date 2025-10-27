@@ -1,13 +1,13 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   casinoId: z.string().uuid(),
@@ -15,12 +15,12 @@ const routeParamsSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  context: { params: { casinoId: string } },
+  segmentData: { params: Promise<{ casinoId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const supabase = await createClient();
     void supabase; // TODO: Pass to CasinoService.detail
     void params;

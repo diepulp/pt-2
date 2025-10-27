@@ -312,7 +312,7 @@ We've implemented a four-layer integrity framework to prevent schema drift incid
 **Documentation**:
 - Quick Reference: `docs/integrity/QUICK_REFERENCE.md`
 - Full Guide: `docs/integrity/INTEGRITY_FRAMEWORK.md`
-- ADR: `docs/adr/ADR-005-integrity-enforcement.md`
+- ADR: `80-adrs/ADR-005-integrity-enforcement.md`
 
 Questions? Reach out on #engineering-standards
 

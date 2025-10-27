@@ -5,4 +5,5 @@
 .husky/pre-commit-api-sanity.sh || exit 1
 
 # Run lint-staged for all staged files
-npm run lint-staged
+# DISABLED: Takes unreasonable time with eslint --fix
+# npm run lint-staged

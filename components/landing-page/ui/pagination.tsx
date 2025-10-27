@@ -1,12 +1,12 @@
-import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react'
-import Link from 'next/link'
-import * as React from 'react'
+import { ChevronLeft, ChevronRight, MoreHorizontal } from 'lucide-react';
+import Link from 'next/link';
+import * as React from 'react';
 
 import {
   ButtonProps,
   buttonVariants,
-} from '@/components/landing-page/ui/button'
-import { cn } from '@/lib/utils'
+} from '@/components/landing-page/ui/button';
+import { cn } from '@/lib/utils';
 
 const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
   <nav
@@ -15,38 +15,38 @@ const Pagination = ({ className, ...props }: React.ComponentProps<'nav'>) => (
     className={cn('mx-auto flex w-full justify-center', className)}
     {...props}
   />
-)
-Pagination.displayName = 'Pagination'
+);
+Pagination.displayName = 'Pagination';
 
 const PaginationContent = ({
   ref,
   className,
   ...props
 }: React.ComponentProps<'ul'> & {
-  ref?: React.Ref<HTMLUListElement>
+  ref?: React.Ref<HTMLUListElement>;
 }) => (
   <ul
     ref={ref}
     className={cn('flex flex-row items-center gap-1', className)}
     {...props}
   />
-)
-PaginationContent.displayName = 'PaginationContent'
+);
+PaginationContent.displayName = 'PaginationContent';
 
 const PaginationItem = ({
   ref,
   className,
   ...props
 }: React.ComponentProps<'li'> & {
-  ref?: React.Ref<HTMLLIElement>
-}) => <li ref={ref} className={cn('', className)} {...props} />
-PaginationItem.displayName = 'PaginationItem'
+  ref?: React.Ref<HTMLLIElement>;
+}) => <li ref={ref} className={cn('', className)} {...props} />;
+PaginationItem.displayName = 'PaginationItem';
 
 type PaginationLinkProps = {
-  isActive?: boolean
-  href?: string
+  isActive?: boolean;
+  href?: string;
 } & Pick<ButtonProps, 'size'> &
-  React.ComponentProps<typeof Link>
+  React.ComponentProps<typeof Link>;
 
 const PaginationLink = ({
   className,
@@ -65,8 +65,8 @@ const PaginationLink = ({
     )}
     {...props}
   />
-)
-PaginationLink.displayName = 'PaginationLink'
+);
+PaginationLink.displayName = 'PaginationLink';
 
 const PaginationPrevious = ({
   className,
@@ -81,8 +81,8 @@ const PaginationPrevious = ({
     <ChevronLeft className="h-4 w-4" />
     <span>Previous</span>
   </PaginationLink>
-)
-PaginationPrevious.displayName = 'PaginationPrevious'
+);
+PaginationPrevious.displayName = 'PaginationPrevious';
 
 const PaginationNext = ({
   className,
@@ -97,8 +97,8 @@ const PaginationNext = ({
     <span>Next</span>
     <ChevronRight className="h-4 w-4" />
   </PaginationLink>
-)
-PaginationNext.displayName = 'PaginationNext'
+);
+PaginationNext.displayName = 'PaginationNext';
 
 const PaginationEllipsis = ({
   className,
@@ -112,8 +112,8 @@ const PaginationEllipsis = ({
     <MoreHorizontal className="h-4 w-4" />
     <span className="sr-only">More pages</span>
   </span>
-)
-PaginationEllipsis.displayName = 'PaginationEllipsis'
+);
+PaginationEllipsis.displayName = 'PaginationEllipsis';
 
 export {
   Pagination,
@@ -123,4 +123,4 @@ export {
   PaginationLink,
   PaginationNext,
   PaginationPrevious,
-}
+};

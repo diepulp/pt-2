@@ -24,7 +24,7 @@
 
 Create a short-lived **“SRM Canonicalization”** board with the following swimlanes:
 
-1. **Policy & Docs** – ADR-000, [`docs/adr/ADR-000-matrix-as-contract.md`] SRM Patch merge, SRM changelog
+1. **Policy & Docs** – ADR-000, [`80-adrs/ADR-000-matrix-as-contract.md`] SRM Patch merge, SRM changelog
 2. **Schema Baseline** – baseline migration, seed, types regen
 3. **CI & Tooling** – diff linter, types gate, RLS & identifier lint
 4. **Backfills** – staff.casino_id, dealer_rotation.table_id, finance.gaming_day
@@ -38,7 +38,7 @@ Create a short-lived **“SRM Canonicalization”** board with the following swi
 ## 2) Deliverable Files/Dirs to Add
 
 ```
-docs/adr/ADR-000-matrix-as-contract.md                  # already produced
+80-adrs/ADR-000-matrix-as-contract.md                  # already produced
 docs/patterns/SRM_CHANGELOG.md                          # from Patch Pack
 docs/patterns/SRM_CANONICAL_ROLLUP.md                   # this effort’s progress log
 

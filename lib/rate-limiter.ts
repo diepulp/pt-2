@@ -154,6 +154,6 @@ function cleanupExpiredEntries(): void {
 }
 
 // Start periodic cleanup
-if (typeof setInterval !== "undefined") {
+if (typeof setInterval !== 'undefined') {
   setInterval(cleanupExpiredEntries, CLEANUP_INTERVAL_MS);
 }

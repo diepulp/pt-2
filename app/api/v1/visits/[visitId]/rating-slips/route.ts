@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -7,8 +7,8 @@ import {
   parseParams,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   visitId: z.string().uuid(),
@@ -21,12 +21,12 @@ const ratingSlipListQuerySchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  context: { params: { visitId: string } },
+  segmentData: { params: Promise<{ visitId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const query = parseQuery(request, ratingSlipListQuerySchema);
 
     const supabase = await createClient();

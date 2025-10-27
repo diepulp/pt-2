@@ -1,0 +1,5 @@
+- TypeScript-first with generated Supabase `Database` types; no `any`/`ReturnType` leaks, explicit service interfaces, and DTO schemas colocated per domain (`services/{domain}/dto.ts`).
+- Domain services built as functional factories over `SupabaseClient`, composed from `crud.ts`/`business.ts` modules, and wrapped by `executeOperation` to emit `ServiceResult` envelopes.
+- Validation uses Zod at the edge (Route Handlers & Server Actions) with services assuming validated DTOs; HTTP status mapping is confined to those edges.
+- RLS and tenancy scopes must be explicit in queries; idempotency handled via natural keys and constraint management, avoiding shared "base" classes.
+- UI layers follow Next.js + Tailwind + shadcn conventions; linting via ESLint config (Next + Prettier) and formatting handled automatically in lint scripts.

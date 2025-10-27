@@ -1,0 +1,36 @@
+{
+  "$schema": "node_modules/@openapitools/openapi-generator-cli/config.schema.json",
+  "spaces": 2,
+  "generator-cli": {
+    "version": "7.10.0",
+    "generators": {
+      "typescript-fetch": {
+        "inputSpec": "docs/api-route-catalogue/api-surface.openapi.yaml",
+        "output": "generated/api-client",
+        "generatorName": "typescript-fetch",
+        "additionalProperties": {
+          "supportsES6": "true",
+          "npmName": "@pt-2/api-client",
+          "npmVersion": "1.0.0",
+          "typescriptThreePlus": "true",
+          "withInterfaces": "true",
+          "modelPropertyNaming": "camelCase",
+          "enumPropertyNaming": "UPPERCASE"
+        }
+      },
+      "typescript-axios": {
+        "inputSpec": "docs/api-route-catalogue/api-surface.openapi.yaml",
+        "output": "generated/api-client-axios",
+        "generatorName": "typescript-axios",
+        "additionalProperties": {
+          "supportsES6": "true",
+          "npmName": "@pt-2/api-client-axios",
+          "npmVersion": "1.0.0",
+          "withSeparateModelsAndApi": "true",
+          "modelPropertyNaming": "camelCase",
+          "enumPropertyNaming": "UPPERCASE"
+        }
+      }
+    }
+  }
+}

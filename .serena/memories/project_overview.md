@@ -1,0 +1,3 @@
+- PT-2 is a Next.js 15 App Router project backed by Supabase/Postgres that implements casino/staff/player domain workflows documented under docs/.
+- Architecture leans on domain services in `services/` (per SERVICE_TEMPLATE) consumed by Route Handlers and Server Actions plus extensive docs tooling for pattern audits.
+- Repo structure highlights: `app/` (UI + API routes), `components/`, `services/` (bounded contexts), `lib/` (client helpers), `docs/` (architecture specs), `supabase/` (database config), `scripts/` (schema + audit tooling), plus Cypress/Jest configurations for testing.

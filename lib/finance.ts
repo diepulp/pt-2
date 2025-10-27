@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 type Nullable<T> = T | null | undefined;
 
@@ -24,7 +24,7 @@ export async function createFinancialTransaction(
     ratingSlipId,
   }: CreateFinancialTxnArgs,
 ) {
-  const { data, error } = await supabase.rpc("rpc_create_financial_txn", {
+  const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
     p_casino_id: casinoId,
     p_player_id: playerId,
     p_amount: amount,

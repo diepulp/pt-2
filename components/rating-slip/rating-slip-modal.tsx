@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   ArrowLeftRight,
@@ -10,15 +10,13 @@ import {
   Gift,
   Loader2,
   UserRound,
-} from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+} from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { completeRatingSlip } from "@/app/actions/ratingslip-actions";
-import { Progress } from "@/components/landing-page/ui/progress";
-import { ManualRewardDialog } from "@/components/loyalty/manual-reward-dialog";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Progress } from '@/components/landing-page/ui/progress';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -26,20 +24,22 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useServiceMutation } from "@/hooks/shared/use-service-mutation";
-import { toast } from "@/hooks/ui";
-import type { ServiceError } from "@/services/shared/types";
-type RatingSlipStatus = "OPEN" | "CLOSED";
+} from '@/components/ui/select';
+import { ManualRewardDialog } from '@/components/loyalty/manual-reward-dialog';
+import { toast } from '@/hooks/ui';
+import type { ServiceHttpResult } from '@/lib/http/service-response';
+import { loyaltyKeys } from '@/services/loyalty/keys';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
+type RatingSlipStatus = 'OPEN' | 'CLOSED';
 
 type RatingSlipPlayer = {
   id: string;
@@ -77,6 +77,63 @@ type RatingSlipFormDraft = {
   startTime: string;
 };
 
+type ServiceError = {
+  code?: string;
+  message?: string;
+  metadata?: {
+    correlationId?: string;
+  };
+  details?: unknown;
+};
+
+type RatingSlipCompletion = {
+  loyalty: {
+    pointsEarned: number;
+    newBalance: number;
+    tier: string;
+    ledgerEntry: {
+      tier_before: string | null;
+      tier_after: string | null;
+    };
+  };
+};
+
+async function completeRatingSlip(
+  ratingSlipId: string,
+): Promise<RatingSlipCompletion | null> {
+  const response = await fetch(`/api/v1/rating-slips/${ratingSlipId}/close`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'idempotency-key':
+        typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2),
+    },
+    body: JSON.stringify({}),
+  });
+
+  let payload: ServiceHttpResult<RatingSlipCompletion | null> | null = null;
+  try {
+    payload = (await response.json()) as ServiceHttpResult<
+      RatingSlipCompletion | null
+    >;
+  } catch {
+    // Ignore JSON parse errors; handled below.
+  }
+
+  if (!response.ok || !payload?.ok) {
+    const error = new Error(payload?.error ?? 'Failed to close rating slip');
+    if (payload?.details) {
+      (error as Error & { details?: ServiceError }).details =
+        payload.details as ServiceError;
+    }
+    throw error;
+  }
+
+  return payload.data ?? null;
+}
+
 type RatingSlipModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -84,7 +141,7 @@ type RatingSlipModalProps = {
   tables: RatingSlipTable[];
   onSave?: (draft: RatingSlipFormDraft) => void;
   onMovePlayer?: (
-    draft: Pick<RatingSlipFormDraft, "tableId" | "seatNumber">,
+    draft: Pick<RatingSlipFormDraft, 'tableId' | 'seatNumber'>,
   ) => void;
   onCloseSession?: (draft: RatingSlipFormDraft) => void;
 };
@@ -92,11 +149,11 @@ type RatingSlipModalProps = {
 const ADJUST_INTERVALS = [5, 25, 100, 500, 1000];
 
 const defaultDraft = (snapshot: RatingSlipSnapshot): RatingSlipFormDraft => ({
-  tableId: snapshot.tableId ?? "",
-  seatNumber: snapshot.seatNumber ?? "",
-  averageBet: snapshot.averageBet?.toString() ?? "",
-  cashIn: snapshot.cashIn?.toString() ?? "",
-  chipsTaken: snapshot.chipsTaken?.toString() ?? "",
+  tableId: snapshot.tableId ?? '',
+  seatNumber: snapshot.seatNumber ?? '',
+  averageBet: snapshot.averageBet?.toString() ?? '',
+  cashIn: snapshot.cashIn?.toString() ?? '',
+  chipsTaken: snapshot.chipsTaken?.toString() ?? '',
   startTime: snapshot.startTime ?? new Date().toISOString().slice(0, 16),
 });
 
@@ -126,27 +183,32 @@ export function RatingSlipModal({
     isPending: isClosing,
     data: completionResult,
     error: loyaltyError,
-  } = useServiceMutation(completeRatingSlip, {
+  } = useMutation<RatingSlipCompletion | null, Error, string>({
+    mutationKey: ratingSlipKeys.close(snapshot.id),
+    mutationFn: completeRatingSlip,
     onSuccess: (result) => {
       onCloseSession?.(draft);
 
-      queryClient.invalidateQueries({ queryKey: ["rating-slip"] });
+      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.root });
       queryClient.invalidateQueries({
-        queryKey: ["loyalty", "player", snapshot.player.id],
+        queryKey: loyaltyKeys.playerSummary(snapshot.player.id),
       });
 
-      toast({ title: "Session closed successfully" });
-      toast({
-        title: `Earned ${result.loyalty.pointsEarned} loyalty points!`,
-      });
+      toast({ title: 'Session closed successfully' });
 
-      if (
-        result.loyalty.ledgerEntry.tier_after !==
-        result.loyalty.ledgerEntry.tier_before
-      ) {
+      if (result) {
         toast({
-          title: `🎉 Tier upgraded to ${result.loyalty.tier}!`,
+          title: `Earned ${result.loyalty.pointsEarned} loyalty points!`,
         });
+
+        if (
+          result.loyalty.ledgerEntry.tier_after !==
+          result.loyalty.ledgerEntry.tier_before
+        ) {
+          toast({
+            title: `🎉 Tier upgraded to ${result.loyalty.tier}!`,
+          });
+        }
       }
 
       setTimeout(() => onOpenChange(false), 2000);
@@ -154,17 +216,17 @@ export function RatingSlipModal({
     onError: (error) => {
       const serviceError = (error as Error & { details?: ServiceError })
         .details;
-      if (serviceError?.code === "PARTIAL_COMPLETION") {
+      if (serviceError?.code === 'PARTIAL_COMPLETION') {
         toast({
-          title: "Error",
+          title: 'Error',
           description: `Session closed but loyalty processing failed. Contact support with ID: ${(serviceError as ServiceError & { metadata?: { correlationId?: string } }).metadata?.correlationId}`,
-          variant: "destructive",
+          variant: 'destructive',
         });
       } else {
         toast({
-          title: "Error",
-          description: error.message || "Failed to close session",
-          variant: "destructive",
+          title: 'Error',
+          description: error.message || 'Failed to close session',
+          variant: 'destructive',
         });
       }
     },
@@ -178,7 +240,7 @@ export function RatingSlipModal({
   };
 
   const applyAdjustment = (
-    key: "averageBet" | "cashIn" | "chipsTaken",
+    key: 'averageBet' | 'cashIn' | 'chipsTaken',
     delta: number,
   ) => {
     setDraft((prev) => {
@@ -200,7 +262,7 @@ export function RatingSlipModal({
     closeSlip(snapshot.id);
   };
 
-  const statusVariant = snapshot.status === "OPEN" ? "secondary" : "outline";
+  const statusVariant = snapshot.status === 'OPEN' ? 'secondary' : 'outline';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,12 +313,12 @@ export function RatingSlipModal({
                 inputMode="numeric"
                 value={draft.chipsTaken}
                 onChange={(event) =>
-                  updateDraft("chipsTaken", event.target.value)
+                  updateDraft('chipsTaken', event.target.value)
                 }
                 placeholder="0"
               />
               <QuickAdjustRow
-                onAdjust={(delta) => applyAdjustment("chipsTaken", delta)}
+                onAdjust={(delta) => applyAdjustment('chipsTaken', delta)}
               />
             </div>
             <div className="space-y-2">
@@ -267,7 +329,7 @@ export function RatingSlipModal({
                   type="datetime-local"
                   value={draft.startTime}
                   onChange={(event) =>
-                    updateDraft("startTime", event.target.value)
+                    updateDraft('startTime', event.target.value)
                   }
                 />
                 <Button
@@ -305,12 +367,12 @@ export function RatingSlipModal({
                 inputMode="decimal"
                 value={draft.averageBet}
                 onChange={(event) =>
-                  updateDraft("averageBet", event.target.value)
+                  updateDraft('averageBet', event.target.value)
                 }
                 placeholder="0"
               />
               <QuickAdjustRow
-                onAdjust={(delta) => applyAdjustment("averageBet", delta)}
+                onAdjust={(delta) => applyAdjustment('averageBet', delta)}
               />
             </div>
             <div className="space-y-2">
@@ -320,11 +382,11 @@ export function RatingSlipModal({
                 type="number"
                 inputMode="numeric"
                 value={draft.cashIn}
-                onChange={(event) => updateDraft("cashIn", event.target.value)}
+                onChange={(event) => updateDraft('cashIn', event.target.value)}
                 placeholder="0"
               />
               <QuickAdjustRow
-                onAdjust={(delta) => applyAdjustment("cashIn", delta)}
+                onAdjust={(delta) => applyAdjustment('cashIn', delta)}
               />
             </div>
           </fieldset>
@@ -340,7 +402,7 @@ export function RatingSlipModal({
               <Label htmlFor="tableId">Table</Label>
               <Select
                 value={draft.tableId}
-                onValueChange={(value) => updateDraft("tableId", value)}
+                onValueChange={(value) => updateDraft('tableId', value)}
               >
                 <SelectTrigger id="tableId">
                   <SelectValue placeholder="Select a table" />
@@ -367,7 +429,7 @@ export function RatingSlipModal({
                 id="seatNumber"
                 value={draft.seatNumber}
                 onChange={(event) =>
-                  updateDraft("seatNumber", event.target.value)
+                  updateDraft('seatNumber', event.target.value)
                 }
                 placeholder="e.g. 3"
               />
@@ -398,11 +460,11 @@ export function RatingSlipModal({
                 Current Points
               </p>
               <p className="text-3xl font-semibold tracking-tight">
-                {snapshot.currentPoints?.toLocaleString() ?? "0"}
+                {snapshot.currentPoints?.toLocaleString() ?? '0'}
               </p>
             </div>
 
-            {snapshot.status === "OPEN" && (
+            {snapshot.status === 'OPEN' && (
               <Button
                 type="button"
                 variant="outline"
@@ -421,11 +483,11 @@ export function RatingSlipModal({
                 </p>
                 <div className="space-y-1 text-sm text-green-800">
                   <p>
-                    Points Earned:{" "}
+                    Points Earned:{' '}
                     <strong>+{completionResult.loyalty.pointsEarned}</strong>
                   </p>
                   <p>
-                    New Balance:{" "}
+                    New Balance:{' '}
                     <strong>{completionResult.loyalty.newBalance}</strong>
                   </p>
                   <p>
@@ -456,7 +518,7 @@ export function RatingSlipModal({
                     }
                   )?.metadata?.correlationId && (
                     <div className="mt-1 text-xs opacity-80">
-                      Correlation ID:{" "}
+                      Correlation ID:{' '}
                       {
                         (
                           (loyaltyError as Error & { details?: ServiceError })
@@ -496,7 +558,7 @@ export function RatingSlipModal({
             type="button"
             variant="destructive"
             onClick={handleCloseSession}
-            disabled={isClosing || snapshot.status === "CLOSED"}
+            disabled={isClosing || snapshot.status === 'CLOSED'}
           >
             {isClosing ? (
               <>
@@ -504,7 +566,7 @@ export function RatingSlipModal({
                 Closing...
               </>
             ) : (
-              "Close Session"
+              'Close Session'
             )}
           </Button>
         </DialogFooter>
@@ -516,10 +578,10 @@ export function RatingSlipModal({
         playerId={snapshot.player.id}
         playerName={snapshot.player.name}
         currentBalance={snapshot.currentPoints ?? 0}
-        currentTier={snapshot.player.tier ?? "BRONZE"}
-        onSuccess={(result) => {
+        currentTier={snapshot.player.tier ?? 'BRONZE'}
+        onSuccess={() => {
           queryClient.invalidateQueries({
-            queryKey: ["loyalty", "player", snapshot.player.id],
+            queryKey: loyaltyKeys.playerSummary(snapshot.player.id),
           });
         }}
       />

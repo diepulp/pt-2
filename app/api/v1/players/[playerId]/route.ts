@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const routeParamsSchema = z.object({
   playerId: z.string().uuid(),
@@ -23,23 +23,23 @@ const playerUpdateSchema = z
     casino_enrollment: z
       .object({
         casino_id: z.string().uuid(),
-        status: z.enum(["active", "inactive"]).default("active"),
+        status: z.enum(['active', 'inactive']).default('active'),
       })
       .optional(),
   })
   .refine(
     (payload) => Object.keys(payload).length > 0,
-    "At least one field must be provided",
+    'At least one field must be provided',
   );
 
 export async function PATCH(
   request: NextRequest,
-  context: { params: { playerId: string } },
+  segmentData: { params: Promise<{ playerId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
     const idempotencyKey = requireIdempotencyKey(request);
     void idempotencyKey; // TODO: Use when invoking PlayerService.update
 
@@ -60,12 +60,12 @@ export async function PATCH(
 
 export async function GET(
   request: NextRequest,
-  context: { params: { playerId: string } },
+  segmentData: { params: Promise<{ playerId: string }> },
 ) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(context.params, routeParamsSchema);
+    const params = parseParams(await segmentData.params, routeParamsSchema);
 
     const supabase = await createClient();
     void supabase; // TODO: Pass to PlayerService.getById

@@ -1,5 +1,5 @@
-import { NextRequest } from "next/server";
-import { z } from "zod";
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 
 import {
   createRequestContext,
@@ -8,8 +8,8 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { createClient } from '@/lib/supabase/server';
 
 const visitCreateSchema = z.object({
   player_id: z.string().uuid(),
@@ -20,7 +20,7 @@ const visitCreateSchema = z.object({
 const visitListQuerySchema = z.object({
   casino_id: z.string().uuid(),
   player_id: z.string().uuid().optional(),
-  status: z.enum(["open", "closed"]).optional(),
+  status: z.enum(['open', 'closed']).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
 });

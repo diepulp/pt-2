@@ -1,0 +1,8 @@
+- `npm run dev` – start the Next.js development server.
+- `npm run build && npm run start` – create and run a production build.
+- `npm run type-check` – strict TypeScript compile to ensure types are sound.
+- `npm run lint:check` (or `npm run lint`) – run ESLint (optionally autofix with `lint`/`lint:fix`).
+- `npm run test` / `npm run test:watch` / `npm run test:coverage` – execute Jest unit tests.
+- `npm run cypress:headless` or `npm run e2e:headless` – run Cypress integration/E2E suites (the latter boots dev server automatically).
+- `npm run db:types` / `npm run db:types-local` – regenerate Supabase database type definitions.
+- `npm run validate:matrix-schema` – run the docs/schema validation/parsing scripts when touching architecture matrices.

@@ -10,7 +10,7 @@
  * - Uses SHA-256 for collision resistance
  */
 
-import { createHash } from "crypto";
+import { createHash } from 'crypto';
 
 /**
  * Generate deterministic idempotency key from components
@@ -49,15 +49,15 @@ export function hashIdempotencyKey(
       const value = components[key];
       // Normalize value to string
       const normalizedValue =
-        value === null || value === undefined ? "" : String(value);
+        value === null || value === undefined ? '' : String(value);
       return `${key}=${normalizedValue}`;
     })
-    .join("&");
+    .join('&');
 
   // Generate SHA-256 hash
-  const hash = createHash("sha256");
+  const hash = createHash('sha256');
   hash.update(canonicalString);
-  return hash.digest("hex");
+  return hash.digest('hex');
 }
 
 /**
@@ -82,7 +82,7 @@ export function generateManualRewardKey(
     staffId,
     date,
     sequence,
-    type: "manual_reward",
+    type: 'manual_reward',
   });
 }
 
@@ -102,6 +102,6 @@ export function generateExternalRewardKey(
   return hashIdempotencyKey({
     playerId,
     rewardId,
-    type: "external_reward",
+    type: 'external_reward',
   });
 }

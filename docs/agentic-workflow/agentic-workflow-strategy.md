@@ -144,8 +144,8 @@ Agent: [Fixes issues]
 
 `.claude/CLAUDE.md` contains static references:
 ```markdown
-See `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
-See `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md`
+See `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+See `20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
 See `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md`
 ```
 
@@ -238,9 +238,9 @@ scope: all_agents
 - **Blocker**: Loyalty service optional (deferred to post-MVP)
 
 ## Key References (Full Context)
-- PRD: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+- PRD: `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
 - Service Template: `docs/patterns/SERVICE_TEMPLATE_QUICK.md`
-- Architecture Decision Framework: `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md`
+- Architecture Decision Framework: `20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
 ```
 
 **Benefits**:
@@ -287,8 +287,8 @@ tools_forbidden:
 context_files:
   - .claude/memory/project-context.memory.md
   - .claude/memory/architecture-decisions.memory.md
-  - docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md
-  - docs/patterns/BALANCED_ARCHITECTURE_QUICK.md
+  - 10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md
+  - 20-architecture/BALANCED_ARCHITECTURE_QUICK.md
   - docs/adr/*.md
 ---
 
@@ -350,7 +350,7 @@ When completing an architectural task, always deliver:
 
 1. **If significant decision**: ADR document
    ```
-   docs/adr/ADR-XXX-description.md
+   80-adrs/ADR-XXX-description.md
    ```
 
 2. **For implementation**: Specification file
@@ -442,7 +442,7 @@ context_files:
   - .claude/memory/service-catalog.memory.md
   - docs/patterns/SERVICE_TEMPLATE_QUICK.md
   - docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md
-  - docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md
+  - 10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md
 ---
 
 # Create Service Workflow
@@ -1057,7 +1057,7 @@ Before marking complete:
 
 - Service Template: `docs/patterns/SERVICE_TEMPLATE_QUICK.md`
 - Service Responsibility Matrix: `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md`
-- Architecture Standards: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` §3.3
+- Architecture Standards: `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` §3.3
 
 ---
 
@@ -1527,7 +1527,7 @@ Architect Agent: [Generates ADR-003-state-management-strategy.md]
 Architect Agent: [Updates architecture-decisions.memory.md with summary]
 
 Architect Agent: "ADR created:
-  - docs/adr/ADR-003-state-management-strategy.md
+  - 80-adrs/ADR-003-state-management-strategy.md
   - .claude/memory/architecture-decisions.memory.md updated
 
   Ready to commit?"
@@ -2022,8 +2022,8 @@ Memory files become single source of truth
 - **Compressed Version**: `/home/diepulp/projects/pt-2/docs-compressed/` (72k words, 64.2% reduction)
 - **Architecture Standards**: `/home/diepulp/projects/pt-2/.claude/CLAUDE.md`
 - **Service Template**: `docs/patterns/SERVICE_TEMPLATE_QUICK.md`
-- **Architecture Framework**: `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md`
-- **PRD**: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
+- **Architecture Framework**: `20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
+- **PRD**: `10-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
 
 ### Related ADRs
 

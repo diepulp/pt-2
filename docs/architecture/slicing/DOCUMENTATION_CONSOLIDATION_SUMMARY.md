@@ -56,7 +56,7 @@
 
 ### 1. BALANCED_ARCHITECTURE_QUICK.md (400 lines)
 
-**Location**: [docs/patterns/BALANCED_ARCHITECTURE_QUICK.md](../../patterns/BALANCED_ARCHITECTURE_QUICK.md)
+**Location**: [20-architecture/BALANCED_ARCHITECTURE_QUICK.md](../../patterns/BALANCED_ARCHITECTURE_QUICK.md)
 
 **Contents**:
 - ✅ Decision tree (mermaid diagram)
@@ -131,7 +131,7 @@
 ## Files Modified/Created
 
 ### Created
-- ✅ `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md` (400 lines)
+- ✅ `20-architecture/BALANCED_ARCHITECTURE_QUICK.md` (400 lines)
 - ✅ `docs/architecture/slicing/UPDATE_SUMMARY.md` (tracking doc)
 - ✅ `docs/architecture/slicing/DOCUMENTATION_CONSOLIDATION_SUMMARY.md` (this file)
 

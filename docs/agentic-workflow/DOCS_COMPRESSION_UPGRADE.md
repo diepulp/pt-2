@@ -19,10 +19,10 @@ The existing `compress_docs.py` script compresses documentation but has critical
 
 ```markdown
 # Before compression
-See [ADR-001](docs/adr/ADR-001-dual-database.md) for details.
+See [ADR-001](80-adrs/ADR-001-dual-database.md) for details.
 
 # After compression with original script (BROKEN!)
-See [ADR-001]docs/adr/ADR-001-dual-database.md for details.
+See [ADR-001]80-adrs/ADR-001-dual-database.md for details.
 #            ^ Missing ( and )
 ```
 
@@ -41,10 +41,10 @@ Created **advanced compression script** (`compress_docs_advanced.py`) with:
 
 ```markdown
 # Before compression
-See [ADR-001](docs/adr/ADR-001-dual-database.md) for details.
+See [ADR-001](80-adrs/ADR-001-dual-database.md) for details.
 
 # After compression with advanced script (INTACT!)
-See [ADR-001](docs/adr/ADR-001-dual-database.md) for details.
+See [ADR-001](80-adrs/ADR-001-dual-database.md) for details.
 #            ✓ All link syntax preserved
 ```
 
@@ -236,7 +236,7 @@ python scripts/compress_docs_advanced.py --dry-run --verbose
 python scripts/compress_docs_advanced.py --validate
 
 # 4. Spot check files
-diff docs/adr/ADR-001.md docs-compressed/adr/ADR-001.md
+diff 80-adrs/ADR-001.md docs-compressed/adr/ADR-001.md
 
 # 5. Test with Claude
 # Load compressed docs, verify context quality

@@ -33,7 +33,7 @@ Implemented Python compression script using Microsoft's LLMLingua-2 with advance
 
 2. **Link Protection**
    - Forces preservation of: `[`, `]`, `(`, `)`, `/`, `.`, `-`
-   - Prevents broken file references like `docs/adr/ADR-001.md`
+   - Prevents broken file references like `80-adrs/ADR-001.md`
    - Maintains path separators and extensions
 
 3. **Structure Preservation**
