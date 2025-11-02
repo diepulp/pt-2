@@ -1,6 +1,6 @@
 # Architecture Decisions
 
-**Last Updated**: 2025-10-17
+**Last Updated**: 2025-10-29
 **Source**: ADRs in `docs/80-adrs`
 **Purpose**: Key architectural decisions and their rationale
 
@@ -8,16 +8,22 @@
 
 ## Overview
 
-This document summarizes the 5 major Architecture Decision Records (ADRs) that govern PT-2's design. These decisions are binding and must be followed.
+This document summarizes the 12 Architecture Decision Records (ADRs) that govern PT-2's design. These decisions are binding and must be followed.
 
 **Quick Reference**:
 
-  [ADR-000: SRM Canonical contract](@/docs/80-adrs/ADR-000-matrix-as-contract.md)
-- ADR-001: Dual database type strategy (local + remote)
-- ADR-002: Test location standardization (root-level)
-- ADR-003: State management strategy (React Query + Zustand)
-- ADR-004: Real-time strategy (domain channels + scheduler)
-- ADR-005: Integrity enforcement (4-layer guardrails)
+- [ADR-000: SRM Canonical contract](../../docs/80-adrs/ADR-000-matrix-as-contract.md)
+- [ADR-001: Dual database type strategy (local + remote)](../../docs/80-adrs/ADR-001-dual-database-type-strategy.md)
+- [ADR-002: Test location standardization (root-level)](../../docs/80-adrs/ADR-002-test-location-standard.md)
+- [ADR-003: State management strategy (React Query + Zustand)](../../docs/80-adrs/ADR-003-state-management-strategy.md)
+- [ADR-004: Real-time strategy (domain channels + scheduler)](../../docs/80-adrs/ADR-004-real-time-strategy.md)
+- [ADR-005: Integrity enforcement (4-layer guardrails)](../../docs/80-adrs/ADR-005-integrity-enforcement.md)
+- [ADR-006: RatingSlip financial field removal](../../docs/80-adrs/ADR-006-rating-slip-field-removal.md)
+- [ADR-007: API surface catalogue & OpenAPI contract](../../docs/80-adrs/ADR-007-api-surface-catalogue.md)
+- [ADR-008: Service layer architecture diagram & template](../../docs/80-adrs/ADR-008-service-layer-architecture.md)
+- [ADR-009: Balanced architecture intake & transport gate](../../docs/80-adrs/ADR-009-balanced-architecture-intake.md)
+- [ADR-010: DTO & service compliance gate](../../docs/80-adrs/ADR-010-dto-compliance-gate.md)
+- [ADR-011: Over-engineering guardrail (OE-01)](../../docs/80-adrs/ADR-011-over-engineering-guardrail.md)
 
 ---
 
@@ -157,7 +163,7 @@ import type { Database } from "@/types/remote/database.types";
 
 ## ADR-002: Test Location Standardization
 
-**Status**: ✅ Accepted (2025-10-07)
+**Status**: ⚠️ Proposed (2025-10-07)
 **Context**: Inconsistency in test file locations across services
 
 ### Decision
@@ -504,7 +510,7 @@ interface PlayerUIStore {
 
 ## ADR-004: Real-Time Strategy
 
-**Status**: ⏸️ PROPOSED (Week 6 implementation)
+**Status**: ✅ ACCEPTED (2025-10-25)
 **Context**: Standardize Supabase real-time integration with React Query
 
 ### Decision
@@ -760,15 +766,260 @@ git commit -m "feat: add loyalty fields"
 
 ---
 
+## ADR-000: SRM Canonical Contract (Matrix as Schema Contract)
+
+**Status**: ✅ Accepted (2025-10-21)
+**Context**: Live DB schema drifted from design docs (Prisma-era casing, missing FKs)
+
+### Decision
+
+**The Service Responsibility Matrix (SRM) is the canonical contract. The database schema MUST mirror the SRM.**
+
+### Key Principles
+
+1. **Matrix-First Flow**: SRM change → migration SQL → regenerated types → services → tests → release
+2. **Naming**: All identifiers are `lower_snake_case`. No quoted CamelCase anywhere
+3. **Identifiers**: All PKs/FKs are `uuid default gen_random_uuid()`. Text IDs allowed as business keys with unique constraints
+4. **JSON Usage**: JSON for extensible metadata only. Anything referenced by FKs, RLS, analytics, or constraints is a first-class column
+5. **Ownership**: Records depending on casino policy MUST carry `casino_id`. Financial records store `gaming_day`
+6. **RLS**: Row-level security policies derive from SRM ownership rules, ship with each schema change. No permissive catch-alls in production
+7. **Loyalty ↔ Rating Slip**: Single source of truth = Loyalty. `rating_slip` does not cache points unless explicitly reintroduced by SRM
+
+### Contract Change Policy
+
+- **Additive**: Safe - add to SRM → generate ALTER SQL → regenerate types
+- **Renames**: Safe with map - SRM includes RENAMES table → migration uses ALTER...RENAME
+- **Tightening Constraints**: Migration includes backfill then sets constraint
+- **Removals**: Breaking - mark DEPRECATED with EOL date → drop one release later
+
+### CI Gates
+
+1. Matrix ↔ Schema Diff (tables/columns/FKs match SRM)
+2. Types Regeneration Required (fail if not updated when migrations change)
+3. RLS Lint (deny `USING (true)`, verify ownership keys)
+4. Identifier Lint (fail on quoted identifiers/CamelCase)
+
+### References
+
+- Full contract: `docs/bounded-context-integrity/phase-D/srm-patch/SERVICE_RESPONSIBILITY_MATRIX.md`
+- Also: `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md`
+
+---
+
+## ADR-006: RatingSlip Financial Field Removal
+
+**Status**: ✅ Accepted (2025-10-19)
+**Context**: Monetary truth must live in `player_financial_transaction` (PFT) for auditability, reversals, RLS isolation
+
+### Decision
+
+Remove `cash_in`, `chips_brought`, `chips_taken` from `ratingslip`. Provide backward-compatible view; add targeted indexes to PFT. Only materialize if p95 > 100ms.
+
+### Implementation
+
+**Views**:
+```sql
+CREATE VIEW visit_financial_summary AS
+SELECT visit_id,
+  COALESCE(SUM(cash_in), 0) AS total_cash_in,
+  COALESCE(SUM(chips_brought), 0) AS total_chips_brought,
+  COALESCE(SUM(chips_taken), 0) AS total_chips_taken
+FROM player_financial_transaction
+GROUP BY visit_id;
+
+CREATE VIEW ratingslip_with_financials AS
+SELECT r.*, vfs.total_cash_in AS cash_in,
+  vfs.total_chips_brought AS chips_brought,
+  vfs.total_chips_taken AS chips_taken
+FROM ratingslip r
+LEFT JOIN visit_financial_summary vfs ON vfs.visit_id = r.visit_id;
+```
+
+**Indexes**:
+```sql
+CREATE INDEX idx_pft_visit_id ON player_financial_transaction(visit_id);
+CREATE INDEX idx_pft_player_id ON player_financial_transaction(player_id);
+CREATE INDEX idx_pft_rating_slip_id ON player_financial_transaction(rating_slip_id);
+```
+
+**Migration Order**: Create views & indexes → update readers → remove columns from ratingslip → keep compatibility view through deprecation cycle
+
+### Rationale
+
+- Single source of truth for financial data
+- RLS isolation at transaction level
+- Audit trail preserved
+- Backward compatibility maintained
+
+---
+
+## ADR-007: API Surface Catalogue & OpenAPI Contract
+
+**Status**: ✅ Accepted (2025-10-25)
+**Context**: API contract management across teams requires stable, versioned HTTP description
+
+### Decision
+
+1. **Canonical Catalogue**: `25-api-data/API_SURFACE_MVP.md` is human-readable source of truth for all MVP endpoints (paths, methods, DTOs, error codes, RBAC, rate limits, observability)
+2. **OpenAPI Parity**: `25-api-data/api-surface.openapi.yaml` must remain in lockstep with catalogue. PRs that touch either must update both
+3. **Roadmap & SDLC Gate**: Phase 2 (Architecture & Security) must show updated API catalogue/OpenAPI diff before slices begin
+4. **Link to SRM**: Endpoint ownership, DTO shapes, idempotency keys must align with SRM (ADR-000)
+
+### Rationale
+
+- Single place to check HTTP contract
+- OpenAPI drives client generation, mocks, contract tests
+- Explicit ADR reference ties HTTP surface back to SRM and Balanced Architecture
+
+### References
+
+- `25-api-data/API_SURFACE_MVP.md`
+- `25-api-data/api-surface.openapi.yaml`
+- `70-governance/SERVICE_TEMPLATE.md`
+
+---
+
+## ADR-008: Service Layer Architecture Diagram & Template
+
+**Status**: ✅ Accepted (2025-10-25)
+**Context**: Uniform service structure prevents ad-hoc hierarchies and manual DTOs
+
+### Decision
+
+1. **Canonical Template**: `70-governance/SERVICE_TEMPLATE.md` (v1.2) is required architecture for every domain service. Factories expose explicit interfaces, DTOs derive from generated Supabase types, shared concerns live in `services/shared`
+2. **Diagram Requirement**: Architecture & Security phase of SDLC must include updated service-layer diagram (Mermaid) showing Route Handler/Server Action → Service → Supabase flow per context
+3. **Compliance Gate**: Before declaring slice "done":
+   - DTOs follow canonical patterns
+   - Services expose explicit interfaces from template
+   - No cross-context imports outside published DTOs/views
+4. **Evolution via ADR**: Changes to service layering require updating this ADR (or successor)
+
+### Rationale
+
+- Consistency keeps React Query hooks, Server Actions, Supabase queries predictable
+- SRM Alignment: services mirror schema ownership cleanly
+- DX: Clear directories/interfaces help tooling and reduce onboarding cost
+
+### References
+
+- `70-governance/SERVICE_TEMPLATE.md`
+- `25-api-data/DTO_CANONICAL_STANDARD.md`
+
+---
+
+## ADR-009: Balanced Architecture Intake & Transport Gate
+
+**Status**: ✅ Accepted (2025-10-25)
+**Context**: Work classification (vertical/horizontal/hybrid/service-only) and transport choice (Route Handler vs Server Action) needed explicit gates
+
+### Decision
+
+1. **Intake Card Required**: Every backlog item/PRD slice must include Balanced Architecture intake card answers before entering design:
+   - Scope (# bounded contexts per SRM)
+   - User-facing vs infrastructure
+   - Slice classification (Vertical/Horizontal/Hybrid/Service)
+   - Transport (Route Handler vs Server Action) + rationale
+   - Estimated timeline from quick reference table
+2. **Roadmap Gate**: Phase 1 (Inception/PRD) cannot close without intake cards for scoped MVP slices. Phase 2 re-validates classification
+3. **Code Review Checklist**: Reviewers confirm implementation matches declared classification and transport
+
+### Transport Rule
+
+- **React Query** → Route Handler (JSON + ServiceHttpResult)
+- **Forms/RSC** → Server Action (wrapped with `withServerAction`)
+
+### Rationale
+
+- Predictable scope keeps MVP vertical-first unless trigger justifies horizontal/infra
+- Transport consistency avoids late rewrites
+- Traceability: intake cards document decisions for later audit
+
+### References
+
+- `20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
+
+---
+
+## ADR-010: DTO & Service Compliance Gate
+
+**Status**: ✅ Accepted (2025-10-25)
+**Context**: Manual DTO interfaces and ad-hoc service factories caused schema drift despite standards
+
+### Decision
+
+1. **Architecture Phase Gate**: Phase 2 of SDLC must include DTO/service audit for every affected domain:
+   - DTOs derive from `Database['public']['Tables'][…]` with `type` aliases
+   - Service factories export explicit interfaces (no `ReturnType<typeof createService>`)
+   - Shared helpers (operation wrapper, ServiceResult, error map) used instead of custom per-domain equivalents
+2. **Per-Slice Definition of Done**:
+   - Supabase types regenerated after migrations
+   - DTO lint/pre-commit checks pass
+   - Service files follow template layout (dto.ts, selects.ts, crud.ts, index.ts)
+   - Compliance checkbox referencing this ADR marked in PR template
+3. **CI Hook (Future)**: Fail when manual `interface .*DTO` definitions exist under `services/**` or service factories export implicit types
+
+### Rationale
+
+- Schema safety: canonical DTOs track schema changes automatically
+- Consistency: explicit interfaces reduce code review friction
+- Traceability: SDLC documents and audits confirm compliance quickly
+
+### References
+
+- `25-api-data/DTO_CANONICAL_STANDARD.md`
+- `70-governance/SERVICE_TEMPLATE.md`
+
+---
+
+## ADR-011: Over-Engineering Guardrail (OE-01 Enforcement)
+
+**Status**: ✅ Accepted (2025-10-25)
+**Context**: Infra-heavy changes landed without proving triggers from OE-01 guardrail
+
+### Decision
+
+1. **Trigger Proof Required**: Any work item introducing new infra/abstractions must document OE-01 checklist and satisfied trigger (per §6) before implementation. If no trigger exists, work must be descoped or Mini-ADR raised
+2. **PR Template Hook**: PRs touching infrastructure/shared layers must answer:
+   - Which OE-01 trigger applies?
+   - Link to supporting evidence (incident, metric, mandate)
+   - Link to Mini-ADR if >150 LOC infra change or multiple triggers violated
+3. **Roadmap Gate**: During backlog grooming and Stabilization, team reviews OE-01 compliance to ensure MVP remains lean
+
+### OE-01 Triggers (Valid Complexity Justifiers)
+
+- Second consumer needs abstraction
+- SLO breach requires optimization
+- Compliance mandate requires audit trail
+- Horizontal scale requires coordination
+
+### Rationale
+
+- Scope control: keeps MVP focused on vertical value delivery
+- Auditability: explicit linkage between work and triggers
+- Consistency: aligns with Balanced Architecture intake (ADR-009) and DTO/service gates
+
+### References
+
+- `70-governance/OVER_ENGINEERING_GUARDRAIL.md`
+
+---
+
 ## Decision Summary Matrix
 
-| ADR                       | Status      | Validated                  | Impact                 |
-| ------------------------- | ----------- | -------------------------- | ---------------------- |
-| ADR-001: Dual Types       | ✅ Accepted | ✅ 100%                    | Development workflow   |
-| ADR-002: Test Location    | ✅ Accepted | ⚠️ 67% (migration pending) | Test organization      |
-| ADR-003: State Management | ✅ Accepted | ✅ 100% (32 tests)         | Data flow architecture |
-| ADR-004: Real-Time        | ⏸️ Proposed | ⏳ Week 6                  | Live data updates      |
-| ADR-005: Integrity        | ✅ Accepted | ✅ Phase 1 complete        | Quality enforcement    |
+| ADR                         | Status      | Validated                  | Impact                    |
+| --------------------------- | ----------- | -------------------------- | ------------------------- |
+| ADR-000: SRM Contract       | ✅ Accepted | ✅ Foundational            | Schema & naming standards |
+| ADR-001: Dual Types         | ✅ Accepted | ✅ 100%                    | Development workflow      |
+| ADR-002: Test Location      | ⚠️ Proposed | ⚠️ 67% (migration pending) | Test organization         |
+| ADR-003: State Management   | ✅ Accepted | ✅ 100% (32 tests)         | Data flow architecture    |
+| ADR-004: Real-Time          | ✅ Accepted | ✅ Week 6 complete         | Live data updates         |
+| ADR-005: Integrity          | ✅ Accepted | ✅ Phase 1 complete        | Quality enforcement       |
+| ADR-006: RatingSlip Finance | ✅ Accepted | ✅ Implemented             | Financial data separation |
+| ADR-007: API Catalogue      | ✅ Accepted | ✅ Active                  | API contract management   |
+| ADR-008: Service Template   | ✅ Accepted | ✅ Active                  | Service standards         |
+| ADR-009: Architecture Intake| ✅ Accepted | ✅ Active                  | SDLC gates                |
+| ADR-010: DTO Compliance     | ✅ Accepted | ✅ Active                  | Code compliance           |
+| ADR-011: OE Guardrail       | ✅ Accepted | ✅ Active                  | Complexity control        |
 
 ---
 
@@ -776,11 +1027,18 @@ git commit -m "feat: add loyalty fields"
 
 Before implementing any feature, verify compliance with:
 
+- [ ] **ADR-000**: Schema changes must update SRM first, use `lower_snake_case` naming
 - [ ] **ADR-001**: Use local types in services, regenerate after migrations
 - [ ] **ADR-002**: Place tests in `__tests__/services/{domain}/`
 - [ ] **ADR-003**: Server data in React Query, UI state in Zustand
 - [ ] **ADR-004**: Follow domain channel pattern (when implementing real-time)
 - [ ] **ADR-005**: Run schema verification test before committing schema changes
+- [ ] **ADR-006**: Financial data lives in `player_financial_transaction`, not `ratingslip`
+- [ ] **ADR-007**: Update API catalogue + OpenAPI together for any endpoint changes
+- [ ] **ADR-008**: Follow service template structure with explicit interfaces
+- [ ] **ADR-009**: Complete Balanced Architecture intake card before implementation
+- [ ] **ADR-010**: DTOs derive from generated types, no manual interfaces
+- [ ] **ADR-011**: Prove OE-01 trigger before adding infrastructure/abstractions
 
 ---
 
@@ -788,22 +1046,33 @@ Before implementing any feature, verify compliance with:
 
 **Full ADRs**:
 
-- `docs/adr/ADR-001-dual-database-type-strategy.md`
-- `docs/adr/ADR-002-test-location-standard.md`
-- `docs/adr/ADR-003-state-management-strategy.md`
-- `docs/adr/ADR-004-real-time-strategy.md`
-- `docs/adr/ADR-005-integrity-enforcement.md`
+- `docs/80-adrs/ADR-000-matrix-as-contract.md`
+- `docs/80-adrs/ADR-001-dual-database-type-strategy.md`
+- `docs/80-adrs/ADR-002-test-location-standard.md`
+- `docs/80-adrs/ADR-003-state-management-strategy.md`
+- `docs/80-adrs/ADR-004-real-time-strategy.md`
+- `docs/80-adrs/ADR-005-integrity-enforcement.md`
+- `docs/80-adrs/ADR-006-rating-slip-field-removal.md`
+- `docs/80-adrs/ADR-007-api-surface-catalogue.md`
+- `docs/80-adrs/ADR-008-service-layer-architecture.md`
+- `docs/80-adrs/ADR-009-balanced-architecture-intake.md`
+- `docs/80-adrs/ADR-010-dto-compliance-gate.md`
+- `docs/80-adrs/ADR-011-over-engineering-guardrail.md`
 
 **Related Documentation**:
 
-- `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
-- `docs/patterns/BALANCED_ARCHITECTURE_QUICK.md`
+- `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md`
+- `docs/20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
+- `docs/25-api-data/API_SURFACE_MVP.md`
+- `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+- `docs/70-governance/SERVICE_TEMPLATE.md`
+- `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`
 - `docs/integrity/INTEGRITY_FRAMEWORK.md`
 
 **Auto-Load**: This file loads automatically with `.claude/config.yml`
 
 ---
 
-**Version**: 1.0.0
-**Lines**: ~740 (target: <800)
-**Next Update**: After ADR-004 implementation or new ADRs
+**Version**: 2.0.0
+**Lines**: ~1040 (expanded from ~810 to include all 12 ADRs)
+**Next Update**: When new ADRs are created or existing ADRs are updated

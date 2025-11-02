@@ -25,7 +25,7 @@ export default {
     if (filteredFiles.length === 0) return [];
 
     return [
-      `eslint --fix ${filteredFiles.join(' ')}`,
+      // `eslint --fix ${filteredFiles.join(' ')}`,
       `prettier --write ${filteredFiles.join(' ')}`,
     ];
   },

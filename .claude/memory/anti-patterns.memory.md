@@ -249,6 +249,118 @@ export async function getPlayerWithVisits(playerId: string) {
 
 ---
 
+### ❌ Boundary & Access Violations
+
+**NEVER join across bounded contexts directly**:
+
+```typescript
+// ❌ WRONG
+// services/rating-slip/crud.ts
+await supabase
+  .from("rating_slip")
+  .select("*, player:player(*)"); // Cross-context join bypasses published APIs
+
+// ✅ CORRECT
+// Consume the other context's published view/service
+const ratingSlip = await ratingSlipService.getById(id);
+const player = await playerService.getById(ratingSlip.playerId);
+return { ratingSlip, player };
+```
+
+**NEVER bypass RLS with service-role keys in runtime code**:
+
+```typescript
+// ❌ WRONG
+const supabase = createClient(process.env.SUPABASE_SERVICE_ROLE_KEY!); // Exposes unrestricted key
+
+// ✅ CORRECT
+// Use scoped SSR helpers; runtime always runs under RLS
+const supabase = await createServerClient();
+```
+
+**NEVER leave tenancy-scoped queries unfiltered**:
+
+```typescript
+// ❌ WRONG
+await supabase.from("visit").select("*").eq("id", id); // Missing casino scope
+
+// ✅ CORRECT
+await supabase
+  .from("visit")
+  .select(VISIT_SELECT_MIN)
+  .eq("id", id)
+  .eq("casino_id", casinoId);
+```
+
+**NEVER inline raw column lists inside queries**:
+
+```typescript
+// ❌ WRONG
+await supabase.from("player").select("id, first_name, last_name");
+
+// ✅ CORRECT
+// Centralize selects in selects.ts per domain
+import { PLAYER_SELECT_MIN } from "./selects";
+await supabase.from("player").select(PLAYER_SELECT_MIN);
+```
+
+**NEVER invalidate React Query caches from services or server actions**:
+
+```typescript
+// ❌ WRONG
+export async function createPlayer(/* ... */) {
+  const result = await playerService.create(data);
+  queryClient.invalidateQueries({ queryKey: playerKeys.root }); // ❌ Service layer touching UI cache
+  return result;
+}
+
+// ✅ CORRECT
+// Services return data; UI/Hooks handle cache updates per ADR-003/004
+return withServerAction("player.create", () => playerService.create(data));
+```
+
+---
+
+### ❌ Service Contract Violations
+
+**NEVER attach HTTP status codes to `ServiceResult`**:
+
+```typescript
+// ❌ WRONG
+return {
+  success: true,
+  status: 201, // HTTP leakage
+  data,
+};
+
+// ✅ CORRECT
+return {
+  success: true,
+  data,
+  error: null,
+};
+// Map to HTTP in server action / route handler only
+```
+
+**NEVER create `services/{domain}/types.ts` junk drawers**:
+
+```typescript
+// ❌ WRONG
+// services/player/types.ts
+export interface PlayerCreatePayload {
+  name: string;
+}
+
+// ✅ CORRECT
+// Keep DTOs in dto.ts derived from canonical Database types
+export type PlayerCreateDTO = Pick<
+  Database["public"]["Tables"]["player"]["Insert"],
+  "name"
+>;
+```
+
+---
+
 ## State Management Anti-Patterns
 
 ### ❌ React Query Violations
@@ -396,6 +508,21 @@ useEffect(() => {
 }, []);
 ```
 
+**NEVER trigger refetch storms from realtime handlers**:
+
+```typescript
+// ❌ WRONG
+channel.on("postgres_changes", () => {
+  queryClient.invalidateQueries(); // Blasts every cache on each event
+});
+
+// ✅ CORRECT
+// Batch updates and scope to active queries
+scheduler.enqueue("rating-slip.detail", ratingSlipId, () => {
+  queryClient.setQueryData(ratingSlipKeys.detail(ratingSlipId), update);
+});
+```
+
 ---
 
 ## Type System Anti-Patterns
@@ -419,6 +546,22 @@ import { Database } from "../database.types";
 export type PlayerDTO = Pick<
   Database["public"]["Tables"]["player"]["Row"],
   "id" | "firstName" | "lastName"
+>;
+```
+
+**NEVER declare DTOs as interfaces or base them on `Row` for inserts**:
+
+```typescript
+// ❌ WRONG
+export interface PlayerCreateDTO {
+  id?: string; // brings in immutable fields
+  first_name: string;
+}
+
+// ✅ CORRECT
+export type PlayerCreateDTO = Pick<
+  Database["public"]["Tables"]["player"]["Insert"],
+  "first_name"
 >;
 ```
 
@@ -447,6 +590,66 @@ npx supabase migration up
 npm run db:types  # ← Regenerate types
 git add supabase/migrations/ types/database.types.ts
 git commit -m "Add new column + regenerate types"
+```
+
+---
+
+## Architecture & Scope Anti-Patterns
+
+**NEVER introduce generic infrastructure without a second concrete consumer**:
+
+```typescript
+// ❌ WRONG
+// lib/events/domain-event-bus.ts
+export class DomainEventBus {
+  private handlers = new Map<string, ((payload: any) => void)[]>();
+  publish(event: string, payload: any) {/* ... */}
+}
+
+// ✅ CORRECT
+// Direct orchestration until a documented trigger justifies abstraction
+export async function completeRatingSlip(input: CompleteRatingSlipDTO) {
+  const ratingSlip = await ratingSlipService.close(input);
+  await loyaltyService.awardPoints(ratingSlip);
+  return ratingSlip;
+}
+```
+
+**NEVER ship non-idempotent writes when a natural key exists**:
+
+```typescript
+// ❌ WRONG
+await supabase.from("player").insert(data); // Duplicate submits throw hard 23505 errors
+
+// ✅ CORRECT
+try {
+  await supabase.from("player").insert(data);
+} catch (error) {
+  if ((error as PostgrestError).code === "23505") {
+    return await supabase
+      .from("player")
+      .select(PLAYER_SELECT_MIN)
+      .eq("casino_id", data.casino_id)
+      .eq("player_id", data.player_id)
+      .single();
+  }
+  throw error;
+}
+```
+
+**NEVER maintain dual database clients in application runtime**:
+
+```typescript
+// ❌ WRONG
+import { createServerClient } from "@/lib/supabase/server";
+import { Pool } from "pg";
+
+const supabase = await createServerClient();
+const pg = new Pool({ connectionString: process.env.POSTGRES_URL }); // Second unrestricted client
+
+// ✅ CORRECT
+// Use the canonical Supabase client factories (server/browser) exclusively under RLS
+const supabase = await createServerClient();
 ```
 
 ---

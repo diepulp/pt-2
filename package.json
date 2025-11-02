@@ -24,6 +24,7 @@
     "parse:schema": "node scripts/parse_schema_identifiers.js",
     "validate:ownership": "node scripts/detect_ownership_conflicts.js",
     "validate:matrix-schema": "npm run parse:schema && npm run validate:ownership && node scripts/validate_matrix_schema.js",
+    "validate:adr-sync": "node scripts/validate-adr-sync.mjs",
     "openapi:types": "openapi-typescript docs/api-route-catalogue/api-surface.openapi.yaml -o types/api-schema.d.ts",
     "openapi:client": "openapi-generator-cli generate -g typescript-fetch",
     "openapi:client:axios": "openapi-generator-cli generate -g typescript-axios",
