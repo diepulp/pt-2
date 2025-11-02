@@ -130,8 +130,8 @@ Reuse the same `SKILL.md` definitions; adapt hook scripts to Codex CLI expectati
 
 ## 4. Outstanding Work
 
-- [ ] Implement `.claude/hooks/require-approval.sh` to enforce STOP gates (reads plan + waits for human approval marker).
-- [ ] Implement `.claude/hooks/format-and-test.sh` to run lint/typecheck/test suites aligned with QA-002.
+- [x] Implement `.claude/hooks/require-approval.sh` to enforce STOP gates (Approval log in `.agent/approval.log`).
+- [x] Implement `.claude/hooks/format-and-test.sh` to run lint/typecheck/test suites aligned with QA-002.
 - [ ] Add CI job to verify `AGENTS.md` references valid files.
 - [ ] Create Codex CLI wrapper script once official binary is available.
 
