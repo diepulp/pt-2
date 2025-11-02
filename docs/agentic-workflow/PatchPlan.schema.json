@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PatchPlan",
+  "type": "object",
+  "properties": {
+    "summary": {
+      "type": "string",
+      "description": "High-level overview of the change set."
+    },
+    "tasks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "description": { "type": "string" },
+          "sdlcGroup": {
+            "type": "string",
+            "enum": ["V&S", "PRD", "ARCH", "API/DATA", "SEC/RBAC", "DEL/QA", "OPS/SRE", "REL/CHANGE", "GOV"]
+          },
+          "owner": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["pending", "in_progress", "blocked", "done"]
+          }
+        },
+        "required": ["description", "sdlcGroup"]
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "diff": { "type": "string" },
+          "tests": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Tests to add/update or commands to run."
+          },
+          "docs": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Documentation paths impacted."
+          }
+        },
+        "required": ["path", "diff"]
+      }
+    },
+    "approvals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "gate": { "type": "string" },
+          "status": { "type": "string", "enum": ["required", "approved", "rejected"] },
+          "notes": { "type": "string" }
+        },
+        "required": ["gate", "status"]
+      }
+    }
+  },
+  "required": ["tasks", "files"]
+}

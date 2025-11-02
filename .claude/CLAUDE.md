@@ -3,12 +3,12 @@
 <!-- Auto-load Memory Files (Phase 1 Agentic Workflow) -->
 <!-- These 6 memory files provide compressed context from 203k-word documentation -->
 
-@.claude/memory/project-context.memory.md
-@.claude/memory/anti-patterns.memory.md
-@.claude/memory/architecture-decisions.memory.md
-@.claude/memory/phase-status.memory.md
-@.claude/memory/service-catalog.memory.md
-@.claude/memory/domain-glossary.memory.md
+@memory/project.memory.md
+@memory/anti-patterns.memory.md
+@memory/architecture-decisions.memory.md
+@memory/phase-status.memory.md
+@memory/service-catalog.memory.md
+@memory/domain-glossary.memory.md
 
 <!-- Full Documentation References (use when memory files insufficient) -->
 <!-- PRD: docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md -->

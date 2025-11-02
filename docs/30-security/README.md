@@ -35,8 +35,9 @@ last_review: 2025-10-25
 
 ## Current Documents
 
-- **RLS patterns** (embedded in SRM, to be extracted)
-- **Casino-scoped security model** (to be documented)
+- `SEC-001` — Casino-Scoped RLS Policy Matrix (`SEC-001-rls-policy-matrix.md`)
+- `SEC-002` — Casino-Scoped Security Model (`SEC-002-casino-scoped-security-model.md`)
+- `SEC-003` — Casino-Scoped RBAC Matrix (`SEC-003-rbac-matrix.md`)
 
 ## Related Categories
 
