@@ -1,41 +1,90 @@
 # Claude Code Configuration for PT-2
-# Auto-loads memory files at session start
+# Memory loading is handled via .claude/CLAUDE.md (IDE) or --agents flag (CLI)
 
-memory:
-  auto_load:
-    - memory/project.memory.md
-    - memory/anti-patterns.memory.md
-    - memory/architecture-decisions.memory.md
-    - memory/phase-status.memory.md
-    - memory/service-catalog.memory.md
-    - memory/domain-glossary.memory.md
-
-  # Memory file metadata
-  version: "1.0.0"
-  last_updated: "2025-10-17"
-
-  # Total memory footprint target: <5k words (from 203k docs)
-  # Actual: ~3.5k words across 6 files
-  # Load time target: <10 seconds
-
-  notes: |
-    Auto-load the SDLC-aligned memory set under /memory. These files summarize the
-    canonical docs and replace the 203k-word corpus with high-signal snapshots that
-    any LLM-aware CLI can consume.
-
-# Project-specific settings
+# Project metadata
 project:
   name: "PT-2 Casino Tracker"
-  phase: "Phase 6 Wave 3 Complete"
-  status: "~75% MVP Complete"
+  phase: "AI-Native Scaffold Implementation"
+  status: "Memory V2 Optimized"
 
-settings:
-  # Prefer reading memory files over full documentation
-  context_strategy: "memory_first"
+# Memory architecture
+memory:
+  version: "2.0.0"
+  last_updated: "2025-11-03"
+  location: "memory/"  # Root-level memory directory (123 lines, 6 files)
+  context_location: "context/"  # SDLC-aligned context files (569 lines, 6 files)
 
-  # Update memory files when major milestones occur
-  memory_refresh_triggers:
+  # Loading mechanisms (choose based on environment)
+  loading:
+    ide:
+      mechanism: ".claude/CLAUDE.md @ references"
+      files_loaded:
+        - memory/project.memory.md
+        - memory/anti-patterns.memory.md
+        - memory/architecture-decisions.memory.md
+        - memory/phase-status.memory.md
+        - memory/service-catalog.memory.md
+        - memory/domain-glossary.memory.md
+      automatic: true
+      notes: "Loads automatically on IDE session start"
+
+    cli:
+      mechanism: "--agents flag"
+      command: "claude --agents ./AGENTS.md --prompt 'your task'"
+      files_loaded: "All memory/ and context/ files via AGENTS.md hierarchy"
+      automatic: false
+      notes: "Use --agents flag to load AGENTS.md which references memory + context"
+
+    manual:
+      mechanism: "/load-memory slash command"
+      command: "/load-memory"
+      files_loaded: "Same as IDE (6 memory files)"
+      automatic: false
+      notes: "Fallback when auto-load fails or debugging"
+
+  # Memory metrics
+  metrics:
+    total_lines: 123  # Down from 1,984 (94% reduction)
+    baseline_load: "2.5k tokens (1.3% of 200k budget)"
+    context_files: 569  # On-demand loading via chatmodes
+    context_load: "11k tokens (5.5% of budget when loaded)"
+    available_budget: "93% (186k tokens)"
+
+  # Update triggers
+  refresh_triggers:
     - "Phase completion"
     - "New ADR accepted"
     - "Service implementation complete"
     - "Major architectural change"
+    - "Monthly review cycle"
+
+# Context strategy
+settings:
+  context_strategy: "memory_first_context_on_demand"
+
+  philosophy:
+    memory: "Lightweight decision log + gotchas (50-100 lines/file)"
+    context: "Domain patterns extracted from docs (100-300 lines/file)"
+    docs: "Full details, read on-demand from docs/"
+
+  taxonomy_alignment:
+    enabled: true
+    source: "docs/patterns/SDLC_DOCS_TAXONOMY.md"
+    categories:
+      - "ARCH (20-architecture/) → context/architecture.context.md"
+      - "GOV (70-governance/) → context/governance.context.md"
+      - "QA (40-quality/) → context/quality.context.md"
+      - "SEC (30-security/) → context/api-security.context.md"
+      - "API/DATA (25-api-data/) → context/api-security.context.md"
+      - "ADR-003 → context/state-management.context.md"
+
+# Notes
+notes: |
+  Memory V2 Architecture (2025-11-03):
+  - Single canonical memory directory: memory/ (123 lines)
+  - SDLC-aligned context files: context/ (569 lines)
+  - Auto-load via .claude/CLAUDE.md (IDE) or --agents flag (CLI)
+  - Manual fallback: /load-memory command
+  - Context loads on-demand via chatmodes (backend-dev, frontend-dev, reviewer)
+
+  See: docs/agentic-workflow/MEMORY_ARCHITECTURE_V2.md

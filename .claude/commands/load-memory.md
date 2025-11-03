@@ -1,6 +1,6 @@
 # Load Memory Context
 
-**Purpose**: Load all PT-2 memory files for immediate project context
+**Purpose**: Manually load all PT-2 memory files for immediate project context
 
 **Usage**: `/load-memory`
 
@@ -8,24 +8,24 @@
 
 ## Instructions
 
-Load all 6 memory files to establish full project context:
+Load all 6 memory files from the root `memory/` directory:
 
-1. Read `.claude/memory/project-context.memory.md`
-   - Tech stack, constraints, current status
+1. Read `memory/project.memory.md`
+   - Recent decisions, patterns that worked, pitfalls, next steps
 
-2. Read `.claude/memory/anti-patterns.memory.md`
+2. Read `memory/anti-patterns.memory.md`
    - Critical violations to avoid (enforcement checklist)
 
-3. Read `.claude/memory/architecture-decisions.memory.md`
-   - ADR summaries and key architectural decisions
+3. Read `memory/architecture-decisions.memory.md`
+   - ADR index with quick reference to all 12 ADRs
 
-4. Read `.claude/memory/phase-status.memory.md`
-   - Current work, completed phases, next steps
+4. Read `memory/phase-status.memory.md`
+   - Current AI-native scaffold status, milestones, blockers
 
-5. Read `.claude/memory/service-catalog.memory.md`
-   - All 7 services with operations and patterns
+5. Read `memory/service-catalog.memory.md`
+   - Quick index of 9 bounded contexts and ownership patterns
 
-6. Read `.claude/memory/domain-glossary.memory.md`
+6. Read `memory/domain-glossary.memory.md`
    - Canonical terminology and definitions
 
 ---
@@ -40,18 +40,18 @@ After loading all files, confirm:
 - Current phase status
 - Service architecture patterns
 - Anti-patterns to avoid
-- Tech stack and constraints
+- Recent decisions and lessons learned
 - Domain terminology
 
-**Total Context**: ~11,441 words (vs 203k full docs)
-**Load Time**: <10 seconds target
-**Session Ready**: Full project context available
+**Total Context**: ~123 lines (vs 1,984 in old .claude/memory/)
+**Load Time**: <5 seconds
+**Session Ready**: Lightweight project context available
 
 ---
 
 ## When to Use
 
-- **Session start**: If auto-load didn't work
+- **Auto-load failed**: If `.claude/CLAUDE.md` @ references didn't work
 - **Context refresh**: When returning after break
 - **Mid-session**: If memory seems incomplete
 - **Troubleshooting**: Validate memory file integrity
@@ -59,10 +59,46 @@ After loading all files, confirm:
 
 ---
 
-## Fallback
+## Automatic Loading (Recommended)
 
-If memory files are missing or corrupted, fall back to:
+Instead of using this manual command, prefer automatic loading:
 
-- Full PRD: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md`
--
-- Documentation index: `docs/INDEX.md`
+**Claude Code IDE**:
+- Memory loads automatically via `.claude/CLAUDE.md` @ references
+- No action needed on session start
+
+**Claude CLI**:
+```bash
+claude --agents ./AGENTS.md --prompt "your task"
+```
+
+**Codex CLI**:
+```bash
+codex --agents ./AGENTS.md --prompt "your task"
+```
+
+---
+
+## Full Documentation Fallback
+
+If memory files are missing or corrupted, reference full docs:
+
+- **Documentation index**: `docs/INDEX.md`
+- **SDLC taxonomy**: `docs/patterns/SDLC_DOCS_TAXONOMY.md`
+- **Architecture**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+- **ADRs**: `docs/80-adrs/ADR-*.md`
+
+---
+
+## Context Files (On-Demand Loading)
+
+For deep dives on specific topics, load context files:
+
+- `context/architecture.context.md` - SRM patterns, ADR index
+- `context/governance.context.md` - Service templates, standards
+- `context/quality.context.md` - Test patterns, quality gates
+- `context/state-management.context.md` - React Query + Zustand
+- `context/api-security.context.md` - RLS policies, RBAC
+- `context/db.context.md` - Migration workflow
+
+**Note**: These load automatically when using chatmodes (backend-dev, frontend-dev, reviewer)
