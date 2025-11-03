@@ -2,6 +2,7 @@
 decisions:
   - "2025-10-20: Adopt SRM v3.0.2 with casino-scoped RLS patterns."
   - "2025-11-02: Security docs extracted into SEC-001..003; RBAC matrix formalized."
+  - "2025-11-03: Added agents compiler + codex hooks baseline to enforce scaffold drift detection."
 patterns:
   worked:
     - "Vertical slice delivery: service factory + typed server actions + React Query."
@@ -12,4 +13,4 @@ patterns:
 nextSteps:
   - "Backfill threat model and secrets runbook (SEC docs)."
   - "Author performance budget + accessibility plan (QA docs)."
-  - "Implement AGENTS compiler to keep instructions hierarchy consistent."
+  - "Wire CI automation for `npm run agents:check` + archive approval/tool logs."

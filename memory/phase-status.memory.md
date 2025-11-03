@@ -10,8 +10,9 @@ progress:
     - "Service refactor (Phase 2) with 7 services, >80% coverage."
     - "Agentic workflow compression + memory infrastructure (Phase 1)."
     - "Security docs extraction (SEC-001..003)."
+    - "Agent compiler + codex hooks baseline (Phase 5 automation)."
   in_progress:
-    - "AI-native scaffold rollout (current task)."
+    - "AI-native scaffold rollout (documented hooks + CI guardrails pending wiring)."
     - "Performance budget + accessibility docs under Quality."
   backlog:
     - "Threat model + secrets runbook (SEC)."
