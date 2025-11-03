@@ -29,11 +29,11 @@ memory:
       notes: "Loads automatically on IDE session start"
 
     cli:
-      mechanism: "--agents flag"
-      command: "claude --agents ./AGENTS.md --prompt 'your task'"
+      mechanism: "--append-system-prompt with file content"
+      command: "claude --append-system-prompt \"$(cat AGENTS.md)\" 'your task'"
       files_loaded: "All memory/ and context/ files via AGENTS.md hierarchy"
       automatic: false
-      notes: "Use --agents flag to load AGENTS.md which references memory + context"
+      notes: "CLI --agents expects inline JSON, not file paths. Use --append-system-prompt to load file content instead."
 
     manual:
       mechanism: "/load-memory slash command"

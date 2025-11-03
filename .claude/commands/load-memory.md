@@ -69,13 +69,14 @@ Instead of using this manual command, prefer automatic loading:
 
 **Claude CLI**:
 ```bash
-claude --agents ./AGENTS.md --prompt "your task"
+# Load memory files via AGENTS.md
+claude --append-system-prompt "$(cat AGENTS.md)" "your task"
+
+# Or load memory files directly
+claude --append-system-prompt "$(cat memory/*.md)" "your task"
 ```
 
-**Codex CLI**:
-```bash
-codex --agents ./AGENTS.md --prompt "your task"
-```
+**Note**: Claude CLI's `--agents` flag expects inline JSON, not file paths. Use `--append-system-prompt` to load file content instead.
 
 ---
 

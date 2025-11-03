@@ -83,25 +83,32 @@ Start a new IDE session and check initial context:
 
 ### 2. CLI Auto-Load (Recommended for Automation)
 
-**Status**: ✅ Production
+**Status**: ⚠️ Limited (No native file-based --agents support)
 **File**: `AGENTS.md`
-**When**: When using `--agents` flag
+**When**: Manual context loading via `--append-system-prompt`
 **Who**: Developers using Claude CLI, Codex, or automation scripts
 
 #### How It Works
 
-Use `--agents` flag to load hierarchical context:
+**Current Limitation**: Claude CLI's `--agents` flag expects inline JSON, NOT file paths.
+
+**Workaround**: Use `--append-system-prompt` to load AGENTS.md content:
 
 ```bash
-# Claude CLI
-claude --agents ./AGENTS.md \
-  --prompt "Implement loyalty points feature" \
-  --chatmode .github/chatmodes/backend-dev.chatmode.md
+# Claude CLI - Load AGENTS.md content
+claude --append-system-prompt "$(cat AGENTS.md)" "Implement loyalty points feature"
 
-# Codex CLI (when available)
-codex --agents ./AGENTS.md \
-  --prompt "Review RLS policies" \
-  --chatmode .github/chatmodes/reviewer.chatmode.md
+# With chatmode context (concatenate files)
+claude \
+  --append-system-prompt "$(cat .github/chatmodes/backend-dev.chatmode.md)" \
+  --append-system-prompt "$(cat context/architecture.context.md)" \
+  --append-system-prompt "$(cat context/governance.context.md)" \
+  "Implement loyalty points feature"
+
+# Print mode (non-interactive)
+claude --print \
+  --append-system-prompt "$(cat AGENTS.md)" \
+  "Review RLS policies"
 ```
 
 #### What Gets Loaded
@@ -142,12 +149,14 @@ memory:
 #### Verification
 
 ```bash
-# Run agent with debug output
-claude --agents ./AGENTS.md --prompt "List loaded context files"
+# Test context loading
+claude --append-system-prompt "$(cat AGENTS.md)" \
+  --print \
+  "List loaded context files"
 
 # Should see:
-# - All 6 memory files
-# - Context files based on chatmode
+# - All 6 memory files (from AGENTS.md)
+# - Context files if chatmode loaded
 # - Instructions from .github/instructions/
 ```
 
@@ -206,27 +215,30 @@ Context files (569 lines) load **on-demand** via chatmodes, not automatically.
 
 **Backend Work**:
 ```bash
-claude --agents ./AGENTS.md \
-  --chatmode .github/chatmodes/backend-dev.chatmode.md \
-  --prompt "Create loyalty service"
+claude \
+  --append-system-prompt "$(cat .github/chatmodes/backend-dev.chatmode.md)" \
+  --append-system-prompt "$(cat context/architecture.context.md context/governance.context.md context/db.context.md context/api-security.context.md context/quality.context.md)" \
+  "Create loyalty service"
 
 # Loads: architecture, governance, db, api-security, quality contexts
 ```
 
 **Frontend Work**:
 ```bash
-claude --agents ./AGENTS.md \
-  --chatmode .github/chatmodes/frontend-dev.chatmode.md \
-  --prompt "Implement player dashboard"
+claude \
+  --append-system-prompt "$(cat .github/chatmodes/frontend-dev.chatmode.md)" \
+  --append-system-prompt "$(cat context/state-management.context.md context/governance.context.md context/quality.context.md context/api-security.context.md)" \
+  "Implement player dashboard"
 
 # Loads: state-management, governance, quality, api-security contexts
 ```
 
 **Code Review**:
 ```bash
-claude --agents ./AGENTS.md \
-  --chatmode .github/chatmodes/reviewer.chatmode.md \
-  --prompt "Review PR #123"
+claude \
+  --append-system-prompt "$(cat .github/chatmodes/reviewer.chatmode.md)" \
+  --append-system-prompt "$(cat context/architecture.context.md context/governance.context.md context/quality.context.md context/api-security.context.md)" \
+  "Review PR #123"
 
 # Loads: architecture, governance, quality, api-security contexts
 ```
@@ -269,7 +281,7 @@ wc -l memory/*.md
 
 ### CLI Not Loading AGENTS.md
 
-**Symptom**: `--agents` flag not working
+**Symptom**: Context not loading in CLI sessions
 
 **Check**:
 1. Verify `AGENTS.md` exists at repo root
@@ -284,8 +296,8 @@ npm run agents:compile
 # Validate
 npm run agents:check
 
-# Test
-claude --agents ./AGENTS.md --prompt "List loaded files"
+# Test with correct syntax
+claude --append-system-prompt "$(cat AGENTS.md)" "List loaded files"
 ```
 
 ### Context Files Not Loading
@@ -306,10 +318,11 @@ ls -lh context/*.md
 # Regenerate AGENTS.md to pick up context files
 npm run agents:compile
 
-# Try with explicit chatmode
-claude --agents ./AGENTS.md \
-  --chatmode .github/chatmodes/backend-dev.chatmode.md \
-  --prompt "test"
+# Load chatmode + context manually
+claude \
+  --append-system-prompt "$(cat .github/chatmodes/backend-dev.chatmode.md)" \
+  --append-system-prompt "$(cat context/architecture.context.md)" \
+  "test"
 ```
 
 ### Out of Sync Errors
@@ -352,10 +365,10 @@ git commit -m "chore: regenerate AGENTS.md"
 - [ ] Load time: <5 seconds
 - [ ] Context budget: ~1.3% used
 
-**CLI Auto-Load**:
-- [ ] `--agents` flag loads AGENTS.md
-- [ ] Memory files referenced
-- [ ] Chatmode loads context files
+**CLI Manual Load**:
+- [ ] `--append-system-prompt` loads AGENTS.md content
+- [ ] Memory files included
+- [ ] Chatmode/context loaded via additional `--append-system-prompt`
 - [ ] Total: ~7% budget used
 
 **Manual Load**:
