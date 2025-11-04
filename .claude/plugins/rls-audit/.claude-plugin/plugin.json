@@ -1,0 +1,8 @@
+{
+  "name": "rls-audit",
+  "version": "1.0.0",
+  "description": "Inspect Supabase RLS policies for a specific table and confirm alignment with SEC-001",
+  "author": "PT-2 Engineering Team",
+  "commands": ["rls-audit"],
+  "tags": ["security", "rls", "database", "compliance"]
+}

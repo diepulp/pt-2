@@ -1,0 +1,8 @@
+{
+  "name": "docs-sync",
+  "version": "1.0.0",
+  "description": "Validate architecture documentation consistency and regenerate derived artifacts",
+  "author": "PT-2 Engineering Team",
+  "commands": ["docs-sync"],
+  "tags": ["documentation", "validation", "architecture"]
+}
