@@ -6,6 +6,8 @@ docs:
   supporting:
     - docs/25-api-data/README.md
     - docs/70-governance/SERVICE_TEMPLATE.md
+    - docs/70-governance/ANTI_PATTERN_CATALOG.md
+    - docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md
 rules:
   - Follow SRM ownership: map each change to the service/domain table in the SRM and keep RLS expectations intact.
   - Use functional factories with explicit interfaces; never rely on `ReturnType` inference.

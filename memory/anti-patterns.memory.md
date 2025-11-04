@@ -1,7 +1,7 @@
 # Anti-Patterns Snapshot (PT-2)
 last_updated: 2025-10-17
 sources:
-  - .claude/memory/anti-patterns.memory.md (full reference)
+  - docs/70-governance/ANTI_PATTERN_CATALOG.md (full reference)
   - docs/patterns/OVER_ENGINEERING_GUARDRAIL.md
 summary:
   service_layer:
@@ -20,3 +20,5 @@ summary:
     - [ ] RLS policies verified per SEC-001
     - [ ] Schema types regenerated
     - [ ] Logging sanitized
+
+    

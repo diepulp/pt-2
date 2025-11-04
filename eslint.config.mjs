@@ -18,10 +18,12 @@ const eslintConfig = [
   {
     ignores: [
       'node_modules/**',
+      '.venv/**',
       'dist/**',
       '.next/**',
       'coverage/**',
       '.swc/**',
+      '.venv/**',
       '.qodo/**',
       '.cursor/**',
       'types/database.types.ts', // Generated file, exclude from linting

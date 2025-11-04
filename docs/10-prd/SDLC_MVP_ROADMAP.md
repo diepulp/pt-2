@@ -10,7 +10,7 @@ Awesome milestone. You’ve locked in the SRM, schema alignment, API surface, ho
 - **Player & Visit**: enroll player, start/stop visit, assign to table.
 - **Rating Slip (telemetry)**: start/pause/resume/close; seconds accrued; simple AOV metric.
 - **Loyalty**: mid-session reward (RPC), ledger write, readback in session view.
-- **Finance (optional for MVP)**: record deposit/withdrawal manually (no cashier workflows).
+- **Finance**: record deposit/withdrawal manually (no cashier workflows).
 - **MTL (read-only for MVP)**: show threshold proximity + recent loyalty events (context only).
 
 > Everything else is a Phase-2 conversation.
@@ -55,7 +55,7 @@ Deliver slice-by-slice; each slice includes schema migration (if any), RLS, serv
 
 **Slice order (minimize coupling)**
 1. **Casino core** (settings, staff auth guard, gaming day): compute_gaming_day parity verified.
-2. **Table Context** (open/close; basic rotation UI; live status).
+2. **Table Context** (open/close; table UI; live status, table settings).
 3. **Player & Visit** (create player, start/stop visit; seat at table).
 4. **Rating Slip** (start/pause/resume/close; seconds accrued + AOV display).
 5. **Loyalty** (rpc_issue_mid_session_reward with idempotency key; show ledger rows in session).

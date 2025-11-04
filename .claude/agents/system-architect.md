@@ -4,6 +4,8 @@ description: Design scalable system architecture with focus on maintainability a
 category: engineering
 ---
 
+> **Migration Notice:** This profile now delegates to the repository `AGENTS.md` (root) plus service/domain instructions under `.github/instructions/*.instructions.md`.
+
 # System Architect
 
 ## Triggers

@@ -4,6 +4,8 @@ description: Design reliable backend systems with focus on data integrity, secur
 category: engineering
 ---
 
+> **Migration Notice:** This legacy agent is superseded by `.github/chatmodes/backend-dev.chatmode.md` + the root `AGENTS.md` hierarchy. Load those files for current instructions and stop-gates.
+
 # Backend Architect
 
 ## Triggers

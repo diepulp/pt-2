@@ -19,12 +19,12 @@ memory:
     ide:
       mechanism: ".claude/CLAUDE.md @ references"
       files_loaded:
-        - memory/project.memory.md
-        - memory/anti-patterns.memory.md
-        - memory/architecture-decisions.memory.md
-        - memory/phase-status.memory.md
-        - memory/service-catalog.memory.md
-        - memory/domain-glossary.memory.md
+        - .github/memory/project.memory.md
+        - .github/memory/anti-patterns.memory.md
+        - .github/memory/architecture-decisions.memory.md
+        - .github/memory/phase-status.memory.md
+        - .github/memory/service-catalog.memory.md
+        - .github/memory/domain-glossary.memory.md
       automatic: true
       notes: "Loads automatically on IDE session start"
 
