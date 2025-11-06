@@ -13,17 +13,21 @@ create type rating_slip_status as enum (
   'archived'
 );
 
--- Step 2: Alter rating_slip table to use the enum
+-- Step 2: Drop the existing default before type change
+alter table rating_slip
+  alter column status drop default;
+
+-- Step 3: Alter rating_slip table to use the enum
 -- USING clause handles the cast from text to enum
 alter table rating_slip
   alter column status type rating_slip_status
   using status::rating_slip_status;
 
--- Step 3: Ensure default is preserved
+-- Step 4: Re-apply the default with proper enum type
 alter table rating_slip
   alter column status set default 'open'::rating_slip_status;
 
--- Step 4: Add comment for documentation
+-- Step 5: Add comment for documentation
 comment on type rating_slip_status is 'Rating slip lifecycle states: open (active play), paused (temporarily suspended), closed (session ended), archived (historical)';
 
 comment on column rating_slip.status is 'Current lifecycle state - drives eligibility for mid-session rewards (open/paused only)';
