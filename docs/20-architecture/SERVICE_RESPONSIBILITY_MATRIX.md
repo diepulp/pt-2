@@ -485,17 +485,17 @@ const { data: ledger, error: reward_error } = await supabase
 - `dealer_rotation` table (dealer assignments and rotations)
 - **Chip custody telemetry** for fills, credits, inventory snapshots, and drop custody events (non-monetary)
 
-**PROVIDES TO:** Visit, RatingSlip, Loyalty, Finance, and Compliance contexts that need authoritative table metadata and casino alignment.
+**PROVIDES TO:** Visit, RatingSlip, Loyalty, Finance, and Compliance contexts that need authoritative table metadata and casino alignment. Consumes `floor_layout.activated` events from FloorLayoutService to keep live tables aligned with the approved floor design.
 
 **BOUNDED CONTEXT**: "What is the operational state and chip custody posture of this gaming table?"
 
-### Acceptance Checklist (CI)
 - [ ] **Tables present:** `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`
 - [ ] **PK/FK types:** all `uuid`; chip custody tables reference `gaming_table.id`
 - [ ] **Ownership:** `casino_id` required on all tables (legacy + chip custody)
 - [ ] **Constraints:** `ux_game_settings_casino_type` unique index; bet range checks; `assert_table_context_casino` trigger on `gaming_table_settings` + `dealer_rotation`; custody tables require `request_id not null` for idempotency
 - [ ] **RLS:** read for staff of same casino; writes by admins/pit bosses; custody tables extend to cage/count team roles
 - [ ] **Access paths:** tables by `casino_id`; rotations by `(table_id, started_at desc)`; custody events by `(casino_id, table_id, created_at desc)`
+- [ ] **Layout sync:** TableContext ingestion job listens for `floor_layout.activated` events and reconciles `gaming_table.pit` / activation state accordingly
 
 **RLS (excerpt)**
 - Tables owned by casino scope (`casino_id` present) MUST include:
@@ -602,12 +602,13 @@ for each row execute function assert_table_context_casino();
 - `table_drop_event` — drop box removal/delivery; custody timeline (`gaming_day`, `drop_box_id`, `seq_no`, `delivered_scan_at`)
 
 #### References (Read-Only)
-- `casino`, `gaming_table`, `staff`, `report`
+- `casino`, `gaming_table`, `staff`, `report`, `floor_layout_activation`, `floor_layout_version`
 
 #### Does Not Own
 - **Finance**: monetary ledgers, drop count sheets, marker workflows
 - **Compliance/MTL**: CTR/SAR thresholds and filings
 - **Loyalty**: reward ledger/balance
+- **Floor design**: layout drafting/versioning/approval (handled by FloorLayoutService; TableContext only consumes activations)
 
 #### Extended Schema
 ```sql

@@ -553,7 +553,7 @@ curl -sS "$BASE_URL/api/v1/visits/44444444-4444-4444-4444-444444444444/rating-sl
 ## Table Context Domain (TableContextService — Operational Context)
 
 **Tables**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `audit_log`  
-**Key invariants**: Tables owned by casino; bet range consistency enforced by triggers; dealer rotations validated against `gaming_table` ownership; chip custody telemetry (snapshots, fills, credits, drop custody) is non-monetary and scoped by `casino_id`.
+**Key invariants**: Tables owned by casino; bet range consistency enforced by triggers; dealer rotations validated against `gaming_table` ownership; chip custody telemetry is non-monetary and scoped by `casino_id`. TableContext listens to `floor_layout.activated` events to reconcile which tables/pits are live.
 
 > **Idempotency mapping**: For custody writes (`/inventory-snapshots`, `/fills`, `/credits`) the `Idempotency-Key` header is mandatory. When the JSON body omits `request_id`, the route copies `Idempotency-Key` into the payload before invoking the RPC so the database uniqueness `(casino_id, request_id)` constraint dedupes retries.
 
