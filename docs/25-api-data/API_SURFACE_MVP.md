@@ -840,6 +840,138 @@ curl -sS -X POST "$BASE_URL/api/v1/table-context/drop-events" \
   -d '{"casino_id":"22222222-2222-2222-2222-222222222222","table_id":"55555555-5555-5555-5555-555555555555","drop_box_id":"BX-123","seal_no":"SEAL-456","removed_by":"77777777-7777-7777-7777-777777777777","witnessed_by":"88888888-8888-8888-8888-888888888888"}'
 ```
 
+## Floor Layout Domain (FloorLayoutService — Design & Activation)
+
+**Tables**: `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation`, `audit_log`  
+**Key invariants**: Layout lifecycle managed separately from runtime telemetry; only one active layout per casino; versions immutable once submitted; activation emits `floor_layout.activated` event consumed by TableContext/Performance.
+
+> **Workflow**: Draft → Review → Approved → Activated. Admins design layouts, reviewers approve, activations are idempotent via `activation_request_id`.
+
+#### GET /api/v1/floor-layouts
+
+Query (Zod):
+```ts
+export const FloorLayoutListQuerySchema = z.object({
+  casino_id: z.string().uuid(),
+  status: z.enum(['draft','review','approved','archived']).optional(),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+```
+
+Response DTO:
+```ts
+export const FloorLayoutSchema = z.object({
+  id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+  name: z.string(),
+  description: z.string().nullable(),
+  status: z.enum(['draft','review','approved','archived']),
+  created_by: z.string().uuid(),
+  reviewed_by: z.string().uuid().nullable(),
+  approved_by: z.string().uuid().nullable(),
+  created_at: z.string(),
+  updated_at: z.string(),
+});
+
+export const FloorLayoutListResponseSchema = z.object({
+  items: z.array(FloorLayoutSchema),
+  next_cursor: z.string().optional(),
+});
+```
+
+Operational notes:
+- **Errors**: `FORBIDDEN`, `UNAUTHORIZED`.
+- **Auth/RBAC**: admins/readers within same casino; reviewers require `layout_reviewer` claim.
+- **Idempotency**: Read-only.
+- **Pagination**: Cursor uses `(created_at,id)` descending.
+
+#### POST /api/v1/floor-layouts
+
+Body:
+```ts
+export const FloorLayoutCreateSchema = z.object({
+  casino_id: z.string().uuid(),
+  name: z.string().min(1),
+  description: z.string().optional(),
+});
+```
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR`, `FORBIDDEN`.
+- **Idempotency**: Header required; duplicates replay existing draft (service compares name+casino hash).
+- **Side effects**: Creates layout + seed version `1`.
+
+#### GET /api/v1/floor-layouts/{layout_id}/versions
+
+Query:
+```ts
+export const FloorLayoutVersionQuerySchema = z.object({
+  include_slots: z.boolean().optional(),
+});
+```
+
+Response snippet:
+```ts
+export const FloorLayoutVersionSchema = z.object({
+  id: z.string().uuid(),
+  layout_id: z.string().uuid(),
+  version_no: z.number().int(),
+  status: z.enum(['draft','pending_activation','active','retired']),
+  layout_payload: z.record(z.any()),
+  created_by: z.string().uuid(),
+  created_at: z.string(),
+});
+```
+
+#### PATCH /api/v1/floor-layouts/{layout_id}/versions/{version_id}
+
+Allows upserting pits/table slots while version status = `draft`. Payload references arrays of pits + slots, each with coordinates/metadata. Idempotency enforced via header and row checksum; collisions result in `409`.
+
+#### POST /api/v1/floor-layouts/{layout_id}/submit
+
+- Moves latest draft version → `review`; requires reviewer role.
+- **Idempotency**: header required; repeats return same layout state.
+- Emits audit log event `floor_layout.submitted`.
+
+#### POST /api/v1/floor-layouts/{layout_id}/approve
+
+- Requires `layout_reviewer`/`admin`.
+- Validates layout has at least one pit and slot, marks layout status = `approved`.
+
+#### POST /api/v1/floor-layout-activations
+
+Body:
+```ts
+export const FloorLayoutActivationSchema = z.object({
+  casino_id: z.string().uuid(),
+  layout_version_id: z.string().uuid(),
+  activation_request_id: z.string().uuid().optional(),
+});
+```
+
+Operational notes:
+- **Idempotency**: Mandatory header; server copies to `activation_request_id`.
+- **Auth/RBAC**: admins only.
+- **Side effects**: Inserts activation row, emits `floor_layout.activated` event, notifies TableContext to reconcile active tables.
+
+### cURL sanity
+```bash
+# create layout draft
+curl -sS -X POST "$BASE_URL/api/v1/floor-layouts" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"casino_id":"22222222-2222-2222-2222-222222222222","name":"Main Floor Redesign"}'
+
+# activate approved layout version
+curl -sS -X POST "$BASE_URL/api/v1/floor-layout-activations" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"casino_id":"22222222-2222-2222-2222-222222222222","layout_version_id":"aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"}'
+```
+
 ## Loyalty Domain (LoyaltyService — Reward Context)
 
 **Tables**: `player_loyalty`, `loyalty_ledger`, `audit_log`  

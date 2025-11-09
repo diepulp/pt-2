@@ -114,7 +114,8 @@ create index if not exists ix_mtl_casino_time
 |--------|---------|------|------------|------------|------------------|
 | **Foundational** | `CasinoService` | • Casino registry<br>• **casino_settings** (EXCLUSIVE WRITE)<br>• **Timezone & gaming day** (temporal authority)<br>• **Compliance thresholds** (CTR, watchlist)<br>• Game config templates<br>• Staff & access control<br>• Corporate grouping<br>• Audit logs<br>• Reports | • Company (FK, corporate parent) | • All operational domains<br>• Policy inheritance<br>• Configuration distribution | **Root temporal authority & global policy** |
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• rating_slips<br>• Loyalty | Identity management |
-| **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** |
+| **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips (chip custody telemetry)<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** |
+| **Operational** | `FloorLayoutService` | • Floor layout drafts & approvals<br>• Layout versions (immutable snapshots)<br>• Pit definitions & sections<br>• Table slot placements<br>• Layout activation log/events | • Casino (FK)<br>• Staff (FK, admins)<br>• TableContext (event consumers) | • Activation history<br>• Layout review queues | **Design & activate gaming floor layouts** |
 | **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• `status`/`policy_snapshot` | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• rating_slip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
@@ -167,6 +168,7 @@ create index if not exists ix_mtl_casino_time
 
 ### Schema (Core Entities)
 
+```sql
 create table company (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -472,25 +474,28 @@ const { data: ledger, error: reward_error } = await supabase
 
 ---
 
-## TableContext Service - Operational Context
+## TableContextService
 
 ### ✅ TableContextService (Operational Telemetry & Lifecycle)
 
 **OWNS:**
 - **Table lifecycle management** (provision, activate, deactivate)
 - `gaming_table` table (canonical registry)
-- `gaming_table_settings` table (configuration)
+- `gaming_table_settings` table (configuration history)
 - `dealer_rotation` table (dealer assignments and rotations)
+- **Chip custody telemetry** for fills, credits, inventory snapshots, and drop custody events (non-monetary)
 
-**BOUNDED CONTEXT**: "What is the operational state and activity of this gaming table?"
+**PROVIDES TO:** Visit, RatingSlip, Loyalty, Finance, and Compliance contexts that need authoritative table metadata and casino alignment.
+
+**BOUNDED CONTEXT**: "What is the operational state and chip custody posture of this gaming table?"
 
 ### Acceptance Checklist (CI)
-- [ ] **Tables present:** `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`
-- [ ] **PK/FK types:** all `uuid`; `dealer_rotation.table_id` → `gaming_table.id`
-- [ ] **Ownership:** `casino_id` on `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`
-- [ ] **Constraints:** `ux_game_settings_casino_type` unique index; bet range checks; `assert_table_context_casino` triggers enforce table/casino alignment
-- [ ] **RLS:** read for staff of same casino; write for admins/pit_boss
-- [ ] **Access paths:** tables by `casino_id`; rotations by `table_id` and recency
+- [ ] **Tables present:** `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`
+- [ ] **PK/FK types:** all `uuid`; chip custody tables reference `gaming_table.id`
+- [ ] **Ownership:** `casino_id` required on all tables (legacy + chip custody)
+- [ ] **Constraints:** `ux_game_settings_casino_type` unique index; bet range checks; `assert_table_context_casino` trigger on `gaming_table_settings` + `dealer_rotation`; custody tables require `request_id not null` for idempotency
+- [ ] **RLS:** read for staff of same casino; writes by admins/pit bosses; custody tables extend to cage/count team roles
+- [ ] **Access paths:** tables by `casino_id`; rotations by `(table_id, started_at desc)`; custody events by `(casino_id, table_id, created_at desc)`
 
 **RLS (excerpt)**
 - Tables owned by casino scope (`casino_id` present) MUST include:
@@ -498,7 +503,7 @@ const { data: ledger, error: reward_error } = await supabase
   - Write: admins of same `casino_id`.
 - Cross-domain joins must rely on declared FKs (no implicit string keys).
 
-### Schema
+### Core Schema (Lifecycle & Settings)
 
 ```sql
 create table game_settings (
@@ -585,6 +590,323 @@ create trigger trg_dealer_rotation_casino
 before insert or update on dealer_rotation
 for each row execute function assert_table_context_casino();
 ```
+
+### Chip Custody Extensions (Non-Monetary)
+
+**Responsibility:** Capture operational custody of chips (inventory, fills, credits, drop movement) without storing monetary ledgers. Monetary counting remains with `PlayerFinancialService`.
+
+#### Owns (Data)
+- `table_inventory_snapshot` — opening/closing/rundown counts; dual signers; discrepancies
+- `table_fill` — chip replenishment to table (idempotent by request id)
+- `table_credit` — chips returned from table to cage (idempotent by request id)
+- `table_drop_event` — drop box removal/delivery; custody timeline (`gaming_day`, `drop_box_id`, `seq_no`, `delivered_scan_at`)
+
+#### References (Read-Only)
+- `casino`, `gaming_table`, `staff`, `report`
+
+#### Does Not Own
+- **Finance**: monetary ledgers, drop count sheets, marker workflows
+- **Compliance/MTL**: CTR/SAR thresholds and filings
+- **Loyalty**: reward ledger/balance
+
+#### Extended Schema
+```sql
+-- inventory snapshots (open/close/rundown)
+create table if not exists table_inventory_snapshot (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  table_id uuid not null references gaming_table(id) on delete cascade,
+  snapshot_type text not null check (snapshot_type in ('open','close','rundown')),
+  chipset jsonb not null,
+  counted_by uuid references staff(id),
+  verified_by uuid references staff(id),
+  discrepancy_cents int default 0,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+-- fills (chips to table)
+create table if not exists table_fill (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  table_id uuid not null references gaming_table(id) on delete cascade,
+  request_id text not null,
+  chipset jsonb not null,
+  amount_cents int not null,
+  requested_by uuid references staff(id),
+  delivered_by uuid references staff(id),
+  received_by uuid references staff(id),
+  slip_no text,
+  created_at timestamptz not null default now(),
+  unique (casino_id, request_id)
+);
+
+-- credits (chips to cage)
+create table if not exists table_credit (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  table_id uuid not null references gaming_table(id) on delete cascade,
+  request_id text not null,
+  chipset jsonb not null,
+  amount_cents int not null,
+  authorized_by uuid references staff(id),
+  sent_by uuid references staff(id),
+  received_by uuid references staff(id),
+  slip_no text,
+  created_at timestamptz not null default now(),
+  unique (casino_id, request_id)
+);
+
+-- drop custody events (no money here)
+create table if not exists table_drop_event (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  table_id uuid not null references gaming_table(id) on delete cascade,
+  seal_no text,
+  drop_box_id text,
+  gaming_day date,
+  seq_no int,
+  removed_by uuid references staff(id),
+  witnessed_by uuid references staff(id),
+  removed_at timestamptz not null default now(),
+  delivered_at timestamptz,
+  delivered_scan_at timestamptz,
+  note text
+);
+```
+
+#### RPC (canonical write paths)
+```sql
+-- inventory snapshots
+create or replace function rpc_log_table_inventory_snapshot(
+  p_casino_id uuid,
+  p_table_id uuid,
+  p_snapshot_type text,
+  p_chipset jsonb,
+  p_counted_by uuid default null,
+  p_verified_by uuid default null,
+  p_discrepancy_cents int default 0,
+  p_note text default null
+) returns table_inventory_snapshot language sql security definer as $$
+  insert into table_inventory_snapshot (
+    casino_id, table_id, snapshot_type, chipset,
+    counted_by, verified_by, discrepancy_cents, note
+  ) values (
+    p_casino_id, p_table_id, p_snapshot_type, p_chipset,
+    p_counted_by, p_verified_by, coalesce(p_discrepancy_cents, 0), p_note
+  )
+  returning *;
+$$;
+
+-- idempotent fills
+create or replace function rpc_request_table_fill(
+  p_casino_id uuid, p_table_id uuid, p_chipset jsonb, p_amount_cents int,
+  p_requested_by uuid, p_delivered_by uuid, p_received_by uuid,
+  p_slip_no text, p_request_id text
+) returns table_fill language sql security definer as $$
+  insert into table_fill (casino_id, table_id, chipset, amount_cents,
+    requested_by, delivered_by, received_by, slip_no, request_id)
+  values (p_casino_id, p_table_id, p_chipset, p_amount_cents,
+    p_requested_by, p_delivered_by, p_received_by, p_slip_no, p_request_id)
+  on conflict (casino_id, request_id) do update
+    set delivered_by = excluded.delivered_by,
+        received_by = excluded.received_by,
+        amount_cents = excluded.amount_cents
+  returning *;
+$$;
+
+-- idempotent credits
+create or replace function rpc_request_table_credit(
+  p_casino_id uuid, p_table_id uuid, p_chipset jsonb, p_amount_cents int,
+  p_authorized_by uuid, p_sent_by uuid, p_received_by uuid,
+  p_slip_no text, p_request_id text
+) returns table_credit language sql security definer as $$
+  insert into table_credit (casino_id, table_id, chipset, amount_cents,
+    authorized_by, sent_by, received_by, slip_no, request_id)
+  values (p_casino_id, p_table_id, p_chipset, p_amount_cents,
+    p_authorized_by, p_sent_by, p_received_by, p_slip_no, p_request_id)
+  on conflict (casino_id, request_id) do update
+    set received_by = excluded.received_by,
+        amount_cents = excluded.amount_cents
+  returning *;
+$$;
+
+-- drop custody event
+create or replace function rpc_log_table_drop(
+  p_casino_id uuid,
+  p_table_id uuid,
+  p_drop_box_id text,
+  p_seal_no text,
+  p_removed_by uuid,
+  p_witnessed_by uuid,
+  p_removed_at timestamptz default now(),
+  p_delivered_at timestamptz default null,
+  p_delivered_scan_at timestamptz default null,
+  p_gaming_day date default null,
+  p_seq_no int default null,
+  p_note text default null
+) returns table_drop_event language sql security definer as $$
+  insert into table_drop_event (casino_id, table_id, drop_box_id, seal_no,
+    removed_by, witnessed_by, removed_at, delivered_at, delivered_scan_at,
+    gaming_day, seq_no, note)
+  values (p_casino_id, p_table_id, p_drop_box_id, p_seal_no,
+    p_removed_by, p_witnessed_by, coalesce(p_removed_at, now()), p_delivered_at, p_delivered_scan_at,
+    p_gaming_day, p_seq_no, p_note)
+  returning *;
+$$;
+```
+
+#### RLS (sketch)
+- **Read:** same-casino for `pit_boss`, `dealer`, `accounting_read`, `cage_read`, `compliance_read` (as appropriate).  
+- **Write:** `pit_boss` for inventory/fill/credit/drop; `cage`/`count_team` limited to their custody flows.  
+- Enforce `casino_id = current_setting('app.casino_id')::uuid` and role allow-lists.
+
+#### Events & Observability
+Emit: `table.inventory_open|close|rundown_recorded`, `table.fill_requested|completed`, `table.credit_requested|completed`, `table.drop_removed|delivered`.  
+Payload keys: `{casino_id, table_id, staff_id[], slip_no|request_id, amount_cents, chipset, ts}`.
+
+#### KPIs
+- Time-to-fill; fills/credits per table/shift; drop removed→delivered SLA; % closes with zero discrepancy.
+
+---
+
+## FloorLayoutService - Design & Activation Context
+
+### ✅ FloorLayoutService (Floor Design, Versioning, & Activation)
+
+**Responsibility:** Create, review, version, and activate casino floor layouts (pits, sections, table placements). Produce activation events consumed by `TableContextService`, `PerformanceService`, and Reporting. Layout design lives here; runtime telemetry stays in TableContext.
+
+**Provides To:** TableContext (active layout assignment), Performance (layout metadata for dashboards), Reporting (historical activation lineage), Governance (review/approval workflow).
+
+**BOUNDED CONTEXT**: "What does the gaming floor look like, and which layout is currently active?"
+
+### Acceptance Checklist (CI)
+- [ ] **Tables present:** `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation`
+- [ ] **States defined:** layout status enum (`draft`,`review`,`approved`,`archived`); version state (`draft`,`pending_activation`,`active`,`retired`)
+- [ ] **Ownership:** `casino_id` on every table, enforced by RLS; staff actions recorded
+- [ ] **Idempotency:** layout activation RPC keyed by `(casino_id, activation_request_id)`
+- [ ] **Events:** `floor_layout.activated` emitted with layout + version metadata
+- [ ] **Auditability:** `reviewed_by`, `approved_by`, and activation timestamps captured
+
+### RLS (excerpt)
+- Read/Write limited to admins of same `casino_id`; reviewers need `layout_reviewer` role.
+- Layout versions immutable once submitted for review.
+- Activation only allowed for `approved` layouts; ensures `casino_id` matches TableContext consumers.
+
+### Schema
+
+```sql
+create type floor_layout_status as enum ('draft','review','approved','archived');
+create type floor_layout_version_status as enum ('draft','pending_activation','active','retired');
+
+create table floor_layout (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  name text not null,
+  description text,
+  status floor_layout_status not null default 'draft',
+  created_by uuid not null references staff(id),
+  reviewed_by uuid references staff(id),
+  approved_by uuid references staff(id),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table floor_layout_version (
+  id uuid primary key default gen_random_uuid(),
+  layout_id uuid not null references floor_layout(id) on delete cascade,
+  version_no int not null,
+  status floor_layout_version_status not null default 'draft',
+  layout_payload jsonb not null default '{}'::jsonb,
+  notes text,
+  created_by uuid not null references staff(id),
+  created_at timestamptz not null default now(),
+  unique (layout_id, version_no)
+);
+
+create table floor_pit (
+  id uuid primary key default gen_random_uuid(),
+  layout_version_id uuid not null references floor_layout_version(id) on delete cascade,
+  label text not null,
+  sequence int not null default 0,
+  capacity int,
+  geometry jsonb,
+  metadata jsonb
+);
+
+create table floor_table_slot (
+  id uuid primary key default gen_random_uuid(),
+  layout_version_id uuid not null references floor_layout_version(id) on delete cascade,
+  pit_id uuid references floor_pit(id) on delete cascade,
+  slot_label text not null,
+  game_type game_type not null,
+  preferred_table_id uuid references gaming_table(id) on delete set null,
+  coordinates jsonb,
+  orientation text,
+  metadata jsonb
+);
+
+create table floor_layout_activation (
+  id uuid primary key default gen_random_uuid(),
+  casino_id uuid not null references casino(id) on delete cascade,
+  layout_version_id uuid not null references floor_layout_version(id) on delete cascade,
+  activated_by uuid not null references staff(id),
+  activated_at timestamptz not null default now(),
+  deactivated_at timestamptz,
+  activation_request_id text not null,
+  unique (casino_id, activation_request_id)
+);
+```
+
+### RPC / Events (excerpt)
+
+```sql
+-- create draft layout + first version
+create or replace function rpc_create_floor_layout(
+  p_casino_id uuid,
+  p_name text,
+  p_description text,
+  p_created_by uuid
+) returns floor_layout language plpgsql security definer as $$
+declare v_layout_id uuid;
+begin
+  insert into floor_layout (casino_id, name, description, created_by)
+  values (p_casino_id, p_name, p_description, p_created_by)
+  returning id into v_layout_id;
+
+  insert into floor_layout_version (layout_id, version_no, created_by)
+  values (v_layout_id, 1, p_created_by);
+
+  return (select * from floor_layout where id = v_layout_id);
+end;
+$$;
+
+create or replace function rpc_activate_floor_layout(
+  p_casino_id uuid,
+  p_layout_version_id uuid,
+  p_activated_by uuid,
+  p_request_id text
+) returns floor_layout_activation language sql security definer as $$
+  insert into floor_layout_activation (
+    casino_id, layout_version_id, activated_by, activation_request_id
+  ) values (
+    p_casino_id, p_layout_version_id, p_activated_by, p_request_id
+  )
+  on conflict (casino_id, activation_request_id) do update
+    set layout_version_id = excluded.layout_version_id,
+        activated_by = excluded.activated_by,
+        activated_at = now()
+  returning *;
+$$;
+```
+
+- Event `floor_layout.activated` payload: `{casino_id, layout_id, layout_version_id, activated_at, pits[], table_slots[]}`.
+- TableContext listens and updates `gaming_table` state (activate/deactivate tables according to slots).
+
+### Responsibilities & Hand-offs
+- **Owns**: layout drafts, review workflow, pit definitions, table placement metadata, activation history.
+- **Does Not Own**: real-time dealer assignments (TableContext), monetary data (Finance), staff registry (CasinoService).
+- **Integrations**: publishes read models/API for admin UI; pushes activation events to TableContext/Performance; stores review audit trail for Governance.
 
 ---
 
