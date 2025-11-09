@@ -46,26 +46,28 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - Casino settings including **gaming day** parameters.
 
 ### 3.2 Table Context
-- Open/close table; show status on pit dashboard.
+- Transition table status among `inactive` → `active` (open) → `closed` per SRM `table_status` enum; show canonical labels on the pit dashboard.
 - Dealer rotation (happy path).
 
 ### 3.3 Player & Visit
 - Enroll player; start/stop visit; seat player at table.
 
 ### 3.4 Rating Slip (Telemetry)
-- Start, pause, resume, close slip.
-- Accurate **accumulated_seconds** and AOV visibility.
-- Prevent overlapping active slips for the same player/table.
+- Start, pause, resume, close slip (`status` set to `open`, `paused`, `closed`).
+- Accurate server-derived duration (`duration_seconds` UI metric from `start_time`/`end_time`) and AOV visibility.
+- Prevent overlapping open slips for the same player/table.
+- Persist `seat_number`, current `game_settings`, and a `policy_snapshot` so rewards can be audited against the SRM contract.
 
 ### 3.5 Loyalty
-- Issue **mid-session reward** via RPC; persist to **loyalty_ledger** and show within the slip/session.
+- Issue **mid-session reward** via `rpc_issue_mid_session_reward(p_casino_id, p_player_id, p_rating_slip_id, p_staff_id, p_points, p_idempotency_key, p_reason)`; persist to **loyalty_ledger** and update **player_loyalty** in the same transaction.
 - Enforce **idempotency** (no duplicate issuance).
+- Slip UI reads reward data from `loyalty_ledger`/`player_loyalty`; `rating_slip` remains telemetry-only per SRM.
 
 ### 3.6 Finance (Minimal, Feature-Flagged)
 - Manual **deposit/withdrawal** entry to support reconciliation scenarios.
 
 ### 3.7 MTL (Read-Only)
-- Display threshold proximity badge and recent loyalty activity in context.
+- Display CTR/watchlist threshold proximity badge and recent `mtl_entry` ledger activity in context (no loyalty data duplication).
 
 ---
 
@@ -87,38 +89,38 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 **Acceptance:**
 - **Given** the table is closed  
   **When** I Open Table  
-  **Then** table status becomes `open` and is visible on the pit dashboard within 2s.
+  **Then** table status becomes `active` (per `table_status` enum) and is visible on the pit dashboard within 2s.
 
 ### US-002 Start a Rating Slip
 **As** a Supervisor **I want** to start a rating slip **so that** player time accrues.  
 **Acceptance:**
 - **Given** player is seated at an open table and has no active slip at that table  
   **When** I Start Slip  
-  **Then** a slip is created with `status=active` and a start timestamp, and the pit dashboard shows the active slip within 2s.
+  **Then** a slip is created with `status=open` and a start timestamp, and the pit dashboard shows the active slip within 2s.
 
 ### US-003 Pause/Resume Slip
 **As** a Supervisor **I want** to pause and resume a slip **so that** time tracking remains accurate when the player steps away.  
 **Acceptance:**
 - **Given** an active slip  
   **When** I Pause Slip  
-  **Then** a pause interval is recorded and `accumulated_seconds` stops increasing.  
+  **Then** a pause interval is recorded and the server stops accruing the derived `duration_seconds` metric (no `accumulated_seconds` column).  
 - **Given** a paused slip  
   **When** I Resume Slip  
-  **Then** a resume time is recorded and seconds begin accruing again.
+  **Then** a resume time is recorded and derived seconds begin accruing again.
 
 ### US-004 Close Slip
 **As** a Dealer/Pit Boss **I want** to close a slip **so that** the session is finalized.  
 **Acceptance:**
 - **Given** an active or paused slip  
   **When** I Close Slip  
-  **Then** final `accumulated_seconds` is persisted, `status=closed`, and the slip disappears from “Active” lists within 2s.
+  **Then** `end_time` is persisted, derived duration is emitted to the UI, `status=closed`, and the slip disappears from “Active” lists within 2s.
 
 ### US-005 Mid-Session Reward
 **As** a Pit Boss **I want** to issue a mid-session reward **so that** loyalty can be recognized during play.  
 **Acceptance:**
 - **Given** an active slip with sufficient criteria  
   **When** I Issue Reward  
-  **Then** an entry appears in `loyalty_ledger` linked to the slip/visit, and the slip UI reflects the reward within 2s.  
+  **Then** an entry appears in `loyalty_ledger` linked to the slip/visit, and the slip UI reflects the reward within 2s by reading that ledger entry (no reward fields stored on `rating_slip`).  
 - **And** if the same request is retried with the same idempotency key  
   **Then** no duplicate ledger entry is created (idempotent behavior).
 
@@ -127,18 +129,18 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 **Acceptance:**
 - **Given** feature flag is ON  
   **When** I create a finance entry via RPC  
-  **Then** record persists with derived `gaming_day` and appears in relevant views.
+  **Then** record persists with server-derived `gaming_day` (trigger from casino settings) and appears in relevant views.
 
 ---
 
 ## 6) Functional Requirements (by Domain)
 
 ### Casino
-- Roles: `pit_boss`, `dealer`, `compliance_read`, `accounting_read` (minimum set).  
+- Roles adhere to canonical `staff_role` enum (`dealer`, `pit_boss`, `admin`); compliance/accounting personas use policy-scoped read-only views without introducing new enum values.  
 - Settings: `gaming_day_start`, timezone; must drive `compute_gaming_day` derivations.
 
 ### Table Context
-- States: `open`, `closed`.  
+- States: `inactive`, `active`, `closed` (maps to SRM `table_status`).  
 - Dealer rotation: happy-path logging for audit; optional read-only view for MVP.
 
 ### Player & Visit
@@ -146,28 +148,38 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - Seat mapping: a player must be seated at a specific table to start a slip.
 
 ### Rating Slip
-- State machine: `active` ↔ `paused` → `closed`.  
-- **accumulated_seconds** derived from start/pause/resume/close events (server-trusted clock).  
-- No overlapping **active** slip for {player, table}.
+- State machine: `open` ↔ `paused` → `closed`.  
+- UI duration derived from start/pause/resume/close events (server-trusted clock); no dedicated `accumulated_seconds` column.  
+- No overlapping open slip for {player, table}.  
+- Rating slip remains telemetry-only; loyalty balances live exclusively in `player_loyalty`/`loyalty_ledger`.  
+- Persist `seat_number`, `game_settings`, and a `policy_snapshot` snapshot per SRM to capture the policy in effect.  
+- Mid-session rewards are eligible only while `status` ∈ (`open`, `paused`), and the RPC must enforce casino/player alignment.
 
 ### Loyalty
-- RPC: `rpc_issue_mid_session_reward(sl i p_id, amount, reason, idempotency_key)` writes to `loyalty_ledger`.  
-- Display rewards inline on slip; include who/when/why; audit fields present.
+- RPC: `rpc_issue_mid_session_reward(p_casino_id, p_player_id, p_rating_slip_id, p_staff_id, p_points, p_idempotency_key, p_reason)` is the only write path; it atomically appends to `loyalty_ledger` and updates `player_loyalty`.  
+- Ledger entries capture `loyalty_reason` enum values, `staff_id`, derived telemetry (`average_bet`, `duration_seconds`), and enforce idempotency via unique `idempotency_key`.  
+- Display rewards inline on slip by reading ledger entries; include who/when/why; audit fields present.
 
 ### Finance
 - RPC: `rpc_create_financial_txn(...)` must derive `gaming_day` server-side.  
 - Minimal UI for pilot; behind feature flag.
 
 ### MTL
-- Read-only surface showing threshold proximity and recent loyalty actions; no writes in MVP.
+- Read-only surface showing CTR/watchlist threshold proximity from `mtl_entry` (`direction`, amount, staff) and related audit notes; loyalty data is not duplicated here.
 
 ---
 
 ## 7) Data Contracts & Schema Touchpoints
 
-- **Tables (public):** `casino`, `casino_settings`, `staff`, `gaming_table`, `gaming_table_settings`, `player`, `visit`, `rating_slip`, `player_loyalty`, `loyalty_ledger`, `player_financial_transaction`, `mtl_entry`, `audit_log`.  
+- **Tables (public):**  
+  - `CasinoService (ARCH)`: `casino`, `casino_settings`, `staff`, `player_casino`.  
+  - `TableContextService`: `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`.  
+  - `Visit / Rating`: `player`, `visit`, `rating_slip`.  
+  - `Loyalty`: `player_loyalty`, `loyalty_ledger`.  
+  - `Finance / Compliance`: `player_financial_transaction`, `mtl_entry`, `mtl_audit_note`, `audit_log`.  
 - **RPC/Functions:** `compute_gaming_day`, `rpc_issue_mid_session_reward`, `rpc_create_financial_txn`.  
-- **Events (audit):** Actions on table open/close, slip lifecycle, reward issuance, finance entry.
+- **Events (audit):** Actions on table open/close, slip lifecycle (with policy snapshot), reward issuance, finance entry, CTR thresholds.  
+- `rating_slip` excludes reward totals by design; UI queries `loyalty_ledger`/`player_loyalty` for balances.
 
 > Naming conventions are **lower_snake_case** with UUID ids; JSON only for metadata.
 
@@ -177,6 +189,7 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 
 - **Deny-all** baseline; role- and casino-scoped allow paths.  
 - Row ownership includes `{casino_id, gaming_day}` where applicable.  
+- RLS policies follow SRM template: same-casino read for role-gated staff, admin-only writes, no implicit string joins.  
 - No service keys in app runtime; all access through PostgREST/server actions with RLS.  
 - Audit every state change (who/when/what).
 
@@ -268,10 +281,10 @@ sequenceDiagram
   participant App as PT-2 App
   participant DB as Supabase (RLS)
   PB->>App: Open Table
-  App->>DB: update gaming_table.status=open
+  App->>DB: update gaming_table.status=active
   DB-->>App: ok
   D->>App: Start Slip
-  App->>DB: insert rating_slip (active)
+  App->>DB: insert rating_slip (status=open)
   D->>App: Issue Mid-Session Reward
   App->>DB: rpc_issue_mid_session_reward(idempotency_key)
   D->>App: Close Slip
@@ -288,3 +301,4 @@ sequenceDiagram
 - **ARCH** (`/docs/20-architecture/`): technical design implementing PRD.  
 - **QA** (`/docs/40-quality/`): test plans validating PRD acceptance criteria.  
 - **REL** (`/docs/60-release/`): release notes tracking PRD delivery.
+- Mapping follows `docs/patterns/SDLC_DOCS_TAXONOMY.md` so this PRD stays in sync with ARCH (SRM), QA, and REL artifacts.

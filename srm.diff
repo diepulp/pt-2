@@ -1,0 +1,353 @@
+--- docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md	2025-11-06 12:57:47.287680552 -0800
++++ docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX_UPDATED.md	2025-11-08 18:48:17.070576026 -0800
+@@ -167,6 +167,7 @@
+ 
+ ### Schema (Core Entities)
+ 
++```sql
+ create table company (
+   id uuid primary key default gen_random_uuid(),
+   name text not null,
+@@ -472,123 +473,159 @@
+ 
+ ---
+ 
+-## TableContext Service - Operational Context
+-
+-### ✅ TableContextService (Operational Telemetry & Lifecycle)
+-
+-**OWNS:**
+-- **Table lifecycle management** (provision, activate, deactivate)
+-- `gaming_table` table (canonical registry)
+-- `gaming_table_settings` table (configuration)
+-- `dealer_rotation` table (dealer assignments and rotations)
+-
+-**BOUNDED CONTEXT**: "What is the operational state and activity of this gaming table?"
++## TableContextService
+ 
+-### Acceptance Checklist (CI)
+-- [ ] **Tables present:** `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`
+-- [ ] **PK/FK types:** all `uuid`; `dealer_rotation.table_id` → `gaming_table.id`
+-- [ ] **Ownership:** `casino_id` on `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`
+-- [ ] **Constraints:** `ux_game_settings_casino_type` unique index; bet range checks; `assert_table_context_casino` triggers enforce table/casino alignment
+-- [ ] **RLS:** read for staff of same casino; write for admins/pit_boss
+-- [ ] **Access paths:** tables by `casino_id`; rotations by `table_id` and recency
+-
+-**RLS (excerpt)**
+-- Tables owned by casino scope (`casino_id` present) MUST include:
+-  - Read: staff of same `casino_id` (role-gated).
+-  - Write: admins of same `casino_id`.
+-- Cross-domain joins must rely on declared FKs (no implicit string keys).
++**Responsibility:** What is the **operational state** and **chip custody** of each gaming table? Owns lifecycle, rotations, and **drop custody events**; **excludes** monetary ledgers and AML filings.
+ 
+-### Schema
++### Owns (Data)
++- `table_inventory_snapshot` — opening/closing/rundown counts; dual signers; discrepancies
++- `table_fill` — chip replenishment to table (idempotent by request id)
++- `table_credit` — chips returned from table to cage (idempotent by request id)
++- `table_drop_event` — drop box removal/delivery; custody timeline (`gaming_day`, `drop_box_id`, `seq_no`, `delivered_scan_at`)
++- `dealer_rotation` — happy-path rotation telemetry
++
++### References (Read-Only)
++- `casino`, `gaming_table`, `staff`, `report`
++
++### Does Not Own
++- **Finance**: monetary ledgers and marker workflows
++- **Compliance/MTL**: CTR/SAR thresholds and filings
++- **Loyalty**: rewards ledger
+ 
++### Data Contracts (public schema)
+ ```sql
+-create table game_settings (
++-- inventory snapshots (open/close/rundown)
++create table if not exists table_inventory_snapshot (
+   id uuid primary key default gen_random_uuid(),
+   casino_id uuid not null references casino(id) on delete cascade,
+-  game_type game_type not null,
+-  min_bet numeric,
+-  max_bet numeric,
+-  rotation_interval_minutes int,
+-  constraint chk_game_bet_range check (
+-    min_bet is null or max_bet is null or min_bet <= max_bet
+-  )
++  table_id uuid not null references gaming_table(id) on delete cascade,
++  snapshot_type text not null check (snapshot_type in ('open','close','rundown')),
++  chipset jsonb not null,
++  counted_by uuid references staff(id),
++  verified_by uuid references staff(id),
++  discrepancy_cents int default 0,
++  note text,
++  created_at timestamptz not null default now()
+ );
+ 
+-create unique index if not exists ux_game_settings_casino_type
+-  on game_settings (casino_id, game_type);
+-
+-create type table_status as enum ('inactive','active','closed');
+-
+-create table gaming_table (
++-- fills (chips to table)
++create table if not exists table_fill (
+   id uuid primary key default gen_random_uuid(),
+   casino_id uuid not null references casino(id) on delete cascade,
+-  label text not null,
+-  pit text,
+-  type game_type not null,
+-  status table_status not null default 'inactive',
+-  created_at timestamptz not null default now()
++  table_id uuid not null references gaming_table(id) on delete cascade,
++  request_id text,
++  chipset jsonb not null,
++  amount_cents int not null,
++  requested_by uuid references staff(id),
++  delivered_by uuid references staff(id),
++  received_by uuid references staff(id),
++  slip_no text,
++  created_at timestamptz not null default now(),
++  unique (casino_id, request_id)
+ );
+ 
+-create table gaming_table_settings (
++-- credits (chips to cage)
++create table if not exists table_credit (
+   id uuid primary key default gen_random_uuid(),
+   casino_id uuid not null references casino(id) on delete cascade,
+   table_id uuid not null references gaming_table(id) on delete cascade,
+-  active_from timestamptz not null default now(),
+-  active_to timestamptz,
+-  min_bet numeric,
+-  max_bet numeric,
+-  rotation_interval_minutes int,
+-  constraint chk_table_bet_range check (
+-    min_bet is null or max_bet is null or min_bet <= max_bet
+-  )
++  request_id text,
++  chipset jsonb not null,
++  amount_cents int not null,
++  authorized_by uuid references staff(id),
++  sent_by uuid references staff(id),
++  received_by uuid references staff(id),
++  slip_no text,
++  created_at timestamptz not null default now(),
++  unique (casino_id, request_id)
+ );
+ 
+-create table dealer_rotation (
++-- drop custody events (no money here)
++create table if not exists table_drop_event (
+   id uuid primary key default gen_random_uuid(),
+   casino_id uuid not null references casino(id) on delete cascade,
+   table_id uuid not null references gaming_table(id) on delete cascade,
+-  staff_id uuid references staff(id) on delete set null,
+-  started_at timestamptz not null default now(),
+-  ended_at timestamptz
++  seal_no text,
++  drop_box_id text,
++  gaming_day date,
++  seq_no int,
++  removed_by uuid references staff(id),
++  witnessed_by uuid references staff(id),
++  removed_at timestamptz not null default now(),
++  delivered_at timestamptz,
++  delivered_scan_at timestamptz,
++  note text
+ );
++```
+ 
+-create index if not exists ix_dealer_rotation_table_time
+-  on dealer_rotation (table_id, started_at desc);
+-
+-create or replace function assert_table_context_casino()
+-returns trigger
+-language plpgsql
+-as $$
+-declare
+-  v_table_casino uuid;
+-begin
+-  select casino_id into v_table_casino
+-    from gaming_table
+-   where id = new.table_id;
+-
+-  if v_table_casino is null then
+-    raise exception 'Gaming table % not found', new.table_id;
+-  end if;
+-
+-  if new.casino_id <> v_table_casino then
+-    raise exception 'Casino mismatch for table % (expected %, got %)',
+-      new.table_id, v_table_casino, new.casino_id;
+-  end if;
++### RPC (canonical write paths)
++```sql
++-- idempotent fills
++create or replace function rpc_request_table_fill(
++  p_casino_id uuid, p_table_id uuid, p_chipset jsonb, p_amount_cents int,
++  p_requested_by uuid, p_delivered_by uuid, p_received_by uuid,
++  p_slip_no text, p_request_id text
++) returns table_fill language sql security definer as $$
++  insert into table_fill (casino_id, table_id, chipset, amount_cents,
++    requested_by, delivered_by, received_by, slip_no, request_id)
++  values (p_casino_id, p_table_id, p_chipset, p_amount_cents,
++    p_requested_by, p_delivered_by, p_received_by, p_slip_no, p_request_id)
++  on conflict (casino_id, request_id) do update
++    set delivered_by = excluded.delivered_by
++  returning *;
++$$;
+ 
+-  return new;
+-end $$;
++-- idempotent credits
++create or replace function rpc_request_table_credit(
++  p_casino_id uuid, p_table_id uuid, p_chipset jsonb, p_amount_cents int,
++  p_authorized_by uuid, p_sent_by uuid, p_received_by uuid,
++  p_slip_no text, p_request_id text
++) returns table_credit language sql security definer as $$
++  insert into table_credit (casino_id, table_id, chipset, amount_cents,
++    authorized_by, sent_by, received_by, slip_no, request_id)
++  values (p_casino_id, p_table_id, p_chipset, p_amount_cents,
++    p_authorized_by, p_sent_by, p_received_by, p_slip_no, p_request_id)
++  on conflict (casino_id, request_id) do update
++    set received_by = excluded.received_by
++  returning *;
++$$;
+ 
+-create trigger trg_gaming_table_settings_casino
+-before insert or update on gaming_table_settings
+-for each row execute function assert_table_context_casino();
+-
+-create trigger trg_dealer_rotation_casino
+-before insert or update on dealer_rotation
+-for each row execute function assert_table_context_casino();
++-- drop custody event
++create or replace function rpc_log_table_drop(
++  p_casino_id uuid,
++  p_table_id uuid,
++  p_drop_box_id text,
++  p_seal_no text,
++  p_removed_by uuid,
++  p_witnessed_by uuid,
++  p_removed_at timestamptz default now(),
++  p_delivered_at timestamptz default null,
++  p_delivered_scan_at timestamptz default null,
++  p_gaming_day date default null,
++  p_seq_no int default null,
++  p_note text default null
++) returns table_drop_event language sql security definer as $$
++  insert into table_drop_event (casino_id, table_id, drop_box_id, seal_no,
++    removed_by, witnessed_by, removed_at, delivered_at, delivered_scan_at,
++    gaming_day, seq_no, note)
++  values (p_casino_id, p_table_id, p_drop_box_id, p_seal_no,
++    p_removed_by, p_witnessed_by, coalesce(p_removed_at, now()), p_delivered_at, p_delivered_scan_at,
++    p_gaming_day, p_seq_no, p_note)
++  returning *;
++$$;
+ ```
+ 
+----
++### RLS (sketch)
++- **Read:** same-casino for `pit_boss`, `dealer`, `accounting_read`, `cage_read`, `compliance_read` (as appropriate).  
++- **Write:** `pit_boss` for inventory/fill/credit/drop; `cage`/`count_team` limited to their flows.  
++- Enforce `casino_id = current_setting('app.casino_id')::uuid` and role allow-lists.
++
++### Events & Observability
++Emit: `table.inventory_open|close|rundown_recorded`, `table.fill_requested|completed`, `table.credit_requested|completed`, `table.drop_removed|delivered`.  
++Payload keys: `{casino_id, table_id, staff_id[], slip_no|request_id, amount_cents, chipset, ts}`.
+ 
+-## RatingSlip Service - Telemetry Context (Updated)
++### KPIs
++- Time-to-fill; fills/credits per table/shift; drop removed→delivered SLA; % closes with zero discrepancy.## RatingSlip Service - Telemetry Context (Updated)
+ 
+ ### ✅ RatingSlipService (Gameplay Telemetry)
+ 
+@@ -864,3 +901,92 @@
+ **Document Version**: 3.0.2-PATCHED
+ **Created**: 2025-10-21
+ **Status**: CANONICAL - All SRM_PATCH_PACK.md patches applied
++
++
++## FinanceService — Drop Counts (Monetary)
++
++**Responsibility:** Monetary value **counted** from each table’s drop box; reconciliation with custody events.
++
++### Owns (Data)
++- `count_room_drop_count` — per-box monetary count; linked to `table_id` and `gaming_day`.
++
++### Data Contracts (public schema)
++```sql
++create table if not exists count_room_drop_count (
++  id uuid primary key default gen_random_uuid(),
++  casino_id uuid not null references casino(id) on delete cascade,
++  table_id uuid not null references gaming_table(id) on delete cascade,
++  drop_box_id text not null,
++  gaming_day date not null,
++  count_sheet_no text,
++  counted_value_cents int not null,
++  variance_cents int default 0,
++  received_at timestamptz,
++  counted_at timestamptz not null default now(),
++  created_at timestamptz not null default now(),
++  unique (casino_id, drop_box_id, gaming_day)
++);
++```
++
++### RPC
++```sql
++create or replace function rpc_record_drop_count(
++  p_casino_id uuid,
++  p_table_id uuid,
++  p_drop_box_id text,
++  p_gaming_day date,
++  p_counted_value_cents int,
++  p_variance_cents int default 0,
++  p_count_sheet_no text default null,
++  p_received_at timestamptz default null,
++  p_counted_at timestamptz default null
++) returns count_room_drop_count language sql security definer as $$
++  insert into count_room_drop_count
++  (casino_id, table_id, drop_box_id, gaming_day, counted_value_cents, variance_cents, count_sheet_no, received_at, counted_at)
++  values
++  (p_casino_id, p_table_id, p_drop_box_id, p_gaming_day, p_counted_value_cents, coalesce(p_variance_cents,0), p_count_sheet_no, p_received_at, coalesce(p_counted_at, now()))
++  on conflict (casino_id, drop_box_id, gaming_day) do update
++     set counted_value_cents = excluded.counted_value_cents,
++         variance_cents = excluded.variance_cents,
++         count_sheet_no = excluded.count_sheet_no,
++         received_at = excluded.received_at,
++         counted_at = excluded.counted_at
++  returning *;
++$$;
++```
++
++### RLS
++- **Write:** `count_team`, `accounting` within same casino.  
++- **Read:** same-casino for pit/compliance/accounting.  
++- Uniqueness on `(casino_id, drop_box_id, gaming_day)` prevents duplicate counts.
++
++
++## Projection — Reconciliation View
++
++```sql
++create or replace view vw_table_drop_recon as
++select
++  tde.casino_id,
++  tde.table_id,
++  tde.gaming_day,
++  tde.id as drop_event_id,
++  tde.drop_box_id,
++  tde.seq_no,
++  tde.removed_at,
++  tde.delivered_at,
++  tde.delivered_scan_at,
++  cdc.count_sheet_no,
++  cdc.counted_value_cents,
++  cdc.variance_cents,
++  cdc.counted_at
++from table_drop_event tde
++left join count_room_drop_count cdc
++  on cdc.casino_id = tde.casino_id
++ and cdc.drop_box_id = tde.drop_box_id
++ and cdc.gaming_day = tde.gaming_day;
++```
++
++
++### SRM Summary (Updated Lines)
++- **TableContextService** — *Owns:* lifecycle, rotations, inventory snapshots, fills, credits, **drop custody events**; *Excludes:* monetary ledgers/AML. *APIs:* `rpc_table_inventory_snapshot`, `rpc_request_table_fill`, `rpc_request_table_credit`, `rpc_log_table_drop`. *RLS:* deny-all; casino-scoped; role-gated writes.
++- **FinanceService** — *Owns:* `count_room_drop_count` (monetary). *API:* `rpc_record_drop_count`. *Projection:* `vw_table_drop_recon` for per-table drop totals & reconciliation.

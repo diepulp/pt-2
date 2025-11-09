@@ -864,6 +864,307 @@ export type Database = {
           },
         ]
       }
+      table_credit: {
+        Row: {
+          amount_cents: number
+          authorized_by: string | null
+          casino_id: string
+          chipset: Json
+          created_at: string
+          id: string
+          received_by: string | null
+          request_id: string
+          sent_by: string | null
+          slip_no: string | null
+          table_id: string
+        }
+        Insert: {
+          amount_cents: number
+          authorized_by?: string | null
+          casino_id: string
+          chipset: Json
+          created_at?: string
+          id?: string
+          received_by?: string | null
+          request_id: string
+          sent_by?: string | null
+          slip_no?: string | null
+          table_id: string
+        }
+        Update: {
+          amount_cents?: number
+          authorized_by?: string | null
+          casino_id?: string
+          chipset?: Json
+          created_at?: string
+          id?: string
+          received_by?: string | null
+          request_id?: string
+          sent_by?: string | null
+          slip_no?: string | null
+          table_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_credit_authorized_by_fkey"
+            columns: ["authorized_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_sent_by_fkey"
+            columns: ["sent_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_drop_event: {
+        Row: {
+          casino_id: string
+          delivered_at: string | null
+          delivered_scan_at: string | null
+          drop_box_id: string
+          gaming_day: string | null
+          id: string
+          note: string | null
+          removed_at: string
+          removed_by: string | null
+          seal_no: string | null
+          seq_no: number | null
+          table_id: string
+          witnessed_by: string | null
+        }
+        Insert: {
+          casino_id: string
+          delivered_at?: string | null
+          delivered_scan_at?: string | null
+          drop_box_id: string
+          gaming_day?: string | null
+          id?: string
+          note?: string | null
+          removed_at?: string
+          removed_by?: string | null
+          seal_no?: string | null
+          seq_no?: number | null
+          table_id: string
+          witnessed_by?: string | null
+        }
+        Update: {
+          casino_id?: string
+          delivered_at?: string | null
+          delivered_scan_at?: string | null
+          drop_box_id?: string
+          gaming_day?: string | null
+          id?: string
+          note?: string | null
+          removed_at?: string
+          removed_by?: string | null
+          seal_no?: string | null
+          seq_no?: number | null
+          table_id?: string
+          witnessed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_drop_event_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_drop_event_removed_by_fkey"
+            columns: ["removed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_drop_event_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_drop_event_witnessed_by_fkey"
+            columns: ["witnessed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_fill: {
+        Row: {
+          amount_cents: number
+          casino_id: string
+          chipset: Json
+          created_at: string
+          delivered_by: string | null
+          id: string
+          received_by: string | null
+          request_id: string
+          requested_by: string | null
+          slip_no: string | null
+          table_id: string
+        }
+        Insert: {
+          amount_cents: number
+          casino_id: string
+          chipset: Json
+          created_at?: string
+          delivered_by?: string | null
+          id?: string
+          received_by?: string | null
+          request_id: string
+          requested_by?: string | null
+          slip_no?: string | null
+          table_id: string
+        }
+        Update: {
+          amount_cents?: number
+          casino_id?: string
+          chipset?: Json
+          created_at?: string
+          delivered_by?: string | null
+          id?: string
+          received_by?: string | null
+          request_id?: string
+          requested_by?: string | null
+          slip_no?: string | null
+          table_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_fill_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_delivered_by_fkey"
+            columns: ["delivered_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_inventory_snapshot: {
+        Row: {
+          casino_id: string
+          chipset: Json
+          counted_by: string | null
+          created_at: string
+          discrepancy_cents: number | null
+          id: string
+          note: string | null
+          snapshot_type: string
+          table_id: string
+          verified_by: string | null
+        }
+        Insert: {
+          casino_id: string
+          chipset: Json
+          counted_by?: string | null
+          created_at?: string
+          discrepancy_cents?: number | null
+          id?: string
+          note?: string | null
+          snapshot_type: string
+          table_id: string
+          verified_by?: string | null
+        }
+        Update: {
+          casino_id?: string
+          chipset?: Json
+          counted_by?: string | null
+          created_at?: string
+          discrepancy_cents?: number | null
+          id?: string
+          note?: string | null
+          snapshot_type?: string
+          table_id?: string
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_inventory_snapshot_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_counted_by_fkey"
+            columns: ["counted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit: {
         Row: {
           casino_id: string
@@ -938,6 +1239,137 @@ export type Database = {
           balance_after: number
           ledger_id: string
         }[]
+      }
+      rpc_log_table_drop: {
+        Args: {
+          p_casino_id: string
+          p_delivered_at?: string
+          p_delivered_scan_at?: string
+          p_drop_box_id: string
+          p_gaming_day?: string
+          p_note?: string
+          p_removed_at?: string
+          p_removed_by: string
+          p_seal_no: string
+          p_seq_no?: number
+          p_table_id: string
+          p_witnessed_by: string
+        }
+        Returns: {
+          casino_id: string
+          delivered_at: string | null
+          delivered_scan_at: string | null
+          drop_box_id: string
+          gaming_day: string | null
+          id: string
+          note: string | null
+          removed_at: string
+          removed_by: string | null
+          seal_no: string | null
+          seq_no: number | null
+          table_id: string
+          witnessed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_drop_event"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_log_table_inventory_snapshot: {
+        Args: {
+          p_casino_id: string
+          p_chipset: Json
+          p_counted_by?: string
+          p_discrepancy_cents?: number
+          p_note?: string
+          p_snapshot_type: string
+          p_table_id: string
+          p_verified_by?: string
+        }
+        Returns: {
+          casino_id: string
+          chipset: Json
+          counted_by: string | null
+          created_at: string
+          discrepancy_cents: number | null
+          id: string
+          note: string | null
+          snapshot_type: string
+          table_id: string
+          verified_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_inventory_snapshot"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_request_table_credit: {
+        Args: {
+          p_amount_cents: number
+          p_authorized_by: string
+          p_casino_id: string
+          p_chipset: Json
+          p_received_by: string
+          p_request_id: string
+          p_sent_by: string
+          p_slip_no: string
+          p_table_id: string
+        }
+        Returns: {
+          amount_cents: number
+          authorized_by: string | null
+          casino_id: string
+          chipset: Json
+          created_at: string
+          id: string
+          received_by: string | null
+          request_id: string
+          sent_by: string | null
+          slip_no: string | null
+          table_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_credit"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_request_table_fill: {
+        Args: {
+          p_amount_cents: number
+          p_casino_id: string
+          p_chipset: Json
+          p_delivered_by: string
+          p_received_by: string
+          p_request_id: string
+          p_requested_by: string
+          p_slip_no: string
+          p_table_id: string
+        }
+        Returns: {
+          amount_cents: number
+          casino_id: string
+          chipset: Json
+          created_at: string
+          delivered_by: string | null
+          id: string
+          received_by: string | null
+          request_id: string
+          requested_by: string | null
+          slip_no: string | null
+          table_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_fill"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
     }
     Enums: {

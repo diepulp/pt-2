@@ -67,7 +67,7 @@ See `docs/patterns/OVER_ENGINEERING_GUARDRAIL.md`
 - Use actual file creation timestamp: `date +"%Y%m%d%H%M%S"`
 - ❌ DO NOT use simplified patterns like `YYYYMMDD000001` or `YYYYMMDD_description`
 - ✅ Example: `20251014134942_mtl_schema_enhancements.sql`
-- See `docs/patterns/MTL_MIGRATION_TIMESTAMP_FIX.md` for historical corrections
+
 
 ### UI
 
