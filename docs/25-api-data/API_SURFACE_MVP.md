@@ -552,8 +552,10 @@ curl -sS "$BASE_URL/api/v1/visits/44444444-4444-4444-4444-444444444444/rating-sl
 
 ## Table Context Domain (TableContextService — Operational Context)
 
-**Tables**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `audit_log`  
-**Key invariants**: Tables owned by casino; bet range consistency enforced by triggers; dealer rotations validated against `gaming_table` ownership.
+**Tables**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `audit_log`  
+**Key invariants**: Tables owned by casino; bet range consistency enforced by triggers; dealer rotations validated against `gaming_table` ownership; chip custody telemetry (snapshots, fills, credits, drop custody) is non-monetary and scoped by `casino_id`.
+
+> **Idempotency mapping**: For custody writes (`/inventory-snapshots`, `/fills`, `/credits`) the `Idempotency-Key` header is mandatory. When the JSON body omits `request_id`, the route copies `Idempotency-Key` into the payload before invoking the RPC so the database uniqueness `(casino_id, request_id)` constraint dedupes retries.
 
 #### GET /api/v1/table-context/tables
 
@@ -644,6 +646,173 @@ Operational notes:
 - **Rate limit**: 10 req/min per staff.
 - **Observability & Traceability**: ServiceHttpResult metadata; SRM TableContextService maintains rotation history + audit.
 
+#### POST /api/v1/table-context/inventory-snapshots
+
+Request body (Zod):
+```ts
+export const TableInventorySnapshotCreateSchema = z.object({
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  snapshot_type: z.enum(['open','close','rundown']),
+  chipset: z.record(z.string(), z.number().int().nonnegative()),
+  counted_by: z.string().uuid().optional(),
+  verified_by: z.string().uuid().optional(),
+  discrepancy_cents: z.number().int().optional(),
+  note: z.string().max(500).optional(),
+});
+```
+
+Response DTO:
+```ts
+export const TableInventorySnapshotSchema = z.object({
+  id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  snapshot_type: z.enum(['open','close','rundown']),
+  chipset: z.record(z.string(), z.number().int()),
+  counted_by: z.string().uuid().nullable(),
+  verified_by: z.string().uuid().nullable(),
+  discrepancy_cents: z.number().int(),
+  note: z.string().nullable(),
+  created_at: z.string(),
+});
+```
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR`, `FORBIDDEN`.
+- **Auth/RBAC**: `pit_boss` or `admin`; `count_team` can write when JWT carries `count_team` claim.
+- **Idempotency**: Write requires `Idempotency-Key`; when `request_id` absent, route copies header into RPC payload so duplicates collapse on `(casino_id, request_id)`.
+- **Rate limit**: 10 req/min per staff; escalate to 2 req/min for automated closeouts during audits.
+- **Observability**: Route wraps `rpc_log_table_inventory_snapshot`; audit_log records `snapshot_type` and `chipset` hash to detect tampering.
+
+#### POST /api/v1/table-context/fills
+
+Request body (Zod):
+```ts
+export const TableFillCreateSchema = z.object({
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  chipset: z.record(z.string(), z.number().int().nonnegative()),
+  amount_cents: z.number().int().positive(),
+  requested_by: z.string().uuid(),
+  delivered_by: z.string().uuid(),
+  received_by: z.string().uuid(),
+  slip_no: z.string().max(64).optional(),
+  request_id: z.string().uuid().optional(),
+});
+```
+
+Response DTO:
+```ts
+export const TableFillSchema = z.object({
+  id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  chipset: z.record(z.string(), z.number().int()),
+  amount_cents: z.number().int(),
+  requested_by: z.string().uuid().nullable(),
+  delivered_by: z.string().uuid().nullable(),
+  received_by: z.string().uuid().nullable(),
+  slip_no: z.string().nullable(),
+  request_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+});
+```
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR`, `FOREIGN_KEY_VIOLATION`, `UNIQUE_VIOLATION` (duplicate request).
+- **Auth/RBAC**: `pit_boss` initiates; `cage` or `count_team` can complete delivery; RLS ensures `casino_id` match.
+- **Idempotency**: Mandatory header; server injects header value into `request_id` when body omits it before calling `rpc_request_table_fill`.
+- **Rate limit**: 5 req/min per staff.
+- **Observability**: Emits `table.fill_requested|completed` events with `request_id`, bridging SRM telemetry expectations.
+
+#### POST /api/v1/table-context/credits
+
+Request body (Zod):
+```ts
+export const TableCreditCreateSchema = z.object({
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  chipset: z.record(z.string(), z.number().int().nonnegative()),
+  amount_cents: z.number().int().positive(),
+  authorized_by: z.string().uuid(),
+  sent_by: z.string().uuid(),
+  received_by: z.string().uuid(),
+  slip_no: z.string().max(64).optional(),
+  request_id: z.string().uuid().optional(),
+});
+```
+
+Response DTO:
+```ts
+export const TableCreditSchema = z.object({
+  id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  chipset: z.record(z.string(), z.number().int()),
+  amount_cents: z.number().int(),
+  authorized_by: z.string().uuid().nullable(),
+  sent_by: z.string().uuid().nullable(),
+  received_by: z.string().uuid().nullable(),
+  slip_no: z.string().nullable(),
+  request_id: z.string().uuid().nullable(),
+  created_at: z.string(),
+});
+```
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR`, `FOREIGN_KEY_VIOLATION`, `UNIQUE_VIOLATION`.
+- **Auth/RBAC**: `pit_boss` or `cage` role must authorize; `count_team` records receipt.
+- **Idempotency**: Same as fills—`Idempotency-Key` required and mapped to `request_id` for `rpc_request_table_credit`.
+- **Rate limit**: 5 req/min per staff.
+- **Observability**: Emits `table.credit_requested|completed`; audit trail links to `table_drop_event` when present.
+
+#### POST /api/v1/table-context/drop-events
+
+Request body (Zod):
+```ts
+export const TableDropEventCreateSchema = z.object({
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  drop_box_id: z.string().min(1),
+  seal_no: z.string().min(1),
+  removed_by: z.string().uuid(),
+  witnessed_by: z.string().uuid(),
+  removed_at: z.string().optional(),
+  delivered_at: z.string().optional(),
+  delivered_scan_at: z.string().optional(),
+  gaming_day: z.string().optional(),
+  seq_no: z.number().int().optional(),
+  note: z.string().max(500).optional(),
+});
+```
+
+Response DTO:
+```ts
+export const TableDropEventSchema = z.object({
+  id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  drop_box_id: z.string(),
+  seal_no: z.string(),
+  removed_by: z.string().uuid(),
+  witnessed_by: z.string().uuid(),
+  removed_at: z.string(),
+  delivered_at: z.string().nullable(),
+  delivered_scan_at: z.string().nullable(),
+  gaming_day: z.string().nullable(),
+  seq_no: z.number().int().nullable(),
+  note: z.string().nullable(),
+});
+```
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR`, `FOREIGN_KEY_VIOLATION`.
+- **Auth/RBAC**: `pit_boss`, `cage`, or `count_team` may write depending on custody stage; RLS enforces same casino.
+- **Idempotency**: Optional (drops are timestamped events); callers may still send `Idempotency-Key` for audit correlation.
+- **Rate limit**: 10 req/min per staff.
+- **Observability**: Wraps `rpc_log_table_drop`; triggers `table.drop_removed|delivered` telemetry used by compliance/finance projections.
+
 ### cURL sanity
 ```bash
 # list active tables
@@ -656,6 +825,19 @@ curl -sS -X POST "$BASE_URL/api/v1/table-context/dealer-rotations" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{"casino_id":"22222222-2222-2222-2222-222222222222","table_id":"55555555-5555-5555-5555-555555555555","staff_id":"66666666-6666-6666-6666-666666666666"}'
+
+# record a fill (requestId derived from header)
+curl -sS -X POST "$BASE_URL/api/v1/table-context/fills" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"casino_id":"22222222-2222-2222-2222-222222222222","table_id":"55555555-5555-5555-5555-555555555555","chipset":{"green":40,"black":20},"amount_cents":500000,"requested_by":"77777777-7777-7777-7777-777777777777","delivered_by":"88888888-8888-8888-8888-888888888888","received_by":"99999999-9999-9999-9999-999999999999"}'
+
+# log a drop custody event
+curl -sS -X POST "$BASE_URL/api/v1/table-context/drop-events" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"casino_id":"22222222-2222-2222-2222-222222222222","table_id":"55555555-5555-5555-5555-555555555555","drop_box_id":"BX-123","seal_no":"SEAL-456","removed_by":"77777777-7777-7777-7777-777777777777","witnessed_by":"88888888-8888-8888-8888-888888888888"}'
 ```
 
 ## Loyalty Domain (LoyaltyService — Reward Context)

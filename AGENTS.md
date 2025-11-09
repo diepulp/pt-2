@@ -35,3 +35,4 @@ memory:
 notes:
   - "See docs/patterns/SDLC_DOCS_TAXONOMY.md for documentation ownership."
   - "Subdirectories may supply their own AGENTS.md inheriting from this file."
+  - "Supabase migrations MUST follow docs/60-release/MIGRATION_NAMING_STANDARD.md (YYYYMMDDHHMMSS_descriptive_name.sql)."
