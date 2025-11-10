@@ -42,6 +42,7 @@ graph TB
         end
 
         subgraph OPERATIONAL[Operational Services]
+            FLOOR[FloorLayoutService<br/>Floor Design]
             TABLE[TableContextService<br/>Table Lifecycle]
             VISIT[VisitService<br/>Session Lifecycle]
         end
@@ -78,6 +79,7 @@ graph TB
 
     WRAPPER --> CASINO
     WRAPPER --> PLAYER
+    WRAPPER --> FLOOR
     WRAPPER --> TABLE
     WRAPPER --> VISIT
     WRAPPER --> RATING
@@ -87,6 +89,7 @@ graph TB
 
     CASINO --> DB
     PLAYER --> DB
+    FLOOR --> DB
     TABLE --> DB
     VISIT --> DB
     RATING --> DB
@@ -124,6 +127,7 @@ graph LR
     end
 
     subgraph "Operational"
+        FLOOR[FloorLayoutService]
         TABLE[TableContextService]
         VISIT[VisitService]
     end
@@ -158,6 +162,7 @@ graph LR
     VISIT -.session context.-> RATING
     VISIT -.session context.-> FINANCE
 
+    FLOOR -.activates layout.-> TABLE
     TABLE -.table context.-> RATING
 
     RATING -.telemetry.-> LOYALTY
