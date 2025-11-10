@@ -1,5 +1,3 @@
----
-title: Create Architecture Decision Record (Systematic ADR)
 description: Structured ADR creation with sequential thinking and alternatives evaluation
 chatmode_sequence:
   - architect # Analysis and ADR creation
