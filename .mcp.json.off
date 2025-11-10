@@ -75,7 +75,7 @@
     "shadcn": {
       "command": "npx",
       "args": ["shadcn@latest", "mcp"]
-    }
+    },
     "tavily": {
       "type": "stdio",
       "command": "npx",
@@ -84,5 +84,13 @@
         "tavily-mcp@0.1.2"
       ],
       "env": {}
+    },
+      "filesystem": {
+      "type": "stdio",
+      "command": "node",
+      "args": ["scripts/mcp-filesystem-server.mjs"],
+      "env": {
+        "MCP_FS_ROOT": "/home/diepulp/projects/pt-2"
+      }
     }
   },

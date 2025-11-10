@@ -1064,7 +1064,7 @@ npm run type-check
 npm test
 ```
 
-**CRITICAL**: NEVER skip `npm run db:types` after migrations
+**CRITICAL**: NEVER skip `npm run db:types-local` after migrations
 
 ---
 

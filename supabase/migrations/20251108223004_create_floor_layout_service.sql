@@ -3,8 +3,18 @@
 
 BEGIN;
 
-create type if not exists public.floor_layout_status as enum ('draft','review','approved','archived');
-create type if not exists public.floor_layout_version_status as enum ('draft','pending_activation','active','retired');
+-- Create enum types (with safe handling for re-runs)
+DO $$ BEGIN
+    CREATE TYPE public.floor_layout_status AS ENUM ('draft','review','approved','archived');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+
+DO $$ BEGIN
+    CREATE TYPE public.floor_layout_version_status AS ENUM ('draft','pending_activation','active','retired');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
 
 create table if not exists public.floor_layout (
   id uuid primary key default gen_random_uuid(),

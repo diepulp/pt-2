@@ -228,6 +228,270 @@ export type Database = {
           },
         ]
       }
+      floor_layout: {
+        Row: {
+          approved_by: string | null
+          casino_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["floor_layout_status"]
+          updated_at: string
+        }
+        Insert: {
+          approved_by?: string | null
+          casino_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["floor_layout_status"]
+          updated_at?: string
+        }
+        Update: {
+          approved_by?: string | null
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["floor_layout_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_layout_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_layout_activation: {
+        Row: {
+          activated_at: string
+          activated_by: string
+          activation_request_id: string
+          casino_id: string
+          deactivated_at: string | null
+          id: string
+          layout_version_id: string
+        }
+        Insert: {
+          activated_at?: string
+          activated_by: string
+          activation_request_id: string
+          casino_id: string
+          deactivated_at?: string | null
+          id?: string
+          layout_version_id: string
+        }
+        Update: {
+          activated_at?: string
+          activated_by?: string
+          activation_request_id?: string
+          casino_id?: string
+          deactivated_at?: string | null
+          id?: string
+          layout_version_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_layout_activation_activated_by_fkey"
+            columns: ["activated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_activation_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_activation_layout_version_id_fkey"
+            columns: ["layout_version_id"]
+            isOneToOne: false
+            referencedRelation: "floor_layout_version"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_layout_version: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          layout_id: string
+          layout_payload: Json
+          notes: string | null
+          status: Database["public"]["Enums"]["floor_layout_version_status"]
+          version_no: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          layout_id: string
+          layout_payload?: Json
+          notes?: string | null
+          status?: Database["public"]["Enums"]["floor_layout_version_status"]
+          version_no: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          layout_id?: string
+          layout_payload?: Json
+          notes?: string | null
+          status?: Database["public"]["Enums"]["floor_layout_version_status"]
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_layout_version_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_layout_version_layout_id_fkey"
+            columns: ["layout_id"]
+            isOneToOne: false
+            referencedRelation: "floor_layout"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_pit: {
+        Row: {
+          capacity: number | null
+          geometry: Json | null
+          id: string
+          label: string
+          layout_version_id: string
+          metadata: Json | null
+          sequence: number
+        }
+        Insert: {
+          capacity?: number | null
+          geometry?: Json | null
+          id?: string
+          label: string
+          layout_version_id: string
+          metadata?: Json | null
+          sequence?: number
+        }
+        Update: {
+          capacity?: number | null
+          geometry?: Json | null
+          id?: string
+          label?: string
+          layout_version_id?: string
+          metadata?: Json | null
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_pit_layout_version_id_fkey"
+            columns: ["layout_version_id"]
+            isOneToOne: false
+            referencedRelation: "floor_layout_version"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      floor_table_slot: {
+        Row: {
+          coordinates: Json | null
+          game_type: Database["public"]["Enums"]["game_type"]
+          id: string
+          layout_version_id: string
+          metadata: Json | null
+          orientation: string | null
+          pit_id: string | null
+          preferred_table_id: string | null
+          slot_label: string
+        }
+        Insert: {
+          coordinates?: Json | null
+          game_type: Database["public"]["Enums"]["game_type"]
+          id?: string
+          layout_version_id: string
+          metadata?: Json | null
+          orientation?: string | null
+          pit_id?: string | null
+          preferred_table_id?: string | null
+          slot_label: string
+        }
+        Update: {
+          coordinates?: Json | null
+          game_type?: Database["public"]["Enums"]["game_type"]
+          id?: string
+          layout_version_id?: string
+          metadata?: Json | null
+          orientation?: string | null
+          pit_id?: string | null
+          preferred_table_id?: string | null
+          slot_label?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "floor_table_slot_layout_version_id_fkey"
+            columns: ["layout_version_id"]
+            isOneToOne: false
+            referencedRelation: "floor_layout_version"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_table_slot_pit_id_fkey"
+            columns: ["pit_id"]
+            isOneToOne: false
+            referencedRelation: "floor_pit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "floor_table_slot_preferred_table_id_fkey"
+            columns: ["preferred_table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_settings: {
         Row: {
           casino_id: string
@@ -1213,6 +1477,29 @@ export type Database = {
         Args: { gstart: string; ts: string }
         Returns: string
       }
+      rpc_activate_floor_layout: {
+        Args: {
+          p_activated_by: string
+          p_casino_id: string
+          p_layout_version_id: string
+          p_request_id: string
+        }
+        Returns: {
+          activated_at: string
+          activated_by: string
+          activation_request_id: string
+          casino_id: string
+          deactivated_at: string | null
+          id: string
+          layout_version_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "floor_layout_activation"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_financial_txn: {
         Args: {
           p_amount: number
@@ -1224,6 +1511,32 @@ export type Database = {
           p_visit_id?: string
         }
         Returns: string
+      }
+      rpc_create_floor_layout: {
+        Args: {
+          p_casino_id: string
+          p_created_by: string
+          p_description: string
+          p_name: string
+        }
+        Returns: {
+          approved_by: string | null
+          casino_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["floor_layout_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "floor_layout"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_issue_mid_session_reward: {
         Args: {
@@ -1373,6 +1686,12 @@ export type Database = {
       }
     }
     Enums: {
+      floor_layout_status: "draft" | "review" | "approved" | "archived"
+      floor_layout_version_status:
+        | "draft"
+        | "pending_activation"
+        | "active"
+        | "retired"
       game_type: "blackjack" | "poker" | "roulette" | "baccarat"
       loyalty_reason:
         | "mid_session"
@@ -1514,6 +1833,13 @@ export const Constants = {
   },
   public: {
     Enums: {
+      floor_layout_status: ["draft", "review", "approved", "archived"],
+      floor_layout_version_status: [
+        "draft",
+        "pending_activation",
+        "active",
+        "retired",
+      ],
       game_type: ["blackjack", "poker", "roulette", "baccarat"],
       loyalty_reason: [
         "mid_session",

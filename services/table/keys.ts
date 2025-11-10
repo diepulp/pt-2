@@ -1,6 +1,7 @@
+import type { KeyFilter } from '@/services/shared/key-utils';
 import { serializeKeyFilters } from '@/services/shared/key-utils';
 
-export type TableListFilters = {
+export type TableListFilters = KeyFilter & {
   casinoId?: string;
   status?: 'inactive' | 'active' | 'closed';
   game?: string;
@@ -10,7 +11,7 @@ export type TableListFilters = {
 };
 
 const ROOT = ['table'] as const;
-const serialize = (filters: TableListFilters = {}) =>
+const serialize = <T extends KeyFilter>(filters?: T) =>
   serializeKeyFilters(filters);
 
 export const tableKeys = {

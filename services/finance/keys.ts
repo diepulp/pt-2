@@ -1,6 +1,7 @@
+import type { KeyFilter } from '@/services/shared/key-utils';
 import { serializeKeyFilters } from '@/services/shared/key-utils';
 
-export type FinancialTransactionFilters = {
+export type FinancialTransactionFilters = KeyFilter & {
   casinoId?: string;
   playerId?: string;
   gamingDay?: string;
@@ -9,7 +10,7 @@ export type FinancialTransactionFilters = {
 };
 
 const ROOT = ['finance'] as const;
-const serialize = (filters: FinancialTransactionFilters = {}) =>
+const serialize = <T extends KeyFilter>(filters?: T) =>
   serializeKeyFilters(filters);
 
 export const financeKeys = {
@@ -22,4 +23,10 @@ export const financeKeys = {
   detail: (transactionId: string) =>
     [...ROOT, 'detail', transactionId] as const,
   create: () => [...ROOT, 'create'] as const,
+  dropCounts: Object.assign(
+    (filters: { casinoId?: string; gamingDay?: string } = {}) =>
+      [...ROOT, 'drop-counts', serialize(filters)] as const,
+    { scope: [...ROOT, 'drop-counts'] as const },
+  ),
+  recordDropCount: [...ROOT, 'mutations', 'record-drop-count'] as const,
 };

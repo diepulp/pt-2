@@ -23,8 +23,10 @@ args    = []
 # Filesystem **rooted in this project**
 
 [mcp_servers.filesystem]
-command = "npx"
-args    = ["-y", "@modelcontextprotocol/server-filesystem", "/home/diepulp/projects/pt-2"]
+command = "node"
+args    = ["scripts/mcp-filesystem-server.mjs"]
+[mcp_servers.filesystem.env]
+MCP_FS_ROOT = "/home/diepulp/projects/pt-2"
 
 # Playwright (optional)
 #[mcp_servers.playwright]
@@ -39,10 +41,6 @@ args    = ["-y", "@modelcontextprotocol/server-filesystem", "/home/diepulp/proje
 
 # Context7 via npx (works if your proxy or package exposes stdio)
 
-[mcp_servers.context7]
-command = "/home/diepulp/.nvm/versions/node/v24.4.1/bin/context7-mcp"
-args    = []
-
 # Supabase MCP (disabled by default: uncomment to use)
 
 # [mcp_servers.supabase]
@@ -53,6 +51,6 @@ args    = []
 
 # SERENA
 
-[mcp_servers.serena]
-command = "uvx"
-args = ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "codex"]
+# [mcp_servers.serena]
+# command = "uvx"
+# args = ["--from", "git+https://github.com/oraios/serena", "serena", "start-mcp-server", "--context", "codex"]

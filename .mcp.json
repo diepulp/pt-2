@@ -2,25 +2,9 @@
   "mcpServers": {
     "sequential-thinking": {
       "type": "stdio",
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
-    },
-    "serena": {
-      "type": "stdio",
-      "command": "uvx",
-      "args": [
-        "--from",
-        "git+https://github.com/oraios/serena",
-        "serena",
-        "start-mcp-server",
-        "--context",
-        "ide-assistant"
-      ],
-      "env": {}
-    },
-    "context7": {
-      "type": "http",
-      "url": "https://mcp.context7.com/mcp"
+      "command": "/home/diepulp/projects/pt-2/node_modules/.bin/mcp-server-sequential-thinking",
+      "args": []
     }
+  
   }
 }
