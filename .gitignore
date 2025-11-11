@@ -50,3 +50,6 @@ next-env.d.ts
 # OpenAPI generated clients
 /generated
 .claude/skills.backup/
+
+#venv
+/.venv/
