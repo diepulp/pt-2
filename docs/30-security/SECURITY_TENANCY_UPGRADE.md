@@ -148,6 +148,7 @@ export async function getAuthContext(
     .select('id, casino_id, role')
     .eq('user_id', user.id)
     .eq('status', 'active')
+    .in('role', ['pit_boss', 'admin']) // Exclude dealers (non-authenticated)
     .single();
 
   if (staffError || !staff || !staff.casino_id) {
@@ -270,6 +271,104 @@ const supabase = createClient(
 
 ---
 
+## Dealer Role Exception
+
+**CRITICAL**: Dealers are **not authenticated** and do not require `user_id` linkage.
+
+### Dealer Role Characteristics
+
+- **Non-Authenticated**: Dealer records in `staff` table have `user_id = null`
+- **No Login**: Dealers cannot log in to the application
+- **No RLS Context**: Dealers have no `app.actor_id` injection (cannot execute authenticated queries)
+- **Scheduling Only**: Dealer rotations are managed by pit boss/admin roles via administrative APIs
+
+### Implementation Requirements
+
+**1. Staff Query Filtering**
+
+When querying staff for authentication context, **exclude dealers**:
+
+```typescript
+const { data: staff } = await supabase
+  .from('staff')
+  .select('id, casino_id, role')
+  .eq('user_id', user.id)
+  .in('role', ['pit_boss', 'admin']) // ✅ Exclude dealers
+  .single();
+```
+
+**2. RLS Policies**
+
+All RLS policies that reference `staff.user_id` automatically exclude dealers (since `user_id = null`):
+
+```sql
+create policy "visit_read_same_casino"
+  on visit for select using (
+    -- Dealers cannot satisfy this condition (user_id = null)
+    auth.uid() = (
+      select user_id
+      from staff
+      where id = current_setting('app.actor_id')::uuid
+    )
+    AND casino_id = current_setting('app.casino_id')::uuid
+  );
+```
+
+**3. Rotation Management**
+
+Dealer rotations are administrative operations performed **by authenticated staff**:
+
+```typescript
+// ✅ CORRECT: Pit boss starts dealer rotation
+export async function startDealerRotation(input: {
+  tableId: string;
+  dealerId: string; // References staff.id where role = 'dealer'
+}) {
+  const supabase = await createClient();
+
+  return withServerAction(
+    async () => {
+      // RLS context is pit_boss (authenticated)
+      // Dealer is the subject of the rotation, not the actor
+      const { data } = await supabase
+        .from('dealer_rotation')
+        .insert({
+          table_id: input.tableId,
+          staff_id: input.dealerId,
+          started_at: new Date().toISOString(),
+        });
+
+      return data;
+    },
+    { supabase, endpoint: 'table-context.start-rotation' }
+  );
+}
+```
+
+### Validation Queries
+
+**Verify dealer records have no user_id**:
+```sql
+select count(*) from staff
+where role = 'dealer' and user_id is not null;
+-- Should return 0
+```
+
+**Verify authenticated staff have user_id**:
+```sql
+select count(*) from staff
+where role in ('pit_boss', 'admin') and user_id is null;
+-- Should return 0
+```
+
+### See Also
+
+- `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` - Dealer Role Semantics section
+- Migration `20251110231330_dealer_role_clarification.sql` - Schema documentation
+- `docs/audits/DEALER_ROLE_BLAST_RADIUS_AUDIT_NOV_10.md` - Complete analysis
+
+---
+
 ## RLS Policy Templates
 
 ### Template 1: Read Access (Casino-Scoped)
@@ -367,10 +466,11 @@ alter table staff add column user_id uuid references auth.users(id);
 -- Option A: Manual assignment via admin tool
 -- Option B: Invite flow that creates auth.users + staff records atomically
 
--- Add constraint after backfill
-alter table staff alter column user_id set not null;
-create unique index staff_user_id_unique on staff(user_id);
+-- Create unique index (partial to allow null for dealers)
+create unique index staff_user_id_unique on staff(user_id) where user_id is not null;
 ```
+
+**IMPORTANT**: Do NOT add `NOT NULL` constraint. The `user_id` column must remain nullable to support the dealer role (see Dealer Role Exception below).
 
 ### Step 2: Create `exec_sql` RPC for SET LOCAL
 

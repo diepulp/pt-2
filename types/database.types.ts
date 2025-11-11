@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1194,6 +1169,7 @@ export type Database = {
           last_name: string
           role: Database["public"]["Enums"]["staff_role"]
           status: Database["public"]["Enums"]["staff_status"]
+          user_id: string | null
         }
         Insert: {
           casino_id?: string | null
@@ -1203,8 +1179,9 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
-          role?: Database["public"]["Enums"]["staff_role"]
+          role: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
+          user_id?: string | null
         }
         Update: {
           casino_id?: string | null
@@ -1216,6 +1193,7 @@ export type Database = {
           last_name?: string
           role?: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -1587,6 +1565,7 @@ export type Database = {
           recommended_points: number
         }[]
       }
+      exec_sql: { Args: { sql: string }; Returns: undefined }
       rpc_activate_floor_layout: {
         Args: {
           p_activated_by: string
@@ -1952,9 +1931,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       floor_layout_status: ["draft", "review", "approved", "archived"],

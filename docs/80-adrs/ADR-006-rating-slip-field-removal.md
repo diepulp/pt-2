@@ -5,8 +5,16 @@
 
 ## Context
 
+**SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §1720-1806](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) (RatingSlipService)
+
+The Service Responsibility Matrix establishes the canonical stance on rating slip boundaries:
+- **DOES NOT STORE**: Reward balances or points; **Loyalty** remains the sole source of truth (SRM:1732-1733)
+- **OWNS**: Telemetry only (`average_bet`, `start_time`, `end_time`, `game_settings`, `seat_number`, `status`, `policy_snapshot`) (SRM:1725-1730)
+- **BOUNDED CONTEXT**: "What gameplay activity occurred?" (SRM:1735)
+
+This ADR extends that principle to financial data:
 - Monetary truth must live in `player_financial_transaction` (PFT) for auditability, reversals, and RLS isolation.
-- `ratingslip` remains telemetry/performance only.
+- `rating_slip` remains telemetry/performance only (no financial data, no reward balances).
 - Backward compatibility is required for existing consumers.
 
 ## Decision

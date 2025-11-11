@@ -2,7 +2,8 @@ import { serializeKeyFilters } from '@/services/shared/key-utils';
 
 export type CasinoStaffFilters = {
   status?: 'active' | 'inactive';
-  role?: 'dealer' | 'pit_boss' | 'admin';
+  role?: 'dealer' | 'pit_boss' | 'admin'; // Note: dealer role is non-authenticated
+  authenticated?: boolean; // Filter for authenticated staff only (excludes dealers)
   cursor?: string;
   limit?: number;
 };

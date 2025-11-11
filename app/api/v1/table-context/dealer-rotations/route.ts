@@ -1,3 +1,19 @@
+/**
+ * Dealer Rotation API
+ *
+ * IMPORTANT: Dealers are non-authenticated. This API is for administrative
+ * management of dealer assignments (scheduling metadata only).
+ *
+ * - POST /dealer-rotations: Start a new dealer rotation (pit boss/admin only)
+ * - Dealers do NOT call this API (they don't log in to the application)
+ * - Dealer assignments are managed by supervisory roles (pit boss, admin)
+ * - The dealer is the SUBJECT of the rotation, not the ACTOR
+ *
+ * See also:
+ * - docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md (Dealer Role Semantics)
+ * - docs/30-security/SECURITY_TENANCY_UPGRADE.md (Dealer Role Exception)
+ */
+
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 

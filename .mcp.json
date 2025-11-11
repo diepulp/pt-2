@@ -4,7 +4,10 @@
       "type": "stdio",
       "command": "/home/diepulp/projects/pt-2/node_modules/.bin/mcp-server-sequential-thinking",
       "args": []
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp"
     }
-  
   }
 }

@@ -565,8 +565,11 @@ node scripts/validate-error-taxonomy.js
 ### Security & Tenancy *(see `docs/30-security/SECURITY_TENANCY_UPGRADE.md` for full detail)*
 
 **Status**: MANDATORY (Effective 2025-11-09)
+**Schema State**: ⚠️ TARGET STATE (requires migration - staff.user_id not yet added)
 
 **Purpose**: Eliminate privilege escalation via service keys; enforce multi-tenant isolation via canonical RLS pattern.
+
+**⚠️ IMPORTANT**: All RLS code examples in this section represent **TARGET STATE** after security upgrade migration. Current baseline schema (staff table) does NOT yet have `user_id` column. See Migration Checklist below for upgrade path.
 
 #### Pitfalls (Before)
 
@@ -615,6 +618,7 @@ node scripts/validate-error-taxonomy.js
 3. **Canonical RLS pattern**: Single deterministic path
    ```sql
    -- ✅ AFTER: No OR trees, uses current_setting()
+   -- ⚠️ REQUIRES: staff.user_id column (see migration steps below)
    create policy "visit_read_same_casino"
      on visit for select using (
        auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
@@ -623,6 +627,10 @@ node scripts/validate-error-taxonomy.js
    ```
 
 #### RLS Context Injection
+
+**⚠️ TARGET STATE (Post-Security-Upgrade)**
+**Status**: Requires `staff.user_id` column (see SECURITY_TENANCY_UPGRADE.md Step 1)
+**Effective**: 2025-11-09
 
 **Implementation** (`lib/supabase/rls-context.ts`):
 
@@ -633,16 +641,22 @@ export interface RLSContext {
   staffRole: string; // staff.role
 }
 
-// Flow:
-// 1. auth.getUser() → user_id
-// 2. Query staff: user_id → staff.id, casino_id, role
-// 3. Validate active staff with casino assignment
+/**
+ * Get authenticated user's casino context
+ *
+ * ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
+ *
+ * Flow:
+ * 1. auth.getUser() → user_id from auth.users
+ * 2. Query staff: user_id → staff.id, casino_id, role
+ * 3. Validate active staff with casino assignment
+ */
 export async function getAuthContext(supabase): Promise<RLSContext> {
   const { data: { user } } = await supabase.auth.getUser();
   const { data: staff } = await supabase
     .from('staff')
     .select('id, casino_id, role')
-    .eq('user_id', user.id)
+    .eq('user_id', user.id)  // ⚠️ Requires migration: add staff.user_id column
     .eq('status', 'active')
     .single();
 
@@ -668,8 +682,11 @@ export async function injectRLSContext(supabase, context, correlationId): Promis
 
 #### RLS Policy Templates
 
+**⚠️ TARGET STATE**: All templates below require `staff.user_id` column (SECURITY_TENANCY_UPGRADE.md)
+
 **Template 1: Read Access (Casino-Scoped)**
 ```sql
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 create policy "{table}_read_same_casino"
   on {table} for select using (
     auth.uid() = (
@@ -683,6 +700,7 @@ create policy "{table}_read_same_casino"
 
 **Template 2: Write Access (Role-Gated)**
 ```sql
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 create policy "{table}_insert_authorized"
   on {table} for insert with check (
     auth.uid() = (
@@ -697,6 +715,7 @@ create policy "{table}_insert_authorized"
 
 **Template 3: Append-Only Ledger**
 ```sql
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 -- Insert only
 create policy "{table}_append_authorized"
   on {table} for insert with check (
@@ -719,15 +738,23 @@ create policy "{table}_no_deletes" on {table} for delete using (false);
 | **Loyalty** | `player_loyalty`, `loyalty_ledger` | Same casino | RPC only | Template 3 (append-only) |
 | **Finance** | `player_financial_transaction` | Same casino | RPC only | Template 3 (append-only) |
 | **MTL** | `mtl_entry`, `mtl_audit_note` | Compliance roles | Cashier, compliance | Template 3 (append-only) |
-| **Table Context** | `gaming_table`, `dealer_rotation` | Operations staff | Pit boss, admin | Template 2 (pit_boss, admin) |
+| **Table Context** | `gaming_table`, `dealer_rotation` | Pit boss, admin | Pit boss, admin | Template 2 (pit_boss, admin) |
 | **Rating Slip** | `rating_slip` | Same casino | Telemetry service | Template 2 (telemetry role) |
 | **Floor Layout** | `floor_layout`, `floor_pit` | Same casino | Admin only | Template 2 (admin role) |
 
 #### Migration Checklist
 
+**⚠️ MIGRATION REQUIRED**: The RLS patterns above require database schema changes.
+
+**See**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` for complete migration guide
+**Effective**: 2025-11-09 (MANDATORY)
+**Priority**: Finance → Loyalty → Visit → Others
+
 **Database:**
-- [ ] Add `user_id uuid references auth.users(id)` to `staff` table
-- [ ] Create `exec_sql(text)` RPC for `SET LOCAL` commands
+- [ ] Add `user_id uuid references auth.users(id)` to `staff` table (BLOCKER for RLS)
+- [ ] Backfill `staff.user_id` with auth.users linkage (production: manual assignment or invite flow)
+- [ ] Add `not null` constraint and unique index on `user_id` after backfill
+- [ ] Create `exec_sql(text)` RPC for `SET LOCAL` commands (security definer)
 - [ ] Apply RLS policies per template (table by table)
 - [ ] Enable RLS on all casino-scoped tables
 - [ ] Deny direct table access (force RPC for mutations)
@@ -767,6 +794,7 @@ using (
 **✅ DO: Single path**
 ```sql
 -- ✅ GOOD: Deterministic
+-- ⚠️ REQUIRES: staff.user_id column (see SECURITY_TENANCY_UPGRADE.md)
 using (
   auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
   AND casino_id = current_setting('app.casino_id')::uuid
@@ -889,7 +917,7 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - `casino` table (canonical casino identity)
 - `company` table (corporate ownership hierarchy)
 - `game_settings` table (game configuration templates)
-- `staff` table (staff registry and access control)
+- `staff` table (staff registry and access control) ⚠️ **Pending**: `user_id` auth linkage (SECURITY_TENANCY_UPGRADE)
 - `player_casino` table (player enrollment associations)
 - `audit_log` table (cross-domain event logging)
 - `report` table (administrative reports)
@@ -911,8 +939,9 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - [ ] **Temporal config:** `casino_settings.gaming_day_start_time time not null default '06:00'`
 - [ ] **Ownership:** `casino_id` on `staff`
 - [ ] **Constraints:** `casino_settings` 1:1 via unique `(casino_id)`
-- [ ] **RLS:** staff read/write scoped to their `casino_id` (admins write)
+- [ ] **RLS:** staff read/write scoped to their `casino_id` (admins write) ⚠️ Pending: requires `staff.user_id`
 - [ ] **Access paths:** `casino_settings` by `casino_id`; `staff` by `casino_id`, `employee_id`
+- [ ] **Auth linkage (PENDING):** `staff.user_id uuid references auth.users(id)` (see SECURITY_TENANCY_UPGRADE.md)
 
 **RLS (excerpt)**
 - Tables owned by casino scope (`casino_id` present) MUST include:
@@ -967,10 +996,43 @@ create table staff (
   first_name text not null,
   last_name text not null,
   email text unique,
-  role staff_role not null default 'dealer',
+  role staff_role not null, -- No default; explicit assignment required (see Dealer Role Semantics below)
   status staff_status not null default 'active',
   created_at timestamptz not null default now()
+  -- ⚠️ PENDING SECURITY UPGRADE (Effective 2025-11-09):
+  -- user_id uuid references auth.users(id) not null unique
+  -- See: docs/30-security/SECURITY_TENANCY_UPGRADE.md (Step 1)
+  -- Required for: RLS context injection, withServerAction() wrapper, multi-tenant isolation
 );
+
+#### Dealer Role Semantics
+
+**CRITICAL**: The `staff_role` enum includes `'dealer'`, but dealer records are **non-authenticated**.
+
+**Role Definitions**:
+- **`dealer`**: Scheduling metadata only. No login, no permissions, no RLS enforcement.
+  - `staff.user_id` is **null** for dealer role
+  - Dealers do NOT authenticate to the application
+  - Dealers have **zero application permissions**
+  - Tracked in `dealer_rotation` for operational visibility only
+- **`pit_boss`**: Authenticated staff with operational permissions
+  - `staff.user_id` is **required** (must reference `auth.users.id`)
+  - Can manage dealer rotations, chip custody, table operations
+- **`admin`**: Authenticated staff with administrative permissions
+  - `staff.user_id` is **required** (must reference `auth.users.id`)
+  - Full access to casino configuration and all operational functions
+
+**Implications**:
+- `dealer_rotation` table tracks scheduling only, **not access control**
+- RLS policies **exclude** dealer role (dealers cannot query database)
+- Rotation management is performed **by pit_boss/admin** via administrative APIs
+- Dealers are **non-authenticated participants** in the gaming operation
+
+**See Also**:
+- Migration `20251110231330_dealer_role_clarification.sql` for schema documentation
+- `docs/audits/DEALER_ROLE_BLAST_RADIUS_AUDIT_NOV_10.md` for full analysis
+
+---
 
 create table audit_log (
   id uuid primary key default gen_random_uuid(),
@@ -1556,8 +1618,8 @@ $$;
 ```
 
 #### RLS (sketch)
-- **Read:** same-casino for `pit_boss`, `dealer`, `accounting_read`, `cage_read`, `compliance_read` (as appropriate).  
-- **Write:** `pit_boss` for inventory/fill/credit/drop; `cage`/`count_team` limited to their custody flows.  
+- **Read:** same-casino for `pit_boss`, `accounting_read`, `cage_read`, `compliance_read` (as appropriate).
+- **Write:** `pit_boss` for inventory/fill/credit/drop; `cage`/`count_team` limited to their custody flows.
 - Enforce `casino_id = current_setting('app.casino_id')::uuid` and role allow-lists.
 
 #### Transport & Edge Rules
