@@ -11,6 +11,8 @@ Prevents drift and informs RLS, services, and APIs through system diagrams, boun
 ## What Belongs Here
 
 - **Service Responsibility Matrix (SRM)**: Canonical bounded context contract
+- **Edge Transport & Middleware Policy**: Server Action vs Route Handler contract, middleware chain, required headers
+- **Service Layer Isolation & CQRS Guidance**: DTO-only cross-context access rules and CQRS-light instructions for telemetry domains
 - **Service Layer Diagram**: Visual architecture reference
 - **Context Map**: Domain relationships and integration patterns
 - **System Architecture Diagrams**: High-level component views
@@ -35,6 +37,8 @@ last_review: 2025-10-25
 ## Current Documents
 
 - **SERVICE_RESPONSIBILITY_MATRIX.md** (in patterns/, canonical source)
+- **EDGE_TRANSPORT_POLICY.md** (this folder, ingress/middleware contract)
+- **(this doc)** for Service Layer Isolation & CQRS guidance summary
 - **SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md** (in system-prd/)
 - **BALANCED_ARCHITECTURE_QUICK.md** (patterns/)
 - Context maps and diagrams (to be created)

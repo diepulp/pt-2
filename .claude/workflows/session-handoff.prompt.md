@@ -1,5 +1,4 @@
----
-title: Generate Session Handoff (Automated Memory Sync)
+--- title: Generate Session Handoff (Automated Memory Sync)
 description: Auto-generate session handoff from memory with dual output
 chatmode_sequence:
   - documenter # Memory analysis and handoff generation

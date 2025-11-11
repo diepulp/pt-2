@@ -56,17 +56,7 @@ npm run db:types
 // → Bug filed: "Can't set timezone via service layer"
 ```
 
-### Root Cause: 100% Service Layer Non-Compliance
 
-**ALL 6 services violate this standard:**
-- Casino: Missing `address`, `status` from CreateDTO
-- Loyalty: Manual DTOs + schema drift
-- PlayerFinancial: Manual DTOs referencing Phase B columns
-- MTL: Manual DTOs with 12+ non-existent columns
-- RatingSlip: Dual type systems (local vs remote)
-- TableContext: Manual DTOs with wrong column names
-
-**Compliance Score: 40%** (was falsely reported as 62%)
 
 ---
 
@@ -157,12 +147,12 @@ export type CreateFinancialTxnParams = Pick<
 
 ## Enforcement Mechanisms
 
-### 1. ESLint Rule (Build-Time)
+### 1. ESLint Rule: Syntax (Build-Time)
 
 **Location**: `.eslint-rules/no-manual-dto-interfaces.js`
 
 ```bash
-# Detects violations during development
+# Detects manual interface violations
 npx eslint services/casino/crud.ts
 
 # Output:
@@ -173,7 +163,140 @@ npx eslint services/casino/crud.ts
 
 ---
 
-### 2. Pre-commit Hook (Commit-Time)
+### 2. ESLint Rule: Semantics (Bounded Context)
+
+**Location**: `.eslint-rules/no-cross-context-db-imports.js` (NEW)
+
+**Purpose**: Prevent services from directly accessing Database types outside their owned tables (per SRM)
+
+```javascript
+// .eslint-rules/no-cross-context-db-imports.js
+module.exports = {
+  meta: {
+    type: 'problem',
+    docs: {
+      description: 'Prevent cross-context Database type access (SRM violation)',
+      category: 'Bounded Context Integrity',
+    },
+  },
+  create(context) {
+    const filename = context.getFilename();
+    const serviceMatch = filename.match(/services\/([^/]+)\//);
+    if (!serviceMatch) return {};
+
+    const serviceName = serviceMatch[1];
+    const SRM_OWNERSHIP = {
+      'casino': ['casino', 'casino_settings', 'company', 'staff', 'game_settings', 'audit_log', 'report'],
+      'player': ['player', 'player_casino'],
+      'visit': ['visit'],
+      'loyalty': ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox'],
+      'rating-slip': ['rating_slip'],
+      'finance': ['player_financial_transaction', 'finance_outbox'],
+      'mtl': ['mtl_entry', 'mtl_audit_note'],
+      'table-context': ['gaming_table', 'gaming_table_settings', 'dealer_rotation', 'table_inventory_snapshot', 'table_fill', 'table_credit', 'table_drop_event'],
+      'floor-layout': ['floor_layout', 'floor_layout_version', 'floor_pit', 'floor_table_slot', 'floor_layout_activation'],
+    };
+
+    return {
+      MemberExpression(node) {
+        // Detect: Database['public']['Tables']['table_name']
+        if (
+          node.object?.property?.value === 'Tables' &&
+          node.property?.type === 'Literal'
+        ) {
+          const tableName = node.property.value;
+          const ownedTables = SRM_OWNERSHIP[serviceName] || [];
+
+          if (!ownedTables.includes(tableName)) {
+            context.report({
+              node,
+              message: `BOUNDED CONTEXT VIOLATION: Service "${serviceName}" cannot directly access table "${tableName}". Must consume via published DTO from owning service. See SRM ownership matrix.`,
+            });
+          }
+        }
+      },
+    };
+  },
+};
+```
+
+**Example violation:**
+```typescript
+// services/loyalty/telemetry.ts
+import type { Database } from '@/types/database.types';
+
+// ❌ ESLint error:
+type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+// Error: Service "loyalty" cannot directly access table "rating_slip"
+// Must consume via published DTO from rating-slip service
+```
+
+---
+
+### 3. ESLint Rule: Column Allowlist (Field-Level)
+
+**Location**: `.eslint-rules/dto-column-allowlist.js` (NEW)
+
+**Purpose**: Enforce explicit allowlist for sensitive tables (Player, Staff)
+
+```javascript
+// .eslint-rules/dto-column-allowlist.js
+const SENSITIVE_TABLES = {
+  player: {
+    allowed: ['id', 'first_name', 'last_name', 'created_at'],
+    forbidden: ['ssn', 'birth_date', 'internal_notes', 'risk_score'],
+    rationale: 'PII and operational data must not leak to public DTOs',
+  },
+  staff: {
+    allowed: ['id', 'first_name', 'last_name', 'role', 'status', 'created_at'],
+    forbidden: ['employee_id', 'email', 'ssn'],
+    rationale: 'Staff PII restricted to admin-only DTOs',
+  },
+};
+
+module.exports = {
+  create(context) {
+    return {
+      TSTypeAliasDeclaration(node) {
+        // Detect: Pick<Database[...]['player']['Row'], 'field1' | 'field2'>
+        if (node.typeAnnotation?.typeName?.name === 'Pick') {
+          const typeArgs = node.typeAnnotation.typeParameters?.params || [];
+          const tableNode = typeArgs[0]; // Database['public']['Tables']['player']['Row']
+          const fieldsNode = typeArgs[1]; // 'field1' | 'field2'
+
+          const tableName = extractTableName(tableNode);
+          if (!SENSITIVE_TABLES[tableName]) return;
+
+          const pickedFields = extractUnionLiterals(fieldsNode);
+          const config = SENSITIVE_TABLES[tableName];
+
+          pickedFields.forEach(field => {
+            if (config.forbidden.includes(field)) {
+              context.report({
+                node: fieldsNode,
+                message: `COLUMN LEAK: Field "${field}" in table "${tableName}" is forbidden from public DTOs. ${config.rationale}. Use admin-specific DTO variant.`,
+              });
+            }
+          });
+        }
+      },
+    };
+  },
+};
+```
+
+**Example violation:**
+```typescript
+// services/player/dtos.ts
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'ssn' // ❌ ESLint error: Field "ssn" is forbidden
+>;
+```
+
+---
+
+### 4. Pre-commit Hook (Commit-Time)
 
 **Location**: `.husky/pre-commit-service-check.sh`
 
@@ -195,18 +318,26 @@ git commit --no-verify  # ⚠️ Use sparingly
 
 ---
 
-### 3. CI/CD Gate (Pipeline)
+### 5. CI/CD Gate (Pipeline)
 
 **TODO**: Add to GitHub Actions workflow
 
 ```yaml
 - name: Validate DTO Compliance
   run: |
+    # Syntax check
     npx eslint services/**/*.ts --max-warnings 0
-    git diff --name-only origin/main...HEAD | \
-      grep "^services/.*\.ts$" | \
-      xargs grep -l "export interface.*DTO" && \
-      echo "Manual DTOs detected" && exit 1 || true
+
+    # Bounded context check
+    node scripts/validate-srm-ownership.js
+
+    # Column allowlist check
+    node scripts/validate-dto-fields.js
+
+    # Ensure all services have dtos.ts
+    for service in casino player visit loyalty rating-slip finance mtl table-context floor-layout; do
+      [[ -f "services/$service/dtos.ts" ]] || (echo "Missing dtos.ts for $service" && exit 1)
+    done
 ```
 
 ---
@@ -348,6 +479,209 @@ Database (generated from schema)
 
 **Total**: ~40 manual DTO definitions across codebase
 **Estimated Remediation**: 8 hours (all services)
+
+---
+
+## Semantics Enforcement (Contract-First DTOs)
+
+### The Problem: Syntax Without Semantics
+
+The canonical `Pick<Database...>` pattern ensures **type safety** but doesn't enforce:
+
+1. **Column exposure control**: Which fields are safe to expose to UI/external consumers?
+2. **Bounded context integrity**: Which tables can a service access?
+3. **Schema coupling**: How to decouple domain contracts from database evolution?
+
+**Example of the gap:**
+```typescript
+// ✅ Type-safe (compiles)
+// ❌ Semantically wrong (leaks internal data)
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'ssn' | 'internal_credit_score' // ❌ PII + internal fields
+>;
+
+// ✅ Type-safe (compiles)
+// ❌ Violates bounded context (Loyalty accessing RatingSlip table directly)
+export type LoyaltyRewardDTO = Pick<
+  Database['public']['Tables']['rating_slip']['Row'], // ❌ Cross-context access
+  'average_bet' | 'duration'
+>;
+```
+
+---
+
+### Pattern 5: Contract-First DTOs (Bounded Contexts)
+
+**When to use**: Services with complex business logic and strict bounded contexts (Loyalty, Finance, MTL, TableContext)
+
+**Principle**: SRM defines contract → DTO interface → Mapper enforces boundary
+
+#### Step 1: Define Domain Contract (SRM-Aligned)
+
+```typescript
+// services/loyalty/dtos.ts
+// ✅ Domain contract independent of DB schema
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+  // NO: preferences (internal), updated_at (implementation detail)
+}
+
+export interface IssueMidSessionRewardInput {
+  casino_id: string;
+  player_id: string;
+  rating_slip_id: string; // Reference, not full object
+  staff_id: string;
+  points: number;
+  idempotency_key: string;
+  reason?: 'mid_session' | 'session_end' | 'manual_adjustment' | 'promotion' | 'correction';
+  // NO: Direct RatingSlip fields (average_bet, duration) - violates bounded context
+}
+```
+
+#### Step 2: Implement Mapper (Internal Use)
+
+```typescript
+// services/loyalty/mappers.ts
+import type { Database } from '@/types/database.types'; // ⚠️ Internal use only
+
+type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Explicitly omit: preferences (internal-only field)
+  };
+}
+
+export function toPlayerLoyaltyInsert(
+  dto: Omit<PlayerLoyaltyDTO, 'balance' | 'tier'>
+): Database['public']['Tables']['player_loyalty']['Insert'] {
+  return {
+    player_id: dto.player_id,
+    casino_id: dto.casino_id,
+    // Apply defaults:
+    balance: 0,
+    tier: null,
+    preferences: {}, // Internal field with safe default
+  };
+}
+```
+
+#### Step 3: Bounded Context Enforcement
+
+**Services MUST only import DTOs from their owned contexts or declared dependencies (per SRM):**
+
+```typescript
+// ✅ ALLOWED (declared in SRM:358)
+// services/loyalty/mid-session-reward.ts
+import type { IssueMidSessionRewardInput } from './dtos';
+// Loyalty owns this contract
+
+// ❌ FORBIDDEN (violates SRM:302-303)
+// services/loyalty/telemetry.ts
+import type { Database } from '@/types/database.types';
+type RatingSlipData = Database['public']['Tables']['rating_slip']['Row'];
+// Loyalty must consume RatingSlip data via RPC/DTO, not direct table access
+```
+
+**Correct approach (SRM:382):**
+```typescript
+// services/rating-slip/dtos.ts (RatingSlip owns this contract)
+export interface RatingSlipTelemetryDTO {
+  id: string;
+  player_id: string;
+  casino_id: string;
+  average_bet: number | null;
+  duration_seconds: number;
+  game_type: 'blackjack' | 'poker' | 'roulette' | 'baccarat';
+}
+
+// services/loyalty/mid-session-reward.ts (Loyalty consumes via import)
+import type { RatingSlipTelemetryDTO } from '@/services/rating-slip/dtos';
+
+function calculateReward(telemetry: RatingSlipTelemetryDTO): number {
+  // Uses published DTO, not raw DB row
+}
+```
+
+---
+
+### Pattern 6: Hybrid Approach (Pragmatic Default)
+
+**Decision Tree**:
+
+```
+Is this service a bounded context with complex business logic?
+├─ YES → Use Contract-First DTOs (Pattern 5)
+│   └─ Examples: Loyalty, Finance, MTL, TableContext
+│
+└─ NO → Is it thin CRUD?
+    ├─ YES → Use Canonical DTOs with Allowlist (Pattern 1 + enforcement)
+    │   └─ Examples: Player, Visit, Casino
+    │
+    └─ HYBRID → Use canonical DTOs + mappers for cross-context data
+        └─ Example: RatingSlip (owns telemetry, publishes DTOs to Loyalty/Finance)
+```
+
+**Thin CRUD Example with Allowlist:**
+```typescript
+// services/player/dtos.ts
+// ✅ Canonical pattern with explicit field control
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'created_at' // ✅ Explicit allowlist
+>;
+
+export type PlayerCreateDTO = Pick<
+  Database['public']['Tables']['player']['Insert'],
+  'first_name' | 'last_name' | 'birth_date' // ✅ Explicit allowlist
+>;
+
+// ❌ Forbidden fields (enforced by ESLint):
+// 'ssn', 'internal_notes', 'risk_score', etc.
+```
+
+---
+
+### Column Exposure Policy
+
+**REQUIRED: Every DTO MUST document exposure rationale**
+
+```typescript
+// services/player/dtos.ts
+
+/**
+ * PlayerDTO - Public player profile
+ *
+ * Exposure: UI, external APIs
+ * Excludes:
+ * - ssn, birth_date (PII, compliance requirement)
+ * - internal_notes (staff-only)
+ * - risk_score (operational data, not player-facing)
+ */
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'created_at'
+>;
+
+/**
+ * PlayerAdminDTO - Full player data for admin views
+ *
+ * Exposure: Admin UI only (role-gated)
+ * Includes PII: Requires audit logging
+ */
+export type PlayerAdminDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'birth_date' | 'created_at'
+>;
+```
 
 ---
 

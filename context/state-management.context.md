@@ -112,6 +112,28 @@ const updateVisit = useServiceMutation(updateVisitAction, {
 });
 ```
 
+## Mutation + Query Key Discipline
+
+- **Key shape:** enforce `[domain, operation, scope?, ...params]` everywhere. Example: `['rating-slip', 'detail', slipId]`, `['rating-slip', 'list', casinoId]`. Never drop the operation/scope segments or alias them (`['rating-slip', slipId]`)—that breaks deterministic invalidation.
+- **Domain-event mapping:** every mutation must declare the SRM domain events it emits (e.g., `ratingSlip.updated`, `loyalty.ledger_appended`). Invalidation should target only the query keys that those events touch instead of calling `invalidateQueries({ queryKey: ['rating-slip'] })` globally.
+- **Helper utilities:** add `invalidateByDomainEvent(event, payload)` (shared helper) that maps domain events → queryKey arrays. All mutations and realtime listeners call this helper so cache discipline stays centralized.
+- **Service boundaries:** hooks/mutations consume service DTOs/RPCs only. Never query another service's tables/views; cross-context reads must go through the owning service’s API or published projection per SRM.
+
+## Realtime Integration & Cache Reconciliation
+
+1. **Edge-emitted events**: Server Actions emit app-level events (same casing as SRM event catalog). Realtime subscriptions listen to those events, not raw table change feeds, and update React Query cache via `setQueryData`/`invalidateQueries`.
+2. **Single source of truth**: React Query cache owns server state. Realtime handlers must reconcile the cache; components never subscribe directly to Supabase channels for rendering.
+3. **Optimistic updates**: When using optimistic UI, ensure the follow-up event reconciles the authoritative payload to avoid drift.
+
+### Channel Scoping Guidelines
+
+- Subscribe using `{casino_id}` for list/collection views and `{casino_id}:{resource_id}` for detail streams. Avoid global `rating_slip:*` channels that flood all operators.
+- For hot telemetry domains (RatingSlip, TableContext), broadcast state transitions or periodic snapshots (1–5s) instead of every row change (mirrors SRM realtime guidance).
+- Track subscriptions per screen and auto-unsubscribe on unmount; reuse channels via a context to keep socket counts low.
+- Consume read-side projections (CQRS) for dashboards when provided (e.g., rating slip aggregates) instead of hitting write tables directly.
+- Gated subscriptions: before subscribing, assert role/casino perms (mirrors channel predicates). Denied joins must fall back to React Query polling.
+- High-cardinality dashboards default to **poll + ETag** (React Query `refetchInterval` or manual refetch) with server-side cache validators; realtime is opt-in only when the service publishes curated summary channels.
+
 ## Zustand Store Scope
 
 ### Includes (UI state only)

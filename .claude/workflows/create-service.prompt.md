@@ -1,5 +1,4 @@
----
-title: Create New Service (Systematic Workflow)
+--- title: Create New Service (Systematic Workflow)
 description: End-to-end service creation with 3 validation gates
 chatmode_sequence:
   - architect # Phase 1: Design

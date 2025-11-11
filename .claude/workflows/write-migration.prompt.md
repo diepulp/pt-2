@@ -1,5 +1,4 @@
----
-title: Write Database Migration (Type-Safe Workflow)
+--- title: Write Database Migration (Type-Safe Workflow)
 description: Database migration with automated type regeneration and validation
 chatmode_sequence:
   - service-engineer # Migration creation and type gen

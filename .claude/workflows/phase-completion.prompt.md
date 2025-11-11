@@ -1,5 +1,4 @@
----
-title: Complete Phase (Checklist-Based Sign-Off)
+--- title: Complete Phase (Checklist-Based Sign-Off)
 description: Systematic phase completion with quality gates and handoff
 chatmode_sequence:
   - reviewer # Quality validation

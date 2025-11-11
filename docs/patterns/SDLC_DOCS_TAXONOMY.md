@@ -17,9 +17,9 @@ This guide defines **what belongs where**, **why it exists**, and **who owns it*
 **Docs:** PRD, Release Plan, Feature Specs.
 
 ### Architecture & System Patterns (ARCH)
-**What:** System diagram, bounded contexts (SRM), integration contracts, non‑functionals.  
+**What:** System diagram, bounded contexts (SRM), integration contracts, non-functionals.  
 **Why:** Prevents drift; informs RLS, services, and APIs.  
-**Docs:** Service Responsibility Matrix (SRM), Context Map, Service Layer Diagram, NFRs.
+**Docs:** Service Responsibility Matrix (SRM), Context Map, Service Layer Diagram, Edge Transport policy (`withServerAction` chain + headers), Service Layer Isolation & CQRS guidance (DTO-only APIs, telemetry projections), NFRs.
 
 ### Architecture Decision Records (ADR)
 **What:** Immutable log of decisions with trade‑offs.  
@@ -27,9 +27,9 @@ This guide defines **what belongs where**, **why it exists**, and **who owns it*
 **Docs:** ADR‑### with Status (Proposed/Accepted/Superseded).
 
 ### API & Data Contracts (API/DATA)
-**What:** OpenAPI/Swagger, DTOs, DB schema (`database.types.ts`), events.  
-**Why:** Stable interfaces for client/server and data lineage.  
-**Docs:** API Surface, Event Catalog, Schema Diffs, Migration Plan.
+**What:** OpenAPI/Swagger, contract-first DTOs + shared zod schemas, DB schema (`database.types.ts`), events.  
+**Why:** Stable interfaces for client/server and data lineage; keeps UI/tests aligned with SRM DTOs.  
+**Docs:** API Surface, DTO Catalog (edge/server), Event Catalog, Schema Diffs, Migration Plan.
 
 ### Security & Access (SEC/RBAC)
 **What:** RLS/RBAC matrix, secrets handling, data classification.  
@@ -82,8 +82,10 @@ Legend: ✅ primary; ◻️ optional/supporting.
 - **ADRs** → **ADR** (cross‑phase).  
 - **System patterns** → **ARCH** + **GOV** (patterns catalog under GOV; concrete usage in SRM/diagrams under ARCH).  
 - **Service layer diagram** → **ARCH**.  
-- **SRM (canonical)** → **ARCH** (matrix‑first contract; mirrored by schema & RLS).  
-- **Front‑end standards, Over‑engineering guardrails** → **GOV**.  
+- **SRM (canonical)** → **ARCH** (matrix-first contract; mirrored by schema & RLS).  
+- **Edge transport & middleware contract (`withServerAction`, header policy)** → **ARCH** (policy) + **API/DATA** (DTO/zod catalog).  
+- **Service layer isolation & CQRS light (DTO-only APIs, projections)** → **ARCH** (policy) with supporting ADR references; API consumers reference service DTO catalogs.
+- **Front-end standards, Over-engineering guardrails** → **GOV**.  
 - **`database.types.ts`, OpenAPI** → **API/DATA**.  
 - **RLS/RBAC matrix** → **SEC/RBAC**.  
 - **Observability spec, runbooks** → **OPS/SRE**.
@@ -110,8 +112,8 @@ Legend: ✅ primary; ◻️ optional/supporting.
 /docs/
   00-vision/
   10-prd/
-  20-architecture/        # SRM, diagrams, patterns-use
-  25-api-data/            # openapi, dto, events, schema diffs
+  20-architecture/        # SRM, diagrams, edge transport policy, service isolation/CQRS patterns
+  25-api-data/            # openapi, dto/zod catalogs, events, schema diffs
   30-security/            # rls-rbac, threat-model
   40-quality/             # test-strategy, plans, gates
   50-ops/                 # o11y, runbooks, slo
@@ -166,7 +168,7 @@ last_review: 2025-11-15
 
 ## 8) Immediate Actions (1–2 hours)
 
-1. Move existing docs into the folder layout above; add front‑matter.  
+1. Move existing docs into the folder layout above; add front-matter.  
 2. Create a **Docs Index** (`docs/INDEX.md`) listing `id → title → status → link`.  
 3. Add a weekly **Docs Review** cadence to PR template (checkbox: “Touched related docs? yes/no”).
-
+4. Capture the **Edge Transport & Middleware** contract (Server Actions vs Route Handlers, middleware chain, required headers, DTO catalog) under `docs/20-architecture/` and link it from API/DATA docs.

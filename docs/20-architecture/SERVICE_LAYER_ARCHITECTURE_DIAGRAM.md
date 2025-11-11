@@ -27,6 +27,7 @@ graph TB
     subgraph "Transport Layer"
         ROUTES[Route Handlers<br/>/api/v1/**/route.ts]
         ACTIONS[Server Actions<br/>app/actions/**]
+        JOBS[Jobs/Workers<br/>Outbox + Projections]
         WRAPPER[withServerAction<br/>wrapper + audit]
     end
 
@@ -67,6 +68,12 @@ graph TB
     subgraph "Data Layer"
         DB[(Supabase/PostgreSQL<br/>RLS Enabled)]
         TYPES[Database Types<br/>types/database.types.ts]
+        POLICIES[Policies/Indexes<br/>RLS + Index Design]
+    end
+
+    subgraph "Data Contracts"
+        REPOS[Typed Repositories<br/>services/*/repository.ts]
+        DTOS[DTO Contracts<br/>services/*/dtos.ts]
     end
 
     UI --> HOOKS
@@ -76,6 +83,7 @@ graph TB
 
     ROUTES --> WRAPPER
     ACTIONS --> WRAPPER
+    JOBS --> WRAPPER
 
     WRAPPER --> CASINO
     WRAPPER --> PLAYER
@@ -87,19 +95,31 @@ graph TB
     WRAPPER --> FINANCE_SVC
     WRAPPER --> MTL
 
-    CASINO --> DB
-    PLAYER --> DB
-    FLOOR --> DB
-    TABLE --> DB
-    VISIT --> DB
-    RATING --> DB
-    LOYALTY --> DB
-    FINANCE_SVC --> DB
-    MTL --> DB
-
     DB --> TYPES
-    TYPES -.generates.-> CASINO
-    TYPES -.generates.-> PLAYER
+    POLICIES -.enforces.-> DB
+    TYPES -.feed.-> REPOS
+    REPOS --> DB
+
+    CASINO --> REPOS
+    PLAYER --> REPOS
+    FLOOR --> REPOS
+    TABLE --> REPOS
+    VISIT --> REPOS
+    RATING --> REPOS
+    LOYALTY --> REPOS
+    FINANCE_SVC --> REPOS
+    MTL --> REPOS
+
+    CASINO -.maps DTOs.-> DTOS
+    PLAYER -.maps DTOs.-> DTOS
+    FLOOR -.maps DTOs.-> DTOS
+    TABLE -.maps DTOs.-> DTOS
+    VISIT -.maps DTOs.-> DTOS
+    RATING -.maps DTOs.-> DTOS
+    LOYALTY -.maps DTOs.-> DTOS
+    FINANCE_SVC -.maps DTOs.-> DTOS
+    MTL -.maps DTOs.-> DTOS
+    DTOS -.shape responses.-> WRAPPER
 
     REALTIME -.subscribes.-> DB
 
@@ -111,6 +131,8 @@ graph TB
     style FINANCE fill:#b2dfdb,stroke:#00695c
     style COMPLIANCE fill:#ffcdd2,stroke:#c62828
 ```
+
+> Data contracts: `types/database.types.ts` feed every bounded-context repository, and services export DTOs from `services/*/dtos.ts` before data crosses the transport boundary. RLS policies and indexes are modeled explicitly through the `Policies/Indexes` control in the data layer.
 
 ---
 
@@ -148,6 +170,11 @@ graph LR
         MTL[MTLService]
     end
 
+    subgraph "Data Layer Controls"
+        DB[(SRM Tables<br/>Supabase/RLS)]
+        POLICIES[Policies/Indexes<br/>RLS + Index Design]
+    end
+
     CASINO -.provides settings.-> TABLE
     CASINO -.provides settings.-> VISIT
     CASINO -.provides settings.-> MTL
@@ -171,6 +198,17 @@ graph LR
     LOYALTY -.reads.-> RATING
     FINANCE -.reads.-> VISIT
     MTL -.reads.-> CASINO
+    POLICIES -.enforces.-> DB
+
+    CASINO --> DB
+    PLAYER --> DB
+    FLOOR --> DB
+    TABLE --> DB
+    VISIT --> DB
+    RATING --> DB
+    LOYALTY --> DB
+    FINANCE --> DB
+    MTL --> DB
 ```
 
 ---

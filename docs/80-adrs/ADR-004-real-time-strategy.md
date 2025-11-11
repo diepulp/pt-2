@@ -51,8 +51,17 @@ Questions to resolve:
 - **Backoff & Limits**: Let Supabase handle connection retries but impose a cap of 5 rapid reconnections before surfacing a toast via Zustand UI store prompting users to refresh. This prevents infinite reconnect loops in degraded networks.
 - **Foreground/Background Awareness**: When the document visibility changes to hidden for >2 minutes, we pause scheduler execution (queue persists). On visibility regain we flush the queue then rely on React Query’s `refetchOnReconnect` to catch any missed deltas.
 - **Auth Refresh Integration**: The Supabase SSR helper already rotates session tokens; the registry exposes `refreshAuth(token)` so that when Next.js refreshes session cookies the channel client updates without tearing down listeners.
+- **Role & Casino Predicate Revalidation**: When tokens rotate or a user switches casinos, the registry revalidates `casino_id` + role predicates before re-subscribing so stale credentials cannot eavesdrop on feeds.
 
-### 6. Domain Event Map Alignment & Developer Workflow
+### 6. Performance & Cost Controls
+
+- **State-transition broadcasts**: Hot telemetry domains emit only discrete lifecycle events (`ratingSlip.opened|paused|closed`, `table.fill_requested|completed`, etc.) and optional 1–5s snapshots. Raw row-level feeds are disabled to prevent fanout storms.
+- **Poll + ETag for high-cardinality dashboards**: React Query polling with HTTP cache validators (`If-None-Match`) is the default for dashboards listing hundreds of rows. Realtime is opt-in per widget once a curated summary channel exists.
+- **Channel predicates**: All subscriptions include `casino_id` **and** role filters. Unauthorized joins are rejected immediately and the UI falls back to polling.
+- **Throttle budgets & metrics**: Each channel enforces a min inter-event delay (per domain). Scheduler logs include dropped/batched event counts routed to ops dashboards so Platform can tune thresholds.
+- **Cost monitoring**: Supabase connection/message counts are scraped into observability dashboards; alerts fire when usage exceeds agreed budgets, prompting a review to tighten predicates or switch consumers to polling.
+
+### 7. Domain Event Map Alignment & Developer Workflow
 
 - Supabase channel contracts must match `25-api-data/REAL_TIME_EVENTS_MAP.md`. Each hook documents which event (`rating_slip.updated`, `loyalty.ledger_appended`, etc.) it listens to and how it touches React Query keys (`setQueryData` vs `invalidateQueries` with `refetchType:'active'`).
 - Update the map whenever a new realtime event ships; ADR-007 requires the API catalogue/OpenAPI bundle to mention corresponding read endpoints if they exist.
@@ -102,12 +111,14 @@ Questions to resolve:
    - `hooks/shared/use-realtime-channel.ts` encapsulating Supabase subscription lifecycle and scheduler integration.
 3. **Pilot Domains**
    - Implement `useTableAvailabilityRealtime` and `usePlayerStatusRealtime` with unit tests covering mount/unmount, scheduler batching, and cache updates via jest-mock Supabase client.
-4. **Reconnection Handling**
-   - Integrate status listener with React Query `refetchOnReconnect` and UI toast on repeated failures.
-5. **Documentation & Training**
-   - Update relevant domain READMEs with channel naming, overrides, and testing recipes.
-6. **Validation**
-   - Add integration tests (Cypress or Jest) simulating rapid updates and reconnection to confirm cache and UI consistency.
+4. **Reconnection & Predicate Enforcement**
+   - Integrate status listener with React Query `refetchOnReconnect`, revalidate casino/role predicates on token refresh, and surface UI toast on repeated failures.
+5. **Performance Controls**
+   - Implement state-transition event gating, snapshot timers, poll + ETag fallbacks, and Supabase usage metrics/alerts per domain.
+6. **Documentation & Training**
+   - Update domain READMEs + onboarding with channel naming, throttling defaults, and polling guidance.
+7. **Validation**
+   - Add integration tests (Cypress/Jest) simulating rapid updates, reconnects, and unauthorized joins to confirm throttling + fallbacks.
 
 ## References
 

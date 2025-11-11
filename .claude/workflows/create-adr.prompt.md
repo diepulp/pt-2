@@ -1,3 +1,4 @@
+--- title: Create Architecture Decision Record (ADR) Workflow
 description: Structured ADR creation with sequential thinking and alternatives evaluation
 chatmode_sequence:
   - architect # Analysis and ADR creation

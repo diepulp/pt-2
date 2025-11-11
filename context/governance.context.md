@@ -7,6 +7,7 @@ docs:
   - docs/70-governance/FRONT_END_CANONICAL_STANDARD.md
   - docs/80-adrs/ADR-010-dto-compliance-gate.md
   - docs/80-adrs/ADR-011-over-engineering-guardrail.md
+  - docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md
 
 ## Service Template Structure (ADR-010)
 

@@ -1,5 +1,4 @@
----
-title: Workflow Prompt Template & Creation Guide
+--- title: Workflow Prompt Template & Creation Guide
 description: Comprehensive guide for creating new workflow prompts following PT-2 patterns
 validation_gates: 0
 estimated_time: N/A (template reference)

@@ -15,9 +15,11 @@ Stable interfaces for client/server and data lineage through OpenAPI/Swagger, DT
 - **DTO Standards**: Data transfer object patterns
 - **Database Schema**: `database.types.ts` generation and migration notes
 - **Event Catalog**: Real-time event contracts
+- **Outbox Event Contracts**: Payload schemas for service-owned outboxes (Finance, Loyalty) drained by workers/webhooks
 - **Schema Diffs**: Migration impact analysis
 - **Migration Plans**: Database evolution strategy
 - **Type System Documentation**: DTO canonical standards
+- **Service DTO Catalogs**: Documented DTO/RPC surfaces for each service (consumers MUST use these instead of joining other services' tables).
 
 ## Document Format
 
@@ -46,3 +48,4 @@ last_review: 2025-10-25
 - **SEC** (30-security): RLS and RBAC for data access
 - **QA** (40-quality): API contract testing
 - **GOV** (70-governance): API design standards
+- **ARCH (SRM)**: Enforces DTO-only service boundaries; reference SRM for which RPC/DTO each context exposes.

@@ -11,7 +11,6 @@
 @memory/domain-glossary.memory.md
 
 <!-- Full Documentation References (use when memory files insufficient) -->
-<!-- PRD: docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md -->
 <!-- Service Architecture: docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md -->
 <!-- Patterns: docs/patterns/BALANCED_ARCHITECTURE_QUICK.md -->
 <!-- Bounded Contexts: docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md -->

@@ -44,7 +44,7 @@ ls_specific_settings: {}
 tool_timeout: 240
 # timeout, in seconds, after which tool executions are terminated
 
-excluded_tools: ["list_dir", "find_file","list_dir", "find_file","check_onboarding_performed", "onboarding", "initial_instructions"]
+excluded_tools: []
 # list of tools to be globally excluded
 
 included_optional_tools: []

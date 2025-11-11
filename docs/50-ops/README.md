@@ -12,7 +12,7 @@ Keep production healthy and diagnosable through observability specs, runbooks, S
 
 - **Observability Specification**: Logging, metrics, tracing standards
 - **Runbooks**: Operational procedures and troubleshooting guides
-- **SLIs/SLOs**: Service level indicators and objectives
+- **SLIs/SLOs**: Service level indicators and objectives (per SRM domain; e.g., rating slip update p95 < 80 ms, finance write p95 < 120 ms)
 - **Dashboards**: Monitoring and alerting configurations
 - **Incident Process**: On-call playbooks and escalation
 - **Incident Templates**: Postmortem structure
@@ -36,7 +36,7 @@ last_review: 2025-10-25
 ## Current Documents
 
 - **Audit logging patterns** (embedded in SERVER_ACTIONS_ARCHITECTURE.md)
-- **Error mapping** (to be documented)
+- **Error mapping** `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`
 - **Telemetry patterns** (to be documented)
 
 ## Related Categories

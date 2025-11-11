@@ -228,6 +228,54 @@ export type Database = {
           },
         ]
       }
+      finance_outbox: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          event_type: string
+          id: string
+          ledger_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ledger_id: string
+          payload: Json
+          processed_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ledger_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "finance_outbox_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "finance_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "player_financial_transaction"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       floor_layout: {
         Row: {
           approved_by: string | null
@@ -697,6 +745,54 @@ export type Database = {
           },
         ]
       }
+      loyalty_outbox: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          event_type: string
+          id: string
+          ledger_id: string
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ledger_id: string
+          payload: Json
+          processed_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ledger_id?: string
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_outbox_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mtl_audit_note: {
         Row: {
           created_at: string
@@ -881,6 +977,7 @@ export type Database = {
           created_at: string
           gaming_day: string | null
           id: string
+          idempotency_key: string | null
           player_id: string
           rating_slip_id: string | null
           tender_type: string | null
@@ -892,6 +989,7 @@ export type Database = {
           created_at?: string
           gaming_day?: string | null
           id?: string
+          idempotency_key?: string | null
           player_id: string
           rating_slip_id?: string | null
           tender_type?: string | null
@@ -903,6 +1001,7 @@ export type Database = {
           created_at?: string
           gaming_day?: string | null
           id?: string
+          idempotency_key?: string | null
           player_id?: string
           rating_slip_id?: string | null
           tender_type?: string | null
@@ -1477,6 +1576,17 @@ export type Database = {
         Args: { gstart: string; ts: string }
         Returns: string
       }
+      evaluate_mid_session_reward_policy: {
+        Args: {
+          p_average_bet: number
+          p_minutes_played: number
+          p_policy: Json
+        }
+        Returns: {
+          eligible: boolean
+          recommended_points: number
+        }[]
+      }
       rpc_activate_floor_layout: {
         Args: {
           p_activated_by: string
@@ -1500,18 +1610,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_create_financial_txn: {
-        Args: {
-          p_amount: number
-          p_casino_id: string
-          p_created_at?: string
-          p_player_id: string
-          p_rating_slip_id?: string
-          p_tender_type?: string
-          p_visit_id?: string
-        }
-        Returns: string
-      }
+      rpc_create_financial_txn:
+        | {
+            Args: {
+              p_amount: number
+              p_casino_id: string
+              p_created_at?: string
+              p_idempotency_key?: string
+              p_player_id: string
+              p_rating_slip_id?: string
+              p_tender_type?: string
+              p_visit_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_casino_id: string
+              p_created_at?: string
+              p_player_id: string
+              p_rating_slip_id?: string
+              p_tender_type?: string
+              p_visit_id?: string
+            }
+            Returns: string
+          }
       rpc_create_floor_layout: {
         Args: {
           p_casino_id: string

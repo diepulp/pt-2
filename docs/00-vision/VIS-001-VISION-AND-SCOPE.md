@@ -86,9 +86,10 @@ One casino runs a full shift with minimal training, reliable accrual, and audita
 ## In‑Scope (MVP Capabilities)
 
 - **Casino**: staff auth, casino settings (gaming day), table catalog.  
-- **Table Context**: open/close table; dealer rotation (happy path).  
+- **Table Context**: open/close table; dealer rotation (happy path).
+- **FloorLayout**: Pit, table slots configuration and assignment
 - **Player & Visit**: enroll player; start/stop visit; seat at table.  
-- **Rating Slip (telemetry)**: start/pause/resume/close; seconds accrued; AOV visible.  
+- **Rating Slip (telemetry)**: start/pause/resume/close; move player, AOV visible.  
 - **Loyalty**: issue **mid‑session reward** via RPC; ledger written and read back in session.  
 - **Finance (minimal)**: manual deposit/withdraw entry (feature‑flagged).  
 - **MTL (read‑only)**: threshold proximity badge and recent loyalty activity in context.

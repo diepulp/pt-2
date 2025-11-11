@@ -3,6 +3,8 @@ import { fileURLToPath } from 'url';
 
 import { FlatCompat } from '@eslint/eslintrc';
 
+import dtoColumnAllowlist from './.eslint-rules/dto-column-allowlist.js';
+import noCrossContextDbImports from './.eslint-rules/no-cross-context-db-imports.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 
@@ -39,6 +41,8 @@ const eslintConfig = [
         rules: {
           'no-return-type-inference': noReturnTypeInference,
           'no-manual-dto-interfaces': noManualDTOInterfaces,
+          'no-cross-context-db-imports': noCrossContextDbImports,
+          'dto-column-allowlist': dtoColumnAllowlist,
         },
       },
     },
@@ -47,6 +51,10 @@ const eslintConfig = [
       'custom-rules/no-return-type-inference': 'error',
       // Enable custom rule for manual DTO prevention (SRM canonical standard)
       'custom-rules/no-manual-dto-interfaces': 'error',
+      // Enable bounded context enforcement (SRM:28-295)
+      'custom-rules/no-cross-context-db-imports': 'error',
+      // Enable column allowlist for sensitive tables (SRM:217-238)
+      'custom-rules/dto-column-allowlist': 'error',
       // Require explicit return types for service factories
       '@typescript-eslint/explicit-function-return-type': [
         'error',
