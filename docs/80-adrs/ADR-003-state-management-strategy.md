@@ -35,6 +35,7 @@ The architecture must support:
 
 - Enable the React 19 compiler and associated runtime per `70-governance/FRONT_END_CANONICAL_STANDARD.md`. New components default to compiler-optimized renders; manual memoization requires profiling evidence attached to the PR.
 - Hook directories follow `70-governance/HOOKS_STANDARD.md`: global QueryClient defaults live in `hooks/shared`, domain hooks import canonical query-key factories from `services/**/keys.ts`, and UI-only Zustand hooks stay under `hooks/ui`.
+- Domain hooks must consume **service DTO/RPC APIs** only; never query another service's tables/views directly. CQRS projections published by each service are the sanctioned read models for hot telemetry paths.
 - Transport rule: React Query mutations must hit Route Handlers (JSON + ServiceHttpResult), while form/RSC flows use Server Actions wrapped with `withServerAction`. Intake cards (ADR-009) record the transport choice, and API routes must appear in the canonical catalogue/OpenAPI bundle (ADR-007).
 
 ### 1) TanStack React Query (v5) for **Server State**
@@ -81,6 +82,7 @@ High-volatility domains (live table availability, player status dashboards) **mu
 **Rules**
 - Keys must be JSON-serializable & stable (no functions, Dates; normalized/sorted objects).
 - Use per-domain key factories to avoid typos and centralize normalization.
+- Shape follows `[domain, operation, scope?, ...params]` so domain-event helpers can deterministically map events (e.g., `ratingSlip.updated`) back to specific keys.
 
 **Template (`services/player/keys.ts`)**
 ```ts
@@ -155,6 +157,7 @@ queryClient.setQueriesData({ queryKey: playerKeys.list() }, (current: any) => {
 **When to invalidate vs setQueryData**
 - **Invalidate** when payload is partial or impacts derived queries/aggregates.  
 - **`setQueryData`/`setQueriesData`** when payload is a full snapshot and you must avoid extra hops.
+- **Domain-event helper**: implement a shared `invalidateByDomainEvent(eventName, payload)` utility that maps SRM domain events → query-key factories. All mutations call this helper in `onSuccess`, and realtime listeners reuse it to reconcile cache in lockstep.
 
 ---
 
@@ -188,6 +191,9 @@ usePlayerRealtime((evt) => {
 - **Batch/debounce** invalidations (e.g., 250–500 ms) for busy streams.  
 - For Infinite Queries, update the **correct page** shape: `{ pages: [...], pageParams: [...] }`.  
 - Avoid global invalidations on high-churn channels; target detail keys first.
+- **Domain event contract:** mutations emit app-level events (mirroring SRM names) which are also delivered via Supabase Realtime. Both the mutation `onSuccess` handler and the realtime listener call `invalidateByDomainEvent(event, payload)` so cache reconciliation logic lives in one place.
+- **Channel scope:** subscribe by `{casino_id}` for collection/list feeds and `{casino_id}:{resource_id}` for detail views. Hot domains (RatingSlip, TableContext) should only push state transitions or periodic snapshots (1–5s) to avoid flooding operators.
+- **Fallback polling:** For high-cardinality dashboards, default to React Query polling with HTTP cache validators (ETag/If-None-Match) unless the service publishes a curated summary channel. Unauthorized channel joins must be rejected up front based on role + casino scope.
 
 ---
 
@@ -324,18 +330,31 @@ const updateVisit = useServiceMutation(updateVisitAction, {
 - **Pagination transitions?** Use `placeholderData` (identity) or Infinite Query; no `keepPreviousData` in v5.  
 - **Mutations & retries?** `retry: 0` if DB idempotent; otherwise `retry: 1` limited to network/5xx.  
 - **Realtime invalidation scope?** Prefer targeted detail updates; batch list invalidations; `refetchType:'active'`.
+- **Query key & event discipline?** Keys follow `[domain, operation, scope?, ...params]`. Domain events emitted from Server Actions map to these keys via the shared helper; realtime listeners reuse the same mapping.
 
 ---
 
 ## Acceptance Criteria (updated)
 
-✅ Query-key factories added per domain; params stability documented  
-✅ v5 pagination patterns adopted (`placeholderData`, Infinite Query)  
-✅ Mutation retry policy clarified vis-à-vis DB idempotency  
-✅ Realtime invalidation playbook added (batching, active-only refetch)  
-✅ Structural sharing & `setQueriesData` guidance added  
+✅ Query-key factories added per domain; params stability documented
+✅ v5 pagination patterns adopted (`placeholderData`, Infinite Query)
+✅ Mutation retry policy clarified vis-à-vis DB idempotency
+✅ Realtime invalidation playbook added (batching, active-only refetch)
+✅ Domain-event driven invalidation helper + channel scoping documented
+✅ Structural sharing & `setQueriesData` guidance added
 ✅ Tests expanded for timers, reconnect, placeholder transitions
 
-**Status**: ACCEPTED  
-**Approved By**: Development Team  
-**Date**: 2025-10-10 (Redacted/Updated 2025-10-23)
+---
+
+## Related Standards
+
+**UX & Data Fetching Patterns** (`docs/70-governance/UX_DATA_FETCHING_PATTERNS.md`):
+- Virtualized lists (> 100 items) using `@tanstack/react-virtual`
+- Loading skeletons (not spinners)
+- Stale-while-revalidate cache strategies by data type (hot/warm/cold)
+- Prefetching strategies (hover, route, parallel)
+- Optimistic update policy (ONLY idempotent operations)
+
+**Status**: ACCEPTED
+**Approved By**: Development Team
+**Date**: 2025-10-10 (Redacted/Updated 2025-10-23, 2025-11-09)

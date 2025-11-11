@@ -252,6 +252,40 @@ const createMutation = useMutation({
 })
 ```
 
+**UX & Data Fetching Patterns:** See `docs/70-governance/UX_DATA_FETCHING_PATTERNS.md` for comprehensive guidance on:
+- **Virtualized Lists**: Lists > 100 items must use `@tanstack/react-virtual`
+- **Loading Skeletons**: Use layout-aware skeletons (not spinners)
+- **Stale-While-Revalidate**: Configure `staleTime` by data volatility (hot/warm/cold)
+- **Prefetching**: Hover + route prefetch for perceived performance
+- **Optimistic Updates**: ONLY for idempotent operations with low conflict risk
+
+```typescript
+// ✅ Virtualized list for large datasets
+import { useVirtualizer } from '@tanstack/react-virtual'
+
+const virtualizer = useVirtualizer({
+  count: items.length,
+  getScrollElement: () => parentRef.current,
+  estimateSize: () => 60,
+  overscan: 5,
+})
+
+// ✅ Stale-while-revalidate
+const { data } = useQuery({
+  queryKey: playerKeys.list(),
+  queryFn: fetchPlayers,
+  staleTime: 5 * 60 * 1000, // 5 minutes
+  gcTime: 30 * 60 * 1000,   // 30 minutes
+})
+
+// ❌ NEVER optimistically update non-idempotent operations
+const createTxnMutation = useMutation({
+  mutationFn: createTransaction,
+  // ❌ DON'T: onMutate optimistic update (financial = non-idempotent)
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: txnKeys.list() })
+})
+```
+
 ---
 
 ## 4) Tailwind CSS v4 Styling Architecture
@@ -665,6 +699,14 @@ This standard cites and defers to:
 - [ ] Code-splitting applied for large features
 - [ ] Images optimized via Next.js `<Image>` component
 - [ ] No unnecessary client components (Server Components preferred)
+
+**UX & Data Fetching Checklist:**
+- [ ] Lists > 100 items use virtualization (`@tanstack/react-virtual`)
+- [ ] Loading states show skeletons (not spinners)
+- [ ] `staleTime` configured per data volatility (hot/warm/cold)
+- [ ] Prefetch on hover for detail views
+- [ ] Optimistic updates ONLY for idempotent operations
+- [ ] Real-time updates reconcile with TanStack Query cache (no direct state mutations)
 
 **Quality Checklist:**
 - [ ] Lint/Type/Tests green; no unreviewed rule disables

@@ -16,6 +16,7 @@ allowedTools:
   - bash
   - shell.exec
   - git
+  - sequentialthinking
 
 constraints:
   - "Restrict changes to app/**, components/**, ui/**, styles/**"
@@ -23,6 +24,10 @@ constraints:
   - "Stop before modifying shared design tokens or global styles"
   - "Server data in React Query, UI state in Zustand (ADR-003)"
   - "shadcn/ui library for components, Tailwind utility-first styling"
+  - "Lists > 100 items MUST use virtualization (@tanstack/react-virtual)"
+  - "Loading states show skeletons (not spinners)"
+  - "Configure staleTime by data type: Hot (30s), Warm (5m), Cold (1h), Critical (0s)"
+  - "Optimistic updates ONLY for idempotent operations (no financial/rewards)"
 
 stopGates:
   - "Before making changes that alter public UI contracts or accessibility landmarks"

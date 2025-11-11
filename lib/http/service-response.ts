@@ -14,11 +14,13 @@ export type ResultCode =
   | 'FOREIGN_KEY_VIOLATION'
   | 'UNAUTHORIZED'
   | 'FORBIDDEN'
-  | 'INTERNAL_ERROR';
+  | 'INTERNAL_ERROR'
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'IDEMPOTENCY_CONFLICT';
 
 export interface ServiceResult<T> {
   ok: boolean;
-  code: ResultCode;
+  code: ResultCode | string; // Allow DomainErrorCode (superset of ResultCode)
   data?: T;
   error?: string;
   details?: unknown;
@@ -40,6 +42,8 @@ const RESULT_CODE_HTTP_STATUS: Record<ResultCode, number> = {
   UNAUTHORIZED: 401,
   FORBIDDEN: 403,
   INTERNAL_ERROR: 500,
+  RATE_LIMIT_EXCEEDED: 429,
+  IDEMPOTENCY_CONFLICT: 409,
 };
 
 export const IDEMPOTENCY_HEADER = 'idempotency-key';

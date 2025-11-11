@@ -17,6 +17,7 @@ allowedTools:
   - read
   - edit
   - write
+  - sequentialthinking
 
 constraints:
   - "Operate within services/**, app/api/**, db/**"
@@ -24,6 +25,9 @@ constraints:
   - "Honor RLS expectations from docs/30-security/SEC-001-rls-policy-matrix.md"
   - "Follow service template structure (governance.context.md)"
   - "Derive DTOs from Database types, no manual interfaces (ADR-010)"
+  - "Use DomainError for all service errors (never expose Postgres codes)"
+  - "Inject RLS context via withServerAction (NO service keys in runtime)"
+  - "Financial/loyalty ops use idempotent retry; non-idempotent set retry: 0"
 
 stopGates:
   - "Before executing migrations or RLS writes"
