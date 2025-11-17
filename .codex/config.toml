@@ -22,11 +22,11 @@ args    = []
 
 # Filesystem **rooted in this project**
 
-[mcp_servers.filesystem]
-command = "node"
-args    = ["scripts/mcp-filesystem-server.mjs"]
-[mcp_servers.filesystem.env]
-MCP_FS_ROOT = "/home/diepulp/projects/pt-2"
+#[mcp_servers.filesystem]
+#command = "node"
+#args    = ["scripts/mcp-filesystem-server.mjs"]
+#[mcp_servers.filesystem.env]
+#MCP_FS_ROOT = "/home/diepulp/projects/pt-2"
 
 # Playwright (optional)
 #[mcp_servers.playwright]
@@ -35,11 +35,15 @@ MCP_FS_ROOT = "/home/diepulp/projects/pt-2"
 
 # Shadcn helper (optional)
 
-#[mcp_servers.shadcn]
-#command = "npx"
-#args    = ["shadcn@latest", "mcp"]
+[mcp_servers.shadcn]
+command = "npx"
+args    = ["shadcn@latest", "mcp"]
 
 # Context7 via npx (works if your proxy or package exposes stdio)
+[mcp_servers.context7]
+command = "npx"
+args = ["-y", "@upstash/context7-mcp"]
+startup_timeout_ms = 40000
 
 # Supabase MCP (disabled by default: uncomment to use)
 

@@ -1,6 +1,7 @@
 ---
 name: pt2-dto-validator
 description: Validate DTO contracts, detect cross-context violations, and enforce table ownership mapping from SRM to maintain bounded context integrity
+allowed-tools: SlashCommand, Read, Write, sequentialthinking, serena
 license: MIT
 version: "1.0.0"
 ---

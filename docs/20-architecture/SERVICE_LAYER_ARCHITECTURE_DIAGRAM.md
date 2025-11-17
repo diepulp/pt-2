@@ -1,16 +1,25 @@
 # Service Layer Architecture Diagram
 
-**Version**: 1.0
-**Date**: 2025-10-25
-**Status**: CANONICAL
+**Version**: 2.0.0
+**Date**: 2025-11-14
+**Status**: CANONICAL (Aligned with SRM v3.1.0)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
-**References**:
-- `docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v3.0.2)
-- `70-governance/SERVICE_TEMPLATE.md` (v1.2)
-- `20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
-- `25-api-data/DTO_CANONICAL_STANDARD.md`
-- `70-governance/SERVER_ACTIONS_ARCHITECTURE.md`
+> **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
+
+**Canonical References** (SDLC Taxonomy Peers):
+- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v3.1.0, 2025-11-13)
+- **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
+- **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
+- **Edge Transport**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (withServerAction middleware)
+- **State Management**: `docs/80-adrs/ADR-003-state-management-strategy.md` (React Query v5)
+- **Real-time**: `docs/80-adrs/ADR-004-real-time-strategy.md` (Domain-scoped channels)
+- **Observability**: `docs/50-ops/OBSERVABILITY_SPEC.md` (Correlation/audit patterns)
+- **API Contracts**: `docs/25-api-data/API_SURFACE_MVP.md` (ServiceHttpResult envelope)
+- **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
+
+**Deprecated References** (Do Not Use):
+- ~~`70-governance/SERVICE_TEMPLATE.md` (v1.2)~~ - Outdated, use SRM v3.1.0 instead
 
 ---
 
@@ -289,17 +298,27 @@ sequenceDiagram
 
 ## Service Structure (Directory Layout)
 
+> **Canonical Reference**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008
+
 ```
 services/{domain}/
-├── dto.ts                    # ✅ Zod schemas + inferred types
-│   └── export const CreateXSchema = z.object({...})
-│   └── export type CreateXDTO = Pick<Tables['x']['Insert'], ...>
+├── dtos.ts                    # ✅ DTO contracts (3 patterns per SRM v3.1.0:117-199)
+│   └── Pattern A (Contract-First): Manual interfaces for complex services
+│   └── Pattern B (Canonical): Pick/Omit from Database types for simple CRUD
+│   └── Pattern C (Hybrid): Mixed approach (e.g., RatingSlip)
+│
+├── mappers.ts                 # ✅ CONDITIONAL: Contract-First services ONLY
+│   └── Services: Loyalty, Finance, MTL, TableContext
+│   └── Internal row → DTO transformations (omit internal fields)
+│   └── export function toEntityDTO(row: DbRow): EntityDTO
+│   └── Reference: SRM v3.1.0:141-154
 │
 ├── selects.ts                # ✅ Named column sets
 │   └── export const X_SELECT_MIN = "id, name, created_at"
 │
 ├── keys.ts                   # ✅ React Query key factories (with .scope)
 │   └── export const xKeys = { root: ['x'], list: assign(..., { scope }), ... }
+│   └── Reference: ADR-003:87-96
 │
 ├── http.ts                   # ✅ HTTP fetchers (thin wrappers to API routes)
 │   └── export async function createX(input: CreateXDTO): Promise<XDTO>
@@ -307,6 +326,7 @@ services/{domain}/
 ├── index.ts                  # ✅ Factory + explicit interface
 │   └── export interface XService { ... }
 │   └── export function createXService(supabase): XService
+│   └── Reference: ADR-008
 │
 ├── crud.ts                   # ✅ CRUD operations
 │   └── create, update, getById, delete
@@ -318,9 +338,123 @@ services/{domain}/
     └── Aggregations, reports
 ```
 
+**Note**: `mappers.ts` is REQUIRED only for Contract-First services (Loyalty, Finance, MTL, TableContext). Simple CRUD services (Player, Visit, Casino) use Canonical pattern and do NOT need mappers.
+
 ---
 
 ## Type System Architecture (DTO Canonical Standard)
+
+> **Canonical Reference**: SRM v3.1.0 §3 (Lines 117-199), DTO_CANONICAL_STANDARD.md
+
+### DTO Derivation Patterns (By Service Type)
+
+PT-2 uses **three DTO patterns** based on service complexity. All services MUST use one of these patterns—manual interfaces are BANNED except for Contract-First services.
+
+---
+
+#### Pattern A: Contract-First DTOs (Complex Services)
+
+**Services**: Loyalty, Finance, MTL, TableContext
+
+**When to Use**: Services with complex business logic that need to:
+- Decouple domain contracts from schema evolution
+- Prevent internal columns from leaking to public APIs
+- Enforce explicit control over field exposure
+
+**Pattern**: Manual interfaces + mappers.ts
+
+**Example** (SRM v3.1.0:125-154):
+```typescript
+// services/loyalty/dtos.ts
+/**
+ * PlayerLoyaltyDTO - Public loyalty balance
+ *
+ * Exposure: UI, external APIs
+ * Excludes: preferences (internal-only)
+ * Owner: LoyaltyService (SRM:343-373)
+ */
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+  // Omits: preferences (internal field)
+}
+
+// services/loyalty/mappers.ts (INTERNAL USE ONLY)
+import type { Database } from '@/types/database.types';
+
+type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Explicitly omit: preferences
+  };
+}
+```
+
+**Reference**: SRM v3.1.0:119-155
+
+---
+
+#### Pattern B: Canonical DTOs (Simple CRUD Services)
+
+**Services**: Player, Visit, Casino, FloorLayout
+
+**When to Use**: Simple CRUD services with:
+- Transparent field exposure (no sensitive internal columns)
+- Minimal business logic
+- Schema changes should auto-propagate to DTOs
+
+**Pattern**: Pick/Omit from Database types (NO manual interfaces, NO mappers)
+
+**Example** (SRM v3.1.0:170-190):
+```typescript
+// services/player/dtos.ts
+import type { Database } from '@/types/database.types';
+
+/**
+ * PlayerDTO - Public player profile
+ *
+ * Exposure: UI, external APIs
+ * Excludes: birth_date (PII), internal_notes (staff-only)
+ * Owner: PlayerService (SRM:149)
+ */
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'created_at'
+>;
+
+export type PlayerCreateDTO = Pick<
+  Database['public']['Tables']['player']['Insert'],
+  'first_name' | 'last_name' | 'birth_date'
+>;
+```
+
+**Rationale**:
+- Automatic schema sync via `npm run db:types`
+- Minimal boilerplate
+- ESLint enforces allowlist (prevents PII leakage)
+
+**Reference**: SRM v3.1.0:164-196, DTO_CANONICAL_STANDARD.md:65-127
+
+---
+
+#### Pattern C: Hybrid (Mixed Complexity)
+
+**Services**: RatingSlip
+
+**When to Use**: Services with mixed needs (some fields canonical, some contract-first)
+
+**Reference**: SRM v3.1.0:199+
+
+---
+
+### Type Generation Flow
 
 ```mermaid
 graph TB
@@ -355,43 +489,71 @@ graph TB
     style DB_TYPES fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
 ```
 
-### Type Derivation Examples
+### DTO Anti-Patterns (BANNED)
 
-```typescript
-// ✅ CREATE DTO (from Insert)
-export type PlayerCreateDTO = Pick<
-  Database['public']['Tables']['player']['Insert'],
-  'first_name' | 'last_name' | 'birth_date'
->;
-
-// ✅ UPDATE DTO (Partial of Insert, omit immutable)
-export type PlayerUpdateDTO = Partial<
-  Omit<
-    Database['public']['Tables']['player']['Insert'],
-    'id' | 'created_at'
-  >
->;
-
-// ✅ RESPONSE DTO (from Row)
-export type PlayerDTO = Pick<
-  Database['public']['Tables']['player']['Row'],
-  'id' | 'first_name' | 'last_name' | 'created_at'
->;
-
-// ✅ RPC PARAMS (from Functions)
-export type CreateFinancialTxnParams =
-  Database['public']['Functions']['rpc_create_financial_txn']['Args'];
-```
-
-**Rules**:
-- ❌ NEVER use `interface` for DTOs
+**Pattern B (Canonical) Services ONLY**:
+- ❌ NEVER use `interface` for DTOs (use `type` with Pick/Omit)
 - ❌ NEVER manually define table structures
 - ✅ ALWAYS derive from `Database` types
 - ✅ Use `Pick`/`Omit`/`Partial` for transformations
 
+**Pattern A (Contract-First) Services**: Manual interfaces are ALLOWED but MUST use mappers.ts
+
+**Reference**: See DTO_CANONICAL_STANDARD.md for complete patterns and enforcement rules
+
+---
+
+## Bounded Context DTO Access Rules
+
+> **Canonical Reference**: SRM v3.1.0 §2.2 (Lines 75-113)
+> **Enforcement**: ESLint rule `no-cross-context-db-imports`
+
+### Core Principle
+
+Services MUST NOT directly access `Database['public']['Tables']['X']` for tables they don't own. Cross-context access is ONLY allowed via published DTOs.
+
+### Allowed Cross-Context DTO Consumption
+
+| Consumer Service | Can Import DTOs From | Use Case | SRM Reference |
+|------------------|---------------------|----------|---------------|
+| **Loyalty** | RatingSlip (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | SRM:358-373 |
+| **Loyalty** | Visit (`VisitDTO`) | Session context for ledger entries | SRM:358 |
+| **Finance** | Visit (`VisitDTO`) | Associate transactions with sessions | SRM:1122 |
+| **Finance** | RatingSlip (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | SRM:1123 |
+| **MTL** | RatingSlip (`RatingSlipDTO`) | Optional FK for compliance tracking | SRM:1295 |
+| **MTL** | Visit (`VisitDTO`) | Optional FK for compliance tracking | SRM:1297 |
+| **TableContext** | Casino (`CasinoSettingsDTO`) | Gaming day temporal authority | SRM:569 |
+| **RatingSlip** | TableContext (`GamingTableDTO`) | Table assignment FK | SRM:1044-1045 |
+| **All Services** | Casino (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references | SRM:148 |
+
+### Examples
+
+**FORBIDDEN** (Direct table access):
+```typescript
+// ❌ services/loyalty/telemetry.ts
+import type { Database } from '@/types/database.types';
+type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+// ESLint error: BOUNDED CONTEXT VIOLATION
+// Service "loyalty" cannot directly access table "rating_slip"
+```
+
+**CORRECT** (Import published DTO):
+```typescript
+// ✅ services/loyalty/mid-session-reward.ts
+import type { RatingSlipTelemetryDTO } from '@/services/rating-slip/dtos';
+
+function calculateReward(telemetry: RatingSlipTelemetryDTO): number {
+  return telemetry.average_bet * telemetry.duration_seconds * 0.01;
+}
+```
+
+**Reference**: SRM v3.1.0:75-113, DTO_CANONICAL_STANDARD.md:176-243
+
 ---
 
 ## Transport Layer Architecture
+
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md, SRM v3.1.0:28-30
 
 ```mermaid
 graph TB
@@ -439,10 +601,51 @@ graph TB
     style ROUTE_READ fill:#c8e6c9,stroke:#2e7d32
 ```
 
+### Entry Point Strategy
+
+**Rule**: First-party = Server Actions, Third-party = Route Handlers (EDGE_TRANSPORT_POLICY.md:16-24)
+
+| Use Case | Entry Point | Notes |
+|----------|-------------|-------|
+| First-party (staff UI, forms) | **Server Actions** (`app/actions/**`) | Primary - wrapped with `withServerAction()` |
+| Third-party (webhooks, integrations) | **Route Handlers** (`app/api/v1/**/route.ts`) | Secondary - reuse same DTOs + services |
+
+### Middleware Chain (`withServerAction`)
+
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:27-45
+
+```
+withAuth()
+  → withRLS()            # SET LOCAL app.casino_id, validates staff scope
+    → withIdempotency()  # Enforces x-idempotency-key for mutations
+      → withAudit()      # Records audit_log row w/ correlation_id
+        → withTracing()  # Metrics, error mapping, SLO budgets
+```
+
+**Responsibilities**:
+- **withAuth**: Validates session, staff role, casino membership
+- **withRLS**: Executes `SET LOCAL app.casino_id`, ensures tenant isolation
+- **withIdempotency**: Requires `x-idempotency-key` on mutations, scopes by `(casino_id, domain)`
+- **withAudit**: Writes `audit_log` rows per SRM contract, sets `application_name = correlation_id`
+- **withTracing**: Emits telemetry spans, maps domain errors → HTTP status codes
+
+### Required Headers
+
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:54-63, OBSERVABILITY_SPEC.md:27-31
+
+| Header | Scope | Owner | Reference |
+|--------|-------|-------|-----------|
+| `x-correlation-id` | All actions & routes | withAudit/withTracing | OBSERVABILITY_SPEC.md:27-31 |
+| `x-idempotency-key` | Mutations only | withIdempotency | EDGE_TRANSPORT_POLICY.md:42 |
+| `x-pt2-client` (optional) | Diagnostics | withTracing | EDGE_TRANSPORT_POLICY.md:59 |
+| `x-slo-budget` (optional) | SLO attribution | withTracing | EDGE_TRANSPORT_POLICY.md:60 |
+
 ### Response Envelope Contract
 
+> **Canonical Reference**: API_SURFACE_MVP.md:1-6
+
 ```typescript
-// ServiceResult<T> (Internal - Service Layer)
+// ServiceResult<T> (Internal - Service Layer → Route Handler)
 interface ServiceResult<T> {
   data: T | null;
   error: ServiceError | null;
@@ -451,42 +654,127 @@ interface ServiceResult<T> {
   requestId: string;
 }
 
-// ServiceHttpResult<T> (External - HTTP Response)
+// ServiceHttpResult<T> (External - Route Handler → Client)
 interface ServiceHttpResult<T> {
-  ok: boolean;
-  code: string;
-  status: number;
-  requestId: string;
-  durationMs: number;
-  timestamp: string;
-  data?: T;
-  error?: string;
-  details?: unknown;
+  ok: boolean;           // Maps from success
+  code: string;          // Domain error code
+  status: number;        // HTTP status (added at edge)
+  requestId: string;     // Passthrough
+  durationMs: number;    // Added by withTracing
+  timestamp: string;     // Passthrough
+  data?: T;              // Optional
+  error?: string;        // Optional
+  details?: unknown;     // Optional
 }
 ```
+
+**Transformation Helper**:
+```typescript
+// lib/http/service-response.ts
+export function toServiceHttpResponse<T>(
+  result: ServiceResult<T>
+): ServiceHttpResult<T> {
+  return {
+    ok: result.success,
+    code: result.error?.code || 'OK',
+    status: mapToHttpStatus(result.error?.code),
+    requestId: result.requestId,
+    durationMs: calculateDuration(result.timestamp),
+    timestamp: result.timestamp,
+    data: result.data || undefined,
+    error: result.error?.message,
+    details: result.error?.details,
+  };
+}
+```
+
+**Reference**: API_SURFACE_MVP.md:1-6, EDGE_TRANSPORT_POLICY.md
 
 ---
 
 ## Real-time Architecture
 
+> **Canonical Reference**: ADR-004-real-time-strategy.md, REAL_TIME_EVENTS_MAP.md
+
+### Domain-Scoped Channels
+
+**Pattern**: `rt.<domain>.<scope>` (e.g., `rt.player.detail`, `rt.table.available`)
+
+**Architecture** (ADR-004:23-26):
+- Each bounded context owns dedicated channel namespace
+- Channels subscribe to Postgres changes filtered by table + row-level `ids`
+- Hooks use scheduler-based batching (default 50ms debounce)
+
 ```mermaid
 sequenceDiagram
     participant DB as Supabase/PostgreSQL
-    participant Channel as Supabase Channel
-    participant Hook as useRealtime Hook
+    participant Channel as Domain Channel<br/>(rt.rating-slip.*)
+    participant Hook as useRealtimeSubscription
+    participant Scheduler as Invalidation Scheduler
     participant QueryClient as React Query Client
     participant UI as UI Component
 
     DB->>Channel: rating_slip.updated event
-    Channel->>Hook: Broadcast event payload
-    Hook->>Hook: Batch events (250-500ms)
-    Hook->>QueryClient: invalidateQueries({ queryKey, refetchType: 'active' })
+    Channel->>Hook: Broadcast typed payload
+    Hook->>Scheduler: Enqueue cache operation (batched)
+    Scheduler->>Scheduler: Debounce 50ms
+    Scheduler->>QueryClient: Execute batch (setQueryData + invalidate)
     QueryClient->>DB: Refetch active queries
     DB-->>QueryClient: Fresh data
     QueryClient->>UI: Update components
 ```
 
+### Hook Pattern
+
+**Reference**: ADR-004:66-71
+
+```typescript
+// hooks/rating-slip/use-rating-slip-realtime.ts
+import { useRealtimeSubscription } from '@/hooks/shared/use-realtime-channel';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
+
+export function useRatingSlipRealtime(ratingSlipId: string) {
+  return useRealtimeSubscription({
+    channel: `rt.rating-slip.${ratingSlipId}`,
+    event: 'rating_slip.updated',
+    queryKey: ratingSlipKeys.detail(ratingSlipId),
+    mode: 'batched', // 50ms debounce (default)
+  });
+}
+```
+
+### Event Processing Strategy
+
+> **Reference**: ADR-004:29-34
+
+**Default**: Scheduler-based (batched, 50ms window)
+```typescript
+// lib/realtime/invalidation-scheduler.ts
+scheduler.enqueue({
+  operation: 'setQueryData',
+  queryKey: ratingSlipKeys.detail(id),
+  data: payload,
+});
+```
+
+**Immediate Mode** (low-frequency events <1/sec):
+```typescript
+mode: 'immediate' // Bypass scheduler
+```
+
+### Event-to-Cache Mapping
+
+> **Reference**: ADR-004:66, REAL_TIME_EVENTS_MAP.md
+
+| Event | Query Keys Affected | Operation | ADR-004 Ref |
+|-------|-------------------|-----------|-------------|
+| `rating_slip.updated` | `ratingSlipKeys.detail(id)`, `ratingSlipKeys.list.scope` | setQueryData + invalidate | ADR-004:32-34 |
+| `loyalty.ledger_appended` | `loyaltyKeys.ledger(playerId)` | invalidate | ADR-004:66 |
+| `table.fill_completed` | `tableKeys.detail(tableId)`, `tableKeys.custody` | setQueryData | ADR-004:58 |
+
 ### Event Contracts
+
+> **Canonical Reference**: REAL_TIME_EVENTS_MAP.md
 
 ```typescript
 // rating_slip.updated
@@ -512,6 +800,8 @@ interface LoyaltyLedgerAppendedEvent {
   at: string;              // ISO timestamp
 }
 ```
+
+**Reference**: ADR-004:23-71, REAL_TIME_EVENTS_MAP.md
 
 ---
 
@@ -997,6 +1287,74 @@ const mutation = useMutation({
 
 ---
 
+## Observability & Audit
+
+> **Canonical Reference**: OBSERVABILITY_SPEC.md, EDGE_TRANSPORT_POLICY.md:38-45
+
+### Correlation ID Propagation
+
+**Pattern**: `x-correlation-id` → `SET LOCAL application_name` (OBSERVABILITY_SPEC.md:23-65)
+
+```typescript
+// Server Action / Route Handler
+export async function mutateEntity(input: DTO) {
+  const correlationId = headers().get('x-correlation-id') || uuidv4();
+  const idempotencyKey = headers().get('x-idempotency-key');
+
+  return withServerAction(correlationId, async (supabase) => {
+    // Propagate to database session
+    await supabase.rpc('exec_sql', {
+      sql: `SET LOCAL application_name = '${correlationId}'`
+    });
+
+    // All downstream RPCs/audit inherit correlation context
+    return await service.mutate(input, { idempotencyKey });
+  });
+}
+```
+
+**Database Usage**:
+```sql
+-- RPCs read current_setting('application_name') for audit rows
+INSERT INTO audit_log (
+  correlation_id,
+  actor_id,
+  domain,
+  action,
+  ...
+) VALUES (
+  current_setting('application_name'),  -- Automatic correlation
+  current_setting('app.actor_id')::uuid,
+  ...
+);
+```
+
+### Canonical Audit Shape
+
+> **Reference**: OBSERVABILITY_SPEC.md:76-88, SRM v3.1.0:19
+
+```typescript
+interface AuditLogEntry {
+  ts: string;                    // timestamptz
+  actor_id: string;              // uuid (staff_id)
+  casino_id: string;             // uuid (tenant scope)
+  domain: string;                // 'loyalty' | 'finance' | 'mtl' | 'table-context' | ...
+  action: string;                // 'create' | 'update' | 'issue_reward' | ...
+  dto_before: JSONObject | null; // Snapshot before mutation
+  dto_after: JSONObject | null;  // Snapshot after mutation
+  correlation_id: string;        // From x-correlation-id header
+  metadata?: JSONObject;         // Domain-specific context
+}
+```
+
+**Emission**: Automatic via `withServerAction` wrapper (EDGE_TRANSPORT_POLICY.md:43)
+
+**Per-Domain KPIs**: Each service defines performance budgets and SLO targets
+
+**Reference**: OBSERVABILITY_SPEC.md, EDGE_TRANSPORT_POLICY.md:38-45
+
+---
+
 ## Testing Strategy
 
 ### Unit Tests (Mandatory)
@@ -1113,45 +1471,66 @@ npm test
 
 ## Idempotency Strategy
 
-### Idempotency Key Enforcement
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:42, API_SURFACE_MVP.md:26
+
+### Complete 3-Layer Implementation
+
+#### Layer 1: Route-Level Enforcement
+
+**Reference**: EDGE_TRANSPORT_POLICY.md:54-63
 
 ```typescript
 // app/api/v1/loyalty/ledger/route.ts
 export async function POST(request: NextRequest) {
-  const ctx = createRequestContext(request);
-
-  // ✅ Require Idempotency-Key header
-  const idempotencyKey = requireIdempotencyKey(request);
+  // Enforce header presence
+  const idempotencyKey = request.headers.get('x-idempotency-key');
+  if (!idempotencyKey) {
+    return errorResponse({
+      code: 'IDEMPOTENCY_KEY_REQUIRED',
+      status: 400
+    });
+  }
 
   const supabase = await createClient();
   const service = createLoyaltyService(supabase);
 
-  const result = await withServerAction(
-    async () => service.appendLedger(input, { idempotencyKey }),
-    { supabase, action: 'loyalty.append', idempotencyKey }
-  );
+  // Pass to middleware + service
+  const result = await withServerAction(async (context) => {
+    return service.appendLedger(input, { idempotencyKey });
+  });
 
-  return successResponse(ctx, result.data, result.code);
+  return toServiceHttpResponse(result);
 }
 ```
 
-### Database-Level Idempotency
+#### Layer 2: Database Schema
+
+**Pattern**: Partial unique index (only non-null keys)
 
 ```sql
 -- loyalty_ledger table with idempotency
 CREATE TABLE loyalty_ledger (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  idempotency_key text,
+  idempotency_key text,  -- Nullable for backward compat
+  player_id uuid NOT NULL,
+  casino_id uuid NOT NULL,
+  points_earned integer NOT NULL,
   -- other columns...
 );
 
--- Partial unique index (only non-null keys)
+-- Partial unique index (WHERE clause critical)
 CREATE UNIQUE INDEX ux_loyalty_ledger_idem
   ON loyalty_ledger (idempotency_key)
   WHERE idempotency_key IS NOT NULL;
 ```
 
-### Service-Level Handling
+**Services with Idempotency** (EDGE_TRANSPORT_POLICY.md):
+- Loyalty (`loyalty_ledger.idempotency_key`)
+- Finance (`player_financial_transaction.idempotency_key`)
+- MTL (`mtl_entry.idempotency_key`)
+- TableContext (custody tables: `table_fill`, `table_credit`, `table_drop`)
+
+#### Layer 3: Service-Level Handling
 
 ```typescript
 // services/loyalty/crud.ts
@@ -1166,85 +1545,134 @@ async create(data: CreateLedgerDTO, opts?: { idempotencyKey?: string }) {
         .single();
 
       if (existing) {
-        // Return existing record (idempotent)
+        // Return existing record (idempotent return)
         return existing;
       }
     }
 
-    // Insert new record
+    // Insert new record with idempotency key
     const { data: row, error } = await this.supabase
       .from('loyalty_ledger')
-      .insert({ ...data, idempotency_key: opts?.idempotencyKey })
+      .insert({
+        ...data,
+        idempotency_key: opts?.idempotencyKey
+      })
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // Handle race condition (duplicate key)
+      if (error.code === '23505') {
+        // Retry lookup
+        const { data: existing } = await this.supabase
+          .from('loyalty_ledger')
+          .select('*')
+          .eq('idempotency_key', opts.idempotencyKey)
+          .single();
+
+        if (existing) return existing;
+      }
+      throw error;
+    }
+
     return row;
   });
 }
 ```
 
+**Reference**: EDGE_TRANSPORT_POLICY.md:42, API_SURFACE_MVP.md:26, existing SLAD:1138-1152
+
 ---
 
 ## RLS (Row-Level Security) Pattern
 
+> **Canonical Reference**: SEC-001-rls-policy-matrix.md:64-100, SECURITY_TENANCY_UPGRADE.md
+> **Schema Foundation**: Migration `20251110224223_staff_authentication_upgrade.sql`
+
+### Canonical Pattern (DEPLOYED Schema)
+
+**Prerequisites** (SEC-001:66-69):
+- ✅ `staff.user_id uuid references auth.users(id)` - DEPLOYED
+- ✅ `exec_sql(text)` RPC for SET LOCAL injection - DEPLOYED
+- ⚠️ `withServerAction` wrapper - In Progress (SEC-001:69)
+
+**Pattern**: `auth.uid()` + `staff.user_id` + `current_setting()`
+
+This pattern ensures:
+1. **User is authenticated** via Supabase auth (`auth.uid()`)
+2. **User is linked to active staff** via `staff.user_id`
+3. **Casino scope injected** via `SET LOCAL app.casino_id`
+4. **Actor identity injected** via `SET LOCAL app.actor_id`
+
 ### Casino-Scoped Tables
 
+**Read Policy** (SEC-001:87-100):
 ```sql
 -- Enable RLS
 ALTER TABLE player_loyalty ENABLE ROW LEVEL SECURITY;
 
--- Read policy: staff can read their casino's data
-CREATE POLICY "Casino staff can read player loyalty"
+-- Read policy (canonical pattern)
+CREATE POLICY "player_loyalty_read_same_casino"
   ON player_loyalty
-  FOR SELECT
-  USING (
-    casino_id IN (
-      SELECT casino_id
+  FOR SELECT USING (
+    -- Verify authenticated user
+    auth.uid() = (
+      SELECT user_id
       FROM staff
-      WHERE id = auth.uid()
+      WHERE id = current_setting('app.actor_id')::uuid
     )
+    -- Verify casino scope
+    AND casino_id = current_setting('app.casino_id')::uuid
   );
+```
 
+**Write Policy** (Role-based):
+```sql
 -- Write policy: admins only
-CREATE POLICY "Casino admins can write player loyalty"
+CREATE POLICY "player_loyalty_write_admin"
   ON player_loyalty
   FOR INSERT
   WITH CHECK (
-    EXISTS (
-      SELECT 1
+    -- User is authenticated staff
+    auth.uid() = (
+      SELECT user_id
       FROM staff
-      WHERE id = auth.uid()
-        AND casino_id = player_loyalty.casino_id
+      WHERE id = current_setting('app.actor_id')::uuid
+        AND casino_id = current_setting('app.casino_id')::uuid
         AND role = 'admin'
     )
+    -- Matches casino scope
+    AND casino_id = current_setting('app.casino_id')::uuid
   );
 ```
 
-### Service Layer Scoping
+### Application Layer (withServerAction)
+
+> **Reference**: EDGE_TRANSPORT_POLICY.md:33, SEC-001:42-44
 
 ```typescript
-// services/loyalty/crud.ts
-async getBalance(playerId: string, casinoId: string) {
-  return executeOperation({ label: 'loyalty.getBalance' }, async () => {
-    const { data, error } = await this.supabase
-      .from('player_loyalty')
-      .select('balance, tier')
-      .eq('player_id', playerId)
-      .eq('casino_id', casinoId)  // ✅ Always scope by casino
-      .single();
+// withServerAction injects context
+await supabase.rpc('exec_sql', {
+  sql: `
+    SET LOCAL app.actor_id = '${actorId}';
+    SET LOCAL app.casino_id = '${casinoId}';
+  `
+});
 
-    if (error) {
-      if (error.code === 'PGRST116') {
-        throw { code: 'NOT_FOUND', message: 'Loyalty record not found' };
-      }
-      throw error;
-    }
-
-    return data;
-  });
-}
+// All subsequent queries inherit RLS context
+const result = await service.getBalance(playerId);
 ```
+
+### Key Principles
+
+> **Reference**: SEC-001:38-46
+
+- ❌ **No JWT claims for business logic** - All context via SET LOCAL
+- ❌ **No service keys in runtime** - All operations use anon key + user authentication
+- ✅ **Casino scoping mandatory** - Every query scoped by `current_setting('app.casino_id')`
+- ✅ **Actor tracking** - `current_setting('app.actor_id')` for audit trails
+
+**Reference**: SEC-001:38-100, SECURITY_TENANCY_UPGRADE.md
 
 ---
 
@@ -1252,17 +1680,25 @@ async getBalance(playerId: string, casinoId: string) {
 
 ### Starting New Service
 
+> **Reference**: SRM v3.1.0 §3, ADR-008
+
 - [ ] Create `services/{domain}/` directory
-- [ ] Define DTOs in `dto.ts` using `Pick`/`Omit` from `Database` types
-- [ ] Create query key factories in `keys.ts` (with `.scope` for lists)
+- [ ] Define DTOs in `dtos.ts` (plural) using appropriate pattern:
+  - **Contract-First** (Loyalty, Finance, MTL, TableContext): Manual interfaces
+  - **Canonical** (Player, Visit, Casino): Pick/Omit from `Database` types
+  - **Hybrid** (RatingSlip): Mixed approach
+- [ ] Add `mappers.ts` if using Contract-First pattern (SRM v3.1.0:141-154)
+- [ ] Create query key factories in `keys.ts` (with `.scope` for lists) (ADR-003:87-96)
 - [ ] Create HTTP fetchers in `http.ts` (thin wrappers to API routes)
-- [ ] Define explicit interface in `index.ts`
+- [ ] Define explicit interface in `index.ts` (NOT ReturnType) (ADR-008)
 - [ ] Implement CRUD operations in `crud.ts`
 - [ ] Add `selects.ts` for column sets
-- [ ] Create Route Handler in `app/api/v1/{domain}/route.ts`
+- [ ] Create Route Handler in `app/api/v1/{domain}/route.ts` with `withServerAction()`
 - [ ] Implement React Query hooks in `hooks/{domain}/`
+- [ ] Add real-time hooks if needed (ADR-004)
 - [ ] Write unit tests
 - [ ] Update SRM if new bounded context
+- [ ] Verify cross-context DTO consumption matrix compliance (SRM:81-93)
 
 ### Adding New Feature
 
@@ -1292,7 +1728,47 @@ async getBalance(playerId: string, casinoId: string) {
 
 ---
 
-**Document Status**: CANONICAL
-**Last Updated**: 2025-10-25
+---
+
+## Document History
+
+**Version**: 2.0.0
+**Date**: 2025-11-14
+**Status**: CANONICAL (Aligned with SRM v3.1.0)
 **Maintained By**: Architecture Team
-**Next Review**: As patterns evolve
+
+### Change Log
+
+**v2.0.0 (2025-11-14)** - SDLC Taxonomy Peer Alignment:
+- ✅ Updated metadata with all canonical references (SRM, SEC-001, ADRs, etc.)
+- ✅ Added DTO Contract-First pattern (SRM v3.1.0:119-155) for complex services
+- ✅ Added DTO Hybrid pattern (SRM v3.1.0:199+) for RatingSlip
+- ✅ Added `mappers.ts` to directory structure (conditional for Contract-First services)
+- ✅ Added cross-context DTO consumption matrix (SRM v3.1.0:81-93)
+- ✅ Enhanced Transport Layer with Edge Transport Policy details
+- ✅ Added required headers table (x-correlation-id, x-idempotency-key)
+- ✅ Completed ServiceHttpResult envelope transformation pattern
+- ✅ Added Observability & Audit section (OBSERVABILITY_SPEC.md)
+- ✅ Updated Real-time Architecture with ADR-004 patterns (domain-scoped channels, scheduler)
+- ✅ Replaced RLS section with SEC-001 canonical pattern (auth.uid + staff.user_id + SET LOCAL)
+- ✅ Completed Idempotency Strategy with 3-layer implementation
+- ✅ Updated checklists with references to canonical docs
+- ✅ Deprecated SERVICE_TEMPLATE.md (outdated, superseded by SRM v3.1.0)
+
+**v1.0 (2025-10-25)** - Initial CANONICAL version
+
+### Alignment Status
+
+| SDLC Peer | Status | Gaps Addressed |
+|-----------|--------|----------------|
+| SRM v3.1.0 | ✅ ALIGNED | Added 3 DTO patterns, cross-context matrix, mappers.ts |
+| DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Referenced Pattern A/B/C with SRM line numbers |
+| SEC-001 | ✅ ALIGNED | Added canonical RLS pattern (auth.uid + SET LOCAL) |
+| EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Added middleware chain, headers, withServerAction |
+| ADR-003 (State Mgmt) | ✅ ALIGNED | Referenced query key factories, React Query v5 |
+| ADR-004 (Real-time) | ✅ ALIGNED | Added domain-scoped channels, scheduler patterns |
+| OBSERVABILITY_SPEC.md | ✅ ALIGNED | Added correlation/audit section |
+| API_SURFACE_MVP.md | ✅ ALIGNED | Added ServiceHttpResult transformation |
+| ADR-008 | ✅ ALIGNED | Referenced service architecture decisions |
+
+**Next Review**: When SRM or security contracts evolve

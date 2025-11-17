@@ -1,20 +1,7 @@
----
-id: ARCH-SRM
-title: Service Responsibility Matrix - Bounded Context Integrity
-version: 3.1.0
-status: CANONICAL
-effective: 2025-11-13
-schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
-source_of_truth:
-  - database schema
-  - docs/30-security/SECURITY_TENANCY_UPGRADE.md
-  - docs/30-security/SEC-001-rls-policy-matrix.md
----
-
 # Service Responsibility Matrix - Bounded Context Integrity (CANONICAL)
 
-> **Version**: 3.1.0 (Security & Tenancy Upgrade) - CANONICAL
-> **Date**: 2025-11-13
+> **Version**: 3.0.2 (Rating Slip Mid-Session Rewards) - PATCHED
+> **Date**: 2025-10-21
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Maintain bounded context integrity across all service domains
 
@@ -22,15 +9,14 @@ source_of_truth:
 > - Source of truth: **This SRM** (matrix-first). Schema MUST mirror this document.
 > - Naming: **lower_snake_case** for tables/columns/enums; no quoted CamelCase.
 > - IDs: **uuid** for all PKs/FKs. Text IDs allowed only as secondary business keys.
-> - JSON: allowed only for **extensible metadata**; operational facts used in FKs/RLS/analytics must be first-class columns. Approved metadata blobs: `table_*` chipset payloads, `rating_slip.policy_snapshot`, `rating_slip.game_settings`, and `floor_layout*` geometry (documented per section).
+> - JSON: allowed only for **extensible metadata**; anything used in FKs/RLS/analytics must be a first-class column.
 > - Ownership: Records that depend on casino policy MUST carry `casino_id` and (where applicable) `gaming_day`.
 > - RLS: Policies derive from ownership in this SRM and must be shipped with each schema change.
 > - Edge transport: First-party reads/writes enter via **Server Actions** wrapped by `withServerAction()` (auth → `SET LOCAL app.casino_id` → RLS scope → idempotency → audit). Route Handlers are reserved for 3rd-party/webhook/file-upload ingress and must reuse the same service DTO contracts. (See `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` for the detailed middleware contract.)
 > - Headers: `x-correlation-id` required on **all** edge calls; `x-idempotency-key` required on **mutations** and persisted by the owning service (Finance, Loyalty, etc.).
-> - Idempotency semantics, DTO validation, and transport middleware are detailed in `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` and the API contracts in `docs/25-api-data/API_SURFACE_MVP.md`.
 > - DTOs: Contract-first DTOs live beside each service, validated with shared zod schemas that are also imported by tests.
 > - Service layer boundaries: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs declared in this SRM—never by reaching into another service's tables/views directly.
-> - Observability & audit: Correlation IDs are injected at the edge and propagated through every service call/RPC (`SET LOCAL application_name = correlation_id`). All contexts emit rows to the canonical audit shape (`{ts, actor_id, casino_id, domain, action, dto_before, dto_after, correlation_id}`) and expose SLO budgets. Detailed instrumentation guidance and event-to-cache mappings live in `docs/50-ops/OBSERVABILITY_SPEC.md` and `docs/80-adrs/ADR-004-real-time-strategy.md`.
+> - Observability & audit: Correlation IDs are injected at the edge and propagated through every service call/RPC (`SET LOCAL application_name = correlation_id`). All contexts emit rows to the canonical audit shape (`{ts, actor_id, casino_id, domain, action, dto_before, dto_after, correlation_id}`) and expose SLO budgets.
 
 > **Conventions**
 > **Identifiers**
@@ -39,33 +25,272 @@ source_of_truth:
 
 ---
 
-## Change Log
+## DTO Contract Policy (Type System Integrity)
 
-- **3.1.0 (2025-11-13)** – Security & tenancy upgrade landed (staff.user_id + `exec_sql` RPC), SRM ↔ SEC doc alignment (`SEC-001`), table ownership clarifications, JSON metadata exceptions documented, redundant RLS excerpts replaced with canonical references.
-- **3.0.2 (2025-10-21)** – Rating Slip Mid-Session Rewards patch (archived at `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX_v3.0.2.md`).
+> **Canonical Reference**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+> **Enforcement**: ESLint + Pre-commit hooks + CI gates
+> **Status**: MANDATORY (Effective 2025-10-22)
+
+### 1. **Table Ownership → DTO Ownership**
+
+**Rule**: A service that OWNS a table in this SRM MUST provide canonical DTOs for that table.
+
+| Service | Owns Tables | MUST Export DTOs |
+|---------|-------------|------------------|
+| **Casino** | `casino`, `casino_settings`, `company`, `staff`, `game_settings` | `CasinoDTO`, `CasinoSettingsDTO`, `StaffDTO`, `GameSettingsDTO` |
+| **Player** | `player`, `player_casino` | `PlayerDTO`, `PlayerEnrollmentDTO` |
+| **Visit** | `visit` | `VisitDTO` |
+| **Loyalty** | `player_loyalty`, `loyalty_ledger` | `PlayerLoyaltyDTO`, `LoyaltyLedgerEntryDTO` |
+| **RatingSlip** | `rating_slip` | `RatingSlipDTO`, `RatingSlipTelemetryDTO` |
+| **Finance** | `player_financial_transaction` | `FinancialTransactionDTO` |
+| **MTL** | `mtl_entry`, `mtl_audit_note` | `MTLEntryDTO`, `MTLAuditNoteDTO` |
+| **TableContext** | `gaming_table`, `gaming_table_settings`, `dealer_rotation`, chip custody tables | `GamingTableDTO`, `DealerRotationDTO`, `TableInventoryDTO`, `TableFillDTO`, `TableCreditDTO`, `TableDropDTO` |
+| **FloorLayout** | `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation` | `FloorLayoutDTO`, `FloorLayoutVersionDTO`, `FloorPitDTO`, `FloorTableSlotDTO`, `FloorLayoutActivationDTO` |
+
+**File Location**: `services/{service}/dtos.ts` (REQUIRED for all services)
 
 ---
 
-## DTO Contract Policy (Type System Integrity)
+### 2. **Bounded Context DTO Access Rules**
 
-> **Full Specification**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
-> **DTO Catalog**: `docs/25-api-data/DTO_CATALOG.md`
-> **Status**: MANDATORY (Effective 2025-10-22)
+**Rule**: Services MUST NOT directly access `Database['public']['Tables']['X']` for tables they don't own.
 
-**Core Rule**: Services MUST provide canonical DTOs for tables they own and MUST NOT directly access `Database['public']['Tables']['X']` for tables they don't own. Cross-context consumption happens through published DTOs only.
+**Enforcement**: ESLint rule `no-cross-context-db-imports` (see DTO_CANONICAL_STANDARD.md:176-243)
 
-**Key Patterns**:
-- **Bounded Context Services** (Loyalty, Finance, MTL, TableContext): Contract-first DTOs with explicit mappers
-- **Thin CRUD Services** (Player, Visit, Casino): Canonical DTOs using Pick/Omit from database types
-- **Hybrid Services** (RatingSlip): Mixed approach with published cross-context contracts
+#### Cross-Context DTO Consumption (Allowed Patterns)
 
-**Migration Workflow**: When modifying schema: (1) Update SRM, (2) Run migration, (3) **`npm run db:types`** (CRITICAL), (4) Update DTOs/mappers, (5) Pass type-check and ESLint, (6) Update tests.
+| Consumer Service | Can Import DTOs From | Use Case | SRM Reference |
+|------------------|---------------------|----------|---------------|
+| **Loyalty** | RatingSlip (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | SRM:358-373 |
+| **Loyalty** | Visit (`VisitDTO`) | Session context for ledger entries | SRM:358 |
+| **Finance** | Visit (`VisitDTO`) | Associate transactions with sessions | SRM:1122 |
+| **Finance** | RatingSlip (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | SRM:1123 |
+| **MTL** | RatingSlip (`RatingSlipDTO`) | Optional FK for compliance tracking | SRM:1295 |
+| **MTL** | Visit (`VisitDTO`) | Optional FK for compliance tracking | SRM:1297 |
+| **TableContext** | Casino (`CasinoSettingsDTO`) | Gaming day temporal authority | SRM:569 |
+| **RatingSlip** | TableContext (`GamingTableDTO`) | Table assignment FK | SRM:1044-1045 |
+| **All Services** | Casino (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references | SRM:148 |
 
-**Why Follow the Links**:
-- **DTO_CATALOG.md** (771 lines): Complete ownership matrix, per-DTO field specifications, cross-context consumption rules, column exposure policies, and versioning. Essential for understanding which DTOs your service can consume and how to structure new DTOs.
-- **DTO_CANONICAL_STANDARD.md**: CI enforcement details, ESLint rules, derivation patterns by service type, and migration workflows.
+**Example (CORRECT)**:
+```typescript
+// services/loyalty/mid-session-reward.ts
+import type { RatingSlipTelemetryDTO } from '@/services/rating-slip/dtos';
+// ✅ Consumes published DTO from owning service
 
-See SRM service sections below for table ownership; see DTO_CATALOG for complete DTO cross-reference matrix.
+function calculateReward(telemetry: RatingSlipTelemetryDTO): number {
+  return telemetry.average_bet * telemetry.duration_seconds * 0.01;
+}
+```
+
+**Example (FORBIDDEN)**:
+```typescript
+// services/loyalty/telemetry.ts
+import type { Database } from '@/types/database.types';
+type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+// ❌ ESLint error: BOUNDED CONTEXT VIOLATION
+// Service "loyalty" cannot directly access table "rating_slip"
+```
+
+---
+
+### 3. **DTO Derivation Patterns (By Service Type)**
+
+#### A. **Bounded Context Services** (Complex Business Logic)
+
+**Services**: Loyalty, Finance, MTL, TableContext
+
+**Pattern**: Contract-First DTOs (SRM-aligned interfaces + mappers)
+
+```typescript
+// services/loyalty/dtos.ts
+/**
+ * PlayerLoyaltyDTO - Public loyalty balance
+ *
+ * Exposure: UI, external APIs
+ * Excludes: preferences (internal-only)
+ * Owner: LoyaltyService (SRM:343-373)
+ */
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+}
+
+// services/loyalty/mappers.ts (INTERNAL USE ONLY)
+import type { Database } from '@/types/database.types';
+
+type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Omit: preferences (internal field)
+  };
+}
+```
+
+**Rationale**:
+- Decouples domain contracts from schema evolution
+- Enforces explicit control over field exposure
+- Prevents internal columns from leaking to public APIs
+
+---
+
+#### B. **Thin CRUD Services** (Simple Data Access)
+
+**Services**: Player, Visit, Casino
+
+**Pattern**: Canonical DTOs (Pick/Omit from Database types with allowlist enforcement)
+
+```typescript
+// services/player/dtos.ts
+import type { Database } from '@/types/database.types';
+
+/**
+ * PlayerDTO - Public player profile
+ *
+ * Exposure: UI, external APIs
+ * Excludes: birth_date (PII), internal_notes (staff-only)
+ * Owner: PlayerService (SRM:149)
+ */
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'created_at'
+>;
+
+export type PlayerCreateDTO = Pick<
+  Database['public']['Tables']['player']['Insert'],
+  'first_name' | 'last_name' | 'birth_date'
+>;
+```
+
+**Rationale**:
+- Minimal boilerplate for simple CRUD
+- Automatic schema sync via `npm run db:types`
+- Allowlist enforcement prevents PII leakage (ESLint rule: `dto-column-allowlist`)
+
+---
+
+#### C. **Hybrid Services** (Mixed Complexity)
+
+**Services**: RatingSlip (owns telemetry, publishes to Loyalty/Finance)
+
+**Pattern**: Canonical DTOs for owned data + mapper functions for cross-context publishing
+
+```typescript
+// services/rating-slip/dtos.ts
+import type { Database } from '@/types/database.types';
+
+// Internal DTO (full row)
+export type RatingSlipDTO = Database['public']['Tables']['rating_slip']['Row'];
+
+// Published DTO (cross-context contract)
+export interface RatingSlipTelemetryDTO {
+  id: string;
+  player_id: string;
+  casino_id: string;
+  average_bet: number | null;
+  duration_seconds: number;
+  game_type: 'blackjack' | 'poker' | 'roulette' | 'baccarat';
+  // Omit: policy_snapshot (internal), visit_id (FK not needed by consumers)
+}
+
+// services/rating-slip/mappers.ts
+export function toTelemetryDTO(slip: RatingSlipDTO): RatingSlipTelemetryDTO {
+  return {
+    id: slip.id,
+    player_id: slip.player_id,
+    casino_id: slip.casino_id,
+    average_bet: slip.average_bet,
+    duration_seconds: calculateDuration(slip),
+    game_type: slip.game_settings?.type || 'blackjack',
+  };
+}
+```
+
+---
+
+### 4. **Column Exposure Policy**
+
+**Rule**: DTOs MUST document exposure scope and excluded fields.
+
+**Required JSDoc Template**:
+```typescript
+/**
+ * {ServiceName}DTO - {Purpose}
+ *
+ * Exposure: {UI | Admin UI | External API | Internal only}
+ * Excludes: {field1 (reason), field2 (reason), ...}
+ * Owner: {ServiceName} (SRM:{line-ref})
+ */
+```
+
+**Sensitive Tables** (MUST use allowlist):
+- `player`: Exclude `birth_date`, `ssn`, `internal_notes`, `risk_score`
+- `staff`: Exclude `employee_id`, `email`, `ssn`
+- `player_financial_transaction`: Exclude `idempotency_key` (internal-only)
+- `loyalty_ledger`: Exclude `idempotency_key` (internal-only)
+
+**Enforcement**: ESLint rule `dto-column-allowlist` (DTO_CANONICAL_STANDARD.md:246-305)
+
+---
+
+### 5. **Type Import Restrictions**
+
+**Rule**: `types/database.types.ts` MUST only be imported in:
+1. Service-owned `mappers.ts` files (internal use)
+2. Service-owned `dtos.ts` files (for canonical pattern services)
+3. RPC parameter builders
+
+**Forbidden Locations**:
+- ❌ `app/` directory (route handlers, server actions)
+- ❌ `components/` directory (UI components)
+- ❌ `lib/` directory (shared utilities)
+- ❌ Cross-service imports (e.g., loyalty importing from `services/rating-slip/mappers.ts`)
+
+**Enforcement**: ESLint import restrictions (DTO_CANONICAL_STANDARD.md:176-243)
+
+---
+
+### 6. **CI Validation Requirements**
+
+All DTO changes MUST pass:
+
+1. **Syntax Check**: No manual `interface` DTOs (ESLint: `no-manual-dto-interfaces`)
+2. **Bounded Context Check**: No cross-service table access (ESLint: `no-cross-context-db-imports`)
+3. **Column Allowlist Check**: Sensitive fields not exposed (ESLint: `dto-column-allowlist`)
+4. **Ownership Check**: All SRM-owned tables have published DTOs
+5. **Documentation Check**: All DTOs have exposure JSDoc
+
+**CI Gate** (GitHub Actions):
+```yaml
+- name: Validate DTO Compliance
+  run: |
+    npx eslint services/**/*.ts --max-warnings 0
+    node scripts/validate-srm-ownership.js
+    node scripts/validate-dto-fields.js
+```
+
+---
+
+### 7. **Migration Workflow**
+
+When adding/modifying a table:
+
+1. **Update SRM**: Document table in ownership matrix
+2. **Run Migration**: `npx supabase migration new {description}`
+3. **Regenerate Types**: `npm run db:types` (CRITICAL)
+4. **Create/Update DTOs**: In owning service's `dtos.ts`
+5. **Add Mappers** (if bounded context): In owning service's `mappers.ts`
+6. **Run Type Check**: `npm run type-check` (must pass)
+7. **Run ESLint**: `npx eslint services/{service}/` (must pass)
+8. **Update Tests**: Use same DTOs in test fixtures
+
+**Enforcement**: Pre-commit hook validates steps 6-7 (DTO_CANONICAL_STANDARD.md:309-327)
 
 ---
 
@@ -85,12 +310,35 @@ create type loyalty_reason as enum ('mid_session','session_end','manual_adjustme
 - Migration order: enums first, then tables that consume them.
 - Change policy: additive values only; removals require deprecation plus data rewrite.
 
-### Event / Telemetry Contracts
+### Event / Telemetry Notes
 
-> **Event Catalog**: `docs/35-integration/INT-002-event-catalog.md`
-> **Realtime Strategy**: `docs/80-adrs/ADR-004-real-time-strategy.md`
+**rating_slip.events** (reference, non-persistent)
+```json
+{
+  "event": "rating_slip.updated",
+  "rating_slip_id": "uuid",
+  "player_id": "uuid",
+  "casino_id": "uuid",
+  "average_bet": 25.0,
+  "minutes_played": 42,
+  "game_type": "blackjack",
+  "at": "2025-10-21T19:15:00Z"
+}
+```
 
-**Core Rule**: Event payloads mirror SRM table FKs and types; no ad-hoc keys. Channel naming: `{casino_id}` for collections, `{casino_id}:{resource_id}` for details. See INT-002 for complete event catalog (producers, consumers, payloads, channel scopes), retry semantics, and UI cache reconciliation patterns.
+**loyalty.ledger_appended**
+```json
+{
+  "event": "loyalty.ledger_appended",
+  "ledger_id": "uuid",
+  "player_id": "uuid",
+  "points_earned": 120,
+  "reason": "session_end",
+  "rating_slip_id": "uuid|null",
+  "at": "2025-10-21T19:16:00Z"
+}
+```
+- Contract: event keys mirror table FKs and types in this SRM; no ad-hoc string keys.
 
 ### Index Strategy Stubs
 
@@ -130,8 +378,7 @@ create index if not exists ix_mtl_casino_time
 - `withServerAction()` is composed from independently tested middlewares: `withAuth()` → `withRLS()` → `withRateLimit()` → `withIdempotency()` → `withAudit()` → `withTracing()`. Each middleware stays <100 LOC, exposes a deterministic contract, and has unit tests so we can evolve concerns independently instead of accreting "god" wrappers.
 - Domain errors raised inside services are mapped once (inside the middleware chain) to canonical HTTP codes; Postgres errors must never escape to the UI directly.
 
-### Error Taxonomy & Resilience *(canonical: `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`)*
-> **Extraction Target**: Keep summary here; defer detailed codes/mapping to the canonical doc.
+### Error Taxonomy & Resilience *(see `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` for full detail)*
 
 **Status**: MANDATORY (Effective 2025-11-09)
 
@@ -315,15 +562,14 @@ node scripts/validate-error-taxonomy.js
 - Rate Limiter: `lib/errors/rate-limiter.ts`
 - Error Mapping: `lib/server-actions/error-map.ts`
 
-### Security & Tenancy *(canonical references: `docs/30-security/SECURITY_TENANCY_UPGRADE.md`, `docs/30-security/SEC-001-rls-policy-matrix.md`, `docs/30-security/SEC-002-casino-scoped-security-model.md`, `docs/30-security/SEC-003-rbac-matrix.md`)*
-> **Extraction Target**: `docs/30-security/SEC-005-role-taxonomy.md` (stub) for role definitions referenced by RLS/channel joins
+### Security & Tenancy *(see `docs/30-security/SECURITY_TENANCY_UPGRADE.md` for full detail)*
 
-**Status**: MANDATORY (Effective 2025-11-09, enforced via `supabase/migrations/20251110224223_staff_authentication_upgrade.sql`)
-**Schema State**: ✅ DEPLOYED (staff.user_id column + `exec_sql` RPC present; dealers remain non-authenticated so their `user_id` stays null)
+**Status**: MANDATORY (Effective 2025-11-09)
+**Schema State**: ⚠️ TARGET STATE (requires migration - staff.user_id not yet added)
 
 **Purpose**: Eliminate privilege escalation via service keys; enforce multi-tenant isolation via canonical RLS pattern.
 
-**Note**: Dealer rows intentionally keep `user_id = null`. Canonical RLS policies match authenticated pit_boss/admin staff to `auth.uid()` via the new column; dealers stay non-authenticated scheduling metadata only.
+**⚠️ IMPORTANT**: All RLS code examples in this section represent **TARGET STATE** after security upgrade migration. Current baseline schema (staff table) does NOT yet have `user_id` column. See Migration Checklist below for upgrade path.
 
 #### Pitfalls (Before)
 
@@ -372,7 +618,7 @@ node scripts/validate-error-taxonomy.js
 3. **Canonical RLS pattern**: Single deterministic path
    ```sql
    -- ✅ AFTER: No OR trees, uses current_setting()
-   -- Requirement satisfied: staff.user_id column added in migration 20251110224223
+   -- ⚠️ REQUIRES: staff.user_id column (see migration steps below)
    create policy "visit_read_same_casino"
      on visit for select using (
        auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
@@ -382,7 +628,8 @@ node scripts/validate-error-taxonomy.js
 
 #### RLS Context Injection
 
-**Deployed State** (Post-migration `20251110224223` + dealer clarification `20251110231330`)
+**⚠️ TARGET STATE (Post-Security-Upgrade)**
+**Status**: Requires `staff.user_id` column (see SECURITY_TENANCY_UPGRADE.md Step 1)
 **Effective**: 2025-11-09
 
 **Implementation** (`lib/supabase/rls-context.ts`):
@@ -397,7 +644,7 @@ export interface RLSContext {
 /**
  * Get authenticated user's casino context
  *
- * Prerequisite: staff.user_id uuid references auth.users(id) (migration 20251110224223, dealers stay null)
+ * ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
  *
  * Flow:
  * 1. auth.getUser() → user_id from auth.users
@@ -409,7 +656,7 @@ export async function getAuthContext(supabase): Promise<RLSContext> {
   const { data: staff } = await supabase
     .from('staff')
     .select('id, casino_id, role')
-    .eq('user_id', user.id)  // Present since migration 20251110224223
+    .eq('user_id', user.id)  // ⚠️ Requires migration: add staff.user_id column
     .eq('status', 'active')
     .single();
 
@@ -433,13 +680,13 @@ export async function injectRLSContext(supabase, context, correlationId): Promis
 }
 ```
 
-#### RLS Policy Templates *(see SEC-001 for full matrix)*
+#### RLS Policy Templates
 
-**Deployed Templates**: Require `staff.user_id` column (fulfilled by migration `20251110224223`; dealers remain null by design)
+**⚠️ TARGET STATE**: All templates below require `staff.user_id` column (SECURITY_TENANCY_UPGRADE.md)
 
 **Template 1: Read Access (Casino-Scoped)**
 ```sql
--- Requirement: staff.user_id uuid references auth.users(id) (present)
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 create policy "{table}_read_same_casino"
   on {table} for select using (
     auth.uid() = (
@@ -453,7 +700,7 @@ create policy "{table}_read_same_casino"
 
 **Template 2: Write Access (Role-Gated)**
 ```sql
--- Requirement: staff.user_id uuid references auth.users(id) (present)
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 create policy "{table}_insert_authorized"
   on {table} for insert with check (
     auth.uid() = (
@@ -468,7 +715,7 @@ create policy "{table}_insert_authorized"
 
 **Template 3: Append-Only Ledger**
 ```sql
--- Requirement: staff.user_id uuid references auth.users(id) (present)
+-- ⚠️ REQUIRES: staff.user_id uuid references auth.users(id)
 -- Insert only
 create policy "{table}_append_authorized"
   on {table} for insert with check (
@@ -481,7 +728,7 @@ create policy "{table}_no_updates" on {table} for update using (false);
 create policy "{table}_no_deletes" on {table} for delete using (false);
 ```
 
-#### RLS Policy Matrix *(authoritative table lives in `docs/30-security/SEC-001-rls-policy-matrix.md`; mirrored here for quick scan)*
+#### RLS Policy Matrix
 
 | Service | Tables | Read Policy | Write Policy | Template |
 |---------|--------|-------------|--------------|----------|
@@ -495,29 +742,29 @@ create policy "{table}_no_deletes" on {table} for delete using (false);
 | **Rating Slip** | `rating_slip` | Same casino | Telemetry service | Template 2 (telemetry role) |
 | **Floor Layout** | `floor_layout`, `floor_pit` | Same casino | Admin only | Template 2 (admin role) |
 
-#### Migration Checklist (Status; see SECURITY_TENANCY_UPGRADE.md for playbook)
+#### Migration Checklist
 
-**Status**: ✅ Completed via `20251110224223_staff_authentication_upgrade.sql` + `20251110231330_dealer_role_clarification.sql`. Keep this list to verify future tables/contexts stay compliant.
+**⚠️ MIGRATION REQUIRED**: The RLS patterns above require database schema changes.
 
-**See**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` for detailed procedure
+**See**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` for complete migration guide
 **Effective**: 2025-11-09 (MANDATORY)
-**Priority** (if onboarding a new context): Finance → Loyalty → Visit → Others
+**Priority**: Finance → Loyalty → Visit → Others
 
 **Database:**
-- [x] Add `user_id uuid references auth.users(id)` to `staff` table (BLOCKER for RLS)
-- [x] Backfill `staff.user_id` with auth.users linkage (dealers remain null)
-- [x] Add unique index on `user_id` (partial for nulls)
-- [x] Create `exec_sql(text)` RPC for `SET LOCAL` commands (security definer)
-- [x] Apply canonical RLS policies per template (table by table)
-- [x] Enable RLS on all casino-scoped tables
-- [x] Deny direct table access (force RPC for mutations)
+- [ ] Add `user_id uuid references auth.users(id)` to `staff` table (BLOCKER for RLS)
+- [ ] Backfill `staff.user_id` with auth.users linkage (production: manual assignment or invite flow)
+- [ ] Add `not null` constraint and unique index on `user_id` after backfill
+- [ ] Create `exec_sql(text)` RPC for `SET LOCAL` commands (security definer)
+- [ ] Apply RLS policies per template (table by table)
+- [ ] Enable RLS on all casino-scoped tables
+- [ ] Deny direct table access (force RPC for mutations)
 
 **Application:**
-- [x] Remove all `SERVICE_ROLE_KEY` usage from runtime code
-- [x] Update `withServerAction` to inject RLS context
-- [x] Validate `auth.uid()` → `staff.user_id` link
-- [x] Test cross-casino isolation
-- [x] Audit admin override policies
+- [ ] Remove all `SERVICE_ROLE_KEY` usage from runtime code
+- [ ] Update `withServerAction` to inject RLS context
+- [ ] Validate `auth.uid()` → `staff.user_id` link
+- [ ] Test cross-casino isolation
+- [ ] Audit admin override policies
 
 **CI Validation:**
 ```bash
@@ -547,7 +794,7 @@ using (
 **✅ DO: Single path**
 ```sql
 -- ✅ GOOD: Deterministic
--- Requirement satisfied: staff.user_id column present
+-- ⚠️ REQUIRES: staff.user_id column (see SECURITY_TENANCY_UPGRADE.md)
 using (
   auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
   AND casino_id = current_setting('app.casino_id')::uuid
@@ -584,13 +831,13 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - WRAPPER Integration: `lib/server-actions/with-server-action-wrapper.ts`
 - Policy Matrix: `docs/30-security/SEC-001-rls-policy-matrix.md`
 
-### Client Cache & Realtime Discipline
+### Client Cache & Realtime Discipline *(aligns with `context/state-management.context.md`)*
 
-> **Event Catalog**: `docs/35-integration/INT-002-event-catalog.md`
-> **State Management Strategy**: `docs/80-adrs/ADR-003-state-management-strategy.md`
-> **Real-Time Strategy**: `docs/80-adrs/ADR-004-real-time-strategy.md`
-
-**Core Rule**: React Query is single source of truth. Query keys follow `[domain, operation, scope?, ...params]`. Mutations emit SRM domain events; realtime listeners reconcile via `invalidateByDomainEvent()`. Channels scoped by `casino_id` and role; hot domains use snapshots (1-5s) not raw row mutations. See INT-002 for event catalog; ADR-003/004 for query key conventions, invalidation patterns, poll vs stream decisions, and stale-while-revalidate configuration.
+- React Query is the single source of truth for server data. Query keys follow `[domain, operation, scope?, ...params]` (e.g., `['rating-slip','detail',slip_id]`) so mutation invalidation and realtime reconciliation remain deterministic.
+- Every mutation declares the SRM domain events it emits (`ratingSlip.updated`, `loyalty.ledger_appended`, etc). The same event payload is published via Edge (Server Action) and consumed by Supabase Realtime so UI caches can reconcile without streaming raw row-level changes.
+- Implement a shared `invalidateByDomainEvent(event, payload)` helper that maps SRM events to React Query keys; use it in both mutation success handlers and realtime listeners.
+- Realtime channels are scoped by casino and resource: `{casino_id}` for collection/list feeds; `{casino_id}:{resource_id}` for detail views. Hot domains (RatingSlip, TableContext telemetry) broadcast state transitions or periodic snapshots (1–5s) instead of every row mutation to avoid over-subscription.
+- Realtime subscriptions include predicates on `casino_id` **and role**; channel joins are denied unless the caller's role matches the SRM RLS policy (e.g., pit boss vs cage). For high-cardinality dashboards, prefer **poll + ETag** refresh (React Query refetch with `If-None-Match`) rather than realtime streams.
 
 ### UX & Data Fetching Patterns *(see `docs/70-governance/UX_DATA_FETCHING_PATTERNS.md` for full detail)*
 
@@ -619,11 +866,11 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - TanStack Virtual: `https://tanstack.com/virtual/latest`
 - Frontend Canonical Standard: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md`
 
-### Service Layer Isolation & CQRS Guidance *(see `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for layering/service-factory wiring and `docs/80-adrs/ADR-003-state-management-strategy.md` for CQRS-light cache rules)*
+### Service Layer Isolation & CQRS Guidance
 
-- Each bounded context exposes **DTO-level service APIs** (_service factories, RPCs, server actions_) defined in this SRM. Other contexts consume those APIs; direct table/view reads across contexts are prohibited (e.g., Loyalty never joins `rating_slip`, it calls `rpc_issue_mid_session_reward`). The service layer diagram documents how Server Actions/Route Handlers call into factories and repositories; follow that structure when adding new services.
-- Cross-context write paths occur via RPCs owned by the target service. WRAPPER code must not fan out into multiple services when a single domain orchestration suffices—push orchestration into service-level factories to avoid N+1 RPCs (see the architecture diagram’s transport-to-service boundaries).
-- Hot telemetry domains (RatingSlip, TableContext) follow the CQRS-light pattern captured in ADR-003: append-only write models for ingest plus projection jobs/materialized views for read models. Projection cadence and ownership are documented per service section.
+- Each bounded context exposes **DTO-level service APIs** (_service factories, RPCs, server actions_) defined in this SRM. Other contexts consume those APIs; direct table/view reads across contexts are prohibited (e.g., Loyalty never joins `rating_slip`, it calls `rpc_issue_mid_session_reward`).
+- Cross-context write paths occur via RPCs owned by the target service. WRAPPER code must not fan out into multiple services when a single domain orchestration suffices—push orchestration into service-level factories to avoid N+1 RPCs.
+- Hot telemetry domains (RatingSlip, TableContext) follow a CQRS-light pattern: append-only write models optimized for ingest plus projection jobs/materialized views for read models. Projection cadence and ownership are documented per service section.
 
 ### Financial & Reward Correctness
 
@@ -633,9 +880,13 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 
 ### Deprecation Policy
 
-> **Migration Tracking Matrix**: `docs/65-migrations/MIG-001-migration-tracking-matrix.md`
-
-**Rule**: All deprecations tracked in MIG-001 with rationale, migration plan, owner, and EOL release. CI fails if EOL item exists past target version (5 business day grace max).
+```md
+**DEPRECATIONS**
+- `rating_slip.points` — deprecated in v3.0.0, EOL v3.2.0. Replace with `player_loyalty.balance`.
+- `dealer_rotation.table_string_id` (legacy alias `tableStringId`) — deprecated in v3.0.0, EOL v3.1.0. Use FK `dealer_rotation.table_id`.
+```
+- CI rule: fail when an EOL item exists past its target version (5 business day grace max).
+- Every deprecation must name rationale, migration/backfill plan, owner, and EOL release.
 
 ---
 
@@ -645,7 +896,7 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 |--------|---------|------|------------|------------|------------------|
 | **Foundational** | `CasinoService` | • Casino registry<br>• **casino_settings** (EXCLUSIVE WRITE)<br>• **Timezone & gaming day** (temporal authority)<br>• **Compliance thresholds** (CTR, watchlist)<br>• Game config templates<br>• Staff & access control<br>• Corporate grouping<br>• Audit logs<br>• Reports | • Company (FK, corporate parent) | • All operational domains<br>• Policy inheritance<br>• Configuration distribution | **Root temporal authority & global policy** |
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• rating_slips<br>• Loyalty | Identity management |
-| **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips (chip custody telemetry)<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** *(post-MVP extensions in `docs/20-architecture/SRM_Addendum_TableContext_PostMVP.md`)* |
+| **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips (chip custody telemetry)<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** |
 | **Operational** | `FloorLayoutService` | • Floor layout drafts & approvals<br>• Layout versions (immutable snapshots)<br>• Pit definitions & sections<br>• Table slot placements<br>• Layout activation log/events | • Casino (FK)<br>• Staff (FK, admins)<br>• TableContext (event consumers) | • Activation history<br>• Layout review queues | **Design & activate gaming floor layouts** |
 | **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• `status`/`policy_snapshot` | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
@@ -666,7 +917,7 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - `casino` table (canonical casino identity)
 - `company` table (corporate ownership hierarchy)
 - `game_settings` table (game configuration templates)
-- `staff` table (staff registry and access control) — `user_id` auth linkage enforced via migration `20251110224223` (dealers remain null)
+- `staff` table (staff registry and access control) ⚠️ **Pending**: `user_id` auth linkage (SECURITY_TENANCY_UPGRADE)
 - `player_casino` table (player enrollment associations)
 - `audit_log` table (cross-domain event logging)
 - `report` table (administrative reports)
@@ -688,11 +939,15 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - [ ] **Temporal config:** `casino_settings.gaming_day_start_time time not null default '06:00'`
 - [ ] **Ownership:** `casino_id` on `staff`
 - [ ] **Constraints:** `casino_settings` 1:1 via unique `(casino_id)`
-- [ ] **RLS:** staff read/write scoped to their `casino_id` (admins write) — see `docs/30-security/SEC-001-rls-policy-matrix.md#casino`
+- [ ] **RLS:** staff read/write scoped to their `casino_id` (admins write) ⚠️ Pending: requires `staff.user_id`
 - [ ] **Access paths:** `casino_settings` by `casino_id`; `staff` by `casino_id`, `employee_id`
-- [ ] **Auth linkage:** `staff.user_id uuid references auth.users(id)` (see migration `20251110224223`)
+- [ ] **Auth linkage (PENDING):** `staff.user_id uuid references auth.users(id)` (see SECURITY_TENANCY_UPGRADE.md)
 
-**RLS Reference**: See `docs/30-security/SEC-001-rls-policy-matrix.md#casino` for canonical read/write policies (implemented via `SET LOCAL` per `docs/30-security/SECURITY_TENANCY_UPGRADE.md`).
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Service Boundary Notes
 - Downstream services consume CasinoService facts via exposed DTOs/RPCs (`getCasinoSettings`, staff roster endpoints) or denormalized projections; they **never** join directly against `casino`, `staff`, or `casino_settings` tables.
@@ -743,12 +998,12 @@ create table staff (
   email text unique,
   role staff_role not null, -- No default; explicit assignment required (see Dealer Role Semantics below)
   status staff_status not null default 'active',
-  user_id uuid references auth.users(id),
   created_at timestamptz not null default now()
+  -- ⚠️ PENDING SECURITY UPGRADE (Effective 2025-11-09):
+  -- user_id uuid references auth.users(id) not null unique
+  -- See: docs/30-security/SECURITY_TENANCY_UPGRADE.md (Step 1)
+  -- Required for: RLS context injection, withServerAction() wrapper, multi-tenant isolation
 );
-
-create unique index staff_user_id_unique on staff(user_id)
-  where user_id is not null;
 
 #### Dealer Role Semantics
 
@@ -820,17 +1075,20 @@ const { data, error } = await supabase
 - [ ] **RLS:** membership reads within same `casino_id`; writes by enrollment service
 - [ ] **Access paths:** membership by `(player_id, casino_id)`; visits by `(player_id, started_at desc)`
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` defines the same-casino read policies and enrollment/visit write paths. All access flows through Server Actions or RPCs that set `app.casino_id`.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Service Boundary Notes
-- PlayerService owns enrollment + identity fields; VisitService depends on Player DTOs and never mutates player data directly.
-- VisitService exposes session lifecycle RPCs (`create_visit`, `close_visit`, etc.); downstream domains (Finance, Loyalty, MTL) consume published Visit DTOs/RPCs instead of querying the `visit` table directly.
-- Casino/Staff metadata required by VisitService is retrieved via CasinoService DTOs so the ownership boundary remains intact.
+- Loyalty never reads RatingSlip tables directly; it ingests gameplay facts via `rpc_issue_mid_session_reward` inputs or dedicated DTOs (e.g., telemetry projections). Any cross-context read must come from a published API/projection, not raw joins.
+- When Loyalty needs casino/staff metadata it calls the owning service’s RPCs; direct foreign reads are forbidden to keep bounded contexts isolated.
 
 ### Transport & Edge Rules
-- Player enrollment and visit check-in/out flows MUST enter via `withServerAction()` so auth, `SET LOCAL app.*`, and audit/idempotency policies remain centralized.
-- Route Handlers are limited to kiosk or kiosk-adjacent integrations and reuse the same DTO/zod schemas as Server Actions.
-- DTO/zod schemas are owned by PlayerService/VisitService and imported by UI/tests to guarantee parity with this SRM.
+- Mid-session rewards, manual adjustments, and preference updates are invoked via Server Actions that wrap `rpc_issue_mid_session_reward`/companion RPCs with `withServerAction()`; the wrapper enforces auth, sets `app.casino_id`, logs `x-correlation-id`, and requires `x-idempotency-key` for every ledger mutation.
+- Route Handlers exist only for third-party loyalty integrations and must reuse the same DTO schema + audit contract defined for Server Actions.
+- DTOs/zod schemas live with LoyaltyService and are re-imported by UI/tests to prove parity with the SRM.
 
 ### Schema
 
@@ -897,14 +1155,18 @@ create table visit (
 - [ ] **Outbox:** `loyalty_outbox` table captures downstream side effects; worker documented
 - [ ] **Policy evaluation function:** pure, side-effect-free function published for re-evaluation (see below)
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#loyaltyservice` — append-only ledger inserts via `rpc_issue_mid_session_reward`; direct UPDATE/DELETE paths remain disabled.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Service Boundary Notes
 - RatingSlipService owns telemetry ingest; downstream consumers read via events/DTOs or dedicated projections, not by querying `rating_slip` directly. Loyalty and Finance interact through RPCs (`rpc_issue_mid_session_reward`) or read models.
 - WRAPPER code must call RatingSlip service factories/RPCs instead of chaining multiple service writes per request to avoid WRAPPER-level fan-out.
 
 ### Transport & Edge Rules
-- Mid-session rewards, manual adjustments, and preference updates are invoked via Server Actions that wrap `rpc_issue_mid_session_reward`/related RPCs with `withServerAction()`; the wrapper enforces auth, sets `app.casino_id`, logs `x-correlation-id`, and requires `x-idempotency-key` for every ledger mutation (HTTP contract lives in `docs/25-api-data/API_SURFACE_MVP.md`).
+- Mid-session rewards, manual adjustments, and preference updates are invoked via Server Actions that wrap `rpc_issue_mid_session_reward`/related RPCs with `withServerAction()`; the wrapper enforces auth, sets `app.casino_id`, logs `x-correlation-id`, and requires `x-idempotency-key` for every ledger mutation.
 - Route Handlers exist only for third-party loyalty integrations/webhooks and must reuse the same DTO schema + audit contract defined for Server Actions.
 - DTO/zod schemas live with LoyaltyService and are re-imported by UI/tests to guarantee SRM conformance.
 
@@ -1076,8 +1338,6 @@ const { data: ledger, error: reward_error } = await supabase
 
 ### ✅ TableContextService (Operational Telemetry & Lifecycle)
 
-> Detailed custody extensions, regulatory references, and operational KPIs live in `docs/20-architecture/SRM_Addendum_TableContext_PostMVP.md`. That addendum clarifies Finance vs TableContext ownership and should be consulted for any new custody object.
-
 **OWNS:**
 - **Table lifecycle management** (provision, activate, deactivate)
 - `gaming_table` table (canonical registry)
@@ -1089,20 +1349,21 @@ const { data: ledger, error: reward_error } = await supabase
 
 **BOUNDED CONTEXT**: "What is the operational state and chip custody posture of this gaming table?"
 
-- [ ] **Tables present (owned):** `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`
-- [ ] **Upstream dependency:** `CasinoService.game_settings` (read-only template authority; TableContext consumes DTOs/RPCs, never mutates)
+- [ ] **Tables present:** `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`
 - [ ] **PK/FK types:** all `uuid`; chip custody tables reference `gaming_table.id`
 - [ ] **Ownership:** `casino_id` required on all tables (legacy + chip custody)
-- [ ] **Constraints:** `assert_table_context_casino` trigger on `gaming_table_settings` + `dealer_rotation`; custody tables require `request_id not null` for idempotency (API contract in `docs/25-api-data/API_SURFACE_MVP.md`); `ux_game_settings_casino_type` uniqueness enforced upstream by CasinoService
+- [ ] **Constraints:** `ux_game_settings_casino_type` unique index; bet range checks; `assert_table_context_casino` trigger on `gaming_table_settings` + `dealer_rotation`; custody tables require `request_id not null` for idempotency
 - [ ] **RLS:** read for staff of same casino; writes by admins/pit bosses; custody tables extend to cage/count team roles
 - [ ] **Access paths:** tables by `casino_id`; rotations by `(table_id, started_at desc)`; custody events by `(casino_id, table_id, created_at desc)`
 - [ ] **Layout sync:** TableContext ingestion job listens for `floor_layout.activated` events and reconciles `gaming_table.pit` / activation state accordingly
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#tablecontextservice` (pit boss/admin write paths; custody tables extend to cage/count roles). Role semantics for dealers/pit bosses/admins are in `docs/30-security/SEC-003-rbac-matrix.md`.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Core Schema (Lifecycle & Settings)
-
-> `game_settings` is owned and migrated by CasinoService. TableContext depends on it for template lookups; schema excerpt shown here for constraint clarity. For operational custody objects (limit changes, equipment, incidents, chip transfers) see the TableContext addendum referenced above.
 
 ```sql
 create table game_settings (
@@ -1362,18 +1623,18 @@ $$;
 - Enforce `casino_id = current_setting('app.casino_id')::uuid` and role allow-lists.
 
 #### Transport & Edge Rules
-- All first-party table custody mutations (fills, credits, drops, alerts) go through Server Actions using `withServerAction()`; the wrapper requires `x-idempotency-key` for each custody request and persists it via `(casino_id, request_id)` partial uniques. The HTTP surface/route handlers that enforce this mapping are defined in `docs/25-api-data/API_SURFACE_MVP.md`.
+- All first-party table custody mutations (fills, credits, drops, alerts) go through Server Actions using `withServerAction()`; the wrapper requires `x-idempotency-key` for each custody request and persists it via `(casino_id, request_id)` partial uniques.
 - Route Handlers are limited to hardware/webhook integrations (e.g., drop-box scanners) and must publish the same DTOs and schemas as the Server Action surface.
 - DTOs are defined contract-first and validated with shared zod schemas that telemetry tests reuse.
 
 #### Events & Observability
-Emit: `table.inventory_open|close|rundown_recorded`, `table.fill_requested|completed`, `table.credit_requested|completed`, `table.drop_removed|delivered` (event payload + cache invalidation rules in `docs/50-ops/OBSERVABILITY_SPEC.md` §4 and `docs/25-api-data/REAL_TIME_EVENTS_MAP.md`).  
+Emit: `table.inventory_open|close|rundown_recorded`, `table.fill_requested|completed`, `table.credit_requested|completed`, `table.drop_removed|delivered`.  
 Payload keys: `{casino_id, table_id, staff_id[], slip_no|request_id, amount_cents, chipset, ts}`.
 - Events double as cache signals: React Query invalidation (`invalidateByDomainEvent`) maps these event names to `[table-context, ...]` query keys, and realtime channels subscribe to `{casino_id}` or `{casino_id}:{table_id}` only.
 - Broadcasts are throttled to custody state transitions (requested/completed, removed/delivered); high-volume counts are aggregated server-side with periodic snapshots (1–5s) or served via poll + ETag dashboards to avoid channel storms.
 - Audit rows use the canonical shape `{ts, actor_id, casino_id, domain, action, dto_before, dto_after, correlation_id}`. Correlation IDs come from edge headers and propagate into RPCs via `SET LOCAL application_name`.
 
-#### KPIs *(targets + alert thresholds in `docs/50-ops/OBSERVABILITY_SPEC.md` §5)*
+#### KPIs
 - Time-to-fill; fills/credits per table/shift; drop removed→delivered SLA; % closes with zero discrepancy.
 
 ---
@@ -1396,7 +1657,10 @@ Payload keys: `{casino_id, table_id, staff_id[], slip_no|request_id, amount_cent
 - [ ] **Events:** `floor_layout.activated` emitted with layout + version metadata
 - [ ] **Auditability:** `reviewed_by`, `approved_by`, and activation timestamps captured
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#floorlayoutservice` — admins own layout writes, reviewers are gated via role checks, and activation RPCs enforce same-casino scope + approved status.
+### RLS (excerpt)
+- Read/Write limited to admins of same `casino_id`; reviewers need `layout_reviewer` role.
+- Layout versions immutable once submitted for review.
+- Activation only allowed for `approved` layouts; ensures `casino_id` matches TableContext consumers.
 
 ### Schema
 
@@ -1540,7 +1804,11 @@ $$;
 - [ ] **RLS:** same-casino read; updates restricted to authorized staff roles
 - [ ] **Telemetry focus:** updates limited to gameplay metrics (`average_bet`, `start_time`, `end_time`)
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#ratingslipservice` — same-casino reads + telemetry role updates enforced via Server Actions/RPCs (no direct table writes across contexts).
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Transport & Edge Rules
 - Rating slip lifecycle changes (create/open/close/pause) flow through Server Actions wrapped with `withServerAction()` so staff auth, `SET LOCAL app.casino_id`, and `x-correlation-id` audit logging stay centralized; telemetry-only updates remain idempotent-by-field (no separate key required).
@@ -1583,7 +1851,7 @@ create table rating_slip (
 - Reward issuance transactions append to `loyalty_outbox` with the same `correlation_id`/`ledger_id`. Workers drain via `FOR UPDATE SKIP LOCKED`, emit downstream notifications (emails, loyalty partner webhooks), set `processed_at`, and increment `attempt_count` on failures.
 - Dead-letter queue/alert triggers when `attempt_count` exceeds threshold; replays remain idempotent because ledger rows are immutable and keyed by `idempotency_key`.
 
-### Realtime & Cache Notes *(see ADR-004 + Observability Spec §4 for hook + invalidation details)*
+### Realtime & Cache Notes
 - Server Actions that mutate rating slips emit `ratingSlip.created|updated|closed` events; realtime listeners subscribe to `{casino_id}` for list refresh and `{casino_id}:{rating_slip_id}` for detail reconciliation.
 - React Query invalidation targets `['rating-slip','list',casino_id]`, `['rating-slip','detail',rating_slip_id]`, etc., via the shared `invalidateByDomainEvent` helper—no blanket invalidations.
 - Optimistic UI paths must reconcile with the emitted event payload to prevent drift against the canonical telemetry snapshot.
@@ -1600,7 +1868,11 @@ create table rating_slip (
 
 ## PlayerFinancial Service - Finance Context
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#playerfinancialservice` — append-only ledger inserts via cashier/compliance flows; no deletes.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 **RLS Expectations**
 - Reads scoped by `casino_id` for finance/compliance roles.
@@ -1608,7 +1880,7 @@ create table rating_slip (
 - Updates restricted to idempotent correction flows; deletes prohibited.
 
 ### Transport & Edge Rules
-- Cashier/cage mutations MUST enter through Server Actions composed with `withServerAction()`; the wrapper requires `x-idempotency-key`, persists it via `player_financial_transaction`'s `(casino_id, idempotency_key)` uniqueness, and writes `audit_log` rows using the inbound `x-correlation-id`. See `docs/25-api-data/API_SURFACE_MVP.md` for the cashier API contract and header requirements.
+- Cashier/cage mutations MUST enter through Server Actions composed with `withServerAction()`; the wrapper requires `x-idempotency-key`, persists it via `player_financial_transaction`'s `(casino_id, idempotency_key)` uniqueness, and writes `audit_log` rows using the inbound `x-correlation-id`.
 - Route Handlers are restricted to third-party payment gateways or webhook callbacks and must marshal through the same DTO/zod schema before invoking finance services.
 - DTOs are contract-first artifacts; QA/integration tests import the same schema to assert SRM conformance.
 
@@ -1768,7 +2040,6 @@ await createFinancialTransaction(supabase, {
 ## MTL Service - Compliance Context
 
 ### ✅ MTLService (AML/CTR Compliance Engine)
-> **Extraction Target**: `docs/30-security/compliance/COMP-002-mtl-compliance-standard.md` (stub) for AML/CTR policy, retention, and operational controls.
 
 **OWNS:**
 - **Cash transaction logging** (immutable, write-once records)
@@ -1783,8 +2054,7 @@ await createFinancialTransaction(supabase, {
 **BOUNDED CONTEXT**: "What cash/monetary transactions occurred for AML/CTR compliance?"
 
 ### Acceptance Checklist (CI)
-- [ ] **Tables present:** `mtl_entry`, `mtl_audit_note`
-- [ ] **Dependencies:** `player_financial_transaction` (Finance-owned) for reconciliation + triggers that feed compliance
+- [ ] **Tables present:** `player_financial_transaction`, `mtl_entry`
 - [ ] **Ownership:** `casino_id` required
 - [ ] **References:** optional FKs to `staff`, `rating_slip`, and `visit` maintained for lineage
 - [ ] **Temporal:** `gaming_day` computed via `casino_settings.gaming_day_start_time`
@@ -1792,7 +2062,11 @@ await createFinancialTransaction(supabase, {
 - [ ] **RLS:** reads limited to compliance roles per `casino_id`; writes by cashier/compliance services
 - [ ] **Access paths:** finance by `(player_id, created_at)` and `(casino_id, gaming_day)`; MTL by `(casino_id, created_at)`
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#mtlservice` — compliance roles read per casino; append-only inserts via cashier/compliance RPCs.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id` present) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins must rely on declared FKs (no implicit string keys).
 
 ### Schema
 
@@ -1826,7 +2100,11 @@ create table mtl_audit_note (
 
 ## RLS Statement Template
 
-For any new table covered by this SRM, derive policies from `docs/30-security/SEC-001-rls-policy-matrix.md` and the templates in `docs/30-security/SECURITY_TENANCY_UPGRADE.md`. Each policy must enforce same-casino scope via `SET LOCAL` session settings and role-gated writes.
+**RLS (excerpt)**
+- Tables owned by casino scope (`casino_id`) MUST include:
+  - Read: staff of same `casino_id` (role-gated).
+  - Write: admins of same `casino_id`.
+- Cross-domain joins rely on declared FKs (no implicit string keys).
 
 ---
 

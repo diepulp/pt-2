@@ -76,8 +76,8 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 
 ## Stakeholder Map
 
-- **Pit Boss / Floor Supervisor** — *Primary*: Run the pit, resolve edge cases, approve fills/credits, activate layouts.
-- **Dealer** — *Primary*: Record clean begins/pauses/resumes/ends; log rotations; report chip discrepancies.
+- **Pit Boss / Floor Supervisor** — *Primary*: Run the pit, resolve edge cases, approve fills/credits, activate layouts, open/close tables, assign dealers.
+- **Dealer** — *Participant (Non-authenticated)*: Physical table operator; does NOT log in to application; no system permissions; represented in dealer_rotation as scheduling metadata managed by pit_boss/admin.
 - **Cage/Accounting** — *Secondary*: Verify in-session rewards; reconcile fills/credits/drops; generate end-of-day reports.
 - **Compliance Analyst** — *Secondary*: Review MTL entries, threshold proximity, and audit context; export CTR filings.
 - **Casino Admin** — *Enabler*: Configure casino settings, manage staff, design floor layouts, set game parameters.
@@ -122,7 +122,7 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 **Capabilities**:
 - Casino registry (licensed gaming establishments)
 - `casino_settings` (EXCLUSIVE WRITE): gaming day start time, timezone, compliance thresholds (CTR, watchlist)
-- Staff management: authentication, role assignment (`dealer`, `pit_boss`, `admin`), status tracking
+- Staff management: authentication (pit_boss, admin only), role assignment (dealer [non-authenticated], pit_boss, admin), status tracking
 - Game configuration templates (min/max bets, rotation intervals per game type)
 - Centralized audit logging (cross-domain event capture)
 - Administrative reporting
@@ -161,7 +161,7 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 **Capabilities**:
 - Gaming table registry (provision, activate, deactivate)
 - Table settings (min/max bets, rotation intervals)
-- **Dealer rotations** (happy path: dealer assignments with start/end timestamps)
+- **Dealer rotations** (scheduling metadata managed by pit_boss/admin; dealers are non-authenticated participants with no application access; happy path: dealer assignments with start/end timestamps)
 - **Chip custody telemetry** (non-monetary):
   - **Inventory snapshots** (open/close/rundown with dual signers, discrepancy tracking)
   - **Table fills** (chip replenishment from cage; idempotent by `request_id`)
@@ -276,21 +276,22 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 
 ### Journey 1: Shift Open → Table Activation → Player Seating → Reward
 1. **Pit Boss activates floor layout** (via approved layout version; zero downtime)
-2. **Dealer opens table** → logs inventory snapshot (chipset count, dual signers)
-3. **Player checks in** (Visit created; enrollment verified)
-4. **Player seated** → Rating Slip started (table FK, game settings captured)
-5. **Mid-session reward issued** (Loyalty RPC called with idempotency key; ledger appended; balance updated)
-6. **Player moves tables** → Rating Slip paused/resumed
-7. **Session ends** → Rating Slip closed; Visit closed
-8. **End-of-shift inventory** → Closing snapshot logged; discrepancies noted
+2. **Pit boss opens table** → logs inventory snapshot (chipset count, dual signers)
+3. **Pit boss assigns dealer to table** → dealer_rotation record created (scheduling metadata; dealer does not authenticate)
+4. **Player checks in** (Visit created; enrollment verified)
+5. **Player seated** → Rating Slip started (table FK, game settings captured)
+6. **Mid-session reward issued** (Loyalty RPC called with idempotency key; ledger appended; balance updated)
+7. **Player moves tables** → Rating Slip paused/resumed
+8. **Session ends** → Rating Slip closed; Visit closed
+9. **End-of-shift inventory** → Closing snapshot logged; discrepancies noted
 
 ---
 
 ### Journey 2: Chip Custody Workflow
-1. **Dealer requests fill** (table needs chips) → `rpc_request_table_fill` called with `request_id`
+1. **Pit boss requests fill for table** (table needs chips) → `rpc_request_table_fill` called with `request_id`
 2. **Cage prepares fill** → chipset + amount logged; dual signatures (requested_by, delivered_by, received_by)
 3. **Fill recorded** → idempotent by `(casino_id, request_id)`; audit trail created
-4. **Dealer returns excess chips** → `rpc_request_table_credit` (same idempotency pattern)
+4. **Pit boss logs table credit** (excess chips returned to cage) → `rpc_request_table_credit` (same idempotency pattern)
 5. **Drop box removed** → `rpc_log_table_drop` (seal number, custody chain, gaming day, sequence)
 6. **Drop delivered to count room** → timestamp updated; compliance scan recorded
 
@@ -578,6 +579,7 @@ withAuth() → withRLS() → withRateLimit() → withIdempotency() → withAudit
 - **Idempotency Key**: Unique identifier (`x-idempotency-key` header) ensuring mutations can be safely retried without duplicates.
 - **Gaming Day**: Casino-specific temporal boundary (e.g., 6:00 AM start); derived from `casino_settings.gaming_day_start_time`.
 - **Chip Custody**: Non-monetary tracking of chip movement (fills, credits, inventory, drops); distinct from financial ledger.
+- **Dealer Role**: Non-authenticated staff classification for table operators. Dealers do not log in to the application, have zero permissions, and cannot perform system actions. Dealer rotations are scheduling metadata managed exclusively by pit_boss and admin roles via administrative APIs. Staff records with `role = 'dealer'` must have `user_id = null`.
 - **Outbox Pattern**: Side effect isolation via append-only tables (`loyalty_outbox`, `finance_outbox`); workers drain via `FOR UPDATE SKIP LOCKED`.
 - **CQRS-Light**: Write model (append-only telemetry) + Read model (projections); hot domains use this pattern to decouple ingest from dashboards.
 - **Correlation ID**: UUID (`x-correlation-id` header) propagated through all layers for distributed tracing and audit linking.
