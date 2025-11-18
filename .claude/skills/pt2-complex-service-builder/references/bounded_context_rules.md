@@ -1,6 +1,11 @@
 # Bounded Context Rules for Complex Services
 
-**Source**: SRM v3.0.2 §34-73 (Table Ownership & Cross-Context Access)
+**Source**:
+- Service Responsibility Matrix (compressed, 2025-11-17)
+- DTO Catalog: `docs/25-api-data/DTO_CATALOG.md` (771 lines)
+- DTO Canonical Standard: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+
+**Note**: SRM has been compressed. For detailed DTO specifications, field-level information, and consumer matrices, always refer to DTO_CATALOG.md.
 
 ---
 
@@ -37,18 +42,20 @@ import type { RatingSlipTelemetryDTO } from '@/services/rating-slip/dtos';
 
 ### Rule 2: Allowed Cross-Context Imports
 
-From SRM v3.0.2 §60-73:
+From DTO Catalog (see `docs/25-api-data/DTO_CATALOG.md` for complete matrix):
 
-| Consumer Service | Can Import DTOs From | Use Case | SRM Reference |
-|------------------|---------------------|----------|---------------|
-| **Loyalty** | `RatingSlip` (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | SRM:358-373 |
-| **Loyalty** | `Visit` (`VisitDTO`) | Session context for ledger entries | SRM:358 |
-| **Finance** | `Visit` (`VisitDTO`) | Associate transactions with sessions | SRM:1122 |
-| **Finance** | `RatingSlip` (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | SRM:1123 |
-| **MTL** | `RatingSlip` (`RatingSlipDTO`) | Optional FK for compliance tracking | SRM:1295 |
-| **MTL** | `Visit` (`VisitDTO`) | Optional FK for compliance tracking | SRM:1297 |
-| **TableContext** | `Casino` (`CasinoSettingsDTO`) | Gaming day temporal authority | SRM:569 |
-| **All Services** | `Casino` (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references | SRM:148 |
+| Consumer Service | Can Import DTOs From | Use Case | Reference |
+|------------------|---------------------|----------|-----------|
+| **Loyalty** | `RatingSlip` (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | DTO_CATALOG: RatingSlipTelemetryDTO |
+| **Loyalty** | `Visit` (`VisitDTO`) | Session context for ledger entries | DTO_CATALOG: VisitDTO |
+| **Finance** | `Visit` (`VisitDTO`) | Associate transactions with sessions | DTO_CATALOG: VisitDTO |
+| **Finance** | `RatingSlip` (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | DTO_CATALOG: RatingSlipDTO |
+| **MTL** | `RatingSlip` (`RatingSlipDTO`) | Optional FK for compliance tracking | DTO_CATALOG: RatingSlipDTO |
+| **MTL** | `Visit` (`VisitDTO`) | Optional FK for compliance tracking | DTO_CATALOG: VisitDTO |
+| **TableContext** | `Casino` (`CasinoSettingsDTO`) | Gaming day temporal authority | DTO_CATALOG: CasinoSettingsDTO |
+| **All Services** | `Casino` (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references | DTO_CATALOG: CasinoDTO, StaffDTO |
+
+**Complete consumer matrix**: See DTO_CATALOG.md for field-level specifications, exposure policies, and versioning information.
 
 ---
 

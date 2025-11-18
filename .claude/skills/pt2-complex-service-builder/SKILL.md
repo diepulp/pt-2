@@ -107,7 +107,7 @@ import type { Database } from '@/types/database.types';
 
 // ============================================================================
 // TABLE OWNERSHIP: player_loyalty, loyalty_ledger, loyalty_outbox
-// Reference: SRM v3.0.2 §1061-1274
+// Reference: SRM (compressed) + DTO_CATALOG.md (PlayerLoyaltyDTO section)
 // ============================================================================
 
 // 1. CANONICAL DTOs (owned tables)
@@ -185,7 +185,7 @@ import type { VisitDTO } from '@/services/visit/dtos';
 
 // ============================================================================
 // LOYALTY SERVICE (Bounded Context: Comp Points & Rewards)
-// Reference: SRM v3.0.2 §1061-1274
+// Reference: SRM (compressed) + DTO_CATALOG.md
 // ============================================================================
 
 export interface LoyaltyService {
@@ -651,13 +651,20 @@ Before shipping a complex service, verify:
 ## References
 
 This skill bundles patterns and rules from:
-- Service Responsibility Matrix (SRM) v3.0.2
-- DTO Canonical Standard
+- Service Responsibility Matrix (SRM) - compressed bounded context registry
+- DTO Catalog - complete DTO specifications with field-level detail
+- DTO Canonical Standard - derivation patterns and CI enforcement
 - Balanced Architecture Quick Reference
 - Service Template Guidelines
 
 For full documentation:
-- SRM: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
-- DTO Standard: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
-- Service Template: `docs/70-governance/SERVICE_TEMPLATE.md`
-- Anti-Patterns: `docs/70-governance/ANTI_PATTERN_CATALOG.md`
+- **SRM** (compressed): `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+- **DTO Catalog** (771 lines): `docs/25-api-data/DTO_CATALOG.md`
+- **DTO Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+- **Event Catalog**: `docs/35-integration/INT-002-event-catalog.md`
+- **Migration Matrix**: `docs/65-migrations/MIG-001-migration-tracking-matrix.md`
+- **Service Template**: `docs/70-governance/SERVICE_TEMPLATE.md`
+- **Service Factory Pattern**: `docs/70-governance/patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md`
+- **Mapper Pattern**: `docs/70-governance/patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md`
+
+**Note**: As of 2025-11-17, SRM has been compressed (13% reduction). Detailed DTO specifications are now in DTO_CATALOG.md, not in SRM. Always refer to DTO_CATALOG for field-level detail, consumer matrices, and versioning information.
