@@ -1,26 +1,29 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2025-10-25
-**Taxonomy Version**: 1.0 (SDLC-Aligned)
+**Last Updated**: 2025-11-17
+**Taxonomy Version**: 1.1 (SDLC-Aligned + Emerging Categories)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
-**Reference**: [SDLC_DOCS_TAXONOMY.md](patterns/SDLC_DOCS_TAXONOMY.md)
+**Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
+**SRM Status**: Compressed (2,127 → 1,848 lines, 13% reduction)
 
 ---
 
 ## 🚀 Quick Navigation (SDLC Taxonomy)
 
-| Category | Folder | Owner | Purpose | Phase |
-|----------|--------|-------|---------|-------|
-| Vision & Scope | [00-vision/](00-vision/) | Product | Problem, goals, non-goals | Inception, Discovery |
-| Product Requirements | [10-prd/](10-prd/) | Product | User stories, acceptance criteria | All phases |
-| Architecture | [20-architecture/](20-architecture/) | Architecture | SRM, diagrams, NFRs | Design, Build, Operate |
-| API & Data | [25-api-data/](25-api-data/) | Backend | OpenAPI, DTOs, schema | Design → Evolve |
-| Security & RBAC | [30-security/](30-security/) | Security | RLS, RBAC, threat model | Design → Evolve |
-| Quality & Testing | [40-quality/](40-quality/) | QA | Test strategy, coverage | Discovery → Evolve |
-| Operations | [50-ops/](50-ops/) | SRE | Observability, runbooks, SLOs | Design → Evolve |
-| Release | [60-release/](60-release/) | Release Mgr | Release notes, rollout | Design → Evolve |
-| Governance | [70-governance/](70-governance/) | Eng Lead | Standards, patterns | All phases |
-| ADRs | [80-adrs/](80-adrs/) | Various | Decision records | All phases |
+| Category | Folder | Owner | Purpose | Phase | Status |
+|----------|--------|-------|---------|-------|--------|
+| Vision & Scope | [00-vision/](00-vision/) | Product | Problem, goals, non-goals | Inception, Discovery | ✅ Established |
+| Product Requirements | [10-prd/](10-prd/) | Product | User stories, acceptance criteria | All phases | ✅ Established |
+| Architecture | [20-architecture/](20-architecture/) | Architecture | SRM, diagrams, NFRs | Design, Build, Operate | ✅ Established |
+| API & Data | [25-api-data/](25-api-data/) | Backend | OpenAPI, DTOs, schema | Design → Evolve | ✅ Established |
+| Security & RBAC | [30-security/](30-security/) | Security | RLS, RBAC, threat model | Design → Evolve | ✅ Established |
+| **Integration** | [35-integration/](35-integration/) | Backend/Arch | Event catalogs, service contracts | Design → Evolve | 🟡 Emerging |
+| Quality & Testing | [40-quality/](40-quality/) | QA | Test strategy, coverage | Discovery → Evolve | ✅ Established |
+| Operations | [50-ops/](50-ops/) | SRE | Observability, runbooks, SLOs | Design → Evolve | ✅ Established |
+| Release | [60-release/](60-release/) | Release Mgr | Release notes, rollout | Design → Evolve | ✅ Established |
+| **Migrations** | [65-migrations/](65-migrations/) | Backend/DBA | Migration tracking, schema evolution | Design → Evolve | 🟡 Emerging |
+| Governance | [70-governance/](70-governance/) | Eng Lead | Standards, patterns | All phases | ✅ Established |
+| ADRs | [80-adrs/](80-adrs/) | Various | Decision records | All phases | ✅ Established |
 
 ---
 
@@ -33,10 +36,11 @@
 4. **[Database Type Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)** - Daily DB management
 
 ### For Architects
-1. **[Service Responsibility Matrix](20-architecture/)** → SRM v3.0.2 - Canonical bounded contexts
-2. **[Service Layer Diagram](20-architecture/)** → Architecture patterns + anti-patterns
-3. **[API Surface](25-api-data/)** → API_SURFACE_MVP.md - Endpoint catalogue
-4. **[ADRs](80-adrs/)** → Decision history and rationale
+1. **[Service Responsibility Matrix](20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)** → SRM (compressed) - Canonical bounded contexts registry
+2. **[DTO Catalog](25-api-data/DTO_CATALOG.md)** → Complete DTO specifications with field-level detail
+3. **[Service Layer Diagram](20-architecture/)** → Architecture patterns + anti-patterns
+4. **[API Surface](25-api-data/)** → API_SURFACE_MVP.md - Endpoint catalogue
+5. **[ADRs](80-adrs/)** → Decision history and rationale
 
 ### For Product Managers
 1. **[MVP Roadmap](10-prd/)** → SDLC_MVP_ROADMAP.md - 10-week delivery plan
@@ -77,16 +81,24 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| ARCH-001 | Service Responsibility Matrix v3.0.2 | Accepted | `patterns/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| ARCH-002 | Service Layer Architecture Diagram v1.0 | Accepted | `system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
-| ARCH-003 | Balanced Architecture Quick Reference | Accepted | `patterns/BALANCED_ARCHITECTURE_QUICK.md` |
+| ARCH-001 | Service Responsibility Matrix (compressed) | Active | `SERVICE_RESPONSIBILITY_MATRIX.md` |
+| ARCH-002 | Service Layer Architecture Diagram v1.0 | Accepted | `SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
+| ARCH-003 | SRM Mapping Table | Active | `SRM_MAPPING_TABLE.md` |
+| TEMP-001 | Gaming Day Specification | Active | `temporal-patterns/TEMP-001-gaming-day-specification.md` |
+| TEMP-002 | Temporal Authority Pattern | Active | `temporal-patterns/TEMP-002-temporal-authority-pattern.md` |
 
 **Purpose**: Bounded contexts, system diagrams, integration contracts, NFRs
 
 **Key Documents**:
-- **SRM**: Canonical matrix-first contract (snake_case, UUID-based)
+- **SRM** (1,848 lines): Canonical bounded context registry - compressed for maintainability
+- **SRM Mapping Table**: Links SRM sections to detailed taxonomy documents
 - **Service Layer Diagram**: Visual patterns + anti-patterns with mermaid
-- **Balanced Architecture**: HORIZONTAL vs VERTICAL decision framework
+- **Temporal Patterns**: Gaming day authority and edge case handling
+
+**Recent Changes** (2025-11-17):
+- ✅ SRM compressed by 13% (279 lines saved)
+- ✅ Detailed specs moved to taxonomy docs (DTO_CATALOG, INT-002, etc.)
+- ✅ Link validation automated via CI
 
 ---
 
@@ -94,15 +106,22 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| API-001 | API Surface MVP | Accepted | `api-route-catalogue/API_SURFACE_MVP.md` |
-| API-002 | DTO Canonical Standard | Accepted | `patterns/DTO_CANONICAL_STANDARD.md` |
-| API-003 | Real-time Events Map | Accepted | `patterns/REAL_TIME_EVENTS_MAP.md` |
-| API-004 | OpenAPI Specification | Draft | `api-route-catalogue/api-surface.openapi.yaml` |
+| API-001 | DTO Catalog | Active | `DTO_CATALOG.md` |
+| API-002 | DTO Canonical Standard | Accepted | `DTO_CANONICAL_STANDARD.md` |
+| API-003 | API Surface MVP | Accepted | `API_SURFACE_MVP.md` |
+| API-004 | Real-time Events Map | Accepted | `REAL_TIME_EVENTS_MAP.md` |
+| API-005 | OpenAPI Specification | Draft | `api-surface.openapi.yaml` |
 
 **Purpose**: REST API contracts, DTOs, database schema, event contracts
 
+**Key Documents**:
+- **DTO Catalog** (771 lines): Complete DTO specifications with field-level detail, consumers, exposure policies
+- **DTO Canonical Standard**: Derivation patterns, ESLint rules, CI enforcement
+- **API Surface**: REST endpoint catalog with auth/validation requirements
+
 **Standards**:
 - DTOs derived from `Database` types using Pick/Omit/Partial
+- Cross-context consumption through published DTOs only
 - OpenAPI specs for all `/api/v1/**` endpoints
 - Real-time event contracts for Supabase channels
 
@@ -112,13 +131,41 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| - | *To be extracted from SRM* | - | - |
+| SEC-001 | RLS Policy Matrix | Active | `SEC-001-rls-policy-matrix.md` |
+| SEC-005 | Role Taxonomy | Active | `SEC-005-role-taxonomy.md` |
+| COMP-002 | MTL Compliance Standard | Active | `compliance/COMP-002-mtl-compliance-standard.md` |
 
-**Purpose**: RLS policies, RBAC matrix, threat model, secrets handling
+**Purpose**: RLS policies, RBAC matrix, threat model, secrets handling, compliance
 
-**Current Coverage**:
-- RLS patterns embedded in SRM (casino-scoped tables)
-- Casino-scoped security model (to be documented)
+**Key Documents**:
+- **SEC-001**: RLS policy catalog per table with predicate patterns
+- **SEC-005**: Role capabilities matrix (admin, pit_boss, cage, compliance, dealer)
+- **COMP-002**: MTL/AML compliance thresholds, retention, audit requirements
+
+**Security Model**:
+- Casino-scoped tenancy with RLS
+- No service keys in runtime (anon key + user context)
+- WRAPPER pattern for context injection
+
+---
+
+### 35-integration/ - Integration & Events 🟡 EMERGING
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| INT-002 | Event Catalog | Active | `INT-002-event-catalog.md` |
+
+**Purpose**: Event catalogs, service contracts, integration patterns, channel naming
+
+**Key Documents**:
+- **INT-002**: Domain event catalog with producers, consumers, payloads, channel scopes
+
+**Integration Patterns**:
+- Event payloads mirror SRM table FKs and types
+- Channel naming: `{casino_id}` for collections, `{casino_id}:{resource_id}` for details
+- Realtime listeners reconcile via `invalidateByDomainEvent()`
+
+**Status**: Emerging category - created as part of SRM modularization (2025-11-17)
 
 ---
 
@@ -141,14 +188,23 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| - | *To be documented* | - | - |
+| RUN-001 | Outbox Worker Playbook | Active | `runbooks/RUN-001-outbox-worker-playbook.md` |
+| RUN-002 | Schema Reload | Active | `runbooks/RUN-002-schema-reload.md` |
+| RUN-003 | Schema Migration Runbook | Active | `runbooks/RUN-003-schema-migration-runbook.md` |
+| RUN-004 | RLS Policy Verification | Active | `runbooks/RUN-004-rls-policy-verification.md` |
+| RUN-005 | Type Sync | Active | `runbooks/RUN-005-type-sync.md` |
 
 **Purpose**: Observability, runbooks, SLIs/SLOs, incident process
+
+**Key Runbooks**:
+- **RUN-001**: Outbox worker operations and troubleshooting
+- **RUN-003**: Schema migration workflow (critical: `npm run db:types`)
+- **RUN-004**: RLS policy verification and testing
 
 **Patterns**:
 - Audit logging (embedded in SERVER_ACTIONS_ARCHITECTURE.md)
 - Error mapping (PG → domain codes)
-- Telemetry patterns (to be documented)
+- Outbox pattern for reliability
 
 ---
 
@@ -167,24 +223,50 @@
 
 ---
 
+### 65-migrations/ - Database Migrations 🟡 EMERGING
+
+| ID | Title | Status | Location |
+|----|-------|--------|----------|
+| MIG-001 | Migration Tracking Matrix | Active | `MIG-001-migration-tracking-matrix.md` |
+
+**Purpose**: Migration tracking, database evolution, schema changes, deprecation/EOL
+
+**Key Documents**:
+- **MIG-001**: Current vs target schema state per table, migration IDs, RLS deployment status, deprecation timelines
+
+**Migration Standards**:
+- File naming: `YYYYMMDDHHMMSS_description.sql`
+- Critical workflow: (1) Update SRM, (2) Run migration, (3) **`npm run db:types`**, (4) Update DTOs
+- CI fails if EOL item exists past target version (5 business day grace max)
+
+**Status**: Emerging category - created as part of SRM modularization (2025-11-17)
+
+---
+
 ### 70-governance/ - Governance & Process
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| GOV-001 | Service Template v1.2 | Accepted | `patterns/SERVICE_TEMPLATE.md` |
-| GOV-002 | Over-Engineering Guardrail | Accepted | `patterns/OVER_ENGINEERING_GUARDRAIL.md` |
-| GOV-003 | Hooks Standard | Accepted | `patterns/HOOKS_STANDARD.md` |
-| GOV-004 | DTO Canonical Standard | Accepted | `patterns/DTO_CANONICAL_STANDARD.md` |
-| GOV-005 | Frontend Canonical Standard | Accepted | `patterns/FRONT_END_CANONICAL_STANDARD.md` |
-| GOV-006 | Server Actions Architecture v1.2 | Accepted | `patterns/SERVER_ACTIONS_ARCHITECTURE.md` |
+| GOV-001 | Service Template v1.2 | Accepted | `SERVICE_TEMPLATE.md` |
+| GOV-002 | Over-Engineering Guardrail | Accepted | `OVER_ENGINEERING_GUARDRAIL.md` |
+| GOV-003 | Hooks Standard | Accepted | `HOOKS_STANDARD.md` |
+| GOV-004 | DTO Canonical Standard | Accepted | `DTO_CANONICAL_STANDARD.md` |
+| GOV-005 | Frontend Canonical Standard | Accepted | `FRONT_END_CANONICAL_STANDARD.md` |
+| GOV-006 | Server Actions Architecture v1.2 | Accepted | `SERVER_ACTIONS_ARCHITECTURE.md` |
+| GOV-PAT-001 | Service Factory Pattern | Active | `patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md` |
+| GOV-PAT-002 | Mapper Pattern | Active | `patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md` |
 
-**Purpose**: SDLC policy, coding standards, anti-patterns, contribution guide
+**Purpose**: SDLC policy, coding standards, anti-patterns, contribution guide, domain modeling patterns
 
 **Standards**:
 - Functional factories (not classes)
 - Explicit interfaces (ban `ReturnType<>`)
 - DTO derivation from `Database` types
 - React Query v5 patterns with key factories
+
+**Domain Modeling**:
+- **GOV-PAT-001**: Service factory anti-patterns and correct implementations
+- **GOV-PAT-002**: Mapper patterns for DTO transformations
 
 ---
 
@@ -210,11 +292,15 @@
 | Question | Category | Document |
 |----------|----------|----------|
 | "Why did we choose X?" | ADRs | [80-adrs/](80-adrs/) |
-| "How should bounded contexts talk?" | ARCH | [SRM](patterns/SERVICE_RESPONSIBILITY_MATRIX.md) |
-| "What are the endpoints?" | API/DATA | [API Surface](25-api-data/) |
-| "Who can read/write this table?" | SEC/RBAC | [30-security/](30-security/) |
+| "How should bounded contexts talk?" | ARCH | [SRM](20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) |
+| "What DTOs can I consume?" | API/DATA | [DTO Catalog](25-api-data/DTO_CATALOG.md) |
+| "What are the endpoints?" | API/DATA | [API Surface](25-api-data/API_SURFACE_MVP.md) |
+| "What events are available?" | INTEGRATION | [Event Catalog](35-integration/INT-002-event-catalog.md) |
+| "Who can read/write this table?" | SEC/RBAC | [RLS Policy Matrix](30-security/SEC-001-rls-policy-matrix.md) |
+| "What are the roles/capabilities?" | SEC/RBAC | [Role Taxonomy](30-security/SEC-005-role-taxonomy.md) |
 | "What tests must pass?" | QA | [40-quality/](40-quality/) |
-| "How do we debug in prod?" | OPS | [50-ops/](50-ops/) Runbooks |
+| "How do I run a migration?" | MIGRATIONS | [Migration Runbook](50-ops/runbooks/RUN-003-schema-migration-runbook.md) |
+| "How do we debug in prod?" | OPS | [50-ops/runbooks/](50-ops/runbooks/) |
 | "How do we ship safely?" | REL | [60-release/](60-release/) |
 | "What are coding standards?" | GOV | [70-governance/](70-governance/) |
 | "Should this be HORIZONTAL or VERTICAL?" | ARCH | [Balanced Architecture](patterns/BALANCED_ARCHITECTURE_QUICK.md) |
@@ -363,7 +449,37 @@
 
 ---
 
-**Index Version**: 2.0.0 (SDLC Taxonomy)
-**Last Updated**: 2025-10-25
+## 📝 Recent Changes (2025-11-17)
+
+### SRM Compression & Taxonomy Expansion ✅
+
+**What Changed**:
+- ✅ SRM compressed: 2,127 → 1,848 lines (13% reduction, 279 lines saved)
+- ✅ Detailed specs moved to taxonomy: DTO_CATALOG (771 lines), INT-002, runbooks
+- ✅ Two new taxonomy categories: `35-integration/` and `65-migrations/`
+- ✅ Link validation automated via CI (17/17 links valid)
+- ✅ Line reference tracking tool created (85 references monitored)
+
+**Sections Compressed**:
+1. DTO Contract Policy: 270 → 20 lines (now in DTO_CATALOG.md)
+2. Event/Telemetry: 30 → 7 lines (now in INT-002-event-catalog.md)
+3. Deprecation Policy: 11 → 5 lines (now in MIG-001-migration-tracking-matrix.md)
+4. Client Cache: 9 → 7 lines (now in ADR-003/004)
+
+**Impact**:
+- SRM remains canonical bounded context registry
+- Detailed specifications now in specialized taxonomy documents
+- Documentation bloat prevented
+- Product development unblocked
+
+**Reports**:
+- [Compression Execution Report](srn-modularization/COMPRESSION_EXECUTION_REPORT.md)
+- [Blocker Resolution Report](srn-modularization/BLOCKER_RESOLUTION_REPORT.md)
+- [SRM Mapping Table](20-architecture/SRM_MAPPING_TABLE.md)
+
+---
+
+**Index Version**: 2.1.0 (SDLC Taxonomy + Emerging Categories)
+**Last Updated**: 2025-11-17
 **Maintained By**: Development Team
 **Next Review**: Weekly
