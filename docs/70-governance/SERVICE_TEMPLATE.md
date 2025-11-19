@@ -1,473 +1,518 @@
-# PT-2 Service Standard (v1.2)
-> **Scope:** Small-team, MVP-scale architecture. KISS + YAGNI preserved. DDD boundaries respected.  
-> **Applies to:** Domain services consumed by Next.js 15 App Router Route Handlers (`app/api/v1/**/route.ts`) and Server Actions, backed by Supabase/Postgres with RLS enforced.
+# PT-2 Service Implementation Guide
+
+**Version**: 2.0.1
+**Date**: 2025-11-18
+**Status**: CANONICAL (Aligned with SLAD v2.1.1)
+**Supersedes**: v2.0.0 (executeOperation pattern restored)
+
+> **Architecture Reference**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.1)
+> **This Document**: Quick implementation guide derived from SLAD + actual service patterns
 
 ---
 
-## 0) Core Principles
-- **KISS / YAGNI:** Extract only on the 3rd repetition. No base classes. No singletons.  
-- **Schema-first:** Use generated `Database` types as the *only* table/enum source of truth.  
-- **Bounded Contexts:** Each folder under `services/` = one bounded context. No cross-context imports except public DTOs/APIs or published **views**.  
-- **RLS-first:** All runtime access through PostgREST with RLS. Never use service keys in app runtime.  
-- **HTTP at the edge:** Inside services, use domain error codes. Map to HTTP only in server actions/controllers.  
-- **Idempotency by design:** Prefer natural keys + constraint handling to make writes retry-safe.
+## Purpose
+
+This guide helps you implement new services following PT-2 architecture patterns. It is a **thin reference** that points to SLAD for architecture details and actual service implementations for examples.
 
 ---
 
-## Anti-Pattern Guardrails
+## Quick Start: Choose Your Pattern
 
-Before starting ANY service implementation, verify you will NOT:
-
-| ❌ Anti-Pattern | ✅ Correct Pattern |
-|----------------|-------------------|
-| `ReturnType<typeof createXService>` | Explicit `interface XService` |
-| `supabase: any` | `supabase: SupabaseClient<Database>` |
-| Importing ad-hoc rebuilt DB types | Use generated `Database['public']['Tables']['x']` |
-| `services/x/types.ts` junk drawer | Promote **cross-context** types only to `types/domains/shared/…`; DTOs live in `services/{domain}/dto.ts` |
-| Maintaining deprecated parallel APIs | Delete obsolete APIs; provide a single canonical path |
-| `class BaseService` hierarchy | Functional factories only |
-| `console.*` noise in ops | Structured logging via `executeOperation` logger hook |
-| HTTP status in `ServiceResult` | Keep HTTP mapping in server actions/controllers only |
-| Premature abstraction | Extract on the 3rd repetition (Rule-of-Three) |
-| Cross-context ad-hoc joins | Consume other context’s published view/service |
-| Bypassing RLS with service keys | Service keys only in migrations/CI |
-| Unscoped queries | Include tenancy keys where required (`casino_id`, `gaming_day`, …) |
-| Scattered validation | Validate at the edge; services may re-validate to guard invariants |
-| Repeated inline select strings | Centralize in `selects.ts` |
-| Singletons / global state | Functional factories; no global singletons |
-| `any` or `ReturnType<>` leaks | Explicit interfaces and types only |
-| Non-idempotent writes where natural key exists | Handle `23505`; return existing when safe |
-
----
-
-## 1) Minimal Directory Structure
+### Decision Tree
 
 ```
-services/
-├── shared/                          # ✅ Shared infrastructure
-│   ├── types.ts                    # ServiceResult<T>, ServiceError (domain-agnostic)
-│   └── operation.ts                # executeOperation: timeouts, (opt) retry, logger hook
+┌─ Is this complex business logic with domain contracts?
+│  (Loyalty points, Financial transactions, Compliance workflows)
+│  └─> Pattern A: Contract-First
 │
-└── {domain}/                        # ✅ Domain service
-    ├── dto.ts                      # ⬅️ DTO schemas (Zod) + inferred types
-    ├── selects.ts                  # Named column sets for .select(...)
-    ├── index.ts                    # Factory + explicit interface; composes crud
-    ├── crud.ts                     # CRUD operations module
-    ├── business.ts                 # Business logic (if needed)
-    ├── queries.ts                  # Complex queries (if needed)
-    └──
+├─ Is this simple CRUD over database tables?
+│  (Player identity, Visit sessions, Casino config, Floor layouts)
+│  └─> Pattern B: Canonical CRUD
+│
+└─ Mixed complexity?
+   (RatingSlip: state machine + CRUD, some domain logic)
+   └─> Pattern C: Hybrid
 ```
 
-**Rules**
-- **DTO co-location is required.** Application/input/output DTOs live in `services/{domain}/dto.ts`.  
-- **Promote** to `types/domains/shared/…` *only* if used across ≥2 bounded contexts.  
-- **No** `services/{domain}/types.ts` junk drawers.
+**See SLAD §345-361** for complete pattern definitions and examples.
 
 ---
 
-## 2) DTOs & Validation
-- Define **Zod** schemas in `dto.ts`. Export both schemas and inferred types.  
-- **Validate at the edge** (server action / API route). Services can assume validated inputs.  
-- If a service is reachable from multiple edges, it may re-validate to guard invariants.
+## Pattern A: Contract-First Services
 
-```ts
-// services/player/dto.ts
-import { z } from "zod";
+**Use When**: Complex business logic, domain contracts, cross-context boundaries
+**Examples**: `services/loyalty/`, `services/finance/`, `services/mtl/`, `services/table-context/`
+**SLAD Reference**: §362-424
 
-export const CreatePlayerSchema = z.object({
-  first_name: z.string().min(1),
-  last_name: z.string().min(1),
-  phone: z.string().optional(),
-});
-export type CreatePlayerDTO = z.infer<typeof CreatePlayerSchema>;
+### Directory Structure (Actual Implementation)
 
-export const PlayerSchema = z.object({
-  id: z.string().uuid(),
-  first_name: z.string(),
-  last_name: z.string(),
-  phone: z.string().nullable(),
-});
-export type PlayerDTO = z.infer<typeof PlayerSchema>;
-
-// Domain error codes (small, explicit)
-export const PlayerError = {
-  DUPLICATE: "PLAYER_DUPLICATE",
-  NOT_FOUND: "NOT_FOUND",
-  VALIDATION_ERROR: "VALIDATION_ERROR",
-} as const;
+```
+services/{domain}/
+├── keys.ts              # React Query key factories (REQUIRED)
+├── {feature}.ts         # Business logic / RPC wrappers
+├── {feature}.test.ts    # Unit/integration tests
+├── mappers.ts           # Database ↔ DTO transformations (if needed)
+└── README.md            # Service documentation with SRM reference
 ```
 
----
-
-## 3) Select Sets (Drift Prevention)
-Keep column shapes consistent and reviewable.
-
-```ts
-// services/player/selects.ts
-export const PLAYER_SELECT_MIN = "id, first_name, last_name, phone";
+**Example**: `services/loyalty/`
+```
+services/loyalty/
+├── keys.ts                      # loyaltyKeys factory
+├── mid-session-reward.ts        # Business logic with DTOs
+├── mid-session-reward.test.ts   # Tests
+└── README.md                    # References SRM §1061-1274
 ```
 
----
+### DTO Pattern
 
-## 4) Service Interface & Factory (Explicit, Stable)
-```ts
-// services/player/index.ts
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database.types";
-import type { ServiceResult } from "@/services/shared/types";
-import type { CreatePlayerDTO, PlayerDTO } from "./dto";
-import { createPlayerCrud } from "./crud";
+**Manual interfaces** for domain contracts:
 
-export interface PlayerService {
-  create(data: CreatePlayerDTO): Promise<ServiceResult<PlayerDTO>>;
-  update(id: string, data: Partial<CreatePlayerDTO>): Promise<ServiceResult<PlayerDTO>>;
-  getById(id: string): Promise<ServiceResult<PlayerDTO>>;
+```typescript
+// services/loyalty/mid-session-reward.ts (ACTUAL CODE)
+export interface MidSessionRewardInput {
+  casinoId: string;
+  playerId: string;
+  ratingSlipId: string;
+  staffId: string;
+  points: number;
+  idempotencyKey: string;
+  reason?: LoyaltyReason;
 }
 
-export function createPlayerService(supabase: SupabaseClient<Database>): PlayerService {
-  const crud = createPlayerCrud(supabase);
-  return { ...crud };
+export interface MidSessionRewardRpcInput {
+  p_casino_id: string;
+  p_player_id: string;
+  p_rating_slip_id: string;
+  p_staff_id: string;
+  p_points: number;
+  p_idempotency_key: string;
+  p_reason: LoyaltyReason;
 }
 ```
 
----
+### React Query Keys Pattern
 
-## 5) Persistence Module (Thin, RLS-Aware, Idempotent)
-```ts
-// services/player/crud.ts
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database.types";
-import { executeOperation } from "@/services/shared/operation";
-import type { ServiceResult } from "@/services/shared/types";
-import { CreatePlayerDTO, PlayerDTO, PlayerError } from "./dto";
-import { PLAYER_SELECT_MIN } from "./selects";
+**ALL services** use React Query key factories:
 
-export function createPlayerCrud(supabase: SupabaseClient<Database>) {
-  return {
-    create: (data: CreatePlayerDTO): Promise<ServiceResult<PlayerDTO>> =>
-      executeOperation<PlayerDTO>({ label: "player.create" }, async () => {
-        const { data: row, error } = await supabase
-          .from("player")
-          .insert(data)
-          .select(PLAYER_SELECT_MIN)
-          .single();
+```typescript
+// services/loyalty/keys.ts (ACTUAL CODE)
+import { serializeKeyFilters } from '@/services/shared/key-utils';
 
-        if (error) {
-          // Postgres duplicate key
-          if ((error as any).code === "23505") {
-            // Optional idempotency: look up existing by natural key & return it
-            // const existing = await findByNaturalKey(...);
-            throw { code: PlayerError.DUPLICATE, message: "Player already exists", details: error };
-          }
-          throw error;
-        }
-        return row!;
-      }),
+export type LoyaltyLedgerFilters = {
+  casinoId?: string;
+  playerId?: string;
+  ratingSlipId?: string;
+  cursor?: string;
+  limit?: number;
+};
 
-    update: (id: string, data: Partial<CreatePlayerDTO>) =>
-      executeOperation<PlayerDTO>({ label: "player.update" }, async () => {
-        const { data: row, error } = await supabase
-          .from("player")
-          .update(data)
-          .eq("id", id)
-          // If tenant-scoped, also filter: .eq("casino_id", casinoId)
-          .select(PLAYER_SELECT_MIN)
-          .single();
+const ROOT = ['loyalty'] as const;
+const serialize = (filters: LoyaltyLedgerFilters = {}) =>
+  serializeKeyFilters(filters);
 
-        if (error) {
-          if ((error as any).code === "PGRST116") {
-            throw { code: PlayerError.NOT_FOUND, message: `Player ${id} not found` };
-          }
-          throw error;
-        }
-        return row!;
-      }),
-
-    getById: (id: string) =>
-      executeOperation<PlayerDTO>({ label: "player.getById" }, async () => {
-        const { data: row, error } = await supabase
-          .from("player")
-          .select(PLAYER_SELECT_MIN)
-          .eq("id", id)
-          // If tenant-scoped, also filter: .eq("casino_id", casinoId)
-          .single();
-
-        if (error) {
-          if ((error as any).code === "PGRST116") {
-            throw { code: PlayerError.NOT_FOUND, message: `Player ${id} not found` };
-          }
-          throw error;
-        }
-        return row!;
-      }),
-  };
-}
+export const loyaltyKeys = {
+  root: ROOT,
+  playerBalance: (playerId: string, casinoId: string) =>
+    [...ROOT, 'balance', playerId, casinoId] as const,
+  ledger: Object.assign(
+    (filters: LoyaltyLedgerFilters = {}) =>
+      [...ROOT, 'ledger', serialize(filters)] as const,
+    { scope: [...ROOT, 'ledger'] as const },  // For setQueriesData
+  ),
+};
 ```
 
----
+**See SLAD §1032-1112** for complete React Query patterns.
 
-## 6) Operation Wrapper (Domain-centric; HTTP is External)
-```ts
-// services/shared/types.ts
-export interface ServiceError { code: string; message: string; details?: unknown; }
-export interface ServiceResult<T> {
-  data: T | null;
-  error: ServiceError | null;
-  success: boolean;
-  timestamp: string;
-  requestId: string;
-}
-```
+### Error Handling Pattern
 
-```ts
-// services/shared/operation.ts
-export type Logger = (evt: { label: string; requestId: string; ok: boolean; ms: number; err?: unknown }) => void;
+**Pattern**: Wrap service operations with `executeOperation` for consistent ServiceResult<T> returns.
 
-export interface OperationOptions {
-  label: string;
-  timeoutMs?: number;                 // default 10_000
-  logger?: Logger;                    // optional
-  retry?: { attempts: 0 | 1 | 2; backoffMs?: number }; // default 0
-}
+**Reference**: SLAD §918-975 (Operation Wrapper Pattern)
 
+```typescript
+// services/shared/operation-wrapper.ts
 export async function executeOperation<T>(
-  options: OperationOptions,
-  op: () => Promise<T>,
+  label: string,
+  operation: () => Promise<T>,
 ): Promise<ServiceResult<T>> {
   const requestId = `req_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
   const timestamp = new Date().toISOString();
-  const timeoutMs = options.timeoutMs ?? 10_000;
-  let attempts = Math.max(0, Math.min(options.retry?.attempts ?? 0, 2));
-  const backoff = options.retry?.backoffMs ?? 200;
 
-  const timed = () => Promise.race([
-    op(),
-    new Promise<never>((_, rej) => setTimeout(() => rej({ code: "TIMEOUT", message: "Operation timed out" }), timeoutMs)),
-  ]);
-
-  const start = performance.now();
   try {
-    while (true) {
-      try {
-        const data = await timed();
-        options.logger?.({ label: options.label, requestId, ok: true, ms: performance.now() - start });
-        return { data, error: null, success: true, timestamp, requestId };
-      } catch (e) {
-        if (attempts-- > 0) { await new Promise(r => setTimeout(r, backoff)); continue; }
-        throw e;
-      }
-    }
+    const data = await operation();
+    return {
+      data,
+      error: null,
+      success: true,
+      timestamp,
+      requestId,
+    };
   } catch (err: any) {
-    const code = typeof err === "object" && err?.code ? String(err.code) : "OPERATION_FAILED";
-    const message = typeof err === "object" && err?.message ? String(err.message) : "Operation failed";
-    options.logger?.({ label: options.label, requestId, ok: false, ms: performance.now() - start, err });
-    return { data: null, error: { code, message, details: err }, success: false, timestamp, requestId };
+    return {
+      data: null,
+      error: { code: err?.code ?? 'OPERATION_FAILED', message: err?.message },
+      success: false,
+      timestamp,
+      requestId,
+    };
   }
 }
+
+// services/loyalty/mid-session-reward.ts (EXAMPLE USAGE)
+import { executeOperation } from '@/services/shared/operation-wrapper';
+import type { ServiceResult } from '@/services/shared/types';
+
+export async function rewardPlayer(
+  input: MidSessionRewardInput
+): Promise<ServiceResult<RewardDTO>> {
+  return executeOperation('loyalty.rewardPlayer', async () => {
+    // Business logic
+    const rpcInput = buildMidSessionRewardRpcInput(input);
+    const { data, error } = await supabase.rpc('issue_mid_session_reward', rpcInput);
+
+    if (error) throw error;
+    return mapToRewardDTO(data);
+  });
+}
+```
+
+**Benefits**:
+- Consistent error handling across all service operations
+- Structured ServiceResult<T> envelope for type-safe error checking
+- Operation labels for observability (e.g., `'loyalty.rewardPlayer'`)
+- Request tracking with unique requestId
+- Timestamp metadata for debugging
+
+**See SLAD §918-975** for complete implementation details and ServiceResult<T> contract.
+
+### Checklist
+
+- [ ] Create `keys.ts` with React Query factory keys
+- [ ] Define domain DTOs in `{feature}.ts`
+- [ ] Wrap operations with `executeOperation` (returns ServiceResult<T>)
+- [ ] Add `README.md` with SRM reference
+- [ ] Write tests for business logic
+- [ ] Add `mappers.ts` if Database ↔ DTO transformation is complex
+
+---
+
+## Pattern B: Canonical CRUD Services
+
+**Use When**: Simple CRUD operations, minimal business logic
+**Examples**: `services/player/`, `services/visit/`, `services/casino/`, `services/floor-layout/`
+**SLAD Reference**: §429-471
+
+### Directory Structure (Actual Implementation)
+
+```
+services/{domain}/
+├── keys.ts       # React Query key factories (REQUIRED)
+└── README.md     # Service documentation with SRM reference
+```
+
+**Example**: `services/player/`
+```
+services/player/
+├── keys.ts     # playerKeys factory
+└── README.md   # References SRM §1007-1060
+```
+
+### DTO Pattern
+
+**Pick/Omit from Database types**:
+
+```typescript
+// services/player/README.md documents this pattern (ACTUAL DOCS)
+export type PlayerDTO = Pick<
+  Database['public']['Tables']['player']['Row'],
+  'id' | 'first_name' | 'last_name' | 'created_at'
+>;
+
+export type PlayerCreateDTO = Pick<
+  Database['public']['Tables']['player']['Insert'],
+  'first_name' | 'last_name' | 'birth_date'
+>;
+```
+
+### React Query Keys Pattern
+
+```typescript
+// services/player/keys.ts (ACTUAL CODE)
+export type PlayerListFilters = {
+  casinoId?: string;
+  status?: 'active' | 'inactive';
+  q?: string;
+  cursor?: string;
+  limit?: number;
+};
+
+const ROOT = ['player'] as const;
+const serialize = (filters: PlayerListFilters = {}) =>
+  serializeKeyFilters(filters);
+
+export const playerKeys = {
+  root: ROOT,
+  list: Object.assign(
+    (filters: PlayerListFilters = {}) =>
+      [...ROOT, 'list', serialize(filters)] as const,
+    { scope: [...ROOT, 'list'] as const },
+  ),
+  detail: (playerId: string) => [...ROOT, 'detail', playerId] as const,
+};
+```
+
+### Checklist
+
+- [ ] Create `keys.ts` with React Query factory keys
+- [ ] DTOs use Pick/Omit from `Database` types (no manual interfaces)
+- [ ] Add `README.md` with SRM reference
+- [ ] Reference DTO_CANONICAL_STANDARD.md for derivation rules
+
+**❌ BANNED for Pattern B**: Manual DTO interfaces (use Pick/Omit only)
+
+---
+
+## Pattern C: Hybrid Services
+
+**Use When**: Mixed complexity (some domain logic, some CRUD)
+**Examples**: `services/rating-slip/` (state machine + CRUD)
+**SLAD Reference**: §472-517
+
+### Directory Structure
+
+Use **appropriate pattern per feature**:
+- Contract-first DTOs for state machine logic
+- Canonical DTOs for CRUD operations
+
+**Example**: `services/rating-slip/`
+```
+services/rating-slip/
+├── keys.ts
+├── state-machine.ts        # Pattern A: Manual DTOs
+├── state-machine.test.ts
+└── README.md
 ```
 
 ---
 
-## 7) Route Handler & Server Action Boundary (HTTP Mapping Here Only)
-```ts
-// app/api/v1/casinos/[casino_id]/route.ts
-import { type NextRequest } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { createCasinoService } from "@/services/casino";
-import { CasinoDetailParamsSchema } from "@/services/casino/dto";
-import { withServerAction } from "@/lib/http/with-server-action";
-import { toServiceHttpResponse } from "@/lib/http/service-response";
-import { IdempotencyKey } from "@/lib/http/idempotency";
+## Shared Utilities
 
-export async function GET(
-  request: NextRequest,
-  segmentData: { params: Promise<{ casino_id: string }> },
-) {
-  // Next.js 15 passes params as a Promise — await before use.
-  const params = await segmentData.params;
-  const parse = CasinoDetailParamsSchema.safeParse(params);
-  if (!parse.success) {
-    return toServiceHttpResponse({
-      ok: false,
-      status: 400,
-      error: { code: "VALIDATION_ERROR", issues: parse.error.flatten() },
-    });
-  }
+### React Query Key Serialization
 
-  const supabase = await createClient();
-  const service = createCasinoService(supabase);
-  const envelope = await withServerAction("casino.detail", async (ctx) => {
-    return service.getById(parse.data.casino_id);
+**Location**: `services/shared/key-utils.ts`
+
+```typescript
+// services/shared/key-utils.ts (ACTUAL CODE)
+export type KeyFilter = Record<string, KeyFilterValue>;
+
+export function serializeKeyFilters<T extends KeyFilter>(
+  filters?: T,
+): string {
+  if (!filters) return '[]';
+  const entries = Object.entries(filters).filter(
+    ([, value]) => value !== undefined,
+  );
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  return JSON.stringify(entries);
+}
+```
+
+**All services** import this for filter serialization.
+
+---
+
+## Service Documentation (README.md)
+
+**Every service MUST have a README.md** with:
+
+### Required Sections
+
+```markdown
+# {ServiceName} - {Bounded Context}
+
+> **Bounded Context**: "One-sentence description"
+> **SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §X-Y](../../docs/...)
+> **Status**: Implemented / In Progress
+
+## Ownership
+**Tables**: List tables owned by this service
+**DTOs**: List public DTOs exposed
+**RPCs**: List database functions (if any)
+
+## Pattern
+Pattern A / Pattern B / Pattern C (explain why)
+
+## References
+- [SRM §X-Y](...)
+- [SLAD §X-Y](...)
+- [DTO_CANONICAL_STANDARD.md](...)
+```
+
+**See Actual Examples**:
+- Pattern A: `services/loyalty/README.md`
+- Pattern B: `services/player/README.md`
+
+---
+
+## Anti-Patterns (From SLAD §1200-1241)
+
+### ❌ NEVER Do This
+
+| Anti-Pattern | Why Banned | Correct Pattern |
+|--------------|------------|-----------------|
+| Manual `interface` for Pattern B services | Schema evolution blindness | Use `Pick<Database['public']['Tables']['x']['Row'], ...>` |
+| Missing `keys.ts` | React Query won't work | ALL services need key factories |
+| Cross-context Database type access | Violates bounded contexts | Use published DTOs only (see SLAD §559-603) |
+| `ReturnType<typeof createService>` | Implicit, unstable types | Explicit `interface XService` |
+| `supabase: any` | Type safety lost | `supabase: SupabaseClient<Database>` |
+| No README.md | Service undocumented | Required with SRM reference |
+
+---
+
+## Implementation Workflow
+
+### 1. Choose Pattern
+Use decision tree above → Pattern A, B, or C
+
+### 2. Create Directory
+```bash
+mkdir -p services/{domain}
+cd services/{domain}
+```
+
+### 3. Create Keys File
+```typescript
+// services/{domain}/keys.ts
+import { serializeKeyFilters } from '@/services/shared/key-utils';
+
+const ROOT = ['{domain}'] as const;
+
+export const {domain}Keys = {
+  root: ROOT,
+  // Add key factories based on your queries
+};
+```
+
+### 4. Add Business Logic (Pattern A) or Skip (Pattern B)
+```typescript
+// services/{domain}/{feature}.ts (Pattern A only)
+export interface {Feature}Input {
+  // Domain contract
+}
+
+export async function {featureAction}(input: {Feature}Input) {
+  // Business logic
+}
+```
+
+### 5. Create README.md
+```markdown
+# {Service} - {Context}
+> **SRM Reference**: [§X-Y](...)
+> **Pattern**: A / B / C
+```
+
+### 6. Add Tests
+```typescript
+// services/{domain}/{feature}.test.ts
+import { describe, it, expect } from 'vitest';
+```
+
+### 7. Update SRM
+Add service to SERVICE_RESPONSIBILITY_MATRIX.md
+
+---
+
+## Testing
+
+**See**: `docs/40-quality/QA-004-tdd-standard.md` (if exists)
+
+### Unit Testing Pattern
+
+```typescript
+// services/{domain}/{feature}.test.ts
+import { describe, it, expect } from 'vitest';
+
+describe('{Service}.{feature}', () => {
+  it('should handle happy path', async () => {
+    // Test logic
   });
 
-  return toServiceHttpResponse(envelope);
-}
-
-export async function PATCH(
-  request: NextRequest,
-  segmentData: { params: Promise<{ casino_id: string }> },
-) {
-  const params = await segmentData.params;
-  const idempotencyKey = IdempotencyKey.fromRequest(request);
-  // ...validate body with Zod, enforce Idempotency-Key per API Surface doc
-  // ...call service mutation, return toServiceHttpResponse(envelope)
-}
-```
-
----
-
-## 8) RLS & Tenancy Guardrails (Made Explicit)
-- Always scope queries with required tenancy keys (`casino_id`, `gaming_day`, etc.) when the use-case requires.  
-- Never bypass RLS with service keys in runtime. Service keys are allowed only in migrations/CI.  
-- For cross-context reads, consume the other context’s **published view/service**. Do not ad-hoc join across domains.
-
----
-
-## 9) Testing Policy (Fast Unit, Targeted Integration)
-- **Unit tests:** mock `SupabaseClient<Database>` with a typed test double; verify interface shape & domain error mapping.  
-- **Integration tests (opt-in):** run against local Supabase with RLS enabled; verify select shapes and constraint → domain error mapping.  
-- Keep per-domain **test helpers** (e.g., `makePlayer()`) within the domain folder.
-
----
-
-## 10) Testing Pattern (TDD)
-
-**Goal:** fast feedback (red → green → refactor) with strong type guarantees and minimal ceremony.
-
-### 10.1 Unit tests (default)
-- **Isolate the application service.** Use a **typed test double** for `SupabaseClient<Database>`.
-- **No `ReturnType` in public APIs or test types.** Import the **explicit service interface** (e.g., `PlayerService`) instead.
-- Verify:
-  - happy-path data mapping,
-  - domain error mapping (e.g., `PGRST116` → `NOT_FOUND`, `23505` → domain `*_DUPLICATE`),
-  - that `executeOperation` envelopes results consistently.
-
-**Example (Vitest/Jest):**
-```ts
-// services/player/__tests__/player.unit.test.ts
-import { describe, it, expect } from "vitest";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/types/database.types";
-import { createPlayerService } from "@/services/player";
-import type { PlayerService } from "@/services/player"; // explicit interface, not ReturnType
-
-function makeClientDouble(overrides: Partial<SupabaseClient<Database>> = {}): SupabaseClient<Database> {
-  // minimal shape we need for this test; add methods incrementally
-  return {
-    from: (table: string) => {
-      if (table !== "player") throw new Error("unexpected table");
-      return {
-        insert: (_: any) => ({
-          select: (_sel: string) => ({ single: async () => ({ data: { id: "p1", first_name: "A", last_name: "B", phone: null }, error: null }) }),
-        }),
-        update: (_: any) => ({
-          eq: (_c: string, _v: string) => ({
-            select: (_sel: string) => ({ single: async () => ({ data: { id: "p1", first_name: "A", last_name: "B", phone: null }, error: null }) }),
-          }),
-        }),
-        select: (_sel: string) => ({
-          eq: (_c: string, _v: string) => ({ single: async () => ({ data: { id: "p1", first_name: "A", last_name: "B", phone: null }, error: null }) }),
-        }),
-      } as any;
-    },
-    // @ts-expect-error partial double for tests
-    ...overrides,
-  } as SupabaseClient<Database>;
-}
-
-describe("player service (unit)", () => {
-  it("creates a player and returns envelope", async () => {
-    const svc: PlayerService = createPlayerService(makeClientDouble());
-    const res = await svc.create({ first_name: "A", last_name: "B" });
-    expect(res.success).toBe(true);
-    expect(res.data?.id).toBe("p1");
+  it('should validate input', async () => {
+    // Test validation
   });
 });
 ```
 
-### 10.2 Integration tests (opt-in)
-- Run against local Supabase with **RLS enabled** and seed data.
-- Verify **column select shapes** and **constraint → domain error** behavior.
-- Keep them focused and few; prefer unit tests for logic.
+---
 
-**Example outline:**
-```ts
-// services/player/__tests__/player.int.test.ts
-// - boot real Supabase client
-// - insert with conflicting natural key → expect domain DUPLICATE code
-// - fetch by id with RLS scope → expect data
-```
+## Cross-References
 
-### 10.3 Testing rules
-- **Use the public interface** (`PlayerService`) in tests; **do not** export or rely on `ReturnType<typeof createPlayerService>` in test declarations.
-- **Do not mock** PostgREST internals; only double the **minimal** client surface you need.
-- **Seed helpers** live per domain (e.g., `makePlayer()`); avoid a global utilities junk drawer.
-- Keep CI fast: unit tests mandatory; integration tests are targeted.
+### Architecture
+- **PRIMARY**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.1)
+- **Bounded Contexts**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) (SRM v3.1.0)
+- **DTO Standards**: [DTO_CANONICAL_STANDARD.md](../25-api-data/DTO_CANONICAL_STANDARD.md) (v2.1.0)
+
+### Patterns
+- **DTO Patterns**: SLAD §345-517
+- **React Query Patterns**: SLAD §1032-1112
+- **Cross-Context Consumption**: SLAD §559-603
+- **Anti-Patterns**: SLAD §1200-1241
+
+### Governance
+- **ADR-008**: Service layer architecture decisions
+- **Edge Transport**: [EDGE_TRANSPORT_POLICY.md](../20-architecture/EDGE_TRANSPORT_POLICY.md)
 
 ---
 
-## 11) Edge Compliance Checklist (API Surface Alignment)
-- **Versioning:** All HTTP entrypoints live under `/api/v1/**`; breaking contracts fork to `/api/v2` with sunset guidance (see `25-api-data/API_SURFACE_MVP.md`).
-- **ServiceHttpResult contract:** Route Handlers and Server Actions *must* return the canonical HTTP envelope (`ok`, `code`, `status`, `requestId`, `durationMs`, `timestamp`) via `lib/http/service-response.ts`. Services continue returning `ServiceResult`.
-- **Idempotency:** POST/PATCH requests require an `Idempotency-Key`. Either persist per-domain ledgers (e.g., `loyalty_ledger.idempotency_key`) or hash the request into `audit_log` when tables lack a dedicated column. Services should prefer natural-key upserts; edges enforce header presence.
-- **Rate limiting & RBAC:** Use `lib/rate-limiter` defaults (60 read / 10 write req/min/staff) unless the API Surface specifies stricter policies, and honor the SRM-defined JWT roles + `casino_id` scoping.
-- **Observability & Audit:** Wrap mutating operations in `withServerAction` to capture `requestId`, `durationMs`, and actor context, and append mutations to `audit_log` with the same correlation identifiers.
-- **Caching & runtime configs:** Configure Route Handler segment options (`dynamic`, `revalidate`, `runtime`, etc.) per Next.js guidance to match the API’s consistency expectations (e.g., `force-static` for cached GETs).
+## Actual Service Examples (Reference Implementations)
 
-## 12) Error Code Catalog (Small & Domain-Centric)
-- Shared minimal set: `NOT_FOUND`, `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `TIMEOUT`, `OPERATION_FAILED`.  
-- Domain codes follow `{DOMAIN}_{REASON}` (e.g., `PLAYER_DUPLICATE`).  
-- Catalogs live with the domain (`dto.ts`). Promote to shared only if reused across ≥2 domains.
+| Service | Pattern | Files | Purpose |
+|---------|---------|-------|---------|
+| `services/loyalty/` | A (Contract-First) | keys.ts, mid-session-reward.ts, README.md | Complex reward logic |
+| `services/player/` | B (Canonical CRUD) | keys.ts, README.md | Simple identity CRUD |
+| `services/rating-slip/` | C (Hybrid) | keys.ts, state-machine.ts, README.md | Mixed complexity |
+| `services/finance/` | A (Contract-First) | keys.ts, README.md | Financial transactions |
 
-Standard error codes for consistency across services. **Note:** HTTP mapping happens at the edge (server actions/controllers); services emit domain codes only.
-
-| Code | HTTP Status | Meaning | When to Use |
-|------|-------------|---------|-------------|
-| `DUPLICATE_X` *(prefer domain-specific, e.g., `PLAYER_DUPLICATE`)* | **409** (or 400) | Unique constraint violation | PostgreSQL `23505` |
-| `NOT_FOUND` | 404 | Entity doesn't exist | PostgREST `PGRST116` |
-| `VALIDATION_ERROR` | 400 | Input validation failed | Zod/manual validation at the edge |
-| `UNAUTHORIZED` | 401 | Auth required | No/invalid session |
-| `FORBIDDEN` | 403 | Authenticated but not allowed | RLS policy denial / business rule violation |
-| `TIMEOUT` | 504 | Operation exceeded timeout | `executeOperation` timeout |
-| `OPERATION_FAILED` | 500 | Unexpected error | Catch‑all for unknown errors |
-
-**Naming Convention:** `{DOMAIN}_{ACTION?}_{REASON}` (e.g., `PLAYER_UPDATE_EMAIL_EXISTS`, `PLAYER_DUPLICATE`).  
-**Guidance:** Prefer **domain‑centric codes** in services (e.g., `PLAYER_DUPLICATE`). Map to the suggested HTTP status at the edge.
+**Before implementing**: Read the README.md of a similar service for patterns.
 
 ---
 
-## 13) Idempotency & Constraints (Policy)
-- If a natural key exists, **writes are idempotent**: on `23505`, find+return existing when safe.  
-- If idempotency is not safe, return a domain duplicate error (`*_DUPLICATE`) with enough details to surface the conflict.
+## Change Log
+
+### v2.0.1 (2025-11-18) - executeOperation Pattern Restoration
+- ✅ **CORRECTION**: Re-added executeOperation pattern (SLAD §918-975)
+- ✅ Added Error Handling Pattern section with complete example
+- ✅ Restored alignment with SLAD canonical architecture
+- ✅ Clarified that pattern is planned (not yet implemented in services)
+- ✅ Updated checklist to include executeOperation wrapper requirement
+
+**Rationale**: The v2.0.0 removal of executeOperation was premature. While no PT-2 services currently implement this pattern, SLAD §918-975 documents it as the canonical error handling approach, and ANTI_PATTERN_CATALOG.md does not list it as banned. The absence from current code reflects early implementation stage, not architectural deprecation.
+
+### v2.0.0 (2025-11-18) - SLAD Alignment Rewrite
+- ✅ **BREAKING**: Complete rewrite aligned with SLAD v2.1.1
+- ✅ Removed outdated directory structure (dto.ts, selects.ts, crud.ts, business.ts)
+- ✅ Documented actual implementation patterns from current codebase
+- ✅ Added React Query keys.ts pattern (missing in v1.2)
+- ✅ Added service README.md requirement (missing in v1.2)
+- ✅ Removed hypothetical code examples that don't match actual implementation
+- ✅ Fixed Pattern A/B/C alignment with SLAD
+- ✅ Added cross-references to SLAD sections instead of duplicating content
+- ⚠️ Removed executeOperation wrapper (CORRECTED in v2.0.1 - see above)
+  1- ✅ Removed Zod schema patterns (not found in dto.ts files)
+- ✅ Documented actual file structure from services/loyalty/, services/player/
+- ✅ Eradicated contradictions with SLAD §305-341, §559-603, §1200-1241
+
+### v1.2 (2024) - DEPRECATED
+- Outdated directory structure
+- Hypothetical code patterns not matching actual implementation
+- Missing React Query keys pattern
+- Contradictions with SLAD established patterns
 
 ---
 
-## 14) Checklists (Lean)
-**Start**
-- [ ] DTOs + Zod in `services/{domain}/dto.ts`  
-- [ ] Named selects in `selects.ts`  
-- [ ] Explicit interface in `index.ts`  
-- [ ] No `services/{domain}/types.ts`
+**End of Guide**
 
-**During**
-- [ ] Validate at edge; trust inside  
-- [ ] No exported `ReturnType<>`; no `any`  
-- [ ] Extract only on 3rd repetition
-
-**Before PR**
-- [ ] Unit tests pass (typed double)  
-- [ ] Integration (if present) green  
-- [ ] RLS scope verified in queries  
-- [ ] Error codes mapped & documented
-
----
-
-## 15) Migration Notes (from v1.0)
-- **Move DTOs** into `services/{domain}/dto.ts`. Replace ad-hoc types with Zod schemas + inferred types.  
-- **Delete** `services/{domain}/types.ts` files.  
-- **Remove HTTP status** from `ServiceResult`; do mapping at edge only.  
-- **Centralize** column sets in `selects.ts`.  
-- **Adopt** `executeOperation()` wrapper with timeout (+ optional retry/logger).  
-
----
-**End of file**
+For complete architecture details, patterns, and diagrams, see [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md).

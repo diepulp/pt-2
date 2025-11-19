@@ -1,0 +1,176 @@
+# Memori Configuration for PT-2 Project
+# SQL-native memory engine for agentic workflows
+
+# Database Configuration
+# Using existing Supabase local instance (supabase_db_pt-2 container)
+database:
+  url: "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+  schema: "memori"  # Separate schema to avoid conflicts with PT-2 tables
+
+# Environment
+environment: "development"
+
+# Memory Modes
+modes:
+  # Conscious Mode: One-shot working memory injection
+  # Injects short-term context at the start of each session
+  conscious_ingest: true
+
+  # Auto Mode: Dynamic search per query
+  # Retrieves relevant memories based on query context
+  auto_ingest: true
+
+  # Combined mode provides best of both worlds:
+  # - Conscious: Quick working memory (recent decisions, active patterns)
+  # - Auto: Deep retrieval from full doc corpus (203k words)
+
+# Bounded Context Isolation
+# Each service gets isolated memory namespace
+contexts:
+  - name: "mtl_service"
+    user_id: "mtl_service"
+    description: "MTL compliance engine - cash transaction log, AML/CTR"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/30-security/SEC-*.md"
+      - "memory/service-catalog.memory.md"
+      - "memory/anti-patterns.memory.md"
+
+  - name: "player_service"
+    user_id: "player_service"
+    description: "Player identity and profile management"
+    ingest_paths:
+      - "docs/10-prd/PRD-001_Player_Management_System_Requirements.md"
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+
+  - name: "casino_service"
+    user_id: "casino_service"
+    description: "Casino foundational context - settings, staff, reports"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "memory/architecture-decisions.memory.md"
+
+  - name: "table_context_service"
+    user_id: "table_context_service"
+    description: "Table operations - dealers, fills/drops, chip custody"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "memory/domain-glossary.memory.md"
+
+  - name: "loyalty_service"
+    user_id: "loyalty_service"
+    description: "Loyalty points engine and reward ledger"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+
+  - name: "visit_service"
+    user_id: "visit_service"
+    description: "Visit session lifecycle - check-in/out, session management"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "docs/archive/bounded-context-integrity/phase-B/VISIT_PLAYERFINANCIAL_INTERFACE.md"
+
+  - name: "rating_slip_service"
+    user_id: "rating_slip_service"
+    description: "Telemetry and gameplay measurement - average bet, time played"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "docs/80-adrs/ADR-006-rating-slip-field-removal.md"
+
+  - name: "player_financial_service"
+    user_id: "player_financial_service"
+    description: "Finance context - player transaction ledger (append-only)"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "docs/archive/bounded-context-integrity/phase-B/VISIT_PLAYERFINANCIAL_INTERFACE.md"
+      - "docs/archive/bounded-context-integrity/phase-B/FINANCIAL_DATA_OWNERSHIP_TABLE.md"
+
+  - name: "floor_layout_service"
+    user_id: "floor_layout_service"
+    description: "Floor design and activation - layout versions, pit definitions, table placements"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+      - "memory/domain-glossary.memory.md"
+
+  - name: "performance_service"
+    user_id: "performance_service"
+    description: "Observability and monitoring - metrics, alerts, read-only telemetry"
+    ingest_paths:
+      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "memory/service-catalog.memory.md"
+
+  - name: "architecture"
+    user_id: "pt2_architect"
+    description: "System architecture - SRM, ADRs, patterns"
+    ingest_paths:
+      - "docs/20-architecture/**/*.md"
+      - "docs/80-adrs/**/*.md"
+      - "docs/patterns/**/*.md"
+      - "memory/architecture-decisions.memory.md"
+      - "memory/anti-patterns.memory.md"
+
+  - name: "security"
+    user_id: "pt2_security"
+    description: "Security patterns - RLS, RBAC, compliance"
+    ingest_paths:
+      - "docs/30-security/**/*.md"
+      - "memory/anti-patterns.memory.md"
+
+# Ingestion Rules
+ingestion:
+  # Categories for auto-classification
+  categories:
+    - "facts"          # Verifiable information (e.g., "CTR threshold is $10,000")
+    - "preferences"    # Team preferences (e.g., "Use functional factories, not classes")
+    - "skills"         # Technical patterns (e.g., "Vertical slice delivery")
+    - "rules"          # Enforcement rules (e.g., "No ReturnType inference")
+    - "context"        # Background information (e.g., "Gaming day starts at 6am")
+
+  # Exclude patterns
+  exclude:
+    - "node_modules/**"
+    - ".git/**"
+    - "*.log"
+    - ".venv/**"
+    - "dist/**"
+    - "build/**"
+
+# Retrieval Settings
+retrieval:
+  # Number of memories to retrieve per query
+  max_results: 10
+
+  # Relevance threshold (0.0 - 1.0)
+  min_relevance: 0.6
+
+  # Prioritize recent memories
+  recency_weight: 0.3
+
+# Background Processing
+background:
+  # Conscious Agent runs every 6 hours to promote important memories
+  conscious_interval: 21600  # seconds
+
+  # Enable automatic entity extraction
+  entity_extraction: true
+
+  # Enable relationship mapping
+  relationship_mapping: true
+
+# Logging
+logging:
+  level: "INFO"
+  file: ".memori/memori.log"
+
+# Export Settings
+export:
+  # Enable SQLite export for portability
+  sqlite_path: ".memori/export/memori.db"
