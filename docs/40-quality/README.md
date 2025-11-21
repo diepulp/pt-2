@@ -38,6 +38,7 @@ last_review: 2025-10-25
 - `QA-001` — Service & Layered Testing Strategy (`QA-001-service-testing-strategy.md`)
 - `QA-002` — CI/CD Quality Gates (`QA-002-quality-gates.md`)
 - `QA-003` — Service Testing Patterns & Examples (`QA-003-service-testing-patterns.md`)
+- `QA-004` — Test-Driven Development (TDD) Standard (`QA-004-tdd-standard.md`)
 
 ## Related Categories
 

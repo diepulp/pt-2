@@ -10,7 +10,7 @@
 
 ## Context
 
-- `70-governance/SERVICE_TEMPLATE.md` (v1.2) codifies how each bounded context structures DTOs, CRUD modules, factories, and shared helpers, but this practice had not been recorded in ADR form.
+- `70-governance/SERVICE_TEMPLATE.md` (v2.0.1) codifies how each bounded context structures DTOs, CRUD modules, factories, and shared helpers, but this practice had not been recorded in ADR form.
 - The API catalogue (ADR-007) and Balanced Architecture card both assume a consistent service layer diagram that ties Supabase schema, Route Handlers/Server Actions, and React Query hooks together.
 - Without an ADR, contributors risk re-introducing ad-hoc service hierarchies, manual DTOs, or cross-context imports that break SRM guarantees.
 

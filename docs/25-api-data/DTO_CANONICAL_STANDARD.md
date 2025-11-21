@@ -1,27 +1,41 @@
 # DTO Canonical Standard - Type System Architecture
 
+**Version**: 2.1.0
 **Status**: MANDATORY (Enforced by ESLint + Pre-commit Hooks)
-**Effective**: 2025-10-22
-**Supersedes**: Manual DTO interfaces in all services
+**Effective**: 2025-10-22 (Updated: 2025-11-18)
+**Supersedes**: Manual DTO interfaces in Pattern B (Canonical CRUD) services
 
 ---
 
 ## TL;DR
 
-**❌ BANNED:**
+**❌ BANNED (Pattern B - Canonical CRUD Services ONLY):**
 ```typescript
+// For simple CRUD services (Player, Visit, Casino, FloorLayout)
 export interface PlayerCreateDTO {
   first_name: string;
   last_name: string;
 }
 ```
 
-**✅ REQUIRED:**
+**✅ REQUIRED (Pattern B - Canonical CRUD Services):**
 ```typescript
 export type PlayerCreateDTO = Pick<
   Database['public']['Tables']['player']['Insert'],
   'first_name' | 'last_name'
 >;
+```
+
+**✅ ALLOWED (Pattern A - Contract-First Services ONLY):**
+```typescript
+// For complex services (Loyalty, Finance, MTL, TableContext)
+// Must use mappers.ts to enforce boundary
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+}
 ```
 
 ---
@@ -517,11 +531,13 @@ export type LoyaltyRewardDTO = Pick<
 
 **Principle**: SRM defines contract → DTO interface → Mapper enforces boundary
 
+**Syntax Choice**: `interface` OR `type` (both allowed for Pattern A)
+
 #### Step 1: Define Domain Contract (SRM-Aligned)
 
 ```typescript
 // services/loyalty/dtos.ts
-// ✅ Domain contract independent of DB schema
+// ✅ Option 1: interface (semantic clarity for public contracts)
 export interface PlayerLoyaltyDTO {
   player_id: string;
   casino_id: string;
@@ -529,6 +545,21 @@ export interface PlayerLoyaltyDTO {
   tier: string | null;
   // NO: preferences (internal), updated_at (implementation detail)
 }
+
+// ✅ Option 2: type alias (functionally equivalent)
+export type PlayerLoyaltyDTO = {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+};
+```
+
+**Why manual definitions are SAFE here** (vs. Pattern B ban):
+- Pattern A DTOs are **domain contracts**, not schema mirrors
+- Mappers enforce transformation (compile-time checkpoint)
+- Schema changes handled in `mappers.ts`, DTO contract remains stable
+- TypeScript errors if mapper doesn't satisfy DTO contract
 
 export interface IssueMidSessionRewardInput {
   casino_id: string;
@@ -733,7 +764,86 @@ ALTER TABLE player RENAME COLUMN birth_date TO date_of_birth;
 
 ### Q: Can I ever use `interface` for DTOs?
 
-**A**: No. Use `type` aliases exclusively for DTOs. Interfaces cannot leverage `Pick`, `Omit`, `Partial`.
+**A**: It depends on the DTO pattern:
+
+#### Pattern B (Canonical CRUD Services)
+**NO. Use `type` aliases exclusively.**
+
+```typescript
+// ❌ BANNED for Pattern B (Player, Visit, Casino, FloorLayout)
+export interface PlayerCreateDTO {
+  first_name: string;
+  last_name: string;
+}
+
+// ✅ REQUIRED for Pattern B
+export type PlayerCreateDTO = Pick<
+  Database['public']['Tables']['player']['Insert'],
+  'first_name' | 'last_name' | 'birth_date'
+>;
+```
+
+**Rationale**: Manual interfaces create **schema evolution blindness**. Pattern B DTOs mirror database schema 1:1, so they MUST be derived from `Database` types to auto-sync with migrations.
+
+**The Problem**:
+```typescript
+// Migration adds column
+ALTER TABLE player ADD COLUMN email text;
+
+// npm run db:types → Database types update automatically
+// Manual interface → NO UPDATE (silent drift)
+// Result: TypeScript doesn't error, runtime drops data
+```
+
+---
+
+#### Pattern A (Contract-First Services)
+**YES. Manual `interface` allowed (but `type` also works).**
+
+```typescript
+// ✅ ALLOWED for Pattern A (Loyalty, Finance, MTL, TableContext)
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+}
+
+// ✅ OR use type alias (functionally equivalent)
+export type PlayerLoyaltyDTO = {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+};
+```
+
+**Rationale**: Pattern A DTOs define **domain contracts** intentionally decoupled from schema. Mappers enforce the boundary and provide compile-time safety:
+
+```typescript
+// services/loyalty/mappers.ts (REQUIRED for Pattern A)
+import type { Database } from '@/types/database.types';
+type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Explicitly omit: preferences (internal field)
+  };
+}
+```
+
+**Type safety is preserved** because:
+- Mapper function signature enforces completeness: `(row: LoyaltyRow) → PlayerLoyaltyDTO`
+- Schema changes break mapper at compile time (not silently at runtime)
+- DTO contract remains stable unless domain needs change
+
+**Key difference**:
+- Pattern B: Schema change → DTO MUST change (enforced by `Pick`)
+- Pattern A: Schema change → Mapper adapts, DTO contract stable
 
 ### Q: What if I need to extend a DTO?
 
@@ -773,6 +883,35 @@ export type PlayerWithStats = PlayerDTO & {
 
 ---
 
-**Effective Date**: 2025-10-22
-**Enforcement**: Immediate (ESLint errors block builds)
-**Migration Deadline**: End of Sprint (all services must comply)
+## Document History
+
+**Version**: 2.1.0
+**Date**: 2025-11-18
+**Status**: CANONICAL (Aligned with SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md v2.1.0)
+
+### Change Log
+
+**v2.1.0 (2025-11-18)** - Pattern-Specific Interface Ban Resolution:
+- ✅ Updated TL;DR to clarify Pattern B ban vs. Pattern A allowance
+- ✅ Resolved FAQ contradiction (added pattern-specific guidance)
+- ✅ Added comprehensive rationale for manual interface ban (schema evolution blindness)
+- ✅ Clarified Pattern A safety mechanism (mappers.ts compile-time checkpoint)
+- ✅ Updated Pattern 5 with syntax choice options (interface OR type)
+- ✅ Added "Why manual definitions are SAFE for Pattern A" explanation
+- ✅ Cross-referenced with SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md v2.1.0
+
+**Rationale Summary**:
+- **Pattern B ban**: Prevents schema evolution blindness (silent data loss)
+- **Pattern A allowance**: Mappers enforce boundary (compile-time safety preserved)
+- **Key insight**: Different coupling models require different enforcement rules
+
+**v1.0 (2025-10-22)** - Initial CANONICAL version:
+- Established Pick/Omit pattern for database-bound DTOs
+- Created ESLint enforcement rules
+- Defined canonical patterns 1-4
+
+---
+
+**Effective Date**: 2025-10-22 (Updated: 2025-11-18)
+**Enforcement**: Immediate (ESLint errors block builds for Pattern B)
+**Migration Deadline**: End of Sprint (Pattern B services must comply)

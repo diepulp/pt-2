@@ -16,8 +16,8 @@ Baseline the role-based access control model that complements the casino-scoped 
 
 | Role / Claim | Issuer | Description |
 | --- | --- | --- |
-| `dealer` | `staff_role` enum | Table-level operator; submits telemetry and session updates. |
-| `pit_boss` | `staff_role` enum | Supervises tables; approves table configuration changes and reward escalations. |
+| `dealer` | `staff_role` enum | Non-authenticated scheduling metadata only. Dealers are tracked in the system for operational visibility (dealer rotations, table assignments) but have ZERO application permissions |
+| `pit_boss` | `staff_role` enum |Table-level operator; submits telemetry and session updates. Supervises tables; approves table configuration changes and reward escalations. |
 | `admin` | `staff_role` enum | Casino administrator; manages staff and foundational configuration. |
 | `cashier` | Service claim (`auth.jwt()` scope) | Initiates cashiering transactions through finance service RPCs. |
 | `compliance` | Service claim (`auth.jwt()` scope) | Reviews financial/MTL ledgers, appends compliance audit notes. |

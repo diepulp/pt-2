@@ -1,10 +1,11 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2025-11-17
+**Last Updated**: 2025-11-20
 **Taxonomy Version**: 1.1 (SDLC-Aligned + Emerging Categories)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
 **SRM Status**: Compressed (2,127 → 1,848 lines, 13% reduction)
+**Purpose**: Navigation hub and document registry for PT-2 architecture documentation
 
 ---
 
@@ -30,21 +31,21 @@
 ## 📚 Quick Start by Role
 
 ### For Developers
-1. **[Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md)** ⭐ HORIZONTAL vs VERTICAL decision (10-min)
-2. **[Service Template](70-governance/)** → SERVICE_TEMPLATE.md - Implementation guide
-3. **[Hooks Standard](70-governance/)** → HOOKS_STANDARD.md - React Query v5 patterns
+1. **[Balanced Architecture Quick](20-architecture/BALANCED_ARCHITECTURE_QUICK.md)** ⭐ HORIZONTAL vs VERTICAL decision (10-min)
+2. **[Service Template](70-governance/SERVICE_TEMPLATE.md)** - Implementation guide
+3. **[Hooks Standard](70-governance/HOOKS_STANDARD.md)** - React Query v5 patterns
 4. **[Database Type Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)** - Daily DB management
 
 ### For Architects
 1. **[Service Responsibility Matrix](20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)** → SRM (compressed) - Canonical bounded contexts registry
 2. **[DTO Catalog](25-api-data/DTO_CATALOG.md)** → Complete DTO specifications with field-level detail
-3. **[Service Layer Diagram](20-architecture/)** → Architecture patterns + anti-patterns
-4. **[API Surface](25-api-data/)** → API_SURFACE_MVP.md - Endpoint catalogue
+3. **[Service Layer Architecture Diagram](20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)** → Architecture patterns + anti-patterns
+4. **[API Surface MVP](25-api-data/API_SURFACE_MVP.md)** - Endpoint catalogue
 5. **[ADRs](80-adrs/)** → Decision history and rationale
 
 ### For Product Managers
-1. **[MVP Roadmap](10-prd/)** → SDLC_MVP_ROADMAP.md - 10-week delivery plan
-2. **[Canonical PRD](10-prd/)** → CANONICAL_BLUEPRINT_MVP_PRD.md - Complete spec
+1. **[Vision and Scope](00-vision/VIS-001-VISION-AND-SCOPE.md)** - Project vision and goals
+2. **[Product Requirements](10-prd/PRD-001_Player_Management_System_Requirements.md)** - Complete spec
 3. **[Release Plans](60-release/)** → Phased delivery strategy
 
 ---
@@ -55,7 +56,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| - | *To be populated* | - | - |
+| VIS-001 | Vision and Scope | Active | `00-vision/VIS-001-VISION-AND-SCOPE.md` |
 
 **Purpose**: Problem statement, goals, non-goals, success metrics
 
@@ -65,8 +66,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| PRD-001 | SDLC MVP Roadmap | Draft | `system-prd/SDLC_MVP_ROADMAP.md` |
-| PRD-002 | Canonical Blueprint MVP | Accepted | `system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` |
+| PRD-001 | Player Management System Requirements | Active | `10-prd/PRD-001_Player_Management_System_Requirements.md` |
 
 **Purpose**: User stories, acceptance criteria, release goals
 
@@ -81,11 +81,12 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| ARCH-001 | Service Responsibility Matrix (compressed) | Active | `SERVICE_RESPONSIBILITY_MATRIX.md` |
-| ARCH-002 | Service Layer Architecture Diagram v1.0 | Accepted | `SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
-| ARCH-003 | SRM Mapping Table | Active | `SRM_MAPPING_TABLE.md` |
-| TEMP-001 | Gaming Day Specification | Active | `temporal-patterns/TEMP-001-gaming-day-specification.md` |
-| TEMP-002 | Temporal Authority Pattern | Active | `temporal-patterns/TEMP-002-temporal-authority-pattern.md` |
+| ARCH-001 | Service Responsibility Matrix (compressed) | Active | `20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
+| ARCH-002 | Service Layer Architecture Diagram v2.1.2 | Accepted | `20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
+| ARCH-003 | SRM Mapping Table | Active | `20-architecture/SRM_MAPPING_TABLE.md` |
+| ARCH-004 | Balanced Architecture Quick Reference | Active | `20-architecture/BALANCED_ARCHITECTURE_QUICK.md` |
+| TEMP-001 | Gaming Day Specification | Active | `20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` |
+| TEMP-002 | Temporal Authority Pattern | Active | `20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` |
 
 **Purpose**: Bounded contexts, system diagrams, integration contracts, NFRs
 
@@ -106,11 +107,11 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| API-001 | DTO Catalog | Active | `DTO_CATALOG.md` |
-| API-002 | DTO Canonical Standard | Accepted | `DTO_CANONICAL_STANDARD.md` |
-| API-003 | API Surface MVP | Accepted | `API_SURFACE_MVP.md` |
-| API-004 | Real-time Events Map | Accepted | `REAL_TIME_EVENTS_MAP.md` |
-| API-005 | OpenAPI Specification | Draft | `api-surface.openapi.yaml` |
+| API-001 | DTO Catalog | Active | `25-api-data/DTO_CATALOG.md` |
+| API-002 | DTO Canonical Standard | Accepted | `25-api-data/DTO_CANONICAL_STANDARD.md` |
+| API-003 | API Surface MVP | Accepted | `25-api-data/API_SURFACE_MVP.md` |
+| API-004 | Real-time Events Map | Accepted | `25-api-data/REAL_TIME_EVENTS_MAP.md` |
+| API-005 | OpenAPI Specification | Draft | `25-api-data/api-surface.openapi.yaml` |
 
 **Purpose**: REST API contracts, DTOs, database schema, event contracts
 
@@ -131,9 +132,9 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| SEC-001 | RLS Policy Matrix | Active | `SEC-001-rls-policy-matrix.md` |
-| SEC-005 | Role Taxonomy | Active | `SEC-005-role-taxonomy.md` |
-| COMP-002 | MTL Compliance Standard | Active | `compliance/COMP-002-mtl-compliance-standard.md` |
+| SEC-001 | RLS Policy Matrix | Active | `30-security/SEC-001-rls-policy-matrix.md` |
+| SEC-005 | Role Taxonomy | Active | `30-security/SEC-005-role-taxonomy.md` |
+| COMP-002 | MTL Compliance Standard | Active | `30-security/compliance/COMP-002-mtl-compliance-standard.md` |
 
 **Purpose**: RLS policies, RBAC matrix, threat model, secrets handling, compliance
 
@@ -153,7 +154,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| INT-002 | Event Catalog | Active | `INT-002-event-catalog.md` |
+| INT-002 | Event Catalog | Active | `35-integration/INT-002-event-catalog.md` |
 
 **Purpose**: Event catalogs, service contracts, integration patterns, channel naming
 
@@ -173,14 +174,18 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| QA-001 | Testing Setup | Accepted | `phase-0/TESTING_SETUP.md` |
+| QA-001 | Service & Layered Testing Strategy | Draft | `40-quality/QA-001-service-testing-strategy.md` |
+| QA-002 | CI/CD Quality Gates | Draft | `40-quality/QA-002-quality-gates.md` |
+| QA-003 | Service Testing Patterns & Examples | Draft | `40-quality/QA-003-service-testing-patterns.md` |
+| QA-004 | Test-Driven Development (TDD) Standard | Draft | `40-quality/QA-004-tdd-standard.md` |
 
-**Purpose**: Test strategy, coverage goals, quality gates, performance budgets
+**Purpose**: Test strategy, coverage goals, quality gates, performance budgets, TDD workflows
 
 **Testing Standards**:
-- Unit tests: Typed test doubles, 80% coverage minimum
-- Integration tests: Local Supabase with RLS enabled
-- E2E tests: Cypress (opt-in)
+- TDD workflow: Red-Green-Refactor cycle with typed doubles
+- Unit tests: Typed test doubles, 90% coverage for services
+- Integration tests: Local Supabase with RLS enabled, 85% coverage for workflows
+- E2E tests: Cypress for critical flows (10% of tests)
 
 ---
 
@@ -188,11 +193,11 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| RUN-001 | Outbox Worker Playbook | Active | `runbooks/RUN-001-outbox-worker-playbook.md` |
-| RUN-002 | Schema Reload | Active | `runbooks/RUN-002-schema-reload.md` |
-| RUN-003 | Schema Migration Runbook | Active | `runbooks/RUN-003-schema-migration-runbook.md` |
-| RUN-004 | RLS Policy Verification | Active | `runbooks/RUN-004-rls-policy-verification.md` |
-| RUN-005 | Type Sync | Active | `runbooks/RUN-005-type-sync.md` |
+| RUN-001 | Outbox Worker Playbook | Active | `50-ops/runbooks/RUN-001-outbox-worker-playbook.md` |
+| RUN-002 | Schema Reload | Active | `50-ops/runbooks/RUN-002-schema-reload.md` |
+| RUN-003 | Schema Migration Runbook | Active | `50-ops/runbooks/RUN-003-schema-migration-runbook.md` |
+| RUN-004 | RLS Policy Verification | Active | `50-ops/runbooks/RUN-004-rls-policy-verification.md` |
+| RUN-005 | Type Sync | Active | `50-ops/runbooks/RUN-005-type-sync.md` |
 
 **Purpose**: Observability, runbooks, SLIs/SLOs, incident process
 
@@ -212,7 +217,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| REL-001 | Migration Naming Standard | Accepted | `patterns/MIGRATION_NAMING_STANDARD.md` |
+| REL-001 | Migration Naming Standard | Accepted | `60-release/MIGRATION_NAMING_STANDARD.md` |
 
 **Purpose**: Versioning, release notes, rollout/rollback, deprecation
 
@@ -227,7 +232,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| MIG-001 | Migration Tracking Matrix | Active | `MIG-001-migration-tracking-matrix.md` |
+| MIG-001 | Migration Tracking Matrix | Active | `65-migrations/MIG-001-migration-tracking-matrix.md` |
 
 **Purpose**: Migration tracking, database evolution, schema changes, deprecation/EOL
 
@@ -247,14 +252,14 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| GOV-001 | Service Template v1.2 | Accepted | `SERVICE_TEMPLATE.md` |
-| GOV-002 | Over-Engineering Guardrail | Accepted | `OVER_ENGINEERING_GUARDRAIL.md` |
-| GOV-003 | Hooks Standard | Accepted | `HOOKS_STANDARD.md` |
-| GOV-004 | DTO Canonical Standard | Accepted | `DTO_CANONICAL_STANDARD.md` |
-| GOV-005 | Frontend Canonical Standard | Accepted | `FRONT_END_CANONICAL_STANDARD.md` |
-| GOV-006 | Server Actions Architecture v1.2 | Accepted | `SERVER_ACTIONS_ARCHITECTURE.md` |
-| GOV-PAT-001 | Service Factory Pattern | Active | `patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md` |
-| GOV-PAT-002 | Mapper Pattern | Active | `patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md` |
+| GOV-001 | Service Template v2.0.1 | Accepted | `70-governance/SERVICE_TEMPLATE.md` |
+| GOV-002 | Over-Engineering Guardrail | Accepted | `70-governance/OVER_ENGINEERING_GUARDRAIL.md` |
+| GOV-003 | Hooks Standard | Accepted | `70-governance/HOOKS_STANDARD.md` |
+| GOV-004 | DTO Canonical Standard | Accepted | `70-governance/DTO_CANONICAL_STANDARD.md` |
+| GOV-005 | Frontend Canonical Standard | Accepted | `70-governance/FRONT_END_CANONICAL_STANDARD.md` |
+| GOV-006 | Server Actions Architecture v1.2 | Accepted | `70-governance/SERVER_ACTIONS_ARCHITECTURE.md` |
+| GOV-PAT-001 | Service Factory Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md` |
+| GOV-PAT-002 | Mapper Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md` |
 
 **Purpose**: SDLC policy, coding standards, anti-patterns, contribution guide, domain modeling patterns
 
@@ -283,7 +288,7 @@
 | ADR-010 | DTO Compliance Gate | Accepted | - | - |
 | ADR-011 | Over-Engineering Guardrail | Accepted | - | - |
 
-**Location**: `adr/`
+**Location**: `80-adrs/`
 
 ---
 
@@ -303,101 +308,17 @@
 | "How do we debug in prod?" | OPS | [50-ops/runbooks/](50-ops/runbooks/) |
 | "How do we ship safely?" | REL | [60-release/](60-release/) |
 | "What are coding standards?" | GOV | [70-governance/](70-governance/) |
-| "Should this be HORIZONTAL or VERTICAL?" | ARCH | [Balanced Architecture](patterns/BALANCED_ARCHITECTURE_QUICK.md) |
-
----
-
-## 📊 Current Project Status
-
-### Phase Completion
-
-| Phase | Status | Approach | Completion | Key Docs |
-|-------|--------|----------|------------|----------|
-| **Phase 0** | ✅ Complete | HORIZONTAL | 100% | [COMPLETED.md](phase-0/COMPLETED.md) |
-| **Phase 1** | ✅ Complete | HORIZONTAL | 100% | [security-skeleton.md](phase-1/security-skeleton.md) |
-| **Phase 2** | 🔄 In Progress | HORIZONTAL | 87.5% | [SESSION_HANDOFF.md](phase-2/SESSION_HANDOFF.md) |
-| **Phase 3** | ⏳ Next | H → V | 0% | Week 3: State (H), Weeks 4-6: UI (V) |
-| **Phase 4** | ⏳ Pending | V + HYBRID | 0% | Compliance workflows |
-| **Phase 5** | ⏳ Pending | HORIZONTAL | 0% | Production hardening |
-
-### Service Layer Status (Phase 2)
-- ✅ 7/8 core services complete (87.5%)
-- ✅ 98/98 tests passing
-- ✅ Zero PRD violations
-- ✅ Test coverage >80%
-- ✅ Hybrid strategy formalized
-
----
-
-## 📖 Learning Paths
-
-### New Developer (4 hours)
-1. [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
-2. [Canonical PRD](10-prd/) §1-4 (30 min)
-3. [Service Layer Diagram](20-architecture/) (15 min)
-4. [Player Service Implementation](../services/player/) (30 min)
-5. [Database Workflow](workflows/DATABASE_TYPE_WORKFLOW.md) (30 min)
-6. [Build test service](70-governance/) using template (2h)
-
-### Architect/Tech Lead (2.5 hours)
-1. [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐ (10 min)
-2. [Complete PRD](10-prd/) (1h)
-3. [MVP Roadmap](10-prd/) (30 min)
-4. [Architecture Gaps](roadmap/ARCHITECTURE_GAPS.md) (30 min)
-5. [ADRs](80-adrs/) review (30 min)
-6. Optional: [CONSENSUS_SYNTHESIS.md](architecture/slicing/CONSENSUS_SYNTHESIS.md) (3h)
-
----
-
-## 🔄 Reorganization Status
-
-### ✅ Phase 1: Structure Created (2025-10-25)
-- [x] Create SDLC taxonomy folder structure
-- [x] Add README to each category
-- [x] Update INDEX.md with taxonomy
-
-### ✅ Phase 2: Document Migration (2025-10-25)
-- [x] Move PRD documents to `10-prd/` (2 docs)
-- [x] Move architecture documents to `20-architecture/` (2 docs)
-- [x] Move API documents to `25-api-data/` (8 docs)
-- [x] Move release docs to `60-release/` (1 doc)
-- [x] Move governance docs to `70-governance/` (5 docs)
-- [x] Organize ADRs in `80-adrs/` (12 ADRs)
-- [x] Create MIGRATION_SUMMARY.md
-
-**Total**: 39 documents migrated successfully
-**Report**: See [MIGRATION_SUMMARY.md](MIGRATION_SUMMARY.md)
-
-### ✅ Phase 3 - Priority 1: Link Updates & Cleanup (2025-10-26)
-- [x] Scan all documents for broken internal links
-- [x] Update references to migrated documents (35+ files)
-- [x] Validate cross-references between docs (15+ links)
-- [x] Remove empty legacy folders (adr/, api-route-catalogue/, system-prd/)
-- [x] Create Phase 3 report
-
-**Total**: 17 path patterns fixed across 35+ files
-**Report**: See [PHASE_3_LINK_UPDATES_REPORT.md](PHASE_3_LINK_UPDATES_REPORT.md)
-
-### ⏳ Phase 3 - Priority 2: Front Matter (Pending)
-- [ ] Add YAML front matter to all migrated documents
-- [ ] Include: id, title, owner, status, created, last_review
-- [ ] Add affects/references cross-links
-
-### ⏳ Phase 4: Automation & Maintenance (Pending)
-- [ ] Add docs review checkbox to PR template
-- [ ] Schedule weekly docs review cadence
-- [ ] Create CODEOWNERS for doc categories
-- [ ] Setup automated link checking (GitHub Actions)
+| "Should this be HORIZONTAL or VERTICAL?" | ARCH | [Balanced Architecture](20-architecture/BALANCED_ARCHITECTURE_QUICK.md) |
 
 ---
 
 ## 📝 Document Maintenance
 
 ### Review Schedule
-- **Weekly**: Session handoffs, status updates
-- **Phase End**: Phase summary docs
-- **Monthly**: Roadmap timeline adjustments
-- **Quarterly**: PRD architecture refinements
+- **Weekly**: Documentation updates and taxonomy adjustments
+- **Bi-weekly**: Cross-reference validation
+- **Monthly**: Category ownership review
+- **Quarterly**: Architecture refinements and ADR review
 
 ### Ownership (RACI)
 
@@ -440,46 +361,47 @@
 ## 🆘 Need Help?
 
 ### Common Questions
-1. **"Should this be HORIZONTAL or VERTICAL?"** → [Balanced Architecture Quick](patterns/BALANCED_ARCHITECTURE_QUICK.md) ⭐
+1. **"Should this be HORIZONTAL or VERTICAL?"** → [Balanced Architecture Quick](20-architecture/BALANCED_ARCHITECTURE_QUICK.md) ⭐
 2. **"Which type file do I import?"** → [Database Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)
-3. **"How do I write a service?"** → [Service Template](70-governance/)
-4. **"What's the anti-pattern rule?"** → [PRD §4](10-prd/) or [Over-Engineering Guardrail](70-governance/)
-5. **"When is MVP done?"** → [MVP Roadmap](10-prd/)
-6. **"Where are we now?"** → [Session Handoff](phase-2/SESSION_HANDOFF.md)
+3. **"How do I write a service?"** → [Service Template](70-governance/SERVICE_TEMPLATE.md)
+4. **"What's the anti-pattern rule?"** → [PRD §4](10-prd/PRD-001_Player_Management_System_Requirements.md) or [Over-Engineering Guardrail](70-governance/OVER_ENGINEERING_GUARDRAIL.md)
+
+### Finding Specific Information
+- **Bounded Context Rules**: [Service Responsibility Matrix](20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
+- **Data Flow Patterns**: [Service Layer Architecture Diagram](20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
+- **Security Patterns**: [30-security/](30-security/)
+- **Testing Patterns**: [40-quality/](40-quality/)
 
 ---
 
-## 📝 Recent Changes (2025-11-17)
+## 📝 Recent Changes (2025-11-20)
 
-### SRM Compression & Taxonomy Expansion ✅
+### INDEX.md Refactored to Registry-Only ✅
 
 **What Changed**:
-- ✅ SRM compressed: 2,127 → 1,848 lines (13% reduction, 279 lines saved)
-- ✅ Detailed specs moved to taxonomy: DTO_CATALOG (771 lines), INT-002, runbooks
-- ✅ Two new taxonomy categories: `35-integration/` and `65-migrations/`
-- ✅ Link validation automated via CI (17/17 links valid)
-- ✅ Line reference tracking tool created (85 references monitored)
+- ✅ Removed project status sections (Phase Completion, Service Layer Status)
+- ✅ Removed Learning Paths section (content outdated, references broken)
+- ✅ Removed Reorganization Status section (completed work, no longer relevant)
+- ✅ Fixed broken file path references to match current taxonomy structure
+- ✅ Clarified purpose: Navigation hub and document registry only
+- ✅ Simplified Quick Start by Role with corrected paths
+- ✅ Updated "Recent Changes" to reflect this refactor
 
-**Sections Compressed**:
-1. DTO Contract Policy: 270 → 20 lines (now in DTO_CATALOG.md)
-2. Event/Telemetry: 30 → 7 lines (now in INT-002-event-catalog.md)
-3. Deprecation Policy: 11 → 5 lines (now in MIG-001-migration-tracking-matrix.md)
-4. Client Cache: 9 → 7 lines (now in ADR-003/004)
+**Rationale**:
+- Per `SDLC_DOCS_TAXONOMY.md:172`, INDEX.md purpose is "listing id → title → status → link"
+- Project status tracking mechanism to be devised separately
+- Prevents documentation drift and stale status information
+- Maintains INDEX.md as stable navigation reference
 
 **Impact**:
-- SRM remains canonical bounded context registry
-- Detailed specifications now in specialized taxonomy documents
-- Documentation bloat prevented
-- Product development unblocked
-
-**Reports**:
-- [Compression Execution Report](srn-modularization/COMPRESSION_EXECUTION_REPORT.md)
-- [Blocker Resolution Report](srn-modularization/BLOCKER_RESOLUTION_REPORT.md)
-- [SRM Mapping Table](20-architecture/SRM_MAPPING_TABLE.md)
+- INDEX.md now serves single, clear purpose: document discovery
+- Status tracking decoupled from navigation (prevents staleness)
+- All file references verified and corrected
+- Aligns with SDLC taxonomy definition
 
 ---
 
-**Index Version**: 2.1.0 (SDLC Taxonomy + Emerging Categories)
-**Last Updated**: 2025-11-17
+**Index Version**: 2.2.0 (Registry-Only)
+**Last Updated**: 2025-11-20
 **Maintained By**: Development Team
 **Next Review**: Weekly

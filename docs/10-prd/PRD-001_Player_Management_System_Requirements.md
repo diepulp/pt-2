@@ -31,7 +31,7 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 ## 2) Personas & JTBD
 
 - **Pit Boss / Floor Supervisor** — run pit, open/close tables, monitor state, resolve issues.  
-- **Dealer** — start/pause/resume/close rating slips as part of normal workflow.  
+- **Dealer** — NOT involved in running the pit, logging or manipulating rating slips 
 - **Cage/Accounting (read-only)** — verify in-session rewards, reconcile at day end.  
 - **Compliance (read-only)** — review threshold proximity and session context.
 
@@ -85,7 +85,7 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 > Format uses Gherkin-style acceptance tests (can be automated as E2E).
 
 ### US-001 Open a Table
-**As** a Pit Boss **I want** to open a table **so that** dealers can seat players.  
+**As** a Pit Boss **I want** to open a table **so that** patrons coudld be assigned seats to further monitor their activities, gaming action tracked and logged into rating slips, rewards issued, loyalty redemption and accrual tracked. I should be able to track patron's movement across the gaming floor and place them into appropriate seats on the table.  
 **Acceptance:**
 - **Given** the table is closed  
   **When** I Open Table  
@@ -142,6 +142,8 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 ### Table Context
 - States: `inactive`, `active`, `closed` (maps to SRM `table_status`).  
 - Dealer rotation: happy-path logging for audit; optional read-only view for MVP.
+- Handles live operational telemetry for tables and chip custody
+- References activated layouts from FloorLayoutService
 
 ### Player & Visit
 - Prevent multiple concurrent **visits** for same player at the same casino unless explicitly allowed.  

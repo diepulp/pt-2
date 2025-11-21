@@ -34,7 +34,6 @@ last_review: 2025-10-25
 ## Current Documents
 
 - **SDLC_MVP_ROADMAP.md** (to be moved here)
-- **CANONICAL_BLUEPRINT_MVP_PRD.md** (to be moved here)
 
 ## Related Categories
 

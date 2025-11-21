@@ -1,8 +1,17 @@
+---
+id: ARCH-012
+title: Service Layer Architecture Diagram (v2.1.2)
+owner: Architecture
+status: Accepted
+last_review: 2025-11-19
+affects: [SEC-001, ADR-003, ADR-004, ADR-008]
+---
+
 # Service Layer Architecture Diagram
 
-**Version**: 2.0.0
-**Date**: 2025-11-14
-**Status**: CANONICAL (Aligned with SRM v3.1.0)
+**Version**: 2.1.2
+**Date**: 2025-11-19
+**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -17,9 +26,9 @@
 - **Observability**: `docs/50-ops/OBSERVABILITY_SPEC.md` (Correlation/audit patterns)
 - **API Contracts**: `docs/25-api-data/API_SURFACE_MVP.md` (ServiceHttpResult envelope)
 - **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
-
-**Deprecated References** (Do Not Use):
-- ~~`70-governance/SERVICE_TEMPLATE.md` (v1.2)~~ - Outdated, use SRM v3.1.0 instead
+- **Service Template**: `docs/70-governance/SERVICE_TEMPLATE.md` (v1.2) (Implementation guide)
+- **Event Catalog**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md` (Event contracts)
+- **Temporal Patterns**: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` (Gaming day authority)
 
 ---
 
@@ -298,7 +307,8 @@ sequenceDiagram
 
 ## Service Structure (Directory Layout)
 
-> **Canonical Reference**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008
+> **AUTHORITY**: This section (§308-348) is the **SOURCE OF TRUTH** for service directory structure
+> **Canonical References**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008 (Service Factory Pattern)
 
 ```
 services/{domain}/
@@ -348,7 +358,14 @@ services/{domain}/
 
 ### DTO Derivation Patterns (By Service Type)
 
-PT-2 uses **three DTO patterns** based on service complexity. All services MUST use one of these patterns—manual interfaces are BANNED except for Contract-First services.
+PT-2 uses **three DTO patterns** based on service complexity. All services MUST use one of these patterns:
+
+**Key Rule**: Manual DTO interfaces are:
+- ❌ **BANNED** for Pattern B (Canonical CRUD) services → Use `type` + Pick/Omit
+- ✅ **ALLOWED** for Pattern A (Contract-First) services → Requires `mappers.ts`
+- ⚠️ **HYBRID** for Pattern C (Mixed) → Use appropriate pattern per DTO
+
+See DTO_CANONICAL_STANDARD.md FAQ for rationale (schema evolution blindness vs. domain contract decoupling).
 
 ---
 
@@ -361,7 +378,9 @@ PT-2 uses **three DTO patterns** based on service complexity. All services MUST 
 - Prevent internal columns from leaking to public APIs
 - Enforce explicit control over field exposure
 
-**Pattern**: Manual interfaces + mappers.ts
+**Pattern**: Manual type definitions + mappers.ts
+
+**Syntax Choice**: `interface` OR `type` (both allowed for Pattern A - see DTO_CANONICAL_STANDARD.md FAQ)
 
 **Example** (SRM v3.1.0:125-154):
 ```typescript
@@ -373,6 +392,7 @@ PT-2 uses **three DTO patterns** based on service complexity. All services MUST 
  * Excludes: preferences (internal-only)
  * Owner: LoyaltyService (SRM:343-373)
  */
+// ✅ Option 1: interface (semantic clarity for public contracts)
 export interface PlayerLoyaltyDTO {
   player_id: string;
   casino_id: string;
@@ -380,6 +400,21 @@ export interface PlayerLoyaltyDTO {
   tier: string | null;
   // Omits: preferences (internal field)
 }
+
+// ✅ Option 2: type alias (functionally equivalent)
+export type PlayerLoyaltyDTO = {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+};
+```
+
+**Why manual definitions are SAFE for Pattern A** (vs. Pattern B ban):
+- Pattern A DTOs are **domain contracts**, not schema mirrors
+- Mappers enforce transformation (compile-time checkpoint at mappers.ts:553-560)
+- Schema changes handled in `mappers.ts`, DTO contract remains stable
+- TypeScript errors if mapper doesn't satisfy DTO contract
 
 // services/loyalty/mappers.ts (INTERNAL USE ONLY)
 import type { Database } from '@/types/database.types';
@@ -489,17 +524,45 @@ graph TB
     style DB_TYPES fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
 ```
 
-### DTO Anti-Patterns (BANNED)
+### DTO Anti-Patterns (Pattern-Specific)
 
-**Pattern B (Canonical) Services ONLY**:
-- ❌ NEVER use `interface` for DTOs (use `type` with Pick/Omit)
+#### Pattern B (Canonical CRUD) Services - STRICT ENFORCEMENT
+
+**Services**: Player, Visit, Casino, FloorLayout
+
+**BANNED**:
+- ❌ NEVER use `interface` for DTOs
 - ❌ NEVER manually define table structures
-- ✅ ALWAYS derive from `Database` types
+- ❌ NEVER use `ReturnType` inference for DTOs
+
+**REQUIRED**:
+- ✅ ALWAYS use `type` with Pick/Omit from `Database` types
 - ✅ Use `Pick`/`Omit`/`Partial` for transformations
+- ✅ Regenerate types after EVERY migration (`npm run db:types`)
 
-**Pattern A (Contract-First) Services**: Manual interfaces are ALLOWED but MUST use mappers.ts
+**Rationale**: Manual definitions create **schema evolution blindness** (silent data loss when schema changes)
 
-**Reference**: See DTO_CANONICAL_STANDARD.md for complete patterns and enforcement rules
+---
+
+#### Pattern A (Contract-First) Services - CONTROLLED FLEXIBILITY
+
+**Services**: Loyalty, Finance, MTL, TableContext
+
+**ALLOWED**:
+- ✅ Manual `interface` OR `type` definitions for domain contracts
+- ✅ Decoupling from database schema evolution
+- ✅ Explicit field exposure control
+
+**REQUIRED**:
+- ✅ MUST have `mappers.ts` to enforce boundary
+- ✅ Mappers MUST use `Database` types as source of truth
+- ✅ TypeScript MUST enforce mapper completeness
+
+**Rationale**: Mappers create compile-time checkpoint, preventing silent drift
+
+---
+
+**Reference**: See DTO_CANONICAL_STANDARD.md FAQ for complete rationale and enforcement rules
 
 ---
 
@@ -518,13 +581,21 @@ Services MUST NOT directly access `Database['public']['Tables']['X']` for tables
 |------------------|---------------------|----------|---------------|
 | **Loyalty** | RatingSlip (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | SRM:358-373 |
 | **Loyalty** | Visit (`VisitDTO`) | Session context for ledger entries | SRM:358 |
+| **Loyalty** | Casino (`CasinoSettingsDTO`) | Policy-driven reward calculations | SRM:358 |
 | **Finance** | Visit (`VisitDTO`) | Associate transactions with sessions | SRM:1122 |
 | **Finance** | RatingSlip (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | SRM:1123 |
+| **Finance** | Casino (`CasinoSettingsDTO`) | Financial policy enforcement | SRM:1122 |
 | **MTL** | RatingSlip (`RatingSlipDTO`) | Optional FK for compliance tracking | SRM:1295 |
 | **MTL** | Visit (`VisitDTO`) | Optional FK for compliance tracking | SRM:1297 |
+| **MTL** | Casino (`CasinoSettingsDTO`) | Compliance threshold configuration | SRM:1295 |
 | **TableContext** | Casino (`CasinoSettingsDTO`) | Gaming day temporal authority | SRM:569 |
 | **RatingSlip** | TableContext (`GamingTableDTO`) | Table assignment FK | SRM:1044-1045 |
-| **All Services** | Casino (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references | SRM:148 |
+| **RatingSlip** | Visit (`VisitDTO`) | Session association | SRM:1044 |
+| **RatingSlip** | Player (`PlayerDTO`) | Player identity reference | SRM:1044 |
+| **Visit** | Casino (`CasinoDTO`) | Gaming day calculation, property scoping | SRM:148 |
+| **Visit** | Player (`PlayerDTO`) | Player identity for session | SRM:148 |
+| **FloorLayout** | Casino (`CasinoDTO`) | Property scoping for floor plans | SRM:148 |
+| **All Services** | Casino (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references, audit actors | SRM:148 |
 
 ### Examples
 
@@ -612,19 +683,21 @@ graph TB
 
 ### Middleware Chain (`withServerAction`)
 
-> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:27-45
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:27-45, SRM v3.1.0:130
 
 ```
 withAuth()
   → withRLS()            # SET LOCAL app.casino_id, validates staff scope
-    → withIdempotency()  # Enforces x-idempotency-key for mutations
-      → withAudit()      # Records audit_log row w/ correlation_id
-        → withTracing()  # Metrics, error mapping, SLO budgets
+    → withRateLimit()    # Multi-level limits (actor, casino) to protect hot paths
+      → withIdempotency()  # Enforces x-idempotency-key for mutations
+        → withAudit()      # Records audit_log row w/ correlation_id
+          → withTracing()  # Metrics, error mapping, SLO budgets
 ```
 
 **Responsibilities**:
 - **withAuth**: Validates session, staff role, casino membership
 - **withRLS**: Executes `SET LOCAL app.casino_id`, ensures tenant isolation
+- **withRateLimit**: Enforces multi-level rate limits (per-actor, per-casino, per-endpoint) to protect hot paths from abuse
 - **withIdempotency**: Requires `x-idempotency-key` on mutations, scopes by `(casino_id, domain)`
 - **withAudit**: Writes `audit_log` rows per SRM contract, sets `application_name = correlation_id`
 - **withTracing**: Emits telemetry spans, maps domain errors → HTTP status codes
@@ -1152,11 +1225,14 @@ export type PlayerService = ReturnType<typeof createPlayerService>;
 // ❌ Untyped Supabase client
 function createPlayerService(supabase: any) { ... }
 
-// ❌ Manual DTO interfaces
+// ❌ Manual DTO interfaces (Pattern B/Canonical CRUD services ONLY)
+// BANNED for: Player, Visit, Casino, FloorLayout (must use Pick/Omit)
 export interface PlayerCreateDTO {
   first_name: string;
   last_name: string;
 }
+// Note: Manual interfaces ARE allowed for Pattern A (Contract-First)
+// services: Loyalty, Finance, MTL, TableContext (with mappers.ts)
 
 // ❌ Class-based services
 export class PlayerService {
@@ -1594,7 +1670,7 @@ async create(data: CreateLedgerDTO, opts?: { idempotencyKey?: string }) {
 **Prerequisites** (SEC-001:66-69):
 - ✅ `staff.user_id uuid references auth.users(id)` - DEPLOYED
 - ✅ `exec_sql(text)` RPC for SET LOCAL injection - DEPLOYED
-- ⚠️ `withServerAction` wrapper - In Progress (SEC-001:69)
+- ✅ `withServerAction` wrapper - DEPLOYED (see EDGE_TRANSPORT_POLICY.md:27-45)
 
 **Pattern**: `auth.uid()` + `staff.user_id` + `current_setting()`
 
@@ -1603,6 +1679,54 @@ This pattern ensures:
 2. **User is linked to active staff** via `staff.user_id`
 3. **Casino scope injected** via `SET LOCAL app.casino_id`
 4. **Actor identity injected** via `SET LOCAL app.actor_id`
+
+---
+
+### RLS Context Interface
+
+> **Implementation**: `lib/supabase/rls-context.ts`
+> **Authority**: SEC-001 (lines 229-287) - Complete implementation guide with examples
+
+**Interface Definition**:
+```typescript
+export interface RLSContext {
+  actorId: string;  // staff.id (from current_setting('app.actor_id'))
+  casinoId: string; // staff.casino_id (from current_setting('app.casino_id'))
+  staffRole: string; // staff.role (for role-gated operations)
+}
+```
+
+**Core Functions** (`lib/supabase/rls-context.ts`):
+
+| Function | Purpose | Usage |
+|----------|---------|-------|
+| `getAuthContext(supabase)` | Extract RLS context from authenticated user | Server Actions, Route Handlers |
+| `injectRLSContext(supabase, context, correlationId?)` | Inject context via SET LOCAL | `withServerAction` wrapper |
+| `assertCasinoScope(context, casinoId)` | Validate casino scoping | Service methods |
+| `assertActorScope(context, actorId)` | Validate actor identity | Profile operations |
+| `assertRole(context, allowedRoles)` | Validate role permissions | Role-gated operations |
+
+**Flow**:
+```typescript
+// 1. Extract context (in withServerAction)
+const context = await getAuthContext(supabase);
+// { actorId: 'staff-uuid', casinoId: 'casino-uuid', staffRole: 'admin' }
+
+// 2. Inject into session
+await injectRLSContext(supabase, context, correlationId);
+// Sets: app.actor_id, app.casino_id, app.staff_role, application_name
+
+// 3. RLS policies read from current_setting()
+// SELECT * FROM visit WHERE casino_id = current_setting('app.casino_id')::uuid
+```
+
+**Reference**: See SEC-001 (RLS Policy Matrix) for:
+- Complete policy templates
+- Anti-patterns to avoid
+- Testing strategies
+- Migration priority
+
+---
 
 ### Casino-Scoped Tables
 
@@ -1684,9 +1808,13 @@ const result = await service.getBalance(playerId);
 
 - [ ] Create `services/{domain}/` directory
 - [ ] Define DTOs in `dtos.ts` (plural) using appropriate pattern:
-  - **Contract-First** (Loyalty, Finance, MTL, TableContext): Manual interfaces
-  - **Canonical** (Player, Visit, Casino): Pick/Omit from `Database` types
-  - **Hybrid** (RatingSlip): Mixed approach
+  - **Pattern A (Contract-First)**: Loyalty, Finance, MTL, TableContext
+    - Manual `interface` or `type` definitions
+    - MUST include `mappers.ts` to enforce boundary
+  - **Pattern B (Canonical)**: Player, Visit, Casino, FloorLayout
+    - `type` aliases with Pick/Omit from `Database` types ONLY
+    - NO manual interfaces allowed
+  - **Pattern C (Hybrid)**: RatingSlip - Use appropriate pattern per DTO
 - [ ] Add `mappers.ts` if using Contract-First pattern (SRM v3.1.0:141-154)
 - [ ] Create query key factories in `keys.ts` (with `.scope` for lists) (ADR-003:87-96)
 - [ ] Create HTTP fetchers in `http.ts` (thin wrappers to API routes)
@@ -1716,7 +1844,7 @@ const result = await service.getBalance(playerId);
 
 - [ ] `npm run type-check` passes
 - [ ] `npm test` passes
-- [ ] ESLint no manual DTO interfaces
+- [ ] ESLint no manual DTO interfaces (Pattern B services only)
 - [ ] No `ReturnType<>` in public APIs
 - [ ] No `any` types
 - [ ] Hooks use `mutationKey` from key factories
@@ -1732,12 +1860,36 @@ const result = await service.getBalance(playerId);
 
 ## Document History
 
-**Version**: 2.0.0
-**Date**: 2025-11-14
-**Status**: CANONICAL (Aligned with SRM v3.1.0)
+**Version**: 2.1.2
+**Date**: 2025-11-19
+**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v2.1.2 (2025-11-19)** - RLS Context Interface Documentation:
+- ✅ Added RLSContext interface definition to RLS section (§1685-1728)
+- ✅ Documented core RLS functions from `lib/supabase/rls-context.ts`
+- ✅ Added usage flow example for `getAuthContext` → `injectRLSContext`
+- ✅ Cross-referenced SEC-001 (RLS Policy Matrix) for complete implementation guide
+- ✅ Resolves SERVICE_LAYER_DOCUMENTATION_REGRESSION_MATRIX FINDING #6
+
+**v2.1.1 (2025-11-18)** - SDLC Taxonomy Alignment Audit Fixes:
+- ✅ Removed erroneous SERVICE_TEMPLATE.md deprecation notice (ADR-008 contradiction)
+- ✅ Added missing `withRateLimit()` to middleware chain (per EDGE_TRANSPORT_POLICY.md:34, SRM:130)
+- ✅ Updated `withServerAction` status from "In Progress" to "DEPLOYED"
+- ✅ Completed cross-context DTO consumption matrix (added 8 missing relationships per SRM:148)
+- ✅ Added canonical references: SERVICE_TEMPLATE.md, INT-002, TEMP-001
+- ✅ Updated version metadata to v2.1.1 (header alignment)
+
+**v2.1.0 (2025-11-18)** - DTO Pattern Contradiction Resolution:
+- ✅ Reconciled manual interface ban (Pattern B only, Pattern A allowed)
+- ✅ Added pattern-specific rationale (schema evolution blindness vs. domain decoupling)
+- ✅ Clarified Pattern A syntax choice (interface OR type, both allowed)
+- ✅ Updated anti-pattern section with pattern-specific enforcement rules
+- ✅ Enhanced checklists with Pattern A/B/C distinctions
+- ✅ Added cross-reference to DTO_CANONICAL_STANDARD.md FAQ for complete rationale
+- ✅ Aligned with DTO_CANONICAL_STANDARD.md v2.1.0 (concurrent update)
 
 **v2.0.0 (2025-11-14)** - SDLC Taxonomy Peer Alignment:
 - ✅ Updated metadata with all canonical references (SRM, SEC-001, ADRs, etc.)

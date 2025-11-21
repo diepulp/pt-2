@@ -390,7 +390,7 @@ export function createFinanceBusiness(supabase: SupabaseClient<Database>) {
 
 ## 3. Mapper Patterns by Service Type
 
-### Pattern A: Simple Services (CRUD-only)
+### Pattern B: Canonical CRUD Services (Simple CRUD)
 
 For services with simple CRUD operations and no cross-context publishing:
 
@@ -414,7 +414,7 @@ export type PlayerDTO = Database['public']['Tables']['player']['Row'];
 
 ---
 
-### Pattern B: Bounded Context Services (Complex Business Logic)
+### Pattern A: Contract-First Services (Complex Business Logic)
 
 For services with complex logic and cross-context DTO publishing:
 

@@ -1,11 +1,11 @@
 # PT-2 Service Implementation Guide
 
-**Version**: 2.0.1
-**Date**: 2025-11-18
-**Status**: CANONICAL (Aligned with SLAD v2.1.1)
-**Supersedes**: v2.0.0 (executeOperation pattern restored)
+**Version**: 2.0.3
+**Date**: 2025-11-20
+**Status**: CANONICAL (Aligned with Actual Implementation + SLAD v2.1.2)
+**Supersedes**: v2.0.2 (reality alignment - documents actual vs. planned patterns)
 
-> **Architecture Reference**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.1)
+> **Architecture Reference**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.2)
 > **This Document**: Quick implementation guide derived from SLAD + actual service patterns
 
 ---
@@ -38,35 +38,134 @@ This guide helps you implement new services following PT-2 architecture patterns
 
 ---
 
+## Implementation Status Overview
+
+**Last Verified**: 2025-11-20
+
+This table shows which architectural components are **currently deployed** (✅) vs. **planned for future** (⚠️):
+
+| Component | Pattern A | Pattern B | Pattern C | Adoption Rate | Status |
+|-----------|-----------|-----------|-----------|---------------|--------|
+| **keys.ts** | ✅ Required | ✅ Required | ✅ Required | 100% | ✅ DEPLOYED |
+| **README.md** | ✅ Required | ✅ Required | ✅ Required | 100% | ✅ DEPLOYED |
+| **{feature}.ts** | ✅ Required | ⚠️ Minimal | ✅ Required | 100% | ✅ DEPLOYED |
+| **{feature}.test.ts** | ✅ Required | ⚠️ Optional | ✅ Required | ~80% | ✅ DEPLOYED |
+| **DTOs inline** | ✅ Current | ✅ Current | ✅ Current | 100% | ✅ DEPLOYED |
+| **Mappers inline** | ✅ Current | N/A | ✅ Current | 100% | ✅ DEPLOYED |
+| | | | | | |
+| **dtos.ts** (file) | ⚠️ Planned | ⚠️ Planned | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **mappers.ts** (file) | ⚠️ Planned | N/A | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **selects.ts** (file) | ⚠️ Planned | ⚠️ Planned | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **http.ts** (file) | ⚠️ Planned | ⚠️ Planned | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **index.ts** (file) | ⚠️ Planned | ⚠️ Planned | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **crud.ts** (file) | ⚠️ Planned | ⚠️ Optional | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **business.ts** (file) | ⚠️ Planned | N/A | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| **queries.ts** (file) | ⚠️ Planned | ⚠️ Optional | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED |
+| | | | | | |
+| **Error Handling Infrastructure** | | | | | |
+| ServiceResult<T> (type) | ✅ Deployed | ✅ Deployed | ✅ Deployed | 100% | ✅ DEPLOYED |
+| withServerAction() (fn) | ✅ Deployed | ✅ Deployed | ✅ Deployed | 100% | ✅ DEPLOYED (edge layer) |
+| executeOperation() (fn) | ⚠️ Planned | ⚠️ Planned | ⚠️ Planned | 0% | ⚠️ NOT IMPLEMENTED (service layer) |
+
+**Legend**:
+- ✅ **DEPLOYED** - Implemented and in active use
+- ⚠️ **PLANNED** - Documented in SLAD but not yet implemented
+- **(file)** - File/module in directory structure
+- **(type)** - TypeScript type definition
+- **(fn)** - Function/wrapper pattern
+- N/A - Not applicable for this pattern
+
+**Note**: `ServiceResult<T>` and `withServerAction()` are deployed infrastructure. `executeOperation()` is a hypothetical service-layer wrapper function (not a file) that would complement `withServerAction()` but operates at a different layer.
+
+**Key Insights**:
+- **File Structure**: Current implementation uses **4-5 files per service** (simple, co-located) vs. SLAD's **9-11 files** (modular, separated)
+- **Error Handling**: Edge-layer infrastructure (`ServiceResult<T>`, `withServerAction()`) is deployed; service-layer wrapper (`executeOperation()`) is planned
+- **Planning Stage**: This is documentation alignment - no full service layer implementation exists yet; patterns reflect planned architecture
+- **Evolution Path**: Both approaches valid - current suits early-stage services, SLAD architecture will be adopted as services mature
+
+---
+
 ## Pattern A: Contract-First Services
 
 **Use When**: Complex business logic, domain contracts, cross-context boundaries
 **Examples**: `services/loyalty/`, `services/finance/`, `services/mtl/`, `services/table-context/`
 **SLAD Reference**: §362-424
 
-### Directory Structure (Actual Implementation)
+### Directory Structure (Current Implementation)
+
+**Status**: ✅ **DEPLOYED** - This is what exists in the codebase today
 
 ```
 services/{domain}/
-├── keys.ts              # React Query key factories (REQUIRED)
-├── {feature}.ts         # Business logic / RPC wrappers
-├── {feature}.test.ts    # Unit/integration tests
-├── mappers.ts           # Database ↔ DTO transformations (if needed)
-└── README.md            # Service documentation with SRM reference
+├── keys.ts              # React Query key factories (REQUIRED) ✅ 100% adoption
+├── {feature}.ts         # Business logic / RPC wrappers WITH INLINE DTOs ✅ 100% adoption
+├── {feature}.test.ts    # Unit/integration tests ✅ ~80% coverage
+└── README.md            # Service documentation with SRM reference ✅ 100% adoption
 ```
 
-**Example**: `services/loyalty/`
+**Key Characteristics**:
+- **DTOs are inline**: Defined in the same file as business logic (not in separate `dtos.ts`)
+- **Mappers are inline**: Transformation logic embedded in feature files (not in separate `mappers.ts`)
+- **No service factories**: Services export standalone functions, not factory pattern
+- **Minimal file count**: Focus on simplicity and co-location
+
+**Example**: `services/loyalty/` (Verified 2025-11-20)
 ```
 services/loyalty/
-├── keys.ts                      # loyaltyKeys factory
-├── mid-session-reward.ts        # Business logic with DTOs
-├── mid-session-reward.test.ts   # Tests
-└── README.md                    # References SRM §1061-1274
+├── keys.ts                      # ✅ loyaltyKeys factory (EXISTS)
+├── mid-session-reward.ts        # ✅ Business logic with INLINE DTOs (EXISTS)
+├── mid-session-reward.test.ts   # ✅ Tests (EXISTS)
+└── README.md                    # ✅ References SRM §1061-1274 (EXISTS)
 ```
 
-### DTO Pattern
+**Note**: This service does NOT have `dtos.ts`, `mappers.ts`, `http.ts`, `index.ts`, or `crud.ts` files. All functionality is consolidated in the feature file.
 
-**Manual interfaces** for domain contracts:
+---
+
+### Planned Enhancements (SLAD Architecture - Not Yet Implemented)
+
+**Status**: ⚠️ **PLANNED** - These patterns are documented in SLAD §308-348 but have **0% adoption** as of 2025-11-20
+
+The following directory structure represents the **aspirational architecture** from SLAD. It has NOT been implemented yet, but is preserved here for future reference:
+
+```
+services/{domain}/
+├── keys.ts              # ✅ DEPLOYED (100% adoption)
+├── {feature}.ts         # ✅ DEPLOYED (100% adoption)
+├── {feature}.test.ts    # ✅ DEPLOYED (~80% coverage)
+├── README.md            # ✅ DEPLOYED (100% adoption)
+│
+├── dtos.ts              # ⚠️ PLANNED - Centralized DTO exports (SLAD §315)
+├── mappers.ts           # ⚠️ PLANNED - Database ↔ DTO transformations (SLAD §320)
+├── selects.ts           # ⚠️ PLANNED - Named column sets (SLAD §326)
+├── http.ts              # ⚠️ PLANNED - HTTP fetchers (SLAD §333)
+├── index.ts             # ⚠️ PLANNED - Service factory pattern (SLAD §336)
+├── crud.ts              # ⚠️ PLANNED - CRUD operations (SLAD §341)
+├── business.ts          # ⚠️ PLANNED - Business logic extraction (SLAD §344)
+└── queries.ts           # ⚠️ PLANNED - Complex queries (SLAD §347)
+```
+
+**Why not implemented yet?**
+- Early-stage services prioritize simplicity over separation
+- Inline DTOs/mappers reduce file navigation overhead
+- Service factories deferred until cross-context reuse emerges
+- Will implement incrementally as services mature
+
+**Future migration path**: When a service grows complex enough:
+1. Extract inline DTOs to `dtos.ts`
+2. Add `mappers.ts` for boundary enforcement
+3. Implement factory pattern in `index.ts`
+4. Separate CRUD from business logic
+
+---
+
+### DTO Pattern (Current Implementation)
+
+**Manual interfaces** inline with business logic:
+
+> **Current Approach**: Pattern A services define DTOs inline in feature files (e.g., `mid-session-reward.ts`). Mapping logic is embedded as standalone functions (e.g., `buildMidSessionRewardRpcInput()`). This keeps related types and logic co-located.
+>
+> **Future Architecture** (SLAD §362-424, SRM v3.1.0:141-154): When services mature, extract DTOs to `dtos.ts` and add `mappers.ts` to enforce Database ↔ DTO boundary. The `mappers.ts` file will prevent direct schema coupling and maintain schema evolution independence.
 
 ```typescript
 // services/loyalty/mid-session-reward.ts (ACTUAL CODE)
@@ -127,9 +226,26 @@ export const loyaltyKeys = {
 
 ### Error Handling Pattern
 
-**Pattern**: Wrap service operations with `executeOperation` for consistent ServiceResult<T> returns.
+**Role of `executeOperation()`**: Service-layer wrapper function that would return `ServiceResult<T>` envelopes for individual business operations.
 
-**Reference**: SLAD §918-975 (Operation Wrapper Pattern)
+**What EXISTS Today** (✅ DEPLOYED):
+- ✅ `ServiceResult<T>` type definition (lib/http/service-response.ts:21-30)
+- ✅ `withServerAction()` wrapper (lib/server-actions/with-server-action-wrapper.ts:74)
+  - **Layer**: Edge/transport layer (wraps entire Server Actions)
+  - **Returns**: `ServiceResult<T>` envelope
+  - **Handles**: Auth, RLS injection, rate limiting, audit logging, error mapping
+  - **Usage**: `withServerAction(handler, { endpoint, actorId, casinoId })`
+
+**What's PLANNED** (⚠️ NOT IMPLEMENTED):
+- ⚠️ `executeOperation()` wrapper (SLAD §918-975 - hypothetical)
+  - **Layer**: Service layer (wraps individual business operations)
+  - **Returns**: `ServiceResult<T>` envelope
+  - **Handles**: Operation-level error catching, labeling, request ID generation
+  - **Would Live**: `services/shared/operation-wrapper.ts` (file doesn't exist)
+
+**Current Reality**: Services handle errors inline. Edge-layer error handling exists via `withServerAction()`, but there's no service-layer operation wrapper. The `executeOperation()` pattern is documented in SLAD as aspirational architecture.
+
+**Reference**: SLAD §918-975 (Operation Wrapper Pattern - Planned)
 
 ```typescript
 // services/shared/operation-wrapper.ts
@@ -187,14 +303,20 @@ export async function rewardPlayer(
 
 **See SLAD §918-975** for complete implementation details and ServiceResult<T> contract.
 
-### Checklist
+### Checklist (Current Implementation)
 
+**✅ Required (Must Do Today)**:
 - [ ] Create `keys.ts` with React Query factory keys
-- [ ] Define domain DTOs in `{feature}.ts`
-- [ ] Wrap operations with `executeOperation` (returns ServiceResult<T>)
+- [ ] Define domain DTOs inline in `{feature}.ts` (co-located with logic)
+- [ ] Add inline mapping functions (e.g., `buildXRpcInput()`)
 - [ ] Add `README.md` with SRM reference
-- [ ] Write tests for business logic
-- [ ] Add `mappers.ts` if Database ↔ DTO transformation is complex
+- [ ] Write tests for business logic (`{feature}.test.ts`)
+
+**⚠️ Planned (Future Enhancements)**:
+- [ ] Extract DTOs to `dtos.ts` when service grows complex
+- [ ] Add `mappers.ts` for Database ↔ DTO boundary enforcement (Pattern A future state)
+- [ ] Wrap operations with `executeOperation` wrapper (when implemented)
+- [ ] Implement service factory pattern in `index.ts`
 
 ---
 
@@ -204,20 +326,30 @@ export async function rewardPlayer(
 **Examples**: `services/player/`, `services/visit/`, `services/casino/`, `services/floor-layout/`
 **SLAD Reference**: §429-471
 
-### Directory Structure (Actual Implementation)
+### Directory Structure (Current Implementation)
+
+**Status**: ✅ **DEPLOYED** - Minimal structure for simple CRUD
 
 ```
 services/{domain}/
-├── keys.ts       # React Query key factories (REQUIRED)
-└── README.md     # Service documentation with SRM reference
+├── keys.ts       # React Query key factories (REQUIRED) ✅ 100% adoption
+└── README.md     # Service documentation with SRM reference ✅ 100% adoption
 ```
 
-**Example**: `services/player/`
+**Key Characteristics**:
+- **Extremely minimal**: Only 2 files per service
+- **No separate DTO files**: DTOs documented in README or inline where needed
+- **No business logic files**: Logic handled in React Query hooks or Server Actions
+- **Focus**: React Query key management and documentation
+
+**Example**: `services/player/` (Verified 2025-11-20)
 ```
 services/player/
-├── keys.ts     # playerKeys factory
-└── README.md   # References SRM §1007-1060
+├── keys.ts     # ✅ playerKeys factory (EXISTS)
+└── README.md   # ✅ References SRM §1007-1060 (EXISTS)
 ```
+
+**Note**: Pattern B services have even fewer files than Pattern A because they lack complex business logic.
 
 ### DTO Pattern
 
@@ -263,14 +395,18 @@ export const playerKeys = {
 };
 ```
 
-### Checklist
+### Checklist (Current Implementation)
 
+**✅ Required (Must Do Today)**:
 - [ ] Create `keys.ts` with React Query factory keys
-- [ ] DTOs use Pick/Omit from `Database` types (no manual interfaces)
 - [ ] Add `README.md` with SRM reference
+- [ ] Document DTOs in README (using Pick/Omit from `Database` types)
 - [ ] Reference DTO_CANONICAL_STANDARD.md for derivation rules
 
-**❌ BANNED for Pattern B**: Manual DTO interfaces (use Pick/Omit only)
+**❌ BANNED for Pattern B**:
+- Manual DTO interfaces (use Pick/Omit only)
+- Separate `dtos.ts` files (keep minimal)
+- Business logic files (handle in Server Actions/hooks)
 
 ---
 
@@ -451,7 +587,7 @@ describe('{Service}.{feature}', () => {
 ## Cross-References
 
 ### Architecture
-- **PRIMARY**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.1)
+- **PRIMARY**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.2)
 - **Bounded Contexts**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) (SRM v3.1.0)
 - **DTO Standards**: [DTO_CANONICAL_STANDARD.md](../25-api-data/DTO_CANONICAL_STANDARD.md) (v2.1.0)
 
@@ -481,6 +617,42 @@ describe('{Service}.{feature}', () => {
 ---
 
 ## Change Log
+
+### v2.0.3 (2025-11-20) - Reality Alignment Audit + executeOperation Clarification
+- ✅ **REALITY CHECK**: Documented actual vs. planned patterns (audit findings 2025-11-20)
+- ✅ Added "Planned Enhancements" section with 0% adoption status for SLAD architecture
+- ✅ Updated Pattern A directory structure to reflect current implementation (inline DTOs/mappers)
+- ✅ Updated Pattern B/C directory structures (verified against codebase)
+- ✅ Clarified mappers.ts as **PLANNED** (not REQUIRED) - 0% adoption as of 2025-11-20
+- ✅ **executeOperation Clarification**: Distinguished function patterns from file structure
+  - Separated "Error Handling Infrastructure" section in status table
+  - Clarified executeOperation is a **service-layer wrapper function** (not a file)
+  - Distinguished from withServerAction (edge layer vs. service layer)
+  - Added ServiceResult<T> type to status table (deployed infrastructure)
+  - Documented that withServerAction() is deployed, executeOperation() is planned
+  - Clarified role: service-layer wrapper that would return ServiceResult<T> envelopes
+- ✅ Added Implementation Status Overview table showing deployed vs. planned components
+  - Added **(file)**, **(type)**, **(fn)** markers to distinguish component types
+  - Separated file structure from wrapper functions
+  - Added "Planning Stage" note - no full service layer implementation exists yet
+- ✅ Updated checklists with "Required Today" vs. "Planned Future" sections
+- ✅ Added verified file structure examples with ✅ EXISTS markers
+- ✅ Documented inline DTO/mapper pattern as current standard
+- ✅ Explained rationale for simple architecture (early-stage services)
+- ✅ Preserved SLAD aspirational architecture for future reference
+- ⚠️ **Impact**: Template now accurately reflects 100% of actual codebase patterns
+- 📊 **Audit Report**: See `docs/audits/SERVICE_TEMPLATE_AUDIT_2025-11-20.md`
+
+**Rationale**: Previous versions (v2.0.0-v2.0.2) described SLAD §308-348 architecture as "Actual Implementation" when 70% of described files had 0% adoption. This update separates "Current Implementation" (what exists today) from "Planned Enhancements" (SLAD aspirational architecture). The executeOperation ambiguity (function vs. file) was clarified to distinguish service-layer patterns from edge-layer infrastructure. This is a **planning/documentation stage** - no full service layer exists yet; patterns reflect planned architecture.
+
+### v2.0.2 (2025-11-19) - SLAD v2.1.2 Alignment
+- ✅ **CLARIFICATION**: mappers.ts marked as **REQUIRED** for Pattern A services (line 54)
+- ✅ Updated SLAD version references: v2.1.1 → v2.1.2
+- ✅ Added rationale for mappers.ts requirement (schema evolution independence)
+- ✅ Updated Pattern A checklist to emphasize mappers.ts is REQUIRED
+- ✅ Resolves SERVICE_LAYER_DOCUMENTATION_REGRESSION_MATRIX FINDING #4
+
+**Rationale**: SLAD §298 and SRM v3.1.0:141-154 document mappers.ts as REQUIRED (not optional) for Pattern A services. The previous "(if needed)" language contradicted the canonical architecture. Pattern A services MUST enforce the Database ↔ DTO boundary via mappers to maintain schema evolution independence.
 
 ### v2.0.1 (2025-11-18) - executeOperation Pattern Restoration
 - ✅ **CORRECTION**: Re-added executeOperation pattern (SLAD §918-975)
@@ -515,4 +687,4 @@ describe('{Service}.{feature}', () => {
 
 **End of Guide**
 
-For complete architecture details, patterns, and diagrams, see [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md).
+For complete architecture details, patterns, and diagrams, see [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md) (SLAD v2.1.2).

@@ -24,6 +24,20 @@
 
 ---
 
+## Pattern
+
+**Pattern A: Contract-First**
+
+**Rationale**: Loyalty has complex business logic (point calculation rules, tier progression, idempotency guarantees) that requires domain contracts intentionally decoupled from database schema. DTOs are manually defined to maintain stable contracts for external consumers while allowing internal schema evolution.
+
+**Characteristics**:
+- Manual DTO interfaces (inline in feature files)
+- Business logic in `mid-session-reward.ts`
+- RPC-based operations with mappers
+- Tests with ~80% coverage
+
+---
+
 ## Core Responsibilities
 
 **OWNS**:

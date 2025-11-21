@@ -55,8 +55,8 @@ source_of_truth:
 **Core Rule**: Services MUST provide canonical DTOs for tables they own and MUST NOT directly access `Database['public']['Tables']['X']` for tables they don't own. Cross-context consumption happens through published DTOs only.
 
 **Key Patterns**:
-- **Bounded Context Services** (Loyalty, Finance, MTL, TableContext): Contract-first DTOs with explicit mappers
-- **Thin CRUD Services** (Player, Visit, Casino): Canonical DTOs using Pick/Omit from database types
+- **Contract-First Services** (Loyalty, Finance, MTL, TableContext): Contract-first DTOs with explicit mappers
+- **Canonical CRUD Services** (Player, Visit, Casino): Canonical DTOs using Pick/Omit from database types
 - **Hybrid Services** (RatingSlip): Mixed approach with published cross-context contracts
 
 **Migration Workflow**: When modifying schema: (1) Update SRM, (2) Run migration, (3) **`npm run db:types`** (CRITICAL), (4) Update DTOs/mappers, (5) Pass type-check and ESLint, (6) Update tests.

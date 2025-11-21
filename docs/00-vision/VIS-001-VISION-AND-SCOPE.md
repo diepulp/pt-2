@@ -11,9 +11,10 @@ title: PT-2 Casino Management Platform Vision
 owner: Product
 status: Active
 created: 2025-10-25
-last_review: 2025-11-10
-version: 2.0.0
+last_review: 2025-11-18
+version: 2.1.0
 canonical_srm_version: 3.0.2
+mtl_thresholds: {watchlist_floor: $3000, ctr_threshold: $10000}
 ---
 ```
 
@@ -49,7 +50,11 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 - **RLS Coverage**: All tables with `casino_id` have RLS policies enabled; no service key usage in runtime.
 - **Idempotency**: 100% of mutations enforce idempotency keys (`x-idempotency-key` header required).
 - **Audit Trail**: Every mutation writes to canonical audit shape with `correlation_id` propagation.
-- **MTL Compliance**: Threshold detection within **5 seconds** of transaction; CTR export < **1 minute** on-demand.
+- **MTL Compliance Thresholds** (per 31 USC 5313 & casino policy):
+  - **Watchlist floor**: $3,000 (single transaction, daily compliance review)
+  - **CTR threshold**: $10,000 (gaming day aggregate, FinCEN filing within 15 days)
+  - **Detection latency**: < 5 seconds from transaction to alert
+  - **CTR export**: < 1 minute on-demand
 
 ### Operational Excellence
 - **Chip Custody**: Time-to-fill < **3 minutes**; zero-discrepancy table closes > **95%**.
@@ -121,7 +126,9 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 
 **Capabilities**:
 - Casino registry (licensed gaming establishments)
-- `casino_settings` (EXCLUSIVE WRITE): gaming day start time, timezone, compliance thresholds (CTR, watchlist)
+- `casino_settings` (EXCLUSIVE WRITE): gaming day start time, timezone, compliance thresholds
+  - **CTR threshold**: $10,000 (federal requirement, 31 USC 5313)
+  - **Watchlist floor**: $3,000 (internal monitoring threshold)
 - Staff management: authentication (pit_boss, admin only), role assignment (dealer [non-authenticated], pit_boss, admin), status tracking
 - Game configuration templates (min/max bets, rotation intervals per game type)
 - Centralized audit logging (cross-domain event capture)
@@ -260,8 +267,10 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 - `mtl_entry` (immutable cash transaction log)
 - `mtl_audit_note` (append-only compliance annotations)
 - **Gaming day calculation**: Automated via trigger (same `compute_gaming_day` as Finance)
-- **Threshold detection**: Real-time monitoring against `casino_settings` (watchlist floor, CTR threshold)
-- **Compliance exports**: CTR/SAR report generation
+- **Threshold detection**: Real-time monitoring against `casino_settings`
+  - **Watchlist floor**: $3,000 (single transaction monitoring, daily review)
+  - **CTR threshold**: $10,000 (aggregate gaming day transactions, FinCEN filing required within 15 days)
+- **Compliance exports**: CTR/SAR report generation (FinCEN Form 8362)
 - **Proximity badges**: UI indicators for threshold proximity (e.g., "within $500 of watchlist floor")
 
 **References**: Casino (settings, policy), Player (optional), Staff, Visit (optional), RatingSlip (optional).
@@ -297,12 +306,14 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 
 ---
 
-### Journey 3: Compliance Monitoring
-1. **Player buys in** (Finance transaction recorded; gaming day auto-calculated)
+### Journey 3: Compliance Monitoring (MTL Thresholds: $3k Watchlist / $10k CTR)
+1. **Player buys in $2,800** (Finance transaction recorded; gaming day auto-calculated)
 2. **MTL entry created** (threshold detection runs; watchlist proximity calculated)
-3. **Proximity badge shown** (UI indicator: "Within $500 of watchlist floor")
-4. **Threshold exceeded** → Compliance alert triggered; `mtl_audit_note` appended by analyst
-5. **End-of-day CTR export** → Batch job queries MTL entries by gaming day; generates regulatory report
+3. **Proximity badge shown** (UI indicator: "Within $200 of $3,000 watchlist floor")
+4. **Second transaction $4,500** → **Watchlist threshold ($3k) exceeded** → Real-time alert to compliance officer
+5. **Aggregate hits $11,200 for gaming day** → **CTR threshold ($10k) exceeded** → FinCEN filing required within 15 days
+6. **Compliance officer reviews** → Appends `mtl_audit_note` with CTR filing reference
+7. **End-of-day CTR export** → Batch job queries MTL entries by gaming day; generates FinCEN Form 8362
 
 ---
 
@@ -512,7 +523,7 @@ withAuth() → withRLS() → withRateLimit() → withIdempotency() → withAudit
 
 | Service | Bounded Context | Tables Owned | Key Responsibilities |
 |---------|----------------|--------------|---------------------|
-| **CasinoService** | Foundational | `casino`, `company`, `casino_settings`, `staff`, `game_settings`, `player_casino`, `audit_log`, `report` | Root temporal authority, global policy, staff registry, game config templates |
+| **CasinoService** | Foundational | `casino`, `company`, `casino_settings`, `staff`, `game_settings`, `player_casino`, `audit_log`, `report` | Root temporal authority, global policy (CTR: $10k, Watchlist: $3k), staff registry, game config templates |
 | **PlayerService** | Identity | `player` | Player profile, contact info, identity data |
 | **VisitService** | Session | `visit` | Session lifecycle (check-in/out, status tracking) |
 | **LoyaltyService** | Reward | `player_loyalty`, `loyalty_ledger`, `loyalty_outbox` | Points calculation logic, mid-session reward RPC, tier progression, outbox side effects |
@@ -520,7 +531,7 @@ withAuth() → withRLS() → withRateLimit() → withIdempotency() → withAudit
 | **FloorLayoutService** | Design & Activation | `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation` | Floor design, versioning, review workflow, zero-downtime activation |
 | **RatingSlipService** | Gameplay Telemetry | `rating_slip` | Gameplay measurement (average bet, time played, game settings); DOES NOT STORE REWARDS |
 | **PlayerFinancialService** | Finance | `player_financial_transaction`, `finance_outbox` | Financial ledger (source of truth), gaming day derivation, idempotency enforcement, outbox side effects |
-| **MTLService** | Compliance | `mtl_entry`, `mtl_audit_note` | AML/CTR compliance, threshold detection, gaming day calculation, regulatory exports |
+| **MTLService** | Compliance | `mtl_entry`, `mtl_audit_note` | AML/CTR compliance, threshold detection ($3k watchlist, $10k CTR), gaming day calculation, regulatory exports (FinCEN Form 8362) |
 
 ---
 
@@ -567,6 +578,7 @@ withAuth() → withRLS() → withRateLimit() → withIdempotency() → withAudit
 | 1.0.0 | 2025-10-25 | Product | Initial draft |
 | 1.1.0 | 2025-11-03 | Product | Updated with FloorLayout scope |
 | 2.0.0 | 2025-11-10 | Product + Architecture | **Major update**: Full alignment with SRM v3.0.2; added chip custody telemetry, floor layout workflow, error taxonomy, security/tenancy upgrades, edge transport policy, outbox pattern, UX patterns. Now production-ready. |
+| 2.1.0 | 2025-11-18 | Product + Compliance | **Explicit MTL thresholds**: Added concrete dollar amounts ($3k watchlist, $10k CTR) throughout document to prevent PRD/spec ambiguity. Updated Success Metrics, Service capabilities, Compliance Journey, Service Catalog, and Glossary with explicit thresholds per 31 USC 5313. |
 
 ---
 
@@ -580,6 +592,9 @@ withAuth() → withRLS() → withRateLimit() → withIdempotency() → withAudit
 - **Gaming Day**: Casino-specific temporal boundary (e.g., 6:00 AM start); derived from `casino_settings.gaming_day_start_time`.
 - **Chip Custody**: Non-monetary tracking of chip movement (fills, credits, inventory, drops); distinct from financial ledger.
 - **Dealer Role**: Non-authenticated staff classification for table operators. Dealers do not log in to the application, have zero permissions, and cannot perform system actions. Dealer rotations are scheduling metadata managed exclusively by pit_boss and admin roles via administrative APIs. Staff records with `role = 'dealer'` must have `user_id = null`.
+- **MTL (Multiple Transaction Log)**: Compliance system tracking cash transactions for AML/CTR purposes. Two thresholds enforced: **Watchlist Floor ($3,000)** triggers daily compliance review for single transactions; **CTR Threshold ($10,000)** requires FinCEN Form 8362 filing within 15 days for aggregate gaming day transactions. Both thresholds configured in `casino_settings` per 31 USC 5313.
+- **CTR (Currency Transaction Report)**: FinCEN Form 8362 required for cash transactions >= $10,000 aggregate per gaming day per patron (federal law: 31 USC 5313). Filing deadline: 15 days from transaction date.
+- **Watchlist Floor**: Internal compliance threshold ($3,000 per casino policy) triggering daily review for cash transactions. Lower than CTR threshold to enable proactive monitoring and SAR (Suspicious Activity Report) detection.
 - **Outbox Pattern**: Side effect isolation via append-only tables (`loyalty_outbox`, `finance_outbox`); workers drain via `FOR UPDATE SKIP LOCKED`.
 - **CQRS-Light**: Write model (append-only telemetry) + Read model (projections); hot domains use this pattern to decouple ingest from dashboards.
 - **Correlation ID**: UUID (`x-correlation-id` header) propagated through all layers for distributed tracing and audit linking.

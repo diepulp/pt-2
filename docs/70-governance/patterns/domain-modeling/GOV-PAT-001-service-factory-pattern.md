@@ -371,7 +371,7 @@ export async function GET(request: NextRequest) {
 
 ## 4. Composition Patterns
 
-### Pattern A: Simple CRUD Service
+### Pattern B: Canonical CRUD Service
 
 ```typescript
 // services/player/index.ts
@@ -390,7 +390,7 @@ export function createPlayerService(
 }
 ```
 
-### Pattern B: CRUD + Business Logic
+### Pattern A: Contract-First Service (CRUD + Business Logic)
 
 ```typescript
 // services/loyalty/index.ts
