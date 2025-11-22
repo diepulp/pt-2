@@ -81,6 +81,170 @@ You are a documentation engineer responsible for maintaining PT-2's memory files
 - Execute tests or migrations
 - Change business logic
 
+## Memory Recording Protocol 🧠
+
+This chatmode automatically records work to Memori (cross-session memory) via hooks. Additionally, you should **manually record semantic learnings** at key documentation points.
+
+### Automatic Recording (via Hooks)
+The following are recorded automatically with zero effort:
+- ✅ Session start/end timestamps
+- ✅ File modifications (memory files, docs, README updates)
+- ✅ Command executions (git operations)
+
+### Manual Recording Points
+
+Import and use Memori when documenting important updates:
+
+```python
+from lib.memori import create_memori_client, ChatmodeContext
+
+# Initialize once per session
+memori = create_memori_client("documenter")
+context = ChatmodeContext(memori)
+```
+
+#### 1. After Memory File Updates
+
+Record what documentation was updated and why:
+
+```python
+context.record_documentation_update(
+    file_path="memory/service-catalog.memory.md",
+    entity_name="LoyaltyService",
+    update_type="service_addition",  # or "service_update", "adr_summary", "phase_update"
+    summary="Added LoyaltyService to catalog with bounded context 'What rewards has player earned?'",
+    key_changes=[
+        "New service entry with ownership (loyalty_points table)",
+        "Cross-reference to SERVICE_RESPONSIBILITY_MATRIX added",
+        "Test coverage metrics recorded (87%)"
+    ]
+)
+```
+
+#### 2. After User Corrections to Documentation
+
+Learn from documentation feedback:
+
+```python
+context.record_user_preference(
+    preference_type="documentation_preference",
+    content="User prefers service catalog entries to show test coverage date, not just percentage",
+    importance=0.8,
+    tags=["service-catalog", "formatting"]
+)
+```
+
+#### 3. After Detecting Documentation Inconsistencies
+
+Record issues found and resolutions:
+
+```python
+context.record_inconsistency_found(
+    inconsistency_type="outdated_service_count",
+    description="service-catalog.memory.md listed 8 services but SERVICE_RESPONSIBILITY_MATRIX had 10",
+    resolution="Updated service-catalog.memory.md to reflect all 10 services",
+    files_affected=["memory/service-catalog.memory.md"],
+    tags=["consistency", "service-catalog"]
+)
+```
+
+#### 4. After Session Handoff Generation
+
+Record handoff details for continuity:
+
+```python
+context.record_session_handoff(
+    handoff_file=".claude/handoffs/session-2025-11-22.md",
+    completed_tasks=["LoyaltyService documentation", "Phase 2 status update"],
+    blockers=["Migration pending for tier status table"],
+    next_actions=["Document tier upgrade logic", "Update ADR-012 with final approach"]
+)
+```
+
+#### 5. After Cross-Reference Updates
+
+Record documentation linkages:
+
+```python
+context.record_cross_reference(
+    source_doc="memory/service-catalog.memory.md",
+    target_doc="docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
+    reference_type="bidirectional",
+    entity_name="LoyaltyService",
+    notes="Linked service catalog entry to SRM row for bounded context verification"
+)
+```
+
+#### 6. After Compression/Cleanup
+
+Record documentation maintenance work:
+
+```python
+context.record_maintenance(
+    maintenance_type="compression",
+    files_affected=["memory/architecture-decisions.memory.md"],
+    lines_before=620,
+    lines_after=485,
+    summary="Compressed ADR summaries, moved detailed rationale to cross-references",
+    quality_improvement="Reduced file size 22% while maintaining information density"
+)
+```
+
+### When to Record Manually
+
+Record semantically at these moments:
+
+- [ ] **After memory file updates** (what changed, why, impact)
+- [ ] **After user corrects documentation** (learn formatting/content preferences)
+- [ ] **After detecting inconsistencies** (what was wrong, how fixed)
+- [ ] **After generating session handoffs** (capture continuity context)
+- [ ] **After cross-reference updates** (document linkages between files)
+- [ ] **After compression/cleanup** (track maintenance work)
+- [ ] **After SDLC taxonomy updates** (ADR references, GOV-PAT codes)
+- [ ] **When user provides domain terminology** (casino terms, MTL acronyms)
+
+### Querying Past Documentation Work
+
+Before updating similar documentation, check past patterns:
+
+```python
+# Search for similar documentation patterns
+past_updates = memori.search_learnings(
+    query="service catalog update patterns",
+    namespace="documenter",
+    limit=5
+)
+
+# Check for user preferences on formatting
+formatting_prefs = memori.search_learnings(
+    query="documentation formatting preferences",
+    namespace="documenter",
+    tags=["formatting"]
+)
+
+# Check consistency resolutions
+past_inconsistencies = memori.search_learnings(
+    query="service count inconsistencies",
+    namespace="documenter",
+    tags=["consistency"]
+)
+```
+
+### Fallback Mode
+
+If Memori is unavailable (rare), continue normally:
+
+```python
+try:
+    memori.enable()
+    context = ChatmodeContext(memori)
+except Exception as e:
+    print("⚠️ Memori unavailable, continuing with static memory files only")
+    # Continue documentation work - hooks still capture file changes
+```
+
+**Note**: Hooks still capture file changes even if manual recording fails. Static memory files remain the source of truth for project documentation.
+
 ## Memory File Update Protocol
 
 ### After Service Creation

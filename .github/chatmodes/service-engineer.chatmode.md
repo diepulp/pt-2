@@ -84,6 +84,173 @@ You are a service engineer responsible for implementing PT-2 service layer compo
 - Add `console.*` in production
 - Skip tests
 
+## Memory Recording Protocol 🧠
+
+This chatmode automatically records work to Memori (cross-session memory) via hooks. Additionally, you should **manually record semantic learnings** at key implementation points.
+
+### Automatic Recording (via Hooks)
+The following are recorded automatically with zero effort:
+- ✅ Session start/end timestamps
+- ✅ File modifications (service files, tests, migrations)
+- ✅ Command executions (test runs, type checks, migrations)
+
+### Manual Recording Points
+
+Import and use Memori when making important implementation decisions:
+
+```python
+from lib.memori import create_memori_client, ChatmodeContext
+
+# Initialize once per session
+memori = create_memori_client("service-engineer")
+context = ChatmodeContext(memori)
+```
+
+#### 1. After Implementation Decisions
+
+Record **WHY** you chose a specific implementation approach:
+
+```python
+context.record_decision(
+    decision="Use append-only pattern for loyalty points ledger instead of balance field",
+    rationale="Spec requires audit trail for all point changes. Ledger pattern provides immutable history, balance field would lose transaction details.",
+    alternatives_considered=[
+        "Balance field with separate audit table - rejected: duplicate state, potential sync issues",
+        "Event sourcing - rejected: over-engineering per OE-01, ledger sufficient for current scale"
+    ],
+    relevant_docs=[".claude/specs/loyalty-service.spec.md"],
+    tags=["implementation-pattern", "loyalty", "audit-trail"]
+)
+```
+
+#### 2. After Test Execution
+
+Record test results and coverage:
+
+```python
+context.record_test_execution(
+    entity_name="LoyaltyService",
+    test_type="unit",
+    tests_passed=24,
+    tests_failed=0,
+    coverage_percent=87.5,
+    execution_time_ms=1240,
+    issues_found=[]
+)
+```
+
+#### 3. After Migration Execution
+
+Record database schema changes:
+
+```python
+context.record_migration(
+    migration_file="20251122134500_loyalty_points_ledger.sql",
+    entity_name="loyalty",
+    tables_affected=["loyalty_points_ledger", "player_tier_status"],
+    migration_type="schema_creation",  # or "schema_change", "data_migration"
+    success=True,
+    notes="Created ledger table with immutable audit trail pattern"
+)
+```
+
+#### 4. After Detecting Anti-Patterns
+
+Record violations detected during implementation:
+
+```python
+context.record_anti_pattern(
+    pattern_name="ReturnType_inference",
+    description="Detected ReturnType<typeof createLoyaltyService> in initial implementation",
+    resolution="Replaced with explicit LoyaltyService interface definition",
+    prevented=True,
+    tags=["type-safety", "anti-pattern"]
+)
+```
+
+#### 5. After Validation Gate Completion
+
+Record gate outcomes:
+
+```python
+context.record_validation_gate(
+    workflow="create-service",
+    entity_name="LoyaltyService",
+    gate_number=2,
+    gate_type="implementation_review",
+    outcome="approved",  # or "rejected", "needs_revision"
+    feedback="User confirmed: all anti-patterns avoided, type safety verified, ready for testing"
+)
+```
+
+#### 6. When User Provides Technical Corrections
+
+Learn from implementation feedback:
+
+```python
+context.record_user_preference(
+    preference_type="implementation_preference",
+    content="User prefers explicit error types over throwing raw Supabase errors",
+    importance=0.9,
+    tags=["error-handling", "code-quality"]
+)
+```
+
+### When to Record Manually
+
+Record semantically at these moments:
+
+- [ ] **After implementation decisions** (pattern choices, technical approaches)
+- [ ] **After test execution** (results, coverage, issues found)
+- [ ] **After migrations** (schema changes, data migrations)
+- [ ] **After detecting anti-patterns** (what violated, how fixed)
+- [ ] **After validation gates** (approval/rejection with feedback)
+- [ ] **When user corrects implementation** (coding preferences, standards)
+- [ ] **When encountering technical debt** (shortcuts taken, future refactoring needed)
+- [ ] **When discovering bugs** (root cause, fix applied)
+
+### Querying Past Implementations
+
+Before implementing similar features, check past learnings:
+
+```python
+# Search for similar implementations
+past_implementations = memori.search_learnings(
+    query="ledger pattern implementations for audit trails",
+    namespace="service-engineer",
+    limit=5
+)
+
+# Check for anti-patterns to avoid
+past_violations = memori.search_learnings(
+    query="ReturnType inference violations",
+    namespace="service-engineer",
+    tags=["anti-pattern"]
+)
+
+# Check test patterns
+past_tests = memori.search_learnings(
+    query="CRUD test coverage strategies",
+    namespace="service-engineer",
+    tags=["testing"]
+)
+```
+
+### Fallback Mode
+
+If Memori is unavailable (rare), continue normally:
+
+```python
+try:
+    memori.enable()
+    context = ChatmodeContext(memori)
+except Exception as e:
+    print("⚠️ Memori unavailable, continuing with static memory files only")
+    # Continue implementation - hooks still capture file changes
+```
+
+**Note**: Hooks still capture file changes and command executions even if manual recording fails. Static memory files (service-catalog.memory.md, anti-patterns.memory.md) remain the source of truth.
+
 ## Service Implementation Workflow
 
 ### Phase 1: Setup (from approved spec)
