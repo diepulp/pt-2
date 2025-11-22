@@ -34,6 +34,21 @@
 
 ---
 
+## Pattern
+
+**Pattern A: Contract-First**
+
+**Rationale**: Table-context manages complex operational workflows (chip custody, dealer rotation, inventory reconciliation) with strict dual-signer requirements and custody chain tracking. Domain contracts must remain stable for floor operations, compliance audits, and cage reconciliation systems. Chip custody telemetry, fill/credit workflows, and drop custody timelines are complex business rules requiring decoupling from database schema.
+
+**Characteristics**:
+- Manual DTO interfaces (custody chain contracts)
+- RPC-based operations with idempotency keys
+- Multi-table transactions (fill/credit/inventory)
+- Event-driven floor layout integration
+- Dual-signer validation business rules
+
+---
+
 ## Core Responsibilities
 
 **OWNS**:

@@ -80,7 +80,8 @@ class DocConsistencyChecker:
 
             # Extract pattern from README
             readme = readme_path.read_text()
-            pattern_match = re.search(r'##\s*Pattern\s*\n\s*Pattern\s+([ABC])', readme)
+            # Match both formats: "Pattern A" or "**Pattern A: Description**"
+            pattern_match = re.search(r'##\s*Pattern\s*\n+\s*\*?\*?Pattern\s+([ABC])', readme)
 
             if not pattern_match:
                 self.inconsistencies.append(Inconsistency(

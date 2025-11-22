@@ -14,7 +14,7 @@ docs:
 ```
 services/{domain}/
 ├── index.ts          # Factory + explicit interface export
-├── dto.ts            # Derived from Database types
+├── dtos.ts           # Derived from Database types
 ├── selects.ts        # Centralized column lists
 ├── crud.ts           # CRUD operations
 ├── operations.ts     # Business logic (optional)

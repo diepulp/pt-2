@@ -20,6 +20,20 @@
 
 ---
 
+## Pattern
+
+**Pattern C: Hybrid**
+
+**Rationale**: Rating-slip has mixed complexity combining state machine logic (Pattern A) with telemetry CRUD operations (Pattern B). State transitions require domain rules and guard conditions (Pattern A characteristics), while telemetry updates (average_bet, duration) are straightforward data updates (Pattern B characteristics). This hybrid approach allows both manual DTOs for cross-context contracts (`RatingSlipTelemetryDTO`) and canonical DTOs for internal operations.
+
+**Characteristics**:
+- **Pattern A aspects**: State machine transitions, policy snapshots, cross-context DTO publishing (`RatingSlipTelemetryDTO`)
+- **Pattern B aspects**: Telemetry field updates (average_bet, duration), basic CRUD operations
+- Mix of manual and derived DTOs as appropriate per feature
+- State transition guards enforce business rules
+
+---
+
 ## Core Responsibilities
 
 **OWNS**:

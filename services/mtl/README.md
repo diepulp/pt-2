@@ -10,6 +10,19 @@
 - `mtl_entry` - Immutable cash transaction log (write-once)
 - `mtl_audit_note` - Append-only audit trail
 
+## Pattern
+
+**Pattern A: Contract-First**
+
+**Rationale**: MTL (Monetary Transaction Log) is a compliance-driven service subject to strict AML/CTR regulatory requirements. Domain contracts must remain immutable and auditable, decoupled from database implementation. Threshold detection rules, gaming day calculation, and watchlist triggers are complex business logic requiring stable external contracts for regulatory reporting systems.
+
+**Characteristics**:
+- Manual DTO interfaces (compliance reporting contracts)
+- Immutable records (write-once, no updates/deletes)
+- Idempotency key enforcement
+- Threshold detection business rules
+- Temporal gaming day calculation via triggers
+
 ## Core Responsibilities
 
 **OWNS**:

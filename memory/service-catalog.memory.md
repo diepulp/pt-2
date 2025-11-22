@@ -14,7 +14,7 @@ detailed_context: context/architecture.context.md
 **Compliance**: MTLService (immutable cash log, AML/CTR)  
 **Operational**: TableContextService (tables, dealers, fills/drops, chip custody; consumes layout activations)  
 **Operational**: FloorLayoutService (design/version/activation of pits & table placements; emits layout events)  
-**Observability**: PerformanceService (metrics, alerts, read-only)
+
 
 ## Key Ownership Patterns
 

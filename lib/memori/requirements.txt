@@ -1,0 +1,16 @@
+# Memori SDK dependencies for PT-2
+
+# Core Memori SDK
+memorisdk>=0.1.0
+
+# OpenAI (required by Memori for embeddings)
+openai>=1.0.0
+
+# Database adapter
+psycopg2-binary>=2.9.9
+
+# Logging
+loguru>=0.7.2
+
+# Optional: Vector embeddings (if pgvector is used)
+# Note: pgvector extension must be installed in PostgreSQL

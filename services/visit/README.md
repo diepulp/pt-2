@@ -21,7 +21,15 @@
 
 ## Pattern
 
-**Thin CRUD Service** - Canonical DTOs using Pick/Omit
+**Pattern B: Canonical CRUD**
+
+**Rationale**: Visit service manages simple session tracking (player check-in/check-out) with straightforward CRUD operations. DTOs mirror database schema 1:1 since session data flows directly from table structure. No complex business logic or domain transformations required.
+
+**Characteristics**:
+- DTOs use `Pick<Database['public']['Tables']['visit']['Row'], ...>`
+- Minimal business logic (session start/end handled in Server Actions)
+- Session lifecycle tracking (started_at, ended_at timestamps)
+- Schema changes auto-sync via type derivation
 
 ## References
 

@@ -25,7 +25,7 @@ source_of_truth:
 > - JSON: allowed only for **extensible metadata**; operational facts used in FKs/RLS/analytics must be first-class columns. Approved metadata blobs: `table_*` chipset payloads, `rating_slip.policy_snapshot`, `rating_slip.game_settings`, and `floor_layout*` geometry (documented per section).
 > - Ownership: Records that depend on casino policy MUST carry `casino_id` and (where applicable) `gaming_day`.
 > - RLS: Policies derive from ownership in this SRM and must be shipped with each schema change.
-> - Edge transport: First-party reads/writes enter via **Server Actions** wrapped by `withServerAction()` (auth → `SET LOCAL app.casino_id` → RLS scope → idempotency → audit). Route Handlers are reserved for 3rd-party/webhook/file-upload ingress and must reuse the same service DTO contracts. (See `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` for the detailed middleware contract.)
+> - Edge transport: First-party flows follow the dual-entry pattern from `docs/70-governance/SERVER_ACTIONS_ARCHITECTURE.md`. Form-based flows use **Server Actions**; React Query/JSON flows use **Route Handlers**. Both paths wrap `withServerAction()` (auth → `SET LOCAL app.casino_id` → RLS scope → idempotency → audit), and third-party/webhook/file-upload ingress also uses Route Handlers that reuse the same DTO contracts. (See `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` for the detailed middleware contract.)
 > - Headers: `x-correlation-id` required on **all** edge calls; `x-idempotency-key` required on **mutations** and persisted by the owning service (Finance, Loyalty, etc.).
 > - Idempotency semantics, DTO validation, and transport middleware are detailed in `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` and the API contracts in `docs/25-api-data/API_SURFACE_MVP.md`.
 > - DTOs: Contract-first DTOs live beside each service, validated with shared zod schemas that are also imported by tests.
@@ -647,7 +647,7 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• rating_slips<br>• Loyalty | Identity management |
 | **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips (chip custody telemetry)<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** *(post-MVP extensions in `docs/20-architecture/SRM_Addendum_TableContext_PostMVP.md`)* |
 | **Operational** | `FloorLayoutService` | • Floor layout drafts & approvals<br>• Layout versions (immutable snapshots)<br>• Pit definitions & sections<br>• Table slot placements<br>• Layout activation log/events | • Casino (FK)<br>• Staff (FK, admins)<br>• TableContext (event consumers) | • Activation history<br>• Layout review queues | **Design & activate gaming floor layouts** |
-| **Session** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle |
+| **Operational** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• `status`/`policy_snapshot` | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• rating_slip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
 | **Finance** | `PlayerFinancialService` | • `player_financial_transaction` (OWNS - append-only)<br>• **Financial event types**<br>• Idempotency enforcement<br>• **PROVIDES**: 3 aggregation views | • Player (FK)<br>• Visit (FK - READ-ONLY)<br>• rating_slip (FK - compat)<br>• Casino (FK - temporal) | • Visit consumes summaries (READ)<br>• MTL refs gaming-day aggs | **Financial ledger (SoT)** |
@@ -699,8 +699,8 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 - Cross-context writes targeting CasinoService tables must invoke the sanctioned RPC/service factory so audit, idempotency, and RLS constraints remain consistent.
 
 ### Transport & Edge Rules
-- First-party mutations (staff management, casino settings, audit writes) MUST enter via Server Actions wrapped with `withServerAction()` so auth, `SET LOCAL app.casino_id`, idempotency enforcement, and audit logging remain centralized.
-- Route Handlers are restricted to enterprise imports/webhooks and must reuse the same DTOs, schemas, and audit contract defined for the Server Actions.
+- First-party mutations (staff management, casino settings, audit writes) MUST run through `withServerAction()` whether triggered via Server Actions (forms) or Route Handlers (React Query/API) so auth, `SET LOCAL app.casino_id`, idempotency enforcement, and audit logging remain centralized.
+- Route Handlers power both React Query flows and enterprise/webhook integrations; all handlers reuse the same DTOs, schemas, and audit contract defined for the Server Action surface.
 - DTO payloads are validated with shared zod schemas; specs/tests import the same schema to prevent drift.
 
 ### Schema (Core Entities)
@@ -811,26 +811,25 @@ const { data, error } = await supabase
 
 ---
 
-## Player & Visit - Identity & Session Context
+## Player Service - Identity Context
 
-### Player & Visit Acceptance Checklist (CI)
-- [ ] **Tables present:** `player`, `player_casino`, `visit`
+### Player Acceptance Checklist (CI)
+- [ ] **Tables present:** `player`, `player_casino`
 - [ ] **PK/FK types:** all `uuid`; `player_casino` PK `(player_id, casino_id)`
 - [ ] **Constraints:** `player_casino.status default 'active'`
-- [ ] **RLS:** membership reads within same `casino_id`; writes by enrollment service
-- [ ] **Access paths:** membership by `(player_id, casino_id)`; visits by `(player_id, started_at desc)`
+- [ ] **RLS:** enrollment reads/writes scoped to the same `casino_id`
+- [ ] **Access paths:** membership by `(player_id, casino_id)`
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` defines the same-casino read policies and enrollment/visit write paths. All access flows through Server Actions or RPCs that set `app.casino_id`.
+**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` (Player section) defines the same-casino read policies and enrollment write paths. All access flows through `withServerAction()` entry points (Server Actions or Route Handlers) or RPCs that set `app.casino_id`.
 
 ### Service Boundary Notes
-- PlayerService owns enrollment + identity fields; VisitService depends on Player DTOs and never mutates player data directly.
-- VisitService exposes session lifecycle RPCs (`create_visit`, `close_visit`, etc.); downstream domains (Finance, Loyalty, MTL) consume published Visit DTOs/RPCs instead of querying the `visit` table directly.
-- Casino/Staff metadata required by VisitService is retrieved via CasinoService DTOs so the ownership boundary remains intact.
+- PlayerService owns enrollment + identity fields and publishes DTOs consumed by Visit, Loyalty, and Finance contexts.
+- CasinoService remains the source of casino/staff metadata; PlayerService reads via DTOs to keep the boundary intact.
 
 ### Transport & Edge Rules
-- Player enrollment and visit check-in/out flows MUST enter via `withServerAction()` so auth, `SET LOCAL app.*`, and audit/idempotency policies remain centralized.
-- Route Handlers are limited to kiosk or kiosk-adjacent integrations and reuse the same DTO/zod schemas as Server Actions.
-- DTO/zod schemas are owned by PlayerService/VisitService and imported by UI/tests to guarantee parity with this SRM.
+- Enrollment flows MUST enter via `withServerAction()` so auth, `SET LOCAL app.*`, and audit/idempotency policies remain centralized whether invoked by Server Actions (forms) or Route Handlers (React Query surfaces).
+- Route Handlers cover React Query transport plus kiosk/3rd-party enrollment integrations and reuse the same DTO/zod schemas as Server Actions.
+- DTO/zod schemas are owned by PlayerService and imported by UI/tests to guarantee parity with this SRM.
 
 ### Schema
 
@@ -850,7 +849,33 @@ create table player_casino (
   enrolled_at timestamptz not null default now(),
   primary key (player_id, casino_id)
 );
+```
 
+---
+
+## Visit Service - Operational Session Context
+
+### Visit Acceptance Checklist (CI)
+- [ ] **Table present:** `visit`
+- [ ] **PK/FK types:** `uuid`
+- [ ] **RLS:** same-casino scope; writes by authorized session lifecycle roles
+- [ ] **Access paths:** `(player_id, started_at desc)`; `(casino_id, started_at desc)`
+
+**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` (Visit section) defines the same-casino read policies and visit write paths. All access flows through `withServerAction()` entry points (Server Actions or Route Handlers) or RPCs that set `app.casino_id`.
+
+### Service Boundary Notes
+- VisitService depends on Player DTOs and never mutates player data directly.
+- VisitService exposes session lifecycle RPCs (`create_visit`, `close_visit`, etc.); downstream domains (Finance, Loyalty, MTL) consume published Visit DTOs/RPCs instead of querying the `visit` table directly.
+- Casino/Staff metadata required by VisitService is retrieved via CasinoService DTOs so the ownership boundary remains intact.
+
+### Transport & Edge Rules
+- Visit check-in/out flows MUST execute via `withServerAction()` so auth, `SET LOCAL app.*`, and audit/idempotency policies remain centralized (Server Actions for form/RSC flows, Route Handlers for React Query/kiosk transport).
+- Route Handlers cover React Query transport plus kiosk/3rd-party integrations and reuse the same DTO/zod schemas as Server Actions.
+- DTO/zod schemas are owned by VisitService and imported by UI/tests to guarantee parity with this SRM.
+
+### Schema
+
+```sql
 create table visit (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references player(id) on delete cascade,
@@ -904,8 +929,8 @@ create table visit (
 - WRAPPER code must call RatingSlip service factories/RPCs instead of chaining multiple service writes per request to avoid WRAPPER-level fan-out.
 
 ### Transport & Edge Rules
-- Mid-session rewards, manual adjustments, and preference updates are invoked via Server Actions that wrap `rpc_issue_mid_session_reward`/related RPCs with `withServerAction()`; the wrapper enforces auth, sets `app.casino_id`, logs `x-correlation-id`, and requires `x-idempotency-key` for every ledger mutation (HTTP contract lives in `docs/25-api-data/API_SURFACE_MVP.md`).
-- Route Handlers exist only for third-party loyalty integrations/webhooks and must reuse the same DTO schema + audit contract defined for Server Actions.
+- Mid-session rewards, manual adjustments, and preference updates execute through `withServerAction()` regardless of entrypoint: Server Actions for form flows, Route Handlers for React Query/API. The wrapper enforces auth, sets `app.casino_id`, logs `x-correlation-id`, and requires `x-idempotency-key` for every ledger mutation (HTTP contract lives in `docs/25-api-data/API_SURFACE_MVP.md`).
+- Route Handlers cover both React Query mutations and third-party loyalty integrations/webhooks and must reuse the same DTO schema + audit contract defined for Server Actions.
 - DTO/zod schemas live with LoyaltyService and are re-imported by UI/tests to guarantee SRM conformance.
 
 ### Schema
@@ -1362,8 +1387,8 @@ $$;
 - Enforce `casino_id = current_setting('app.casino_id')::uuid` and role allow-lists.
 
 #### Transport & Edge Rules
-- All first-party table custody mutations (fills, credits, drops, alerts) go through Server Actions using `withServerAction()`; the wrapper requires `x-idempotency-key` for each custody request and persists it via `(casino_id, request_id)` partial uniques. The HTTP surface/route handlers that enforce this mapping are defined in `docs/25-api-data/API_SURFACE_MVP.md`.
-- Route Handlers are limited to hardware/webhook integrations (e.g., drop-box scanners) and must publish the same DTOs and schemas as the Server Action surface.
+- All first-party table custody mutations (fills, credits, drops, alerts) go through `withServerAction()`, whether invoked via Server Actions or Route Handlers. The wrapper requires `x-idempotency-key` for each custody request and persists it via `(casino_id, request_id)` partial uniques. The HTTP surfaces that enforce this mapping are defined in `docs/25-api-data/API_SURFACE_MVP.md`.
+- Route Handlers cover React Query mutations plus hardware/webhook integrations (e.g., drop-box scanners) and must publish the same DTOs and schemas as the Server Action surface.
 - DTOs are defined contract-first and validated with shared zod schemas that telemetry tests reuse.
 
 #### Events & Observability
@@ -1540,11 +1565,11 @@ $$;
 - [ ] **RLS:** same-casino read; updates restricted to authorized staff roles
 - [ ] **Telemetry focus:** updates limited to gameplay metrics (`average_bet`, `start_time`, `end_time`)
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#ratingslipservice` — same-casino reads + telemetry role updates enforced via Server Actions/RPCs (no direct table writes across contexts).
+**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#ratingslipservice` — same-casino reads + telemetry role updates enforced via `withServerAction()` entry points/RPCs (no direct table writes across contexts).
 
 ### Transport & Edge Rules
-- Rating slip lifecycle changes (create/open/close/pause) flow through Server Actions wrapped with `withServerAction()` so staff auth, `SET LOCAL app.casino_id`, and `x-correlation-id` audit logging stay centralized; telemetry-only updates remain idempotent-by-field (no separate key required).
-- Route Handlers are reserved for telemetry devices/3rd-party ingest and must reuse the same DTO schema so validation/audit paths match the Server Action flow.
+- Rating slip lifecycle changes (create/open/close/pause) flow through `withServerAction()` so staff auth, `SET LOCAL app.casino_id`, and `x-correlation-id` audit logging stay centralized; use Server Actions for form/RSC flows and Route Handlers for React Query or device JSON surfaces. Telemetry-only updates remain idempotent-by-field (no separate key required).
+- Route Handlers cover React Query as well as telemetry devices/3rd-party ingest and must reuse the same DTO schema so validation/audit paths match the Server Action flow.
 - DTO + zod schemas for slips live with RatingSlipService and are imported by UI/tests to keep the contract aligned with this SRM.
 
 ### Schema
@@ -1584,7 +1609,7 @@ create table rating_slip (
 - Dead-letter queue/alert triggers when `attempt_count` exceeds threshold; replays remain idempotent because ledger rows are immutable and keyed by `idempotency_key`.
 
 ### Realtime & Cache Notes *(see ADR-004 + Observability Spec §4 for hook + invalidation details)*
-- Server Actions that mutate rating slips emit `ratingSlip.created|updated|closed` events; realtime listeners subscribe to `{casino_id}` for list refresh and `{casino_id}:{rating_slip_id}` for detail reconciliation.
+- `withServerAction()` flows (Server Actions or Route Handlers) that mutate rating slips emit `ratingSlip.created|updated|closed` events; realtime listeners subscribe to `{casino_id}` for list refresh and `{casino_id}:{rating_slip_id}` for detail reconciliation.
 - React Query invalidation targets `['rating-slip','list',casino_id]`, `['rating-slip','detail',rating_slip_id]`, etc., via the shared `invalidateByDomainEvent` helper—no blanket invalidations.
 - Optimistic UI paths must reconcile with the emitted event payload to prevent drift against the canonical telemetry snapshot.
 - Realtime broadcasts cover **state transitions** (OPEN→PAUSED→CLOSED) plus optional 1–5s snapshots; high-cardinality dashboards fall back to poll + ETag rather than maintaining a feed per slip.
@@ -1608,8 +1633,8 @@ create table rating_slip (
 - Updates restricted to idempotent correction flows; deletes prohibited.
 
 ### Transport & Edge Rules
-- Cashier/cage mutations MUST enter through Server Actions composed with `withServerAction()`; the wrapper requires `x-idempotency-key`, persists it via `player_financial_transaction`'s `(casino_id, idempotency_key)` uniqueness, and writes `audit_log` rows using the inbound `x-correlation-id`. See `docs/25-api-data/API_SURFACE_MVP.md` for the cashier API contract and header requirements.
-- Route Handlers are restricted to third-party payment gateways or webhook callbacks and must marshal through the same DTO/zod schema before invoking finance services.
+- Cashier/cage mutations MUST execute through `withServerAction()`; use Server Actions for staff form workflows and Route Handlers for React Query/API transport. The wrapper requires `x-idempotency-key`, persists it via `player_financial_transaction`'s `(casino_id, idempotency_key)` uniqueness, and writes `audit_log` rows using the inbound `x-correlation-id`. See `docs/25-api-data/API_SURFACE_MVP.md` for the cashier API contract and header requirements.
+- Route Handlers cover React Query mutations plus third-party payment gateways or webhook callbacks and must marshal through the same DTO/zod schema before invoking finance services.
 - DTOs are contract-first artifacts; QA/integration tests import the same schema to assert SRM conformance.
 
 ### Acceptance Checklist (CI)

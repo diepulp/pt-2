@@ -21,6 +21,7 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008]
 - **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
 - **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
 - **Edge Transport**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (withServerAction middleware)
+- **Server Actions Split**: `docs/70-governance/SERVER_ACTIONS_ARCHITECTURE.md` (form vs React Query routing contract)
 - **State Management**: `docs/80-adrs/ADR-003-state-management-strategy.md` (React Query v5)
 - **Real-time**: `docs/80-adrs/ADR-004-real-time-strategy.md` (Domain-scoped channels)
 - **Observability**: `docs/50-ops/OBSERVABILITY_SPEC.md` (Correlation/audit patterns)
@@ -624,7 +625,7 @@ function calculateReward(telemetry: RatingSlipTelemetryDTO): number {
 
 ## Transport Layer Architecture
 
-> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md, SRM v3.1.0:28-30
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md, SERVER_ACTIONS_ARCHITECTURE.md, SRM v3.1.0:28-30
 
 ```mermaid
 graph TB
@@ -674,12 +675,13 @@ graph TB
 
 ### Entry Point Strategy
 
-**Rule**: First-party = Server Actions, Third-party = Route Handlers (EDGE_TRANSPORT_POLICY.md:16-24)
+**Rule**: Server Actions handle first-party form/RSC flows; Route Handlers handle React Query/JSON transport plus third-party/webhook ingress (EDGE_TRANSPORT_POLICY.md:16-24, SERVER_ACTIONS_ARCHITECTURE.md §Overview).
 
 | Use Case | Entry Point | Notes |
 |----------|-------------|-------|
-| First-party (staff UI, forms) | **Server Actions** (`app/actions/**`) | Primary - wrapped with `withServerAction()` |
-| Third-party (webhooks, integrations) | **Route Handlers** (`app/api/v1/**/route.ts`) | Secondary - reuse same DTOs + services |
+| First-party (staff UI, forms/RSC) | **Server Actions** (`app/actions/**`) | Wrap with `withServerAction()`; no direct client invocation |
+| First-party (React Query, JSON mutations/reads) | **Route Handlers** (`app/api/v1/**/route.ts`) | React Query `mutationFn`/`queryFn` target; enforce headers, share DTOs |
+| Third-party (webhooks, integrations) | **Route Handlers** (`app/api/v1/**/route.ts`) | Reuse same DTOs/services; may add signature/rate-limit guards |
 
 ### Middleware Chain (`withServerAction`)
 

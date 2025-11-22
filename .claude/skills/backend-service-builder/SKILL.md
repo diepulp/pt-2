@@ -1,6 +1,7 @@
 ---
 name: backend-service-builder
 description: Build PT-2 service layer modules following bounded context rules, service patterns, and DTO standards. This skill should be used when implementing new backend services, database migrations, or service refactoring. Validates implementation against governance documents and flags documentation inconsistencies.
+allowed-tools: SlashCommand, context7, mcp__sequential-thinking__sequentialthinking, supabase, Read, Write, Edit, Glob, Bash, TodoWrite, BashOutput, KillShell, Task, mcp__tavily-remote__tavily_extract
 ---
 
 # Backend Service Builder

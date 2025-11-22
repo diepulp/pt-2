@@ -17,8 +17,17 @@
 
 ## Pattern
 
-**Thin CRUD Service** - Canonical DTOs using Pick/Omit from Database types
+**Pattern B: Canonical CRUD**
 
+**Rationale**: Player service manages simple identity and enrollment CRUD operations. DTOs mirror database schema 1:1 with no complex business logic. Player profile changes flow directly from schema updates, making type derivation the safest approach to prevent schema drift.
+
+**Characteristics**:
+- DTOs use `Pick<Database['public']['Tables']['player']['Row'], ...>`
+- Minimal business logic (handled in Server Actions)
+- PII exclusion via explicit column selection
+- Schema changes auto-sync via type derivation
+
+**Example**:
 ```typescript
 export type PlayerDTO = Pick<
   Database['public']['Tables']['player']['Row'],

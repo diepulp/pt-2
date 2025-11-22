@@ -10,6 +10,18 @@
 - `player_financial_transaction` - Monetary ledger (append-only)
 - `finance_outbox` - Async side effects
 
+## Pattern
+
+**Pattern A: Contract-First**
+
+**Rationale**: Financial transactions require strict compliance rules, audit trails, and idempotency guarantees. Domain contracts must remain stable for external systems (payment gateways, accounting) while allowing internal schema evolution. Gaming day computation and monetary ledger logic are complex business rules requiring decoupling from database schema.
+
+**Characteristics**:
+- Manual DTO interfaces (financial transaction contracts)
+- RPC-based operations (`rpc_create_financial_txn`)
+- Idempotency key handling
+- Outbox pattern for async webhooks
+
 ## Core Responsibilities
 
 **OWNS**:

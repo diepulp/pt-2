@@ -13,6 +13,18 @@
 - `floor_table_slot` - Table placements within a version
 - `floor_layout_activation` - Activation event log
 
+## Pattern
+
+**Pattern B: Canonical CRUD**
+
+**Rationale**: Floor-layout service manages design configuration and approval workflow with straightforward CRUD operations on layout data. While activation includes an RPC (`rpc_activate_floor_layout`), the core responsibility is layout data management where DTOs mirror database schema 1:1. Layout structure changes flow directly from schema updates.
+
+**Characteristics**:
+- DTOs use `Pick<Database['public']['Tables']['floor_layout']['Row'], ...>`
+- Minimal business logic (approval workflow handled in Server Actions)
+- Event emission on activation (simple publish pattern)
+- Schema changes auto-sync via type derivation
+
 ## Core Responsibilities
 
 **OWNS**:

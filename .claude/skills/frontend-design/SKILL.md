@@ -1,6 +1,7 @@
 ---
 name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality for PT-2 architecture. Use this skill when building web components, pages, or applications. Generates creative, polished code that follows PT-2 technical standards (React 19, Next.js App Router, Tailwind v4, shadcn/ui) while avoiding generic AI aesthetics.
+allowed-tools: SlashCommand, context7, mcp__sequential-thinking__sequentialthinking, supabase, Read, Write, Edit, Glob, Bash, TodoWrite, BashOutput, KillShell, Task, mcp__tavily-remote__tavily_extract, mcp__tavily-remote__tavily_map, mcp__tavily-remote__tavily_map, mcp__tavily-remote__tavily_search
 license: Complete terms in LICENSE.txt
 ---
 
