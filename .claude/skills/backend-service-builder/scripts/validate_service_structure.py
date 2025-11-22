@@ -8,18 +8,31 @@ Checks:
 - No ReturnType inference for service types
 - Proper supabase typing (SupabaseClient<Database>)
 - Pattern-appropriate file structure
+
+Enhanced with Memori integration for historical violation tracking.
 """
 
 import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
+
+# Add lib/memori to path
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "lib"))
+
+try:
+    from memori import create_memori_client, ValidationContext
+    MEMORI_AVAILABLE = True
+except ImportError:
+    MEMORI_AVAILABLE = False
+    print("⚠️  Memori SDK not available - running without historical context")
 
 # Color codes for output
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
+BLUE = '\033[94m'
 RESET = '\033[0m'
 
 class ServiceValidator:
@@ -30,12 +43,27 @@ class ServiceValidator:
         self.warnings: List[str] = []
         self.info: List[str] = []
 
+        # Memori integration
+        self.memori = None
+        self.context = None
+        if MEMORI_AVAILABLE:
+            try:
+                self.memori = create_memori_client("skill:backend-service-builder")
+                self.context = ValidationContext(self.memori)
+            except Exception as e:
+                print(f"⚠️  Could not initialize Memori: {e}")
+                MEMORI_AVAILABLE = False
+
     def validate(self) -> bool:
         """Run all validation checks. Returns True if all pass."""
         print(f"\n{'='*60}")
         print(f"Validating service: {self.service_name}")
         print(f"Path: {self.service_path}")
         print(f"{'='*60}\n")
+
+        # Query past violations BEFORE validating (Memori integration)
+        if self.context:
+            self.query_past_violations()
 
         # Run all checks
         self.check_required_files()
@@ -45,10 +73,124 @@ class ServiceValidator:
         self.check_readme_content()
         self.detect_pattern()
 
-        # Print results
+        # Record findings to Memori
+        if self.context:
+            self.record_findings()
+
+        # Print results (includes fix suggestions from history)
         self.print_results()
 
+        # Record validation session outcome
+        if self.context:
+            self.record_validation_session()
+
         return len(self.errors) == 0
+
+    def query_past_violations(self):
+        """Query Memori for past validation issues with this service."""
+        if not self.context:
+            return
+
+        past_violations = self.context.query_past_violations(
+            service_name=self.service_name,
+            limit=10
+        )
+
+        if past_violations:
+            print(f"{BLUE}📚 Historical Context:{RESET}")
+            print(f"   Found {len(past_violations)} past validation issues for {self.service_name}\n")
+
+            # Group by pattern
+            patterns = {}
+            for v in past_violations:
+                metadata = v.get("metadata", {})
+                pattern = metadata.get("pattern_violated", "Unknown")
+                if pattern not in patterns:
+                    patterns[pattern] = []
+                patterns[pattern].append(v)
+
+            for pattern, issues in list(patterns.items())[:3]:  # Show top 3
+                resolved_count = sum(1 for i in issues if i.get("metadata", {}).get("resolved"))
+                print(f"   - {pattern}: {len(issues)} occurrences ({resolved_count} resolved)")
+
+            print()
+
+    def record_findings(self):
+        """Record all validation findings to Memori."""
+        if not self.context:
+            return
+
+        # Record errors
+        for error in self.errors:
+            pattern = self.extract_pattern_from_message(error)
+            file_location = self.extract_file_location(error)
+
+            self.context.record_validation_finding(
+                service_name=self.service_name,
+                finding_type="error",
+                pattern_violated=pattern,
+                description=error,
+                file_location=file_location,
+                severity="high",
+                resolved=False
+            )
+
+        # Record warnings
+        for warning in self.warnings:
+            pattern = self.extract_pattern_from_message(warning)
+            file_location = self.extract_file_location(warning)
+
+            self.context.record_validation_finding(
+                service_name=self.service_name,
+                finding_type="warning",
+                pattern_violated=pattern,
+                description=warning,
+                file_location=file_location,
+                severity="medium",
+                resolved=False
+            )
+
+    def record_validation_session(self):
+        """Record validation session outcome."""
+        if not self.context:
+            return
+
+        self.context.record_validation_session(
+            service_name=self.service_name,
+            validation_type="structure",
+            errors_found=len(self.errors),
+            warnings_found=len(self.warnings),
+            all_checks_passed=(len(self.errors) == 0)
+        )
+
+    def extract_pattern_from_message(self, message: str) -> str:
+        """Extract anti-pattern name from error/warning message."""
+        if "ANTI-PATTERN" in message:
+            # Extract pattern name from "ANTI-PATTERN: Pattern name detected"
+            match = re.search(r'ANTI-PATTERN:\s*([^.]+?)(?:\sdetected|\.|$)', message)
+            if match:
+                return match.group(1).strip()
+
+        if "Class-based service" in message:
+            return "Class-based service"
+        if "ReturnType inference" in message:
+            return "ReturnType inference"
+        if "supabase: any" in message:
+            return "Supabase any typing"
+        if "Missing required file" in message:
+            return "Missing required file"
+        if "Missing or malformed section" in message:
+            return "README missing section"
+
+        return "Unknown"
+
+    def extract_file_location(self, message: str) -> Optional[str]:
+        """Extract file location from error/warning message."""
+        # Look for pattern: "filename.ts:"
+        match = re.search(r'(\w+\.ts)(?::\d+)?', message)
+        if match:
+            return match.group(1)
+        return None
 
     def check_required_files(self):
         """Verify required files exist."""
@@ -175,6 +317,10 @@ class ServiceValidator:
                 print(f"  ❌ {msg}")
             print()
 
+            # Suggest fixes from historical resolutions (Memori integration)
+            if self.context:
+                self.suggest_fixes_from_history()
+
         # Summary
         if self.errors:
             print(f"{RED}❌ VALIDATION FAILED{RESET} ({len(self.errors)} errors, {len(self.warnings)} warnings)\n")
@@ -182,6 +328,29 @@ class ServiceValidator:
             print(f"{YELLOW}⚠️  VALIDATION PASSED WITH WARNINGS{RESET} ({len(self.warnings)} warnings)\n")
         else:
             print(f"{GREEN}✅ VALIDATION PASSED{RESET}\n")
+
+    def suggest_fixes_from_history(self):
+        """Suggest fixes based on how similar violations were resolved before."""
+        if not self.context:
+            return
+
+        # Get unique patterns from errors
+        patterns = set(self.extract_pattern_from_message(e) for e in self.errors)
+
+        print(f"{BLUE}💡 Suggested Fixes (from historical resolutions):{RESET}")
+
+        for pattern in patterns:
+            if pattern == "Unknown":
+                continue
+
+            suggestions = self.context.suggest_fix_from_history(pattern, limit=3)
+
+            if suggestions:
+                print(f"\n   {pattern}:")
+                for i, suggestion in enumerate(suggestions, 1):
+                    print(f"     {i}. {suggestion}")
+
+        print()
 
 
 def main():

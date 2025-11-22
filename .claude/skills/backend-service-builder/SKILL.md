@@ -70,6 +70,160 @@ Process:
 
 ---
 
+## Memory Recording Protocol 🧠
+
+This skill automatically tracks execution outcomes to build pattern knowledge and improve over time.
+
+### Skill Execution Tracking
+
+Record complete execution outcomes after service creation:
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+# Initialize Memori for this skill
+memori = create_memori_client("skill:backend-service-builder")
+context = SkillContext(memori)
+
+# Record skill execution outcome
+context.record_skill_execution(
+    skill_name="backend-service-builder",
+    task="Create LoyaltyService",
+    outcome="success",  # or "failure", "partial"
+    pattern_used="Pattern A (Contract-First)",
+    validation_results={
+        "structure_valid": True,
+        "doc_consistency": True,
+        "cross_context_violations": 0,
+        "anti_patterns_detected": 0
+    },
+    files_created=[
+        "services/loyalty/keys.ts",
+        "services/loyalty/loyalty.ts",
+        "services/loyalty/loyalty.test.ts",
+        "services/loyalty/README.md"
+    ],
+    issues_encountered=[
+        "Initially violated bounded context (fixed)",
+        "README missing SRM reference (added)"
+    ],
+    duration_seconds=180,
+    lessons_learned=[
+        "Loyalty domain requires Pattern A due to business logic complexity",
+        "SRM reference critical for cross-service coordination"
+    ]
+)
+```
+
+### Query Past Patterns Before Starting
+
+Before implementing a service, check what worked before:
+
+```python
+# Search for similar past service creations
+past_executions = memori.search_learnings(
+    query="create service for loyalty domain",
+    namespace="skill:backend-service-builder",
+    tags=["service-creation", "loyalty"],
+    limit=5
+)
+
+if past_executions:
+    print(f"\n📚 Learning from {len(past_executions)} past executions:\n")
+    for execution in past_executions:
+        print(f"  Task: {execution['task']}")
+        print(f"  Pattern Used: {execution['pattern_used']}")
+        print(f"  Outcome: {execution['outcome']}")
+        print(f"  Issues: {execution['issues_encountered']}")
+        print()
+
+    # Analyze patterns
+    successful = [e for e in past_executions if e['outcome'] == 'success']
+    if successful:
+        # Recommend most successful pattern
+        patterns = [e['pattern_used'] for e in successful]
+        recommended = max(set(patterns), key=patterns.count)
+        print(f"💡 Recommendation: Use {recommended} (highest success rate)\n")
+```
+
+### Validation Script Integration
+
+The validation scripts (`validate_service_structure.py`, `check_doc_consistency.py`) automatically record findings to Memori:
+
+- **Anti-pattern detections** (ReturnType inference, class-based services, etc.)
+- **Validation failures** with historical context
+- **Fix suggestions** based on past resolutions
+
+When running validation, scripts will:
+1. Query past violations for context
+2. Run validation checks
+3. Record findings to Memori
+4. Suggest fixes based on historical resolutions
+
+**Example Output**:
+```
+⚠️  Historical Context: 12 past validation issues found
+
+Running validation checks...
+❌ services/loyalty/loyalty.ts: ReturnType inference detected
+
+💡 Suggested fix for 'ReturnType inference':
+   Based on 8 past resolutions:
+   - Replace ReturnType<typeof createLoyaltyService> with explicit interface
+   - Define LoyaltyService interface with all method signatures
+```
+
+### When to Record Manually
+
+Record execution outcomes at these key moments:
+
+- [ ] **After service creation** (pattern used, files created, validation results)
+- [ ] **After migration execution** (tables created, RLS policies applied)
+- [ ] **After validation failures** (issues found, how resolved)
+- [ ] **After user corrections** (learn from feedback)
+- [ ] **After discovering patterns** (bounded context insights, DTO decisions)
+
+### Analytics Available
+
+Query skill effectiveness:
+
+```python
+# Service pattern success rates
+pattern_a_executions = memori.search_learnings(
+    query="Pattern A service creation",
+    namespace="skill:backend-service-builder",
+    tags=["Pattern-A"],
+    limit=50
+)
+
+success_count = sum(1 for e in pattern_a_executions if e['outcome'] == 'success')
+success_rate = (success_count / len(pattern_a_executions)) * 100
+
+print(f"Pattern A success rate: {success_rate}%")
+print(f"Total executions: {len(pattern_a_executions)}")
+
+# Common validation violations
+violations = memori.search_learnings(
+    namespace="skill:backend-service-builder",
+    tags=["validation", "error"],
+    limit=200
+)
+
+# Analyze trends
+violation_counts = {}
+for v in violations:
+    pattern = v.get('pattern_violated', 'Unknown')
+    violation_counts[pattern] = violation_counts.get(pattern, 0) + 1
+
+print("\nTop violations:")
+for pattern, count in sorted(violation_counts.items(), key=lambda x: x[1], reverse=True)[:5]:
+    print(f"  {pattern}: {count} occurrences")
+```
+
+**Note**: Validation scripts automatically record findings. Manual recording needed only for execution outcomes and lessons learned.
+
+---
+
 ## Service Implementation Workflow
 
 Follow these steps when building a new service. Reference the bundled resources for detailed patterns.
