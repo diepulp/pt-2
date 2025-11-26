@@ -17,6 +17,7 @@ class ChatmodeContext:
     Chatmode-specific context manager.
 
     Provides specialized memory recording methods for each chatmode.
+    Also provides session checkpoint/restore for context continuity across /clear.
     """
 
     def __init__(self, memori_client: MemoriClient):
@@ -28,6 +29,242 @@ class ChatmodeContext:
         """
         self.memori = memori_client
         self.chatmode = memori_client.chatmode
+
+    # -------------------------------------------------------------------------
+    # Session Checkpoint Methods (for context continuity across /clear)
+    # -------------------------------------------------------------------------
+
+    def save_checkpoint(
+        self,
+        current_task: str,
+        reason: str = "manual",  # context_threshold_60pct, manual, session_end
+        decisions_made: Optional[List[str]] = None,
+        files_modified: Optional[List[str]] = None,
+        services_touched: Optional[List[str]] = None,
+        open_questions: Optional[List[str]] = None,
+        next_steps: Optional[List[str]] = None,
+        key_insights: Optional[List[str]] = None,
+        active_domain: Optional[str] = None,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Save a session checkpoint before context clear.
+
+        Args:
+            current_task: What you're currently working on
+            reason: Why the checkpoint is being saved
+            decisions_made: Key decisions made this session
+            files_modified: Files created or modified
+            services_touched: Services worked on
+            open_questions: Unresolved questions needing user input
+            next_steps: What to do after resuming
+            key_insights: Important learnings from this session
+            active_domain: Active bounded context/domain
+            notes: Additional context notes
+
+        Returns:
+            True if checkpoint saved successfully
+        """
+        if not self.memori.enabled:
+            return False
+
+        content = f"Session checkpoint ({reason}): {current_task}"
+
+        metadata = {
+            "type": "session_checkpoint",
+            "checkpoint_reason": reason,
+            "current_task": current_task,
+            "timestamp": datetime.now().isoformat(),
+            "chatmode_namespace": self.chatmode,
+        }
+
+        if decisions_made:
+            metadata["decisions_made"] = decisions_made
+        if files_modified:
+            metadata["files_modified"] = files_modified
+        if services_touched:
+            metadata["services_touched"] = services_touched
+        if open_questions:
+            metadata["open_questions"] = open_questions
+        if next_steps:
+            metadata["next_steps"] = next_steps
+        if key_insights:
+            metadata["key_insights"] = key_insights
+        if active_domain:
+            metadata["active_domain"] = active_domain
+        if notes:
+            metadata["notes"] = notes
+
+        tags = ["session-checkpoint", reason]
+
+        # High importance to ensure retrieval
+        result = self.memori.record_memory(
+            content=content,
+            category="context",
+            metadata=metadata,
+            importance=0.95,
+            tags=tags
+        )
+
+        if result:
+            logger.info(f"✅ Chatmode checkpoint saved: {current_task[:50]}...")
+
+        return result is not None
+
+    def load_latest_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """
+        Load the most recent session checkpoint.
+
+        Returns:
+            Checkpoint metadata dict or None if no checkpoint found
+        """
+        if not self.memori.enabled:
+            return None
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                SELECT content, metadata, created_at
+                FROM memori.memories
+                WHERE user_id = %s
+                  AND metadata->>'type' = 'session_checkpoint'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (self.memori.user_id,))
+
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if not row:
+                logger.info("No checkpoint found")
+                return None
+
+            metadata = row[1]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+
+            metadata["content"] = row[0]
+            metadata["saved_at"] = row[2].isoformat() if row[2] else None
+
+            logger.info(f"✅ Loaded checkpoint from {metadata.get('saved_at', 'unknown')}")
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to load checkpoint: {e}")
+            return None
+
+    def format_checkpoint_for_resume(self, checkpoint: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Format a checkpoint as markdown for injection into context after /clear.
+
+        Args:
+            checkpoint: Checkpoint dict (if None, loads latest)
+
+        Returns:
+            Formatted markdown string for context injection
+        """
+        if checkpoint is None:
+            checkpoint = self.load_latest_checkpoint()
+
+        if not checkpoint:
+            return "No previous session checkpoint found."
+
+        lines = [
+            "## 🔄 Resumed Session Context",
+            "",
+            f"**Saved at:** {checkpoint.get('saved_at', 'unknown')}",
+            f"**Reason:** {checkpoint.get('checkpoint_reason', 'unknown')}",
+            "",
+            f"### Current Task",
+            checkpoint.get('current_task', 'Unknown'),
+            "",
+        ]
+
+        if checkpoint.get('active_domain'):
+            lines.append(f"**Active Domain:** {checkpoint['active_domain']}")
+
+        if checkpoint.get('decisions_made'):
+            lines.extend(["", "### Decisions Made This Session"])
+            for decision in checkpoint['decisions_made']:
+                lines.append(f"- {decision}")
+
+        if checkpoint.get('files_modified'):
+            lines.extend(["", "### Files Modified"])
+            for f in checkpoint['files_modified']:
+                lines.append(f"- {f}")
+
+        if checkpoint.get('services_touched'):
+            lines.extend(["", "### Services Touched"])
+            for svc in checkpoint['services_touched']:
+                lines.append(f"- {svc}")
+
+        if checkpoint.get('open_questions'):
+            lines.extend(["", "### Open Questions (Require User Input)"])
+            for q in checkpoint['open_questions']:
+                lines.append(f"- ❓ {q}")
+
+        if checkpoint.get('next_steps'):
+            lines.extend(["", "### Next Steps"])
+            for step in checkpoint['next_steps']:
+                lines.append(f"- [ ] {step}")
+
+        if checkpoint.get('key_insights'):
+            lines.extend(["", "### Key Insights"])
+            for insight in checkpoint['key_insights']:
+                lines.append(f"- 💡 {insight}")
+
+        if checkpoint.get('notes'):
+            lines.extend(["", "### Notes", checkpoint['notes']])
+
+        lines.extend([
+            "",
+            "---",
+            "*Continue from where you left off. Review the above context and proceed with the next steps.*"
+        ])
+
+        return "\n".join(lines)
+
+    def get_checkpoint_count(self) -> int:
+        """Get the number of checkpoints saved for this chatmode namespace."""
+        if not self.memori.enabled:
+            return 0
+
+        try:
+            import psycopg2
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                SELECT COUNT(*)
+                FROM memori.memories
+                WHERE user_id = %s
+                  AND metadata->>'type' = 'session_checkpoint'
+            """, (self.memori.user_id,))
+
+            count = cur.fetchone()[0]
+            cur.close()
+            conn.close()
+
+            return count
+
+        except Exception as e:
+            logger.warning(f"Failed to count checkpoints: {e}")
+            return 0
+
+    # -------------------------------------------------------------------------
+    # Chatmode-Specific Recording Methods
+    # -------------------------------------------------------------------------
 
     def record_decision(
         self,

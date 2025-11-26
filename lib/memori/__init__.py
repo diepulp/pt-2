@@ -12,7 +12,7 @@ Extended with Context Management Layer components:
 from .client import create_memori_client, MemoriClient
 from .workflow_state import WorkflowStateManager
 from .chatmode_context import ChatmodeContext
-from .skill_context import SkillContext, ValidationContext
+from .skill_context import SkillContext, ValidationContext, ArchitectContext
 from .retrieval import (
     MemoryRetriever,
     RetrievalConfig,
@@ -33,6 +33,7 @@ __all__ = [
     "ChatmodeContext",
     "SkillContext",
     "ValidationContext",
+    "ArchitectContext",
     # Context Management - Retrieval
     "MemoryRetriever",
     "RetrievalConfig",

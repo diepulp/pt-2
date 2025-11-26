@@ -45,6 +45,11 @@ class MemoriClient:
         "frontend-dev": "pt2_frontend",
         "reviewer": "pt2_reviewer",
         "main": "pt2_agent",
+        # Skill-specific namespaces
+        "skill:backend-service-builder": "skill_backend_service_builder",
+        "skill:frontend-design": "skill_frontend_design",
+        "skill:lead-architect": "skill_lead_architect",
+        "skill:skill-creator": "skill_skill_creator",
     }
 
     def __init__(
@@ -141,7 +146,8 @@ class MemoriClient:
         content: str,
         category: str = "context",
         metadata: Optional[Dict[str, Any]] = None,
-        importance: float = 0.5
+        importance: float = 0.5,
+        tags: Optional[List[str]] = None
     ) -> Optional[Dict]:
         """
         Manually record a memory (in addition to automatic recording).
@@ -151,6 +157,7 @@ class MemoriClient:
             category: Memory category (facts, preferences, skills, rules, context)
             metadata: Additional structured metadata
             importance: Importance score (0.0-1.0)
+            tags: Optional list of tags for filtering/categorization
 
         Returns:
             Memory record dict or None if failed
@@ -169,6 +176,10 @@ class MemoriClient:
             # Add chatmode to metadata
             metadata["chatmode"] = self.chatmode
             metadata["importance"] = importance
+
+            # Add tags to metadata if provided
+            if tags:
+                metadata["tags"] = tags
 
             memory = {
                 "user_id": self.user_id,
@@ -268,6 +279,97 @@ class MemoriClient:
 
         except Exception as e:
             logger.error(f"Error getting shared learnings: {e}")
+            return []
+
+    def search_learnings(
+        self,
+        query: str,
+        namespace: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        category: Optional[str] = None,
+        limit: int = 10
+    ) -> List[Dict]:
+        """
+        Search memories/learnings with full-text search.
+
+        This method provides skill-friendly access to memory search with
+        tag filtering and namespace override capabilities.
+
+        Args:
+            query: Natural language search query
+            namespace: Override namespace (default: use client's user_id)
+            tags: Filter by tags (metadata->'tags' array)
+            category: Filter by category (facts, preferences, rules, skills, context)
+            limit: Maximum results to return
+
+        Returns:
+            List of memory dicts with content, category, metadata, created_at
+        """
+        if not self.enabled:
+            logger.warning("Memori not enabled, cannot search learnings")
+            return []
+
+        try:
+            import psycopg2
+            import json
+
+            target_namespace = namespace or self.user_id
+            db_url = self.config.database_url.split('?')[0]
+
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            # Build query with full-text search
+            query_sql = """
+                SELECT
+                    id, user_id, content, category, metadata, created_at,
+                    ts_rank(content_tsv, plainto_tsquery('english', %s)) as relevance
+                FROM memori.memories
+                WHERE user_id = %s
+                  AND content_tsv @@ plainto_tsquery('english', %s)
+            """
+            params = [query, target_namespace, query]
+
+            if category:
+                query_sql += " AND category = %s"
+                params.append(category)
+
+            if tags:
+                # Filter by tags in metadata->'tags' jsonb array
+                query_sql += " AND metadata->'tags' ?| %s"
+                params.append(tags)
+
+            query_sql += " ORDER BY relevance DESC LIMIT %s"
+            params.append(limit)
+
+            cur.execute(query_sql, params)
+            rows = cur.fetchall()
+
+            results = []
+            for row in rows:
+                metadata = row[4]
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+
+                results.append({
+                    "id": row[0],
+                    "user_id": row[1],
+                    "content": row[2],
+                    "category": row[3],
+                    "metadata": metadata or {},
+                    "created_at": row[5].isoformat() if row[5] else None,
+                    "relevance": float(row[6]) if row[6] else 0.0,
+                })
+
+            cur.close()
+            conn.close()
+
+            logger.debug(f"Found {len(results)} learnings for query: {query[:30]}...")
+            return results
+
+        except Exception as e:
+            logger.error(f"Error searching learnings: {e}")
             return []
 
     def trigger_conscious_analysis(self):
