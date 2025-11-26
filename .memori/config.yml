@@ -5,7 +5,7 @@
 # Using existing Supabase local instance (supabase_db_pt-2 container)
 database:
   url: "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
-  schema: "memori"  # Separate schema to avoid conflicts with PT-2 tables
+  schema: "memori" # Separate schema to avoid conflicts with PT-2 tables
 
 # Environment
 environment: "development"
@@ -32,6 +32,7 @@ contexts:
     description: "MTL compliance engine - cash transaction log, AML/CTR"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "docs/30-security/SEC-*.md"
       - "memory/service-catalog.memory.md"
       - "memory/anti-patterns.memory.md"
@@ -42,6 +43,7 @@ contexts:
     ingest_paths:
       - "docs/10-prd/PRD-001_Player_Management_System_Requirements.md"
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
 
   - name: "casino_service"
@@ -49,6 +51,8 @@ contexts:
     description: "Casino foundational context - settings, staff, reports"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
+      
       - "memory/service-catalog.memory.md"
       - "memory/architecture-decisions.memory.md"
 
@@ -57,6 +61,7 @@ contexts:
     description: "Table operations - dealers, fills/drops, chip custody"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
       - "memory/domain-glossary.memory.md"
 
@@ -65,6 +70,7 @@ contexts:
     description: "Loyalty points engine and reward ledger"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
 
   - name: "visit_service"
@@ -72,6 +78,7 @@ contexts:
     description: "Visit session lifecycle - check-in/out, session management"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
       - "docs/archive/bounded-context-integrity/phase-B/VISIT_PLAYERFINANCIAL_INTERFACE.md"
 
@@ -80,6 +87,7 @@ contexts:
     description: "Telemetry and gameplay measurement - average bet, time played"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
       - "docs/80-adrs/ADR-006-rating-slip-field-removal.md"
 
@@ -88,6 +96,7 @@ contexts:
     description: "Finance context - player transaction ledger (append-only)"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
       - "docs/archive/bounded-context-integrity/phase-B/VISIT_PLAYERFINANCIAL_INTERFACE.md"
       - "docs/archive/bounded-context-integrity/phase-B/FINANCIAL_DATA_OWNERSHIP_TABLE.md"
@@ -97,15 +106,9 @@ contexts:
     description: "Floor design and activation - layout versions, pit definitions, table placements"
     ingest_paths:
       - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+      - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
       - "memory/service-catalog.memory.md"
       - "memory/domain-glossary.memory.md"
-
-  - name: "performance_service"
-    user_id: "performance_service"
-    description: "Observability and monitoring - metrics, alerts, read-only telemetry"
-    ingest_paths:
-      - "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
-      - "memory/service-catalog.memory.md"
 
   - name: "architecture"
     user_id: "pt2_architect"
@@ -128,11 +131,11 @@ contexts:
 ingestion:
   # Categories for auto-classification
   categories:
-    - "facts"          # Verifiable information (e.g., "CTR threshold is $10,000")
-    - "preferences"    # Team preferences (e.g., "Use functional factories, not classes")
-    - "skills"         # Technical patterns (e.g., "Vertical slice delivery")
-    - "rules"          # Enforcement rules (e.g., "No ReturnType inference")
-    - "context"        # Background information (e.g., "Gaming day starts at 6am")
+    - "facts" # Verifiable information (e.g., "CTR threshold is $10,000")
+    - "preferences" # Team preferences (e.g., "Use functional factories, not classes")
+    - "skills" # Technical patterns (e.g., "Vertical slice delivery")
+    - "rules" # Enforcement rules (e.g., "No ReturnType inference")
+    - "context" # Background information (e.g., "Gaming day starts at 6am")
 
   # Exclude patterns
   exclude:
@@ -157,7 +160,7 @@ retrieval:
 # Background Processing
 background:
   # Conscious Agent runs every 6 hours to promote important memories
-  conscious_interval: 21600  # seconds
+  conscious_interval: 21600 # seconds
 
   # Enable automatic entity extraction
   entity_extraction: true

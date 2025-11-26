@@ -6,8 +6,9 @@ memorisdk>=0.1.0
 # OpenAI (required by Memori for embeddings)
 openai>=1.0.0
 
-# Database adapter
+# Database adapters
 psycopg2-binary>=2.9.9
+asyncpg>=0.29.0  # Async PostgreSQL for SessionService
 
 # Logging
 loguru>=0.7.2
