@@ -18,6 +18,7 @@ from pathlib import Path
 SKILL_TEMPLATE = """---
 name: {skill_name}
 description: [TODO: Complete and informative explanation of what the skill does and when to use it. Include WHEN to use this skill - specific scenarios, file types, or tasks that trigger it.]
+allowed-tools: Read, Write, Edit, Glob, Bash, TodoWrite
 ---
 
 # {skill_title}
@@ -25,6 +26,101 @@ description: [TODO: Complete and informative explanation of what the skill does 
 ## Overview
 
 [TODO: 1-2 sentences explaining what this skill enables]
+
+## Memory Recording Protocol 🧠
+
+This skill tracks execution outcomes to build pattern knowledge and improve over time.
+
+### Memory Activation Model
+
+Memory is **automatically activated** when this skill is invoked via the `Skill` tool.
+
+**How automatic activation works:**
+1. `PreToolUse` hook detects `Skill` tool invocation
+2. `skill-init-memori.sh` extracts skill name and initializes namespace
+3. Memori client is enabled for `skill_{skill_name_underscore}` namespace
+4. All subsequent `record_memory()` calls in this session use the skill namespace
+
+**Automatic activation points:**
+- ✅ Skill invocation via `Skill` tool - **auto-enabled via hook**
+
+**Manual activation** (if needed outside skill invocation):
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+memori = create_memori_client("skill:{skill_name}")
+memori.enable()  # Required for manual initialization
+context = SkillContext(memori)
+```
+
+### Skill Execution Tracking
+
+Record complete execution outcomes after task completion:
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+# Initialize Memori for this skill
+memori = create_memori_client("skill:{skill_name}")
+memori.enable()  # REQUIRED: Activates memory recording
+context = SkillContext(memori)
+
+# Record skill execution outcome
+context.record_skill_execution(
+    skill_name="{skill_name}",
+    task="[TODO: Describe specific task]",
+    outcome="success",  # or "failure", "partial"
+    pattern_used="[TODO: Pattern or approach used]",
+    validation_results={{
+        # [TODO: Add relevant validation checks]
+    }},
+    files_created=[
+        # [TODO: List files created]
+    ],
+    issues_encountered=[
+        # [TODO: List any issues encountered]
+    ],
+    lessons_learned=[
+        # [TODO: Lessons for future executions]
+    ]
+)
+```
+
+### Query Past Patterns Before Starting
+
+Before starting work, check what worked before:
+
+```python
+# Search for similar past executions
+past_executions = memori.search_learnings(
+    query="[TODO: relevant search query]",
+    tags=["[TODO: relevant tags]"],
+    category="skills",
+    limit=5
+)
+
+if past_executions:
+    print(f"\\n📚 Learning from {{len(past_executions)}} past executions:\\n")
+    for execution in past_executions:
+        metadata = execution.get('metadata', {{}})
+        print(f"  Task: {{metadata.get('task', 'N/A')}}")
+        print(f"  Pattern Used: {{metadata.get('pattern_used', 'N/A')}}")
+        print(f"  Outcome: {{metadata.get('outcome', 'N/A')}}")
+```
+
+### Namespace Reference
+
+The skill uses the namespace `skill_{skill_name_underscore}` in the database. This maps from:
+- Client initialization: `create_memori_client("skill:{skill_name}")`
+- Database user_id: `skill_{skill_name_underscore}`
+
+**IMPORTANT**: Register this namespace in `lib/memori/client.py` CHATMODE_USER_IDS:
+```python
+"skill:{skill_name}": "skill_{skill_name_underscore}",
+```
+
+---
 
 ## Structuring This Skill
 
@@ -220,9 +316,11 @@ def init_skill(skill_name, path):
 
     # Create SKILL.md from template
     skill_title = title_case_skill_name(skill_name)
+    skill_name_underscore = skill_name.replace('-', '_')
     skill_content = SKILL_TEMPLATE.format(
         skill_name=skill_name,
-        skill_title=skill_title
+        skill_title=skill_title,
+        skill_name_underscore=skill_name_underscore
     )
 
     skill_md_path = skill_dir / 'SKILL.md'
@@ -265,7 +363,9 @@ def init_skill(skill_name, path):
     print("\nNext steps:")
     print("1. Edit SKILL.md to complete the TODO items and update the description")
     print("2. Customize or delete the example files in scripts/, references/, and assets/")
-    print("3. Run the validator when ready to check the skill structure")
+    print(f"3. Register namespace in lib/memori/client.py CHATMODE_USER_IDS:")
+    print(f"   \"skill:{skill_name}\": \"skill_{skill_name_underscore}\",")
+    print("4. Run the validator when ready to check the skill structure")
 
     return skill_dir
 

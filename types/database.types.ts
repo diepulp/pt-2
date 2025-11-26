@@ -1,3 +1,4 @@
+Connecting to db 5432
 export type Json =
   | string
   | number
@@ -132,6 +133,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      chat_history: {
+        Row: {
+          ai_output: string
+          chat_id: string
+          metadata_json: Json | null
+          model: string
+          namespace: string
+          session_id: string
+          timestamp: string
+          tokens_used: number | null
+          user_input: string
+        }
+        Insert: {
+          ai_output: string
+          chat_id: string
+          metadata_json?: Json | null
+          model: string
+          namespace: string
+          session_id: string
+          timestamp: string
+          tokens_used?: number | null
+          user_input: string
+        }
+        Update: {
+          ai_output?: string
+          chat_id?: string
+          metadata_json?: Json | null
+          model?: string
+          namespace?: string
+          session_id?: string
+          timestamp?: string
+          tokens_used?: number | null
+          user_input?: string
+        }
+        Relationships: []
       }
       company: {
         Row: {
@@ -518,27 +555,51 @@ export type Database = {
       game_settings: {
         Row: {
           casino_id: string
+          created_at: string
+          decisions_per_hour: number
           game_type: Database["public"]["Enums"]["game_type"]
+          house_edge: number
           id: string
           max_bet: number | null
           min_bet: number | null
+          name: string
+          point_multiplier: number | null
+          points_conversion_rate: number | null
           rotation_interval_minutes: number | null
+          seats_available: number
+          updated_at: string
         }
         Insert: {
           casino_id: string
+          created_at?: string
+          decisions_per_hour?: number
           game_type: Database["public"]["Enums"]["game_type"]
+          house_edge?: number
           id?: string
           max_bet?: number | null
           min_bet?: number | null
+          name: string
+          point_multiplier?: number | null
+          points_conversion_rate?: number | null
           rotation_interval_minutes?: number | null
+          seats_available?: number
+          updated_at?: string
         }
         Update: {
           casino_id?: string
+          created_at?: string
+          decisions_per_hour?: number
           game_type?: Database["public"]["Enums"]["game_type"]
+          house_edge?: number
           id?: string
           max_bet?: number | null
           min_bet?: number | null
+          name?: string
+          point_multiplier?: number | null
+          points_conversion_rate?: number | null
           rotation_interval_minutes?: number | null
+          seats_available?: number
+          updated_at?: string
         }
         Relationships: [
           {
@@ -635,6 +696,117 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      long_term_memory: {
+        Row: {
+          access_count: number | null
+          actionability_score: number | null
+          category_primary: string
+          classification: string
+          classification_reason: string | null
+          confidence_score: number | null
+          conscious_processed: boolean | null
+          created_at: string
+          duplicate_of: string | null
+          entities_json: Json | null
+          extraction_timestamp: string
+          importance_score: number
+          is_current_project: boolean | null
+          is_preference: boolean | null
+          is_skill_knowledge: boolean | null
+          is_user_context: boolean | null
+          keywords_json: Json | null
+          last_accessed: string | null
+          memory_id: string
+          memory_importance: string
+          namespace: string
+          novelty_score: number | null
+          original_chat_id: string | null
+          processed_data: Json
+          processed_for_duplicates: boolean | null
+          promotion_eligible: boolean | null
+          related_memories_json: Json | null
+          relevance_score: number | null
+          retention_type: string
+          search_vector: unknown
+          searchable_content: string
+          summary: string
+          supersedes_json: Json | null
+          topic: string | null
+        }
+        Insert: {
+          access_count?: number | null
+          actionability_score?: number | null
+          category_primary: string
+          classification: string
+          classification_reason?: string | null
+          confidence_score?: number | null
+          conscious_processed?: boolean | null
+          created_at: string
+          duplicate_of?: string | null
+          entities_json?: Json | null
+          extraction_timestamp: string
+          importance_score: number
+          is_current_project?: boolean | null
+          is_preference?: boolean | null
+          is_skill_knowledge?: boolean | null
+          is_user_context?: boolean | null
+          keywords_json?: Json | null
+          last_accessed?: string | null
+          memory_id: string
+          memory_importance: string
+          namespace: string
+          novelty_score?: number | null
+          original_chat_id?: string | null
+          processed_data: Json
+          processed_for_duplicates?: boolean | null
+          promotion_eligible?: boolean | null
+          related_memories_json?: Json | null
+          relevance_score?: number | null
+          retention_type: string
+          search_vector?: unknown
+          searchable_content: string
+          summary: string
+          supersedes_json?: Json | null
+          topic?: string | null
+        }
+        Update: {
+          access_count?: number | null
+          actionability_score?: number | null
+          category_primary?: string
+          classification?: string
+          classification_reason?: string | null
+          confidence_score?: number | null
+          conscious_processed?: boolean | null
+          created_at?: string
+          duplicate_of?: string | null
+          entities_json?: Json | null
+          extraction_timestamp?: string
+          importance_score?: number
+          is_current_project?: boolean | null
+          is_preference?: boolean | null
+          is_skill_knowledge?: boolean | null
+          is_user_context?: boolean | null
+          keywords_json?: Json | null
+          last_accessed?: string | null
+          memory_id?: string
+          memory_importance?: string
+          namespace?: string
+          novelty_score?: number | null
+          original_chat_id?: string | null
+          processed_data?: Json
+          processed_for_duplicates?: boolean | null
+          promotion_eligible?: boolean | null
+          related_memories_json?: Json | null
+          relevance_score?: number | null
+          retention_type?: string
+          search_vector?: unknown
+          searchable_content?: string
+          summary?: string
+          supersedes_json?: Json | null
+          topic?: string | null
+        }
+        Relationships: []
       }
       loyalty_ledger: {
         Row: {
@@ -1064,6 +1236,7 @@ export type Database = {
           id: string
           player_id: string
           policy_snapshot: Json | null
+          seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
           table_id: string | null
@@ -1077,6 +1250,7 @@ export type Database = {
           id?: string
           player_id: string
           policy_snapshot?: Json | null
+          seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
           table_id?: string | null
@@ -1090,6 +1264,7 @@ export type Database = {
           id?: string
           player_id?: string
           policy_snapshot?: Json | null
+          seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
           table_id?: string | null
@@ -1155,6 +1330,68 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casino"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      short_term_memory: {
+        Row: {
+          access_count: number | null
+          category_primary: string
+          chat_id: string | null
+          created_at: string
+          expires_at: string | null
+          importance_score: number
+          is_permanent_context: boolean | null
+          last_accessed: string | null
+          memory_id: string
+          namespace: string
+          processed_data: Json
+          retention_type: string
+          search_vector: unknown
+          searchable_content: string
+          summary: string
+        }
+        Insert: {
+          access_count?: number | null
+          category_primary: string
+          chat_id?: string | null
+          created_at: string
+          expires_at?: string | null
+          importance_score: number
+          is_permanent_context?: boolean | null
+          last_accessed?: string | null
+          memory_id: string
+          namespace: string
+          processed_data: Json
+          retention_type: string
+          search_vector?: unknown
+          searchable_content: string
+          summary: string
+        }
+        Update: {
+          access_count?: number | null
+          category_primary?: string
+          chat_id?: string | null
+          created_at?: string
+          expires_at?: string | null
+          importance_score?: number
+          is_permanent_context?: boolean | null
+          last_accessed?: string | null
+          memory_id?: string
+          namespace?: string
+          processed_data?: Json
+          retention_type?: string
+          search_vector?: unknown
+          searchable_content?: string
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "short_term_memory_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chat_history"
+            referencedColumns: ["chat_id"]
           },
         ]
       }
@@ -1956,3 +2193,5 @@ export const Constants = {
   },
 } as const
 
+A new version of Supabase CLI is available: v2.62.10 (currently installed v2.58.1)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli

@@ -1,12 +1,190 @@
 ---
 name: skill-creator
 description: Guide for creating effective skills. This skill should be used when users want to create a new skill (or update an existing skill) that extends Claude's capabilities with specialized knowledge, workflows, or tool integrations.
+allowed-tools: Read, Write, Edit, Glob, Bash, TodoWrite
 license: Complete terms in LICENSE.txt
 ---
 
 # Skill Creator
 
 This skill provides guidance for creating effective skills.
+
+## Memory Recording Protocol 🧠
+
+This skill tracks execution outcomes to build skill design pattern knowledge and improve over time.
+
+### Memory Activation Model
+
+Memory is **automatically activated** when this skill is invoked via the `Skill` tool.
+
+**How automatic activation works:**
+1. `PreToolUse` hook detects `Skill` tool invocation
+2. `skill-init-memori.sh` extracts skill name and initializes namespace
+3. Memori client is enabled for `skill_skill_creator` namespace
+4. All subsequent `record_memory()` calls in this session use the skill namespace
+
+**Automatic activation points:**
+- ✅ Skill invocation via `Skill` tool - **auto-enabled via hook**
+
+**Manual activation** (if needed outside skill invocation):
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+memori = create_memori_client("skill:skill-creator")
+memori.enable()  # Required for manual initialization
+context = SkillContext(memori)
+```
+
+### Skill Execution Tracking
+
+Record complete execution outcomes after skill creation:
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+# Initialize Memori for this skill
+memori = create_memori_client("skill:skill-creator")
+memori.enable()  # REQUIRED: Activates memory recording
+context = SkillContext(memori)
+
+# Record skill execution outcome
+context.record_skill_execution(
+    skill_name="skill-creator",
+    task="Create data-analyzer skill",
+    outcome="success",  # or "failure", "partial"
+    pattern_used="Workflow-based structure with validation scripts",
+    validation_results={
+        "yaml_frontmatter_valid": True,
+        "description_quality": "complete",
+        "resource_structure": "scripts + references"
+    },
+    files_created=[
+        ".claude/skills/data-analyzer/SKILL.md",
+        ".claude/skills/data-analyzer/scripts/analyze.py",
+        ".claude/skills/data-analyzer/references/patterns.md"
+    ],
+    issues_encountered=[
+        "Initial description too vague (revised)",
+        "Missing trigger scenarios (added)"
+    ],
+    duration_seconds=300,
+    lessons_learned=[
+        "Data skills benefit from workflow-based structure",
+        "Include sample queries in references for better context"
+    ],
+    user_satisfaction="approved"  # or "needs_revision", "rejected"
+)
+```
+
+### Query Past Skill Designs Before Starting
+
+Before creating a new skill, check what patterns worked before:
+
+```python
+# Search for similar past skill creations
+past_skills = memori.search_learnings(
+    query="skill creation for data processing",
+    tags=["skill-creation", "data"],
+    category="skills",
+    limit=5
+)
+
+if past_skills:
+    print(f"\n📚 Learning from {len(past_skills)} past skill designs:\n")
+    for skill in past_skills:
+        metadata = skill.get('metadata', {})
+        print(f"  Task: {metadata.get('task', 'N/A')}")
+        print(f"  Pattern Used: {metadata.get('pattern_used', 'N/A')}")
+        print(f"  Outcome: {metadata.get('outcome', 'N/A')}")
+        print(f"  Issues: {metadata.get('issues_encountered', [])}")
+        print()
+```
+
+### When to Record Manually
+
+Record execution outcomes at these key moments:
+
+- [ ] **After skill creation** (structure chosen, resources bundled)
+- [ ] **After skill iteration** (what improvements were needed)
+- [ ] **After user feedback** (approval, revision requests)
+- [ ] **After validation failures** (what checks failed and why)
+- [ ] **After discovering patterns** (effective skill structures, description quality tips)
+
+### Namespace Reference
+
+The skill uses the namespace `skill_skill_creator` in the database. This maps from:
+- Client initialization: `create_memori_client("skill:skill-creator")`
+- Database user_id: `skill_skill_creator`
+
+---
+
+## Context Threshold Management 📊
+
+This skill is designed for long-running skill creation sessions. When context usage approaches **60%** of the context window, the skill proactively manages session continuity.
+
+### Context Awareness Protocol
+
+**Monitor context usage throughout the session.** When you estimate context is approaching 60%:
+
+1. **Announce threshold reached:**
+   ```
+   ⚠️ Context Usage Alert: Approaching 60% threshold.
+   Recommend saving checkpoint before /clear to preserve session state.
+   ```
+
+2. **Save checkpoint before /clear:**
+   ```python
+   from lib.memori import create_memori_client, SkillContext
+
+   memori = create_memori_client("skill:skill-creator")
+   memori.enable()
+   context = SkillContext(memori)
+
+   context.save_checkpoint(
+       current_task="[Current skill creation task]",
+       reason="context_threshold_60pct",
+       decisions_made=["Skill structure decisions", "Resource organization"],
+       files_modified=["SKILL.md", "scripts/xxx.py"],
+       open_questions=["Outstanding design question?"],
+       next_steps=["Next action 1", "Next action 2"],
+       key_insights=["Key learning from session"],
+       workflow="skill-creation",
+       notes="Additional context for resume"
+   )
+   ```
+
+3. **Inform user and recommend /clear:**
+   ```
+   ✅ Checkpoint saved. Session state persisted to Memori.
+
+   You can now run /clear to reset context. After clearing:
+   - Run `/skill-checkpoint restore` to resume from checkpoint
+   - Or start fresh with new context
+   ```
+
+### Post-Clear Session Resume
+
+After `/clear`, restore session context immediately:
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+memori = create_memori_client("skill:skill-creator")
+memori.enable()
+context = SkillContext(memori)
+
+# Load and display formatted checkpoint
+resume_context = context.format_checkpoint_for_resume()
+print(resume_context)
+```
+
+### Slash Command Reference
+
+- **`/skill-checkpoint save`** - Save current session state before /clear
+- **`/skill-checkpoint restore`** - Resume from last checkpoint after /clear
+
+---
 
 ## About Skills
 

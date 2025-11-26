@@ -431,5 +431,6 @@
   - CI job to verify AGENTS.md references valid files
   - PatchPlan.schema.json creation
   - CLI usage documentation (docs/agentic-workflow/CLI_USAGE.md)
+  - Missing chatmodes referenced  at `.github/chatmodes`
 
   ---

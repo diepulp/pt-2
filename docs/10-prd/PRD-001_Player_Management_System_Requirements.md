@@ -140,13 +140,14 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - Settings: `gaming_day_start`, timezone; must drive `compute_gaming_day` derivations.
 
 ### Table Context
-- States: `inactive`, `active`, `closed` (maps to SRM `table_status`).  
-- Dealer rotation: happy-path logging for audit; optional read-only view for MVP.
+- States: `inactive`, `active`, `closed` (maps to SRM `table_status`).
+- **DECISION (2025-11-26):** Dealer rotation — Middle-ground approach. MVP provides "current dealer" dropdown on table view (via `gaming_table_settings`). Full rotation event logging deferred to Phase 2. Feature flag: `dealer_rotation_log_readonly=true`.
 - Handles live operational telemetry for tables and chip custody
 - References activated layouts from FloorLayoutService
 
 ### Player & Visit
-- Prevent multiple concurrent **visits** for same player at the same casino unless explicitly allowed.  
+- **DECISION (2025-11-26):** Disallow multiple concurrent active visits per `(player_id, casino_id, gaming_day)`. Special cases to be handled post-MVP via visit segments or supervisor overrides.
+- Enforce unique constraint: at most one `status='active'` visit per player/casino/gaming_day.
 - Seat mapping: a player must be seated at a specific table to start a slip.
 
 ### Rating Slip
@@ -158,9 +159,10 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - Mid-session rewards are eligible only while `status` ∈ (`open`, `paused`), and the RPC must enforce casino/player alignment.
 
 ### Loyalty
-- RPC: `rpc_issue_mid_session_reward(p_casino_id, p_player_id, p_rating_slip_id, p_staff_id, p_points, p_idempotency_key, p_reason)` is the only write path; it atomically appends to `loyalty_ledger` and updates `player_loyalty`.  
-- Ledger entries capture `loyalty_reason` enum values, `staff_id`, derived telemetry (`average_bet`, `duration_seconds`), and enforce idempotency via unique `idempotency_key`.  
+- RPC: `rpc_issue_mid_session_reward(p_casino_id, p_player_id, p_rating_slip_id, p_staff_id, p_points, p_idempotency_key, p_reason)` is the only write path; it atomically appends to `loyalty_ledger` and updates `player_loyalty`.
+- Ledger entries capture `loyalty_reason` enum values, `staff_id`, derived telemetry (`average_bet`, `duration_seconds`), and enforce idempotency via unique `idempotency_key`.
 - Display rewards inline on slip by reading ledger entries; include who/when/why; audit fields present.
+- **Theo & Points Calculation:** See `utils/point-calculator.ts` for combined calculation and `lib/theo.ts` for split utilities (`calculateTheo`, `calculatePointsFromTheo`). Schema fields: `game_settings.house_edge`, `decisions_per_hour`, `points_conversion_rate`, `point_multiplier`.
 
 ### Finance
 - RPC: `rpc_create_financial_txn(...)` must derive `gaming_day` server-side.  
@@ -253,9 +255,12 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 
 ## 15) Open Questions
 
-- Do we allow multiple concurrent visits per player for special cases?  
-- What is the minimal AOV calc required for MVP UI?  
-- Should dealer rotation writes be part of MVP or read-only only?
+- ~~Do we allow multiple concurrent visits per player for special cases?~~
+  **RESOLVED (2025-11-26):** No. MVP enforces 1 active visit per `(player_id, casino_id, gaming_day)`. Future: visit segments or supervisor overrides.
+- ~~What is the minimal AOV calc required for MVP UI?~~
+  **RESOLVED (2025-11-26):** Option A — Full theo exposure. Schema updated with `house_edge`, `decisions_per_hour`, `seats_available`, `points_conversion_rate`, `point_multiplier`. Utility functions split: `calculateTheo()` (financial truth) + `calculatePointsFromTheo()` (loyalty layer). UI shows per-visit theo, theo/hour, and derived points. See `lib/theo.ts`.
+- ~~Should dealer rotation writes be part of MVP or read-only only?~~
+  **RESOLVED (2025-11-26):** Option B — Middle-ground. Schema retained (`dealer_rotation` table), but full rotation logging deferred to Phase 2. MVP provides simple "current dealer" dropdown on table view via `gaming_table_settings`. Feature flag: `dealer_rotation_log_readonly=true`.
 
 ---
 

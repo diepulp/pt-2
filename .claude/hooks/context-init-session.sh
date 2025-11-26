@@ -9,9 +9,8 @@
 
 set -e
 
-# Consume stdin (Claude Code passes event payload via stdin)
-# We don't need the payload, but must consume it to avoid blocking
-cat > /dev/null 2>&1 || true
+# NOTE: Do NOT consume stdin here - downstream hooks need access to the payload
+# Claude Code hooks share stdin, and lint-prompt.sh requires it
 
 # Environment setup
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

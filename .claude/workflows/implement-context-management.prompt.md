@@ -1,5 +1,4 @@
----
-title: Implement Context Management & Memory Evolution
+---title: Implement Context Management & Memory Evolution
 description: Systematic implementation of session layer, memory pipeline, retrieval, compaction, and multi-agent coordination
 chatmode_sequence:
   - architect      # Phase 1: Schema Design

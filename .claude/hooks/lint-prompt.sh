@@ -18,6 +18,13 @@ if [[ -z "${PROMPT_CONTENT}" ]]; then
   exit 0
 fi
 
+# Skip validation for short conversational prompts (under 200 chars)
+# Only enforce template structure for substantial task prompts
+PROMPT_LENGTH=${#PROMPT_CONTENT}
+if [[ "${PROMPT_LENGTH}" -lt 200 ]]; then
+  exit 0
+fi
+
 if ! grep -qE '^#' <<<"${PROMPT_CONTENT}"; then
   cat <<'EOF' >&2
 [lint-prompt] Prompt rejected: missing Markdown heading. Follow the Markdown prompt engineering template (include top-level headings).

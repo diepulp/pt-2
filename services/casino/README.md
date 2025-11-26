@@ -1,16 +1,16 @@
 # CasinoService - Foundational Context
 
-> **Bounded Context**: "What are the operational parameters and policy boundaries of this casino property?"
+> **Bounded Context**: "What staff can work at this casino and what are its operational settings?"
 > **SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §882-1006](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
-> **Status**: Implemented
+> **Status**: Implemented (MVP-001 Phase 1, Section 1.1)
 
 ## Ownership
 
 **Tables** (8):
 - `casino` - Casino registry
-- `casino_settings` - **EXCLUSIVE WRITE** - Single temporal authority
+- `casino_settings` - **EXCLUSIVE WRITE** - Single temporal authority (gaming day parameters, timezone)
 - `company` - Corporate ownership hierarchy
-- `staff` - Staff registry and access control
+- `staff` - Staff registry and access control (role assignment)
 - `game_settings` - Game configuration templates
 - `player_casino` - Player enrollment (shared with PlayerService)
 - `audit_log` - Cross-domain event logging

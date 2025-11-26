@@ -1,19 +1,19 @@
 # PlayerService - Identity Context
 
-> **Bounded Context**: Player identity and casino enrollment
+> **Bounded Context**: "Who is this player and what is their profile?"
 > **SRM Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §1007-1060](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
-> **Status**: Implemented
+> **Status**: Implemented (Phase 1 MVP-001 Section 1.2)
 
 ## Ownership
 
 **Tables** (2):
-- `player` - Player identity
-- `player_casino` - Multi-casino enrollment (shared with CasinoService)
+- `player` - Player identity and profile
+- `player_casino` - Player-casino enrollment relationship
 
 **DTOs**:
-- `PlayerDTO` - Public player profile (excludes PII like birth_date)
-- `PlayerCreateDTO` - Enrollment input
-- `PlayerEnrollmentDTO` - Casino membership status
+- `PlayerDTO` - Player profile with identity fields
+- `EnrollPlayerDTO` - Enrollment input (player creation + casino assignment)
+- `PlayerCasinoDTO` - Casino membership status
 
 ## Pattern
 
@@ -35,7 +35,23 @@ export type PlayerDTO = Pick<
 >;
 ```
 
+## Implementation
+
+**Server Actions** (`app/actions/player.ts`):
+- `enrollPlayer(data: EnrollPlayerDTO)` - Create player and enroll in casino
+- `getPlayer(playerId: string)` - Fetch player by ID
+- `getPlayerByCasino(casinoId: string, playerId: string)` - Fetch player with casino verification
+- `isPlayerEnrolled(casinoId: string, playerId: string)` - Check enrollment status
+- `getPlayersByCasino(casinoId: string, options?)` - Paginated player list for casino
+
+**React Hooks** (`hooks/use-player.ts`):
+- `usePlayer(playerId)` - Query single player
+- `usePlayerList(casinoId, options)` - Infinite query for player list
+- `usePlayerEnrollment(casinoId, playerId)` - Query enrollment status
+- `useEnrollPlayer()` - Mutation for player enrollment
+
 ## References
 
 - [SRM §1007-1060](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
 - [DTO_CANONICAL_STANDARD.md](../../docs/25-api-data/DTO_CANONICAL_STANDARD.md) (Simple CRUD pattern)
+- [PRD-001 Player Management System](../../docs/10-prd/PRD-001_Player_Management_System_Requirements.md)

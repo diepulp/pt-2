@@ -37,9 +37,9 @@ Create 5 specialized chatmodes with tool restrictions and validation gates.
 
 | File | Role | Tools Allowed | Tools Forbidden | Purpose |
 |------|------|---------------|-----------------|---------|
-| **architect.chatmode.md** | System Architect | Read, Grep, Glob, WebSearch, Sequential | Write, Edit, Bash (write) | Design, ADRs, specs |
+| **architect.chatmode.md** | System Architect | Read, Grep, Glob, WebSearch, SlashCommand, Serena Sequential | Write, Edit, Bash (write) | Design, ADRs, specs | 
 | **service-engineer.chatmode.md** | Service Engineer | Read, Write, Edit, Bash (tests), MultiEdit | WebSearch, UI changes | Service implementation, tests |
-| **ui-engineer.chatmode.md** | UI Engineer | Read, Write, Edit, Bash, Magic MCP | Service layer mods, migrations | Frontend implementation |
+| **ui-engineer.chatmode.md** | UI Engineer | Read, Write, Edit, Bash, Magic MCP, Tavily mcp, Playwright mcp, shadcn mcp | Service layer mods, migrations | Frontend implementation |
 | **reviewer.chatmode.md** | Code Reviewer | Read, Grep, Glob, Bash (read-only), Diagnostics | Write, Edit, MultiEdit | Quality validation, anti-patterns |
 | **documenter.chatmode.md** | Documenter | Read, Write, Edit, Grep, Glob | Service/UI implementation | Memory files, documentation |
 | **template.chatmode.md** | Template | N/A | N/A | Chatmode creation guide |

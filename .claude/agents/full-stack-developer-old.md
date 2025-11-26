@@ -25,7 +25,7 @@ model: sonnet
 
 - context7: Research full stack frameworks, best practices, technology documentation
 - sequential-thinking: Complex application architecture, integration planning
-- magic: Frontend component generation, UI development patterns
+
 
 ## Core Development Philosophy
 

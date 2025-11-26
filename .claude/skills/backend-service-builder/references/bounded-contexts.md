@@ -258,3 +258,4 @@ Every service README.md MUST document:
 - **Full SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 - **DTO Standards**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (cross-context rules)
 - **ESLint Rule**: `.eslint-rules/no-cross-context-db-imports.js`
+- **Full Documentaion Repository**: `SDLC_DOCS_TAXONOMY.md`
