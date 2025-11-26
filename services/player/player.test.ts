@@ -1,0 +1,480 @@
+/**
+ * Player Service Unit Tests
+ *
+ * Tests the player server actions by mocking the Supabase client.
+ * These are unit tests that verify the action logic without hitting the database.
+ */
+
+// Mock Supabase client
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn(),
+}));
+
+import { createClient } from '@/lib/supabase/server';
+import {
+  enrollPlayer,
+  getPlayer,
+  getPlayerByCasino,
+  isPlayerEnrolled,
+  getPlayersByCasino,
+  updatePlayer,
+  deletePlayer,
+  searchPlayers,
+} from '@/app/actions/player';
+
+// Helper to create a chainable mock query builder
+// The key insight: ALL methods must return `builder` for chaining
+// Only `limit` (when awaited) returns the final result via a special property
+function createMockQueryBuilder(finalResult: { data: unknown; error: unknown }) {
+  const builder: Record<string, jest.Mock> = {};
+  const methods = ['select', 'insert', 'update', 'delete', 'eq', 'lt', 'or', 'order', 'limit', 'single'];
+
+  // Make builder thenable so it can be awaited after limit()
+  const thenable = {
+    then: (resolve: (val: unknown) => void) => {
+      resolve(finalResult);
+      return thenable;
+    },
+  };
+
+  methods.forEach(method => {
+    builder[method] = jest.fn().mockImplementation(() => {
+      // single() is always terminal and returns promise
+      if (method === 'single') {
+        return Promise.resolve(finalResult);
+      }
+      // limit() returns a thenable builder for both chaining and awaiting
+      if (method === 'limit') {
+        return { ...builder, ...thenable };
+      }
+      // All other methods return builder for chaining
+      return builder;
+    });
+  });
+
+  return builder;
+}
+
+describe('Player Server Actions', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('enrollPlayer', () => {
+    it('creates player and enrolls in casino', async () => {
+      const mockPlayer = {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Doe',
+        birth_date: '1990-01-01',
+        created_at: '2025-01-01',
+      };
+
+      // Create two separate builders for the two from() calls
+      const playerBuilder = createMockQueryBuilder({ data: mockPlayer, error: null });
+      const enrollBuilder = createMockQueryBuilder({ data: null, error: null });
+      // Override insert on enrollBuilder to return directly (no chaining needed)
+      enrollBuilder.insert = jest.fn().mockResolvedValue({ error: null });
+
+      let fromCallCount = 0;
+      const mockSupabase = {
+        from: jest.fn().mockImplementation((table: string) => {
+          fromCallCount++;
+          return table === 'player' ? playerBuilder : enrollBuilder;
+        }),
+      };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await enrollPlayer({
+        first_name: 'John',
+        last_name: 'Doe',
+        birth_date: '1990-01-01',
+        casinoId: 'casino-1',
+      });
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player');
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(playerBuilder.insert).toHaveBeenCalledWith({
+        first_name: 'John',
+        last_name: 'Doe',
+        birth_date: '1990-01-01',
+      });
+      expect(result).toEqual(mockPlayer);
+    });
+
+    it('throws error when player creation fails', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'Insert failed' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(
+        enrollPlayer({
+          first_name: 'John',
+          last_name: 'Doe',
+          casinoId: 'casino-1',
+        })
+      ).rejects.toThrow('Failed to create player: Insert failed');
+    });
+
+    it('throws error when enrollment fails', async () => {
+      const mockPlayer = { id: 'player-1' };
+      const playerBuilder = createMockQueryBuilder({ data: mockPlayer, error: null });
+      const enrollBuilder = createMockQueryBuilder({ data: null, error: null });
+      enrollBuilder.insert = jest.fn().mockResolvedValue({ error: { message: 'Enrollment failed' } });
+
+      const mockSupabase = {
+        from: jest.fn().mockImplementation((table: string) => {
+          return table === 'player' ? playerBuilder : enrollBuilder;
+        }),
+      };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(
+        enrollPlayer({
+          first_name: 'John',
+          last_name: 'Doe',
+          casinoId: 'casino-1',
+        })
+      ).rejects.toThrow('Failed to enroll player: Enrollment failed');
+    });
+  });
+
+  describe('getPlayer', () => {
+    it('fetches player by ID', async () => {
+      const mockPlayer = {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Doe',
+        birth_date: '1990-01-01',
+        created_at: '2025-01-01',
+      };
+      const mockBuilder = createMockQueryBuilder({ data: mockPlayer, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayer('player-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player');
+      expect(mockBuilder.eq).toHaveBeenCalledWith('id', 'player-1');
+      expect(result).toEqual(mockPlayer);
+    });
+
+    it('returns null when player not found', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { code: 'PGRST116', message: 'Not found' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayer('nonexistent');
+
+      expect(result).toBeNull();
+    });
+
+    it('throws error for other database errors', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { code: 'OTHER', message: 'DB error' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(getPlayer('player-1')).rejects.toThrow(
+        'Failed to fetch player: DB error'
+      );
+    });
+  });
+
+  describe('getPlayerByCasino', () => {
+    it('returns player if enrolled in casino', async () => {
+      const mockPlayer = {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Doe',
+      };
+
+      const enrollmentBuilder = createMockQueryBuilder({
+        data: { player_id: 'player-1' },
+        error: null,
+      });
+      const playerBuilder = createMockQueryBuilder({ data: mockPlayer, error: null });
+
+      const mockSupabase = {
+        from: jest.fn().mockImplementation((table: string) => {
+          return table === 'player_casino' ? enrollmentBuilder : playerBuilder;
+        }),
+      };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayerByCasino('casino-1', 'player-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(result).toEqual(mockPlayer);
+    });
+
+    it('returns null if player not enrolled in casino', async () => {
+      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayerByCasino('casino-1', 'player-1');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('isPlayerEnrolled', () => {
+    it('returns true when player is enrolled and active', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: { player_id: 'player-1' },
+        error: null,
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await isPlayerEnrolled('casino-1', 'player-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(result).toBe(true);
+    });
+
+    it('returns false when player is not enrolled', async () => {
+      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await isPlayerEnrolled('casino-1', 'player-1');
+
+      expect(result).toBe(false);
+    });
+  });
+
+  describe('getPlayersByCasino', () => {
+    it('fetches players enrolled in casino with pagination', async () => {
+      const mockData = [
+        {
+          enrolled_at: '2025-01-02',
+          player: { id: 'p1', first_name: 'John', last_name: 'Doe' },
+        },
+        {
+          enrolled_at: '2025-01-01',
+          player: { id: 'p2', first_name: 'Jane', last_name: 'Smith' },
+        },
+      ];
+      const mockBuilder = createMockQueryBuilder({ data: mockData, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayersByCasino('casino-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(mockBuilder.order).toHaveBeenCalledWith('enrolled_at', {
+        ascending: false,
+      });
+      expect(result.players).toHaveLength(2);
+    });
+
+    it('uses cursor for pagination', async () => {
+      const mockBuilder = createMockQueryBuilder({ data: [], error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await getPlayersByCasino('casino-1', { cursor: '2025-01-15T00:00:00Z' });
+
+      expect(mockBuilder.lt).toHaveBeenCalledWith(
+        'enrolled_at',
+        '2025-01-15T00:00:00Z'
+      );
+    });
+
+    it('returns nextCursor when more results exist', async () => {
+      const mockData = Array(51)
+        .fill(null)
+        .map((_, i) => ({
+          enrolled_at: `2025-01-${String(i + 1).padStart(2, '0')}`,
+          player: { id: `p${i}`, first_name: `Player ${i}` },
+        }));
+
+      const mockBuilder = createMockQueryBuilder({ data: mockData, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await getPlayersByCasino('casino-1', { limit: 50 });
+
+      expect(result.players).toHaveLength(50);
+      expect(result.nextCursor).toBeDefined();
+    });
+
+    it('throws error when fetch fails', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'Fetch failed' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(getPlayersByCasino('casino-1')).rejects.toThrow(
+        'Failed to fetch players: Fetch failed'
+      );
+    });
+  });
+
+  describe('updatePlayer', () => {
+    it('updates player profile', async () => {
+      const updatedPlayer = {
+        id: 'player-1',
+        first_name: 'Johnny',
+        last_name: 'Doe',
+        birth_date: '1990-01-01',
+        created_at: '2025-01-01',
+      };
+      const mockBuilder = createMockQueryBuilder({ data: updatedPlayer, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await updatePlayer('player-1', { first_name: 'Johnny' });
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player');
+      expect(mockBuilder.update).toHaveBeenCalledWith({
+        first_name: 'Johnny',
+        last_name: undefined,
+        birth_date: undefined,
+      });
+      expect(mockBuilder.eq).toHaveBeenCalledWith('id', 'player-1');
+      expect(result).toEqual(updatedPlayer);
+    });
+
+    it('throws error when update fails', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'Update failed' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(
+        updatePlayer('player-1', { first_name: 'Johnny' })
+      ).rejects.toThrow('Failed to update player: Update failed');
+    });
+  });
+
+  describe('deletePlayer', () => {
+    it('deletes player and casino relationships', async () => {
+      const casinoBuilder = createMockQueryBuilder({ data: null, error: null });
+      casinoBuilder.eq = jest.fn().mockResolvedValue({ error: null });
+      const playerBuilder = createMockQueryBuilder({ data: null, error: null });
+      playerBuilder.eq = jest.fn().mockResolvedValue({ error: null });
+
+      const mockSupabase = {
+        from: jest.fn().mockImplementation((table: string) => {
+          return table === 'player_casino' ? casinoBuilder : playerBuilder;
+        }),
+      };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await deletePlayer('player-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(mockSupabase.from).toHaveBeenCalledWith('player');
+      expect(casinoBuilder.delete).toHaveBeenCalled();
+      expect(playerBuilder.delete).toHaveBeenCalled();
+    });
+
+    it('throws error when casino relationship delete fails', async () => {
+      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
+      mockBuilder.eq = jest.fn().mockResolvedValue({
+        error: { message: 'Delete failed' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(deletePlayer('player-1')).rejects.toThrow(
+        'Failed to delete player casino relationships: Delete failed'
+      );
+    });
+
+    it('throws error when player delete fails', async () => {
+      const casinoBuilder = createMockQueryBuilder({ data: null, error: null });
+      casinoBuilder.eq = jest.fn().mockResolvedValue({ error: null });
+      const playerBuilder = createMockQueryBuilder({ data: null, error: null });
+      playerBuilder.eq = jest.fn().mockResolvedValue({
+        error: { message: 'Player delete failed' },
+      });
+
+      const mockSupabase = {
+        from: jest.fn().mockImplementation((table: string) => {
+          return table === 'player_casino' ? casinoBuilder : playerBuilder;
+        }),
+      };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(deletePlayer('player-1')).rejects.toThrow(
+        'Failed to delete player: Player delete failed'
+      );
+    });
+  });
+
+  describe('searchPlayers', () => {
+    it('searches players globally when no casinoId provided', async () => {
+      const mockPlayers = [
+        { id: 'p1', first_name: 'John', last_name: 'Doe' },
+        { id: 'p2', first_name: 'Johnny', last_name: 'Smith' },
+      ];
+      const mockBuilder = createMockQueryBuilder({ data: mockPlayers, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await searchPlayers('John');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player');
+      expect(mockBuilder.or).toHaveBeenCalledWith(
+        'first_name.ilike.%John%,last_name.ilike.%John%'
+      );
+      expect(mockBuilder.limit).toHaveBeenCalledWith(50);
+      expect(result).toHaveLength(2);
+    });
+
+    it('searches players within casino when casinoId provided', async () => {
+      const mockData = [
+        { player: { id: 'p1', first_name: 'John', last_name: 'Doe' } },
+      ];
+      const mockBuilder = createMockQueryBuilder({ data: mockData, error: null });
+      // Override or to return promise for casino search (no limit chaining)
+      mockBuilder.or = jest.fn().mockResolvedValue({ data: mockData, error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await searchPlayers('John', 'casino-1');
+
+      expect(mockSupabase.from).toHaveBeenCalledWith('player_casino');
+      expect(result).toHaveLength(1);
+    });
+
+    it('returns empty array when no matches found', async () => {
+      const mockBuilder = createMockQueryBuilder({ data: [], error: null });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      const result = await searchPlayers('NonexistentName');
+
+      expect(result).toEqual([]);
+    });
+
+    it('throws error when search fails', async () => {
+      const mockBuilder = createMockQueryBuilder({
+        data: null,
+        error: { message: 'Search failed' },
+      });
+      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
+      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+
+      await expect(searchPlayers('John')).rejects.toThrow(
+        'Failed to search players: Search failed'
+      );
+    });
+  });
+});
