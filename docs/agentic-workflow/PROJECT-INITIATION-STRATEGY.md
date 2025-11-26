@@ -1,25 +1,26 @@
 # PT-2 Agentic Workflow: Project Initiation Strategy
 
-**Version**: 2.0.0
-**Date**: 2025-11-21 (Updated)
-**Status**: Complete + Memori Integration
+**Version**: 3.0.0
+**Date**: 2025-11-25 (Updated)
+**Status**: Complete + Skills + Context-Aware Memory
 **Purpose**: Comprehensive analysis and strategy for project initiation using agentic primitives
 
 ---
 
 ## Executive Summary
 
-PT-2 has successfully implemented **100% of the agentic workflow strategy** outlined in the AI-Native Implementation Aid document, including the advanced Memori engine for cross-session agent memory.
+PT-2 has evolved through **3 phases** of agentic workflow implementation, culminating in a unified system where **Skills** serve as the primary agent specialization mechanism with automatic Memori integration.
 
-### Key Achievement: Complete Agentic Infrastructure + Dynamic Memory ✅
+### Key Achievement: Unified Primitives Architecture ✅
 
 **What's Working:**
-- ✅ 7 Memory files providing compressed baseline context
+- ✅ 7 Memory files providing compressed baseline context (Layer 1: Static)
 - ✅ 6 Context files for domain-specific guidance
-- ✅ 6 Workflow prompts for systematic operations
+- ✅ 8 Workflow prompts for systematic operations
 - ✅ 4 Instruction files for scoped guidance
-- ✅ **6 Chatmodes** (architect, service-engineer, documenter, backend-dev, frontend-dev, reviewer)
-- ✅ **Memori Engine** - Cross-session dynamic memory (NEW: 2025-11-21)
+- ✅ **4 Skills** with auto-activated Memori (Layer 2: Dynamic)
+- ✅ **6 Chatmodes** for simple role switching (deprecated for complex tasks)
+- ✅ **13 Hooks** for lifecycle automation (Layer 3: Automation)
 
 **Phase 1 Completed (2025-11-20):**
 - ✅ `architect.chatmode.md` - System design and ADR creation
@@ -35,6 +36,13 @@ PT-2 has successfully implemented **100% of the agentic workflow strategy** outl
 - ✅ **Workflow State Tracking** - Phase transitions and validation gates
 - ✅ **Session Hooks** - Automatic memory initialization and finalization
 - ✅ **11 Integration Tests** - All passing (100% coverage)
+
+**Phase 3 Completed (2025-11-25):**
+- ✅ **4 Skills** with Memori integration (lead-architect, backend-service-builder, frontend-design, skill-creator)
+- ✅ **Skill namespaces** registered in `lib/memori/client.py`
+- ✅ **PreToolUse hook** for automatic skill memory activation
+- ✅ **Context classes** (SkillContext, ValidationContext, ArchitectContext)
+- ✅ **Unified documentation** in SESSION_HANDOFF_SKILL_MEMORY_FIXES.md
 
 ---
 
@@ -196,7 +204,181 @@ memori.conversations     -- Session tracking
 
 ---
 
-## New Chatmodes Created
+## Unified Primitives Architecture (Phase 3)
+
+### Overview: 3-Layer Architecture + Sub-agents
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         AGENTIC PRIMITIVES FLOW                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  SESSION START                                                          │
+│       │                                                                 │
+│       ▼                                                                 │
+│  ┌─────────────────────────────────────────────────────────────────┐   │
+│  │ LAYER 1: STATIC CONTEXT (auto-loaded via CLAUDE.md)             │   │
+│  │  ├─ memory/*.memory.md  (7 files - compressed baseline)         │   │
+│  │  ├─ context/*.context.md (6 files - domain guidance)            │   │
+│  │  └─ .github/instructions/*.instructions.md (4 files)            │   │
+│  └─────────────────────────────────────────────────────────────────┘   │
+│       │                                                                 │
+│       ├─────────────────────────┬───────────────────────────────┐      │
+│       │                         │                               │      │
+│       │ Skill tool              │ Task tool                     │      │
+│       ▼                         ▼                               │      │
+│  ┌────────────────────┐   ┌────────────────────────────────┐   │      │
+│  │ LAYER 2A: SKILLS   │   │ LAYER 2B: SUB-AGENTS           │   │      │
+│  │ (with Memori)      │   │ (stateless, parallel)          │   │      │
+│  │                    │   │                                │   │      │
+│  │ lead-architect     │   │ system-architect               │   │      │
+│  │ backend-service-   │   │ backend-architect              │   │      │
+│  │   builder          │   │ full-stack-developer           │   │      │
+│  │ frontend-design    │   │ typescript-pro                 │   │      │
+│  │ skill-creator      │   │ react-pro                      │   │      │
+│  │                    │   │ Explore, Plan                  │   │      │
+│  │ ✅ Memori enabled  │   │ ❌ No Memori (stateless)       │   │      │
+│  │ ✅ Cross-session   │   │ ❌ Results lost after task     │   │      │
+│  │ ❌ Sequential only │   │ ✅ Can run in parallel         │   │      │
+│  └─────────┬──────────┘   └────────────────┬───────────────┘   │      │
+│            │                               │                   │      │
+│            │ Memory operations             │ Returns report    │      │
+│            ▼                               ▼                   │      │
+│  ┌─────────────────────────────────────────────────────────────┘      │
+│  │ LAYER 3: MEMORI ENGINE (dynamic cross-session memory)              │
+│  │  ├─ lib/memori/client.py       - Core API                          │
+│  │  ├─ lib/memori/skill_context.py - Context classes                  │
+│  │  ├─ lib/memori/workflow_state.py - Phase tracking                  │
+│  │  └─ PostgreSQL (memori schema) - Persistent storage                │
+│  │                                                                    │
+│  │  Note: Sub-agent results must be manually recorded to Memori       │
+│  │        if cross-session persistence is needed.                     │
+│  └────────────────────────────────────────────────────────────────────┘
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Agent Primitives Hierarchy
+
+The system provides **four levels** of agent specialization:
+
+| Level | Primitive | Invocation | Memory | Parallelism | Use When |
+|-------|-----------|------------|--------|-------------|----------|
+| 1 | **Skills** | `Skill` tool | ✅ Memori | ❌ Sequential | Work requiring cross-session memory |
+| 2 | **Sub-agents** | `Task` tool | ❌ None | ✅ Parallel | Parallel exploration, stateless analysis |
+| 3 | **Chatmodes** | `/chatmode` | ❌ None | ❌ Sequential | Lightweight role switching |
+| 4 | **Instructions** | Auto-loaded | N/A | N/A | Passive guidance files |
+
+### Skills vs Sub-agents: Critical Distinction
+
+**Skills** (`.claude/skills/*/SKILL.md`):
+- Run **in the main conversation** context
+- Have **auto-activated Memori** via PreToolUse hook
+- Learnings **persist across sessions**
+- Cannot run in parallel
+
+**Sub-agents** (`.claude/agents/*.md`):
+- Spawned as **separate processes** via Task tool
+- **Stateless** - no Memori integration
+- Results **lost after task completes** (unless manually recorded)
+- **Can run in parallel** for exploration tasks
+
+### When to Use Each
+
+| Task | Use | Reason |
+|------|-----|--------|
+| Architecture decisions that should persist | `lead-architect` **skill** | ArchitectContext records to Memori |
+| Parallel codebase exploration | `system-architect` **sub-agent** | Can spawn multiple in parallel |
+| Service implementation with validation | `backend-service-builder` **skill** | ValidationContext tracks findings |
+| Quick architecture analysis (no memory needed) | `system-architect` **sub-agent** | Faster, stateless |
+| Research across multiple files | `Explore` **sub-agent** | Designed for exploration |
+| Quick code review | `reviewer` **chatmode** | Lightweight, no overhead |
+
+### Bridging Skills and Sub-agents
+
+To get benefits of both (parallelism + memory), use this pattern:
+
+```python
+# In a skill execution, delegate to sub-agent then record results
+
+# 1. Spawn sub-agent for parallel analysis
+result = await Task(
+    subagent_type="system-architect",
+    prompt="Analyze the authentication system architecture"
+)
+
+# 2. Record findings to Memori for persistence
+from lib.memori import ArchitectContext
+context = ArchitectContext(memori)
+context.record_architectural_decision(
+    name="Auth System Analysis",
+    rationale=result.summary,
+    alternatives=result.alternatives_considered
+)
+```
+
+### Skills vs Chatmodes: When to Use Each
+
+| Use Case | Recommended | Reason |
+|----------|-------------|--------|
+| Architecture decisions | `lead-architect` skill | Has ArchitectContext for memory |
+| Service implementation | `backend-service-builder` skill | Has ValidationContext |
+| Frontend components | `frontend-design` skill | Has SkillContext |
+| Simple code review | `reviewer` chatmode | No memory needed |
+| Quick documentation | `documenter` chatmode | Lightweight |
+| Complex documentation | `backend-service-builder` skill | Validation + memory |
+
+**Rule of Thumb**: Use **Skills** when you need cross-session memory. Use **Chatmodes** for one-off tasks.
+
+### Skill Namespace Registry
+
+All skill namespaces are registered in `lib/memori/client.py`:
+
+```python
+CHATMODE_USER_IDS = {
+    # Chatmode namespaces
+    "architect": "pt2_architect",
+    "service-engineer": "service_engineer",
+    "documenter": "pt2_documenter",
+    "backend-dev": "pt2_backend",
+    "frontend-dev": "pt2_frontend",
+    "reviewer": "pt2_reviewer",
+    "main": "pt2_agent",
+
+    # Skill namespaces (Phase 3)
+    "skill:backend-service-builder": "skill_backend_service_builder",
+    "skill:frontend-design": "skill_frontend_design",
+    "skill:lead-architect": "skill_lead_architect",
+    "skill:skill-creator": "skill_skill_creator",
+}
+```
+
+### Automatic Memory Activation Flow
+
+```
+1. User: "Use lead-architect skill"
+2. Claude Code: Invokes Skill tool with skill="lead-architect"
+3. PreToolUse hook: .claude/hooks/skill-init-memori.sh triggered
+4. Hook extracts skill name → maps to namespace → enables Memori
+5. Skill executes with ArchitectContext available
+6. Memory recorded to skill_lead_architect namespace
+7. Future sessions can query past architectural decisions
+```
+
+### Key Files for Context Management
+
+| File | Purpose |
+|------|---------|
+| `.claude/hooks/skill-init-memori.sh` | Auto-activates skill memory |
+| `.claude/hooks/context-init-session.sh` | Initializes session context |
+| `.claude/hooks/context-end-session.sh` | Finalizes session memory |
+| `lib/memori/client.py` | Core Memori API |
+| `lib/memori/skill_context.py` | Context classes |
+| `.memori/session.log` | Session activity log |
+
+---
+
+## Legacy: Chatmodes (Phase 1)
 
 ### 1. architect.chatmode.md
 
@@ -398,23 +580,21 @@ The new chatmodes integrate seamlessly with existing workflows:
 
 ## Comparison: Evolution Timeline
 
-| Aspect | Before (Nov 19) | Phase 1 (Nov 20) | Phase 2 (Nov 21) |
-|--------|-----------------|------------------|------------------|
-| **Missing Chatmodes** | 3 (architect, service-engineer, documenter) | 0 | 0 + Memory-enhanced |
-| **Workflow Execution** | create-service.prompt.md blocked | Fully operational | + State tracking |
-| **Spec Storage** | No directory | .claude/specs/ created | + Workflow recovery |
-| **Project Initiation** | Manual, ad-hoc | Systematic workflow | + Session continuity |
-| **Role Boundaries** | Backend-dev does all | Specialized chatmodes | + Isolated memory |
-| **Validation Gates** | In workflows but chatmodes missing | End-to-end working | + Persisted history |
-| **Memory System** | Static files only | Static files only | **Hybrid (Static + Dynamic)** |
-| **Cross-Session Memory** | ❌ None | ❌ None | ✅ **Memori engine** |
-| **Workflow State** | ❌ Lost | ❌ Lost | ✅ **Tracked & recoverable** |
-| **User Preference Learning** | ❌ None | ❌ None | ✅ **Automatic** |
-| **Semantic Search** | ❌ Grep only | ❌ Grep only | ✅ **pgvector embeddings** |
-| **Chatmode Context Isolation** | ❌ Shared | ❌ Shared | ✅ **6 namespaces** |
-| **Session Hooks** | ❌ Manual | ❌ Manual | ✅ **Automatic** |
-| **Integration Tests** | - | - | ✅ **11 tests (100% pass)** |
-| **Agentic Strategy** | 95% | 100% | 100% + Enhanced |
+| Aspect | Before (Nov 19) | Phase 1 (Nov 20) | Phase 2 (Nov 21) | Phase 3 (Nov 25) |
+|--------|-----------------|------------------|------------------|------------------|
+| **Agent Specialization** | Backend-dev does all | 6 Chatmodes | + Memory namespaces | **4 Skills (primary)** |
+| **Memory Activation** | ❌ Manual | ❌ Manual | ✅ Session hooks | ✅ **Auto via PreToolUse** |
+| **Context Classes** | ❌ None | ❌ None | ChatmodeContext | **Skill/Validation/Architect** |
+| **Workflow Execution** | Blocked | Fully operational | + State tracking | + Skill integration |
+| **Project Initiation** | Manual, ad-hoc | Systematic workflow | + Session continuity | + Skill templates |
+| **Memory System** | Static files only | Static files only | Hybrid (Static + Dynamic) | **3-Layer unified** |
+| **Cross-Session Memory** | ❌ None | ❌ None | ✅ Memori engine | ✅ **Skill namespaces** |
+| **Workflow State** | ❌ Lost | ❌ Lost | ✅ Tracked | ✅ **+ Skill state** |
+| **Semantic Search** | ❌ Grep only | ❌ Grep only | ✅ pgvector | ✅ **+ tags filter** |
+| **Context Isolation** | ❌ Shared | ❌ Shared | ✅ 6 namespaces | ✅ **10+ namespaces** |
+| **Validation Tracking** | ❌ None | In workflows | + Gate history | ✅ **ValidationContext** |
+| **Architecture Decisions** | ❌ Manual ADRs | architect chatmode | + Memory | ✅ **ArchitectContext** |
+| **Documentation** | Scattered | Centralized | + API docs | ✅ **Unified strategy** |
 
 ### Key Improvements
 
@@ -428,6 +608,13 @@ The new chatmodes integrate seamlessly with existing workflows:
 - ✅ Workflow state persistence
 - ✅ User preference learning
 - ✅ Semantic search capabilities
+
+**Phase 3 (Nov 25)**: Skills + Context unification
+- ✅ **4 Skills** as primary agent specialization mechanism
+- ✅ **Auto-activation** via PreToolUse hook (no manual enable needed)
+- ✅ **3 Context classes** (SkillContext, ValidationContext, ArchitectContext)
+- ✅ **Skill namespaces** in CHATMODE_USER_IDS registry
+- ✅ **Unified documentation** consolidating strategy
 
 ---
 
@@ -615,7 +802,7 @@ lib/memori/
 
 ## Conclusion
 
-PT-2's agentic workflow infrastructure is now **100% complete** and enhanced with the Memori engine for dynamic cross-session memory. This represents a fully integrated AI-native development environment aligned with the AI-Native Implementation Aid strategy.
+PT-2's agentic workflow infrastructure is now **100% complete** through 3 phases, providing a unified system where **Skills are the primary agent specialization mechanism** with automatic Memori integration.
 
 ### Phase 1 Achievements (2025-11-20):
 - ✅ All agentic primitives implemented (memory, chatmodes, workflows, context, instructions)
@@ -634,23 +821,32 @@ PT-2's agentic workflow infrastructure is now **100% complete** and enhanced wit
 - ✅ **25+ API methods** for comprehensive memory recording
 - ✅ **Graceful degradation** maintaining compatibility
 
+### Phase 3 Achievements (2025-11-25):
+- ✅ **4 Skills** with automatic Memori integration (lead-architect, backend-service-builder, frontend-design, skill-creator)
+- ✅ **PreToolUse hook** (`skill-init-memori.sh`) for auto-activation
+- ✅ **3 Context classes** (SkillContext, ValidationContext, ArchitectContext)
+- ✅ **Skill namespaces** registered in CHATMODE_USER_IDS
+- ✅ **Unified documentation** consolidating all 3 phases
+- ✅ **Clear usage guidance** (Skills for memory, Chatmodes for one-off)
+
 ### Complete Infrastructure:
 - **7 Memory Files** - Static baseline context (Git-versioned)
 - **6 Context Files** - Domain-specific guidance
-- **6 Workflow Prompts** - Systematic operations
+- **8 Workflow Prompts** - Systematic operations
 - **4 Instruction Files** - Scoped guidance
-- **6 Chatmodes** - Specialized roles with isolated memory
+- **6 Chatmodes** - Lightweight role switching (deprecated for complex tasks)
+- **4 Skills** - Primary agent specialization with auto-memory
+- **13 Hooks** - Lifecycle automation
 - **Memori Engine** - Dynamic cross-session memory layer
-- **11 Integration Modules** - Full Memori SDK wrapper
 
-### Hybrid Memory Architecture:
-- **Layer 1** (Static): Memory files in Git - Fast, version-controlled baseline
-- **Layer 2** (Dynamic): Memori PostgreSQL - Cross-session learnings, workflow state
-- **Layer 3** (Pointers): Metadata references - Links to relevant documentation
+### 3-Layer Unified Architecture:
+- **Layer 1** (Static): Memory files in Git - Fast, version-controlled baseline (<10s load)
+- **Layer 2** (Skills): Agent specialization with context classes - Auto-activated memory
+- **Layer 3** (Memori): PostgreSQL + pgvector - Cross-session learnings, semantic search
 
-**Agentic Workflow Status**: ✅ **PRODUCTION READY + MEMORY-ENHANCED**
+**Agentic Workflow Status**: ✅ **PRODUCTION READY + SKILLS-UNIFIED**
 
-**Total Implementation**: 18 files, ~2,700 lines of code + documentation, 2 phases
+**Total Implementation**: 3 phases, 30+ files, ~4,000 lines of code + documentation
 
 ---
 
@@ -680,12 +876,19 @@ PT-2's agentic workflow infrastructure is now **100% complete** and enhanced wit
 - Workflows: `.claude/workflows/*.prompt.md` (7 files)
 - Instructions: `.github/instructions/*.instructions.md` (4 files)
 
-#### Dynamic Memory Layer (NEW)
+#### Dynamic Memory Layer (Phase 2)
 - Memori SDK: `lib/memori/` (11 files, 2,700+ lines)
 - Database Schema: `memori` schema in PostgreSQL
 - Integration Tests: `lib/memori/test_integration.py` (11 tests, 100% passing)
 - Session Hooks: `lib/memori/session_hooks.py` (auto start/end)
 - API Methods: 25+ methods for memory recording
+
+#### Skills Layer (Phase 3)
+- Skills: `.claude/skills/*/SKILL.md` (4 skills)
+- Skill Hook: `.claude/hooks/skill-init-memori.sh` (auto-activation)
+- Context Classes: `lib/memori/skill_context.py` (SkillContext, ValidationContext, ArchitectContext)
+- Namespaces: `lib/memori/client.py` CHATMODE_USER_IDS (skill_* entries)
+- Session Handoff: `docs/context-engineering/SESSION_HANDOFF_SKILL_MEMORY_FIXES.md`
 
 ### External
 - [GitHub: Building Reliable AI Workflows](https://github.blog/ai-and-ml/github-copilot/how-to-build-reliable-ai-workflows-with-agentic-primitives-and-context-engineering/)
@@ -694,12 +897,13 @@ PT-2's agentic workflow infrastructure is now **100% complete** and enhanced wit
 
 ---
 
-**Document Version**: 2.0.0
-**Last Updated**: 2025-11-21
-**Status**: Complete + Memori Integration
+**Document Version**: 3.0.0
+**Last Updated**: 2025-11-25
+**Status**: Complete + Skills + Context-Aware Memory
 **Maintained By**: Agentic Workflow Framework
 
 **Changelog**:
+- **v3.0.0** (2025-11-25): Skills as primary agents, PreToolUse hook, 3 context classes, unified architecture
 - **v2.0.0** (2025-11-21): Added Memori engine integration, 11 new files, hybrid memory architecture
 - **v1.0.0** (2025-11-20): Initial agentic workflow infrastructure, 6 chatmodes, workflows
 

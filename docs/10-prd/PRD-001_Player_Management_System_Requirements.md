@@ -46,7 +46,7 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - Casino settings including **gaming day** parameters.
 
 ### 3.2 Table Context
-- Transition table status among `inactive` → `active` (open) → `closed` per SRM `table_status` enum; show canonical labels on the pit dashboard.
+- Transition table status among `inactive` → `active` (open) → `closed` per SRM `table_status` enum; show canonical labels on the pit dashboard
 - Dealer rotation (happy path).
 
 ### 3.3 Player & Visit
@@ -85,7 +85,7 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 > Format uses Gherkin-style acceptance tests (can be automated as E2E).
 
 ### US-001 Open a Table
-**As** a Pit Boss **I want** to open a table **so that** patrons coudld be assigned seats to further monitor their activities, gaming action tracked and logged into rating slips, rewards issued, loyalty redemption and accrual tracked. I should be able to track patron's movement across the gaming floor and place them into appropriate seats on the table.  
+**As** a Pit Boss **I want** to open a table **so that** patrons coudld be assigned seats to further monitor their activities, gaming action tracked and logged into rating slips, rewards issued, loyalty redemption and accrual tracked. I **should be** able to track patron's movement across the gaming floor and place them into appropriate seats on the table.  
 **Acceptance:**
 - **Given** the table is closed  
   **When** I Open Table  

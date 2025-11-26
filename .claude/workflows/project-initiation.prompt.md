@@ -1,34 +1,82 @@
----
-title: Project Initiation Workflow
-description: Systematic workflow for setting up agentic infrastructure for new projects
-chatmode_sequence:
-  - architect      # Phase 1: Assess requirements
-  - documenter     # Phase 2: Initialize memory files
-  - architect      # Phase 3: Create initial specs
-  - documenter     # Phase 4: Finalize documentation
-validation_gates: 3
-estimated_time: 3-5 hours
-version: 1.0.0
-last_updated: 2025-11-20
+--- title: Project Initiation Workflow
+description: Systematic workflow for setting up 3-layer agentic infrastructure with Skills and Memori
+skill_sequence:
+  - lead-architect       # Phase 1: Assess requirements (ArchitectContext)
+  - skill-creator        # Phase 2: Create Skills infrastructure
+  - backend-service-builder  # Phase 3: Validate setup (ValidationContext)
+chatmode_fallback:
+  - architect            # If skills unavailable
+  - documenter           # For lightweight documentation
+validation_gates: 4
+estimated_time: 2-4 hours
+version: 2.0.0
+last_updated: 2025-11-25
 context_files:
-  - docs/agentic-workflow/AI-NATIVE-IMPLEMEMTATION-AID.md
-  - docs/agentic-workflow/agentic-workflow-strategy.md
+  - docs/agentic-workflow/PROJECT-INITIATION-STRATEGY.md
+  - docs/context-engineering/SESSION_HANDOFF_SKILL_MEMORY_FIXES.md
+  - lib/memori/README.md
 ---
 
 # Project Initiation Workflow
 
 ## Overview
 
-This workflow sets up the complete agentic infrastructure for a new project, including memory files, context files, chatmodes, and initial specifications.
+This workflow sets up the complete **3-layer agentic infrastructure** for a new project:
+
+1. **Layer 1 (Static)**: Memory files, context files, instructions (Git-versioned)
+2. **Layer 2 (Skills)**: Agent specialization with auto-activated Memori
+3. **Layer 3 (Memori)**: Dynamic cross-session memory engine
 
 **Use this workflow when:**
 - Starting a new project from scratch
 - Migrating an existing project to agentic workflow
 - Onboarding a new development team to agentic practices
+- Setting up cross-session memory for AI-assisted development
 
-**Estimated Time**: 3-5 hours (full setup)
+**Estimated Time**: 2-4 hours (full setup)
 
-**Outcome**: Complete agentic infrastructure ready for development
+**Outcome**: Complete 3-layer agentic infrastructure with Skills and Memori integration
+
+### Architecture Overview
+
+```
+┌────────────────────────────────────────────────────────────┐
+│ CLAUDE.md (Entry Point)                                    │
+│   @memory/*.memory.md → Auto-loaded static context         │
+└────────────────────────────────────────────────────────────┘
+                            │
+            ┌───────────────┴───────────────┐
+            │                               │
+            ▼                               ▼
+┌───────────────────────────┐   ┌───────────────────────────┐
+│ SKILLS (Skill tool)       │   │ SUB-AGENTS (Task tool)    │
+│ ✅ Memori enabled         │   │ ❌ Stateless              │
+│ ✅ Cross-session memory   │   │ ✅ Can run in parallel    │
+│                           │   │                           │
+│ lead-architect            │   │ system-architect          │
+│ backend-service-builder   │   │ backend-architect         │
+│ frontend-design           │   │ full-stack-developer      │
+│ skill-creator             │   │ Explore, Plan             │
+└─────────────┬─────────────┘   └─────────────┬─────────────┘
+              │                               │
+              │ Records to Memori             │ Returns report only
+              ▼                               ▼
+┌────────────────────────────────────────────────────────────┐
+│ MEMORI ENGINE (Persistent Memory)                          │
+│   lib/memori/client.py → Core API                          │
+│   PostgreSQL memori schema → Cross-session storage         │
+│                                                            │
+│   Note: Sub-agent results must be manually recorded        │
+└────────────────────────────────────────────────────────────┘
+```
+
+### Agent Primitives Hierarchy
+
+| Primitive | Tool | Memory | Parallel | Use When |
+|-----------|------|--------|----------|----------|
+| **Skills** | `Skill` | ✅ Memori | ❌ No | Cross-session memory needed |
+| **Sub-agents** | `Task` | ❌ None | ✅ Yes | Parallel exploration, stateless tasks |
+| **Chatmodes** | `/chatmode` | ❌ None | ❌ No | Lightweight role switching |
 
 ---
 
@@ -36,18 +84,43 @@ This workflow sets up the complete agentic infrastructure for a new project, inc
 
 Before starting this workflow:
 
+### Essential
 - [ ] Project repository created
 - [ ] Basic project structure exists (if migrating)
 - [ ] Project requirements document available (or PRD)
 - [ ] Key stakeholders identified
 
+### For Memori Integration (Layer 3)
+- [ ] PostgreSQL database available (local or Supabase)
+- [ ] `lib/memori/` directory created (copy from PT-2 reference)
+- [ ] Python 3.10+ installed for Memori SDK
+- [ ] `pgvector` extension enabled in PostgreSQL
+
+### Reference Files (Copy from PT-2)
+```
+lib/memori/
+├── __init__.py
+├── client.py              # Core Memori API
+├── skill_context.py       # Context classes
+├── workflow_state.py      # State tracking
+└── session_hooks.py       # Lifecycle hooks
+
+.claude/hooks/
+├── skill-init-memori.sh   # Auto-activation hook
+├── context-init-session.sh
+└── context-end-session.sh
+```
+
 ---
 
-## Phase 1: Requirements Assessment (Architect Mode)
+## Phase 1: Requirements Assessment (lead-architect Skill)
 
-**Chatmode**: `architect.chatmode.md`
+**Skill**: `lead-architect` (preferred) or `architect.chatmode.md` (fallback)
+**Context Class**: `ArchitectContext` (auto-activated via hook)
 **Tools**: Read, Grep, Glob, WebSearch, sequential-thinking
-**Output**: Project assessment document
+**Output**: Project assessment document with infrastructure plan
+
+> **Note**: Using the `lead-architect` skill automatically activates Memori with `skill_lead_architect` namespace. All architectural decisions are recorded for cross-session continuity.
 
 ### Step 1.1: Gather Project Context
 
@@ -81,9 +154,10 @@ Before starting this workflow:
 
 ### Step 1.2: Identify Agentic Primitives Needed
 
-Based on project assessment, determine:
+Based on project assessment, determine requirements for all 3 layers:
 
-**Memory Files Required:**
+#### Layer 1: Static Context (Memory Files)
+
 ```
 Essential (all projects):
 - memory/project.memory.md           # Project context, tech stack, patterns
@@ -97,22 +171,110 @@ Domain-specific:
 - memory/coding-standards.memory.md        # For multi-team projects
 ```
 
-**Chatmodes Required:**
+#### Layer 2: Skills (Primary Agent Specialization)
+
 ```
-Essential:
-- .github/chatmodes/architect.chatmode.md     # Design decisions
-- .github/chatmodes/reviewer.chatmode.md      # Quality assurance
-- .github/chatmodes/documenter.chatmode.md    # Documentation
+Essential (all projects):
+- .claude/skills/lead-architect/SKILL.md      # Architecture decisions (ArchitectContext)
+- .claude/skills/skill-creator/SKILL.md       # Create new skills
 
 Project-specific:
-- .github/chatmodes/backend-dev.chatmode.md   # Backend work
-- .github/chatmodes/frontend-dev.chatmode.md  # Frontend work
-- .github/chatmodes/service-engineer.chatmode.md  # Service layer
-- .github/chatmodes/devops.chatmode.md        # Infrastructure (optional)
-- .github/chatmodes/security.chatmode.md      # Security review (optional)
+- .claude/skills/backend-service-builder/SKILL.md  # Backend services (ValidationContext)
+- .claude/skills/frontend-design/SKILL.md          # Frontend components (SkillContext)
+
+Each skill requires:
+├── SKILL.md                 # Skill definition with Memori integration
+├── scripts/                 # Validation scripts (optional)
+└── templates/               # Code templates (optional)
 ```
 
-**Workflows Required:**
+**Skill Namespace Registry** (add to `lib/memori/client.py`):
+```python
+CHATMODE_USER_IDS = {
+    # Skill namespaces
+    "skill:lead-architect": "skill_lead_architect",
+    "skill:backend-service-builder": "skill_backend_service_builder",
+    "skill:frontend-design": "skill_frontend_design",
+    "skill:skill-creator": "skill_skill_creator",
+    # Add project-specific skills here
+}
+```
+
+#### Layer 2 (Fallback): Chatmodes (Lightweight Tasks)
+
+```
+For one-off tasks without memory requirement:
+- .github/chatmodes/reviewer.chatmode.md      # Quick code review
+- .github/chatmodes/documenter.chatmode.md    # Quick documentation
+
+Note: Use Skills for tasks requiring cross-session memory.
+      Use Chatmodes for simple, one-off operations.
+```
+
+#### Layer 2 (Parallel): Sub-agents (Stateless Tasks)
+
+```
+Sub-agents are spawned via Task tool for parallel, stateless work.
+They do NOT have Memori integration - results must be manually recorded.
+
+Available sub-agents (built-in):
+- system-architect          # System design, scalability analysis
+- backend-architect         # Backend systems, data integrity
+- full-stack-developer      # End-to-end application development
+- typescript-pro            # TypeScript architecture and refactoring
+- react-pro                 # React component development
+- Explore                   # Fast codebase exploration
+- Plan                      # Planning and exploration
+
+Custom sub-agents (project-specific):
+- .claude/agents/*.md       # Define custom sub-agents here
+
+When to use sub-agents vs skills:
+┌─────────────────────────────────────────────────────────────┐
+│ Need memory persistence?                                    │
+│   YES → Use Skill (lead-architect, backend-service-builder) │
+│   NO  → Use Sub-agent (system-architect, Explore)           │
+│                                                             │
+│ Need parallel execution?                                    │
+│   YES → Use Sub-agent (can spawn multiple)                  │
+│   NO  → Use Skill (sequential but with memory)              │
+│                                                             │
+│ Quick exploration/research?                                 │
+│   YES → Use Explore or Plan sub-agent                       │
+│   NO  → Use appropriate Skill for the domain                │
+└─────────────────────────────────────────────────────────────┘
+
+Bridging pattern (get parallelism + memory):
+  1. Spawn sub-agent for analysis
+  2. Receive results in main conversation
+  3. Record findings to Memori via Skill context class
+```
+
+#### Layer 3: Memori Infrastructure
+
+```
+Essential (copy from PT-2):
+lib/memori/
+├── __init__.py              # Package exports
+├── client.py                # Core API + CHATMODE_USER_IDS
+├── skill_context.py         # SkillContext, ValidationContext, ArchitectContext
+├── workflow_state.py        # Phase tracking
+└── session_hooks.py         # Lifecycle management
+
+.claude/hooks/
+├── skill-init-memori.sh     # PreToolUse hook for auto-activation
+├── context-init-session.sh  # Session start
+└── context-end-session.sh   # Session end
+
+Database schema (memori.*):
+- memories                   # Agent learnings (pgvector)
+- entities                   # Extracted entities
+- relationships              # Entity relationships
+- conversations              # Session tracking
+```
+
+#### Workflows Required
+
 ```
 Essential:
 - .claude/workflows/session-handoff.prompt.md   # Session continuity
@@ -122,10 +284,10 @@ Project-specific:
 - .claude/workflows/create-service.prompt.md    # For service-oriented
 - .claude/workflows/create-adr.prompt.md        # For architecture decisions
 - .claude/workflows/write-migration.prompt.md   # For database projects
-- .claude/workflows/deploy.prompt.md            # For deployment automation
 ```
 
-**Context Files Required:**
+#### Context Files Required
+
 ```
 Essential:
 - context/architecture.context.md    # Architecture patterns
@@ -157,9 +319,9 @@ Project-specific:
 **Service Boundaries**: {If applicable}
 **Key Components**: {List major components}
 
-## Agentic Infrastructure Plan
+## 3-Layer Agentic Infrastructure Plan
 
-### Memory Files to Create (Priority)
+### Layer 1: Static Context (Memory Files)
 1. ✅ project.memory.md (ESSENTIAL)
 2. ✅ anti-patterns.memory.md (ESSENTIAL)
 3. ✅ phase-status.memory.md (ESSENTIAL)
@@ -167,35 +329,43 @@ Project-specific:
 5. [ ] service-catalog.memory.md
 6. [ ] domain-glossary.memory.md
 
-### Chatmodes to Create (Priority)
-1. ✅ architect.chatmode.md (ESSENTIAL)
-2. ✅ documenter.chatmode.md (ESSENTIAL)
-3. ✅ reviewer.chatmode.md (ESSENTIAL)
-4. [ ] backend-dev.chatmode.md
-5. [ ] frontend-dev.chatmode.md
-6. [ ] service-engineer.chatmode.md
+### Layer 2: Skills (Primary Agents)
+1. ✅ lead-architect/SKILL.md (ESSENTIAL) → ArchitectContext
+2. ✅ skill-creator/SKILL.md (ESSENTIAL) → SkillContext
+3. [ ] backend-service-builder/SKILL.md → ValidationContext
+4. [ ] frontend-design/SKILL.md → SkillContext
 
-### Workflows to Create (Priority)
+### Layer 2 (Fallback): Chatmodes
+1. [ ] reviewer.chatmode.md (for quick reviews)
+2. [ ] documenter.chatmode.md (for quick docs)
+
+### Layer 3: Memori Infrastructure
+1. ✅ lib/memori/ directory (ESSENTIAL)
+2. ✅ CHATMODE_USER_IDS with skill namespaces
+3. ✅ .claude/hooks/skill-init-memori.sh (ESSENTIAL)
+4. ✅ PostgreSQL memori schema
+5. [ ] pgvector extension enabled
+
+### Workflows to Create
 1. ✅ session-handoff.prompt.md (ESSENTIAL)
 2. ✅ phase-completion.prompt.md (ESSENTIAL)
 3. [ ] create-service.prompt.md
 4. [ ] create-adr.prompt.md
-5. [ ] write-migration.prompt.md
 
-### Context Files to Create (Priority)
+### Context Files to Create
 1. ✅ architecture.context.md (ESSENTIAL)
 2. ✅ governance.context.md (ESSENTIAL)
 3. [ ] api-security.context.md
 4. [ ] db.context.md
-5. [ ] quality.context.md
 
 ## Estimated Effort
 
-- Phase 2 (Memory initialization): 1-2 hours
-- Phase 3 (Chatmode/workflow creation): 2-3 hours
-- Phase 4 (Context documentation): 1-2 hours
+- Phase 2 (Layer 1 - Memory files): 30-60 min
+- Phase 3 (Layer 2 - Skills setup): 60-90 min
+- Phase 4 (Layer 3 - Memori setup): 30-60 min
+- Phase 5 (Context & finalization): 30-60 min
 
-**Total**: 4-7 hours
+**Total**: 2-4 hours
 ```
 
 ### Step 1.4: VALIDATION GATE 1 - Assessment Review
@@ -209,15 +379,23 @@ Project-specific:
 **Type**: {Type}
 **Tech Stack**: {Stack}
 
-**Agentic Infrastructure Plan**:
+**3-Layer Infrastructure Plan**:
 
-Memory Files: {N} files
+Layer 1 - Memory Files: {N} files
   Essential: 3 (project, anti-patterns, phase-status)
   Optional: {N} additional
 
-Chatmodes: {N} chatmodes
-  Essential: 3 (architect, documenter, reviewer)
-  Optional: {N} additional
+Layer 2 - Skills: {N} skills
+  Essential: 2 (lead-architect, skill-creator)
+  Optional: {N} additional (backend-service-builder, frontend-design)
+
+Layer 2 (Fallback) - Chatmodes: {N} chatmodes
+  Optional: reviewer, documenter
+
+Layer 3 - Memori: Required
+  - lib/memori/ directory
+  - skill-init-memori.sh hook
+  - PostgreSQL memori schema
 
 Workflows: {N} workflows
   Essential: 2 (session-handoff, phase-completion)
@@ -227,24 +405,25 @@ Context Files: {N} files
   Essential: 2 (architecture, governance)
   Optional: {N} additional
 
-**Estimated Effort**: 4-7 hours
+**Estimated Effort**: 2-4 hours
 
 **Next Steps**:
-  - Create memory files (documenter)
-  - Create chatmodes and workflows (architect)
-  - Initialize context documentation (documenter)
+  1. Create memory files (Phase 2)
+  2. Set up Skills with Memori (Phase 3)
+  3. Configure Memori infrastructure (Phase 4)
+  4. Finalize context documentation (Phase 5)
 
 Do you approve this plan? (Reply "approved" to proceed)
 ```
 
 ---
 
-## Phase 2: Memory File Initialization (Documenter Mode)
+## Phase 2: Memory File Initialization (Layer 1)
 
-**Chatmode**: `documenter.chatmode.md`
+**Skill**: Use `skill-creator` or `documenter.chatmode.md` (fallback)
 **Tools**: Read, Write, Edit
 **Input**: Project assessment from Phase 1
-**Output**: Initialized memory files
+**Output**: Initialized memory files (static context)
 
 ### Step 2.1: Create Essential Memory Files
 
@@ -524,89 +703,126 @@ Memory files ready? (Reply "proceed" to continue)
 
 ---
 
-## Phase 3: Chatmodes & Workflows Creation (Architect Mode)
+## Phase 3: Skills Setup (Layer 2)
 
-**Chatmode**: `architect.chatmode.md`
-**Tools**: Read, Write
+**Skill**: `skill-creator` (to create new skills)
+**Tools**: Read, Write, Edit
 **Input**: Project assessment
-**Output**: Chatmode files, workflow files
+**Output**: Skill definitions with Memori integration
 
-### Step 3.1: Create Essential Chatmodes
+### Step 3.1: Create Essential Skills
 
 **Required for all projects:**
 
-1. **architect.chatmode.md** (if doesn't exist)
-   - Copy from reference implementation (PT-2 or template)
-   - Customize tool restrictions
-   - Customize context files
+1. **lead-architect/SKILL.md**
+   - Copy from PT-2 reference: `.claude/skills/lead-architect/`
+   - Context class: `ArchitectContext`
+   - Use for: Architecture decisions, ADRs, system design
 
-2. **documenter.chatmode.md** (if doesn't exist)
-   - Copy from reference implementation
-   - Customize for project structure
+2. **skill-creator/SKILL.md**
+   - Copy from PT-2 reference: `.claude/skills/skill-creator/`
+   - Context class: `SkillContext`
+   - Use for: Creating new project-specific skills
 
-3. **reviewer.chatmode.md** (if doesn't exist)
-   - Copy from reference implementation
-   - Customize review checklist for project standards
-
-### Step 3.2: Create Project-Specific Chatmodes
+### Step 3.2: Create Project-Specific Skills
 
 **Based on project type:**
 
 **Backend-focused projects:**
-- `backend-dev.chatmode.md` or `service-engineer.chatmode.md`
-- Configure for backend directory structure
-- Add database-specific tools
+- `backend-service-builder/SKILL.md`
+  - Context class: `ValidationContext`
+  - Use for: Service implementation with validation
 
 **Frontend-focused projects:**
-- `frontend-dev.chatmode.md`
-- Configure for component directory structure
-- Add UI library tools (shadcn, etc.)
+- `frontend-design/SKILL.md`
+  - Context class: `SkillContext`
+  - Use for: Component design with memory
 
 **Full-stack projects:**
-- Both backend and frontend chatmodes
+- Both backend and frontend skills
 
-### Step 3.3: Create Essential Workflows
+### Step 3.3: Skill SKILL.md Template
+
+Each skill must include Memori integration:
+
+```markdown
+---
+name: {skill-name}
+description: {description}
+namespace: skill:{skill-name}
+context_class: SkillContext | ValidationContext | ArchitectContext
+---
+
+# {Skill Name}
+
+## Memory Activation Model
+
+Memory is **automatically activated** when this skill is invoked via the `Skill` tool.
+
+**How automatic activation works:**
+1. `PreToolUse` hook detects `Skill` tool invocation
+2. `skill-init-memori.sh` extracts skill name and initializes namespace
+3. Memori client is enabled for `skill_{name}` namespace
+4. All subsequent memory operations use the skill namespace
+
+**Manual activation** (if needed outside skill invocation):
+
+\`\`\`python
+from lib.memori import create_memori_client, {ContextClass}
+
+memori = create_memori_client("skill:{skill-name}")
+memori.enable()  # Required for manual initialization
+context = {ContextClass}(memori)
+\`\`\`
+
+## Skill Instructions
+
+{Detailed instructions for the skill...}
+```
+
+### Step 3.4: Register Skill Namespaces
+
+Update `lib/memori/client.py` with new skill namespaces:
+
+```python
+CHATMODE_USER_IDS = {
+    # ... existing entries ...
+
+    # Project-specific skills
+    "skill:{skill-name}": "skill_{skill_name_underscored}",
+}
+```
+
+### Step 3.5: Create Essential Workflows
 
 **Required for all projects:**
 
 1. **session-handoff.prompt.md**
    - Automates session continuity
-   - Updates memory files
+   - Updates memory files + Memori learnings
    - Captures technical notes
 
 2. **phase-completion.prompt.md**
    - Checklist-based signoffs
    - Quality gate verification
-   - Handoff to next phase
+   - Records to ValidationContext
 
-### Step 3.4: Create Project-Specific Workflows
+### Step 3.6: VALIDATION GATE 3 - Skills Review
 
-**Based on project needs:**
-
-**Service-oriented:**
-- `create-service.prompt.md` (4-phase workflow with validation gates)
-
-**Architecture-heavy:**
-- `create-adr.prompt.md` (structured ADR creation)
-
-**Database-driven:**
-- `write-migration.prompt.md` (migration workflow with type regeneration)
-
-**Deployment needs:**
-- `deploy.prompt.md` (deployment workflow with rollback plan)
-
-### Step 3.5: VALIDATION GATE 3 - Infrastructure Review
-
-🛑 **STOP: Present complete infrastructure**
+🛑 **STOP: Present skills infrastructure**
 
 ```
-🛑 VALIDATION GATE 3: Agentic Infrastructure Complete
+🛑 VALIDATION GATE 3: Skills Infrastructure Complete
 
-**Chatmodes Created** ({N} total):
-  ✅ architect.chatmode.md
-  ✅ documenter.chatmode.md
-  ✅ reviewer.chatmode.md
-  [List optional chatmodes]
+**Skills Created** ({N} total):
+  ✅ lead-architect/SKILL.md → ArchitectContext
+  ✅ skill-creator/SKILL.md → SkillContext
+  [List project-specific skills]
+
+**Skill Namespaces Registered**:
+  ✅ skill:lead-architect → skill_lead_architect
+  ✅ skill:skill-creator → skill_skill_creator
+  [List additional namespaces]
 
 **Workflows Created** ({N} total):
   ✅ session-handoff.prompt.md
@@ -614,29 +830,159 @@ Memory files ready? (Reply "proceed" to continue)
   [List optional workflows]
 
 **Directory Structure**:
-  ✅ .github/chatmodes/
+  ✅ .claude/skills/
   ✅ .claude/workflows/
   ✅ .claude/specs/
   ✅ memory/
   ✅ context/ (to be populated)
 
 **Next Steps**:
-  - Initialize context documentation (documenter)
-  - Create initial project specifications (architect)
+  - Set up Memori infrastructure (Phase 4)
+  - Initialize context documentation (Phase 5)
   - Begin Phase 1 development
 
-Infrastructure complete? (Reply "finalize" to proceed)
+Skills infrastructure complete? (Reply "proceed" to continue)
 ```
 
 ---
 
-## Phase 4: Context Documentation & Finalization (Documenter Mode)
+## Phase 4: Memori Infrastructure Setup (Layer 3)
 
-**Chatmode**: `documenter.chatmode.md`
+**Skill**: `backend-service-builder` (for validation) or manual setup
+**Tools**: Read, Write, Edit, Bash
+**Output**: Memori engine configured and tested
+
+### Step 4.1: Copy Memori Library
+
+Copy from PT-2 reference implementation:
+
+```bash
+# Copy core Memori library
+cp -r /path/to/pt-2/lib/memori/ ./lib/memori/
+
+# Copy hooks
+cp /path/to/pt-2/.claude/hooks/skill-init-memori.sh ./.claude/hooks/
+cp /path/to/pt-2/.claude/hooks/context-init-session.sh ./.claude/hooks/
+cp /path/to/pt-2/.claude/hooks/context-end-session.sh ./.claude/hooks/
+```
+
+### Step 4.2: Configure Database Schema
+
+Create the Memori schema in PostgreSQL:
+
+```sql
+-- Enable pgvector extension
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Create memori schema
+CREATE SCHEMA IF NOT EXISTS memori;
+
+-- Create tables
+CREATE TABLE memori.memories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    content TEXT NOT NULL,
+    category TEXT DEFAULT 'context',
+    metadata JSONB DEFAULT '{}',
+    importance FLOAT DEFAULT 0.5,
+    embedding vector(1536),
+    content_tsv tsvector,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE memori.conversations (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id TEXT NOT NULL,
+    started_at TIMESTAMPTZ DEFAULT NOW(),
+    ended_at TIMESTAMPTZ,
+    metadata JSONB DEFAULT '{}'
+);
+
+-- Create indexes
+CREATE INDEX idx_memories_user_id ON memori.memories(user_id);
+CREATE INDEX idx_memories_category ON memori.memories(category);
+CREATE INDEX idx_memories_content_tsv ON memori.memories USING GIN(content_tsv);
+CREATE INDEX idx_memories_embedding ON memori.memories USING ivfflat(embedding vector_cosine_ops);
+```
+
+### Step 4.3: Configure PreToolUse Hook
+
+Update `.claude/settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill",
+        "hooks": [{ "command": ".claude/hooks/skill-init-memori.sh" }]
+      }
+    ]
+  }
+}
+```
+
+### Step 4.4: Test Memori Integration
+
+```python
+# test_memori_setup.py
+from lib.memori import create_memori_client, SkillContext
+
+# Test client creation
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Test recording
+context = SkillContext(memori)
+result = context.record_skill_execution(
+    skill_name="lead-architect",
+    task="Test setup",
+    outcome="success"
+)
+
+print(f"Memori setup: {'✅ SUCCESS' if result else '❌ FAILED'}")
+```
+
+### Step 4.5: VALIDATION GATE 4 - Memori Review
+
+🛑 **STOP: Verify Memori infrastructure**
+
+```
+🛑 VALIDATION GATE 4: Memori Infrastructure Complete
+
+**Memori Library**:
+  ✅ lib/memori/__init__.py
+  ✅ lib/memori/client.py
+  ✅ lib/memori/skill_context.py
+  ✅ lib/memori/workflow_state.py
+
+**Hooks Configured**:
+  ✅ .claude/hooks/skill-init-memori.sh
+  ✅ .claude/settings.local.json updated
+
+**Database Schema**:
+  ✅ memori schema created
+  ✅ pgvector extension enabled
+  ✅ Tables: memories, conversations
+
+**Integration Test**:
+  ✅ Client creation works
+  ✅ Memory recording works
+  ✅ Skill namespace isolation verified
+
+Memori ready? (Reply "finalize" to proceed to context documentation)
+```
+
+---
+
+## Phase 5: Context Documentation & Finalization (Layer 1 Completion)
+
+**Chatmode**: `documenter.chatmode.md` (lightweight, no memory needed)
 **Tools**: Read, Write, Edit
 **Output**: Context files, .claude/CLAUDE.md updated
 
-### Step 4.1: Create Essential Context Files
+### Step 5.1: Create Essential Context Files
 
 #### File: context/architecture.context.md
 
@@ -734,7 +1080,7 @@ Infrastructure complete? (Reply "finalize" to proceed)
 - Standards: `docs/standards/`
 ```
 
-### Step 4.2: Create Optional Context Files (Based on Plan)
+### Step 5.2: Create Optional Context Files (Based on Plan)
 
 **If API-focused:**
 
@@ -812,7 +1158,7 @@ Create `context/state-management.context.md`:
 - State management docs: `docs/frontend/state-management.md`
 ```
 
-### Step 4.3: Update .claude/CLAUDE.md
+### Step 5.3: Update .claude/CLAUDE.md
 
 **Add auto-load configuration:**
 
@@ -854,7 +1200,7 @@ Create `context/state-management.context.md`:
 - ❌ {Anti-pattern 3}
 ```
 
-### Step 4.4: Create Developer Onboarding Guide
+### Step 5.4: Create Developer Onboarding Guide
 
 Create `docs/ONBOARDING.md`:
 
@@ -949,24 +1295,33 @@ Systematic workflows with validation gates:
 - Testing: `docs/testing/`
 ```
 
-### Step 4.5: Final Summary
+### Step 5.5: Final Summary
 
 ```
 ✅ PROJECT INITIATION COMPLETE
 
-**Agentic Infrastructure Created**:
+**3-Layer Agentic Infrastructure Created**:
 
-Memory Files: {N} files
+Layer 1 - Memory Files: {N} files
   - project.memory.md
   - anti-patterns.memory.md
   - phase-status.memory.md
   [List additional files]
 
-Chatmodes: {N} chatmodes
-  - architect.chatmode.md
-  - documenter.chatmode.md
-  - reviewer.chatmode.md
-  [List additional chatmodes]
+Layer 2 - Skills: {N} skills
+  - lead-architect/SKILL.md → ArchitectContext
+  - skill-creator/SKILL.md → SkillContext
+  [List project-specific skills]
+
+Layer 2 (Fallback) - Chatmodes: {N} chatmodes
+  - reviewer.chatmode.md (optional)
+  - documenter.chatmode.md (optional)
+
+Layer 3 - Memori Infrastructure:
+  ✅ lib/memori/ directory
+  ✅ skill-init-memori.sh hook
+  ✅ PostgreSQL memori schema
+  ✅ Skill namespaces registered
 
 Workflows: {N} workflows
   - session-handoff.prompt.md
@@ -982,17 +1337,18 @@ Documentation:
   ✅ .claude/CLAUDE.md updated
   ✅ docs/ONBOARDING.md created
   ✅ .claude/specs/ directory created
+  ✅ .claude/skills/ directory created
 
 **Total Setup Time**: {X} hours
 
 **Next Steps**:
   1. Review all created files
-  2. Customize templates for project needs
-  3. Create initial project specifications (architect)
+  2. Test Memori integration with test script
+  3. Create initial project specifications (lead-architect skill)
   4. Begin Phase 1 development
   5. Use session-handoff workflow for session continuity
 
-**Agentic Workflow Status**: ✅ READY FOR DEVELOPMENT
+**Agentic Workflow Status**: ✅ READY FOR DEVELOPMENT (3-LAYER)
 ```
 
 ---
@@ -1001,23 +1357,39 @@ Documentation:
 
 Before marking project initiation complete:
 
-### Memory Infrastructure
+### Layer 1: Memory Infrastructure
 - [ ] Essential memory files created (3 minimum)
 - [ ] Optional memory files created (based on project)
 - [ ] Memory files properly formatted
 - [ ] Cross-references to detailed docs included
+- [ ] Auto-load via CLAUDE.md @ syntax
 
-### Chatmode Infrastructure
-- [ ] Essential chatmodes created (3 minimum)
-- [ ] Project-specific chatmodes created
+### Layer 2: Skills Infrastructure
+- [ ] Essential skills created (lead-architect, skill-creator)
+- [ ] Project-specific skills created (if needed)
+- [ ] Each SKILL.md has Memori integration section
+- [ ] Skill namespaces registered in client.py CHATMODE_USER_IDS
+- [ ] Context classes specified (SkillContext, ValidationContext, ArchitectContext)
+
+### Layer 2 (Fallback): Chatmodes
+- [ ] reviewer.chatmode.md created (optional)
+- [ ] documenter.chatmode.md created (optional)
 - [ ] Tool restrictions configured
 - [ ] Context files properly referenced
+
+### Layer 3: Memori Infrastructure
+- [ ] lib/memori/ directory copied from PT-2
+- [ ] skill-init-memori.sh hook configured
+- [ ] .claude/settings.local.json updated with PreToolUse hook
+- [ ] PostgreSQL memori schema created
+- [ ] pgvector extension enabled
+- [ ] Integration test passes
 
 ### Workflow Infrastructure
 - [ ] Essential workflows created (2 minimum)
 - [ ] Project-specific workflows created
-- [ ] Validation gates defined
-- [ ] Chatmode sequences specified
+- [ ] Validation gates defined (4 gates total)
+- [ ] Skill sequences specified
 
 ### Context Documentation
 - [ ] Essential context files created (2 minimum)
@@ -1028,6 +1400,7 @@ Before marking project initiation complete:
 ### Configuration
 - [ ] .claude/CLAUDE.md updated with auto-load
 - [ ] .claude/specs/ directory created
+- [ ] .claude/skills/ directory created
 - [ ] docs/ONBOARDING.md created
 - [ ] Developer guide comprehensive
 
@@ -1036,6 +1409,7 @@ Before marking project initiation complete:
 - [ ] Consistent formatting throughout
 - [ ] No broken links
 - [ ] Clear cross-references
+- [ ] Memori integration tested
 
 ---
 
@@ -1105,10 +1479,12 @@ Before marking project initiation complete:
 
 | Version | Date       | Changes                        |
 | ------- | ---------- | ------------------------------ |
+| 2.0.0   | 2025-11-25 | 3-layer architecture, Skills as primary agents, Memori integration, 4 validation gates |
 | 1.0.0   | 2025-11-20 | Initial project initiation workflow |
 
 ---
 
-**Workflow Status**: Production Ready
-**Last Updated**: 2025-11-20
+**Workflow Status**: Production Ready (3-Layer Architecture)
+**Last Updated**: 2025-11-25
 **Maintained By**: Agentic Workflow Framework
+**Reference Strategy**: docs/agentic-workflow/PROJECT-INITIATION-STRATEGY.md
