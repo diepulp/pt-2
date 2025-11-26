@@ -9,20 +9,33 @@ Flags inconsistencies between governance documents and actual implementations:
 - Migration naming convention adherence
 
 This helps surface documentation drift and conflicting guidance.
+
+Enhanced with Memori integration for historical regression tracking.
 """
 
 import os
 import re
 import sys
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
+
+# Add lib/memori to path
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "lib"))
+
+try:
+    from memori import create_memori_client, BackendServiceContext
+    MEMORI_AVAILABLE = True
+except ImportError:
+    MEMORI_AVAILABLE = False
+    print("⚠️  Memori SDK not available - running without historical context")
 
 # Color codes
 GREEN = '\033[92m'
 RED = '\033[91m'
 YELLOW = '\033[93m'
 CYAN = '\033[96m'
+BLUE = '\033[94m'
 RESET = '\033[0m'
 
 @dataclass
@@ -38,11 +51,26 @@ class DocConsistencyChecker:
         self.project_root = Path(project_root)
         self.inconsistencies: List[Inconsistency] = []
 
+        # Memori integration with Self-Improving Intelligence
+        self.memori = None
+        self.context: Optional[BackendServiceContext] = None
+        if MEMORI_AVAILABLE:
+            try:
+                self.memori = create_memori_client("skill:backend-service-builder")
+                self.memori.enable()
+                self.context = BackendServiceContext(self.memori)
+            except Exception as e:
+                print(f"⚠️  Could not initialize Memori: {e}")
+
     def check_all(self):
         """Run all documentation consistency checks."""
         print(f"\n{'='*70}")
         print(f"{CYAN}PT-2 Documentation Consistency Checker{RESET}")
         print(f"{'='*70}\n")
+
+        # Query past regressions BEFORE checking (Memori integration)
+        if self.context:
+            self._query_past_regressions()
 
         self.check_service_template_alignment()
         self.check_srm_ownership_claims()
@@ -50,7 +78,142 @@ class DocConsistencyChecker:
         self.check_dto_standard_compliance()
         self.check_readme_completeness()
 
+        # Record findings to Memori
+        if self.context:
+            self._record_findings()
+
         self.print_results()
+
+        # Record validation session outcome
+        if self.context:
+            self._record_validation_session()
+
+        # Auto-propose primitive updates for recurring issues (Self-Improving Intelligence)
+        if self.context:
+            self._propose_primitive_updates_for_recurring_issues()
+
+    def _query_past_regressions(self):
+        """Query Memori for past documentation regressions."""
+        if not self.context:
+            return
+
+        past_regressions = self.context.query_past_violations(
+            pattern_violated="documentation",
+            limit=10
+        )
+
+        if past_regressions:
+            print(f"{BLUE}📚 Historical Context:{RESET}")
+            print(f"   Found {len(past_regressions)} past documentation issues\n")
+
+            # Group by category
+            categories = {}
+            for r in past_regressions:
+                metadata = r.get("metadata", {})
+                category = metadata.get("finding_type", "Unknown")
+                if category not in categories:
+                    categories[category] = 0
+                categories[category] += 1
+
+            for category, count in list(categories.items())[:3]:
+                print(f"   - {category}: {count} occurrences")
+
+            print()
+
+    def _record_findings(self):
+        """Record all inconsistencies to Memori."""
+        if not self.context:
+            return
+
+        for inc in self.inconsistencies:
+            self.context.record_validation_finding(
+                service_name="documentation",
+                finding_type=inc.severity,
+                pattern_violated=inc.category,
+                description=inc.message,
+                file_location=inc.location,
+                severity="high" if inc.severity == "error" else "medium",
+                resolved=False
+            )
+
+    def _record_validation_session(self):
+        """Record validation session outcome."""
+        if not self.context:
+            return
+
+        errors = sum(1 for i in self.inconsistencies if i.severity == 'error')
+        warnings = sum(1 for i in self.inconsistencies if i.severity == 'warning')
+
+        self.context.record_validation_session(
+            service_name="documentation",
+            validation_type="doc_consistency",
+            errors_found=errors,
+            warnings_found=warnings,
+            all_checks_passed=(errors == 0)
+        )
+
+    def _propose_primitive_updates_for_recurring_issues(self):
+        """
+        Auto-propose primitive updates when issues recur frequently.
+
+        This is part of the Self-Improving Intelligence system - it detects
+        recurring documentation issues and proposes updates to the primitives.
+        """
+        if not self.context:
+            return
+
+        try:
+            # Group current issues by category
+            issue_counts = {}
+            for inc in self.inconsistencies:
+                if inc.severity == 'error':
+                    key = (inc.category, inc.doc_reference)
+                    if key not in issue_counts:
+                        issue_counts[key] = []
+                    issue_counts[key].append(inc)
+
+            # Check if any category has 3+ issues (threshold for proposal)
+            for (category, doc_ref), issues in issue_counts.items():
+                if len(issues) >= 3:
+                    # Build proposal
+                    locations = [i.location for i in issues[:5]]  # Cap at 5 examples
+                    proposal_text = f"Multiple {category} issues detected across {len(issues)} locations. "
+
+                    if category == "SRM_OWNERSHIP":
+                        proposal_text += "Consider updating SRM to reflect actual table ownership patterns."
+                        update_type = "modify_pattern_rule"
+                        primitive_file = "references/bounded-contexts.md"
+                    elif category == "MIGRATION_NAMING":
+                        proposal_text += "Migration naming conventions may need clarification or tooling enforcement."
+                        update_type = "update_migration_pattern"
+                        primitive_file = "references/migration-workflow.md"
+                    elif category == "DTO_STANDARD":
+                        proposal_text += "DTO standards may need revision for Pattern B services."
+                        update_type = "add_dto_standard"
+                        primitive_file = "references/dto-standards.md"
+                    else:
+                        proposal_text += "Consider reviewing and updating documentation."
+                        update_type = "modify_pattern_rule"
+                        primitive_file = f"references/{doc_ref.lower().replace(' ', '-')}"
+
+                    # Propose the update
+                    proposal_id = self.context.propose_primitive_update(
+                        primitive_file=primitive_file,
+                        update_type=update_type,
+                        proposal=proposal_text,
+                        evidence=[],  # Would need memory IDs from recording
+                        impact_assessment=f"Affects {len(issues)} locations: {', '.join(locations[:3])}"
+                    )
+
+                    if proposal_id:
+                        print(f"\n{CYAN}📋 Auto-Proposed Primitive Update:{RESET}")
+                        print(f"  ID: {proposal_id}")
+                        print(f"  File: {primitive_file}")
+                        print(f"  Proposal: {proposal_text[:100]}...")
+                        print(f"  Review with: context.get_pending_primitive_updates()")
+
+        except Exception as e:
+            print(f"⚠️  Could not propose primitive updates: {e}")
 
     def check_service_template_alignment(self):
         """Check if services match SERVICE_TEMPLATE patterns."""

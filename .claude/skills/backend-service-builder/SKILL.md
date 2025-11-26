@@ -70,20 +70,183 @@ Process:
 
 ---
 
-## Memory Recording Protocol 🧠
+## Self-Improving Intelligence 🧠
 
-This skill automatically tracks execution outcomes to build pattern knowledge and improve over time.
+This skill includes **adaptive learning mechanisms** that update primitives based on execution outcomes. The system continuously improves by:
+
+1. **Tracking pattern effectiveness** - Monitors success rates per pattern over time
+2. **Proposing primitive updates** - Suggests changes to reference docs based on learnings
+3. **Providing adaptive recommendations** - Weights suggestions by historical success
+4. **Detecting regressions** - Alerts when patterns start failing more frequently
+5. **Integrating user feedback** - Learns from corrections and overrides
+
+### Using BackendServiceContext
+
+The `BackendServiceContext` class provides all self-improving capabilities:
+
+```python
+from lib.memori import create_memori_client, BackendServiceContext
+
+# Initialize with self-improving context
+memori = create_memori_client("skill:backend-service-builder")
+memori.enable()
+context = BackendServiceContext(memori)
+```
+
+### Pattern Effectiveness Tracking
+
+Query how well patterns have performed historically:
+
+```python
+# Get stats for a specific pattern
+stats = context.calculate_pattern_effectiveness("Pattern A", days=90)
+
+if stats:
+    print(f"Pattern A Statistics:")
+    print(f"  Success Rate: {stats.success_rate:.0%}")
+    print(f"  Total Executions: {stats.total_executions}")
+    print(f"  Trend: {stats.trend}")  # improving, stable, declining
+    print(f"  Common Issues: {stats.common_issues[:3]}")
+
+# Get stats for all patterns
+all_stats = context.get_all_pattern_stats()
+for pattern, s in all_stats.items():
+    print(f"{pattern}: {s.success_rate:.0%} ({s.trend})")
+```
+
+### Adaptive Recommendations
+
+Get pattern recommendations weighted by historical success:
+
+```python
+# Before selecting a pattern, query the adaptive recommender
+recommendation = context.get_adaptive_recommendation(
+    task_type="create_service",
+    domain="loyalty",
+    complexity="high"
+)
+
+print(f"Recommended: {recommendation['pattern']}")
+print(f"Confidence: {recommendation['confidence']:.0%}")
+print(f"Rationale: {recommendation['rationale']}")
+
+# Check alternatives
+if recommendation['alternative']:
+    print(f"Alternative: {recommendation['alternative']} ({recommendation['alt_confidence']:.0%})")
+```
+
+### Primitive Evolution Engine
+
+Propose updates to reference docs based on learnings:
+
+```python
+# When SRM ownership violations keep occurring for a table
+context.propose_primitive_update(
+    primitive_file="references/bounded-contexts.md",
+    update_type="add_table_ownership",
+    proposal="Add 'rating_slip_history' to rating-slip service ownership",
+    evidence=["mem_abc123", "mem_def456", "mem_ghi789"],
+    impact_assessment="Resolves recurring cross-context violations in loyalty service"
+)
+
+# Get pending proposals for review
+proposals = context.get_pending_primitive_updates()
+print(f"📋 {len(proposals)} primitive update proposals pending review:")
+
+for p in proposals:
+    print(f"\n[{p.id}] {p.primitive_file}")
+    print(f"  Type: {p.update_type}")
+    print(f"  Proposal: {p.proposal}")
+    print(f"  Confidence: {p.confidence:.0%}")
+    print(f"  Evidence: {len(p.evidence_ids)} supporting memories")
+
+# After user review, update status
+context.update_proposal_status(
+    proposal_id="prop_abc123",
+    status="approved",  # or "rejected", "applied"
+    reviewer_notes="Applied to bounded-contexts.md in commit abc123"
+)
+```
+
+### Regression Detection
+
+Detect when patterns start performing worse:
+
+```python
+# Check for pattern regressions
+regressions = context.detect_pattern_regressions()
+
+if regressions:
+    print("⚠️ Pattern Regressions Detected:")
+    for r in regressions:
+        print(f"  {r.pattern}: {r.baseline_success_rate:.0%} → {r.current_success_rate:.0%}")
+        print(f"    Decline: {r.decline_percentage:.1f}%")
+        print(f"    Suspected cause: {r.suspected_cause}")
+
+# Check for emerging anti-patterns
+anti_patterns = context.detect_anti_pattern_emergence(days=30)
+
+if anti_patterns:
+    print("🔍 Emerging Anti-Patterns:")
+    for ap in anti_patterns:
+        print(f"  {ap['anti_pattern']}: {ap['occurrence_count']} occurrences")
+        print(f"    {ap['recommendation']}")
+```
+
+### User Feedback Integration
+
+Record user corrections to improve future recommendations:
+
+```python
+# When user overrides a recommendation
+context.record_user_correction(
+    original_recommendation="Pattern B",
+    user_choice="Pattern A",
+    context={"domain": "finance", "complexity": "high"},
+    reason="Business rules more complex than initially apparent"
+)
+
+# Record feedback on execution outcomes
+context.record_execution_outcome_feedback(
+    execution_id="exec_abc123",
+    user_satisfaction="approved",  # or "needs_revision", "rejected"
+    feedback="Service works well, good pattern choice"
+)
+```
+
+### Learning Report
+
+Generate a summary of all learning data:
+
+```python
+# Get structured summary
+summary = context.get_learning_summary()
+print(f"Most Reliable Pattern: {summary['recommendations']['most_reliable_pattern']}")
+print(f"Pending Proposals: {summary['pending_proposals']}")
+print(f"Regressions: {summary['regressions']}")
+
+# Get formatted markdown report
+report = context.format_learning_report()
+print(report)
+```
+
+---
+
+## Memory Recording Protocol
+
+This skill automatically tracks execution outcomes to build pattern knowledge.
 
 ### Skill Execution Tracking
 
 Record complete execution outcomes after service creation:
 
 ```python
-from lib.memori import create_memori_client, SkillContext
+from lib.memori import create_memori_client, BackendServiceContext
 
 # Initialize Memori for this skill
 memori = create_memori_client("skill:backend-service-builder")
-context = SkillContext(memori)
+memori.enable()
+context = BackendServiceContext(memori)
 
 # Record skill execution outcome
 context.record_skill_execution(
@@ -117,52 +280,105 @@ context.record_skill_execution(
 
 ### Query Past Patterns Before Starting
 
-Before implementing a service, check what worked before:
+Before implementing a service, use the adaptive recommender:
 
 ```python
-# Search for similar past service creations
-past_executions = memori.search_learnings(
-    query="create service for loyalty domain",
-    namespace="skill:backend-service-builder",
-    tags=["service-creation", "loyalty"],
+# Get data-driven recommendation BEFORE starting
+recommendation = context.get_adaptive_recommendation(
+    task_type="create_service",
+    domain="loyalty",
+    complexity="high"
+)
+
+print(f"📊 Adaptive Recommendation:")
+print(f"  Pattern: {recommendation['pattern']}")
+print(f"  Confidence: {recommendation['confidence']:.0%}")
+print(f"  Rationale: {recommendation['rationale']}")
+
+# View detailed stats if needed
+stats = recommendation.get('stats', {})
+for pattern, s in stats.items():
+    print(f"  {pattern}: {s['success_rate']:.0%} success ({s['trend']})")
+```
+
+### Advanced: Async Retrieval with Composite Scoring
+
+For high-performance memory retrieval, use the `MemoryRetriever` with PostgreSQL full-text search:
+
+```python
+from lib.memori import MemoryRetriever, RetrievalConfig, create_memory_retriever
+
+# Create retriever with custom scoring weights
+config = RetrievalConfig(
+    relevance_weight=0.4,   # Full-text match quality
+    recency_weight=0.3,     # Newer memories score higher
+    importance_weight=0.3,  # Metadata importance field
+    recency_decay_days=30,  # Days until recency score reaches 0
+)
+
+# Initialize async retriever
+retriever = await create_memory_retriever(config=config)
+
+# Search with composite scoring
+memories = await retriever.retrieve(
+    namespace="skill_backend_service_builder",
+    query="Pattern A service creation loyalty",
+    category="skills",
+    limit=10,
+    track_usage=True  # Auto-increments use_count
+)
+
+# Access scored results
+for mem in memories:
+    print(f"Content: {mem.content}")
+    print(f"Final Score: {mem.final_score:.3f}")
+    print(f"  - Relevance: {mem.text_relevance:.3f}")
+    print(f"  - Recency: {mem.recency_score:.3f}")
+    print(f"  - Importance: {mem.importance_score:.3f}")
+```
+
+### High-Importance Context Injection
+
+Inject critical memories at session start regardless of query match:
+
+```python
+# Get high-importance memories for skill context
+critical_memories = await retriever.retrieve_high_importance(
+    namespace="skill_backend_service_builder",
+    category="rules",
     limit=5
 )
 
-if past_executions:
-    print(f"\n📚 Learning from {len(past_executions)} past executions:\n")
-    for execution in past_executions:
-        print(f"  Task: {execution['task']}")
-        print(f"  Pattern Used: {execution['pattern_used']}")
-        print(f"  Outcome: {execution['outcome']}")
-        print(f"  Issues: {execution['issues_encountered']}")
-        print()
-
-    # Analyze patterns
-    successful = [e for e in past_executions if e['outcome'] == 'success']
-    if successful:
-        # Recommend most successful pattern
-        patterns = [e['pattern_used'] for e in successful]
-        recommended = max(set(patterns), key=patterns.count)
-        print(f"💡 Recommendation: Use {recommended} (highest success rate)\n")
+for mem in critical_memories:
+    print(f"⚠️ Critical Rule: {mem.content}")
 ```
 
 ### Validation Script Integration
 
-The validation scripts (`validate_service_structure.py`, `check_doc_consistency.py`) automatically record findings to Memori:
+Both validation scripts have full Memori integration:
 
-- **Anti-pattern detections** (ReturnType inference, class-based services, etc.)
-- **Validation failures** with historical context
-- **Fix suggestions** based on past resolutions
+**`validate_service_structure.py`** - Records:
+- Anti-pattern detections (ReturnType inference, class-based services, etc.)
+- Validation failures with historical context
+- Fix suggestions based on past resolutions
+
+**`check_doc_consistency.py`** - Records:
+- Documentation regressions and drift
+- SRM ownership mismatches
+- Migration naming violations
+- README incompleteness
 
 When running validation, scripts will:
-1. Query past violations for context
+1. Query past violations for context (shows historical patterns)
 2. Run validation checks
-3. Record findings to Memori
+3. Record findings to Memori (builds knowledge base)
 4. Suggest fixes based on historical resolutions
 
 **Example Output**:
 ```
-⚠️  Historical Context: 12 past validation issues found
+📚 Historical Context: 12 past validation issues found
+   - error: 5 occurrences
+   - warning: 7 occurrences
 
 Running validation checks...
 ❌ services/loyalty/loyalty.ts: ReturnType inference detected
@@ -172,6 +388,33 @@ Running validation checks...
    - Replace ReturnType<typeof createLoyaltyService> with explicit interface
    - Define LoyaltyService interface with all method signatures
 ```
+
+### Memory Generation Pipeline (Advanced)
+
+For automated memory extraction from session events, use the ETL pipeline:
+
+```python
+from lib.memori import MemoryGenerationPipeline, run_pipeline_for_session
+
+# Process a completed session for memory extraction
+results = await run_pipeline_for_session(
+    session_id="session-uuid",
+    db_url="postgresql://postgres:postgres@127.0.0.1:54322/postgres",
+    namespace="skill_backend_service_builder"
+)
+
+# Review consolidation results
+for result in results:
+    print(f"Action: {result.action}")  # created, updated, skipped, invalidated
+    print(f"Reason: {result.reason}")
+    if result.memory_id:
+        print(f"Memory ID: {result.memory_id}")
+```
+
+The pipeline extracts memories using:
+- **Pattern matching**: Detects decisions, anti-patterns, architecture choices
+- **Memory consolidation**: Merges similar memories, increases confidence for corroboration
+- **Lineage tracking**: Maintains provenance back to source events
 
 ### When to Record Manually
 
@@ -191,20 +434,23 @@ Query skill effectiveness:
 # Service pattern success rates
 pattern_a_executions = memori.search_learnings(
     query="Pattern A service creation",
-    namespace="skill:backend-service-builder",
     tags=["Pattern-A"],
+    category="skills",
     limit=50
 )
 
-success_count = sum(1 for e in pattern_a_executions if e['outcome'] == 'success')
-success_rate = (success_count / len(pattern_a_executions)) * 100
+success_count = sum(
+    1 for e in pattern_a_executions
+    if e.get('metadata', {}).get('outcome') == 'success'
+)
+success_rate = (success_count / len(pattern_a_executions)) * 100 if pattern_a_executions else 0
 
-print(f"Pattern A success rate: {success_rate}%")
+print(f"Pattern A success rate: {success_rate:.1f}%")
 print(f"Total executions: {len(pattern_a_executions)}")
 
 # Common validation violations
 violations = memori.search_learnings(
-    namespace="skill:backend-service-builder",
+    query="validation error",
     tags=["validation", "error"],
     limit=200
 )
@@ -212,7 +458,7 @@ violations = memori.search_learnings(
 # Analyze trends
 violation_counts = {}
 for v in violations:
-    pattern = v.get('pattern_violated', 'Unknown')
+    pattern = v.get('metadata', {}).get('pattern_violated', 'Unknown')
     violation_counts[pattern] = violation_counts.get(pattern, 0) + 1
 
 print("\nTop violations:")
@@ -221,6 +467,21 @@ for pattern, count in sorted(violation_counts.items(), key=lambda x: x[1], rever
 ```
 
 **Note**: Validation scripts automatically record findings. Manual recording needed only for execution outcomes and lessons learned.
+
+### Namespace Reference
+
+The skill uses the namespace `skill_backend_service_builder` in the database. This maps from:
+- Client initialization: `create_memori_client("skill:backend-service-builder")`
+- Database user_id: `skill_backend_service_builder`
+
+Related namespaces:
+| Client Key | Database user_id |
+|------------|------------------|
+| `skill:backend-service-builder` | `skill_backend_service_builder` |
+| `skill:frontend-design` | `skill_frontend_design` |
+| `skill:lead-architect` | `skill_lead_architect` |
+| `architect` | `pt2_architect` |
+| `main` | `pt2_agent` |
 
 ---
 
@@ -665,6 +926,119 @@ Option 3: Document as planned future enhancement (mark PLANNED in template)
 ```
 
 This surfaces documentation drift proactively instead of silently following outdated patterns.
+
+---
+
+### Step 9: Learning Review (Self-Improving Intelligence)
+
+**This step leverages the adaptive learning system to improve future executions.**
+
+**9a. Record Execution Outcome**
+
+After completing service implementation, record the outcome:
+
+```python
+from lib.memori import create_memori_client, BackendServiceContext
+
+memori = create_memori_client("skill:backend-service-builder")
+memori.enable()
+context = BackendServiceContext(memori)
+
+# Record the execution
+context.record_skill_execution(
+    skill_name="backend-service-builder",
+    task="Create LoyaltyService",
+    outcome="success",
+    pattern_used="Pattern A (Contract-First)",
+    validation_results={
+        "structure_valid": True,
+        "doc_consistency": True,
+        "cross_context_violations": 0
+    },
+    files_created=["services/loyalty/keys.ts", "services/loyalty/loyalty.ts"],
+    issues_encountered=["Initially violated bounded context (fixed)"],
+    lessons_learned=["Loyalty domain requires Pattern A due to business logic complexity"]
+)
+```
+
+**9b. Check for Regressions**
+
+After validation, check if patterns are regressing:
+
+```python
+regressions = context.detect_pattern_regressions()
+
+if regressions:
+    print("⚠️ Pattern Regressions Detected:")
+    for r in regressions:
+        print(f"  {r.pattern}: {r.baseline_success_rate:.0%} → {r.current_success_rate:.0%}")
+        print(f"    Suspected cause: {r.suspected_cause}")
+```
+
+**9c. Propose Primitive Updates (If Needed)**
+
+If you encountered recurring issues, propose updates to reference docs:
+
+```python
+# When a pattern consistently causes issues
+if recurring_srm_violations:
+    context.propose_primitive_update(
+        primitive_file="references/bounded-contexts.md",
+        update_type="add_table_ownership",
+        proposal="Add 'rating_slip_history' to rating-slip service",
+        evidence=[memory_id_1, memory_id_2],
+        impact_assessment="Prevents recurring cross-context violations"
+    )
+```
+
+**9d. Review Pending Proposals**
+
+Periodically review primitive update proposals:
+
+```python
+proposals = context.get_pending_primitive_updates()
+
+for p in proposals:
+    print(f"[{p.id}] {p.primitive_file}: {p.proposal}")
+    print(f"  Confidence: {p.confidence:.0%}")
+    print(f"  Evidence: {len(p.evidence_ids)} supporting memories")
+
+# After review, update status
+context.update_proposal_status("prop_abc123", "approved", "Applied in commit xyz")
+```
+
+**9e. Generate Learning Report**
+
+Generate a summary report of skill effectiveness:
+
+```python
+report = context.format_learning_report()
+print(report)
+```
+
+**Example Output**:
+```
+# Backend Service Builder - Learning Report
+
+**Generated:** 2025-11-26 14:30
+
+## Pattern Effectiveness
+
+- **Pattern A**: 87% success (23 executions) 📈
+- **Pattern B**: 92% success (45 executions) ➡️
+- **Pattern C**: 78% success (12 executions) 📉
+
+## ⚠️ Regressions Detected
+
+- Pattern C: declined 15.2%
+
+## 📋 Pending Primitive Updates: 2
+
+## Recommendations
+
+- **Most Reliable Pattern:** Pattern B
+- **Needs Attention:** Pattern C
+```
 
 ---
 

@@ -13,6 +13,7 @@ from .client import create_memori_client, MemoriClient
 from .workflow_state import WorkflowStateManager
 from .chatmode_context import ChatmodeContext
 from .skill_context import SkillContext, ValidationContext, ArchitectContext
+from .backend_service_context import BackendServiceContext, PatternStats, PrimitiveProposal, RegressionAlert
 from .retrieval import (
     MemoryRetriever,
     RetrievalConfig,
@@ -34,6 +35,11 @@ __all__ = [
     "SkillContext",
     "ValidationContext",
     "ArchitectContext",
+    # Self-Improving Intelligence
+    "BackendServiceContext",
+    "PatternStats",
+    "PrimitiveProposal",
+    "RegressionAlert",
     # Context Management - Retrieval
     "MemoryRetriever",
     "RetrievalConfig",

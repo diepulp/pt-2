@@ -22,7 +22,7 @@ from typing import List, Dict, Tuple, Optional
 sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "lib"))
 
 try:
-    from memori import create_memori_client, ValidationContext
+    from memori import create_memori_client, BackendServiceContext
     MEMORI_AVAILABLE = True
 except ImportError:
     MEMORI_AVAILABLE = False
@@ -43,13 +43,14 @@ class ServiceValidator:
         self.warnings: List[str] = []
         self.info: List[str] = []
 
-        # Memori integration
+        # Memori integration with Self-Improving Intelligence
         self.memori = None
         self.context = None
         if MEMORI_AVAILABLE:
             try:
                 self.memori = create_memori_client("skill:backend-service-builder")
-                self.context = ValidationContext(self.memori)
+                self.memori.enable()  # Required to activate memory recording
+                self.context = BackendServiceContext(self.memori)
             except Exception as e:
                 print(f"⚠️  Could not initialize Memori: {e}")
                 MEMORI_AVAILABLE = False
@@ -84,7 +85,38 @@ class ServiceValidator:
         if self.context:
             self.record_validation_session()
 
+        # Check for pattern regressions (Self-Improving Intelligence)
+        if self.context:
+            self.check_for_regressions()
+
         return len(self.errors) == 0
+
+    def check_for_regressions(self):
+        """Check for pattern regressions using Self-Improving Intelligence."""
+        if not self.context:
+            return
+
+        try:
+            regressions = self.context.detect_pattern_regressions()
+            if regressions:
+                print(f"\n{YELLOW}📉 Pattern Regressions Detected:{RESET}")
+                for r in regressions:
+                    print(f"  {r.pattern}: {r.baseline_success_rate:.0%} → {r.current_success_rate:.0%}")
+                    print(f"    Decline: {r.decline_percentage:.1f}%")
+                    print(f"    Suspected cause: {r.suspected_cause}")
+                print()
+
+            # Check for emerging anti-patterns
+            anti_patterns = self.context.detect_anti_pattern_emergence(days=30)
+            if anti_patterns:
+                print(f"{YELLOW}🔍 Emerging Anti-Patterns:{RESET}")
+                for ap in anti_patterns:
+                    print(f"  {ap['anti_pattern']}: {ap['occurrence_count']} occurrences")
+                    print(f"    {ap['recommendation']}")
+                print()
+
+        except Exception as e:
+            print(f"⚠️  Could not check for regressions: {e}")
 
     def query_past_violations(self):
         """Query Memori for past validation issues with this service."""
