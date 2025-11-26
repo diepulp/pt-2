@@ -1,5 +1,11 @@
 import { serializeKeyFilters } from '@/services/shared/key-utils';
 
+export type CasinoFilters = {
+  status?: 'active' | 'inactive';
+  cursor?: string;
+  limit?: number;
+};
+
 export type CasinoStaffFilters = {
   status?: 'active' | 'inactive';
   role?: 'dealer' | 'pit_boss' | 'admin'; // Note: dealer role is non-authenticated
@@ -14,6 +20,11 @@ const serialize = (filters: CasinoStaffFilters = {}) =>
 
 export const casinoKeys = {
   root: ROOT,
+  list: Object.assign(
+    (filters: CasinoFilters = {}) =>
+      [...ROOT, 'list', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'list'] as const },
+  ),
   detail: (casinoId: string) => [...ROOT, 'detail', casinoId] as const,
   staff: (
     casinoId: string,

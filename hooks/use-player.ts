@@ -1,6 +1,23 @@
-import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  useInfiniteQuery,
+} from '@tanstack/react-query';
+
+import {
+  enrollPlayer,
+  getPlayer,
+  getPlayersByCasino,
+  isPlayerEnrolled,
+  updatePlayer,
+  deletePlayer,
+  searchPlayers,
+  type PlayerDTO,
+  type EnrollPlayerDTO,
+  type PlayerUpdateDTO,
+} from '@/app/actions/player';
 import { playerKeys } from '@/services/player/keys';
-import { enrollPlayer, getPlayer, getPlayersByCasino, isPlayerEnrolled, type PlayerDTO, type EnrollPlayerDTO } from '@/app/actions/player';
 
 export function usePlayer(playerId: string) {
   return useQuery({
@@ -13,7 +30,11 @@ export function usePlayer(playerId: string) {
 export function usePlayerList(casinoId: string, options?: { limit?: number }) {
   return useInfiniteQuery({
     queryKey: playerKeys.list({ casinoId, limit: options?.limit }),
-    queryFn: ({ pageParam }) => getPlayersByCasino(casinoId, { limit: options?.limit, cursor: pageParam }),
+    queryFn: ({ pageParam }) =>
+      getPlayersByCasino(casinoId, {
+        limit: options?.limit,
+        cursor: pageParam,
+      }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.nextCursor,
     enabled: !!casinoId,
@@ -39,4 +60,43 @@ export function useEnrollPlayer() {
   });
 }
 
-export type { PlayerDTO, EnrollPlayerDTO };
+export function useUpdatePlayer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: PlayerUpdateDTO }) =>
+      updatePlayer(id, data),
+    onSuccess: (updatedPlayer) => {
+      // Invalidate the specific player detail query
+      queryClient.invalidateQueries({
+        queryKey: playerKeys.detail(updatedPlayer.id),
+      });
+      // Invalidate all player lists
+      queryClient.invalidateQueries({ queryKey: playerKeys.list.scope });
+    },
+  });
+}
+
+export function useDeletePlayer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: deletePlayer,
+    onSuccess: () => {
+      // Invalidate all player lists
+      queryClient.invalidateQueries({ queryKey: playerKeys.list.scope });
+      // Invalidate all player details
+      queryClient.invalidateQueries({ queryKey: playerKeys.root });
+    },
+  });
+}
+
+export function useSearchPlayers(query: string, casinoId?: string) {
+  return useQuery({
+    queryKey: playerKeys.search(query),
+    queryFn: () => searchPlayers(query, casinoId),
+    enabled: query.length > 0,
+  });
+}
+
+export type { PlayerDTO, EnrollPlayerDTO, PlayerUpdateDTO };

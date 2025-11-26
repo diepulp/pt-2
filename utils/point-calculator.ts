@@ -1,4 +1,6 @@
-import type { GameSettings } from '@/utils/supabase/types'
+import type { Database } from '@/types/database.types'
+
+type GameSettings = Database['public']['Tables']['game_settings']['Row']
 
 export function calculatePoints(
   gameSettings: GameSettings,
@@ -7,7 +9,7 @@ export function calculatePoints(
 ): number {
   const {
     house_edge,
-    average_rounds_per_hour,
+    decisions_per_hour,
     point_multiplier,
     points_conversion_rate,
     seats_available = 7,
@@ -27,7 +29,7 @@ export function calculatePoints(
     pointsEarned *= bonusFactor
   }
 
-  const expectedRounds = average_rounds_per_hour
+  const expectedRounds = decisions_per_hour
   if (totalRounds > expectedRounds) {
     pointsEarned *= 1.1
   }

@@ -48,10 +48,154 @@ All downstream services that compute `gaming_day` reference `casino_settings`.
 
 ## DTOs
 
-- `CasinoDTO` - Casino identity
-- `CasinoSettingsDTO` - Operational parameters
+### Casino
+- `CasinoDTO` - Casino identity (read operations)
+- `CasinoCreateDTO` - Casino creation input
+- `CasinoUpdateDTO` - Casino update input
+
+### Settings
+- `CasinoSettingsDTO` - Operational parameters (gaming day, timezone, thresholds)
+
+### Staff
 - `StaffDTO` - Staff record (RBAC)
+
+### Game
 - `GameSettingsDTO` - Game templates
+
+## Server Actions
+
+### Casino CRUD (`app/actions/casino.ts`)
+```typescript
+// List casinos with pagination
+getCasinos(options?: { limit?: number; cursor?: string; status?: 'active' | 'inactive' })
+  => Promise<{ casinos: CasinoDTO[]; nextCursor?: string }>
+
+// Get single casino by ID
+getCasinoById(id: string) => Promise<CasinoDTO | null>
+
+// Create new casino
+createCasino(input: CasinoCreateDTO) => Promise<CasinoDTO>
+
+// Update existing casino
+updateCasino(id: string, input: CasinoUpdateDTO) => Promise<CasinoDTO>
+
+// Delete casino
+deleteCasino(id: string) => Promise<void>
+```
+
+### Staff Operations
+```typescript
+// Get all active staff for a casino
+getStaffByCasino(casinoId: string) => Promise<StaffDTO[]>
+```
+
+### Settings Operations
+```typescript
+// Get casino settings
+getCasinoSettings(casinoId: string) => Promise<CasinoSettingsDTO | null>
+
+// Compute current gaming day based on casino timezone and start time
+computeGamingDay(casinoId: string, timestamp?: Date) => Promise<string>
+```
+
+## React Query Hooks (`hooks/use-casino.ts`)
+
+### Casino CRUD Hooks
+```typescript
+// List casinos
+useCasinos(filters?: CasinoFilters)
+
+// Get single casino
+useCasino(casinoId: string)
+
+// Create casino (mutation)
+useCreateCasino()
+
+// Update casino (mutation)
+useUpdateCasino()
+
+// Delete casino (mutation)
+useDeleteCasino()
+```
+
+### Staff Hooks
+```typescript
+// Get casino staff
+useCasinoStaff(casinoId: string)
+```
+
+### Settings Hooks
+```typescript
+// Get casino settings
+useCasinoSettings(casinoId: string)
+
+// Get current gaming day (cached for 5 minutes)
+useGamingDay(casinoId: string)
+```
+
+## Query Keys (`services/casino/keys.ts`)
+
+```typescript
+casinoKeys.root                         // ['casino']
+casinoKeys.list(filters)                // ['casino', 'list', serialized(filters)]
+casinoKeys.list.scope                   // ['casino', 'list']
+casinoKeys.detail(casinoId)             // ['casino', 'detail', casinoId]
+casinoKeys.staff(casinoId, filters)     // ['casino', 'staff', casinoId, serialized(filters)]
+casinoKeys.settings(casinoId)           // ['casino', 'settings', casinoId]
+casinoKeys.updateSettings(casinoId)     // ['casino', 'settings', casinoId, 'update']
+```
+
+## Usage Examples
+
+### Create a Casino
+```typescript
+import { useCreateCasino } from '@/hooks/use-casino';
+
+function CreateCasinoForm() {
+  const createCasino = useCreateCasino();
+
+  const handleSubmit = async (data) => {
+    await createCasino.mutateAsync({
+      name: 'New Casino',
+      location: 'Las Vegas, NV',
+      address: { street: '123 Main St', city: 'Las Vegas', state: 'NV', zip: '89101' },
+      company_id: 'company-uuid',
+      status: 'active',
+    });
+  };
+}
+```
+
+### List Casinos
+```typescript
+import { useCasinos } from '@/hooks/use-casino';
+
+function CasinoList() {
+  const { data, isLoading } = useCasinos({ status: 'active' });
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return data.casinos.map(casino => (
+    <div key={casino.id}>{casino.name}</div>
+  ));
+}
+```
+
+### Update Casino
+```typescript
+import { useUpdateCasino } from '@/hooks/use-casino';
+
+function EditCasinoForm({ casinoId }) {
+  const updateCasino = useUpdateCasino();
+
+  const handleSubmit = async (data) => {
+    await updateCasino.mutateAsync({
+      id: casinoId,
+      data: { name: 'Updated Name' },
+    });
+  };
+}
+```
 
 ## References
 
