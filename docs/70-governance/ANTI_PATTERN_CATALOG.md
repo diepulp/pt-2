@@ -527,11 +527,76 @@ scheduler.enqueue("rating-slip.detail", ratingSlipId, () => {
 
 ## Type System Anti-Patterns
 
-**NEVER create manual type redefinitions**:
+> **Canonical Reference**: SLAD §356-490 (DTO Patterns), SRM §57-60 (Pattern Classification)
+
+### DTO Pattern Classification (CRITICAL)
+
+PT-2 uses **three DTO patterns** based on service complexity. Violations depend on which pattern applies:
+
+| Pattern | Services | Manual `interface` | `type` + Pick/Omit | `mappers.ts` Required |
+|---------|----------|-------------------|-------------------|----------------------|
+| **A (Contract-First)** | Loyalty, Finance, MTL, TableContext | ✅ Allowed | ✅ Allowed | ✅ **REQUIRED** |
+| **B (Canonical CRUD)** | Player, Visit, Casino, FloorLayout | ❌ **BANNED** | ✅ Required | ❌ Not needed |
+| **C (Hybrid)** | RatingSlip | Per-DTO basis | Per-DTO basis | Optional |
+
+---
+
+**Pattern B Services: NEVER use manual interface DTOs**:
+
+```typescript
+// ❌ WRONG (Pattern B: Player, Visit, Casino, FloorLayout)
+// services/player/dtos.ts
+export interface PlayerCreateDTO {
+  id?: string;
+  first_name: string;
+}
+
+// ✅ CORRECT (Pattern B)
+export type PlayerCreateDTO = Pick<
+  Database["public"]["Tables"]["player"]["Insert"],
+  "first_name"
+>;
+```
+
+**Pattern A Services: Manual interfaces ARE allowed (with mappers.ts)**:
+
+```typescript
+// ✅ CORRECT (Pattern A: Loyalty, Finance, MTL, TableContext)
+// services/loyalty/dtos.ts
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+  // Omits: preferences (internal field)
+}
+
+// REQUIRED: services/loyalty/mappers.ts
+import type { Database } from '@/types/database.types';
+type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Explicitly omit: preferences
+  };
+}
+```
+
+**Why the distinction?**
+- **Pattern B**: Schema changes should auto-propagate → interfaces cause "schema evolution blindness"
+- **Pattern A**: Domain contracts are intentionally decoupled → mappers.ts provides compile-time checkpoint
+
+---
+
+**NEVER create manual type redefinitions outside services**:
 
 ```typescript
 // ❌ WRONG
-// types/player.ts
+// types/player.ts (global types folder)
 export interface Player {
   id: string;
   firstName: string;
@@ -540,28 +605,12 @@ export interface Player {
 }
 
 // ✅ CORRECT
-// types/dto/player.ts
-import { Database } from "../database.types";
+// services/player/dtos.ts (service-owned)
+import { Database } from "@/types/database.types";
 
 export type PlayerDTO = Pick<
   Database["public"]["Tables"]["player"]["Row"],
-  "id" | "firstName" | "lastName"
->;
-```
-
-**NEVER declare DTOs as interfaces or base them on `Row` for inserts**:
-
-```typescript
-// ❌ WRONG
-export interface PlayerCreateDTO {
-  id?: string; // brings in immutable fields
-  first_name: string;
-}
-
-// ✅ CORRECT
-export type PlayerCreateDTO = Pick<
-  Database["public"]["Tables"]["player"]["Insert"],
-  "first_name"
+  "id" | "first_name" | "last_name"
 >;
 ```
 
@@ -738,24 +787,42 @@ import { CheckIcon } from "@heroicons/react/24/solid"; // Specific icon
 
 Before committing code, verify:
 
+### Service Layer
 - [ ] No `ReturnType` inference in service exports
 - [ ] No `any` typing on supabase parameters
-- [ ] No class-based services
+- [ ] No class-based services (`export class.*Service`)
 - [ ] No ServiceFactory singletons
 - [ ] No global state in services
 - [ ] No service-to-service calls
+
+### DTO Patterns (Pattern-Aware)
+- [ ] **Pattern B services** (Player, Visit, Casino, FloorLayout): No `export interface.*DTO`
+- [ ] **Pattern A services** (Loyalty, Finance, MTL, TableContext): Has `mappers.ts` if using DTOs
+- [ ] No manual type redefinitions in `types/` folder (DTOs belong in `services/{domain}/dtos.ts`)
+
+### State & Real-time
 - [ ] No server data in Zustand
 - [ ] No `staleTime: 0` without justification
 - [ ] No Supabase clients in hooks/stores
 - [ ] No global real-time managers
-- [ ] No manual type redefinitions
+
+### RPC-Managed Tables (Direct Insert Banned)
+- [ ] No `.from('player_financial_transaction').insert()` - use RPC
+- [ ] No `.from('loyalty_ledger').insert()` without idempotency
+- [ ] No `.from('mtl_entry').insert()` without idempotency
+
+### General
 - [ ] No `console.*` in production paths
 - [ ] Named exports only (no default)
-- [ ] Types regenerated if schema changed
+- [ ] Types regenerated if schema changed (`npm run db:types`)
 
 ---
 
-**Version**: 1.0.0
-**Lines**: ~450
+**Version**: 1.1.0
+**Date**: 2025-11-26
+**Lines**: ~550
 **Severity**: **CRITICAL** - Violations block PR approval
 **Auto-Load**: Loads with `.claude/config.yml`
+
+### Change Log
+- **v1.1.0 (2025-11-26)**: Added pattern-aware DTO rules (SLAD §356-490 alignment), expanded RPC-managed table list, updated checklist with pattern classification
