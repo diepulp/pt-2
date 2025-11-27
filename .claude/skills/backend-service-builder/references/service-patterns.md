@@ -1,7 +1,9 @@
 # Service Implementation Patterns
 
-**Source**: `docs/70-governance/SERVICE_TEMPLATE.md` v2.0.3
-**SLAD Reference**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` v2.1.2
+**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2)
+**Supplementary**: `docs/70-governance/SERVICE_TEMPLATE.md` v2.0.3
+
+> **Note**: SLAD §308-348 is the authoritative source for service directory structure.
 
 ## Pattern Selection Decision Tree
 
@@ -26,26 +28,42 @@ Mixed complexity?
 **Use When**: Complex business logic, domain contracts, cross-context boundaries
 **Examples**: `loyalty`, `finance`, `mtl`, `table-context`
 
-### Current Implementation (✅ DEPLOYED)
+### Directory Structure (SLAD §308-348)
 
 ```
 services/{domain}/
-├── keys.ts              # React Query key factories (REQUIRED)
-├── {feature}.ts         # Business logic WITH INLINE DTOs
-├── {feature}.test.ts    # Unit/integration tests
-└── README.md            # Service documentation with SRM reference
+├── dtos.ts              # ✅ DTO contracts (manual interfaces for domain contracts)
+├── mappers.ts           # ✅ REQUIRED: Database ↔ DTO transformations
+├── selects.ts           # ✅ Named column sets
+├── keys.ts              # ✅ React Query key factories (with .scope)
+├── http.ts              # ✅ HTTP fetchers (thin wrappers to API routes)
+├── index.ts             # ✅ Factory + explicit interface
+├── crud.ts              # ✅ CRUD operations
+├── business.ts          # ✅ Business logic (if needed)
+├── queries.ts           # ✅ Complex queries (if needed)
+├── {feature}.test.ts    # ✅ Unit/integration tests
+└── README.md            # ✅ Service documentation with SRM reference
 ```
 
 **Key Characteristics**:
-- DTOs defined inline in feature files (not in separate `dtos.ts`)
-- Mappers embedded as standalone functions (e.g., `buildXRpcInput()`)
-- No service factories - export standalone functions
-- Focus: simplicity and co-location
 
-**Example**: `services/loyalty/mid-session-reward.ts`
+- DTOs defined in `dtos.ts` (manual `interface` or `type` definitions allowed)
+- `mappers.ts` REQUIRED - enforces Database ↔ DTO boundary
+- Explicit service interface in `index.ts` (NOT ReturnType inference)
+- Focus: domain contract stability, explicit field control
+
+**Example**: Pattern A service structure
 
 ```typescript
-// Inline DTO definition
+// services/loyalty/dtos.ts - Domain contracts
+export interface PlayerLoyaltyDTO {
+  player_id: string;
+  casino_id: string;
+  balance: number;
+  tier: string | null;
+  // Omits: preferences (internal field)
+}
+
 export interface MidSessionRewardInput {
   casinoId: string;
   playerId: string;
@@ -56,9 +74,24 @@ export interface MidSessionRewardInput {
   reason?: LoyaltyReason;
 }
 
-// Inline RPC mapper
+// services/loyalty/mappers.ts - REQUIRED for Pattern A
+import type { Database } from "@/types/database.types";
+import type { PlayerLoyaltyDTO } from "./dtos";
+
+type LoyaltyRow = Database["public"]["Tables"]["player_loyalty"]["Row"];
+
+export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    balance: row.balance,
+    tier: row.tier,
+    // Explicitly omit: preferences (internal)
+  };
+}
+
 export function buildMidSessionRewardRpcInput(
-  input: MidSessionRewardInput
+  input: MidSessionRewardInput,
 ): MidSessionRewardRpcInput {
   return {
     p_casino_id: input.casinoId,
@@ -67,23 +100,30 @@ export function buildMidSessionRewardRpcInput(
     p_staff_id: input.staffId,
     p_points: input.points,
     p_idempotency_key: input.idempotencyKey,
-    p_reason: input.reason ?? 'mid_session',
+    p_reason: input.reason ?? "mid_session",
   };
 }
 
-// Business logic function
-export async function rewardPlayer(
+// services/loyalty/index.ts - Explicit interface + factory
+export interface LoyaltyService {
+  getBalance(
+    playerId: string,
+    casinoId: string,
+  ): Promise<ServiceResult<PlayerLoyaltyDTO>>;
+  rewardPlayer(input: MidSessionRewardInput): Promise<ServiceResult<RewardDTO>>;
+}
+
+export function createLoyaltyService(
   supabase: SupabaseClient<Database>,
-  input: MidSessionRewardInput
-): Promise<ServiceResult<RewardDTO>> {
-  const rpcInput = buildMidSessionRewardRpcInput(input);
-  const { data, error } = await supabase.rpc('issue_mid_session_reward', rpcInput);
-
-  if (error) {
-    return { success: false, error: { code: 'RPC_ERROR', message: error.message } };
-  }
-
-  return { success: true, data: mapToRewardDTO(data) };
+): LoyaltyService {
+  return {
+    async getBalance(playerId, casinoId) {
+      /* ... */
+    },
+    async rewardPlayer(input) {
+      /* ... */
+    },
+  };
 }
 ```
 
@@ -91,7 +131,7 @@ export async function rewardPlayer(
 
 ```typescript
 // services/{domain}/keys.ts
-import { serializeKeyFilters } from '@/services/shared/key-utils';
+import { serializeKeyFilters } from "@/services/shared/key-utils";
 
 export type LoyaltyLedgerFilters = {
   casinoId?: string;
@@ -101,36 +141,36 @@ export type LoyaltyLedgerFilters = {
   limit?: number;
 };
 
-const ROOT = ['loyalty'] as const;
+const ROOT = ["loyalty"] as const;
 const serialize = (filters: LoyaltyLedgerFilters = {}) =>
   serializeKeyFilters(filters);
 
 export const loyaltyKeys = {
   root: ROOT,
   playerBalance: (playerId: string, casinoId: string) =>
-    [...ROOT, 'balance', playerId, casinoId] as const,
+    [...ROOT, "balance", playerId, casinoId] as const,
   ledger: Object.assign(
     (filters: LoyaltyLedgerFilters = {}) =>
-      [...ROOT, 'ledger', serialize(filters)] as const,
-    { scope: [...ROOT, 'ledger'] as const },  // For setQueriesData
+      [...ROOT, "ledger", serialize(filters)] as const,
+    { scope: [...ROOT, "ledger"] as const }, // For setQueriesData
   ),
 };
 ```
 
 ### Checklist (Pattern A)
 
-**✅ Required Today**:
-- [ ] Create `keys.ts` with React Query factory keys
-- [ ] Define domain DTOs inline in `{feature}.ts`
-- [ ] Add inline mapping functions (e.g., `buildXRpcInput()`)
+**✅ Required (SLAD §308-348)**:
+
+- [ ] Create `dtos.ts` with domain DTO contracts
+- [ ] Create `mappers.ts` with Database ↔ DTO transformations
+- [ ] Create `selects.ts` with named column sets
+- [ ] Create `keys.ts` with React Query factory keys (with `.scope`)
+- [ ] Create `http.ts` with HTTP fetchers
+- [ ] Create `index.ts` with explicit interface + factory function
+- [ ] Create `crud.ts` for CRUD operations
 - [ ] Add `README.md` with SRM reference
 - [ ] Write tests for business logic (`{feature}.test.ts`)
 - [ ] Type `supabase` parameter as `SupabaseClient<Database>` (never `any`)
-
-**⚠️ Planned (Future)**:
-- [ ] Extract DTOs to `dtos.ts` when service grows complex
-- [ ] Add `mappers.ts` for Database ↔ DTO boundary enforcement
-- [ ] Implement service factory pattern in `index.ts`
 
 ---
 
@@ -139,19 +179,25 @@ export const loyaltyKeys = {
 **Use When**: Simple CRUD operations, minimal business logic
 **Examples**: `player`, `visit`, `casino`, `floor-layout`
 
-### Current Implementation (✅ DEPLOYED)
+### Directory Structure (SLAD §308-348)
 
 ```
 services/{domain}/
-├── keys.ts       # React Query key factories (REQUIRED)
-└── README.md     # Service documentation with SRM reference
+├── dtos.ts              # ✅ DTOs using Pick/Omit from Database types
+├── selects.ts           # ✅ Named column sets
+├── keys.ts              # ✅ React Query key factories (with .scope)
+├── http.ts              # ✅ HTTP fetchers (thin wrappers to API routes)
+├── index.ts             # ✅ Factory + explicit interface
+├── crud.ts              # ✅ CRUD operations
+└── README.md            # ✅ Service documentation with SRM reference
 ```
 
 **Key Characteristics**:
-- Minimal: Only 2 files
-- No separate DTO files (documented in README using Pick/Omit)
-- No business logic files (handled in Server Actions/hooks)
-- Focus: React Query key management
+
+- DTOs MUST use `Pick`/`Omit` from `Database` types (NO manual interfaces)
+- No `mappers.ts` (schema changes auto-propagate via `npm run db:types`)
+- Explicit service interface in `index.ts`
+- Focus: schema-aligned, auto-evolving types
 
 **Example**: `services/player/`
 
@@ -159,13 +205,13 @@ services/{domain}/
 // services/player/keys.ts
 export type PlayerListFilters = {
   casinoId?: string;
-  status?: 'active' | 'inactive';
+  status?: "active" | "inactive";
   q?: string;
   cursor?: string;
   limit?: number;
 };
 
-const ROOT = ['player'] as const;
+const ROOT = ["player"] as const;
 const serialize = (filters: PlayerListFilters = {}) =>
   serializeKeyFilters(filters);
 
@@ -173,38 +219,46 @@ export const playerKeys = {
   root: ROOT,
   list: Object.assign(
     (filters: PlayerListFilters = {}) =>
-      [...ROOT, 'list', serialize(filters)] as const,
-    { scope: [...ROOT, 'list'] as const },
+      [...ROOT, "list", serialize(filters)] as const,
+    { scope: [...ROOT, "list"] as const },
   ),
-  detail: (playerId: string) => [...ROOT, 'detail', playerId] as const,
+  detail: (playerId: string) => [...ROOT, "detail", playerId] as const,
 };
 ```
 
 **DTOs documented in README**:
+
 ```typescript
 // Pattern B MUST use Pick/Omit from Database types
 export type PlayerDTO = Pick<
-  Database['public']['Tables']['player']['Row'],
-  'id' | 'first_name' | 'last_name' | 'created_at'
+  Database["public"]["Tables"]["player"]["Row"],
+  "id" | "first_name" | "last_name" | "created_at"
 >;
 
 export type PlayerCreateDTO = Pick<
-  Database['public']['Tables']['player']['Insert'],
-  'first_name' | 'last_name' | 'birth_date'
+  Database["public"]["Tables"]["player"]["Insert"],
+  "first_name" | "last_name" | "birth_date"
 >;
 ```
 
 ### Checklist (Pattern B)
 
-**✅ Required Today**:
-- [ ] Create `keys.ts` with React Query factory keys
+**✅ Required (SLAD §308-348)**:
+
+- [ ] Create `dtos.ts` with Pick/Omit from `Database` types
+- [ ] Create `selects.ts` with named column sets
+- [ ] Create `keys.ts` with React Query factory keys (with `.scope`)
+- [ ] Create `http.ts` with HTTP fetchers
+- [ ] Create `index.ts` with explicit interface + factory function
+- [ ] Create `crud.ts` for CRUD operations
 - [ ] Add `README.md` with SRM reference
-- [ ] Document DTOs in README using Pick/Omit from `Database` types
+- [ ] Type `supabase` parameter as `SupabaseClient<Database>` (never `any`)
 
 **❌ BANNED for Pattern B**:
-- Manual DTO interfaces (use Pick/Omit only - see DTO_CANONICAL_STANDARD)
-- Separate `dtos.ts` files (keep minimal)
-- Business logic files (handle in Server Actions/hooks)
+
+- Manual `interface` definitions for DTOs (use `type` + Pick/Omit only)
+- `mappers.ts` files (schema auto-propagates)
+- `ReturnType<typeof createService>` inference
 
 ---
 
@@ -216,6 +270,7 @@ export type PlayerCreateDTO = Pick<
 ### Implementation
 
 Use appropriate pattern per feature:
+
 - Contract-first DTOs for complex logic
 - Canonical DTOs for CRUD operations
 
@@ -239,14 +294,17 @@ services/rating-slip/
 > **Status**: Implemented / In Progress
 
 ## Ownership
+
 **Tables**: List tables owned by this service
 **DTOs**: List public DTOs exposed
 **RPCs**: List database functions (if any)
 
 ## Pattern
+
 Pattern A / Pattern B / Pattern C (explain why)
 
 ## References
+
 - [SRM §X-Y](...)
 - [SLAD §X-Y](...)
 - [DTO_CANONICAL_STANDARD.md](...)
@@ -256,14 +314,14 @@ Pattern A / Pattern B / Pattern C (explain why)
 
 ## Anti-Patterns (NEVER DO)
 
-| Anti-Pattern | Why Banned | Correct Pattern |
-|--------------|------------|-----------------|
+| Anti-Pattern                              | Why Banned                 | Correct Pattern                                           |
+| ----------------------------------------- | -------------------------- | --------------------------------------------------------- |
 | Manual `interface` for Pattern B services | Schema evolution blindness | Use `Pick<Database['public']['Tables']['x']['Row'], ...>` |
-| Missing `keys.ts` | React Query won't work | ALL services need key factories |
-| Cross-context Database type access | Violates bounded contexts | Use published DTOs only |
-| `ReturnType<typeof createService>` | Implicit, unstable types | Explicit `interface XService` |
-| `supabase: any` | Type safety lost | `supabase: SupabaseClient<Database>` |
-| No README.md | Service undocumented | Required with SRM reference |
+| Missing `keys.ts`                         | React Query won't work     | ALL services need key factories                           |
+| Cross-context Database type access        | Violates bounded contexts  | Use published DTOs only                                   |
+| `ReturnType<typeof createService>`        | Implicit, unstable types   | Explicit `interface XService`                             |
+| `supabase: any`                           | Type safety lost           | `supabase: SupabaseClient<Database>`                      |
+| No README.md                              | Service undocumented       | Required with SRM reference                               |
 
 ---
 
@@ -281,10 +339,10 @@ Pattern A / Pattern B / Pattern C (explain why)
 
 ## Reference Implementations
 
-| Service | Pattern | Files | Purpose |
-|---------|---------|-------|---------|
-| `services/loyalty/` | A (Contract-First) | keys.ts, mid-session-reward.ts, README.md | Complex reward logic |
-| `services/player/` | B (Canonical CRUD) | keys.ts, README.md | Simple identity CRUD |
-| `services/rating-slip/` | C (Hybrid) | keys.ts, state-machine.ts, README.md | Mixed complexity |
+| Service                 | Pattern            | Files                                     | Purpose              |
+| ----------------------- | ------------------ | ----------------------------------------- | -------------------- |
+| `services/loyalty/`     | A (Contract-First) | keys.ts, mid-session-reward.ts, README.md | Complex reward logic |
+| `services/player/`      | B (Canonical CRUD) | keys.ts, README.md                        | Simple identity CRUD |
+| `services/rating-slip/` | C (Hybrid)         | keys.ts, state-machine.ts, README.md      | Mixed complexity     |
 
 **Before implementing**: Read the README.md of a similar service for patterns.

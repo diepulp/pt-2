@@ -1,24 +1,40 @@
 # Service Implementation Validation Checklist
 
+**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2 §308-348)
+**Registry**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM - bounded context registry only)
+
 Complete this checklist before considering a service implementation done.
 
 ---
 
-## 1. Directory Structure
+## 1. Directory Structure (SLAD §308-348)
 
-**Pattern A (Contract-First)**:
-- [ ] `services/{domain}/keys.ts` exists
-- [ ] `services/{domain}/{feature}.ts` exists (business logic)
+**Pattern A (Contract-First)** - Loyalty, Finance, MTL, TableContext:
+
+- [ ] `services/{domain}/dtos.ts` exists (manual interfaces for domain contracts)
+- [ ] `services/{domain}/mappers.ts` exists (REQUIRED - Database ↔ DTO)
+- [ ] `services/{domain}/selects.ts` exists (named column sets)
+- [ ] `services/{domain}/keys.ts` exists (React Query factories with `.scope`)
+- [ ] `services/{domain}/http.ts` exists (HTTP fetchers)
+- [ ] `services/{domain}/index.ts` exists (explicit interface + factory)
+- [ ] `services/{domain}/crud.ts` exists (CRUD operations)
 - [ ] `services/{domain}/{feature}.test.ts` exists (tests)
 - [ ] `services/{domain}/README.md` exists
 
-**Pattern B (Canonical CRUD)**:
-- [ ] `services/{domain}/keys.ts` exists
-- [ ] `services/{domain}/README.md` exists
-- [ ] No business logic files (logic in Server Actions/hooks)
+**Pattern B (Canonical CRUD)** - Player, Visit, Casino, FloorLayout:
 
-**Pattern C (Hybrid)**:
-- [ ] Mix of Pattern A and B files as appropriate
+- [ ] `services/{domain}/dtos.ts` exists (Pick/Omit from Database types)
+- [ ] `services/{domain}/selects.ts` exists (named column sets)
+- [ ] `services/{domain}/keys.ts` exists (React Query factories with `.scope`)
+- [ ] `services/{domain}/http.ts` exists (HTTP fetchers)
+- [ ] `services/{domain}/index.ts` exists (explicit interface + factory)
+- [ ] `services/{domain}/crud.ts` exists (CRUD operations)
+- [ ] `services/{domain}/README.md` exists
+- [ ] NO `mappers.ts` file (banned for Pattern B)
+
+**Pattern C (Hybrid)** - RatingSlip:
+
+- [ ] Mix of Pattern A and B files as appropriate per feature
 
 ---
 
@@ -32,41 +48,47 @@ Complete this checklist before considering a service implementation done.
 - [ ] Scope keys defined for hierarchical invalidation (`.scope`)
 
 **Example validation**:
+
 ```typescript
 // ✅ CORRECT
-const ROOT = ['domain'] as const;  // as const
+const ROOT = ["domain"] as const; // as const
 const serialize = (filters: DomainFilters = {}) => serializeKeyFilters(filters);
 
 export const domainKeys = {
   root: ROOT,
   list: Object.assign(
-    (filters: DomainFilters = {}) => [...ROOT, 'list', serialize(filters)] as const,
-    { scope: [...ROOT, 'list'] as const },  // Scope for invalidation
+    (filters: DomainFilters = {}) =>
+      [...ROOT, "list", serialize(filters)] as const,
+    { scope: [...ROOT, "list"] as const }, // Scope for invalidation
   ),
 };
 ```
 
 ---
 
-## 3. DTO Standards Compliance
+## 3. DTO Standards Compliance (SLAD §356-566)
 
-### Pattern A (Contract-First)
+### Pattern A (Contract-First) - Loyalty, Finance, MTL, TableContext
 
-- [ ] DTOs defined inline in `{feature}.ts` (or separate `dtos.ts` if extracted)
-- [ ] Mapper functions defined (e.g., `buildXRpcInput()`, `toXDTO()`)
+- [ ] DTOs defined in `dtos.ts` (manual `interface` or `type` allowed)
+- [ ] `mappers.ts` exists with Database ↔ DTO transformations
+- [ ] Mapper functions: `toXDTO(row: DbRow): XDTO`
+- [ ] RPC input builders: `buildXRpcInput(input: XInput): XRpcInput`
 - [ ] Domain contracts documented with JSDoc
-- [ ] No direct Database type derivation (manual interfaces allowed)
+- [ ] Mappers use `Database` types as source of truth
 
-### Pattern B (Canonical CRUD)
+### Pattern B (Canonical CRUD) - Player, Visit, Casino, FloorLayout
 
-- [ ] DTOs documented in README.md
+- [ ] DTOs defined in `dtos.ts` using `type` (NOT `interface`)
 - [ ] ALL DTOs use `Pick<Database['public']['Tables']['x']['Row/Insert'], ...>`
 - [ ] NO manual `interface` definitions for DTOs
 - [ ] Column selections explicitly listed (not `Omit` of single field)
 - [ ] Uses `Insert` for create DTOs, `Row` for response DTOs
 - [ ] Auto-generated fields (`id`, `created_at`) omitted from create DTOs
+- [ ] NO `mappers.ts` file
 
 **Validation command**:
+
 ```bash
 npx eslint services/{domain}/*.ts
 # Should have 0 errors about manual DTO interfaces
@@ -82,12 +104,14 @@ npx eslint services/{domain}/*.ts
 - [ ] Cross-service dependencies documented in README.md
 
 **Validation command**:
+
 ```bash
 npx eslint services/{domain}/*.ts
 # Check for "BOUNDED CONTEXT VIOLATION" errors
 ```
 
 **Manual check**:
+
 ```typescript
 // Search for cross-context violations
 grep -r "Database\['public'\]\['Tables'\]" services/{domain}/
@@ -106,6 +130,7 @@ grep -r "Database\['public'\]\['Tables'\]" services/{domain}/
 - [ ] All DTOs exported for consumer use
 
 **Validation command**:
+
 ```bash
 npm run type-check
 # Should compile with 0 errors
@@ -126,6 +151,7 @@ npm run type-check
 - [ ] Cross-references to SLAD, DTO standards
 
 **Template verification**:
+
 ```markdown
 # {ServiceName} - {Bounded Context}
 
@@ -134,14 +160,17 @@ npm run type-check
 > **Status**: Implemented / In Progress
 
 ## Ownership
+
 **Tables**: ...
 **DTOs**: ...
 **RPCs**: ...
 
 ## Pattern
+
 Pattern A/B/C (explain why)
 
 ## References
+
 - [SRM §X-Y](...)
 ```
 
@@ -150,6 +179,7 @@ Pattern A/B/C (explain why)
 ## 7. Testing
 
 **Pattern A (Contract-First) - REQUIRED**:
+
 - [ ] `{feature}.test.ts` exists
 - [ ] Tests cover happy path
 - [ ] Tests cover error cases
@@ -158,9 +188,11 @@ Pattern A/B/C (explain why)
 - [ ] Tests have ~80% coverage
 
 **Pattern B (Canonical CRUD) - OPTIONAL**:
+
 - [ ] Tests may be in Server Actions or integration tests
 
 **Validation command**:
+
 ```bash
 npm test services/{domain}/{feature}.test.ts
 # Should pass with 0 failures
@@ -179,6 +211,7 @@ npm test services/{domain}/{feature}.test.ts
 - [ ] Schema verification test passes
 
 **Validation commands**:
+
 ```bash
 # Verify migration naming
 ls supabase/migrations/ | grep "^[0-9]\{14\}_"
@@ -201,6 +234,7 @@ npm test -- schema-verification
 - [ ] Policies tested (manual or automated)
 
 **Validation script**:
+
 ```bash
 # Run RLS coverage check
 node scripts/validate-rls-coverage.js
@@ -220,6 +254,7 @@ node scripts/validate-rls-coverage.js
 - [ ] No cross-context Database type access
 
 **Validation command**:
+
 ```bash
 # Pre-commit hook simulation
 .husky/pre-commit-service-check.sh
@@ -237,20 +272,24 @@ node scripts/validate-rls-coverage.js
 - [ ] No conflicting guidance between docs
 
 **Manual verification**:
+
 1. Read SERVICE_TEMPLATE.md pattern description
 2. Compare with actual service implementation
 3. Flag inconsistencies for user review
 
 ---
 
-## 12. SRM Update
+## 12. SRM Registry Update
+
+> **Note**: SRM serves as bounded context registry only. SLAD is the authoritative source for implementation patterns.
 
 - [ ] Service added to SERVICE_RESPONSIBILITY_MATRIX.md
 - [ ] Table ownership documented
 - [ ] Cross-service dependencies listed
 - [ ] Bounded context description added
 
-**Location**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+**Location**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (registry only)
+**Pattern Authority**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD)
 
 ---
 
@@ -265,6 +304,7 @@ node scripts/validate-rls-coverage.js
 - [ ] No regressions introduced
 
 **Validation commands**:
+
 ```bash
 npm run type-check  # TypeScript compilation
 npm test            # All tests pass
@@ -312,6 +352,7 @@ echo "Validation complete!"
 ```
 
 **Usage**:
+
 ```bash
 chmod +x scripts/validate-service.sh
 ./scripts/validate-service.sh loyalty
@@ -334,7 +375,8 @@ Before marking service as **COMPLETE**:
 - [ ] Peer review completed (if applicable)
 
 **Sign-off**:
-- Implementation reviewed by: __________
-- Documentation reviewed by: __________
-- Tests reviewed by: __________
-- Date: __________
+
+- Implementation reviewed by: ****\_\_****
+- Documentation reviewed by: ****\_\_****
+- Tests reviewed by: ****\_\_****
+- Date: ****\_\_****
