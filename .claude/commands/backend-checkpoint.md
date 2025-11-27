@@ -1,152 +1,128 @@
 ---
 description: Save or restore backend-service-builder session checkpoint for context continuity across /clear
-args:
-  - name: action
-    description: "save" to checkpoint current state, "restore" to resume from last checkpoint
-    required: true
+argument-hint: [save|restore]
+allowed-tools: Bash, Read, SlashCommand
 ---
 
 # Backend Service Builder Session Checkpoint
 
-Manage session checkpoints for the backend-service-builder skill. Checkpoints persist work state to Memori, enabling session continuity across `/clear` commands.
+**Action:** `$ARGUMENTS`
 
-## Actions
+Execute the checkpoint action based on the argument provided.
 
-### `save` - Checkpoint Current Session
+## Instructions
 
-Before running `/clear`, save your current work state:
+### If argument is "restore" (or empty/default)
 
-1. **Gather current session state:**
-   - Current task being worked on
-   - Services created or modified
-   - Files created (migrations, services, tests)
-   - Validation gates passed
-   - Open questions requiring user input
-   - Planned next steps
-   - Key insights learned
+Immediately run this Python code to restore the session:
 
-2. **Save checkpoint using Python:**
-
-```python
-from lib.memori import create_memori_client, SkillContext
+```bash
+python3 << 'EOF'
+from lib.memori import create_memori_client, BackendServiceContext
 
 memori = create_memori_client("skill:backend-service-builder")
 memori.enable()
-context = SkillContext(memori)
+context = BackendServiceContext(memori)
 
-context.save_checkpoint(
-    current_task="[Current task description]",
-    reason="context_threshold_60pct",  # or "manual", "session_end"
-    decisions_made=[
-        "Pattern A selected for LoyaltyService",
-        "RLS policy design decision...",
-    ],
-    files_modified=[
-        "supabase/migrations/20251125_xxx.sql",
-        "services/loyalty/loyalty.ts",
-        "services/loyalty/keys.ts",
-    ],
-    validation_gates_passed=[1, 2, 3],  # Workflow steps completed
-    open_questions=[
-        "Should we add soft delete support?",
-    ],
-    next_steps=[
-        "Run validation scripts",
-        "Add unit tests",
-        "Update SRM",
-    ],
-    key_insights=[
-        "Loyalty domain requires Pattern A due to business logic complexity",
-    ],
-    workflow="service-creation",
-    notes="Additional context notes..."
-)
-```
-
-3. **Confirm checkpoint saved** - Look for "Session checkpoint saved" in output
-
-4. **Now safe to run `/clear`**
-
----
-
-### `restore` - Resume from Checkpoint
-
-After running `/clear`, restore your session context:
-
-1. **Load and display checkpoint:**
-
-```python
-from lib.memori import create_memori_client, SkillContext
-
-memori = create_memori_client("skill:backend-service-builder")
-memori.enable()
-context = SkillContext(memori)
-
-# Load and format the latest checkpoint
-resume_context = context.format_checkpoint_for_resume()
-print(resume_context)
-```
-
-2. **Review the displayed context** and continue from the next steps
-
-3. **Alternatively, load raw checkpoint data:**
-
-```python
 checkpoint = context.load_latest_checkpoint()
 if checkpoint:
-    print(f"Task: {checkpoint.get('current_task')}")
-    print(f"Next steps: {checkpoint.get('next_steps', [])}")
-    print(f"Open questions: {checkpoint.get('open_questions', [])}")
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_backend_service_builder namespace.")
+    print("Save a checkpoint first with: /backend-checkpoint save")
+EOF
+```
+
+After running the code, summarize:
+
+- The current task that was in progress
+- The service being worked on (if any)
+- The pattern being used (if any)
+- The next steps to continue with
+- Any open questions that need resolution
+
+---
+
+### If argument is "save"
+
+Before saving, gather the current session state:
+
+1. What task is currently being worked on?
+2. What service is being built/modified?
+3. What pattern is being used (Pattern A/B/C)?
+4. What decisions have been made?
+5. What files have been modified?
+6. What validation gates have been passed?
+7. What questions remain open?
+8. What are the next steps?
+
+Then run Python code to save the checkpoint with the gathered information:
+
+```bash
+python3 << 'EOF'
+from lib.memori import create_memori_client, BackendServiceContext
+
+memori = create_memori_client("skill:backend-service-builder")
+memori.enable()
+context = BackendServiceContext(memori)
+
+# FILL IN with current session state
+result = context.save_checkpoint(
+    current_task="[FILL: Current task description]",
+    reason="manual",
+    service_name="[FILL: Service name or None]",
+    pattern_used="[FILL: Pattern A/B/C or None]",
+    decisions_made=[
+        # [FILL: Decisions made]
+    ],
+    files_modified=[
+        # [FILL: Files modified]
+    ],
+    validation_gates_passed=[],
+    open_questions=[
+        # [FILL: Open questions]
+    ],
+    next_steps=[
+        # [FILL: Next steps]
+    ],
+    key_insights=[
+        # [FILL: Key insights]
+    ],
+    workflow=None,
+    notes=""
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/backend-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
 ```
 
 ---
 
-## Quick SQL Queries
+## Quick Reference
 
-### View Latest Checkpoint
+| Command                       | Purpose                     |
+| ----------------------------- | --------------------------- |
+| `/backend-checkpoint restore` | Resume session after /clear |
+| `/backend-checkpoint save`    | Save state before /clear    |
 
-```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
-SELECT
-    content,
-    metadata->>'current_task' as task,
-    metadata->>'checkpoint_reason' as reason,
-    metadata->>'next_steps' as next_steps,
-    created_at
-FROM memori.memories
-WHERE user_id = 'skill_backend_service_builder'
-  AND metadata->>'type' = 'session_checkpoint'
-ORDER BY created_at DESC
-LIMIT 1;
-"
-```
+---
 
-### View All Checkpoints
+## Integration with Self-Improving Intelligence
 
-```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
-SELECT
-    LEFT(metadata->>'current_task', 60) as task,
-    metadata->>'checkpoint_reason' as reason,
-    created_at
-FROM memori.memories
-WHERE user_id = 'skill_backend_service_builder'
-  AND metadata->>'type' = 'session_checkpoint'
-ORDER BY created_at DESC
-LIMIT 10;
-"
-```
+The BackendServiceContext also provides:
 
-### Count Checkpoints
+- **Pattern effectiveness tracking**: `context.calculate_pattern_effectiveness("Pattern A")`
+- **Adaptive recommendations**: `context.get_adaptive_recommendation(task_type, domain, complexity)`
+- **Regression detection**: `context.detect_pattern_regressions()`
+- **Primitive update proposals**: `context.get_pending_primitive_updates()`
 
-```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
-SELECT COUNT(*) as checkpoint_count
-FROM memori.memories
-WHERE user_id = 'skill_backend_service_builder'
-  AND metadata->>'type' = 'session_checkpoint';
-"
-```
+Use these after restoring to check for any system learnings that might affect your current task.
 
 ---
 
@@ -174,27 +150,6 @@ Before running validation scripts:
 
 - Checkpoint current state
 - If validation fails, checkpoint provides context for debugging
-
----
-
-## Checkpoint Metadata Schema
-
-```json
-{
-  "type": "session_checkpoint",
-  "checkpoint_reason": "context_threshold_60pct | manual | session_end",
-  "current_task": "Description of current task",
-  "timestamp": "ISO 8601 timestamp",
-  "decisions_made": ["List of decisions"],
-  "files_modified": ["List of file paths"],
-  "validation_gates_passed": [1, 2, 3],
-  "open_questions": ["Questions needing user input"],
-  "next_steps": ["Planned next actions"],
-  "key_insights": ["Important learnings"],
-  "workflow": "service-creation",
-  "notes": "Additional context"
-}
-```
 
 ---
 

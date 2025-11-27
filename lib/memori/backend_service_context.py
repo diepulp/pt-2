@@ -109,6 +109,223 @@ class BackendServiceContext(ValidationContext):
         self._cache_ttl = timedelta(minutes=15)
 
     # -------------------------------------------------------------------------
+    # Session Checkpoint Methods (for context continuity across /clear)
+    # -------------------------------------------------------------------------
+
+    def save_checkpoint(
+        self,
+        current_task: str,
+        reason: str = "manual",  # context_threshold_60pct, manual, session_end
+        decisions_made: Optional[List[str]] = None,
+        files_modified: Optional[List[str]] = None,
+        validation_gates_passed: Optional[List[int]] = None,
+        open_questions: Optional[List[str]] = None,
+        next_steps: Optional[List[str]] = None,
+        key_insights: Optional[List[str]] = None,
+        pattern_used: Optional[str] = None,
+        service_name: Optional[str] = None,
+        workflow: Optional[str] = None,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Save a session checkpoint before context clear.
+
+        This creates a high-importance memory that captures the current work state,
+        allowing the session to resume after /clear.
+
+        Args:
+            current_task: What you're currently working on
+            reason: Why the checkpoint is being saved
+            decisions_made: Key decisions made this session
+            files_modified: Files created or modified
+            validation_gates_passed: Gates passed in the workflow
+            open_questions: Unresolved questions needing user input
+            next_steps: What to do after resuming
+            key_insights: Important learnings from this session
+            pattern_used: Service pattern being used (Pattern A/B/C)
+            service_name: Name of service being worked on
+            workflow: Active workflow name
+            notes: Additional context notes
+
+        Returns:
+            True if checkpoint saved successfully
+        """
+        if not self.memori.enabled:
+            return False
+
+        content = f"Session checkpoint ({reason}): {current_task}"
+
+        metadata = {
+            "type": "session_checkpoint",
+            "checkpoint_reason": reason,
+            "current_task": current_task,
+            "timestamp": datetime.now().isoformat(),
+            "skill_namespace": self.SKILL_NAMESPACE,
+        }
+
+        if decisions_made:
+            metadata["decisions_made"] = decisions_made
+        if files_modified:
+            metadata["files_modified"] = files_modified
+        if validation_gates_passed:
+            metadata["validation_gates_passed"] = validation_gates_passed
+        if open_questions:
+            metadata["open_questions"] = open_questions
+        if next_steps:
+            metadata["next_steps"] = next_steps
+        if key_insights:
+            metadata["key_insights"] = key_insights
+        if pattern_used:
+            metadata["pattern_used"] = pattern_used
+        if service_name:
+            metadata["service_name"] = service_name
+        if workflow:
+            metadata["workflow"] = workflow
+        if notes:
+            metadata["notes"] = notes
+
+        tags = ["session-checkpoint", reason]
+
+        # High importance to ensure retrieval
+        result = self.memori.record_memory(
+            content=content,
+            category="context",
+            metadata=metadata,
+            importance=0.95,
+            tags=tags
+        )
+
+        if result:
+            logger.info(f"✅ Session checkpoint saved: {current_task[:50]}...")
+
+        return result is not None
+
+    def load_latest_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """
+        Load the most recent session checkpoint.
+
+        Returns:
+            Checkpoint metadata dict or None if no checkpoint found
+        """
+        if not self.memori.enabled:
+            return None
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            # Get the most recent checkpoint
+            cur.execute("""
+                SELECT content, metadata, created_at
+                FROM memori.memories
+                WHERE user_id = %s
+                  AND metadata->>'type' = 'session_checkpoint'
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (self.memori.user_id,))
+
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if not row:
+                logger.info("No checkpoint found")
+                return None
+
+            metadata = row[1]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+
+            metadata["content"] = row[0]
+            metadata["saved_at"] = row[2].isoformat() if row[2] else None
+
+            logger.info(f"✅ Loaded checkpoint from {metadata.get('saved_at', 'unknown')}")
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to load checkpoint: {e}")
+            return None
+
+    def format_checkpoint_for_resume(self, checkpoint: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Format a checkpoint as markdown for injection into context after /clear.
+
+        Args:
+            checkpoint: Checkpoint dict (if None, loads latest)
+
+        Returns:
+            Formatted markdown string for context injection
+        """
+        if checkpoint is None:
+            checkpoint = self.load_latest_checkpoint()
+
+        if not checkpoint:
+            return "No previous session checkpoint found."
+
+        lines = [
+            "## 🔄 Resumed Session Context (Backend Service Builder)",
+            "",
+            f"**Saved at:** {checkpoint.get('saved_at', 'unknown')}",
+            f"**Reason:** {checkpoint.get('checkpoint_reason', 'unknown')}",
+            "",
+            f"### Current Task",
+            checkpoint.get('current_task', 'Unknown'),
+            "",
+        ]
+
+        if checkpoint.get('service_name'):
+            lines.append(f"**Service:** {checkpoint['service_name']}")
+        if checkpoint.get('pattern_used'):
+            lines.append(f"**Pattern:** {checkpoint['pattern_used']}")
+        if checkpoint.get('workflow'):
+            lines.append(f"**Workflow:** {checkpoint['workflow']}")
+
+        if checkpoint.get('decisions_made'):
+            lines.extend(["", "### Decisions Made This Session"])
+            for decision in checkpoint['decisions_made']:
+                lines.append(f"- {decision}")
+
+        if checkpoint.get('files_modified'):
+            lines.extend(["", "### Files Modified"])
+            for f in checkpoint['files_modified']:
+                lines.append(f"- {f}")
+
+        if checkpoint.get('validation_gates_passed'):
+            gates = ", ".join(str(g) for g in checkpoint['validation_gates_passed'])
+            lines.extend(["", f"### Validation Gates Passed: {gates}"])
+
+        if checkpoint.get('open_questions'):
+            lines.extend(["", "### Open Questions (Require User Input)"])
+            for q in checkpoint['open_questions']:
+                lines.append(f"- ❓ {q}")
+
+        if checkpoint.get('next_steps'):
+            lines.extend(["", "### Next Steps"])
+            for step in checkpoint['next_steps']:
+                lines.append(f"- [ ] {step}")
+
+        if checkpoint.get('key_insights'):
+            lines.extend(["", "### Key Insights"])
+            for insight in checkpoint['key_insights']:
+                lines.append(f"- 💡 {insight}")
+
+        if checkpoint.get('notes'):
+            lines.extend(["", "### Notes", checkpoint['notes']])
+
+        lines.extend([
+            "",
+            "---",
+            "*Continue from where you left off. Review the above context and proceed with the next steps.*"
+        ])
+
+        return "\n".join(lines)
+
+    # -------------------------------------------------------------------------
     # Pattern Effectiveness Tracking
     # -------------------------------------------------------------------------
 
