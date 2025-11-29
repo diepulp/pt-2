@@ -127,13 +127,21 @@ grep -r "Database\['public'\]\['Tables'\]" services/{domain}/
 - [ ] Service functions have explicit return types
 - [ ] NO `ReturnType<typeof createService>` inference
 - [ ] NO `as any` type casting
+- [ ] NO `as ConcreteType` casting for RPC/query responses (V1 violation)
 - [ ] All DTOs exported for consumer use
+- [ ] RPC responses use generated `Database['public']['Functions']['rpc_*']['Returns']` types
+- [ ] Mapper functions created for RPC → DTO transformation
+- [ ] Complex RPC returns have type guards for runtime validation
 
 **Validation command**:
 
 ```bash
 npm run type-check
 # Should compile with 0 errors
+
+# Search for type casting violations:
+grep -r "as [A-Z].*DTO" services/
+# Should return 0 results
 ```
 
 ---
@@ -252,6 +260,8 @@ node scripts/validate-rls-coverage.js
 - [ ] No deprecated code marked `@deprecated`
 - [ ] No missing README.md
 - [ ] No cross-context Database type access
+- [ ] No `as Type` casting for RPC/query responses
+- [ ] No duplicate infrastructure type definitions (ServiceResult, DomainError)
 
 **Validation command**:
 
@@ -260,6 +270,33 @@ node scripts/validate-rls-coverage.js
 .husky/pre-commit-service-check.sh
 
 # Should exit with 0 errors
+
+# Check for type casting anti-patterns:
+grep -rn "data as [A-Z]" services/
+grep -rn "as {" services/
+# Both should return 0 results
+```
+
+---
+
+## 10a. Security Validation (V4 Critical)
+
+**Canonical Reference**: `.claude/skills/backend-service-builder/references/security-patterns.md`
+
+- [ ] Casino context derived from authenticated user's staff record
+- [ ] NO `headers.get('x-casino-id')` or similar
+- [ ] NO `body.casinoId` accepted from client for context
+- [ ] NO empty string fallbacks for context (`?? ''`)
+- [ ] Staff record lookup uses `user.id` from Supabase auth
+- [ ] DomainError thrown if context cannot be derived
+
+**Validation command**:
+
+```bash
+# Search for dangerous header trust patterns:
+grep -rn "headers.get.*casino" app/
+grep -rn "x-casino-id" app/
+# Should return 0 results in production code
 ```
 
 ---
@@ -276,6 +313,55 @@ node scripts/validate-rls-coverage.js
 1. Read SERVICE_TEMPLATE.md pattern description
 2. Compare with actual service implementation
 3. Flag inconsistencies for user review
+
+---
+
+## 11a. Documentation Updates Required (V6, W2, W3)
+
+**After implementing a service, update these artifacts:**
+
+### Domain Error Codes (V6)
+
+- [ ] Add domain error codes to `services/{domain}/README.md`:
+
+```markdown
+## Domain Error Codes
+
+| Code | HTTP Status | Description |
+|------|-------------|-------------|
+| `ENTITY_NOT_FOUND` | 404 | ... |
+| `ENTITY_INVALID_STATE` | 409 | ... |
+```
+
+- [ ] Verify codes are registered in `lib/errors/domain-errors.ts` (if new domain)
+
+### DTO Catalog (W2)
+
+- [ ] Update `docs/25-api-data/DTO_CATALOG.md` with new DTOs:
+
+```markdown
+### {ServiceName} DTOs
+
+| DTO | Pattern | Location | Description |
+|-----|---------|----------|-------------|
+| `EntityDTO` | A | `services/{domain}/dtos.ts` | ... |
+| `EntityCreateDTO` | A | `services/{domain}/dtos.ts` | ... |
+```
+
+### Service Index Exports (W3)
+
+- [ ] `services/{domain}/index.ts` re-exports all public functions:
+
+```typescript
+// services/{domain}/index.ts
+export { functionA, functionB } from './feature';
+export type { DTOA, DTOB } from './dtos';
+export { domainKeys } from './keys';
+```
+
+### Service Catalog Memory (Optional)
+
+- [ ] Update `memory/service-catalog.memory.md` if new service added
 
 ---
 
@@ -364,14 +450,37 @@ chmod +x scripts/validate-service.sh
 
 Before marking service as **COMPLETE**:
 
+### Core Implementation
 - [ ] All validation checks pass
 - [ ] README.md reviewed and complete
 - [ ] Tests written and passing
-- [ ] Documentation updated (SRM, service catalog)
 - [ ] No ESLint errors or warnings
 - [ ] TypeScript compiles
+
+### Database & Types
 - [ ] Migrations applied and types regenerated
 - [ ] RLS policies verified
+- [ ] RPC types generated and used (no `as` casting)
+
+### Security (V4 Critical)
+- [ ] Casino context derived from auth, not client input
+- [ ] No header/body trust for tenant context
+
+### Documentation Updates
+- [ ] Domain error codes in README.md (V6)
+- [ ] DTO_CATALOG.md updated (W2)
+- [ ] Service index.ts exports all public APIs (W3)
+- [ ] SRM updated (if new service)
+
+### Shared Types
+- [ ] No duplicate ServiceResult/DomainError definitions (V3)
+- [ ] Imports from canonical locations (`lib/http/`, `lib/errors/`)
+
+### Error Handling (ADR-012)
+- [ ] Service functions throw DomainError (not return ServiceResult)
+- [ ] Transport layer uses withServerAction wrapper
+
+### Final
 - [ ] Peer review completed (if applicable)
 
 **Sign-off**:

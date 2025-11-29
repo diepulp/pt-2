@@ -1,13 +1,35 @@
 # DTO Catalog
 
-**Status**: Active (extracted from SRM v3.1.0)
+**Status**: ASPIRATIONAL SPECIFICATION
+**Implementation**: NOT YET IMPLEMENTED (0% adoption as of 2025-11-27)
 **Effective**: 2025-11-17
 **Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 **Canonical Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+**Version**: 3.1.0
+
+---
+
+> **⚠️ IMPORTANT: This is an aspirational specification, not an inventory of existing code.**
+>
+> The `dtos.ts` files described below **DO NOT EXIST YET**. Current implementation uses:
+> - **Inline DTOs** in feature files (e.g., `mid-session-reward.ts`)
+> - **README documentation** for Pattern B services
+>
+> This catalog defines the **target architecture** for when services mature and DTOs are
+> extracted to dedicated files. Use this as a guide when implementing `dtos.ts` files.
+>
+> **Current state**: See `docs/70-governance/SERVICE_TEMPLATE.md` § Implementation Status Overview
+
+---
 
 ## Purpose
 
 This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, their owners, fields, consumers, and versioning. Each DTO represents a contract between services as defined in the Service Responsibility Matrix (SRM).
+
+**Use this catalog when**:
+- Implementing a new `dtos.ts` file (reference for field definitions)
+- Understanding cross-context DTO dependencies
+- Planning DTO extraction from inline definitions
 
 ## Conventions
 

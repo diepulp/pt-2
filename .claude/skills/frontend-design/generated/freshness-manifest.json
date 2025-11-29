@@ -1,0 +1,74 @@
+{
+  "$schema": "./freshness-manifest.schema.json",
+  "version": "1.0.0",
+  "generated_at": "2025-11-27T09:30:00Z",
+  "description": "Tracks source document hashes to detect primitive drift for frontend-design skill",
+
+  "source_documents": {
+    "ADR_003": {
+      "path": "docs/80-adrs/ADR-003-state-management-strategy.md",
+      "version": "2025-10-23",
+      "sha256": "28cf9f295ff8b42455ae5e81fc39ad90ea195d7619102956b3d4d56ad1c9a065",
+      "last_verified": "2025-11-27",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/frontend-rules.md",
+        "references/ADR-003-state-management-strategy.md"
+      ]
+    },
+    "FRONT_END_CANONICAL_STANDARD": {
+      "path": "docs/70-governance/FRONT_END_CANONICAL_STANDARD.md",
+      "version": "2.1",
+      "sha256": "b308dfc4fc974fe5dc52b02ed8a6f89316c7710f8e0fffcb97718f0307b241e5",
+      "last_verified": "2025-11-27",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/frontend-rules.md",
+        "references/pt2-technical-standards.md"
+      ]
+    },
+    "HOOKS_STANDARD": {
+      "path": "docs/70-governance/HOOKS_STANDARD.md",
+      "version": "1.0.0",
+      "sha256": "8293008cf93392001e8764bcbc1508cfaf259e67c29fc600830934557c22cf76",
+      "last_verified": "2025-11-27",
+      "derived_primitives": [
+        "references/frontend-rules.md"
+      ]
+    }
+  },
+
+  "primitives": {
+    "references/QUICK_START.md": {
+      "sources": ["ADR_003", "FRONT_END_CANONICAL_STANDARD"],
+      "purpose": "Single entry point for frontend implementation workflow",
+      "created": "2025-11-27"
+    },
+    "references/frontend-rules.md": {
+      "sources": ["ADR_003", "FRONT_END_CANONICAL_STANDARD", "HOOKS_STANDARD"],
+      "purpose": "Condensed rules for state management, performance, and type safety",
+      "created": "2025-11-27"
+    },
+    "references/pt2-technical-standards.md": {
+      "sources": ["FRONT_END_CANONICAL_STANDARD"],
+      "purpose": "Technology stack specifics (Tailwind v4, shadcn, React 19)",
+      "created": "2025-11-26"
+    },
+    "references/pt2-architecture-integration.md": {
+      "sources": ["ADR_003"],
+      "purpose": "Service layer integration patterns",
+      "created": "2025-11-26"
+    },
+    "references/ADR-003-state-management-strategy.md": {
+      "sources": ["ADR_003"],
+      "purpose": "Full ADR reference for state management details",
+      "created": "2025-11-26"
+    }
+  },
+
+  "validation_rules": {
+    "stale_threshold_days": 30,
+    "on_stale": "warn",
+    "on_hash_mismatch": "error"
+  }
+}

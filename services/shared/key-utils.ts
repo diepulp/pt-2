@@ -7,11 +7,9 @@ export type KeyFilterValue =
 
 export type KeyFilter = Record<string, KeyFilterValue>;
 
-export function serializeKeyFilters<T extends KeyFilter>(
-  filters?: T,
-): string {
+export function serializeKeyFilters<T extends KeyFilter>(filters?: T): string {
   if (!filters) {
-    return '[]';
+    return "[]";
   }
 
   const entries = Object.entries(filters).filter(

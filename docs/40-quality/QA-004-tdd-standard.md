@@ -215,7 +215,7 @@ npx supabase migration up
 ### Step 3: Regenerate Types (CRITICAL)
 
 ```bash
-npm run db:types
+npm run db:types-local
 ```
 
 This updates `types/database.types.ts` with the new schema.

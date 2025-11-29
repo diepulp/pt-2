@@ -1,9 +1,20 @@
+// ==============================================================================
+// lint-staged Configuration
+// ==============================================================================
+// Version: 2.0.0
+// Date: 2025-11-28
+//
+// Scope: Production code only (app, components, hooks, lib, services, utils)
+// Excludes: Agent configs, skills, memory files, generated files, docs
+// ==============================================================================
+
 export default {
-  '**/*.{ts,tsx,js,json,md}': (filenames) => {
-    // Filter out test files, config files, and docs from linting
+  // TypeScript/JavaScript production code only
+  '**/*.{ts,tsx,js,jsx}': (filenames) => {
+    // Patterns to EXCLUDE from linting (non-production code)
     const ignoredPatterns = [
+      // Test files (linted separately in CI)
       '__tests__/',
-      'cypress/',
       '*.test.ts',
       '*.test.tsx',
       '*.spec.ts',
@@ -11,11 +22,32 @@ export default {
       'jest.config.js',
       'jest.setup.js',
       'cypress.config.ts',
+      'cypress/',
+
+      // Generated files
+      'types/database.types.ts',
+      'types/remote/',
+
+      // Agent/skill infrastructure (not production code)
+      '.claude/',
+      'memory/',
+
+      // ESLint rule files (plugins, not production code)
+      '.eslint-rules/',
+
+      // Documentation
       'docs/',
+
+      // Database migrations (SQL, not TS)
       'supabase/migrations/',
+
+      // Generated UI components
+      'components/landing-page/ui/',
+
+      // Config files
       'package.json',
       'package-lock.json',
-      'components/landing-page/ui/', // shadcn/ui generated components
+      'tsconfig.json',
     ];
 
     const filteredFiles = filenames.filter(
@@ -25,8 +57,30 @@ export default {
     if (filteredFiles.length === 0) return [];
 
     return [
-      `eslint --fix ${filteredFiles.join(' ')}`,
+      // ESLint with:
+      // --no-warn-ignored: suppress "file ignored" warnings
+      // --max-warnings=-1: don't fail on warnings (only fail on errors)
+      `eslint --fix --no-warn-ignored --max-warnings=-1 ${filteredFiles.join(' ')}`,
       `prettier --write ${filteredFiles.join(' ')}`,
     ];
+  },
+
+  // JSON files - prettier only (no ESLint)
+  '**/*.json': (filenames) => {
+    const ignoredPatterns = [
+      'package.json',
+      'package-lock.json',
+      'tsconfig.json',
+      '.claude/',
+      'node_modules/',
+    ];
+
+    const filteredFiles = filenames.filter(
+      (file) => !ignoredPatterns.some((pattern) => file.includes(pattern)),
+    );
+
+    if (filteredFiles.length === 0) return [];
+
+    return [`prettier --write ${filteredFiles.join(' ')}`];
   },
 };

@@ -10,13 +10,21 @@ import * as path from 'path';
 
 // SRM Ownership Matrix
 const SRM_OWNERSHIP: Record<string, string[]> = {
-  'casino': ['casino', 'casino_settings', 'company', 'staff', 'game_settings', 'audit_log', 'report'],
-  'player': ['player', 'player_casino'],
-  'visit': ['visit'],
-  'loyalty': ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox'],
+  casino: [
+    'casino',
+    'casino_settings',
+    'company',
+    'staff',
+    'game_settings',
+    'audit_log',
+    'report',
+  ],
+  player: ['player', 'player_casino'],
+  visit: ['visit'],
+  loyalty: ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox'],
   'rating-slip': ['rating_slip'],
-  'finance': ['player_financial_transaction', 'finance_outbox'],
-  'mtl': ['mtl_entry', 'mtl_audit_note'],
+  finance: ['player_financial_transaction', 'finance_outbox'],
+  mtl: ['mtl_entry', 'mtl_audit_note'],
   'table-context': [
     'gaming_table',
     'gaming_table_settings',
@@ -84,7 +92,7 @@ class CrossContextDetector {
   private async checkFile(
     filePath: string,
     serviceName: string,
-    ownedTables: string[]
+    ownedTables: string[],
   ): Promise<void> {
     const content = fs.readFileSync(filePath, 'utf-8');
     const lines = content.split('\n');
@@ -133,18 +141,24 @@ class CrossContextDetector {
       return;
     }
 
-    console.log(`\x1b[31m❌ FOUND ${this.violations.length} VIOLATION(S)\x1b[0m\n`);
+    console.log(
+      `\x1b[31m❌ FOUND ${this.violations.length} VIOLATION(S)\x1b[0m\n`,
+    );
 
     this.violations.forEach((v, i) => {
       console.log(`${i + 1}. ${path.basename(v.file)}:${v.line}`);
       console.log(`   Service: ${v.service}`);
       console.log(`   Accessed table: ${v.accessedTable}`);
       console.log(`   Owner: ${v.owningService}`);
-      console.log(`   \x1b[33m→ Use published DTO from ${v.owningService} service instead\x1b[0m`);
+      console.log(
+        `   \x1b[33m→ Use published DTO from ${v.owningService} service instead\x1b[0m`,
+      );
       console.log();
     });
 
-    console.log(`\x1b[31m❌ VALIDATION FAILED\x1b[0m (${this.violations.length} violations)\n`);
+    console.log(
+      `\x1b[31m❌ VALIDATION FAILED\x1b[0m (${this.violations.length} violations)\n`,
+    );
   }
 
   hasViolations(): boolean {
@@ -156,15 +170,21 @@ async function main() {
   const args = process.argv.slice(2);
 
   if (args.length === 0) {
-    console.log('Usage: ts-node detect_cross_context_violations.ts <service-path>');
-    console.log('Example: ts-node detect_cross_context_violations.ts services/loyalty');
+    console.log(
+      'Usage: ts-node detect_cross_context_violations.ts <service-path>',
+    );
+    console.log(
+      'Example: ts-node detect_cross_context_violations.ts services/loyalty',
+    );
     process.exit(1);
   }
 
   const servicePath = args[0];
 
   if (!fs.existsSync(servicePath)) {
-    console.error(`\x1b[31mError:\x1b[0m Service path does not exist: ${servicePath}`);
+    console.error(
+      `\x1b[31mError:\x1b[0m Service path does not exist: ${servicePath}`,
+    );
     process.exit(1);
   }
 

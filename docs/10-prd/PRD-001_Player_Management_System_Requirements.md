@@ -10,9 +10,9 @@ id: PRD-001
 title: Player Management System Requirements (MVP Pilot)
 owner: Product
 status: Draft
-affects: [ARCH-012, API-005, QA-008, SEC-010, OPS-006, REL-003]
+affects: [ARCH-012, API-005, QA-001, QA-004, SEC-010, OPS-006, REL-003]
 created: 2025-11-04
-last_review: 2025-11-04
+last_review: 2025-11-27
 ---
 ```
 
@@ -35,7 +35,104 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 - **Cage/Accounting (read-only)** — verify in-session rewards, reconcile at day end.  
 - **Compliance (read-only)** — review threshold proximity and session context.
 
-**JTBD:** “Keep tables and player sessions clean, timely, and compliant — with minimal taps and zero ambiguity.”
+**JTBD:** "Keep tables and player sessions clean, timely, and compliant — with minimal taps and zero ambiguity."
+
+---
+
+## 2A) Architecture & Slicing Strategy
+
+> **Reference**: `docs/20-architecture/BALANCED_ARCHITECTURE_QUICK.md`
+> **Mandate**: This section MUST be consulted before any implementation spec is produced.
+
+### Slicing Decision
+
+**Question**: What is the scope of PRD-001?
+
+| Criterion | Assessment |
+|-----------|------------|
+| Single domain? | No — 7 bounded contexts |
+| ALL domains (infrastructure)? | No — feature-focused, not cross-cutting |
+| 2-3 domains? | No — spans Casino, TableContext, Player, Visit, RatingSlip, Loyalty, Finance, MTL |
+| User-facing? | Yes — Pit Boss dashboard, slip management UI |
+
+**Decision**: **VERTICAL slices per domain** with **HYBRID orchestration** for cross-domain flows.
+
+```
+PRD-001 Implementation Approach:
+┌─────────────────────────────────────────────────────────────────────┐
+│  VERTICAL SLICES (per bounded context)                              │
+│  DB → Service → Route → Hook → UI                                   │
+│                                                                     │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────┐       │
+│  │ Casino  │ │ Table   │ │ Player  │ │ Visit   │ │ Rating  │       │
+│  │ Service │ │ Context │ │ Service │ │ Service │ │ Slip    │       │
+│  └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘ └────┬────┘       │
+│       │          │          │          │          │               │
+│  ┌────┴──────────┴──────────┴──────────┴──────────┴────┐          │
+│  │           HYBRID ORCHESTRATION LAYER                 │          │
+│  │  (Server Actions / Route Handlers for cross-domain)  │          │
+│  └──────────────────────────────────────────────────────┘          │
+│       │                                        │                   │
+│  ┌────┴────┐                              ┌────┴────┐              │
+│  │ Loyalty │                              │ Finance │              │
+│  │ Service │                              │ Service │              │
+│  └─────────┘                              └─────────┘              │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Implementation Slice Order
+
+| Phase | Slice | Domains | Approach | Timeline |
+|-------|-------|---------|----------|----------|
+| 1 | Foundation | Casino, Player | VERTICAL | Week 1 |
+| 2 | Operational | TableContext, Visit | VERTICAL | Week 2 |
+| 3 | Telemetry | RatingSlip | VERTICAL | Week 3 |
+| 4 | Reward Flow | Visit → RatingSlip → Loyalty | HYBRID | Week 4 |
+| 5 | Finance (FF) | Finance | VERTICAL (feature-flagged) | Week 5 |
+| 6 | Compliance | MTL (read-only) | VERTICAL | Week 5 |
+| 7 | Integration | All domains | E2E testing | Week 6 |
+
+### Transport Rule
+
+Per `BALANCED_ARCHITECTURE_QUICK.md`:
+
+| Flow Type | Transport | Location |
+|-----------|-----------|----------|
+| React Query mutations | **Route Handlers** | `app/api/**/route.ts` |
+| Form submissions / RSC | **Server Actions** | `app/actions/**` |
+
+### Cross-Domain Orchestration Points
+
+| Flow | Domains Involved | Orchestrator |
+|------|------------------|--------------|
+| Start Visit | Player + Casino + Visit | `POST /api/visit/start` |
+| Start Rating Slip | Visit + TableContext + RatingSlip | `POST /api/rating-slips` |
+| Issue Mid-Session Reward | RatingSlip + Loyalty | `POST /api/loyalty/rewards` |
+| Close Slip with Reward | RatingSlip + Loyalty + Visit | `POST /api/rating-slips/{id}/close` |
+
+### TDD Mandate
+
+**All implementation MUST follow TDD** per `docs/40-quality/QA-004-tdd-standard.md`:
+
+```
+RED → GREEN → REFACTOR
+
+1. Define interface in services/{domain}/index.ts
+2. Write failing test in services/{domain}/__tests__/*.test.ts
+3. Implement minimal code to pass
+4. Refactor while keeping tests green
+```
+
+**Per-service test structure**:
+```
+services/{domain}/
+├── index.ts              # Interface + factory
+├── dto.ts                # DTOs (Pattern A/B/C)
+├── keys.ts               # React Query key factory
+└── __tests__/
+    ├── {domain}.unit.test.ts        # Mock supabase
+    └── {domain}.integration.test.ts # Real DB
+```
 
 ---
 
@@ -236,11 +333,120 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 
 ## 13) Acceptance & Test Strategy
 
-- **Contract tests** for RPCs and RLS allow-paths.  
-- **E2E happy-path** for Stories US-001…US-006.  
-- **Idempotency tests** for reward RPC and finance RPC.  
-- **Performance tests** covering KPIs and LCP.  
-- **Security tests** for least-privilege roles and casino scoping.
+> **References**:
+> - `docs/40-quality/QA-001-service-testing-strategy.md` (layer playbook)
+> - `docs/40-quality/QA-004-tdd-standard.md` (TDD mandate)
+
+### 13.1 TDD Requirement (MANDATORY)
+
+**All PRD-001 services MUST be developed using Test-Driven Development:**
+
+```
+┌─────────────────────────────────────────────────────┐
+│  RED → GREEN → REFACTOR (per QA-004)                │
+│                                                     │
+│  1. Define interface (services/{domain}/index.ts)   │
+│  2. Write failing test                              │
+│  3. Implement minimal code to pass                  │
+│  4. Refactor while tests stay green                 │
+│  5. Repeat for next method                          │
+└─────────────────────────────────────────────────────┘
+```
+
+**Anti-patterns to avoid:**
+- ❌ Writing code first, tests as afterthought
+- ❌ Using `any` types in test doubles
+- ❌ Testing implementation details instead of interfaces
+- ❌ Skipping integration tests for DB-backed services
+
+### 13.2 Testing Pyramid (per QA-001)
+
+```
+              /\
+             /  \  E2E Tests (Cypress) — 10%
+            /    \  • US-001 through US-006
+           /------\
+          /        \  Integration Tests — 30%
+         /          \  • Service + DB (RLS enabled)
+        /            \  • RPC contracts
+       /--------------\
+      /                \  Unit Tests — 60%
+     /                  \  • Service logic
+    /                    \  • DTO transforms
+   /______________________\
+```
+
+### 13.3 Layer Mock Boundaries
+
+| Layer | Mock Boundary | Real Dependencies | Tooling |
+|-------|---------------|-------------------|---------|
+| **Service (Unit)** | Typed `SupabaseClient<Database>` double | None | Vitest |
+| **Service (Integration)** | None | Real Supabase test DB with RLS | Vitest + Supabase CLI |
+| **Route/Action** | Mock downstream services | Auth context | Vitest + MSW |
+| **UI Component** | Mock server actions, React Query | None | RTL |
+| **E2E** | None | Full stack | Cypress |
+
+### 13.4 Coverage Targets
+
+| Module | Minimum | Notes |
+|--------|---------|-------|
+| Service CRUD | 90% | Happy path + domain errors |
+| Service workflows | 85% | State machines, concurrency |
+| DTO mappers | 100% | Snapshot/golden tests |
+| Action layer | 80% | Cache invalidation, RBAC |
+| UI components | 70% | Accessibility focus |
+| Schema verification | 100% | Every constraint exercised |
+
+**CI fails if coverage drops below target.**
+
+### 13.5 PRD-001 Story → Test Layer Mapping
+
+| Story | Test Expectations | Layers |
+|-------|-------------------|--------|
+| **US-001 Open Table** | Unit: `TableContextService.openTable` returns `active` status; Integration: RLS allows pit_boss write; E2E: dashboard reflects within 2s | Unit, Integration, E2E |
+| **US-002 Start Slip** | Unit: slip created with `status=open`; Integration: overlapping slip rejected; E2E: pit dashboard shows active slip | Unit, Integration, E2E |
+| **US-003 Pause/Resume** | Unit: state machine transitions; Integration: derived `duration_seconds` correct; E2E: UI reflects pause state | Unit, Integration, E2E |
+| **US-004 Close Slip** | Unit: `end_time` set, `status=closed`; Integration: telemetry event emitted; E2E: slip removed from Active list | Unit, Integration, E2E |
+| **US-005 Mid-Session Reward** | Unit: points calculated correctly; Integration: RPC idempotency (replay returns same result); Contract: RPC signature matches; E2E: ledger entry visible on slip | Unit, Integration, Contract, E2E |
+| **US-006 Finance Entry** | Unit: `gaming_day` derived; Integration: feature flag honored; E2E: entry appears in reconciliation view | Unit, Integration, E2E |
+
+### 13.6 RLS Test Matrix
+
+| Table | Test Scenario | Expected Outcome |
+|-------|---------------|------------------|
+| `gaming_table` | pit_boss reads own casino | ✅ Allowed |
+| `gaming_table` | pit_boss reads other casino | ❌ Denied (empty result) |
+| `rating_slip` | admin writes slip | ✅ Allowed |
+| `rating_slip` | dealer writes slip | ❌ Denied |
+| `loyalty_ledger` | direct INSERT | ❌ Denied (RPC only) |
+| `loyalty_ledger` | RPC with valid idempotency_key | ✅ Allowed |
+| `player_financial_transaction` | direct INSERT | ❌ Denied (RPC only) |
+
+### 13.7 Contract Tests
+
+- **RPC Signature Verification**: `rpc_issue_mid_session_reward` params match SRM contract
+- **RPC Idempotency**: Replay with same `idempotency_key` returns prior result
+- **Schema Verification**: `types/database.types.ts` matches deployed schema
+- **DTO Conformance**: Service DTOs derive from `Database['public']['Tables']`
+
+### 13.8 Performance Tests
+
+| Metric | Target | Test Method |
+|--------|--------|-------------|
+| Pit dashboard LCP | ≤ 2.5s | Lighthouse CI |
+| Slip action latency (p95) | < 400ms | k6 load test |
+| Reward RPC latency (p95) | < 500ms | k6 load test |
+| Zero duplicate rewards | 100% | Concurrent retry test |
+
+### 13.9 Definition of Done (Testing)
+
+- [ ] All services have unit tests (90%+ coverage)
+- [ ] Integration tests run against RLS-enabled Supabase
+- [ ] RPC contract tests pass
+- [ ] Schema verification test passes
+- [ ] E2E tests cover US-001 through US-006
+- [ ] Performance tests meet KPI targets
+- [ ] No `any` types in test doubles
 
 ---
 
@@ -264,16 +470,42 @@ Drive a pilot-ready vertical slice that enables **table-centric player tracking*
 
 ---
 
-## 16) Traceability Matrix (Feature ↔ Schema/RPC ↔ Tests)
+## 16) Traceability Matrix (Feature ↔ Schema/RPC ↔ Tests ↔ Implementation)
 
-| Feature | Tables/RPC | Primary Tests |
-|---|---|---|
-| Open/Close Table | `gaming_table`, `gaming_table_settings` | E2E-US-001, RLS-Table |
-| Start/Pause/Resume/Close Slip | `rating_slip` | E2E-US-002/003/004, PERF-Slip |
-| Mid-Session Reward | `loyalty_ledger`, `rpc_issue_mid_session_reward` | E2E-US-005, IDEMP-Reward |
-| Seat Player / Visit | `player`, `visit` | E2E-Seat, RLS-Visit |
-| Finance Entry (FF) | `player_financial_transaction`, `rpc_create_financial_txn` | E2E-US-006, IDEMP-Finance |
-| MTL Read-Only | `mtl_entry` | VIEW-MTL |
+### 16.1 Full Traceability
+
+| Feature | Story | Service | Tables/RPC | Slice | Test Layers |
+|---------|-------|---------|------------|-------|-------------|
+| Open/Close Table | US-001 | TableContextService | `gaming_table`, `gaming_table_settings` | VERTICAL | Unit, Integration (RLS), E2E |
+| Start Slip | US-002 | RatingSlipService | `rating_slip` | VERTICAL | Unit (state machine), Integration, E2E |
+| Pause/Resume Slip | US-003 | RatingSlipService | `rating_slip` | VERTICAL | Unit (state machine), Integration (duration calc), E2E |
+| Close Slip | US-004 | RatingSlipService | `rating_slip` | VERTICAL | Unit, Integration (telemetry), E2E |
+| Mid-Session Reward | US-005 | LoyaltyService | `loyalty_ledger`, `rpc_issue_mid_session_reward` | HYBRID | Unit, Integration (RPC), Contract, E2E |
+| Seat Player / Visit | — | PlayerService, VisitService | `player`, `visit` | VERTICAL | Unit, Integration (RLS), E2E |
+| Finance Entry (FF) | US-006 | PlayerFinancialService | `player_financial_transaction`, `rpc_create_financial_txn` | VERTICAL | Unit, Integration (FF), E2E |
+| MTL Read-Only | — | MTLService | `mtl_entry` | VERTICAL | Unit, Integration (RLS), E2E |
+
+### 16.2 Service → Test File Mapping
+
+| Service | Unit Test | Integration Test | Fixtures |
+|---------|-----------|------------------|----------|
+| CasinoService | `services/casino/__tests__/casino.unit.test.ts` | `casino.integration.test.ts` | `helpers.ts` |
+| TableContextService | `services/table-context/__tests__/table-context.unit.test.ts` | `table-context.integration.test.ts` | `helpers.ts` |
+| PlayerService | `services/player/__tests__/player.unit.test.ts` | `player.integration.test.ts` | `helpers.ts` |
+| VisitService | `services/visit/__tests__/visit.unit.test.ts` | `visit.integration.test.ts` | `helpers.ts` |
+| RatingSlipService | `services/rating-slip/__tests__/rating-slip.unit.test.ts` | `rating-slip.integration.test.ts` | `helpers.ts` |
+| LoyaltyService | `services/loyalty/__tests__/loyalty.unit.test.ts` | `loyalty.integration.test.ts` | `helpers.ts` |
+| PlayerFinancialService | `services/finance/__tests__/finance.unit.test.ts` | `finance.integration.test.ts` | `helpers.ts` |
+| MTLService | `services/mtl/__tests__/mtl.unit.test.ts` | `mtl.integration.test.ts` | `helpers.ts` |
+
+### 16.3 Cross-Domain Flow Tests
+
+| Flow | Orchestrator | Services Involved | Test Type |
+|------|--------------|-------------------|-----------|
+| Start Visit | `POST /api/visit/start` | Player + Casino + Visit | Integration |
+| Start Rating Slip | `POST /api/rating-slips` | Visit + TableContext + RatingSlip | Integration |
+| Issue Mid-Session Reward | `POST /api/loyalty/rewards` | RatingSlip + Loyalty | Integration + Contract |
+| Close Slip with Reward | `POST /api/rating-slips/{id}/close` | RatingSlip + Loyalty + Visit | Integration |
 
 ---
 

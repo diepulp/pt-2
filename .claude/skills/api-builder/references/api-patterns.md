@@ -2,9 +2,13 @@
 
 This reference defines canonical API implementation patterns aligned with SDLC taxonomy category **API/DATA** (`docs/25-api-data/`).
 
+**Full Transport Policy**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md`
+
 ---
 
 ## 1. Transport Architecture
+
+**Canonical Reference**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (full middleware chain, headers, CI hooks)
 
 PT-2 uses a **dual transport** model:
 

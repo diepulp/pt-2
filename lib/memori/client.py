@@ -50,6 +50,7 @@ class MemoriClient:
         "skill:frontend-design": "skill_frontend_design",
         "skill:lead-architect": "skill_lead_architect",
         "skill:skill-creator": "skill_skill_creator",
+        "skill:api-builder": "skill_api_builder",
     }
 
     def __init__(

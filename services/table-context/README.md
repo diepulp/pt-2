@@ -36,16 +36,16 @@
 
 ## Pattern
 
-**Pattern C: Hybrid (State Machine + CRUD)**
+**Pattern A: Contract-First**
 
-**Rationale**: Table-context manages both simple CRUD operations (table registry, metadata) AND complex state transitions (table lifecycle, break management, reservations). The state machine pattern provides clear business rules for table status transitions while CRUD operations handle basic table management. This hybrid approach balances simplicity for basic operations with sophistication for state management.
+**Rationale**: Table-context manages complex operational workflows (chip custody, dealer rotation, inventory reconciliation) with strict dual-signer requirements and custody chain tracking. Domain contracts must remain stable for floor operations, compliance audits, and cage reconciliation systems. Chip custody telemetry, fill/credit workflows, and drop custody timelines are complex business rules requiring decoupling from database schema.
 
 **Characteristics**:
-- **State Machine**: Table lifecycle transitions (open/closed/break/reserved)
-- **CRUD Operations**: Table registry management using canonical database types
-- **Pattern B DTOs**: Pick/Omit from `Database['public']['Tables']['gaming_table']`
-- **Server Actions**: Functional approach with `{ data, error }` result pattern
-- **React Query Integration**: Type-safe hooks with automatic cache invalidation
+- Manual DTO interfaces (custody chain contracts)
+- RPC-based operations with idempotency keys
+- Multi-table transactions (fill/credit/inventory)
+- Event-driven floor layout integration
+- Dual-signer validation business rules
 
 ---
 
@@ -74,114 +74,6 @@
 - `GamingTableDTO` to **RatingSlipService** (table assignment FK)
 - Table custody events to **PlayerFinancialService** (monetary reconciliation)
 - Inventory discrepancies to **Compliance** (variance alerts)
-
----
-
-## State Machine Implementation
-
-### Table States
-
-The service implements a state machine for table lifecycle management:
-
-```typescript
-type TableState = 'closed' | 'open' | 'break' | 'reserved';
-```
-
-**State Transitions**:
-- `closed` → `open` (OPEN_TABLE)
-- `closed` → `reserved` (RESERVE)
-- `open` → `closed` (CLOSE_TABLE)
-- `open` → `break` (START_BREAK)
-- `break` → `open` (END_BREAK)
-- `break` → `closed` (CLOSE_TABLE)
-- `reserved` → `closed` (UNRESERVE)
-- `reserved` → `open` (OPEN_TABLE)
-
-### Usage Example
-
-```typescript
-import { useOpenTable, useStartTableBreak, useTableState } from '@/hooks/use-table-context';
-
-function TableControls({ tableId }: { tableId: string }) {
-  const { data: currentState } = useTableState(tableId);
-  const openTable = useOpenTable();
-  const startBreak = useStartTableBreak();
-
-  return (
-    <div>
-      <p>Current State: {currentState}</p>
-      {currentState === 'closed' && (
-        <button onClick={() => openTable.mutate(tableId)}>
-          Open Table
-        </button>
-      )}
-      {currentState === 'open' && (
-        <button onClick={() => startBreak.mutate(tableId)}>
-          Start Break
-        </button>
-      )}
-    </div>
-  );
-}
-```
-
-### Server Actions API
-
-All server actions follow the `{ data, error }` pattern:
-
-```typescript
-// CRUD Operations
-const result = await getTables(casinoId);
-const table = await getTableById(tableId);
-const newTable = await createTable({ casino_id, label, type, pit });
-const updated = await updateTable(tableId, { label: 'New Label' });
-const deleted = await deleteTable(tableId);
-
-// State Management
-const state = await getTableState(tableId);
-const transitioned = await transitionTableState(tableId, { type: 'OPEN_TABLE' });
-
-// Convenience Methods
-const opened = await openTable(tableId);
-const closed = await closeTable(tableId);
-const onBreak = await startTableBreak(tableId);
-const resumed = await endTableBreak(tableId);
-const reserved = await reserveTable(tableId);
-const unreserved = await unreserveTable(tableId);
-
-// Error Handling
-if (result.error) {
-  console.error(result.error);
-} else {
-  console.log(result.data);
-}
-```
-
-### React Query Hooks
-
-All hooks use the centralized `tableContextKeys` for cache management:
-
-```typescript
-// Query Hooks
-const { data: tables } = useTables(casinoId);
-const { data: table } = useTable(tableId);
-const { data: state } = useTableState(tableId);
-const { data: slips } = useActiveRatingSlips(tableId);
-
-// Mutation Hooks
-const createTable = useCreateTable();
-const updateTable = useUpdateTable();
-const deleteTable = useDeleteTable();
-const transitionState = useTransitionTableState();
-
-// Convenience Mutation Hooks
-const openTable = useOpenTable();
-const closeTable = useCloseTable();
-const startBreak = useStartTableBreak();
-const endBreak = useEndTableBreak();
-const reserve = useReserveTable();
-const unreserve = useUnreserveTable();
-```
 
 ---
 
@@ -322,25 +214,6 @@ await supabase.rpc('rpc_log_table_drop', {
 **Cache Invalidation**:
 - React Query: `['table-context', 'inventory', table_id]`
 - Realtime channel: `{casino_id}:table-context:{table_id}`
-
----
-
-## Implementation Files
-
-### Service Layer
-- `services/table-context/keys.ts` - React Query key factories
-- `services/table-context/table-state-machine.ts` - State machine logic
-- `services/table-context/README.md` - This documentation
-
-### Actions & Hooks
-- `app/actions/table-context-actions.ts` - Server actions (CRUD + state transitions)
-- `hooks/use-table-context.ts` - React Query hooks
-
-### Database
-- `types/database.types.ts` - Generated types from Supabase schema
-- Table: `gaming_table` (columns: id, casino_id, label, type, status, pit, created_at)
-- Enum: `table_status` = "inactive" | "active" | "closed"
-- Enum: `game_type` = "blackjack" | "poker" | "roulette" | "baccarat"
 
 ---
 

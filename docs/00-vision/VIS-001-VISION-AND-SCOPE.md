@@ -26,7 +26,7 @@ Aligns direction and guards against scope creep with clear problem statements, g
 
 ## Vision Brief (One-Pager)
 
-**North Star**: *Matrix-first, table-centric player tracking with compliant session logging, chip custody telemetry, and idempotent mid-session rewards—production-ready for single-casino pilot.*
+**North Star**: *Matrix-first, table-centric player tracking with compliant session logging, chip custody telemetry, and idempotent loyalty rewards, production-ready for single-casino pilot.*
 
 **Problem**
 Pit operations struggle with fragmented tools, manual workflows, and error-prone mid-session rewards. Player time is miscounted, chip custody is poorly tracked, compliance context is hard to reconstruct, and floor layout changes require system downtime. This creates revenue leakage, audit risk, operational friction, and operator fatigue.
@@ -35,7 +35,7 @@ Pit operations struggle with fragmented tools, manual workflows, and error-prone
 A pit-friendly, operator-first platform built on **9 bounded-context services** with matrix-first contracts (SRM ↔ schema ↔ RLS ↔ DTOs). Core workflows: open/close tables with chip custody tracking, draft/review/activate floor layouts without downtime, start/pause/resume/close rating slips with accurate timekeeping, and award **idempotent mid-session rewards** safely. Compliance signals are ambient and built-in. Gaming day temporal authority is centralized. Error taxonomy prevents infrastructure leaks. RLS-by-default security with no service keys in runtime.
 
 **Definition of Success (qualitative)**
-One casino runs a full shift—table opens with inventory counts, dealers rotate cleanly, players earn rewards mid-session without duplicates, fills and credits are logged with dual signatures, compliance thresholds are monitored in real-time, and the shift closes with reconcilable audit trails—and asks us back tomorrow.
+One casino runs a full shift—table opens with inventory counts, dealers rotate cleanly, players earn rewards mid-session without duplicates, fills and credits are logged with dual signatures, compliance thresholds are monitored in real-time, and the shift closes with reconcilable audit trails and shift reports.
 
 ---
 
@@ -144,7 +144,7 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 **Capabilities**:
 - Player profile management (first/last name, identity data)
 - Multi-casino enrollment via `player_casino` (status tracking per casino)
-- PII protection (birth_date, SSN excluded from public DTOs)
+- PII protection (birth_date, SSN excluded from public DTOs, required for CTL)
 
 **Provides To**: Visit, Loyalty, Finance, RatingSlip, MTL (player identity FKs).
 
@@ -290,9 +290,9 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 4. **Player checks in** (Visit created; enrollment verified)
 5. **Player seated** → Rating Slip started (table FK, game settings captured)
 6. **Mid-session reward issued** (Loyalty RPC called with idempotency key; ledger appended; balance updated)
-7. **Player moves tables** → Rating Slip paused/resumed
+7. **Player moves** → Rating Slip paused/resumed/moved to another table
 8. **Session ends** → Rating Slip closed; Visit closed
-9. **End-of-shift inventory** → Closing snapshot logged; discrepancies noted
+9. **End-of-shift inventory** → Closing snapshot logged; discrepancies noted, shift report generated
 
 ---
 
@@ -321,7 +321,7 @@ One casino runs a full shift—table opens with inventory counts, dealers rotate
 1. **Admin drafts new layout** → `rpc_create_floor_layout` (pits, table slots defined)
 2. **Layout versioned** → Immutable snapshot created
 3. **Layout submitted for review** → Status: Draft → Review
-4. **Pit Boss approves** → Status: Review → Approved
+4. **Pit Boss approves** → Status: Review → Approved, also could be approved by an admin
 5. **Admin activates layout** → `rpc_activate_floor_layout` (idempotent by `activation_request_id`)
 6. **Event emitted** → `floor_layout.activated` broadcast
 7. **TableContext syncs** → Gaming tables updated with new pit assignments; no downtime

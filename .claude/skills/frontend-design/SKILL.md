@@ -5,17 +5,34 @@ allowed-tools: SlashCommand, context7, mcp__sequential-thinking__sequentialthink
 license: Complete terms in LICENSE.txt
 ---
 
+## Quick Start
+
+**START HERE**: Read `references/QUICK_START.md` for the fastest path to implementation.
+
+```
+references/
+├── QUICK_START.md              ← START HERE (single entry point)
+├── frontend-rules.md           ← Condensed rules for state, performance, types
+├── pt2-technical-standards.md  ← Stack specifics (Tailwind v4, shadcn, React 19)
+├── pt2-architecture-integration.md ← Service layer patterns
+└── ADR-003-state-management-strategy.md ← Full state management ADR
+```
+
+### Pre-flight Check (Optional)
+
+```bash
+python .claude/skills/frontend-design/scripts/check_primitive_freshness.py
+```
+
+---
+
+## Overview
+
 This skill guides creation of distinctive, production-grade frontend interfaces for the PT-2 project that avoid generic "AI slop" aesthetics while adhering to PT-2's technical architecture.
 
 The user provides frontend requirements: a component, page, application, or interface to build. They may include context about the purpose, audience, or technical constraints.
 
 ## PT-2 Architecture Context
-
-**IMPORTANT**: This project follows specific technical standards. Before implementing any frontend code, consult the reference files:
-
-- **`references/ADR-003-state-management-strategy.md`** - **AUTHORITATIVE** state management strategy (TanStack Query v5, Zustand, query key factories, cache invalidation, real-time)
-- **`references/pt2-technical-standards.md`** - Technology stack requirements (React 19, Next.js App Router, Tailwind v4, shadcn/ui)
-- **`references/pt2-architecture-integration.md`** - Service layer integration, DTOs, Server Actions, data patterns
 
 **Quick Technical Requirements**:
 - ✅ React 19 with App Router (NOT Pages Router)
@@ -25,7 +42,7 @@ The user provides frontend requirements: a component, page, application, or inte
 - ✅ TanStack Query for client-side data
 - ✅ TypeScript strict mode
 
-Read the reference files when technical implementation details are needed.
+See `references/QUICK_START.md` for implementation workflow and code templates.
 
 ## Memory Recording Protocol 🧠
 
@@ -342,103 +359,78 @@ Interpret creatively and make unexpected choices that feel genuinely designed fo
 
 Remember: Claude is capable of extraordinary creative work. Don't hold back, show what can truly be created when thinking outside the box and committing fully to a distinctive vision.
 
-## Implementation Workflow for PT-2
+## Implementation Workflow
 
-Follow this workflow when building frontend interfaces for PT-2:
+See `references/QUICK_START.md` for the complete implementation workflow including:
+- Pattern selection (Server Component, Client + Query, Real-time, Forms)
+- Code templates for each pattern
+- Validation checklist
+- Anti-patterns to avoid
 
-### 1. Understand Requirements & Design Direction
-- Clarify the component/page purpose and audience
-- Choose a bold aesthetic direction (see "Design Thinking" above)
-- Identify any specific PT-2 domain context (players, visits, loyalty, etc.)
+See `references/frontend-rules.md` for condensed technical rules.
 
-### 2. Consult Technical Standards
+---
 
-**Read `references/ADR-003-state-management-strategy.md` FIRST** (authoritative):
-- TanStack Query v5 configuration and patterns
-- Query key factories (REQUIRED - never hardcode keys)
-- Cache invalidation strategies (hierarchical, direct updates)
-- Pagination patterns (`placeholderData`, Infinite Query)
-- Real-time → cache reconciliation (Supabase subscriptions)
-- Zustand for ephemeral UI state only
-- Mutation retry policies and idempotency
+## Real-Time Events & Cache Invalidation
 
-**Then read `references/pt2-technical-standards.md` for**:
-- Tailwind v4 configuration and custom utilities
-- shadcn/ui component installation and usage
-- React 19 patterns (Server Actions, useActionState, useOptimistic)
-- Performance requirements (virtualization, skeletons, staleTime)
-- Code quality standards (ESLint, Prettier, testing)
+**Canonical Reference**: `docs/35-integration/INT-002-event-catalog.md`
 
-### 3. Integrate with PT-2 Architecture
-**Read `references/pt2-architecture-integration.md` for**:
-- Choosing Server Component vs Client Component pattern
-- Using service layer and DTOs correctly
-- Implementing mutations with Server Actions
-- Setting up TanStack Query with service keys
-- Real-time data synchronization patterns
-- Error handling with ServiceResult<T>
+When implementing real-time UI updates, use the event catalog patterns:
 
-### 4. Implement with Creative Excellence
-- Write production-grade code that follows PT-2 standards
-- Apply your chosen aesthetic direction with precision
-- Use shadcn/ui as foundation, customize for the aesthetic
-- Ensure Tailwind v4 utilities create the desired visual impact
-- Add animations and micro-interactions that delight
+### Cache Invalidation from Events
 
-### 5. Verify Technical Compliance
-- ✅ Uses Tailwind v4 syntax (not v3)
-- ✅ Uses shadcn/ui components where appropriate
-- ✅ Server Components for static content, Client Components for interactivity
-- ✅ Server Actions for all mutations
-- ✅ Service keys from `services/{domain}/keys.ts`
-- ✅ DTOs imported from service types
-- ✅ Lists > 100 items use virtualization
-- ✅ Loading states use skeletons (not spinners)
+```typescript
+// Shared helper maps events to React Query keys
+function invalidateByDomainEvent(queryClient: QueryClient, event: string, payload: EventPayload) {
+  switch (event) {
+    case 'rating_slip.created':
+      queryClient.invalidateQueries({ queryKey: ['rating-slip', 'list', payload.casino_id] });
+      break;
+    case 'rating_slip.updated':
+      queryClient.setQueryData(['rating-slip', 'detail', payload.rating_slip_id], payload);
+      queryClient.invalidateQueries({
+        queryKey: ['rating-slip', 'by-visit', payload.visit_id],
+        refetchType: 'active'  // Batched, avoids refetch storms
+      });
+      break;
+    case 'loyalty.balance_updated':
+      queryClient.setQueryData(
+        ['player', 'loyalty', 'balance', payload.player_id, payload.casino_id],
+        payload.balance
+      );
+      break;
+    // ... other events from INT-002
+  }
+}
+```
 
-### Common PT-2 Frontend Patterns
+### Realtime Subscription Pattern
 
-**Pattern: Interactive Data Table**
-- Use shadcn/ui `<Table>` component
-- Virtualize with `@tanstack/react-virtual` if > 100 rows
-- Query data with TanStack Query + service keys
-- Apply creative styling via Tailwind v4 utilities
+```typescript
+'use client'
+import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { createClient } from '@/lib/supabase/client'
 
-**Pattern: Form with Server Action**
-- Use shadcn/ui `<Form>` components
-- Submit via Server Action with `useActionState`
-- Show loading state during submission
-- Style with bold, distinctive form design
+function useRealtimeInvalidation(casinoId: string) {
+  const queryClient = useQueryClient()
+  const supabase = createClient()
 
-**Pattern: Real-time Dashboard**
-- Server Component for initial data
-- Client Component with TanStack Query for interactivity
-- Supabase subscription for real-time updates
-- Invalidate queries on change events
-- Creative, information-dense layout
+  useEffect(() => {
+    const channel = supabase
+      .channel(`casino:${casinoId}`)
+      .on('broadcast', { event: 'rating_slip.updated' }, ({ payload }) => {
+        invalidateByDomainEvent(queryClient, 'rating_slip.updated', payload)
+      })
+      .subscribe()
 
-**Pattern: Master-Detail View**
-- Server Component for list (or Client + Query)
-- Dynamic route for detail page `[id]/page.tsx`
-- Prefetch on hover for instant navigation
-- Distinctive visual hierarchy between list and detail
+    return () => { supabase.removeChannel(channel) }
+  }, [casinoId, queryClient, supabase])
+}
+```
 
-## Quick Reference: PT-2 + Aesthetics
+### Event Batching
 
-Combine PT-2's technical requirements with exceptional design:
-
-| Technical Requirement | Creative Opportunity |
-|-----------------------|----------------------|
-| Tailwind v4 utilities | Custom `@theme` tokens for distinctive color palettes |
-| shadcn/ui components | Customize via Tailwind classes for unique visual identity |
-| Server Actions | Loading states as micro-interaction moments |
-| TanStack Query | Skeleton loading as part of aesthetic language |
-| React 19 patterns | `useOptimistic` for delightful instant feedback |
-| TypeScript strict | Type-safe design system tokens and variants |
-
-## Resources Available
-
-- **`references/ADR-003-state-management-strategy.md`** - **AUTHORITATIVE** state management ADR (TanStack Query v5, Zustand, patterns)
-- **`references/pt2-technical-standards.md`** - Complete technical stack guide
-- **`references/pt2-architecture-integration.md`** - Service integration patterns
-- **PT-2 Documentation**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` (if deeper context needed)
-- **shadcn/ui Registry**: https://ui.shadcn.com (for component installation)
+- Use **250-500ms batching** for list invalidations
+- Use `refetchType: 'active'` to avoid background refetch storms
+- For high-volume telemetry (RatingSlip, TableContext), prefer **poll + ETag** over realtime streams

@@ -1,5 +1,5 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+import { NextRequest } from "next/server";
+import { z } from "zod";
 
 import {
   createRequestContext,
@@ -7,20 +7,27 @@ import {
   parseParams,
   parseQuery,
   successResponse,
-} from '@/lib/http/service-response';
-import { createClient } from '@/lib/supabase/server';
+} from "@/lib/http/service-response";
+import { createClient } from "@/lib/supabase/server";
+import type { Database } from "@/types/database.types";
+
+type FloorPitRow = Database["public"]["Tables"]["floor_pit"]["Row"];
+type FloorTableSlotRow =
+  Database["public"]["Tables"]["floor_table_slot"]["Row"];
 
 const paramsSchema = z.object({
   layoutId: z.string().uuid(),
 });
 
 const versionQuerySchema = z.object({
-  status: z.enum(['draft', 'pending_activation', 'active', 'retired']).optional(),
+  status: z
+    .enum(["draft", "pending_activation", "active", "retired"])
+    .optional(),
   include_slots: z
     .preprocess((value) => {
       if (value === undefined) return undefined;
-      if (typeof value === 'string') {
-        return value === 'true' || value === '1';
+      if (typeof value === "string") {
+        return value === "true" || value === "1";
       }
       return value;
     }, z.boolean())
@@ -39,13 +46,13 @@ export async function GET(
     const supabase = await createClient();
 
     let dbQuery = supabase
-      .from('floor_layout_version')
-      .select('*')
-      .eq('layout_id', layoutId)
-      .order('version_no', { ascending: false });
+      .from("floor_layout_version")
+      .select("*")
+      .eq("layout_id", layoutId)
+      .order("version_no", { ascending: false });
 
     if (query.status) {
-      dbQuery = dbQuery.eq('status', query.status);
+      dbQuery = dbQuery.eq("status", query.status);
     }
 
     const { data, error } = await dbQuery;
@@ -62,29 +69,31 @@ export async function GET(
 
     const versionIds = versions.map((v) => v.id);
 
-    const [{ data: pits, error: pitsError }, { data: slots, error: slotsError }] =
-      await Promise.all([
-        supabase
-          .from('floor_pit')
-          .select('*')
-          .in('layout_version_id', versionIds),
-        supabase
-          .from('floor_table_slot')
-          .select('*')
-          .in('layout_version_id', versionIds),
-      ]);
+    const [
+      { data: pits, error: pitsError },
+      { data: slots, error: slotsError },
+    ] = await Promise.all([
+      supabase
+        .from("floor_pit")
+        .select("*")
+        .in("layout_version_id", versionIds),
+      supabase
+        .from("floor_table_slot")
+        .select("*")
+        .in("layout_version_id", versionIds),
+    ]);
 
     if (pitsError) throw pitsError;
     if (slotsError) throw slotsError;
 
-    const pitsByVersion = new Map<string, any[]>();
+    const pitsByVersion = new Map<string, FloorPitRow[]>();
     (pits ?? []).forEach((pit) => {
       const list = pitsByVersion.get(pit.layout_version_id) ?? [];
       list.push(pit);
       pitsByVersion.set(pit.layout_version_id, list);
     });
 
-    const slotsByVersion = new Map<string, any[]>();
+    const slotsByVersion = new Map<string, FloorTableSlotRow[]>();
     (slots ?? []).forEach((slot) => {
       const list = slotsByVersion.get(slot.layout_version_id) ?? [];
       list.push(slot);

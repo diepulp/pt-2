@@ -1,4 +1,4 @@
-import { serializeKeyFilters } from '@/services/shared/key-utils';
+import { serializeKeyFilters } from "@/services/shared/key-utils";
 
 export type MtlEntryFilters = {
   casinoId?: string;
@@ -10,7 +10,7 @@ export type MtlEntryFilters = {
   limit?: number;
 };
 
-const ROOT = ['mtl'] as const;
+const ROOT = ["mtl"] as const;
 const serialize = (filters: MtlEntryFilters = {}) =>
   serializeKeyFilters(filters);
 
@@ -18,11 +18,10 @@ export const mtlKeys = {
   root: ROOT,
   entries: Object.assign(
     (filters: MtlEntryFilters = {}) =>
-      [...ROOT, 'entries', serialize(filters)] as const,
-    { scope: [...ROOT, 'entries'] as const },
+      [...ROOT, "entries", serialize(filters)] as const,
+    { scope: [...ROOT, "entries"] as const },
   ),
-  detail: (entryId: string) => [...ROOT, 'detail', entryId] as const,
-  create: () => [...ROOT, 'create'] as const,
-  auditTrail: (entryId: string) =>
-    [...ROOT, 'audit-trail', entryId] as const,
+  detail: (entryId: string) => [...ROOT, "detail", entryId] as const,
+  create: () => [...ROOT, "create"] as const,
+  auditTrail: (entryId: string) => [...ROOT, "audit-trail", entryId] as const,
 };

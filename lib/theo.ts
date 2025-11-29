@@ -9,7 +9,7 @@
  * @see docs/10-prd/OPEN_QUESTIONS.md for rationale
  */
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
 /**
  * Minimal game settings required for theo calculation.
@@ -32,7 +32,8 @@ export type PointsGameSettings = TheoGameSettings & {
 /**
  * Full game settings row type from database.
  */
-export type GameSettingsRow = Database['public']['Tables']['game_settings']['Row'];
+export type GameSettingsRow =
+  Database["public"]["Tables"]["game_settings"]["Row"];
 
 /**
  * Options for points calculation.
@@ -64,9 +65,9 @@ export type CalculatePointsOptions = {
  * // Result: 105 (theoretical win for the house)
  */
 export function calculateTheo(
-  gameSettings: Pick<TheoGameSettings, 'house_edge'>,
+  gameSettings: Pick<TheoGameSettings, "house_edge">,
   averageBet: number,
-  totalDecisions: number
+  totalDecisions: number,
 ): number {
   const { house_edge } = gameSettings;
 
@@ -74,7 +75,7 @@ export function calculateTheo(
     return 0;
   }
 
-  const theoreticalWin = (averageBet * house_edge / 100) * totalDecisions;
+  const theoreticalWin = ((averageBet * house_edge) / 100) * totalDecisions;
   return theoreticalWin;
 }
 
@@ -100,7 +101,7 @@ export function calculateTheo(
 export function calculateTheoFromDuration(
   gameSettings: TheoGameSettings,
   averageBet: number,
-  durationMinutes: number
+  durationMinutes: number,
 ): number {
   const { decisions_per_hour } = gameSettings;
 
@@ -119,7 +120,10 @@ export function calculateTheoFromDuration(
  * @param durationMinutes - Play duration in minutes
  * @returns Theo per hour (or 0 if duration is 0)
  */
-export function calculateTheoPerHour(theo: number, durationMinutes: number): number {
+export function calculateTheoPerHour(
+  theo: number,
+  durationMinutes: number,
+): number {
   if (durationMinutes <= 0) {
     return 0;
   }
@@ -154,7 +158,7 @@ export function calculateTheoPerHour(theo: number, durationMinutes: number): num
 export function calculatePointsFromTheo(
   theo: number,
   gameSettings: PointsGameSettings,
-  options?: CalculatePointsOptions
+  options?: CalculatePointsOptions,
 ): number {
   const {
     seats_available = 7,
@@ -168,7 +172,8 @@ export function calculatePointsFromTheo(
 
   // Base points calculation
   const conversionRate = points_conversion_rate ?? 10.0;
-  const multiplier = options?.pointMultiplierOverride ?? point_multiplier ?? 1.0;
+  const multiplier =
+    options?.pointMultiplierOverride ?? point_multiplier ?? 1.0;
 
   let pointsEarned = theo * conversionRate * multiplier;
 
@@ -200,9 +205,13 @@ export function calculateSessionRewards(
   gameSettings: PointsGameSettings,
   averageBet: number,
   durationMinutes: number,
-  options?: CalculatePointsOptions
+  options?: CalculatePointsOptions,
 ): { theo: number; theoPerHour: number; points: number } {
-  const theo = calculateTheoFromDuration(gameSettings, averageBet, durationMinutes);
+  const theo = calculateTheoFromDuration(
+    gameSettings,
+    averageBet,
+    durationMinutes,
+  );
   const theoPerHour = calculateTheoPerHour(theo, durationMinutes);
   const points = calculatePointsFromTheo(theo, gameSettings, options);
 

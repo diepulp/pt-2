@@ -43,18 +43,12 @@ export type PlayerDTO = Pick<
 - `getPlayerByCasino(casinoId: string, playerId: string)` - Fetch player with casino verification
 - `isPlayerEnrolled(casinoId: string, playerId: string)` - Check enrollment status
 - `getPlayersByCasino(casinoId: string, options?)` - Paginated player list for casino
-- `updatePlayer(playerId: string, data: PlayerUpdateDTO)` - Update player profile
-- `deletePlayer(playerId: string)` - Delete player and casino relationships
-- `searchPlayers(query: string, casinoId?: string)` - Search players by name (optionally filtered by casino)
 
 **React Hooks** (`hooks/use-player.ts`):
 - `usePlayer(playerId)` - Query single player
 - `usePlayerList(casinoId, options)` - Infinite query for player list
 - `usePlayerEnrollment(casinoId, playerId)` - Query enrollment status
 - `useEnrollPlayer()` - Mutation for player enrollment
-- `useUpdatePlayer()` - Mutation for updating player profile
-- `useDeletePlayer()` - Mutation for deleting player
-- `useSearchPlayers(query, casinoId?)` - Query for searching players by name
 
 ## References
 

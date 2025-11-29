@@ -5,7 +5,7 @@
     "build": "next build",
     "start": "next start",
     "type-check": "tsc --noEmit --strict",
-    "lint": "eslint . --fix",
+    "lint": "eslint .",
     "lint:check": "eslint . --max-warnings=0",
     "lint:fix": "eslint . --fix",
     "lint-staged": "lint-staged",

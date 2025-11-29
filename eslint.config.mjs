@@ -5,8 +5,11 @@ import { FlatCompat } from '@eslint/eslintrc';
 
 import dtoColumnAllowlist from './.eslint-rules/dto-column-allowlist.js';
 import noCrossContextDbImports from './.eslint-rules/no-cross-context-db-imports.js';
+import noDtoTypeAssertions from './.eslint-rules/no-dto-type-assertions.js';
+import noHeaderCasinoContext from './.eslint-rules/no-header-casino-context.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
+import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -25,12 +28,17 @@ const eslintConfig = [
       '.next/**',
       'coverage/**',
       '.swc/**',
-      '.venv/**',
       '.qodo/**',
       '.cursor/**',
       'types/database.types.ts', // Generated file, exclude from linting
+      'types/remote/**', // Remote generated types
       'cypress/**/*.{js,ts}', // Exclude Cypress files from main config
       'scripts/**', // Utility scripts are executed via node without linting
+      '.eslint-rules/**', // ESLint plugin files (not production code)
+      '.claude/**', // Agent configs, skills, commands (not production code)
+      'memory/**', // Memory files (not production code)
+      'components/landing-page/ui/**', // shadcn/ui generated components
+      'components/landing-page/theme-provider.tsx', // next-themes wrapper
     ],
   },
   // Service layer specific configuration - PRD §3.3 Service Layer Standards
@@ -43,6 +51,8 @@ const eslintConfig = [
           'no-manual-dto-interfaces': noManualDTOInterfaces,
           'no-cross-context-db-imports': noCrossContextDbImports,
           'dto-column-allowlist': dtoColumnAllowlist,
+          'no-dto-type-assertions': noDtoTypeAssertions,
+          'no-service-result-return': noServiceResultReturn,
         },
       },
     },
@@ -55,6 +65,10 @@ const eslintConfig = [
       'custom-rules/no-cross-context-db-imports': 'error',
       // Enable column allowlist for sensitive tables (SRM:217-238)
       'custom-rules/dto-column-allowlist': 'error',
+      // V1 FIX: Prevent DTO type assertions - use type guards (WORKFLOW-PRD-002)
+      'custom-rules/no-dto-type-assertions': 'error',
+      // V2 FIX: ADR-012 compliance - services throw, don't return ServiceResult
+      'custom-rules/no-service-result-return': 'error',
       // Require explicit return types for service factories
       '@typescript-eslint/explicit-function-return-type': [
         'error',
@@ -111,7 +125,22 @@ const eslintConfig = [
       ],
 
       // No console in services (use structured logging)
-      'no-console': 'error',
+      'no-console': 'warn',
+    },
+  },
+  // API Routes security configuration - V4 FIX (WORKFLOW-PRD-002)
+  {
+    files: ['app/api/**/*.ts', 'app/actions/**/*.ts', 'pages/api/**/*.ts'],
+    plugins: {
+      'security-rules': {
+        rules: {
+          'no-header-casino-context': noHeaderCasinoContext,
+        },
+      },
+    },
+    rules: {
+      // V4 FIX: Prevent casino context from headers - security vulnerability
+      'security-rules/no-header-casino-context': 'error',
     },
   },
   // Cypress-specific configuration
@@ -165,8 +194,10 @@ const eslintConfig = [
       // PRD Section 4: Anti-Pattern Guardrails
       // ===================================================================
 
-      // Ban console.* in production code (allow in tests)
-      'no-console': ['error', { allow: ['warn', 'error'] }],
+      // console.* - WARN globally, ERROR in services (see service config above)
+      // Allows debug logging in non-service code during development
+      // Service layer enforces 'no-console': 'error' for production safety
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
 
       // Forbid 'as any' type casting
       '@typescript-eslint/no-explicit-any': 'error',

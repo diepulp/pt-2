@@ -1,26 +1,37 @@
 # Edge Transport & Middleware Policy (PT-2)
 
-**Status:** Draft (syncs with SRM v3.0.2 transport clauses)  
-**Owners:** Architecture + Backend Leads  
-**Last Reviewed:** 2025-11-10  
-**Related Docs:** docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md, docs/25-api-data/DTO_CATALOG.md (TBD)
+**Status:** Accepted (syncs with SRM v3.1.0 + SERVER_ACTIONS_ARCHITECTURE.md)
+**Owners:** Architecture + Backend Leads
+**Last Reviewed:** 2025-11-28
+**Related Docs:** docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md, docs/70-governance/SERVER_ACTIONS_ARCHITECTURE.md, docs/25-api-data/DTO_CATALOG.md
 
 ---
 
 ## 1. Purpose
 
-The Service Responsibility Matrix (SRM) now mandates a matrix-first transport contract. This document captures the operational detail: which ingress paths are allowed, how middleware is composed, and how DTOs, headers, and idempotency keys remain consistent across Server Actions, Route Handlers, and services.
+The Service Responsibility Matrix (SRM) mandates a matrix-first transport contract. This document captures the operational detail: which ingress paths are allowed, how middleware is composed, and how DTOs, headers, and idempotency keys remain consistent across Server Actions, Route Handlers, and services.
 
 ---
 
-## 2. Allowed Entry Points
+## 2. Allowed Entry Points (Dual-Entry Pattern)
 
-| Use Case | Entry Point | Notes |
-|----------|-------------|-------|
-| First-party reads & mutations (staff UI, admin console, casino tooling) | **Server Actions** (`app/*`) | Must be wrapped with the middleware chain defined below. No direct `route.ts` mutations for first-party flows. |
-| Third-party integrations, webhooks, hardware feeds, file uploads | **Route Handlers** (`app/api/*/route.ts`) | Must reuse the same DTO + schema as the Server Action surface and call into the same service factories. |
+> **Canonical Reference:** `docs/70-governance/SERVER_ACTIONS_ARCHITECTURE.md`
+> **Decision Date:** 2025-11-28 (Executive Decision: Dual-Entry Transport Pattern)
 
-**Rule of thumb:** if PT-2 owns the UI, use Server Actions; if an external caller controls payloads or timing, use Route Handlers.
+| Client Transport Mechanism | Entry Point | Notes |
+|---------------------------|-------------|-------|
+| React Query mutations/queries | **Route Handlers** (`app/api/v1/**/route.ts`) | JSON transport via `fetch()`, header-based idempotency (`x-idempotency-key`), returns `ServiceHttpResult<T>` |
+| Form actions / RSC prop flows | **Server Actions** (`app/actions/**`) | Non-JSON transport, `useFormState` compatible, returns `ServiceResult<T>` |
+| Third-party integrations, webhooks, hardware feeds | **Route Handlers** (`app/api/v1/**/route.ts`) | Signature validation, rate limiting, shared DTO contracts |
+
+**Rule:** The **client transport mechanism** determines the entry point, not caller origin. Both paths MUST wrap `withServerAction()` for the middleware chain.
+
+### Rationale for Dual-Entry Pattern
+
+1. **React Query integration** - Route Handlers return JSON (`ServiceHttpResult<T>`) that React Query's `mutationFn` consumes directly
+2. **Header semantics** - `x-idempotency-key` and `x-correlation-id` are natural in HTTP headers
+3. **Cache control** - React Query's `invalidateQueries` pattern is cleaner with explicit HTTP responses
+4. **Implementation reality** - 30+ Route Handlers in `app/api/v1/**` follow this pattern
 
 ---
 
@@ -74,14 +85,18 @@ Headers must be validated inside the wrapper; downstream handlers assume presenc
 
 ## 6. Service-Specific Notes
 
-| Service | Transport Notes |
-|---------|-----------------|
-| CasinoService | Server Actions for staff management/settings; Route Handlers limited to enterprise imports (bulk staff sync). |
-| TableContextService | Server Actions for fills/credits/drops; hardware integrations via Route Handlers must reuse the DTO schema and include `x-idempotency-key`. |
-| LoyaltyService | Server Actions for mid-session rewards + manual adjustments. Third-party loyalty integrations call Route Handlers that forward to the same service layer. |
-| RatingSlipService | Server Actions for lifecycle changes; telemetry collectors hit Route Handlers that validate DTOs + `x-correlation-id` and throttle broadcasts to slip state transitions / 1–5s snapshots (others served via poll + ETag). |
-| PlayerFinancialService | Cashier/cage actions flow through Server Actions, requiring idempotency key persistence. External payment gateways hit Route Handlers wired to the same RPCs. |
-| MTLService | Compliance submissions via Server Actions; regulator interfaces/hardware via Route Handlers referencing shared DTOs. |
+> **Transport Decision Rule:** React Query flows → Route Handlers; Form/RSC flows → Server Actions
+
+| Service | Route Handlers (React Query) | Server Actions (Forms/RSC) | Notes |
+|---------|------------------------------|---------------------------|-------|
+| CasinoService | Staff queries, settings reads | Staff management forms | Enterprise imports via Route Handlers |
+| TableContextService | Fills, credits, drops, table status | Form-based quick actions | Hardware integrations via Route Handlers with `x-idempotency-key` |
+| LoyaltyService | Mid-session rewards, ledger queries | Manual adjustment forms | Third-party integrations via Route Handlers |
+| RatingSlipService | Lifecycle mutations (start/pause/resume/close), telemetry | Form-based slip creation | Telemetry collectors use Route Handlers with throttling |
+| PlayerFinancialService | Transactions, balance queries | Cashier/cage forms | External payment gateways via Route Handlers |
+| MTLService | Compliance queries, entry mutations | Compliance submission forms | Regulator interfaces via Route Handlers |
+| PlayerService | Player CRUD, enrollment | Enrollment forms | Standard dual-entry pattern |
+| VisitService | Visit lifecycle (start/end) | Visit forms | Cross-domain orchestration |
 
 ---
 

@@ -1,12 +1,13 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { RatingSlipModal } from '@/components/rating-slip/rating-slip-modal';
+import { useState } from "react";
+
+import { RatingSlipModal } from "@/components/rating-slip/rating-slip-modal";
 import type {
   RatingSlipSnapshot,
   RatingSlipTable,
   RatingSlipFormDraft,
-} from '@/components/rating-slip/rating-slip-modal';
+} from "@/components/rating-slip/rating-slip-modal";
 
 /**
  * Rating Slip Preview Page
@@ -19,16 +20,16 @@ export default function RatingSlipPreviewPage() {
 
   // Dummy player data
   const dummySnapshot: RatingSlipSnapshot = {
-    id: 'rating-slip-123',
-    status: 'OPEN',
+    id: "rating-slip-123",
+    status: "OPEN",
     player: {
-      id: 'player-456',
-      name: 'John Smith',
-      membershipId: 'M-789012',
-      tier: 'GOLD',
+      id: "player-456",
+      name: "John Smith",
+      membershipId: "M-789012",
+      tier: "GOLD",
     },
-    tableId: 'table-1',
-    seatNumber: '3',
+    tableId: "table-1",
+    seatNumber: "3",
     averageBet: 50,
     cashIn: 500,
     chipsTaken: 450,
@@ -39,43 +40,45 @@ export default function RatingSlipPreviewPage() {
   // Dummy tables data
   const dummyTables: RatingSlipTable[] = [
     {
-      id: 'table-1',
-      name: 'Table 1',
-      limit: '$25-$500',
+      id: "table-1",
+      name: "Table 1",
+      limit: "$25-$500",
       openSeats: 3,
     },
     {
-      id: 'table-2',
-      name: 'Table 2',
-      limit: '$50-$1000',
+      id: "table-2",
+      name: "Table 2",
+      limit: "$50-$1000",
       openSeats: 1,
     },
     {
-      id: 'table-3',
-      name: 'Table 3 - High Roller',
-      limit: '$100-$5000',
+      id: "table-3",
+      name: "Table 3 - High Roller",
+      limit: "$100-$5000",
       openSeats: 5,
     },
     {
-      id: 'table-4',
-      name: 'Table 4',
-      limit: '$10-$200',
+      id: "table-4",
+      name: "Table 4",
+      limit: "$10-$200",
       openSeats: 0,
     },
   ];
 
   const handleSave = (draft: RatingSlipFormDraft) => {
-    console.log('Save draft:', draft);
+    console.log("Save draft:", draft);
     // TODO: Integrate with service layer when ready
   };
 
-  const handleMovePlayer = (draft: Pick<RatingSlipFormDraft, 'tableId' | 'seatNumber'>) => {
-    console.log('Move player:', draft);
+  const handleMovePlayer = (
+    draft: Pick<RatingSlipFormDraft, "tableId" | "seatNumber">,
+  ) => {
+    console.log("Move player:", draft);
     // TODO: Integrate with service layer when ready
   };
 
   const handleCloseSession = (draft: RatingSlipFormDraft) => {
-    console.log('Close session:', draft);
+    console.log("Close session:", draft);
     // TODO: Integrate with service layer when ready
   };
 
@@ -84,7 +87,8 @@ export default function RatingSlipPreviewPage() {
       <div className="mb-6 space-y-2">
         <h1 className="text-3xl font-bold">Rating Slip Preview</h1>
         <p className="text-muted-foreground">
-          This is a preview page with dummy data for UI development. The modal opens automatically.
+          This is a preview page with dummy data for UI development. The modal
+          opens automatically.
         </p>
         <button
           onClick={() => setOpen(true)}

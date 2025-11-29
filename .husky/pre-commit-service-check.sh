@@ -2,12 +2,18 @@
 # ==============================================================================
 # Service Layer Anti-Pattern Detection (Pattern-Aware)
 # ==============================================================================
-# Version: 2.0.0
-# Date: 2025-11-26
+# Version: 2.1.0
+# Date: 2025-11-28
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 #   - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md
+#   - Workflow: docs/20-architecture/specs/WORKFLOW-PRD-002-parallel-execution.md
+#
+# This script runs BEFORE lint-staged. Additional AST-based checks run via ESLint:
+#   - V1: no-dto-type-assertions (services/**/*.ts) - Prevents `as` casting
+#   - V2: no-service-result-return (services/**/*.ts) - ADR-012 compliance
+#   - V4: no-header-casino-context (app/api/**/*.ts) - Security enforcement
 # ==============================================================================
 
 echo "🔍 Checking service layer for anti-patterns..."

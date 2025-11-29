@@ -10,7 +10,7 @@
  * - Configurable per-endpoint limits
  */
 
-import { DomainError } from './domain-errors';
+import { DomainError } from "./domain-errors";
 
 // ============================================================================
 // RATE LIMIT CONFIGURATION
@@ -140,14 +140,18 @@ export class RateLimiter {
       const limiter = this.getLimiter(`${endpoint}:actor`, rule.perActor);
       if (!limiter.tryConsume(context.actorId)) {
         const resetMs = limiter.getResetTime(context.actorId);
-        throw new DomainError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded for user', {
-          httpStatus: 429,
-          retryable: true,
-          details: {
-            limit: 'per_actor',
-            resetInMs: resetMs,
+        throw new DomainError(
+          "RATE_LIMIT_EXCEEDED",
+          "Rate limit exceeded for user",
+          {
+            httpStatus: 429,
+            retryable: true,
+            details: {
+              limit: "per_actor",
+              resetInMs: resetMs,
+            },
           },
-        });
+        );
       }
     }
 
@@ -156,30 +160,38 @@ export class RateLimiter {
       const limiter = this.getLimiter(`${endpoint}:casino`, rule.perCasino);
       if (!limiter.tryConsume(context.casinoId)) {
         const resetMs = limiter.getResetTime(context.casinoId);
-        throw new DomainError('RATE_LIMIT_EXCEEDED', 'Rate limit exceeded for casino', {
-          httpStatus: 429,
-          retryable: true,
-          details: {
-            limit: 'per_casino',
-            resetInMs: resetMs,
+        throw new DomainError(
+          "RATE_LIMIT_EXCEEDED",
+          "Rate limit exceeded for casino",
+          {
+            httpStatus: 429,
+            retryable: true,
+            details: {
+              limit: "per_casino",
+              resetInMs: resetMs,
+            },
           },
-        });
+        );
       }
     }
 
     // Check global limit
     if (rule.global) {
       const limiter = this.getLimiter(`${endpoint}:global`, rule.global);
-      if (!limiter.tryConsume('global')) {
-        const resetMs = limiter.getResetTime('global');
-        throw new DomainError('RATE_LIMIT_EXCEEDED', 'Global rate limit exceeded', {
-          httpStatus: 429,
-          retryable: true,
-          details: {
-            limit: 'global',
-            resetInMs: resetMs,
+      if (!limiter.tryConsume("global")) {
+        const resetMs = limiter.getResetTime("global");
+        throw new DomainError(
+          "RATE_LIMIT_EXCEEDED",
+          "Global rate limit exceeded",
+          {
+            httpStatus: 429,
+            retryable: true,
+            details: {
+              limit: "global",
+              resetInMs: resetMs,
+            },
           },
-        });
+        );
       }
     }
   }
@@ -221,8 +233,8 @@ export class RateLimiter {
     if (rule.global) {
       const limiter = this.getLimiter(`${endpoint}:global`, rule.global);
       info.global = {
-        remaining: limiter.getRemainingTokens('global'),
-        resetInMs: limiter.getResetTime('global'),
+        remaining: limiter.getRemainingTokens("global"),
+        resetInMs: limiter.getResetTime("global"),
       };
     }
 
@@ -258,7 +270,7 @@ export class RateLimiter {
 export const DEFAULT_RATE_LIMITS = new Map<string, RateLimitRule>([
   // High-value mutations: strict limits
   [
-    'finance.create-transaction',
+    "finance.create-transaction",
     {
       perActor: {
         tokensPerInterval: 10,
@@ -271,7 +283,7 @@ export const DEFAULT_RATE_LIMITS = new Map<string, RateLimitRule>([
     },
   ],
   [
-    'loyalty.issue-reward',
+    "loyalty.issue-reward",
     {
       perActor: {
         tokensPerInterval: 20,
@@ -286,7 +298,7 @@ export const DEFAULT_RATE_LIMITS = new Map<string, RateLimitRule>([
 
   // MTL operations: moderate limits
   [
-    'mtl.create-entry',
+    "mtl.create-entry",
     {
       perActor: {
         tokensPerInterval: 30,
@@ -301,7 +313,7 @@ export const DEFAULT_RATE_LIMITS = new Map<string, RateLimitRule>([
 
   // Visit operations: generous limits
   [
-    'visit.check-in',
+    "visit.check-in",
     {
       perCasino: {
         tokensPerInterval: 1000,
@@ -312,7 +324,7 @@ export const DEFAULT_RATE_LIMITS = new Map<string, RateLimitRule>([
 
   // Read operations: very generous limits
   [
-    '*.read',
+    "*.read",
     {
       perActor: {
         tokensPerInterval: 100,

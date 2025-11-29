@@ -12,7 +12,9 @@ interface SwaggerUIProps {
 }
 
 // Dynamically import Swagger UI to avoid SSR issues
-const SwaggerUI = dynamic<SwaggerUIProps>(() => import('swagger-ui-react'), { ssr: false });
+const SwaggerUI = dynamic<SwaggerUIProps>(() => import('swagger-ui-react'), {
+  ssr: false,
+});
 
 export default function ApiDocsPage() {
   const [spec, setSpec] = useState<string | null>(null);
@@ -40,11 +42,15 @@ export default function ApiDocsPage() {
     return (
       <div className="container mx-auto p-8">
         <div className="rounded-md border border-red-500 bg-red-50 p-4 text-red-900">
-          <h2 className="mb-2 text-lg font-semibold">Error Loading API Specification</h2>
+          <h2 className="mb-2 text-lg font-semibold">
+            Error Loading API Specification
+          </h2>
           <p>{error}</p>
           <p className="mt-4 text-sm">
             Make sure the OpenAPI spec file is available at{' '}
-            <code className="rounded bg-red-100 px-1 py-0.5">/public/api-spec.yaml</code>
+            <code className="rounded bg-red-100 px-1 py-0.5">
+              /public/api-spec.yaml
+            </code>
           </p>
         </div>
       </div>

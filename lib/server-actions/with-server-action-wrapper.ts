@@ -1,46 +1,46 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
 
-import { runWithCorrelation } from '@/lib/correlation';
-import type { DomainErrorCode } from '@/lib/errors/domain-errors';
-import { getRateLimiter } from '@/lib/errors/rate-limiter';
-import type { ResultCode, ServiceResult } from '@/lib/http/service-response';
+import { runWithCorrelation } from "@/lib/correlation";
+import type { DomainErrorCode } from "@/lib/errors/domain-errors";
+import { getRateLimiter } from "@/lib/errors/rate-limiter";
+import type { ResultCode, ServiceResult } from "@/lib/http/service-response";
 import {
   getAuthContext,
   injectRLSContext,
   type RLSContext,
-} from '@/lib/supabase/rls-context';
+} from "@/lib/supabase/rls-context";
 
-import { writeAuditLog } from './audit';
-import { mapDatabaseError } from './error-map';
-import type { ServerActionContext, ServerActionHandler } from './types';
+import { writeAuditLog } from "./audit";
+import { mapDatabaseError } from "./error-map";
+import type { ServerActionContext, ServerActionHandler } from "./types";
 
 const RESULT_CODES: ResultCode[] = [
-  'OK',
-  'VALIDATION_ERROR',
-  'NOT_FOUND',
-  'UNIQUE_VIOLATION',
-  'FOREIGN_KEY_VIOLATION',
-  'UNAUTHORIZED',
-  'FORBIDDEN',
-  'INTERNAL_ERROR',
+  "OK",
+  "VALIDATION_ERROR",
+  "NOT_FOUND",
+  "UNIQUE_VIOLATION",
+  "FOREIGN_KEY_VIOLATION",
+  "UNAUTHORIZED",
+  "FORBIDDEN",
+  "INTERNAL_ERROR",
 ];
 
 type MaybeServiceResult<T> = ServiceResult<T> | T;
 
 function isServiceResult<T>(value: unknown): value is ServiceResult<T> {
   return (
-    typeof value === 'object' &&
+    typeof value === "object" &&
     value !== null &&
-    'ok' in value &&
-    'code' in value
+    "ok" in value &&
+    "code" in value
   );
 }
 
 function resolveResultCode(code: unknown): ResultCode {
-  if (typeof code === 'string' && RESULT_CODES.includes(code as ResultCode)) {
+  if (typeof code === "string" && RESULT_CODES.includes(code as ResultCode)) {
     return code as ResultCode;
   }
-  return 'INTERNAL_ERROR';
+  return "INTERNAL_ERROR";
 }
 
 function finalizeResult<T>(
@@ -64,7 +64,7 @@ function finalizeResult<T>(
   return {
     data: value as T,
     ok: true,
-    code: 'OK',
+    code: "OK",
     requestId,
     durationMs: Date.now() - startedAt,
     timestamp: new Date().toISOString(),
@@ -103,15 +103,23 @@ export async function withServerAction<T>(
 
       // 4. Execute handler with RLS context active
       const result = await handler();
-      const envelope = finalizeResult(result as MaybeServiceResult<T>, requestId, startedAt);
+      const envelope = finalizeResult(
+        result as MaybeServiceResult<T>,
+        requestId,
+        startedAt,
+      );
 
       // 5. Audit log
-      if (process.env.NODE_ENV === 'production') {
-        await writeAuditLog(context.supabase, {
-          ...context,
-          userId: rlsContext.actorId,
-          casinoId: rlsContext.casinoId,
-        }, envelope);
+      if (process.env.NODE_ENV === "production") {
+        await writeAuditLog(
+          context.supabase,
+          {
+            ...context,
+            userId: rlsContext.actorId,
+            casinoId: rlsContext.casinoId,
+          },
+          envelope,
+        );
       }
 
       return envelope;
@@ -128,12 +136,16 @@ export async function withServerAction<T>(
         timestamp: new Date().toISOString(),
       };
 
-      if (process.env.NODE_ENV === 'production') {
-        await writeAuditLog(context.supabase, {
-          ...context,
-          userId: rlsContext?.actorId,
-          casinoId: rlsContext?.casinoId,
-        }, failure);
+      if (process.env.NODE_ENV === "production") {
+        await writeAuditLog(
+          context.supabase,
+          {
+            ...context,
+            userId: rlsContext?.actorId,
+            casinoId: rlsContext?.casinoId,
+          },
+          failure,
+        );
       }
 
       return failure;

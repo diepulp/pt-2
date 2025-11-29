@@ -70,7 +70,8 @@ module.exports = {
           'gaming_day',
         ],
         forbidden: ['idempotency_key', 'visit_id', 'rating_slip_id'],
-        rationale: 'Internal-only fields (idempotency, FKs) not for external APIs',
+        rationale:
+          'Internal-only fields (idempotency, FKs) not for external APIs',
       },
       loyalty_ledger: {
         allowed: [
@@ -155,9 +156,7 @@ module.exports = {
       if (jsdoc.type !== 'Block' || !jsdoc.value.includes('*')) return false;
 
       const docText = jsdoc.value;
-      return (
-        docText.includes('Exposure:') && docText.includes('Excludes:')
-      );
+      return docText.includes('Exposure:') && docText.includes('Excludes:');
     }
 
     return {
@@ -193,7 +192,7 @@ module.exports = {
 
         // Check for forbidden fields
         const violations = pickedFields.filter((field) =>
-          config.forbidden.includes(field)
+          config.forbidden.includes(field),
         );
 
         violations.forEach((fieldName) => {

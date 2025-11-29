@@ -1,0 +1,94 @@
+{
+  "$schema": "./freshness-manifest.schema.json",
+  "version": "1.0.0",
+  "generated_at": "2025-11-28T00:00:00Z",
+  "description": "Tracks source document hashes to detect when primitives become stale",
+
+  "source_documents": {
+    "SLAD": {
+      "path": "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md",
+      "version": "2.1.2",
+      "sha256": "39c5d8d519961e89ce8900ecf5d951537420af397045ba748ecbe81dae155ea6",
+      "last_verified": "2025-11-28",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/architecture-rules.md"
+      ]
+    },
+    "SRM": {
+      "path": "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
+      "version": "3.1.0",
+      "sha256": "b18cdcb35f8c7ce2a83f9355d42957044f0d95532eda3eaaea9746e51ffb9ebc",
+      "last_verified": "2025-11-28",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/architecture-rules.md",
+        "references/validation-checklist.md"
+      ]
+    },
+    "SERVICE_TEMPLATE": {
+      "path": "docs/70-governance/SERVICE_TEMPLATE.md",
+      "version": "2.0.3",
+      "sha256": "5638fa1970700bfefdcb1c1cf50ca5af790ee4632f2c553b27e97d1ac4835336",
+      "last_verified": "2025-11-28",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/architecture-rules.md"
+      ]
+    },
+    "SDLC_TAXONOMY": {
+      "path": "docs/patterns/SDLC_DOCS_TAXONOMY.md",
+      "version": "1.0.0",
+      "sha256": "e89d391e2811dbd355ae66d996843195e174133ff2b585016ca9ae92f175637c",
+      "last_verified": "2025-11-28",
+      "derived_primitives": [
+        "references/QUICK_START.md",
+        "references/validation-checklist.md"
+      ]
+    }
+  },
+
+  "primitives": {
+    "references/QUICK_START.md": {
+      "sources": ["SLAD", "SRM", "SERVICE_TEMPLATE", "SDLC_TAXONOMY"],
+      "purpose": "Single entry point for sub-agent",
+      "updated": "2025-11-28"
+    },
+    "references/architecture-rules.md": {
+      "sources": ["SLAD", "SRM", "SERVICE_TEMPLATE"],
+      "purpose": "Condensed patterns and anti-patterns",
+      "updated": "2025-11-28"
+    },
+    "references/validation-checklist.md": {
+      "sources": ["SRM", "SDLC_TAXONOMY"],
+      "purpose": "Pre/post architecture validation checklist",
+      "updated": "2025-11-28"
+    },
+    "references/output-templates.md": {
+      "sources": [],
+      "purpose": "Templates for SRM, ADR, API specs",
+      "updated": "2025-11-27"
+    },
+    "references/example-architectures.md": {
+      "sources": [],
+      "purpose": "Reference architectural examples",
+      "updated": "2025-11-27"
+    },
+    "references/memory-protocol.md": {
+      "sources": [],
+      "purpose": "Memory recording protocol (optional)",
+      "created": "2025-11-28"
+    },
+    "references/context-management.md": {
+      "sources": [],
+      "purpose": "Session continuity guide",
+      "created": "2025-11-28"
+    }
+  },
+
+  "validation_rules": {
+    "stale_threshold_days": 30,
+    "on_stale": "warn",
+    "on_hash_mismatch": "error"
+  }
+}

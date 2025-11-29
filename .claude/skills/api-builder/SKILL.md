@@ -126,6 +126,12 @@ This skill operates within the **API/DATA** documentation category:
 - **`OPENAPI_QUICKSTART.md`** - Developer workflow guide
 - **`REAL_TIME_EVENTS_MAP.md`** - WebSocket event contracts
 
+### Architecture References
+
+- **`docs/20-architecture/EDGE_TRANSPORT_POLICY.md`** - Transport policy, middleware chain, headers, CI hooks
+- **`docs/20-architecture/BALANCED_ARCHITECTURE_QUICK.md`** - When to use Route Handlers vs Server Actions
+- **`docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`** - Error mapping, HTTP status codes, rate limiting, retry policies
+
 ### ADR References
 
 - **ADR-007** - API Surface Catalogue & OpenAPI Contract
@@ -510,6 +516,8 @@ describe('{METHOD} /api/v1/{domain}', () => {
 
 ## Transport Architecture Reference
 
+**Canonical Source**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md`
+
 PT-2 uses dual transport:
 
 | Transport | Use Case | Location |
@@ -519,9 +527,25 @@ PT-2 uses dual transport:
 
 **Rule**: Route Handlers for React Query, Server Actions for forms.
 
+### Middleware Chain (from EDGE_TRANSPORT_POLICY.md)
+
+```
+withAuth() → withRLS() → withIdempotency() → withAudit() → withTracing()
+```
+
+- **withAuth**: Validates session, staff role, casino membership
+- **withRLS**: Sets `SET LOCAL app.casino_id`, ensures tenant isolation
+- **withIdempotency**: Requires `x-idempotency-key`, scopes by (casino_id, domain)
+- **withAudit**: Writes audit_log with actor_id, correlation_id, DTO hash
+- **withTracing**: Emits telemetry, maps domain errors → HTTP codes
+
 ---
 
 ## Error Code Reference
+
+**Full Error Taxonomy**: `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`
+
+### Quick Reference
 
 | Code | HTTP | When |
 |------|------|------|
@@ -533,6 +557,29 @@ PT-2 uses dual transport:
 | `UNAUTHORIZED` | 401 | Not authenticated |
 | `FORBIDDEN` | 403 | Not authorized |
 | `INTERNAL_ERROR` | 500 | Server error |
+
+### HTTP Status Mapping Pattern
+
+| Error Pattern | HTTP | Retryable |
+|---------------|------|-----------|
+| `*_NOT_FOUND` | 404 | No |
+| `*_INVALID`, `*_MISMATCH` | 400 | No |
+| `*_ALREADY_*`, `*_DUPLICATE` | 409 | No |
+| `*_CONCURRENT_*` | 409 | Yes |
+| `RATE_LIMIT_EXCEEDED` | 429 | Yes |
+| `INTERNAL_ERROR` | 500 | Yes |
+
+### Rate Limiting (from ERROR_TAXONOMY)
+
+```typescript
+// Rate limits enforced in withServerAction
+| Endpoint | Per Actor | Per Casino |
+|----------|-----------|------------|
+| finance.create-transaction | 10/min | 100/min |
+| loyalty.issue-reward | 20/min | 200/min |
+| visit.check-in | — | 1000/min |
+| *.read | 100/min | 5000/min |
+```
 
 ---
 

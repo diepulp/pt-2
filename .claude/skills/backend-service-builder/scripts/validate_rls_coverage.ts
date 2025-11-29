@@ -37,7 +37,9 @@ class RLSValidator {
 
   private findMigrationFiles(dirPath: string): string[] {
     if (!fs.existsSync(dirPath)) {
-      console.error(`\x1b[31mError:\x1b[0m Migrations directory not found: ${dirPath}`);
+      console.error(
+        `\x1b[31mError:\x1b[0m Migrations directory not found: ${dirPath}`,
+      );
       return [];
     }
 
@@ -53,7 +55,8 @@ class RLSValidator {
     const fileName = path.basename(filePath);
 
     // Find CREATE TABLE statements
-    const tablePattern = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_]+)\s*\(/gi;
+    const tablePattern =
+      /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?([a-z_]+)\s*\(/gi;
     let match;
 
     while ((match = tablePattern.exec(content)) !== null) {
@@ -70,7 +73,8 @@ class RLSValidator {
     }
 
     // Find ENABLE ROW LEVEL SECURITY statements
-    const rlsPattern = /ALTER\s+TABLE\s+([a-z_]+)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/gi;
+    const rlsPattern =
+      /ALTER\s+TABLE\s+([a-z_]+)\s+ENABLE\s+ROW\s+LEVEL\s+SECURITY/gi;
 
     while ((match = rlsPattern.exec(content)) !== null) {
       const tableName = match[1];
@@ -99,7 +103,7 @@ class RLSValidator {
       if (!check.hasRLS) {
         this.errors.push(
           `Table "${tableName}" (${check.migrationFile}): RLS not enabled. ` +
-            `Add: ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;`
+            `Add: ALTER TABLE ${tableName} ENABLE ROW LEVEL SECURITY;`,
         );
       }
 
@@ -107,7 +111,7 @@ class RLSValidator {
       if (check.policies.length === 0) {
         this.errors.push(
           `Table "${tableName}" (${check.migrationFile}): No RLS policies defined. ` +
-            `Add at least one policy.`
+            `Add at least one policy.`,
         );
       }
 
@@ -116,7 +120,7 @@ class RLSValidator {
         if (!this.isPolicyNameValid(policy, tableName)) {
           this.warnings.push(
             `Table "${tableName}": Policy "${policy}" doesn't follow naming convention. ` +
-              `Expected: {role}_{action}_{table} (e.g., "casino_staff_view_${tableName}")`
+              `Expected: {role}_{action}_{table} (e.g., "casino_staff_view_${tableName}")`,
           );
         }
       }
@@ -141,7 +145,8 @@ class RLSValidator {
     for (const [tableName, check] of this.checks.entries()) {
       const rlsStatus = check.hasRLS ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
       const policyCount = check.policies.length;
-      const policyStatus = policyCount > 0 ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
+      const policyStatus =
+        policyCount > 0 ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
 
       console.log(`Table: ${tableName}`);
       console.log(`  RLS Enabled: ${rlsStatus}`);
@@ -169,12 +174,16 @@ class RLSValidator {
     // Summary
     if (this.errors.length > 0) {
       console.log(
-        `\x1b[31m❌ VALIDATION FAILED\x1b[0m (${this.errors.length} errors, ${this.warnings.length} warnings)\n`
+        `\x1b[31m❌ VALIDATION FAILED\x1b[0m (${this.errors.length} errors, ${this.warnings.length} warnings)\n`,
       );
     } else if (this.warnings.length > 0) {
-      console.log(`\x1b[33m⚠️  VALIDATION PASSED WITH WARNINGS\x1b[0m (${this.warnings.length} warnings)\n`);
+      console.log(
+        `\x1b[33m⚠️  VALIDATION PASSED WITH WARNINGS\x1b[0m (${this.warnings.length} warnings)\n`,
+      );
     } else {
-      console.log(`\x1b[32m✅ VALIDATION PASSED\x1b[0m - All tables have proper RLS coverage\n`);
+      console.log(
+        `\x1b[32m✅ VALIDATION PASSED\x1b[0m - All tables have proper RLS coverage\n`,
+      );
     }
   }
 
