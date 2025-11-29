@@ -1,0 +1,62 @@
+WS-5 Frontend Hooks Complete
+==============================
+
+Timestamp: 2025-11-28T23:00:00Z
+Dependencies Met:
+  - WS-4 (API layer): YES
+
+Files Created:
+--------------
+1. /home/diepulp/projects/pt-2/hooks/table-context/use-table-operations.ts
+   - Hook: useUpdateTableStatus
+   - Mutation: POST /api/v1/table-context/status
+   - Features: Idempotency key generation, query invalidation
+
+2. /home/diepulp/projects/pt-2/hooks/table-context/index.ts
+   - Barrel export for table-context hooks
+
+3. /home/diepulp/projects/pt-2/hooks/rating-slip/use-rating-slip-lifecycle.ts
+   - Hook: useStartRatingSlip (POST /api/v1/rating-slip/start)
+   - Hook: usePauseRatingSlip (POST /api/v1/rating-slip/[id]/pause)
+   - Hook: useResumeRatingSlip (POST /api/v1/rating-slip/[id]/resume)
+   - Hook: useCloseRatingSlip (POST /api/v1/rating-slip/[id]/close)
+   - Features: Idempotency keys, query invalidation
+
+4. /home/diepulp/projects/pt-2/hooks/rating-slip/use-rating-slip-duration.ts
+   - Hook: useRatingSlipDuration
+   - Method: Direct RPC call via Supabase client
+   - Features: 10-second auto-refresh, staleTime: 5s, conditional fetching
+
+5. /home/diepulp/projects/pt-2/hooks/rating-slip/index.ts
+   - Barrel export for rating-slip hooks
+
+Hook Features:
+--------------
+| Hook                    | Idempotency | Invalidation                      | Refresh |
+|-------------------------|-------------|-----------------------------------|---------|
+| useUpdateTableStatus    | YES         | table-context (byTable, tables)   | -       |
+| useStartRatingSlip      | YES         | rating-slip (root)                | -       |
+| usePauseRatingSlip      | YES         | rating-slip (detail, list, dur)   | -       |
+| useResumeRatingSlip     | YES         | rating-slip (detail, list, dur)   | -       |
+| useCloseRatingSlip      | YES         | rating-slip (detail, list, dur)   | -       |
+| useRatingSlipDuration   | -           | -                                 | 10s     |
+
+Architecture Patterns:
+----------------------
+- W1 Fix Applied: Generic mutation keys (no ID in mutationKey)
+- Idempotency: crypto.randomUUID() for all mutations
+- Query Invalidation: Specific queries + scopes invalidated on success
+- Live Refresh: useRatingSlipDuration refetches every 10 seconds
+- Conditional Fetching: useRatingSlipDuration respects enabled flag
+
+Validation Results:
+-------------------
+- lint: PASS (no new errors/warnings in hooks/)
+- type-check: Pre-existing errors unrelated to WS-5
+
+Next Steps:
+-----------
+WS-5 is complete. Downstream workstreams can now:
+- Use hooks in UI components for table operations
+- Use hooks in UI components for rating slip lifecycle
+- Display live-updating duration using useRatingSlipDuration

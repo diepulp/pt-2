@@ -32,6 +32,7 @@ const eslintConfig = [
       '.cursor/**',
       'types/database.types.ts', // Generated file, exclude from linting
       'types/remote/**', // Remote generated types
+      'next-env.d.ts', // Next.js generated type declarations
       'cypress/**/*.{js,ts}', // Exclude Cypress files from main config
       'scripts/**', // Utility scripts are executed via node without linting
       '.eslint-rules/**', // ESLint plugin files (not production code)
@@ -42,8 +43,10 @@ const eslintConfig = [
     ],
   },
   // Service layer specific configuration - PRD §3.3 Service Layer Standards
+  // Excludes test files which have their own relaxed rules below
   {
     files: ['services/**/*.ts', 'services/**/*.tsx'],
+    ignores: ['**/*.test.ts', '**/*.integration.test.ts', '**/*.spec.ts'],
     plugins: {
       'custom-rules': {
         rules: {
@@ -307,6 +310,44 @@ const eslintConfig = [
       },
     },
   }),
+  // ==========================================================================
+  // TEST FILE OVERRIDES - Must come LAST for highest precedence
+  // ADR-002: Co-located test pattern standardized (services/**/*.test.ts)
+  // ==========================================================================
+
+  // Service layer test files - relaxed rules per ADR-002 (co-located tests)
+  // Note: custom-rules are already excluded via ignores in service layer config
+  {
+    files: [
+      'services/**/*.test.ts',
+      'services/**/*.integration.test.ts',
+      'services/**/*.spec.ts',
+    ],
+    rules: {
+      // Tests may use direct Supabase client for integration testing
+      'no-restricted-imports': 'off',
+      // Tests legitimately use type assertions for mocking
+      '@typescript-eslint/consistent-type-assertions': 'off',
+      // Explicit return types not required in tests
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      // Allow console in tests for debugging
+      'no-console': 'off',
+      // Allow @deprecated comments in test expectations
+      'no-warning-comments': 'off',
+    },
+  },
+  // E2E test files (Playwright) - relaxed rules
+  {
+    files: ['e2e/**/*.ts', 'e2e/**/*.spec.ts'],
+    rules: {
+      // E2E tests need direct Supabase access for setup/teardown
+      'no-restricted-imports': 'off',
+      // E2E tests don't need explicit return types
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      // Allow console in E2E tests
+      'no-console': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

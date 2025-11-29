@@ -4,7 +4,7 @@ type TableStatus = Database["public"]["Enums"]["table_status"];
 
 const VALID_TRANSITIONS: Record<TableStatus, TableStatus[]> = {
   inactive: ["active"],
-  active: ["closed"],
+  active: ["inactive", "closed"],
   closed: [],
 };
 

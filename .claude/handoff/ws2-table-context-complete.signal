@@ -1,0 +1,42 @@
+{
+  "workstream": "WS-2",
+  "status": "complete",
+  "files_created": [
+    "services/table-context/type-guards.ts",
+    "services/table-context/table-operations.ts",
+    "services/table-context/index.ts",
+    "services/table-context/table-state-machine.simple.test.ts"
+  ],
+  "files_modified": [
+    "services/table-context/table-state-machine.ts",
+    "services/table-context/keys.ts",
+    "services/table-context/README.md"
+  ],
+  "methods_added": [
+    "updateTableStatus"
+  ],
+  "type_guards_added": [
+    "isValidGamingTableDTO"
+  ],
+  "state_machine_updates": {
+    "transitions_added": [
+      "active -> inactive"
+    ],
+    "valid_transitions": {
+      "inactive": ["active"],
+      "active": ["inactive", "closed"],
+      "closed": []
+    }
+  },
+  "adr_compliance": {
+    "ADR-012": "COMPLIANT - throws DomainError, never returns ServiceResult",
+    "no_as_casting": "COMPLIANT - uses type guards",
+    "uses_getAuthContext": "COMPLIANT"
+  },
+  "validation": {
+    "type_check": "PASS (pre-existing errors unrelated to WS-2)",
+    "lint": "PASS (auto-fixed formatting)",
+    "tests": "PASS (11/11 tests passing)"
+  },
+  "timestamp": "2025-11-28T22:30:00Z"
+}

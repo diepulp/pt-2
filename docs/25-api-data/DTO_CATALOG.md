@@ -303,7 +303,7 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 ### RatingSlipDTO
 
 **Owner**: RatingSlipService
-**File**: `services/rating-slip/dtos.ts`
+**File**: `services/rating-slip/lifecycle.ts`
 **Pattern**: Canonical (full row)
 **Exposure**: Internal only
 **SRM Reference**: Lines 60-73, 1831-1843
@@ -322,10 +322,52 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 | `end_time` | `timestamptz` | Yes | Session end |
 | `status` | `text` | No | Lifecycle state: open, paused, closed |
 | `policy_snapshot` | `jsonb` | Yes | Reward policy at play time |
+| `seat_number` | `text` | Yes | Player seat position |
 
 **Consumers**:
 - RatingSlip service (internal CRUD)
 - Loyalty (via RatingSlipTelemetryDTO)
+
+---
+
+### StartRatingSlipInput
+
+**Owner**: RatingSlipService
+**File**: `services/rating-slip/lifecycle.ts`
+**Pattern**: Contract-First (input DTO)
+**Exposure**: Internal only
+**SRM Reference**: Lines 60-73, 1831-1843
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `playerId` | `string` | No | Player UUID |
+| `tableId` | `string` | No | Gaming table UUID |
+| `visitId` | `string` | No | Visit session UUID |
+| `seatNumber` | `string` | No | Player seat position |
+| `gameSettings` | `Record<string, unknown>` | No | Game configuration snapshot |
+
+**Consumers**:
+- RatingSlip service (startSlip operation)
+
+---
+
+### RatingSlipCloseDTO
+
+**Owner**: RatingSlipService
+**File**: `services/rating-slip/lifecycle.ts`
+**Pattern**: Canonical (extends RatingSlipDTO)
+**Exposure**: Internal only
+**SRM Reference**: Lines 60-73, 1831-1843
+
+**Fields**: Extends `RatingSlipDTO` with:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `duration_seconds` | `number` | No | Active play duration (excludes pauses) |
+
+**Consumers**:
+- RatingSlip service (closeSlip operation)
+- Loyalty (reward calculation input)
 
 ---
 

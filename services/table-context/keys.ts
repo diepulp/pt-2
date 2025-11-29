@@ -67,4 +67,6 @@ export const tableContextKeys = {
   requestFill: [...ROOT, "mutations", "request-fill"] as const,
   requestCredit: [...ROOT, "mutations", "request-credit"] as const,
   logDropEvent: [...ROOT, "mutations", "drop-event"] as const,
+  updateStatus: (tableId: string) =>
+    [...ROOT, "mutations", "update-status", tableId] as const,
 };

@@ -49,6 +49,74 @@
 
 ---
 
+## Table Lifecycle Operations
+
+### Status Transitions
+
+**Pattern**: Use `updateTableStatus()` to transition tables between statuses via RPC.
+
+```typescript
+import { updateTableStatus } from '@/services/table-context';
+
+// Activate table for gaming day
+const activeTable = await updateTableStatus(supabase, tableId, 'active');
+
+// Temporarily close table (e.g., dealer break, maintenance)
+const inactiveTable = await updateTableStatus(supabase, tableId, 'inactive');
+
+// Permanently close table (end of gaming day)
+const closedTable = await updateTableStatus(supabase, tableId, 'closed');
+```
+
+**Valid Transitions**:
+- `inactive` → `active` (open table for play)
+- `active` → `inactive` (temporary close: break, maintenance)
+- `active` → `closed` (permanent close: end of day)
+- `closed` → (terminal state, no transitions)
+
+**Error Handling** (ADR-012 compliant):
+```typescript
+import { DomainError, isDomainError } from '@/lib/errors/domain-errors';
+
+try {
+  await updateTableStatus(supabase, tableId, 'closed');
+} catch (error) {
+  if (isDomainError(error)) {
+    switch (error.code) {
+      case 'TABLE_NOT_FOUND':
+        // Handle missing table
+        break;
+      case 'TABLE_SETTINGS_INVALID':
+        // Handle invalid transition (e.g., closed → active)
+        console.error('Invalid transition:', error.details);
+        break;
+      default:
+        // Handle other domain errors
+    }
+  }
+  throw error; // Re-throw unknown errors
+}
+```
+
+**React Query Integration**:
+```typescript
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { tableContextKeys } from '@/services/table-context';
+
+const updateStatusMutation = useMutation({
+  mutationKey: tableContextKeys.updateStatus(tableId),
+  mutationFn: (newStatus: 'active' | 'inactive' | 'closed') =>
+    updateTableStatus(supabase, tableId, newStatus),
+  onSuccess: (updatedTable) => {
+    // Invalidate related queries
+    queryClient.invalidateQueries({ queryKey: tableContextKeys.byTable(tableId) });
+    queryClient.invalidateQueries({ queryKey: tableContextKeys.active(casinoId) });
+  },
+});
+```
+
+---
+
 ## Core Responsibilities
 
 **OWNS**:

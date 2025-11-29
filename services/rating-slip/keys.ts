@@ -35,4 +35,10 @@ export const ratingSlipKeys = {
   close: (ratingSlipId: string) => [...ROOT, "close", ratingSlipId] as const,
   loyaltyImpact: (ratingSlipId: string) =>
     [...ROOT, "loyalty-impact", ratingSlipId] as const,
+  // Lifecycle mutations
+  start: () => [...ROOT, "mutations", "start"] as const,
+  pause: (slipId: string) => [...ROOT, "mutations", "pause", slipId] as const,
+  resume: (slipId: string) => [...ROOT, "mutations", "resume", slipId] as const,
+  // Queries
+  duration: (slipId: string) => [...ROOT, "duration", slipId] as const,
 };

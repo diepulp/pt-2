@@ -1,0 +1,21 @@
+{
+  "workstream": "WS-1",
+  "status": "complete",
+  "migration_file": "supabase/migrations/20251128221408_rating_slip_pause_tracking.sql",
+  "types_regenerated": true,
+  "rpcs_created": [
+    "rpc_update_table_status",
+    "rpc_start_rating_slip",
+    "rpc_pause_rating_slip",
+    "rpc_resume_rating_slip",
+    "rpc_close_rating_slip",
+    "rpc_get_rating_slip_duration"
+  ],
+  "tables_created": [
+    "rating_slip_pause"
+  ],
+  "constraints_created": [
+    "ux_rating_slip_player_table_active"
+  ],
+  "timestamp": "2025-11-28T22:14:08Z"
+}

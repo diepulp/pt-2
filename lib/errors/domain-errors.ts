@@ -75,6 +75,7 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
 export type RatingSlipErrorCode =
   | "RATING_SLIP_NOT_FOUND"
   | "RATING_SLIP_NOT_OPEN"
+  | "RATING_SLIP_NOT_PAUSED"
   | "RATING_SLIP_ALREADY_CLOSED"
   | "RATING_SLIP_INVALID_STATE"
   | "RATING_SLIP_MISSING_REQUIRED_DATA"
@@ -83,6 +84,7 @@ export type RatingSlipErrorCode =
 export const RATING_SLIP_ERROR_MESSAGES: Record<RatingSlipErrorCode, string> = {
   RATING_SLIP_NOT_FOUND: "Rating slip not found",
   RATING_SLIP_NOT_OPEN: "Rating slip is not in open state",
+  RATING_SLIP_NOT_PAUSED: "Rating slip is not in paused state",
   RATING_SLIP_ALREADY_CLOSED: "Rating slip has already been closed",
   RATING_SLIP_INVALID_STATE:
     "Rating slip is in an invalid state for this operation",

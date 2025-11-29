@@ -5,6 +5,7 @@ import {
   errorResponse,
   successResponse,
 } from "@/lib/http/service-response";
+import { getAuthContext } from "@/lib/supabase/rls-context";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -44,10 +45,14 @@ export async function GET(
     const { tableId } = await params;
     const supabase = await createClient();
 
+    // V4 FIX: Validate casino context from authenticated user
+    const authContext = await getAuthContext(supabase);
+
     const { data: table, error } = await supabase
       .from("gaming_table")
       .select("id, status")
       .eq("id", tableId)
+      .eq("casino_id", authContext.casinoId) // Enforce casino boundary
       .single();
 
     if (error || !table) {

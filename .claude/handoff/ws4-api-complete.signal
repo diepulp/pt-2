@@ -1,0 +1,68 @@
+WS-4 API Layer Complete
+========================
+
+Timestamp: 2025-11-28T22:40:00Z
+Dependencies Met:
+  - WS-2 (table-context service): YES
+  - WS-3 (rating-slip service): YES
+
+Files Created:
+--------------
+1. /home/diepulp/projects/pt-2/app/api/v1/table-context/status/route.ts
+   - Method: POST
+   - Purpose: Update gaming table status via state machine
+   - Security: Uses getAuthContext() for casino context
+
+2. /home/diepulp/projects/pt-2/app/api/v1/rating-slip/start/route.ts
+   - Method: POST
+   - Purpose: Start new rating slip in "open" state
+   - Returns: { ratingSlipId: string }
+   - Security: Uses getAuthContext() for casino context
+
+3. /home/diepulp/projects/pt-2/app/api/v1/rating-slip/[id]/pause/route.ts
+   - Method: POST
+   - Purpose: Pause active rating slip
+   - Security: Uses getAuthContext() for casino context
+
+4. /home/diepulp/projects/pt-2/app/api/v1/rating-slip/[id]/resume/route.ts
+   - Method: POST
+   - Purpose: Resume paused rating slip
+   - Security: Uses getAuthContext() for casino context
+
+5. /home/diepulp/projects/pt-2/app/api/v1/rating-slip/[id]/close/route.ts
+   - Method: POST
+   - Purpose: Close rating slip with final telemetry
+   - Returns: { slip, durationSeconds }
+   - Security: Uses getAuthContext() for casino context
+
+Files Modified:
+---------------
+1. /home/diepulp/projects/pt-2/lib/http/service-response.ts
+   - Added DomainError handling to errorResponse()
+   - DomainError now has priority over RouteError
+
+Security Compliance:
+--------------------
+- All routes use getAuthContext() for casino_id: YES
+- No casino_id extraction from headers: YES
+- Idempotency key processed on mutations: YES
+- All routes use createClient() from @/lib/supabase/server: YES
+
+Validation Results:
+-------------------
+- type-check: PASS (no errors in new routes)
+- lint: PASS (no errors in new routes)
+
+Architecture Patterns:
+----------------------
+- V4 Security Fix: NEVER extract casino_id from headers
+- Services throw DomainError on failure
+- Route handlers catch DomainError and convert via errorResponse()
+- All mutations require idempotency key header
+- Dynamic route params extracted from Next.js context
+
+Next Steps:
+-----------
+WS-4 is complete. Downstream workstreams can now:
+- WS-5: Build UI components that call these endpoints
+- Integration tests can be written against these routes

@@ -1,0 +1,112 @@
+WS-6B Integration Testing Complete
+====================================
+
+Completion Date: 2025-11-28
+Workstream: WS-6B Integration Tests
+Dependencies Met:
+  - WS-1 Database Complete: YES (.claude/handoff/ws1-db-complete.signal)
+
+Integration Tests Created:
+---------------------------
+
+1. Table Operations Integration Tests
+   File: services/table-context/table-operations.integration.test.ts
+   Tests: 9 passing
+   Coverage:
+     - rpc_update_table_status lifecycle (inactive → active → closed)
+     - Invalid transition rejection (closed is terminal state)
+     - Non-existent table error handling
+     - Audit log creation verification
+     - RLS enforcement (cross-casino access blocked)
+
+2. Rating Slip Lifecycle Integration Tests
+   File: services/rating-slip/lifecycle.integration.test.ts
+   Tests: 15 passing
+   Coverage:
+     - rpc_start_rating_slip with validation (active table, open visit)
+     - rpc_pause_rating_slip state transitions
+     - rpc_resume_rating_slip pause record closure
+     - rpc_close_rating_slip duration calculation
+     - rpc_get_rating_slip_duration accuracy
+     - RLS enforcement (cross-casino blocked)
+
+3. Unique Constraint Integration Tests
+   File: services/rating-slip/unique-constraint.integration.test.ts
+   Tests: 6 passing
+   Coverage:
+     - Duplicate active slip blocked (same player, same table)
+     - Duplicate paused slip blocked
+     - New slip allowed after close
+     - Same player at different table allowed
+     - Multiple players at same table allowed
+     - Reopen after pause-close allowed
+
+4. Duration Calculation Integration Tests
+   File: services/rating-slip/duration.integration.test.ts
+   Tests: 10 passing
+   Coverage:
+     - Duration without pauses
+     - Duration excluding single pause time
+     - Duration excluding multiple pause times
+     - Closing while paused (frozen duration)
+     - rpc_get_rating_slip_duration for open/paused/closed states
+     - Edge cases (very short active periods)
+
+Total Integration Tests: 40 passing
+
+RLS Enforcement Verified:
+-------------------------
+✓ Cross-casino table access blocked via RPC
+✓ Same-casino table access allowed
+✓ Cross-casino rating slip creation blocked
+✓ Same-casino slip operations allowed
+
+Unique Constraint Verified:
+---------------------------
+✓ Only one open/paused slip per player per table enforced
+✓ Constraint releases on slip close
+✓ Different tables don't conflict
+✓ Different players don't conflict
+
+Duration Calculation Verified:
+------------------------------
+✓ Pause time excluded from duration
+✓ Multiple pauses handled correctly
+✓ Closing while paused freezes duration
+✓ Duration queries accurate for all states
+
+Test Results Summary:
+---------------------
+All Tests: 247 passing
+Integration Tests: 40 passing
+Unit Tests: 207 passing
+
+Test Environment:
+-----------------
+- Database: Supabase Local (http://127.0.0.1:54321)
+- Test Runner: Jest
+- Test Strategy: Real database with service role for setup/teardown
+
+Key Patterns Followed:
+----------------------
+✓ Service role client for test data setup
+✓ beforeAll/afterAll for test isolation
+✓ Cleanup in reverse order of creation
+✓ Player/casino linkage via player_casino table
+✓ Proper staff schema (first_name, last_name)
+✓ Real RPC calls (not mocked)
+✓ Actual RLS policy verification
+✓ Duration tests with real time delays
+
+Next Steps:
+-----------
+WS-6C (E2E Tests) can now proceed when WS-4 (API Layer) is complete.
+Required signal: .claude/handoff/ws4-api-complete.signal
+
+Files Modified:
+---------------
+Created:
+- services/table-context/table-operations.integration.test.ts
+- services/rating-slip/lifecycle.integration.test.ts
+- services/rating-slip/unique-constraint.integration.test.ts
+- services/rating-slip/duration.integration.test.ts
