@@ -1,0 +1,33 @@
+{
+  "prd": "PRD-HZ-001",
+  "workstream": "WS5",
+  "agent": "lead-architect",
+  "status": "complete",
+  "timestamp": "2025-11-29T03:45:00Z",
+  "files_created": [
+    "lib/server-actions/README.md"
+  ],
+  "files_modified": [
+    "app/api/v1/rating-slip/start/route.ts",
+    "app/api/v1/rating-slip/[id]/close/route.ts",
+    "app/api/v1/rating-slip/[id]/pause/route.ts",
+    "app/api/v1/rating-slip/[id]/resume/route.ts",
+    "app/api/v1/table-context/status/route.ts",
+    "app/api/v1/table-context/tables/route.ts",
+    "app/api/v1/table-context/tables/[tableId]/route.ts"
+  ],
+  "validation": {
+    "type_check": "pass (3 pre-existing errors)",
+    "lint": "pass (migrated routes)",
+    "tests": "pass (150/151, 1 pre-existing flaky)"
+  },
+  "summary": {
+    "total_routes": 35,
+    "p0_migrated": 7,
+    "p1_remaining": 17,
+    "p2_remaining": 11,
+    "old_wrapper_imports": 0,
+    "manual_getAuthContext": 0
+  },
+  "notes": "P0 routes (with manual getAuthContext) fully migrated. P1/P2 routes can be migrated incrementally as needed."
+}

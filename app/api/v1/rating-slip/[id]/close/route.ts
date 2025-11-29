@@ -5,14 +5,13 @@
  *
  * Closes a rating slip with final telemetry (average bet).
  * Returns calculated points and duration.
- * Requires authentication and casino context from getAuthContext().
+ * Uses composable middleware for auth, RLS, idempotency, and audit.
  *
  * Security: NEVER extract casino_id from request headers (V4 fix)
  */
 
 import type { NextRequest } from "next/server";
 
-import { DomainError } from "@/lib/errors/domain-errors";
 import {
   createRequestContext,
   errorResponse,
@@ -20,10 +19,9 @@ import {
   requireIdempotencyKey,
   successResponse,
 } from "@/lib/http/service-response";
-import { getAuthContext } from "@/lib/supabase/rls-context";
+import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
 import { closeSlip } from "@/services/rating-slip";
-import type { Database } from "@/types/database.types";
 
 interface CloseRatingSlipRequest {
   averageBet?: number;
@@ -36,44 +34,51 @@ export async function POST(
   const ctx = createRequestContext(request);
 
   try {
-    // Require idempotency key for mutation
     const idempotencyKey = requireIdempotencyKey(request);
-
-    // Create Supabase client
     const supabase = await createClient();
-
-    // Get authenticated context (NEVER from headers)
-    const authCtx = await getAuthContext(supabase);
-
-    // Extract rating slip ID from route params
     const ratingSlipId = params.id;
 
     // Read optional request body (averageBet)
     let body: CloseRatingSlipRequest = {};
     try {
       body = await readJsonBody<CloseRatingSlipRequest>(request);
-    } catch (e) {
+    } catch {
       // Body is optional, ignore parsing errors
     }
 
-    // Call service (throws DomainError on failure)
-    const result = await closeSlip(
+    const result = await withServerAction(
       supabase,
-      authCtx.casinoId,
-      authCtx.actorId,
-      ratingSlipId,
-      body.averageBet,
+      async (mwCtx) => {
+        const slip = await closeSlip(
+          mwCtx.supabase,
+          mwCtx.rlsContext!.casinoId,
+          mwCtx.rlsContext!.actorId,
+          ratingSlipId,
+          body.averageBet,
+        );
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: { slip, durationSeconds: slip.duration_seconds },
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "rating-slip",
+        action: "close",
+        requireIdempotency: true,
+        idempotencyKey,
+        correlationId: ctx.requestId,
+      },
     );
 
-    return successResponse(ctx, {
-      slip: result,
-      durationSeconds: result.duration_seconds,
-    });
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return errorResponse(ctx, error);
+    if (!result.ok) {
+      return errorResponse(ctx, result);
     }
-    // Let Next.js handle unexpected errors
-    throw error;
+    return successResponse(ctx, result.data);
+  } catch (error) {
+    return errorResponse(ctx, error);
   }
 }

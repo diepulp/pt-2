@@ -4,14 +4,14 @@
  * POST /api/v1/rating-slip/start
  *
  * Creates a new rating slip in "open" state.
- * Requires authentication and casino context from getAuthContext().
+ * Uses composable middleware for auth, RLS, idempotency, and audit.
  *
  * Security: NEVER extract casino_id from request headers (V4 fix)
+ * Pattern: WS5 reference implementation
  */
 
 import type { NextRequest } from "next/server";
 
-import { DomainError } from "@/lib/errors/domain-errors";
 import {
   createRequestContext,
   errorResponse,
@@ -19,10 +19,9 @@ import {
   requireIdempotencyKey,
   successResponse,
 } from "@/lib/http/service-response";
-import { getAuthContext } from "@/lib/supabase/rls-context";
+import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
 import { startSlip, type StartRatingSlipInput } from "@/services/rating-slip";
-import type { Database } from "@/types/database.types";
 
 export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -34,26 +33,44 @@ export async function POST(request: NextRequest) {
     // Create Supabase client
     const supabase = await createClient();
 
-    // Get authenticated context (NEVER from headers)
-    const authCtx = await getAuthContext(supabase);
-
     // Read request body
     const body = await readJsonBody<StartRatingSlipInput>(request);
 
-    // Call service (throws DomainError on failure)
-    const result = await startSlip(
+    // Middleware handles auth, RLS, idempotency, audit, tracing
+    const result = await withServerAction(
       supabase,
-      authCtx.casinoId,
-      authCtx.actorId,
-      body,
+      async (mwCtx) => {
+        // Auth context available via mwCtx.rlsContext
+        const slip = await startSlip(
+          mwCtx.supabase,
+          mwCtx.rlsContext!.casinoId,
+          mwCtx.rlsContext!.actorId,
+          body,
+        );
+        // Return ServiceResult<T> with data
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: { ratingSlipId: slip.id },
+          requestId: mwCtx.correlationId,
+          durationMs: 0, // Will be overwritten by tracing middleware
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "rating-slip",
+        action: "start",
+        requireIdempotency: true,
+        idempotencyKey,
+        correlationId: ctx.requestId,
+      },
     );
 
-    return successResponse(ctx, { ratingSlipId: result.id });
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return errorResponse(ctx, error);
+    if (!result.ok) {
+      return errorResponse(ctx, result);
     }
-    // Let Next.js handle unexpected errors
-    throw error;
+    return successResponse(ctx, result.data, "OK", 201);
+  } catch (error) {
+    return errorResponse(ctx, error);
   }
 }

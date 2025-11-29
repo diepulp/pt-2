@@ -4,14 +4,13 @@
  * POST /api/v1/table-context/status
  *
  * Updates gaming table status via state machine validation.
- * Requires authentication and casino context from getAuthContext().
+ * Uses composable middleware for auth, RLS, idempotency, and audit.
  *
  * Security: NEVER extract casino_id from request headers (V4 fix)
  */
 
 import type { NextRequest } from "next/server";
 
-import { DomainError } from "@/lib/errors/domain-errors";
 import {
   createRequestContext,
   errorResponse,
@@ -19,7 +18,7 @@ import {
   requireIdempotencyKey,
   successResponse,
 } from "@/lib/http/service-response";
-import { getAuthContext } from "@/lib/supabase/rls-context";
+import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
 import { updateTableStatus } from "@/services/table-context";
 import type { Database } from "@/types/database.types";
@@ -33,27 +32,41 @@ export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    // Require idempotency key for mutation
     const idempotencyKey = requireIdempotencyKey(request);
-
-    // Create Supabase client
     const supabase = await createClient();
-
-    // Get authenticated context (NEVER from headers)
-    const authCtx = await getAuthContext(supabase);
-
-    // Read request body
     const body = await readJsonBody<UpdateTableStatusRequest>(request);
 
-    // Call service (throws DomainError on failure)
-    const result = await updateTableStatus(supabase, body.tableId, body.status);
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        const table = await updateTableStatus(
+          mwCtx.supabase,
+          body.tableId,
+          body.status,
+        );
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: table,
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "table-context",
+        action: "status.update",
+        requireIdempotency: true,
+        idempotencyKey,
+        correlationId: ctx.requestId,
+      },
+    );
 
-    return successResponse(ctx, result);
-  } catch (error) {
-    if (error instanceof DomainError) {
-      return errorResponse(ctx, error);
+    if (!result.ok) {
+      return errorResponse(ctx, result);
     }
-    // Let Next.js handle unexpected errors
-    throw error;
+    return successResponse(ctx, result.data);
+  } catch (error) {
+    return errorResponse(ctx, error);
   }
 }

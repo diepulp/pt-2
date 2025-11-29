@@ -1,3 +1,14 @@
+/**
+ * Gaming Table Detail Route
+ *
+ * GET /api/v1/table-context/tables/[tableId]
+ *
+ * Returns table status and current dealer information.
+ * Uses composable middleware for auth and RLS.
+ *
+ * Security: NEVER extract casino_id from request headers (V4 fix)
+ */
+
 import { NextRequest } from "next/server";
 
 import {
@@ -5,7 +16,7 @@ import {
   errorResponse,
   successResponse,
 } from "@/lib/http/service-response";
-import { getAuthContext } from "@/lib/supabase/rls-context";
+import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database.types";
 
@@ -45,43 +56,52 @@ export async function GET(
     const { tableId } = await params;
     const supabase = await createClient();
 
-    // V4 FIX: Validate casino context from authenticated user
-    const authContext = await getAuthContext(supabase);
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        const { data: table, error } = await mwCtx.supabase
+          .from("gaming_table")
+          .select("id, status")
+          .eq("id", tableId)
+          .eq("casino_id", mwCtx.rlsContext!.casinoId)
+          .single();
 
-    const { data: table, error } = await supabase
-      .from("gaming_table")
-      .select("id, status")
-      .eq("id", tableId)
-      .eq("casino_id", authContext.casinoId) // Enforce casino boundary
-      .single();
-
-    if (error || !table) {
-      throw new Error(`Table not found: ${tableId}`);
-    }
-
-    const { data: rotation } = await supabase
-      .from("dealer_rotation")
-      .select("staff:staff_id (id, first_name, last_name)")
-      .eq("table_id", tableId)
-      .is("ended_at", null)
-      .single();
-
-    // Use type guard instead of `as any` (V1 compliance)
-    const staff = rotation?.staff;
-    const currentDealer = isStaffJoinResult(staff)
-      ? {
-          id: staff.id,
-          name: `${staff.first_name} ${staff.last_name}`,
+        if (error || !table) {
+          throw new Error(`Table not found: ${tableId}`);
         }
-      : null;
 
-    const result: TableStatusDTO = {
-      tableId: table.id,
-      status: table.status,
-      currentDealer,
-    };
+        const { data: rotation } = await mwCtx.supabase
+          .from("dealer_rotation")
+          .select("staff:staff_id (id, first_name, last_name)")
+          .eq("table_id", tableId)
+          .is("ended_at", null)
+          .single();
 
-    return successResponse<TableStatusDTO>(ctx, result);
+        const staff = rotation?.staff;
+        const currentDealer = isStaffJoinResult(staff)
+          ? { id: staff.id, name: `${staff.first_name} ${staff.last_name}` }
+          : null;
+
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: { tableId: table.id, status: table.status, currentDealer },
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "table-context",
+        action: "tables.get",
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
+    }
+    return successResponse<TableStatusDTO>(ctx, result.data!);
   } catch (error) {
     return errorResponse(ctx, error);
   }
