@@ -1,21 +1,16 @@
-import { QueryClient } from '@tanstack/react-query';
-
 /**
- * Returns a QueryClient configured with the canonical defaults.
- * Keep this in sync with docs/patterns/HOOKS_STANDARD.md.
+ * @deprecated Use `lib/query/client.ts` instead.
+ * This file will be removed in v2.0.
+ *
+ * Migration:
+ * ```ts
+ * // Before
+ * import { queryClient, makeQueryClient } from '@/lib/query-client';
+ *
+ * // After
+ * import { getQueryClient, makeQueryClient } from '@/lib/query/client';
+ * ```
  */
-export const makeQueryClient = () =>
-  new QueryClient({
-    defaultOptions: {
-      queries: {
-        staleTime: 300_000, // 5 minutes
-        gcTime: 30 * 60_000, // 30 minutes
-        retry: 2,
-      },
-      mutations: {
-        retry: 0,
-      },
-    },
-  });
 
-export const queryClient = makeQueryClient();
+// Re-export from new location for backward compatibility
+export { makeQueryClient, getQueryClient as queryClient } from "./query/client";
