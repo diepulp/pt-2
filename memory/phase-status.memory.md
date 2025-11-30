@@ -15,10 +15,10 @@ sources:
 
 | PRD | Scope | Status |
 |-----|-------|--------|
-| PRD-000 | CasinoService (Root Authority) | Draft |
+| PRD-000 | CasinoService (Root Authority) | Implemented |
 | PRD-001 | Player Management (MVP Overview) | Accepted |
 | PRD-002 | Table & Rating Core | Implemented |
-| PRD-003 | Player Intake & Visit | Draft |
+| PRD-003 | Player Intake & Visit | Implemented (2025-11-30) |
 | PRD-004 | Mid-Session Loyalty | Draft |
 | PRD-005 | Compliance Monitoring (MTL) | Draft |
 
@@ -37,9 +37,9 @@ sources:
 
 | Service | PRD | Code Exists | Tests | Status |
 |---------|-----|-------------|-------|--------|
-| CasinoService | PRD-000 | No | No | Not Started |
-| PlayerService | PRD-003 | No | No | Not Started |
-| VisitService | PRD-003 | No | No | Not Started |
+| CasinoService | PRD-000 | Yes | Yes | Implemented |
+| PlayerService | PRD-003 | Yes | Yes | Implemented |
+| VisitService | PRD-003 | Yes | Yes | Implemented |
 
 ### Phase 2: Session Management + UI (GATE-2)
 
@@ -63,26 +63,28 @@ sources:
 GATE-0 (Horizontal) → CasinoService → PlayerService → VisitService → RatingSlipService → PitDashboard → LoyaltyService
 ```
 
-**Current Blocker**: GATE-0 horizontal infrastructure must be completed before any routes can be deployed.
+**Current Blocker**: PlayerService + VisitService must be implemented to unblock RatingSlipService E2E and LoyaltyService.
 
 ## Next Actions
 
-1. **CRITICAL (P0)**: Implement GATE-0 Horizontal Infrastructure
-   - `withServerAction` wrapper (auth → RLS → idempotency → audit)
-   - `ServiceResult<T>` pattern
-   - Error taxonomy (domain errors → HTTP mapping)
-   - React Query client configuration
+1. ~~**CRITICAL (P0)**: Implement GATE-0 Horizontal Infrastructure~~ ✅ COMPLETE
 
-2. HIGH: Implement CasinoService (PRD-000) after GATE-0
-   - Casino settings management
-   - Staff authentication with RLS
-   - Gaming day temporal authority (TEMP-001, TEMP-002)
-   - `compute_gaming_day()` function + trigger propagation
+2. ~~HIGH: Implement CasinoService (PRD-000)~~ ✅ COMPLETE
 
-3. HIGH: Build Pit Dashboard skeleton (MVP-ROADMAP)
+3. ~~**HIGH (P0)**: Implement PlayerService + VisitService (PRD-003)~~ ✅ COMPLETE
+   - PlayerService: Player profile, enrollment, search
+   - VisitService: Check-in/check-out lifecycle
+   - RLS policies for player/visit tables
+   - React Query hooks for UI integration
+
+4. **HIGH**: Build Pit Dashboard skeleton (MVP-ROADMAP)
    - Table status grid
    - Active rating slips panel
    - Real-time updates via Supabase channels
+
+5. MEDIUM: Integrate RatingSlipService with PlayerService/VisitService
+   - Wire up player selection in rating slip creation
+   - Link visits to rating slips
 
 ## Progress Tracking
 

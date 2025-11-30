@@ -14,8 +14,8 @@
 | Phase | PRD | Status | Notes |
 |-------|-----|--------|-------|
 | **0** | **PRD-HZ-001** | **COMPLETE** ✅ | GATE-0 Horizontal Infrastructure |
-| 1 | PRD-000 | Draft | CasinoService (next priority) |
-| 1 | PRD-003 | Draft | Player/Visit Services |
+| **1** | **PRD-000** | **COMPLETE** ✅ | CasinoService (Root Authority) |
+| 1 | **PRD-003** | **Ready** ✅ | PlayerService + VisitService |
 | 2 | PRD-002 | **Retrofitted** ✅ | TableContext/RatingSlip using new middleware |
 | 3 | PRD-004 | Draft | Mid-Session Loyalty |
 | 3 | PRD-005 | Draft | Compliance Monitoring |
@@ -27,7 +27,19 @@
 > - WS3: Testing infrastructure
 > - WS5: API route migration (7 P0 routes)
 >
+> **PRD-000 Complete (2025-11-29)**: CasinoService Root Authority implemented:
+> - Migration: `20251129161956_prd000_casino_foundation.sql` (compute_gaming_day RPC, staff constraint, RLS)
+> - Service: DTOs, schemas, keys, HTTP fetchers, 5 React Query hooks
+> - Routes: GET/POST /casino, GET/PATCH /casino/[id], /settings, /staff, /gaming-day
+> - Tests: 125 unit/integration tests passing
+>
 > **PRD-002 Retrofit**: TableContextService and RatingSlipService routes have been migrated to use the new `withServerAction` middleware. P1/P2 routes can be migrated incrementally.
+>
+> **PRD-003 Ready (2025-11-29)**: PlayerService + VisitService PRD drafted and validated:
+> - Identity context: Player profile, enrollment, search
+> - Session lifecycle: Visit check-in/check-out
+> - RLS policies, Route Handlers, React Query hooks defined
+> - Unblocks: RatingSlipService, LoyaltyService, PitDashboard
 
 ---
 
@@ -200,24 +212,28 @@ export const LoyaltyErrors = {
 **Timeline**: Foundation services required for all downstream
 **Approach**: VERTICAL per service
 
-### 1.1 CasinoService (Root Authority)
+### 1.1 CasinoService (Root Authority) — COMPLETE ✅
 
 **PRD Reference**: PRD-000
+**Completed**: 2025-11-29
 **Critical**: Blocks ALL downstream services (temporal authority)
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Migration** | Casino settings, staff | `supabase/migrations/` | P0 |
-| **Service** | CasinoService factory | `services/casino/index.ts` | P0 |
-| **DTOs** | CasinoDTO, StaffDTO | `services/casino/dtos.ts` | P0 |
-| **RPC** | `compute_gaming_day` | Database function | P0 |
-| **Route** | `POST /api/casino/settings` | `app/api/casino/settings/route.ts` | P1 |
-| **Hook** | `useCasinoSettings` | `hooks/use-casino.ts` | P1 |
-| **UI** | Casino settings panel | `components/casino/settings-panel.tsx` | P2 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Migration** | Casino settings, staff, RLS | `supabase/migrations/20251129161956_prd000_casino_foundation.sql` | ✅ |
+| **Service** | CasinoService factory | `services/casino/index.ts` | ✅ |
+| **DTOs** | CasinoDTO, StaffDTO, GamingDayDTO | `services/casino/dtos.ts` | ✅ |
+| **Schemas** | Zod validation schemas | `services/casino/schemas.ts` | ✅ |
+| **Keys** | Query key factory | `services/casino/keys.ts` | ✅ |
+| **HTTP** | Fetcher functions | `services/casino/http.ts` | ✅ |
+| **RPC** | `compute_gaming_day` | Database function | ✅ |
+| **Routes** | Full CRUD + settings/staff/gaming-day | `app/api/v1/casino/**` | ✅ |
+| **Hooks** | 5 React Query hooks | `hooks/casino/` | ✅ |
+| **Tests** | 125 unit + integration tests | `services/casino/*.test.ts` | ✅ |
 
 **Temporal Authority Pattern** (TEMP-001, TEMP-002):
 ```sql
--- compute_gaming_day function
+-- compute_gaming_day function (deployed)
 CREATE OR REPLACE FUNCTION compute_gaming_day(
   p_casino_id uuid,
   p_timestamp timestamptz DEFAULT now()
@@ -237,11 +253,12 @@ END;
 $$ LANGUAGE plpgsql STABLE;
 ```
 
-**Validation Gate 1.1**:
-- [ ] CasinoService factory created with typed interface
-- [ ] `compute_gaming_day` function deployed and tested
-- [ ] Staff authentication working (pit_boss, admin only)
-- [ ] RLS policies enforce casino scoping
+**Validation Gate 1.1**: ✅ PASSED
+- [x] CasinoService factory created with typed interface
+- [x] `compute_gaming_day` function deployed and tested
+- [x] Staff authentication working (pit_boss, admin only)
+- [x] RLS policies enforce casino scoping
+- [x] 125 tests passing (unit + integration)
 
 ### 1.2 PlayerService (Identity Context)
 

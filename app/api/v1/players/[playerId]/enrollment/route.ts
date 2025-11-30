@@ -1,7 +1,7 @@
 /**
- * Visit Detail Route
+ * Player Enrollment Status Route
  *
- * GET /api/v1/visits/[visitId] - Get visit by ID
+ * GET /api/v1/players/[playerId]/enrollment - Check enrollment status
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  * Pattern: PRD-003 reference implementation
@@ -18,17 +18,17 @@ import {
 } from "@/lib/http/service-response";
 import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
-import { createVisitService } from "@/services/visit/index";
-import { visitRouteParamsSchema } from "@/services/visit/schemas";
+import { createPlayerService } from "@/services/player/index";
+import { playerRouteParamsSchema } from "@/services/player/schemas";
 
 /** Route params type for Next.js 15 */
-type RouteParams = { params: Promise<{ visitId: string }> };
+type RouteParams = { params: Promise<{ playerId: string }> };
 
 /**
- * GET /api/v1/visits/[visitId]
+ * GET /api/v1/players/[playerId]/enrollment
  *
- * Get visit details by ID.
- * Returns 404 if visit not found.
+ * Get enrollment status for player in the authenticated user's casino.
+ * Returns 404 if not enrolled.
  */
 export async function GET(request: NextRequest, segmentData: RouteParams) {
   const ctx = createRequestContext(request);
@@ -36,36 +36,40 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
   try {
     const params = parseParams(
       await segmentData.params,
-      visitRouteParamsSchema,
+      playerRouteParamsSchema,
     );
     const supabase = await createClient();
 
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        const service = createVisitService(mwCtx.supabase);
+        const service = createPlayerService(mwCtx.supabase);
 
-        const visit = await service.getById(params.visitId);
+        const enrollment = await service.getEnrollment(params.playerId);
 
-        if (!visit) {
-          throw new DomainError("VISIT_NOT_FOUND", "Visit not found", {
-            httpStatus: 404,
-            details: { visitId: params.visitId },
-          });
+        if (!enrollment) {
+          throw new DomainError(
+            "PLAYER_NOT_ENROLLED",
+            "Player not enrolled in this casino",
+            {
+              httpStatus: 404,
+              details: { playerId: params.playerId },
+            },
+          );
         }
 
         return {
           ok: true as const,
           code: "OK" as const,
-          data: visit,
+          data: enrollment,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
         };
       },
       {
-        domain: "visit",
-        action: "detail",
+        domain: "player",
+        action: "enrollment.get",
         correlationId: ctx.requestId,
       },
     );

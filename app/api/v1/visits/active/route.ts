@@ -1,7 +1,7 @@
 /**
- * Visit Detail Route
+ * Active Visit Route
  *
- * GET /api/v1/visits/[visitId] - Get visit by ID
+ * GET /api/v1/visits/active - Get active visit for a player
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  * Pattern: PRD-003 reference implementation
@@ -9,55 +9,42 @@
 
 import type { NextRequest } from "next/server";
 
-import { DomainError } from "@/lib/errors/domain-errors";
 import {
   createRequestContext,
   errorResponse,
-  parseParams,
+  parseQuery,
   successResponse,
 } from "@/lib/http/service-response";
 import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
 import { createVisitService } from "@/services/visit/index";
-import { visitRouteParamsSchema } from "@/services/visit/schemas";
-
-/** Route params type for Next.js 15 */
-type RouteParams = { params: Promise<{ visitId: string }> };
+import { activeVisitQuerySchema } from "@/services/visit/schemas";
 
 /**
- * GET /api/v1/visits/[visitId]
+ * GET /api/v1/visits/active
  *
- * Get visit details by ID.
- * Returns 404 if visit not found.
+ * Get active visit for a player.
+ * Query params: player_id (required)
+ * Returns { has_active_visit: boolean, visit: VisitDTO | null }
  */
-export async function GET(request: NextRequest, segmentData: RouteParams) {
+export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(
-      await segmentData.params,
-      visitRouteParamsSchema,
-    );
     const supabase = await createClient();
+    const query = parseQuery(request, activeVisitQuerySchema);
 
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
         const service = createVisitService(mwCtx.supabase);
 
-        const visit = await service.getById(params.visitId);
-
-        if (!visit) {
-          throw new DomainError("VISIT_NOT_FOUND", "Visit not found", {
-            httpStatus: 404,
-            details: { visitId: params.visitId },
-          });
-        }
+        const activeVisit = await service.getActiveForPlayer(query.player_id);
 
         return {
           ok: true as const,
           code: "OK" as const,
-          data: visit,
+          data: activeVisit,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -65,7 +52,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       },
       {
         domain: "visit",
-        action: "detail",
+        action: "active",
         correlationId: ctx.requestId,
       },
     );

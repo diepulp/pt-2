@@ -197,6 +197,9 @@ const eslintConfig = [
       'no-only-tests/no-only-tests': 'error',
 
       // Service layer type enforcement + Supabase client restrictions
+      // NOTE: The pattern for services/*/index was removed as it blocked legitimate
+      // factory function imports. ReturnType inference is caught by no-restricted-syntax
+      // rule "TSTypeReference[typeName.name='ReturnType']" in custom-rules section.
       'no-restricted-imports': [
         'error',
         {
@@ -206,13 +209,6 @@ const eslintConfig = [
               importNames: ['createClient'],
               message:
                 'Do not use createClient from @supabase/supabase-js directly. Use createClient from lib/supabase/server or lib/supabase/client.',
-            },
-          ],
-          patterns: [
-            {
-              group: ['**/services/*/index'],
-              message:
-                'Do not use ReturnType inference. Import explicit interfaces from service modules.',
             },
           ],
         },
