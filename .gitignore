@@ -53,3 +53,6 @@ next-env.d.ts
 
 #venv
 /.venv/
+
+# worktrees
+trees/

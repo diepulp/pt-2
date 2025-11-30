@@ -479,6 +479,41 @@ Expected output:
 5. Implementation plan with DoD
 ```
 
+### Generate EXECUTION-SPEC (Pipeline Mode)
+
+```
+Use the lead-architect skill to generate an EXECUTION-SPEC for [PRD-ID].
+
+Mode: generate-execution-spec
+
+Input: PRD document at docs/10-prd/[PRD-ID].md
+
+Expected output:
+EXECUTION-SPEC document with:
+1. YAML frontmatter (machine-parseable workstream definitions)
+2. Workstream breakdown with agent assignments
+3. Dependency graph (depends_on relationships)
+4. Execution phases (parallelized where possible)
+5. Validation gates per workstream
+6. Human-readable context for each workstream
+
+Output location: docs/20-architecture/specs/[PRD-ID]/EXECUTION-SPEC-[PRD-ID].md
+```
+
+**EXECUTION-SPEC Generation Workflow**:
+
+1. **Read PRD** - Extract scope, features, DoD
+2. **Identify Workstreams** - Break into DB/Service/Route/Hook/Test layers
+3. **Assign Agents** - Map each workstream to capability agent
+4. **Define Dependencies** - Establish depends_on relationships
+5. **Parallelize Phases** - Group independent workstreams
+6. **Set Gates** - Assign validation gate per workstream
+7. **Output EXECUTION-SPEC** - Write to specs directory
+
+**Template**: See `.claude/skills/prd-pipeline/references/execution-spec-template.md`
+
+**Integration**: Called by `/prd-execute` command via `prd-pipeline` skill
+
 ## MVP Roadmap & Progress Tracking
 
 ### Canonical Implementation Baseline
