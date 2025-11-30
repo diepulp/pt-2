@@ -83,6 +83,8 @@ const eslintConfig = [
       ],
 
       // Ban ReturnType inference patterns (PRD §3.3: Ban ReturnType<typeof createXService>)
+      // NOTE: DTO interface checks moved to custom-rules/no-manual-dto-interfaces.js
+      // which supports RPC response exceptions via JSDoc annotations
       'no-restricted-syntax': [
         'error',
         {
@@ -91,20 +93,6 @@ const eslintConfig = [
             'ExportNamedDeclaration > TSTypeAliasDeclaration > TSTypeReference[typeName.name="ReturnType"]',
           message:
             'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3). Define explicit interface: export interface XService { methodName(): ReturnType }',
-        },
-        {
-          // Ban manual DTO interfaces (SRM canonical standard)
-          selector:
-            'ExportNamedDeclaration > TSInterfaceDeclaration[id.name=/.*DTO$/]',
-          message:
-            'ANTI-PATTERN: Manual DTO interfaces banned (SRM canonical). Use type alias: export type XCreateDTO = Pick<Database["public"]["Tables"]["x"]["Insert"], "field1" | "field2">',
-        },
-        {
-          // Ban DTO-like interfaces with common suffixes
-          selector:
-            'ExportNamedDeclaration > TSInterfaceDeclaration[id.name=/.*(?:Create|Update|Response|Request)DTO$/]',
-          message:
-            'ANTI-PATTERN: DTO interfaces must be type aliases derived from Database types. This ensures automatic schema sync.',
         },
       ],
 

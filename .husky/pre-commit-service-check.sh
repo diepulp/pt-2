@@ -64,20 +64,43 @@ fi
 
 # ==============================================================================
 # Check 2: Pattern B - Manual DTO interfaces BANNED (SLAD §440-479)
+# Exception: RPC response interfaces are allowed (annotated with "RPC response" in JSDoc)
 # ==============================================================================
 if [ -n "$STAGED_SERVICE_FILES" ]; then
-  PATTERN_B_DTO_VIOLATIONS=$(echo "$STAGED_SERVICE_FILES" | grep -E "^services/($PATTERN_B_SERVICES)/" | xargs grep -l "export interface.*DTO" 2>/dev/null || true)
+  PATTERN_B_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -E "^services/($PATTERN_B_SERVICES)/" || true)
+  PATTERN_B_DTO_VIOLATIONS=""
+
+  for file in $PATTERN_B_FILES; do
+    # Find interfaces with DTO suffix
+    if grep -q "export interface.*DTO" "$file" 2>/dev/null; then
+      # Check each interface - exclude those preceded by RPC response JSDoc
+      # Get line numbers of interface declarations
+      INTERFACE_LINES=$(grep -n "export interface.*DTO" "$file" 2>/dev/null | cut -d: -f1)
+
+      for line in $INTERFACE_LINES; do
+        # Check if preceding lines (within 5 lines) contain "RPC response"
+        START_LINE=$((line - 5))
+        if [ $START_LINE -lt 1 ]; then START_LINE=1; fi
+
+        # Extract context and check for RPC response annotation
+        CONTEXT=$(sed -n "${START_LINE},${line}p" "$file")
+        if ! echo "$CONTEXT" | grep -qi "RPC response"; then
+          # This interface is NOT an RPC response - it's a violation
+          VIOLATION_LINE=$(sed -n "${line}p" "$file")
+          PATTERN_B_DTO_VIOLATIONS="$PATTERN_B_DTO_VIOLATIONS
+  - $file
+    ${line}:${VIOLATION_LINE}"
+        fi
+      done
+    fi
+  done
 
   if [ -n "$PATTERN_B_DTO_VIOLATIONS" ]; then
     echo "❌ ANTI-PATTERN: Manual DTO interfaces in Pattern B (Canonical CRUD) services"
     echo ""
     echo "Pattern B services (Player, Visit, Casino, FloorLayout) MUST use type aliases:"
     echo ""
-    echo "Files with violations:"
-    echo "$PATTERN_B_DTO_VIOLATIONS" | while read -r file; do
-      echo "  - $file"
-      grep -n "export interface.*DTO" "$file" 2>/dev/null | head -3 | sed 's/^/    /'
-    done
+    echo "Files with violations:$PATTERN_B_DTO_VIOLATIONS"
     echo ""
     echo "Fix: Use type aliases derived from Database types:"
     echo ""
@@ -91,6 +114,10 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
     echo "    Database['public']['Tables']['player']['Insert'],"
     echo "    'first_name'"
     echo "  >;"
+    echo ""
+    echo "Exception: RPC response interfaces are allowed with JSDoc annotation:"
+    echo "  /** Gaming day computation RPC response ... */"
+    echo "  export interface GamingDayDTO { ... }"
     echo ""
     echo "Reference: SLAD §440-479, SRM §57-60"
     echo ""

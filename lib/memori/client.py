@@ -51,6 +51,7 @@ class MemoriClient:
         "skill:lead-architect": "skill_lead_architect",
         "skill:skill-creator": "skill_skill_creator",
         "skill:api-builder": "skill_api_builder",
+        "skill:mvp-progress": "skill_mvp_progress",
     }
 
     def __init__(

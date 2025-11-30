@@ -1,7 +1,6 @@
 ---
 name: frontend-design
 description: Create distinctive, production-grade frontend interfaces with high design quality for PT-2 architecture. Use this skill when building web components, pages, or applications. Generates creative, polished code that follows PT-2 technical standards (React 19, Next.js App Router, Tailwind v4, shadcn/ui) while avoiding generic AI aesthetics.
-allowed-tools: SlashCommand, context7, mcp__sequential-thinking__sequentialthinking, supabase, Read, Write, Edit, Glob, Bash, TodoWrite, BashOutput, KillShell, Task, mcp__tavily-remote__tavily_extract, mcp__tavily-remote__tavily_map, mcp__tavily-remote__tavily_map, mcp__tavily-remote__tavily_search, shadcn mcp
 license: Complete terms in LICENSE.txt
 ---
 
@@ -37,12 +36,97 @@ The user provides frontend requirements: a component, page, application, or inte
 **Quick Technical Requirements**:
 - ✅ React 19 with App Router (NOT Pages Router)
 - ✅ Tailwind CSS v4 utilities (NOT inline styles or v3 syntax)
-- ✅ shadcn/ui components (copy-paste from registry)
+- ✅ shadcn/ui components via MCP server (de-facto UI standard)
 - ✅ Server Actions for mutations (NOT fetch to API routes)
 - ✅ TanStack Query for client-side data
 - ✅ TypeScript strict mode
 
 See `references/QUICK_START.md` for implementation workflow and code templates.
+
+---
+
+## shadcn UI - De-facto Standard 🎨
+
+**shadcn/ui is the de-facto UI component library for PT-2.** Access components via the shadcn MCP server.
+
+### MCP Server Access
+
+Use `mcp__shadcn__*` tools to browse and install components:
+
+```bash
+# Available MCP tools for shadcn
+mcp__shadcn__list_components    # List all available components
+mcp__shadcn__get_component      # Get component details/code
+mcp__shadcn__install_component  # Install component to project
+```
+
+### Registered Component Registries
+
+The project has multiple registries configured in `components.json`:
+
+| Registry | URL | Use Case |
+|----------|-----|----------|
+| **shadcn/ui** (default) | `https://ui.shadcn.com` | Core components (Button, Dialog, Form, etc.) |
+| **@aceternity** | `https://ui.aceternity.com` | Animated effects, backgrounds, hero sections |
+| **@originui** | `https://originui.com` | Alternative component variants |
+| **@shadcnui-blocks** | `https://shadcnui-blocks.com` | Pre-built page blocks and layouts |
+| **@kokonutui** | `https://kokonutui.com` | Extended component collection |
+| **@tweakcn** | `https://tweakcn.com` | Customized shadcn variants |
+
+### Installing Components
+
+```bash
+# Default shadcn/ui registry
+npx shadcn@latest add button dialog form table
+
+# From specific registries (use registry prefix)
+npx shadcn@latest add @aceternity/background-beams
+npx shadcn@latest add @originui/button
+npx shadcn@latest add @kokonutui/card
+```
+
+### Project Configuration
+
+```json
+// components.json (already configured)
+{
+  "style": "new-york",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "css": "app/globals.css",
+    "baseColor": "neutral",
+    "cssVariables": true
+  },
+  "aliases": {
+    "components": "@/components",
+    "ui": "@/components/ui"
+  },
+  "iconLibrary": "lucide"
+}
+```
+
+### Component Usage Pattern
+
+```typescript
+// Import from local components/ui (shadcn copies components here)
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
+import { Card, CardHeader, CardContent } from "@/components/ui/card"
+
+// Customize via Tailwind classes
+<Button variant="default" className="bg-primary hover:bg-primary/90">
+  Action
+</Button>
+```
+
+### When to Use Each Registry
+
+- **Core UI elements** → Default shadcn/ui (Button, Input, Select, Dialog, etc.)
+- **Animated backgrounds/effects** → @aceternity (for distinctive aesthetics)
+- **Alternative component styles** → @originui, @tweakcn
+- **Pre-built page sections** → @shadcnui-blocks
+- **Extended components** → @kokonutui
 
 ## Memory Recording Protocol 🧠
 

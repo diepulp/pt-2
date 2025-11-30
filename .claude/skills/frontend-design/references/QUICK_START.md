@@ -44,12 +44,29 @@
 ```
 ✅ React 19 + App Router (NOT Pages Router)
 ✅ Tailwind CSS v4 (NOT v3 syntax)
-✅ shadcn/ui components (from registry)
+✅ shadcn/ui components via MCP (de-facto UI standard)
 ✅ Server Actions for mutations (NOT fetch to API routes)
 ✅ TanStack Query + service keys (NEVER hardcode keys)
 ✅ TypeScript strict mode
 ✅ Loading skeletons (NOT spinners)
 ✅ Lists > 100 items use virtualization
+```
+
+### shadcn UI via MCP Server
+
+Use `mcp__shadcn__*` tools to access components. Registries configured in `components.json`:
+
+| Registry | Use Case |
+|----------|----------|
+| Default shadcn/ui | Core components (Button, Dialog, Form, Table) |
+| @aceternity | Animated backgrounds, hero effects |
+| @originui, @tweakcn | Alternative component variants |
+| @shadcnui-blocks | Pre-built page layouts |
+| @kokonutui | Extended component collection |
+
+```bash
+npx shadcn@latest add button dialog        # default registry
+npx shadcn@latest add @aceternity/sparkles # from aceternity
 ```
 
 ### State Management Rules

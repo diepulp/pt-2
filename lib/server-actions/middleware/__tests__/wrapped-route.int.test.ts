@@ -95,9 +95,7 @@ describe('Wrapped Route Handler Integration', () => {
     });
 
     it('should demonstrate correlation ID extraction', () => {
-      const headers = new Map([
-        ['x-request-id', 'corr-123-456'],
-      ]);
+      const headers = new Map([['x-request-id', 'corr-123-456']]);
 
       const correlationId = headers.get('x-request-id');
       expect(correlationId).toBe('corr-123-456');

@@ -224,7 +224,44 @@ Every architecture should enable testing. Verify:
 
 ---
 
-## Step 7: Record to Memori (Optional)
+## Step 7: Check MVP Roadmap Status
+
+**Before designing**, check current MVP implementation status:
+
+```bash
+/mvp-status   # Live status from Memori
+```
+
+Or check static memory file: `memory/phase-status.memory.md`
+
+**MVP-ROADMAP.md** (`docs/20-architecture/MVP-ROADMAP.md`) defines the baseline:
+
+```
+Phase 0: Horizontal Infrastructure (GATE-0) ← MUST COMPLETE FIRST
+├── TransportLayer (withServerAction)
+├── ErrorTaxonomy
+├── ServiceResultPattern
+└── QueryInfra
+
+Phase 1: Core Services (GATE-1) ← Blocked by Phase 0
+├── CasinoService (PRD-000) ← ROOT AUTHORITY
+├── PlayerService (PRD-003)
+└── VisitService (PRD-003)
+
+Phase 2: Session Management + UI (GATE-2)
+├── TableContextService ✓
+├── RatingSlipService ✓
+└── PitDashboard
+
+Phase 3: Rewards & Compliance (GATE-3)
+├── LoyaltyService, PlayerFinancialService, MTLService
+```
+
+**Key Insight**: HORIZONTAL-FIRST order. No routes deployable until GATE-0 completes.
+
+---
+
+## Step 8: Record to Memori (Optional)
 
 ```python
 # After architectural decisions
@@ -243,6 +280,16 @@ context.record_documentation_regression(
     affected_docs=["doc1.md", "doc2.md"],
     description="[What was inconsistent]",
     resolution="[How it was fixed]"
+)
+
+# After implementing a service (update MVP progress)
+from lib.memori.mvp_progress_context import create_mvp_progress_context
+ctx = create_mvp_progress_context()
+ctx.record_service_completion(
+    service_name="ServiceName",
+    files_created=["path/to/file.ts"],
+    test_coverage=90.0,
+    implementation_notes="Notes"
 )
 ```
 
@@ -266,6 +313,8 @@ context.record_documentation_regression(
 | Topic | Reference |
 |-------|-----------|
 | **Database types (SOT)** | `types/database.types.ts` |
+| **MVP Roadmap (baseline)** | `docs/20-architecture/MVP-ROADMAP.md` |
+| **MVP Status (live)** | `/mvp-status` command |
 | Output templates | `references/output-templates.md` |
 | Example architectures | `references/example-architectures.md` |
 | Full validation checklist | `references/validation-checklist.md` |
@@ -274,5 +323,6 @@ context.record_documentation_regression(
 | Implementation reality | `docs/70-governance/SERVICE_TEMPLATE.md` |
 | Testing strategy | `docs/40-quality/QA-001-service-testing-strategy.md` |
 | TDD standard | `docs/40-quality/QA-004-tdd-standard.md` |
+| MVP Progress Tracker | `lib/memori/mvp_progress_context.py` |
 | Memory protocol | `references/memory-protocol.md` |
 | Session continuity | `references/context-management.md` |

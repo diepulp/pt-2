@@ -1,115 +1,113 @@
 # Phase Status Snapshot
-last_updated: 2025-11-25
-current_phase: "MVP Implementation Phase 1 - Core Infrastructure"
-implementation_status: "Kickoff baseline established, ready for service implementation"
-canonical_source: "SRM v3.1.0 maintained by schema contract"
+last_updated: 2025-11-29
+current_phase: "Phase 1"
+implementation_status: "6/13 services implemented"
+canonical_source: "Memori engine (skill:mvp-progress namespace)"
+canonical_roadmap: "docs/20-architecture/MVP-ROADMAP.md"
 sources:
+  - docs/20-architecture/MVP-ROADMAP.md
   - docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
+  - docs/10-prd/PRD-000-casino-foundation.md
   - docs/10-prd/PRD-001_Player_Management_System_Requirements.md
-  - .claude/specs/MVP-001-implementation-roadmap.spec.md
-  - docs/70-governance/ANTI_PATTERN_CATALOG.md
-  - docs/80-adrs/ADR-*.md
+  - docs/10-prd/PRD-002-table-rating-core.md
 
-progress:
-  completed:
-    - "SRM v3.1.0 canonical standard (security & tenancy upgrade)"
-    - "Schema baseline established via Supabase migrations"
-    - "Documentation catalogs organized (20-architecture, 70-governance, 80-adrs)"
-    - "Anti-pattern catalog and ADR index (12 ADRs)"
-    - "Agentic workflow infrastructure complete (3-layer: Static + Skills + Memori)"
-    - "PRD-001 Player Management System Requirements finalized"
-    - "MVP-001 Implementation Roadmap spec approved"
-    - "MVP implementation workflow created"
-    - "Project kickoff baseline established"
-  in_progress:
-    - "Phase 1: Core Infrastructure implementation"
-    - "CasinoService implementation (next action)"
-  backlog:
-    - "PlayerService implementation"
-    - "TableContextService implementation"
-    - "GATE-1 validation"
-    - "Phase 2: Session Management (VisitService, RatingSlipService)"
-    - "Phase 3: Rewards & Compliance (LoyaltyService, PlayerFinancialService, MTLService)"
-    - "UI implementation (shadcn + React Query)"
+## PRD Coverage Status
 
-milestones:
-  - name: "Phase 1: Core Infrastructure (GATE-1)"
-    eta: "TBD"
-    gates: ["CasinoService", "PlayerService", "TableContextService", "RLS policies", "US-001 E2E"]
-    services:
-      - CasinoService
-      - PlayerService
-      - TableContextService
-    status: "In Progress"
-  - name: "Phase 2: Session Management (GATE-2)"
-    eta: "TBD"
-    gates: ["VisitService", "RatingSlipService", "US-002-004 E2E"]
-    services:
-      - VisitService
-      - RatingSlipService
-    status: "Not Started"
-  - name: "Phase 3: Rewards & Compliance (GATE-3)"
-    eta: "TBD"
-    gates: ["LoyaltyService", "PlayerFinancialService", "MTLService", "US-005-006 E2E"]
-    services:
-      - LoyaltyService
-      - PlayerFinancialService
-      - MTLService
-    status: "Not Started"
-  - name: "MVP Integration (GATE-4)"
-    eta: "TBD"
-    gates: ["All services operational", "PRD KPIs met", "Coverage ≥80%"]
-    status: "Not Started"
-  - name: "Pilot Readiness (GATE-5)"
-    eta: "TBD"
-    gates: ["Runbooks", "Dashboards", "Full shift simulation"]
-    status: "Not Started"
+| PRD | Scope | Status |
+|-----|-------|--------|
+| PRD-000 | CasinoService (Root Authority) | Draft |
+| PRD-001 | Player Management (MVP Overview) | Accepted |
+| PRD-002 | Table & Rating Core | Implemented |
+| PRD-003 | Player Intake & Visit | Draft |
+| PRD-004 | Mid-Session Loyalty | Draft |
+| PRD-005 | Compliance Monitoring (MTL) | Draft |
 
-next_actions:
-  - priority: "HIGH"
-    action: "Implement CasinoService"
-    skill: "backend-service-builder"
-    spec: "MVP-001 Section 1.1"
-  - priority: "HIGH"
-    action: "Implement PlayerService"
-    skill: "backend-service-builder"
-    spec: "MVP-001 Section 1.2"
-  - priority: "HIGH"
-    action: "Implement TableContextService"
-    skill: "backend-service-builder"
-    spec: "MVP-001 Section 1.3"
-  - priority: "MEDIUM"
-    action: "Complete GATE-1 validation"
-    skill: "lead-architect"
-    workflow: "mvp-implementation.prompt.md"
+## Implementation Status (Per MVP-ROADMAP)
 
-blockers:
-  - None identified
+### Phase 0: Horizontal Infrastructure (GATE-0)
 
-key_decisions:
-  - date: "2025-11-25"
-    decision: "MVP implementation phasing: Infrastructure → Session → Rewards"
-    rationale: "Dependencies require foundational services first"
-    spec: "MVP-001"
-  - date: "2025-11-25"
-    decision: "Service-per-bounded-context pattern"
-    rationale: "Aligns with SRM v3.1.0 bounded contexts"
-    spec: "MVP-001"
-  - date: "2025-11-25"
-    decision: "PlayerFinancialService feature-flagged"
-    rationale: "Finance is optional for pilot, reduces MVP scope"
-    spec: "MVP-001 Section 3.2"
-  - date: "2025-11-25"
-    decision: "MTLService read-only in MVP"
-    rationale: "Compliance writes deferred to post-MVP"
-    spec: "MVP-001 Section 3.3"
+| Component | Reference | Code Exists | Tests | Status |
+|-----------|-----------|-------------|-------|--------|
+| TransportLayer | MVP-ROADMAP | Yes | No | Implemented |
+| ErrorTaxonomy | MVP-ROADMAP | Yes | No | Implemented |
+| ServiceResultPattern | MVP-ROADMAP | Yes | No | Implemented |
+| QueryInfra | MVP-ROADMAP | Yes | No | Implemented |
 
-reference_docs:
-  - path: ".claude/specs/MVP-001-implementation-roadmap.spec.md"
-    description: "Complete implementation roadmap with service specs"
-  - path: ".claude/workflows/mvp-implementation.prompt.md"
-    description: "Orchestrated workflow with validation gates"
-  - path: "docs/10-prd/PRD-001_Player_Management_System_Requirements.md"
-    description: "Product requirements document"
-  - path: "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
-    description: "Bounded context definitions"
+### Phase 1: Core Services (GATE-1)
+
+| Service | PRD | Code Exists | Tests | Status |
+|---------|-----|-------------|-------|--------|
+| CasinoService | PRD-000 | No | No | Not Started |
+| PlayerService | PRD-003 | No | No | Not Started |
+| VisitService | PRD-003 | No | No | Not Started |
+
+### Phase 2: Session Management + UI (GATE-2)
+
+| Service | PRD | Code Exists | Tests | Status |
+|---------|-----|-------------|-------|--------|
+| TableContextService | PRD-002 | Yes | Yes | Implemented |
+| RatingSlipService | PRD-002 | Yes | Yes | Implemented |
+| PitDashboard | MVP-ROADMAP | No | No | Not Started |
+
+### Phase 3: Rewards & Compliance (GATE-3)
+
+| Service | PRD | Code Exists | Tests | Status |
+|---------|-----|-------------|-------|--------|
+| LoyaltyService | PRD-004 | No | No | Not Started |
+| PlayerFinancialService | PRD-001 | No | No | Not Started (Feature-Flagged) |
+| MTLService | PRD-005 | No | No | Not Started (Read-Only MVP) |
+
+## Critical Path
+
+```
+GATE-0 (Horizontal) → CasinoService → PlayerService → VisitService → RatingSlipService → PitDashboard → LoyaltyService
+```
+
+**Current Blocker**: GATE-0 horizontal infrastructure must be completed before any routes can be deployed.
+
+## Next Actions
+
+1. **CRITICAL (P0)**: Implement GATE-0 Horizontal Infrastructure
+   - `withServerAction` wrapper (auth → RLS → idempotency → audit)
+   - `ServiceResult<T>` pattern
+   - Error taxonomy (domain errors → HTTP mapping)
+   - React Query client configuration
+
+2. HIGH: Implement CasinoService (PRD-000) after GATE-0
+   - Casino settings management
+   - Staff authentication with RLS
+   - Gaming day temporal authority (TEMP-001, TEMP-002)
+   - `compute_gaming_day()` function + trigger propagation
+
+3. HIGH: Build Pit Dashboard skeleton (MVP-ROADMAP)
+   - Table status grid
+   - Active rating slips panel
+   - Real-time updates via Supabase channels
+
+## Progress Tracking
+
+Primary mechanism: **Memori engine (MVPProgressContext)**
+- Namespace: `skill:mvp-progress`
+- Categories: milestones, service-status, gate-validations
+- Query via: `/mvp-status` command
+- Python API: `lib/memori/mvp_progress_context.py`
+- Features:
+  - Service status tracking with files/tests/blockers
+  - Phase milestone transitions
+  - PRD status updates
+  - Velocity metrics (last 7/30 days, trend analysis)
+  - Critical path analysis (blocking services)
+
+Secondary mechanism: **This memory file**
+- **Auto-synced from Memori DB**
+- Git-controlled for audit trail
+- Serves as static reference when DB unavailable
+
+## Reference Docs
+
+- Full implementation roadmap: `.claude/specs/MVP-001-implementation-roadmap.spec.md`
+- Service patterns: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
+- PRD standard: `docs/10-prd/PRD-STD-001_PRD_STANDARD.md`
+- Temporal patterns (critical for CasinoService):
+  - `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md`
+  - `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md`

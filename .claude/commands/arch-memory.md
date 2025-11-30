@@ -1,8 +1,8 @@
 ---
-description: Query lead-architect Memori knowledge base for past architectural decisions, patterns, and documentation regressions
+description: Query lead-architect Memori knowledge base for past architectural decisions, patterns, MVP progress, and documentation regressions
 args:
   - name: query_type
-    description: Type of query (decisions|patterns|regressions|debt|compliance|all)
+    description: Type of query (decisions|patterns|regressions|debt|compliance|mvp|all)
     required: false
     default: all
 ---
@@ -16,7 +16,8 @@ Query the Memori PostgreSQL database for architectural knowledge.
 - **Container:** `supabase_db_pt-2`
 - **Schema:** `memori`
 - **Table:** `memori.memories`
-- **Architect namespace:** `pt2_architect` (user_id field)
+- **Architect namespace:** `skill_lead_architect` (user_id field)
+- **MVP Progress namespace:** `skill_mvp_progress` (user_id field)
 
 ## Instructions for Agent
 
@@ -198,6 +199,82 @@ LIMIT 15;
 
 ---
 
+## Query: `mvp` (NEW)
+
+### MVP Implementation Progress
+
+```bash
+docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+SELECT
+    metadata->>'service_name' as service,
+    metadata->>'prd_reference' as prd,
+    metadata->>'status' as status,
+    metadata->>'code_exists' as code,
+    metadata->>'tests_exist' as tests,
+    created_at
+FROM memori.memories
+WHERE user_id = 'skill_mvp_progress'
+  AND metadata->>'type' = 'service_status'
+ORDER BY created_at DESC
+LIMIT 20;
+"
+```
+
+### MVP Milestone Transitions
+
+```bash
+docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+SELECT
+    metadata->>'phase' as phase,
+    metadata->>'phase_name' as name,
+    metadata->>'status' as status,
+    metadata->>'services_completed' as completed,
+    metadata->>'services_pending' as pending,
+    created_at
+FROM memori.memories
+WHERE user_id = 'skill_mvp_progress'
+  AND metadata->>'type' = 'milestone_transition'
+ORDER BY created_at DESC
+LIMIT 10;
+"
+```
+
+### MVP PRD Status
+
+```bash
+docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+SELECT
+    metadata->>'prd_id' as prd,
+    metadata->>'status' as status,
+    metadata->>'scope' as scope,
+    metadata->>'services_defined' as services,
+    created_at
+FROM memori.memories
+WHERE user_id = 'skill_mvp_progress'
+  AND metadata->>'type' = 'prd_status'
+ORDER BY created_at DESC;
+"
+```
+
+### Lead Architect Checkpoints
+
+```bash
+docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+SELECT
+    LEFT(metadata->>'current_task', 60) as task,
+    metadata->>'checkpoint_reason' as reason,
+    metadata->>'next_steps' as next_steps,
+    created_at
+FROM memori.memories
+WHERE user_id = 'skill_lead_architect'
+  AND metadata->>'type' = 'session_checkpoint'
+ORDER BY created_at DESC
+LIMIT 5;
+"
+```
+
+---
+
 ## Summary Queries (Always Run)
 
 ### Memory Distribution by Namespace
@@ -271,6 +348,17 @@ After running queries, compile results into this format:
 - Namespaces: [list with counts]
 - Categories: [breakdown]
 
+## MVP Implementation Progress
+- Phase 0 (Horizontal): [status] - TransportLayer, ErrorTaxonomy, ServiceResultPattern, QueryInfra
+- Phase 1 (Core): [status] - CasinoService, PlayerService, VisitService
+- Phase 2 (Session+UI): [status] - TableContextService, RatingSlipService, PitDashboard
+- Phase 3 (Rewards): [status] - LoyaltyService, PlayerFinancialService, MTLService
+- Current Blocker: [what's blocking progress]
+- Recent Completions: [services completed recently]
+
+## Lead Architect Checkpoints
+[Recent checkpoints with current task, next steps]
+
 ## Architectural Decisions
 [List decisions with patterns, rationale, outcomes]
 
@@ -325,11 +413,13 @@ The `memori.memories` table structure:
 
 | Namespace | Purpose |
 |-----------|---------|
-| `pt2_architect` | Architecture agent memories |
+| `skill_lead_architect` | Lead architect skill memories, checkpoints |
+| `skill_mvp_progress` | MVP implementation progress tracking |
+| `skill_backend_service_builder` | Backend service builder skill |
+| `skill_frontend_design` | Frontend design skill |
+| `skill_api_builder` | API builder skill |
+| `pt2_architect` | Legacy architecture agent memories |
 | `pt2_agent` | Main agent session context |
-| `mtl_agent` | MTL service domain |
-| `player_agent` | Player service domain |
-| `skill:lead-architect` | Lead architect skill (future) |
 
 ---
 

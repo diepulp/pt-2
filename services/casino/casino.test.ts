@@ -1,510 +1,432 @@
 /**
- * Casino Service Unit Tests
+ * Casino Service HTTP Fetchers Unit Tests
  *
- * Tests the casino server actions by mocking the Supabase client.
- * These are unit tests that verify the action logic without hitting the database.
+ * Tests the HTTP fetcher functions by mocking the fetch API.
+ * These tests verify the correct URL construction, headers, and response handling.
+ *
+ * @see services/casino/http.ts - HTTP fetchers
+ * @see SPEC-PRD-000-casino-foundation.md section 8.1
  */
 
-// Mock Next.js cache functions
-jest.mock("next/cache", () => ({
-  revalidatePath: jest.fn(),
-}));
-
-// Mock Supabase client
-jest.mock("@/lib/supabase/server", () => ({
-  createClient: jest.fn(),
-}));
-
-import { revalidatePath } from "next/cache";
-
+import type {
+  CasinoDTO,
+  CasinoSettingsDTO,
+  GamingDayDTO,
+  StaffDTO,
+} from "./dtos";
 import {
   getCasinos,
-  getCasinoById,
+  getCasino,
   createCasino,
   updateCasino,
   deleteCasino,
-  getStaffByCasino,
   getCasinoSettings,
-  computeGamingDay,
-} from "@/app/actions/casino";
-import { createClient } from "@/lib/supabase/server";
+  updateCasinoSettings,
+  getCasinoStaff,
+  createStaff,
+  getGamingDay,
+} from "./http";
 
-// Helper to create a chainable mock query builder
-// The key insight: ALL methods must return `builder` for chaining
-// Only `limit` (when awaited) returns the final result via a special property
-function createMockQueryBuilder(finalResult: {
-  data: unknown;
-  error: unknown;
-}) {
-  const builder: Record<string, jest.Mock> = {};
-  const methods = [
-    "select",
-    "insert",
-    "update",
-    "delete",
-    "eq",
-    "lt",
-    "order",
-    "limit",
-    "single",
-  ];
+// Mock fetch globally
+const mockFetch = jest.fn();
+global.fetch = mockFetch;
 
-  // Make builder thenable so it can be awaited after limit()
-  const thenable = {
-    then: (resolve: (val: unknown) => void) => {
-      resolve(finalResult);
-      return thenable;
-    },
+// Mock crypto.randomUUID for idempotency key generation
+Object.defineProperty(globalThis, "crypto", {
+  value: {
+    randomUUID: () => "test-uuid-12345",
+  },
+});
+
+// Helper to create a successful response
+function createSuccessResponse<T>(data: T) {
+  return {
+    ok: true,
+    json: () => Promise.resolve({ ok: true, status: 200, data }),
   };
-
-  methods.forEach((method) => {
-    builder[method] = jest.fn().mockImplementation(() => {
-      // single() is always terminal and returns promise
-      if (method === "single") {
-        return Promise.resolve(finalResult);
-      }
-      // limit() returns a thenable builder for both chaining and awaiting
-      if (method === "limit") {
-        return { ...builder, ...thenable };
-      }
-      // All other methods return builder for chaining
-      return builder;
-    });
-  });
-
-  return builder;
 }
 
-describe("Casino Server Actions", () => {
+// Helper to create an error response
+function createErrorResponse(
+  status: number,
+  code: string,
+  error: string,
+  details?: unknown,
+) {
+  return {
+    ok: false,
+    json: () =>
+      Promise.resolve({
+        ok: false,
+        status,
+        code,
+        error,
+        details,
+      }),
+  };
+}
+
+describe("Casino HTTP Fetchers", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
 
   describe("getCasinos", () => {
-    it("fetches casinos with default options", async () => {
-      const mockCasinos = [
-        {
-          id: "1",
-          name: "Casino A",
-          location: "Vegas",
-          status: "active",
-          created_at: "2025-01-01",
-        },
-        {
-          id: "2",
-          name: "Casino B",
-          location: "Reno",
-          status: "active",
-          created_at: "2025-01-02",
-        },
-      ];
+    const mockCasinos: CasinoDTO[] = [
+      {
+        id: "1",
+        name: "Casino A",
+        location: "Vegas",
+        status: "active",
+        created_at: "2025-01-01T00:00:00Z",
+      },
+      {
+        id: "2",
+        name: "Casino B",
+        location: "Reno",
+        status: "active",
+        created_at: "2025-01-02T00:00:00Z",
+      },
+    ];
 
-      const mockBuilder = createMockQueryBuilder({
-        data: mockCasinos,
-        error: null,
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("fetches casinos with no filters", async () => {
+      mockFetch.mockResolvedValue(
+        createSuccessResponse({ items: mockCasinos }),
+      );
 
       const result = await getCasinos();
 
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino");
-      expect(mockBuilder.select).toHaveBeenCalledWith(
-        "id, name, location, address, status, company_id, created_at",
-      );
-      expect(mockBuilder.order).toHaveBeenCalledWith("created_at", {
-        ascending: false,
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino", {
+        headers: { Accept: "application/json" },
       });
-      expect(mockBuilder.limit).toHaveBeenCalledWith(51); // 50 + 1 for pagination check
-      expect(result.casinos).toHaveLength(2);
+      expect(result.items).toEqual(mockCasinos);
     });
 
-    it("filters by status when provided", async () => {
-      const mockBuilder = createMockQueryBuilder({ data: [], error: null });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("includes status filter in URL", async () => {
+      mockFetch.mockResolvedValue(
+        createSuccessResponse({ items: mockCasinos }),
+      );
 
       await getCasinos({ status: "active" });
 
-      expect(mockBuilder.eq).toHaveBeenCalledWith("status", "active");
-    });
-
-    it("uses cursor for pagination", async () => {
-      const mockBuilder = createMockQueryBuilder({ data: [], error: null });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await getCasinos({ cursor: "2025-01-15T00:00:00Z" });
-
-      expect(mockBuilder.lt).toHaveBeenCalledWith(
-        "created_at",
-        "2025-01-15T00:00:00Z",
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/casino?status=active",
+        expect.any(Object),
       );
     });
 
-    it("returns nextCursor when more results exist", async () => {
-      const mockCasinos = Array(51)
-        .fill(null)
-        .map((_, i) => ({
-          id: `${i}`,
-          name: `Casino ${i}`,
-          created_at: `2025-01-${String(i + 1).padStart(2, "0")}`,
-        }));
+    it("includes pagination params in URL", async () => {
+      mockFetch.mockResolvedValue(
+        createSuccessResponse({
+          items: mockCasinos,
+          cursor: "2025-01-01T00:00:00Z",
+        }),
+      );
 
-      const mockBuilder = createMockQueryBuilder({
-        data: mockCasinos,
-        error: null,
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+      await getCasinos({ limit: 10, cursor: "abc123" });
 
-      const result = await getCasinos({ limit: 50 });
-
-      expect(result.casinos).toHaveLength(50);
-      expect(result.nextCursor).toBeDefined();
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/casino?limit=10&cursor=abc123",
+        expect.any(Object),
+      );
     });
 
-    it("throws error when Supabase returns error", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { message: "Database error" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await expect(getCasinos()).rejects.toThrow(
-        "Failed to fetch casinos: Database error",
+    it("throws FetchError on error response", async () => {
+      mockFetch.mockResolvedValue(
+        createErrorResponse(500, "INTERNAL_ERROR", "Database error"),
       );
+
+      await expect(getCasinos()).rejects.toThrow("Database error");
     });
   });
 
-  describe("getCasinoById", () => {
-    it("fetches a single casino by ID", async () => {
-      const mockCasino = { id: "1", name: "Test Casino", location: "Vegas" };
-      const mockBuilder = createMockQueryBuilder({
-        data: mockCasino,
-        error: null,
+  describe("getCasino", () => {
+    const mockCasino: CasinoDTO = {
+      id: "1",
+      name: "Test Casino",
+      location: "Vegas",
+      status: "active",
+      created_at: "2025-01-01T00:00:00Z",
+    };
+
+    it("fetches single casino by ID", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
+
+      const result = await getCasino("1");
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/1", {
+        headers: { Accept: "application/json" },
       });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await getCasinoById("1");
-
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino");
-      expect(mockBuilder.eq).toHaveBeenCalledWith("id", "1");
-      expect(mockBuilder.single).toHaveBeenCalled();
       expect(result).toEqual(mockCasino);
     });
 
-    it("returns null when casino not found (PGRST116)", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { code: "PGRST116", message: "Not found" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("throws FetchError when casino not found", async () => {
+      mockFetch.mockResolvedValue(
+        createErrorResponse(404, "NOT_FOUND", "Casino not found"),
+      );
 
-      const result = await getCasinoById("nonexistent");
-
-      expect(result).toBeNull();
-    });
-
-    it("throws error for other database errors", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { code: "OTHER", message: "DB error" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await expect(getCasinoById("1")).rejects.toThrow(
-        "Failed to fetch casino: DB error",
+      await expect(getCasino("nonexistent")).rejects.toThrow(
+        "Casino not found",
       );
     });
   });
 
   describe("createCasino", () => {
-    it("creates a new casino and revalidates path", async () => {
-      const newCasino = {
-        id: "new-1",
-        name: "New Casino",
-        location: "Atlantic City",
-        status: "active",
-      };
-      const mockBuilder = createMockQueryBuilder({
-        data: newCasino,
-        error: null,
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    const mockCasino: CasinoDTO = {
+      id: "new-1",
+      name: "New Casino",
+      location: "Atlantic City",
+      status: "active",
+      created_at: "2025-01-01T00:00:00Z",
+    };
 
-      const result = await createCasino({
-        name: "New Casino",
-        location: "Atlantic City",
-        company_id: "company-1",
-      });
+    it("creates casino with POST request", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
 
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino");
-      expect(mockBuilder.insert).toHaveBeenCalledWith({
-        name: "New Casino",
-        location: "Atlantic City",
-        address: undefined,
-        company_id: "company-1",
-        status: "active",
+      const input = { name: "New Casino", location: "Atlantic City" };
+      const result = await createCasino(input);
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          "idempotency-key": "test-uuid-12345",
+        },
+        body: JSON.stringify(input),
       });
-      expect(mockBuilder.select).toHaveBeenCalled();
-      expect(revalidatePath).toHaveBeenCalledWith("/casinos");
-      expect(result).toEqual(newCasino);
+      expect(result).toEqual(mockCasino);
     });
 
-    it("uses provided status when specified", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: { id: "1" },
-        error: null,
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("includes idempotency key header", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
 
-      await createCasino({
-        name: "Test",
-        location: "Test",
-        company_id: "c1",
-        status: "inactive",
-      });
+      await createCasino({ name: "Test" });
 
-      expect(mockBuilder.insert).toHaveBeenCalledWith(
-        expect.objectContaining({ status: "inactive" }),
-      );
-    });
-
-    it("throws error when insert fails", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { message: "Insert failed" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await expect(
-        createCasino({ name: "Test", location: "Test", company_id: "c1" }),
-      ).rejects.toThrow("Failed to create casino: Insert failed");
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[1].headers["idempotency-key"]).toBe("test-uuid-12345");
     });
   });
 
   describe("updateCasino", () => {
-    it("updates casino and revalidates paths", async () => {
-      const updatedCasino = {
-        id: "1",
-        name: "Updated Casino",
-        location: "Vegas",
-      };
-      const mockBuilder = createMockQueryBuilder({
-        data: updatedCasino,
-        error: null,
+    const mockCasino: CasinoDTO = {
+      id: "1",
+      name: "Updated Casino",
+      location: "Vegas",
+      status: "active",
+      created_at: "2025-01-01T00:00:00Z",
+    };
+
+    it("updates casino with PATCH request", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
+
+      const input = { name: "Updated Casino" };
+      const result = await updateCasino("1", input);
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/1", {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          "idempotency-key": "test-uuid-12345",
+        },
+        body: JSON.stringify(input),
       });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await updateCasino("1", { name: "Updated Casino" });
-
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino");
-      expect(mockBuilder.update).toHaveBeenCalledWith({
-        name: "Updated Casino",
-      });
-      expect(mockBuilder.eq).toHaveBeenCalledWith("id", "1");
-      expect(revalidatePath).toHaveBeenCalledWith("/casinos");
-      expect(revalidatePath).toHaveBeenCalledWith("/casinos/1");
-      expect(result).toEqual(updatedCasino);
-    });
-
-    it("throws error when update fails", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { message: "Update failed" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await expect(updateCasino("1", { name: "Test" })).rejects.toThrow(
-        "Failed to update casino: Update failed",
-      );
+      expect(result).toEqual(mockCasino);
     });
   });
 
   describe("deleteCasino", () => {
-    it("deletes casino and revalidates path", async () => {
-      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
-      // Override eq to return the result directly for delete
-      mockBuilder.eq = jest.fn().mockResolvedValue({ error: null });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("deletes casino with DELETE request", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(undefined));
 
       await deleteCasino("1");
 
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino");
-      expect(mockBuilder.delete).toHaveBeenCalled();
-      expect(mockBuilder.eq).toHaveBeenCalledWith("id", "1");
-      expect(revalidatePath).toHaveBeenCalledWith("/casinos");
-    });
-
-    it("throws error when delete fails", async () => {
-      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
-      mockBuilder.eq = jest
-        .fn()
-        .mockResolvedValue({ error: { message: "Delete failed" } });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      await expect(deleteCasino("1")).rejects.toThrow(
-        "Failed to delete casino: Delete failed",
-      );
-    });
-  });
-
-  describe("getStaffByCasino", () => {
-    it("fetches active staff for a casino", async () => {
-      const mockStaff = [
-        {
-          id: "s1",
-          first_name: "John",
-          last_name: "Doe",
-          role: "dealer",
-          status: "active",
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/1", {
+        method: "DELETE",
+        headers: {
+          Accept: "application/json",
+          "idempotency-key": "test-uuid-12345",
         },
-        {
-          id: "s2",
-          first_name: "Jane",
-          last_name: "Smith",
-          role: "manager",
-          status: "active",
-        },
-      ];
-      const mockBuilder = createMockQueryBuilder({
-        data: mockStaff,
-        error: null,
       });
-      // Override eq to return builder for chaining, final eq returns result
-      let eqCallCount = 0;
-      mockBuilder.eq = jest.fn().mockImplementation(() => {
-        eqCallCount++;
-        if (eqCallCount === 2) {
-          return Promise.resolve({ data: mockStaff, error: null });
-        }
-        return mockBuilder;
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await getStaffByCasino("casino-1");
-
-      expect(mockSupabase.from).toHaveBeenCalledWith("staff");
-      expect(result).toHaveLength(2);
-    });
-
-    it("returns empty array when no staff found", async () => {
-      const mockBuilder = createMockQueryBuilder({ data: null, error: null });
-      let eqCallCount = 0;
-      mockBuilder.eq = jest.fn().mockImplementation(() => {
-        eqCallCount++;
-        if (eqCallCount === 2) {
-          return Promise.resolve({ data: null, error: null });
-        }
-        return mockBuilder;
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await getStaffByCasino("casino-1");
-
-      expect(result).toEqual([]);
     });
   });
 
   describe("getCasinoSettings", () => {
+    const mockSettings: CasinoSettingsDTO = {
+      id: "settings-1",
+      casino_id: "casino-1",
+      gaming_day_start_time: "06:00:00",
+      timezone: "America/Los_Angeles",
+      watchlist_floor: 3000,
+      ctr_threshold: 10000,
+    };
+
     it("fetches casino settings", async () => {
-      const mockSettings = {
-        id: "settings-1",
-        casino_id: "casino-1",
-        gaming_day_start_time: "06:00",
-        timezone: "America/Los_Angeles",
-      };
-      const mockBuilder = createMockQueryBuilder({
-        data: mockSettings,
-        error: null,
+      mockFetch.mockResolvedValue(createSuccessResponse(mockSettings));
+
+      const result = await getCasinoSettings();
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/settings", {
+        headers: { Accept: "application/json" },
       });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await getCasinoSettings("casino-1");
-
-      expect(mockSupabase.from).toHaveBeenCalledWith("casino_settings");
-      expect(mockBuilder.eq).toHaveBeenCalledWith("casino_id", "casino-1");
       expect(result).toEqual(mockSettings);
-    });
-
-    it("returns null when settings not found", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { code: "PGRST116" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
-
-      const result = await getCasinoSettings("casino-1");
-
-      expect(result).toBeNull();
     });
   });
 
-  describe("computeGamingDay", () => {
-    it("computes gaming day based on casino settings", async () => {
-      const mockSettings = {
-        gaming_day_start_time: "06:00",
-        timezone: "America/Los_Angeles",
+  describe("updateCasinoSettings", () => {
+    const mockSettings: CasinoSettingsDTO = {
+      id: "settings-1",
+      casino_id: "casino-1",
+      gaming_day_start_time: "05:00:00",
+      timezone: "America/Los_Angeles",
+      watchlist_floor: 5000,
+      ctr_threshold: 10000,
+    };
+
+    it("updates casino settings with PATCH request", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockSettings));
+
+      const input = {
+        gaming_day_start_time: "05:00:00",
+        watchlist_floor: 5000,
       };
-      const mockBuilder = createMockQueryBuilder({
-        data: mockSettings,
-        error: null,
+      const result = await updateCasinoSettings(input);
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/settings", {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          "idempotency-key": "test-uuid-12345",
+        },
+        body: JSON.stringify(input),
       });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+      expect(result).toEqual(mockSettings);
+    });
+  });
 
-      // Test at 10:00 AM Pacific on Jan 15 - should return Jan 15
-      const testDate = new Date("2025-01-15T18:00:00Z"); // 10 AM Pacific
-      const result = await computeGamingDay("casino-1", testDate);
+  describe("getCasinoStaff", () => {
+    const mockStaff: StaffDTO[] = [
+      {
+        id: "s1",
+        first_name: "John",
+        last_name: "Doe",
+        role: "dealer",
+        status: "active",
+        employee_id: "EMP001",
+        casino_id: "casino-1",
+      },
+      {
+        id: "s2",
+        first_name: "Jane",
+        last_name: "Smith",
+        role: "pit_boss",
+        status: "active",
+        employee_id: "EMP002",
+        casino_id: "casino-1",
+      },
+    ];
 
-      expect(result).toBe("2025-01-15");
+    it("fetches staff with no filters", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse({ items: mockStaff }));
+
+      const result = await getCasinoStaff();
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/staff", {
+        headers: { Accept: "application/json" },
+      });
+      expect(result.items).toEqual(mockStaff);
     });
 
-    it("returns previous day when before gaming day start", async () => {
-      const mockSettings = {
-        gaming_day_start_time: "06:00",
-        timezone: "America/Los_Angeles",
-      };
-      const mockBuilder = createMockQueryBuilder({
-        data: mockSettings,
-        error: null,
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("includes role filter in URL", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse({ items: mockStaff }));
 
-      // Test at 2:00 AM Pacific on Jan 15 - should return Jan 14
-      const testDate = new Date("2025-01-15T10:00:00Z"); // 2 AM Pacific
-      const result = await computeGamingDay("casino-1", testDate);
+      await getCasinoStaff({ role: "dealer" });
 
-      expect(result).toBe("2025-01-14");
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/casino/staff?role=dealer",
+        expect.any(Object),
+      );
     });
 
-    it("throws error when settings not found", async () => {
-      const mockBuilder = createMockQueryBuilder({
-        data: null,
-        error: { code: "PGRST116" },
-      });
-      const mockSupabase = { from: jest.fn().mockReturnValue(mockBuilder) };
-      (createClient as jest.Mock).mockResolvedValue(mockSupabase);
+    it("includes status filter in URL", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse({ items: mockStaff }));
 
-      await expect(computeGamingDay("casino-1")).rejects.toThrow(
-        "Casino settings not found for casino casino-1",
+      await getCasinoStaff({ status: "active" });
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/v1/casino/staff?status=active",
+        expect.any(Object),
+      );
+    });
+  });
+
+  describe("createStaff", () => {
+    const mockStaff: StaffDTO = {
+      id: "s-new",
+      first_name: "New",
+      last_name: "Dealer",
+      role: "dealer",
+      status: "active",
+      employee_id: "EMP003",
+      casino_id: "casino-1",
+    };
+
+    it("creates staff with POST request", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockStaff));
+
+      const input = {
+        first_name: "New",
+        last_name: "Dealer",
+        role: "dealer" as const,
+        employee_id: "EMP003",
+        casino_id: "casino-1",
+        email: "new.dealer@example.com",
+      };
+      const result = await createStaff(input);
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/staff", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "content-type": "application/json",
+          "idempotency-key": "test-uuid-12345",
+        },
+        body: JSON.stringify(input),
+      });
+      expect(result).toEqual(mockStaff);
+    });
+  });
+
+  describe("getGamingDay", () => {
+    const mockGamingDay: GamingDayDTO = {
+      gaming_day: "2025-11-29",
+      casino_id: "casino-1",
+      computed_at: "2025-11-29T10:00:00Z",
+      timezone: "America/Los_Angeles",
+    };
+
+    it("fetches gaming day without timestamp", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockGamingDay));
+
+      const result = await getGamingDay();
+
+      expect(mockFetch).toHaveBeenCalledWith("/api/v1/casino/gaming-day", {
+        headers: { Accept: "application/json" },
+      });
+      expect(result).toEqual(mockGamingDay);
+    });
+
+    it("fetches gaming day with timestamp parameter", async () => {
+      mockFetch.mockResolvedValue(createSuccessResponse(mockGamingDay));
+
+      const timestamp = "2025-01-15T14:00:00Z";
+      await getGamingDay(timestamp);
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        `/api/v1/casino/gaming-day?timestamp=${encodeURIComponent(timestamp)}`,
+        expect.any(Object),
       );
     });
   });

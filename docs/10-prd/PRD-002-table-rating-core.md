@@ -2,7 +2,8 @@
 
 ## 1. Overview
 - **Owner:** Product
-- **Status:** Draft
+- **Status:** Approved (Implemented)
+- **Revision:** 2.0.0 — Lead Architect redaction (2025-11-29)
 - **Summary:** Enable pit supervisors to open/close gaming tables and track player sessions via rating slips. This is the operational foundation for table-centric player tracking—without it, no downstream features (loyalty, compliance, finance) can function. Targets single-casino pilot readiness.
 
 ## 2. Problem & Goals
@@ -55,6 +56,7 @@ Pit operations currently lack a digital way to track table status and player ses
 
 ### 5.1 Functional Requirements
 - Table status transitions follow state machine: `inactive` ↔ `active` → `closed`
+  - **Note:** `active → inactive` transition required for temporary table closure (dealer break, low traffic)
 - Rating slip status transitions: `open` ↔ `paused` → `closed`
 - Duration calculation excludes paused intervals (server-derived)
 - Slip requires valid `visit_id`, `gaming_table_id`, `seat_number`
@@ -65,7 +67,33 @@ Pit operations currently lack a digital way to track table status and player ses
 - State changes reflect in UI within 2s
 - p95 mutation latency < 400ms
 
-> Architecture details: see `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (TableContextService, RatingSlipService sections)
+### 5.3 Architectural Requirements
+
+**Service Patterns (per SLAD v2.1.2, SERVICE_TEMPLATE v2.0.3):**
+- **TableContextService**: Pattern A (Contract-First) — requires `type-guards.ts`, DTOs may be inline
+- **RatingSlipService**: Pattern C (Hybrid) — canonical DTOs via `Database["public"]["Tables"]`, contract-first for computed fields
+
+**Error Handling (per ADR-012):**
+- Services THROW `DomainError` on failure, never return `ServiceResult<T>`
+- Transport layer (Route Handlers, Server Actions) catches and wraps in `ServiceResult<T>`
+- Domain error codes: `TABLE_NOT_FOUND`, `TABLE_SETTINGS_INVALID`, `RATING_SLIP_NOT_OPEN`, `RATING_SLIP_NOT_PAUSED`, `RATING_SLIP_INVALID_STATE`
+
+**Type Safety (per anti-patterns.memory.md):**
+- ❌ NO `as` type casting for RPC responses
+- ✅ Type guards required (`isValidGamingTableDTO`, `isValidRatingSlipData`)
+- ✅ RPC response validation before returning to caller
+
+**Transport Layer (per EDGE_TRANSPORT_POLICY.md):**
+- All mutations wrapped with `withServerAction()` middleware chain
+- Casino context derived via `getAuthContext()` (never from client headers)
+- `x-idempotency-key` required for all mutations
+- `x-correlation-id` propagated for audit trail
+
+**Temporal Authority:**
+- RatingSlip duration uses server timestamps exclusively
+- Gaming day context (if needed) consumed from CasinoService via DTO, not direct table access
+
+> Architecture details: see `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (TableContextService §1100-1180, RatingSlipService §1040-1095)
 
 ## 6. UX / Flow Overview
 1. Pit Boss opens Floor View → sees table grid with status indicators
@@ -78,51 +106,103 @@ Pit operations currently lack a digital way to track table status and player ses
 ## 7. Dependencies & Risks
 
 ### 7.1 Dependencies
-- CasinoService: Staff authentication, `casino_settings` for gaming day
-- PlayerService: Player identity for slip FK
-- VisitService: Active visit required before starting slip
-- Schema: `gaming_table`, `gaming_table_settings`, `rating_slip` tables exist
+
+**Upstream Services (MUST exist before PRD-002):**
+- **CasinoService (PRD-000)**: Root authority for all operations
+  - Staff authentication via `staff.user_id` → `auth.users` linkage
+  - `casino_settings` provides timezone and gaming day context
+  - RLS context derived via `getAuthContext()` → `current_setting('app.casino_id')`
+  - See: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md`
+- **PlayerService (PRD-003)**: Player identity for rating slip FK
+- **VisitService (PRD-003)**: Active visit required before starting slip
+
+**Schema Dependencies:**
+- `gaming_table`, `gaming_table_settings` — TableContextService ownership
+- `rating_slip`, `rating_slip_pause` — RatingSlipService ownership
+- RLS policies per `docs/30-security/SEC-001-rls-policy-matrix.md`
+
+**Infrastructure Dependencies:**
+- `lib/errors/domain-errors.ts` — DomainError class
+- `lib/supabase/rls-context.ts` — `getAuthContext()` function
+- `lib/http/service-response.ts` — ServiceResult<T> envelope
 
 ### 7.2 Risks & Open Questions
 - **Risk:** RLS complexity for cross-table queries — Mitigate with per-role integration tests
 - **Risk:** Clock drift on pause/resume — Server timestamps only; client advisory
-- **Open:** Should closing a table auto-close active slips? — Decision needed before impl
+- **Resolved:** Should closing a table auto-close active slips? — No, slips remain open; UI warns if active slips exist
 
 ## 8. Definition of Done (DoD)
 
 The release is considered **Done** when:
 
 **Functionality**
-- [ ] Pit Boss can open/close tables via dashboard
-- [ ] Pit Boss can start/pause/resume/close rating slips
-- [ ] No duplicate active slips allowed (constraint enforced)
-- [ ] Duration displayed correctly after pause/resume cycles
+- [x] Pit Boss can open/close tables via dashboard
+- [x] Pit Boss can start/pause/resume/close rating slips
+- [x] No duplicate active slips allowed (constraint enforced)
+- [x] Duration displayed correctly after pause/resume cycles
 
 **Data & Integrity**
-- [ ] Table state machine enforced (no invalid transitions)
-- [ ] Slip state machine enforced (no invalid transitions)
-- [ ] No orphaned slips (all have valid visit/table FKs)
+- [x] Table state machine enforced (no invalid transitions)
+- [x] Slip state machine enforced (no invalid transitions)
+- [x] No orphaned slips (all have valid visit/table FKs)
+- [x] Schema verification test passes (`npm test -- schema-verification`)
+- [x] Types regenerated after migration (`npm run db:types`)
 
 **Security & Access**
-- [ ] RLS: pit_boss can only see/modify own casino's tables/slips
-- [ ] RLS: dealer role cannot modify slips (if applicable)
+- [x] RLS: pit_boss can only see/modify own casino's tables/slips
+- [x] RLS: dealer role cannot modify slips (if applicable)
+- [x] Casino context via `getAuthContext()` (not client headers)
+
+**Architecture Compliance**
+- [x] Services throw `DomainError` (ADR-012 compliant)
+- [x] Type guards for RPC response validation (no `as` casting)
+- [x] Route handlers use `withServerAction()` middleware
+- [x] Idempotency keys on all mutations
+- [x] Pre-commit hooks pass (ESLint rules enforced)
 
 **Testing**
-- [ ] Unit tests for state machine transitions
-- [ ] Integration test: full slip lifecycle with RLS enabled
-- [ ] One E2E test: open table → start slip → pause → resume → close
+- [x] Unit tests for state machine transitions
+- [x] Integration test: full slip lifecycle with RLS enabled
+- [x] One E2E test: open table → start slip → pause → resume → close
 
 **Operational Readiness**
-- [ ] Structured logs for table/slip state changes
-- [ ] Error states visible in UI (not silent failures)
+- [x] Structured logs for table/slip state changes
+- [x] Error states visible in UI (not silent failures)
 
 **Documentation**
-- [ ] Service README updated with supported operations
-- [ ] Known limitations documented (e.g., no bulk operations)
+- [x] Service README updated with supported operations
+- [x] Known limitations documented (e.g., no bulk operations)
 
 ## 9. Related Documents
-- Vision / Strategy: `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
-- Architecture / SRM: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+
+**Architecture & Governance:**
+- Service Layer Architecture (SLAD): `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
+- Service Responsibility Matrix (SRM): `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+- Service Implementation Template: `docs/70-governance/SERVICE_TEMPLATE.md`
+- Error Handling: `docs/80-adrs/ADR-012-error-handling-layers.md`
+- Edge Transport: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md`
+
+**Security:**
+- RLS Policy Matrix: `docs/30-security/SEC-001-rls-policy-matrix.md`
+- Security & Tenancy: `docs/30-security/SECURITY_TENANCY_UPGRADE.md`
+
+**Temporal Patterns:**
+- Gaming Day Specification: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md`
+- Temporal Authority Pattern: `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md`
+
+**Implementation:**
+- Workflow Spec: `docs/20-architecture/specs/WORKFLOW-PRD-002-parallel-execution.md`
 - Schema / Types: `types/database.types.ts`
-- QA Standards: `docs/40-quality/QA-001-service-testing-strategy.md`
 - Service READMEs: `services/table-context/README.md`, `services/rating-slip/README.md`
+
+**Quality:**
+- QA Standards: `docs/40-quality/QA-001-service-testing-strategy.md`
+- Vision / Strategy: `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
+
+**Upstream Dependencies:**
+- PRD-000: CasinoService (root authority)
+- PRD-003: PlayerService, VisitService
+
+**Downstream Consumers:**
+- PRD-004: LoyaltyService (consumes RatingSlipTelemetryDTO)
+- PRD-005: MTLService (optional rating slip reference)

@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1860,10 +1835,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      compute_gaming_day: {
-        Args: { gstart: string; ts: string }
-        Returns: string
-      }
+      compute_gaming_day:
+        | {
+            Args: { p_casino_id: string; p_timestamp?: string }
+            Returns: string
+          }
+        | { Args: { gstart: string; ts: string }; Returns: string }
       evaluate_mid_session_reward_policy: {
         Args: {
           p_average_bet: number
@@ -2365,9 +2342,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       floor_layout_status: ["draft", "review", "approved", "archived"],

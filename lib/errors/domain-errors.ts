@@ -196,7 +196,9 @@ export type CasinoErrorCode =
   | "CASINO_INACTIVE"
   | "STAFF_NOT_FOUND"
   | "STAFF_UNAUTHORIZED"
-  | "STAFF_CASINO_MISMATCH";
+  | "STAFF_CASINO_MISMATCH"
+  | "STAFF_ROLE_CONSTRAINT_VIOLATION"
+  | "STAFF_ALREADY_EXISTS";
 
 export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   CASINO_NOT_FOUND: "Casino not found",
@@ -205,6 +207,9 @@ export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   STAFF_NOT_FOUND: "Staff member not found",
   STAFF_UNAUTHORIZED: "Staff member is not authorized for this operation",
   STAFF_CASINO_MISMATCH: "Staff member does not belong to this casino",
+  STAFF_ROLE_CONSTRAINT_VIOLATION:
+    "Staff role constraint violation: dealer cannot have user_id; pit_boss/admin must have user_id",
+  STAFF_ALREADY_EXISTS: "Staff member already exists",
 };
 
 // ============================================================================

@@ -105,7 +105,11 @@ describe('Middleware Chain Integration', () => {
         supabase,
         async (ctx) => {
           expect(ctx.correlationId).toBe(testCorrelationId);
-          return { ok: true, code: 'OK', data: { correlationId: ctx.correlationId } };
+          return {
+            ok: true,
+            code: 'OK',
+            data: { correlationId: ctx.correlationId },
+          };
         },
         {
           skipAuth: true,

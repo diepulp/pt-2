@@ -92,16 +92,44 @@ npm install tailwindcss@next @tailwindcss/postcss@next
 
 ---
 
-## shadcn/ui Component Library
+## shadcn/ui Component Library (De-facto Standard)
+
+**shadcn/ui is the de-facto UI standard for PT-2.** Access via MCP server (`mcp__shadcn__*` tools).
+
+### MCP Server Access
+
+```bash
+# Available MCP tools
+mcp__shadcn__list_components    # Browse available components
+mcp__shadcn__get_component      # Get component details/code
+mcp__shadcn__install_component  # Install to project
+```
 
 ### Installation
 
 ```bash
 npx shadcn@latest init
-npx shadcn@latest add button
-npx shadcn@latest add form
-npx shadcn@latest add dialog
-# Add other components as needed
+npx shadcn@latest add button form dialog table
+```
+
+### Registered Registries (components.json)
+
+PT-2 has multiple component registries configured:
+
+| Registry | URL | Purpose |
+|----------|-----|---------|
+| **shadcn/ui** | `https://ui.shadcn.com` | Core components (default) |
+| **@aceternity** | `https://ui.aceternity.com` | Animated effects, backgrounds |
+| **@originui** | `https://originui.com` | Alternative variants |
+| **@shadcnui-blocks** | `https://shadcnui-blocks.com` | Pre-built page blocks |
+| **@kokonutui** | `https://kokonutui.com` | Extended components |
+| **@tweakcn** | `https://tweakcn.com` | Customized variants |
+
+```bash
+# Install from registries
+npx shadcn@latest add button                    # default
+npx shadcn@latest add @aceternity/background-beams
+npx shadcn@latest add @kokonutui/card
 ```
 
 ### Why shadcn/ui
@@ -110,6 +138,7 @@ npx shadcn@latest add dialog
 - **TypeScript-first**: Fully typed components
 - **Customizable**: Modify components directly in your codebase
 - **Production-ready**: Accessible, performant, well-tested
+- **Multiple registries**: Extended options via @aceternity, @originui, etc.
 
 ### Component Usage Pattern
 
@@ -136,6 +165,14 @@ function PlayerForm() {
   )
 }
 ```
+
+### Registry Selection Guide
+
+- **Core UI** → Default shadcn/ui (Button, Input, Dialog, Table, etc.)
+- **Distinctive aesthetics** → @aceternity (animated backgrounds, hero effects)
+- **Style variants** → @originui, @tweakcn
+- **Page layouts** → @shadcnui-blocks
+- **Additional components** → @kokonutui
 
 ---
 

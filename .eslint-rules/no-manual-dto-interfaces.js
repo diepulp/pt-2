@@ -60,6 +60,18 @@ module.exports = {
 
         if (!isExported) return;
 
+        // Check for RPC response exception via JSDoc comment
+        // Pattern: /** ... RPC response ... */ or /** ... RPC ... */
+        const sourceCode = context.getSourceCode();
+        const comments = sourceCode.getCommentsBefore(parent || node);
+        const hasRPCAnnotation = comments.some(
+          (comment) =>
+            comment.type === 'Block' &&
+            /\bRPC\s+(response|result|return)/i.test(comment.value)
+        );
+
+        if (hasRPCAnnotation) return; // Allow RPC response interfaces
+
         // Extract potential table name from DTO name
         // e.g., "PlayerCreateDTO" -> "player"
         const tableMatch = interfaceName.match(
@@ -108,8 +120,38 @@ module.exports = {
         const sourceCode = context.getSourceCode();
         const typeText = sourceCode.getText(node.typeAnnotation);
 
-        // If it doesn't reference Database, it's likely manually defined
-        if (!typeText.includes('Database')) {
+        // Get the full file content to check for intermediate type aliases
+        const fullSource = sourceCode.getText();
+
+        // Check if the type uses Pick/Omit/Partial (structural derivation patterns)
+        const usesDerivationPattern = /\b(Pick|Omit|Partial|Required|Readonly)\s*</.test(typeText);
+
+        // Check if the file imports Database type
+        const importsDatabaseType = /import\s+.*\bDatabase\b.*from\s+['"]@\/types\/database\.types['"]/.test(fullSource);
+
+        // Check if the referenced type in Pick/Omit is a local alias that derives from Database
+        // e.g., type CasinoRow = Database['public']['Tables']['casino']['Row'];
+        // then: export type CasinoDTO = Pick<CasinoRow, ...>
+        const typeRefMatch = typeText.match(/(?:Pick|Omit|Partial|Required|Readonly)\s*<\s*(\w+)/);
+        const referencedTypeName = typeRefMatch ? typeRefMatch[1] : null;
+
+        // Check if the referenced type is a local alias derived from Database
+        let referencesLocalDatabaseAlias = false;
+        if (referencedTypeName && referencedTypeName !== 'Database') {
+          // Look for: type ReferencedType = Database['public']...
+          const localAliasPattern = new RegExp(
+            `type\\s+${referencedTypeName}\\s*=\\s*Database\\s*\\[`
+          );
+          referencesLocalDatabaseAlias = localAliasPattern.test(fullSource);
+        }
+
+        // If it doesn't reference Database directly or via local alias, it's likely manually defined
+        const referencesDatabase =
+          typeText.includes('Database') ||
+          referencesLocalDatabaseAlias ||
+          (usesDerivationPattern && importsDatabaseType && referencedTypeName);
+
+        if (!referencesDatabase) {
           // Extract potential table name
           const tableMatch = typeName.match(
             /^([A-Z][a-z]+)(?:Create|Update|Response)?DTO$/,

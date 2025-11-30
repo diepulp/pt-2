@@ -121,6 +121,26 @@ context.record_compliance_design(
 )
 ```
 
+## Proactive Retrieval (Dynamic Memory Recall)
+
+**NEW**: Use the Dynamic Memory Recall system for automatic context injection at skill startup.
+
+Before starting any architectural work, inject relevant past decisions:
+
+```python
+from lib.memori.dynamic_recall import query_past_decisions
+
+# Quick context injection - returns formatted markdown
+context = query_past_decisions(
+    topic="loyalty service architecture",
+    namespace="skill:lead-architect",
+    limit=5
+)
+print(context)  # Inject into conversation context
+```
+
+This is simpler than the full ArchitectContext and works across namespaces.
+
 ## Query Past Architectural Work
 
 Before starting architectural work, query Memori for relevant past decisions:
@@ -260,3 +280,9 @@ The skill uses the namespace `skill_lead_architect` in the database. This maps f
 |---------------|---------|
 | `ArchitectContext` | Architectural decisions, regressions, patterns, tech debt, compliance |
 | `SkillContext` | Skill execution tracking (outcomes, files created, lessons) |
+| `DynamicRecall` | Proactive retrieval across namespaces (new) |
+
+## Related Documentation
+
+- `lib/memori/dynamic_recall.py` - Dynamic Memory Recall System
+- `docs/context-engineering/DYNAMIC_MEMORY_RECALL_SYSTEM.md` - Full documentation

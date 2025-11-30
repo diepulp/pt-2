@@ -161,6 +161,57 @@ Summarize:
 
 Include migration strategy and rollback plan if needed.
 
+### 8. Writing PRDs (When Required)
+
+When the architectural work requires a new PRD or PRD update, follow PRD-STD-001 standard.
+
+**PRD Writing Workflow:**
+
+1. **Scope Assessment** - Validate PRD covers ONE release/phase/problem area
+   - If scope spans >3 bounded contexts, split into multiple PRDs
+   - If "done" feels impossible, scope is too broad
+
+2. **Gather Requirements** - Using architectural context already discovered:
+   - Problem statement from domain analysis
+   - Goals derived from architectural capabilities
+   - User jobs from bounded context responsibilities
+   - Dependencies from service layer dependencies
+
+3. **Draft PRD** - Use template from `references/prd-template.md`:
+   - Overview (3-5 sentences)
+   - Problem & Goals (3-5 observable goals)
+   - Users & Use Cases (2-4 jobs per user)
+   - Scope & Features (5-15 testable bullets)
+   - Requirements (functional + non-functional)
+   - UX / Flow Overview (3-7 bullets)
+   - Dependencies & Risks
+   - Definition of Done (5-12 items per `references/prd-dod-guide.md`)
+   - Related Documents (CRITICAL: Include SLAD, SERVICE_TEMPLATE, temporal patterns where relevant)
+
+4. **Validate** - Run validation script:
+   ```bash
+   python .claude/skills/lead-architect/scripts/validate_prd.py <path-to-prd.md>
+   ```
+
+5. **Link Architecture References** - Ensure PRD Related Documents includes:
+   - Vision / Strategy: `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
+   - Architecture / SRM: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+   - Service Layer (SLAD): `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
+   - Service Template: `docs/70-governance/SERVICE_TEMPLATE.md`
+   - Temporal Patterns (if time-sensitive): `docs/20-architecture/temporal-patterns/`
+   - Schema / Types: `types/database.types.ts`
+   - Security / RLS: `docs/30-security/SEC-001-rls-policy-matrix.md`
+   - QA Standards: `docs/40-quality/`
+
+**PRD Anti-Patterns** (see `references/prd-anti-patterns.md`):
+- ❌ Architecture spec crammed in PRD (move to ARCH docs, link only)
+- ❌ QA/testing standards in PRD (reference QA-xxx docs)
+- ❌ Manual traceability matrices (keep separate or generate)
+- ❌ Vague goals ("improve", "better") - make observable
+- ❌ Coverage percentages in DoD (belongs in QA standards)
+
+**PRD ID Convention:** `PRD-XXX-description` (e.g., `PRD-000-casino-foundation`)
+
 ## PT-2 Specific Constraints
 
 Validate against these PT-2 standards:
@@ -313,6 +364,9 @@ An architectural task is complete when:
 | `example-architectures.md` | Reference examples |
 | `memory-protocol.md` | Memory recording (optional) |
 | `context-management.md` | Session continuity |
+| `prd-template.md` | PRD copy-paste template (PRD-STD-001) |
+| `prd-anti-patterns.md` | PRD-specific anti-patterns |
+| `prd-dod-guide.md` | Definition of Done guidance |
 
 ### Source Documents (docs/)
 
@@ -322,6 +376,8 @@ An architectural task is complete when:
 | SRM (boundaries) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
 | SERVICE_TEMPLATE | `docs/70-governance/SERVICE_TEMPLATE.md` |
 | SDLC Taxonomy | `docs/SDLC_DOCS_TAXONOMY.md` |
+| **PRD-STD-001** | `docs/10-prd/PRD-STD-001_PRD_STANDARD.md` |
+| Temporal Patterns | `docs/20-architecture/temporal-patterns/` |
 | ADRs | `docs/80-adrs/` |
 | RLS/RBAC | `docs/30-security/` |
 | API contracts | `docs/25-api-data/` |
@@ -407,6 +463,110 @@ Expected output:
 - Remediation strategy with priority
 - Migration approach (big-bang vs incremental)
 ```
+
+### PRD Creation
+
+```
+Use the lead-architect skill to create a PRD for [SERVICE/FEATURE].
+
+Current context: [Link to SRM section, relevant ADRs]
+
+Expected output:
+1. Architecture discovery (bounded context, dependencies)
+2. PRD draft following PRD-STD-001
+3. Related Documents linking SLAD, SERVICE_TEMPLATE, temporal patterns
+4. Validation via scripts/validate_prd.py
+5. Implementation plan with DoD
+```
+
+## MVP Roadmap & Progress Tracking
+
+### Canonical Implementation Baseline
+
+**MVP-ROADMAP.md** (`docs/20-architecture/MVP-ROADMAP.md`) establishes the implementation baseline:
+
+```
+Phase 0: Horizontal Infrastructure (GATE-0) ← CURRENT BLOCKER
+├── TransportLayer (withServerAction wrapper)
+├── ErrorTaxonomy (domain errors → HTTP mapping)
+├── ServiceResultPattern (ServiceResult<T>)
+└── QueryInfra (React Query configuration)
+
+Phase 1: Core Services (GATE-1)
+├── CasinoService (PRD-000) ← Blocks ALL downstream
+├── PlayerService (PRD-003)
+└── VisitService (PRD-003)
+
+Phase 2: Session Management + UI (GATE-2)
+├── TableContextService (PRD-002) ← IMPLEMENTED
+├── RatingSlipService (PRD-002) ← IMPLEMENTED
+└── PitDashboard (UI)
+
+Phase 3: Rewards & Compliance (GATE-3)
+├── LoyaltyService (PRD-004)
+├── PlayerFinancialService (PRD-001)
+└── MTLService (PRD-005)
+```
+
+**Key Decision**: HORIZONTAL-FIRST implementation order. No routes can be deployed until GATE-0 completes.
+
+### Progress Tracking via Memori
+
+MVP progress is tracked via `MVPProgressContext` in `lib/memori/mvp_progress_context.py`:
+
+**Check Status**:
+```bash
+/mvp-status
+```
+
+**Record Service Completion** (after implementing a service):
+```python
+from lib.memori.mvp_progress_context import create_mvp_progress_context
+ctx = create_mvp_progress_context()
+ctx.record_service_completion(
+    service_name="CasinoService",
+    files_created=["services/casino/index.ts", "services/casino/dtos.ts"],
+    test_coverage=90.0,
+    implementation_notes="Temporal authority with compute_gaming_day"
+)
+```
+
+**Record Milestone Transition**:
+```python
+ctx.record_milestone_transition(
+    phase=0,
+    status="completed",
+    services_completed=["TransportLayer", "ErrorTaxonomy", "ServiceResultPattern", "QueryInfra"]
+)
+```
+
+### Architecture Tasks Should Update Progress
+
+When completing architectural work that advances the MVP:
+
+1. **After PRD Creation**: Record PRD status
+   ```python
+   ctx.record_prd_status("PRD-000", "accepted", services_defined=["CasinoService"])
+   ```
+
+2. **After Implementation Plan**: If service is implemented, record completion
+3. **After Gate Validation**: Record milestone transition
+
+### Current MVP Status Reference
+
+Always check current status before planning:
+- **Memory file**: `memory/phase-status.memory.md`
+- **Live query**: `/mvp-status` command
+- **Roadmap**: `docs/20-architecture/MVP-ROADMAP.md`
+
+| Phase | Status | Components |
+|-------|--------|------------|
+| 0 | **NOT STARTED** | TransportLayer, ErrorTaxonomy, ServiceResultPattern, QueryInfra |
+| 1 | Blocked by Phase 0 | CasinoService, PlayerService, VisitService |
+| 2 | Partial (2/3) | TableContextService ✓, RatingSlipService ✓, PitDashboard |
+| 3 | Not Started | LoyaltyService, PlayerFinancialService, MTLService |
+
+**Critical Path**: GATE-0 → CasinoService → PlayerService → VisitService → PitDashboard → LoyaltyService
 
 ## Non-Goals
 
