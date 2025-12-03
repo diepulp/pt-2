@@ -20,12 +20,18 @@ CasinoService follows Pattern B per SLAD requirements:
 
 ```
 services/casino/
-├── dtos.ts          # DTO type definitions (Pick/Omit from Database)
-├── schemas.ts       # Zod validation schemas
-├── keys.ts          # React Query key factories with .scope pattern
-├── http.ts          # HTTP fetcher functions using fetchJSON
-├── README.md        # This documentation
-└── casino.test.ts   # Unit tests (legacy, to be migrated)
+├── dtos.ts              # DTO type definitions (Pick/Omit from Database)
+├── selects.ts           # Named column sets (SLAD §327)
+├── keys.ts              # React Query key factories with .scope pattern
+├── http.ts              # HTTP fetcher functions using fetchJSON
+├── index.ts             # Service factory + explicit interface (SLAD §337)
+├── crud.ts              # CRUD operations (SLAD §342)
+├── schemas.ts           # Zod validation schemas
+├── README.md            # This documentation
+├── casino.test.ts       # Unit tests
+├── casino.integration.test.ts  # Integration tests
+├── gaming-day.test.ts   # Gaming day RPC tests
+└── schemas.test.ts      # Schema validation tests
 ```
 
 ## Ownership

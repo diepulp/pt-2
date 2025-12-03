@@ -81,18 +81,22 @@ Schema changes break the mapper at compile time, not silently at runtime.
 
 ---
 
-## Current Implementation: Inline DTOs
+## DTO Location: MUST Be in dtos.ts (SLAD §315-319)
 
-**Current state**: DTOs are defined inline in feature files (e.g., `mid-session-reward.ts`).
+**Rule**: All DTOs MUST be defined in `services/{domain}/dtos.ts`. Inline DTOs are **BANNED**.
 
-**Extract to `dtos.ts` when**:
-- Service consumed by 2+ other services
-- Cross-context DTO publishing needed
-- Service complexity warrants separation
+This applies to ALL patterns (A, B, C) - Hybrid does NOT exempt from this rule.
 
-**Example of inline DTO** (current pattern):
 ```typescript
+// ❌ BANNED - Inline DTO in feature file
 // services/loyalty/mid-session-reward.ts
+export interface MidSessionRewardInput {  // ❌ VIOLATION
+  casinoId: string;
+  playerId: string;
+}
+
+// ✅ CORRECT - DTO in dedicated file
+// services/loyalty/dtos.ts
 export interface MidSessionRewardInput {
   casinoId: string;
   playerId: string;
@@ -103,6 +107,9 @@ export interface MidSessionRewardInput {
   reason?: LoyaltyReason;
 }
 
+// services/loyalty/mid-session-reward.ts
+import type { MidSessionRewardInput } from './dtos';
+
 export function buildMidSessionRewardRpcInput(input: MidSessionRewardInput) {
   return {
     p_casino_id: input.casinoId,
@@ -110,6 +117,14 @@ export function buildMidSessionRewardRpcInput(input: MidSessionRewardInput) {
   };
 }
 ```
+
+**Why?** Centralized DTOs enable:
+- Pre-commit hook validation (Check 8)
+- Cross-context DTO publishing
+- Consistent type discovery
+- Schema evolution tracking
+
+**Enforcement**: Pre-commit hook Check 8 blocks commits with inline DTOs.
 
 ---
 

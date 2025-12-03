@@ -303,16 +303,15 @@ grep -rn "x-casino-id" app/
 
 ## 11. Documentation Consistency Check
 
-- [ ] Service implementation matches SERVICE_TEMPLATE pattern
+- [ ] Service implementation matches SLAD §308-350 pattern
 - [ ] DTOs follow DTO_CANONICAL_STANDARD rules
 - [ ] Bounded context matches SRM ownership
 - [ ] No conflicting guidance between docs
 
 **Manual verification**:
 
-1. Read SERVICE_TEMPLATE.md pattern description
+1. Read SLAD §308-350 pattern requirements
 2. Compare with actual service implementation
-3. Flag inconsistencies for user review
 
 ---
 

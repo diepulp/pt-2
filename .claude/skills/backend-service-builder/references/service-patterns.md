@@ -1,7 +1,6 @@
 # Service Implementation Patterns
 
-**Source**: `docs/70-governance/SERVICE_TEMPLATE.md` v2.0.3
-**Architecture**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2)
+**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2 §308-350)
 **Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` (OE-01)
 
 ---
@@ -27,7 +26,7 @@
 ## Pattern A: Contract-First Services
 
 **Use When**: Complex business logic, domain contracts, cross-context boundaries
-**Examples**: `loyalty/`, `finance/`, `mtl/`, `table-context/`
+**Examples**: `loyalty/`, `finance/`, `mtl/`
 
 ### Current Implementation (DEPLOYED)
 
@@ -380,7 +379,7 @@ These types are **already defined** in the codebase. **NEVER create local copies
 ### ❌ WRONG - Redefining ServiceResult
 
 ```typescript
-// services/table-context/table-operations.ts
+// services/loyalty/points-ledger.ts
 export interface ServiceResult<T> {  // ❌ DUPLICATE
   success: boolean;
   data?: T;
@@ -391,7 +390,7 @@ export interface ServiceResult<T> {  // ❌ DUPLICATE
 ### ✅ CORRECT - Import from canonical location
 
 ```typescript
-// services/table-context/table-operations.ts
+// services/loyalty/points-ledger.ts
 import type { ServiceResult } from '@/lib/http/service-response';
 // OR for server actions that return ServiceHttpResult:
 import type { ServiceHttpResult } from '@/lib/http/service-response';
