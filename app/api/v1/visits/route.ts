@@ -110,7 +110,10 @@ export async function POST(request: NextRequest) {
           input.player_id,
         );
 
-        const visit = await service.startVisit(input.player_id);
+        const visit = await service.startVisit(
+          input.player_id,
+          mwCtx.rlsContext!.casinoId,
+        );
 
         return {
           ok: true as const,

@@ -2,9 +2,6 @@ import { serializeKeyFilters } from "@/services/shared/key-utils";
 
 import type { VisitListFilters } from "./dtos";
 
-// Re-export for convenience
-export type { VisitListFilters } from "./dtos";
-
 const ROOT = ["visit"] as const;
 const serialize = (filters: VisitListFilters = {}) =>
   serializeKeyFilters(filters);
