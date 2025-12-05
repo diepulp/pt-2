@@ -88,59 +88,100 @@ CREATE INDEX idx_session_events_type ON context.session_events(type);
 CREATE INDEX idx_session_events_created_at ON context.session_events(created_at DESC);
 
 -- ============================================================================
--- PART 3: Extend memori.memories with provenance fields
+-- PART 3: Extend memori.memories with provenance fields (if schema exists)
 -- ============================================================================
+-- NOTE: The memori schema is optional and may not exist in all deployments.
+-- These extensions are applied conditionally via DO block.
 
--- Source classification: explicit, implicit, bootstrap, tool_output
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS source_type text;
-COMMENT ON COLUMN memori.memories.source_type IS 'Memory source: explicit (user said remember), implicit (extracted), bootstrap (seed data), tool_output (from command)';
+DO $$
+BEGIN
+  -- Only proceed if memori schema and memories table exist
+  IF EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'memori' AND table_name = 'memories'
+  ) THEN
+    -- Source classification: explicit, implicit, bootstrap, tool_output
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'source_type'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN source_type text;
+    END IF;
 
--- Belief strength (0.00 - 1.00), updated on corroboration/contradiction
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS confidence numeric(3,2) DEFAULT 0.80;
-COMMENT ON COLUMN memori.memories.confidence IS 'Belief strength 0.00-1.00, adjusted on corroboration (+) or contradiction (-)';
+    -- Belief strength (0.00 - 1.00), updated on corroboration/contradiction
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'confidence'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN confidence numeric(3,2) DEFAULT 0.80;
+    END IF;
 
--- Provenance tracking - array of session_ids that contributed
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS lineage jsonb DEFAULT '[]'::jsonb;
-COMMENT ON COLUMN memori.memories.lineage IS 'Array of session_ids that contributed to this memory';
+    -- Provenance tracking - array of session_ids that contributed
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'lineage'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN lineage jsonb DEFAULT '[]'::jsonb;
+    END IF;
 
--- Usage tracking
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS last_used_at timestamptz;
-COMMENT ON COLUMN memori.memories.last_used_at IS 'Timestamp of last retrieval';
+    -- Usage tracking
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'last_used_at'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN last_used_at timestamptz;
+    END IF;
 
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS use_count integer DEFAULT 0;
-COMMENT ON COLUMN memori.memories.use_count IS 'Number of times this memory was retrieved';
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'use_count'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN use_count integer DEFAULT 0;
+    END IF;
 
--- TTL support
-ALTER TABLE memori.memories ADD COLUMN IF NOT EXISTS expires_at timestamptz;
-COMMENT ON COLUMN memori.memories.expires_at IS 'Optional expiration timestamp, NULL means never expires';
+    -- TTL support
+    IF NOT EXISTS (
+      SELECT 1 FROM information_schema.columns
+      WHERE table_schema = 'memori' AND table_name = 'memories' AND column_name = 'expires_at'
+    ) THEN
+      ALTER TABLE memori.memories ADD COLUMN expires_at timestamptz;
+    END IF;
 
--- ============================================================================
--- PART 4: Additional indexes for memory retrieval
--- ============================================================================
+    -- Create indexes
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_indexes
+      WHERE schemaname = 'memori' AND indexname = 'idx_memories_namespace_category'
+    ) THEN
+      CREATE INDEX idx_memories_namespace_category ON memori.memories(user_id, category);
+    END IF;
 
--- Composite index for chatmode + category filtering
-CREATE INDEX IF NOT EXISTS idx_memories_namespace_category
-  ON memori.memories(user_id, category);
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_indexes
+      WHERE schemaname = 'memori' AND indexname = 'idx_memories_expires_at'
+    ) THEN
+      CREATE INDEX idx_memories_expires_at ON memori.memories(expires_at) WHERE expires_at IS NOT NULL;
+    END IF;
 
--- Index for expiration queries
-CREATE INDEX IF NOT EXISTS idx_memories_expires_at
-  ON memori.memories(expires_at)
-  WHERE expires_at IS NOT NULL;
+    IF NOT EXISTS (
+      SELECT 1 FROM pg_indexes
+      WHERE schemaname = 'memori' AND indexname = 'idx_memories_last_used'
+    ) THEN
+      CREATE INDEX idx_memories_last_used ON memori.memories(last_used_at DESC NULLS LAST);
+    END IF;
 
--- Index for usage tracking
-CREATE INDEX IF NOT EXISTS idx_memories_last_used
-  ON memori.memories(last_used_at DESC NULLS LAST);
+    -- Backfill existing memories with source_type = 'bootstrap'
+    UPDATE memori.memories
+    SET
+      source_type = 'bootstrap',
+      confidence = 0.80,
+      lineage = '[]'::jsonb
+    WHERE source_type IS NULL;
 
--- ============================================================================
--- PART 5: Backfill existing memories with source_type = 'bootstrap'
--- ============================================================================
-
-UPDATE memori.memories
-SET
-  source_type = 'bootstrap',
-  confidence = 0.80,
-  lineage = '[]'::jsonb
-WHERE source_type IS NULL;
+    RAISE NOTICE 'memori.memories table extended with provenance fields';
+  ELSE
+    RAISE NOTICE 'memori schema/memories table not found - skipping provenance extensions';
+  END IF;
+END $$;
 
 -- ============================================================================
 -- PART 6: Trigger PostgREST schema cache reload

@@ -40,7 +40,7 @@ docs/
 **Purpose:** Cross-session continuity and learned context
 
 **Store in Memori:**
-- Agent decisions: "Created MTLService using SERVICE_TEMPLATE.md pattern"
+- Agent decisions: "Created MTLService using SLAD Pattern A"
 - Learned facts: "User prefers functional factories over classes"
 - Project context: "Working on MTL compliance service for gaming compliance"
 - User corrections: "Don't use console.log in production code"
@@ -91,9 +91,9 @@ client.chat.completions.create(
 
 # Memori auto-injects:
 # - "User prefers functional factories (discussed 2024-11-15)"
-# - "Last service created: MTLService using SERVICE_TEMPLATE.md"
+# - "Last service created: MTLService using SLAD Pattern A"
 # - "Project: PT-2 casino management (bounded context architecture)"
-# - "Relevant docs: SERVICE_RESPONSIBILITY_MATRIX.md, SERVICE_TEMPLATE.md"
+# - "Relevant docs: SERVICE_RESPONSIBILITY_MATRIX.md, SLAD §308-350"
 ```
 
 #### Step 2: Agent Fetches Referenced Docs
@@ -114,13 +114,13 @@ create_loyalty_service()
 # Memori automatically records the session
 # New memory created:
 {
-  "fact": "Created LoyaltyService following SERVICE_TEMPLATE.md pattern",
+  "fact": "Created LoyaltyService following SLAD Pattern A",
   "category": "skills",
   "entities": ["LoyaltyService", "points_ledger", "tier_status"],
   "metadata": {
     "service_file": "src/services/loyalty.service.ts",
     "pattern_used": "functional_factory",
-    "referenced_docs": ["SERVICE_TEMPLATE.md", "SRM.md#loyalty-service"]
+    "referenced_docs": ["SLAD §308-350", "SRM.md#loyalty-service"]
   }
 }
 ```
@@ -131,7 +131,7 @@ create_loyalty_service()
 # Memori auto-injects:
 # - "LoyaltyService exists at src/services/loyalty.service.ts"
 # - "Uses functional factory pattern"
-# - "Relevant docs: SERVICE_TEMPLATE.md, SRM.md#loyalty-service"
+# - "Relevant docs: SLAD §308-350, SRM.md#loyalty-service"
 
 # Agent knows exactly where to go and what pattern to follow
 # No need to re-explain project structure or patterns
@@ -221,7 +221,7 @@ doc_references:
     - "docs/30-security/SEC-002-casino-scoped-security-model.md"
 
   patterns:
-    - "docs/patterns/SERVICE_TEMPLATE.md"
+    - "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
     - "docs/patterns/BALANCED_ARCHITECTURE_QUICK.md"
 
   anti_patterns:
@@ -231,7 +231,7 @@ doc_references:
 categories:
   - "facts"         # "MTLService handles CTR threshold detection"
   - "preferences"   # "User prefers functional factories"
-  - "skills"        # "Agent can create services using SERVICE_TEMPLATE.md"
+  - "skills"        # "Agent can create services using SLAD patterns"
   - "rules"         # "Never use ReturnType inference (learned from code review)"
   - "context"       # "Currently working on MTL compliance features"
 
@@ -332,10 +332,10 @@ def work_on_service(service_name: str):
 # - [CONTEXT] "Project: PT-2 casino management system"
 # - [PREFERENCE] "User prefers functional factories"
 # - [RULE] "Always check SERVICE_RESPONSIBILITY_MATRIX.md for ownership"
-# - [SKILL] "Agent knows how to use SERVICE_TEMPLATE.md"
+# - [SKILL] "Agent knows how to use SLAD patterns"
 
 # Agent logic:
-1. Read SERVICE_TEMPLATE.md (fresh from file)
+1. Read SLAD §308-350 (fresh from file)
 2. Read SRM.md section on MTL Service (fresh from file)
 3. Apply learned preferences (from Memori)
 4. Create service following template
@@ -435,7 +435,7 @@ agent.register_tool("search_session_memory", memory_tool)
 # Example usage:
 # Agent: "What pattern should I use for services?"
 # Tool: Searches Memori → "Use functional factories"
-# Agent: Reads SERVICE_TEMPLATE.md → Applies pattern
+# Agent: Reads SLAD §308-350 → Applies pattern
 ```
 
 ## Success Metrics
@@ -482,7 +482,7 @@ Memori: Records "Fixed CTR threshold calculation bug"
 
 Day 4:
 User: "Create similar service for Player Financial"
-Agent: Recalls "Used SERVICE_TEMPLATE.md for MTLService"
+Agent: Recalls "Used SLAD Pattern A for MTLService"
 Agent: Recalls "User prefers functional factories"
 Agent: Applies same pattern to new service
 Memori: Records "Created PlayerFinancialService using same pattern as MTL"

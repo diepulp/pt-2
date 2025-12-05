@@ -3,7 +3,7 @@
 Check documentation consistency - The Innovation!
 
 Flags inconsistencies between governance documents and actual implementations:
-- SERVICE_TEMPLATE vs actual service implementations
+- SLAD pattern requirements vs actual service implementations
 - SRM ownership vs service README claims
 - DTO_CANONICAL_STANDARD vs actual DTO definitions
 - Migration naming convention adherence
@@ -72,7 +72,7 @@ class DocConsistencyChecker:
         if self.context:
             self._query_past_regressions()
 
-        self.check_service_template_alignment()
+        self.check_slad_pattern_alignment()
         self.check_srm_ownership_claims()
         self.check_migration_naming()
         self.check_dto_standard_compliance()
@@ -215,16 +215,21 @@ class DocConsistencyChecker:
         except Exception as e:
             print(f"⚠️  Could not propose primitive updates: {e}")
 
-    def check_service_template_alignment(self):
-        """Check if services match SERVICE_TEMPLATE patterns."""
-        print(f"{CYAN}[1/5] Checking SERVICE_TEMPLATE alignment...{RESET}")
+    def check_slad_pattern_alignment(self):
+        """Check if services match SLAD pattern requirements (§308-350)."""
+        print(f"{CYAN}[1/5] Checking SLAD pattern alignment...{RESET}")
 
-        template_path = self.project_root / 'docs/70-governance/SERVICE_TEMPLATE.md'
-        if not template_path.exists():
+        # SLAD is the single source of truth for service structure
+        slad_path = self.project_root / 'docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md'
+        if not slad_path.exists():
+            self.inconsistencies.append(Inconsistency(
+                severity='error',
+                category='SLAD_MISSING',
+                message=f"SLAD document not found - cannot validate patterns",
+                doc_reference='SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md',
+                location='docs/20-architecture/'
+            ))
             return
-
-        # Read template to extract pattern requirements
-        template_content = template_path.read_text()
 
         # Pattern A: Should have {feature}.ts and {feature}.test.ts
         # Pattern B: Should only have keys.ts and README.md
@@ -249,9 +254,9 @@ class DocConsistencyChecker:
             if not pattern_match:
                 self.inconsistencies.append(Inconsistency(
                     severity='warning',
-                    category='SERVICE_TEMPLATE',
+                    category='SLAD_PATTERN',
                     message=f"Pattern not clearly documented in README.md",
-                    doc_reference='SERVICE_TEMPLATE.md § Pattern Selection',
+                    doc_reference='SLAD §308-350 (Pattern Selection)',
                     location=f'services/{service_dir.name}/README.md'
                 ))
                 continue
@@ -260,7 +265,7 @@ class DocConsistencyChecker:
             self.validate_pattern_structure(service_dir, pattern)
 
     def validate_pattern_structure(self, service_dir: Path, pattern: str):
-        """Validate service directory structure matches declared pattern."""
+        """Validate service directory structure matches declared pattern per SLAD §308-350."""
         files = [f.name for f in service_dir.glob('*.ts')]
         has_keys = 'keys.ts' in files
         has_business_logic = any(
@@ -274,18 +279,18 @@ class DocConsistencyChecker:
             if not has_business_logic:
                 self.inconsistencies.append(Inconsistency(
                     severity='warning',
-                    category='SERVICE_TEMPLATE',
+                    category='SLAD_PATTERN',
                     message=f"Pattern A service missing business logic files",
-                    doc_reference='SERVICE_TEMPLATE.md § Pattern A',
+                    doc_reference='SLAD §320-325 (Pattern A)',
                     location=f'services/{service_dir.name}/'
                 ))
 
             if not has_tests:
                 self.inconsistencies.append(Inconsistency(
                     severity='warning',
-                    category='SERVICE_TEMPLATE',
+                    category='SLAD_PATTERN',
                     message=f"Pattern A service missing test files (recommended ~80% coverage)",
-                    doc_reference='SERVICE_TEMPLATE.md § Pattern A Checklist',
+                    doc_reference='SLAD §320-325 (Pattern A)',
                     location=f'services/{service_dir.name}/'
                 ))
 
@@ -294,9 +299,9 @@ class DocConsistencyChecker:
             if has_business_logic:
                 self.inconsistencies.append(Inconsistency(
                     severity='info',
-                    category='SERVICE_TEMPLATE',
+                    category='SLAD_PATTERN',
                     message=f"Pattern B service has business logic files (may be Pattern C?)",
-                    doc_reference='SERVICE_TEMPLATE.md § Pattern B',
+                    doc_reference='SLAD §326-330 (Pattern B)',
                     location=f'services/{service_dir.name}/'
                 ))
 
@@ -313,8 +318,6 @@ class DocConsistencyChecker:
             'rating-slip': ['rating_slip'],
             'finance': ['player_financial_transaction', 'finance_outbox'],
             'mtl': ['mtl_entry', 'mtl_audit_note'],
-            'table-context': ['gaming_table', 'gaming_table_settings', 'dealer_rotation',
-                               'table_inventory_snapshot', 'table_fill', 'table_credit', 'table_drop_event'],
             'floor-layout': ['floor_layout', 'floor_layout_version', 'floor_pit',
                               'floor_table_slot', 'floor_layout_activation'],
         }
@@ -456,7 +459,7 @@ class DocConsistencyChecker:
                     severity='error',
                     category='README_MISSING',
                     message=f"Service missing README.md",
-                    doc_reference='SERVICE_TEMPLATE.md § Service Documentation',
+                    doc_reference='SLAD §337-350 (Service Documentation)',
                     location=f'services/{service_dir.name}/'
                 ))
                 continue
@@ -469,7 +472,7 @@ class DocConsistencyChecker:
                         severity='warning',
                         category='README_INCOMPLETE',
                         message=f"README.md missing or malformed section: {section_name}",
-                        doc_reference='SERVICE_TEMPLATE.md § Service Documentation',
+                        doc_reference='SLAD §337-350 (Service Documentation)',
                         location=f'services/{service_dir.name}/README.md'
                     ))
 

@@ -32,7 +32,7 @@
 
 ### For Developers
 1. **[Balanced Architecture Quick](20-architecture/BALANCED_ARCHITECTURE_QUICK.md)** ⭐ HORIZONTAL vs VERTICAL decision (10-min)
-2. **[Service Template](70-governance/SERVICE_TEMPLATE.md)** - Implementation guide
+2. **[SLAD §308-350](20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)** - Service structure requirements
 3. **[Hooks Standard](70-governance/HOOKS_STANDARD.md)** - React Query v5 patterns
 4. **[Database Type Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)** - Daily DB management
 
@@ -252,8 +252,7 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| GOV-001 | Service Template v2.0.1 | Accepted | `70-governance/SERVICE_TEMPLATE.md` |
-| GOV-002 | Over-Engineering Guardrail | Accepted | `70-governance/OVER_ENGINEERING_GUARDRAIL.md` |
+| GOV-001 | Over-Engineering Guardrail | Accepted | `70-governance/OVER_ENGINEERING_GUARDRAIL.md` |
 | GOV-003 | Hooks Standard | Accepted | `70-governance/HOOKS_STANDARD.md` |
 | GOV-004 | DTO Canonical Standard | Accepted | `70-governance/DTO_CANONICAL_STANDARD.md` |
 | GOV-005 | Frontend Canonical Standard | Accepted | `70-governance/FRONT_END_CANONICAL_STANDARD.md` |
@@ -363,7 +362,7 @@
 ### Common Questions
 1. **"Should this be HORIZONTAL or VERTICAL?"** → [Balanced Architecture Quick](20-architecture/BALANCED_ARCHITECTURE_QUICK.md) ⭐
 2. **"Which type file do I import?"** → [Database Workflow](workflows/DATABASE_TYPE_WORKFLOW.md)
-3. **"How do I write a service?"** → [Service Template](70-governance/SERVICE_TEMPLATE.md)
+3. **"How do I write a service?"** → [SLAD §308-350](20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
 4. **"What's the anti-pattern rule?"** → [PRD §4](10-prd/PRD-001_Player_Management_System_Requirements.md) or [Over-Engineering Guardrail](70-governance/OVER_ENGINEERING_GUARDRAIL.md)
 
 ### Finding Specific Information

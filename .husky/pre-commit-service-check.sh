@@ -2,12 +2,13 @@
 # ==============================================================================
 # Service Layer Anti-Pattern Detection (Pattern-Aware)
 # ==============================================================================
-# Version: 2.1.0
-# Date: 2025-11-28
+# Version: 2.4.0
+# Date: 2025-12-03
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 #   - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md
+#   - ADR-013: docs/80-adrs/ADR-013-zod-validation-schemas.md (Zod schemas)
 #   - Workflow: docs/20-architecture/specs/WORKFLOW-PRD-002-parallel-execution.md
 #
 # This script runs BEFORE lint-staged. Additional AST-based checks run via ESLint:
@@ -25,12 +26,13 @@ VIOLATIONS_FOUND=0
 # Pattern Classification (SLAD §314-352, SRM §57-60)
 # ==============================================================================
 # Pattern A (Contract-First): Manual interfaces ALLOWED, mappers.ts REQUIRED
-PATTERN_A_SERVICES="loyalty|finance|mtl|table-context"
+PATTERN_A_SERVICES="loyalty|finance|mtl"
 
 # Pattern B (Canonical CRUD): Manual interfaces BANNED, Pick/Omit REQUIRED
 PATTERN_B_SERVICES="player|visit|casino|floor-layout"
 
-# Pattern C (Hybrid): Per-DTO basis
+# Pattern C (Hybrid): Per-DTO basis (interface OR type allowed per DTO)
+# NOTE: Hybrid does NOT exempt from dtos.ts requirement - all DTOs must be in dtos.ts
 PATTERN_C_SERVICES="rating-slip"
 
 # Get staged service files
@@ -128,7 +130,7 @@ fi
 # ==============================================================================
 # Check 3: Pattern A - mappers.ts REQUIRED when dtos.ts exists (SLAD §321-325)
 # ==============================================================================
-for service in loyalty finance mtl table-context; do
+for service in loyalty finance mtl; do
   SERVICE_PATH="services/$service"
   STAGED_DTOS=$(echo "$STAGED_SERVICE_FILES" | grep "^$SERVICE_PATH/dtos.ts$" || true)
 
@@ -326,7 +328,169 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
 fi
 
 # ==============================================================================
-# Check 8: console.* in production paths BANNED (Anti-Patterns §686-705)
+# Check 8: Inline DTOs BANNED - Must be in dtos.ts (SLAD §315-319)
+# ==============================================================================
+# DTOs must live in dedicated dtos.ts files, not inline in feature files.
+# This applies to ALL patterns (A, B, C) - Hybrid does NOT exempt from this rule.
+if [ -n "$STAGED_SERVICE_FILES" ]; then
+  INLINE_DTO_VIOLATIONS=""
+
+  for file in $STAGED_SERVICE_FILES; do
+    # Skip dtos.ts files (that's where DTOs should be)
+    if echo "$file" | grep -q "/dtos\.ts$"; then
+      continue
+    fi
+
+    # Skip keys.ts files (filter types are allowed there)
+    if echo "$file" | grep -q "/keys\.ts$"; then
+      continue
+    fi
+
+    # Skip test files
+    if echo "$file" | grep -q "\.test\.ts$\|\.spec\.ts$"; then
+      continue
+    fi
+
+    # Skip mappers.ts (internal type aliases allowed)
+    if echo "$file" | grep -q "/mappers\.ts$"; then
+      continue
+    fi
+
+    # Skip schemas.ts (Zod-inferred types are valid co-location)
+    if echo "$file" | grep -q "/schemas\.ts$"; then
+      continue
+    fi
+
+    # Skip type-guards.ts (runtime type guards may need co-located types)
+    if echo "$file" | grep -q "/type-guards\.ts$"; then
+      continue
+    fi
+
+    # Check for DTO-like exports (interface or type with DTO/Input/Response/Params suffix)
+    DTO_PATTERNS=$(grep -nE "^export (interface|type) [A-Z][a-zA-Z]*(DTO|Input|Response|Params|Create|Update)[^=]*[={]" "$file" 2>/dev/null || true)
+
+    if [ -n "$DTO_PATTERNS" ]; then
+      INLINE_DTO_VIOLATIONS="$INLINE_DTO_VIOLATIONS
+  - $file"
+      echo "$DTO_PATTERNS" | head -5 | while read -r line; do
+        INLINE_DTO_VIOLATIONS="$INLINE_DTO_VIOLATIONS
+    $line"
+      done
+    fi
+  done
+
+  if [ -n "$INLINE_DTO_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Inline DTOs detected (must be in dtos.ts)"
+    echo ""
+    echo "DTOs MUST be centralized in services/{domain}/dtos.ts files."
+    echo "This applies to ALL patterns including Hybrid (Pattern C)."
+    echo ""
+    echo "Files with violations:$INLINE_DTO_VIOLATIONS"
+    echo ""
+    echo "Fix: Move DTOs to dedicated dtos.ts file:"
+    echo ""
+    echo "  ❌ WRONG (in lifecycle.ts, crud.ts, etc.):"
+    echo "  export interface StartRatingSlipInput {"
+    echo "    playerId: string;"
+    echo "  }"
+    echo ""
+    echo "  ✅ CORRECT (in dtos.ts):"
+    echo "  // services/rating-slip/dtos.ts"
+    echo "  export interface StartRatingSlipInput {"
+    echo "    playerId: string;"
+    echo "  }"
+    echo ""
+    echo "  // services/rating-slip/lifecycle.ts"
+    echo "  import type { StartRatingSlipInput } from './dtos';"
+    echo ""
+    echo "Reference: SLAD §315-319, DTO_CANONICAL_STANDARD.md"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
+# Check 9: Required File Structure (SLAD §308-350, ADR-013)
+# ==============================================================================
+# Pattern B services MUST have: dtos.ts, selects.ts, keys.ts, http.ts, index.ts, crud.ts
+# HTTP boundary services MUST also have: schemas.ts (ADR-013)
+# This check runs when ANY file in a Pattern B service is staged
+if [ -n "$STAGED_SERVICE_FILES" ]; then
+  PATTERN_B_SERVICES_LIST="player visit casino floor-layout"
+  REQUIRED_FILES_B="dtos.ts selects.ts keys.ts http.ts index.ts crud.ts"
+  # HTTP boundary services need schemas.ts (ADR-013)
+  HTTP_BOUNDARY_SERVICES="player visit casino"
+
+  FILE_STRUCTURE_VIOLATIONS=""
+  SCHEMA_VIOLATIONS=""
+
+  for service in $PATTERN_B_SERVICES_LIST; do
+    SERVICE_PATH="services/$service"
+
+    # Check if any file in this service is staged
+    STAGED_IN_SERVICE=$(echo "$STAGED_SERVICE_FILES" | grep "^$SERVICE_PATH/" || true)
+
+    if [ -n "$STAGED_IN_SERVICE" ] && [ -d "$SERVICE_PATH" ]; then
+      MISSING_FILES=""
+      for required_file in $REQUIRED_FILES_B; do
+        if [ ! -f "$SERVICE_PATH/$required_file" ]; then
+          MISSING_FILES="$MISSING_FILES $required_file"
+        fi
+      done
+
+      if [ -n "$MISSING_FILES" ]; then
+        FILE_STRUCTURE_VIOLATIONS="$FILE_STRUCTURE_VIOLATIONS
+  - $SERVICE_PATH: MISSING$MISSING_FILES"
+      fi
+
+      # Check schemas.ts for HTTP boundary services (ADR-013)
+      if echo "$HTTP_BOUNDARY_SERVICES" | grep -qw "$service"; then
+        if [ ! -f "$SERVICE_PATH/schemas.ts" ]; then
+          SCHEMA_VIOLATIONS="$SCHEMA_VIOLATIONS
+  - $SERVICE_PATH: MISSING schemas.ts (ADR-013 REQUIRED for HTTP boundary)"
+        fi
+      fi
+    fi
+  done
+
+  if [ -n "$FILE_STRUCTURE_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Pattern B service missing required files (SLAD §308-350)"
+    echo ""
+    echo "Pattern B services (Player, Visit, Casino, FloorLayout) REQUIRE:"
+    echo "  dtos.ts, selects.ts, keys.ts, http.ts, index.ts, crud.ts"
+    echo ""
+    echo "Services with violations:$FILE_STRUCTURE_VIOLATIONS"
+    echo ""
+    echo "Fix: Create missing files following SLAD §308-350 patterns."
+    echo ""
+    echo "Reference: SLAD §308-350, §429-471"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  if [ -n "$SCHEMA_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: HTTP boundary service missing schemas.ts (ADR-013)"
+    echo ""
+    echo "Services with HTTP Route Handlers REQUIRE schemas.ts for Zod validation."
+    echo ""
+    echo "Services with violations:$SCHEMA_VIOLATIONS"
+    echo ""
+    echo "Fix: Create services/{domain}/schemas.ts with Zod validation schemas:"
+    echo ""
+    echo "  // services/{domain}/schemas.ts"
+    echo "  import { z } from 'zod';"
+    echo ""
+    echo "  export const createXSchema = z.object({ ... });"
+    echo "  export type CreateXInput = z.infer<typeof createXSchema>;"
+    echo ""
+    echo "Reference: ADR-013 (Zod Validation Schemas Standard)"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
+# Check 10: console.* in production paths BANNED (Anti-Patterns §686-705)
 # ==============================================================================
 if [ -n "$STAGED_SERVICE_FILES" ]; then
   CONSOLE_VIOLATIONS=$(echo "$STAGED_SERVICE_FILES" | xargs grep -l "console\.\(log\|error\|warn\|debug\|info\)" 2>/dev/null || true)
@@ -348,6 +512,64 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
 fi
 
 # ==============================================================================
+# Check 11: Type assertions in crud.ts BANNED (SLAD §327-359)
+# ==============================================================================
+# Pattern B services with crud.ts MUST use mappers.ts instead of `as` casting.
+# Allowed: `as const`, `as 'literal'` (string literal narrowing)
+# Banned: `as TypeName`, `as TypeName[]` (bypasses type safety)
+if [ -n "$STAGED_SERVICE_FILES" ]; then
+  CRUD_FILES=$(echo "$STAGED_SERVICE_FILES" | grep "/crud\.ts$" || true)
+  AS_CASTING_VIOLATIONS=""
+
+  for file in $CRUD_FILES; do
+    # Find lines with 'as' followed by a type name (capital letter)
+    # Exclude: 'as const', 'as 'literal'', 'as "literal"', 'as unknown'
+    VIOLATIONS=$(grep -nE "[[:space:]]as[[:space:]]+[A-Z]" "$file" 2>/dev/null | grep -v "as const" || true)
+
+    if [ -n "$VIOLATIONS" ]; then
+      AS_CASTING_VIOLATIONS="$AS_CASTING_VIOLATIONS
+  - $file"
+      echo "$VIOLATIONS" | head -5 | while read -r line; do
+        AS_CASTING_VIOLATIONS="$AS_CASTING_VIOLATIONS
+    $line"
+      done
+    fi
+  done
+
+  if [ -n "$AS_CASTING_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Type assertions (as) in crud.ts files (SLAD §327-359)"
+    echo ""
+    echo "Pattern B services with crud.ts MUST use mappers.ts for type-safe transformations."
+    echo "Type assertions bypass compile-time safety and hide schema evolution bugs."
+    echo ""
+    echo "Files with violations:$AS_CASTING_VIOLATIONS"
+    echo ""
+    echo "Fix: Create/use mappers.ts with explicit transformation functions:"
+    echo ""
+    echo "  ❌ WRONG (in crud.ts):"
+    echo "  const { data } = await supabase.from('player').select(PLAYER_SELECT);"
+    echo "  return data as PlayerDTO[];  // V1 VIOLATION"
+    echo ""
+    echo "  ✅ CORRECT:"
+    echo "  // mappers.ts"
+    echo "  type PlayerSelectedRow = { id: string; name: string; ... };"
+    echo "  export function toPlayerDTO(row: PlayerSelectedRow): PlayerDTO {"
+    echo "    return { id: row.id, name: row.name, ... };"
+    echo "  }"
+    echo ""
+    echo "  // crud.ts"
+    echo "  import { toPlayerDTOList } from './mappers';"
+    echo "  const { data } = await supabase.from('player').select(PLAYER_SELECT);"
+    echo "  return toPlayerDTOList(data);  // ✅ Type-safe"
+    echo ""
+    echo "Reference Implementation: services/casino/mappers.ts"
+    echo "Reference: SLAD §327-359, DTO_CANONICAL_STANDARD.md"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
 # Summary
 # ==============================================================================
 if [ $VIOLATIONS_FOUND -eq 1 ]; then
@@ -362,9 +584,10 @@ if [ $VIOLATIONS_FOUND -eq 1 ]; then
   echo "  - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md"
   echo ""
   echo "DTO Pattern Quick Reference:"
+  echo "  ALL PATTERNS: DTOs must be in dtos.ts (inline DTOs BANNED)"
   echo "  Pattern A (Loyalty, Finance, MTL, TableContext): interface OK, mappers.ts REQUIRED"
   echo "  Pattern B (Player, Visit, Casino, FloorLayout): interface BANNED, use type + Pick/Omit"
-  echo "  Pattern C (RatingSlip): Hybrid - per-DTO basis"
+  echo "  Pattern C (RatingSlip): Hybrid - per-DTO basis (still requires dtos.ts)"
   echo ""
   exit 1
 fi

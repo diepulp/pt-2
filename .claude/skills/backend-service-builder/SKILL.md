@@ -13,7 +13,9 @@ description: Build PT-2 service layer modules following bounded context rules, s
 references/
 ├── QUICK_START.md           <- Start here (single entry point)
 ├── dto-rules.md             <- DTO derivation rules (Pattern A vs B) + RPC types
+├── dto-compliance.md        <- DTO pattern enforcement (MANDATORY)
 ├── service-patterns.md      <- Pattern A/B/C + shared types + error handling (ADR-012)
+├── zod-schemas.md           <- Zod validation schemas for HTTP boundaries (ADR-013)
 ├── security-patterns.md     <- Casino context derivation, trust boundaries (V4 critical)
 ├── bounded-contexts.md      <- Table ownership matrix
 ├── validation-checklist.md  <- Pre-merge validation (includes V1-V6, W1-W6 checks)
@@ -72,8 +74,9 @@ Complex business logic? (Loyalty, Finance, MTL)
 
 Simple CRUD? (Player, Visit, Casino)
 └─> Pattern B: Canonical CRUD
-    Files: keys.ts, README.md
+    Files: keys.ts, dtos.ts, selects.ts, mappers.ts, crud.ts, README.md
     DTOs: Pick/Omit from Database types
+    Mappers: Row → DTO transformations (REQUIRED for services with crud.ts)
 
 Mixed complexity? (RatingSlip)
 └─> Pattern C: Hybrid
@@ -99,6 +102,9 @@ npm run db:types
 **All patterns require:**
 - `services/{domain}/keys.ts` - React Query key factories
 - `services/{domain}/README.md` - Service documentation with SRM reference
+
+**HTTP boundary services additionally require:**
+- `services/{domain}/schemas.ts` - Zod validation schemas for request bodies and query params (see ADR-013)
 
 **Pattern A additionally requires:**
 - `services/{domain}/{feature}.ts` - Business logic with inline DTOs
@@ -144,7 +150,7 @@ Run the consistency checker to detect drift:
 ```
 
 This detects:
-- SERVICE_TEMPLATE drift
+- SLAD compliance drift
 - SRM ownership conflicts
 - Migration naming violations
 - DTO standard violations
@@ -153,10 +159,17 @@ This detects:
 
 ## Anti-Patterns
 
+**Pre-commit Enforcement**: Check 11 in `.husky/pre-commit-service-check.sh` automatically blocks `as` type casting in crud.ts files.
+
 | Anti-Pattern | Correct Pattern | Violation |
 |--------------|-----------------|-----------|
 | `interface` for Pattern B DTOs | Use `type` + Pick/Omit | - |
 | Missing `keys.ts` | All services need key factories | - |
+| Missing `mappers.ts` for Pattern B services with crud.ts | Add mappers per SLAD §326-331 | V1 |
+| `as` type assertions in crud.ts | Use mapper functions from mappers.ts | V1 (Check 11) |
+| Missing `schemas.ts` for HTTP boundary services | Add Zod schemas per ADR-013 | ADR-013 |
+| Inline Zod schemas in route handlers | Extract to `schemas.ts` | ADR-013 |
+| **Test files at service root** | **Place in `__tests__/` subdirectory** | **ADR-002** |
 | Cross-context `Database['...']['other_table']` | Import DTO from owning service | - |
 | `ReturnType<typeof createService>` | Explicit `interface XService` | - |
 | `supabase: any` | `supabase: SupabaseClient<Database>` | - |
@@ -164,12 +177,29 @@ This detects:
 | Duplicate `ServiceResult<T>` definition | Import from `lib/http/service-response.ts` | V3 |
 | `headers.get('x-casino-id')` | Derive from authenticated user's staff record | V4 |
 | Service returning `ServiceResult<T>` | Service throws `DomainError`, transport returns envelope | ADR-012 |
+| Foreign domain errors leaking across contexts | Wrap in local domain vocabulary (see service-patterns.md §Cross-Context) | ADR-012 Addendum |
+| Zod schemas importing from `dtos.ts` | Keep schemas independent; DTOs for services, schemas for transport | ADR-013 |
 
 ---
 
 ## Testing Standards
 
-See `docs/40-quality/QA-001-service-testing-strategy.md` and `docs/40-quality/QA-004-tdd-standard.md`.
+See `docs/40-quality/QA-001-service-testing-strategy.md`, `docs/40-quality/QA-004-tdd-standard.md`, and `docs/80-adrs/ADR-002-test-location-standard.md`.
+
+**Test File Organization (ADR-002 v3.0.0):**
+All test files MUST be in `__tests__/` subdirectories:
+```
+services/{domain}/
+├── __tests__/
+│   ├── {domain}.test.ts              # Unit tests
+│   ├── {domain}.integration.test.ts  # Integration tests
+│   └── {feature}.test.ts             # Feature-specific tests
+├── index.ts
+├── crud.ts
+├── dtos.ts
+├── mappers.ts
+└── README.md
+```
 
 **Coverage Targets:**
 - Pattern A services: 90% for CRUD, 85% for workflows
@@ -177,7 +207,7 @@ See `docs/40-quality/QA-001-service-testing-strategy.md` and `docs/40-quality/QA
 - DTO mappers: 100% coverage
 
 **TDD Workflow (QA-004):**
-1. **RED**: Write failing test with typed Supabase double
+1. **RED**: Write failing test in `__tests__/` with typed Supabase double
 2. **GREEN**: Implement minimal service logic
 3. **REFACTOR**: Extract error mapping, add domain errors
 
@@ -192,11 +222,16 @@ Before marking service implementation complete:
 - [ ] RLS policies defined for all new tables
 - [ ] Types regenerated (`npm run db:types`)
 - [ ] keys.ts created with React Query key factories
-- [ ] DTOs follow pattern-appropriate standards
+- [ ] DTOs follow pattern-appropriate standards (dtos.ts with Pick/Omit for Pattern B)
+- [ ] **mappers.ts created for Pattern B services with crud.ts (NO `as` casting)**
+- [ ] **Tests in `__tests__/` subdirectory (ADR-002 v3.0.0)**
+- [ ] **mappers.test.ts in `__tests__/` with unit tests for all mapper functions**
+- [ ] **schemas.ts created for HTTP boundary services (ADR-013)**
+- [ ] **Zod validation failures map to `VALIDATION_ERROR` envelope**
 - [ ] No cross-context table access (validated)
 - [ ] README.md complete with required sections
 - [ ] All validation scripts pass
-- [ ] Tests written and passing (Pattern A)
+- [ ] Tests written and passing (Pattern A and mappers)
 - [ ] Documentation consistency check run
 
 ---
@@ -228,7 +263,8 @@ This skill includes adaptive learning mechanisms. See:
 |----------|----------|
 | SLAD (patterns) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | SRM (boundaries) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| SERVICE_TEMPLATE | `docs/70-governance/SERVICE_TEMPLATE.md` |
 | DTO Standard | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` |
+| **Zod Schemas (ADR-013)** | `docs/80-adrs/ADR-013-zod-validation-schemas.md` |
+| **Test Organization (ADR-002)** | `docs/80-adrs/ADR-002-test-location-standard.md` |
 | Testing Strategy | `docs/40-quality/QA-001-service-testing-strategy.md` |
 | TDD Standard | `docs/40-quality/QA-004-tdd-standard.md` |

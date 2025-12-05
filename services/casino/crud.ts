@@ -27,9 +27,20 @@ import type {
   UpdateCasinoSettingsDTO,
 } from "./dtos";
 import {
+  toCasinoDTO,
+  toCasinoDTOList,
+  toCasinoDTOOrNull,
+  toCasinoSettingsDTO,
+  toCasinoSettingsDTOOrNull,
+  toStaffDTO,
+  toStaffDTOList,
+  toStaffDTOOrNull,
+} from "./mappers";
+import {
   CASINO_SELECT_PUBLIC,
   CASINO_SETTINGS_SELECT,
   STAFF_SELECT_PUBLIC,
+  STAFF_SELECT_PUBLIC_LIST,
 } from "./selects";
 
 // === Casino CRUD ===
@@ -67,7 +78,7 @@ export async function listCasinos(
   const items = hasMore ? data!.slice(0, limit) : (data ?? []);
   const cursor = hasMore ? items[items.length - 1]?.created_at : null;
 
-  return { items: items as CasinoDTO[], cursor };
+  return { items: toCasinoDTOList(items), cursor };
 }
 
 /**
@@ -87,7 +98,7 @@ export async function getCasinoById(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  return data as CasinoDTO | null;
+  return toCasinoDTOOrNull(data);
 }
 
 /**
@@ -115,8 +126,7 @@ export async function createCasino(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase .single() returns typed row
-  return data as CasinoDTO;
+  return toCasinoDTO(data);
 }
 
 /**
@@ -147,8 +157,7 @@ export async function updateCasino(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase .single() returns typed row
-  return data as CasinoDTO;
+  return toCasinoDTO(data);
 }
 
 /**
@@ -190,7 +199,7 @@ export async function getCasinoSettings(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  return data as CasinoSettingsDTO | null;
+  return toCasinoSettingsDTOOrNull(data);
 }
 
 /**
@@ -229,8 +238,7 @@ export async function updateCasinoSettings(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase .single() returns typed row
-  return data as CasinoSettingsDTO;
+  return toCasinoSettingsDTO(data);
 }
 
 // === Staff CRUD ===
@@ -246,7 +254,7 @@ export async function listStaff(
 
   let query = supabase
     .from("staff")
-    .select(STAFF_SELECT_PUBLIC)
+    .select(STAFF_SELECT_PUBLIC_LIST)
     .order("created_at", { ascending: false })
     .limit(limit + 1);
 
@@ -270,12 +278,10 @@ export async function listStaff(
 
   const hasMore = (data?.length ?? 0) > limit;
   const items = hasMore ? data!.slice(0, limit) : (data ?? []);
-  const cursor = hasMore
-    ? // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase select returns typed rows with created_at
-      ((items[items.length - 1] as { created_at?: string })?.created_at ?? null)
-    : null;
+  // Extract cursor from raw data before mapping (staff row has created_at)
+  const cursor = hasMore ? (items[items.length - 1]?.created_at ?? null) : null;
 
-  return { items: items as StaffDTO[], cursor };
+  return { items: toStaffDTOList(items), cursor };
 }
 
 /**
@@ -295,7 +301,7 @@ export async function getStaffById(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  return data as StaffDTO | null;
+  return toStaffDTOOrNull(data);
 }
 
 /**
@@ -341,6 +347,5 @@ export async function createStaff(
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
 
-  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Supabase .single() returns typed row
-  return data as StaffDTO;
+  return toStaffDTO(data);
 }

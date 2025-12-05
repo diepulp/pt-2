@@ -100,7 +100,6 @@ Start with existing documentation:
 3. **Cross-reference core docs**:
    - **SRM** -> Service boundaries and ownership
    - **SLAD** -> Patterns (A/B/C), transport, RLS
-   - **SERVICE_TEMPLATE** -> Deployed vs. planned reality
 
 **Key principle**: Reference and extend what exists rather than designing from scratch.
 
@@ -110,17 +109,17 @@ Start with existing documentation:
 
 ### Service Ownership (from SRM)
 
-| Domain | Key Tables | Pattern |
-|--------|-----------|---------|
-| casino | `casino`, `company`, `staff`, `game_settings` | B (Canonical) |
-| player | `player`, `player_casino` | B (Canonical) |
-| visit | `visit` | B (Canonical) |
-| loyalty | `player_loyalty`, `loyalty_ledger` | A (Contract-First) |
-| rating-slip | `rating_slip` | A (Contract-First) |
-| finance | `player_financial_transaction` | A (Contract-First) |
-| mtl | `mtl_entry`, `mtl_audit_note` | A (Contract-First) |
-| table-context | `gaming_table`, `dealer_rotation` | B (Canonical) |
-| floor-layout | `floor_layout`, `floor_pit` | B (Canonical) |
+| Domain | Key Tables | Pattern | Status |
+|--------|-----------|---------|--------|
+| casino | `casino`, `company`, `staff`, `game_settings` | B (Canonical) | ✅ Deployed |
+| player | `player`, `player_casino` | B (Canonical) | ✅ Deployed |
+| visit | `visit` | B (Canonical) | ✅ Deployed |
+| loyalty | `player_loyalty`, `loyalty_ledger` | A (Contract-First) | Planned |
+| rating-slip | `rating_slip` | C (Hybrid) | REMOVED (rebuild per PRD-002) |
+| finance | `player_financial_transaction` | A (Contract-First) | Planned |
+| mtl | `mtl_entry`, `mtl_audit_note` | A (Contract-First) | Planned |
+| table-context | `gaming_table`, `dealer_rotation` | C (Hybrid) | REMOVED (rebuild per PRD-006) |
+| floor-layout | `floor_layout`, `floor_pit` | B (Canonical) | ✅ Deployed |
 
 ### Pattern Selection
 
@@ -137,11 +136,19 @@ Start with existing documentation:
 
 ### PT-2 Anti-Patterns (Avoid)
 
+**Service Layer**:
 - Class-based services
 - `ReturnType<typeof createXService>`
 - Global singletons or stateful factories
 - `as any` type casting
 - Over-engineered abstractions
+
+**DTO Anti-Patterns (CRITICAL)** - See `references/dto-compliance.md`:
+- Manual `interface` for Pattern B services (schema evolution blindness)
+- Raw `Row` type exports (exposes internal fields)
+- Missing `dtos.ts` in Pattern B services (CI gate failure)
+- `as` casting on RPC responses (type safety bypass)
+- Cross-context direct table access (bounded context violation)
 
 ---
 
@@ -181,8 +188,35 @@ Before completing, run validation checklist:
 - [ ] No anti-patterns introduced
 - [ ] ADRs don't contradict each other
 - [ ] All affected docs updated atomically
+- [ ] **DTO compliance verified** (see below)
 - [ ] **OE-01 Check passed** (see below)
 - [ ] **Testing strategy defined** (see below)
+
+### DTO Compliance Check (MANDATORY)
+
+**Reference**: `references/dto-compliance.md`, `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
+
+```markdown
+### Pattern B Services (casino, player, visit, floor-layout)
+- [ ] Has `dtos.ts` with Pick/Omit types
+- [ ] Has `selects.ts` with named column sets
+- [ ] Has `keys.ts` with React Query key factories
+- [ ] Has `crud.ts` with CRUD operations
+- [ ] NO manual `interface` declarations
+- [ ] NO raw `Row` type exports
+
+### Pattern A Services (loyalty, finance, mtl)
+- [ ] DTOs extracted to `dtos.ts` if consumed by 2+ services
+- [ ] Has `mappers.ts` with typed input (REQUIRED)
+- [ ] Cross-context DTOs published for consumers
+
+### Pattern C Services (table-context, rating-slip) - REMOVED
+> When rebuilt per PRD-002/PRD-006, follow `dto-compliance.md` Pattern C section
+
+### All Services
+- [ ] NO `as` casting on RPC responses
+- [ ] NO cross-context `Database['...']['Tables']['foreign']` access
+```
 
 ### OE-01 Over-Engineering Check
 
@@ -249,8 +283,8 @@ Phase 1: Core Services (GATE-1) ← Blocked by Phase 0
 └── VisitService (PRD-003)
 
 Phase 2: Session Management + UI (GATE-2)
-├── TableContextService ✓
-├── RatingSlipService ✓
+├── TableContextService (REMOVED - rebuild per PRD-006)
+├── RatingSlipService (REMOVED - rebuild per PRD-002)
 └── PitDashboard
 
 Phase 3: Rewards & Compliance (GATE-3)
@@ -313,6 +347,8 @@ ctx.record_service_completion(
 | Topic | Reference |
 |-------|-----------|
 | **Database types (SOT)** | `types/database.types.ts` |
+| **DTO Standard (MANDATORY)** | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` |
+| **DTO Compliance Guide** | `references/dto-compliance.md` |
 | **MVP Roadmap (baseline)** | `docs/20-architecture/MVP-ROADMAP.md` |
 | **MVP Status (live)** | `/mvp-status` command |
 | Output templates | `references/output-templates.md` |
@@ -320,7 +356,7 @@ ctx.record_service_completion(
 | Full validation checklist | `references/validation-checklist.md` |
 | Service patterns (full) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | Service boundaries (full) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| Implementation reality | `docs/70-governance/SERVICE_TEMPLATE.md` |
+| Anti-patterns | `docs/70-governance/ANTI_PATTERN_CATALOG.md` |
 | Testing strategy | `docs/40-quality/QA-001-service-testing-strategy.md` |
 | TDD standard | `docs/40-quality/QA-004-tdd-standard.md` |
 | MVP Progress Tracker | `lib/memori/mvp_progress_context.py` |

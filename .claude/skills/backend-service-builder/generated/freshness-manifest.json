@@ -5,16 +5,6 @@
   "description": "Tracks source document hashes to detect when primitives become stale",
 
   "source_documents": {
-    "SERVICE_TEMPLATE": {
-      "path": "docs/70-governance/SERVICE_TEMPLATE.md",
-      "version": "2.0.3",
-      "sha256": "5638fa1970700bfefdcb1c1cf50ca5af790ee4632f2c553b27e97d1ac4835336",
-      "last_verified": "2025-11-27",
-      "derived_primitives": [
-        "references/service-patterns.md",
-        "references/QUICK_START.md"
-      ]
-    },
     "SLAD": {
       "path": "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md",
       "version": "2.1.2",
@@ -42,12 +32,22 @@
       "derived_primitives": [
         "references/bounded-contexts.md"
       ]
+    },
+    "ADR-012": {
+      "path": "docs/80-adrs/ADR-012-error-handling-layers.md",
+      "version": "1.0.0",
+      "sha256": "manual-tracking",
+      "last_verified": "2025-12-03",
+      "derived_primitives": [
+        "references/service-patterns.md"
+      ],
+      "notes": "ADR-012 Addendum selective adoption (PRD-003A §9.2, PRD-003B §10.3): ADOPT §2 cross-context, §5 assertOk, §8 observability. DEFER §1 InfrastructureError, §4 withEntrypoint, §7 test matchers."
     }
   },
 
   "primitives": {
     "references/QUICK_START.md": {
-      "sources": ["SERVICE_TEMPLATE", "SLAD"],
+      "sources": ["SLAD"],
       "purpose": "Single entry point for sub-agent",
       "created": "2025-11-27"
     },
@@ -57,9 +57,9 @@
       "created": "2025-11-27"
     },
     "references/service-patterns.md": {
-      "sources": ["SERVICE_TEMPLATE", "SLAD"],
-      "purpose": "Pattern A/B/C implementation details",
-      "updated": "2025-11-27"
+      "sources": ["SLAD", "ADR-012"],
+      "purpose": "Pattern A/B/C implementation details + ADR-012 error handling + Addendum selective adoption",
+      "updated": "2025-12-03"
     },
     "references/bounded-contexts.md": {
       "sources": ["SRM", "SLAD"],
@@ -67,12 +67,12 @@
       "updated": "2025-11-27"
     },
     "references/validation-checklist.md": {
-      "sources": ["SERVICE_TEMPLATE"],
+      "sources": ["SLAD"],
       "purpose": "Pre-merge validation checklist",
-      "updated": "2025-11-26"
+      "updated": "2025-12-03"
     },
     "references/migration-workflow.md": {
-      "sources": ["SERVICE_TEMPLATE"],
+      "sources": ["SLAD"],
       "purpose": "Database migration workflow",
       "updated": "2025-11-21"
     },

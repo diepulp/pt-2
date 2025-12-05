@@ -1,7 +1,65 @@
-# PT-2 Architecture Standards
+# PT-2 Pit Station
 
-<!-- Auto-load Memory Files (Phase 1 Agentic Workflow) -->
-<!-- These 6 memory files provide compressed context from 203k-word documentation -->
+Casino pit management system for tracking player sessions, rating slips, and loyalty rewards at gaming tables. Built for pit bosses and floor supervisors to manage real-time table operations.
+
+## Project Structure
+
+**Next.js 15 App Router at root level. NO `src/` directory.**
+
+```
+pt-2/
+├── app/                    # Routes, layouts, API handlers, server actions
+├── components/             # React components (ui/, table/, rating-slip/)
+├── hooks/                  # Domain-organized React hooks
+├── services/               # Service layer (casino, player, rating-slip, visit)
+├── lib/                    # Core utilities (supabase, errors, query, http)
+├── types/                  # TypeScript types (database.types.ts = source of truth)
+├── supabase/migrations/    # SQL migrations
+├── docs/                   # Architecture & governance documentation
+└── memory/                 # Compressed context files
+```
+
+## Quick Reference
+
+```bash
+npm run dev              # Dev server at localhost:3000
+npm run build            # Production build
+npm run test             # Jest tests
+npm run db:types         # Regenerate types after migrations
+```
+
+## Documentation Navigation
+
+Use **`docs/patterns/SDLC_DOCS_TAXONOMY.md`** to locate documentation by category:
+
+| Category | What It Contains | Location |
+|----------|------------------|----------|
+| **V&S** | Vision, goals, scope | `docs/00-vision/` |
+| **PRD** | Product requirements, features | `docs/10-prd/` |
+| **ARCH** | Service architecture, bounded contexts | `docs/20-architecture/` |
+| **API/DATA** | OpenAPI specs, DTOs, schema | `docs/25-api-data/` |
+| **SEC/RBAC** | RLS policies, role matrix | `docs/30-security/` |
+| **DEL/QA** | Test strategy, quality gates | `docs/40-quality/` |
+| **OPS/SRE** | Observability, runbooks | `docs/50-ops/` |
+| **REL** | Release notes, rollout plans | `docs/60-release/` |
+| **GOV** | Standards, anti-patterns, guardrails | `docs/70-governance/` |
+| **ADR** | Architecture decision records | `docs/80-adrs/` |
+
+**Start here**: `docs/INDEX.md` for full documentation index.
+
+## Memori Engine
+
+Cross-session memory system for agent continuity. Stores lightweight context in PostgreSQL (`memori` schema).
+
+- **Session recall**: `/memory-recall` command to query past decisions
+- **Progress tracking**: `/mvp-status` for implementation phase status
+- **Architecture memory**: `/arch-memory` for architectural decisions
+
+Memori stores pointers and learnings, not full documents. Documentation lives in `docs/` (git-controlled).
+
+## Memory Files (Compressed Context)
+
+These files provide compressed context from 200k+ words of documentation:
 
 @memory/project.memory.md
 @memory/anti-patterns.memory.md
@@ -10,64 +68,17 @@
 @memory/service-catalog.memory.md
 @memory/domain-glossary.memory.md
 
-<!-- Full Documentation References (use when memory files insufficient) -->
-<!-- Service Architecture: docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md -->
-<!-- Patterns: docs/patterns/BALANCED_ARCHITECTURE_QUICK.md -->
-<!-- Bounded Contexts: docs/patterns/SERVICE_RESPONSIBILITY_MATRIX.md -->
-<!-- State Management: docs/adr/ADR-003-state-management-strategy.md -->
-<!-- Integrity: docs/integrity/INTEGRITY_FRAMEWORK.md -->
-<!-- Index: docs/INDEX.md -->
+## Tech Stack
 
-## Critical Standards (Quick Reference)
+- **Framework**: Next.js 15 (App Router), React 19
+- **Database**: Supabase (PostgreSQL + RLS)
+- **State**: TanStack Query v5, Zustand
+- **UI**: Tailwind CSS v4, shadcn/ui
+- **Testing**: Jest, Playwright
 
-### Over-Engineering Guardrail
+## Critical Guardrails
 
-See `docs/patterns/OVER_ENGINEERING_GUARDRAIL.md`
-
-### Service Layer
-
-- Use functional factories, not classes
-- Explicit interfaces, ban `ReturnType` inference
-- Type `supabase` parameter as `SupabaseClient<Database>`, never `any`
-- No global singletons or stateful factories
-
-### Type System
-
-- Single source: `types/database.types.ts`
-- No manual table type redefinitions
-- Use Pick/Omit/mapped types only
-- **CRITICAL**: Run `npm run db:types` after every migration
-- **CRITICAL**: Schema verification test MUST pass before merge
-
-### Real-Time
-
-- Domain-specific hooks only
-- No global connection pools or managers
-- Clean up subscriptions on unmount
-
-### Anti-Patterns (DO NOT)
-
-- ❌ Class-based services
-- ❌ `ReturnType<typeof createXService>`
-- ❌ Global real-time managers
-- ❌ `console.*` in production
-- ❌ Deprecated code marked `@deprecated`
-- ❌ `as any` type casting
-
-### DB Workflow
-
-- all migrations are ran against the local db
-- do not use psql, it Doesn't trigger cache reload — must run NOTIFY pgrst, 'reload schema'
-- Apply migrations via **npx supabase migration** up or **npx supabase db reset**
-
-### Migration Naming Convention
-
-- **REQUIRED**: All migration files MUST follow `YYYYMMDDHHMMSS_description.sql` pattern
-- Use actual file creation timestamp: `date +"%Y%m%d%H%M%S"`
-- ❌ DO NOT use simplified patterns like `YYYYMMDD000001` or `YYYYMMDD_description`
-- ✅ Example: `20251014134942_mtl_schema_enhancements.sql`
-
-
-### UI
-
-- The de-facto standard for UI is shadcn UI library and the respective registries provided by the Shadcn MCP server
+- Types from `types/database.types.ts` only (run `npm run db:types` after migrations)
+- Functional factories for services, not classes
+- No `as any`, no `console.*` in production
+- See `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` before adding abstractions

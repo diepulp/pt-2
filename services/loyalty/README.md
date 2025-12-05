@@ -117,5 +117,5 @@ const result = await supabase.rpc('rpc_issue_mid_session_reward', {
 
 - **SRM Section**: [§1061-1274](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
 - **API Surface**: [API_SURFACE_MVP.md](../../docs/25-api-data/API_SURFACE_MVP.md) (Loyalty Domain)
-- **Service Template**: [SERVICE_TEMPLATE.md](../../docs/70-governance/SERVICE_TEMPLATE.md)
+- **SLAD Structure**: [SLAD §308-350](../../docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
 - **DTO Standard**: [DTO_CANONICAL_STANDARD.md](../../docs/25-api-data/DTO_CANONICAL_STANDARD.md)

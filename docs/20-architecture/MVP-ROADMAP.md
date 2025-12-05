@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 1.1.0
+**Version**: 1.3.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-11-29
+**Updated**: 2025-12-03
 **Owner**: Lead Architect
 
 ---
@@ -15,11 +15,14 @@
 |-------|-----|--------|-------|
 | **0** | **PRD-HZ-001** | **COMPLETE** ✅ | GATE-0 Horizontal Infrastructure |
 | **1** | **PRD-000** | **COMPLETE** ✅ | CasinoService (Root Authority) |
-| 1 | **PRD-003** | **Ready** ✅ | PlayerService + VisitService |
-| 2 | PRD-002 | **Retrofitted** ✅ | TableContext/RatingSlip using new middleware |
-| 3 | PRD-004 | Draft | Mid-Session Loyalty |
-| 3 | PRD-005 | Draft | Compliance Monitoring |
-| 3 | PRD-001 | Draft | Player Financial Service |
+| **1** | **PRD-003** | **COMPLETE** ✅ | PlayerService + VisitService (Pattern B refactor) |
+| **1** | **PRD-003A** | **COMPLETE** ✅ | PlayerService Pattern B refactor |
+| **1** | **PRD-003B** | **COMPLETE** ✅ | VisitService Pattern B refactor |
+| **2** | **PRD-002** | **Pending** | TableContext + RatingSlip REMOVED (rebuild when needed) |
+| **2** | **PRD-006** | **Draft** | Pit Dashboard UI (GATE-2 blocker) |
+| 3 | PRD-004 | **Partial** | Mid-Session Loyalty (routes exist, service factory incomplete) |
+| 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
+| 3 | PRD-001 | **Partial** | Player Financial Service (routes exist, keys only) |
 
 > **PRD-HZ-001 Complete (2025-11-29)**: All 4 workstreams delivered:
 > - WS1: Middleware architecture (6 modules)
@@ -33,13 +36,23 @@
 > - Routes: GET/POST /casino, GET/PATCH /casino/[id], /settings, /staff, /gaming-day
 > - Tests: 125 unit/integration tests passing
 >
-> **PRD-002 Retrofit**: TableContextService and RatingSlipService routes have been migrated to use the new `withServerAction` middleware. P1/P2 routes can be migrated incrementally.
+> **PRD-002 Status**: TableContextService was removed (incomplete implementation, ~10% done). RatingSlipService was also removed in prior cleanup. These will be rebuilt correctly when PRD-002 implementation actually begins.
 >
-> **PRD-003 Ready (2025-11-29)**: PlayerService + VisitService PRD drafted and validated:
-> - Identity context: Player profile, enrollment, search
-> - Session lifecycle: Visit check-in/check-out
-> - RLS policies, Route Handlers, React Query hooks defined
-> - Unblocks: RatingSlipService, LoyaltyService, PitDashboard
+> **PRD-003 Complete (2025-11-30)**: PlayerService + VisitService fully implemented:
+> - Migration: `20251129230733_prd003_player_visit_rls.sql` (RLS, indexes, constraints)
+> - PlayerService: search, enrollment, CRUD, functional factory, DTOs, schemas
+> - VisitService: check-in/check-out, idempotent, active visit constraint
+> - Routes: 8 endpoints at `/api/v1/players/*` and `/api/v1/visits/*`
+> - Tests: Unit tests for both services
+> - Unblocks: GATE-2 (PitDashboard), Phase 3 services
+>
+> **PRD-003A/B Complete (2025-12-03)**: Pattern B refactor for both services:
+> - PlayerService: `selects.ts`, `mappers.ts`, `crud.ts` (6 mapper functions, DomainError handling)
+> - VisitService: `selects.ts`, `mappers.ts`, `crud.ts` (6 mapper functions, DomainError handling)
+> - API change: `startVisit(playerId, casinoId)` now requires explicit casinoId
+> - Tests relocated to `__tests__/` subdirectories per ADR-002
+> - Zero `as` type assertions - all transformations via mappers
+> - ADR-012 Addendum: cross-context error propagation, `assertOk` helper pattern
 
 ---
 
@@ -59,11 +72,11 @@ Establishes a complete implementation baseline for MVP delivery, addressing gaps
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| **Database Schema** | Partial | Migrations exist; types generated |
-| **Service Layer** | 25% | TableContextService, RatingSlipService implemented |
-| **API Routes** | Active | 7 P0 routes using new middleware, 28 remaining |
-| **React Query Keys** | Partial | Key factories exist for most domains |
-| **UI Components** | Minimal | Landing page, auth forms, shadcn/ui base |
+| **Database Schema** | **~90%** | 16 migrations deployed; types generated |
+| **Service Layer** | **~50%** | 3/6 core services implemented (Casino, Player, Visit) |
+| **API Routes** | **~60%** | Core routes deployed; table-context/rating-slip routes removed |
+| **React Query Keys** | **Complete** | Key factories for all implemented services |
+| **UI Components** | Minimal | Landing page, auth forms, shadcn/ui base, prototype components |
 | **Horizontal Infra** | **COMPLETE** ✅ | withServerAction, ServiceResult, error mapping, query client |
 
 ### Critical Gaps
@@ -76,16 +89,31 @@ HORIZONTAL LAYERS ✅ COMPLETE (PRD-HZ-001)
 ├── Rate limiting infrastructure (in-memory, single-instance) ✅
 └── Correlation ID propagation ✅
 
-UI LAYER (Required to demo/test implementation)
-├── Pit Dashboard (table status, active slips)
-├── Rating Slip Management UI
-├── Player Check-in Flow
-└── Loyalty Rewards Display
+CORE SERVICES ✅ COMPLETE (PRD-000, PRD-003, PRD-003A/B)
+├── CasinoService (Pattern B: selects, mappers, crud) ✅
+├── PlayerService (Pattern B: selects, mappers, crud) ✅
+└── VisitService (Pattern B: selects, mappers, crud) ✅
 
-PROGRESS TRACKING
-├── Gate validation automation
-├── Service completion criteria
-└── Memori integration for velocity tracking
+SESSION MANAGEMENT ❌ REMOVED (PRD-002)
+├── TableContextService - DELETED (routes + service removed 2025-12-02)
+├── RatingSlipService - DELETED (routes + service removed 2025-12-02)
+└── Will be rebuilt from scratch when PRD-002 implementation begins
+
+UI LAYER (GATE-2 Blocker - Required to demo/test)
+├── Pit Dashboard (table status, active slips) ❌
+├── Rating Slip Management UI (routes REMOVED, rebuild with PRD-002)
+├── Player Check-in Flow (routes ready, UI pending)
+└── Loyalty Rewards Display (routes ready, UI pending)
+
+PHASE 3 SERVICES (Partial - routes exist, factories incomplete)
+├── LoyaltyService - keys only (mid-session-reward.ts DELETED)
+├── PlayerFinancialService - keys only
+└── MTLService - keys only (view-model.ts DELETED)
+
+PROGRESS TRACKING ✅ INTEGRATED
+├── MVPProgressContext with 16 memories recorded
+├── Service completion tracking via Memori
+└── Velocity metrics available via /mvp-status
 ```
 
 ---
@@ -260,36 +288,93 @@ $$ LANGUAGE plpgsql STABLE;
 - [x] RLS policies enforce casino scoping
 - [x] 125 tests passing (unit + integration)
 
-### 1.2 PlayerService (Identity Context)
+### 1.2 PlayerService (Identity Context) — COMPLETE ✅
 
-**PRD Reference**: PRD-003
+**PRD Reference**: PRD-003, PRD-003A
+**Completed**: 2025-11-30 (initial), 2025-12-03 (Pattern B refactor)
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Service** | PlayerService factory | `services/player/index.ts` | P0 |
-| **DTOs** | PlayerDTO, PlayerEnrollmentDTO | `services/player/dtos.ts` | P0 |
-| **Route** | `POST /api/players` | `app/api/players/route.ts` | P1 |
-| **Hook** | `usePlayer`, `usePlayerSearch` | `hooks/use-player.ts` | P1 |
-| **UI** | Player search/select | `components/player/player-search.tsx` | P1 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Migration** | RLS policies, indexes | `supabase/migrations/20251129230733_prd003_player_visit_rls.sql` | ✅ |
+| **Selects** | Named column projections | `services/player/selects.ts` | ✅ |
+| **Mappers** | Row→DTO transformers | `services/player/mappers.ts` | ✅ |
+| **CRUD** | Database operations | `services/player/crud.ts` | ✅ |
+| **Service** | PlayerService factory | `services/player/index.ts` | ✅ |
+| **DTOs** | PlayerDTO, PlayerEnrollmentDTO, PlayerSearchResultDTO | `services/player/dtos.ts` | ✅ |
+| **Schemas** | Zod validation schemas | `services/player/schemas.ts` | ✅ |
+| **Keys** | Query key factory | `services/player/keys.ts` | ✅ |
+| **HTTP** | Fetcher functions | `services/player/http.ts` | ✅ |
+| **Routes** | CRUD + enrollment | `app/api/v1/players/**` | ✅ |
+| **Tests** | Unit tests | `services/player/__tests__/player.service.test.ts` | ✅ |
 
-### 1.3 VisitService (Session Context)
+**Pattern B Architecture** (PRD-003A):
+```
+services/player/
+├── __tests__/player.service.test.ts  # Tests in __tests__/ per ADR-002
+├── selects.ts     # PLAYER_SELECT, ENROLLMENT_SELECT, PLAYER_SEARCH_SELECT
+├── mappers.ts     # toPlayerDTO, toEnrollmentDTO, toPlayerSearchResultDTO families
+├── crud.ts        # Database ops with DomainError handling
+├── index.ts       # Factory delegating to crud.ts
+├── dtos.ts, schemas.ts, keys.ts, http.ts
+```
 
-**PRD Reference**: PRD-003
+**Implemented Methods**:
+- `search(query, limit)` - Fuzzy name search with enrollment status
+- `list(filters)` - Paginated player list
+- `getById(playerId)` - Player detail
+- `create(data)` - Create player profile
+- `update(playerId, data)` - Update player
+- `enroll(playerId, casinoId)` - Idempotent enrollment
+- `getEnrollment(playerId)` - Check enrollment status
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Service** | VisitService factory | `services/visit/index.ts` | P0 |
-| **DTOs** | VisitDTO, CheckInDTO | `services/visit/dtos.ts` | P0 |
-| **Route** | `POST /api/visit/start` | `app/api/visit/start/route.ts` | P1 |
-| **Hook** | `useVisit`, `useStartVisit` | `hooks/use-visit.ts` | P1 |
-| **UI** | Check-in flow | `components/visit/check-in-dialog.tsx` | P1 |
+### 1.3 VisitService (Session Context) — COMPLETE ✅
 
-**Gate 1 Definition of Done**:
-- [ ] CasinoService with temporal authority operational
-- [ ] PlayerService with enrollment working
-- [ ] VisitService with check-in/check-out
-- [ ] All services use `ServiceResult<T>`
-- [ ] Integration tests pass with RLS enabled
+**PRD Reference**: PRD-003, PRD-003B
+**Completed**: 2025-11-30 (initial), 2025-12-03 (Pattern B refactor)
+
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Selects** | Named column projections | `services/visit/selects.ts` | ✅ |
+| **Mappers** | Row→DTO transformers | `services/visit/mappers.ts` | ✅ |
+| **CRUD** | Database operations | `services/visit/crud.ts` | ✅ |
+| **Service** | VisitService factory | `services/visit/index.ts` | ✅ |
+| **DTOs** | VisitDTO, ActiveVisitDTO, VisitWithPlayerDTO | `services/visit/dtos.ts` | ✅ |
+| **Schemas** | Zod validation schemas | `services/visit/schemas.ts` | ✅ |
+| **Keys** | Query key factory | `services/visit/keys.ts` | ✅ |
+| **HTTP** | Fetcher functions | `services/visit/http.ts` | ✅ |
+| **Routes** | CRUD + active check | `app/api/v1/visits/**` | ✅ |
+| **Tests** | Unit tests | `services/visit/__tests__/visit.service.test.ts` | ✅ |
+
+**Pattern B Architecture** (PRD-003B):
+```
+services/visit/
+├── __tests__/visit.service.test.ts  # Tests in __tests__/ per ADR-002
+├── selects.ts     # VISIT_SELECT, VISIT_WITH_PLAYER_SELECT, ACTIVE_VISIT_SELECT
+├── mappers.ts     # toVisitDTO, toVisitWithPlayerDTO, toActiveVisitDTO families
+├── crud.ts        # Database ops with DomainError handling
+├── index.ts       # Factory delegating to crud.ts
+├── dtos.ts, schemas.ts, keys.ts, http.ts
+```
+
+**Implemented Methods**:
+- `list(filters)` - Paginated visit list with player join
+- `getById(visitId)` - Visit detail
+- `getActiveForPlayer(playerId)` - Active visit check
+- `startVisit(playerId, casinoId)` - Idempotent check-in (casinoId required per PRD-003B)
+- `closeVisit(visitId)` - Check-out with timestamp
+
+**Validation Gate 1.2-1.3**: ✅ PASSED
+- [x] PlayerService factory with search, enrollment, CRUD
+- [x] VisitService with idempotent check-in/check-out
+- [x] RLS policies enforce casino scoping
+- [x] Single active visit constraint enforced at DB level
+
+**Gate 1 Definition of Done**: ✅ ALL COMPLETE
+- [x] CasinoService with temporal authority operational
+- [x] PlayerService with enrollment working
+- [x] VisitService with check-in/check-out
+- [x] All services use `ServiceResult<T>`
+- [x] Integration tests pass with RLS enabled
 
 ---
 
@@ -297,72 +382,147 @@ $$ LANGUAGE plpgsql STABLE;
 
 **Timeline**: Operational features with dashboard
 **Approach**: VERTICAL + UI focus
+**Status**: 🔴 SERVICES REMOVED — Rebuild required before GATE-2 completion
 
-### 2.1 TableContextService Enhancement
+### 2.1 TableContextService — ❌ REMOVED
 
-**Status**: Partially implemented (PRD-002)
+**PRD Reference**: PRD-002
+**Status**: DELETED (2025-12-02) — Implementation was ~10% complete, did not follow Pattern B
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Route** | `POST /api/tables/{id}/open` | `app/api/tables/[id]/open/route.ts` | P0 |
-| **Hook** | `useOpenTable`, `useCloseTable` | `hooks/use-table.ts` | P0 |
-| **UI** | Table status card | `components/table/table-card.tsx` | P0 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Migration** | Chip custody tables | `supabase/migrations/20251108195341_table_context_chip_custody.sql` | ✅ (DB schema intact) |
+| **Service** | TableContextService | `services/table-context/` | ❌ DELETED |
+| **Routes** | Table context API | `app/api/v1/table-context/**` | ❌ DELETED |
+| **Tests** | Service tests | `services/table-context/*.test.ts` | ❌ DELETED |
 
-### 2.2 RatingSlipService Enhancement
+**Rebuild Requirements** (when PRD-002 implementation begins):
+- Must follow Pattern B: `selects.ts`, `mappers.ts`, `crud.ts`
+- State machine for table transitions (`inactive` ↔ `active` → `closed`)
+- Type-safe Row→DTO mappers with zero `as` assertions
+- Tests in `__tests__/` subdirectory per ADR-002
 
-**Status**: Partially implemented (PRD-002)
+### 2.2 RatingSlipService — ❌ REMOVED
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Route** | Full CRUD routes | `app/api/rating-slips/route.ts` | P0 |
-| **Hook** | `useRatingSlip`, mutations | `hooks/use-rating-slip.ts` | P0 |
-| **UI** | Slip management modal | `components/rating-slip/slip-modal.tsx` | P0 |
+**PRD Reference**: PRD-002
+**Status**: DELETED (2025-12-02) — Implementation had architectural issues
 
-### 2.3 Pit Dashboard (New)
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Migration** | Pause tracking | `supabase/migrations/20251128221408_rating_slip_pause_tracking.sql` | ✅ (DB schema intact) |
+| **Migration** | Seat number | `supabase/migrations/20251125214329_add_rating_slip_seat_number.sql` | ✅ (DB schema intact) |
+| **Service** | RatingSlipService | `services/rating-slip/` | ❌ DELETED |
+| **Routes** | Rating slip API | `app/api/v1/rating-slips/**`, `app/api/v1/rating-slip/**` | ❌ DELETED |
+| **Tests** | Service tests | `services/rating-slip/*.test.ts` | ❌ DELETED |
 
-**Critical UI Component** - Primary operational interface
+**Rebuild Requirements** (when PRD-002 implementation begins):
+- Must follow Pattern B: `selects.ts`, `mappers.ts`, `crud.ts`
+- State machine for slip lifecycle (start → pause → resume → close)
+- Duration calculation excluding pauses
+- Type-safe Row→DTO mappers with zero `as` assertions
+- Tests in `__tests__/` subdirectory per ADR-002
+
+### 2.3 Pit Dashboard — PRD-006
+
+**PRD Reference**: PRD-006-pit-dashboard.md
+**Critical UI Component** - Primary operational interface (GATE-2 blocker)
 
 | Item | Location | Description | Priority |
 |------|----------|-------------|----------|
 | Dashboard layout | `app/dashboard/page.tsx` | Main pit operations view | P0 |
-| Table grid | `components/dashboard/table-grid.tsx` | Visual table status | P0 |
+| Table grid | `components/table/table-layout-terminal.tsx` | Visual table status | P0 |
 | Active slips panel | `components/dashboard/active-slips.tsx` | Current sessions | P0 |
 | Player activity | `components/dashboard/player-activity.tsx` | Recent check-ins | P1 |
 | Realtime updates | `hooks/use-dashboard-realtime.ts` | Supabase channels | P1 |
 
-**Dashboard Wireframe**:
+**Dashboard Wireframe** (Updated: Uses `TableLayoutTerminal` component):
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  PT-2 Pit Dashboard                    [Casino Name] [User] │
-├─────────────────────────────────────────────────────────────┤
-│  ┌─────────────┐ ┌─────────────┐ ┌─────────────┐           │
-│  │ Active: 5   │ │ Open Slips: │ │ Players:    │           │
-│  │ Tables      │ │ 12          │ │ 8 checked-in│           │
-│  └─────────────┘ └─────────────┘ └─────────────┘           │
-├─────────────────────────────────────────────────────────────┤
-│  TABLE GRID                                                 │
-│  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐                   │
-│  │ T1  │ │ T2  │ │ T3  │ │ T4  │ │ T5  │                   │
-│  │ BJ  │ │ BJ  │ │ PKR │ │ BAC │ │ RLT │                   │
-│  │ ●●● │ │ ●●  │ │ ●   │ │ ●●●●│ │     │                   │
-│  └─────┘ └─────┘ └─────┘ └─────┘ └─────┘                   │
-│  [OPEN] [OPEN] [OPEN] [OPEN] [CLOSED]                       │
-├─────────────────────────────────────────────────────────────┤
-│  ACTIVE RATING SLIPS                          [+ New Slip]  │
-│  ┌─────────────────────────────────────────────────────────┐│
-│  │ Player      │ Table │ Duration │ Avg Bet │ Actions     ││
-│  │ John D.     │ T1    │ 0:45:30  │ $25     │ [Pause][End]││
-│  │ Jane S.     │ T2    │ 1:12:00  │ $50     │ [Pause][End]││
-│  └─────────────────────────────────────────────────────────┘│
-└─────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────┐
+│  PT-2 Pit Dashboard                             [Casino Name] [User]  │
+├───────────────────────────────────────────────────────────────────────┤
+│  ┌────────────────┐ ┌────────────────┐ ┌────────────────┐            │
+│  │ Active Tables  │ │ Open Slips     │ │ Players        │            │
+│  │      5/8       │ │      12        │ │ 8 checked-in   │            │
+│  └────────────────┘ └────────────────┘ └────────────────┘            │
+├───────────────────────────────────────────────────────────────────────┤
+│  TABLE VIEW - Select table to manage (powered by TableLayoutTerminal)│
+│                                                                       │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │  T1 · Blackjack · ACTIVE                    [Open Table Actions]│ │
+│  │                    ╭───────────────────────────╮                │ │
+│  │              ╱    1    2    3    4    5    6    ╲               │ │
+│  │            ╱     ●    ●    ○    ●    ○    ○      ╲              │ │
+│  │           │                                       │             │ │
+│  │           │            ┌─────────┐                │             │ │
+│  │           │            │ DEALER  │                │             │ │
+│  │           │            │  Mike   │                │             │ │
+│  │            ╲           └─────────┘               ╱              │ │
+│  │              ╲─────────────────────────────────╱                │ │
+│  │                                                                 │ │
+│  │  ● = Occupied (3)    ○ = Available (3)    [2 Active Slips]     │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+│                                                                       │
+│  ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐ ┌───────┐       │
+│  │ T1    │ │ T2    │ │ T3    │ │ T4    │ │ T5    │ │ T6    │       │
+│  │ BJ ●  │ │ BJ ●  │ │ PKR ● │ │ BAC ● │ │ RLT ○ │ │ BAC ○ │       │
+│  │ 3/6   │ │ 2/6   │ │ 1/8   │ │ 4/8   │ │ 0/6   │ │ 0/8   │       │
+│  └───────┘ └───────┘ └───────┘ └───────┘ └───────┘ └───────┘       │
+│    ACTIVE    ACTIVE    ACTIVE    ACTIVE   CLOSED   INACTIVE        │
+├───────────────────────────────────────────────────────────────────────┤
+│  ACTIVE RATING SLIPS AT SELECTED TABLE                [+ New Slip]   │
+│  ┌─────────────────────────────────────────────────────────────────┐ │
+│  │ Seat │ Player      │ Duration  │ Avg Bet │ Status │ Actions    │ │
+│  │  1   │ John D.     │ 0:45:30   │ $25     │ OPEN   │ [Pause][⏹] │ │
+│  │  2   │ Jane S.     │ 1:12:00   │ $50     │ PAUSED │ [▶][⏹]     │ │
+│  └─────────────────────────────────────────────────────────────────┘ │
+└───────────────────────────────────────────────────────────────────────┘
+
+Legend:
+  ● Active table (has players/slips)    ○ Inactive/Closed table
+  BJ = Blackjack, PKR = Poker, BAC = Baccarat, RLT = Roulette
+  3/6 = 3 occupied seats out of 6 total
 ```
 
-**Gate 2 Definition of Done**:
-- [ ] Pit Dashboard operational
-- [ ] Table open/close from UI
-- [ ] Rating slip start/pause/resume/close from UI
+**TableLayoutTerminal Component Enhancements Required**:
+
+The existing `components/table/table-layout-terminal.tsx` provides:
+- ✅ Semi-circular table layout with seats
+- ✅ Seat occupancy (firstName, lastName)
+- ✅ Dealer position with optional name
+- ✅ Loading state
+- ✅ Interactive seat clicking
+- ✅ Stats footer (Occupied/Available)
+
+**Additions needed for dashboard integration**:
+
+| Enhancement | Description | Priority |
+|-------------|-------------|----------|
+| `tableId` prop | Display table identifier (T1, T2, etc.) | P0 |
+| `gameType` prop | Show game type badge (BJ, PKR, BAC, RLT) | P0 |
+| `tableStatus` prop | Visual status indicator (active/inactive/closed) | P0 |
+| `activeSlipsCount` prop | Badge showing active rating slips at table | P0 |
+| `onTableAction` callback | Quick actions (open/close table, view slips) | P1 |
+| Compact mode variant | Smaller version for grid view (thumbnail) | P1 |
+| `selectedTable` state | Highlight when selected in grid | P1 |
+| `Table min/max` state | Display table limits on the layout
+
+**Validation Gate 2.1-2.2**: ❌ NOT PASSED (services removed)
+- [ ] TableContextService state machine — REBUILD REQUIRED
+- [ ] RatingSlipService lifecycle with pause tracking — REBUILD REQUIRED
+- [ ] All routes use `withServerAction` middleware — Routes removed
+- [ ] Integration tests pass — Tests removed
+
+**Gate 2 Definition of Done**: 🔴 BLOCKED
+- [ ] Pit Dashboard operational ← **BLOCKER: Not started**
+- [ ] Table open/close from API ← **BLOCKER: Routes removed, rebuild required**
+- [ ] Rating slip start/pause/resume/close from API ← **BLOCKER: Routes removed, rebuild required**
 - [ ] Real-time updates working
 - [ ] p95 dashboard LCP ≤ 2.5s
+
+**To Unblock GATE-2**:
+1. Implement PRD-002 TableContextService (Pattern B)
+2. Implement PRD-002 RatingSlipService (Pattern B)
+3. Execute PRD-006 Pit Dashboard UI
 
 ---
 
@@ -370,37 +530,46 @@ $$ LANGUAGE plpgsql STABLE;
 
 **Timeline**: Business value features
 **Approach**: VERTICAL + HYBRID orchestration
+**Status**: 🔄 PARTIAL - Routes exist, service factories incomplete
 
-### 3.1 LoyaltyService
+### 3.1 LoyaltyService — PARTIAL
 
 **PRD Reference**: PRD-004
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Service** | LoyaltyService factory | `services/loyalty/index.ts` | P0 |
-| **RPC** | `rpc_issue_mid_session_reward` | Database function | P0 |
-| **Route** | `POST /api/loyalty/rewards` | `app/api/loyalty/rewards/route.ts` | P0 |
-| **Hook** | `useIssueMidSessionReward` | `hooks/use-loyalty.ts` | P0 |
-| **UI** | Reward dialog | `components/loyalty/reward-dialog.tsx` | P0 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Keys** | Query key factory | `services/loyalty/keys.ts` | ✅ |
+| **Routes** | Balances, ledger, mid-session | `app/api/v1/loyalty/**` | ✅ |
+| **Logic** | Mid-session reward | `services/loyalty/mid-session-reward.ts` | ❌ DELETED |
+| **Tests** | Unit test | `services/loyalty/__tests__/` | ❌ DELETED |
+| **Service** | LoyaltyService factory | `services/loyalty/index.ts` | ❌ Pending |
+| **Hook** | `useIssueMidSessionReward` | `hooks/use-loyalty.ts` | ❌ Pending |
+| **UI** | Reward dialog | `components/loyalty/reward-dialog.tsx` | ❌ Pending |
 
-### 3.2 PlayerFinancialService
+### 3.2 PlayerFinancialService — PARTIAL
 
 **PRD Reference**: PRD-001 (feature-flagged)
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Service** | PlayerFinancialService | `services/finance/index.ts` | P1 |
-| **RPC** | `rpc_create_financial_txn` | Database function | P1 |
-| **UI** | Finance entry form | `components/finance/entry-form.tsx` | P2 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Keys** | Query key factory | `services/finance/keys.ts` | ✅ |
+| **Routes** | Transactions | `app/api/v1/finance/transactions/**` | ✅ |
+| **Service** | PlayerFinancialService | `services/finance/index.ts` | ❌ Pending |
+| **RPC** | `rpc_create_financial_txn` | Database function | ❌ Pending |
+| **UI** | Finance entry form | `components/finance/entry-form.tsx` | ❌ Pending |
 
-### 3.3 MTLService
+### 3.3 MTLService — PARTIAL
 
 **PRD Reference**: PRD-005 (read-only MVP)
 
-| Layer | Item | Location | Priority |
-|-------|------|----------|----------|
-| **Service** | MTLService (read-only) | `services/mtl/index.ts` | P1 |
-| **UI** | Threshold proximity badge | `components/mtl/proximity-badge.tsx` | P1 |
+| Layer | Item | Location | Status |
+|-------|------|----------|--------|
+| **Keys** | Query key factory | `services/mtl/keys.ts` | ✅ |
+| **Routes** | Entries, audit-notes | `app/api/v1/mtl/**` | ✅ |
+| **View Model** | MTL calculations | `services/mtl/view-model.ts` | ❌ DELETED |
+| **Tests** | Unit test | `services/mtl/__tests__/` | ❌ DELETED |
+| **Service** | MTLService factory | `services/mtl/index.ts` | ❌ Pending |
+| **UI** | Threshold proximity badge | `components/mtl/proximity-badge.tsx` | ❌ Pending |
 
 **Gate 3 Definition of Done**:
 - [ ] Mid-session rewards issuable from UI
@@ -552,10 +721,24 @@ graph LR
 
 ## Next Actions
 
-1. **Immediate (P0)**: Implement GATE-0 horizontal infrastructure
-2. **Short-term**: CasinoService with `compute_gaming_day`
-3. **Medium-term**: Pit Dashboard skeleton
-4. **Ongoing**: Record progress via `/mvp-status`
+> **Updated 2025-12-03**: Phase 1 complete with Pattern B refactors (PRD-003A/B), Phase 2 services REMOVED
+
+1. **Immediate (P0)**: Rebuild PRD-002 services with Pattern B architecture
+   - **TableContextService**: `selects.ts`, `mappers.ts`, `crud.ts`, state machine
+   - **RatingSlipService**: `selects.ts`, `mappers.ts`, `crud.ts`, lifecycle operations
+   - Both must follow CasinoService/PlayerService/VisitService as reference implementations
+2. **Next (P0)**: Execute PRD-006 — Pit Dashboard UI (GATE-2 blocker)
+   - **WS1**: Enhance `TableLayoutTerminal` with dashboard props
+   - **WS2**: Create dashboard page and layout
+   - **WS3**: Implement dashboard data hooks
+   - **WS4**: Build slip management UI
+   - See `docs/10-prd/PRD-006-pit-dashboard.md` for full workstream breakdown
+3. **Short-term**: Complete Phase 3 service factories (Pattern B)
+   - LoyaltyService factory (routes exist, logic deleted — rebuild required)
+   - MTLService factory (routes exist, view-model deleted — rebuild required)
+   - PlayerFinancialService factory (routes exist, keys only)
+4. **Medium-term**: Real-time updates via Supabase channels (PRD-006 WS5)
+5. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
 
 ---
 
@@ -563,10 +746,15 @@ graph LR
 
 - **PRD-000**: CasinoService (Root Authority)
 - **PRD-001**: Player Management System Requirements
-- **PRD-002**: Table & Rating Core (partially implemented)
+- **PRD-002**: Table & Rating Core (services REMOVED, rebuild required)
 - **PRD-003**: Player Intake & Visit
+- **PRD-003A**: PlayerService Pattern B Refactor (COMPLETE)
+- **PRD-003B**: VisitService Pattern B Refactor (COMPLETE)
 - **PRD-004**: Mid-Session Loyalty
 - **PRD-005**: Compliance Monitoring
+- **PRD-006**: Pit Dashboard UI (Draft)
+- **ADR-002**: Test File Organization (tests in `__tests__/` subdirectories)
+- **ADR-012**: Error Handling Layers (with Addendum for cross-context propagation)
 - **VIS-001**: Vision & Scope
 - **SRM**: Service Responsibility Matrix v3.1.0
 - **BALANCED_ARCHITECTURE_QUICK**: Slicing decision guide

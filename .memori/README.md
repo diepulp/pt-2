@@ -173,7 +173,7 @@ Max size: ~300 chars (no bloat)
 {
   "relevant_docs": [
     "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
-    "docs/patterns/SERVICE_TEMPLATE.md"
+    "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
   ]
 }
 ```
@@ -231,7 +231,7 @@ WHERE content ILIKE '%threshold%';"
 ```
 Day 1: User asks "Create MTL Service"
 ├── Memori injects: "User prefers functional factories"
-├── Agent reads: SERVICE_TEMPLATE.md (from file system)
+├── Agent reads: SLAD §308-350 (from file system)
 ├── Agent creates: src/services/mtl.service.ts
 └── Memori records: "Created MTLService at src/services/mtl.service.ts"
 
@@ -242,7 +242,7 @@ Day 2: User asks "Add CTR threshold detection"
 └── Memori records: "Added CTR threshold detection"
 
 Day 3: User asks "Create PlayerFinancialService"
-├── Memori injects: "Previously created MTLService using SERVICE_TEMPLATE.md"
+├── Memori injects: "Previously created MTLService using SLAD Pattern A"
 ├── Agent applies: Same pattern to new service
 └── Memori records: "Created PlayerFinancialService using MTL pattern"
 ```

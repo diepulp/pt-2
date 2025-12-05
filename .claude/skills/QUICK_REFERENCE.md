@@ -132,10 +132,10 @@ import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
 | Player | player | `/services/player/` |
 | Visit | visit | `/services/visit/` |
 | Loyalty | player_loyalty, loyalty_ledger, loyalty_outbox | `/services/loyalty/` |
-| RatingSlip | rating_slip | `/services/rating-slip/` |
+| RatingSlip | rating_slip | PENDING (rebuild when needed) |
 | Finance | player_financial_transaction, finance_outbox | `/services/finance/` |
 | MTL | mtl_entry, mtl_audit_note | `/services/mtl/` |
-| TableContext | gaming_table, dealer_rotation, chip custody | `/services/table-context/` |
+| TableContext | gaming_table, dealer_rotation, chip custody | PENDING (rebuild when needed) |
 | FloorLayout | floor_layout, floor_layout_version, floor_pit | `/services/floor-layout/` |
 
 ---
@@ -154,12 +154,6 @@ import type { VisitDTO } from '@/services/visit/dtos';
 
 // ✅ Finance → RatingSlip
 import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
-
-// ✅ TableContext → Casino
-import type { CasinoSettingsDTO } from '@/services/casino/dtos';
-
-// ✅ RatingSlip → TableContext
-import type { GamingTableDTO } from '@/services/table-context/dtos';
 
 // ✅ All Services → Casino
 import type { CasinoDTO, StaffDTO } from '@/services/casino/dtos';

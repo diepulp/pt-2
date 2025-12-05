@@ -1,17 +1,17 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v2.1.2)
+title: Service Layer Architecture Diagram (v2.2.0)
 owner: Architecture
 status: Accepted
-last_review: 2025-11-19
-affects: [SEC-001, ADR-003, ADR-004, ADR-008]
+last_review: 2025-12-03
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 2.1.2
-**Date**: 2025-11-19
-**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001)
+**Version**: 2.2.0
+**Date**: 2025-12-03
+**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001 + ADR-013)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -27,7 +27,6 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008]
 - **Observability**: `docs/50-ops/OBSERVABILITY_SPEC.md` (Correlation/audit patterns)
 - **API Contracts**: `docs/25-api-data/API_SURFACE_MVP.md` (ServiceHttpResult envelope)
 - **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
-- **Service Template**: `docs/70-governance/SERVICE_TEMPLATE.md` (v1.2) (Implementation guide)
 - **Event Catalog**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md` (Event contracts)
 - **Temporal Patterns**: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` (Gaming day authority)
 
@@ -309,7 +308,7 @@ sequenceDiagram
 ## Service Structure (Directory Layout)
 
 > **AUTHORITY**: This section (§308-348) is the **SOURCE OF TRUTH** for service directory structure
-> **Canonical References**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008 (Service Factory Pattern)
+> **Canonical References**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008 (Service Factory Pattern), ADR-013 (Zod Validation Schemas)
 
 ```
 services/{domain}/
@@ -318,11 +317,19 @@ services/{domain}/
 │   └── Pattern B (Canonical): Pick/Omit from Database types for simple CRUD
 │   └── Pattern C (Hybrid): Mixed approach (e.g., RatingSlip)
 │
-├── mappers.ts                 # ✅ CONDITIONAL: Contract-First services ONLY
-│   └── Services: Loyalty, Finance, MTL, TableContext
-│   └── Internal row → DTO transformations (omit internal fields)
-│   └── export function toEntityDTO(row: DbRow): EntityDTO
-│   └── Reference: SRM v3.1.0:141-154
+├── schemas.ts                 # ✅ REQUIRED for HTTP boundary services (ADR-013)
+│   └── Request body + query param validation for Route Handlers
+│   └── Type exports: CreateXInput, XListQuery (use Input/Query suffix)
+│   └── NOT for service layer (services use DTOs)
+│   └── MAY express cheap synchronous business preconditions
+│   └── Reference: ADR-013, EDGE_TRANSPORT_POLICY.md §5
+│
+├── mappers.ts                 # ✅ REQUIRED: Services with crud.ts database operations
+│   └── Pattern A: Loyalty, Finance, MTL, TableContext (domain contract decoupling)
+│   └── Pattern B with crud.ts: Casino, Player, Visit (type-safe transformations)
+│   └── Internal row → DTO transformations (eliminates `as` casting)
+│   └── export function toEntityDTO(row: SelectedRow): EntityDTO
+│   └── Reference: services/casino/mappers.ts (canonical implementation)
 │
 ├── selects.ts                # ✅ Named column sets
 │   └── export const X_SELECT_MIN = "id, name, created_at"
@@ -349,7 +356,13 @@ services/{domain}/
     └── Aggregations, reports
 ```
 
-**Note**: `mappers.ts` is REQUIRED only for Contract-First services (Loyalty, Finance, MTL, TableContext). Simple CRUD services (Player, Visit, Casino) use Canonical pattern and do NOT need mappers.
+**Notes**:
+- `mappers.ts` is **REQUIRED** for any service with `crud.ts` that performs database operations. This applies to:
+  - **Pattern A** (Contract-First): Loyalty, Finance, MTL, TableContext - domain contract decoupling
+  - **Pattern B** (Canonical CRUD) with crud.ts: Casino, Player, Visit - type-safe Row→DTO transformations
+  - Services without `crud.ts` (logic in Server Actions/hooks) do NOT require mappers.ts
+  - **Rationale**: `selects.ts` projections create shapes different from Row types; without mappers, `as` type assertions are needed which are V1 violations. Reference implementation: `services/casino/mappers.ts`
+- `schemas.ts` is **REQUIRED** for services with HTTP Route Handlers. Internal-only services (no HTTP boundary) omit it. Schemas MAY express cheap synchronous business preconditions but domain invariants MUST still be enforced in the service layer.
 
 ---
 
@@ -446,7 +459,9 @@ export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
 - Minimal business logic
 - Schema changes should auto-propagate to DTOs
 
-**Pattern**: Pick/Omit from Database types (NO manual interfaces, NO mappers)
+**Pattern**: Pick/Omit from Database types (NO manual interfaces)
+
+**Mappers Requirement**: If service has `crud.ts` with database operations, `mappers.ts` is **REQUIRED** for type-safe Row→DTO transformations. Reference: `services/casino/mappers.ts`
 
 **Example** (SRM v3.1.0:170-190):
 ```typescript
@@ -1806,7 +1821,7 @@ const result = await service.getBalance(playerId);
 
 ### Starting New Service
 
-> **Reference**: SRM v3.1.0 §3, ADR-008
+> **Reference**: SRM v3.1.0 §3, ADR-008, ADR-013
 
 - [ ] Create `services/{domain}/` directory
 - [ ] Define DTOs in `dtos.ts` (plural) using appropriate pattern:
@@ -1817,6 +1832,9 @@ const result = await service.getBalance(playerId);
     - `type` aliases with Pick/Omit from `Database` types ONLY
     - NO manual interfaces allowed
   - **Pattern C (Hybrid)**: RatingSlip - Use appropriate pattern per DTO
+- [ ] Add `schemas.ts` if Route Handlers need request validation (ADR-013)
+  - Use `CreateXInput`, `XListQuery` naming (NOT `DTO` suffix)
+  - Include `.refine()` for complex business rules
 - [ ] Add `mappers.ts` if using Contract-First pattern (SRM v3.1.0:141-154)
 - [ ] Create query key factories in `keys.ts` (with `.scope` for lists) (ADR-003:87-96)
 - [ ] Create HTTP fetchers in `http.ts` (thin wrappers to API routes)
@@ -1826,7 +1844,7 @@ const result = await service.getBalance(playerId);
 - [ ] Create Route Handler in `app/api/v1/{domain}/route.ts` with `withServerAction()`
 - [ ] Implement React Query hooks in `hooks/{domain}/`
 - [ ] Add real-time hooks if needed (ADR-004)
-- [ ] Write unit tests
+- [ ] Write unit tests (including `schemas.test.ts` if schemas.ts exists)
 - [ ] Update SRM if new bounded context
 - [ ] Verify cross-context DTO consumption matrix compliance (SRM:81-93)
 
@@ -1852,6 +1870,7 @@ const result = await service.getBalance(playerId);
 - [ ] Hooks use `mutationKey` from key factories
 - [ ] Hooks use surgical cache updates (not broad invalidation)
 - [ ] HTTP fetchers in `services/{domain}/http.ts` (not inline in hooks)
+- [ ] Route Handlers use schemas from `schemas.ts` for validation (ADR-013)
 - [ ] RLS scoping verified
 - [ ] Idempotency handled for writes
 - [ ] Audit logging in place
@@ -1862,12 +1881,21 @@ const result = await service.getBalance(playerId);
 
 ## Document History
 
-**Version**: 2.1.2
-**Date**: 2025-11-19
-**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001)
+**Version**: 2.2.0
+**Date**: 2025-12-03
+**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v2.2.0 (2025-12-03)** - Zod Validation Schemas Standardization:
+- ✅ Added `schemas.ts` to service directory structure (§308-348)
+- ✅ Defined purpose: runtime validation for Route Handler request bodies/params
+- ✅ Established naming convention: `CreateXInput`, `XListQuery` (NOT `DTO` suffix)
+- ✅ Updated "Starting New Service" checklist with schemas.ts guidance
+- ✅ Updated "Before Commit" checklist with schema validation check
+- ✅ Added canonical reference to ADR-013 (Zod Validation Schemas Standard)
+- ✅ Clarifies relationship: schemas.ts validates inbound, dtos.ts shapes outbound
 
 **v2.1.2 (2025-11-19)** - RLS Context Interface Documentation:
 - ✅ Added RLSContext interface definition to RLS section (§1685-1728)

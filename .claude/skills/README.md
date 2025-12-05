@@ -129,10 +129,10 @@ These skills enforce the following PT-2 architectural principles:
 | Player | player | /services/player/ |
 | Visit | visit | /services/visit/ |
 | Loyalty | player_loyalty, loyalty_ledger, loyalty_outbox | /services/loyalty/ |
-| RatingSlip | rating_slip | /services/rating-slip/ |
+| RatingSlip | rating_slip | PENDING (removed, rebuild when needed) |
 | Finance | player_financial_transaction, finance_outbox | /services/finance/ |
 | MTL | mtl_entry, mtl_audit_note | /services/mtl/ |
-| TableContext | gaming_table, dealer_rotation, chip custody tables | /services/table-context/ |
+| TableContext | gaming_table, dealer_rotation, chip custody tables | PENDING (removed, rebuild when needed) |
 | FloorLayout | floor_layout, floor_layout_version, etc. | /services/floor-layout/ |
 
 ## Validation Workflow

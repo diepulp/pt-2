@@ -33,7 +33,7 @@
 - Activation history and event emission
 
 **DOES NOT OWN**:
-- Real-time dealer assignments (TableContextService)
+- Real-time dealer assignments (dealer_rotation table, service pending)
 - Monetary data (PlayerFinancialService)
 - Staff registry (CasinoService)
 
@@ -62,7 +62,7 @@ const activation = await supabase.rpc('rpc_activate_floor_layout', {
 ## Cross-Context Integration
 
 **Provides To**:
-- **TableContextService** - Consumes `floor_layout.activated` events to reconcile `gaming_table.pit` assignments
+- **Table Management** - `floor_layout.activated` events reconcile `gaming_table.pit` assignments
 - **PerformanceService** - Layout metadata for dashboards
 - **Reporting** - Historical activation lineage
 
@@ -77,4 +77,4 @@ const activation = await supabase.rpc('rpc_activate_floor_layout', {
 ## References
 
 - [SRM §1580-1719](../../docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
-- [SERVICE_TEMPLATE.md](../../docs/70-governance/SERVICE_TEMPLATE.md)
+- [SLAD §308-350](../../docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)

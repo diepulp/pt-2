@@ -37,6 +37,10 @@ export const CASINO_SETTINGS_SELECT_FULL =
 export const STAFF_SELECT_PUBLIC =
   "id, first_name, last_name, role, status, employee_id, casino_id" as const;
 
+/** Public staff profile with created_at for paginated list queries */
+export const STAFF_SELECT_PUBLIC_LIST =
+  "id, first_name, last_name, role, status, employee_id, casino_id, created_at" as const;
+
 /** Staff with user linkage (for auth checks) */
 export const STAFF_SELECT_WITH_USER =
   "id, first_name, last_name, role, status, employee_id, casino_id, user_id" as const;

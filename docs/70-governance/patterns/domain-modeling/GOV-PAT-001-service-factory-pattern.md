@@ -658,10 +658,32 @@ export async function GET(
 
 ## 7. Testing Pattern
 
+### Test Organization
+
+**Per ADR-002**: All test files must be placed in `__tests__/` subdirectories within their service module.
+
+```
+services/player/
+├── __tests__/
+│   ├── player.test.ts              # Unit tests
+│   ├── player.integration.test.ts  # Integration tests
+│   └── error-mapping.test.ts       # Feature-specific tests
+├── index.ts                        # Factory & interface
+├── crud.ts                         # CRUD operations
+├── dtos.ts                         # DTOs
+└── README.md                       # Service documentation
+```
+
+**Benefits**:
+- Clean source directory (only production code at module root)
+- Clear test/source separation
+- Consistent with lib/* pattern and industry standards (Jest, Vitest, React)
+- Easier to exclude from production builds
+
 ### Unit Tests (Service Factory)
 
 ```typescript
-// services/player/__tests__/player.unit.test.ts
+// services/player/__tests__/player.test.ts
 import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";

@@ -26,16 +26,6 @@
         "references/validation-checklist.md"
       ]
     },
-    "SERVICE_TEMPLATE": {
-      "path": "docs/70-governance/SERVICE_TEMPLATE.md",
-      "version": "2.0.3",
-      "sha256": "5638fa1970700bfefdcb1c1cf50ca5af790ee4632f2c553b27e97d1ac4835336",
-      "last_verified": "2025-11-28",
-      "derived_primitives": [
-        "references/QUICK_START.md",
-        "references/architecture-rules.md"
-      ]
-    },
     "SDLC_TAXONOMY": {
       "path": "docs/patterns/SDLC_DOCS_TAXONOMY.md",
       "version": "1.0.0",
@@ -50,19 +40,28 @@
 
   "primitives": {
     "references/QUICK_START.md": {
-      "sources": ["SLAD", "SRM", "SERVICE_TEMPLATE", "SDLC_TAXONOMY"],
+      "sources": ["SLAD", "SRM", "SDLC_TAXONOMY"],
       "purpose": "Single entry point for sub-agent",
-      "updated": "2025-11-28"
+      "updated": "2025-12-03",
+      "change_note": "Fixed pattern classifications, service status, removed SERVICE_TEMPLATE refs"
     },
     "references/architecture-rules.md": {
-      "sources": ["SLAD", "SRM", "SERVICE_TEMPLATE"],
+      "sources": ["SLAD", "SRM"],
       "purpose": "Condensed patterns and anti-patterns",
-      "updated": "2025-11-28"
+      "updated": "2025-12-03",
+      "change_note": "Added crud.ts/selects.ts to Pattern B, fixed Pattern A mappers.ts requirement, updated service status"
     },
     "references/validation-checklist.md": {
       "sources": ["SRM", "SDLC_TAXONOMY"],
       "purpose": "Pre/post architecture validation checklist",
-      "updated": "2025-11-28"
+      "updated": "2025-12-03",
+      "change_note": "Added required files to Pattern B, separated Pattern A/C, noted removed services"
+    },
+    "references/dto-compliance.md": {
+      "sources": ["SLAD", "SRM"],
+      "purpose": "DTO pattern enforcement guide",
+      "updated": "2025-12-03",
+      "change_note": "Fixed Pattern C section (removed stale RatingSlipService content), added required files"
     },
     "references/output-templates.md": {
       "sources": [],

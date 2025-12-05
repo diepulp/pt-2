@@ -37,16 +37,39 @@ Per `OVER_ENGINEERING_GUARDRAIL.md`:
 
 ## Red-Green-Refactor Cycle
 
+## Test Organization Pattern
+
+**Per ADR-002**: All test files must be placed in `__tests__/` subdirectories within their module.
+
+```
+services/{domain}/
+├── __tests__/
+│   ├── {domain}.test.ts              # Unit tests
+│   ├── {domain}.integration.test.ts  # Integration tests
+│   └── {feature}.test.ts             # Feature-specific tests
+├── index.ts                          # Public API
+├── crud.ts                           # Implementation
+└── README.md                         # Documentation
+```
+
+**Benefits**:
+- Clean source directories (only production code at root)
+- Clear test/source separation
+- Consistent with lib/* pattern and industry standards
+- Easier to exclude from production builds
+
+---
+
 ### Phase 1: RED (Write Failing Test)
 
 **Before writing any implementation code:**
 
 1. **Define the interface** in `services/{domain}/index.ts`
-2. **Write the test** that uses this interface
+2. **Write the test** in `services/{domain}/__tests__/` directory
 3. **Run the test** and verify it fails for the right reason
 
 ```ts
-// services/player/__tests__/player.service.unit.test.ts
+// services/player/__tests__/player.service.test.ts
 import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database.types";
@@ -444,6 +467,7 @@ graph TD
 ### Pattern 1: Testing Domain Error Mapping
 
 ```ts
+// services/player/__tests__/error-mapping.test.ts
 describe("error mapping", () => {
   it("maps PGRST116 to NOT_FOUND", async () => {
     const errorDouble = {
@@ -471,7 +495,7 @@ describe("error mapping", () => {
 ### Pattern 2: Testing RLS Enforcement
 
 ```ts
-// Integration test with different user contexts
+// services/player/__tests__/rls.integration.test.ts
 describe("RLS enforcement", () => {
   it("prevents cross-casino data access", async () => {
     const casino1Client = createClient(/* casino 1 context */);
@@ -492,6 +516,7 @@ describe("RLS enforcement", () => {
 ### Pattern 3: Testing Idempotency
 
 ```ts
+// services/player/__tests__/idempotency.integration.test.ts
 describe("idempotency", () => {
   it("returns same player on duplicate create", async () => {
     const svc = createPlayerService(supabase);
@@ -516,6 +541,7 @@ describe("idempotency", () => {
 ### Pattern 4: Testing Temporal Logic
 
 ```ts
+// services/rating-slip/__tests__/gaming-day.test.ts
 describe("gaming day computation", () => {
   it("assigns correct gaming day for 2 AM transaction", async () => {
     // Mock system time to 2:00 AM on Nov 18

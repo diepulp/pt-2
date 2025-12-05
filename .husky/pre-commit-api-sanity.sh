@@ -1,13 +1,14 @@
 #!/bin/sh
 # ==============================================================================
-# API Route Handler Sanity Checks (PRD-HZ-001 Compliant)
+# API Route Handler Sanity Checks (PRD-HZ-001 + ADR-013 Compliant)
 # ==============================================================================
-# Version: 2.0.0
-# Date: 2025-11-29
+# Version: 2.1.0
+# Date: 2025-12-03
 # References:
 #   - PRD-HZ-001: Gate 0 Horizontal Infrastructure
 #   - WORKFLOW-WS5: API Route Handler Migration
 #   - VALIDATION-PRD-HZ-001: DoD Checklist
+#   - ADR-013: Zod Validation Schemas Standard
 #
 # Ensures app/api/v1 handlers follow canonical patterns established by
 # horizontal infrastructure (withServerAction middleware, idempotency, etc.)
@@ -166,7 +167,138 @@ if [ -n "$NEED_IDEMPOTENCY_OPT" ]; then
 fi
 
 # ==============================================================================
-# Check 6: domain and action options required in middleware
+# Check 6: Zod schemas REQUIRED for HTTP boundary services (ADR-013)
+# Route handlers MUST import validation schemas from services/{domain}/schemas.ts
+# ==============================================================================
+NEED_SCHEMA_IMPORT=""
+for file in $ROUTE_FILES; do
+  # Extract domain from path: app/api/v1/{domain}/... -> {domain}
+  DOMAIN=$(echo "$file" | sed -E 's|^app/api/v1/([^/]+)/.*|\1|')
+
+  # Skip if domain couldn't be extracted
+  if [ "$DOMAIN" = "$file" ]; then
+    continue
+  fi
+
+  # Normalize domain (handle plural -> singular for services)
+  case "$DOMAIN" in
+    casinos) SERVICE_DOMAIN="casino" ;;
+    players) SERVICE_DOMAIN="player" ;;
+    visits) SERVICE_DOMAIN="visit" ;;
+    *) SERVICE_DOMAIN="$DOMAIN" ;;
+  esac
+
+  # Check if this route has POST/PATCH methods that need validation
+  if grep -qE "export async function (POST|PATCH)" "$file"; then
+    # Must import from schemas.ts (handle both quote styles and path variations)
+    if ! grep -qE "from ['\"]@/services/$SERVICE_DOMAIN/schemas['\"]" "$file"; then
+      # Also check for request.json() usage which indicates body parsing
+      if grep -q "request\.json()" "$file"; then
+        NEED_SCHEMA_IMPORT="$NEED_SCHEMA_IMPORT
+  - $file (expected: @/services/$SERVICE_DOMAIN/schemas)"
+      fi
+    fi
+  fi
+done
+
+if [ -n "$NEED_SCHEMA_IMPORT" ]; then
+  echo "❌ CHECK 6 FAILED: Route handlers missing Zod schema imports (ADR-013)"
+  echo ""
+  echo "Files with violations:$NEED_SCHEMA_IMPORT"
+  echo ""
+  echo "HTTP boundary services MUST use centralized Zod schemas for validation."
+  echo ""
+  echo "Fix: Import and use schemas from services/{domain}/schemas.ts:"
+  echo "  import { createXSchema } from '@/services/{domain}/schemas';"
+  echo "  import type { CreateXInput } from '@/services/{domain}/schemas';"
+  echo ""
+  echo "  const parsed = createXSchema.safeParse(body);"
+  echo "  if (!parsed.success) {"
+  echo "    return errorResponse({ code: 'VALIDATION_ERROR', status: 400, details: parsed.error.flatten() });"
+  echo "  }"
+  echo ""
+  echo "Reference: ADR-013 (Zod Validation Schemas Standard), SLAD §320-325"
+  echo ""
+  VIOLATIONS_FOUND=1
+fi
+
+# ==============================================================================
+# Check 7: Inline Zod schemas BANNED in route handlers (ADR-013)
+# Schemas must be defined in services/{domain}/schemas.ts, not inline
+# ==============================================================================
+INLINE_ZOD=""
+for file in $ROUTE_FILES; do
+  # Check for inline z.object() definitions (excluding imports and type inferences)
+  if grep -qE "^[^/]*z\.(object|string|number|boolean|enum|array)\(" "$file"; then
+    # Exclude lines that are just type references or comments
+    INLINE_MATCHES=$(grep -nE "^[^/]*z\.(object|string|number|boolean|enum|array)\(" "$file" 2>/dev/null | grep -v "z\.infer" | head -3 || true)
+    if [ -n "$INLINE_MATCHES" ]; then
+      INLINE_ZOD="$INLINE_ZOD
+  - $file"
+      echo "$INLINE_MATCHES" | while read -r line; do
+        INLINE_ZOD="$INLINE_ZOD
+    $line"
+      done
+    fi
+  fi
+done
+
+if [ -n "$INLINE_ZOD" ]; then
+  echo "❌ CHECK 7 FAILED: Inline Zod schemas in route handlers (ADR-013)"
+  echo ""
+  echo "Files with violations:$INLINE_ZOD"
+  echo ""
+  echo "Zod schemas MUST be defined in services/{domain}/schemas.ts, not inline."
+  echo ""
+  echo "  ❌ WRONG (in route.ts):"
+  echo "  const schema = z.object({ name: z.string() });"
+  echo ""
+  echo "  ✅ CORRECT:"
+  echo "  // services/{domain}/schemas.ts"
+  echo "  export const createXSchema = z.object({ name: z.string() });"
+  echo ""
+  echo "  // app/api/v1/{domain}/route.ts"
+  echo "  import { createXSchema } from '@/services/{domain}/schemas';"
+  echo ""
+  echo "Reference: ADR-013 (Zod Validation Schemas Standard)"
+  echo ""
+  VIOLATIONS_FOUND=1
+fi
+
+# ==============================================================================
+# Check 8: VALIDATION_ERROR envelope required for Zod failures (ADR-013)
+# All Zod validation failures must use standardized error envelope
+# ==============================================================================
+NEED_VALIDATION_ERROR=""
+for file in $ROUTE_FILES; do
+  # If file uses safeParse, it should also use VALIDATION_ERROR
+  if grep -q "\.safeParse\|\.parse(" "$file"; then
+    if ! grep -qE "code:[[:space:]]*['\"]VALIDATION_ERROR['\"]" "$file"; then
+      NEED_VALIDATION_ERROR="$NEED_VALIDATION_ERROR
+  - $file"
+    fi
+  fi
+done
+
+if [ -n "$NEED_VALIDATION_ERROR" ]; then
+  echo "⚠️  CHECK 8 WARNING: Zod validation missing VALIDATION_ERROR envelope"
+  echo ""
+  echo "Files to verify:$NEED_VALIDATION_ERROR"
+  echo ""
+  echo "Zod failures SHOULD use standardized error envelope:"
+  echo "  return errorResponse({"
+  echo "    code: 'VALIDATION_ERROR',  // ← REQUIRED code"
+  echo "    status: 400,"
+  echo "    details: parsed.error.flatten(),"
+  echo "  });"
+  echo ""
+  echo "Reference: ADR-013, EDGE_TRANSPORT_POLICY.md"
+  echo ""
+  # Warning only, not blocking for now
+fi
+
+# ==============================================================================
+# Check 9: domain and action options required in middleware
 # Ensures audit logging has proper context
 # ==============================================================================
 NEED_DOMAIN_ACTION=""

@@ -128,24 +128,33 @@ services/{domain}/
 ```
 services/{domain}/
 ├── keys.ts              # ✅ React Query key factories (REQUIRED)
+├── dtos.ts              # ✅ Pick/Omit DTOs (REQUIRED)
+├── selects.ts           # ✅ Named column sets (REQUIRED for services with crud.ts)
+├── mappers.ts           # ✅ Row → DTO transformations (REQUIRED for services with crud.ts)
+├── crud.ts              # CRUD operations (optional, can be in Server Actions)
 └── README.md            # ✅ Service documentation (REQUIRED)
 ```
 
 **Key Characteristics**:
-- **Minimal structure** - only 2 files
-- DTOs documented in README using Pick/Omit
-- No business logic files (logic in Server Actions/hooks)
-- Focus: schema-aligned, auto-evolving types
+- DTOs use Pick/Omit from Database types
+- Mappers provide **type-safe transformations** from query results to DTOs
+- No `as` casting in crud.ts operations
+- Focus: schema-aligned, type-safe, no implicit conversions
 
-### Example: services/player/
+### Example: services/casino/ (Reference Implementation)
 
 ```
-services/player/
-├── keys.ts     # playerKeys factory
-└── README.md   # Documents DTOs using Pick/Omit
+services/casino/
+├── keys.ts              # casinoKeys factory
+├── dtos.ts              # CasinoDTO, StaffDTO, CasinoSettingsDTO using Pick
+├── selects.ts           # CASINO_SELECT_PUBLIC, STAFF_SELECT_PUBLIC, etc.
+├── mappers.ts           # toCasinoDTO, toStaffDTO, etc.
+├── mappers.test.ts      # Unit tests for mappers
+├── crud.ts              # CRUD operations using mappers
+└── README.md            # Service documentation
 ```
 
-### DTO Pattern (in README or inline)
+### DTO Pattern (in dtos.ts)
 
 ```typescript
 // Pattern B MUST use Pick/Omit from Database types
@@ -160,10 +169,51 @@ export type PlayerCreateDTO = Pick<
 >;
 ```
 
+### Mappers Pattern (REQUIRED for services with crud.ts)
+
+When a Pattern B service has `crud.ts` with direct database operations:
+
+```typescript
+// services/{domain}/mappers.ts
+
+// 1. Define Selected Row types matching query projections
+type PlayerSelectedRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+};
+
+// 2. Create mapper functions for each DTO
+export function toPlayerDTO(row: PlayerSelectedRow): PlayerDTO {
+  return {
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    created_at: row.created_at,
+  };
+}
+
+// 3. Create list/nullable variants
+export function toPlayerDTOList(rows: PlayerSelectedRow[]): PlayerDTO[] {
+  return rows.map(toPlayerDTO);
+}
+
+export function toPlayerDTOOrNull(row: PlayerSelectedRow | null): PlayerDTO | null {
+  return row ? toPlayerDTO(row) : null;
+}
+```
+
+**Why Mappers are Required**:
+- Eliminates `as` type assertions (V1 violations)
+- Provides compile-time safety when columns change
+- Selected types match query projections, not full Row types
+- Cursor pagination may require fields (like `created_at`) not in the DTO
+
 ### Banned for Pattern B
 
 - ❌ Manual `interface` definitions (causes schema evolution blindness)
-- ❌ `mappers.ts` files (schema auto-propagates)
+- ❌ `as` type assertions in crud.ts (use mappers instead)
 - ❌ `ReturnType<typeof createService>` inference
 
 ---
@@ -403,6 +453,7 @@ import type { ServiceHttpResult } from '@/lib/http/service-response';
 ## Layered Error Handling (ADR-012)
 
 **Canonical Reference**: `docs/80-adrs/ADR-012-error-handling-layers.md`
+**Executive Decisions**: PRD-003A §9.1-9.2, PRD-003B §10.2-10.3
 
 PT-2 uses **two complementary error patterns** at different architectural layers:
 
@@ -410,6 +461,13 @@ PT-2 uses **two complementary error patterns** at different architectural layers
 |-------|---------|---------|--------|
 | **Service Layer** (`services/**`) | `throw DomainError` | `Promise<T>` | Yes, on failure |
 | **Transport Layer** (Server Actions) | Return envelope | `ServiceResult<T>` | Never |
+
+### ADR-012 Executive Decisions (2025-12-03)
+
+**ServiceResult in Services — OUT OF SCOPE**: Services throw `DomainError`, they do NOT return `ServiceResult<T>`. This was explicitly decided and rejected in ADR-012 for:
+1. Verbose composition (unwrapping at every call)
+2. Type pollution (`Promise<ServiceResult<T>>` everywhere)
+3. Against ERROR_TAXONOMY_AND_RESILIENCE.md (mandatory)
 
 ### Service Layer: THROW Errors
 
@@ -494,3 +552,87 @@ export async function startSlip(...): Promise<RatingSlipDTO> {
   }
   return slip;
 }
+```
+
+---
+
+## ADR-012 Addendum: Selective Adoption (YAGNI Applied)
+
+**Executive Decision**: PRD-003A §9.2, PRD-003B §10.3
+
+The ADR-012 Addendum proposed 8 refinements. Per YAGNI principle and OE-01 guardrail, only immediately valuable items are adopted:
+
+| Section | Topic | Decision | Rationale |
+|---------|-------|----------|-----------|
+| §1 | InfrastructureError class | **DEFER** | No jobs/workers exist yet; DomainError + mapDatabaseError sufficient |
+| §2 | Cross-context error propagation | **ADOPT** | Required for PlayerService ↔ VisitService interactions |
+| §4 | withEntrypoint generalization | **DEFER** | No background jobs or webhooks yet |
+| §5 | assertOk helper | **ADOPT** | 5 lines, high DX value for React Query mutations |
+| §7 | Test matchers (toMatchDomainError) | **DEFER** | Nice-to-have; standard Jest assertions work |
+| §8 | Observability conventions | **ADOPT** | Already aligned with existing logging patterns |
+
+### Cross-Context Error Propagation (ADOPTED §2)
+
+When **Service A** (in context X) calls **Service B** (in context Y), wrap foreign domain errors:
+
+```typescript
+// services/visit/crud.ts - VisitService calling PlayerService
+import { DomainError } from '@/lib/errors/domain-errors';
+
+try {
+  await playerService.getById(playerId);
+} catch (err) {
+  if (err instanceof DomainError && err.domain === 'player') {
+    // Wrap in visit domain vocabulary
+    throw new DomainError('VISIT_PLAYER_NOT_FOUND', { cause: err as Error });
+  }
+  throw err; // Re-throw infrastructure errors unchanged
+}
+```
+
+**Why?** Prevents deep internal domain codes from leaking across boundaries.
+
+### assertOk Helper (ADOPTED §5)
+
+**Location**: `lib/http/assert-ok.ts`
+
+```typescript
+import type { ServiceResult } from '@/lib/http/service-response';
+
+/**
+ * Unwraps ServiceResult for React Query mutations.
+ * Throws the result object if not ok, allowing error boundaries to catch.
+ */
+export function assertOk<T>(result: ServiceResult<T>): T {
+  if (!result.ok) {
+    throw result;
+  }
+  return result.data;
+}
+```
+
+**Usage with React Query:**
+
+```typescript
+// Envelope style (inline handling)
+const result = await createPlayerAction(input);
+if (!result.ok) {
+  // Show inline error message, handle code-specific UX
+  return;
+}
+const player = result.data;
+
+// Thrown error style (React Query error paths)
+const mutation = useMutation({
+  mutationFn: async (input) => assertOk(await createPlayerAction(input)),
+});
+```
+
+**Why adopted?** 5 lines of code, high DX value. Converts `ServiceResult` to thrown error for `useMutation` compatibility without changing transport layer semantics.
+
+### Deferred Items
+
+These are tracked for Phase 3 (Rewards & Compliance) when background jobs are introduced:
+- **InfrastructureError class** (§1) — Separate DB/network errors from domain errors
+- **withEntrypoint generalization** (§4) — Unified wrapper for jobs, webhooks, CLI
+- **Test matchers** (§7) — Custom `toMatchDomainError` Jest matcher

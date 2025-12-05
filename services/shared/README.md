@@ -33,5 +33,5 @@ Common types used across service layer (e.g., `ServiceResult<T>`).
 
 ## References
 
-- [SERVICE_TEMPLATE.md](../../docs/70-governance/SERVICE_TEMPLATE.md)
+- [SLAD §308-350](../../docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
 - [React Query Key Patterns](../../docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)

@@ -95,7 +95,7 @@ Follow this standard workflow for architectural tasks:
   - Architecture patterns? -> `docs/20-architecture/`
 - **Load referenced docs**: Read existing RLS matrices, ADRs, API specs before designing
 - **Identify domain(s)**: Check `SERVICE_RESPONSIBILITY_MATRIX.md` for affected bounded contexts
-- **Check implementation reality**: Review `SERVICE_TEMPLATE.md` for deployed vs. planned constraints
+- **Check implementation reality**: Review SLAD §308-348 for deployed service structure patterns
 - **Consult patterns**: Reference `SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` for canonical patterns
 - **State explicit in-scope vs out-of-scope**
 
@@ -186,7 +186,7 @@ When the architectural work requires a new PRD or PRD update, follow PRD-STD-001
    - UX / Flow Overview (3-7 bullets)
    - Dependencies & Risks
    - Definition of Done (5-12 items per `references/prd-dod-guide.md`)
-   - Related Documents (CRITICAL: Include SLAD, SERVICE_TEMPLATE, temporal patterns where relevant)
+   - Related Documents (CRITICAL: Include SLAD, SRM, temporal patterns where relevant)
 
 4. **Validate** - Run validation script:
    ```bash
@@ -197,7 +197,7 @@ When the architectural work requires a new PRD or PRD update, follow PRD-STD-001
    - Vision / Strategy: `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
    - Architecture / SRM: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
    - Service Layer (SLAD): `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
-   - Service Template: `docs/70-governance/SERVICE_TEMPLATE.md`
+   - Service Structure: SLAD §308-348 (service directory patterns)
    - Temporal Patterns (if time-sensitive): `docs/20-architecture/temporal-patterns/`
    - Schema / Types: `types/database.types.ts`
    - Security / RLS: `docs/30-security/SEC-001-rls-policy-matrix.md`
@@ -234,6 +234,7 @@ Reference: Memory files loaded via `@memory/*.memory.md` and `docs/patterns/BALA
 
 ### Anti-Patterns to Avoid
 
+**Service Layer**:
 - Class-based services
 - `ReturnType<typeof createXService>`
 - Global real-time managers
@@ -241,7 +242,26 @@ Reference: Memory files loaded via `@memory/*.memory.md` and `docs/patterns/BALA
 - `as any` type casting
 - Over-engineered abstractions
 
-Reference: `@memory/anti-patterns.memory.md`
+**DTO Anti-Patterns (CRITICAL)**:
+- Manual `interface` for Pattern B services (causes schema evolution blindness)
+- Raw `Row` type exports (exposes internal fields)
+- Missing `dtos.ts` in Pattern B services (CI gate will fail)
+- Missing `mappers.ts` in Pattern B services with crud.ts (leads to V1 violations)
+- `as` casting on query results or RPC responses (bypasses type safety - use mappers)
+- Cross-context `Database['...']['Tables']['foreign_table']` access (bounded context violation)
+- Inline DTOs when service consumed by 2+ others (no contract for consumers)
+
+**Zod Schema Anti-Patterns (ADR-013)**:
+- Missing `schemas.ts` for HTTP boundary services
+- Inline Zod schemas in route handlers (extract to `schemas.ts`)
+- Schemas importing from `dtos.ts` (keep schemas independent)
+- Using schemas in service layer (services use DTOs only)
+- Using `DTO` suffix for schema type exports (use `Input`/`Query` suffix)
+
+**Reference**:
+- `@memory/anti-patterns.memory.md`
+- `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (v2.1.0 - MANDATORY)
+- `docs/80-adrs/ADR-013-zod-validation-schemas.md` (MANDATORY for HTTP services)
 
 ### Database Workflow
 
@@ -289,6 +309,11 @@ Each architectural task should produce:
 **New Fields:** [field definitions with types and constraints]
 **Invariants:** [what should remain true]
 
+## Zod Validation Schemas (if HTTP boundary - ADR-013)
+**File:** `services/{domain}/schemas.ts`
+**Schemas Required:** [createXSchema, updateXSchema, xListQuerySchema, etc.]
+**Complex Validations:** [any .refine() rules for business preconditions]
+
 ## RLS/RBAC Implications
 **Policy Required:** [RLS policy description]
 **Roles Affected:** [which roles get access]
@@ -315,6 +340,10 @@ Each architectural task should produce:
 ### Backend
 - [ ] Create migration: [filename]
 - [ ] Implement service: [path]
+- [ ] Create `dtos.ts` with Pick/Omit types (Pattern B)
+- [ ] Create `selects.ts` with named column sets (Pattern B)
+- [ ] Create `mappers.ts` with Row → DTO transformations (Pattern B with crud.ts)
+- [ ] Create `schemas.ts` for HTTP boundary services (ADR-013)
 - [ ] Add RLS policies: [policy names]
 - [ ] Update API routes: [routes]
 
@@ -324,8 +353,10 @@ Each architectural task should produce:
 - [ ] Add client-side validation
 - [ ] Integrate with service layer
 
-### Testing (per QA-001 + QA-004)
+### Testing (per QA-001 + QA-004 + ADR-002)
+- [ ] Tests in `__tests__/` subdirectory (ADR-002 v3.0.0)
 - [ ] Schema verification test passes
+- [ ] Mapper unit tests (100% coverage target)
 - [ ] Service layer unit tests (90% coverage target)
 - [ ] Integration tests for flows (85% coverage target for workflows)
 - [ ] RLS policy validation (integration tests with real Supabase)
@@ -360,6 +391,7 @@ An architectural task is complete when:
 | `QUICK_START.md` | Single entry point - start here |
 | `architecture-rules.md` | Condensed patterns and anti-patterns |
 | `validation-checklist.md` | Pre/post architecture validation |
+| **`dto-compliance.md`** | **DTO pattern enforcement (MANDATORY)** |
 | `output-templates.md` | Templates for SRM, ADR, API specs |
 | `example-architectures.md` | Reference examples |
 | `memory-protocol.md` | Memory recording (optional) |
@@ -374,7 +406,10 @@ An architectural task is complete when:
 |----------|----------|
 | SLAD (patterns) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | SRM (boundaries) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| SERVICE_TEMPLATE | `docs/70-governance/SERVICE_TEMPLATE.md` |
+| Service Structure | SLAD §308-348 (service directory patterns) |
+| **DTO_CANONICAL_STANDARD** | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (v2.1.0 - MANDATORY) |
+| **ADR-013 Zod Schemas** | `docs/80-adrs/ADR-013-zod-validation-schemas.md` (MANDATORY for HTTP services) |
+| **ANTI_PATTERN_CATALOG** | `docs/70-governance/ANTI_PATTERN_CATALOG.md` |
 | SDLC Taxonomy | `docs/SDLC_DOCS_TAXONOMY.md` |
 | **PRD-STD-001** | `docs/10-prd/PRD-STD-001_PRD_STANDARD.md` |
 | Temporal Patterns | `docs/20-architecture/temporal-patterns/` |
@@ -396,6 +431,7 @@ Reference as needed:
 
 - **`docs/40-quality/QA-001-service-testing-strategy.md`** - Testing pyramid, layer playbook, coverage targets, PRD traceability
 - **`docs/40-quality/QA-004-tdd-standard.md`** - TDD workflow, Red-Green-Refactor, quality gates
+- **`docs/80-adrs/ADR-002-test-location-standard.md`** - Test file organization (`__tests__/` subdirectory pattern)
 
 **Architecture-Testing Integration Points**:
 1. **PRD Traceability** (QA-001) - Architectural designs should map to testable user stories
@@ -474,7 +510,7 @@ Current context: [Link to SRM section, relevant ADRs]
 Expected output:
 1. Architecture discovery (bounded context, dependencies)
 2. PRD draft following PRD-STD-001
-3. Related Documents linking SLAD, SERVICE_TEMPLATE, temporal patterns
+3. Related Documents linking SLAD, SRM, temporal patterns
 4. Validation via scripts/validate_prd.py
 5. Implementation plan with DoD
 ```
@@ -533,8 +569,8 @@ Phase 1: Core Services (GATE-1)
 └── VisitService (PRD-003)
 
 Phase 2: Session Management + UI (GATE-2)
-├── TableContextService (PRD-002) ← IMPLEMENTED
-├── RatingSlipService (PRD-002) ← IMPLEMENTED
+├── TableContextService (PRD-002) ← PENDING (removed, rebuild when needed)
+├── RatingSlipService (PRD-002) ← PENDING (removed, rebuild when needed)
 └── PitDashboard (UI)
 
 Phase 3: Rewards & Compliance (GATE-3)
@@ -598,7 +634,7 @@ Always check current status before planning:
 |-------|--------|------------|
 | 0 | **NOT STARTED** | TransportLayer, ErrorTaxonomy, ServiceResultPattern, QueryInfra |
 | 1 | Blocked by Phase 0 | CasinoService, PlayerService, VisitService |
-| 2 | Partial (2/3) | TableContextService ✓, RatingSlipService ✓, PitDashboard |
+| 2 | Not Started (0/3) | TableContextService, RatingSlipService, PitDashboard |
 | 3 | Not Started | LoyaltyService, PlayerFinancialService, MTLService |
 
 **Critical Path**: GATE-0 → CasinoService → PlayerService → VisitService → PitDashboard → LoyaltyService

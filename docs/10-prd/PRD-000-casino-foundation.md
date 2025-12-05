@@ -186,7 +186,6 @@ The release is considered **Done** when:
 - **Architecture / SRM**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) §882-1006
 - **MVP Roadmap**: [MVP-ROADMAP.md](../20-architecture/MVP-ROADMAP.md) §1.1
 - **Service Layer (SLAD)**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
-- **Service Template**: [SERVICE_TEMPLATE.md](../70-governance/SERVICE_TEMPLATE.md)
 - **Temporal Patterns**: [TEMP-001, TEMP-002](../20-architecture/temporal-patterns/) (gaming day authority)
 - **Schema / Types**: `types/database.types.ts`
 - **Security / RLS**: [SEC-001-rls-policy-matrix.md](../30-security/SEC-001-rls-policy-matrix.md)

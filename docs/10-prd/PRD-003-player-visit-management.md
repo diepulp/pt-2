@@ -209,7 +209,6 @@ The release is considered **Done** when:
 - **Architecture / SRM**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) §814-888
 - **MVP Roadmap**: [MVP-ROADMAP.md](../20-architecture/MVP-ROADMAP.md) §1.2-1.3
 - **Service Layer (SLAD)**: [SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md](../20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md)
-- **Service Template**: [SERVICE_TEMPLATE.md](../70-governance/SERVICE_TEMPLATE.md)
 - **Schema / Types**: `types/database.types.ts`
 - **Security / RLS**: [SEC-001-rls-policy-matrix.md](../30-security/SEC-001-rls-policy-matrix.md)
 - **Horizontal Infrastructure**: [PRD-HZ-001](./PRD-HZ-001-gate0-horizontal-infrastructure.md) (Phase 0 prerequisite)

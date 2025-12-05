@@ -17,7 +17,7 @@ sources:
 |-----|-------|--------|
 | PRD-000 | CasinoService (Root Authority) | Implemented |
 | PRD-001 | Player Management (MVP Overview) | Accepted |
-| PRD-002 | Table & Rating Core | Implemented |
+| PRD-002 | Table & Rating Core | Pending (services removed) |
 | PRD-003 | Player Intake & Visit | Implemented (2025-11-30) |
 | PRD-004 | Mid-Session Loyalty | Draft |
 | PRD-005 | Compliance Monitoring (MTL) | Draft |
@@ -45,8 +45,8 @@ sources:
 
 | Service | PRD | Code Exists | Tests | Status |
 |---------|-----|-------------|-------|--------|
-| TableContextService | PRD-002 | Yes | Yes | Implemented |
-| RatingSlipService | PRD-002 | Yes | Yes | Implemented |
+| TableContextService | PRD-002 | No | No | Removed (rebuild when needed) |
+| RatingSlipService | PRD-002 | No | No | Removed (rebuild when needed) |
 | PitDashboard | MVP-ROADMAP | No | No | Not Started |
 
 ### Phase 3: Rewards & Compliance (GATE-3)

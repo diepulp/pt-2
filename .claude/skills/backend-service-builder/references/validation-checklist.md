@@ -25,12 +25,14 @@ Complete this checklist before considering a service implementation done.
 
 - [ ] `services/{domain}/dtos.ts` exists (Pick/Omit from Database types)
 - [ ] `services/{domain}/selects.ts` exists (named column sets)
+- [ ] `services/{domain}/mappers.ts` exists (REQUIRED for services with crud.ts)
 - [ ] `services/{domain}/keys.ts` exists (React Query factories with `.scope`)
 - [ ] `services/{domain}/http.ts` exists (HTTP fetchers)
 - [ ] `services/{domain}/index.ts` exists (explicit interface + factory)
-- [ ] `services/{domain}/crud.ts` exists (CRUD operations)
+- [ ] `services/{domain}/crud.ts` exists (CRUD operations using mappers)
+- [ ] `services/{domain}/__tests__/mappers.test.ts` exists (unit tests for mappers)
 - [ ] `services/{domain}/README.md` exists
-- [ ] NO `mappers.ts` file (banned for Pattern B)
+- [ ] NO `as` type assertions in crud.ts (use mapper functions)
 
 **Pattern C (Hybrid)** - RatingSlip:
 
@@ -85,7 +87,8 @@ export const domainKeys = {
 - [ ] Column selections explicitly listed (not `Omit` of single field)
 - [ ] Uses `Insert` for create DTOs, `Row` for response DTOs
 - [ ] Auto-generated fields (`id`, `created_at`) omitted from create DTOs
-- [ ] NO `mappers.ts` file
+- [ ] `mappers.ts` exists with Row → DTO transformations (REQUIRED for crud.ts)
+- [ ] NO `as` type assertions in crud.ts (use mapper functions)
 
 **Validation command**:
 
@@ -475,9 +478,11 @@ Before marking service as **COMPLETE**:
 - [ ] No duplicate ServiceResult/DomainError definitions (V3)
 - [ ] Imports from canonical locations (`lib/http/`, `lib/errors/`)
 
-### Error Handling (ADR-012)
+### Error Handling (ADR-012 + Addendum)
 - [ ] Service functions throw DomainError (not return ServiceResult)
 - [ ] Transport layer uses withServerAction wrapper
+- [ ] Cross-context calls wrap foreign domain errors (ADR-012 Addendum §2)
+- [ ] assertOk helper available at `lib/http/assert-ok.ts` for React Query mutations
 
 ### Final
 - [ ] Peer review completed (if applicable)

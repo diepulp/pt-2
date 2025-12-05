@@ -5,9 +5,11 @@
 
 ---
 
-## Pattern B (Canonical CRUD): MUST Use Pick/Omit
+## Pattern B (Canonical CRUD): MUST Use Pick/Omit + Mappers
 
 **Services**: player, visit, casino, floor-layout
+
+### DTOs in dtos.ts
 
 ```typescript
 // ✅ REQUIRED - auto-syncs with schema changes
@@ -40,6 +42,51 @@ export interface PlayerDTO {
 ```
 
 **Why banned?** Manual interfaces don't update when schema changes. Migration adds column → Interface unchanged → Data silently dropped.
+
+### Mappers in mappers.ts (REQUIRED for services with crud.ts)
+
+When a Pattern B service has `crud.ts` with direct database operations, **mappers.ts is REQUIRED**:
+
+```typescript
+// services/{domain}/mappers.ts
+
+import type { PlayerDTO } from './dtos';
+
+// 1. Define Selected Row types matching query projections (NOT full Row types)
+type PlayerSelectedRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  created_at: string;
+};
+
+// 2. Create mapper functions for each DTO
+export function toPlayerDTO(row: PlayerSelectedRow): PlayerDTO {
+  return {
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    created_at: row.created_at,
+  };
+}
+
+// 3. Create list/nullable variants
+export function toPlayerDTOList(rows: PlayerSelectedRow[]): PlayerDTO[] {
+  return rows.map(toPlayerDTO);
+}
+
+export function toPlayerDTOOrNull(row: PlayerSelectedRow | null): PlayerDTO | null {
+  return row ? toPlayerDTO(row) : null;
+}
+```
+
+**Why mappers are required for Pattern B:**
+- Eliminates `as` type assertions in crud.ts (V1 violations)
+- Selected row types match query projections, not full Row types
+- Cursor pagination may require fields (like `created_at`) not in the DTO
+- Provides compile-time safety when columns change
+
+**Reference Implementation**: `services/casino/mappers.ts`
 
 ---
 
