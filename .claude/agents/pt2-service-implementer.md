@@ -228,6 +228,49 @@ When invoked as part of an EXECUTION-SPEC workstream:
 | `lib/errors/domain-errors.ts` | DomainError class |
 | `lib/server-actions/with-server-action-wrapper.ts` | Server action wrapper |
 | `services/shared/key-utils.ts` | Query key serialization |
+| `docs/70-governance/ANTI_PATTERN_CATALOG.md` | Anti-patterns & violations |
+
+---
+
+## Anti-Pattern Awareness (CRITICAL)
+
+**Before implementing, review** `docs/70-governance/ANTI_PATTERN_CATALOG.md` v1.2.0
+
+### Service Layer Violations (STOP if encountered)
+- ❌ `ReturnType<typeof createXService>` - use explicit interface
+- ❌ `supabase: any` - use `SupabaseClient<Database>`
+- ❌ Class-based services - use functional factories
+- ❌ Service-to-service calls - orchestrate in server actions
+- ❌ Cross-context table joins - use published DTOs
+
+### Domain Error Violations
+- ❌ Raw Postgres errors leaking (`23505`, `23503`, `PGRST116`)
+- ❌ Generic `throw new Error("Not found")` - use `DomainError`
+- ❌ Missing `mapDatabaseError()` function in crud.ts
+
+### RLS & Security Violations
+- ❌ Complex OR trees in RLS policies
+- ❌ Missing `withServerAction()` wrapper
+- ❌ Service-role key in application runtime
+- ❌ Unscoped queries (missing `casino_id` filter)
+
+### Visit Domain Violations (ADR-014)
+- ❌ Ghost gaming with `visit_id = NULL` (should be `player_id = NULL`)
+- ❌ Rating slips without `visit_id` anchor
+- ❌ Loyalty accrual for non-`gaming_identified_rated` visits
+
+### DTO Pattern Violations
+- ❌ **Pattern B** (Player, Visit, Casino): Manual `interface` DTOs
+- ❌ **Pattern A** (Loyalty, Finance, MTL): Missing `mappers.ts`
+- ❌ Type redefinitions in `types/` folder (belong in `services/{domain}/dtos.ts`)
+
+### Quick Pre-Commit Check
+```bash
+# Verify no anti-patterns
+grep -r "ReturnType<typeof" services/
+grep -r "supabase: any" services/
+grep -r "console\." services/ --include="*.ts" | grep -v test
+```
 
 ---
 
@@ -260,6 +303,8 @@ After implementing, report:
 - [ ] Bounded context rules followed
 - [ ] RLS policies applied (SEC-001 compliant)
 - [ ] Domain errors mapped (no raw Postgres codes)
+- [ ] Anti-pattern catalog checklist passed
+- [ ] No `ReturnType`, `any`, or class-based patterns
 
 ### DTOs Published
 - `{ServiceDTO}` - consumed by {consumers}
@@ -290,6 +335,9 @@ When invoked after `lead-architect` skill:
 - [ ] `npm run type-check` passes
 - [ ] Tests pass with required coverage
 - [ ] No `as any` or `console.*` in production code
+- [ ] Anti-pattern checklist verified (see Anti-Pattern Awareness section)
+- [ ] Domain errors mapped via `mapDatabaseError()`
+- [ ] RLS policies follow SEC-001 templates
 
 ---
 

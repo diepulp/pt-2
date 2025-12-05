@@ -1,7 +1,7 @@
 # Anti-Patterns & Violations
 
-**Last Updated**: 2025-10-17
-**Source**: Validated architecture audit (100% pattern consistency confirmed)
+**Last Updated**: 2025-12-05
+**Source**: Validated architecture audit + ADR-014 alignment
 **Purpose**: Critical violations to avoid - **STOP and ask if you encounter these**
 
 ---
@@ -358,6 +358,178 @@ export type PlayerCreateDTO = Pick<
   "name"
 >;
 ```
+
+---
+
+### ❌ Domain Error Anti-Patterns
+
+> **Canonical Reference**: SRM § Error Taxonomy, `lib/errors/domain-errors.ts`
+
+**NEVER let raw Postgres errors leak to callers**:
+
+```typescript
+// ❌ WRONG
+export async function createPlayer(data: PlayerCreateDTO) {
+  const { data: result, error } = await supabase.from("player").insert(data);
+  if (error) {
+    throw error; // Raw Postgres error leaks: "23505: duplicate key violation"
+  }
+  return result;
+}
+
+// ✅ CORRECT
+import { DomainError } from "@/lib/errors/domain-errors";
+
+function mapDatabaseError(error: { code?: string; message: string }): DomainError {
+  if (error.code === "23505") {
+    return new DomainError("PLAYER_ALREADY_EXISTS", "Player already exists");
+  }
+  if (error.code === "23503") {
+    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
+  }
+  return new DomainError("INTERNAL_ERROR", error.message);
+}
+
+export async function createPlayer(data: PlayerCreateDTO) {
+  const { data: result, error } = await supabase.from("player").insert(data);
+  if (error) throw mapDatabaseError(error);
+  return result;
+}
+```
+
+**NEVER return generic error messages for known domain violations**:
+
+```typescript
+// ❌ WRONG
+if (!visit) {
+  throw new Error("Not found"); // Generic, no domain context
+}
+
+// ✅ CORRECT
+if (!visit) {
+  throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+}
+```
+
+**Domain Error Codes by Service** (from SRM § Error Taxonomy):
+- **Visit**: `VISIT_NOT_FOUND`, `VISIT_NOT_OPEN`, `VISIT_ALREADY_CLOSED`, `VISIT_PLAYER_MISMATCH`
+- **Player**: `PLAYER_NOT_FOUND`, `PLAYER_ALREADY_EXISTS`, `PLAYER_NOT_ENROLLED`
+- **Table**: `TABLE_NOT_FOUND`, `TABLE_NOT_ACTIVE`, `TABLE_SETTINGS_INVALID`
+- **Loyalty**: `INSUFFICIENT_BALANCE`, `REWARD_ALREADY_ISSUED`, `LOYALTY_POLICY_VIOLATION`
+- **Finance**: `TRANSACTION_ALREADY_PROCESSED`, `TRANSACTION_AMOUNT_INVALID`
+
+---
+
+### ❌ RLS & Security Anti-Patterns
+
+> **Canonical Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md`, SRM § Security & Tenancy
+
+**NEVER use complex OR trees in RLS policies**:
+
+```sql
+-- ❌ WRONG: 6-way OR with nested conditions (hard to audit)
+CREATE POLICY "visit_access" ON visit FOR SELECT USING (
+  (auth.jwt() ->> 'casino_id')::uuid = casino_id
+  OR auth.jwt() ->> 'role' = 'admin'
+  OR auth.jwt() ->> 'permissions' @> '["global.read"]'
+);
+
+-- ✅ CORRECT: Single deterministic path via current_setting()
+CREATE POLICY "visit_read_same_casino" ON visit FOR SELECT USING (
+  auth.uid() = (SELECT user_id FROM staff WHERE id = current_setting('app.actor_id')::uuid)
+  AND casino_id = current_setting('app.casino_id')::uuid
+);
+```
+
+**NEVER skip RLS context injection in server actions**:
+
+```typescript
+// ❌ WRONG
+export async function getVisit(visitId: string) {
+  const supabase = await createServerClient();
+  return supabase.from("visit").select("*").eq("id", visitId).single();
+  // Missing: app.casino_id not set, RLS may fail or leak data
+}
+
+// ✅ CORRECT
+export async function getVisit(visitId: string) {
+  return withServerAction("visit.get", async (supabase, context) => {
+    // withServerAction injects: SET LOCAL app.casino_id, app.actor_id
+    return supabase.from("visit").select(VISIT_SELECT).eq("id", visitId).single();
+  });
+}
+```
+
+**NEVER use service-role key in application runtime**:
+
+```typescript
+// ❌ WRONG
+const supabase = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+await supabase.from("visit").select("*"); // Reads ALL casinos!
+
+// ✅ CORRECT
+const supabase = await createServerClient(); // Anon key + user context
+// RLS enforces casino scoping automatically
+```
+
+---
+
+### ❌ Visit Domain Anti-Patterns (ADR-014)
+
+> **Canonical Reference**: `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md`
+
+**NEVER represent ghost gaming with visit_id = NULL**:
+
+```typescript
+// ❌ WRONG
+// Ghost gaming represented by missing visit
+await supabase.from("rating_slip").insert({
+  visit_id: null, // ❌ Floating slip with no visit anchor
+  table_id: tableId,
+  // ...
+});
+
+// ✅ CORRECT
+// Ghost gaming is a visit with player_id = NULL and visit_kind = 'gaming_ghost_unrated'
+const { data: ghostVisit } = await supabase.from("visit").insert({
+  casino_id: casinoId,
+  player_id: null, // Ghost = no player
+  visit_kind: 'gaming_ghost_unrated',
+}).select().single();
+
+await supabase.from("rating_slip").insert({
+  visit_id: ghostVisit.id, // ✅ All slips have visit anchor
+  table_id: tableId,
+});
+```
+
+**NEVER accrue loyalty for ghost visits**:
+
+```typescript
+// ❌ WRONG
+export async function awardPoints(visit: VisitDTO, points: number) {
+  // Blindly awards points regardless of visit_kind
+  await loyaltyService.addPoints(visit.player_id, points);
+}
+
+// ✅ CORRECT
+export async function awardPoints(visit: VisitDTO, points: number) {
+  // Only gaming_identified_rated visits accrue loyalty
+  if (visit.visit_kind !== 'gaming_identified_rated') {
+    throw new DomainError("LOYALTY_POLICY_VIOLATION",
+      "Loyalty accrual only for identified rated visits");
+  }
+  await loyaltyService.addPoints(visit.player_id!, points);
+}
+```
+
+**Visit Kind Archetypes** (must enforce):
+
+| `visit_kind` | `player_id` | Gaming | Loyalty |
+|--------------|-------------|--------|---------|
+| `reward_identified` | NOT NULL | No | Redemptions only |
+| `gaming_identified_rated` | NOT NULL | Yes | Accrual eligible |
+| `gaming_ghost_unrated` | NULL | Yes | Compliance only |
 
 ---
 
@@ -777,8 +949,10 @@ import { CheckIcon } from "@heroicons/react/24/solid"; // Specific icon
 
 ### If unsure:
 
-- Reference: `docs/system-prd/CANONICAL_BLUEPRINT_MVP_PRD.md` §4
-- Reference: `docs/system-prd/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
+- Reference: `docs/SDLC_DOCS_TAXONOMY.md` for documentation navigation
+- Reference: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
+- Reference: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` § Error Taxonomy
+- Reference: `docs/30-security/SEC-001-rls-policy-matrix.md` for RLS templates
 - Ask user for architectural review
 
 ---
@@ -800,6 +974,23 @@ Before committing code, verify:
 - [ ] **Pattern A services** (Loyalty, Finance, MTL, TableContext): Has `mappers.ts` if using DTOs
 - [ ] No manual type redefinitions in `types/` folder (DTOs belong in `services/{domain}/dtos.ts`)
 
+### Domain Errors (NEW)
+- [ ] No raw Postgres errors leaking to callers (use `DomainError`)
+- [ ] Error codes follow SRM § Error Taxonomy naming (`*_NOT_FOUND`, `*_INVALID`, etc.)
+- [ ] All services have `mapDatabaseError()` function
+
+### RLS & Security (NEW)
+- [ ] No complex OR trees in RLS policies (use `current_setting()` pattern)
+- [ ] Server actions use `withServerAction()` for RLS context injection
+- [ ] No service-role key in application runtime
+- [ ] All user-facing tables have casino-scoped RLS policies
+
+### Visit Domain (ADR-014)
+- [ ] Ghost visits have `player_id = NULL` (not `visit_id = NULL`)
+- [ ] All rating slips have `visit_id NOT NULL`
+- [ ] Loyalty accrual only for `gaming_identified_rated` visits
+- [ ] `visit_kind` validated before gaming/loyalty operations
+
 ### State & Real-time
 - [ ] No server data in Zustand
 - [ ] No `staleTime: 0` without justification
@@ -818,11 +1009,12 @@ Before committing code, verify:
 
 ---
 
-**Version**: 1.1.0
-**Date**: 2025-11-26
-**Lines**: ~550
+**Version**: 1.2.0
+**Date**: 2025-12-05
+**Lines**: ~750
 **Severity**: **CRITICAL** - Violations block PR approval
 **Auto-Load**: Loads with `.claude/config.yml`
 
 ### Change Log
+- **v1.2.0 (2025-12-05)**: Added Domain Error Anti-Patterns (SRM § Error Taxonomy), RLS & Security Anti-Patterns (SEC-001), Visit Domain Anti-Patterns (ADR-014 ghost visits, visit_kind archetypes), updated references to current docs/ paths, expanded Quick Checklist with new sections
 - **v1.1.0 (2025-11-26)**: Added pattern-aware DTO rules (SLAD §356-490 alignment), expanded RPC-managed table list, updated checklist with pattern classification
