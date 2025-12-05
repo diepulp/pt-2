@@ -18,7 +18,8 @@
 | **1** | **PRD-003** | **COMPLETE** ✅ | PlayerService + VisitService (Pattern B refactor) |
 | **1** | **PRD-003A** | **COMPLETE** ✅ | PlayerService Pattern B refactor |
 | **1** | **PRD-003B** | **COMPLETE** ✅ | VisitService Pattern B refactor |
-| **2** | **PRD-002** | **Pending** | TableContext + RatingSlip REMOVED (rebuild when needed) |
+| **2** | **PRD-007** | **Pending** | TableContextService (rebuild per Pattern B) |
+| **2** | **PRD-002** | **Pending** | RatingSlipService (rebuild per Pattern B) |
 | **2** | **PRD-006** | **Draft** | Pit Dashboard UI (GATE-2 blocker) |
 | 3 | PRD-004 | **Partial** | Mid-Session Loyalty (routes exist, service factory incomplete) |
 | 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
@@ -384,10 +385,11 @@ services/visit/
 **Approach**: VERTICAL + UI focus
 **Status**: 🔴 SERVICES REMOVED — Rebuild required before GATE-2 completion
 
-### 2.1 TableContextService — ❌ REMOVED
+### 2.1 TableContextService — ❌ REMOVED (PRD-007 Ready)
 
-**PRD Reference**: PRD-002
+**PRD Reference**: PRD-007-table-context-service.md
 **Status**: DELETED (2025-12-02) — Implementation was ~10% complete, did not follow Pattern B
+**Rebuild PRD**: PRD-007 created 2025-12-03 with full Pattern B specification
 
 | Layer | Item | Location | Status |
 |-------|------|----------|--------|
@@ -723,9 +725,9 @@ graph LR
 
 > **Updated 2025-12-03**: Phase 1 complete with Pattern B refactors (PRD-003A/B), Phase 2 services REMOVED
 
-1. **Immediate (P0)**: Rebuild PRD-002 services with Pattern B architecture
-   - **TableContextService**: `selects.ts`, `mappers.ts`, `crud.ts`, state machine
-   - **RatingSlipService**: `selects.ts`, `mappers.ts`, `crud.ts`, lifecycle operations
+1. **Immediate (P0)**: Rebuild session management services with Pattern B architecture
+   - **TableContextService (PRD-007)**: `selects.ts`, `mappers.ts`, `crud.ts`, state machine
+   - **RatingSlipService (PRD-002)**: `selects.ts`, `mappers.ts`, `crud.ts`, lifecycle operations
    - Both must follow CasinoService/PlayerService/VisitService as reference implementations
 2. **Next (P0)**: Execute PRD-006 — Pit Dashboard UI (GATE-2 blocker)
    - **WS1**: Enhance `TableLayoutTerminal` with dashboard props
@@ -746,7 +748,8 @@ graph LR
 
 - **PRD-000**: CasinoService (Root Authority)
 - **PRD-001**: Player Management System Requirements
-- **PRD-002**: Table & Rating Core (services REMOVED, rebuild required)
+- **PRD-002**: RatingSlipService (services REMOVED, rebuild required)
+- **PRD-007**: TableContextService (PRD created 2025-12-03, Pattern B spec ready)
 - **PRD-003**: Player Intake & Visit
 - **PRD-003A**: PlayerService Pattern B Refactor (COMPLETE)
 - **PRD-003B**: VisitService Pattern B Refactor (COMPLETE)

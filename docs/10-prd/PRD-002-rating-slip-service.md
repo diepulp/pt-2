@@ -84,6 +84,7 @@ The previous implementation was removed (2025-12-02) due to architectural non-co
   - `paused` → `closed` (via close, ends active pause)
 - Duration calculation: `end_time - start_time - SUM(pause_intervals)`
 - Single active slip constraint: `UNIQUE(player_id, table_id) WHERE status IN ('open', 'paused')`
+- **Close requires `average_bet`**: Cannot finalize slip without average bet (loyalty calculation dependency)
 
 ### 5.2 Non-Functional Requirements
 
@@ -111,7 +112,13 @@ services/rating-slip/
 
 **Error Handling (ADR-012)**:
 - Service throws `DomainError` on failure
-- Domain error codes: `RATING_SLIP_NOT_FOUND`, `RATING_SLIP_NOT_OPEN`, `RATING_SLIP_NOT_PAUSED`, `RATING_SLIP_ALREADY_CLOSED`, `RATING_SLIP_DUPLICATE_ACTIVE`
+- Domain error codes:
+  - `RATING_SLIP_NOT_FOUND` (404)
+  - `RATING_SLIP_NOT_OPEN` (409) - operation requires open status
+  - `RATING_SLIP_NOT_PAUSED` (409) - resume requires paused status
+  - `RATING_SLIP_ALREADY_CLOSED` (409) - slip already finalized
+  - `RATING_SLIP_DUPLICATE_ACTIVE` (409) - player already has active slip at table
+  - `RATING_SLIP_MISSING_AVERAGE_BET` (422) - close requires average_bet for loyalty calculation
 
 **Type Safety**:
 - Zero `as` type assertions
@@ -140,8 +147,9 @@ Resume Slip:
 
 Close Slip:
   POST /api/v1/rating-slips/{id}/close
-  Body: { average_bet? }
+  Body: { average_bet }  ← REQUIRED (see Resolved Questions §7.2)
   → Returns: RatingSlipDTO with status=closed, duration_seconds
+  → Error 422: RATING_SLIP_MISSING_AVERAGE_BET if average_bet not provided
 
 Get Slip:
   GET /api/v1/rating-slips/{id}
@@ -160,10 +168,11 @@ List Slips:
 |------------|--------|-------|
 | CasinoService (PRD-000) | ✅ Complete | RLS context, casino_id |
 | PlayerService (PRD-003) | ✅ Complete | player_id FK |
-| VisitService (PRD-003) | ✅ Complete | visit_id FK (active visit required) |
+| VisitService (PRD-003) | ✅ Complete | visit_id FK (nullable; close allowed after visit end) |
 | `gaming_table` table | ✅ Schema exists | table_id FK |
 | `rating_slip` table | ✅ Schema exists | Core table |
 | `rating_slip_pause` table | ✅ Schema exists | Pause tracking |
+| **Migration required** | ❌ Pending | Add `closed_after_visit_end boolean DEFAULT false` to rating_slip |
 | Horizontal infrastructure | ✅ Complete | withServerAction, ServiceResult, DomainError |
 
 ### 7.2 Risks & Open Questions
@@ -174,9 +183,49 @@ List Slips:
 | Orphaned pauses (never ended) | Close slip auto-ends any active pause |
 | Concurrent pause/resume race | Database-level status check in transaction |
 
-**Open Questions:**
-1. Should closing a slip require the visit to still be active? → **Recommendation:** No, allow closing slips after visit checkout
-2. Should `average_bet` be required on close? → **Recommendation:** Optional, can be updated later
+**Resolved Questions:**
+
+1. **Should closing a slip require the visit to still be active?**
+   → **Decision:** Allow close, but capture visit state for audit trail.
+
+   **Scenarios Analyzed:**
+
+   | Scenario | Visit State | Slip State | Action | Result |
+   |----------|-------------|------------|--------|--------|
+   | Normal flow | Active (`ended_at` = null) | Open | Close slip | ✅ Allowed |
+   | Late close | Ended (`ended_at` set) | Open | Close slip | ✅ Allowed + flag |
+   | No visit | `visit_id` = null | Open | Close slip | ✅ Allowed |
+
+   **Implementation:**
+   - Closing a slip after visit checkout IS ALLOWED (prevents orphaned open slips)
+   - When closing, check if `visit.ended_at IS NOT NULL`
+   - If visit already ended, set `rating_slip.closed_after_visit_end = true` (audit flag)
+   - **New column required:** `closed_after_visit_end boolean DEFAULT false`
+
+   **Rationale:**
+   1. **Operational Reality:** Pit bosses may forget to close slips before player checkouts
+   2. **Data Integrity:** An uncloseable slip is worse than a late-closed slip
+   3. **Accountability:** The audit flag preserves information about workflow deviation
+   4. **Schema Evidence:** `visit_id` is already nullable, indicating slips can exist independently
+
+   **Edge Cases:**
+   - Slip with `visit_id = null`: Always closeable (no visit to check)
+   - Bulk close on table closure: May include slips from ended visits (flagged appropriately)
+
+   **Error Code:** None (allowed operation, just flagged)
+
+   **UX Consideration:** Dashboard may show warning icon for slips closed after visit end
+
+2. **Should `average_bet` be required on close?**
+   → **Decision:** **YES, REQUIRED.** Slip cannot close without `average_bet`.
+   - **Rationale:** The loyalty points calculation chain critically depends on `average_bet`:
+     ```
+     theo = (average_bet × house_edge / 100) × total_decisions
+     points = theo × conversion_rate × multiplier
+     ```
+     See `lib/theo.ts:calculateTheo()` - returns 0 if `averageBet <= 0`.
+   - **UX:** UI must prompt pit boss for average bet before close. Toast notification on validation failure.
+   - **Error Code:** `RATING_SLIP_MISSING_AVERAGE_BET` (422 Unprocessable Entity)
 
 ## 8. Definition of Done (DoD)
 
@@ -187,12 +236,15 @@ The release is considered **Done** when:
 - [ ] Pause slip records pause start, changes status to paused
 - [ ] Resume slip records pause end, changes status to open
 - [ ] Close slip sets end_time, calculates duration excluding pauses
+- [ ] Close slip validates `average_bet` is provided (rejects with 422 if missing)
 - [ ] Duplicate active slip prevented by constraint
 
 **Data & Integrity**
 - [ ] State machine enforced (no invalid transitions)
 - [ ] Duration calculation excludes all pause intervals
 - [ ] No orphaned pause records (close ends active pause)
+- [ ] `closed_after_visit_end` flag set when closing slip after visit checkout
+- [ ] Migration adds `closed_after_visit_end boolean DEFAULT false` column
 
 **Security & Access**
 - [ ] RLS: Staff can only access slips for their casino
@@ -207,7 +259,9 @@ The release is considered **Done** when:
 **Testing**
 - [ ] Unit tests for state machine transitions
 - [ ] Unit tests for duration calculation with multiple pauses
+- [ ] Unit tests for `closed_after_visit_end` flag logic
 - [ ] Integration test: full lifecycle (start → pause → resume → close)
+- [ ] Integration test: close slip after visit checkout (flag must be set)
 
 **Documentation**
 - [ ] Service README with supported operations
@@ -226,6 +280,8 @@ The release is considered **Done** when:
 - **RLS Policy Matrix:** `docs/30-security/SEC-001-rls-policy-matrix.md`
 - **MVP Roadmap:** `docs/20-architecture/MVP-ROADMAP.md` (Phase 2)
 - **Pit Dashboard (UI):** `docs/10-prd/PRD-006-pit-dashboard.md`
+- **TableContextService:** `docs/10-prd/PRD-007-table-context-service.md`
+- **Theo Calculation:** `lib/theo.ts` (loyalty point calculation dependency)
 
 ---
 
@@ -234,3 +290,5 @@ The release is considered **Done** when:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-12-03 | Lead Architect | Initial draft (clean rebuild) |
+| 1.1 | 2025-12-03 | Lead Architect | Resolved Q2: average_bet required on close (loyalty dependency) |
+| 1.2 | 2025-12-04 | Lead Architect | Resolved Q1: Allow close after visit end with audit flag (`closed_after_visit_end`) |
