@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 1.3.0
+**Version**: 1.4.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-12-03
+**Updated**: 2025-12-05
 **Owner**: Lead Architect
 
 ---
@@ -18,6 +18,7 @@
 | **1** | **PRD-003** | **COMPLETE** ✅ | PlayerService + VisitService (Pattern B refactor) |
 | **1** | **PRD-003A** | **COMPLETE** ✅ | PlayerService Pattern B refactor |
 | **1** | **PRD-003B** | **COMPLETE** ✅ | VisitService Pattern B refactor |
+| **1** | **EXEC-VSE-001** | **COMPLETE** ✅ | VisitService Evolution (ghost visits, 3 archetypes) |
 | **2** | **PRD-007** | **Pending** | TableContextService (rebuild per Pattern B) |
 | **2** | **PRD-002** | **Pending** | RatingSlipService (rebuild per Pattern B) |
 | **2** | **PRD-006** | **Draft** | Pit Dashboard UI (GATE-2 blocker) |
@@ -54,6 +55,13 @@
 > - Tests relocated to `__tests__/` subdirectories per ADR-002
 > - Zero `as` type assertions - all transformations via mappers
 > - ADR-012 Addendum: cross-context error propagation, `assertOk` helper pattern
+>
+> **EXEC-VSE-001 Complete (2025-12-05)**: Visit Service Evolution per ADR-014:
+> - **3 Visit Archetypes**: `reward_identified`, `gaming_identified_rated`, `gaming_ghost_unrated`
+> - **Schema**: 4 migrations (visit_kind enum, player_id nullable, unique index updates, rating_slip hardening)
+> - **Service**: 3 creation flows + `convertRewardToGaming` with audit logging
+> - **Backward Compatible**: `startVisit` defaults to `gaming_identified_rated`
+> - **Documentation**: ADR-014 Accepted, SRM v3.1.0, SLAD v2.3.0 updated
 
 ---
 
@@ -358,11 +366,15 @@ services/visit/
 ```
 
 **Implemented Methods**:
-- `list(filters)` - Paginated visit list with player join
+- `list(filters)` - Paginated visit list with player join (supports `visit_kind` filter)
 - `getById(visitId)` - Visit detail
 - `getActiveForPlayer(playerId)` - Active visit check
-- `startVisit(playerId, casinoId)` - Idempotent check-in (casinoId required per PRD-003B)
+- `startVisit(playerId, casinoId)` - Idempotent check-in (defaults to `gaming_identified_rated`)
 - `closeVisit(visitId)` - Check-out with timestamp
+- `createRewardVisit(playerId, casinoId)` - Create reward-only visit (EXEC-VSE-001)
+- `createGamingVisit(playerId, casinoId)` - Create identified gaming visit (EXEC-VSE-001)
+- `createGhostGamingVisit(casinoId, input)` - Create ghost gaming visit (EXEC-VSE-001)
+- `convertRewardToGaming(visitId)` - Convert reward→gaming with audit (EXEC-VSE-001)
 
 **Validation Gate 1.2-1.3**: ✅ PASSED
 - [x] PlayerService factory with search, enrollment, CRUD
