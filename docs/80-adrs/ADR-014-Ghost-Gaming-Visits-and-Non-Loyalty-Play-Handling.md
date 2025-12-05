@@ -1,8 +1,9 @@
 # ADR: Ghost Gaming Visits & Non-Loyalty Play Handling
 
-**Status:** Draft  
-**Date:** 2025-12-04  
+**Status:** Accepted
+**Date:** 2025-12-05
 **Context:** PT-2 – VisitService, RatingSlip, Loyalty, Finance, MTL
+**Implementation:** EXEC-VSE-001 (Visit Service Evolution)
 
 ---
 

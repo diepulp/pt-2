@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
@@ -157,42 +137,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      chat_history: {
-        Row: {
-          ai_output: string
-          chat_id: string
-          metadata_json: Json | null
-          model: string
-          namespace: string
-          session_id: string
-          timestamp: string
-          tokens_used: number | null
-          user_input: string
-        }
-        Insert: {
-          ai_output: string
-          chat_id: string
-          metadata_json?: Json | null
-          model: string
-          namespace: string
-          session_id: string
-          timestamp: string
-          tokens_used?: number | null
-          user_input: string
-        }
-        Update: {
-          ai_output?: string
-          chat_id?: string
-          metadata_json?: Json | null
-          model?: string
-          namespace?: string
-          session_id?: string
-          timestamp?: string
-          tokens_used?: number | null
-          user_input?: string
-        }
-        Relationships: []
       }
       company: {
         Row: {
@@ -721,117 +665,6 @@ export type Database = {
           },
         ]
       }
-      long_term_memory: {
-        Row: {
-          access_count: number | null
-          actionability_score: number | null
-          category_primary: string
-          classification: string
-          classification_reason: string | null
-          confidence_score: number | null
-          conscious_processed: boolean | null
-          created_at: string
-          duplicate_of: string | null
-          entities_json: Json | null
-          extraction_timestamp: string
-          importance_score: number
-          is_current_project: boolean | null
-          is_preference: boolean | null
-          is_skill_knowledge: boolean | null
-          is_user_context: boolean | null
-          keywords_json: Json | null
-          last_accessed: string | null
-          memory_id: string
-          memory_importance: string
-          namespace: string
-          novelty_score: number | null
-          original_chat_id: string | null
-          processed_data: Json
-          processed_for_duplicates: boolean | null
-          promotion_eligible: boolean | null
-          related_memories_json: Json | null
-          relevance_score: number | null
-          retention_type: string
-          search_vector: unknown
-          searchable_content: string
-          summary: string
-          supersedes_json: Json | null
-          topic: string | null
-        }
-        Insert: {
-          access_count?: number | null
-          actionability_score?: number | null
-          category_primary: string
-          classification: string
-          classification_reason?: string | null
-          confidence_score?: number | null
-          conscious_processed?: boolean | null
-          created_at: string
-          duplicate_of?: string | null
-          entities_json?: Json | null
-          extraction_timestamp: string
-          importance_score: number
-          is_current_project?: boolean | null
-          is_preference?: boolean | null
-          is_skill_knowledge?: boolean | null
-          is_user_context?: boolean | null
-          keywords_json?: Json | null
-          last_accessed?: string | null
-          memory_id: string
-          memory_importance: string
-          namespace: string
-          novelty_score?: number | null
-          original_chat_id?: string | null
-          processed_data: Json
-          processed_for_duplicates?: boolean | null
-          promotion_eligible?: boolean | null
-          related_memories_json?: Json | null
-          relevance_score?: number | null
-          retention_type: string
-          search_vector?: unknown
-          searchable_content: string
-          summary: string
-          supersedes_json?: Json | null
-          topic?: string | null
-        }
-        Update: {
-          access_count?: number | null
-          actionability_score?: number | null
-          category_primary?: string
-          classification?: string
-          classification_reason?: string | null
-          confidence_score?: number | null
-          conscious_processed?: boolean | null
-          created_at?: string
-          duplicate_of?: string | null
-          entities_json?: Json | null
-          extraction_timestamp?: string
-          importance_score?: number
-          is_current_project?: boolean | null
-          is_preference?: boolean | null
-          is_skill_knowledge?: boolean | null
-          is_user_context?: boolean | null
-          keywords_json?: Json | null
-          last_accessed?: string | null
-          memory_id?: string
-          memory_importance?: string
-          namespace?: string
-          novelty_score?: number | null
-          original_chat_id?: string | null
-          processed_data?: Json
-          processed_for_duplicates?: boolean | null
-          promotion_eligible?: boolean | null
-          related_memories_json?: Json | null
-          relevance_score?: number | null
-          retention_type?: string
-          search_vector?: unknown
-          searchable_content?: string
-          summary?: string
-          supersedes_json?: Json | null
-          topic?: string | null
-        }
-        Relationships: []
-      }
       loyalty_ledger: {
         Row: {
           average_bet: number | null
@@ -1263,8 +1096,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         Insert: {
           average_bet?: number | null
@@ -1277,8 +1110,8 @@ export type Database = {
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id: string
+          visit_id: string
         }
         Update: {
           average_bet?: number | null
@@ -1291,8 +1124,8 @@ export type Database = {
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id?: string
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1403,68 +1236,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casino"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      short_term_memory: {
-        Row: {
-          access_count: number | null
-          category_primary: string
-          chat_id: string | null
-          created_at: string
-          expires_at: string | null
-          importance_score: number
-          is_permanent_context: boolean | null
-          last_accessed: string | null
-          memory_id: string
-          namespace: string
-          processed_data: Json
-          retention_type: string
-          search_vector: unknown
-          searchable_content: string
-          summary: string
-        }
-        Insert: {
-          access_count?: number | null
-          category_primary: string
-          chat_id?: string | null
-          created_at: string
-          expires_at?: string | null
-          importance_score: number
-          is_permanent_context?: boolean | null
-          last_accessed?: string | null
-          memory_id: string
-          namespace: string
-          processed_data: Json
-          retention_type: string
-          search_vector?: unknown
-          searchable_content: string
-          summary: string
-        }
-        Update: {
-          access_count?: number | null
-          category_primary?: string
-          chat_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          importance_score?: number
-          is_permanent_context?: boolean | null
-          last_accessed?: string | null
-          memory_id?: string
-          namespace?: string
-          processed_data?: Json
-          retention_type?: string
-          search_vector?: unknown
-          searchable_content?: string
-          summary?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "short_term_memory_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chat_history"
-            referencedColumns: ["chat_id"]
           },
         ]
       }
@@ -1821,22 +1592,25 @@ export type Database = {
           casino_id: string
           ended_at: string | null
           id: string
-          player_id: string
+          player_id: string | null
           started_at: string
+          visit_kind: Database["public"]["Enums"]["visit_kind"]
         }
         Insert: {
           casino_id: string
           ended_at?: string | null
           id?: string
-          player_id: string
+          player_id?: string | null
           started_at?: string
+          visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Update: {
           casino_id?: string
           ended_at?: string | null
           id?: string
-          player_id?: string
+          player_id?: string | null
           started_at?: string
+          visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Relationships: [
           {
@@ -2068,8 +1842,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2159,8 +1933,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2190,8 +1964,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2244,6 +2018,10 @@ export type Database = {
       staff_role: "dealer" | "pit_boss" | "admin"
       staff_status: "active" | "inactive"
       table_status: "inactive" | "active" | "closed"
+      visit_kind:
+        | "reward_identified"
+        | "gaming_identified_rated"
+        | "gaming_ghost_unrated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2369,9 +2147,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       floor_layout_status: ["draft", "review", "approved", "archived"],
@@ -2393,7 +2168,11 @@ export const Constants = {
       staff_role: ["dealer", "pit_boss", "admin"],
       staff_status: ["active", "inactive"],
       table_status: ["inactive", "active", "closed"],
+      visit_kind: [
+        "reward_identified",
+        "gaming_identified_rated",
+        "gaming_ghost_unrated",
+      ],
     },
   },
 } as const
-

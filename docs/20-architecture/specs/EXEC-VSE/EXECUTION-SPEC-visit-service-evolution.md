@@ -7,8 +7,9 @@ source: docs/00-vision/EXEC-SPEC-visit-service-evolution.md
 sources:
   - docs/00-vision/visit_service_enhancement_plan_v2.md
   - docs/00-vision/ADR-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md
-status: APPROVED
+status: IMPLEMENTED
 created: 2025-12-05
+completed: 2025-12-05
 
 phases:
   - id: PHASE-1
@@ -672,30 +673,30 @@ npm run lint
 ## 6. Definition of Done Checklist
 
 ### Schema (Phases A-B)
-- [ ] All 5 migrations applied successfully
-- [ ] `npm run db:types` regenerates clean types with `visit_kind`
-- [ ] CHECK constraint `chk_visit_kind_player_presence` enforces invariant
-- [ ] `rating_slip.visit_id` and `rating_slip.table_id` are NOT NULL
+- [x] All 5 migrations applied successfully
+- [x] `npm run db:types` regenerates clean types with `visit_kind`
+- [x] CHECK constraint `chk_visit_kind_player_presence` enforces invariant
+- [x] `rating_slip.visit_id` and `rating_slip.table_id` are NOT NULL
 
 ### VisitService (Phase C)
-- [ ] Three creation flows work: `createRewardVisit`, `createGamingVisit`, `createGhostGamingVisit`
-- [ ] `convertRewardToGaming` works with audit logging
-- [ ] `startVisit` backward-compatible (defaults to `gaming_identified_rated`)
-- [ ] 90% test coverage on modified service
+- [x] Three creation flows work: `createRewardVisit`, `createGamingVisit`, `createGhostGamingVisit`
+- [x] `convertRewardToGaming` works with audit logging
+- [x] `startVisit` backward-compatible (defaults to `gaming_identified_rated`)
+- [x] 90% test coverage on modified service
 
 ### RLS (Phase E)
-- [ ] Ghost visits insertable by authorized staff
-- [ ] Ghost visits visible to same-casino staff
-- [ ] Existing RLS for identified visits unchanged
+- [x] Ghost visits insertable by authorized staff
+- [x] Ghost visits visible to same-casino staff
+- [x] Existing RLS for identified visits unchanged
 
 ### Documentation (Phase F)
-- [ ] SRM updated for VisitService, RatingSlipService, LoyaltyService, FinanceService
-- [ ] ADR formalized in `docs/80-adrs/`
-- [ ] This EXEC-SPEC marked as "Implemented"
+- [x] SRM updated for VisitService, RatingSlipService, LoyaltyService, FinanceService
+- [x] ADR formalized in `docs/80-adrs/`
+- [x] This EXEC-SPEC marked as "Implemented"
 
 ### Code Quality
-- [ ] No `as any` or `console.*` in production code
-- [ ] Pattern B structure maintained
+- [x] No `as any` or `console.*` in production code
+- [x] Pattern B structure maintained
 
 ## 7. Risks & Mitigations
 

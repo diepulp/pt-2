@@ -18,6 +18,7 @@ import type { Database } from "@/types/database.types";
 import type {
   ActiveVisitDTO,
   CloseVisitDTO,
+  CreateGhostGamingVisitDTO,
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
@@ -55,6 +56,14 @@ function mapDatabaseError(error: {
   // 23503 = Foreign key violation (player not found)
   if (error.code === "23503") {
     return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
+  }
+
+  // 23514 = Check constraint violation (visit_kind/player_id invariant)
+  if (error.code === "23514") {
+    return new DomainError(
+      "VISIT_INVALID_KIND_PLAYER",
+      "Ghost visits require NULL player_id; identified visits require player_id",
+    );
   }
 
   // PGRST116 = No rows returned (used in update/delete operations)
@@ -132,6 +141,11 @@ export async function listVisits(
     query = query.eq("player_id", filters.player_id);
   }
 
+  // Apply visit_kind filter
+  if (filters.visit_kind) {
+    query = query.eq("visit_kind", filters.visit_kind);
+  }
+
   // Apply date range filters
   if (filters.from_date) {
     query = query.gte("started_at", `${filters.from_date}T00:00:00Z`);
@@ -168,6 +182,9 @@ export async function listVisits(
  * Start a visit (check-in) for a player.
  * Idempotent: returns existing active visit if one exists.
  *
+ * BACKWARD COMPATIBILITY: Defaults to visit_kind = 'gaming_identified_rated'.
+ * For typed visit creation, use createRewardVisit, createGamingVisit, or createGhostGamingVisit.
+ *
  * @param supabase - Supabase client with RLS context
  * @param playerId - Player UUID
  * @param casinoId - Casino UUID (from middleware context)
@@ -183,14 +200,15 @@ export async function startVisit(
     return existing.visit;
   }
 
-  // Create new visit
-  // Note: The unique partial index uq_visit_single_active_per_player_casino
+  // Create new visit with explicit visit_kind for clarity
+  // Note: The unique partial index uq_visit_single_active_identified
   // will prevent race conditions at the database level
   const { data, error } = await supabase
     .from("visit")
     .insert({
       player_id: playerId,
       casino_id: casinoId,
+      visit_kind: "gaming_identified_rated",
     })
     .select(VISIT_SELECT)
     .single();
@@ -247,6 +265,178 @@ export async function closeVisit(
         return existing;
       }
       // Visit not found
+      throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+    }
+    throw mapDatabaseError(error);
+  }
+
+  return toVisitDTO(data);
+}
+
+// === Typed Visit Creation Operations (EXEC-VSE-001 WS-3) ===
+
+/**
+ * Create a reward-only visit for an identified player.
+ * Visit kind: 'reward_identified' - for comps, vouchers, customer care without gaming.
+ *
+ * Idempotent: returns existing active visit if one exists (regardless of kind).
+ * This prevents duplicate active visits for the same player.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param playerId - Player UUID (required - cannot be a ghost visit)
+ * @param casinoId - Casino UUID (from middleware context)
+ */
+export async function createRewardVisit(
+  supabase: SupabaseClient<Database>,
+  playerId: string,
+  casinoId: string,
+): Promise<VisitDTO> {
+  // Check for existing active visit (idempotency)
+  const existing = await getActiveVisitForPlayer(supabase, playerId);
+  if (existing.visit) {
+    return existing.visit;
+  }
+
+  const { data, error } = await supabase
+    .from("visit")
+    .insert({
+      player_id: playerId,
+      casino_id: casinoId,
+      visit_kind: "reward_identified",
+    })
+    .select(VISIT_SELECT)
+    .single();
+
+  if (error) {
+    // Handle unique constraint violation (race condition)
+    if (error.code === "23505") {
+      const { visit: existingVisit } = await getActiveVisitForPlayer(
+        supabase,
+        playerId,
+      );
+      if (existingVisit) {
+        return existingVisit;
+      }
+    }
+    throw mapDatabaseError(error);
+  }
+
+  return toVisitDTO(data);
+}
+
+/**
+ * Create a gaming visit for an identified player.
+ * Visit kind: 'gaming_identified_rated' - standard rated play with loyalty accrual.
+ *
+ * This is semantically identical to startVisit but with explicit naming.
+ * Idempotent: returns existing active visit if one exists.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param playerId - Player UUID (required - cannot be a ghost visit)
+ * @param casinoId - Casino UUID (from middleware context)
+ */
+export async function createGamingVisit(
+  supabase: SupabaseClient<Database>,
+  playerId: string,
+  casinoId: string,
+): Promise<VisitDTO> {
+  // Delegate to startVisit which already sets visit_kind = 'gaming_identified_rated'
+  return startVisit(supabase, playerId, casinoId);
+}
+
+/**
+ * Create a ghost gaming visit (anonymous player).
+ * Visit kind: 'gaming_ghost_unrated' - for compliance tracking (CTR/MTL).
+ *
+ * Ghost visits do NOT have idempotency based on player_id since there is no player.
+ * Multiple concurrent ghost visits per casino are allowed.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID (from middleware context)
+ * @param input - Ghost visit input with table_id and optional notes
+ */
+export async function createGhostGamingVisit(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  input: CreateGhostGamingVisitDTO,
+): Promise<VisitDTO> {
+  // Note: Ghost visits allow multiple active visits per casino
+  // No idempotency check since there's no player to dedupe on
+  // table_id and notes are stored for audit/compliance purposes
+  void input; // Currently unused - table_id/notes require schema extension
+  const { data, error } = await supabase
+    .from("visit")
+    .insert({
+      player_id: null, // Ghost visit - no player identity
+      casino_id: casinoId,
+      visit_kind: "gaming_ghost_unrated",
+    })
+    .select(VISIT_SELECT)
+    .single();
+
+  if (error) {
+    throw mapDatabaseError(error);
+  }
+
+  return toVisitDTO(data);
+}
+
+/**
+ * Convert a reward visit to a gaming visit.
+ * Only allowed on active visits with visit_kind = 'reward_identified'.
+ *
+ * Use case: Player came in for rewards, decided to play.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param visitId - Visit UUID to convert
+ */
+export async function convertRewardToGaming(
+  supabase: SupabaseClient<Database>,
+  visitId: string,
+): Promise<VisitDTO> {
+  // Fetch current visit to validate state
+  const currentVisit = await getVisitById(supabase, visitId);
+
+  if (!currentVisit) {
+    throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+  }
+
+  if (currentVisit.ended_at !== null) {
+    throw new DomainError(
+      "VISIT_NOT_OPEN",
+      "Cannot convert a closed visit. Only active visits can be converted.",
+    );
+  }
+
+  if (currentVisit.visit_kind !== "reward_identified") {
+    throw new DomainError(
+      "VISIT_INVALID_CONVERSION",
+      `Cannot convert visit of kind '${currentVisit.visit_kind}' to gaming. Only 'reward_identified' visits can be converted.`,
+    );
+  }
+
+  // Perform the conversion
+  const { data, error } = await supabase
+    .from("visit")
+    .update({
+      visit_kind: "gaming_identified_rated",
+    })
+    .eq("id", visitId)
+    .is("ended_at", null) // Extra safety: only update if still active
+    .select(VISIT_SELECT)
+    .single();
+
+  if (error) {
+    // PGRST116 = No rows returned (concurrent close or not found)
+    if (error.code === "PGRST116") {
+      // Re-fetch to provide better error message
+      const refetched = await getVisitById(supabase, visitId);
+      if (refetched && refetched.ended_at) {
+        throw new DomainError(
+          "VISIT_NOT_OPEN",
+          "Visit was closed concurrently. Cannot convert a closed visit.",
+        );
+      }
       throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
     }
     throw mapDatabaseError(error);

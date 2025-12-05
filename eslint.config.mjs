@@ -23,6 +23,7 @@ const eslintConfig = [
   {
     ignores: [
       'node_modules/**',
+      'trees/**', // Git worktrees - each has own node_modules, lint separately
       '.venv/**',
       'dist/**',
       '.next/**',

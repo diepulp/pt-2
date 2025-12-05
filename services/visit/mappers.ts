@@ -8,18 +8,26 @@
  * @see PRD-003B-visit-service-refactor.md section 4.2
  */
 
-import type { ActiveVisitDTO, VisitDTO, VisitWithPlayerDTO } from "./dtos";
+import type {
+  ActiveVisitDTO,
+  VisitDTO,
+  VisitKind,
+  VisitWithPlayerDTO,
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
 /**
  * Type for rows returned by VISIT_SELECT query.
- * Must match: "id, player_id, casino_id, started_at, ended_at"
+ * Must match: "id, player_id, casino_id, visit_kind, started_at, ended_at"
+ *
+ * Note: player_id is nullable to support ghost gaming visits (gaming_ghost_unrated).
  */
 type VisitSelectedRow = {
   id: string;
-  player_id: string;
+  player_id: string | null;
   casino_id: string;
+  visit_kind: VisitKind;
   started_at: string;
   ended_at: string | null;
 };
@@ -27,11 +35,15 @@ type VisitSelectedRow = {
 /**
  * Type for rows returned by VISIT_WITH_PLAYER_SELECT query.
  * Includes nested player object from join.
+ *
+ * Note: player_id is nullable to support ghost gaming visits.
+ * When player_id is NULL, the player join also returns NULL.
  */
 type VisitWithPlayerSelectedRow = {
   id: string;
-  player_id: string;
+  player_id: string | null;
   casino_id: string;
+  visit_kind: VisitKind;
   started_at: string;
   ended_at: string | null;
   player: {
@@ -52,6 +64,7 @@ export function toVisitDTO(row: VisitSelectedRow): VisitDTO {
     id: row.id,
     player_id: row.player_id,
     casino_id: row.casino_id,
+    visit_kind: row.visit_kind,
     started_at: row.started_at,
     ended_at: row.ended_at,
   };
@@ -77,7 +90,9 @@ export function toVisitDTOOrNull(
 
 /**
  * Maps a selected visit row with player join to VisitWithPlayerDTO.
- * Handles null player (edge case: deleted player).
+ * Handles null player for:
+ *   - Ghost gaming visits (visit_kind = 'gaming_ghost_unrated', player_id is NULL)
+ *   - Deleted player edge case (player_id exists but player was deleted)
  */
 export function toVisitWithPlayerDTO(
   row: VisitWithPlayerSelectedRow,
@@ -86,6 +101,7 @@ export function toVisitWithPlayerDTO(
     id: row.id,
     player_id: row.player_id,
     casino_id: row.casino_id,
+    visit_kind: row.visit_kind,
     started_at: row.started_at,
     ended_at: row.ended_at,
     player: row.player
@@ -94,12 +110,9 @@ export function toVisitWithPlayerDTO(
           first_name: row.player.first_name,
           last_name: row.player.last_name,
         }
-      : {
-          // Fallback for edge case: player was deleted
-          id: row.player_id,
-          first_name: "Unknown",
-          last_name: "Player",
-        },
+      : // Ghost visits or deleted player - return null
+        // UI should display appropriate "Ghost Gaming" or "Unknown Player" label
+        null,
   };
 }
 

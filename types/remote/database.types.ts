@@ -1096,8 +1096,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         Insert: {
           average_bet?: number | null
@@ -1110,8 +1110,8 @@ export type Database = {
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id: string
+          visit_id: string
         }
         Update: {
           average_bet?: number | null
@@ -1124,8 +1124,8 @@ export type Database = {
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id?: string
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1592,22 +1592,25 @@ export type Database = {
           casino_id: string
           ended_at: string | null
           id: string
-          player_id: string
+          player_id: string | null
           started_at: string
+          visit_kind: Database["public"]["Enums"]["visit_kind"]
         }
         Insert: {
           casino_id: string
           ended_at?: string | null
           id?: string
-          player_id: string
+          player_id?: string | null
           started_at?: string
+          visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Update: {
           casino_id?: string
           ended_at?: string | null
           id?: string
-          player_id?: string
+          player_id?: string | null
           started_at?: string
+          visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Relationships: [
           {
@@ -1839,8 +1842,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -1930,8 +1933,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -1961,8 +1964,8 @@ export type Database = {
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2015,6 +2018,10 @@ export type Database = {
       staff_role: "dealer" | "pit_boss" | "admin"
       staff_status: "active" | "inactive"
       table_status: "inactive" | "active" | "closed"
+      visit_kind:
+        | "reward_identified"
+        | "gaming_identified_rated"
+        | "gaming_ghost_unrated"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2161,6 +2168,11 @@ export const Constants = {
       staff_role: ["dealer", "pit_boss", "admin"],
       staff_status: ["active", "inactive"],
       table_status: ["inactive", "active", "closed"],
+      visit_kind: [
+        "reward_identified",
+        "gaming_identified_rated",
+        "gaming_ghost_unrated",
+      ],
     },
   },
 } as const

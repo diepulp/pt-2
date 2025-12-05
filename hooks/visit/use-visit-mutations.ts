@@ -57,10 +57,12 @@ export function useCloseVisit() {
     onSuccess: (data: VisitDTO) => {
       // Invalidate all visit lists
       queryClient.invalidateQueries({ queryKey: visitKeys.list.scope });
-      // Invalidate active visit for this player
-      queryClient.invalidateQueries({
-        queryKey: visitKeys.activeByPlayer(data.player_id),
-      });
+      // Invalidate active visit for this player (skip for ghost visits with null player_id)
+      if (data.player_id) {
+        queryClient.invalidateQueries({
+          queryKey: visitKeys.activeByPlayer(data.player_id),
+        });
+      }
       // Update the detail cache
       queryClient.setQueryData(visitKeys.detail(data.id), data);
     },

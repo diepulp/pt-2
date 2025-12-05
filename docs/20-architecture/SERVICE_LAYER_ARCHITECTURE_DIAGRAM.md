@@ -1,17 +1,17 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v2.2.0)
+title: Service Layer Architecture Diagram (v2.3.0)
 owner: Architecture
 status: Accepted
-last_review: 2025-12-03
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013]
+last_review: 2025-12-05
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 2.2.0
-**Date**: 2025-12-03
-**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001 + ADR-013)
+**Version**: 2.3.0
+**Date**: 2025-12-05
+**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001 + ADR-013 + ADR-014)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -63,7 +63,7 @@ graph TB
         subgraph OPERATIONAL[Operational Services]
             FLOOR[FloorLayoutService<br/>Floor Design]
             TABLE[TableContextService<br/>Table Lifecycle]
-            VISIT[VisitService<br/>Session Lifecycle]
+            VISIT[VisitService<br/>Session Lifecycle<br/>3 visit archetypes]
         end
 
         subgraph TELEMETRY[Telemetry Services]
@@ -1350,16 +1350,20 @@ const mutation = useMutation({
                     ▼ (FK references)
 ┌──────────────────────────────────────────────┐
 │ VisitService (Session)                       │
-│ OWNS: visit                                  │
-│ REFERENCES: player_id, casino_id             │
+│ OWNS: visit (3 archetypes via visit_kind)    │
+│ REFERENCES: player_id (nullable), casino_id  │
+│ SUPPORTS: Ghost gaming (player_id = NULL)    │
+│ See: ADR-014-Ghost-Gaming-Visits             │
 └──────────────────────────────────────────────┘
                     │
                     ▼ (FK references)
 ┌──────────────────────────────────────────────┐
 │ RatingSlipService (Telemetry)               │
 │ OWNS: rating_slip                           │
-│ REFERENCES: player_id, visit_id, table_id   │
+│ REFERENCES: player_id, visit_id (NOT NULL), │
+│             table_id (NOT NULL)             │
 │ DOES NOT OWN: points (Loyalty's domain)     │
+│ CONSTRAINT: All slips anchored to a visit   │
 └──────────────────────────────────────────────┘
                     │
                     ▼ (consumes telemetry)
@@ -1368,6 +1372,8 @@ const mutation = useMutation({
 │ OWNS: loyalty_ledger, player_loyalty         │
 │ REFERENCES: rating_slip_id (telemetry)       │
 │ CALCULATES: points_earned (business logic)   │
+│ FILTER: gaming_identified_rated visits only  │
+│ (Ghost visits excluded from accrual)         │
 └──────────────────────────────────────────────┘
 ```
 
@@ -1881,12 +1887,20 @@ const result = await service.getBalance(playerId);
 
 ## Document History
 
-**Version**: 2.2.0
-**Date**: 2025-12-03
-**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013)
+**Version**: 2.3.0
+**Date**: 2025-12-05
+**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v2.3.0 (2025-12-05)** - Visit Service Evolution (EXEC-VSE-001):
+- ✅ Added visit archetypes (3 types via visit_kind enum) to VisitService
+- ✅ Updated VisitService to support ghost gaming (player_id nullable)
+- ✅ Updated RatingSlipService to note visit_id/table_id NOT NULL constraints
+- ✅ Updated LoyaltyService to note visit_kind filtering (gaming_identified_rated only)
+- ✅ Added ADR-014 to affects list
+- ✅ See ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md for details
 
 **v2.2.0 (2025-12-03)** - Zod Validation Schemas Standardization:
 - ✅ Added `schemas.ts` to service directory structure (§308-348)
@@ -1952,5 +1966,6 @@ const result = await service.getBalance(playerId);
 | OBSERVABILITY_SPEC.md | ✅ ALIGNED | Added correlation/audit section |
 | API_SURFACE_MVP.md | ✅ ALIGNED | Added ServiceHttpResult transformation |
 | ADR-008 | ✅ ALIGNED | Referenced service architecture decisions |
+| ADR-014 | ✅ ALIGNED | Visit archetypes, ghost gaming, loyalty filtering |
 
 **Next Review**: When SRM or security contracts evolve

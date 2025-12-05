@@ -76,6 +76,7 @@ describe("Visit HTTP Fetchers", () => {
         id: "v1",
         player_id: "p1",
         casino_id: "casino-1",
+        visit_kind: "gaming_identified_rated",
         started_at: "2025-01-15T10:00:00Z",
         ended_at: null,
         player: { id: "p1", first_name: "John", last_name: "Doe" },
@@ -84,6 +85,7 @@ describe("Visit HTTP Fetchers", () => {
         id: "v2",
         player_id: "p2",
         casino_id: "casino-1",
+        visit_kind: "gaming_identified_rated",
         started_at: "2025-01-15T09:00:00Z",
         ended_at: "2025-01-15T12:00:00Z",
         player: { id: "p2", first_name: "Jane", last_name: "Smith" },
@@ -178,6 +180,7 @@ describe("Visit HTTP Fetchers", () => {
       id: "v1",
       player_id: "p1",
       casino_id: "casino-1",
+      visit_kind: "gaming_identified_rated",
       started_at: "2025-01-15T10:00:00Z",
       ended_at: null,
     };
@@ -213,6 +216,7 @@ describe("Visit HTTP Fetchers", () => {
         id: "v1",
         player_id: "p1",
         casino_id: "casino-1",
+        visit_kind: "gaming_identified_rated",
         started_at: "2025-01-15T10:00:00Z",
         ended_at: null,
       },
@@ -255,6 +259,7 @@ describe("Visit HTTP Fetchers", () => {
       id: "new-v1",
       player_id: "p1",
       casino_id: "casino-1",
+      visit_kind: "gaming_identified_rated",
       started_at: "2025-01-15T10:00:00Z",
       ended_at: null,
     };
@@ -304,6 +309,7 @@ describe("Visit HTTP Fetchers", () => {
       id: "v1",
       player_id: "p1",
       casino_id: "casino-1",
+      visit_kind: "gaming_identified_rated",
       started_at: "2025-01-15T10:00:00Z",
       ended_at: "2025-01-15T14:00:00Z",
     };

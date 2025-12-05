@@ -34,7 +34,9 @@ export type VisitErrorCode =
   | "VISIT_ALREADY_CLOSED"
   | "VISIT_PLAYER_MISMATCH"
   | "VISIT_CASINO_MISMATCH"
-  | "VISIT_CONCURRENT_MODIFICATION";
+  | "VISIT_CONCURRENT_MODIFICATION"
+  | "VISIT_INVALID_KIND_PLAYER"
+  | "VISIT_INVALID_CONVERSION";
 
 export const VISIT_ERROR_MESSAGES: Record<VisitErrorCode, string> = {
   VISIT_NOT_FOUND: "Visit session not found",
@@ -43,6 +45,10 @@ export const VISIT_ERROR_MESSAGES: Record<VisitErrorCode, string> = {
   VISIT_PLAYER_MISMATCH: "Visit does not belong to the specified player",
   VISIT_CASINO_MISMATCH: "Visit does not belong to the specified casino",
   VISIT_CONCURRENT_MODIFICATION: "Visit was modified by another process",
+  VISIT_INVALID_KIND_PLAYER:
+    "Ghost visits require NULL player_id; identified visits require player_id",
+  VISIT_INVALID_CONVERSION:
+    "Only reward_identified visits can be converted to gaming visits",
 };
 
 // ============================================================================

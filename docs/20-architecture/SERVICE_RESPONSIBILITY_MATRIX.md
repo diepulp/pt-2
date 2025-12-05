@@ -647,7 +647,7 @@ using (casino_id = current_setting('app.casino_id')::uuid)
 | **Identity** | `PlayerService` | • Player profile<br>• Contact info<br>• Identity data | • Casino (FK, enrollment) | • Visits<br>• rating_slips<br>• Loyalty | Identity management |
 | **Operational** | `TableContextService` | • Gaming tables<br>• Table settings<br>• Dealer rotations<br>• Fills/drops/chips (chip custody telemetry)<br>• Inventory slips<br>• Break alerts<br>• Key control logs | • Casino (FK)<br>• Staff (FK, dealers) | • Performance metrics<br>• MTL events<br>• Table snapshots | **Table lifecycle & operational telemetry** *(post-MVP extensions in `docs/20-architecture/SRM_Addendum_TableContext_PostMVP.md`)* |
 | **Operational** | `FloorLayoutService` | • Floor layout drafts & approvals<br>• Layout versions (immutable snapshots)<br>• Pit definitions & sections<br>• Table slot placements<br>• Layout activation log/events | • Casino (FK)<br>• Staff (FK, admins)<br>• TableContext (event consumers) | • Activation history<br>• Layout review queues | **Design & activate gaming floor layouts** |
-| **Operational** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status | • Player (FK)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle |
+| **Operational** | `VisitService` | • Visit sessions<br>• Check-in/out<br>• Visit status<br>• **visit_kind enum**<br>• **Ghost gaming support** | • Player (FK, nullable for ghosts)<br>• Casino (FK) | • rating_slips<br>• Financials<br>• MTL entries | Session lifecycle (3 archetypes) |
 | **Telemetry** | `RatingSlipService` | • Average bet<br>• Time played<br>• Game settings<br>• Seat number<br>• `status`/`policy_snapshot` | • Player (FK)<br>• Visit (FK)<br>• Gaming Table (FK) | – | **Gameplay measurement** |
 | **Reward** | `LoyaltyService` | • **Points calculation logic**<br>• Loyalty ledger<br>• Tier status<br>• Tier rules<br>• Preferences | • Player (FK)<br>• rating_slip (FK)<br>• Visit (FK) | • Points history<br>• Tier progression | **Reward policy & assignment** |
 | **Finance** | `PlayerFinancialService` | • `player_financial_transaction` (OWNS - append-only)<br>• **Financial event types**<br>• Idempotency enforcement<br>• **PROVIDES**: 3 aggregation views | • Player (FK)<br>• Visit (FK - READ-ONLY)<br>• rating_slip (FK - compat)<br>• Casino (FK - temporal) | • Visit consumes summaries (READ)<br>• MTL refs gaming-day aggs | **Financial ledger (SoT)** |
@@ -855,18 +855,45 @@ create table player_casino (
 
 ## Visit Service - Operational Session Context
 
-### Visit Acceptance Checklist (CI)
-- [ ] **Table present:** `visit`
-- [ ] **PK/FK types:** `uuid`
-- [ ] **RLS:** same-casino scope; writes by authorized session lifecycle roles
-- [ ] **Access paths:** `(player_id, started_at desc)`; `(casino_id, started_at desc)`
+### Visit Archetypes
 
-**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` (Visit section) defines the same-casino read policies and visit write paths. All access flows through `withServerAction()` entry points (Server Actions or Route Handlers) or RPCs that set `app.casino_id`.
+VisitService supports three visit kinds (see [ADR-014](../80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md)):
+
+| `visit_kind` | Identity | Gaming | Loyalty | Use Case |
+|--------------|----------|--------|---------|----------|
+| `reward_identified` | Player exists | No | Redemptions only | Comps, vouchers, customer care |
+| `gaming_identified_rated` | Player exists | Yes | Accrual eligible | Standard rated play |
+| `gaming_ghost_unrated` | No player | Yes | Compliance only | Ghost gaming for finance/MTL |
+
+**Key Invariant**: `player_id` is nullable. Ghost visits (`gaming_ghost_unrated`) MUST have `player_id = NULL`; non-ghost visits MUST have `player_id IS NOT NULL`. Enforced by CHECK constraint `chk_visit_kind_player_presence`.
+
+### Visit Acceptance Checklist (CI)
+- [x] **Table present:** `visit`
+- [x] **PK/FK types:** `uuid`
+- [x] **RLS:** same-casino scope; writes by authorized session lifecycle roles
+- [x] **Access paths:** `(player_id, started_at desc)`; `(casino_id, started_at desc)`
+- [x] **visit_kind enum:** `reward_identified`, `gaming_identified_rated`, `gaming_ghost_unrated`
+- [x] **player_id nullable:** with CHECK constraint for visit_kind/player_id invariant
+- [x] **Partial unique index:** `uq_visit_single_active_identified` for identified visits only
+
+**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit` (Visit section) defines the same-casino read policies and visit write paths. All access flows through `withServerAction()` entry points (Server Actions or Route Handlers) or RPCs that set `app.casino_id`. Ghost visits use the same `casino_id` scoping—no special RLS policies required.
 
 ### Service Boundary Notes
 - VisitService depends on Player DTOs and never mutates player data directly.
 - VisitService exposes session lifecycle RPCs (`create_visit`, `close_visit`, etc.); downstream domains (Finance, Loyalty, MTL) consume published Visit DTOs/RPCs instead of querying the `visit` table directly.
 - Casino/Staff metadata required by VisitService is retrieved via CasinoService DTOs so the ownership boundary remains intact.
+- **Ghost gaming visits** anchor all rating slips for compliance/finance without requiring a Player record; `rating_slip.visit_id` is always NOT NULL.
+
+### Creation & Conversion Flows
+
+| Method | Description | visit_kind |
+|--------|-------------|------------|
+| `createRewardVisit` | Identified patron, no gaming | `reward_identified` |
+| `createGamingVisit` | Identified patron, gaming | `gaming_identified_rated` |
+| `createGhostGamingVisit` | No player record | `gaming_ghost_unrated` |
+| `convertRewardToGaming` | Upgrade reward→gaming (one-way) | Changes to `gaming_identified_rated` |
+
+**Note**: `startVisit` defaults to `gaming_identified_rated` for backward compatibility.
 
 ### Transport & Edge Rules
 - Visit check-in/out flows MUST execute via `withServerAction()` so auth, `SET LOCAL app.*`, and audit/idempotency policies remain centralized (Server Actions for form/RSC flows, Route Handlers for React Query/kiosk transport).
@@ -876,13 +903,29 @@ create table player_casino (
 ### Schema
 
 ```sql
+create type visit_kind as enum (
+  'reward_identified',
+  'gaming_identified_rated',
+  'gaming_ghost_unrated'
+);
+
 create table visit (
   id uuid primary key default gen_random_uuid(),
-  player_id uuid not null references player(id) on delete cascade,
+  player_id uuid references player(id) on delete set null, -- nullable for ghost visits
   casino_id uuid not null references casino(id) on delete cascade,
+  visit_kind visit_kind not null default 'gaming_identified_rated',
   started_at timestamptz not null default now(),
-  ended_at timestamptz
+  ended_at timestamptz,
+  constraint chk_visit_kind_player_presence check (
+    (visit_kind = 'gaming_ghost_unrated' and player_id is null) or
+    (visit_kind <> 'gaming_ghost_unrated' and player_id is not null)
+  )
 );
+
+-- Partial unique index: only one active visit per identified player per casino
+create unique index uq_visit_single_active_identified
+  on visit (player_id, casino_id)
+  where ended_at is null and player_id is not null;
 ```
 
 ---
@@ -910,6 +953,14 @@ create table visit (
 
 **Canonical stance:** **Loyalty is the sole source of truth for rewards.**
 `rating_slip` stores telemetry only (time, average_bet, policy snapshot, state) and never caches reward balances. Mid-session rewards are issued via `rpc_issue_mid_session_reward`, which appends to `loyalty_ledger` and updates `player_loyalty` in one transaction.
+
+### Visit Kind Filtering
+
+Loyalty accrual rules operate **only** on `gaming_identified_rated` visits:
+- **Reward-only visits** (`reward_identified`): Can be used for redemptions/adjustments; no play-based accrual (no gaming).
+- **Ghost gaming visits** (`gaming_ghost_unrated`): Visible for audit/reporting but do NOT trigger automated accrual. Any retroactive loyalty treatment is a manual supervisor action.
+
+See [ADR-014](../80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md) for full rationale.
 
 ### Acceptance Checklist (CI)
 - [ ] **Tables present:** `player_loyalty`, `loyalty_ledger`
@@ -1557,12 +1608,25 @@ $$;
 
 **BOUNDED CONTEXT**: "What gameplay activity occurred?"
 
+### Visit Anchoring (Hardened)
+
+All rating slips MUST have a `visit_id` (NOT NULL). This ensures:
+- **Ghost gaming visits** (`gaming_ghost_unrated`) anchor all slips for compliance/finance
+- **Rated telemetry** on identified visits drives loyalty accrual
+- **Compliance-only telemetry** on ghost visits documents action for CTR/AML without loyalty
+
+`table_id` is also NOT NULL—every rating slip occurs at a specific table.
+
+See [ADR-014](../80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md) for the visit archetype model.
+
 ### Acceptance Checklist (CI)
-- [ ] **Table contract:** `rating_slip` excludes any points cache column
-- [ ] **Columns:** `status text default 'open'`, optional `policy_snapshot jsonb`, immutable `player_id`/`casino_id`
+- [x] **Table contract:** `rating_slip` excludes any points cache column
+- [x] **Columns:** `status text default 'open'`, optional `policy_snapshot jsonb`, immutable `player_id`/`casino_id`
+- [x] **visit_id NOT NULL:** all slips anchored to a visit (including ghost visits)
+- [x] **table_id NOT NULL:** all slips tied to a specific table
 - [ ] **States:** supports at least `open`, `closed`, optional `paused`; transitions enforced
 - [ ] **Eligibility guard:** mid-session rewards only when `status` ∈ (`open`,`paused?`)
-- [ ] **RLS:** same-casino read; updates restricted to authorized staff roles
+- [x] **RLS:** same-casino read; updates restricted to authorized staff roles
 - [ ] **Telemetry focus:** updates limited to gameplay metrics (`average_bet`, `start_time`, `end_time`)
 
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#ratingslipservice` — same-casino reads + telemetry role updates enforced via `withServerAction()` entry points/RPCs (no direct table writes across contexts).
@@ -1579,8 +1643,8 @@ create table rating_slip (
   id uuid primary key default gen_random_uuid(),
   player_id uuid not null references player(id) on delete cascade,
   casino_id uuid not null references casino(id) on delete cascade,
-  visit_id uuid references visit(id) on delete set null,
-  table_id uuid references gaming_table(id) on delete set null,
+  visit_id uuid not null references visit(id) on delete cascade, -- HARDENED: always anchored
+  table_id uuid not null references gaming_table(id) on delete cascade, -- HARDENED: always at a table
   game_settings jsonb,
   average_bet numeric,
   start_time timestamptz not null default now(),
