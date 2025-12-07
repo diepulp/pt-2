@@ -9,9 +9,9 @@
  * Note: This is idempotent - closing an already-closed visit returns success.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -19,15 +19,15 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { CloseVisitDTO } from "@/services/visit/dtos";
-import { createVisitService } from "@/services/visit/index";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { CloseVisitDTO } from '@/services/visit/dtos';
+import { createVisitService } from '@/services/visit/index';
 import {
   closeVisitSchema,
   visitRouteParamsSchema,
-} from "@/services/visit/schemas";
+} from '@/services/visit/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ visitId: string }> };
@@ -68,7 +68,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         // Check if visit exists
         const existing = await service.getById(params.visitId);
         if (!existing) {
-          throw new DomainError("VISIT_NOT_FOUND", "Visit not found", {
+          throw new DomainError('VISIT_NOT_FOUND', 'Visit not found', {
             httpStatus: 404,
             details: { visitId: params.visitId },
           });
@@ -78,7 +78,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: visit,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -86,8 +86,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "visit",
-        action: "close",
+        domain: 'visit',
+        action: 'close',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

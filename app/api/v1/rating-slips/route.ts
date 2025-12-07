@@ -8,7 +8,7 @@
  * Pattern: PRD-002 Rating Slip Service
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createRatingSlipService } from '@/services/rating-slip';
 import {
   createRatingSlipSchema,
   ratingSlipListQuerySchema,
-} from "@/services/rating-slip/schemas";
+} from '@/services/rating-slip/schemas';
 
 /**
  * GET /api/v1/rating-slips
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         } else {
           // For MVP, we require either table_id or visit_id filter
           // This prevents unbounded queries across all slips
-          const response = await service.listForTable(query.table_id ?? "", {
+          const response = await service.listForTable(query.table_id ?? '', {
             status: query.status,
             limit: query.limit,
             cursor: query.cursor,
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items,
             cursor,
@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "list",
+        domain: 'rating-slip',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: slip,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -139,8 +139,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "start",
+        domain: 'rating-slip',
+        action: 'start',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -152,7 +152,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return 201 Created for new rating slip
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

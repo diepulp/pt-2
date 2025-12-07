@@ -9,16 +9,16 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import { countOpenSlipsForTable, hasOpenSlipsForTable } from "../queries";
+import { countOpenSlipsForTable, hasOpenSlipsForTable } from '../queries';
 
 // === Test Data ===
 
-const CASINO_ID = "casino-123";
-const TABLE_ID = "table-456";
+const CASINO_ID = 'casino-123';
+const TABLE_ID = 'table-456';
 
 // === Mock Helpers ===
 
@@ -53,7 +53,7 @@ function createMockSupabase(chain: MockChain): SupabaseClient<Database> {
 
 // === Tests ===
 
-describe("Rating Slip Queries", () => {
+describe('Rating Slip Queries', () => {
   let mockChain: MockChain;
   let mockSupabase: SupabaseClient<Database>;
   let originalEnv: string | undefined;
@@ -73,8 +73,8 @@ describe("Rating Slip Queries", () => {
   // hasOpenSlipsForTable
   // ===========================================================================
 
-  describe("hasOpenSlipsForTable", () => {
-    it("should return true when open slips exist", async () => {
+  describe('hasOpenSlipsForTable', () => {
+    it('should return true when open slips exist', async () => {
       mockChain.in.mockResolvedValue({
         count: 3,
         error: null,
@@ -83,21 +83,21 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(true);
-      expect(mockSupabase.from).toHaveBeenCalledWith("rating_slip");
-      expect(mockChain.select).toHaveBeenCalledWith("id", {
-        count: "exact",
+      expect(mockSupabase.from).toHaveBeenCalledWith('rating_slip');
+      expect(mockChain.select).toHaveBeenCalledWith('id', {
+        count: 'exact',
         head: true,
       });
-      expect(mockChain.eq).toHaveBeenCalledWith("table_id", TABLE_ID);
-      expect(mockChain.eq).toHaveBeenCalledWith("casino_id", CASINO_ID);
-      expect(mockChain.in).toHaveBeenCalledWith("status", ["open", "paused"]);
+      expect(mockChain.eq).toHaveBeenCalledWith('table_id', TABLE_ID);
+      expect(mockChain.eq).toHaveBeenCalledWith('casino_id', CASINO_ID);
+      expect(mockChain.in).toHaveBeenCalledWith('status', ['open', 'paused']);
     });
 
-    it("should return true when paused slips exist", async () => {
+    it('should return true when paused slips exist', async () => {
       mockChain.in.mockResolvedValue({
         count: 1,
         error: null,
@@ -106,13 +106,13 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(true);
     });
 
-    it("should return false when no open/paused slips", async () => {
+    it('should return false when no open/paused slips', async () => {
       mockChain.in.mockResolvedValue({
         count: 0,
         error: null,
@@ -121,13 +121,13 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(false);
     });
 
-    it("should return false when count is null", async () => {
+    it('should return false when count is null', async () => {
       mockChain.in.mockResolvedValue({
         count: null,
         error: null,
@@ -136,13 +136,13 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(false);
     });
 
-    it("should filter by casino_id correctly", async () => {
+    it('should filter by casino_id correctly', async () => {
       mockChain.in.mockResolvedValue({
         count: 2,
         error: null,
@@ -151,27 +151,27 @@ describe("Rating Slip Queries", () => {
       await hasOpenSlipsForTable(mockSupabase, TABLE_ID, CASINO_ID);
 
       // Verify both eq calls were made with correct parameters
-      expect(mockChain.eq).toHaveBeenNthCalledWith(1, "table_id", TABLE_ID);
-      expect(mockChain.eq).toHaveBeenNthCalledWith(2, "casino_id", CASINO_ID);
+      expect(mockChain.eq).toHaveBeenNthCalledWith(1, 'table_id', TABLE_ID);
+      expect(mockChain.eq).toHaveBeenNthCalledWith(2, 'casino_id', CASINO_ID);
     });
 
-    it("should return false on error (graceful degradation)", async () => {
+    it('should return false on error (graceful degradation)', async () => {
       mockChain.in.mockResolvedValue({
         count: null,
-        error: { message: "Database error", code: "42000" },
+        error: { message: 'Database error', code: '42000' },
       });
 
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       // Graceful degradation: returns false on error without logging
       expect(result).toBe(false);
     });
 
-    it("should handle exactly one open slip", async () => {
+    it('should handle exactly one open slip', async () => {
       mockChain.in.mockResolvedValue({
         count: 1,
         error: null,
@@ -180,13 +180,13 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(true);
     });
 
-    it("should handle large count values", async () => {
+    it('should handle large count values', async () => {
       mockChain.in.mockResolvedValue({
         count: 1000,
         error: null,
@@ -195,7 +195,7 @@ describe("Rating Slip Queries", () => {
       const result = await hasOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(true);
@@ -206,8 +206,8 @@ describe("Rating Slip Queries", () => {
   // countOpenSlipsForTable
   // ===========================================================================
 
-  describe("countOpenSlipsForTable", () => {
-    it("should return count when slips exist", async () => {
+  describe('countOpenSlipsForTable', () => {
+    it('should return count when slips exist', async () => {
       mockChain.in.mockResolvedValue({
         count: 5,
         error: null,
@@ -216,13 +216,13 @@ describe("Rating Slip Queries", () => {
       const result = await countOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(5);
     });
 
-    it("should return zero when no slips exist", async () => {
+    it('should return zero when no slips exist', async () => {
       mockChain.in.mockResolvedValue({
         count: 0,
         error: null,
@@ -231,13 +231,13 @@ describe("Rating Slip Queries", () => {
       const result = await countOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(0);
     });
 
-    it("should return zero when count is null", async () => {
+    it('should return zero when count is null', async () => {
       mockChain.in.mockResolvedValue({
         count: null,
         error: null,
@@ -246,13 +246,13 @@ describe("Rating Slip Queries", () => {
       const result = await countOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(0);
     });
 
-    it("should filter by casino_id correctly", async () => {
+    it('should filter by casino_id correctly', async () => {
       mockChain.in.mockResolvedValue({
         count: 3,
         error: null,
@@ -260,28 +260,28 @@ describe("Rating Slip Queries", () => {
 
       await countOpenSlipsForTable(mockSupabase, TABLE_ID, CASINO_ID);
 
-      expect(mockChain.eq).toHaveBeenNthCalledWith(1, "table_id", TABLE_ID);
-      expect(mockChain.eq).toHaveBeenNthCalledWith(2, "casino_id", CASINO_ID);
+      expect(mockChain.eq).toHaveBeenNthCalledWith(1, 'table_id', TABLE_ID);
+      expect(mockChain.eq).toHaveBeenNthCalledWith(2, 'casino_id', CASINO_ID);
     });
 
-    it("should return zero on error (graceful degradation)", async () => {
-      process.env.NODE_ENV = "test";
+    it('should return zero on error (graceful degradation)', async () => {
+      process.env.NODE_ENV = 'test';
 
       mockChain.in.mockResolvedValue({
         count: null,
-        error: { message: "Database error", code: "42000" },
+        error: { message: 'Database error', code: '42000' },
       });
 
       const result = await countOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(0);
     });
 
-    it("should handle large count values", async () => {
+    it('should handle large count values', async () => {
       mockChain.in.mockResolvedValue({
         count: 999,
         error: null,
@@ -290,13 +290,13 @@ describe("Rating Slip Queries", () => {
       const result = await countOpenSlipsForTable(
         mockSupabase,
         TABLE_ID,
-        CASINO_ID
+        CASINO_ID,
       );
 
       expect(result).toBe(999);
     });
 
-    it("should use correct select options for count", async () => {
+    it('should use correct select options for count', async () => {
       mockChain.in.mockResolvedValue({
         count: 10,
         error: null,
@@ -304,13 +304,13 @@ describe("Rating Slip Queries", () => {
 
       await countOpenSlipsForTable(mockSupabase, TABLE_ID, CASINO_ID);
 
-      expect(mockChain.select).toHaveBeenCalledWith("id", {
-        count: "exact",
+      expect(mockChain.select).toHaveBeenCalledWith('id', {
+        count: 'exact',
         head: true,
       });
     });
 
-    it("should filter for open and paused status only", async () => {
+    it('should filter for open and paused status only', async () => {
       mockChain.in.mockResolvedValue({
         count: 2,
         error: null,
@@ -318,7 +318,7 @@ describe("Rating Slip Queries", () => {
 
       await countOpenSlipsForTable(mockSupabase, TABLE_ID, CASINO_ID);
 
-      expect(mockChain.in).toHaveBeenCalledWith("status", ["open", "paused"]);
+      expect(mockChain.in).toHaveBeenCalledWith('status', ['open', 'paused']);
     });
   });
 
@@ -326,34 +326,34 @@ describe("Rating Slip Queries", () => {
   // Edge Cases
   // ===========================================================================
 
-  describe("Edge Cases", () => {
-    it("should handle empty string tableId", async () => {
+  describe('Edge Cases', () => {
+    it('should handle empty string tableId', async () => {
       mockChain.in.mockResolvedValue({
         count: 0,
         error: null,
       });
 
-      const result = await hasOpenSlipsForTable(mockSupabase, "", CASINO_ID);
+      const result = await hasOpenSlipsForTable(mockSupabase, '', CASINO_ID);
 
       expect(result).toBe(false);
-      expect(mockChain.eq).toHaveBeenCalledWith("table_id", "");
+      expect(mockChain.eq).toHaveBeenCalledWith('table_id', '');
     });
 
-    it("should handle empty string casinoId", async () => {
+    it('should handle empty string casinoId', async () => {
       mockChain.in.mockResolvedValue({
         count: 0,
         error: null,
       });
 
-      const result = await hasOpenSlipsForTable(mockSupabase, TABLE_ID, "");
+      const result = await hasOpenSlipsForTable(mockSupabase, TABLE_ID, '');
 
       expect(result).toBe(false);
-      expect(mockChain.eq).toHaveBeenCalledWith("casino_id", "");
+      expect(mockChain.eq).toHaveBeenCalledWith('casino_id', '');
     });
 
-    it("should handle UUID-formatted IDs", async () => {
-      const uuidTableId = "550e8400-e29b-41d4-a716-446655440000";
-      const uuidCasinoId = "6ba7b810-9dad-11d1-80b4-00c04fd430c8";
+    it('should handle UUID-formatted IDs', async () => {
+      const uuidTableId = '550e8400-e29b-41d4-a716-446655440000';
+      const uuidCasinoId = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
 
       mockChain.in.mockResolvedValue({
         count: 1,
@@ -362,13 +362,13 @@ describe("Rating Slip Queries", () => {
 
       await hasOpenSlipsForTable(mockSupabase, uuidTableId, uuidCasinoId);
 
-      expect(mockChain.eq).toHaveBeenCalledWith("table_id", uuidTableId);
-      expect(mockChain.eq).toHaveBeenCalledWith("casino_id", uuidCasinoId);
+      expect(mockChain.eq).toHaveBeenCalledWith('table_id', uuidTableId);
+      expect(mockChain.eq).toHaveBeenCalledWith('casino_id', uuidCasinoId);
     });
 
-    it("should handle different casino IDs (RLS scoping)", async () => {
-      const casino1 = "casino-001";
-      const casino2 = "casino-002";
+    it('should handle different casino IDs (RLS scoping)', async () => {
+      const casino1 = 'casino-001';
+      const casino2 = 'casino-002';
 
       mockChain.in.mockResolvedValue({
         count: 3,
@@ -376,7 +376,7 @@ describe("Rating Slip Queries", () => {
       });
 
       await hasOpenSlipsForTable(mockSupabase, TABLE_ID, casino1);
-      expect(mockChain.eq).toHaveBeenLastCalledWith("casino_id", casino1);
+      expect(mockChain.eq).toHaveBeenLastCalledWith('casino_id', casino1);
 
       jest.clearAllMocks();
       mockChain.in.mockResolvedValue({
@@ -385,7 +385,7 @@ describe("Rating Slip Queries", () => {
       });
 
       await hasOpenSlipsForTable(mockSupabase, TABLE_ID, casino2);
-      expect(mockChain.eq).toHaveBeenLastCalledWith("casino_id", casino2);
+      expect(mockChain.eq).toHaveBeenLastCalledWith('casino_id', casino2);
     });
   });
 });

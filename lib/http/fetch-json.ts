@@ -1,4 +1,4 @@
-import type { ServiceHttpResult } from "./service-response";
+import type { ServiceHttpResult } from './service-response';
 
 /**
  * Error thrown when API returns non-ok response
@@ -15,7 +15,7 @@ export class FetchError extends Error {
     details?: unknown,
   ) {
     super(message);
-    this.name = "FetchError";
+    this.name = 'FetchError';
     this.status = status;
     this.code = code;
     this.details = details;
@@ -43,7 +43,7 @@ export async function fetchJSON<T>(
   const response = await fetch(url, {
     ...options,
     headers: {
-      Accept: "application/json",
+      Accept: 'application/json',
       ...options?.headers,
     },
   });
@@ -52,7 +52,7 @@ export async function fetchJSON<T>(
 
   if (!result.ok) {
     throw new FetchError(
-      result.error ?? "Request failed",
+      result.error ?? 'Request failed',
       result.status,
       result.code,
       result.details,
@@ -75,13 +75,13 @@ export async function mutateJSON<T, D = unknown>(
   url: string,
   data: D,
   idempotencyKey: string,
-  options?: Omit<RequestInit, "method" | "body">,
+  options?: Omit<RequestInit, 'method' | 'body'>,
 ): Promise<T> {
   return fetchJSON<T>(url, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
       ...options?.headers,
     },
     body: JSON.stringify(data),

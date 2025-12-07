@@ -11,8 +11,8 @@
  * - Never retry non-retryable errors (validation, not found, etc.)
  */
 
-import type { DomainErrorCode } from "./domain-errors";
-import { DomainError } from "./domain-errors";
+import type { DomainErrorCode } from './domain-errors';
+import { DomainError } from './domain-errors';
 
 // ============================================================================
 // RETRY CONFIGURATION
@@ -84,12 +84,12 @@ function isRetryableError(error: unknown): boolean {
   // Network/timeout errors are retryable
   if (error instanceof Error) {
     const retryableMessages = [
-      "timeout",
-      "network",
-      "ECONNRESET",
-      "ECONNREFUSED",
-      "ETIMEDOUT",
-      "concurrent",
+      'timeout',
+      'network',
+      'ECONNRESET',
+      'ECONNREFUSED',
+      'ETIMEDOUT',
+      'concurrent',
     ];
 
     return retryableMessages.some((msg) =>
@@ -220,9 +220,9 @@ export const DEFAULT_CIRCUIT_BREAKER_CONFIG: CircuitBreakerConfig = {
 };
 
 export enum CircuitState {
-  CLOSED = "CLOSED",
-  OPEN = "OPEN",
-  HALF_OPEN = "HALF_OPEN",
+  CLOSED = 'CLOSED',
+  OPEN = 'OPEN',
+  HALF_OPEN = 'HALF_OPEN',
 }
 
 export class CircuitBreaker {
@@ -243,7 +243,7 @@ export class CircuitBreaker {
         this.halfOpenAttempts = 0;
       } else {
         throw new DomainError(
-          "INTERNAL_ERROR",
+          'INTERNAL_ERROR',
           `Circuit breaker "${this.name}" is open`,
           { httpStatus: 503, retryable: true },
         );
@@ -320,7 +320,7 @@ export class CircuitBreaker {
  */
 export const RETRY_POLICIES: Record<string, RetryConfig> = {
   // High-value financial operations: aggressive retry
-  "finance.create-transaction": {
+  'finance.create-transaction': {
     maxRetries: 5,
     initialDelayMs: 200,
     maxDelayMs: 10000,
@@ -329,7 +329,7 @@ export const RETRY_POLICIES: Record<string, RetryConfig> = {
   },
 
   // Loyalty operations: moderate retry
-  "loyalty.issue-reward": {
+  'loyalty.issue-reward': {
     maxRetries: 3,
     initialDelayMs: 150,
     maxDelayMs: 5000,
@@ -338,7 +338,7 @@ export const RETRY_POLICIES: Record<string, RetryConfig> = {
   },
 
   // Read operations: minimal retry
-  "*.read": {
+  '*.read': {
     maxRetries: 2,
     initialDelayMs: 50,
     maxDelayMs: 1000,

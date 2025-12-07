@@ -7,9 +7,9 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 1580-1719
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import type {
   FloorLayoutDTO,
@@ -17,7 +17,7 @@ import type {
   FloorLayoutVersionDTO,
   FloorLayoutVersionFilters,
   FloorLayoutVersionWithSlotsDTO,
-} from "./dtos";
+} from './dtos';
 import {
   toFloorLayoutDTO,
   toFloorLayoutDTOList,
@@ -26,7 +26,7 @@ import {
   toFloorLayoutVersionWithSlotsDTO,
   toFloorPitDTOList,
   toFloorTableSlotDTOList,
-} from "./mappers";
+} from './mappers';
 
 // === Layout CRUD ===
 
@@ -40,19 +40,19 @@ export async function listLayouts(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("floor_layout")
-    .select("*")
-    .eq("casino_id", filters.casino_id)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
+    .from('floor_layout')
+    .select('*')
+    .eq('casino_id', filters.casino_id)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit);
 
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    query = query.eq('status', filters.status);
   }
 
   if (filters.cursor) {
-    query = query.lt("created_at", filters.cursor);
+    query = query.lt('created_at', filters.cursor);
   }
 
   const { data, error } = await query;
@@ -73,13 +73,13 @@ export async function getLayoutById(
   layoutId: string,
 ): Promise<FloorLayoutDTO | null> {
   const { data, error } = await supabase
-    .from("floor_layout")
-    .select("*")
-    .eq("id", layoutId)
+    .from('floor_layout')
+    .select('*')
+    .eq('id', layoutId)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") return null;
+    if (error.code === 'PGRST116') return null;
     throw error;
   }
 
@@ -98,13 +98,13 @@ export async function listVersions(
   items: FloorLayoutVersionDTO[] | FloorLayoutVersionWithSlotsDTO[];
 }> {
   let query = supabase
-    .from("floor_layout_version")
-    .select("*")
-    .eq("layout_id", filters.layout_id)
-    .order("version_no", { ascending: false });
+    .from('floor_layout_version')
+    .select('*')
+    .eq('layout_id', filters.layout_id)
+    .order('version_no', { ascending: false });
 
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    query = query.eq('status', filters.status);
   }
 
   const { data, error } = await query;
@@ -121,11 +121,11 @@ export async function listVersions(
   const versionIds = versions.map((v) => v.id);
 
   const [pitsResult, slotsResult] = await Promise.all([
-    supabase.from("floor_pit").select("*").in("layout_version_id", versionIds),
+    supabase.from('floor_pit').select('*').in('layout_version_id', versionIds),
     supabase
-      .from("floor_table_slot")
-      .select("*")
-      .in("layout_version_id", versionIds),
+      .from('floor_table_slot')
+      .select('*')
+      .in('layout_version_id', versionIds),
   ]);
 
   if (pitsResult.error) throw pitsResult.error;
@@ -168,13 +168,13 @@ export async function getVersionById(
   versionId: string,
 ): Promise<FloorLayoutVersionDTO | null> {
   const { data, error } = await supabase
-    .from("floor_layout_version")
-    .select("*")
-    .eq("id", versionId)
+    .from('floor_layout_version')
+    .select('*')
+    .eq('id', versionId)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") return null;
+    if (error.code === 'PGRST116') return null;
     throw error;
   }
 

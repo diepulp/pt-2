@@ -8,11 +8,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 298-333
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Enum Types ===
-export type TableStatus = Database["public"]["Enums"]["table_status"];
-export type GameType = Database["public"]["Enums"]["game_type"];
+export type TableStatus = Database['public']['Enums']['table_status'];
+export type GameType = Database['public']['Enums']['game_type'];
 
 // === Chipset Type (JSONB payload) ===
 /** Denomination to quantity mapping for chip counts */
@@ -85,7 +85,7 @@ export interface EndDealerRotationInput {
 
 // === Inventory Snapshot DTOs ===
 
-export type SnapshotType = "open" | "close" | "rundown";
+export type SnapshotType = 'open' | 'close' | 'rundown';
 
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC return type with JSONB chipset
 export interface TableInventorySnapshotDTO {

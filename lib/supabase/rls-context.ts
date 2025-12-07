@@ -11,9 +11,9 @@
  * 4. RLS policies read from current_setting()
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 export interface RLSContext {
   actorId: string; // UUID from auth.uid()
@@ -37,24 +37,24 @@ export async function getAuthContext(
   } = await supabase.auth.getUser();
 
   if (authError || !user) {
-    throw new Error("UNAUTHORIZED: No authenticated user");
+    throw new Error('UNAUTHORIZED: No authenticated user');
   }
 
   // Lookup staff record by user_id
   // NOTE: staff table must have a user_id column linking to auth.users
   const { data: staff, error: staffError } = await supabase
-    .from("staff")
-    .select("id, casino_id, role")
-    .eq("user_id", user.id)
-    .eq("status", "active")
+    .from('staff')
+    .select('id, casino_id, role')
+    .eq('user_id', user.id)
+    .eq('status', 'active')
     .single();
 
   if (staffError || !staff) {
-    throw new Error("FORBIDDEN: User is not active staff");
+    throw new Error('FORBIDDEN: User is not active staff');
   }
 
   if (!staff.casino_id) {
-    throw new Error("FORBIDDEN: Staff member has no casino assignment");
+    throw new Error('FORBIDDEN: Staff member has no casino assignment');
   }
 
   return {
@@ -98,7 +98,7 @@ export async function injectRLSContext(
 
   // Execute all SET LOCAL statements
   for (const stmt of statements) {
-    const { error } = await supabase.rpc("exec_sql", { sql: stmt });
+    const { error } = await supabase.rpc('exec_sql', { sql: stmt });
     if (error) {
       throw new Error(`Failed to inject RLS context: ${error.message}`);
     }
@@ -139,7 +139,7 @@ export function assertActorScope(context: RLSContext, actorId: string): void {
 export function assertRole(context: RLSContext, allowedRoles: string[]): void {
   if (!allowedRoles.includes(context.staffRole)) {
     throw new Error(
-      `FORBIDDEN: Operation requires role ${allowedRoles.join("|")} but actor has ${context.staffRole}`,
+      `FORBIDDEN: Operation requires role ${allowedRoles.join('|')} but actor has ${context.staffRole}`,
     );
   }
 }

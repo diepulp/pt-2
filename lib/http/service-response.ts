@@ -1,23 +1,23 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
-import { ZodError } from "zod";
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
+import { ZodError } from 'zod';
 
-import { setCorrelationId } from "@/lib/correlation";
-import { DomainError } from "@/lib/errors/domain-errors";
+import { setCorrelationId } from '@/lib/correlation';
+import { DomainError } from '@/lib/errors/domain-errors';
 
 export type ResultCode =
-  | "OK"
-  | "VALIDATION_ERROR"
-  | "NOT_FOUND"
-  | "UNIQUE_VIOLATION"
-  | "FOREIGN_KEY_VIOLATION"
-  | "UNAUTHORIZED"
-  | "FORBIDDEN"
-  | "INTERNAL_ERROR"
-  | "RATE_LIMIT_EXCEEDED"
-  | "IDEMPOTENCY_CONFLICT";
+  | 'OK'
+  | 'VALIDATION_ERROR'
+  | 'NOT_FOUND'
+  | 'UNIQUE_VIOLATION'
+  | 'FOREIGN_KEY_VIOLATION'
+  | 'UNAUTHORIZED'
+  | 'FORBIDDEN'
+  | 'INTERNAL_ERROR'
+  | 'RATE_LIMIT_EXCEEDED'
+  | 'IDEMPOTENCY_CONFLICT';
 
 export interface ServiceResult<T> {
   ok: boolean;
@@ -47,7 +47,7 @@ const RESULT_CODE_HTTP_STATUS: Record<ResultCode, number> = {
   IDEMPOTENCY_CONFLICT: 409,
 };
 
-export const IDEMPOTENCY_HEADER = "idempotency-key";
+export const IDEMPOTENCY_HEADER = 'idempotency-key';
 
 export function toHttpStatus(code: ResultCode): number {
   return RESULT_CODE_HTTP_STATUS[code] ?? 500;
@@ -60,7 +60,7 @@ export interface RequestContext {
 }
 
 export function createRequestContext(request: NextRequest): RequestContext {
-  const existing = request.headers.get("x-request-id");
+  const existing = request.headers.get('x-request-id');
   const requestId = existing ?? randomUUID();
   setCorrelationId(requestId);
 
@@ -81,7 +81,7 @@ export class RouteError extends Error {
     options?: { details?: unknown },
   ) {
     super(message);
-    this.name = "RouteError";
+    this.name = 'RouteError';
     this.code = code;
     this.details = options?.details;
   }
@@ -89,7 +89,7 @@ export class RouteError extends Error {
 
 function baseResult<T>(
   ctx: RequestContext,
-  partial: Omit<ServiceHttpResult<T>, "durationMs" | "timestamp" | "requestId">,
+  partial: Omit<ServiceHttpResult<T>, 'durationMs' | 'timestamp' | 'requestId'>,
 ): ServiceHttpResult<T> {
   return {
     ...partial,
@@ -102,7 +102,7 @@ function baseResult<T>(
 export function successResponse<T>(
   ctx: RequestContext,
   data: T,
-  code: ResultCode = "OK",
+  code: ResultCode = 'OK',
   status = toHttpStatus(code),
 ) {
   const result = baseResult<T>(ctx, {
@@ -118,7 +118,7 @@ export function successResponse<T>(
 export function errorResponse(
   ctx: RequestContext,
   error: unknown,
-  fallbackMessage = "Unexpected error",
+  fallbackMessage = 'Unexpected error',
 ) {
   if (error instanceof DomainError) {
     const result = baseResult<never>(ctx, {
@@ -146,9 +146,9 @@ export function errorResponse(
   if (error instanceof ZodError) {
     const result = baseResult<never>(ctx, {
       ok: false,
-      code: "VALIDATION_ERROR",
-      status: toHttpStatus("VALIDATION_ERROR"),
-      error: "Validation Failed",
+      code: 'VALIDATION_ERROR',
+      status: toHttpStatus('VALIDATION_ERROR'),
+      error: 'Validation Failed',
       details: error.flatten(),
     });
     return NextResponse.json(result, { status: result.status });
@@ -156,19 +156,19 @@ export function errorResponse(
 
   const result = baseResult<never>(ctx, {
     ok: false,
-    code: "INTERNAL_ERROR",
-    status: toHttpStatus("INTERNAL_ERROR"),
+    code: 'INTERNAL_ERROR',
+    status: toHttpStatus('INTERNAL_ERROR'),
     error: error instanceof Error ? error.message : fallbackMessage,
   });
   return NextResponse.json(result, { status: result.status });
 }
 
 export async function readJsonBody<T>(request: NextRequest): Promise<T> {
-  const contentType = request.headers.get("content-type");
-  if (!contentType?.includes("application/json")) {
+  const contentType = request.headers.get('content-type');
+  if (!contentType?.includes('application/json')) {
     throw new RouteError(
-      "VALIDATION_ERROR",
-      "Content-Type must be application/json",
+      'VALIDATION_ERROR',
+      'Content-Type must be application/json',
     );
   }
 
@@ -202,8 +202,8 @@ export function requireIdempotencyKey(request: NextRequest): string {
 
   if (!key) {
     throw new RouteError(
-      "VALIDATION_ERROR",
-      "Missing Idempotency-Key header for mutating request",
+      'VALIDATION_ERROR',
+      'Missing Idempotency-Key header for mutating request',
     );
   }
 

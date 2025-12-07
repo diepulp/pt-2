@@ -9,12 +9,12 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useQuery } from "@tanstack/react-query";
-import { useDeferredValue, useMemo } from "react";
+import { useQuery } from '@tanstack/react-query';
+import { useDeferredValue, useMemo } from 'react';
 
-import type { PlayerSearchResultDTO } from "@/services/player/dtos";
-import { searchPlayers } from "@/services/player/http";
-import { playerKeys } from "@/services/player/keys";
+import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import { searchPlayers } from '@/services/player/http';
+import { playerKeys } from '@/services/player/keys';
 
 export interface UsePlayerSearchOptions {
   /** Minimum query length to trigger search (default: 2) */

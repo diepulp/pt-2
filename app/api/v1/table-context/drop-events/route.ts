@@ -8,7 +8,7 @@
  * Transport: Route Handler ONLY (hardware integration, custody chain)
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -16,11 +16,11 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { logDropEvent } from "@/services/table-context/chip-custody";
-import { logDropEventSchema } from "@/services/table-context/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { logDropEvent } from '@/services/table-context/chip-custody';
+import { logDropEventSchema } from '@/services/table-context/schemas';
 
 /**
  * POST /api/v1/table-context/drop-events
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: dropEvent,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -68,8 +68,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "log-drop-event",
+        domain: 'table-context',
+        action: 'log-drop-event',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

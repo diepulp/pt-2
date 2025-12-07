@@ -17,16 +17,16 @@ import type {
   TableCreditDTO,
   TableDropEventDTO,
   TableListFilters,
-} from "./dtos";
+} from './dtos';
 import type {
   LogInventorySnapshotRequestBody,
   RequestTableFillRequestBody,
   RequestTableCreditRequestBody,
   LogDropEventRequestBody,
   AssignDealerRequestBody,
-} from "./schemas";
+} from './schemas';
 
-const BASE_URL = "/api/v1";
+const BASE_URL = '/api/v1';
 
 // === Table CRUD ===
 
@@ -34,11 +34,11 @@ export async function fetchTables(
   filters: TableListFilters = {},
 ): Promise<GamingTableDTO[]> {
   const params = new URLSearchParams();
-  if (filters.status) params.set("status", filters.status);
-  if (filters.pit) params.set("pit", filters.pit);
-  if (filters.type) params.set("type", filters.type);
-  if (filters.cursor) params.set("cursor", filters.cursor);
-  if (filters.limit) params.set("limit", String(filters.limit));
+  if (filters.status) params.set('status', filters.status);
+  if (filters.pit) params.set('pit', filters.pit);
+  if (filters.type) params.set('type', filters.type);
+  if (filters.cursor) params.set('cursor', filters.cursor);
+  if (filters.limit) params.set('limit', String(filters.limit));
 
   const res = await fetch(`${BASE_URL}/tables?${params.toString()}`);
   if (!res.ok) throw await res.json();
@@ -66,10 +66,10 @@ export async function activateTable(
   idempotencyKey: string,
 ): Promise<GamingTableDTO> {
   const res = await fetch(`${BASE_URL}/tables/${tableId}/activate`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
   });
   if (!res.ok) throw await res.json();
@@ -81,10 +81,10 @@ export async function deactivateTable(
   idempotencyKey: string,
 ): Promise<GamingTableDTO> {
   const res = await fetch(`${BASE_URL}/tables/${tableId}/deactivate`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
   });
   if (!res.ok) throw await res.json();
@@ -96,10 +96,10 @@ export async function closeTable(
   idempotencyKey: string,
 ): Promise<GamingTableDTO> {
   const res = await fetch(`${BASE_URL}/tables/${tableId}/close`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
   });
   if (!res.ok) throw await res.json();
@@ -114,10 +114,10 @@ export async function assignDealer(
   idempotencyKey: string,
 ): Promise<DealerRotationDTO> {
   const res = await fetch(`${BASE_URL}/tables/${tableId}/dealer`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });
@@ -130,9 +130,9 @@ export async function endDealerRotation(
   idempotencyKey: string,
 ): Promise<DealerRotationDTO> {
   const res = await fetch(`${BASE_URL}/tables/${tableId}/dealer`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: {
-      "x-idempotency-key": idempotencyKey,
+      'x-idempotency-key': idempotencyKey,
     },
   });
   if (!res.ok) throw await res.json();
@@ -146,10 +146,10 @@ export async function logInventorySnapshot(
   idempotencyKey: string,
 ): Promise<TableInventorySnapshotDTO> {
   const res = await fetch(`${BASE_URL}/table-context/inventory-snapshots`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });
@@ -162,10 +162,10 @@ export async function requestTableFill(
   idempotencyKey: string,
 ): Promise<TableFillDTO> {
   const res = await fetch(`${BASE_URL}/table-context/fills`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });
@@ -178,10 +178,10 @@ export async function requestTableCredit(
   idempotencyKey: string,
 ): Promise<TableCreditDTO> {
   const res = await fetch(`${BASE_URL}/table-context/credits`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });
@@ -194,10 +194,10 @@ export async function logDropEvent(
   idempotencyKey: string,
 ): Promise<TableDropEventDTO> {
   const res = await fetch(`${BASE_URL}/table-context/drop-events`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'x-idempotency-key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });

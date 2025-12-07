@@ -8,10 +8,10 @@
  * @see Migration 20251108195341_table_context_chip_custody.sql
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   TableInventorySnapshotDTO,
@@ -22,14 +22,14 @@ import type {
   RequestTableCreditInput,
   TableDropEventDTO,
   LogDropEventInput,
-} from "./dtos";
+} from './dtos';
 import {
   toTableInventorySnapshotDTO,
   toTableFillDTO,
   toTableCreditDTO,
   toTableDropEventDTO,
   toTableInventorySnapshotDTOListFromRows,
-} from "./mappers";
+} from './mappers';
 
 // === Inventory Snapshot ===
 
@@ -38,7 +38,7 @@ export async function logInventorySnapshot(
   input: LogInventorySnapshotInput,
 ): Promise<TableInventorySnapshotDTO> {
   const { data, error } = await supabase.rpc(
-    "rpc_log_table_inventory_snapshot",
+    'rpc_log_table_inventory_snapshot',
     {
       p_casino_id: input.casinoId,
       p_table_id: input.tableId,
@@ -52,7 +52,7 @@ export async function logInventorySnapshot(
   );
 
   if (error) {
-    throw new DomainError("INTERNAL_ERROR", error.message);
+    throw new DomainError('INTERNAL_ERROR', error.message);
   }
 
   return toTableInventorySnapshotDTO(data);
@@ -64,7 +64,7 @@ export async function requestTableFill(
   supabase: SupabaseClient<Database>,
   input: RequestTableFillInput,
 ): Promise<TableFillDTO> {
-  const { data, error } = await supabase.rpc("rpc_request_table_fill", {
+  const { data, error } = await supabase.rpc('rpc_request_table_fill', {
     p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_request_id: input.requestId,
@@ -78,23 +78,23 @@ export async function requestTableFill(
 
   if (error) {
     // Handle duplicate request (idempotent - return existing per SLAD idempotency)
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
-        .from("table_fill")
+        .from('table_fill')
         .select(
-          "id, casino_id, table_id, request_id, chipset, amount_cents, requested_by, delivered_by, received_by, slip_no, created_at",
+          'id, casino_id, table_id, request_id, chipset, amount_cents, requested_by, delivered_by, received_by, slip_no, created_at',
         )
-        .eq("casino_id", input.casinoId)
-        .eq("request_id", input.requestId)
+        .eq('casino_id', input.casinoId)
+        .eq('request_id', input.requestId)
         .single();
 
       if (existing && !lookupError) {
         return toTableFillDTO(existing);
       }
 
-      throw new DomainError("TABLE_FILL_REJECTED", "Idempotency lookup failed");
+      throw new DomainError('TABLE_FILL_REJECTED', 'Idempotency lookup failed');
     }
-    throw new DomainError("TABLE_FILL_REJECTED", error.message);
+    throw new DomainError('TABLE_FILL_REJECTED', error.message);
   }
 
   return toTableFillDTO(data);
@@ -106,7 +106,7 @@ export async function requestTableCredit(
   supabase: SupabaseClient<Database>,
   input: RequestTableCreditInput,
 ): Promise<TableCreditDTO> {
-  const { data, error } = await supabase.rpc("rpc_request_table_credit", {
+  const { data, error } = await supabase.rpc('rpc_request_table_credit', {
     p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_request_id: input.requestId,
@@ -120,14 +120,14 @@ export async function requestTableCredit(
 
   if (error) {
     // Handle duplicate request (idempotent - return existing per SLAD idempotency)
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
-        .from("table_credit")
+        .from('table_credit')
         .select(
-          "id, casino_id, table_id, request_id, chipset, amount_cents, authorized_by, sent_by, received_by, slip_no, created_at",
+          'id, casino_id, table_id, request_id, chipset, amount_cents, authorized_by, sent_by, received_by, slip_no, created_at',
         )
-        .eq("casino_id", input.casinoId)
-        .eq("request_id", input.requestId)
+        .eq('casino_id', input.casinoId)
+        .eq('request_id', input.requestId)
         .single();
 
       if (existing && !lookupError) {
@@ -135,11 +135,11 @@ export async function requestTableCredit(
       }
 
       throw new DomainError(
-        "TABLE_CREDIT_REJECTED",
-        "Idempotency lookup failed",
+        'TABLE_CREDIT_REJECTED',
+        'Idempotency lookup failed',
       );
     }
-    throw new DomainError("TABLE_CREDIT_REJECTED", error.message);
+    throw new DomainError('TABLE_CREDIT_REJECTED', error.message);
   }
 
   return toTableCreditDTO(data);
@@ -151,7 +151,7 @@ export async function logDropEvent(
   supabase: SupabaseClient<Database>,
   input: LogDropEventInput,
 ): Promise<TableDropEventDTO> {
-  const { data, error } = await supabase.rpc("rpc_log_table_drop", {
+  const { data, error } = await supabase.rpc('rpc_log_table_drop', {
     p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_drop_box_id: input.dropBoxId,
@@ -167,7 +167,7 @@ export async function logDropEvent(
   });
 
   if (error) {
-    throw new DomainError("INTERNAL_ERROR", error.message);
+    throw new DomainError('INTERNAL_ERROR', error.message);
   }
 
   return toTableDropEventDTO(data);
@@ -182,15 +182,15 @@ export async function getInventoryHistory(
   limit: number = 20,
 ): Promise<TableInventorySnapshotDTO[]> {
   const { data, error } = await supabase
-    .from("table_inventory_snapshot")
-    .select("*")
-    .eq("table_id", tableId)
-    .eq("casino_id", casinoId)
-    .order("created_at", { ascending: false })
+    .from('table_inventory_snapshot')
+    .select('*')
+    .eq('table_id', tableId)
+    .eq('casino_id', casinoId)
+    .order('created_at', { ascending: false })
     .limit(limit);
 
   if (error) {
-    throw new DomainError("INTERNAL_ERROR", error.message);
+    throw new DomainError('INTERNAL_ERROR', error.message);
   }
 
   return toTableInventorySnapshotDTOListFromRows(data ?? []);

@@ -13,10 +13,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
-import {
-  createCasinoService,
-  type CasinoServiceInterface,
-} from '../index';
+import { createCasinoService, type CasinoServiceInterface } from '../index';
 
 // Mock the crud module
 jest.mock('../crud', () => ({
@@ -121,7 +118,10 @@ describe('CasinoService Factory', () => {
 
       const result = await service.getById('casino-uuid-1');
 
-      expect(crud.getCasinoById).toHaveBeenCalledWith(supabase, 'casino-uuid-1');
+      expect(crud.getCasinoById).toHaveBeenCalledWith(
+        supabase,
+        'casino-uuid-1',
+      );
       expect(result).toEqual(mockCasino);
     });
 
@@ -174,7 +174,9 @@ describe('CasinoService Factory', () => {
 
     it('updateSettings() delegates to crud.updateCasinoSettings', async () => {
       const updatedSettings = { ...mockSettings, watchlist_floor: 5000 };
-      (crud.updateCasinoSettings as jest.Mock).mockResolvedValue(updatedSettings);
+      (crud.updateCasinoSettings as jest.Mock).mockResolvedValue(
+        updatedSettings,
+      );
 
       const input = { watchlist_floor: 5000 };
       const result = await service.updateSettings('casino-uuid-1', input);
@@ -348,14 +350,20 @@ describe('Service Interface Contract', () => {
     service = createCasinoService(supabase);
 
     // Setup default mocks for all crud functions
-    (crud.listCasinos as jest.Mock).mockResolvedValue({ items: [], cursor: null });
+    (crud.listCasinos as jest.Mock).mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     (crud.getCasinoById as jest.Mock).mockResolvedValue(null);
     (crud.createCasino as jest.Mock).mockResolvedValue(mockCasino);
     (crud.updateCasino as jest.Mock).mockResolvedValue(mockCasino);
     (crud.deleteCasino as jest.Mock).mockResolvedValue(undefined);
     (crud.getCasinoSettings as jest.Mock).mockResolvedValue(null);
     (crud.updateCasinoSettings as jest.Mock).mockResolvedValue(mockSettings);
-    (crud.listStaff as jest.Mock).mockResolvedValue({ items: [], cursor: null });
+    (crud.listStaff as jest.Mock).mockResolvedValue({
+      items: [],
+      cursor: null,
+    });
     (crud.getStaffById as jest.Mock).mockResolvedValue(null);
     (crud.createStaff as jest.Mock).mockResolvedValue(mockStaff);
   });

@@ -9,12 +9,12 @@
  * @see EXEC-VSE-001 Visit Service Evolution
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type VisitRow = Database["public"]["Tables"]["visit"]["Row"];
-type VisitInsert = Database["public"]["Tables"]["visit"]["Insert"];
+type VisitRow = Database['public']['Tables']['visit']['Row'];
+type VisitInsert = Database['public']['Tables']['visit']['Insert'];
 
 // === Visit Kind Enum (derived from database) ===
 
@@ -27,7 +27,7 @@ type VisitInsert = Database["public"]["Tables"]["visit"]["Insert"];
  *
  * @see EXEC-VSE-001 section 1 (Executive Summary)
  */
-export type VisitKind = Database["public"]["Enums"]["visit_kind"];
+export type VisitKind = Database['public']['Enums']['visit_kind'];
 
 // === Visit DTOs ===
 
@@ -39,11 +39,11 @@ export type VisitKind = Database["public"]["Enums"]["visit_kind"];
  */
 export type VisitDTO = Pick<
   VisitRow,
-  "id" | "player_id" | "casino_id" | "visit_kind" | "started_at" | "ended_at"
+  'id' | 'player_id' | 'casino_id' | 'visit_kind' | 'started_at' | 'ended_at'
 >;
 
 /** Visit creation input (casino_id comes from RLS context) */
-export type CreateVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * Visit close input.
@@ -64,7 +64,7 @@ export type CloseVisitDTO = {
  *
  * Use case: Comps, vouchers, customer care without gaming session.
  */
-export type CreateRewardVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateRewardVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * Input for creating an identified gaming visit.
@@ -73,7 +73,7 @@ export type CreateRewardVisitDTO = Pick<VisitInsert, "player_id">;
  *
  * Use case: Standard rated play with loyalty accrual.
  */
-export type CreateGamingVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateGamingVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * RPC input for creating a ghost gaming visit.
@@ -144,7 +144,7 @@ export type VisitListFilters = {
   /** Filter by player */
   player_id?: string;
   /** Filter by visit status */
-  status?: "active" | "closed";
+  status?: 'active' | 'closed';
   /** Filter by visit kind */
   visit_kind?: VisitKind;
   /** Filter by date range start */

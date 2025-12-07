@@ -8,7 +8,7 @@
  * @see ADR-013 Zod Validation Schemas
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === Rating Slip Status Schema ===
 
@@ -17,10 +17,10 @@ import { z } from "zod";
  * Matches Database["public"]["Enums"]["rating_slip_status"].
  */
 export const ratingSlipStatusSchema = z.enum([
-  "open",
-  "paused",
-  "closed",
-  "archived",
+  'open',
+  'paused',
+  'closed',
+  'archived',
 ]);
 
 export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
@@ -35,13 +35,13 @@ export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
  */
 export const createRatingSlipSchema = z.object({
   /** Required: visit ID (provides player identity) */
-  visit_id: z.string().uuid("Invalid visit ID format"),
+  visit_id: z.string().uuid('Invalid visit ID format'),
   /** Required: gaming table ID */
-  table_id: z.string().uuid("Invalid table ID format"),
+  table_id: z.string().uuid('Invalid table ID format'),
   /** Optional: seat position at table */
   seat_number: z
     .string()
-    .max(20, "Seat number must be 20 characters or fewer")
+    .max(20, 'Seat number must be 20 characters or fewer')
     .optional(),
   /** Optional: game-specific settings for theoretical calculation (JSON) */
   game_settings: z.any().optional(),
@@ -55,7 +55,7 @@ export type CreateRatingSlipInput = z.infer<typeof createRatingSlipSchema>;
  */
 export const closeRatingSlipSchema = z.object({
   /** Optional: final average bet amount (must be positive) */
-  average_bet: z.number().positive("Average bet must be positive").optional(),
+  average_bet: z.number().positive('Average bet must be positive').optional(),
 });
 
 export type CloseRatingSlipInput = z.infer<typeof closeRatingSlipSchema>;
@@ -65,7 +65,7 @@ export type CloseRatingSlipInput = z.infer<typeof closeRatingSlipSchema>;
  */
 export const updateAverageBetSchema = z.object({
   /** Average bet amount (must be positive) */
-  average_bet: z.number().positive("Average bet must be positive"),
+  average_bet: z.number().positive('Average bet must be positive'),
 });
 
 export type UpdateAverageBetInput = z.infer<typeof updateAverageBetSchema>;
@@ -95,7 +95,7 @@ export type RatingSlipListQuery = z.infer<typeof ratingSlipListQuerySchema>;
  */
 export const activeSlipsQuerySchema = z.object({
   /** Required: gaming table ID */
-  table_id: z.string().uuid("Invalid table ID format"),
+  table_id: z.string().uuid('Invalid table ID format'),
 });
 
 export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
@@ -106,7 +106,7 @@ export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
  * Schema for rating slip detail route params.
  */
 export const ratingSlipRouteParamsSchema = z.object({
-  id: z.string().uuid("Invalid rating slip ID format"),
+  id: z.string().uuid('Invalid rating slip ID format'),
 });
 
 export type RatingSlipRouteParams = z.infer<typeof ratingSlipRouteParamsSchema>;

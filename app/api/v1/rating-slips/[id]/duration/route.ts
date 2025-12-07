@@ -9,18 +9,18 @@
  * Note: Returns duration in seconds, excluding paused intervals.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
-import { ratingSlipRouteParamsSchema } from "@/services/rating-slip/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createRatingSlipService } from '@/services/rating-slip';
+import { ratingSlipRouteParamsSchema } from '@/services/rating-slip/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             duration_seconds: durationSeconds,
           },
@@ -61,8 +61,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "duration",
+        domain: 'rating-slip',
+        action: 'duration',
         correlationId: ctx.requestId,
       },
     );

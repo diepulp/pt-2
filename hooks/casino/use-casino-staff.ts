@@ -8,14 +8,14 @@
  * @see services/casino/keys.ts - Query key factories
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type {
   CasinoStaffFilters,
   CreateStaffDTO,
-} from "@/services/casino/dtos";
-import { getCasinoStaff, createStaff } from "@/services/casino/http";
-import { casinoKeys } from "@/services/casino/keys";
+} from '@/services/casino/dtos';
+import { getCasinoStaff, createStaff } from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 
 /**
  * Fetches a paginated list of staff for the authenticated user's casino.

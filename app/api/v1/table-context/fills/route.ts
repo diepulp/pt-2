@@ -8,7 +8,7 @@
  * Transport: Route Handler ONLY (hardware integration, custody chain)
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -16,11 +16,11 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { requestTableFill } from "@/services/table-context/chip-custody";
-import { requestTableFillSchema } from "@/services/table-context/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { requestTableFill } from '@/services/table-context/chip-custody';
+import { requestTableFillSchema } from '@/services/table-context/schemas';
 
 /**
  * POST /api/v1/table-context/fills
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: fill,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -66,8 +66,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "request-table-fill",
+        domain: 'table-context',
+        action: 'request-table-fill',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

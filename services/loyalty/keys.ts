@@ -1,4 +1,4 @@
-import { serializeKeyFilters } from "@/services/shared/key-utils";
+import { serializeKeyFilters } from '@/services/shared/key-utils';
 
 export type LoyaltyLedgerFilters = {
   casinoId?: string;
@@ -8,21 +8,21 @@ export type LoyaltyLedgerFilters = {
   limit?: number;
 };
 
-const ROOT = ["loyalty"] as const;
+const ROOT = ['loyalty'] as const;
 const serialize = (filters: LoyaltyLedgerFilters = {}) =>
   serializeKeyFilters(filters);
 
 export const loyaltyKeys = {
   root: ROOT,
-  playerSummary: (playerId: string) => [...ROOT, "player", playerId] as const,
+  playerSummary: (playerId: string) => [...ROOT, 'player', playerId] as const,
   playerBalance: (playerId: string, casinoId: string) =>
-    [...ROOT, "balance", playerId, casinoId] as const,
+    [...ROOT, 'balance', playerId, casinoId] as const,
   ledger: Object.assign(
     (filters: LoyaltyLedgerFilters = {}) =>
-      [...ROOT, "ledger", serialize(filters)] as const,
-    { scope: [...ROOT, "ledger"] as const },
+      [...ROOT, 'ledger', serialize(filters)] as const,
+    { scope: [...ROOT, 'ledger'] as const },
   ),
   midSessionReward: (ratingSlipId: string) =>
-    [...ROOT, "mid-session-reward", ratingSlipId] as const,
-  recalculation: (playerId: string) => [...ROOT, "recalc", playerId] as const,
+    [...ROOT, 'mid-session-reward', ratingSlipId] as const,
+  recalculation: (playerId: string) => [...ROOT, 'recalc', playerId] as const,
 };

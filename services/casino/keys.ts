@@ -7,14 +7,14 @@
  * @see SPEC-PRD-000-casino-foundation.md section 6.1
  */
 
-import { serializeKeyFilters } from "@/services/shared/key-utils";
+import { serializeKeyFilters } from '@/services/shared/key-utils';
 
-import type { CasinoListFilters, CasinoStaffFilters } from "./dtos";
+import type { CasinoListFilters, CasinoStaffFilters } from './dtos';
 
 // Re-export filter types for convenience
-export type { CasinoListFilters, CasinoStaffFilters } from "./dtos";
+export type { CasinoListFilters, CasinoStaffFilters } from './dtos';
 
-const ROOT = ["casino"] as const;
+const ROOT = ['casino'] as const;
 
 export const casinoKeys = {
   /** Root key for all casino queries */
@@ -28,12 +28,12 @@ export const casinoKeys = {
    */
   list: Object.assign(
     (filters: CasinoListFilters = {}) =>
-      [...ROOT, "list", serializeKeyFilters(filters)] as const,
-    { scope: [...ROOT, "list"] as const },
+      [...ROOT, 'list', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'list'] as const },
   ),
 
   /** Single casino detail by ID */
-  detail: (casinoId: string) => [...ROOT, "detail", casinoId] as const,
+  detail: (casinoId: string) => [...ROOT, 'detail', casinoId] as const,
 
   // === Casino Settings ===
 
@@ -41,7 +41,7 @@ export const casinoKeys = {
    * Casino settings (RLS-scoped to authenticated user's casino).
    * No casinoId parameter - relies on server-side RLS context.
    */
-  settings: () => [...ROOT, "settings"] as const,
+  settings: () => [...ROOT, 'settings'] as const,
 
   // === Staff ===
 
@@ -51,8 +51,8 @@ export const casinoKeys = {
    */
   staff: Object.assign(
     (filters: CasinoStaffFilters = {}) =>
-      [...ROOT, "staff", serializeKeyFilters(filters)] as const,
-    { scope: [...ROOT, "staff"] as const },
+      [...ROOT, 'staff', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'staff'] as const },
   ),
 
   // === Gaming Day ===
@@ -62,5 +62,5 @@ export const casinoKeys = {
    * @param timestamp - Optional ISO timestamp (defaults to 'now')
    */
   gamingDay: (timestamp?: string) =>
-    [...ROOT, "gaming-day", timestamp ?? "now"] as const,
+    [...ROOT, 'gaming-day', timestamp ?? 'now'] as const,
 };

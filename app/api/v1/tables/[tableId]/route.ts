@@ -7,18 +7,18 @@
  * Pattern: PRD-007 TableContextService transport layer
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { getTableById } from "@/services/table-context/crud";
-import { tableRouteParamsSchema } from "@/services/table-context/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { getTableById } from '@/services/table-context/crud';
+import { tableRouteParamsSchema } from '@/services/table-context/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ tableId: string }> };
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: table,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "table-context",
-        action: "get-table",
+        domain: 'table-context',
+        action: 'get-table',
         correlationId: ctx.requestId,
       },
     );

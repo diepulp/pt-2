@@ -7,18 +7,18 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createVisitService } from "@/services/visit/index";
-import { activeVisitQuerySchema } from "@/services/visit/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createVisitService } from '@/services/visit/index';
+import { activeVisitQuerySchema } from '@/services/visit/schemas';
 
 /**
  * GET /api/v1/visits/active
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: activeVisit,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "active",
+        domain: 'visit',
+        action: 'active',
         correlationId: ctx.requestId,
       },
     );

@@ -7,10 +7,10 @@
  * @see services/casino/keys.ts - Query key factories
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { getGamingDay } from "@/services/casino/http";
-import { casinoKeys } from "@/services/casino/keys";
+import { getGamingDay } from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 
 /**
  * Computes the gaming day for a given timestamp.

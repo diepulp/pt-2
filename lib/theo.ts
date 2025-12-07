@@ -9,7 +9,7 @@
  * @see docs/10-prd/OPEN_QUESTIONS.md for rationale
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 /**
  * Minimal game settings required for theo calculation.
@@ -33,7 +33,7 @@ export type PointsGameSettings = TheoGameSettings & {
  * Full game settings row type from database.
  */
 export type GameSettingsRow =
-  Database["public"]["Tables"]["game_settings"]["Row"];
+  Database['public']['Tables']['game_settings']['Row'];
 
 /**
  * Options for points calculation.
@@ -65,7 +65,7 @@ export type CalculatePointsOptions = {
  * // Result: 105 (theoretical win for the house)
  */
 export function calculateTheo(
-  gameSettings: Pick<TheoGameSettings, "house_edge">,
+  gameSettings: Pick<TheoGameSettings, 'house_edge'>,
   averageBet: number,
   totalDecisions: number,
 ): number {

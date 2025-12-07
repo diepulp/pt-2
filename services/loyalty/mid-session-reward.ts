@@ -1,13 +1,13 @@
-const ELIGIBLE_STATUSES = ["open", "paused"] as const;
+const ELIGIBLE_STATUSES = ['open', 'paused'] as const;
 
 export type RatingSlipStatusForReward = (typeof ELIGIBLE_STATUSES)[number];
 
 export type LoyaltyReason =
-  | "mid_session"
-  | "session_end"
-  | "manual_adjustment"
-  | "promotion"
-  | "correction";
+  | 'mid_session'
+  | 'session_end'
+  | 'manual_adjustment'
+  | 'promotion'
+  | 'correction';
 
 export interface MidSessionRewardInput {
   casinoId: string;
@@ -36,23 +36,23 @@ function assertEligibleStatus(
   // Use .some() to avoid `as` type assertion (ADR-012 compliance)
   if (!ELIGIBLE_STATUSES.some((s) => s === status)) {
     throw new Error(
-      `Mid-session rewards require rating slip status to be one of ${ELIGIBLE_STATUSES.join(", ")}`,
+      `Mid-session rewards require rating slip status to be one of ${ELIGIBLE_STATUSES.join(', ')}`,
     );
   }
 }
 
 function assertPositivePoints(points: number) {
   if (!Number.isFinite(points) || points <= 0) {
-    throw new Error("Reward points must be a positive integer");
+    throw new Error('Reward points must be a positive integer');
   }
   if (!Number.isInteger(points)) {
-    throw new Error("Reward points must be an integer");
+    throw new Error('Reward points must be an integer');
   }
 }
 
 function assertIdempotencyKey(key: string) {
   if (!key || key.trim().length === 0) {
-    throw new Error("Mid-session rewards require an idempotency key");
+    throw new Error('Mid-session rewards require an idempotency key');
   }
 }
 
@@ -70,6 +70,6 @@ export function buildMidSessionRewardRpcInput(
     p_staff_id: input.staffId,
     p_points: input.points,
     p_idempotency_key: input.idempotencyKey,
-    p_reason: input.reason ?? "mid_session",
+    p_reason: input.reason ?? 'mid_session',
   };
 }

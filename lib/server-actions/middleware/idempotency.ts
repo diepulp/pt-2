@@ -1,6 +1,6 @@
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * Idempotency Key Enforcement Middleware
@@ -20,9 +20,9 @@ export function withIdempotency<T>(required: boolean = true): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
     if (required && !ctx.idempotencyKey) {
       throw new DomainError(
-        "VALIDATION_ERROR",
-        "Missing required x-idempotency-key header for mutation",
-        { details: { header: "x-idempotency-key", required: true } },
+        'VALIDATION_ERROR',
+        'Missing required x-idempotency-key header for mutation',
+        { details: { header: 'x-idempotency-key', required: true } },
       );
     }
 

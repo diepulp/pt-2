@@ -7,18 +7,18 @@
  * Pattern: PRD-007 TableContextService transport layer
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { listTables } from "@/services/table-context/crud";
-import { tableListQuerySchema } from "@/services/table-context/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { listTables } from '@/services/table-context/crud';
+import { tableListQuerySchema } from '@/services/table-context/schemas';
 
 /**
  * GET /api/v1/tables
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: tables,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -58,8 +58,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "list-tables",
+        domain: 'table-context',
+        action: 'list-tables',
         correlationId: ctx.requestId,
       },
     );

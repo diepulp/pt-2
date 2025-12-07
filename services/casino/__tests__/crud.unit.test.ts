@@ -279,7 +279,9 @@ describe('Casino CRUD Operations', () => {
         name: 'Updated Casino',
       });
 
-      expect(queryBuilder.update).toHaveBeenCalledWith({ name: 'Updated Casino' });
+      expect(queryBuilder.update).toHaveBeenCalledWith({
+        name: 'Updated Casino',
+      });
       expect(queryBuilder.eq).toHaveBeenCalledWith('id', 'casino-uuid-1');
       expect(result.name).toBe('Updated Casino');
     });
@@ -320,9 +322,11 @@ describe('Casino CRUD Operations', () => {
       });
       const supabase = createMockSupabase(queryBuilder);
 
-      await expect(deleteCasino(supabase, 'nonexistent')).rejects.toMatchObject({
-        code: 'CASINO_NOT_FOUND',
-      });
+      await expect(deleteCasino(supabase, 'nonexistent')).rejects.toMatchObject(
+        {
+          code: 'CASINO_NOT_FOUND',
+        },
+      );
     });
   });
 });
@@ -338,7 +342,10 @@ describe('Casino Settings CRUD', () => {
       const result = await getCasinoSettings(supabase, 'casino-uuid-1');
 
       expect(supabase.from).toHaveBeenCalledWith('casino_settings');
-      expect(queryBuilder.eq).toHaveBeenCalledWith('casino_id', 'casino-uuid-1');
+      expect(queryBuilder.eq).toHaveBeenCalledWith(
+        'casino_id',
+        'casino-uuid-1',
+      );
       expect(result).toEqual(mockCasinoSettings);
     });
 
@@ -362,7 +369,9 @@ describe('Casino Settings CRUD', () => {
         watchlist_floor: 5000,
       });
 
-      expect(queryBuilder.update).toHaveBeenCalledWith({ watchlist_floor: 5000 });
+      expect(queryBuilder.update).toHaveBeenCalledWith({
+        watchlist_floor: 5000,
+      });
       expect(result.watchlist_floor).toBe(5000);
     });
 
@@ -374,7 +383,9 @@ describe('Casino Settings CRUD', () => {
       const supabase = createMockSupabase(queryBuilder);
 
       await expect(
-        updateCasinoSettings(supabase, 'nonexistent', { watchlist_floor: 5000 }),
+        updateCasinoSettings(supabase, 'nonexistent', {
+          watchlist_floor: 5000,
+        }),
       ).rejects.toMatchObject({
         code: 'CASINO_SETTINGS_NOT_FOUND',
       });

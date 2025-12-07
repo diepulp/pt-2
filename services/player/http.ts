@@ -8,7 +8,7 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
+import { fetchJSON } from '@/lib/http/fetch-json';
 
 import type {
   CreatePlayerDTO,
@@ -17,9 +17,9 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/players";
+const BASE = '/api/v1/players';
 
 // === Helper Functions ===
 
@@ -87,10 +87,10 @@ export async function getPlayer(playerId: string): Promise<PlayerDTO> {
  */
 export async function createPlayer(input: CreatePlayerDTO): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -105,10 +105,10 @@ export async function updatePlayer(
   input: UpdatePlayerDTO,
 ): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(`${BASE}/${playerId}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -124,10 +124,10 @@ export async function enrollPlayer(
   playerId: string,
 ): Promise<PlayerEnrollmentDTO> {
   return fetchJSON<PlayerEnrollmentDTO>(`${BASE}/${playerId}/enroll`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify({}),
   });
@@ -145,7 +145,7 @@ export async function getPlayerEnrollment(
     );
   } catch (error) {
     // 404 means not enrolled
-    if (error instanceof Error && error.message.includes("404")) {
+    if (error instanceof Error && error.message.includes('404')) {
       return null;
     }
     throw error;

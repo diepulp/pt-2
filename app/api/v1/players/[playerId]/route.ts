@@ -8,9 +8,9 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -18,15 +18,15 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { UpdatePlayerDTO } from "@/services/player/dtos";
-import { createPlayerService } from "@/services/player/index";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { UpdatePlayerDTO } from '@/services/player/dtos';
+import { createPlayerService } from '@/services/player/index';
 import {
   playerRouteParamsSchema,
   updatePlayerSchema,
-} from "@/services/player/schemas";
+} from '@/services/player/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ playerId: string }> };
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const player = await service.getById(params.playerId);
 
         if (!player) {
-          throw new DomainError("PLAYER_NOT_FOUND", "Player not found", {
+          throw new DomainError('PLAYER_NOT_FOUND', 'Player not found', {
             httpStatus: 404,
             details: { playerId: params.playerId },
           });
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: player,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -71,8 +71,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "player",
-        action: "detail",
+        domain: 'player',
+        action: 'detail',
         correlationId: ctx.requestId,
       },
     );
@@ -116,7 +116,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         // Check if player exists
         const existing = await service.getById(params.playerId);
         if (!existing) {
-          throw new DomainError("PLAYER_NOT_FOUND", "Player not found", {
+          throw new DomainError('PLAYER_NOT_FOUND', 'Player not found', {
             httpStatus: 404,
             details: { playerId: params.playerId },
           });
@@ -126,7 +126,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: player,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -134,8 +134,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "player",
-        action: "update",
+        domain: 'player',
+        action: 'update',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

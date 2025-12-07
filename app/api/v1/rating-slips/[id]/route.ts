@@ -7,19 +7,19 @@
  * Pattern: PRD-002 Rating Slip Service
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
-import { ratingSlipRouteParamsSchema } from "@/services/rating-slip/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createRatingSlipService } from '@/services/rating-slip';
+import { ratingSlipRouteParamsSchema } from '@/services/rating-slip/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         if (!slip) {
           throw new DomainError(
-            "RATING_SLIP_NOT_FOUND",
-            "Rating slip not found",
+            'RATING_SLIP_NOT_FOUND',
+            'Rating slip not found',
             {
               httpStatus: 404,
               details: { slipId: params.id },
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: slip,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "detail",
+        domain: 'rating-slip',
+        action: 'detail',
         correlationId: ctx.requestId,
       },
     );

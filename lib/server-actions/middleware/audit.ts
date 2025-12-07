@@ -1,7 +1,7 @@
-import type { ServiceResult } from "@/lib/http/service-response";
-import type { Database, Json } from "@/types/database.types";
+import type { ServiceResult } from '@/lib/http/service-response';
+import type { Database, Json } from '@/types/database.types';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * Convert unknown value to JSON-safe type
@@ -9,9 +9,9 @@ import type { Middleware, MiddlewareContext } from "./types";
 function toJson(value: unknown): Json {
   if (
     value === null ||
-    typeof value === "string" ||
-    typeof value === "number" ||
-    typeof value === "boolean"
+    typeof value === 'string' ||
+    typeof value === 'number' ||
+    typeof value === 'boolean'
   ) {
     return value as Json;
   }
@@ -20,7 +20,7 @@ function toJson(value: unknown): Json {
     return value.map((item) => toJson(item)) as Json;
   }
 
-  if (typeof value === "object") {
+  if (typeof value === 'object') {
     const result: Record<string, Json> = {};
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
       result[key] = toJson(val);
@@ -52,7 +52,7 @@ export function withAudit<T>(): Middleware<T> {
     const result = await next();
 
     // Only audit in production
-    if (process.env.NODE_ENV !== "production") {
+    if (process.env.NODE_ENV !== 'production') {
       return result;
     }
 
@@ -60,7 +60,7 @@ export function withAudit<T>(): Middleware<T> {
       await writeAuditEntry(ctx, result);
     } catch (error) {
       // Log but don't fail the request
-      console.error("[audit] Failed to write audit log:", error);
+      console.error('[audit] Failed to write audit log:', error);
     }
 
     return result;
@@ -85,13 +85,13 @@ async function writeAuditEntry<T>(
 
   const payload = {
     casino_id: ctx.rlsContext?.casinoId ?? null,
-    domain: ctx.domain ?? ctx.endpoint ?? "unknown",
+    domain: ctx.domain ?? ctx.endpoint ?? 'unknown',
     actor_id: ctx.rlsContext?.actorId ?? null,
-    action: ctx.action ?? "unknown",
+    action: ctx.action ?? 'unknown',
     details,
-  } satisfies Database["public"]["Tables"]["audit_log"]["Insert"];
+  } satisfies Database['public']['Tables']['audit_log']['Insert'];
 
-  const { error } = await ctx.supabase.from("audit_log").insert(payload);
+  const { error } = await ctx.supabase.from('audit_log').insert(payload);
   if (error) {
     throw error;
   }

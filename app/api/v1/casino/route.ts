@@ -8,9 +8,9 @@
  * Pattern: WS3-A reference implementation per SPEC-PRD-000 section 5.2.1-5.2.2
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -18,18 +18,18 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { CasinoDTO, CreateCasinoDTO } from "@/services/casino/dtos";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { CasinoDTO, CreateCasinoDTO } from '@/services/casino/dtos';
 import {
   casinoListQuerySchema,
   createCasinoSchema,
-} from "@/services/casino/schemas";
-import type { Json } from "@/types/database.types";
+} from '@/services/casino/schemas';
+import type { Json } from '@/types/database.types';
 
 /** Select fields for CasinoDTO projection */
-const CASINO_SELECT = "id, name, location, status, created_at";
+const CASINO_SELECT = 'id, name, location, status, created_at';
 
 /**
  * GET /api/v1/casino
@@ -49,18 +49,18 @@ export async function GET(request: NextRequest) {
       async (mwCtx) => {
         // Build query with filters
         let dbQuery = mwCtx.supabase
-          .from("casino")
+          .from('casino')
           .select(CASINO_SELECT)
-          .order("created_at", { ascending: false });
+          .order('created_at', { ascending: false });
 
         // Apply status filter if provided
         if (query.status) {
-          dbQuery = dbQuery.eq("status", query.status);
+          dbQuery = dbQuery.eq('status', query.status);
         }
 
         // Apply cursor-based pagination
         if (query.cursor) {
-          dbQuery = dbQuery.lt("created_at", query.cursor);
+          dbQuery = dbQuery.lt('created_at', query.cursor);
         }
 
         // Limit results (fetch one extra to determine if there are more)
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items: items as CasinoDTO[],
             cursor,
@@ -90,8 +90,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "list",
+        domain: 'casino',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -128,31 +128,31 @@ export async function POST(request: NextRequest) {
       async (mwCtx) => {
         // Check for duplicate name
         const { data: existing } = await mwCtx.supabase
-          .from("casino")
-          .select("id")
-          .eq("name", input.name)
+          .from('casino')
+          .select('id')
+          .eq('name', input.name)
           .maybeSingle();
 
         if (existing) {
           throw new DomainError(
-            "UNIQUE_VIOLATION",
-            "Casino with this name already exists",
+            'UNIQUE_VIOLATION',
+            'Casino with this name already exists',
             {
               httpStatus: 409,
-              details: { field: "name", value: input.name },
+              details: { field: 'name', value: input.name },
             },
           );
         }
 
         // Insert new casino
         const { data, error } = await mwCtx.supabase
-          .from("casino")
+          .from('casino')
           .insert({
             name: input.name,
             location: input.location ?? null,
             address: (input.address as Json) ?? null,
             company_id: input.company_id ?? null,
-            status: "active",
+            status: 'active',
           })
           .select(CASINO_SELECT)
           .single();
@@ -163,7 +163,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as CasinoDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -171,8 +171,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "create",
+        domain: 'casino',
+        action: 'create',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -182,7 +182,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

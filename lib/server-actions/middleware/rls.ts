@@ -1,7 +1,7 @@
-import { DomainError } from "@/lib/errors/domain-errors";
-import { injectRLSContext } from "@/lib/supabase/rls-context";
+import { DomainError } from '@/lib/errors/domain-errors';
+import { injectRLSContext } from '@/lib/supabase/rls-context';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * RLS Context Injection Middleware
@@ -22,8 +22,8 @@ export function withRLS<T>(): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
     if (!ctx.rlsContext) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RLS context not available - withAuth must run first",
+        'INTERNAL_ERROR',
+        'RLS context not available - withAuth must run first',
       );
     }
 
@@ -31,7 +31,7 @@ export function withRLS<T>(): Middleware<T> {
       await injectRLSContext(ctx.supabase, ctx.rlsContext, ctx.correlationId);
       return next();
     } catch (error) {
-      throw new DomainError("INTERNAL_ERROR", "Failed to inject RLS context", {
+      throw new DomainError('INTERNAL_ERROR', 'Failed to inject RLS context', {
         details: error,
       });
     }

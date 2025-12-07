@@ -21,11 +21,11 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 308-350
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   ActiveVisitDTO,
   CloseVisitDTO,
@@ -33,12 +33,12 @@ import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from "./dtos";
-export * from "./http";
-export * from "./keys";
+export * from './dtos';
+export * from './http';
+export * from './keys';
 
 // === Service Interface ===
 

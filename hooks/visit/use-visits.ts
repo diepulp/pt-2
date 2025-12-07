@@ -8,15 +8,15 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from "@/services/visit/dtos";
-import { getVisit, getVisits } from "@/services/visit/http";
-import { visitKeys } from "@/services/visit/keys";
+} from '@/services/visit/dtos';
+import { getVisit, getVisits } from '@/services/visit/http';
+import { visitKeys } from '@/services/visit/keys';
 
 /**
  * Fetches a paginated list of visits.

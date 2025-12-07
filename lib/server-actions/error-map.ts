@@ -1,6 +1,6 @@
-import type { DomainErrorCode } from "@/lib/errors/domain-errors";
-import { DomainError, isDomainError } from "@/lib/errors/domain-errors";
-import type { ResultCode } from "@/lib/http/service-response";
+import type { DomainErrorCode } from '@/lib/errors/domain-errors';
+import { DomainError, isDomainError } from '@/lib/errors/domain-errors';
+import type { ResultCode } from '@/lib/http/service-response';
 
 /**
  * Postgres Error Code Mapping
@@ -9,23 +9,23 @@ import type { ResultCode } from "@/lib/http/service-response";
  * All database errors are mapped to domain-specific error codes.
  */
 const PG_ERROR_CODE_MAP: Record<string, DomainErrorCode> = {
-  "23502": "VALIDATION_ERROR",
-  "23503": "FOREIGN_KEY_VIOLATION",
-  "23505": "UNIQUE_VIOLATION",
-  "23514": "VALIDATION_ERROR",
-  "40001": "VISIT_CONCURRENT_MODIFICATION", // Serialization failure
-  "40P01": "VISIT_CONCURRENT_MODIFICATION", // Deadlock detected
+  '23502': 'VALIDATION_ERROR',
+  '23503': 'FOREIGN_KEY_VIOLATION',
+  '23505': 'UNIQUE_VIOLATION',
+  '23514': 'VALIDATION_ERROR',
+  '40001': 'VISIT_CONCURRENT_MODIFICATION', // Serialization failure
+  '40P01': 'VISIT_CONCURRENT_MODIFICATION', // Deadlock detected
 };
 
 const RESULT_CODES: ResultCode[] = [
-  "OK",
-  "VALIDATION_ERROR",
-  "NOT_FOUND",
-  "UNIQUE_VIOLATION",
-  "FOREIGN_KEY_VIOLATION",
-  "UNAUTHORIZED",
-  "FORBIDDEN",
-  "INTERNAL_ERROR",
+  'OK',
+  'VALIDATION_ERROR',
+  'NOT_FOUND',
+  'UNIQUE_VIOLATION',
+  'FOREIGN_KEY_VIOLATION',
+  'UNAUTHORIZED',
+  'FORBIDDEN',
+  'INTERNAL_ERROR',
 ];
 
 export interface MappedError {
@@ -38,15 +38,15 @@ export interface MappedError {
 
 function isResultCode(value: unknown): value is ResultCode {
   return (
-    typeof value === "string" && RESULT_CODES.includes(value as ResultCode)
+    typeof value === 'string' && RESULT_CODES.includes(value as ResultCode)
   );
 }
 
 function normalizeMessage(
   message?: unknown,
-  fallback = "Internal error occurred",
+  fallback = 'Internal error occurred',
 ): string {
-  if (typeof message === "string" && message.trim().length > 0) {
+  if (typeof message === 'string' && message.trim().length > 0) {
     return message;
   }
   return fallback;
@@ -74,17 +74,17 @@ export function mapDatabaseError(error: unknown): MappedError {
   }
 
   // Check for error object
-  if (error && typeof error === "object") {
-    const code = Reflect.get(error, "code");
-    const message = Reflect.get(error, "message");
-    const details = Reflect.get(error, "details");
+  if (error && typeof error === 'object') {
+    const code = Reflect.get(error, 'code');
+    const message = Reflect.get(error, 'message');
+    const details = Reflect.get(error, 'details');
 
     // Postgres error codes
-    if (typeof code === "string" && PG_ERROR_CODE_MAP[code]) {
+    if (typeof code === 'string' && PG_ERROR_CODE_MAP[code]) {
       const domainCode = PG_ERROR_CODE_MAP[code];
       const domainError = new DomainError(
         domainCode,
-        normalizeMessage(message, "Database constraint violated"),
+        normalizeMessage(message, 'Database constraint violated'),
         { details },
       );
       return {
@@ -97,8 +97,8 @@ export function mapDatabaseError(error: unknown): MappedError {
     }
 
     // PostgREST errors
-    if (code === "PGRST116") {
-      const domainError = new DomainError("NOT_FOUND", "Record not found", {
+    if (code === 'PGRST116') {
+      const domainError = new DomainError('NOT_FOUND', 'Record not found', {
         details,
       });
       return {
@@ -127,7 +127,7 @@ export function mapDatabaseError(error: unknown): MappedError {
 
   // Generic Error
   if (error instanceof Error) {
-    const domainError = new DomainError("INTERNAL_ERROR", error.message, {
+    const domainError = new DomainError('INTERNAL_ERROR', error.message, {
       details: error,
     });
     return {
@@ -141,8 +141,8 @@ export function mapDatabaseError(error: unknown): MappedError {
 
   // Unknown error type
   const domainError = new DomainError(
-    "INTERNAL_ERROR",
-    "Internal error occurred",
+    'INTERNAL_ERROR',
+    'Internal error occurred',
     {
       details: error,
     },

@@ -1,7 +1,7 @@
-import type { ServiceResult } from "@/lib/http/service-response";
-import { mapDatabaseError } from "@/lib/server-actions/error-map";
+import type { ServiceResult } from '@/lib/http/service-response';
+import { mapDatabaseError } from '@/lib/server-actions/error-map';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * Tracing Middleware

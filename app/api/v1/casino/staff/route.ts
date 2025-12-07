@@ -12,9 +12,9 @@
  * @see SPEC-PRD-000-casino-foundation.md sections 5.2.8-5.2.9
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -22,17 +22,17 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { CreateStaffDTO, StaffDTO } from "@/services/casino/dtos";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { CreateStaffDTO, StaffDTO } from '@/services/casino/dtos';
 import {
   createStaffSchema,
   staffListQuerySchema,
-} from "@/services/casino/schemas";
+} from '@/services/casino/schemas';
 
 const STAFF_SELECT =
-  "id, first_name, last_name, role, status, employee_id, casino_id";
+  'id, first_name, last_name, role, status, employee_id, casino_id';
 
 /**
  * GET /api/v1/casino/staff
@@ -53,23 +53,23 @@ export async function GET(request: NextRequest) {
         const casinoId = mwCtx.rlsContext!.casinoId;
 
         let queryBuilder = mwCtx.supabase
-          .from("staff")
+          .from('staff')
           .select(STAFF_SELECT)
-          .eq("casino_id", casinoId)
-          .order("last_name", { ascending: true })
-          .order("first_name", { ascending: true });
+          .eq('casino_id', casinoId)
+          .order('last_name', { ascending: true })
+          .order('first_name', { ascending: true });
 
         // Apply filters
         if (query.status) {
-          queryBuilder = queryBuilder.eq("status", query.status);
+          queryBuilder = queryBuilder.eq('status', query.status);
         }
         if (query.role) {
-          queryBuilder = queryBuilder.eq("role", query.role);
+          queryBuilder = queryBuilder.eq('role', query.role);
         }
 
         // Cursor pagination
         if (query.cursor) {
-          queryBuilder = queryBuilder.gt("id", query.cursor);
+          queryBuilder = queryBuilder.gt('id', query.cursor);
         }
 
         // Limit + 1 to determine if there are more results
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items: resultItems,
             cursor: nextCursor,
@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "staff.list",
+        domain: 'casino',
+        action: 'staff.list',
         correlationId: ctx.requestId,
       },
     );
@@ -145,27 +145,27 @@ export async function POST(request: NextRequest) {
         };
 
         const { data, error } = await mwCtx.supabase
-          .from("staff")
+          .from('staff')
           .insert(staffData)
           .select(STAFF_SELECT)
           .single();
 
         if (error) {
           // Handle constraint violations
-          if (error.code === "23514") {
+          if (error.code === '23514') {
             // Check constraint violation (staff role constraint)
             throw new DomainError(
-              "STAFF_ROLE_CONSTRAINT_VIOLATION",
+              'STAFF_ROLE_CONSTRAINT_VIOLATION',
               undefined,
               {
                 httpStatus: 400,
-                details: { constraint: "chk_staff_role_user_id" },
+                details: { constraint: 'chk_staff_role_user_id' },
               },
             );
           }
-          if (error.code === "23505") {
+          if (error.code === '23505') {
             // Unique violation
-            throw new DomainError("STAFF_ALREADY_EXISTS", undefined, {
+            throw new DomainError('STAFF_ALREADY_EXISTS', undefined, {
               httpStatus: 409,
               details: { postgresCode: error.code, message: error.message },
             });
@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as StaffDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -183,8 +183,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "staff.create",
+        domain: 'casino',
+        action: 'staff.create',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -194,7 +194,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

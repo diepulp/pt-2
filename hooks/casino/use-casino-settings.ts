@@ -8,14 +8,14 @@
  * @see services/casino/keys.ts - Query key factories
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { UpdateCasinoSettingsDTO } from "@/services/casino/dtos";
+import type { UpdateCasinoSettingsDTO } from '@/services/casino/dtos';
 import {
   getCasinoSettings,
   updateCasinoSettings,
-} from "@/services/casino/http";
-import { casinoKeys } from "@/services/casino/keys";
+} from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 
 /**
  * Fetches settings for the authenticated user's casino.

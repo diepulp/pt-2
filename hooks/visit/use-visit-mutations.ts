@@ -9,11 +9,11 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { CloseVisitDTO, VisitDTO } from "@/services/visit/dtos";
-import { closeVisit, startVisit } from "@/services/visit/http";
-import { visitKeys } from "@/services/visit/keys";
+import type { CloseVisitDTO, VisitDTO } from '@/services/visit/dtos';
+import { closeVisit, startVisit } from '@/services/visit/http';
+import { visitKeys } from '@/services/visit/keys';
 
 /**
  * Starts a visit (check-in) for a player.

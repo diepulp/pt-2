@@ -8,36 +8,36 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
-import * as crud from "../crud";
+import * as crud from '../crud';
 import type {
   CreateRatingSlipInput,
   RatingSlipDTO,
   RatingSlipStatus,
-} from "../dtos";
+} from '../dtos';
 
 // === Test Data ===
 
-const CASINO_ID = "casino-123";
-const ACTOR_ID = "staff-456";
-const SLIP_ID = "slip-789";
-const VISIT_ID = "visit-abc";
-const TABLE_ID = "table-xyz";
-const PLAYER_ID = "player-def";
+const CASINO_ID = 'casino-123';
+const ACTOR_ID = 'staff-456';
+const SLIP_ID = 'slip-789';
+const VISIT_ID = 'visit-abc';
+const TABLE_ID = 'table-xyz';
+const PLAYER_ID = 'player-def';
 
 const mockRatingSlipRow = {
   id: SLIP_ID,
   casino_id: CASINO_ID,
   visit_id: VISIT_ID,
   table_id: TABLE_ID,
-  seat_number: "3",
-  start_time: "2025-01-15T10:00:00Z",
+  seat_number: '3',
+  start_time: '2025-01-15T10:00:00Z',
   end_time: null,
-  status: "open" as RatingSlipStatus,
+  status: 'open' as RatingSlipStatus,
   average_bet: 100,
   game_settings: { min_bet: 25, max_bet: 500 },
   policy_snapshot: { house_edge: 0.02 },
@@ -45,13 +45,13 @@ const mockRatingSlipRow = {
 
 const mockPausedSlipRow = {
   ...mockRatingSlipRow,
-  status: "paused" as RatingSlipStatus,
+  status: 'paused' as RatingSlipStatus,
 };
 
 const mockClosedSlipRow = {
   ...mockRatingSlipRow,
-  status: "closed" as RatingSlipStatus,
-  end_time: "2025-01-15T14:00:00Z",
+  status: 'closed' as RatingSlipStatus,
+  end_time: '2025-01-15T14:00:00Z',
 };
 
 const mockVisitRow = {
@@ -116,12 +116,12 @@ function createMockChain(): MockChain {
  */
 function makeThenableChain(
   chain: MockChain,
-  resolveValue: { data: unknown; error: unknown }
+  resolveValue: { data: unknown; error: unknown },
 ): MockChain {
   // Make chain thenable (can be awaited)
   (chain as unknown as { then: typeof Promise.prototype.then }).then = (
     onFulfilled: (value: unknown) => unknown,
-    onRejected?: (reason: unknown) => unknown
+    onRejected?: (reason: unknown) => unknown,
   ) => {
     return Promise.resolve(resolveValue).then(onFulfilled, onRejected);
   };
@@ -137,7 +137,7 @@ function createMockSupabase(chain: MockChain): SupabaseClient<Database> {
 
 // === Tests ===
 
-describe("RatingSlipService", () => {
+describe('RatingSlipService', () => {
   let mockChain: MockChain;
   let mockSupabase: SupabaseClient<Database>;
 
@@ -151,9 +151,9 @@ describe("RatingSlipService", () => {
   // State Machine Transitions
   // ===========================================================================
 
-  describe("State Machine Transitions", () => {
-    describe("start", () => {
-      it("should create a new rating slip in open state", async () => {
+  describe('State Machine Transitions', () => {
+    describe('start', () => {
+      it('should create a new rating slip in open state', async () => {
         // Mock visit lookup
         mockChain.maybeSingle.mockResolvedValueOnce({
           data: mockVisitRow,
@@ -169,57 +169,57 @@ describe("RatingSlipService", () => {
         const input: CreateRatingSlipInput = {
           visit_id: VISIT_ID,
           table_id: TABLE_ID,
-          seat_number: "3",
+          seat_number: '3',
         };
 
         const result = await crud.start(
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          input
+          input,
         );
 
         expect(result.id).toBe(SLIP_ID);
-        expect(result.status).toBe("open");
+        expect(result.status).toBe('open');
         expect(result.visit_id).toBe(VISIT_ID);
         expect(result.table_id).toBe(TABLE_ID);
-        expect(mockChain.rpc).toHaveBeenCalledWith("rpc_start_rating_slip", {
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_start_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
           p_visit_id: VISIT_ID,
           p_table_id: TABLE_ID,
-          p_seat_number: "3",
+          p_seat_number: '3',
           p_game_settings: {},
           p_player_id: PLAYER_ID,
         });
       });
 
-      it("should throw VISIT_NOT_FOUND for non-existent visit", async () => {
+      it('should throw VISIT_NOT_FOUND for non-existent visit', async () => {
         mockChain.maybeSingle.mockResolvedValue({
           data: null,
           error: null,
         });
 
         const input: CreateRatingSlipInput = {
-          visit_id: "nonexistent",
+          visit_id: 'nonexistent',
           table_id: TABLE_ID,
         };
 
         await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input)
+          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("VISIT_NOT_FOUND");
+          expect((error as DomainError).code).toBe('VISIT_NOT_FOUND');
         }
       });
 
-      it("should throw VISIT_NOT_OPEN for closed visit", async () => {
+      it('should throw VISIT_NOT_OPEN for closed visit', async () => {
         mockChain.maybeSingle.mockResolvedValue({
-          data: { ...mockVisitRow, ended_at: "2025-01-15T12:00:00Z" },
+          data: { ...mockVisitRow, ended_at: '2025-01-15T12:00:00Z' },
           error: null,
         });
 
@@ -229,18 +229,18 @@ describe("RatingSlipService", () => {
         };
 
         await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input)
+          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("VISIT_NOT_OPEN");
+          expect((error as DomainError).code).toBe('VISIT_NOT_OPEN');
         }
       });
 
-      it("should throw RATING_SLIP_INVALID_STATE for ghost visit", async () => {
+      it('should throw RATING_SLIP_INVALID_STATE for ghost visit', async () => {
         mockChain.maybeSingle.mockResolvedValue({
           data: { ...mockVisitRow, player_id: null },
           error: null,
@@ -252,20 +252,20 @@ describe("RatingSlipService", () => {
         };
 
         await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input)
+          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_INVALID_STATE");
+          expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
         }
       });
 
-      it("should throw VISIT_CASINO_MISMATCH for wrong casino", async () => {
+      it('should throw VISIT_CASINO_MISMATCH for wrong casino', async () => {
         mockChain.maybeSingle.mockResolvedValue({
-          data: { ...mockVisitRow, casino_id: "other-casino" },
+          data: { ...mockVisitRow, casino_id: 'other-casino' },
           error: null,
         });
 
@@ -275,18 +275,18 @@ describe("RatingSlipService", () => {
         };
 
         await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input)
+          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("VISIT_CASINO_MISMATCH");
+          expect((error as DomainError).code).toBe('VISIT_CASINO_MISMATCH');
         }
       });
 
-      it("should throw RATING_SLIP_DUPLICATE for unique constraint violation", async () => {
+      it('should throw RATING_SLIP_DUPLICATE for unique constraint violation', async () => {
         mockChain.maybeSingle.mockResolvedValue({
           data: mockVisitRow,
           error: null,
@@ -294,7 +294,10 @@ describe("RatingSlipService", () => {
 
         mockChain.rpc.mockResolvedValue({
           data: null,
-          error: { code: "23505", message: "duplicate key value violates unique constraint" },
+          error: {
+            code: '23505',
+            message: 'duplicate key value violates unique constraint',
+          },
         });
 
         const input: CreateRatingSlipInput = {
@@ -303,20 +306,20 @@ describe("RatingSlipService", () => {
         };
 
         await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input)
+          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_DUPLICATE");
+          expect((error as DomainError).code).toBe('RATING_SLIP_DUPLICATE');
         }
       });
     });
 
-    describe("pause", () => {
-      it("should transition from open to paused via pause()", async () => {
+    describe('pause', () => {
+      it('should transition from open to paused via pause()', async () => {
         mockChain.rpc.mockResolvedValue({
           data: mockPausedSlipRow,
           error: null,
@@ -326,56 +329,58 @@ describe("RatingSlipService", () => {
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          SLIP_ID
+          SLIP_ID,
         );
 
-        expect(result.status).toBe("paused");
-        expect(mockChain.rpc).toHaveBeenCalledWith("rpc_pause_rating_slip", {
+        expect(result.status).toBe('paused');
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_pause_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
           p_rating_slip_id: SLIP_ID,
         });
       });
 
-      it("should throw RATING_SLIP_NOT_OPEN when pausing non-open slip", async () => {
+      it('should throw RATING_SLIP_NOT_OPEN when pausing non-open slip', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
-          error: { message: "RATING_SLIP_NOT_OPEN: Rating slip is not in open state" },
+          error: {
+            message: 'RATING_SLIP_NOT_OPEN: Rating slip is not in open state',
+          },
         });
 
         await expect(
-          crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID)
+          crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_OPEN");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_OPEN');
         }
       });
 
-      it("should throw RATING_SLIP_NOT_FOUND when slip does not exist", async () => {
+      it('should throw RATING_SLIP_NOT_FOUND when slip does not exist', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
           error: null,
         });
 
         await expect(
-          crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent")
+          crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent'),
         ).rejects.toThrow(DomainError);
 
         try {
-          await crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent");
+          await crud.pause(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
         }
       });
     });
 
-    describe("resume", () => {
-      it("should transition from paused to open via resume()", async () => {
+    describe('resume', () => {
+      it('should transition from paused to open via resume()', async () => {
         mockChain.rpc.mockResolvedValue({
           data: mockRatingSlipRow, // Returns open status
           error: null,
@@ -385,56 +390,59 @@ describe("RatingSlipService", () => {
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          SLIP_ID
+          SLIP_ID,
         );
 
-        expect(result.status).toBe("open");
-        expect(mockChain.rpc).toHaveBeenCalledWith("rpc_resume_rating_slip", {
+        expect(result.status).toBe('open');
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_resume_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
           p_rating_slip_id: SLIP_ID,
         });
       });
 
-      it("should throw RATING_SLIP_NOT_PAUSED when resuming non-paused slip", async () => {
+      it('should throw RATING_SLIP_NOT_PAUSED when resuming non-paused slip', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
-          error: { message: "RATING_SLIP_NOT_PAUSED: Rating slip is not in paused state" },
+          error: {
+            message:
+              'RATING_SLIP_NOT_PAUSED: Rating slip is not in paused state',
+          },
         });
 
         await expect(
-          crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID)
+          crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_PAUSED");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_PAUSED');
         }
       });
 
-      it("should throw RATING_SLIP_NOT_FOUND when slip does not exist", async () => {
+      it('should throw RATING_SLIP_NOT_FOUND when slip does not exist', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
           error: null,
         });
 
         await expect(
-          crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent")
+          crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent'),
         ).rejects.toThrow(DomainError);
 
         try {
-          await crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent");
+          await crud.resume(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
         }
       });
     });
 
-    describe("close", () => {
-      it("should transition from open to closed via close()", async () => {
+    describe('close', () => {
+      it('should transition from open to closed via close()', async () => {
         const closedWithDuration = {
           slip: mockClosedSlipRow,
           duration_seconds: 14400, // 4 hours
@@ -449,13 +457,13 @@ describe("RatingSlipService", () => {
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          SLIP_ID
+          SLIP_ID,
         );
 
-        expect(result.status).toBe("closed");
+        expect(result.status).toBe('closed');
         expect(result.end_time).not.toBeNull();
         expect(result.duration_seconds).toBe(14400);
-        expect(mockChain.rpc).toHaveBeenCalledWith("rpc_close_rating_slip", {
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_close_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
           p_rating_slip_id: SLIP_ID,
@@ -463,7 +471,7 @@ describe("RatingSlipService", () => {
         });
       });
 
-      it("should transition from paused to closed via close() with auto-end pause", async () => {
+      it('should transition from paused to closed via close() with auto-end pause', async () => {
         const closedWithDuration = {
           slip: mockClosedSlipRow,
           duration_seconds: 10800, // 3 hours (excluding pause)
@@ -478,14 +486,14 @@ describe("RatingSlipService", () => {
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          SLIP_ID
+          SLIP_ID,
         );
 
-        expect(result.status).toBe("closed");
+        expect(result.status).toBe('closed');
         expect(result.duration_seconds).toBe(10800);
       });
 
-      it("should accept optional average_bet on close", async () => {
+      it('should accept optional average_bet on close', async () => {
         const closedWithDuration = {
           slip: { ...mockClosedSlipRow, average_bet: 250 },
           duration_seconds: 14400,
@@ -501,11 +509,11 @@ describe("RatingSlipService", () => {
           CASINO_ID,
           ACTOR_ID,
           SLIP_ID,
-          { average_bet: 250 }
+          { average_bet: 250 },
         );
 
         expect(result.average_bet).toBe(250);
-        expect(mockChain.rpc).toHaveBeenCalledWith("rpc_close_rating_slip", {
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_close_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
           p_rating_slip_id: SLIP_ID,
@@ -513,43 +521,48 @@ describe("RatingSlipService", () => {
         });
       });
 
-      it("should throw RATING_SLIP_ALREADY_CLOSED when closing already closed slip", async () => {
+      it('should throw RATING_SLIP_ALREADY_CLOSED when closing already closed slip', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
-          error: { message: "RATING_SLIP_ALREADY_CLOSED: Rating slip has already been closed" },
+          error: {
+            message:
+              'RATING_SLIP_ALREADY_CLOSED: Rating slip has already been closed',
+          },
         });
 
         await expect(
-          crud.close(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID)
+          crud.close(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.close(mockSupabase, CASINO_ID, ACTOR_ID, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_ALREADY_CLOSED");
+          expect((error as DomainError).code).toBe(
+            'RATING_SLIP_ALREADY_CLOSED',
+          );
         }
       });
 
-      it("should throw RATING_SLIP_NOT_FOUND when slip does not exist", async () => {
+      it('should throw RATING_SLIP_NOT_FOUND when slip does not exist', async () => {
         mockChain.rpc.mockResolvedValue({
           data: null,
           error: null,
         });
 
         await expect(
-          crud.close(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent")
+          crud.close(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent'),
         ).rejects.toThrow(DomainError);
 
         try {
-          await crud.close(mockSupabase, CASINO_ID, ACTOR_ID, "nonexistent");
+          await crud.close(mockSupabase, CASINO_ID, ACTOR_ID, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
         }
       });
 
-      it("should handle array response from RPC", async () => {
+      it('should handle array response from RPC', async () => {
         const closedWithDuration = {
           slip: mockClosedSlipRow,
           duration_seconds: 14400,
@@ -565,10 +578,10 @@ describe("RatingSlipService", () => {
           mockSupabase,
           CASINO_ID,
           ACTOR_ID,
-          SLIP_ID
+          SLIP_ID,
         );
 
-        expect(result.status).toBe("closed");
+        expect(result.status).toBe('closed');
         expect(result.duration_seconds).toBe(14400);
       });
     });
@@ -578,8 +591,8 @@ describe("RatingSlipService", () => {
   // Duration Calculation
   // ===========================================================================
 
-  describe("Duration Calculation", () => {
-    it("should return duration excluding paused time", async () => {
+  describe('Duration Calculation', () => {
+    it('should return duration excluding paused time', async () => {
       mockChain.rpc.mockResolvedValue({
         data: 10800, // 3 hours in seconds
         error: null,
@@ -589,16 +602,16 @@ describe("RatingSlipService", () => {
 
       expect(result).toBe(10800);
       expect(mockChain.rpc).toHaveBeenCalledWith(
-        "rpc_get_rating_slip_duration",
+        'rpc_get_rating_slip_duration',
         {
           p_rating_slip_id: SLIP_ID,
           p_as_of: undefined,
-        }
+        },
       );
     });
 
-    it("should accept optional asOf parameter", async () => {
-      const asOf = "2025-01-15T12:00:00Z";
+    it('should accept optional asOf parameter', async () => {
+      const asOf = '2025-01-15T12:00:00Z';
 
       mockChain.rpc.mockResolvedValue({
         data: 7200, // 2 hours
@@ -609,29 +622,29 @@ describe("RatingSlipService", () => {
 
       expect(result).toBe(7200);
       expect(mockChain.rpc).toHaveBeenCalledWith(
-        "rpc_get_rating_slip_duration",
+        'rpc_get_rating_slip_duration',
         {
           p_rating_slip_id: SLIP_ID,
           p_as_of: asOf,
-        }
+        },
       );
     });
 
-    it("should throw RATING_SLIP_NOT_FOUND for non-existent slip", async () => {
+    it('should throw RATING_SLIP_NOT_FOUND for non-existent slip', async () => {
       mockChain.rpc.mockResolvedValue({
         data: null,
         error: null,
       });
 
       await expect(
-        crud.getDuration(mockSupabase, "nonexistent")
+        crud.getDuration(mockSupabase, 'nonexistent'),
       ).rejects.toThrow(DomainError);
 
       try {
-        await crud.getDuration(mockSupabase, "nonexistent");
+        await crud.getDuration(mockSupabase, 'nonexistent');
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+        expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
       }
     });
   });
@@ -640,18 +653,18 @@ describe("RatingSlipService", () => {
   // Read Operations
   // ===========================================================================
 
-  describe("Read Operations", () => {
-    describe("getById", () => {
-      it("should return slip with pause history", async () => {
+  describe('Read Operations', () => {
+    describe('getById', () => {
+      it('should return slip with pause history', async () => {
         const slipWithPauses = {
           ...mockRatingSlipRow,
           rating_slip_pause: [
             {
-              id: "pause-1",
+              id: 'pause-1',
               rating_slip_id: SLIP_ID,
               casino_id: CASINO_ID,
-              started_at: "2025-01-15T11:00:00Z",
-              ended_at: "2025-01-15T11:30:00Z",
+              started_at: '2025-01-15T11:00:00Z',
+              ended_at: '2025-01-15T11:30:00Z',
               created_by: ACTOR_ID,
             },
           ],
@@ -666,30 +679,30 @@ describe("RatingSlipService", () => {
 
         expect(result.id).toBe(SLIP_ID);
         expect(result.pauses).toHaveLength(1);
-        expect(result.pauses[0].started_at).toBe("2025-01-15T11:00:00Z");
+        expect(result.pauses[0].started_at).toBe('2025-01-15T11:00:00Z');
       });
 
-      it("should throw RATING_SLIP_NOT_FOUND for non-existent slip", async () => {
+      it('should throw RATING_SLIP_NOT_FOUND for non-existent slip', async () => {
         mockChain.maybeSingle.mockResolvedValue({
           data: null,
           error: null,
         });
 
-        await expect(crud.getById(mockSupabase, "nonexistent")).rejects.toThrow(
-          DomainError
+        await expect(crud.getById(mockSupabase, 'nonexistent')).rejects.toThrow(
+          DomainError,
         );
 
         try {
-          await crud.getById(mockSupabase, "nonexistent");
+          await crud.getById(mockSupabase, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
         }
       });
     });
 
-    describe("listForTable", () => {
-      it("should return slips for table with pagination", async () => {
+    describe('listForTable', () => {
+      it('should return slips for table with pagination', async () => {
         // Make chain thenable to simulate awaiting the query
         makeThenableChain(mockChain, {
           data: [mockRatingSlipRow, mockPausedSlipRow],
@@ -702,19 +715,19 @@ describe("RatingSlipService", () => {
         expect(result.cursor).toBeNull();
       });
 
-      it("should apply status filter", async () => {
+      it('should apply status filter', async () => {
         // Make chain thenable
         makeThenableChain(mockChain, {
           data: [mockRatingSlipRow],
           error: null,
         });
 
-        await crud.listForTable(mockSupabase, TABLE_ID, { status: "open" });
+        await crud.listForTable(mockSupabase, TABLE_ID, { status: 'open' });
 
-        expect(mockChain.eq).toHaveBeenCalledWith("status", "open");
+        expect(mockChain.eq).toHaveBeenCalledWith('status', 'open');
       });
 
-      it("should handle cursor pagination", async () => {
+      it('should handle cursor pagination', async () => {
         // Return limit + 1 items to indicate hasMore
         makeThenableChain(mockChain, {
           data: Array(21).fill(mockRatingSlipRow),
@@ -730,8 +743,8 @@ describe("RatingSlipService", () => {
       });
     });
 
-    describe("listForVisit", () => {
-      it("should return all slips for visit", async () => {
+    describe('listForVisit', () => {
+      it('should return all slips for visit', async () => {
         // Make chain thenable
         makeThenableChain(mockChain, {
           data: [mockRatingSlipRow, mockClosedSlipRow],
@@ -744,8 +757,8 @@ describe("RatingSlipService", () => {
       });
     });
 
-    describe("getActiveForTable", () => {
-      it("should return only open and paused slips", async () => {
+    describe('getActiveForTable', () => {
+      it('should return only open and paused slips', async () => {
         // Make chain thenable
         makeThenableChain(mockChain, {
           data: [mockRatingSlipRow, mockPausedSlipRow],
@@ -755,7 +768,7 @@ describe("RatingSlipService", () => {
         const result = await crud.getActiveForTable(mockSupabase, TABLE_ID);
 
         expect(result).toHaveLength(2);
-        expect(mockChain.in).toHaveBeenCalledWith("status", ["open", "paused"]);
+        expect(mockChain.in).toHaveBeenCalledWith('status', ['open', 'paused']);
       });
     });
   });
@@ -764,9 +777,9 @@ describe("RatingSlipService", () => {
   // Update Operations
   // ===========================================================================
 
-  describe("Update Operations", () => {
-    describe("updateAverageBet", () => {
-      it("should update average bet on open slip", async () => {
+  describe('Update Operations', () => {
+    describe('updateAverageBet', () => {
+      it('should update average bet on open slip', async () => {
         const updatedSlip = { ...mockRatingSlipRow, average_bet: 200 };
 
         mockChain.single.mockResolvedValue({
@@ -779,36 +792,36 @@ describe("RatingSlipService", () => {
         expect(result.average_bet).toBe(200);
       });
 
-      it("should throw RATING_SLIP_INVALID_STATE for closed slip", async () => {
+      it('should throw RATING_SLIP_INVALID_STATE for closed slip', async () => {
         // First call fails with PGRST116
         mockChain.single.mockResolvedValue({
           data: null,
-          error: { code: "PGRST116", message: "No rows returned" },
+          error: { code: 'PGRST116', message: 'No rows returned' },
         });
 
         // Second call (check if exists and closed)
         mockChain.maybeSingle.mockResolvedValue({
-          data: { id: SLIP_ID, status: "closed" },
+          data: { id: SLIP_ID, status: 'closed' },
           error: null,
         });
 
         await expect(
-          crud.updateAverageBet(mockSupabase, SLIP_ID, 200)
+          crud.updateAverageBet(mockSupabase, SLIP_ID, 200),
         ).rejects.toThrow(DomainError);
 
         try {
           await crud.updateAverageBet(mockSupabase, SLIP_ID, 200);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_INVALID_STATE");
+          expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
         }
       });
 
-      it("should throw RATING_SLIP_NOT_FOUND for non-existent slip", async () => {
+      it('should throw RATING_SLIP_NOT_FOUND for non-existent slip', async () => {
         // First call fails with PGRST116
         mockChain.single.mockResolvedValue({
           data: null,
-          error: { code: "PGRST116", message: "No rows returned" },
+          error: { code: 'PGRST116', message: 'No rows returned' },
         });
 
         // Second call (check if exists)
@@ -818,14 +831,14 @@ describe("RatingSlipService", () => {
         });
 
         await expect(
-          crud.updateAverageBet(mockSupabase, "nonexistent", 200)
+          crud.updateAverageBet(mockSupabase, 'nonexistent', 200),
         ).rejects.toThrow(DomainError);
 
         try {
-          await crud.updateAverageBet(mockSupabase, "nonexistent", 200);
+          await crud.updateAverageBet(mockSupabase, 'nonexistent', 200);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+          expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
         }
       });
     });
@@ -835,8 +848,8 @@ describe("RatingSlipService", () => {
   // Error Mapping
   // ===========================================================================
 
-  describe("Error Mapping", () => {
-    it("should map 23503 FK violation to VISIT_NOT_FOUND", async () => {
+  describe('Error Mapping', () => {
+    it('should map 23503 FK violation to VISIT_NOT_FOUND', async () => {
       mockChain.maybeSingle.mockResolvedValue({
         data: mockVisitRow,
         error: null,
@@ -845,8 +858,8 @@ describe("RatingSlipService", () => {
       mockChain.rpc.mockResolvedValue({
         data: null,
         error: {
-          code: "23503",
-          message: "violates foreign key constraint on visit_id",
+          code: '23503',
+          message: 'violates foreign key constraint on visit_id',
         },
       });
 
@@ -859,11 +872,11 @@ describe("RatingSlipService", () => {
         await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("VISIT_NOT_FOUND");
+        expect((error as DomainError).code).toBe('VISIT_NOT_FOUND');
       }
     });
 
-    it("should map 23503 FK violation to TABLE_NOT_FOUND", async () => {
+    it('should map 23503 FK violation to TABLE_NOT_FOUND', async () => {
       mockChain.maybeSingle.mockResolvedValue({
         data: mockVisitRow,
         error: null,
@@ -872,8 +885,8 @@ describe("RatingSlipService", () => {
       mockChain.rpc.mockResolvedValue({
         data: null,
         error: {
-          code: "23503",
-          message: "violates foreign key constraint on table_id",
+          code: '23503',
+          message: 'violates foreign key constraint on table_id',
         },
       });
 
@@ -886,25 +899,25 @@ describe("RatingSlipService", () => {
         await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("TABLE_NOT_FOUND");
+        expect((error as DomainError).code).toBe('TABLE_NOT_FOUND');
       }
     });
 
-    it("should map PGRST116 to RATING_SLIP_NOT_FOUND", async () => {
+    it('should map PGRST116 to RATING_SLIP_NOT_FOUND', async () => {
       mockChain.maybeSingle.mockResolvedValue({
         data: null,
-        error: { code: "PGRST116", message: "No rows returned" },
+        error: { code: 'PGRST116', message: 'No rows returned' },
       });
 
       try {
-        await crud.getById(mockSupabase, "nonexistent");
+        await crud.getById(mockSupabase, 'nonexistent');
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+        expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
       }
     });
 
-    it("should map unknown errors to INTERNAL_ERROR", async () => {
+    it('should map unknown errors to INTERNAL_ERROR', async () => {
       mockChain.maybeSingle.mockResolvedValue({
         data: mockVisitRow,
         error: null,
@@ -912,7 +925,7 @@ describe("RatingSlipService", () => {
 
       mockChain.rpc.mockResolvedValue({
         data: null,
-        error: { code: "12345", message: "Unknown database error" },
+        error: { code: '12345', message: 'Unknown database error' },
       });
 
       const input: CreateRatingSlipInput = {
@@ -924,7 +937,7 @@ describe("RatingSlipService", () => {
         await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("INTERNAL_ERROR");
+        expect((error as DomainError).code).toBe('INTERNAL_ERROR');
       }
     });
   });

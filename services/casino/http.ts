@@ -8,7 +8,7 @@
  * @see SPEC-PRD-000-casino-foundation.md section 6.2
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
+import { fetchJSON } from '@/lib/http/fetch-json';
 
 import type {
   CasinoDTO,
@@ -21,9 +21,9 @@ import type {
   StaffDTO,
   UpdateCasinoDTO,
   UpdateCasinoSettingsDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/casino";
+const BASE = '/api/v1/casino';
 
 // === Helper Functions ===
 
@@ -75,10 +75,10 @@ export async function getCasino(id: string): Promise<CasinoDTO> {
  */
 export async function createCasino(input: CreateCasinoDTO): Promise<CasinoDTO> {
   return fetchJSON<CasinoDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -93,10 +93,10 @@ export async function updateCasino(
   input: UpdateCasinoDTO,
 ): Promise<CasinoDTO> {
   return fetchJSON<CasinoDTO>(`${BASE}/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -108,9 +108,9 @@ export async function updateCasino(
  */
 export async function deleteCasino(id: string): Promise<void> {
   return fetchJSON<void>(`${BASE}/${id}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: {
-      "idempotency-key": generateIdempotencyKey(),
+      'idempotency-key': generateIdempotencyKey(),
     },
   });
 }
@@ -136,10 +136,10 @@ export async function updateCasinoSettings(
   input: UpdateCasinoSettingsDTO,
 ): Promise<CasinoSettingsDTO> {
   return fetchJSON<CasinoSettingsDTO>(`${BASE}/settings`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -169,10 +169,10 @@ export async function getCasinoStaff(
  */
 export async function createStaff(input: CreateStaffDTO): Promise<StaffDTO> {
   return fetchJSON<StaffDTO>(`${BASE}/staff`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
-      "idempotency-key": generateIdempotencyKey(),
+      'content-type': 'application/json',
+      'idempotency-key': generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -187,6 +187,6 @@ export async function createStaff(input: CreateStaffDTO): Promise<StaffDTO> {
  * @param timestamp - Optional ISO 8601 timestamp (defaults to now)
  */
 export async function getGamingDay(timestamp?: string): Promise<GamingDayDTO> {
-  const params = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : "";
+  const params = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : '';
   return fetchJSON<GamingDayDTO>(`${BASE}/gaming-day${params}`);
 }

@@ -1,4 +1,4 @@
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient } from '@tanstack/react-query';
 
 /**
  * Domain-Tiered Stale Times
@@ -34,19 +34,19 @@ export const DOMAIN_STALE_TIMES: Record<string, number> = {
   // Reference data (5 min) - rarely changes
   // DEPLOYED:
   casino: STALE_TIMES.REFERENCE,
-  "casino-settings": STALE_TIMES.REFERENCE,
-  "floor-layout": STALE_TIMES.REFERENCE,
+  'casino-settings': STALE_TIMES.REFERENCE,
+  'floor-layout': STALE_TIMES.REFERENCE,
   // PLANNED (not yet in SRM):
-  "game-settings": STALE_TIMES.REFERENCE,
-  "game-types": STALE_TIMES.REFERENCE,
+  'game-settings': STALE_TIMES.REFERENCE,
+  'game-types': STALE_TIMES.REFERENCE,
 
   // Transactional data (30 sec) - changes with user actions
   // DEPLOYED:
   player: STALE_TIMES.TRANSACTIONAL,
   visit: STALE_TIMES.TRANSACTIONAL,
-  "rating-slip": STALE_TIMES.TRANSACTIONAL,
+  'rating-slip': STALE_TIMES.TRANSACTIONAL,
   loyalty: STALE_TIMES.TRANSACTIONAL,
-  "loyalty-ledger": STALE_TIMES.TRANSACTIONAL,
+  'loyalty-ledger': STALE_TIMES.TRANSACTIONAL,
   mtl: STALE_TIMES.TRANSACTIONAL,
   // PLANNED (not yet in SRM):
   finance: STALE_TIMES.TRANSACTIONAL,
@@ -55,9 +55,9 @@ export const DOMAIN_STALE_TIMES: Record<string, number> = {
   // Real-time data (10 sec) - changes frequently
   // DEPLOYED:
   table: STALE_TIMES.REALTIME,
-  "table-context": STALE_TIMES.REALTIME,
-  "active-visit": STALE_TIMES.REALTIME,
-  "pit-overview": STALE_TIMES.REALTIME,
+  'table-context': STALE_TIMES.REALTIME,
+  'active-visit': STALE_TIMES.REALTIME,
+  'pit-overview': STALE_TIMES.REALTIME,
 };
 
 /**
@@ -120,7 +120,7 @@ let browserQueryClient: QueryClient | undefined;
  * @returns QueryClient instance
  */
 export function getQueryClient(): QueryClient {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     // Server: always create new client to avoid shared state
     return makeQueryClient();
   }

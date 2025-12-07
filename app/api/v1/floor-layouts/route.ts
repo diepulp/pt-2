@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase.rpc('rpc_create_floor_layout', {
       p_casino_id: payload.casino_id,
       p_name: payload.name,
-      p_description: payload.description ?? null,
+      p_description: payload.description ?? '',
       p_created_by: payload.created_by,
     });
 

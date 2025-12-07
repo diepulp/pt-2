@@ -10,10 +10,10 @@
  * @see PRD-003B-visit-service-refactor.md section 4.3
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   ActiveVisitDTO,
@@ -22,18 +22,18 @@ import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 import {
   toActiveVisitDTO,
   toVisitDTO,
   toVisitDTOOrNull,
   toVisitWithPlayerDTOList,
-} from "./mappers";
+} from './mappers';
 import {
   ACTIVE_VISIT_SELECT,
   VISIT_SELECT,
   VISIT_WITH_PLAYER_SELECT,
-} from "./selects";
+} from './selects';
 
 // === Error Mapping ===
 
@@ -46,32 +46,32 @@ function mapDatabaseError(error: {
   message: string;
 }): DomainError {
   // 23505 = Unique constraint violation (active visit exists)
-  if (error.code === "23505") {
+  if (error.code === '23505') {
     return new DomainError(
-      "UNIQUE_VIOLATION",
-      "Player already has an active visit at this casino",
+      'UNIQUE_VIOLATION',
+      'Player already has an active visit at this casino',
     );
   }
 
   // 23503 = Foreign key violation (player not found)
-  if (error.code === "23503") {
-    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
+  if (error.code === '23503') {
+    return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
   }
 
   // 23514 = Check constraint violation (visit_kind/player_id invariant)
-  if (error.code === "23514") {
+  if (error.code === '23514') {
     return new DomainError(
-      "VISIT_INVALID_KIND_PLAYER",
-      "Ghost visits require NULL player_id; identified visits require player_id",
+      'VISIT_INVALID_KIND_PLAYER',
+      'Ghost visits require NULL player_id; identified visits require player_id',
     );
   }
 
   // PGRST116 = No rows returned (used in update/delete operations)
-  if (error.code === "PGRST116") {
-    return new DomainError("VISIT_NOT_FOUND", "Visit not found");
+  if (error.code === 'PGRST116') {
+    return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
   }
 
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // === Read Operations ===
@@ -85,9 +85,9 @@ export async function getVisitById(
   visitId: string,
 ): Promise<VisitDTO | null> {
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .select(VISIT_SELECT)
-    .eq("id", visitId)
+    .eq('id', visitId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -103,10 +103,10 @@ export async function getActiveVisitForPlayer(
   playerId: string,
 ): Promise<ActiveVisitDTO> {
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .select(ACTIVE_VISIT_SELECT)
-    .eq("player_id", playerId)
-    .is("ended_at", null)
+    .eq('player_id', playerId)
+    .is('ended_at', null)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -124,39 +124,39 @@ export async function listVisits(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("visit")
+    .from('visit')
     .select(VISIT_WITH_PLAYER_SELECT)
-    .order("started_at", { ascending: false })
+    .order('started_at', { ascending: false })
     .limit(limit + 1);
 
   // Apply status filter
-  if (filters.status === "active") {
-    query = query.is("ended_at", null);
-  } else if (filters.status === "closed") {
-    query = query.not("ended_at", "is", null);
+  if (filters.status === 'active') {
+    query = query.is('ended_at', null);
+  } else if (filters.status === 'closed') {
+    query = query.not('ended_at', 'is', null);
   }
 
   // Apply player filter
   if (filters.player_id) {
-    query = query.eq("player_id", filters.player_id);
+    query = query.eq('player_id', filters.player_id);
   }
 
   // Apply visit_kind filter
   if (filters.visit_kind) {
-    query = query.eq("visit_kind", filters.visit_kind);
+    query = query.eq('visit_kind', filters.visit_kind);
   }
 
   // Apply date range filters
   if (filters.from_date) {
-    query = query.gte("started_at", `${filters.from_date}T00:00:00Z`);
+    query = query.gte('started_at', `${filters.from_date}T00:00:00Z`);
   }
   if (filters.to_date) {
-    query = query.lte("started_at", `${filters.to_date}T23:59:59Z`);
+    query = query.lte('started_at', `${filters.to_date}T23:59:59Z`);
   }
 
   // Apply cursor for pagination
   if (filters.cursor) {
-    query = query.lt("started_at", filters.cursor);
+    query = query.lt('started_at', filters.cursor);
   }
 
   const { data, error } = await query;
@@ -204,18 +204,18 @@ export async function startVisit(
   // Note: The unique partial index uq_visit_single_active_identified
   // will prevent race conditions at the database level
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       player_id: playerId,
       casino_id: casinoId,
-      visit_kind: "gaming_identified_rated",
+      visit_kind: 'gaming_identified_rated',
     })
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // Handle unique constraint violation (race condition)
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       // Another visit was created concurrently, fetch it
       const { visit: existingVisit } = await getActiveVisitForPlayer(
         supabase,
@@ -248,16 +248,16 @@ export async function closeVisit(
 
   // Attempt to close visit (only if not already closed)
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .update({ ended_at: endedAt })
-    .eq("id", visitId)
-    .is("ended_at", null) // Only close if not already closed
+    .eq('id', visitId)
+    .is('ended_at', null) // Only close if not already closed
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // PGRST116 = No rows returned (already closed or not found)
-    if (error.code === "PGRST116") {
+    if (error.code === 'PGRST116') {
       // Check if visit exists but is already closed (idempotent success)
       const existing = await getVisitById(supabase, visitId);
       if (existing && existing.ended_at) {
@@ -265,7 +265,7 @@ export async function closeVisit(
         return existing;
       }
       // Visit not found
-      throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+      throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
     }
     throw mapDatabaseError(error);
   }
@@ -298,18 +298,18 @@ export async function createRewardVisit(
   }
 
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       player_id: playerId,
       casino_id: casinoId,
-      visit_kind: "reward_identified",
+      visit_kind: 'reward_identified',
     })
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // Handle unique constraint violation (race condition)
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       const { visit: existingVisit } = await getActiveVisitForPlayer(
         supabase,
         playerId,
@@ -365,11 +365,11 @@ export async function createGhostGamingVisit(
   // table_id and notes are stored for audit/compliance purposes
   void input; // Currently unused - table_id/notes require schema extension
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       player_id: null, // Ghost visit - no player identity
       casino_id: casinoId,
-      visit_kind: "gaming_ghost_unrated",
+      visit_kind: 'gaming_ghost_unrated',
     })
     .select(VISIT_SELECT)
     .single();
@@ -398,46 +398,46 @@ export async function convertRewardToGaming(
   const currentVisit = await getVisitById(supabase, visitId);
 
   if (!currentVisit) {
-    throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+    throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
   }
 
   if (currentVisit.ended_at !== null) {
     throw new DomainError(
-      "VISIT_NOT_OPEN",
-      "Cannot convert a closed visit. Only active visits can be converted.",
+      'VISIT_NOT_OPEN',
+      'Cannot convert a closed visit. Only active visits can be converted.',
     );
   }
 
-  if (currentVisit.visit_kind !== "reward_identified") {
+  if (currentVisit.visit_kind !== 'reward_identified') {
     throw new DomainError(
-      "VISIT_INVALID_CONVERSION",
+      'VISIT_INVALID_CONVERSION',
       `Cannot convert visit of kind '${currentVisit.visit_kind}' to gaming. Only 'reward_identified' visits can be converted.`,
     );
   }
 
   // Perform the conversion
   const { data, error } = await supabase
-    .from("visit")
+    .from('visit')
     .update({
-      visit_kind: "gaming_identified_rated",
+      visit_kind: 'gaming_identified_rated',
     })
-    .eq("id", visitId)
-    .is("ended_at", null) // Extra safety: only update if still active
+    .eq('id', visitId)
+    .is('ended_at', null) // Extra safety: only update if still active
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // PGRST116 = No rows returned (concurrent close or not found)
-    if (error.code === "PGRST116") {
+    if (error.code === 'PGRST116') {
       // Re-fetch to provide better error message
       const refetched = await getVisitById(supabase, visitId);
       if (refetched && refetched.ended_at) {
         throw new DomainError(
-          "VISIT_NOT_OPEN",
-          "Visit was closed concurrently. Cannot convert a closed visit.",
+          'VISIT_NOT_OPEN',
+          'Visit was closed concurrently. Cannot convert a closed visit.',
         );
       }
-      throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
+      throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
     }
     throw mapDatabaseError(error);
   }

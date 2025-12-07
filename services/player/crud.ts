@@ -10,10 +10,10 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md §341-342
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CreatePlayerDTO,
@@ -22,7 +22,7 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from "./dtos";
+} from './dtos';
 import {
   toEnrollmentDTO,
   toEnrollmentDTOOrNull,
@@ -30,12 +30,12 @@ import {
   toPlayerDTOList,
   toPlayerDTOOrNull,
   toPlayerSearchResultDTOList,
-} from "./mappers";
+} from './mappers';
 import {
   ENROLLMENT_SELECT,
   PLAYER_SEARCH_SELECT,
   PLAYER_SELECT,
-} from "./selects";
+} from './selects';
 
 // === Error Mapping ===
 
@@ -47,13 +47,13 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  if (error.code === "23505") {
-    return new DomainError("PLAYER_ALREADY_EXISTS", "Player already exists");
+  if (error.code === '23505') {
+    return new DomainError('PLAYER_ALREADY_EXISTS', 'Player already exists');
   }
-  if (error.code === "23503") {
-    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
+  if (error.code === '23503') {
+    return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
   }
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // === Player CRUD ===
@@ -67,9 +67,9 @@ export async function getPlayerById(
   playerId: string,
 ): Promise<PlayerDTO | null> {
   const { data, error } = await supabase
-    .from("player")
+    .from('player')
     .select(PLAYER_SELECT)
-    .eq("id", playerId)
+    .eq('id', playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -87,9 +87,9 @@ export async function listPlayers(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("player")
+    .from('player')
     .select(PLAYER_SELECT)
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit + 1);
 
   // Apply search filter if provided
@@ -100,7 +100,7 @@ export async function listPlayers(
 
   // Apply cursor-based pagination
   if (filters.cursor) {
-    query = query.lt("created_at", filters.cursor);
+    query = query.lt('created_at', filters.cursor);
   }
 
   const { data, error } = await query;
@@ -126,7 +126,7 @@ export async function createPlayer(
   input: CreatePlayerDTO,
 ): Promise<PlayerDTO> {
   const { data, error } = await supabase
-    .from("player")
+    .from('player')
     .insert({
       first_name: input.first_name,
       last_name: input.last_name,
@@ -154,15 +154,15 @@ export async function updatePlayer(
   if (input.birth_date !== undefined) updateData.birth_date = input.birth_date;
 
   const { data, error } = await supabase
-    .from("player")
+    .from('player')
     .update(updateData)
-    .eq("id", playerId)
+    .eq('id', playerId)
     .select(PLAYER_SELECT)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") {
-      throw new DomainError("PLAYER_NOT_FOUND");
+    if (error.code === 'PGRST116') {
+      throw new DomainError('PLAYER_NOT_FOUND');
     }
     throw mapDatabaseError(error);
   }
@@ -185,7 +185,7 @@ export async function searchPlayers(
   const searchPattern = `%${query}%`;
 
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .select(PLAYER_SEARCH_SELECT)
     .or(
       `player.first_name.ilike.${searchPattern},player.last_name.ilike.${searchPattern}`,
@@ -214,18 +214,18 @@ export async function enrollPlayer(
   }
 
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .insert({
       player_id: playerId,
       casino_id: casinoId,
-      status: "active",
+      status: 'active',
     })
     .select(ENROLLMENT_SELECT)
     .single();
 
   if (error) {
     // Handle duplicate enrollment (race condition or re-enrollment)
-    if (error.code === "23505") {
+    if (error.code === '23505') {
       const existingEnrollment = await getPlayerEnrollment(
         supabase,
         playerId,
@@ -234,7 +234,7 @@ export async function enrollPlayer(
       if (existingEnrollment) {
         return existingEnrollment;
       }
-      throw new DomainError("PLAYER_ENROLLMENT_DUPLICATE");
+      throw new DomainError('PLAYER_ENROLLMENT_DUPLICATE');
     }
     throw mapDatabaseError(error);
   }
@@ -252,10 +252,10 @@ export async function getPlayerEnrollment(
   casinoId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .select(ENROLLMENT_SELECT)
-    .eq("player_id", playerId)
-    .eq("casino_id", casinoId)
+    .eq('player_id', playerId)
+    .eq('casino_id', casinoId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -271,9 +271,9 @@ export async function getPlayerEnrollmentByPlayerId(
   playerId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .select(ENROLLMENT_SELECT)
-    .eq("player_id", playerId)
+    .eq('player_id', playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);

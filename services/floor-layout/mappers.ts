@@ -8,7 +8,7 @@
  * @see DTO_CANONICAL_STANDARD.md
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import type {
   FloorLayoutDTO,
@@ -16,16 +16,16 @@ import type {
   FloorLayoutVersionWithSlotsDTO,
   FloorPitDTO,
   FloorTableSlotDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Row Types (from database) ===
 
-type FloorLayoutRow = Database["public"]["Tables"]["floor_layout"]["Row"];
+type FloorLayoutRow = Database['public']['Tables']['floor_layout']['Row'];
 type FloorLayoutVersionRow =
-  Database["public"]["Tables"]["floor_layout_version"]["Row"];
-type FloorPitRow = Database["public"]["Tables"]["floor_pit"]["Row"];
+  Database['public']['Tables']['floor_layout_version']['Row'];
+type FloorPitRow = Database['public']['Tables']['floor_pit']['Row'];
 type FloorTableSlotRow =
-  Database["public"]["Tables"]["floor_table_slot"]["Row"];
+  Database['public']['Tables']['floor_table_slot']['Row'];
 
 // === Layout Mappers ===
 

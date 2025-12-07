@@ -7,19 +7,19 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPlayerService } from "@/services/player/index";
-import { playerRouteParamsSchema } from "@/services/player/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPlayerService } from '@/services/player/index';
+import { playerRouteParamsSchema } from '@/services/player/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ playerId: string }> };
@@ -49,8 +49,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         if (!enrollment) {
           throw new DomainError(
-            "PLAYER_NOT_ENROLLED",
-            "Player not enrolled in this casino",
+            'PLAYER_NOT_ENROLLED',
+            'Player not enrolled in this casino',
             {
               httpStatus: 404,
               details: { playerId: params.playerId },
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: enrollment,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "player",
-        action: "enrollment.get",
+        domain: 'player',
+        action: 'enrollment.get',
         correlationId: ctx.requestId,
       },
     );

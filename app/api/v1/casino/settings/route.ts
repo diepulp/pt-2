@@ -10,26 +10,26 @@
  * @see SPEC-PRD-000-casino-foundation.md sections 5.2.6-5.2.7
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
 import type {
   CasinoSettingsDTO,
   UpdateCasinoSettingsDTO,
-} from "@/services/casino/dtos";
-import { updateCasinoSettingsSchema } from "@/services/casino/schemas";
+} from '@/services/casino/dtos';
+import { updateCasinoSettingsSchema } from '@/services/casino/schemas';
 
 const SETTINGS_SELECT =
-  "id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold";
+  'id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold';
 
 /**
  * GET /api/v1/casino/settings
@@ -49,17 +49,17 @@ export async function GET(request: NextRequest) {
         const casinoId = mwCtx.rlsContext!.casinoId;
 
         const { data, error } = await mwCtx.supabase
-          .from("casino_settings")
+          .from('casino_settings')
           .select(SETTINGS_SELECT)
-          .eq("casino_id", casinoId)
+          .eq('casino_id', casinoId)
           .single();
 
         if (error) {
           // Map PGRST116 (no rows) to domain-specific error
-          if (error.code === "PGRST116") {
+          if (error.code === 'PGRST116') {
             throw new DomainError(
-              "CASINO_SETTINGS_NOT_FOUND",
-              "Casino settings not found",
+              'CASINO_SETTINGS_NOT_FOUND',
+              'Casino settings not found',
               { details: { casinoId } },
             );
           }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as CasinoSettingsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -76,8 +76,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "settings.get",
+        domain: 'casino',
+        action: 'settings.get',
         correlationId: ctx.requestId,
       },
     );
@@ -119,18 +119,18 @@ export async function PATCH(request: NextRequest) {
         const casinoId = mwCtx.rlsContext!.casinoId;
 
         const { data, error } = await mwCtx.supabase
-          .from("casino_settings")
+          .from('casino_settings')
           .update(input)
-          .eq("casino_id", casinoId)
+          .eq('casino_id', casinoId)
           .select(SETTINGS_SELECT)
           .single();
 
         if (error) {
           // Map PGRST116 (no rows) to domain-specific error
-          if (error.code === "PGRST116") {
+          if (error.code === 'PGRST116') {
             throw new DomainError(
-              "CASINO_SETTINGS_NOT_FOUND",
-              "Casino settings not found",
+              'CASINO_SETTINGS_NOT_FOUND',
+              'Casino settings not found',
               { details: { casinoId } },
             );
           }
@@ -139,7 +139,7 @@ export async function PATCH(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as CasinoSettingsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -147,8 +147,8 @@ export async function PATCH(request: NextRequest) {
         };
       },
       {
-        domain: "casino",
-        action: "settings.update",
+        domain: 'casino',
+        action: 'settings.update',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

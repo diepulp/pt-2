@@ -11,20 +11,20 @@
  * @see services/casino/keys.ts - Query key factories
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   CasinoSettingsDTO,
   CasinoStaffFilters,
   GamingDayDTO,
   StaffDTO,
-} from "@/services/casino/dtos";
+} from '@/services/casino/dtos';
 import {
   getCasinoStaff,
   getCasinoSettings,
   getGamingDay,
-} from "@/services/casino/http";
-import { casinoKeys } from "@/services/casino/keys";
+} from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 
 /**
  * Fetches staff for the authenticated user's casino.
@@ -35,7 +35,7 @@ import { casinoKeys } from "@/services/casino/keys";
  */
 export function useCasinoStaff(
   casinoId: string,
-  filters: Omit<CasinoStaffFilters, "cursor" | "limit"> = {},
+  filters: Omit<CasinoStaffFilters, 'cursor' | 'limit'> = {},
 ) {
   return useQuery({
     // Include casinoId in key for cache differentiation during migration

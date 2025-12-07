@@ -1,1 +1,1 @@
-export { TableLayoutTerminal } from "./table-layout-terminal";
+export { TableLayoutTerminal } from './table-layout-terminal';

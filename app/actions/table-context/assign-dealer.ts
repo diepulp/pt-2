@@ -8,17 +8,17 @@
  * @see EDGE_TRANSPORT_POLICY.md section 6 (TableContextService)
  * @see SLAD section 505-513 (Entry Point Strategy)
  */
-"use server";
+'use server';
 
-import type { ServiceResult } from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware/compositor";
-import { createClient } from "@/lib/supabase/server";
-import { assignDealer } from "@/services/table-context/dealer-rotation";
-import type { DealerRotationDTO } from "@/services/table-context/dtos";
+import type { ServiceResult } from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware/compositor';
+import { createClient } from '@/lib/supabase/server';
+import { assignDealer } from '@/services/table-context/dealer-rotation';
+import type { DealerRotationDTO } from '@/services/table-context/dtos';
 import {
   assignDealerSchema,
   tableRouteParamsSchema,
-} from "@/services/table-context/schemas";
+} from '@/services/table-context/schemas';
 
 /**
  * Assign dealer to table.
@@ -41,7 +41,7 @@ export async function assignDealerAction(
         tableId,
       });
       const { staff_id } = assignDealerSchema.parse({
-        staff_id: formData.get("staff_id"),
+        staff_id: formData.get('staff_id'),
       });
 
       const rotation = await assignDealer(
@@ -53,7 +53,7 @@ export async function assignDealerAction(
 
       return {
         ok: true as const,
-        code: "OK" as const,
+        code: 'OK' as const,
         data: rotation,
         requestId: mwCtx.correlationId,
         durationMs: Date.now() - mwCtx.startedAt,
@@ -61,8 +61,8 @@ export async function assignDealerAction(
       };
     },
     {
-      domain: "table-context",
-      action: "assign-dealer",
+      domain: 'table-context',
+      action: 'assign-dealer',
     },
   );
 }

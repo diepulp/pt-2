@@ -9,11 +9,11 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { ActiveVisitDTO } from "@/services/visit/dtos";
-import { getActiveVisit } from "@/services/visit/http";
-import { visitKeys } from "@/services/visit/keys";
+import type { ActiveVisitDTO } from '@/services/visit/dtos';
+import { getActiveVisit } from '@/services/visit/http';
+import { visitKeys } from '@/services/visit/keys';
 
 export interface UseActiveVisitOptions {
   /** Whether to enable the query (default: true if playerId is provided) */

@@ -35,13 +35,23 @@ describe('Casino Query Key Factories', () => {
     });
 
     it('serializes multiple filters in sorted order', () => {
-      const key1 = casinoKeys.list({ status: 'active', cursor: 'abc', limit: 10 });
-      const key2 = casinoKeys.list({ limit: 10, cursor: 'abc', status: 'active' });
+      const key1 = casinoKeys.list({
+        status: 'active',
+        cursor: 'abc',
+        limit: 10,
+      });
+      const key2 = casinoKeys.list({
+        limit: 10,
+        cursor: 'abc',
+        status: 'active',
+      });
 
       // Should produce same key regardless of object property order
       expect(key1[2]).toBe(key2[2]);
       // Keys should be alphabetically sorted
-      expect(key1[2]).toBe('[["cursor","abc"],["limit",10],["status","active"]]');
+      expect(key1[2]).toBe(
+        '[["cursor","abc"],["limit",10],["status","active"]]',
+      );
     });
 
     it('omits undefined values from serialization', () => {
@@ -117,7 +127,9 @@ describe('Casino Query Key Factories', () => {
         status: 'active',
         limit: 50,
       });
-      expect(key[2]).toBe('[["limit",50],["role","pit_boss"],["status","active"]]');
+      expect(key[2]).toBe(
+        '[["limit",50],["role","pit_boss"],["status","active"]]',
+      );
     });
 
     it('has .scope for surgical invalidation', () => {

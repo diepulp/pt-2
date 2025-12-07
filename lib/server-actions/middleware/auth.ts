@@ -1,7 +1,7 @@
-import { DomainError } from "@/lib/errors/domain-errors";
-import { getAuthContext } from "@/lib/supabase/rls-context";
+import { DomainError } from '@/lib/errors/domain-errors';
+import { getAuthContext } from '@/lib/supabase/rls-context';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * Authentication Middleware
@@ -24,17 +24,17 @@ export function withAuth<T>(): Middleware<T> {
       return next();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Authentication failed";
+        error instanceof Error ? error.message : 'Authentication failed';
 
-      if (message.includes("UNAUTHORIZED")) {
-        throw new DomainError("UNAUTHORIZED", "Authentication required");
+      if (message.includes('UNAUTHORIZED')) {
+        throw new DomainError('UNAUTHORIZED', 'Authentication required');
       }
 
-      if (message.includes("FORBIDDEN")) {
-        throw new DomainError("FORBIDDEN", message);
+      if (message.includes('FORBIDDEN')) {
+        throw new DomainError('FORBIDDEN', message);
       }
 
-      throw new DomainError("INTERNAL_ERROR", message, { details: error });
+      throw new DomainError('INTERNAL_ERROR', message, { details: error });
     }
   };
 }

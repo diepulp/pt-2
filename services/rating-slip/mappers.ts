@@ -11,7 +11,7 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { Json } from "@/types/database.types";
+import type { Json } from '@/types/database.types';
 
 import type {
   RatingSlipDTO,
@@ -19,7 +19,7 @@ import type {
   RatingSlipStatus,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 

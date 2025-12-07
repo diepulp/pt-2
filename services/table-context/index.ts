@@ -11,9 +11,9 @@
  * @see SLAD §308-348
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import {
   getInventoryHistory,
@@ -21,13 +21,13 @@ import {
   logInventorySnapshot,
   requestTableCredit,
   requestTableFill,
-} from "./chip-custody";
-import { getActiveTables, getTableById, listTables } from "./crud";
+} from './chip-custody';
+import { getActiveTables, getTableById, listTables } from './crud';
 import {
   assignDealer,
   endDealerRotation,
   getCurrentDealer,
-} from "./dealer-rotation";
+} from './dealer-rotation';
 import type {
   ChipsetPayload,
   DealerRotationDTO,
@@ -45,8 +45,8 @@ import type {
   TableInventorySnapshotDTO,
   TableListFilters,
   TableStatus,
-} from "./dtos";
-import { activateTable, closeTable, deactivateTable } from "./table-lifecycle";
+} from './dtos';
+import { activateTable, closeTable, deactivateTable } from './table-lifecycle';
 
 // Re-export DTOs and keys for consumers
 export type {
@@ -67,7 +67,7 @@ export type {
   TableListFilters,
   TableStatus,
 };
-export { tableContextKeys } from "./keys";
+export { tableContextKeys } from './keys';
 
 // === Service Interface ===
 
@@ -96,7 +96,7 @@ export interface TableContextServiceInterface {
   getTable(tableId: string, casinoId: string): Promise<GamingTableDTO>;
   listTables(
     casinoId: string,
-    filters?: Omit<TableListFilters, "casinoId">,
+    filters?: Omit<TableListFilters, 'casinoId'>,
   ): Promise<GamingTableDTO[]>;
   getActiveTables(casinoId: string): Promise<GamingTableWithDealerDTO[]>;
 

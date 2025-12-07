@@ -7,22 +7,22 @@
  * @see services/casino/keys.ts - Query key factories
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type {
   CasinoDTO,
   CasinoListFilters,
   CreateCasinoDTO,
   UpdateCasinoDTO,
-} from "@/services/casino/dtos";
+} from '@/services/casino/dtos';
 import {
   getCasinos,
   getCasino,
   createCasino,
   updateCasino,
   deleteCasino,
-} from "@/services/casino/http";
-import { casinoKeys } from "@/services/casino/keys";
+} from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 
 /**
  * Fetches a paginated list of casinos.

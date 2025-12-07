@@ -20,25 +20,20 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-} from "@jest/globals";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
-import { createRatingSlipService, RatingSlipServiceInterface } from "../index";
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
+
+import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Shared test fixtures UUIDs (deterministic for cleanup)
-const TEST_PREFIX = "test-rs-int"; // rating-slip integration
+const TEST_PREFIX = 'test-rs-int'; // rating-slip integration
 
 /**
  * Creates a unique player and visit for each test to avoid the
@@ -50,7 +45,7 @@ interface TestFixture {
   slipIds: string[];
 }
 
-describe("RatingSlipService Integration Tests", () => {
+describe('RatingSlipService Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
   let service: RatingSlipServiceInterface;
 
@@ -77,10 +72,10 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 1. Create test casino
     const { data: casino, error: casinoError } = await supabase
-      .from("casino")
+      .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
-        status: "active",
+        status: 'active',
       })
       .select()
       .single();
@@ -90,10 +85,10 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 2. Create second casino for RLS tests
     const { data: casino2, error: casino2Error } = await supabase
-      .from("casino")
+      .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
-        status: "active",
+        status: 'active',
       })
       .select()
       .single();
@@ -102,18 +97,18 @@ describe("RatingSlipService Integration Tests", () => {
     testCasino2Id = casino2.id;
 
     // 3. Create casino settings (required for compute_gaming_day)
-    await supabase.from("casino_settings").insert([
+    await supabase.from('casino_settings').insert([
       {
         casino_id: testCasinoId,
-        gaming_day_start_time: "06:00:00",
-        timezone: "America/Los_Angeles",
+        gaming_day_start_time: '06:00:00',
+        timezone: 'America/Los_Angeles',
         watchlist_floor: 3000,
         ctr_threshold: 10000,
       },
       {
         casino_id: testCasino2Id,
-        gaming_day_start_time: "06:00:00",
-        timezone: "America/Los_Angeles",
+        gaming_day_start_time: '06:00:00',
+        timezone: 'America/Los_Angeles',
         watchlist_floor: 3000,
         ctr_threshold: 10000,
       },
@@ -121,13 +116,13 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 4. Create active gaming table
     const { data: table, error: tableError } = await supabase
-      .from("gaming_table")
+      .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
         label: `${TEST_PREFIX}-BJ-01`,
-        pit: "Pit A",
-        type: "blackjack",
-        status: "active",
+        pit: 'Pit A',
+        type: 'blackjack',
+        status: 'active',
       })
       .select()
       .single();
@@ -137,13 +132,13 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 5. Create second active table (for multi-table tests)
     const { data: table2, error: table2Error } = await supabase
-      .from("gaming_table")
+      .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
         label: `${TEST_PREFIX}-BJ-02`,
-        pit: "Pit A",
-        type: "blackjack",
-        status: "active",
+        pit: 'Pit A',
+        type: 'blackjack',
+        status: 'active',
       })
       .select()
       .single();
@@ -153,13 +148,13 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 6. Create inactive table (for validation tests)
     const { data: inactiveTable, error: inactiveTableError } = await supabase
-      .from("gaming_table")
+      .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
         label: `${TEST_PREFIX}-BJ-INACTIVE`,
-        pit: "Pit A",
-        type: "blackjack",
-        status: "inactive",
+        pit: 'Pit A',
+        type: 'blackjack',
+        status: 'inactive',
       })
       .select()
       .single();
@@ -169,15 +164,15 @@ describe("RatingSlipService Integration Tests", () => {
 
     // 7. Create test actor (staff - dealer)
     const { data: actor, error: actorError } = await supabase
-      .from("staff")
+      .from('staff')
       .insert({
         casino_id: testCasinoId,
         employee_id: `${TEST_PREFIX}-001`,
-        first_name: "Test",
-        last_name: "Actor",
+        first_name: 'Test',
+        last_name: 'Actor',
         email: `${TEST_PREFIX}-actor@test.com`,
-        role: "dealer", // Dealers don't require user_id
-        status: "active",
+        role: 'dealer', // Dealers don't require user_id
+        status: 'active',
       })
       .select()
       .single();
@@ -191,30 +186,45 @@ describe("RatingSlipService Integration Tests", () => {
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from("rating_slip").delete().eq("id", slipId);
+        await supabase.from('rating_slip').delete().eq('id', slipId);
       }
       // Delete visit
-      await supabase.from("rating_slip").delete().eq("visit_id", fixture.visitId);
-      await supabase.from("visit").delete().eq("id", fixture.visitId);
+      await supabase
+        .from('rating_slip')
+        .delete()
+        .eq('visit_id', fixture.visitId);
+      await supabase.from('visit').delete().eq('id', fixture.visitId);
       // Delete player enrollment and player
-      await supabase.from("player_casino").delete().eq("player_id", fixture.playerId);
-      await supabase.from("player_loyalty").delete().eq("player_id", fixture.playerId);
-      await supabase.from("player").delete().eq("id", fixture.playerId);
+      await supabase
+        .from('player_casino')
+        .delete()
+        .eq('player_id', fixture.playerId);
+      await supabase
+        .from('player_loyalty')
+        .delete()
+        .eq('player_id', fixture.playerId);
+      await supabase.from('player').delete().eq('id', fixture.playerId);
     }
 
     // Delete staff
-    await supabase.from("staff").delete().eq("casino_id", testCasinoId);
-    await supabase.from("staff").delete().eq("casino_id", testCasino2Id);
+    await supabase.from('staff').delete().eq('casino_id', testCasinoId);
+    await supabase.from('staff').delete().eq('casino_id', testCasino2Id);
 
     // Delete tables
-    await supabase.from("gaming_table").delete().eq("casino_id", testCasinoId);
-    await supabase.from("gaming_table").delete().eq("casino_id", testCasino2Id);
+    await supabase.from('gaming_table').delete().eq('casino_id', testCasinoId);
+    await supabase.from('gaming_table').delete().eq('casino_id', testCasino2Id);
 
     // Delete casino settings and casinos
-    await supabase.from("casino_settings").delete().eq("casino_id", testCasinoId);
-    await supabase.from("casino_settings").delete().eq("casino_id", testCasino2Id);
-    await supabase.from("casino").delete().eq("id", testCasinoId);
-    await supabase.from("casino").delete().eq("id", testCasino2Id);
+    await supabase
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await supabase
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', testCasino2Id);
+    await supabase.from('casino').delete().eq('id', testCasinoId);
+    await supabase.from('casino').delete().eq('id', testCasino2Id);
   });
 
   // =========================================================================
@@ -227,11 +237,11 @@ describe("RatingSlipService Integration Tests", () => {
 
     // Create unique player
     const { data: player, error: playerError } = await supabase
-      .from("player")
+      .from('player')
       .insert({
-        first_name: "Test",
+        first_name: 'Test',
         last_name: `Player${fixtureCounter}`,
-        birth_date: "1980-01-01",
+        birth_date: '1980-01-01',
       })
       .select()
       .single();
@@ -239,15 +249,15 @@ describe("RatingSlipService Integration Tests", () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from("player_casino").insert({
+    await supabase.from('player_casino').insert({
       player_id: player.id,
       casino_id: casino,
-      status: "active",
+      status: 'active',
     });
 
     // Create visit
     const { data: visit, error: visitError } = await supabase
-      .from("visit")
+      .from('visit')
       .insert({
         player_id: player.id,
         casino_id: casino,
@@ -272,16 +282,19 @@ describe("RatingSlipService Integration Tests", () => {
   // =========================================================================
   // Helper: Create a closed visit for specific tests
   // =========================================================================
-  async function createClosedVisit(): Promise<{ visitId: string; playerId: string }> {
+  async function createClosedVisit(): Promise<{
+    visitId: string;
+    playerId: string;
+  }> {
     fixtureCounter++;
 
     // Create unique player
     const { data: player, error: playerError } = await supabase
-      .from("player")
+      .from('player')
       .insert({
-        first_name: "Test",
+        first_name: 'Test',
         last_name: `ClosedVisit${fixtureCounter}`,
-        birth_date: "1980-01-01",
+        birth_date: '1980-01-01',
       })
       .select()
       .single();
@@ -289,15 +302,15 @@ describe("RatingSlipService Integration Tests", () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from("player_casino").insert({
+    await supabase.from('player_casino').insert({
       player_id: player.id,
       casino_id: testCasinoId,
-      status: "active",
+      status: 'active',
     });
 
     // Create closed visit
     const { data: visit, error: visitError } = await supabase
-      .from("visit")
+      .from('visit')
       .insert({
         player_id: player.id,
         casino_id: testCasinoId,
@@ -322,25 +335,25 @@ describe("RatingSlipService Integration Tests", () => {
   // 1. Full Lifecycle Tests
   // =========================================================================
 
-  describe("Full Lifecycle Test", () => {
-    it("should complete full rating slip lifecycle: start -> pause -> resume -> close", async () => {
+  describe('Full Lifecycle Test', () => {
+    it('should complete full rating slip lifecycle: start -> pause -> resume -> close', async () => {
       const fixture = await createTestFixture();
 
       // 1. Start rating slip
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
-        seat_number: "1",
+        seat_number: '1',
       });
 
       fixture.slipIds.push(slip.id);
 
       expect(slip).toBeDefined();
-      expect(slip.status).toBe("open");
+      expect(slip.status).toBe('open');
       expect(slip.visit_id).toBe(fixture.visitId);
       expect(slip.table_id).toBe(testTableId);
       expect(slip.casino_id).toBe(testCasinoId);
-      expect(slip.seat_number).toBe("1");
+      expect(slip.seat_number).toBe('1');
       expect(slip.start_time).toBeDefined();
       expect(slip.end_time).toBeNull();
 
@@ -350,7 +363,7 @@ describe("RatingSlipService Integration Tests", () => {
       // 2. Pause rating slip
       const paused = await service.pause(testCasinoId, testActorId, slip.id);
 
-      expect(paused.status).toBe("paused");
+      expect(paused.status).toBe('paused');
       expect(paused.id).toBe(slip.id);
 
       // Small delay during pause
@@ -359,7 +372,7 @@ describe("RatingSlipService Integration Tests", () => {
       // 3. Resume rating slip
       const resumed = await service.resume(testCasinoId, testActorId, slip.id);
 
-      expect(resumed.status).toBe("open");
+      expect(resumed.status).toBe('open');
       expect(resumed.id).toBe(slip.id);
 
       // Small delay after resume
@@ -370,14 +383,14 @@ describe("RatingSlipService Integration Tests", () => {
         average_bet: 50,
       });
 
-      expect(closed.status).toBe("closed");
+      expect(closed.status).toBe('closed');
       expect(closed.id).toBe(slip.id);
       expect(closed.end_time).not.toBeNull();
       expect(closed.average_bet).toBe(50);
       expect(closed.duration_seconds).toBeGreaterThanOrEqual(0);
     });
 
-    it("should track pause history correctly", async () => {
+    it('should track pause history correctly', async () => {
       const fixture = await createTestFixture();
 
       // Start and immediately pause
@@ -413,8 +426,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 2. Duration Calculation Tests
   // =========================================================================
 
-  describe("Duration Calculation", () => {
-    it("should calculate duration excluding paused time", async () => {
+  describe('Duration Calculation', () => {
+    it('should calculate duration excluding paused time', async () => {
       const fixture = await createTestFixture();
 
       // Start slip
@@ -444,10 +457,10 @@ describe("RatingSlipService Integration Tests", () => {
       // Note: Due to processing overhead, we use >= 0 check
       expect(closed.duration_seconds).toBeGreaterThanOrEqual(0);
       // The duration should be returned (even if 0 for very short tests)
-      expect(typeof closed.duration_seconds).toBe("number");
+      expect(typeof closed.duration_seconds).toBe('number');
     });
 
-    it("should get current duration for open slip", async () => {
+    it('should get current duration for open slip', async () => {
       const fixture = await createTestFixture();
 
       const slip = await service.start(testCasinoId, testActorId, {
@@ -473,8 +486,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 3. Unique Constraint Tests
   // =========================================================================
 
-  describe("Unique Constraint Test", () => {
-    it("should prevent duplicate open slips for same visit at same table", async () => {
+  describe('Unique Constraint Test', () => {
+    it('should prevent duplicate open slips for same visit at same table', async () => {
       const fixture = await createTestFixture();
 
       // Start first slip
@@ -489,7 +502,7 @@ describe("RatingSlipService Integration Tests", () => {
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
-        })
+        }),
       ).rejects.toThrow();
 
       // Verify the error is a domain error
@@ -500,14 +513,14 @@ describe("RatingSlipService Integration Tests", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_DUPLICATE");
+        expect((error as DomainError).code).toBe('RATING_SLIP_DUPLICATE');
       }
 
       // Clean up
       await service.close(testCasinoId, testActorId, slip1.id);
     });
 
-    it("should allow slips at different tables for same visit", async () => {
+    it('should allow slips at different tables for same visit', async () => {
       const fixture = await createTestFixture();
 
       // Start slip at table 1
@@ -532,7 +545,7 @@ describe("RatingSlipService Integration Tests", () => {
       await service.close(testCasinoId, testActorId, slip2.id);
     });
 
-    it("should allow new slip after previous one is closed", async () => {
+    it('should allow new slip after previous one is closed', async () => {
       const fixture = await createTestFixture();
 
       // Start and close first slip
@@ -551,7 +564,7 @@ describe("RatingSlipService Integration Tests", () => {
       });
       fixture.slipIds.push(slip2.id);
 
-      expect(slip2.status).toBe("open");
+      expect(slip2.status).toBe('open');
 
       // Clean up
       await service.close(testCasinoId, testActorId, slip2.id);
@@ -562,8 +575,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 4. State Machine Validation Tests
   // =========================================================================
 
-  describe("State Machine Validation", () => {
-    it("should reject pause on non-open slip", async () => {
+  describe('State Machine Validation', () => {
+    it('should reject pause on non-open slip', async () => {
       const fixture = await createTestFixture();
 
       // Start and pause
@@ -577,21 +590,21 @@ describe("RatingSlipService Integration Tests", () => {
 
       // Try to pause again - should fail
       await expect(
-        service.pause(testCasinoId, testActorId, slip.id)
+        service.pause(testCasinoId, testActorId, slip.id),
       ).rejects.toThrow();
 
       try {
         await service.pause(testCasinoId, testActorId, slip.id);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_NOT_OPEN");
+        expect((error as DomainError).code).toBe('RATING_SLIP_NOT_OPEN');
       }
 
       // Clean up
       await service.close(testCasinoId, testActorId, slip.id);
     });
 
-    it("should reject resume on non-paused slip", async () => {
+    it('should reject resume on non-paused slip', async () => {
       const fixture = await createTestFixture();
 
       // Start (but don't pause)
@@ -603,21 +616,21 @@ describe("RatingSlipService Integration Tests", () => {
 
       // Try to resume open slip - should fail
       await expect(
-        service.resume(testCasinoId, testActorId, slip.id)
+        service.resume(testCasinoId, testActorId, slip.id),
       ).rejects.toThrow();
 
       try {
         await service.resume(testCasinoId, testActorId, slip.id);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_NOT_PAUSED");
+        expect((error as DomainError).code).toBe('RATING_SLIP_NOT_PAUSED');
       }
 
       // Clean up
       await service.close(testCasinoId, testActorId, slip.id);
     });
 
-    it("should reject close on already closed slip", async () => {
+    it('should reject close on already closed slip', async () => {
       const fixture = await createTestFixture();
 
       // Start and close
@@ -631,7 +644,7 @@ describe("RatingSlipService Integration Tests", () => {
 
       // Try to close again - should fail
       await expect(
-        service.close(testCasinoId, testActorId, slip.id)
+        service.close(testCasinoId, testActorId, slip.id),
       ).rejects.toThrow();
 
       try {
@@ -641,12 +654,12 @@ describe("RatingSlipService Integration Tests", () => {
         // Could be RATING_SLIP_INVALID_STATE, RATING_SLIP_ALREADY_CLOSED, or INTERNAL_ERROR
         // depending on how the RPC handles the already-closed state
         expect((error as DomainError).code).toMatch(
-          /RATING_SLIP_INVALID_STATE|RATING_SLIP_ALREADY_CLOSED|INTERNAL_ERROR/
+          /RATING_SLIP_INVALID_STATE|RATING_SLIP_ALREADY_CLOSED|INTERNAL_ERROR/,
         );
       }
     });
 
-    it("should reject start for closed visit", async () => {
+    it('should reject start for closed visit', async () => {
       const { visitId } = await createClosedVisit();
 
       // Try to start slip for closed visit - should fail
@@ -654,7 +667,7 @@ describe("RatingSlipService Integration Tests", () => {
         service.start(testCasinoId, testActorId, {
           visit_id: visitId,
           table_id: testTableId,
-        })
+        }),
       ).rejects.toThrow();
 
       try {
@@ -664,11 +677,11 @@ describe("RatingSlipService Integration Tests", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("VISIT_NOT_OPEN");
+        expect((error as DomainError).code).toBe('VISIT_NOT_OPEN');
       }
     });
 
-    it("should reject start for inactive table", async () => {
+    it('should reject start for inactive table', async () => {
       const fixture = await createTestFixture();
 
       // Try to start slip at inactive table - should fail
@@ -676,7 +689,7 @@ describe("RatingSlipService Integration Tests", () => {
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testInactiveTableId,
-        })
+        }),
       ).rejects.toThrow();
 
       try {
@@ -686,7 +699,7 @@ describe("RatingSlipService Integration Tests", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("TABLE_NOT_ACTIVE");
+        expect((error as DomainError).code).toBe('TABLE_NOT_ACTIVE');
       }
     });
   });
@@ -695,11 +708,11 @@ describe("RatingSlipService Integration Tests", () => {
   // 5. Ghost Visit Validation Tests (ADR-014 compliance)
   // =========================================================================
 
-  describe("Ghost Visit Validation", () => {
-    it("should reject start for ghost visit (player_id = null)", async () => {
+  describe('Ghost Visit Validation', () => {
+    it('should reject start for ghost visit (player_id = null)', async () => {
       // Create a ghost visit (no player_id) directly in db
       const { data: ghostVisit, error: ghostError } = await supabase
-        .from("visit")
+        .from('visit')
         .insert({
           player_id: null, // Ghost visit
           casino_id: testCasinoId,
@@ -721,7 +734,7 @@ describe("RatingSlipService Integration Tests", () => {
 
       // Track for cleanup (no player to clean up)
       allFixtures.push({
-        playerId: "", // No player
+        playerId: '', // No player
         visitId: ghostVisit.id,
         slipIds: [],
       });
@@ -731,7 +744,7 @@ describe("RatingSlipService Integration Tests", () => {
         service.start(testCasinoId, testActorId, {
           visit_id: ghostVisit.id,
           table_id: testTableId,
-        })
+        }),
       ).rejects.toThrow();
 
       try {
@@ -741,8 +754,8 @@ describe("RatingSlipService Integration Tests", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_INVALID_STATE");
-        expect((error as DomainError).message).toContain("ghost visit");
+        expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
+        expect((error as DomainError).message).toContain('ghost visit');
       }
     });
   });
@@ -751,7 +764,7 @@ describe("RatingSlipService Integration Tests", () => {
   // 6. Read Operations Tests
   // =========================================================================
 
-  describe("Read Operations", () => {
+  describe('Read Operations', () => {
     let readTestFixture: TestFixture;
     let testSlipId: string;
 
@@ -761,8 +774,8 @@ describe("RatingSlipService Integration Tests", () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: readTestFixture.visitId,
         table_id: testTableId,
-        seat_number: "5",
-        game_settings: { game_type: "blackjack", min_bet: 25 },
+        seat_number: '5',
+        game_settings: { game_type: 'blackjack', min_bet: 25 },
       });
       testSlipId = slip.id;
       readTestFixture.slipIds.push(testSlipId);
@@ -777,7 +790,7 @@ describe("RatingSlipService Integration Tests", () => {
       }
     });
 
-    it("should get slip by ID with pauses", async () => {
+    it('should get slip by ID with pauses', async () => {
       const slip = await service.getById(testSlipId);
 
       expect(slip.id).toBe(testSlipId);
@@ -786,7 +799,7 @@ describe("RatingSlipService Integration Tests", () => {
       expect(Array.isArray(slip.pauses)).toBe(true);
     });
 
-    it("should list slips for table", async () => {
+    it('should list slips for table', async () => {
       const result = await service.listForTable(testTableId);
 
       expect(result.items).toBeDefined();
@@ -798,7 +811,7 @@ describe("RatingSlipService Integration Tests", () => {
       expect(foundSlip).toBeDefined();
     });
 
-    it("should list slips for visit", async () => {
+    it('should list slips for visit', async () => {
       const slips = await service.listForVisit(readTestFixture.visitId);
 
       expect(Array.isArray(slips)).toBe(true);
@@ -808,19 +821,19 @@ describe("RatingSlipService Integration Tests", () => {
       expect(foundSlip).toBeDefined();
     });
 
-    it("should get active slips for table", async () => {
+    it('should get active slips for table', async () => {
       const activeSlips = await service.getActiveForTable(testTableId);
 
       expect(Array.isArray(activeSlips)).toBe(true);
 
       // All returned slips should be open or paused
       for (const slip of activeSlips) {
-        expect(["open", "paused"]).toContain(slip.status);
+        expect(['open', 'paused']).toContain(slip.status);
       }
     });
 
-    it("should return RATING_SLIP_NOT_FOUND for non-existent slip", async () => {
-      const fakeId = "00000000-0000-0000-0000-000000000000";
+    it('should return RATING_SLIP_NOT_FOUND for non-existent slip', async () => {
+      const fakeId = '00000000-0000-0000-0000-000000000000';
 
       await expect(service.getById(fakeId)).rejects.toThrow();
 
@@ -828,7 +841,7 @@ describe("RatingSlipService Integration Tests", () => {
         await service.getById(fakeId);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_NOT_FOUND");
+        expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
       }
     });
   });
@@ -837,8 +850,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 7. Update Operations Tests
   // =========================================================================
 
-  describe("Update Operations", () => {
-    it("should update average_bet on open slip", async () => {
+  describe('Update Operations', () => {
+    it('should update average_bet on open slip', async () => {
       const fixture = await createTestFixture();
 
       const slip = await service.start(testCasinoId, testActorId, {
@@ -860,7 +873,7 @@ describe("RatingSlipService Integration Tests", () => {
       await service.close(testCasinoId, testActorId, slip.id);
     });
 
-    it("should reject average_bet update on closed slip", async () => {
+    it('should reject average_bet update on closed slip', async () => {
       const fixture = await createTestFixture();
 
       const slip = await service.start(testCasinoId, testActorId, {
@@ -878,7 +891,7 @@ describe("RatingSlipService Integration Tests", () => {
         await service.updateAverageBet(slip.id, 200);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("RATING_SLIP_INVALID_STATE");
+        expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
       }
     });
   });
@@ -887,14 +900,14 @@ describe("RatingSlipService Integration Tests", () => {
   // 8. Published Query Tests
   // =========================================================================
 
-  describe("Published Queries", () => {
-    it("should check hasOpenSlipsForTable", async () => {
+  describe('Published Queries', () => {
+    it('should check hasOpenSlipsForTable', async () => {
       const fixture = await createTestFixture();
 
       // Initially might or might not have slips
       const beforeCount = await service.countOpenSlipsForTable(
         testTable2Id,
-        testCasinoId
+        testCasinoId,
       );
 
       // Create a slip at table 2
@@ -907,13 +920,13 @@ describe("RatingSlipService Integration Tests", () => {
       // Now should have open slips
       const hasOpen = await service.hasOpenSlipsForTable(
         testTable2Id,
-        testCasinoId
+        testCasinoId,
       );
       expect(hasOpen).toBe(true);
 
       const afterCount = await service.countOpenSlipsForTable(
         testTable2Id,
-        testCasinoId
+        testCasinoId,
       );
       expect(afterCount).toBe(beforeCount + 1);
 
@@ -922,7 +935,7 @@ describe("RatingSlipService Integration Tests", () => {
 
       const finalCount = await service.countOpenSlipsForTable(
         testTable2Id,
-        testCasinoId
+        testCasinoId,
       );
       expect(finalCount).toBe(beforeCount);
     });
@@ -932,8 +945,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 9. Concurrency Safety Tests
   // =========================================================================
 
-  describe("Concurrency Test", () => {
-    it("should handle concurrent pause operations safely", async () => {
+  describe('Concurrency Test', () => {
+    it('should handle concurrent pause operations safely', async () => {
       const fixture = await createTestFixture();
 
       // Start a slip
@@ -951,21 +964,21 @@ describe("RatingSlipService Integration Tests", () => {
       const results = await Promise.allSettled(pausePromises);
 
       // Exactly one should succeed, others should fail
-      const successes = results.filter((r) => r.status === "fulfilled");
-      const failures = results.filter((r) => r.status === "rejected");
+      const successes = results.filter((r) => r.status === 'fulfilled');
+      const failures = results.filter((r) => r.status === 'rejected');
 
       expect(successes.length).toBe(1);
       expect(failures.length).toBe(2);
 
       // Verify slip is paused
       const current = await service.getById(slip.id);
-      expect(current.status).toBe("paused");
+      expect(current.status).toBe('paused');
 
       // Clean up
       await service.close(testCasinoId, testActorId, slip.id);
     });
 
-    it("should handle concurrent start operations (unique constraint)", async () => {
+    it('should handle concurrent start operations (unique constraint)', async () => {
       const fixture = await createTestFixture();
 
       // Attempt multiple start operations concurrently at same table
@@ -975,13 +988,13 @@ describe("RatingSlipService Integration Tests", () => {
           service.start(testCasinoId, testActorId, {
             visit_id: fixture.visitId,
             table_id: testTable2Id,
-          })
+          }),
         );
 
       const results = await Promise.allSettled(startPromises);
 
       // Exactly one should succeed (unique constraint)
-      const successes = results.filter((r) => r.status === "fulfilled");
+      const successes = results.filter((r) => r.status === 'fulfilled');
       expect(successes.length).toBe(1);
 
       // Clean up the successful one
@@ -997,22 +1010,22 @@ describe("RatingSlipService Integration Tests", () => {
   // 10. RLS Casino Isolation Tests
   // =========================================================================
 
-  describe("RLS Casino Isolation", () => {
-    it("should not find slips from different casino via listForTable", async () => {
+  describe('RLS Casino Isolation', () => {
+    it('should not find slips from different casino via listForTable', async () => {
       // Create table and slip in casino 2
       const { data: casino2Table } = await supabase
-        .from("gaming_table")
+        .from('gaming_table')
         .insert({
           casino_id: testCasino2Id,
           label: `${TEST_PREFIX}-C2-BJ`,
-          pit: "Pit A",
-          type: "blackjack",
-          status: "active",
+          pit: 'Pit A',
+          type: 'blackjack',
+          status: 'active',
         })
         .select()
         .single();
 
-      if (!casino2Table) throw new Error("Failed to create casino 2 table");
+      if (!casino2Table) throw new Error('Failed to create casino 2 table');
 
       // List slips for casino 1's table - should only get casino 1 slips
       // This tests RLS scoping
@@ -1024,7 +1037,7 @@ describe("RatingSlipService Integration Tests", () => {
       }
 
       // Clean up
-      await supabase.from("gaming_table").delete().eq("id", casino2Table.id);
+      await supabase.from('gaming_table').delete().eq('id', casino2Table.id);
     });
   });
 
@@ -1032,8 +1045,8 @@ describe("RatingSlipService Integration Tests", () => {
   // 11. Edge Cases
   // =========================================================================
 
-  describe("Edge Cases", () => {
-    it("should handle empty game_settings", async () => {
+  describe('Edge Cases', () => {
+    it('should handle empty game_settings', async () => {
       const fixture = await createTestFixture();
 
       const slip = await service.start(testCasinoId, testActorId, {
@@ -1049,7 +1062,7 @@ describe("RatingSlipService Integration Tests", () => {
       await service.close(testCasinoId, testActorId, slip.id);
     });
 
-    it("should close paused slip directly", async () => {
+    it('should close paused slip directly', async () => {
       const fixture = await createTestFixture();
 
       const slip = await service.start(testCasinoId, testActorId, {
@@ -1065,11 +1078,11 @@ describe("RatingSlipService Integration Tests", () => {
         average_bet: 75,
       });
 
-      expect(closed.status).toBe("closed");
+      expect(closed.status).toBe('closed');
       expect(closed.average_bet).toBe(75);
     });
 
-    it("should handle visit from different casino", async () => {
+    it('should handle visit from different casino', async () => {
       // Create visit in casino 2
       const fixture = await createTestFixture(testCasino2Id);
 
@@ -1078,7 +1091,7 @@ describe("RatingSlipService Integration Tests", () => {
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
-        })
+        }),
       ).rejects.toThrow();
 
       try {
@@ -1088,7 +1101,7 @@ describe("RatingSlipService Integration Tests", () => {
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe("VISIT_CASINO_MISMATCH");
+        expect((error as DomainError).code).toBe('VISIT_CASINO_MISMATCH');
       }
     });
   });

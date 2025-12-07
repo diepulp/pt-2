@@ -8,7 +8,7 @@
  * @see EXEC-VSE-001 Visit Service Evolution
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === Visit Kind Schema ===
 
@@ -17,9 +17,9 @@ import { z } from "zod";
  * Matches Database["public"]["Enums"]["visit_kind"].
  */
 export const visitKindSchema = z.enum([
-  "reward_identified",
-  "gaming_identified_rated",
-  "gaming_ghost_unrated",
+  'reward_identified',
+  'gaming_identified_rated',
+  'gaming_ghost_unrated',
 ]);
 
 export type VisitKindInput = z.infer<typeof visitKindSchema>;
@@ -28,7 +28,7 @@ export type VisitKindInput = z.infer<typeof visitKindSchema>;
 
 /** Schema for starting a visit (check-in) - backward compatible default */
 export const startVisitSchema = z.object({
-  player_id: z.string().uuid("Invalid player ID format"),
+  player_id: z.string().uuid('Invalid player ID format'),
 });
 
 /** Schema for closing a visit (check-out) */
@@ -36,7 +36,7 @@ export const closeVisitSchema = z.object({
   /** Optional explicit end time (defaults to server time) */
   ended_at: z
     .string()
-    .datetime({ message: "ended_at must be a valid ISO timestamp" })
+    .datetime({ message: 'ended_at must be a valid ISO timestamp' })
     .optional(),
 });
 
@@ -50,7 +50,7 @@ export const closeVisitSchema = z.object({
  */
 export const createRewardVisitSchema = z.object({
   /** Required: identified player UUID */
-  player_id: z.string().uuid("Invalid player ID format"),
+  player_id: z.string().uuid('Invalid player ID format'),
 });
 
 export type CreateRewardVisitInput = z.infer<typeof createRewardVisitSchema>;
@@ -64,7 +64,7 @@ export type CreateRewardVisitInput = z.infer<typeof createRewardVisitSchema>;
  */
 export const createGamingVisitSchema = z.object({
   /** Required: identified player UUID */
-  player_id: z.string().uuid("Invalid player ID format"),
+  player_id: z.string().uuid('Invalid player ID format'),
 });
 
 export type CreateGamingVisitInput = z.infer<typeof createGamingVisitSchema>;
@@ -81,11 +81,11 @@ export type CreateGamingVisitInput = z.infer<typeof createGamingVisitSchema>;
  */
 export const createGhostGamingVisitSchema = z.object({
   /** Required: the gaming table where ghost play occurs */
-  table_id: z.string().uuid("Invalid table ID format"),
+  table_id: z.string().uuid('Invalid table ID format'),
   /** Optional: notes about the ghost gaming session */
   notes: z
     .string()
-    .max(500, "Notes must be 500 characters or fewer")
+    .max(500, 'Notes must be 500 characters or fewer')
     .optional(),
 });
 
@@ -101,7 +101,7 @@ export type CreateGhostGamingVisitInput = z.infer<
  */
 export const convertRewardToGamingSchema = z.object({
   /** Required: the visit ID to convert */
-  visit_id: z.string().uuid("Invalid visit ID format"),
+  visit_id: z.string().uuid('Invalid visit ID format'),
 });
 
 export type ConvertRewardToGamingInput = z.infer<
@@ -115,18 +115,18 @@ export const visitListQuerySchema = z.object({
   /** Filter by player ID */
   player_id: z.string().uuid().optional(),
   /** Filter by visit status */
-  status: z.enum(["active", "closed"]).optional(),
+  status: z.enum(['active', 'closed']).optional(),
   /** Filter by visit kind */
   visit_kind: visitKindSchema.optional(),
   /** Filter by date range start (ISO date) */
   from_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "from_date must be YYYY-MM-DD")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'from_date must be YYYY-MM-DD')
     .optional(),
   /** Filter by date range end (ISO date) */
   to_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "to_date must be YYYY-MM-DD")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'to_date must be YYYY-MM-DD')
     .optional(),
   /** Pagination cursor (ISO timestamp) */
   cursor: z.string().optional(),
@@ -137,14 +137,14 @@ export const visitListQuerySchema = z.object({
 /** Schema for active visit query params */
 export const activeVisitQuerySchema = z.object({
   /** Required: player ID to check for active visit */
-  player_id: z.string().uuid("Invalid player ID format"),
+  player_id: z.string().uuid('Invalid player ID format'),
 });
 
 // === Route Param Schemas ===
 
 /** Schema for visit detail route params */
 export const visitRouteParamsSchema = z.object({
-  visitId: z.string().uuid("Invalid visit ID format"),
+  visitId: z.string().uuid('Invalid visit ID format'),
 });
 
 // === Type Exports ===

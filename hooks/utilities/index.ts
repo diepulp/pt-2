@@ -1,1 +1,1 @@
-export { useSeatPositions } from "./use-seat-positions";
+export { useSeatPositions } from './use-seat-positions';

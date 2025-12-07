@@ -13,4 +13,4 @@
  */
 
 // Re-export from new location for backward compatibility
-export { makeQueryClient, getQueryClient as queryClient } from "./query/client";
+export { makeQueryClient, getQueryClient as queryClient } from './query/client';

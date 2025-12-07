@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface SeatOccupant {
   firstName: string;
@@ -70,12 +70,12 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
           {/* Table surface */}
           <div
             className={cn(
-              "absolute inset-x-[5%] top-[8%] bottom-0",
-              "rounded-t-[50%]",
-              "border border-border/50",
-              "shadow-[inset_0_2px_40px_rgba(0,0,0,0.4),_0_16px_48px_-8px_rgba(0,0,0,0.4),_0_0_0_1px_rgba(255,255,255,0.05)]",
-              "overflow-hidden",
-              "bg-gradient-to-b from-card via-card/90 to-background",
+              'absolute inset-x-[5%] top-[8%] bottom-0',
+              'rounded-t-[50%]',
+              'border border-border/50',
+              'shadow-[inset_0_2px_40px_rgba(0,0,0,0.4),_0_16px_48px_-8px_rgba(0,0,0,0.4),_0_0_0_1px_rgba(255,255,255,0.05)]',
+              'overflow-hidden',
+              'bg-gradient-to-b from-card via-card/90 to-background',
             )}
           >
             {/* Subtle noise texture overlay */}
@@ -141,8 +141,8 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   key={i}
                   onClick={() => onSeatClick?.(i, occupant)}
                   className={cn(
-                    "group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-hidden",
-                    "animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both",
+                    'group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-hidden',
+                    'animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both',
                   )}
                   style={{
                     left: pos.left,
@@ -158,36 +158,36 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   {/* Seat glow effect on hover/occupied */}
                   <div
                     className={cn(
-                      "absolute inset-0 rounded-full blur-md transition-opacity duration-300",
+                      'absolute inset-0 rounded-full blur-md transition-opacity duration-300',
                       occupant
-                        ? "bg-accent/40 opacity-100"
-                        : "bg-accent/20 opacity-0 group-hover:opacity-100",
+                        ? 'bg-accent/40 opacity-100'
+                        : 'bg-accent/20 opacity-0 group-hover:opacity-100',
                     )}
-                    style={{ transform: "scale(1.4)" }}
+                    style={{ transform: 'scale(1.4)' }}
                   />
 
                   {/* Main seat circle - responsive sizing */}
                   <div
                     className={cn(
-                      "relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full",
-                      "border backdrop-blur-sm",
-                      "transition-all duration-300 ease-out",
+                      'relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full',
+                      'border backdrop-blur-sm',
+                      'transition-all duration-300 ease-out',
                       occupant
-                        ? "border-accent/60 bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]"
-                        : "border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]",
-                      "group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10",
-                      "group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
+                        ? 'border-accent/60 bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
+                        : 'border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]',
+                      'group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10',
+                      'group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background',
                     )}
                   >
                     {/* Seat number */}
                     <span
                       className={cn(
-                        "absolute inset-0 grid place-items-center font-semibold transition-all duration-300",
+                        'absolute inset-0 grid place-items-center font-semibold transition-all duration-300',
                         occupant
-                          ? "text-accent-foreground text-xs sm:text-sm"
-                          : "text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground",
+                          ? 'text-accent-foreground text-xs sm:text-sm'
+                          : 'text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground',
                       )}
-                      style={{ fontVariantNumeric: "tabular-nums" }}
+                      style={{ fontVariantNumeric: 'tabular-nums' }}
                     >
                       {i + 1}
                     </span>
@@ -199,33 +199,33 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   {/* Status badge */}
                   <span
                     className={cn(
-                      "absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2",
-                      "rounded-full px-1.5 sm:px-2 py-0.5",
-                      "text-[7px] sm:text-[9px] font-bold tracking-wider uppercase",
-                      "transition-all duration-300",
-                      "shadow-xs",
+                      'absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2',
+                      'rounded-full px-1.5 sm:px-2 py-0.5',
+                      'text-[7px] sm:text-[9px] font-bold tracking-wider uppercase',
+                      'transition-all duration-300',
+                      'shadow-xs',
                       occupant
-                        ? "bg-accent text-accent-foreground"
-                        : "bg-muted text-muted-foreground border border-border/50",
-                      "group-hover:scale-105",
+                        ? 'bg-accent text-accent-foreground'
+                        : 'bg-muted text-muted-foreground border border-border/50',
+                      'group-hover:scale-105',
                     )}
                   >
-                    {occupant ? "Taken" : "Open"}
+                    {occupant ? 'Taken' : 'Open'}
                   </span>
 
                   {/* Player name tooltip on hover for occupied seats */}
                   {occupant && (
                     <div
                       className={cn(
-                        "absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2",
-                        "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md",
-                        "bg-popover border border-border",
-                        "text-[9px] sm:text-[11px] font-medium text-popover-foreground whitespace-nowrap",
-                        "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100",
-                        "transition-all duration-200",
-                        "shadow-lg",
-                        "pointer-events-none",
-                        "z-20",
+                        'absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2',
+                        'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md',
+                        'bg-popover border border-border',
+                        'text-[9px] sm:text-[11px] font-medium text-popover-foreground whitespace-nowrap',
+                        'opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100',
+                        'transition-all duration-200',
+                        'shadow-lg',
+                        'pointer-events-none',
+                        'z-20',
                       )}
                     >
                       {occupant.firstName} {occupant.lastName}

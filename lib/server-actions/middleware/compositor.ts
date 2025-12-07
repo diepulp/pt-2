@@ -1,21 +1,21 @@
-import { randomUUID } from "crypto";
+import { randomUUID } from 'crypto';
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { runWithCorrelation } from "@/lib/correlation";
-import type { ServiceResult } from "@/lib/http/service-response";
-import type { Database } from "@/types/database.types";
+import { runWithCorrelation } from '@/lib/correlation';
+import type { ServiceResult } from '@/lib/http/service-response';
+import type { Database } from '@/types/database.types';
 
-import { withAudit } from "./audit";
-import { withAuth } from "./auth";
-import { withIdempotency } from "./idempotency";
-import { withRLS } from "./rls";
-import { withTracing } from "./tracing";
+import { withAudit } from './audit';
+import { withAuth } from './auth';
+import { withIdempotency } from './idempotency';
+import { withRLS } from './rls';
+import { withTracing } from './tracing';
 import type {
   Middleware,
   MiddlewareContext,
   ServerActionOptions,
-} from "./types";
+} from './types';
 
 /**
  * Compose middleware functions into a single chain
@@ -28,14 +28,14 @@ function compose<T>(middlewares: Middleware<T>[]): Middleware<T> {
 
     function dispatch(i: number): Promise<ServiceResult<T>> {
       if (i <= index) {
-        return Promise.reject(new Error("next() called multiple times"));
+        return Promise.reject(new Error('next() called multiple times'));
       }
       index = i;
 
       const fn = i < middlewares.length ? middlewares[i] : next;
 
       if (!fn) {
-        return Promise.reject(new Error("No handler provided"));
+        return Promise.reject(new Error('No handler provided'));
       }
 
       try {

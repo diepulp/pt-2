@@ -9,10 +9,10 @@
  * Pattern: WS3-A reference implementation per SPEC-PRD-000 section 5.2.3-5.2.5
  */
 
-import type { NextRequest } from "next/server";
-import { z } from "zod";
+import type { NextRequest } from 'next/server';
+import { z } from 'zod';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -20,23 +20,23 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { CasinoDTO, UpdateCasinoDTO } from "@/services/casino/dtos";
-import { updateCasinoSchema } from "@/services/casino/schemas";
-import type { Json } from "@/types/database.types";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { CasinoDTO, UpdateCasinoDTO } from '@/services/casino/dtos';
+import { updateCasinoSchema } from '@/services/casino/schemas';
+import type { Json } from '@/types/database.types';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
 
 /** Schema for route params validation */
 const routeParamsSchema = z.object({
-  id: z.string().uuid("Invalid casino ID format"),
+  id: z.string().uuid('Invalid casino ID format'),
 });
 
 /** Select fields for CasinoDTO projection */
-const CASINO_SELECT = "id, name, location, status, created_at";
+const CASINO_SELECT = 'id, name, location, status, created_at';
 
 /**
  * GET /api/v1/casino/[id]
@@ -55,9 +55,9 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       supabase,
       async (mwCtx) => {
         const { data, error } = await mwCtx.supabase
-          .from("casino")
+          .from('casino')
           .select(CASINO_SELECT)
-          .eq("id", params.id)
+          .eq('id', params.id)
           .maybeSingle();
 
         if (error) {
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         }
 
         if (!data) {
-          throw new DomainError("CASINO_NOT_FOUND", "Casino not found", {
+          throw new DomainError('CASINO_NOT_FOUND', 'Casino not found', {
             httpStatus: 404,
             details: { casinoId: params.id },
           });
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as CasinoDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -81,8 +81,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "casino",
-        action: "detail",
+        domain: 'casino',
+        action: 'detail',
         correlationId: ctx.requestId,
       },
     );
@@ -118,8 +118,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
     // Check if there are any fields to update
     if (Object.keys(input).length === 0) {
       throw new DomainError(
-        "VALIDATION_ERROR",
-        "No fields provided for update",
+        'VALIDATION_ERROR',
+        'No fields provided for update',
         {
           httpStatus: 400,
         },
@@ -131,13 +131,13 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
       async (mwCtx) => {
         // Check if casino exists
         const { data: existing } = await mwCtx.supabase
-          .from("casino")
-          .select("id")
-          .eq("id", params.id)
+          .from('casino')
+          .select('id')
+          .eq('id', params.id)
           .maybeSingle();
 
         if (!existing) {
-          throw new DomainError("CASINO_NOT_FOUND", "Casino not found", {
+          throw new DomainError('CASINO_NOT_FOUND', 'Casino not found', {
             httpStatus: 404,
             details: { casinoId: params.id },
           });
@@ -146,19 +146,19 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         // If updating name, check for duplicates
         if (input.name) {
           const { data: duplicate } = await mwCtx.supabase
-            .from("casino")
-            .select("id")
-            .eq("name", input.name)
-            .neq("id", params.id)
+            .from('casino')
+            .select('id')
+            .eq('name', input.name)
+            .neq('id', params.id)
             .maybeSingle();
 
           if (duplicate) {
             throw new DomainError(
-              "UNIQUE_VIOLATION",
-              "Casino with this name already exists",
+              'UNIQUE_VIOLATION',
+              'Casino with this name already exists',
               {
                 httpStatus: 409,
-                details: { field: "name", value: input.name },
+                details: { field: 'name', value: input.name },
               },
             );
           }
@@ -166,7 +166,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         // Update casino
         const { data, error } = await mwCtx.supabase
-          .from("casino")
+          .from('casino')
           .update({
             ...(input.name !== undefined && { name: input.name }),
             ...(input.location !== undefined && { location: input.location }),
@@ -177,7 +177,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
               company_id: input.company_id,
             }),
           })
-          .eq("id", params.id)
+          .eq('id', params.id)
           .select(CASINO_SELECT)
           .single();
 
@@ -187,7 +187,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: data as CasinoDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -195,8 +195,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "casino",
-        action: "update",
+        domain: 'casino',
+        action: 'update',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -232,23 +232,23 @@ export async function DELETE(request: NextRequest, segmentData: RouteParams) {
       async (mwCtx) => {
         // Check if casino exists
         const { data: existing } = await mwCtx.supabase
-          .from("casino")
-          .select("id, status")
-          .eq("id", params.id)
+          .from('casino')
+          .select('id, status')
+          .eq('id', params.id)
           .maybeSingle();
 
         if (!existing) {
-          throw new DomainError("CASINO_NOT_FOUND", "Casino not found", {
+          throw new DomainError('CASINO_NOT_FOUND', 'Casino not found', {
             httpStatus: 404,
             details: { casinoId: params.id },
           });
         }
 
         // Already inactive - idempotent success
-        if (existing.status === "inactive") {
+        if (existing.status === 'inactive') {
           return {
             ok: true as const,
-            code: "OK" as const,
+            code: 'OK' as const,
             data: undefined,
             requestId: mwCtx.correlationId,
             durationMs: 0,
@@ -258,9 +258,9 @@ export async function DELETE(request: NextRequest, segmentData: RouteParams) {
 
         // Soft delete by setting status to inactive
         const { error } = await mwCtx.supabase
-          .from("casino")
-          .update({ status: "inactive" })
-          .eq("id", params.id);
+          .from('casino')
+          .update({ status: 'inactive' })
+          .eq('id', params.id);
 
         if (error) {
           throw error;
@@ -268,7 +268,7 @@ export async function DELETE(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: undefined,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -276,8 +276,8 @@ export async function DELETE(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "casino",
-        action: "delete",
+        domain: 'casino',
+        action: 'delete',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

@@ -13,9 +13,9 @@
  * @see docs/20-architecture/bounded-contexts.md
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Published Queries ===
 
@@ -52,11 +52,11 @@ export async function hasOpenSlipsForTable(
   casinoId: string,
 ): Promise<boolean> {
   const { count, error } = await supabase
-    .from("rating_slip")
-    .select("id", { count: "exact", head: true })
-    .eq("table_id", tableId)
-    .eq("casino_id", casinoId)
-    .in("status", ["open", "paused"]);
+    .from('rating_slip')
+    .select('id', { count: 'exact', head: true })
+    .eq('table_id', tableId)
+    .eq('casino_id', casinoId)
+    .in('status', ['open', 'paused']);
 
   if (error) {
     // Graceful degradation: assume no open slips to prevent blocking operations
@@ -83,11 +83,11 @@ export async function countOpenSlipsForTable(
   casinoId: string,
 ): Promise<number> {
   const { count, error } = await supabase
-    .from("rating_slip")
-    .select("id", { count: "exact", head: true })
-    .eq("table_id", tableId)
-    .eq("casino_id", casinoId)
-    .in("status", ["open", "paused"]);
+    .from('rating_slip')
+    .select('id', { count: 'exact', head: true })
+    .eq('table_id', tableId)
+    .eq('casino_id', casinoId)
+    .in('status', ['open', 'paused']);
 
   if (error) {
     // Graceful degradation: return 0 on error to prevent blocking operations

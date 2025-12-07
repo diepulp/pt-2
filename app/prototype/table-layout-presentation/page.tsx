@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import TableLayoutTerminal from "@/components/table/table-layout-terminal";
+import TableLayoutTerminal from '@/components/table/table-layout-terminal';
 
 export default function TableLayoutPresentationPage() {
   const [seats, setSeats] = React.useState([
-    { firstName: "John", lastName: "Doe" },
+    { firstName: 'John', lastName: 'Doe' },
     null,
-    { firstName: "Jane", lastName: "Smith" },
+    { firstName: 'Jane', lastName: 'Smith' },
     null,
-    { firstName: "Bob", lastName: "Johnson" },
+    { firstName: 'Bob', lastName: 'Johnson' },
     null,
-    { firstName: "Alice", lastName: "Williams" },
+    { firstName: 'Alice', lastName: 'Williams' },
   ]);
 
   const handleSeatClick = (index: number) => {
@@ -21,7 +21,7 @@ export default function TableLayoutPresentationPage() {
       if (newSeats[index]) {
         newSeats[index] = null;
       } else {
-        newSeats[index] = { firstName: "New", lastName: "Player" };
+        newSeats[index] = { firstName: 'New', lastName: 'Player' };
       }
       return newSeats;
     });
@@ -56,13 +56,13 @@ export default function TableLayoutPresentationPage() {
         <button
           onClick={() =>
             setSeats([
-              { firstName: "P1", lastName: "A" },
-              { firstName: "P2", lastName: "B" },
-              { firstName: "P3", lastName: "C" },
-              { firstName: "P4", lastName: "D" },
-              { firstName: "P5", lastName: "E" },
-              { firstName: "P6", lastName: "F" },
-              { firstName: "P7", lastName: "G" },
+              { firstName: 'P1', lastName: 'A' },
+              { firstName: 'P2', lastName: 'B' },
+              { firstName: 'P3', lastName: 'C' },
+              { firstName: 'P4', lastName: 'D' },
+              { firstName: 'P5', lastName: 'E' },
+              { firstName: 'P6', lastName: 'F' },
+              { firstName: 'P7', lastName: 'G' },
             ])
           }
           className="px-4 py-2 rounded-md bg-accent text-accent-foreground hover:bg-accent/90 transition-colors"

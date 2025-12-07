@@ -16,11 +16,11 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 341-342
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CloseRatingSlipInput,
   CreateRatingSlipInput,
@@ -31,13 +31,13 @@ import type {
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
   UpdateAverageBetInput,
-} from "./dtos";
-import { hasOpenSlipsForTable, countOpenSlipsForTable } from "./queries";
+} from './dtos';
+import { hasOpenSlipsForTable, countOpenSlipsForTable } from './queries';
 
 // Re-export DTOs, keys, and queries for consumers
-export * from "./dtos";
-export * from "./keys";
-export { hasOpenSlipsForTable, countOpenSlipsForTable } from "./queries";
+export * from './dtos';
+export * from './keys';
+export { hasOpenSlipsForTable, countOpenSlipsForTable } from './queries';
 
 // === Service Interface ===
 
@@ -136,7 +136,7 @@ export interface RatingSlipServiceInterface {
    */
   listForTable(
     tableId: string,
-    filters?: Omit<RatingSlipListFilters, "table_id" | "visit_id">,
+    filters?: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'>,
   ): Promise<{ items: RatingSlipDTO[]; cursor: string | null }>;
 
   /**

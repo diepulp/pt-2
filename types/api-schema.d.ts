@@ -4,7 +4,7 @@
  */
 
 export interface paths {
-  "/casinos/{casino_id}": {
+  '/casinos/{casino_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -20,7 +20,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          casino_id: components["parameters"]["CasinoId"];
+          casino_id: components['parameters']['CasinoId'];
         };
         cookie?: never;
       };
@@ -32,12 +32,12 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Casino"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Casino'];
             };
           };
         };
-        404: components["responses"]["NotFound"];
+        404: components['responses']['NotFound'];
       };
     };
     put?: never;
@@ -48,7 +48,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/casinos/{casino_id}/settings": {
+  '/casinos/{casino_id}/settings': {
     parameters: {
       query?: never;
       header?: never;
@@ -70,16 +70,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          casino_id: components["parameters"]["CasinoId"];
+          casino_id: components['parameters']['CasinoId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["CasinoSettingsPatch"];
+          'application/json': components['schemas']['CasinoSettingsPatch'];
         };
       };
       responses: {
@@ -89,17 +89,17 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["CasinoSettings"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['CasinoSettings'];
             };
           };
         };
-        400: components["responses"]["ValidationError"];
+        400: components['responses']['ValidationError'];
       };
     };
     trace?: never;
   };
-  "/casinos/{casino_id}/staff": {
+  '/casinos/{casino_id}/staff': {
     parameters: {
       query?: never;
       header?: never;
@@ -114,14 +114,14 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
-          status?: components["schemas"]["StaffStatus"];
-          role?: components["schemas"]["StaffRole"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
+          status?: components['schemas']['StaffStatus'];
+          role?: components['schemas']['StaffRole'];
         };
         header?: never;
         path: {
-          casino_id: components["parameters"]["CasinoId"];
+          casino_id: components['parameters']['CasinoId'];
         };
         cookie?: never;
       };
@@ -133,8 +133,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["StaffList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['StaffList'];
             };
           };
         };
@@ -148,7 +148,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/players": {
+  '/players': {
     parameters: {
       query?: never;
       header?: never;
@@ -159,11 +159,11 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
+          casino_id: components['schemas']['UUID'];
           q?: string;
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -177,8 +177,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["PlayerList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['PlayerList'];
             };
           };
         };
@@ -191,14 +191,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["PlayerCreate"];
+          'application/json': components['schemas']['PlayerCreate'];
         };
       };
       responses: {
@@ -208,8 +208,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Player"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Player'];
             };
           };
         };
@@ -221,7 +221,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/players/{player_id}": {
+  '/players/{player_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -234,7 +234,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          player_id: components["parameters"]["PlayerId"];
+          player_id: components['parameters']['PlayerId'];
         };
         cookie?: never;
       };
@@ -246,12 +246,12 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Player"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Player'];
             };
           };
         };
-        404: components["responses"]["NotFound"];
+        404: components['responses']['NotFound'];
       };
     };
     put?: never;
@@ -265,16 +265,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          player_id: components["parameters"]["PlayerId"];
+          player_id: components['parameters']['PlayerId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["PlayerUpdate"];
+          'application/json': components['schemas']['PlayerUpdate'];
         };
       };
       responses: {
@@ -284,8 +284,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Player"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Player'];
             };
           };
         };
@@ -293,7 +293,7 @@ export interface paths {
     };
     trace?: never;
   };
-  "/visits": {
+  '/visits': {
     parameters: {
       query?: never;
       header?: never;
@@ -304,12 +304,12 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
-          player_id?: components["schemas"]["UUID"];
-          status?: components["schemas"]["VisitStatus"];
+          casino_id: components['schemas']['UUID'];
+          player_id?: components['schemas']['UUID'];
+          status?: components['schemas']['VisitStatus'];
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -323,8 +323,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["VisitList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['VisitList'];
             };
           };
         };
@@ -337,14 +337,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["VisitStart"];
+          'application/json': components['schemas']['VisitStart'];
         };
       };
       responses: {
@@ -354,8 +354,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Visit"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Visit'];
             };
           };
         };
@@ -367,7 +367,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/visits/{visit_id}": {
+  '/visits/{visit_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -380,7 +380,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          visit_id: components["parameters"]["VisitId"];
+          visit_id: components['parameters']['VisitId'];
         };
         cookie?: never;
       };
@@ -392,8 +392,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Visit"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Visit'];
             };
           };
         };
@@ -407,7 +407,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/visits/{visit_id}/end": {
+  '/visits/{visit_id}/end': {
     parameters: {
       query?: never;
       header?: never;
@@ -422,16 +422,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          visit_id: components["parameters"]["VisitId"];
+          visit_id: components['parameters']['VisitId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["VisitEnd"];
+          'application/json': components['schemas']['VisitEnd'];
         };
       };
       responses: {
@@ -441,8 +441,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Visit"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Visit'];
             };
           };
         };
@@ -454,7 +454,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/visits/{visit_id}/rating-slips": {
+  '/visits/{visit_id}/rating-slips': {
     parameters: {
       query?: never;
       header?: never;
@@ -466,12 +466,12 @@ export interface paths {
       parameters: {
         query?: {
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path: {
-          visit_id: components["parameters"]["VisitId"];
+          visit_id: components['parameters']['VisitId'];
         };
         cookie?: never;
       };
@@ -483,8 +483,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["RatingSlipList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['RatingSlipList'];
             };
           };
         };
@@ -498,7 +498,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/rating-slips": {
+  '/rating-slips': {
     parameters: {
       query?: never;
       header?: never;
@@ -513,14 +513,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["RatingSlipCreate"];
+          'application/json': components['schemas']['RatingSlipCreate'];
         };
       };
       responses: {
@@ -530,8 +530,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["RatingSlip"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['RatingSlip'];
             };
           };
         };
@@ -543,7 +543,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/rating-slips/{rating_slip_id}": {
+  '/rating-slips/{rating_slip_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -562,16 +562,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          rating_slip_id: components["parameters"]["RatingSlipId"];
+          rating_slip_id: components['parameters']['RatingSlipId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["RatingSlipUpdate"];
+          'application/json': components['schemas']['RatingSlipUpdate'];
         };
       };
       responses: {
@@ -581,8 +581,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["RatingSlip"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['RatingSlip'];
             };
           };
         };
@@ -590,7 +590,7 @@ export interface paths {
     };
     trace?: never;
   };
-  "/rating-slips/{rating_slip_id}/close": {
+  '/rating-slips/{rating_slip_id}/close': {
     parameters: {
       query?: never;
       header?: never;
@@ -605,16 +605,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          rating_slip_id: components["parameters"]["RatingSlipId"];
+          rating_slip_id: components['parameters']['RatingSlipId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["RatingSlipClose"];
+          'application/json': components['schemas']['RatingSlipClose'];
         };
       };
       responses: {
@@ -624,8 +624,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["RatingSlip"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['RatingSlip'];
             };
           };
         };
@@ -637,7 +637,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/table-context/tables": {
+  '/table-context/tables': {
     parameters: {
       query?: never;
       header?: never;
@@ -648,11 +648,11 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
-          status?: components["schemas"]["TableStatus"];
+          casino_id: components['schemas']['UUID'];
+          status?: components['schemas']['TableStatus'];
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -666,8 +666,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["TableList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['TableList'];
             };
           };
         };
@@ -681,7 +681,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/table-context/tables/{table_id}": {
+  '/table-context/tables/{table_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -694,7 +694,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          table_id: components["parameters"]["TableId"];
+          table_id: components['parameters']['TableId'];
         };
         cookie?: never;
       };
@@ -706,8 +706,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["Table"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['Table'];
             };
           };
         };
@@ -721,7 +721,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/table-context/dealer-rotations": {
+  '/table-context/dealer-rotations': {
     parameters: {
       query?: never;
       header?: never;
@@ -736,14 +736,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["DealerRotationCreate"];
+          'application/json': components['schemas']['DealerRotationCreate'];
         };
       };
       responses: {
@@ -753,8 +753,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["DealerRotation"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['DealerRotation'];
             };
           };
         };
@@ -766,7 +766,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/loyalty/mid-session-reward": {
+  '/loyalty/mid-session-reward': {
     parameters: {
       query?: never;
       header?: never;
@@ -781,14 +781,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["MidSessionReward"];
+          'application/json': components['schemas']['MidSessionReward'];
         };
       };
       responses: {
@@ -798,8 +798,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["MidSessionRewardResult"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['MidSessionRewardResult'];
             };
           };
         };
@@ -811,7 +811,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/loyalty/balances": {
+  '/loyalty/balances': {
     parameters: {
       query?: never;
       header?: never;
@@ -822,8 +822,8 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          player_id: components["schemas"]["UUID"];
-          casino_id: components["schemas"]["UUID"];
+          player_id: components['schemas']['UUID'];
+          casino_id: components['schemas']['UUID'];
         };
         header?: never;
         path?: never;
@@ -837,8 +837,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["LoyaltyBalance"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['LoyaltyBalance'];
             };
           };
         };
@@ -852,7 +852,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/loyalty/ledger": {
+  '/loyalty/ledger': {
     parameters: {
       query?: never;
       header?: never;
@@ -863,12 +863,12 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
-          player_id?: components["schemas"]["UUID"];
-          rating_slip_id?: components["schemas"]["UUID"];
+          casino_id: components['schemas']['UUID'];
+          player_id?: components['schemas']['UUID'];
+          rating_slip_id?: components['schemas']['UUID'];
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -882,8 +882,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["LoyaltyLedgerList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['LoyaltyLedgerList'];
             };
           };
         };
@@ -897,7 +897,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/finance/transactions": {
+  '/finance/transactions': {
     parameters: {
       query?: never;
       header?: never;
@@ -908,12 +908,12 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
-          player_id?: components["schemas"]["UUID"];
+          casino_id: components['schemas']['UUID'];
+          player_id?: components['schemas']['UUID'];
           gaming_day?: string;
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -927,8 +927,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["FinancialTransactionList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['FinancialTransactionList'];
             };
           };
         };
@@ -941,14 +941,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["FinancialTransactionCreate"];
+          'application/json': components['schemas']['FinancialTransactionCreate'];
         };
       };
       responses: {
@@ -958,8 +958,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["FinancialTransactionCreated"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['FinancialTransactionCreated'];
             };
           };
         };
@@ -971,7 +971,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/finance/transactions/{transaction_id}": {
+  '/finance/transactions/{transaction_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -984,7 +984,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          transaction_id: components["parameters"]["TransactionId"];
+          transaction_id: components['parameters']['TransactionId'];
         };
         cookie?: never;
       };
@@ -996,8 +996,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["FinancialTransaction"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['FinancialTransaction'];
             };
           };
         };
@@ -1011,7 +1011,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/mtl/entries": {
+  '/mtl/entries': {
     parameters: {
       query?: never;
       header?: never;
@@ -1022,12 +1022,12 @@ export interface paths {
     get: {
       parameters: {
         query: {
-          casino_id: components["schemas"]["UUID"];
-          patron_uuid?: components["schemas"]["UUID"];
+          casino_id: components['schemas']['UUID'];
+          patron_uuid?: components['schemas']['UUID'];
           min_amount?: number;
           /** @description Base64 cursor token from previous page. */
-          cursor?: components["parameters"]["Cursor"];
-          limit?: components["parameters"]["Limit"];
+          cursor?: components['parameters']['Cursor'];
+          limit?: components['parameters']['Limit'];
         };
         header?: never;
         path?: never;
@@ -1041,8 +1041,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["MtlEntryList"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['MtlEntryList'];
             };
           };
         };
@@ -1055,14 +1055,14 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path?: never;
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["MtlEntryCreate"];
+          'application/json': components['schemas']['MtlEntryCreate'];
         };
       };
       responses: {
@@ -1072,8 +1072,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["MtlEntry"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['MtlEntry'];
             };
           };
         };
@@ -1085,7 +1085,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/mtl/entries/{entry_id}": {
+  '/mtl/entries/{entry_id}': {
     parameters: {
       query?: never;
       header?: never;
@@ -1098,7 +1098,7 @@ export interface paths {
         query?: never;
         header?: never;
         path: {
-          entry_id: components["parameters"]["MtlEntryId"];
+          entry_id: components['parameters']['MtlEntryId'];
         };
         cookie?: never;
       };
@@ -1110,8 +1110,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["MtlEntry"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['MtlEntry'];
             };
           };
         };
@@ -1125,7 +1125,7 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
-  "/mtl/entries/{entry_id}/audit-notes": {
+  '/mtl/entries/{entry_id}/audit-notes': {
     parameters: {
       query?: never;
       header?: never;
@@ -1140,16 +1140,16 @@ export interface paths {
         query?: never;
         header: {
           /** @description Unique key per mutating request to guarantee idempotency. */
-          "Idempotency-Key": components["parameters"]["IdempotencyKey"];
+          'Idempotency-Key': components['parameters']['IdempotencyKey'];
         };
         path: {
-          entry_id: components["parameters"]["MtlEntryId"];
+          entry_id: components['parameters']['MtlEntryId'];
         };
         cookie?: never;
       };
       requestBody: {
         content: {
-          "application/json": components["schemas"]["MtlAuditNoteCreate"];
+          'application/json': components['schemas']['MtlAuditNoteCreate'];
         };
       };
       responses: {
@@ -1159,8 +1159,8 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            "application/json": components["schemas"]["ServiceHttpResultBase"] & {
-              data?: components["schemas"]["MtlAuditNote"];
+            'application/json': components['schemas']['ServiceHttpResultBase'] & {
+              data?: components['schemas']['MtlAuditNote'];
             };
           };
         };
@@ -1180,14 +1180,14 @@ export interface components {
       ok: boolean;
       /** @enum {string} */
       code:
-        | "OK"
-        | "VALIDATION_ERROR"
-        | "NOT_FOUND"
-        | "UNIQUE_VIOLATION"
-        | "FOREIGN_KEY_VIOLATION"
-        | "UNAUTHORIZED"
-        | "FORBIDDEN"
-        | "INTERNAL_ERROR";
+        | 'OK'
+        | 'VALIDATION_ERROR'
+        | 'NOT_FOUND'
+        | 'UNIQUE_VIOLATION'
+        | 'FOREIGN_KEY_VIOLATION'
+        | 'UNAUTHORIZED'
+        | 'FORBIDDEN'
+        | 'INTERNAL_ERROR';
       status: number;
       requestId: string;
       durationMs: number;
@@ -1200,18 +1200,18 @@ export interface components {
     /** Format: uuid */
     UUID: string;
     Casino: {
-      id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
       name?: string;
       location?: string | null;
       status?: string;
       address?: {
         [key: string]: unknown;
       } | null;
-      company_id?: components["schemas"]["UUID"];
+      company_id?: components['schemas']['UUID'];
       created_at?: string;
     };
     CasinoSettings: {
-      casino_id?: components["schemas"]["UUID"];
+      casino_id?: components['schemas']['UUID'];
       timezone?: string;
       gaming_day_start_time?: string;
       watchlist_floor?: number;
@@ -1225,27 +1225,27 @@ export interface components {
       ctr_threshold?: number;
     };
     /** @enum {string} */
-    StaffRole: "dealer" | "pit_boss" | "admin";
+    StaffRole: 'dealer' | 'pit_boss' | 'admin';
     /** @enum {string} */
-    StaffStatus: "active" | "inactive";
+    StaffStatus: 'active' | 'inactive';
     Staff: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
       first_name?: string;
       last_name?: string;
       /** Format: email */
       email?: string | null;
       employee_id?: string | null;
-      role?: components["schemas"]["StaffRole"];
-      status?: components["schemas"]["StaffStatus"];
+      role?: components['schemas']['StaffRole'];
+      status?: components['schemas']['StaffStatus'];
       created_at?: string;
     };
     StaffList: {
-      items?: components["schemas"]["Staff"][];
+      items?: components['schemas']['Staff'][];
       next_cursor?: string | null;
     };
     Player: {
-      id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
       first_name?: string;
       last_name?: string;
       birth_date?: string | null;
@@ -1256,44 +1256,44 @@ export interface components {
       last_name: string;
       birth_date?: string;
       casino_enrollment?: {
-        casino_id: components["schemas"]["UUID"];
+        casino_id: components['schemas']['UUID'];
         /** @enum {string} */
-        status?: "active" | "inactive";
+        status?: 'active' | 'inactive';
       };
     };
     /** @description Partial updates allowed; at least one field required. */
-    PlayerUpdate: components["schemas"]["PlayerCreate"];
+    PlayerUpdate: components['schemas']['PlayerCreate'];
     PlayerList: {
-      items?: components["schemas"]["Player"][];
+      items?: components['schemas']['Player'][];
       next_cursor?: string | null;
     };
     Visit: {
-      id?: components["schemas"]["UUID"];
-      player_id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      player_id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
       started_at?: string;
       ended_at?: string | null;
     };
     VisitStart: {
-      player_id: components["schemas"]["UUID"];
-      casino_id: components["schemas"]["UUID"];
+      player_id: components['schemas']['UUID'];
+      casino_id: components['schemas']['UUID'];
       started_at?: string;
     };
     VisitEnd: {
       ended_at?: string;
     };
     VisitList: {
-      items?: components["schemas"]["Visit"][];
+      items?: components['schemas']['Visit'][];
       next_cursor?: string | null;
     };
     /** @enum {string} */
-    VisitStatus: "open" | "closed";
+    VisitStatus: 'open' | 'closed';
     RatingSlip: {
-      id?: components["schemas"]["UUID"];
-      player_id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
-      table_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      player_id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
+      table_id?: components['schemas']['UUID'];
       game_settings?: {
         [key: string]: unknown;
       } | null;
@@ -1301,16 +1301,16 @@ export interface components {
       start_time?: string;
       end_time?: string | null;
       /** @enum {string} */
-      status?: "open" | "paused" | "closed";
+      status?: 'open' | 'paused' | 'closed';
       policy_snapshot?: {
         [key: string]: unknown;
       } | null;
     };
     RatingSlipCreate: {
-      player_id: components["schemas"]["UUID"];
-      casino_id: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
-      table_id?: components["schemas"]["UUID"];
+      player_id: components['schemas']['UUID'];
+      casino_id: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
+      table_id?: components['schemas']['UUID'];
       game_settings?: {
         [key: string]: unknown;
       } | null;
@@ -1323,7 +1323,7 @@ export interface components {
       average_bet?: number | null;
       end_time?: string;
       /** @enum {string} */
-      status?: "open" | "paused" | "closed";
+      status?: 'open' | 'paused' | 'closed';
       policy_snapshot?: {
         [key: string]: unknown;
       } | null;
@@ -1332,63 +1332,63 @@ export interface components {
       end_time?: string;
     };
     RatingSlipList: {
-      items?: components["schemas"]["RatingSlip"][];
+      items?: components['schemas']['RatingSlip'][];
       next_cursor?: string | null;
     };
     Table: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
       label?: string;
       pit?: string | null;
-      type?: components["schemas"]["GameType"];
-      status?: components["schemas"]["TableStatus"];
+      type?: components['schemas']['GameType'];
+      status?: components['schemas']['TableStatus'];
       created_at?: string;
     };
     TableList: {
-      items?: components["schemas"]["Table"][];
+      items?: components['schemas']['Table'][];
       next_cursor?: string | null;
     };
     /** @enum {string} */
-    GameType: "blackjack" | "poker" | "roulette" | "baccarat";
+    GameType: 'blackjack' | 'poker' | 'roulette' | 'baccarat';
     /** @enum {string} */
-    TableStatus: "inactive" | "active" | "closed";
+    TableStatus: 'inactive' | 'active' | 'closed';
     DealerRotation: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
-      table_id?: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
+      table_id?: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
       started_at?: string;
       ended_at?: string | null;
     };
     DealerRotationCreate: {
-      casino_id: components["schemas"]["UUID"];
-      table_id: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
+      casino_id: components['schemas']['UUID'];
+      table_id: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
       started_at?: string;
     };
     MidSessionReward: {
-      casino_id: components["schemas"]["UUID"];
-      player_id: components["schemas"]["UUID"];
-      rating_slip_id: components["schemas"]["UUID"];
-      staff_id: components["schemas"]["UUID"];
+      casino_id: components['schemas']['UUID'];
+      player_id: components['schemas']['UUID'];
+      rating_slip_id: components['schemas']['UUID'];
+      staff_id: components['schemas']['UUID'];
       points: number;
-      reason?: components["schemas"]["LoyaltyReason"];
+      reason?: components['schemas']['LoyaltyReason'];
       idempotency_key?: string;
     };
     MidSessionRewardResult: {
-      ledger_id?: components["schemas"]["UUID"];
+      ledger_id?: components['schemas']['UUID'];
       balance_after?: number;
     };
     /** @enum {string} */
     LoyaltyReason:
-      | "mid_session"
-      | "session_end"
-      | "manual_adjustment"
-      | "promotion"
-      | "correction";
+      | 'mid_session'
+      | 'session_end'
+      | 'manual_adjustment'
+      | 'promotion'
+      | 'correction';
     LoyaltyBalance: {
-      player_id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
+      player_id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
       balance?: number;
       tier?: string | null;
       preferences?: {
@@ -1397,90 +1397,90 @@ export interface components {
       updated_at?: string;
     };
     LoyaltyLedgerEntry: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
-      player_id?: components["schemas"]["UUID"];
-      rating_slip_id?: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
+      player_id?: components['schemas']['UUID'];
+      rating_slip_id?: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
       points_earned?: number;
-      reason?: components["schemas"]["LoyaltyReason"];
+      reason?: components['schemas']['LoyaltyReason'];
       idempotency_key?: string | null;
       average_bet?: number | null;
       duration_seconds?: number | null;
-      game_type?: components["schemas"]["GameType"];
+      game_type?: components['schemas']['GameType'];
       created_at?: string;
     };
     LoyaltyLedgerList: {
-      items?: components["schemas"]["LoyaltyLedgerEntry"][];
+      items?: components['schemas']['LoyaltyLedgerEntry'][];
       next_cursor?: string | null;
     };
     FinancialTransactionCreate: {
-      casino_id: components["schemas"]["UUID"];
-      player_id: components["schemas"]["UUID"];
+      casino_id: components['schemas']['UUID'];
+      player_id: components['schemas']['UUID'];
       amount: number;
       tender_type?: string;
       created_at?: string;
-      visit_id?: components["schemas"]["UUID"];
-      rating_slip_id?: components["schemas"]["UUID"];
+      visit_id?: components['schemas']['UUID'];
+      rating_slip_id?: components['schemas']['UUID'];
     };
     FinancialTransactionCreated: {
-      id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
     };
     FinancialTransaction: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
-      player_id?: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
-      rating_slip_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
+      player_id?: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
+      rating_slip_id?: components['schemas']['UUID'];
       amount?: number;
       tender_type?: string | null;
       created_at?: string;
       gaming_day?: string | null;
     };
     FinancialTransactionList: {
-      items?: components["schemas"]["FinancialTransaction"][];
+      items?: components['schemas']['FinancialTransaction'][];
       next_cursor?: string | null;
     };
     MtlEntryCreate: {
-      casino_id: components["schemas"]["UUID"];
-      patron_uuid: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
-      rating_slip_id?: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
+      casino_id: components['schemas']['UUID'];
+      patron_uuid: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
+      rating_slip_id?: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
       amount: number;
-      direction: components["schemas"]["MtlDirection"];
+      direction: components['schemas']['MtlDirection'];
       area?: string;
       idempotency_key?: string;
       created_at?: string;
     };
     /** @enum {string} */
-    MtlDirection: "in" | "out";
+    MtlDirection: 'in' | 'out';
     MtlEntry: {
-      id?: components["schemas"]["UUID"];
-      casino_id?: components["schemas"]["UUID"];
-      patron_uuid?: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
-      rating_slip_id?: components["schemas"]["UUID"];
-      visit_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      casino_id?: components['schemas']['UUID'];
+      patron_uuid?: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
+      rating_slip_id?: components['schemas']['UUID'];
+      visit_id?: components['schemas']['UUID'];
       amount?: number;
-      direction?: components["schemas"]["MtlDirection"];
+      direction?: components['schemas']['MtlDirection'];
       area?: string | null;
       created_at?: string;
       idempotency_key?: string | null;
     };
     MtlEntryList: {
-      items?: components["schemas"]["MtlEntry"][];
+      items?: components['schemas']['MtlEntry'][];
       next_cursor?: string | null;
     };
     MtlAuditNoteCreate: {
-      staff_id: components["schemas"]["UUID"];
+      staff_id: components['schemas']['UUID'];
       note: string;
     };
     MtlAuditNote: {
-      id?: components["schemas"]["UUID"];
-      mtl_entry_id?: components["schemas"]["UUID"];
-      staff_id?: components["schemas"]["UUID"];
+      id?: components['schemas']['UUID'];
+      mtl_entry_id?: components['schemas']['UUID'];
+      staff_id?: components['schemas']['UUID'];
       note?: string;
       created_at?: string;
     };
@@ -1492,12 +1492,12 @@ export interface components {
         [name: string]: unknown;
       };
       content: {
-        "application/json": components["schemas"]["ServiceHttpResultBase"] & {
+        'application/json': components['schemas']['ServiceHttpResultBase'] & {
           data?: unknown;
           /** @example Record not found */
           error?: unknown;
           /** @enum {unknown} */
-          code?: "NOT_FOUND";
+          code?: 'NOT_FOUND';
         };
       };
     };
@@ -1507,21 +1507,21 @@ export interface components {
         [name: string]: unknown;
       };
       content: {
-        "application/json": components["schemas"]["ServiceHttpResultBase"] & {
+        'application/json': components['schemas']['ServiceHttpResultBase'] & {
           /** @enum {unknown} */
-          code?: "VALIDATION_ERROR";
+          code?: 'VALIDATION_ERROR';
         };
       };
     };
   };
   parameters: {
-    CasinoId: components["schemas"]["UUID"];
-    PlayerId: components["schemas"]["UUID"];
-    VisitId: components["schemas"]["UUID"];
-    RatingSlipId: components["schemas"]["UUID"];
-    TableId: components["schemas"]["UUID"];
-    TransactionId: components["schemas"]["UUID"];
-    MtlEntryId: components["schemas"]["UUID"];
+    CasinoId: components['schemas']['UUID'];
+    PlayerId: components['schemas']['UUID'];
+    VisitId: components['schemas']['UUID'];
+    RatingSlipId: components['schemas']['UUID'];
+    TableId: components['schemas']['UUID'];
+    TransactionId: components['schemas']['UUID'];
+    MtlEntryId: components['schemas']['UUID'];
     /** @description Unique key per mutating request to guarantee idempotency. */
     IdempotencyKey: string;
     /** @description Base64 cursor token from previous page. */

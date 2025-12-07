@@ -7,14 +7,14 @@
  * @see EDGE_TRANSPORT_POLICY.md section 6 (TableContextService)
  * @see SLAD section 505-513 (Entry Point Strategy)
  */
-"use server";
+'use server';
 
-import type { ServiceResult } from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware/compositor";
-import { createClient } from "@/lib/supabase/server";
-import type { GamingTableDTO } from "@/services/table-context/dtos";
-import { tableRouteParamsSchema } from "@/services/table-context/schemas";
-import { activateTable } from "@/services/table-context/table-lifecycle";
+import type { ServiceResult } from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware/compositor';
+import { createClient } from '@/lib/supabase/server';
+import type { GamingTableDTO } from '@/services/table-context/dtos';
+import { tableRouteParamsSchema } from '@/services/table-context/schemas';
+import { activateTable } from '@/services/table-context/table-lifecycle';
 
 /**
  * Activate table (inactive → active transition).
@@ -42,7 +42,7 @@ export async function activateTableAction(
 
       return {
         ok: true as const,
-        code: "OK" as const,
+        code: 'OK' as const,
         data: table,
         requestId: mwCtx.correlationId,
         durationMs: Date.now() - mwCtx.startedAt,
@@ -50,8 +50,8 @@ export async function activateTableAction(
       };
     },
     {
-      domain: "table-context",
-      action: "activate-table",
+      domain: 'table-context',
+      action: 'activate-table',
     },
   );
 }

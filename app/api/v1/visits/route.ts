@@ -8,7 +8,7 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createVisitService } from "@/services/visit/index";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createVisitService } from '@/services/visit/index';
 import {
   startVisitSchema,
   visitListQuerySchema,
-} from "@/services/visit/schemas";
+} from '@/services/visit/schemas';
 
 /**
  * GET /api/v1/visits
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items,
             cursor,
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "list",
+        domain: 'visit',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: visit,
           isNew: !has_active_visit,
           requestId: mwCtx.correlationId,
@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "start",
+        domain: 'visit',
+        action: 'start',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
 
     // Return 201 for new visit, 200 for existing
     const status = (result as { isNew?: boolean }).isNew ? 201 : 200;
-    return successResponse(ctx, result.data, "OK", status);
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }

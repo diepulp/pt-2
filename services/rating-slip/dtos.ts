@@ -12,13 +12,13 @@
  * @see EXECUTION-SPEC-PRD-002.md
  */
 
-import type { Database, Json } from "@/types/database.types";
+import type { Database, Json } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type RatingSlipRow = Database["public"]["Tables"]["rating_slip"]["Row"];
+type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
 type RatingSlipPauseRow =
-  Database["public"]["Tables"]["rating_slip_pause"]["Row"];
+  Database['public']['Tables']['rating_slip_pause']['Row'];
 
 // === Rating Slip Status Enum (derived from database) ===
 
@@ -35,7 +35,7 @@ type RatingSlipPauseRow =
  * @see PRD-002 section 5.1 State Machine
  */
 export type RatingSlipStatus =
-  Database["public"]["Enums"]["rating_slip_status"];
+  Database['public']['Enums']['rating_slip_status'];
 
 // === Rating Slip DTOs ===
 
@@ -52,17 +52,17 @@ export type RatingSlipStatus =
  */
 export type RatingSlipDTO = Pick<
   RatingSlipRow,
-  | "id"
-  | "casino_id"
-  | "visit_id"
-  | "table_id"
-  | "seat_number"
-  | "start_time"
-  | "end_time"
-  | "status"
-  | "average_bet"
-  | "game_settings"
-  | "policy_snapshot"
+  | 'id'
+  | 'casino_id'
+  | 'visit_id'
+  | 'table_id'
+  | 'seat_number'
+  | 'start_time'
+  | 'end_time'
+  | 'status'
+  | 'average_bet'
+  | 'game_settings'
+  | 'policy_snapshot'
 >;
 
 /**
@@ -99,12 +99,12 @@ export interface RatingSlipWithPausesDTO extends RatingSlipDTO {
  */
 export type RatingSlipPauseDTO = Pick<
   RatingSlipPauseRow,
-  | "id"
-  | "rating_slip_id"
-  | "casino_id"
-  | "started_at"
-  | "ended_at"
-  | "created_by"
+  | 'id'
+  | 'rating_slip_id'
+  | 'casino_id'
+  | 'started_at'
+  | 'ended_at'
+  | 'created_by'
 >;
 
 // === Input DTOs ===
