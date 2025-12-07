@@ -214,7 +214,7 @@ services/{domain}/
 └── selects.ts           # Named column sets
 ```
 
-**Example DTO Structure** (for RatingSlipService when rebuilt):
+**Example DTO Structure** (for RatingSlipService when rebuilt per PRD-002 + EXEC-VSE-001):
 
 ```typescript
 // services/rating-slip/dtos.ts
@@ -224,16 +224,18 @@ import type { Database } from '@/types/database.types';
 type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
 
 // Public DTO for consumers (Loyalty, Finance)
+// NOTE: No player_id - player identity derived from visit.player_id (EXEC-VSE-001)
 export type RatingSlipDTO = Pick<
   RatingSlipRow,
-  'id' | 'casino_id' | 'player_id' | 'visit_id' | 'table_id' |
+  'id' | 'casino_id' | 'visit_id' | 'table_id' |
   'seat_number' | 'status' | 'start_time' | 'end_time' | 'average_bet'
 >;
 
-// Cross-context DTO for Loyalty consumption (per SPEC-PRD-002)
+// Cross-context DTO for Loyalty consumption (per EXEC-VSE-001)
+// Player identity comes from the associated visit
 export interface RatingSlipTelemetryDTO {
   id: string;
-  player_id: string;
+  visit_id: string;        // Player identity derived via visit.player_id
   casino_id: string;
   average_bet: number | null;
   duration_seconds: number;

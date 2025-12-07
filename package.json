@@ -1,8 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --experimental-https",
+    "dev:webpack": "next dev --experimental-https --webpack",
     "build": "next build",
+    "build:webpack": "next build --webpack",
     "start": "next start",
     "type-check": "tsc --noEmit --strict",
     "lint": "eslint .",

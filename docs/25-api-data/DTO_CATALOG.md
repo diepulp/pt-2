@@ -5,7 +5,7 @@
 **Effective**: 2025-12-06
 **Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 **Canonical Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
-**Version**: 3.2.0
+**Version**: 3.3.0
 
 ---
 
@@ -525,6 +525,53 @@ Transitions `visit_kind` from `reward_identified` to `gaming_identified_rated`.
 
 ---
 
+### HasOpenSlipsForTableResult
+
+**Owner**: RatingSlipService  
+**File**: `services/rating-slip/queries.ts`  
+**Pattern**: Contract-First (published query result)  
+**Exposure**: Internal (cross-context)  
+**SRM Reference**: Cross-Context Consumption Table (TableContextService ← RatingSlipService)
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `hasOpenSlips` | `boolean` | No | `true` when any `rating_slip.status = 'open'` for the table/casino scope |
+
+**Consumers**:
+- **TableContext** (deactivate guard; prevents deactivation when open slips exist)
+
+---
+
+### RatingSlipPauseDTO
+
+**Owner**: RatingSlipService
+**File**: `services/rating-slip/dtos.ts`
+**Pattern**: Canonical (full row)
+**Exposure**: Internal only
+**SRM Reference**: §RatingSlipService (Telemetry Context)
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `id` | `uuid` | No | Primary key |
+| `rating_slip_id` | `uuid` | No | Parent rating slip FK |
+| `casino_id` | `uuid` | No | Casino FK (RLS scoping) |
+| `started_at` | `timestamptz` | No | Pause start timestamp |
+| `ended_at` | `timestamptz` | Yes | Pause end (NULL = still paused) |
+| `created_by` | `uuid` | Yes | Staff FK (actor tracking) |
+
+**Invariants**:
+- `ended_at IS NULL OR ended_at > started_at` (CHECK constraint)
+- One row per pause interval (supports multiple pause/resume cycles)
+
+**Consumers**:
+- RatingSlipService (duration calculation via `rpc_get_rating_slip_duration`)
+
+**Duration Formula**: `duration_seconds = (end_time - start_time) - SUM(ended_at - started_at)`
+
+---
+
 ## FinanceService DTOs
 
 ### FinancialTransactionDTO
@@ -959,5 +1006,5 @@ Transitions `visit_kind` from `reward_identified` to `gaming_identified_rated`.
 
 ---
 
-**Last Updated**: 2025-11-17
+**Last Updated**: 2025-12-07
 **Schema SHA**: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6

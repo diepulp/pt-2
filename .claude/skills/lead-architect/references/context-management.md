@@ -1,6 +1,52 @@
 # Session Continuity Guide
 
-This skill is designed for potentially long-running architectural sessions. This guide covers how to preserve session state across context resets.
+This skill is designed for potentially long-running architectural sessions. This guide covers how to preserve session state across context resets and prevent context rot during extended Q&A cycles.
+
+---
+
+## Context Refresh Triggers (CRITICAL)
+
+### When to Re-Read Foundational Docs
+
+Extended sessions can cause "context rot" where key constraints drift out of working memory. Re-read foundational docs:
+
+1. **Before schema decisions** — Re-read SRM "Schema Invariants" table for affected services
+2. **After 3+ Q&A cycles** — Re-read SRM + SLAD relevant sections
+3. **Before final output** — Verify key decisions against fresh SRM read
+4. **When proposing column changes** — Re-read SRM invariants for affected table
+
+### Schema Decision Protocol
+
+Before any decision that adds, removes, or modifies database columns:
+
+1. **State explicitly**: "Re-reading SRM Schema Invariants for [service_name]"
+2. **Quote the relevant invariants** from SRM (copy the table row)
+3. **Verify proposed change is compatible** with NOT NULL and immutability rules
+4. **If conflict exists**: STOP and escalate to stakeholder
+   - PRD cannot override SRM without explicit SRM amendment
+   - Document the conflict and request SRM update first
+
+### Long Session Protocol
+
+For sessions exceeding 10 tool calls or 3 Q&A cycles:
+
+**Before finalizing output:**
+1. Re-read:
+   - SRM "Schema Invariants" table for affected services
+   - SRM "Contracts" section for affected services
+   - SRM "Cross-Context Consumption" table
+2. Cross-check final decisions against fresh reads
+3. Note any conflicts discovered during refresh
+4. If schema changes proposed, quote SRM invariants in output
+
+### Q&A Cycle Counter
+
+Track Q&A cycles during session:
+- Q1, Q2: Normal operation
+- Q3+: Trigger context refresh before next schema decision
+- Q5+: Consider checkpoint save and context reset
+
+---
 
 ## When to Save Checkpoints
 

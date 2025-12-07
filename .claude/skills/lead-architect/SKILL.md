@@ -193,6 +193,16 @@ When the architectural work requires a new PRD or PRD update, follow PRD-STD-001
    python .claude/skills/lead-architect/scripts/validate_prd.py <path-to-prd.md>
    ```
 
+4b. **Schema Invariant Check** (CRITICAL) - Before finalizing PRD:
+   - Re-read SRM "Schema Invariants" table for affected services
+   - Quote SRM schema invariants in working notes
+   - Verify no NOT NULL columns being removed without SRM amendment
+   - Verify no immutable columns being modified
+   - Check SRM "Contracts" subsections (Outbox, CQRS, Triggers, Events)
+   - Cross-check `types/database.types.ts` to confirm current reality
+
+   **If conflict found**: STOP and escalate. PRD cannot override SRM without explicit SRM amendment.
+
 5. **Link Architecture References** - Ensure PRD Related Documents includes:
    - Vision / Strategy: `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
    - Architecture / SRM: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
@@ -209,6 +219,11 @@ When the architectural work requires a new PRD or PRD update, follow PRD-STD-001
 - ❌ Manual traceability matrices (keep separate or generate)
 - ❌ Vague goals ("improve", "better") - make observable
 - ❌ Coverage percentages in DoD (belongs in QA standards)
+- ❌ Schema changes that contradict SRM invariants (must amend SRM first)
+- ❌ Removing columns without checking SRM invariants for NOT NULL/immutable
+- ❌ Missing SRM contract sections (Outbox, CQRS, policy_snapshot, triggers)
+- ❌ Incomplete entity RLS coverage (e.g., `rating_slip` without `rating_slip_pause`)
+- ❌ PRD overriding SRM without explicit SRM amendment request
 
 **PRD ID Convention:** `PRD-XXX-description` (e.g., `PRD-000-casino-foundation`)
 
@@ -566,11 +581,11 @@ Phase 0: Horizontal Infrastructure (GATE-0) ← CURRENT BLOCKER
 Phase 1: Core Services (GATE-1)
 ├── CasinoService (PRD-000) ← Blocks ALL downstream
 ├── PlayerService (PRD-003)
-└── VisitService (PRD-003)
+└── VisitService (PRD-003) ← Enhanced with 3 archetypes (EXEC-VSE-001)
 
 Phase 2: Session Management + UI (GATE-2)
-├── TableContextService (PRD-002) ← PENDING (removed, rebuild when needed)
-├── RatingSlipService (PRD-002) ← PENDING (removed, rebuild when needed)
+├── TableContextService (PRD-006) ← REMOVED (rebuild when needed)
+├── RatingSlipService (PRD-002) ← REMOVED (rebuild when needed)
 └── PitDashboard (UI)
 
 Phase 3: Rewards & Compliance (GATE-3)

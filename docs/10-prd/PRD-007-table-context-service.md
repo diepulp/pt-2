@@ -3,8 +3,9 @@
 ## 1. Overview
 
 - **Owner:** Lead Architect
-- **Status:** Draft
+- **Status:** Approved
 - **Created:** 2025-12-03
+- **Approved:** 2025-12-07
 - **Summary:** Implement TableContextService to manage gaming table lifecycle and chip custody operations. This service enables pit bosses to activate/deactivate tables, track dealer rotations, and maintain chip inventory through fills, credits, and drop events. TableContextService is a GATE-2 blocker required by Pit Dashboard (PRD-006) and provides operational telemetry for compliance reporting.
 
 ## 2. Problem & Goals

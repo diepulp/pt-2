@@ -1091,7 +1091,7 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
-          player_id: string
+          player_id: string //Deprecated, needs to be dropped in PRD-002, derived from visit
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string

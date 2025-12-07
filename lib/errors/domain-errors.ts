@@ -85,7 +85,8 @@ export type RatingSlipErrorCode =
   | "RATING_SLIP_ALREADY_CLOSED"
   | "RATING_SLIP_INVALID_STATE"
   | "RATING_SLIP_MISSING_REQUIRED_DATA"
-  | "RATING_SLIP_CONCURRENT_UPDATE";
+  | "RATING_SLIP_CONCURRENT_UPDATE"
+  | "RATING_SLIP_DUPLICATE";
 
 export const RATING_SLIP_ERROR_MESSAGES: Record<RatingSlipErrorCode, string> = {
   RATING_SLIP_NOT_FOUND: "Rating slip not found",
@@ -97,6 +98,8 @@ export const RATING_SLIP_ERROR_MESSAGES: Record<RatingSlipErrorCode, string> = {
   RATING_SLIP_MISSING_REQUIRED_DATA:
     "Rating slip is missing required telemetry data",
   RATING_SLIP_CONCURRENT_UPDATE: "Rating slip was modified by another process",
+  RATING_SLIP_DUPLICATE:
+    "An open rating slip already exists for this player at this table",
 };
 
 // ============================================================================
@@ -150,12 +153,18 @@ export const MTL_ERROR_MESSAGES: Record<MTLErrorCode, string> = {
 export type TableContextErrorCode =
   | "TABLE_NOT_FOUND"
   | "TABLE_NOT_ACTIVE"
+  | "TABLE_NOT_INACTIVE"
   | "TABLE_ALREADY_ACTIVE"
+  | "TABLE_ALREADY_CLOSED"
+  | "TABLE_HAS_OPEN_SLIPS"
   | "TABLE_OCCUPIED"
   | "TABLE_DEALER_CONFLICT"
   | "TABLE_SETTINGS_INVALID"
   | "TABLE_FILL_REJECTED"
-  | "TABLE_CREDIT_REJECTED";
+  | "TABLE_CREDIT_REJECTED"
+  | "FILL_DUPLICATE_REQUEST"
+  | "CREDIT_DUPLICATE_REQUEST"
+  | "DEALER_ROTATION_NOT_FOUND";
 
 export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   TableContextErrorCode,
@@ -163,12 +172,18 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
 > = {
   TABLE_NOT_FOUND: "Gaming table not found",
   TABLE_NOT_ACTIVE: "Gaming table is not active",
+  TABLE_NOT_INACTIVE: "Cannot activate table that is not inactive",
   TABLE_ALREADY_ACTIVE: "Gaming table is already active",
+  TABLE_ALREADY_CLOSED: "Gaming table is already closed (terminal state)",
+  TABLE_HAS_OPEN_SLIPS: "Cannot deactivate table with open rating slips",
   TABLE_OCCUPIED: "Gaming table is currently occupied",
   TABLE_DEALER_CONFLICT: "Dealer assignment conflict",
   TABLE_SETTINGS_INVALID: "Table settings are invalid",
   TABLE_FILL_REJECTED: "Table fill request rejected",
   TABLE_CREDIT_REJECTED: "Table credit request rejected",
+  FILL_DUPLICATE_REQUEST: "Fill request with this ID already processed",
+  CREDIT_DUPLICATE_REQUEST: "Credit request with this ID already processed",
+  DEALER_ROTATION_NOT_FOUND: "No active dealer rotation found for this table",
 };
 
 // ============================================================================

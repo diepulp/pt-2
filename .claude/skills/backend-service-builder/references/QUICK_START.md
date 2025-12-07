@@ -41,7 +41,7 @@ Before implementing, verify which tables your service owns (see `bounded-context
 | player | player, player_casino |
 | visit | visit |
 | loyalty | player_loyalty, loyalty_ledger, loyalty_outbox |
-| rating-slip | rating_slip |
+| rating-slip | rating_slip, rating_slip_pause |
 | finance | player_financial_transaction, finance_outbox |
 | mtl | mtl_entry, mtl_audit_note |
 | table-context | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event |

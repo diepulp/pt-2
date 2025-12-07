@@ -1,6 +1,6 @@
 # Service Implementation Patterns
 
-**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2 §308-350)
+**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v3.0.0 §308-356)
 **Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` (OE-01)
 
 ---
@@ -222,6 +222,7 @@ export function toPlayerDTOOrNull(row: PlayerSelectedRow | null): PlayerDTO | nu
 
 **Use When**: Mixed complexity (some domain logic, some CRUD)
 **Example**: `rating-slip/` (state machine + CRUD)
+**Owns Tables**: `rating_slip`, `rating_slip_pause`
 
 ### Current Implementation
 
@@ -236,6 +237,10 @@ services/rating-slip/
 Use appropriate pattern per feature:
 - Contract-first DTOs for complex logic
 - Canonical DTOs for CRUD operations
+
+### Key Invariant (SRM v4.0.0)
+
+RatingSlip does NOT have its own `player_id` column. Player identity is derived from `visit.player_id` via the `visit_id` FK. See ADR-014 for visit archetypes.
 
 ---
 

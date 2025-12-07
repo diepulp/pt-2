@@ -34,6 +34,11 @@ class SkillContext:
     # Session Checkpoint Methods (for context continuity across /clear)
     # -------------------------------------------------------------------------
 
+    def _get_session_namespace(self) -> str:
+        """Get the session namespace for checkpoints, with TTL support."""
+        session_ns = self.memori.get_session_namespace()
+        return session_ns if session_ns else self.memori.user_id
+
     def save_checkpoint(
         self,
         current_task: str,
@@ -53,6 +58,8 @@ class SkillContext:
         This creates a high-importance memory that captures the current work state,
         allowing the session to resume after /clear.
 
+        Checkpoints are stored in the session namespace with 7-day TTL.
+
         Args:
             current_task: What you're currently working on
             reason: Why the checkpoint is being saved
@@ -71,6 +78,14 @@ class SkillContext:
         if not self.memori.enabled:
             return False
 
+        import psycopg2
+        import json
+        from datetime import timedelta
+
+        session_ns = self._get_session_namespace()
+        ttl_days = self.memori.get_session_ttl_days()
+        expires_at = datetime.now() + timedelta(days=ttl_days)
+
         content = f"Session checkpoint ({reason}): {current_task}"
 
         metadata = {
@@ -79,6 +94,7 @@ class SkillContext:
             "current_task": current_task,
             "timestamp": datetime.now().isoformat(),
             "skill_namespace": self.skill_namespace,
+            "ttl_days": ttl_days,
         }
 
         if decisions_made:
@@ -99,24 +115,36 @@ class SkillContext:
             metadata["notes"] = notes
 
         tags = ["session-checkpoint", reason]
+        metadata["tags"] = tags
 
-        # High importance to ensure retrieval
-        result = self.memori.record_memory(
-            content=content,
-            category="context",
-            metadata=metadata,
-            importance=0.95,
-            tags=tags
-        )
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
 
-        if result:
-            logger.info(f"✅ Session checkpoint saved: {current_task[:50]}...")
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata, expires_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session_ns, content, "context", json.dumps(metadata), expires_at))
 
-        return result is not None
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info(f"✅ Session checkpoint saved to {session_ns}: {current_task[:50]}...")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint: {e}")
+            return False
 
     def load_latest_checkpoint(self) -> Optional[Dict[str, Any]]:
         """
         Load the most recent session checkpoint.
+
+        Searches in session namespace first, falls back to main namespace for
+        backwards compatibility with pre-migration checkpoints.
 
         Returns:
             Checkpoint metadata dict or None if no checkpoint found
@@ -133,15 +161,24 @@ class SkillContext:
             cur = conn.cursor()
             cur.execute("SET search_path TO memori, public")
 
-            # Get the most recent checkpoint
+            session_ns = self._get_session_namespace()
+
+            # Search in session namespace first, then fall back to main namespace
+            namespaces_to_search = [session_ns, self.memori.user_id]
+            # Also search any session namespace pattern for this skill
+            skill_short = self.memori.SESSION_CHECKPOINT_SKILLS.get(self.memori.chatmode)
+            if skill_short:
+                namespaces_to_search.append(f"session_{skill_short}_%")
+
             cur.execute("""
-                SELECT content, metadata, created_at
+                SELECT content, metadata, created_at, user_id
                 FROM memori.memories
-                WHERE user_id = %s
+                WHERE (user_id = ANY(%s) OR user_id LIKE %s)
                   AND metadata->>'type' = 'session_checkpoint'
+                  AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY created_at DESC
                 LIMIT 1
-            """, (self.memori.user_id,))
+            """, (namespaces_to_search[:2], namespaces_to_search[2] if len(namespaces_to_search) > 2 else ''))
 
             row = cur.fetchone()
             cur.close()
@@ -157,6 +194,7 @@ class SkillContext:
 
             metadata["content"] = row[0]
             metadata["saved_at"] = row[2].isoformat() if row[2] else None
+            metadata["source_namespace"] = row[3]
 
             logger.info(f"✅ Loaded checkpoint from {metadata.get('saved_at', 'unknown')}")
             return metadata
@@ -236,7 +274,7 @@ class SkillContext:
         return "\n".join(lines)
 
     def get_checkpoint_count(self) -> int:
-        """Get the number of checkpoints saved for this skill namespace."""
+        """Get the number of active (non-expired) checkpoints for this skill."""
         if not self.memori.enabled:
             return 0
 
@@ -248,12 +286,17 @@ class SkillContext:
             cur = conn.cursor()
             cur.execute("SET search_path TO memori, public")
 
+            session_ns = self._get_session_namespace()
+            skill_short = self.memori.SESSION_CHECKPOINT_SKILLS.get(self.memori.chatmode)
+            pattern = f"session_{skill_short}_%" if skill_short else ""
+
             cur.execute("""
                 SELECT COUNT(*)
                 FROM memori.memories
-                WHERE user_id = %s
+                WHERE (user_id = %s OR user_id LIKE %s)
                   AND metadata->>'type' = 'session_checkpoint'
-            """, (self.memori.user_id,))
+                  AND (expires_at IS NULL OR expires_at > NOW())
+            """, (session_ns, pattern))
 
             count = cur.fetchone()[0]
             cur.close()
@@ -562,6 +605,10 @@ class ArchitectContext:
     documentation regressions, pattern selections, and compliance designs.
 
     Also provides session checkpoint/restore for context continuity across /clear.
+
+    Namespace Strategy:
+    - Permanent knowledge (decisions, patterns, regressions) → arch_decisions
+    - Session checkpoints (ephemeral, 7-day TTL) → session_lead_architect_{YYYY_MM}
     """
 
     def __init__(self, memori_client: MemoriClient):
@@ -573,6 +620,11 @@ class ArchitectContext:
         """
         self.memori = memori_client
         self.skill_namespace = memori_client.chatmode
+
+    def _get_session_namespace(self) -> str:
+        """Get the session namespace for checkpoints, with TTL support."""
+        session_ns = self.memori.get_session_namespace()
+        return session_ns if session_ns else self.memori.user_id
 
     # -------------------------------------------------------------------------
     # Session Checkpoint Methods (for context continuity across /clear)
@@ -598,6 +650,8 @@ class ArchitectContext:
         This creates a high-importance memory that captures the current work state,
         allowing the session to resume after /clear.
 
+        Checkpoints are stored in the session namespace with 7-day TTL.
+
         Args:
             current_task: What you're currently working on
             reason: Why the checkpoint is being saved
@@ -617,6 +671,14 @@ class ArchitectContext:
         if not self.memori.enabled:
             return False
 
+        import psycopg2
+        import json
+        from datetime import timedelta
+
+        session_ns = self._get_session_namespace()
+        ttl_days = self.memori.get_session_ttl_days()
+        expires_at = datetime.now() + timedelta(days=ttl_days)
+
         content = f"Session checkpoint ({reason}): {current_task}"
 
         metadata = {
@@ -624,6 +686,8 @@ class ArchitectContext:
             "checkpoint_reason": reason,
             "current_task": current_task,
             "timestamp": datetime.now().isoformat(),
+            "skill_namespace": self.skill_namespace,
+            "ttl_days": ttl_days,
         }
 
         if decisions_made:
@@ -646,24 +710,36 @@ class ArchitectContext:
             metadata["notes"] = notes
 
         tags = ["session-checkpoint", reason]
+        metadata["tags"] = tags
 
-        # High importance to ensure retrieval
-        result = self.memori.record_memory(
-            content=content,
-            category="context",
-            metadata=metadata,
-            importance=0.95,
-            tags=tags
-        )
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
 
-        if result:
-            logger.info(f"✅ Session checkpoint saved: {current_task[:50]}...")
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata, expires_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session_ns, content, "context", json.dumps(metadata), expires_at))
 
-        return result is not None
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info(f"✅ Session checkpoint saved to {session_ns}: {current_task[:50]}...")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint: {e}")
+            return False
 
     def load_latest_checkpoint(self) -> Optional[Dict[str, Any]]:
         """
         Load the most recent session checkpoint.
+
+        Searches in session namespace first, falls back to main namespace for
+        backwards compatibility with pre-migration checkpoints.
 
         Returns:
             Checkpoint metadata dict or None if no checkpoint found
@@ -680,15 +756,19 @@ class ArchitectContext:
             cur = conn.cursor()
             cur.execute("SET search_path TO memori, public")
 
-            # Get the most recent checkpoint
+            session_ns = self._get_session_namespace()
+
+            # Search in session namespace first, then fall back to arch_decisions
+            # Also include pattern matching for any month's session namespace
             cur.execute("""
-                SELECT content, metadata, created_at
+                SELECT content, metadata, created_at, user_id
                 FROM memori.memories
-                WHERE user_id = %s
+                WHERE (user_id = %s OR user_id = %s OR user_id LIKE 'session_lead_architect_%%')
                   AND metadata->>'type' = 'session_checkpoint'
+                  AND (expires_at IS NULL OR expires_at > NOW())
                 ORDER BY created_at DESC
                 LIMIT 1
-            """, (self.memori.user_id,))
+            """, (session_ns, self.memori.user_id))
 
             row = cur.fetchone()
             cur.close()
@@ -704,6 +784,7 @@ class ArchitectContext:
 
             metadata["content"] = row[0]
             metadata["saved_at"] = row[2].isoformat() if row[2] else None
+            metadata["source_namespace"] = row[3]
 
             logger.info(f"✅ Loaded checkpoint from {metadata.get('saved_at', 'unknown')}")
             return metadata
@@ -785,7 +866,7 @@ class ArchitectContext:
         return "\n".join(lines)
 
     def get_checkpoint_count(self) -> int:
-        """Get the number of checkpoints saved for this skill namespace."""
+        """Get the number of active (non-expired) checkpoints for lead-architect."""
         if not self.memori.enabled:
             return 0
 
@@ -797,12 +878,16 @@ class ArchitectContext:
             cur = conn.cursor()
             cur.execute("SET search_path TO memori, public")
 
+            session_ns = self._get_session_namespace()
+
+            # Search in session namespace and any lead_architect session pattern
             cur.execute("""
                 SELECT COUNT(*)
                 FROM memori.memories
-                WHERE user_id = %s
+                WHERE (user_id = %s OR user_id LIKE 'session_lead_architect_%%')
                   AND metadata->>'type' = 'session_checkpoint'
-            """, (self.memori.user_id,))
+                  AND (expires_at IS NULL OR expires_at > NOW())
+            """, (session_ns,))
 
             count = cur.fetchone()[0]
             cur.close()

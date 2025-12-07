@@ -101,7 +101,7 @@ Start with existing documentation:
    - **SRM** -> Service boundaries and ownership
    - **SLAD** -> Patterns (A/B/C), transport, RLS
 
-**Key principle**: Reference and extend what exists rather than designing from scratch.
+**Key principle**: Reference and extend what exists rather than designing from scratch. Surface incongruencies and provide plausible avenues to resolve inconcistencies and regressions found in the canonical documentation
 
 ---
 
@@ -113,13 +113,18 @@ Start with existing documentation:
 |--------|-----------|---------|--------|
 | casino | `casino`, `company`, `staff`, `game_settings` | B (Canonical) | ✅ Deployed |
 | player | `player`, `player_casino` | B (Canonical) | ✅ Deployed |
-| visit | `visit` | B (Canonical) | ✅ Deployed |
+| visit | `visit` (3 archetypes via `visit_kind`) | B (Canonical) | ✅ Deployed + EXEC-VSE-001 |
 | loyalty | `player_loyalty`, `loyalty_ledger` | A (Contract-First) | Planned |
-| rating-slip | `rating_slip` | C (Hybrid) | REMOVED (rebuild per PRD-002) |
+| rating-slip | `rating_slip` (`visit_id`/`table_id` NOT NULL) | C (Hybrid) | REMOVED (rebuild per PRD-002) |
 | finance | `player_financial_transaction` | A (Contract-First) | Planned |
 | mtl | `mtl_entry`, `mtl_audit_note` | A (Contract-First) | Planned |
 | table-context | `gaming_table`, `dealer_rotation` | C (Hybrid) | REMOVED (rebuild per PRD-006) |
 | floor-layout | `floor_layout`, `floor_pit` | B (Canonical) | ✅ Deployed |
+
+> **EXEC-VSE-001 Note**: VisitService supports 3 archetypes via `visit_kind` enum:
+> - `reward_identified`: Player exists, no gaming, redemptions only
+> - `gaming_identified_rated`: Player exists, gaming, loyalty eligible
+> - `gaming_ghost_unrated`: No player (`player_id` NULL), compliance only
 
 ### Pattern Selection
 

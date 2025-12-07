@@ -45,7 +45,7 @@ Use `docs/SDLC_DOCS_TAXONOMY.md` section 7 cheatsheet to locate relevant docs:
 |------|----------|
 | Service boundaries | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
 | RLS policies | `docs/30-security/SEC-001-rls-policy-matrix.md` |
-| Error codes | SRM § Error Taxonomy section |
+| Error codes | `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` |
 | API contracts | `docs/25-api-data/` |
 | Past decisions | `docs/80-adrs/` |
 | Temporal patterns | `docs/20-architecture/temporal-patterns/` |
@@ -93,7 +93,7 @@ date +"%Y%m%d%H%M%S"
 
 ## Domain Error Handling
 
-All services must use domain errors per SRM § Error Taxonomy:
+All services must use domain errors per `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`:
 
 ```typescript
 import { DomainError } from "@/lib/errors/domain-errors";
@@ -261,7 +261,7 @@ When invoked as part of an EXECUTION-SPEC workstream:
 
 ### DTO Pattern Violations
 - ❌ **Pattern B** (Player, Visit, Casino): Manual `interface` DTOs
-- ❌ **Pattern A** (Loyalty, Finance, MTL): Missing `mappers.ts`
+- ❌ **Pattern A** (Loyalty, Finance, MTL, TableContext): Missing `mappers.ts`
 - ❌ Type redefinitions in `types/` folder (belong in `services/{domain}/dtos.ts`)
 
 ### Quick Pre-Commit Check

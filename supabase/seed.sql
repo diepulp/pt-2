@@ -206,10 +206,10 @@ INSERT INTO visit (id, player_id, casino_id, started_at, ended_at) VALUES
 -- --------------------------------
 
 -- Player 1: Currently playing blackjack (open slip)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+-- Note: player_id derived from visit.player_id per SRM v4.0.0
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000001',
-    'a1000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000001',
     '6a000000-0000-0000-0000-000000000001',
@@ -222,10 +222,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
   );
 
 -- Player 3: Currently playing poker (open slip)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000002',
-    'a1000000-0000-0000-0000-000000000003',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000003',
     '6a000000-0000-0000-0000-000000000002',
@@ -238,10 +237,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
   );
 
 -- Player 4: Just sat down at roulette (open slip, no average_bet yet)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000003',
-    'a1000000-0000-0000-0000-000000000004',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000004',
     '6a000000-0000-0000-0000-000000000003',
@@ -258,10 +256,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
 -- --------------------------------
 
 -- Player 2: On break from blackjack (paused slip)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000004',
-    'a1000000-0000-0000-0000-000000000002',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000002',
     '6a000000-0000-0000-0000-000000000001',
@@ -289,10 +286,9 @@ INSERT INTO rating_slip_pause (id, rating_slip_id, casino_id, started_at, ended_
 -- --------------------------------
 
 -- Player 1: Yesterday's blackjack session (closed)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000005',
-    'a1000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000005',
     '6a000000-0000-0000-0000-000000000001',
@@ -305,10 +301,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
   );
 
 -- Player 5: Yesterday's long session with pauses (closed)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000006',
-    'a1000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000006',
     '6a000000-0000-0000-0000-000000000001',
@@ -340,10 +335,9 @@ INSERT INTO rating_slip_pause (id, rating_slip_id, casino_id, started_at, ended_
   );
 
 -- Player 6: Yesterday's roulette session (closed)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000007',
-    'a1000000-0000-0000-0000-000000000006',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000007',
     '6a000000-0000-0000-0000-000000000003',
@@ -356,10 +350,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
   );
 
 -- Player 2: Last week's session at Casino 1 (closed)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000008',
-    'a1000000-0000-0000-0000-000000000002',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000008',
     '6a000000-0000-0000-0000-000000000002',
@@ -372,10 +365,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
   );
 
 -- Player 5: Historical high-roller session (closed)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000009',
-    'a1000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000001',
     'b1000000-0000-0000-0000-000000000009',
     '6a000000-0000-0000-0000-000000000001',
@@ -392,10 +384,9 @@ INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_numb
 -- --------------------------------
 
 -- Player 5: Currently playing at Casino 2 (open slip)
-INSERT INTO rating_slip (id, player_id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000010',
-    'a1000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000002',
     'b1000000-0000-0000-0000-000000000010',
     '6a000000-0000-0000-0000-000000000006',

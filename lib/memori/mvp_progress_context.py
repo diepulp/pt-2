@@ -104,7 +104,7 @@ class MVPProgressContext:
         "PlayerService": "PRD-003",
         "VisitService": "PRD-003",
         # Phase 2: Session Management + UI
-        "TableContextService": "PRD-002",
+        "TableContextService": "PRD-007",
         "RatingSlipService": "PRD-002",
         "PitDashboard": "ARCH-MVP-ROADMAP",
         # Phase 3: Rewards & Compliance

@@ -9,15 +9,22 @@ args:
 
 # Query Lead Architect Memory
 
-Query the Memori PostgreSQL database for architectural knowledge.
+Query the Memori PostgreSQL database for architectural knowledge using the consolidated 4-tier namespace hierarchy.
+
+## Namespace Hierarchy (4-Tier)
+
+| Tier | Namespace | Purpose | TTL |
+|------|-----------|---------|-----|
+| 1 | `pt2_project` | Project standards, domain knowledge | Permanent |
+| 2 | `arch_decisions` | Architectural decisions, patterns | Permanent |
+| 3 | `mvp_progress` | MVP implementation tracking | Operational |
+| 4 | `session_{skill}_{YYYY_MM}` | Session checkpoints | 7-day TTL |
 
 ## Database Configuration
 
 - **Container:** `supabase_db_pt-2`
 - **Schema:** `memori`
 - **Table:** `memori.memories`
-- **Architect namespace:** `skill_lead_architect` (user_id field)
-- **MVP Progress namespace:** `skill_mvp_progress` (user_id field)
 
 ## Instructions for Agent
 
@@ -50,9 +57,10 @@ SELECT
     metadata->>'importance' as importance,
     created_at
 FROM memori.memories
-WHERE category IN ('skills', 'rules', 'preferences')
-   OR metadata->>'type' LIKE '%decision%'
-   OR metadata->>'type' LIKE '%architectural%'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (category IN ('skills', 'rules', 'preferences')
+       OR metadata->>'type' LIKE '%decision%'
+       OR metadata->>'type' LIKE '%architectural%')
 ORDER BY created_at DESC
 LIMIT 20;
 "
@@ -68,8 +76,9 @@ SELECT
     COUNT(*) as usage_count,
     AVG((metadata->>'importance')::float) as avg_importance
 FROM memori.memories
-WHERE metadata->>'pattern' IS NOT NULL
-   OR metadata->>'pattern_used' IS NOT NULL
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'pattern' IS NOT NULL
+       OR metadata->>'pattern_used' IS NOT NULL)
 GROUP BY metadata->>'pattern', metadata->>'pattern_used'
 ORDER BY usage_count DESC;
 "
@@ -89,8 +98,9 @@ SELECT
     metadata->>'relevant_docs' as relevant_docs,
     created_at
 FROM memori.memories
-WHERE content ILIKE '%pattern%'
-   OR metadata::text ILIKE '%pattern%'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (content ILIKE '%pattern%'
+       OR metadata::text ILIKE '%pattern%')
 ORDER BY created_at DESC
 LIMIT 15;
 "
@@ -105,7 +115,8 @@ SELECT
     metadata->>'type' as preference_type,
     metadata->>'importance' as importance
 FROM memori.memories
-WHERE category = 'preferences'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND category = 'preferences'
 ORDER BY (metadata->>'importance')::float DESC NULLS LAST;
 "
 ```
@@ -126,11 +137,12 @@ SELECT
     metadata->>'lessons_learned' as lessons,
     created_at
 FROM memori.memories
-WHERE metadata->>'type' = 'documentation_regression'
-   OR metadata->>'regression_type' IS NOT NULL
-   OR content ILIKE '%regression%'
-   OR content ILIKE '%drift%'
-   OR content ILIKE '%inconsisten%'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'type' = 'documentation_regression'
+       OR metadata->>'regression_type' IS NOT NULL
+       OR content ILIKE '%regression%'
+       OR content ILIKE '%drift%'
+       OR content ILIKE '%inconsisten%')
 ORDER BY created_at DESC
 LIMIT 20;
 "
@@ -153,10 +165,11 @@ SELECT
     metadata->>'priority' as priority,
     created_at
 FROM memori.memories
-WHERE metadata->>'type' = 'tech_debt'
-   OR metadata->>'debt_category' IS NOT NULL
-   OR content ILIKE '%technical debt%'
-   OR content ILIKE '%tech debt%'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'type' = 'tech_debt'
+       OR metadata->>'debt_category' IS NOT NULL
+       OR content ILIKE '%technical debt%'
+       OR content ILIKE '%tech debt%')
 ORDER BY
     CASE metadata->>'severity'
         WHEN 'critical' THEN 1
@@ -186,12 +199,13 @@ SELECT
     metadata->>'audit_log_location' as audit_log,
     created_at
 FROM memori.memories
-WHERE metadata->>'type' = 'compliance_design'
-   OR metadata->>'compliance_requirements' IS NOT NULL
-   OR content ILIKE '%compliance%'
-   OR content ILIKE '%RLS%'
-   OR content ILIKE '%RBAC%'
-   OR content ILIKE '%security%'
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'type' = 'compliance_design'
+       OR metadata->>'compliance_requirements' IS NOT NULL
+       OR content ILIKE '%compliance%'
+       OR content ILIKE '%RLS%'
+       OR content ILIKE '%RBAC%'
+       OR content ILIKE '%security%')
 ORDER BY created_at DESC
 LIMIT 15;
 "
@@ -199,7 +213,7 @@ LIMIT 15;
 
 ---
 
-## Query: `mvp` (NEW)
+## Query: `mvp`
 
 ### MVP Implementation Progress
 
@@ -213,7 +227,7 @@ SELECT
     metadata->>'tests_exist' as tests,
     created_at
 FROM memori.memories
-WHERE user_id = 'skill_mvp_progress'
+WHERE user_id = 'mvp_progress'
   AND metadata->>'type' = 'service_status'
 ORDER BY created_at DESC
 LIMIT 20;
@@ -232,7 +246,7 @@ SELECT
     metadata->>'services_pending' as pending,
     created_at
 FROM memori.memories
-WHERE user_id = 'skill_mvp_progress'
+WHERE user_id = 'mvp_progress'
   AND metadata->>'type' = 'milestone_transition'
 ORDER BY created_at DESC
 LIMIT 10;
@@ -250,24 +264,27 @@ SELECT
     metadata->>'services_defined' as services,
     created_at
 FROM memori.memories
-WHERE user_id = 'skill_mvp_progress'
+WHERE user_id = 'mvp_progress'
   AND metadata->>'type' = 'prd_status'
 ORDER BY created_at DESC;
 "
 ```
 
-### Lead Architect Checkpoints
+### Lead Architect Session Checkpoints (with TTL)
 
 ```bash
 docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
 SELECT
+    user_id as namespace,
     LEFT(metadata->>'current_task', 60) as task,
     metadata->>'checkpoint_reason' as reason,
-    metadata->>'next_steps' as next_steps,
+    metadata->>'ttl_days' as ttl,
+    expires_at,
     created_at
 FROM memori.memories
-WHERE user_id = 'skill_lead_architect'
+WHERE (user_id LIKE 'session_lead_architect_%' OR user_id = 'arch_decisions')
   AND metadata->>'type' = 'session_checkpoint'
+  AND (expires_at IS NULL OR expires_at > NOW())
 ORDER BY created_at DESC
 LIMIT 5;
 "
@@ -277,18 +294,35 @@ LIMIT 5;
 
 ## Summary Queries (Always Run)
 
-### Memory Distribution by Namespace
+### Memory Distribution by Namespace (4-Tier View)
 
 ```bash
 docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
 SELECT
+    CASE
+        WHEN user_id = 'pt2_project' THEN 'Tier 1: pt2_project'
+        WHEN user_id = 'arch_decisions' THEN 'Tier 2: arch_decisions'
+        WHEN user_id = 'mvp_progress' THEN 'Tier 3: mvp_progress'
+        WHEN user_id LIKE 'session_%' THEN 'Tier 4: session_* (ephemeral)'
+        ELSE 'Legacy: ' || user_id
+    END as tier,
     user_id as namespace,
     COUNT(*) as memory_count,
     COUNT(DISTINCT category) as categories,
-    MAX(created_at) as last_activity
+    MAX(created_at) as last_activity,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at > NOW()) as with_ttl,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW()) as expired
 FROM memori.memories
 GROUP BY user_id
-ORDER BY memory_count DESC;
+ORDER BY
+    CASE
+        WHEN user_id = 'pt2_project' THEN 1
+        WHEN user_id = 'arch_decisions' THEN 2
+        WHEN user_id = 'mvp_progress' THEN 3
+        WHEN user_id LIKE 'session_%' THEN 4
+        ELSE 5
+    END,
+    memory_count DESC;
 "
 ```
 
@@ -306,11 +340,16 @@ ORDER BY count DESC;
 "
 ```
 
-### Total Memory Count
+### Total Memory Count with TTL Summary
 
 ```bash
 docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
-SELECT COUNT(*) as total_memories FROM memori.memories;
+SELECT
+    COUNT(*) as total_memories,
+    COUNT(*) FILTER (WHERE expires_at IS NULL) as permanent,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at > NOW()) as active_ttl,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW()) as expired
+FROM memori.memories;
 "
 ```
 
@@ -318,18 +357,27 @@ SELECT COUNT(*) as total_memories FROM memori.memories;
 
 ## Domain-Specific Queries
 
-### By Service Domain
+### By Service Domain (with tags)
 
 ```bash
 docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
 SELECT
-    COALESCE(metadata->>'service', metadata->>'domain', 'general') as domain,
+    COALESCE(
+        metadata->>'service',
+        metadata->>'domain',
+        (SELECT tag FROM jsonb_array_elements_text(metadata->'tags') tag WHERE tag LIKE 'domain:%' LIMIT 1),
+        'general'
+    ) as domain,
     COUNT(*) as memory_count,
     STRING_AGG(DISTINCT category, ', ') as categories
 FROM memori.memories
-WHERE metadata->>'service' IS NOT NULL
-   OR metadata->>'domain' IS NOT NULL
-GROUP BY COALESCE(metadata->>'service', metadata->>'domain', 'general')
+WHERE user_id IN ('pt2_project', 'arch_decisions')
+GROUP BY COALESCE(
+    metadata->>'service',
+    metadata->>'domain',
+    (SELECT tag FROM jsonb_array_elements_text(metadata->'tags') tag WHERE tag LIKE 'domain:%' LIMIT 1),
+    'general'
+)
 ORDER BY memory_count DESC;
 "
 ```
@@ -343,10 +391,11 @@ After running queries, compile results into this format:
 ```markdown
 # Lead Architect Memory Analytics
 
-## Summary
-- Total Memories: [count]
-- Namespaces: [list with counts]
-- Categories: [breakdown]
+## Namespace Hierarchy Status
+- Tier 1 (pt2_project): [count] memories - Project standards
+- Tier 2 (arch_decisions): [count] memories - Architecture decisions
+- Tier 3 (mvp_progress): [count] memories - MVP tracking
+- Tier 4 (session_*): [count] active, [count] expired - Session checkpoints
 
 ## MVP Implementation Progress
 - Phase 0 (Horizontal): [status] - TransportLayer, ErrorTaxonomy, ServiceResultPattern, QueryInfra
@@ -357,7 +406,7 @@ After running queries, compile results into this format:
 - Recent Completions: [services completed recently]
 
 ## Lead Architect Checkpoints
-[Recent checkpoints with current task, next steps]
+[Recent checkpoints with current task, next steps, TTL status]
 
 ## Architectural Decisions
 [List decisions with patterns, rationale, outcomes]
@@ -387,39 +436,32 @@ The `memori.memories` table structure:
 | Column | Type | Description |
 |--------|------|-------------|
 | `id` | uuid | Primary key |
-| `user_id` | text | Namespace (e.g., `pt2_architect`, `mtl_agent`) |
+| `user_id` | text | Namespace (tier-based) |
 | `content` | text | Memory content (100-300 chars ideal) |
 | `category` | text | `facts`, `preferences`, `skills`, `rules`, `context` |
 | `metadata` | jsonb | Structured data (type, importance, tags, etc.) |
 | `embedding` | vector | OpenAI ada-002 embedding (1536 dims) |
+| `expires_at` | timestamp | TTL expiration (NULL = permanent) |
 | `created_at` | timestamp | When recorded |
 
-### Common Metadata Fields
+### Namespace Conventions (4-Tier Hierarchy)
 
-```json
-{
-  "type": "architectural_decision | tech_debt | compliance_design | ...",
-  "importance": 0.0-1.0,
-  "pattern": "Pattern A | Pattern B | Pattern C",
-  "domain": "Loyalty | Player | MTL | ...",
-  "service": "service_name",
-  "relevant_docs": ["doc1.md", "doc2.md"],
-  "tags": ["tag1", "tag2"],
-  "lessons_learned": ["lesson1", "lesson2"]
-}
-```
+| Tier | Namespace | Purpose |
+|------|-----------|---------|
+| 1 | `pt2_project` | Project standards, domain knowledge (merged from legacy) |
+| 2 | `arch_decisions` | Architectural decisions, patterns, compliance |
+| 3 | `mvp_progress` | MVP implementation progress tracking |
+| 4 | `session_lead_architect_{YYYY_MM}` | Lead architect session checkpoints (7-day TTL) |
+| 4 | `session_backend_{YYYY_MM}` | Backend service builder checkpoints (7-day TTL) |
+| 4 | `session_api_{YYYY_MM}` | API builder checkpoints (7-day TTL) |
 
-### Namespace Conventions
+### Domain Tags (in pt2_project namespace)
 
-| Namespace | Purpose |
-|-----------|---------|
-| `skill_lead_architect` | Lead architect skill memories, checkpoints |
-| `skill_mvp_progress` | MVP implementation progress tracking |
-| `skill_backend_service_builder` | Backend service builder skill |
-| `skill_frontend_design` | Frontend design skill |
-| `skill_api_builder` | API builder skill |
-| `pt2_architect` | Legacy architecture agent memories |
-| `pt2_agent` | Main agent session context |
+Cross-domain search is enabled via tags:
+- `domain:mtl` - MTL (Marker Tracking Log) domain
+- `domain:player` - Player domain
+- `domain:loyalty` - Loyalty domain
+- `domain:visit` - Visit/session domain
 
 ---
 
@@ -430,7 +472,7 @@ To record architectural decisions, use `lib/memori/client.py`:
 ```python
 from lib.memori import create_memori_client
 
-memori = create_memori_client("architect")  # Maps to pt2_architect
+memori = create_memori_client("skill:lead-architect")  # Maps to arch_decisions
 memori.enable()
 
 memori.record_memory(
@@ -444,7 +486,8 @@ memori.record_memory(
         "alternatives_considered": ["Pattern B", "Pattern C"],
         "success_outcome": "approved"
     },
-    importance=0.9
+    importance=0.9,
+    tags=["architectural-decision", "domain:loyalty", "Pattern-A"]
 )
 ```
 
@@ -467,4 +510,15 @@ docker ps | grep supabase
 ```bash
 # Restart Supabase
 npx supabase stop && npx supabase start
+```
+
+### Check for Expired Checkpoints
+
+```bash
+docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+SELECT user_id, COUNT(*) as expired_count
+FROM memori.memories
+WHERE expires_at IS NOT NULL AND expires_at <= NOW()
+GROUP BY user_id;
+"
 ```

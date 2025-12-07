@@ -34,24 +34,50 @@ class MemoriClient:
     PT-2-specific Memori client wrapper.
 
     Provides chatmode-specific namespaces and workflow-aware memory management.
+
+    Namespace Hierarchy (4-Tier):
+    1. pt2_project      - Project standards + domain knowledge (permanent)
+    2. arch_decisions   - Architectural decisions (permanent)
+    3. mvp_progress     - MVP tracking (operational)
+    4. session_*        - Ephemeral checkpoints (7-day TTL)
     """
 
-    # Chatmode to user_id mapping (from config.yml and PROJECT-INITIATION-STRATEGY.md)
+    # Tier 1: Project-level namespace (standards, domain knowledge)
+    PROJECT_NAMESPACE = "pt2_project"
+
+    # Tier 2: Architecture decisions namespace (permanent)
+    ARCH_NAMESPACE = "arch_decisions"
+
+    # Tier 3: MVP progress namespace (operational)
+    MVP_NAMESPACE = "mvp_progress"
+
+    # Tier 4: Session checkpoints use dynamic naming: session_{skill}_{YYYY_MM}
+    SESSION_TTL_DAYS = 7
+
+    # Chatmode to namespace mapping (consolidated hierarchy)
     CHATMODE_USER_IDS = {
-        "architect": "pt2_architect",
-        "service-engineer": "service_engineer",
-        "documenter": "pt2_documenter",
-        "backend-dev": "pt2_backend",
-        "frontend-dev": "pt2_frontend",
-        "reviewer": "pt2_reviewer",
-        "main": "pt2_agent",
-        # Skill-specific namespaces
-        "skill:backend-service-builder": "skill_backend_service_builder",
-        "skill:frontend-design": "skill_frontend_design",
-        "skill:lead-architect": "skill_lead_architect",
-        "skill:skill-creator": "skill_skill_creator",
-        "skill:api-builder": "skill_api_builder",
-        "skill:mvp-progress": "skill_mvp_progress",
+        # All general chatmodes write to project namespace
+        "architect": "arch_decisions",
+        "service-engineer": "pt2_project",
+        "documenter": "pt2_project",
+        "backend-dev": "pt2_project",
+        "frontend-dev": "pt2_project",
+        "reviewer": "pt2_project",
+        "main": "pt2_project",
+        # Skills write to arch_decisions for permanent knowledge
+        "skill:backend-service-builder": "arch_decisions",
+        "skill:frontend-design": "pt2_project",
+        "skill:lead-architect": "arch_decisions",
+        "skill:skill-creator": "pt2_project",
+        "skill:api-builder": "arch_decisions",
+        "skill:mvp-progress": "mvp_progress",
+    }
+
+    # Skills that support session checkpoints (ephemeral, 7-day TTL)
+    SESSION_CHECKPOINT_SKILLS = {
+        "skill:lead-architect": "lead_architect",
+        "skill:backend-service-builder": "backend",
+        "skill:api-builder": "api",
     }
 
     def __init__(
@@ -72,7 +98,7 @@ class MemoriClient:
             return
 
         self.chatmode = chatmode
-        self.user_id = self.CHATMODE_USER_IDS.get(chatmode, "pt2_agent")
+        self.user_id = self.CHATMODE_USER_IDS.get(chatmode, self.PROJECT_NAMESPACE)
 
         # Load configuration
         if config is None:
@@ -95,8 +121,31 @@ class MemoriClient:
             environment=os.getenv("MEMORI_ENVIRONMENT", "development"),
             conscious_ingest=True,  # Enable conscious mode
             auto_ingest=True,       # Enable auto mode (Combined Mode)
-            namespace=f"pt2_{self.chatmode}"
+            namespace=self.user_id  # Use consolidated namespace
         )
+
+    def get_session_namespace(self) -> Optional[str]:
+        """
+        Get the session checkpoint namespace for this chatmode.
+
+        Session namespaces are ephemeral (7-day TTL) and use format:
+        session_{skill_short_name}_{YYYY_MM}
+
+        Returns:
+            Session namespace string, or None if chatmode doesn't support checkpoints
+        """
+        from datetime import datetime
+
+        skill_short = self.SESSION_CHECKPOINT_SKILLS.get(self.chatmode)
+        if not skill_short:
+            return None
+
+        month_suffix = datetime.now().strftime("%Y_%m")
+        return f"session_{skill_short}_{month_suffix}"
+
+    def get_session_ttl_days(self) -> int:
+        """Get the TTL in days for session checkpoints."""
+        return self.SESSION_TTL_DAYS
 
     def enable(self) -> bool:
         """

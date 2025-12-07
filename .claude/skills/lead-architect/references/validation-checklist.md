@@ -29,6 +29,38 @@ npm run db:types
 git diff types/database.types.ts  # Should show no changes if in sync
 ```
 
+### 2b. SRM Schema Invariant Cross-Validation (CRITICAL)
+**Location**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` → Schema Invariants tables
+
+Before proposing any column ADD/DROP/MODIFY:
+
+- [ ] Re-read SRM "Schema Invariants" table for affected service
+- [ ] Verify proposed change doesn't violate NOT NULL constraints
+- [ ] Verify proposed change doesn't violate "immutable" column designations
+- [ ] Cross-check `types/database.types.ts` to confirm current reality
+- [ ] If removing column, verify no cross-context DTO contracts reference it
+- [ ] If adding column, determine if it should be added to Schema Invariants table
+
+**Key Tables to Check**:
+| Service | Critical Invariants |
+|---------|---------------------|
+| RatingSlipService | `visit_id` NOT NULL, `table_id` NOT NULL, no `player_id` column |
+| VisitService | `player_id` nullable only for ghost visits, CHECK constraint |
+| LoyaltyService | `idempotency_key` UNIQUE (partial), `points_earned` NOT NULL |
+| FinanceService | `gaming_day` trigger-derived (callers MUST omit) |
+
+**Red Flags**:
+- Proposing to DROP a NOT NULL column without SRM amendment
+- Removing columns that are marked "immutable" in SRM
+- Breaking cross-context DTO contracts (check SRM "Cross-Context Consumption" tables)
+- Adding columns without updating SRM invariants
+
+**Schema Decision Protocol**:
+1. State: "Re-reading SRM Schema Invariants for [service_name]"
+2. Quote the relevant invariants from SRM
+3. Verify proposed change is compatible
+4. If conflict exists, escalate—PRD cannot override SRM without explicit SRM amendment
+
 ### 3. ADR Consistency
 **Location**: `docs/80-adrs/`
 
@@ -121,11 +153,46 @@ done
 grep -r "export type.*DTO.*=" services/*/schemas.ts
 ```
 
+### 7. Entity-Level RLS Coverage
+**Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md`
+
+When documenting RLS for a bounded context:
+
+- [ ] List ALL entities in affected bounded context (e.g., `rating_slip`, `rating_slip_pause`)
+- [ ] Verify each entity has RLS entry in SEC-001
+- [ ] Verify each entity's RLS documented in DoD
+- [ ] Check for dependent/child tables that may be missing RLS
+
+**Common Omissions**:
+- Pause/state tables (e.g., `rating_slip_pause`)
+- Outbox tables (e.g., `loyalty_outbox`, `finance_outbox`)
+- Audit/history tables
+
+### 8. SRM Contract Sections Check
+**Location**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` → "Contracts" subsections
+
+When updating PRD for a service with SRM contract sections:
+
+- [ ] Outbox contract referenced (if SRM "Contracts" section mentions outbox)
+- [ ] CQRS read model referenced (if SRM mentions projections)
+- [ ] RPC contracts referenced (e.g., `rpc_issue_mid_session_reward`)
+- [ ] Trigger contracts noted (e.g., `gaming_day` trigger for Finance)
+- [ ] `policy_snapshot` or similar audit columns included in migration plans
+- [ ] Event contracts noted (if service publishes domain events)
+
+**SRM Contract Quick Reference**:
+| Service | Key Contracts |
+|---------|---------------|
+| LoyaltyService | `rpc_issue_mid_session_reward`, `loyalty_outbox`, Visit Kind Filter |
+| FinanceService | `rpc_create_financial_txn`, `trg_fin_gaming_day`, `finance_outbox` |
+| FloorLayoutService | `floor_layout.activated` events |
+| TableContextService | `assert_table_context_casino()` trigger |
+
 ---
 
 ## Post-Architecture Validation
 
-### 5. Cross-Reference Updates
+### 9. Cross-Reference Updates
 - [ ] List all docs affected by change
 - [ ] Update all atomically (all or nothing)
 - [ ] New docs follow conventions (folder, ID, front-matter)
@@ -146,12 +213,21 @@ grep -r "export type.*DTO.*=" services/*/schemas.ts
 - SRM shows non-existent services
 - Anti-patterns in affected domain
 - RLS missing on user-facing tables
-- **DTO Violations**:
-  - Pattern B service missing `dtos.ts` (CI gate will fail)
-  - Manual `interface` in Pattern B service (schema evolution blindness)
-  - `as` casting on RPC responses (type safety bypass)
-  - Direct `Database['...']['Tables']['foreign_table']` access (bounded context violation)
-  - Raw `Row` type exported without field filtering (internal field exposure)
+
+**SRM Invariant Violations (CRITICAL)**:
+- Schema change that contradicts SRM invariants (must amend SRM first)
+- Proposing to remove NOT NULL column without SRM amendment
+- Modifying "immutable" columns without SRM amendment
+- Missing SRM contract sections (Outbox, CQRS, policy_snapshot, triggers)
+- Incomplete entity RLS coverage (e.g., `rating_slip` without `rating_slip_pause`)
+- PRD overriding SRM without explicit SRM amendment request
+
+**DTO Violations**:
+- Pattern B service missing `dtos.ts` (CI gate will fail)
+- Manual `interface` in Pattern B service (schema evolution blindness)
+- `as` casting on RPC responses (type safety bypass)
+- Direct `Database['...']['Tables']['foreign_table']` access (bounded context violation)
+- Raw `Row` type exported without field filtering (internal field exposure)
 
 ---
 

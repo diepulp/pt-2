@@ -210,15 +210,30 @@ Approved JSON blobs (all others require first-class columns):
 | `rating_slip` | `status` | NOT NULL, default 'open' | Lifecycle state |
 | `rating_slip` | `policy_snapshot` | JSON | Reward policy at creation (immutable) |
 | `rating_slip` | `start_time` | NOT NULL, immutable | Session start |
+| `rating_slip_pause` | `rating_slip_id` | NOT NULL, FK | Parent slip reference |
+| `rating_slip_pause` | `casino_id` | NOT NULL, FK | Casino scoping (RLS) |
+| `rating_slip_pause` | `started_at` | NOT NULL, default now() | Pause start timestamp |
+| `rating_slip_pause` | `ended_at` | NULLABLE | NULL = currently paused |
+| `rating_slip_pause` | `created_by` | FK to staff | Actor tracking |
+| `rating_slip_pause` | — | CHECK constraint | `ended_at IS NULL OR ended_at > started_at` |
 
 **Key Invariant**: Player identity derived from `visit.player_id`. RatingSlip does NOT have its own `player_id` column.
 
 ### Lifecycle States
 
-`open` → (`paused`/`resumed` optional) → `closed`
+`open` → (`paused`/`resumed` cycles) → `closed`
 
 - `casino_id`, `visit_id`, `table_id`, `start_time` immutable post-create
 - `end_time` required at close
+
+### Duration Calculation
+
+**Formula**: `duration_seconds = (end_time - start_time) - SUM(pause_intervals)`
+
+Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_close_rating_slip`:
+- Sums all pause intervals from `rating_slip_pause` table
+- Subtracts paused time from total elapsed time
+- Returns active play duration in seconds
 
 ### Does NOT Store
 
@@ -304,6 +319,7 @@ Approved JSON blobs (all others require first-class columns):
 - **Chip custody**: Non-monetary tracking (Finance owns monetary ledgers)
 - **Layout sync**: Listens for `floor_layout.activated` events
 - **Casino validation**: Trigger `assert_table_context_casino()` on settings/rotations
+- **Rating slip guard**: Consumes RatingSlipService `hasOpenSlipsForTable` published query for deactivate checks (bounded-context allowlisted)
 
 ### Does NOT Own
 
@@ -429,6 +445,7 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 | LoyaltyService | VisitService | Visit DTOs, `visit_kind` check |
 | FinanceService | VisitService | `visit_id` FK (optional) |
 | MTLService | FinanceService | Reconciliation via triggers |
+| TableContextService | RatingSlipService | Published query/DTO `hasOpenSlipsForTable` (open-slip guard) |
 | TableContextService | FloorLayoutService | `floor_layout.activated` events |
 
 **Rule**: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs—never by reaching into another service's tables directly.

@@ -248,10 +248,10 @@ type RpcStartSlipReturns = Database['public']['Functions']['rpc_start_rating_sli
 // 2. Create mapper function with explicit input type
 function mapToRatingSlipDTO(data: RpcStartSlipReturns): RatingSlipDTO {
   // Compile-time error if RPC shape changes
+  // NOTE: player_id NOT included - derive from visit.player_id (SRM v4.0.0 §220)
   return {
     id: data.id,
     casino_id: data.casino_id,
-    player_id: data.player_id,
     visit_id: data.visit_id,
     table_id: data.table_id,
     seat_number: data.seat_number,
@@ -269,9 +269,11 @@ export async function startSlip(
   casinoId: string,
   input: StartRatingSlipInput
 ): Promise<RatingSlipDTO> {
+  // NOTE: visit_id contains player identity via visit.player_id
   const { data, error } = await supabase.rpc('rpc_start_rating_slip', {
     p_casino_id: casinoId,
-    p_player_id: input.playerId,
+    p_visit_id: input.visitId,
+    p_table_id: input.tableId,
     // ... typed by RpcStartSlipArgs
   });
 

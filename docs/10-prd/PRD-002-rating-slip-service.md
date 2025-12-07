@@ -3,94 +3,120 @@
 ## 1. Overview
 
 - **Owner:** Lead Architect
-- **Status:** Draft
-- **Created:** 2025-12-03
-- **Supersedes:** PRD-002-table-rating-core.md (archived)
-- **Summary:** Implement RatingSlipService to track player gameplay sessions at gaming tables. Rating slips capture session duration, average bet, and seat position—the foundational telemetry for loyalty accrual and compliance reporting. This PRD covers the service layer only; UI is handled by PRD-006.
+- **Status:** Approved
+- **Created:** 2025-12-07
+- **Summary:** Implement RatingSlipService to manage gameplay telemetry for rated sessions at gaming tables. This service enables pit staff to start, pause, resume, and close rating slips that track player activity (average bet, duration, seat position). RatingSlipService is a GATE-2 blocker required by Pit Dashboard (PRD-006) and provides telemetry data consumed by LoyaltyService for point accrual. The previous implementation was removed (2025-12-02) due to architectural non-compliance; this PRD defines a clean rebuild following Pattern B architecture.
 
 ## 2. Problem & Goals
 
 ### 2.1 Problem
 
-PT-2 needs to track player gameplay sessions with accurate time measurement. Without RatingSlipService:
-- No way to record when players start/stop playing
-- No pause tracking for breaks (inflated session times)
-- No telemetry for downstream loyalty point calculation
-- No audit trail for compliance reporting
+PT-2 needs to track gameplay activity for player rating and loyalty accrual. Without RatingSlipService:
+- No way to capture how long a player is actively playing
+- No record of average bet for theoretical calculations
+- No pause/resume capability for player breaks (meal, restroom)
+- No accurate duration calculation excluding paused time
+- No foundation for mid-session rewards or loyalty accrual
 
-The previous implementation was removed (2025-12-02) due to architectural non-compliance. This PRD defines a clean rebuild following Pattern B architecture.
+The previous implementation was removed (2025-12-02) due to architectural issues:
+- Did not follow Pattern B structure
+- Had `as` type assertions violating type safety
+- Missing proper Row→DTO mappers
+- Tests not in `__tests__/` subdirectory
 
 ### 2.2 Goals
 
-1. **Accurate duration tracking**: Session time calculated server-side, excluding paused intervals
-2. **State machine enforcement**: Slip transitions follow `open` → `paused` ↔ `open` → `closed` (no invalid states)
-3. **Single active slip per player-table**: Database constraint prevents duplicate active slips
-4. **Telemetry capture**: Average bet, seat number, and game settings recorded at slip creation
+1. **Slip lifecycle management**: Start, pause, resume, and close rating slips with state machine enforcement
+2. **Accurate duration tracking**: Calculate active play time excluding paused intervals
+3. **Visit anchoring**: All slips tied to a visit (identified or ghost) per EXEC-VSE-001
+4. **Mid-session reward eligibility**: Provide telemetry for LoyaltyService via `visit_kind` filtering
 5. **Pattern B compliance**: Service follows SLAD §308-350 with selects.ts, mappers.ts, crud.ts
 
 ### 2.3 Non-Goals
 
-- Loyalty point calculation (PRD-004 LoyaltyService)
-- Table open/close operations (separate TableContextService PRD)
-- UI components (PRD-006 Pit Dashboard)
-- Real-time subscriptions (PRD-006 scope)
-- Historical reporting or analytics
+- Reward/points calculation (LoyaltyService scope)
+- Financial transaction recording (PlayerFinancialService scope)
+- Table open/close operations (TableContextService scope per PRD-007)
+- Real-time subscriptions (PRD-006 Pit Dashboard scope)
+- Historical slip analytics/reporting (Post-MVP)
+- Player identity lookup (derived from visit.player_id per SRM invariant)
 
 ## 3. Users & Use Cases
 
 - **Primary users:** Pit Boss, Floor Supervisor (via API/UI)
-- **System consumers:** LoyaltyService, MTLService, Compliance reporting
+- **System consumers:** LoyaltyService, MTLService, Pit Dashboard, TableContextService
 
 **Top Jobs:**
 
-1. As a **Pit Boss**, I need to start a rating slip when a player sits down so that their session time begins accruing.
+1. As a **Pit Boss**, I need to start a rating slip when a player sits down at my table so that their play is tracked for loyalty rewards.
 
-2. As a **Pit Boss**, I need to pause a rating slip when a player takes a break so that break time doesn't count toward their session.
+2. As a **Pit Boss**, I need to pause a rating slip when a player takes a break so that non-play time isn't counted toward their session.
 
-3. As a **Pit Boss**, I need to resume a paused slip when a player returns so that time tracking continues accurately.
+3. As a **Pit Boss**, I need to resume a paused rating slip when the player returns so that their active time tracking continues.
 
-4. As a **Pit Boss**, I need to close a rating slip when a player leaves so that the session is finalized with accurate duration.
+4. As a **Pit Boss**, I need to close a rating slip with an average bet amount when the player leaves so that their session data is finalized for rating.
 
-5. As **LoyaltyService**, I need to read slip telemetry (duration, average bet) so that loyalty points can be calculated correctly.
+5. As a **Floor Supervisor**, I need to view active slips at a table so that I can monitor ongoing sessions and player activity.
+
+6. As the **Pit Dashboard**, I need to query open/paused slips for a table so that I can display active sessions and their elapsed times.
+
+7. As **LoyaltyService**, I need to query slip telemetry for visits with `visit_kind = 'gaming_identified_rated'` so that I can issue mid-session rewards.
+
+8. As **TableContextService**, I need to check if a table has open rating slips so that I can enforce the "no deactivation with open slips" invariant (bounded context compliant query).
 
 ## 4. Scope & Feature List
 
 **P0 (Must-Have)**
-- Start slip: Create new slip with `status=open`, `start_time=now()`
-- Pause slip: Record pause start in `rating_slip_pause` table
-- Resume slip: Record pause end, slip returns to `open`
-- Close slip: Set `end_time`, `status=closed`, calculate final duration
-- Get slip by ID with calculated duration
-- List slips by visit/player/table with filters
-- Prevent duplicate active slips (same player + table)
+- Start rating slip: Create slip tied to visit + table + seat
+- Pause rating slip: Record pause interval, update status to `paused`
+- Resume rating slip: Close pause interval, update status to `open`
+- Close rating slip: Set end_time, calculate active duration, update status to `closed`
+- Get slip by ID with pause history
+- List slips for a table (all statuses)
+- Get active slips for a table (open/paused only)
+- Calculate duration excluding pause intervals (via RPC)
+- Query key factory for React Query hooks
+- **Published query: `hasOpenSlipsForTable()`** - Cross-context query for TableContextService (PRD-007)
 
 **P1 (Should-Have)**
-- Get active slips for a table (dashboard query)
-- Bulk close slips for a table (table closure scenario)
+- List slips for a visit (player session)
+- Update average bet on open slip
+- Bulk close slips for end-of-table operation
+- Get current pause duration (if paused)
+- Slip history/audit trail query
 
-**P2 (Nice-to-Have)**
-- Archive slip (soft delete for retention)
+
 
 ## 5. Requirements
 
 ### 5.1 Functional Requirements
 
-- Slip requires: `player_id`, `visit_id`, `table_id`, `casino_id`, `seat_number`
-- Slip captures `game_settings` snapshot at creation (from table settings)
-- Status transitions enforced:
+- Slip status transitions enforced:
+  - Creation → `open` (only valid initial state)
   - `open` → `paused` (via pause)
   - `paused` → `open` (via resume)
   - `open` → `closed` (via close)
-  - `paused` → `closed` (via close, ends active pause)
-- Duration calculation: `end_time - start_time - SUM(pause_intervals)`
-- Single active slip constraint: `UNIQUE(player_id, table_id) WHERE status IN ('open', 'paused')`
-- **Close requires `average_bet`**: Cannot finalize slip without average bet (loyalty calculation dependency)
+  - `paused` → `closed` (via close, auto-ends active pause)
+  - `closed` is terminal (no transitions out)
+- Pause tracking:
+  - Only one active pause per slip (ended_at IS NULL)
+  - Pausing creates new `rating_slip_pause` record
+  - Resuming sets ended_at on current pause
+  - Closing auto-ends active pause if present
+- Duration calculation:
+  - `duration_seconds = (end_time - start_time) - SUM(pause_intervals)`
+  - Server-authoritative via `rpc_get_rating_slip_duration` and `rpc_close_rating_slip`
+- Unique constraint: Only one open/paused slip per player per table
+- Visit anchoring: `visit_id` is NOT NULL (ghost visits provide anchor per EXEC-VSE-001)
+- Table anchoring: `table_id` is NOT NULL
+- Player identity: Derived from `visit.player_id` (rating_slip has NO player_id column)
+- Loyalty eligibility: LoyaltyService filters by `visit.visit_kind = 'gaming_identified_rated'`
 
 ### 5.2 Non-Functional Requirements
 
 - p95 mutation latency < 300ms
-- Duration calculation accurate to the second
-- All mutations idempotent (idempotency key support)
+- All RPCs use row-level locking to prevent race conditions
+- RLS policies enforce casino scoping via `current_setting('app.casino_id')`
 
 ### 5.3 Architectural Requirements (SLAD §308-350)
 
@@ -104,21 +130,49 @@ services/rating-slip/
 ├── selects.ts                    # Named column projections
 ├── mappers.ts                    # Row→DTO transformers (REQUIRED)
 ├── crud.ts                       # Database operations
+├── queries.ts                    # Published queries for cross-context consumption
 ├── index.ts                      # Service factory
 ├── keys.ts                       # React Query key factories
 ├── http.ts                       # HTTP fetchers
 └── README.md
 ```
 
+**Published Queries (`queries.ts`)** - Cross-Context Consumption:
+
+Per SLAD Bounded Context DTO Access Rules, other services MUST NOT directly query `rating_slip` table. RatingSlipService publishes these queries for cross-context consumption:
+
+```typescript
+// services/rating-slip/queries.ts
+
+/**
+ * Check if a table has any open (unsettled) rating slips.
+ * Published query for cross-context consumption by TableContextService.
+ *
+ * Used by: TableContextService.deactivateTable() to enforce
+ * "no deactivation with open slips" invariant.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param tableId - Gaming table UUID
+ * @param casinoId - Casino UUID (RLS scoping)
+ * @returns true if any open/paused slips exist for this table
+ */
+export async function hasOpenSlipsForTable(
+  supabase: SupabaseClient<Database>,
+  tableId: string,
+  casinoId: string
+): Promise<boolean>;
+```
+
 **Error Handling (ADR-012)**:
 - Service throws `DomainError` on failure
 - Domain error codes:
-  - `RATING_SLIP_NOT_FOUND` (404)
-  - `RATING_SLIP_NOT_OPEN` (409) - operation requires open status
-  - `RATING_SLIP_NOT_PAUSED` (409) - resume requires paused status
-  - `RATING_SLIP_ALREADY_CLOSED` (409) - slip already finalized
-  - `RATING_SLIP_DUPLICATE_ACTIVE` (409) - player already has active slip at table
-  - `RATING_SLIP_MISSING_AVERAGE_BET` (422) - close requires average_bet for loyalty calculation
+  - `RATING_SLIP_NOT_FOUND`
+  - `RATING_SLIP_NOT_OPEN` (cannot pause)
+  - `RATING_SLIP_NOT_PAUSED` (cannot resume)
+  - `RATING_SLIP_INVALID_STATE` (cannot close)
+  - `RATING_SLIP_DUPLICATE` (unique constraint violation)
+  - `VISIT_NOT_OPEN` (visit ended_at IS NOT NULL)
+  - `TABLE_NOT_ACTIVE` (table status != 'active')
 
 **Type Safety**:
 - Zero `as` type assertions
@@ -132,32 +186,65 @@ services/rating-slip/
 **API Flow (no UI in this PRD)**:
 
 ```
-Start Slip:
+Start Rating Slip:
   POST /api/v1/rating-slips
-  Body: { player_id, visit_id, table_id, seat_number, game_settings_id? }
+  Body: { visit_id, table_id, seat_number?, game_settings? }
   → Returns: RatingSlipDTO with status=open
+  → Error 409: RATING_SLIP_DUPLICATE if open slip exists for player at table
+  → Error 400: VISIT_NOT_OPEN if visit ended
+  → Error 400: TABLE_NOT_ACTIVE if table not active
 
-Pause Slip:
-  POST /api/v1/rating-slips/{id}/pause
+Pause Rating Slip:
+  POST /api/v1/rating-slips/{slipId}/pause
   → Returns: RatingSlipDTO with status=paused
+  → Error 409: RATING_SLIP_NOT_OPEN if already paused or closed
 
-Resume Slip:
-  POST /api/v1/rating-slips/{id}/resume
+Resume Rating Slip:
+  POST /api/v1/rating-slips/{slipId}/resume
   → Returns: RatingSlipDTO with status=open
+  → Error 409: RATING_SLIP_NOT_PAUSED if open or closed
 
-Close Slip:
-  POST /api/v1/rating-slips/{id}/close
-  Body: { average_bet }  ← REQUIRED (see Resolved Questions §7.2)
-  → Returns: RatingSlipDTO with status=closed, duration_seconds
-  → Error 422: RATING_SLIP_MISSING_AVERAGE_BET if average_bet not provided
+Close Rating Slip:
+  POST /api/v1/rating-slips/{slipId}/close
+  Body: { average_bet? }
+  → Returns: RatingSlipWithDurationDTO (includes duration_seconds)
+  → Error 409: RATING_SLIP_INVALID_STATE if already closed
 
-Get Slip:
-  GET /api/v1/rating-slips/{id}
-  → Returns: RatingSlipDTO with calculated duration_seconds
+Get Rating Slip:
+  GET /api/v1/rating-slips/{slipId}
+  → Returns: RatingSlipWithPausesDTO (includes pause history)
 
-List Slips:
-  GET /api/v1/rating-slips?visit_id=X&status=open
+List Slips for Table:
+  GET /api/v1/rating-slips?table_id=X&status=open|paused|closed
   → Returns: RatingSlipDTO[]
+
+List Slips for Visit:
+  GET /api/v1/rating-slips?visit_id=X
+  → Returns: RatingSlipDTO[]
+
+Get Slip Duration:
+  GET /api/v1/rating-slips/{slipId}/duration
+  → Returns: { duration_seconds }
+```
+
+**State Machine**:
+```
+       ┌─────────┐
+       │ (start) │
+       └────┬────┘
+            │
+            ▼
+       ┌─────────┐  pause   ┌─────────┐
+       │  open   │─────────▶│ paused  │
+       │         │◀─────────│         │
+       └────┬────┘  resume  └────┬────┘
+            │                    │
+            │ close              │ close
+            │                    │
+            ▼                    ▼
+       ┌───────────────────────────┐
+       │         closed            │
+       └───────────────────────────┘
 ```
 
 ## 7. Dependencies & Risks
@@ -166,122 +253,103 @@ List Slips:
 
 | Dependency | Status | Notes |
 |------------|--------|-------|
-| CasinoService (PRD-000) | ✅ Complete | RLS context, casino_id |
-| PlayerService (PRD-003) | ✅ Complete | player_id FK |
-| VisitService (PRD-003) | ✅ Complete | visit_id FK (nullable; close allowed after visit end) |
-| `gaming_table` table | ✅ Schema exists | table_id FK |
-| `rating_slip` table | ✅ Schema exists | Core table |
-| `rating_slip_pause` table | ✅ Schema exists | Pause tracking |
-| **Migration required** | ❌ Pending | Add `closed_after_visit_end boolean DEFAULT false` to rating_slip |
-| Horizontal infrastructure | ✅ Complete | withServerAction, ServiceResult, DomainError |
+| CasinoService (PRD-000) | COMPLETE | RLS context, casino_id |
+| VisitService (PRD-003) | COMPLETE | Visit anchor, visit_kind filtering |
+| TableContextService (PRD-007) | PENDING | Table validation (graceful if missing) |
+| `rating_slip` table | EXISTS | Core table with status enum |
+| `rating_slip_pause` table | EXISTS | Via migration 20251128221408 |
+| RPCs | EXISTS | `rpc_start_rating_slip`, `rpc_pause_rating_slip`, `rpc_resume_rating_slip`, `rpc_close_rating_slip`, `rpc_get_rating_slip_duration` |
+| Horizontal infrastructure | COMPLETE | withServerAction, ServiceResult, DomainError |
+
+**Consumed By** (cross-context queries):
+
+| Consumer | Query | Purpose |
+|----------|-------|---------|
+| TableContextService (PRD-007) | `hasOpenSlipsForTable()` | Gate table deactivation if open slips exist |
 
 ### 7.2 Risks & Open Questions
 
 | Risk | Mitigation |
 |------|------------|
-| Clock drift on pause/resume | Server timestamps only; client times are advisory |
-| Orphaned pauses (never ended) | Close slip auto-ends any active pause |
-| Concurrent pause/resume race | Database-level status check in transaction |
+| Concurrent pause/resume race | RPCs use FOR UPDATE locking |
+| Orphaned pauses on slip close | `rpc_close_rating_slip` auto-ends active pause |
+| Table validation dependency | Graceful degradation if TableContextService not yet implemented |
+| Deprecated player_id column | DO NOT use - derive from visit.player_id |
 
-**Resolved Questions:**
+**Open Questions:**
+1. Should we allow updating seat_number after slip creation? → **Recommendation:** No, seat is immutable to maintain accurate position tracking
+2. Should closing require an average_bet? → **Recommendation:** No, allow NULL for quick closes; average_bet can be updated before close
 
-1. **Should closing a slip require the visit to still be active?**
-   → **Decision:** Allow close, but capture visit state for audit trail.
-
-   **Scenarios Analyzed:**
-
-   | Scenario | Visit State | Slip State | Action | Result |
-   |----------|-------------|------------|--------|--------|
-   | Normal flow | Active (`ended_at` = null) | Open | Close slip | ✅ Allowed |
-   | Late close | Ended (`ended_at` set) | Open | Close slip | ✅ Allowed + flag |
-   | No visit | `visit_id` = null | Open | Close slip | ✅ Allowed |
-
-   **Implementation:**
-   - Closing a slip after visit checkout IS ALLOWED (prevents orphaned open slips)
-   - When closing, check if `visit.ended_at IS NOT NULL`
-   - If visit already ended, set `rating_slip.closed_after_visit_end = true` (audit flag)
-   - **New column required:** `closed_after_visit_end boolean DEFAULT false`
-
-   **Rationale:**
-   1. **Operational Reality:** Pit bosses may forget to close slips before player checkouts
-   2. **Data Integrity:** An uncloseable slip is worse than a late-closed slip
-   3. **Accountability:** The audit flag preserves information about workflow deviation
-   4. **Schema Evidence:** `visit_id` is already nullable, indicating slips can exist independently
-
-   **Edge Cases:**
-   - Slip with `visit_id = null`: Always closeable (no visit to check)
-   - Bulk close on table closure: May include slips from ended visits (flagged appropriately)
-
-   **Error Code:** None (allowed operation, just flagged)
-
-   **UX Consideration:** Dashboard may show warning icon for slips closed after visit end
-
-2. **Should `average_bet` be required on close?**
-   → **Decision:** **YES, REQUIRED.** Slip cannot close without `average_bet`.
-   - **Rationale:** The loyalty points calculation chain critically depends on `average_bet`:
-     ```
-     theo = (average_bet × house_edge / 100) × total_decisions
-     points = theo × conversion_rate × multiplier
-     ```
-     See `lib/theo.ts:calculateTheo()` - returns 0 if `averageBet <= 0`.
-   - **UX:** UI must prompt pit boss for average bet before close. Toast notification on validation failure.
-   - **Error Code:** `RATING_SLIP_MISSING_AVERAGE_BET` (422 Unprocessable Entity)
+**SRM Invariant Check (CRITICAL)**:
+- ✅ `rating_slip.visit_id`: NOT NULL (hardened in migration 20251205000004)
+- ✅ `rating_slip.table_id`: NOT NULL (hardened in migration 20251205000004)
+- ✅ `rating_slip.casino_id`: NOT NULL, immutable
+- ✅ `rating_slip.start_time`: NOT NULL, immutable
+- ✅ Player identity via `visit.player_id` - NO player_id on rating_slip (SRM v4.0.0 invariant)
+- ⚠️ Deprecated `player_id` column exists in schema - service MUST NOT use it; column to be dropped in future migration
 
 ## 8. Definition of Done (DoD)
 
 The release is considered **Done** when:
 
 **Functionality**
-- [ ] Start slip creates record with status=open
-- [ ] Pause slip records pause start, changes status to paused
-- [ ] Resume slip records pause end, changes status to open
-- [ ] Close slip sets end_time, calculates duration excluding pauses
-- [ ] Close slip validates `average_bet` is provided (rejects with 422 if missing)
-- [ ] Duplicate active slip prevented by constraint
+- [ ] Start rating slip creates slip with status=open
+- [ ] Pause rating slip transitions open→paused, creates pause record
+- [ ] Resume rating slip transitions paused→open, closes pause record
+- [ ] Close rating slip transitions to closed, returns duration_seconds
+- [ ] Duration calculation excludes paused intervals
+- [ ] Unique constraint prevents duplicate open slips per player/table
 
 **Data & Integrity**
 - [ ] State machine enforced (no invalid transitions)
-- [ ] Duration calculation excludes all pause intervals
-- [ ] No orphaned pause records (close ends active pause)
-- [ ] `closed_after_visit_end` flag set when closing slip after visit checkout
-- [ ] Migration adds `closed_after_visit_end boolean DEFAULT false` column
+- [ ] Single active pause per slip
+- [ ] No orphaned pauses after slip close
+- [ ] visit_id and table_id NOT NULL enforced
 
 **Security & Access**
 - [ ] RLS: Staff can only access slips for their casino
 - [ ] All mutations require authenticated session
+- [ ] Audit log entries for start/pause/resume/close operations
 
 **Architecture Compliance**
-- [ ] Pattern B structure: dtos.ts, schemas.ts, selects.ts, mappers.ts, crud.ts, index.ts
+- [ ] Pattern B structure: dtos.ts, schemas.ts, selects.ts, mappers.ts, crud.ts, queries.ts, index.ts
 - [ ] Zero `as` type assertions
 - [ ] Tests in `__tests__/` subdirectory (ADR-002)
 - [ ] DomainError thrown on failures (ADR-012)
+- [ ] Player identity derived from visit.player_id (NO direct player_id)
+- [ ] Published query `hasOpenSlipsForTable()` exported for TableContextService
 
 **Testing**
 - [ ] Unit tests for state machine transitions
-- [ ] Unit tests for duration calculation with multiple pauses
-- [ ] Unit tests for `closed_after_visit_end` flag logic
-- [ ] Integration test: full lifecycle (start → pause → resume → close)
-- [ ] Integration test: close slip after visit checkout (flag must be set)
+- [ ] Unit tests for pause/resume logic
+- [ ] Unit tests for duration calculation
+- [ ] Integration test: full slip lifecycle (start → pause → resume → close)
+- [ ] Integration test: concurrent pause prevention
+- [ ] Integration test: unique constraint on open slips
 
 **Documentation**
 - [ ] Service README with supported operations
 - [ ] DTOs documented with JSDoc
+- [ ] Error codes documented
 
 ## 9. Related Documents
 
 - **Vision / Strategy:** `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
-- **Architecture / SRM:** `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+- **Architecture / SRM:** `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (§RatingSlipService)
 - **Service Layer (SLAD):** `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` §308-350
 - **DTO Standard:** `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
 - **Error Handling:** `docs/80-adrs/ADR-012-error-handling-layers.md`
 - **Test Location:** `docs/80-adrs/ADR-002-test-location-standard.md`
 - **Zod Schemas:** `docs/80-adrs/ADR-013-zod-validation-schemas.md`
-- **Schema / Types:** `types/database.types.ts` (lines 1087-1205)
+- **Visit Archetypes:** `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md`
+- **Schema / Types:** `types/database.types.ts` (rating_slip, rating_slip_pause)
+- **Pause Tracking Migration:** `supabase/migrations/20251128221408_rating_slip_pause_tracking.sql`
+- **NOT NULL Migration:** `supabase/migrations/20251205000004_rating_slip_not_null_constraints.sql`
 - **RLS Policy Matrix:** `docs/30-security/SEC-001-rls-policy-matrix.md`
 - **MVP Roadmap:** `docs/20-architecture/MVP-ROADMAP.md` (Phase 2)
-- **Pit Dashboard (UI):** `docs/10-prd/PRD-006-pit-dashboard.md`
-- **TableContextService:** `docs/10-prd/PRD-007-table-context-service.md`
-- **Theo Calculation:** `lib/theo.ts` (loyalty point calculation dependency)
+- **Pit Dashboard (Consumer):** `docs/10-prd/PRD-006-pit-dashboard.md`
+- **Table Context (Related):** `docs/10-prd/PRD-007-table-context-service.md`
+- **Loyalty (Consumer):** `docs/10-prd/PRD-004-mid-session-loyalty.md`
 
 ---
 
@@ -289,6 +357,5 @@ The release is considered **Done** when:
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
-| 1.0 | 2025-12-03 | Lead Architect | Initial draft (clean rebuild) |
-| 1.1 | 2025-12-03 | Lead Architect | Resolved Q2: average_bet required on close (loyalty dependency) |
-| 1.2 | 2025-12-04 | Lead Architect | Resolved Q1: Allow close after visit end with audit flag (`closed_after_visit_end`) |
+| 1.1 | 2025-12-07 | Lead Architect | Added `hasOpenSlipsForTable()` published query for TableContextService cross-context consumption (SLAD bounded context compliance) |
+| 1.0 | 2025-12-07 | Lead Architect | Initial draft (clean rebuild per Pattern B) |

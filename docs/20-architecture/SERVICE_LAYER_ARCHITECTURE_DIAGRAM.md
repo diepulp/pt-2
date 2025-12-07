@@ -1071,12 +1071,13 @@ const mutation = useMutation({
                     ▼ (FK references)
 ┌──────────────────────────────────────────────┐
 │ RatingSlipService (Telemetry)               │
-│ OWNS: rating_slip                           │
+│ OWNS: rating_slip, rating_slip_pause        │
 │ REFERENCES: visit_id (NOT NULL),            │
 │             table_id (NOT NULL)             │
 │ DOES NOT OWN: points (Loyalty's domain)     │
 │ CONSTRAINT: All slips anchored to a visit;  │
 │   player identity derived from parent visit │
+│ DURATION: (end - start) - SUM(pauses)       │
 └──────────────────────────────────────────────┘
                     │
                     ▼ (consumes telemetry)

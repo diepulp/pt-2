@@ -1,0 +1,27 @@
+{
+  "timestamp": "2025-12-06T23:29:37.235015",
+  "session_id": "arch-session-20251206-232937",
+  "task_summary": "Documentation alignment for EXEC-VSE-001 Visit Service Evolution",
+  "files_modified": [
+    "docs/25-api-data/DTO_CATALOG.md",
+    "docs/25-api-data/api-surface.openapi.yaml",
+    "docs/25-api-data/API_SURFACE_MVP.md",
+    "docs/35-integration/INT-002-event-catalog.md",
+    "docs/10-prd/PRD-003-player-visit-management.md",
+    "docs/30-security/SEC-001-rls-policy-matrix.md"
+  ],
+  "commit": "3b6026f",
+  "key_changes": [
+    "Added VisitKind enum and 3 visit archetypes (reward_identified, gaming_identified_rated, gaming_ghost_unrated)",
+    "Made player_id nullable for ghost visits",
+    "RatingSlip hardening: visit_id/table_id NOT NULL, player_id removed",
+    "Added new API endpoints: /visits/reward, /visits/gaming, /visits/ghost, /convert-to-gaming",
+    "Updated event catalog with VisitService events",
+    "Updated RLS policies for ghost visit handling"
+  ],
+  "governance_refs": [
+    "EXEC-VSE-001",
+    "ADR-014"
+  ],
+  "status": "completed"
+}

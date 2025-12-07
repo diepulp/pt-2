@@ -1,7 +1,7 @@
 # Bounded Context Rules
 
-**Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM)
-**Architecture**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2)
+**Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.0.0)
+**Architecture**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v3.0.0)
 
 ---
 
@@ -19,7 +19,7 @@
 | **player** | `player`, `player_casino` |
 | **visit** | `visit` |
 | **loyalty** | `player_loyalty`, `loyalty_ledger`, `loyalty_outbox` |
-| **rating-slip** | `rating_slip` |
+| **rating-slip** | `rating_slip`, `rating_slip_pause` |
 | **finance** | `player_financial_transaction`, `finance_outbox` |
 | **mtl** | `mtl_entry`, `mtl_audit_note` |
 | **table-context** | `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event` |
@@ -72,14 +72,18 @@ When your service is consumed by others, export public DTOs:
 // services/rating-slip/dtos.ts (or inline in feature file)
 export interface RatingSlipTelemetryDTO {
   id: string;
-  player_id: string;
+  visit_id: string;        // Player identity derived from parent visit
   casino_id: string;
+  table_id: string;
   average_bet: number | null;
   duration_seconds: number;
   game_type: 'blackjack' | 'poker' | 'roulette' | 'baccarat';
+  // NOTE: player_id NOT included - derive from visit.player_id
   // NOT exposed: internal_notes, risk_flags
 }
 ```
+
+> **Key Invariant**: RatingSlip does NOT have its own `player_id` column. Player identity is derived from `visit.player_id`. See SRM v4.0.0 §220.
 
 ---
 

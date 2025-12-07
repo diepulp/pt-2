@@ -1,7 +1,7 @@
 # Service Implementation Validation Checklist
 
-**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v2.1.2 §308-348)
-**Registry**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM - bounded context registry only)
+**Source**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v3.0.0 §308-356)
+**Registry**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.0.0 - bounded context registry + invariants)
 
 Complete this checklist before considering a service implementation done.
 
