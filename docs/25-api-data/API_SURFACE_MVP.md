@@ -297,30 +297,69 @@ curl -sS "$BASE_URL/api/v1/players?casino_id=22222222-2222-2222-2222-22222222222
 
 ## Visit Domain (VisitService — Session Context)
 
-**Tables**: `visit`, `audit_log`  
-**Key invariants**: `visit` rows carry `player_id` + `casino_id`; `ended_at` null means active session; gaming day derived by downstream finance triggers.
+> **Updated**: 2025-12-06 per EXEC-VSE-001 (Visit Service Evolution)
 
-#### POST /api/v1/visits
+**Tables**: `visit`, `audit_log`
+**Key invariants**: Three visit archetypes via `visit_kind` enum; `player_id` nullable for ghost gaming; `ended_at` null means active session; gaming day derived by downstream finance triggers.
 
-Request body (Zod):
+### Visit Archetypes
+
+| `visit_kind` | Identity | Gaming | Loyalty | Use Case |
+|--------------|----------|--------|---------|----------|
+| `reward_identified` | Player exists | No | Redemptions only | Comps, vouchers, customer care |
+| `gaming_identified_rated` | Player exists | Yes | Accrual eligible | Standard rated play |
+| `gaming_ghost_unrated` | No player | Yes | Compliance only | Ghost gaming for finance/MTL |
+
+### Schemas
+
 ```ts
+// Visit kind enum
+export const VisitKindSchema = z.enum([
+  'reward_identified',
+  'gaming_identified_rated',
+  'gaming_ghost_unrated'
+]);
+
+// Response DTO
+export const VisitSchema = z.object({
+  id: z.string().uuid(),
+  player_id: z.string().uuid().nullable(), // NULL for ghost visits
+  casino_id: z.string().uuid(),
+  visit_kind: VisitKindSchema,
+  started_at: z.string(),
+  ended_at: z.string().nullable(),
+});
+
+// Legacy start (defaults to gaming_identified_rated)
 export const VisitStartSchema = z.object({
   player_id: z.string().uuid(),
   casino_id: z.string().uuid(),
   started_at: z.string().optional(),
 });
-```
 
-Response DTO (Zod):
-```ts
-export const VisitSchema = z.object({
-  id: z.string().uuid(),
+// Typed creation schemas
+export const CreateRewardVisitSchema = z.object({
   player_id: z.string().uuid(),
   casino_id: z.string().uuid(),
-  started_at: z.string(),
-  ended_at: z.string().nullable(),
+});
+
+export const CreateGamingVisitSchema = z.object({
+  player_id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+});
+
+export const CreateGhostGamingVisitSchema = z.object({
+  casino_id: z.string().uuid(),
+  table_id: z.string().uuid(),
+  notes: z.string().max(500).optional(),
+});
+
+export const ConvertRewardToGamingSchema = z.object({
+  visit_id: z.string().uuid(),
 });
 ```
+
+#### POST /api/v1/visits (Legacy)
 
 Operational notes:
 - **Errors**: `VALIDATION_ERROR`, `FOREIGN_KEY_VIOLATION`.
@@ -378,6 +417,7 @@ export const VisitListQuerySchema = z.object({
   casino_id: z.string().uuid(),
   player_id: z.string().uuid().optional(),
   status: z.enum(['open','closed']).optional(),
+  visit_kind: VisitKindSchema.optional(), // NEW: filter by archetype
   cursor: z.string().optional(),
   limit: z.number().int().min(1).max(100).optional(),
 });
@@ -399,14 +439,63 @@ Operational notes:
 - **Rate limit**: 60 req/min per staff.
 - **Observability & Traceability**: ServiceHttpResult metadata; SRM VisitService mandates audit of session lookups for compliance.
 
+#### POST /api/v1/visits/reward (NEW)
+
+Creates reward-only visit (`visit_kind=reward_identified`). Use case: Comps, vouchers, customer care without gaming session.
+
+Request body: `CreateRewardVisitSchema`
+
+Operational notes:
+- **Auth/RBAC**: `pit_boss` or `admin`.
+- **Idempotency**: Required; single active visit per player/casino enforced.
+
+#### POST /api/v1/visits/gaming (NEW)
+
+Creates gaming visit (`visit_kind=gaming_identified_rated`). Use case: Standard rated play with loyalty accrual.
+
+Request body: `CreateGamingVisitSchema`
+
+Operational notes:
+- **Auth/RBAC**: `pit_boss` or `admin`.
+- **Idempotency**: Required; single active visit per player/casino enforced.
+
+#### POST /api/v1/visits/ghost (NEW)
+
+Creates ghost gaming visit (`visit_kind=gaming_ghost_unrated`). Use case: Tracking gaming activity for compliance (CTR/MTL) when player declines or cannot provide identification. `player_id` will be NULL.
+
+Request body: `CreateGhostGamingVisitSchema`
+
+Operational notes:
+- **Auth/RBAC**: `pit_boss` or `admin`.
+- **Idempotency**: Required.
+- **Compliance**: Ghost visits are first-class for CTR/cash movement tracking.
+
+#### POST /api/v1/visits/{visit_id}/convert-to-gaming (NEW)
+
+Converts reward visit (`reward_identified`) to gaming visit (`gaming_identified_rated`). Use case: Player came in for rewards, decided to play.
+
+Request body: Empty object or `ConvertRewardToGamingSchema`
+
+Operational notes:
+- **Errors**: `VALIDATION_ERROR` if visit is not `reward_identified`.
+- **Auth/RBAC**: `pit_boss` or `admin`.
+- **Idempotency**: Required; logs conversion in audit trail.
+
 ### cURL sanity
 ```bash
-# start visit
+# start visit (legacy, defaults to gaming_identified_rated)
 curl -sS -X POST "$BASE_URL/api/v1/visits" \
   -H "Authorization: Bearer $AUTH_TOKEN" \
   -H "Content-Type: application/json" \
   -H "Idempotency-Key: $(uuidgen)" \
   -d '{"player_id":"33333333-3333-3333-3333-333333333333","casino_id":"22222222-2222-2222-2222-222222222222"}'
+
+# create ghost gaming visit
+curl -sS -X POST "$BASE_URL/api/v1/visits/ghost" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Idempotency-Key: $(uuidgen)" \
+  -d '{"casino_id":"22222222-2222-2222-2222-222222222222","table_id":"44444444-4444-4444-4444-444444444444","notes":"Walk-in declined ID"}'
 
 # list open visits for a casino
 curl -sS "$BASE_URL/api/v1/visits?casino_id=22222222-2222-2222-2222-222222222222&status=open" \
@@ -415,18 +504,22 @@ curl -sS "$BASE_URL/api/v1/visits?casino_id=22222222-2222-2222-2222-222222222222
 
 ## Rating Slip Domain (RatingSlipService — Telemetry Context)
 
-**Tables**: `rating_slip`, `audit_log`  
-**Key invariants**: Rating slips capture telemetry only; reward calculations live in Loyalty. `status` drives eligibility for mid-session rewards.
+> **Updated**: 2025-12-06 per EXEC-VSE-001 (Visit Service Evolution)
+> - `visit_id` and `table_id` are now **required** (NOT NULL)
+> - `player_id` removed from rating_slip - derived from `visit.player_id`
+
+**Tables**: `rating_slip`, `rating_slip_pause`, `audit_log`
+**Key invariants**: Rating slips capture telemetry only; reward calculations live in Loyalty. `status` drives eligibility for mid-session rewards. Player identity derived from visit. Loyalty eligibility filtered by `visit.visit_kind = 'gaming_identified_rated'`.
 
 #### POST /api/v1/rating-slips
 
 Request body (Zod):
 ```ts
 export const RatingSlipCreateSchema = z.object({
-  player_id: z.string().uuid(),
   casino_id: z.string().uuid(),
-  visit_id: z.string().uuid().optional(),
-  table_id: z.string().uuid().optional(),
+  visit_id: z.string().uuid(), // REQUIRED - player derived from visit
+  table_id: z.string().uuid(), // REQUIRED - PT-2 = table games only
+  seat_number: z.string().optional(),
   game_settings: z.record(z.any()).nullable().optional(),
   average_bet: z.number().min(0).nullable().optional(),
   policy_snapshot: z.record(z.any()).nullable().optional(),
@@ -437,25 +530,26 @@ Response DTO (Zod):
 ```ts
 export const RatingSlipSchema = z.object({
   id: z.string().uuid(),
-  player_id: z.string().uuid(),
   casino_id: z.string().uuid(),
-  visit_id: z.string().uuid().nullable(),
-  table_id: z.string().uuid().nullable(),
+  visit_id: z.string().uuid(), // NOT NULL
+  table_id: z.string().uuid(), // NOT NULL
   game_settings: z.record(z.any()).nullable(),
   average_bet: z.number().nullable(),
   start_time: z.string(),
   end_time: z.string().nullable(),
   status: z.string(),
   policy_snapshot: z.record(z.any()).nullable(),
+  seat_number: z.string().nullable(),
 });
 ```
 
 Operational notes:
 - **Errors**: `VALIDATION_ERROR`, `FOREIGN_KEY_VIOLATION`.
 - **Auth/RBAC**: `pit_boss` or `admin`; automation allowed for telemetry ingest jobs.
-- **Idempotency**: Required; service rejects duplicate open slip for `(player_id, visit_id?)` when `status='open'` and replays return existing slip.
+- **Idempotency**: Required; service rejects duplicate open slip for `(visit_id, table_id)` when `status='open'` and replays return existing slip.
 - **Pagination**: Not applicable.
 - **Rate limit**: 10 req/min per staff (telemetry writes typically automated).
+- **Visit Kind Validation**: Visit must have gaming `visit_kind` (`gaming_identified_rated` or `gaming_ghost_unrated`).
 - **Observability & Traceability**: ServiceHttpResult metadata + audit entry labeled `rating_slip.created`; SRM RatingSlipService enforces telemetry-only boundary.
 
 #### PATCH /api/v1/rating-slips/{rating_slip_id}

@@ -1,11 +1,11 @@
 # DTO Catalog
 
 **Status**: ASPIRATIONAL SPECIFICATION
-**Implementation**: NOT YET IMPLEMENTED (0% adoption as of 2025-11-27)
-**Effective**: 2025-11-17
+**Implementation**: PARTIAL (VisitService 100%, RatingSlipService pending PRD-002)
+**Effective**: 2025-12-06
 **Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 **Canonical Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
-**Version**: 3.1.0
+**Version**: 3.2.0
 
 ---
 
@@ -214,28 +214,148 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 
 ## VisitService DTOs
 
+> **Updated**: 2025-12-06 per EXEC-VSE-001 (Visit Service Evolution)
+
+### Visit Archetypes
+
+| `visit_kind` | Identity | Gaming | Loyalty | Use Case |
+|--------------|----------|--------|---------|----------|
+| `reward_identified` | Player exists | No | Redemptions only | Comps, vouchers, customer care |
+| `gaming_identified_rated` | Player exists | Yes | Accrual eligible | Standard rated play |
+| `gaming_ghost_unrated` | No player | Yes | Compliance only | Ghost gaming for finance/MTL |
+
+### VisitKind (Enum)
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Derived from Database enum
+**Exposure**: UI, Internal
+
+```typescript
+type VisitKind = 'reward_identified' | 'gaming_identified_rated' | 'gaming_ghost_unrated';
+```
+
+---
+
 ### VisitDTO
 
 **Owner**: VisitService
 **File**: `services/visit/dtos.ts`
 **Pattern**: Canonical
 **Exposure**: Internal only
-**SRM Reference**: Lines 60-73, 1132-1138
+**SRM Reference**: §VisitService (Operational Session Context)
 
 **Fields**:
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
 | `id` | `uuid` | No | Primary key |
-| `player_id` | `uuid` | No | Player FK |
+| `player_id` | `uuid` | **Yes** | Player FK (NULL for ghost visits) |
 | `casino_id` | `uuid` | No | Casino FK |
+| `visit_kind` | `visit_kind` | No | Visit archetype classification |
 | `started_at` | `timestamptz` | No | Check-in timestamp |
 | `ended_at` | `timestamptz` | Yes | Check-out timestamp (null if open) |
 
+**Invariants**:
+- `gaming_ghost_unrated` visits MUST have `player_id = NULL`
+- All other visit kinds MUST have `player_id IS NOT NULL`
+- Enforced by CHECK constraint `chk_visit_kind_player_presence`
+
 **Consumers**:
-- **Loyalty** (session context for ledger entries)
+- **Loyalty** (session context for ledger entries; filters by `visit_kind`)
 - **Finance** (session association for transactions)
 - **MTL** (compliance lineage)
-- **RatingSlip** (session scoping)
+- **RatingSlip** (session scoping; `visit_id` is NOT NULL)
+
+---
+
+### CreateRewardVisitDTO
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Canonical (Pick from Insert)
+**Exposure**: Internal only
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `player_id` | `uuid` | No | Identified player (required) |
+
+**Use Case**: Comps, vouchers, customer care without gaming session.
+Creates visit with `visit_kind = 'reward_identified'`.
+
+---
+
+### CreateGamingVisitDTO
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Canonical (Pick from Insert)
+**Exposure**: Internal only
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `player_id` | `uuid` | No | Identified player (required) |
+
+**Use Case**: Standard rated play with loyalty accrual.
+Creates visit with `visit_kind = 'gaming_identified_rated'`.
+
+---
+
+### CreateGhostGamingVisitDTO
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Contract-First (RPC input)
+**Exposure**: Internal only
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `table_id` | `uuid` | No | Gaming table where ghost play occurs |
+| `notes` | `text` | Yes | Optional notes about the session |
+
+**Use Case**: Tracking gaming activity for compliance (CTR/MTL) when player declines or cannot provide identification.
+Creates visit with `visit_kind = 'gaming_ghost_unrated'` and `player_id = NULL`.
+
+**Reference**: ADR-014 Ghost Gaming Visits
+
+---
+
+### ConvertRewardToGamingDTO
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Contract-First (RPC input)
+**Exposure**: Internal only
+
+**Fields**:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `visit_id` | `uuid` | No | Visit to convert |
+
+**Use Case**: Player came in for rewards, decided to play.
+Transitions `visit_kind` from `reward_identified` to `gaming_identified_rated`.
+
+---
+
+### VisitWithPlayerDTO
+
+**Owner**: VisitService
+**File**: `services/visit/dtos.ts`
+**Pattern**: Contract-First (joined response)
+**Exposure**: UI, Internal
+
+**Fields**: Extends `VisitDTO` with:
+| Field | Type | Nullable | Description |
+|-------|------|----------|-------------|
+| `player` | `object` | Yes | Embedded player details (null for ghost visits) |
+| `player.id` | `uuid` | — | Player ID |
+| `player.first_name` | `text` | — | Player first name |
+| `player.last_name` | `text` | — | Player last name |
+
+**Consumers**:
+- UI (visit list displays)
 
 ---
 
@@ -300,22 +420,25 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 
 ## RatingSlipService DTOs
 
+> **Updated**: 2025-12-06 per EXEC-VSE-001 (Visit Service Evolution)
+> - `visit_id` and `table_id` are now **NOT NULL** (Phase B hardening)
+> - `player_id` column **REMOVED** - player identity derived from `visit.player_id`
+
 ### RatingSlipDTO
 
 **Owner**: RatingSlipService
 **File**: `services/rating-slip/lifecycle.ts`
 **Pattern**: Canonical (full row)
 **Exposure**: Internal only
-**SRM Reference**: Lines 60-73, 1831-1843
+**SRM Reference**: §RatingSlipService (Telemetry Context)
 
 **Fields**:
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
 | `id` | `uuid` | No | Primary key |
-| `player_id` | `uuid` | No | Player FK (immutable) |
 | `casino_id` | `uuid` | No | Casino FK (immutable) |
-| `visit_id` | `uuid` | Yes | Session FK |
-| `table_id` | `uuid` | Yes | Gaming table FK |
+| `visit_id` | `uuid` | **No** | Session FK (immutable, always anchored to visit) |
+| `table_id` | `uuid` | **No** | Gaming table FK (immutable, PT-2 = table games only) |
 | `game_settings` | `jsonb` | Yes | Policy snapshot |
 | `average_bet` | `numeric` | Yes | Wagering telemetry |
 | `start_time` | `timestamptz` | No | Session start (immutable) |
@@ -324,9 +447,11 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 | `policy_snapshot` | `jsonb` | Yes | Reward policy at play time |
 | `seat_number` | `text` | Yes | Player seat position |
 
+**Key Invariant**: Player identity is derived from `visit.player_id`. RatingSlip does NOT have its own `player_id` column.
+
 **Consumers**:
 - RatingSlip service (internal CRUD)
-- Loyalty (via RatingSlipTelemetryDTO)
+- Loyalty (via RatingSlipTelemetryDTO; eligibility filtered by `visit.visit_kind`)
 
 ---
 
@@ -336,16 +461,17 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 **File**: `services/rating-slip/lifecycle.ts`
 **Pattern**: Contract-First (input DTO)
 **Exposure**: Internal only
-**SRM Reference**: Lines 60-73, 1831-1843
+**SRM Reference**: §RatingSlipService (Telemetry Context)
 
 **Fields**:
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
-| `playerId` | `string` | No | Player UUID |
 | `tableId` | `string` | No | Gaming table UUID |
-| `visitId` | `string` | No | Visit session UUID |
+| `visitId` | `string` | No | Visit session UUID (player derived from visit) |
 | `seatNumber` | `string` | No | Player seat position |
 | `gameSettings` | `Record<string, unknown>` | No | Game configuration snapshot |
+
+**Note**: `playerId` removed - player identity is now derived from the visit's `player_id`.
 
 **Consumers**:
 - RatingSlip service (startSlip operation)
@@ -377,22 +503,24 @@ This catalog enumerates all Data Transfer Objects (DTOs) by bounded context, the
 **File**: `services/rating-slip/dtos.ts`
 **Pattern**: Hybrid (contract-first for cross-context)
 **Exposure**: Internal (published to Loyalty/Finance)
-**SRM Reference**: Lines 214-222
+**SRM Reference**: §RatingSlipService (Telemetry Context)
 
 **Fields**:
 | Field | Type | Nullable | Description |
 |-------|------|----------|-------------|
 | `id` | `uuid` | No | Rating slip ID |
-| `player_id` | `uuid` | No | Player FK |
+| `visit_id` | `uuid` | No | Session FK (for player_id resolution) |
 | `casino_id` | `uuid` | No | Casino FK |
 | `average_bet` | `number` | Yes | Average wager amount |
 | `duration_seconds` | `number` | No | Play duration |
 | `game_type` | `'blackjack' \| 'poker' \| 'roulette' \| 'baccarat'` | No | Game type |
 
-**Excluded Fields**: `policy_snapshot`, `visit_id` (not needed by consumers)
+**Note**: `player_id` removed from telemetry DTO - consumers should join via `visit_id` to get player identity.
+
+**Excluded Fields**: `policy_snapshot`
 
 **Consumers**:
-- **Loyalty** (reward calculation input)
+- **Loyalty** (reward calculation input; must check `visit.visit_kind = 'gaming_identified_rated'`)
 - **Finance** (optional gameplay context)
 
 ---

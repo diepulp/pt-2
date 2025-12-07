@@ -1,11 +1,17 @@
 openapi: 3.1.0
 info:
   title: PT-2 API Surface (MVP)
-  version: 1.0.0-mvp
+  version: 1.1.0-mvp
   description: |
     Canonical PT-2 API contract distilled from `docs/api-route-catalogue/API_SURFACE_MVP.md`
     and aligned with the Service Template / Server Actions architecture. All responses are
     wrapped in the `ServiceHttpResult<T>` envelope emitted by `lib/http/service-response.ts`.
+
+    **v1.1.0 Changes (2025-12-06)**: Visit Service Evolution (EXEC-VSE-001)
+    - Added `visit_kind` enum and typed visit creation endpoints
+    - Visit `player_id` now nullable (for ghost gaming visits)
+    - RatingSlip `visit_id` and `table_id` now required (NOT NULL)
+    - RatingSlip no longer has `player_id` (derived from visit)
 servers:
   - url: https://pt-2.local/api/v1
     description: Local development (prepend with project base URL in other environments)
@@ -203,7 +209,11 @@ paths:
                         $ref: '#/components/schemas/Player'
   /visits:
     post:
-      summary: Start visit
+      summary: Start visit (legacy, defaults to gaming_identified_rated)
+      description: |
+        Legacy endpoint for backward compatibility.
+        Creates visit with visit_kind=gaming_identified_rated.
+        For typed visit creation, use /visits/reward, /visits/gaming, or /visits/ghost.
       tags: [Visit]
       security:
         - bearerAuth: []
@@ -246,6 +256,11 @@ paths:
           in: query
           schema:
             $ref: '#/components/schemas/VisitStatus'
+        - name: visit_kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/VisitKind'
+          description: 'Filter by visit archetype'
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -260,6 +275,97 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/VisitList'
+  /visits/reward:
+    post:
+      summary: Create reward-only visit
+      description: |
+        Creates visit with visit_kind=reward_identified.
+        Use case: Comps, vouchers, customer care without gaming session.
+        Player must be identified (player_id required).
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitStartReward'
+      responses:
+        '200':
+          description: Reward visit created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+  /visits/gaming:
+    post:
+      summary: Create gaming visit
+      description: |
+        Creates visit with visit_kind=gaming_identified_rated.
+        Use case: Standard rated play with loyalty accrual.
+        Player must be identified (player_id required).
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitStartGaming'
+      responses:
+        '200':
+          description: Gaming visit created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+  /visits/ghost:
+    post:
+      summary: Create ghost gaming visit
+      description: |
+        Creates visit with visit_kind=gaming_ghost_unrated.
+        Use case: Tracking gaming activity for compliance (CTR/MTL) when
+        player declines or cannot provide identification.
+        No player_id - visit.player_id will be NULL.
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitStartGhost'
+      responses:
+        '200':
+          description: Ghost gaming visit created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
   /visits/{visit_id}:
     get:
       summary: Get visit
@@ -307,6 +413,41 @@ paths:
                     properties:
                       data:
                         $ref: '#/components/schemas/Visit'
+  /visits/{visit_id}/convert-to-gaming:
+    post:
+      summary: Convert reward visit to gaming visit
+      description: |
+        Converts a reward-only visit (visit_kind=reward_identified) to a gaming visit
+        (visit_kind=gaming_identified_rated).
+        Use case: Player came in for rewards, decided to play.
+        Only valid for visits with visit_kind=reward_identified.
+      tags: [Visit]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/VisitId'
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VisitConvertToGaming'
+      responses:
+        '200':
+          description: Visit converted to gaming
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ServiceHttpResultBase'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Visit'
+        '400':
+          description: Invalid visit_kind for conversion (must be reward_identified)
+          $ref: '#/components/responses/ValidationError'
   /visits/{visit_id}/rating-slips:
     get:
       summary: List rating slips for a visit
@@ -974,21 +1115,57 @@ components:
           type: array
           items: { $ref: '#/components/schemas/Player' }
         next_cursor: { type: string, nullable: true }
+    VisitKind:
+      type: string
+      enum: [reward_identified, gaming_identified_rated, gaming_ghost_unrated]
+      description: |
+        Visit archetype classification:
+        - reward_identified: Player exists, no gaming, redemptions only
+        - gaming_identified_rated: Player exists, gaming session, loyalty accrual eligible
+        - gaming_ghost_unrated: No player identity, gaming session, compliance tracking only
     Visit:
       type: object
       properties:
         id: { $ref: '#/components/schemas/UUID' }
-        player_id: { $ref: '#/components/schemas/UUID' }
+        player_id: { $ref: '#/components/schemas/UUID', nullable: true, description: 'NULL for ghost gaming visits' }
         casino_id: { $ref: '#/components/schemas/UUID' }
+        visit_kind: { $ref: '#/components/schemas/VisitKind' }
         started_at: { type: string }
         ended_at: { type: string, nullable: true }
     VisitStart:
       type: object
       required: [player_id, casino_id]
+      description: 'Legacy start visit (defaults to gaming_identified_rated)'
       properties:
         player_id: { $ref: '#/components/schemas/UUID' }
         casino_id: { $ref: '#/components/schemas/UUID' }
         started_at: { type: string }
+    VisitStartReward:
+      type: object
+      required: [player_id, casino_id]
+      description: 'Create reward-only visit (visit_kind=reward_identified)'
+      properties:
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+    VisitStartGaming:
+      type: object
+      required: [player_id, casino_id]
+      description: 'Create gaming visit (visit_kind=gaming_identified_rated)'
+      properties:
+        player_id: { $ref: '#/components/schemas/UUID' }
+        casino_id: { $ref: '#/components/schemas/UUID' }
+    VisitStartGhost:
+      type: object
+      required: [casino_id, table_id]
+      description: 'Create ghost gaming visit (visit_kind=gaming_ghost_unrated, player_id=NULL)'
+      properties:
+        casino_id: { $ref: '#/components/schemas/UUID' }
+        table_id: { $ref: '#/components/schemas/UUID', description: 'Gaming table where ghost play occurs' }
+        notes: { type: string, maxLength: 500, description: 'Optional notes about the session' }
+    VisitConvertToGaming:
+      type: object
+      description: 'Convert reward visit to gaming visit'
+      properties: {}
     VisitEnd:
       type: object
       properties:
@@ -1005,12 +1182,15 @@ components:
       enum: [open, closed]
     RatingSlip:
       type: object
+      description: |
+        Rating slip for tracking gameplay telemetry.
+        **EXEC-VSE-001 Changes**: visit_id and table_id are now required (NOT NULL).
+        Player identity is derived from visit.player_id (no player_id column on rating_slip).
       properties:
         id: { $ref: '#/components/schemas/UUID' }
-        player_id: { $ref: '#/components/schemas/UUID' }
         casino_id: { $ref: '#/components/schemas/UUID' }
-        visit_id: { $ref: '#/components/schemas/UUID', nullable: true }
-        table_id: { $ref: '#/components/schemas/UUID', nullable: true }
+        visit_id: { $ref: '#/components/schemas/UUID', description: 'Session FK (required, player derived from visit)' }
+        table_id: { $ref: '#/components/schemas/UUID', description: 'Gaming table FK (required for PT-2 table games)' }
         game_settings: { type: object, additionalProperties: true, nullable: true }
         average_bet: { type: number, nullable: true }
         start_time: { type: string }
@@ -1019,14 +1199,18 @@ components:
           type: string
           enum: [open, paused, closed]
         policy_snapshot: { type: object, additionalProperties: true, nullable: true }
+        seat_number: { type: string, nullable: true }
     RatingSlipCreate:
       type: object
-      required: [player_id, casino_id]
+      required: [casino_id, visit_id, table_id]
+      description: |
+        Create rating slip. Player identity derived from visit.
+        Visit must have gaming visit_kind (gaming_identified_rated or gaming_ghost_unrated).
       properties:
-        player_id: { $ref: '#/components/schemas/UUID' }
         casino_id: { $ref: '#/components/schemas/UUID' }
-        visit_id: { $ref: '#/components/schemas/UUID' }
-        table_id: { $ref: '#/components/schemas/UUID' }
+        visit_id: { $ref: '#/components/schemas/UUID', description: 'Session FK (required)' }
+        table_id: { $ref: '#/components/schemas/UUID', description: 'Gaming table FK (required)' }
+        seat_number: { type: string, description: 'Player seat position' }
         game_settings: { type: object, additionalProperties: true, nullable: true }
         average_bet: { type: number, minimum: 0, nullable: true }
         policy_snapshot: { type: object, additionalProperties: true, nullable: true }

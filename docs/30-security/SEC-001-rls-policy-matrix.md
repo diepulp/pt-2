@@ -49,15 +49,17 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 
 ## Policy Matrix
 
+> **Updated 2025-12-06**: Visit Service Evolution (EXEC-VSE-001) - Ghost visits have `player_id = NULL` but are still scoped by `casino_id`.
+
 | Context | Tables / Views | Read Access | Write Path | Notes |
 | --- | --- | --- | --- | --- |
 | CasinoService (Foundational) | `staff`, `casino_settings`, `report` | Authenticated staff in same `casino_id` (role-gated) | Admin (`staff_role = 'admin'`) only | `casino_settings` is the sole temporal authority; policies block cross-casino visibility. Dealers excluded (non-authenticated). |
-| Player & Visit (Identity & Session) | `player_casino`, `visit` | Authenticated staff in same `casino_id` | Enrollment/Visit services; admin override only | Membership writes funnel through enrollment workflows; prevents cross-property session leakage. |
-| LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. |
+| Player & Visit (Identity & Session) | `player_casino`, `visit` | Authenticated staff in same `casino_id` | Enrollment/Visit services; admin override only | Membership writes funnel through enrollment workflows; prevents cross-property session leakage. **Ghost visits**: `player_id` is NULL but `casino_id` scoping still applies. |
+| LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. |
 | TableContextService (Operational) | `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation` | Authenticated operations staff for same `casino_id` | Admin + `pit_boss` roles | Trigger `assert_table_context_casino` enforces table/casino alignment. |
-| RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. |
+| RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
 | PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance & compliance staff in same `casino_id` | `rpc_create_financial_txn` (cashier/compliance services) | Append-only ledger; deletes disabled; gaming day derived via trigger. |
-| MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. |
+| MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. |
 
 ---
 

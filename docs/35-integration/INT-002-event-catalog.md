@@ -1,9 +1,13 @@
 # INT-002 Event Catalog
 
-**Status**: Active (extracted from SRM v3.1.0)
-**Effective**: 2025-11-17
+**Status**: Active (updated for EXEC-VSE-001)
+**Effective**: 2025-12-06
 **Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 **Cross-Reference**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md`, `docs/80-adrs/ADR-004-real-time-strategy.md`
+
+> **Updated 2025-12-06**: Visit Service Evolution changes
+> - RatingSlip events: `visit_id` is now required (NOT NULL), `player_id` removed (derived from visit)
+> - Added VisitService events for visit lifecycle
 
 ## Purpose
 
@@ -39,24 +43,102 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 
 ## Event Catalog by Service
 
+### VisitService Events
+
+> **NEW in EXEC-VSE-001**: Visit lifecycle events for real-time dashboard updates.
+
+#### `visit.created`
+
+**Producer**: VisitService
+**Trigger**: New visit started (any visit_kind)
+**Channel**: `{casino_id}` (list feed)
+
+**Payload Schema**:
+```typescript
+{
+  event: "visit.created",
+  visit_id: string,        // uuid
+  casino_id: string,       // uuid
+  player_id: string | null, // uuid (NULL for ghost visits)
+  visit_kind: "reward_identified" | "gaming_identified_rated" | "gaming_ghost_unrated",
+  started_at: string,      // ISO 8601 timestamp
+  at: string               // ISO 8601 timestamp
+}
+```
+
+**Consumers**:
+- UI (visit list refresh, floor dashboard)
+
+---
+
+#### `visit.closed`
+
+**Producer**: VisitService
+**Trigger**: Visit ended via Server Action
+**Channel**: `{casino_id}` (list feed), `{casino_id}:{visit_id}` (detail view)
+
+**Payload Schema**:
+```typescript
+{
+  event: "visit.closed",
+  visit_id: string,        // uuid
+  casino_id: string,       // uuid
+  player_id: string | null, // uuid (NULL for ghost visits)
+  visit_kind: "reward_identified" | "gaming_identified_rated" | "gaming_ghost_unrated",
+  ended_at: string,        // ISO 8601 timestamp
+  at: string               // ISO 8601 timestamp
+}
+```
+
+**Consumers**:
+- UI (visit status update)
+- Loyalty (session-end reward trigger for gaming_identified_rated)
+
+---
+
+#### `visit.converted`
+
+**Producer**: VisitService
+**Trigger**: Reward visit converted to gaming visit
+**Channel**: `{casino_id}` (list feed), `{casino_id}:{visit_id}` (detail view)
+
+**Payload Schema**:
+```typescript
+{
+  event: "visit.converted",
+  visit_id: string,        // uuid
+  casino_id: string,       // uuid
+  player_id: string,       // uuid (always identified for conversion)
+  from_kind: "reward_identified",
+  to_kind: "gaming_identified_rated",
+  at: string               // ISO 8601 timestamp
+}
+```
+
+**Consumers**:
+- UI (visit status update)
+
+---
+
 ### RatingSlipService Events
+
+> **Updated EXEC-VSE-001**: `visit_id` is now required (NOT NULL). `player_id` removed - derive from visit.
 
 #### `rating_slip.created`
 
 **Producer**: RatingSlipService
 **Trigger**: New rating slip created via Server Action
 **Channel**: `{casino_id}` (list feed)
-**SRM Reference**: Lines 1865
+**SRM Reference**: §RatingSlipService
 
 **Payload Schema**:
 ```typescript
 {
   event: "rating_slip.created",
-  rating_slip_id: string, // uuid
-  player_id: string,       // uuid
+  rating_slip_id: string,  // uuid
   casino_id: string,       // uuid
-  visit_id: string | null, // uuid
-  table_id: string | null, // uuid
+  visit_id: string,        // uuid (NOT NULL - always anchored to visit)
+  table_id: string,        // uuid (NOT NULL)
   status: "open",
   at: string               // ISO 8601 timestamp
 }
@@ -78,15 +160,15 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Channels**:
 - `{casino_id}` (list feed)
 - `{casino_id}:{rating_slip_id}` (detail view)
-**SRM Reference**: Lines 339-350, 1865
+**SRM Reference**: §RatingSlipService
 
 **Payload Schema**:
 ```typescript
 {
   event: "rating_slip.updated",
   rating_slip_id: string,  // uuid
-  player_id: string,       // uuid
   casino_id: string,       // uuid
+  visit_id: string,        // uuid (NOT NULL - for player lookup)
   average_bet: number | null,
   minutes_played: number,
   game_type: "blackjack" | "poker" | "roulette" | "baccarat",
@@ -96,7 +178,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 ```
 
 **Consumers**:
-- **Loyalty** (triggers reward evaluation for mid-session rewards)
+- **Loyalty** (triggers reward evaluation for mid-session rewards; must check `visit.visit_kind = 'gaming_identified_rated'`)
 - UI (rating slip detail refresh, list updates)
 
 **Cache Invalidation**:
@@ -112,15 +194,15 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Channels**:
 - `{casino_id}` (list feed)
 - `{casino_id}:{rating_slip_id}` (detail view)
-**SRM Reference**: Lines 1865
+**SRM Reference**: §RatingSlipService
 
 **Payload Schema**:
 ```typescript
 {
   event: "rating_slip.closed",
   rating_slip_id: string,  // uuid
-  player_id: string,       // uuid
   casino_id: string,       // uuid
+  visit_id: string,        // uuid (NOT NULL - for player lookup)
   end_time: string,        // ISO 8601 timestamp
   total_duration: number,  // seconds
   average_bet: number | null,
@@ -130,7 +212,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 ```
 
 **Consumers**:
-- Loyalty (triggers session-end rewards)
+- Loyalty (triggers session-end rewards; must check `visit.visit_kind = 'gaming_identified_rated'`)
 - UI (rating slip status update)
 
 **Cache Invalidation**:

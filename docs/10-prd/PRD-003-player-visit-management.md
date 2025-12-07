@@ -94,8 +94,15 @@ Per MVP-ROADMAP and `/mvp-status`, PlayerService and VisitService are the next c
 - `PlayerDTO` - Profile fields (id, first_name, last_name, birth_date)
 - `PlayerEnrollmentDTO` - Enrollment status (player_id, casino_id, status, enrolled_at)
 - `PlayerSearchResultDTO` - Search hit (id, full_name, enrollment_status)
-- `VisitDTO` - Visit record (id, player_id, casino_id, started_at, ended_at)
+- `VisitDTO` - Visit record (id, player_id, casino_id, **visit_kind**, started_at, ended_at)
+  - **Updated per EXEC-VSE-001**: `player_id` nullable for ghost visits, `visit_kind` enum added
 - `ActiveVisitDTO` - Active visit check result
+- `CreateRewardVisitDTO` - Input for reward-only visits (NEW)
+- `CreateGamingVisitDTO` - Input for gaming visits (NEW)
+- `CreateGhostGamingVisitDTO` - Input for ghost gaming visits (NEW)
+- `ConvertRewardToGamingDTO` - Input for visit conversion (NEW)
+
+> **Reference**: See EXEC-VSE-001 for visit archetype details and `docs/25-api-data/DTO_CATALOG.md` for full DTO specifications.
 
 ### Out of Scope
 - Player photo or document upload
