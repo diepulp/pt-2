@@ -1,23 +1,23 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v2.3.0)
+title: Service Layer Architecture Diagram (v3.0.0)
 owner: Architecture
 status: Accepted
-last_review: 2025-12-05
+last_review: 2025-12-06
 affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 2.3.0
-**Date**: 2025-12-05
-**Status**: Accepted (Aligned with SRM v3.1.0 + SEC-001 + ADR-013 + ADR-014)
+**Version**: 3.0.0
+**Date**: 2025-12-06
+**Status**: Accepted (Aligned with SRM v4.0.0 + SEC-001 + ADR-013 + ADR-014)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
 
 **Canonical References** (SDLC Taxonomy Peers):
-- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v3.1.0, 2025-11-13)
+- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.0.0)
 - **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
 - **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
 - **Edge Transport**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (withServerAction middleware)
@@ -199,12 +199,11 @@ graph LR
     CASINO -.provides settings.-> LOYALTY
 
     PLAYER -.identity.-> VISIT
-    PLAYER -.identity.-> RATING
     PLAYER -.identity.-> LOYALTY
     PLAYER -.identity.-> FINANCE
     PLAYER -.identity.-> MTL
 
-    VISIT -.session context.-> RATING
+    VISIT -.session context + identity.-> RATING
     VISIT -.session context.-> FINANCE
 
     FLOOR -.activates layout.-> TABLE
@@ -308,11 +307,11 @@ sequenceDiagram
 ## Service Structure (Directory Layout)
 
 > **AUTHORITY**: This section (§308-348) is the **SOURCE OF TRUTH** for service directory structure
-> **Canonical References**: SRM v3.1.0 §3 (DTO Derivation Patterns), ADR-008 (Service Factory Pattern), ADR-013 (Zod Validation Schemas)
+> **Canonical References**: SRM v4.0.0 §3 (DTO Derivation Patterns), ADR-008 (Service Factory Pattern), ADR-013 (Zod Validation Schemas)
 
 ```
 services/{domain}/
-├── dtos.ts                    # ✅ DTO contracts (3 patterns per SRM v3.1.0:117-199)
+├── dtos.ts                    # ✅ DTO contracts (3 patterns per SRM v4.0.0)
 │   └── Pattern A (Contract-First): Manual interfaces for complex services
 │   └── Pattern B (Canonical): Pick/Omit from Database types for simple CRUD
 │   └── Pattern C (Hybrid): Mixed approach (e.g., RatingSlip)
@@ -368,142 +367,17 @@ services/{domain}/
 
 ## Type System Architecture (DTO Canonical Standard)
 
-> **Canonical Reference**: SRM v3.1.0 §3 (Lines 117-199), DTO_CANONICAL_STANDARD.md
+> **Canonical Reference**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
 
-### DTO Derivation Patterns (By Service Type)
+### DTO Derivation Patterns (Quick Reference)
 
-PT-2 uses **three DTO patterns** based on service complexity. All services MUST use one of these patterns:
+| Pattern | Services | Rule | Reference |
+|---------|----------|------|-----------|
+| **A (Contract-First)** | Loyalty, Finance, MTL, TableContext | Manual `interface`/`type` + **mappers.ts required** | DTO_CANONICAL_STANDARD §2 |
+| **B (Canonical CRUD)** | Player, Visit, Casino, FloorLayout | `Pick`/`Omit` from Database types only (NO manual interfaces) | DTO_CANONICAL_STANDARD §3 |
+| **C (Hybrid)** | RatingSlip | Mix per DTO | DTO_CANONICAL_STANDARD §4 |
 
-**Key Rule**: Manual DTO interfaces are:
-- ❌ **BANNED** for Pattern B (Canonical CRUD) services → Use `type` + Pick/Omit
-- ✅ **ALLOWED** for Pattern A (Contract-First) services → Requires `mappers.ts`
-- ⚠️ **HYBRID** for Pattern C (Mixed) → Use appropriate pattern per DTO
-
-See DTO_CANONICAL_STANDARD.md FAQ for rationale (schema evolution blindness vs. domain contract decoupling).
-
----
-
-#### Pattern A: Contract-First DTOs (Complex Services)
-
-**Services**: Loyalty, Finance, MTL, TableContext
-
-**When to Use**: Services with complex business logic that need to:
-- Decouple domain contracts from schema evolution
-- Prevent internal columns from leaking to public APIs
-- Enforce explicit control over field exposure
-
-**Pattern**: Manual type definitions + mappers.ts
-
-**Syntax Choice**: `interface` OR `type` (both allowed for Pattern A - see DTO_CANONICAL_STANDARD.md FAQ)
-
-**Example** (SRM v3.1.0:125-154):
-```typescript
-// services/loyalty/dtos.ts
-/**
- * PlayerLoyaltyDTO - Public loyalty balance
- *
- * Exposure: UI, external APIs
- * Excludes: preferences (internal-only)
- * Owner: LoyaltyService (SRM:343-373)
- */
-// ✅ Option 1: interface (semantic clarity for public contracts)
-export interface PlayerLoyaltyDTO {
-  player_id: string;
-  casino_id: string;
-  balance: number;
-  tier: string | null;
-  // Omits: preferences (internal field)
-}
-
-// ✅ Option 2: type alias (functionally equivalent)
-export type PlayerLoyaltyDTO = {
-  player_id: string;
-  casino_id: string;
-  balance: number;
-  tier: string | null;
-};
-```
-
-**Why manual definitions are SAFE for Pattern A** (vs. Pattern B ban):
-- Pattern A DTOs are **domain contracts**, not schema mirrors
-- Mappers enforce transformation (compile-time checkpoint at mappers.ts:553-560)
-- Schema changes handled in `mappers.ts`, DTO contract remains stable
-- TypeScript errors if mapper doesn't satisfy DTO contract
-
-// services/loyalty/mappers.ts (INTERNAL USE ONLY)
-import type { Database } from '@/types/database.types';
-
-type LoyaltyRow = Database['public']['Tables']['player_loyalty']['Row'];
-
-export function toPlayerLoyaltyDTO(row: LoyaltyRow): PlayerLoyaltyDTO {
-  return {
-    player_id: row.player_id,
-    casino_id: row.casino_id,
-    balance: row.balance,
-    tier: row.tier,
-    // Explicitly omit: preferences
-  };
-}
-```
-
-**Reference**: SRM v3.1.0:119-155
-
----
-
-#### Pattern B: Canonical DTOs (Simple CRUD Services)
-
-**Services**: Player, Visit, Casino, FloorLayout
-
-**When to Use**: Simple CRUD services with:
-- Transparent field exposure (no sensitive internal columns)
-- Minimal business logic
-- Schema changes should auto-propagate to DTOs
-
-**Pattern**: Pick/Omit from Database types (NO manual interfaces)
-
-**Mappers Requirement**: If service has `crud.ts` with database operations, `mappers.ts` is **REQUIRED** for type-safe Row→DTO transformations. Reference: `services/casino/mappers.ts`
-
-**Example** (SRM v3.1.0:170-190):
-```typescript
-// services/player/dtos.ts
-import type { Database } from '@/types/database.types';
-
-/**
- * PlayerDTO - Public player profile
- *
- * Exposure: UI, external APIs
- * Excludes: birth_date (PII), internal_notes (staff-only)
- * Owner: PlayerService (SRM:149)
- */
-export type PlayerDTO = Pick<
-  Database['public']['Tables']['player']['Row'],
-  'id' | 'first_name' | 'last_name' | 'created_at'
->;
-
-export type PlayerCreateDTO = Pick<
-  Database['public']['Tables']['player']['Insert'],
-  'first_name' | 'last_name' | 'birth_date'
->;
-```
-
-**Rationale**:
-- Automatic schema sync via `npm run db:types`
-- Minimal boilerplate
-- ESLint enforces allowlist (prevents PII leakage)
-
-**Reference**: SRM v3.1.0:164-196, DTO_CANONICAL_STANDARD.md:65-127
-
----
-
-#### Pattern C: Hybrid (Mixed Complexity)
-
-**Services**: RatingSlip
-
-**When to Use**: Services with mixed needs (some fields canonical, some contract-first)
-
-**Reference**: SRM v3.1.0:199+
-
----
+**Rationale**: Pattern B prevents schema evolution blindness; Pattern A allows domain contract decoupling with mapper enforcement. See DTO_CANONICAL_STANDARD.md FAQ for complete details.
 
 ### Type Generation Flow
 
@@ -540,78 +414,18 @@ graph TB
     style DB_TYPES fill:#c8e6c9,stroke:#2e7d32,stroke-width:3px
 ```
 
-### DTO Anti-Patterns (Pattern-Specific)
-
-#### Pattern B (Canonical CRUD) Services - STRICT ENFORCEMENT
-
-**Services**: Player, Visit, Casino, FloorLayout
-
-**BANNED**:
-- ❌ NEVER use `interface` for DTOs
-- ❌ NEVER manually define table structures
-- ❌ NEVER use `ReturnType` inference for DTOs
-
-**REQUIRED**:
-- ✅ ALWAYS use `type` with Pick/Omit from `Database` types
-- ✅ Use `Pick`/`Omit`/`Partial` for transformations
-- ✅ Regenerate types after EVERY migration (`npm run db:types`)
-
-**Rationale**: Manual definitions create **schema evolution blindness** (silent data loss when schema changes)
-
----
-
-#### Pattern A (Contract-First) Services - CONTROLLED FLEXIBILITY
-
-**Services**: Loyalty, Finance, MTL, TableContext
-
-**ALLOWED**:
-- ✅ Manual `interface` OR `type` definitions for domain contracts
-- ✅ Decoupling from database schema evolution
-- ✅ Explicit field exposure control
-
-**REQUIRED**:
-- ✅ MUST have `mappers.ts` to enforce boundary
-- ✅ Mappers MUST use `Database` types as source of truth
-- ✅ TypeScript MUST enforce mapper completeness
-
-**Rationale**: Mappers create compile-time checkpoint, preventing silent drift
-
----
-
-**Reference**: See DTO_CANONICAL_STANDARD.md FAQ for complete rationale and enforcement rules
-
 ---
 
 ## Bounded Context DTO Access Rules
 
-> **Canonical Reference**: SRM v3.1.0 §2.2 (Lines 75-113)
+> **Canonical Reference**: SRM v4.0.0 §2.2 "Cross-Context Consumption Rules"
 > **Enforcement**: ESLint rule `no-cross-context-db-imports`
 
 ### Core Principle
 
 Services MUST NOT directly access `Database['public']['Tables']['X']` for tables they don't own. Cross-context access is ONLY allowed via published DTOs.
 
-### Allowed Cross-Context DTO Consumption
-
-| Consumer Service | Can Import DTOs From | Use Case | SRM Reference |
-|------------------|---------------------|----------|---------------|
-| **Loyalty** | RatingSlip (`RatingSlipTelemetryDTO`) | Calculate mid-session rewards | SRM:358-373 |
-| **Loyalty** | Visit (`VisitDTO`) | Session context for ledger entries | SRM:358 |
-| **Loyalty** | Casino (`CasinoSettingsDTO`) | Policy-driven reward calculations | SRM:358 |
-| **Finance** | Visit (`VisitDTO`) | Associate transactions with sessions | SRM:1122 |
-| **Finance** | RatingSlip (`RatingSlipDTO`) | Legacy compat FK (`rating_slip_id`) | SRM:1123 |
-| **Finance** | Casino (`CasinoSettingsDTO`) | Financial policy enforcement | SRM:1122 |
-| **MTL** | RatingSlip (`RatingSlipDTO`) | Optional FK for compliance tracking | SRM:1295 |
-| **MTL** | Visit (`VisitDTO`) | Optional FK for compliance tracking | SRM:1297 |
-| **MTL** | Casino (`CasinoSettingsDTO`) | Compliance threshold configuration | SRM:1295 |
-| **TableContext** | Casino (`CasinoSettingsDTO`) | Gaming day temporal authority | SRM:569 |
-| **RatingSlip** | TableContext (`GamingTableDTO`) | Table assignment FK | SRM:1044-1045 |
-| **RatingSlip** | Visit (`VisitDTO`) | Session association | SRM:1044 |
-| **RatingSlip** | Player (`PlayerDTO`) | Player identity reference | SRM:1044 |
-| **Visit** | Casino (`CasinoDTO`) | Gaming day calculation, property scoping | SRM:148 |
-| **Visit** | Player (`PlayerDTO`) | Player identity for session | SRM:148 |
-| **FloorLayout** | Casino (`CasinoDTO`) | Property scoping for floor plans | SRM:148 |
-| **All Services** | Casino (`CasinoDTO`, `StaffDTO`) | `casino_id` FK, staff references, audit actors | SRM:148 |
+See **SRM v4.0.0 Cross-Context Consumption Matrix** for the complete list of allowed DTO imports between bounded contexts.
 
 ### Examples
 
@@ -634,13 +448,13 @@ function calculateReward(telemetry: RatingSlipTelemetryDTO): number {
 }
 ```
 
-**Reference**: SRM v3.1.0:75-113, DTO_CANONICAL_STANDARD.md:176-243
+**Reference**: SRM v4.0.0, DTO_CANONICAL_STANDARD.md
 
 ---
 
 ## Transport Layer Architecture
 
-> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md, SERVER_ACTIONS_ARCHITECTURE.md, SRM v3.1.0:28-30
+> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md, SERVER_ACTIONS_ARCHITECTURE.md, SRM v4.0.0
 
 ```mermaid
 graph TB
@@ -698,37 +512,11 @@ graph TB
 | First-party (React Query, JSON mutations/reads) | **Route Handlers** (`app/api/v1/**/route.ts`) | React Query `mutationFn`/`queryFn` target; enforce headers, share DTOs |
 | Third-party (webhooks, integrations) | **Route Handlers** (`app/api/v1/**/route.ts`) | Reuse same DTOs/services; may add signature/rate-limit guards |
 
-### Middleware Chain (`withServerAction`)
+### Middleware Chain & Headers
 
-> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:27-45, SRM v3.1.0:130
-
-```
-withAuth()
-  → withRLS()            # SET LOCAL app.casino_id, validates staff scope
-    → withRateLimit()    # Multi-level limits (actor, casino) to protect hot paths
-      → withIdempotency()  # Enforces x-idempotency-key for mutations
-        → withAudit()      # Records audit_log row w/ correlation_id
-          → withTracing()  # Metrics, error mapping, SLO budgets
-```
-
-**Responsibilities**:
-- **withAuth**: Validates session, staff role, casino membership
-- **withRLS**: Executes `SET LOCAL app.casino_id`, ensures tenant isolation
-- **withRateLimit**: Enforces multi-level rate limits (per-actor, per-casino, per-endpoint) to protect hot paths from abuse
-- **withIdempotency**: Requires `x-idempotency-key` on mutations, scopes by `(casino_id, domain)`
-- **withAudit**: Writes `audit_log` rows per SRM contract, sets `application_name = correlation_id`
-- **withTracing**: Emits telemetry spans, maps domain errors → HTTP status codes
-
-### Required Headers
-
-> **Canonical Reference**: EDGE_TRANSPORT_POLICY.md:54-63, OBSERVABILITY_SPEC.md:27-31
-
-| Header | Scope | Owner | Reference |
-|--------|-------|-------|-----------|
-| `x-correlation-id` | All actions & routes | withAudit/withTracing | OBSERVABILITY_SPEC.md:27-31 |
-| `x-idempotency-key` | Mutations only | withIdempotency | EDGE_TRANSPORT_POLICY.md:42 |
-| `x-pt2-client` (optional) | Diagnostics | withTracing | EDGE_TRANSPORT_POLICY.md:59 |
-| `x-slo-budget` (optional) | SLO attribution | withTracing | EDGE_TRANSPORT_POLICY.md:60 |
+> **Canonical Reference**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md`
+>
+> Middleware chain (`withAuth` → `withRLS` → `withRateLimit` → `withIdempotency` → `withAudit` → `withTracing`) and required headers (`x-correlation-id`, `x-idempotency-key`) are fully documented in EDGE_TRANSPORT_POLICY.md.
 
 ### Response Envelope Contract
 
@@ -864,34 +652,9 @@ mode: 'immediate' // Bypass scheduler
 
 ### Event Contracts
 
-> **Canonical Reference**: REAL_TIME_EVENTS_MAP.md
-
-```typescript
-// rating_slip.updated
-interface RatingSlipUpdatedEvent {
-  event: 'rating_slip.updated';
-  rating_slip_id: string;  // uuid
-  player_id: string;       // uuid
-  casino_id: string;       // uuid
-  average_bet: number;
-  minutes_played: number;
-  game_type: 'blackjack' | 'poker' | 'roulette' | 'baccarat';
-  at: string;              // ISO timestamp
-}
-
-// loyalty.ledger_appended
-interface LoyaltyLedgerAppendedEvent {
-  event: 'loyalty.ledger_appended';
-  ledger_id: string;       // uuid
-  player_id: string;       // uuid
-  points_earned: number;
-  reason: 'mid_session' | 'session_end' | 'manual_adjustment';
-  rating_slip_id?: string; // uuid | null
-  at: string;              // ISO timestamp
-}
-```
-
-**Reference**: ADR-004:23-71, REAL_TIME_EVENTS_MAP.md
+> **Canonical Reference**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md`
+>
+> All event interface definitions (`RatingSlipUpdatedEvent`, `LoyaltyLedgerAppendedEvent`, etc.) are documented in REAL_TIME_EVENTS_MAP.md.
 
 ---
 
@@ -996,61 +759,10 @@ export async function executeOperation<T>(
 
 ## Error Mapping Strategy
 
-```typescript
-// lib/server-actions/error-map.ts
-export function mapDatabaseError(error: unknown): RouteError {
-  // PostgreSQL error codes
-  if (error?.code === '23505') {
-    return {
-      code: 'UNIQUE_VIOLATION',
-      message: 'A record with this information already exists',
-      status: 409,
-      details: error,
-    };
-  }
-
-  if (error?.code === '23503') {
-    return {
-      code: 'FOREIGN_KEY_VIOLATION',
-      message: 'Invalid reference: related record does not exist',
-      status: 400,
-      details: error,
-    };
-  }
-
-  // PostgREST error codes
-  if (error?.code === 'PGRST116') {
-    return {
-      code: 'NOT_FOUND',
-      message: 'Record not found',
-      status: 404,
-      details: error,
-    };
-  }
-
-  // Default
-  return {
-    code: 'INTERNAL_ERROR',
-    message: 'Internal error',
-    status: 500,
-    details: error,
-  };
-}
-```
-
-### Error Code Catalog
-
-| PostgreSQL | PostgREST | Domain Code | HTTP | Meaning |
-|------------|-----------|-------------|------|---------|
-| 23505 | - | UNIQUE_VIOLATION | 409 | Duplicate record |
-| 23503 | - | FOREIGN_KEY_VIOLATION | 400 | Invalid FK reference |
-| 23514 | - | VALIDATION_ERROR | 400 | Check constraint failed |
-| 23502 | - | VALIDATION_ERROR | 400 | NOT NULL violation |
-| - | PGRST116 | NOT_FOUND | 404 | No rows returned |
-| - | - | UNAUTHORIZED | 401 | Auth required |
-| - | - | FORBIDDEN | 403 | RLS denied |
-| - | - | TIMEOUT | 504 | Operation timeout |
-| - | - | INTERNAL_ERROR | 500 | Unknown error |
+> **Canonical Reference**: `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`
+>
+> Error mapping (PostgreSQL → Domain codes → HTTP status) is fully documented in ERROR_TAXONOMY_AND_RESILIENCE.md.
+> Implementation: `lib/server-actions/error-map.ts`
 
 ---
 
@@ -1360,10 +1072,11 @@ const mutation = useMutation({
 ┌──────────────────────────────────────────────┐
 │ RatingSlipService (Telemetry)               │
 │ OWNS: rating_slip                           │
-│ REFERENCES: player_id, visit_id (NOT NULL), │
+│ REFERENCES: visit_id (NOT NULL),            │
 │             table_id (NOT NULL)             │
 │ DOES NOT OWN: points (Loyalty's domain)     │
-│ CONSTRAINT: All slips anchored to a visit   │
+│ CONSTRAINT: All slips anchored to a visit;  │
+│   player identity derived from parent visit │
 └──────────────────────────────────────────────┘
                     │
                     ▼ (consumes telemetry)
@@ -1430,7 +1143,7 @@ INSERT INTO audit_log (
 
 ### Canonical Audit Shape
 
-> **Reference**: OBSERVABILITY_SPEC.md:76-88, SRM v3.1.0:19
+> **Reference**: OBSERVABILITY_SPEC.md, SRM v4.0.0
 
 ```typescript
 interface AuditLogEntry {
@@ -1705,121 +1418,20 @@ This pattern ensures:
 
 ---
 
-### RLS Context Interface
+### RLS Context Interface & Policy Templates
 
+> **Canonical Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md`
+>
+> RLS context interface (`RLSContext`), core functions (`getAuthContext`, `injectRLSContext`, `assertCasinoScope`, `assertRole`), and all SQL policy templates are documented in SEC-001.
+>
 > **Implementation**: `lib/supabase/rls-context.ts`
-> **Authority**: SEC-001 (lines 229-287) - Complete implementation guide with examples
-
-**Interface Definition**:
-```typescript
-export interface RLSContext {
-  actorId: string;  // staff.id (from current_setting('app.actor_id'))
-  casinoId: string; // staff.casino_id (from current_setting('app.casino_id'))
-  staffRole: string; // staff.role (for role-gated operations)
-}
-```
-
-**Core Functions** (`lib/supabase/rls-context.ts`):
-
-| Function | Purpose | Usage |
-|----------|---------|-------|
-| `getAuthContext(supabase)` | Extract RLS context from authenticated user | Server Actions, Route Handlers |
-| `injectRLSContext(supabase, context, correlationId?)` | Inject context via SET LOCAL | `withServerAction` wrapper |
-| `assertCasinoScope(context, casinoId)` | Validate casino scoping | Service methods |
-| `assertActorScope(context, actorId)` | Validate actor identity | Profile operations |
-| `assertRole(context, allowedRoles)` | Validate role permissions | Role-gated operations |
-
-**Flow**:
-```typescript
-// 1. Extract context (in withServerAction)
-const context = await getAuthContext(supabase);
-// { actorId: 'staff-uuid', casinoId: 'casino-uuid', staffRole: 'admin' }
-
-// 2. Inject into session
-await injectRLSContext(supabase, context, correlationId);
-// Sets: app.actor_id, app.casino_id, app.staff_role, application_name
-
-// 3. RLS policies read from current_setting()
-// SELECT * FROM visit WHERE casino_id = current_setting('app.casino_id')::uuid
-```
-
-**Reference**: See SEC-001 (RLS Policy Matrix) for:
-- Complete policy templates
-- Anti-patterns to avoid
-- Testing strategies
-- Migration priority
-
----
-
-### Casino-Scoped Tables
-
-**Read Policy** (SEC-001:87-100):
-```sql
--- Enable RLS
-ALTER TABLE player_loyalty ENABLE ROW LEVEL SECURITY;
-
--- Read policy (canonical pattern)
-CREATE POLICY "player_loyalty_read_same_casino"
-  ON player_loyalty
-  FOR SELECT USING (
-    -- Verify authenticated user
-    auth.uid() = (
-      SELECT user_id
-      FROM staff
-      WHERE id = current_setting('app.actor_id')::uuid
-    )
-    -- Verify casino scope
-    AND casino_id = current_setting('app.casino_id')::uuid
-  );
-```
-
-**Write Policy** (Role-based):
-```sql
--- Write policy: admins only
-CREATE POLICY "player_loyalty_write_admin"
-  ON player_loyalty
-  FOR INSERT
-  WITH CHECK (
-    -- User is authenticated staff
-    auth.uid() = (
-      SELECT user_id
-      FROM staff
-      WHERE id = current_setting('app.actor_id')::uuid
-        AND casino_id = current_setting('app.casino_id')::uuid
-        AND role = 'admin'
-    )
-    -- Matches casino scope
-    AND casino_id = current_setting('app.casino_id')::uuid
-  );
-```
-
-### Application Layer (withServerAction)
-
-> **Reference**: EDGE_TRANSPORT_POLICY.md:33, SEC-001:42-44
-
-```typescript
-// withServerAction injects context
-await supabase.rpc('exec_sql', {
-  sql: `
-    SET LOCAL app.actor_id = '${actorId}';
-    SET LOCAL app.casino_id = '${casinoId}';
-  `
-});
-
-// All subsequent queries inherit RLS context
-const result = await service.getBalance(playerId);
-```
 
 ### Key Principles
-
-> **Reference**: SEC-001:38-46
 
 - ❌ **No JWT claims for business logic** - All context via SET LOCAL
 - ❌ **No service keys in runtime** - All operations use anon key + user authentication
 - ✅ **Casino scoping mandatory** - Every query scoped by `current_setting('app.casino_id')`
 - ✅ **Actor tracking** - `current_setting('app.actor_id')` for audit trails
-
-**Reference**: SEC-001:38-100, SECURITY_TENANCY_UPGRADE.md
 
 ---
 
@@ -1827,7 +1439,7 @@ const result = await service.getBalance(playerId);
 
 ### Starting New Service
 
-> **Reference**: SRM v3.1.0 §3, ADR-008, ADR-013
+> **Reference**: SRM v4.0.0 §3, ADR-008, ADR-013
 
 - [ ] Create `services/{domain}/` directory
 - [ ] Define DTOs in `dtos.ts` (plural) using appropriate pattern:
@@ -1841,7 +1453,7 @@ const result = await service.getBalance(playerId);
 - [ ] Add `schemas.ts` if Route Handlers need request validation (ADR-013)
   - Use `CreateXInput`, `XListQuery` naming (NOT `DTO` suffix)
   - Include `.refine()` for complex business rules
-- [ ] Add `mappers.ts` if using Contract-First pattern (SRM v3.1.0:141-154)
+- [ ] Add `mappers.ts` if using Contract-First pattern (SRM v4.0.0)
 - [ ] Create query key factories in `keys.ts` (with `.scope` for lists) (ADR-003:87-96)
 - [ ] Create HTTP fetchers in `http.ts` (thin wrappers to API routes)
 - [ ] Define explicit interface in `index.ts` (NOT ReturnType) (ADR-008)
@@ -1887,12 +1499,30 @@ const result = await service.getBalance(playerId);
 
 ## Document History
 
-**Version**: 2.3.0
-**Date**: 2025-12-05
-**Status**: Accepted (Aligned with SRM v3.1.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014)
+**Version**: 3.0.0
+**Date**: 2025-12-06
+**Status**: Accepted (Aligned with SRM v4.0.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.0.0 (2025-12-06)** - DRY Reduction (SLAD Audit 2025-12-06):
+- ✅ Removed Error Mapping section (~60 lines) → Reference ERROR_TAXONOMY_AND_RESILIENCE.md
+- ✅ Condensed cross-context DTO consumption matrix (~20 lines) → Reference SRM v4.0.0
+- ✅ Removed middleware chain detail + headers table (~45 lines) → Reference EDGE_TRANSPORT_POLICY.md
+- ✅ Condensed Pattern A/B/C explanations (~180 lines) → Quick reference table + DTO_CANONICAL_STANDARD.md
+- ✅ Removed RLS policy templates + Context Interface detail (~100 lines) → Reference SEC-001
+- ✅ Removed event contract examples (~25 lines) → Reference REAL_TIME_EVENTS_MAP.md
+- ✅ Updated all SRM references from v3.1.0 to v4.0.0
+- ✅ **Total reduction: ~430 lines (~22% reduction)**
+- ✅ Kept: All mermaid diagrams, Service Factory Pattern, React Query patterns, checklists
+
+**v2.3.1 (2025-12-06)** - RatingSlip player_id Removal (EXEC-VSE-001 Continuation):
+- ✅ Removed `player_id` from RatingSlipService REFERENCES (identity derived from parent visit)
+- ✅ Updated RatingSlipUpdatedEvent to include visit_id and make player_id nullable
+- ✅ Removed PLAYER→RATING direct identity dependency (now flows through VISIT)
+- ✅ Updated cross-context DTO matrix: RatingSlip→Visit now includes identity derivation
+- ✅ Aligns SRM and SLAD rating_slip schema with EXEC-VSE-001 specification
 
 **v2.3.0 (2025-12-05)** - Visit Service Evolution (EXEC-VSE-001):
 - ✅ Added visit archetypes (3 types via visit_kind enum) to VisitService
@@ -1955,17 +1585,14 @@ const result = await service.getBalance(playerId);
 
 ### Alignment Status
 
-| SDLC Peer | Status | Gaps Addressed |
-|-----------|--------|----------------|
-| SRM v3.1.0 | ✅ ALIGNED | Added 3 DTO patterns, cross-context matrix, mappers.ts |
-| DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Referenced Pattern A/B/C with SRM line numbers |
-| SEC-001 | ✅ ALIGNED | Added canonical RLS pattern (auth.uid + SET LOCAL) |
-| EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Added middleware chain, headers, withServerAction |
-| ADR-003 (State Mgmt) | ✅ ALIGNED | Referenced query key factories, React Query v5 |
-| ADR-004 (Real-time) | ✅ ALIGNED | Added domain-scoped channels, scheduler patterns |
-| OBSERVABILITY_SPEC.md | ✅ ALIGNED | Added correlation/audit section |
-| API_SURFACE_MVP.md | ✅ ALIGNED | Added ServiceHttpResult transformation |
-| ADR-008 | ✅ ALIGNED | Referenced service architecture decisions |
-| ADR-014 | ✅ ALIGNED | Visit archetypes, ghost gaming, loyalty filtering |
+| SDLC Peer | Status | Notes |
+|-----------|--------|-------|
+| SRM v4.0.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns |
+| DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Quick reference table, detailed patterns externalized |
+| SEC-001 | ✅ ALIGNED | RLS patterns externalized, key principles retained |
+| EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
+| ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized |
+| REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |
+| ADR-003, ADR-004, ADR-008, ADR-014 | ✅ ALIGNED | Referenced throughout |
 
 **Next Review**: When SRM or security contracts evolve
