@@ -21,6 +21,8 @@
 
 **CRITICAL**: Choose ONE bold direction, not a safe blend.
 
+**Reference**: `.claude/skills/frontend-design-pt-2/references/pt2-ui-design-system-prototype-style-guide.md` for UI/UX design system
+
 | Direction | Characteristics |
 |-----------|-----------------|
 | Brutalist | Raw, exposed structure, monospace, harsh contrasts |

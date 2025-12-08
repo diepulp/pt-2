@@ -461,8 +461,8 @@ services/visit/
 
 | Item | Location | Description | Priority |
 |------|----------|-------------|----------|
-| Dashboard layout | `app/dashboard/page.tsx` | Main pit operations view | P0 |
-| Table grid | `components/table/table-layout-terminal.tsx` | Visual table status | P0 |
+| Dashboard layout | `app/pit-terminal/page.tsx` | Main pit operations view | P0 |
+| Table terminal | `components/table/table-layout-terminal.tsx` | Visual table status | P0 |
 | Active slips panel | `components/dashboard/active-slips.tsx` | Current sessions | P0 |
 | Player activity | `components/dashboard/player-activity.tsx` | Recent check-ins | P1 |
 | Realtime updates | `hooks/use-dashboard-realtime.ts` | Supabase channels | P1 |

@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https",
+    "dev": "npm run dev -- --webpack",
     "dev:webpack": "next dev --experimental-https --webpack",
     "build": "next build",
     "build:webpack": "next build --webpack",

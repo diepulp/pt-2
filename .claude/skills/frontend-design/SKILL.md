@@ -48,6 +48,7 @@ See `references/QUICK_START.md` for implementation workflow and code templates.
 ## shadcn UI - De-facto Standard 🎨
 
 **shadcn/ui is the de-facto UI component library for PT-2.** Access components via the shadcn MCP server.
+**use magicUI mcp** as a fallback for shadcn, should the registries be unavailable 
 
 ### MCP Server Access
 
@@ -58,7 +59,12 @@ Use `mcp__shadcn__*` tools to browse and install components:
 mcp__shadcn__list_components    # List all available components
 mcp__shadcn__get_component      # Get component details/code
 mcp__shadcn__install_component  # Install component to project
+
+# MagicUI
+mcp___magicuidesign_mcp__getUIComponents
 ```
+
+
 
 ### Registered Component Registries
 
