@@ -117,7 +117,38 @@ grep -r "export interface.*DTO" services/player/ services/visit/ services/casino
 grep -r "Tables\[" services/ | grep -v "# own table"
 ```
 
-### 6. Zod Validation Schemas Check (ADR-013)
+### 6. Next.js 16 Compliance Check (CRITICAL)
+**Reference**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md`, Context7 Next.js 16 docs
+
+#### Dynamic Route Params
+- [ ] All pages/layouts with dynamic segments use `params: Promise<{ ... }>`
+- [ ] All `params` access uses `await params` (not direct destructuring)
+- [ ] Layout components that use params are `async` functions
+
+**Quick Check**:
+```bash
+# Find pages that may need updating (manual review required)
+grep -r "params\s*:" app/ --include="*.tsx" | grep -v "Promise"
+```
+
+#### Cache Revalidation
+- [ ] Server Actions use `revalidateTag(tag, 'max')` (with profile)
+- [ ] NOT using deprecated `revalidateTag(tag)` alone
+- [ ] `updateTag(tag)` used only in Server Actions (not Route Handlers)
+- [ ] Cached data uses `cacheTag()` (stable API, not `unstable_cacheTag`)
+
+#### React 19 Form Patterns
+- [ ] `useActionState` destructures 3 values: `[state, formAction, pending]`
+- [ ] NOT using old 2-tuple destructure `[state, formAction]`
+- [ ] `useFormStatus` used only in child components of forms
+
+**Red Flags**:
+- `params.id` without `await` → Runtime error in Next.js 16
+- `revalidateTag(tag)` without profile → Missing stale-while-revalidate
+- `unstable_cacheTag` → Deprecated, use `cacheTag`
+- Pages Router patterns in new code → Use App Router only
+
+### 7. Zod Validation Schemas Check (ADR-013)
 **Reference**: `docs/80-adrs/ADR-013-zod-validation-schemas.md`, SLAD §308-348
 
 #### When schemas.ts REQUIRED
@@ -214,6 +245,13 @@ When updating PRD for a service with SRM contract sections:
 - Anti-patterns in affected domain
 - RLS missing on user-facing tables
 
+**Next.js 16 Violations (CRITICAL)**:
+- Dynamic route pages using `params: { id: string }` instead of `Promise<{ id: string }>`
+- `await params` missing in page/layout components
+- `revalidateTag(tag)` without `'max'` profile
+- Using `unstable_cacheTag` instead of `cacheTag`
+- `useActionState` with 2-tuple destructure instead of 3-tuple
+
 **SRM Invariant Violations (CRITICAL)**:
 - Schema change that contradicts SRM invariants (must amend SRM first)
 - Proposing to remove NOT NULL column without SRM amendment
@@ -255,6 +293,7 @@ When patterns are insufficient:
 | **Database types (SOT)** | `types/database.types.ts` |
 | **DTO Standard (MANDATORY)** | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` |
 | **Zod Schemas Standard (ADR-013)** | `docs/80-adrs/ADR-013-zod-validation-schemas.md` |
+| **Frontend Standard (Next.js 16)** | `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` |
 | Service boundaries | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
 | Patterns | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | ADRs | `docs/80-adrs/` |
@@ -262,3 +301,4 @@ When patterns are insufficient:
 | API contracts | `docs/25-api-data/` |
 | Anti-patterns | `docs/70-governance/ANTI_PATTERN_CATALOG.md` |
 | Taxonomy (master index) | `docs/SDLC_DOCS_TAXONOMY.md` |
+| Next.js 16 Docs | Context7 `/vercel/next.js/v16.0.3` |

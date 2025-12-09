@@ -1,7 +1,7 @@
 # PT-2 Frontend Technical Standards
 
 **Source**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` v2.1
-**Stack**: React 19 + Next.js App Router + Tailwind CSS v4 + TypeScript + shadcn/ui
+**Stack**: React 19 + **Next.js 16** App Router + Tailwind CSS v4 + TypeScript + shadcn/ui
 
 ---
 
@@ -9,7 +9,7 @@
 
 ### Core Technologies
 - **React 19** with React Compiler (automatic optimizations)
-- **Next.js App Router** (not Pages Router)
+- **Next.js 16 App Router** (not Pages Router)
 - **TypeScript** (strict mode enabled)
 - **Tailwind CSS v4** (utility-first styling)
 - **shadcn/ui** component library (copy-paste, not npm package)
@@ -176,7 +176,7 @@ function PlayerForm() {
 
 ---
 
-## React 19 Patterns
+## Next.js 16 + React 19 Patterns
 
 ### Server Actions (REQUIRED for mutations)
 
@@ -187,12 +187,13 @@ function PlayerForm() {
 import { createClient } from '@/lib/supabase/server'
 import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper'
 import { createPlayerService } from '@/services/player'
+import { revalidateTag } from 'next/cache'
 
 export async function createPlayerAction(input: CreatePlayerInput) {
   const supabase = await createClient()
   const { data: { session } } = await supabase.auth.getSession()
 
-  return withServerAction(
+  const result = await withServerAction(
     async () => {
       const playerService = createPlayerService(supabase)
       return playerService.create(input)
@@ -205,27 +206,107 @@ export async function createPlayerAction(input: CreatePlayerInput) {
       metadata: { email: input.email }
     }
   )
+
+  // Next.js 16: Revalidate with stale-while-revalidate
+  revalidateTag('players', 'max')
+  return result
 }
 ```
 
-### New React 19 Hooks
+### Dynamic Route Params (Next.js 16 Breaking Change)
+
+```typescript
+// Next.js 16: params is now a Promise - MUST await
+export default async function PlayerPage({
+  params,
+}: {
+  params: Promise<{ playerId: string }>
+}) {
+  const { playerId } = await params  // Required in Next.js 16
+
+  const supabase = await createClient()
+  const service = createPlayerService(supabase)
+  const result = await service.getById(playerId)
+
+  if (!result.success) return <ErrorDisplay error={result.error} />
+  return <PlayerDetails player={result.data} />
+}
+
+// Layouts also receive params as Promise
+export default async function DashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ casinoId: string }>
+}) {
+  const { casinoId } = await params
+  return (
+    <section>
+      <CasinoHeader casinoId={casinoId} />
+      {children}
+    </section>
+  )
+}
+```
+
+### Next.js 16 Cache APIs (Stable)
+
+```typescript
+import { cacheTag, revalidateTag, updateTag } from 'next/cache'
+
+// Tag cached data for invalidation
+export async function getPlayers() {
+  'use cache'
+  cacheTag('players')
+  const players = await db.query('SELECT * FROM players')
+  return players
+}
+
+// unstable_cache still available for function-level caching
+import { unstable_cache } from 'next/cache'
+
+const getCachedPlayer = unstable_cache(
+  async (playerId: string) => getPlayerById(playerId),
+  ['player'],
+  {
+    tags: ['player'],
+    revalidate: 3600,  // 1 hour
+  }
+)
+```
+
+### New React 19 Hooks (useActionState with pending)
 
 ```typescript
 'use client'
 import { useActionState, useOptimistic } from 'react'
+import { useFormStatus } from 'react-dom'
 import { createPlayerAction } from '@/app/actions/player/create-player-action'
 
+// useActionState now returns pending state directly (React 19)
 function PlayerForm() {
-  // Form submission with Server Action
-  const [state, formAction] = useActionState(createPlayerAction, null)
+  const [state, formAction, isPending] = useActionState(createPlayerAction, null)
 
   return (
     <form action={formAction}>
       <input name="email" type="email" required />
       <input name="name" required />
-      <button type="submit">Create Player</button>
+      <button type="submit" disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create Player'}
+      </button>
       {state?.error && <p className="text-red-500">{state.error.message}</p>}
     </form>
+  )
+}
+
+// Alternative: useFormStatus for nested submit buttons
+function SubmitButton() {
+  const { pending } = useFormStatus()
+  return (
+    <button type="submit" disabled={pending}>
+      {pending ? 'Submitting...' : 'Submit'}
+    </button>
   )
 }
 
@@ -248,6 +329,39 @@ function TodoList({ todos }: { todos: Todo[] }) {
       <button>Add</button>
     </form>
   )
+}
+```
+
+### Streaming with Suspense (Next.js 16)
+
+```typescript
+import { Suspense } from 'react'
+import { PlayerListSkeleton } from '@/components/skeletons'
+
+export default function PlayersPage() {
+  return (
+    <div>
+      {/* Static content renders immediately */}
+      <header>
+        <h1>Player Management</h1>
+      </header>
+
+      {/* Dynamic content streams when ready */}
+      <Suspense fallback={<PlayerListSkeleton />}>
+        <PlayerList />
+      </Suspense>
+    </div>
+  )
+}
+
+// Async Server Component - data fetches on server
+async function PlayerList() {
+  const supabase = await createClient()
+  const service = createPlayerService(supabase)
+  const result = await service.list()
+
+  if (!result.success) return <ErrorDisplay error={result.error} />
+  return <PlayersTable players={result.data} />
 }
 ```
 
@@ -420,9 +534,21 @@ describe('PlayerForm', () => {
 
 ---
 
+## Next.js 16 Breaking Changes Summary
+
+| Change | Before (Next.js 15) | After (Next.js 16) |
+|--------|--------------------|--------------------|
+| **Dynamic params** | `params: { id: string }` | `params: Promise<{ id: string }>` + `await` |
+| **Cache tags** | `unstable_cacheTag` | `cacheTag` (stable) |
+| **Revalidation** | `revalidateTag(tag)` | `revalidateTag(tag, 'max')` for stale-while-revalidate |
+| **Immediate invalidation** | N/A | `updateTag(tag)` for read-your-own-writes |
+| **useActionState** | `[state, formAction]` | `[state, formAction, pending]` |
+
+---
+
 ## Quick Reference Links
 
-- **Next.js App Router**: https://nextjs.org/docs/app
+- **Next.js 16 Docs**: https://nextjs.org/docs/app
 - **React 19 Docs**: https://react.dev
 - **Tailwind CSS v4**: https://tailwindcss.com
 - **shadcn/ui**: https://ui.shadcn.com

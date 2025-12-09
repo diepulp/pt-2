@@ -1,6 +1,7 @@
 # Architecture Rules
 
 **Source**: SLAD v2.1.2, SRM v3.1.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013
+**Stack**: **Next.js 16** + React 19 + Supabase + TypeScript
 
 This document provides condensed patterns and anti-patterns. For the full workflow, see `QUICK_START.md`.
 
@@ -12,6 +13,7 @@ This document provides condensed patterns and anti-patterns. For the full workfl
 2. **Bounded Contexts**: Services should access tables they own. Cross-context communication uses DTOs.
 3. **KISS/YAGNI**: Keep solutions implementable by a small team.
 4. **Documentation as Product**: Update all affected docs atomically.
+5. **Next.js 16 Patterns**: Use App Router, async params, stable cache APIs.
 
 ---
 
@@ -123,6 +125,83 @@ CREATE POLICY "staff_casino_data" ON table_name
 
 ---
 
+## Next.js 16 Architecture Patterns
+
+### Dynamic Route Params (Breaking Change)
+
+```typescript
+// BEFORE (Next.js 15) - NO LONGER WORKS
+export default function Page({ params }: { params: { id: string } }) {
+  const { id } = params  // ❌ Direct access fails
+}
+
+// AFTER (Next.js 16) - REQUIRED PATTERN
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>
+}) {
+  const { id } = await params  // ✅ Must await
+}
+```
+
+### Cache Revalidation APIs (Stable)
+
+| API | Usage | Behavior |
+|-----|-------|----------|
+| `cacheTag('tag')` | Tag cached data | Stable (no `unstable_` prefix) |
+| `revalidateTag(tag, 'max')` | Server Action/Route Handler | Stale-while-revalidate |
+| `updateTag(tag)` | Server Action only | Immediate expiration |
+| `revalidatePath(path)` | Server Action/Route Handler | Path-based invalidation |
+
+```typescript
+import { cacheTag, revalidateTag, updateTag } from 'next/cache'
+
+// Tag cached data in Server Component
+export async function getPlayers() {
+  'use cache'
+  cacheTag('players')
+  return await db.query('SELECT * FROM players')
+}
+
+// Revalidate in Server Action (stale-while-revalidate)
+export async function createPlayer(formData: FormData) {
+  'use server'
+  await db.insert(/* ... */)
+  revalidateTag('players', 'max')  // Recommended
+}
+
+// Immediate invalidation (shopping cart scenario)
+export async function updateCart(itemId: string) {
+  'use server'
+  await db.update(/* ... */)
+  updateTag('cart')  // Immediate
+}
+```
+
+### React 19 Form Patterns
+
+```typescript
+'use client'
+import { useActionState } from 'react'
+import { useFormStatus } from 'react-dom'
+
+function Form() {
+  // React 19: Returns [state, formAction, pending]
+  const [state, formAction, isPending] = useActionState(createAction, null)
+
+  return (
+    <form action={formAction}>
+      <input name="field" />
+      <button disabled={isPending}>{isPending ? 'Saving...' : 'Save'}</button>
+      {state?.error && <p>{state.error}</p>}
+    </form>
+  )
+}
+```
+
+---
+
 ## Anti-Patterns (Avoid)
 
 ### Service Layer Anti-Patterns
@@ -134,6 +213,16 @@ CREATE POLICY "staff_casino_data" ON table_name
 | `supabase: any` | `supabase: SupabaseClient<Database>` |
 | Global singletons | Dependency injection |
 | `as any` casting | Proper type narrowing |
+
+### Next.js 16 Anti-Patterns
+
+| Anti-Pattern | Why Banned | Correct Pattern |
+|--------------|------------|-----------------|
+| `params.id` without await | Breaking change in Next.js 16 | `const { id } = await params` |
+| `revalidateTag(tag)` alone | Missing stale-while-revalidate | `revalidateTag(tag, 'max')` |
+| `unstable_cacheTag` | Deprecated | `cacheTag` (stable) |
+| `[state, formAction]` destructure | Missing pending | `[state, formAction, pending]` |
+| Pages Router patterns | Deprecated for new code | App Router only |
 
 ### DTO Anti-Patterns (CRITICAL - See DTO_CANONICAL_STANDARD.md)
 
@@ -230,3 +319,5 @@ done
 - **DTO_CATALOG**: `docs/25-api-data/DTO_CATALOG.md`
 - **Anti-Pattern Catalog**: `docs/70-governance/ANTI_PATTERN_CATALOG.md`
 - **Over-Engineering Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`
+- **Frontend Standard**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` (Next.js 16 patterns)
+- **Next.js 16 Docs**: Context7 `/vercel/next.js/v16.0.3`

@@ -112,7 +112,7 @@ Follow this standard workflow for architectural tasks:
 
 - Propose 1-2 options with tradeoffs
 - Select a **recommended option** with brief justification
-- Ensure compatibility with PT-2 tech stack (Next.js, Supabase, React 19)
+- Ensure compatibility with PT-2 tech stack (**Next.js 16**, Supabase, React 19)
 - Validate against OVER_ENGINEERING_GUARDRAIL.md
 
 ### 4. Produce Canonical Artifacts
@@ -231,6 +231,59 @@ When the architectural work requires a new PRD or PRD update, follow PRD-STD-001
 
 Validate against these PT-2 standards:
 
+### Next.js 16 Architecture Requirements (CRITICAL)
+
+**Stack**: Next.js 16 + React 19 + App Router
+
+| Pattern | Requirement | Notes |
+|---------|-------------|-------|
+| **Dynamic params** | `params: Promise<{ id: string }>` | MUST `await params` in pages/layouts |
+| **Cache revalidation** | `revalidateTag(tag, 'max')` | Use profile for stale-while-revalidate |
+| **Immediate invalidation** | `updateTag(tag)` | For read-your-own-writes scenarios |
+| **Server Actions** | `useActionState` returns `pending` | `[state, formAction, pending]` |
+| **Cache tags** | `cacheTag('tag')` | Stable API (no `unstable_` prefix) |
+
+**Breaking Change - Dynamic Route Params**:
+```typescript
+// Next.js 16: params is now a Promise - MUST await
+export default async function Page({
+  params,
+}: {
+  params: Promise<{ id: string }>  // NOT { id: string }
+}) {
+  const { id } = await params  // Required in Next.js 16
+  // ...
+}
+```
+
+**Cache Revalidation Patterns**:
+```typescript
+import { cacheTag, revalidateTag, updateTag } from 'next/cache'
+
+// Tag cached data
+export async function getPlayers() {
+  'use cache'
+  cacheTag('players')
+  return await service.list()
+}
+
+// Server Action with revalidation
+export async function updatePlayer(id: string) {
+  'use server'
+  await service.update(id, data)
+  revalidateTag('players', 'max')  // Stale-while-revalidate (recommended)
+}
+
+// Immediate invalidation (for shopping carts, etc.)
+export async function updateCart(itemId: string) {
+  'use server'
+  await service.update(itemId, data)
+  updateTag('cart')  // Immediate expiration
+}
+```
+
+Reference: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md`, Context7 Next.js 16 docs
+
 ### Service Layer Patterns
 
 - Use functional factories, not classes
@@ -256,6 +309,13 @@ Reference: Memory files loaded via `@memory/*.memory.md` and `docs/patterns/BALA
 - `console.*` in production code
 - `as any` type casting
 - Over-engineered abstractions
+
+**Next.js 16 Anti-Patterns**:
+- `params.id` without `await` (MUST `await params` first)
+- `revalidateTag(tag)` without profile (use `revalidateTag(tag, 'max')`)
+- `unstable_cacheTag` (use stable `cacheTag`)
+- `useActionState` expecting 2-tuple (returns 3-tuple with pending)
+- Pages Router patterns (use App Router only)
 
 **DTO Anti-Patterns (CRITICAL)**:
 - Manual `interface` for Pattern B services (causes schema evolution blindness)
@@ -362,9 +422,12 @@ Each architectural task should produce:
 - [ ] Add RLS policies: [policy names]
 - [ ] Update API routes: [routes]
 
-### Frontend
+### Frontend (Next.js 16)
 - [ ] Update types: `npm run db:types`
 - [ ] Implement UI components: [component paths]
+- [ ] Dynamic route pages use `await params` pattern
+- [ ] Server Actions use `revalidateTag(tag, 'max')` for cache invalidation
+- [ ] Forms use `useActionState` with pending state
 - [ ] Add client-side validation
 - [ ] Integrate with service layer
 

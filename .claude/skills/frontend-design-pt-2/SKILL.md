@@ -35,11 +35,22 @@ The user provides frontend requirements: a component, page, application, or inte
 
 **Quick Technical Requirements**:
 - ✅ React 19 with App Router (NOT Pages Router)
+- ✅ **Next.js 16** with enhanced caching APIs
 - ✅ Tailwind CSS v4 utilities (NOT inline styles or v3 syntax)
 - ✅ shadcn/ui components via MCP server (de-facto UI standard)
 - ✅ Server Actions for mutations (NOT fetch to API routes)
 - ✅ TanStack Query for client-side data
 - ✅ TypeScript strict mode
+
+### Next.js 16 Key Changes
+
+| Feature | Description |
+|---------|-------------|
+| **`params` as Promise** | Dynamic route params are now async - must `await params` |
+| **`cacheTag`** | Stable API (no `unstable_` prefix) for tagging cached data |
+| **`revalidateTag` with profile** | Use `revalidateTag(tag, 'max')` for stale-while-revalidate |
+| **`updateTag`** | New API for immediate cache expiration (read-your-own-writes) |
+| **Enhanced `useActionState`** | Returns `[state, formAction, pending]` - pending included |
 
 See `references/QUICK_START.md` for implementation workflow and code templates.
 
@@ -467,7 +478,46 @@ See `references/frontend-rules.md` for condensed technical rules.
 
 When implementing real-time UI updates, use the event catalog patterns:
 
-### Cache Invalidation from Events
+### Next.js 16 Cache Revalidation (Server-Side)
+
+Next.js 16 introduces stable caching APIs with improved semantics:
+
+```typescript
+// Server Component or Server Action
+import { cacheTag, revalidateTag, updateTag } from 'next/cache'
+
+// Tag cached data for invalidation
+export async function getPlayers() {
+  'use cache'
+  cacheTag('players')
+  const players = await db.query('SELECT * FROM players')
+  return players
+}
+
+// Revalidate with stale-while-revalidate (recommended)
+export async function updatePlayer(id: string) {
+  'use server'
+  await db.update(/* ... */)
+  revalidateTag('players', 'max')  // Serves stale while fetching fresh
+}
+
+// Immediate expiration (read-your-own-writes scenarios)
+export async function updateCart(itemId: string) {
+  'use server'
+  await db.update(/* ... */)
+  updateTag('cart')  // Immediate cache expiration
+}
+```
+
+### Cache Revalidation Comparison (Next.js 16)
+
+| Function | Context | Behavior | Use Case |
+|----------|---------|----------|----------|
+| `revalidateTag(tag, 'max')` | Server Actions, Route Handlers | Stale-while-revalidate | Tag-based, background refresh |
+| `updateTag(tag)` | Server Actions only | Immediate expiration | Read-your-own-writes |
+| `revalidatePath(path)` | Server Actions, Route Handlers | Path-based | Route-specific invalidation |
+
+### Client-Side Cache Invalidation (TanStack Query)
 
 ```typescript
 // Shared helper maps events to React Query keys

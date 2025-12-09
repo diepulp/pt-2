@@ -44,7 +44,7 @@
 ### Technical Standards (REQUIRED)
 
 ```
-✅ React 19 + App Router (NOT Pages Router)
+✅ React 19 + Next.js 16 App Router (NOT Pages Router)
 ✅ Tailwind CSS v4 (NOT v3 syntax)
 ✅ shadcn/ui components via MCP (de-facto UI standard)
 ✅ Server Actions for mutations (NOT fetch to API routes)
@@ -52,6 +52,7 @@
 ✅ TypeScript strict mode
 ✅ Loading skeletons (NOT spinners)
 ✅ Lists > 100 items use virtualization
+✅ Dynamic params MUST be awaited (Next.js 16)
 ```
 
 ### shadcn UI via MCP Server
@@ -101,6 +102,28 @@ export default async function PlayersPage() {
 }
 ```
 
+### Dynamic Route Page (Next.js 16)
+
+```typescript
+// app/{domain}/[id]/page.tsx
+// IMPORTANT: params is now a Promise in Next.js 16
+
+export default async function PlayerPage({
+  params,
+}: {
+  params: Promise<{ id: string }>  // Promise type required
+}) {
+  const { id } = await params  // MUST await params
+
+  const supabase = await createClient()
+  const service = createPlayerService(supabase)
+  const result = await service.getById(id)
+
+  if (!result.success) return <ErrorDisplay error={result.error} />
+  return <PlayerDetails player={result.data} />
+}
+```
+
 ### Client Component + Query
 
 ```typescript
@@ -120,23 +143,58 @@ function InteractiveList() {
 }
 ```
 
-### Server Action + Form
+### Server Action + Form (React 19 / Next.js 16)
 
 ```typescript
 'use client'
 import { useActionState } from 'react'
+import { useFormStatus } from 'react-dom'
 import { createPlayerAction } from '@/app/actions/player/create-player-action'
 
 function CreateForm() {
+  // React 19: useActionState returns [state, formAction, pending]
   const [state, formAction, isPending] = useActionState(createPlayerAction, null)
 
   return (
     <form action={formAction}>
       <Input name="name" required />
       {state?.error && <Error>{state.error.message}</Error>}
-      <Button disabled={isPending}>Create</Button>
+      <Button disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create'}
+      </Button>
     </form>
   )
+}
+
+// Alternative: useFormStatus for nested submit buttons
+function SubmitButton({ children }: { children: React.ReactNode }) {
+  const { pending } = useFormStatus()
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? 'Saving...' : children}
+    </Button>
+  )
+}
+```
+
+### Server Action with Cache Revalidation (Next.js 16)
+
+```typescript
+// app/actions/player/create-player-action.ts
+'use server'
+import { revalidateTag } from 'next/cache'
+
+export async function createPlayerAction(prevState: unknown, formData: FormData) {
+  const result = await createPlayer({
+    name: formData.get('name') as string,
+  })
+
+  if (result.success) {
+    // Next.js 16: Use 'max' profile for stale-while-revalidate
+    revalidateTag('players', 'max')
+  }
+
+  return result
 }
 ```
 
@@ -178,6 +236,18 @@ npm test -- --grep "ComponentName"
 
 ---
 
+## Quick Reference: Next.js 16 Breaking Changes
+
+| Before (Next.js 15) | After (Next.js 16) | Notes |
+|--------------------|--------------------|-------|
+| `params: { id: string }` | `params: Promise<{ id: string }>` | Must `await params` |
+| `unstable_cacheTag` | `cacheTag` | Stable API |
+| `revalidateTag(tag)` | `revalidateTag(tag, 'max')` | Stale-while-revalidate |
+| N/A | `updateTag(tag)` | Immediate expiration |
+| `[state, formAction]` | `[state, formAction, pending]` | useActionState returns pending |
+
+---
+
 ## Anti-Patterns
 
 | Anti-Pattern | Correct Pattern |
@@ -189,6 +259,8 @@ npm test -- --grep "ComponentName"
 | Spinners for loading | Layout-aware skeletons |
 | `console.*` in production | Remove or use logger |
 | Manual memoization | Trust React Compiler |
+| `params.id` without await | `const { id } = await params` (Next.js 16) |
+| `revalidateTag(tag)` alone | `revalidateTag(tag, 'max')` for SWR |
 
 ---
 
