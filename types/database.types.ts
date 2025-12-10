@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1258,13 +1233,12 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
-          player_id: string | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         Insert: {
           average_bet?: number | null
@@ -1272,13 +1246,12 @@ export type Database = {
           end_time?: string | null
           game_settings?: Json | null
           id?: string
-          player_id?: string | null
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id: string
+          visit_id: string
         }
         Update: {
           average_bet?: number | null
@@ -1286,13 +1259,12 @@ export type Database = {
           end_time?: string | null
           game_settings?: Json | null
           id?: string
-          player_id?: string | null
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string | null
-          visit_id?: string | null
+          table_id?: string
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1300,13 +1272,6 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rating_slip_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
             referencedColumns: ["id"]
           },
           {
@@ -1470,7 +1435,7 @@ export type Database = {
       }
       staff: {
         Row: {
-          casino_id: string | null
+          casino_id: string
           created_at: string
           email: string | null
           employee_id: string | null
@@ -1482,7 +1447,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          casino_id?: string | null
+          casino_id: string
           created_at?: string
           email?: string | null
           employee_id?: string | null
@@ -1494,7 +1459,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          casino_id?: string | null
+          casino_id?: string
           created_at?: string
           email?: string | null
           employee_id?: string | null
@@ -2066,13 +2031,12 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
-          player_id: string | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2157,13 +2121,12 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
-          player_id: string | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
+          table_id: string
+          visit_id: string
         }
         SetofOptions: {
           from: "*"
@@ -2172,37 +2135,66 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_start_rating_slip: {
-        Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_game_settings: Json
-          p_player_id: string
-          p_seat_number: string
-          p_table_id: string
-          p_visit_id: string
-        }
-        Returns: {
-          average_bet: number | null
-          casino_id: string
-          end_time: string | null
-          game_settings: Json | null
-          id: string
-          player_id: string | null
-          policy_snapshot: Json | null
-          seat_number: string | null
-          start_time: string
-          status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string | null
-          visit_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "rating_slip"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      rpc_start_rating_slip:
+        | {
+            Args: {
+              p_actor_id: string
+              p_casino_id: string
+              p_game_settings: Json
+              p_player_id: string
+              p_seat_number: string
+              p_table_id: string
+              p_visit_id: string
+            }
+            Returns: {
+              average_bet: number | null
+              casino_id: string
+              end_time: string | null
+              game_settings: Json | null
+              id: string
+              policy_snapshot: Json | null
+              seat_number: string | null
+              start_time: string
+              status: Database["public"]["Enums"]["rating_slip_status"]
+              table_id: string
+              visit_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "rating_slip"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_actor_id: string
+              p_casino_id: string
+              p_game_settings: Json
+              p_seat_number: string
+              p_table_id: string
+              p_visit_id: string
+            }
+            Returns: {
+              average_bet: number | null
+              casino_id: string
+              end_time: string | null
+              game_settings: Json | null
+              id: string
+              policy_snapshot: Json | null
+              seat_number: string | null
+              start_time: string
+              status: Database["public"]["Enums"]["rating_slip_status"]
+              table_id: string
+              visit_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "rating_slip"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       rpc_update_table_status: {
         Args: {
           p_actor_id: string
@@ -2237,6 +2229,10 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_staff_jwt_claims: {
+        Args: { p_staff_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       floor_layout_status: "draft" | "review" | "approved" | "archived"
@@ -2385,9 +2381,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       floor_layout_status: ["draft", "review", "approved", "archived"],
