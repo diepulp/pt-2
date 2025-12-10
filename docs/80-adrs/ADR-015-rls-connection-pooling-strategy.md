@@ -1,6 +1,6 @@
 # ADR-015: RLS Connection Pooling Strategy
 
-**Status:** Implemented (Phase 1)
+**Status:** Implemented (Phase 2)
 **Date:** 2025-12-10
 **Implementation Date:** 2025-12-10
 **Owner:** Security/Platform
@@ -348,7 +348,24 @@ CREATE POLICY "table_read_hybrid"
   - All 12 integration tests passing (`lib/supabase/__tests__/rls-context.integration.test.ts`)
   - SEC-001 documentation updated with ADR-015 patterns
 
-**Pending Post-Implementation Testing:**
-- Phase 2-3 (JWT Claims Integration) deferred pending production load testing validation
-- JWT claims migration recommended after confirming Phase 1 stability in production environment
-- See Migration Plan sections "Phase 2" and "Phase 3" for implementation roadmap
+- 2025-12-10: **Phase 2 Implemented** - JWT Claims Integration
+  - Created: `lib/supabase/auth-admin.ts` with `syncUserRLSClaims()` function
+  - Migration: `20251210001858_adr015_backfill_jwt_claims.sql`
+    - `sync_staff_jwt_claims()` function for manual/batch sync
+    - Backfill script for existing authenticated staff
+    - `trg_sync_staff_jwt_claims` trigger for automatic future sync
+  - Updated: `services/casino/crud.ts` - createStaff/updateStaff sync JWT claims
+  - Updated: `services/casino/index.ts` - added updateStaff method
+  - Updated: `services/casino/dtos.ts` - added UpdateStaffDTO
+
+**Phase 2 Verification:**
+- [x] JWT claims synced on staff creation (createStaff)
+- [x] JWT claims synced on staff update (updateStaff - role/casino changes)
+- [x] Database trigger auto-syncs on direct staff table changes
+- [x] Hybrid RLS policies use JWT fallback when SET LOCAL unavailable
+- [ ] Integration tests validate JWT-based RLS (in progress)
+
+**Pending (Phase 3):**
+- Monitor JWT claims vs. session variables in production
+- Phase out SET LOCAL once JWT claims proven stable
+- Performance benchmarking with connection pooling
