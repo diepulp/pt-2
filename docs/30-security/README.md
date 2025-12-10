@@ -35,9 +35,18 @@ last_review: 2025-10-25
 
 ## Current Documents
 
-- `SEC-001` — Casino-Scoped RLS Policy Matrix (`SEC-001-rls-policy-matrix.md`)
-- `SEC-002` — Casino-Scoped Security Model (`SEC-002-casino-scoped-security-model.md`)
+- `SEC-001` — Casino-Scoped RLS Policy Matrix (`SEC-001-rls-policy-matrix.md`) ✅ ADR-015 compliant
+- `SEC-002` — Casino-Scoped Security Model (`SEC-002-casino-scoped-security-model.md`) ✅ ADR-015 compliant
 - `SEC-003` — Casino-Scoped RBAC Matrix (`SEC-003-rbac-matrix.md`)
+- `SEC-005` — Role Taxonomy (`SEC-005-role-taxonomy.md`)
+- `SECURITY_TENANCY_UPGRADE.md` — RLS Pattern Canonicalization Guide ✅ ADR-015 compliant
+
+## Key ADRs
+
+- **ADR-015** — RLS Connection Pooling Strategy (`docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`)
+  - Defines Pattern C (Hybrid) for connection pooling-safe RLS
+  - Transaction-wrapped `set_rls_context()` RPC
+  - JWT claims fallback for direct client queries
 
 ## Related Categories
 

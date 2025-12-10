@@ -532,45 +532,48 @@ export async function getAuthContext(
 }
 ```
 
-### 3. RLS Context Injection
+### 3. RLS Context Injection (ADR-015)
+
+> **ADR-015 Compliance**: Uses `set_rls_context()` RPC for transaction-safe context injection with connection pooling support.
 
 ```typescript
-// Inject context via SET LOCAL
+// Inject context via set_rls_context() RPC (ADR-015)
 export async function injectRLSContext(
   supabase: SupabaseClient<Database>,
   context: RLSContext,
   correlationId?: string,
 ): Promise<void> {
-  await supabase.rpc('exec_sql', {
-    sql: `
-      SET LOCAL app.actor_id = '${context.actorId}';
-      SET LOCAL app.casino_id = '${context.casinoId}';
-      SET LOCAL app.staff_role = '${context.staffRole}';
-      ${correlationId ? `SET LOCAL application_name = '${correlationId}';` : ''}
-    `
+  await supabase.rpc('set_rls_context', {
+    p_actor_id: context.actorId,
+    p_casino_id: context.casinoId,
+    p_staff_role: context.staffRole,
+    p_correlation_id: correlationId,
   });
 }
 ```
 
-### 4. RLS Policy Enforcement
+**See**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` for implementation details.
+
+### 4. RLS Policy Enforcement (Pattern C - Hybrid)
+
+> **ADR-015 Compliance**: Hybrid pattern with transaction context + JWT fallback for connection pooling safety.
 
 ```sql
--- Example: Visit read policy
-create policy "visit_read_same_casino"
+-- Example: Visit read policy (Pattern C - ADR-015)
+create policy "visit_read_hybrid"
   on visit
   for select using (
-    -- Verify authenticated user matches staff record
-    auth.uid() = (
-      select user_id
-      from staff
-      where id = current_setting('app.actor_id')::uuid
-      and status = 'active'
-      and role in ('pit_boss', 'admin') -- Role check
+    -- Verify authenticated user
+    auth.uid() IS NOT NULL
+    -- Verify casino scope (hybrid: SET LOCAL with JWT fallback)
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
     )
-    -- Verify casino scope
-    AND casino_id = current_setting('app.casino_id')::uuid
   );
 ```
+
+**See**: `docs/30-security/SEC-001-rls-policy-matrix.md` for complete policy templates.
 
 ### 5. Server Action Wrapper
 

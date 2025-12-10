@@ -1106,25 +1106,30 @@ const mutation = useMutation({
 
 ### Correlation ID Propagation
 
-**Pattern**: `x-correlation-id` → `SET LOCAL application_name` (OBSERVABILITY_SPEC.md:23-65)
+**Pattern**: `x-correlation-id` → `SET LOCAL application_name` via `set_rls_context()` RPC (ADR-015)
+
+> **ADR-015 Compliance**: Correlation ID injection is now handled by the `set_rls_context()` RPC to ensure all context variables are set in a single transaction-safe call.
 
 ```typescript
-// Server Action / Route Handler
+// Server Action / Route Handler (ADR-015 compliant)
 export async function mutateEntity(input: DTO) {
   const correlationId = headers().get('x-correlation-id') || uuidv4();
   const idempotencyKey = headers().get('x-idempotency-key');
 
   return withServerAction(correlationId, async (supabase) => {
-    // Propagate to database session
-    await supabase.rpc('exec_sql', {
-      sql: `SET LOCAL application_name = '${correlationId}'`
-    });
+    // RLS context injection via set_rls_context() RPC (ADR-015)
+    // Automatically sets app.actor_id, app.casino_id, app.staff_role, and application_name
+    // in a single transaction-safe call
+    const rlsContext = await getAuthContext(supabase);
+    await injectRLSContext(supabase, rlsContext, correlationId);
 
     // All downstream RPCs/audit inherit correlation context
     return await service.mutate(input, { idempotencyKey });
   });
 }
 ```
+
+**See**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` for implementation details.
 
 **Database Usage**:
 ```sql
@@ -1399,23 +1404,26 @@ async create(data: CreateLedgerDTO, opts?: { idempotencyKey?: string }) {
 
 ## RLS (Row-Level Security) Pattern
 
-> **Canonical Reference**: SEC-001-rls-policy-matrix.md:64-100, SECURITY_TENANCY_UPGRADE.md
+> **Canonical Reference**: SEC-001-rls-policy-matrix.md, ADR-015-rls-connection-pooling-strategy.md
 > **Schema Foundation**: Migration `20251110224223_staff_authentication_upgrade.sql`
+> **ADR-015 Context RPC**: Migration `20251209183033_adr015_rls_context_rpc.sql`
 
-### Canonical Pattern (DEPLOYED Schema)
+### Canonical Pattern (DEPLOYED - ADR-015 Compliant)
 
-**Prerequisites** (SEC-001:66-69):
+**Prerequisites**:
 - ✅ `staff.user_id uuid references auth.users(id)` - DEPLOYED
-- ✅ `exec_sql(text)` RPC for SET LOCAL injection - DEPLOYED
+- ✅ `set_rls_context()` RPC for transaction-wrapped context injection - DEPLOYED (ADR-015)
+- ✅ JWT `app_metadata` with `casino_id` for fallback - DEPLOYED (ADR-015 Phase 2)
 - ✅ `withServerAction` wrapper - DEPLOYED (see EDGE_TRANSPORT_POLICY.md:27-45)
 
-**Pattern**: `auth.uid()` + `staff.user_id` + `current_setting()`
+**Pattern C (Hybrid)**: Transaction-wrapped context + JWT fallback (ADR-015)
 
 This pattern ensures:
-1. **User is authenticated** via Supabase auth (`auth.uid()`)
+1. **User is authenticated** via Supabase auth (`auth.uid() IS NOT NULL`)
 2. **User is linked to active staff** via `staff.user_id`
-3. **Casino scope injected** via `SET LOCAL app.casino_id`
-4. **Actor identity injected** via `SET LOCAL app.actor_id`
+3. **Casino scope injected** via `set_rls_context()` RPC (transaction-safe)
+4. **JWT fallback** via `auth.jwt() -> 'app_metadata' ->> 'casino_id'`
+5. **Connection pooling safe** - all SET LOCAL in single transaction
 
 ---
 

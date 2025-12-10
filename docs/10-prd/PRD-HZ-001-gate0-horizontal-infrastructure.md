@@ -118,8 +118,9 @@ export const POST = withServerAction(async (context, request) => {
 ### 7.1 Dependencies
 - Supabase Auth configured with `staff.user_id` linkage (exists: migration `20251110224223_staff_authentication_upgrade.sql`)
 - `audit_log` table schema (exists)
-- `exec_sql` RPC for SET LOCAL (exists)
-- RLS context interface in `lib/supabase/rls-context.ts` (exists per SEC-001)
+- `set_rls_context()` RPC for transaction-wrapped SET LOCAL (exists: migration `20251209183033_adr015_rls_context_rpc.sql` - **ADR-015 compliant**)
+- JWT `app_metadata` with `casino_id` for fallback (exists: migration `20251210001858_adr015_backfill_jwt_claims.sql` - **ADR-015 Phase 2**)
+- RLS context interface in `lib/supabase/rls-context.ts` (exists per SEC-001, **updated for ADR-015**)
 
 ### 7.2 Risks & Open Questions
 - **Risk:** Middleware chain becomes too complex — Mitigated by 100 LOC limit per middleware, isolated unit tests

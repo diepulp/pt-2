@@ -2,10 +2,12 @@
 id: SEC-002
 title: Casino-Scoped Security Model
 owner: Security
-status: Draft
+status: Active
 affects: [SEC-001]
 created: 2025-11-02
-last_review: 2025-11-02
+last_review: 2025-12-10
+updated: 2025-12-10
+related_adrs: ADR-015
 ---
 
 ## Purpose
@@ -38,6 +40,42 @@ Document the security boundaries that govern how PT-2 enforces least-privilege a
 - **Policy Snapshots:** `rating_slip.policy_snapshot` captures the reward policy at issuance to support post-event audits without loosening RLS.
 - **No Cross-Casino Joins:** Queries spanning properties must go through aggregated, pre-authorized views; ad hoc joins using free-form keys are rejected.
 
+## RLS Context Injection (ADR-015)
+
+**Status:** ✅ Implemented (Phase 1 + Phase 2)
+
+PT-2 uses a hybrid context injection strategy for RLS policies, ensuring compatibility with Supabase connection pooling (Supavisor transaction mode).
+
+### Context Injection Mechanism
+
+1. **Transaction-Wrapped RPC** - `set_rls_context()` injects `app.actor_id`, `app.casino_id`, and `app.staff_role` via `SET LOCAL` in a single atomic transaction.
+2. **JWT Claims Fallback** - `auth.jwt() -> 'app_metadata' ->> 'casino_id'` provides fallback for direct client queries.
+
+### Implementation Files
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| Context RPC | `set_rls_context()` (Migration `20251209183033`) | Transaction-wrapped SET LOCAL |
+| TypeScript API | `lib/supabase/rls-context.ts` | `injectRLSContext()` wrapper |
+| JWT Sync | `lib/supabase/auth-admin.ts` | `syncUserRLSClaims()` for Phase 2 |
+| DB Trigger | `trg_sync_staff_jwt_claims` | Auto-sync JWT on staff changes |
+
+### Policy Pattern (Pattern C - Hybrid)
+
+```sql
+create policy "table_read_hybrid"
+  on {table_name} for select using (
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
+  );
+```
+
+**See:** `SEC-001-rls-policy-matrix.md` for complete policy templates.
+**ADR:** `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
+
 ## Interaction Points
 
 - **Service Responsibility Matrix (`ARCH-SRM`)** defines ownership and RLS expectations consumed by this model.
@@ -46,9 +84,14 @@ Document the security boundaries that govern how PT-2 enforces least-privilege a
 
 ## Open Questions
 
-- Do we need a dedicated JWT claim for compliance staff versus services?
+- ~~Do we need a dedicated JWT claim for compliance staff versus services?~~ **RESOLVED (ADR-015 Phase 2):** JWT `app_metadata` now carries `casino_id`, `staff_id`, and `staff_role` for all authenticated staff. Compliance staff use the same claim structure.
 - Should finance and compliance ledgers expose read-only views for cross-property auditors under special approval?
 - Are temporal overrides (e.g., daylight saving changes) captured in `casino_settings` change history for forensic review?
 
 Capture answers as ADRs or follow-up SEC docs as they are resolved.
+
+## Changelog
+
+- **2025-12-10**: Added RLS Context Injection section (ADR-015 Phase 1+2 implementation). Updated status to Active.
+- **2025-11-02**: Initial draft created.
 

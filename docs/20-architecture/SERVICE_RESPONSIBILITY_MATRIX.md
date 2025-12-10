@@ -463,6 +463,7 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 | `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` | Middleware chain, header requirements |
 | `docs/30-security/SEC-001-rls-policy-matrix.md` | RLS templates, policy matrix |
 | `docs/30-security/SECURITY_TENANCY_UPGRADE.md` | RLS context injection |
+| `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` | RLS connection pooling, Pattern C (Hybrid) |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
 
 ---
