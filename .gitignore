@@ -57,3 +57,7 @@ next-env.d.ts
 # worktrees
 trees/
 certificates
+
+# Agentic telemetry
+.agent/
+.memori/session.log

@@ -115,7 +115,7 @@ class MemoriClient:
         return MemoriConfig(
             database_url=os.getenv(
                 "MEMORI_DATABASE_URL",
-                "postgresql://postgres:postgres@127.0.0.1:54322/postgres?options=-c search_path=memori,public"
+                "postgresql://memori:memori_dev@127.0.0.1:5433/memori"
             ),
             openai_api_key=os.getenv("OPENAI_API_KEY", ""),
             environment=os.getenv("MEMORI_ENVIRONMENT", "development"),
