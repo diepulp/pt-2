@@ -1,6 +1,3 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
 # Migration safety checks - prevent RLS policy regressions (ISSUE-002 prevention)
 .husky/pre-commit-migration-safety.sh || exit 1
 
