@@ -14,10 +14,10 @@
  * @see EXECUTION-SPEC-PRD-002.md
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { DomainError } from '@/lib/errors/domain-errors';
-import type { Database } from '@/types/database.types';
+import { DomainError } from "@/lib/errors/domain-errors";
+import type { Database } from "@/types/database.types";
 
 import type {
   CloseRatingSlipInput,
@@ -26,14 +26,14 @@ import type {
   RatingSlipListFilters,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-} from './dtos';
+} from "./dtos";
 import {
   toRatingSlipDTO,
   toRatingSlipDTOList,
   toRatingSlipWithDurationDTO,
   toRatingSlipWithPausesDTO,
-} from './mappers';
-import { RATING_SLIP_SELECT, RATING_SLIP_WITH_PAUSES_SELECT } from './selects';
+} from "./mappers";
+import { RATING_SLIP_SELECT, RATING_SLIP_WITH_PAUSES_SELECT } from "./selects";
 
 // === Error Mapping ===
 
@@ -45,77 +45,88 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  const message = error.message || '';
+  const message = error.message || "";
 
   // Handle RPC-raised exceptions
-  if (message.includes('RATING_SLIP_NOT_FOUND')) {
-    return new DomainError('RATING_SLIP_NOT_FOUND', 'Rating slip not found');
+  if (message.includes("RATING_SLIP_NOT_FOUND")) {
+    return new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found");
   }
 
-  if (message.includes('RATING_SLIP_NOT_OPEN')) {
+  if (message.includes("RATING_SLIP_NOT_OPEN")) {
     return new DomainError(
-      'RATING_SLIP_NOT_OPEN',
-      'Rating slip is not in open state',
+      "RATING_SLIP_NOT_OPEN",
+      "Rating slip is not in open state",
     );
   }
 
-  if (message.includes('RATING_SLIP_NOT_PAUSED')) {
+  if (message.includes("RATING_SLIP_NOT_PAUSED")) {
     return new DomainError(
-      'RATING_SLIP_NOT_PAUSED',
-      'Rating slip is not in paused state',
+      "RATING_SLIP_NOT_PAUSED",
+      "Rating slip is not in paused state",
     );
   }
 
-  if (message.includes('RATING_SLIP_ALREADY_CLOSED')) {
+  if (message.includes("RATING_SLIP_ALREADY_CLOSED")) {
     return new DomainError(
-      'RATING_SLIP_ALREADY_CLOSED',
-      'Rating slip has already been closed',
+      "RATING_SLIP_ALREADY_CLOSED",
+      "Rating slip has already been closed",
     );
   }
 
-  if (message.includes('VISIT_NOT_OPEN')) {
+  if (message.includes("VISIT_NOT_OPEN")) {
     return new DomainError(
-      'VISIT_NOT_OPEN',
-      'Visit is not active. Cannot start rating slip.',
+      "VISIT_NOT_OPEN",
+      "Visit is not active. Cannot start rating slip.",
     );
   }
 
-  if (message.includes('TABLE_NOT_ACTIVE')) {
+  if (message.includes("TABLE_NOT_ACTIVE")) {
     return new DomainError(
-      'TABLE_NOT_ACTIVE',
-      'Gaming table is not active. Cannot start rating slip.',
+      "TABLE_NOT_ACTIVE",
+      "Gaming table is not active. Cannot start rating slip.",
     );
   }
 
   // Handle Postgres error codes
-  // 23505 = Unique constraint violation (duplicate slip for visit/table)
-  if (error.code === '23505') {
+  // 23505 = Unique constraint violation
+  if (error.code === "23505") {
+    // Check for seat occupancy constraint (idx_rating_slip_active_seat_unique)
+    if (
+      message.includes("idx_rating_slip_active_seat_unique") ||
+      message.includes("seat_number")
+    ) {
+      return new DomainError(
+        "SEAT_ALREADY_OCCUPIED",
+        "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
+      );
+    }
+    // Default: duplicate slip for visit/table
     return new DomainError(
-      'RATING_SLIP_DUPLICATE',
-      'An open rating slip already exists for this visit at this table',
+      "RATING_SLIP_DUPLICATE",
+      "An open rating slip already exists for this visit at this table",
     );
   }
 
   // 23503 = Foreign key violation (visit or table not found)
-  if (error.code === '23503') {
-    if (message.includes('visit_id')) {
-      return new DomainError('VISIT_NOT_FOUND', 'Referenced visit not found');
+  if (error.code === "23503") {
+    if (message.includes("visit_id")) {
+      return new DomainError("VISIT_NOT_FOUND", "Referenced visit not found");
     }
-    if (message.includes('table_id')) {
-      return new DomainError('TABLE_NOT_FOUND', 'Referenced table not found');
+    if (message.includes("table_id")) {
+      return new DomainError("TABLE_NOT_FOUND", "Referenced table not found");
     }
     return new DomainError(
-      'FOREIGN_KEY_VIOLATION',
-      'Referenced resource not found',
+      "FOREIGN_KEY_VIOLATION",
+      "Referenced resource not found",
     );
   }
 
   // PGRST116 = No rows returned (not found)
-  if (error.code === 'PGRST116') {
-    return new DomainError('RATING_SLIP_NOT_FOUND', 'Rating slip not found');
+  if (error.code === "PGRST116") {
+    return new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found");
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
 }
 
 // === State Machine Operations (RPC-backed) ===
@@ -146,31 +157,31 @@ export async function start(
   // First, fetch the visit to get player_id (required by current RPC signature)
   // This will be removed once migration 20251207024918 is applied
   const { data: visitData, error: visitError } = await supabase
-    .from('visit')
-    .select('id, player_id, ended_at, casino_id')
-    .eq('id', input.visit_id)
+    .from("visit")
+    .select("id, player_id, ended_at, casino_id")
+    .eq("id", input.visit_id)
     .maybeSingle();
 
   if (visitError) throw mapDatabaseError(visitError);
 
   if (!visitData) {
     throw new DomainError(
-      'VISIT_NOT_FOUND',
+      "VISIT_NOT_FOUND",
       `Visit not found: ${input.visit_id}`,
     );
   }
 
   if (visitData.ended_at !== null) {
     throw new DomainError(
-      'VISIT_NOT_OPEN',
-      'Visit is not active. Cannot start rating slip.',
+      "VISIT_NOT_OPEN",
+      "Visit is not active. Cannot start rating slip.",
     );
   }
 
   if (visitData.casino_id !== casinoId) {
     throw new DomainError(
-      'VISIT_CASINO_MISMATCH',
-      'Visit does not belong to the specified casino',
+      "VISIT_CASINO_MISMATCH",
+      "Visit does not belong to the specified casino",
     );
   }
 
@@ -178,17 +189,17 @@ export async function start(
   // Rating slips require identified player for loyalty calculation
   if (visitData.player_id === null) {
     throw new DomainError(
-      'RATING_SLIP_INVALID_STATE',
-      'Cannot create rating slip for ghost visit. Player identity required.',
+      "RATING_SLIP_INVALID_STATE",
+      "Cannot create rating slip for ghost visit. Player identity required.",
     );
   }
 
-  const { data, error } = await supabase.rpc('rpc_start_rating_slip', {
+  const { data, error } = await supabase.rpc("rpc_start_rating_slip", {
     p_casino_id: casinoId,
     p_actor_id: actorId,
     p_visit_id: input.visit_id,
     p_table_id: input.table_id,
-    p_seat_number: input.seat_number ?? '',
+    p_seat_number: input.seat_number ?? "",
     p_game_settings: input.game_settings ?? {},
     p_player_id: visitData.player_id,
   });
@@ -198,8 +209,8 @@ export async function start(
   // RPC returns a single record
   if (!data) {
     throw new DomainError(
-      'INTERNAL_ERROR',
-      'rpc_start_rating_slip returned no data',
+      "INTERNAL_ERROR",
+      "rpc_start_rating_slip returned no data",
     );
   }
 
@@ -224,7 +235,7 @@ export async function pause(
   actorId: string,
   slipId: string,
 ): Promise<RatingSlipDTO> {
-  const { data, error } = await supabase.rpc('rpc_pause_rating_slip', {
+  const { data, error } = await supabase.rpc("rpc_pause_rating_slip", {
     p_casino_id: casinoId,
     p_actor_id: actorId,
     p_rating_slip_id: slipId,
@@ -234,7 +245,7 @@ export async function pause(
 
   if (!data) {
     throw new DomainError(
-      'RATING_SLIP_NOT_FOUND',
+      "RATING_SLIP_NOT_FOUND",
       `Rating slip not found: ${slipId}`,
     );
   }
@@ -260,7 +271,7 @@ export async function resume(
   actorId: string,
   slipId: string,
 ): Promise<RatingSlipDTO> {
-  const { data, error } = await supabase.rpc('rpc_resume_rating_slip', {
+  const { data, error } = await supabase.rpc("rpc_resume_rating_slip", {
     p_casino_id: casinoId,
     p_actor_id: actorId,
     p_rating_slip_id: slipId,
@@ -270,7 +281,7 @@ export async function resume(
 
   if (!data) {
     throw new DomainError(
-      'RATING_SLIP_NOT_FOUND',
+      "RATING_SLIP_NOT_FOUND",
       `Rating slip not found: ${slipId}`,
     );
   }
@@ -298,7 +309,7 @@ export async function close(
   slipId: string,
   input: CloseRatingSlipInput = {},
 ): Promise<RatingSlipWithDurationDTO> {
-  const { data, error } = await supabase.rpc('rpc_close_rating_slip', {
+  const { data, error } = await supabase.rpc("rpc_close_rating_slip", {
     p_casino_id: casinoId,
     p_actor_id: actorId,
     p_rating_slip_id: slipId,
@@ -313,7 +324,7 @@ export async function close(
 
   if (!result) {
     throw new DomainError(
-      'RATING_SLIP_NOT_FOUND',
+      "RATING_SLIP_NOT_FOUND",
       `Rating slip not found: ${slipId}`,
     );
   }
@@ -338,16 +349,16 @@ export async function getById(
   slipId: string,
 ): Promise<RatingSlipWithPausesDTO> {
   const { data, error } = await supabase
-    .from('rating_slip')
+    .from("rating_slip")
     .select(RATING_SLIP_WITH_PAUSES_SELECT)
-    .eq('id', slipId)
+    .eq("id", slipId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
 
   if (!data) {
     throw new DomainError(
-      'RATING_SLIP_NOT_FOUND',
+      "RATING_SLIP_NOT_FOUND",
       `Rating slip not found: ${slipId}`,
     );
   }
@@ -367,25 +378,25 @@ export async function getById(
 export async function listForTable(
   supabase: SupabaseClient<Database>,
   tableId: string,
-  filters: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'> = {},
+  filters: Omit<RatingSlipListFilters, "table_id" | "visit_id"> = {},
 ): Promise<{ items: RatingSlipDTO[]; cursor: string | null }> {
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from('rating_slip')
+    .from("rating_slip")
     .select(RATING_SLIP_SELECT)
-    .eq('table_id', tableId)
-    .order('start_time', { ascending: false })
+    .eq("table_id", tableId)
+    .order("start_time", { ascending: false })
     .limit(limit + 1);
 
   // Apply status filter
   if (filters.status) {
-    query = query.eq('status', filters.status);
+    query = query.eq("status", filters.status);
   }
 
   // Apply cursor for pagination
   if (filters.cursor) {
-    query = query.lt('start_time', filters.cursor);
+    query = query.lt("start_time", filters.cursor);
   }
 
   const { data, error } = await query;
@@ -418,10 +429,10 @@ export async function listForVisit(
   visitId: string,
 ): Promise<RatingSlipDTO[]> {
   const { data, error } = await supabase
-    .from('rating_slip')
+    .from("rating_slip")
     .select(RATING_SLIP_SELECT)
-    .eq('visit_id', visitId)
-    .order('start_time', { ascending: false });
+    .eq("visit_id", visitId)
+    .order("start_time", { ascending: false });
 
   if (error) throw mapDatabaseError(error);
 
@@ -441,11 +452,11 @@ export async function getActiveForTable(
   tableId: string,
 ): Promise<RatingSlipDTO[]> {
   const { data, error } = await supabase
-    .from('rating_slip')
+    .from("rating_slip")
     .select(RATING_SLIP_SELECT)
-    .eq('table_id', tableId)
-    .in('status', ['open', 'paused'])
-    .order('start_time', { ascending: false });
+    .eq("table_id", tableId)
+    .in("status", ["open", "paused"])
+    .order("start_time", { ascending: false });
 
   if (error) throw mapDatabaseError(error);
 
@@ -467,7 +478,7 @@ export async function getDuration(
   slipId: string,
   asOf?: string,
 ): Promise<number> {
-  const { data, error } = await supabase.rpc('rpc_get_rating_slip_duration', {
+  const { data, error } = await supabase.rpc("rpc_get_rating_slip_duration", {
     p_rating_slip_id: slipId,
     p_as_of: asOf,
   });
@@ -476,7 +487,7 @@ export async function getDuration(
 
   if (data === null || data === undefined) {
     throw new DomainError(
-      'RATING_SLIP_NOT_FOUND',
+      "RATING_SLIP_NOT_FOUND",
       `Rating slip not found: ${slipId}`,
     );
   }
@@ -485,6 +496,54 @@ export async function getDuration(
 }
 
 // === Update Operations ===
+
+/**
+ * List all rating slips with optional status filter.
+ * RLS scopes results to the casino automatically.
+ * Used for dashboard aggregate counts.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param filters - Optional list filters (status, limit, cursor)
+ * @returns Paginated list of RatingSlipDTO
+ */
+export async function listAll(
+  supabase: SupabaseClient<Database>,
+  filters: Omit<RatingSlipListFilters, "table_id" | "visit_id"> = {},
+): Promise<{ items: RatingSlipDTO[]; cursor: string | null }> {
+  const limit = filters.limit ?? 20;
+
+  let query = supabase
+    .from("rating_slip")
+    .select(RATING_SLIP_SELECT)
+    .order("start_time", { ascending: false })
+    .limit(limit + 1);
+
+  // Apply status filter
+  if (filters.status) {
+    query = query.eq("status", filters.status);
+  }
+
+  // Apply cursor for pagination
+  if (filters.cursor) {
+    query = query.lt("start_time", filters.cursor);
+  }
+
+  const { data, error } = await query;
+
+  if (error) throw mapDatabaseError(error);
+
+  // Handle pagination
+  const hasMore = (data?.length ?? 0) > limit;
+  const rawItems = hasMore ? data!.slice(0, limit) : (data ?? []);
+  const cursor = hasMore
+    ? (rawItems[rawItems.length - 1]?.start_time ?? null)
+    : null;
+
+  return {
+    items: toRatingSlipDTOList(rawItems),
+    cursor,
+  };
+}
 
 /**
  * Update average bet on an open or paused slip.
@@ -504,31 +563,31 @@ export async function updateAverageBet(
 ): Promise<RatingSlipDTO> {
   // Only update if slip is open or paused (not closed)
   const { data, error } = await supabase
-    .from('rating_slip')
+    .from("rating_slip")
     .update({ average_bet: averageBet })
-    .eq('id', slipId)
-    .in('status', ['open', 'paused'])
+    .eq("id", slipId)
+    .in("status", ["open", "paused"])
     .select(RATING_SLIP_SELECT)
     .single();
 
   if (error) {
     // PGRST116 = No rows returned (not found or already closed)
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       // Check if slip exists but is closed
       const { data: existing } = await supabase
-        .from('rating_slip')
-        .select('id, status')
-        .eq('id', slipId)
+        .from("rating_slip")
+        .select("id, status")
+        .eq("id", slipId)
         .maybeSingle();
 
-      if (existing && existing.status === 'closed') {
+      if (existing && existing.status === "closed") {
         throw new DomainError(
-          'RATING_SLIP_INVALID_STATE',
-          'Cannot update average bet on a closed rating slip',
+          "RATING_SLIP_INVALID_STATE",
+          "Cannot update average bet on a closed rating slip",
         );
       }
       throw new DomainError(
-        'RATING_SLIP_NOT_FOUND',
+        "RATING_SLIP_NOT_FOUND",
         `Rating slip not found: ${slipId}`,
       );
     }

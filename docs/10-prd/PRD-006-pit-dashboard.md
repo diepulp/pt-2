@@ -51,6 +51,9 @@ Without the Pit Dashboard, the GATE-2 milestone cannot be completed, blocking Ph
 
 5. As a **Shift Manager**, I need to see summary stats (active tables, open slips, checked-in players) so that I can monitor pit activity at a macro level.
 
+6. As a **Floor Supervisor**, I need to track players that move seats and place those in the respective 
+positions in a new seat/table
+
 ## 4. Scope & Feature List
 
 ### P0 (Must-Have for GATE-2)
@@ -141,8 +144,8 @@ Dashboard Page Layout:
 
 | Dependency | Status | Notes |
 |------------|--------|-------|
-| TableContextService | ❌ Pending | Build as part of PRD-006 |
-| RatingSlipService | ❌ Pending | Build as part of PRD-006 |
+| TableContextService | ✅ Complete |
+| RatingSlipService | ✅ Complete
 | PlayerService | ✅ Complete | Search, enrollment, CRUD |
 | VisitService | ✅ Complete | Check-in/check-out |
 | CasinoService | ✅ Complete | Temporal authority, settings |
@@ -172,18 +175,22 @@ The existing `components/table/table-layout-terminal.tsx` needs these additions:
 | Large table counts may affect performance | Virtualize grid if >20 tables; test with 50 |
 | Seat-to-player mapping unclear | Use `rating_slip.seat_number` for positioning |
 
-**Open Questions:**
+**Resolved Questions:**
 
-1. Should we show closed/inactive tables or filter them? → **Recommendation:** Show all, dim inactive/closed
-2. How to handle multiple slips per seat (e.g., player moves)? → **Recommendation:** Show most recent only; list all in detail
-3. Should stats bar include gaming day context? → **Recommendation:** Yes, show current gaming day from CasinoService
+1. Should we show closed/inactive tables or filter them? → **Decision:** Show all, dim inactive/closed
+2. ~~How to handle multiple slips per seat?~~ → **Decision (2025-12-09):** **One player per seat enforced.** Multiple active slips per seat are NOT allowed. Two players cannot occupy one seat simultaneously. The system MUST:
+   - Enforce unique constraint: `(table_id, seat_number) WHERE status IN ('open', 'paused')`
+   - Flag/block attempts to start a new slip at an occupied seat
+   - UI displays warning when user attempts to move a player to an occupied seat
+   - Seat becomes available only when slip is closed or player moves to different seat
+3. Should stats bar include gaming day context? → **Decision:** Yes, show current gaming day from CasinoService
 
 ## 8. Definition of Done (DoD)
 
 The release is considered **Done** when:
 
 **Functionality**
-- [ ] Dashboard page loads at `/dashboard` with stats bar and table grid
+- [ ] Dashboard page loads at `/pit` with stats bar and table grid
 - [ ] Clicking a table shows expanded `TableLayoutTerminal` with seat occupancy
 - [ ] Clicking an occupied seat shows player name and slip actions
 - [ ] "New Slip" flow creates a rating slip with correct table/seat/player association
@@ -249,7 +256,7 @@ The release is considered **Done** when:
 - Wire up table selection state
 
 ### WS3: Dashboard Data Layer
-**Agent:** full-stack-developer
+**Agent:** backend-service-builder
 **Effort:** Medium
 **Dependencies:** None (parallel with WS1)
 
@@ -268,7 +275,7 @@ The release is considered **Done** when:
 - Wire up slip lifecycle actions to RatingSlipService
 
 ### WS5: Real-time Updates (P1)
-**Agent:** full-stack-developer
+**Agent:**backend-developer
 **Effort:** Medium
 **Dependencies:** WS3
 
@@ -277,7 +284,7 @@ The release is considered **Done** when:
 - Create `hooks/dashboard/use-dashboard-realtime.ts`
 
 ### WS6: Testing & Validation
-**Agent:** backend-architect
+**Agent:** backend-service-builder
 **Effort:** Small
 **Dependencies:** WS1-WS4
 

@@ -10,6 +10,8 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 
+import { ThemeSwitcher } from "../theme-switcher";
+
 export function Header() {
   return (
     <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
@@ -30,6 +32,7 @@ export function Header() {
         </BreadcrumbList>
       </Breadcrumb>
       <div className="ml-auto">
+        <ThemeSwitcher />
         <GamingDayIndicator />
       </div>
     </header>

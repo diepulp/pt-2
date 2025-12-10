@@ -10,18 +10,33 @@
  * @see PRD-007 Table Context Service
  */
 
-import { z } from 'zod';
+import { z } from "zod";
+
+// === UUID Format Schema ===
+
+/**
+ * Permissive UUID format validation.
+ *
+ * Zod's built-in .uuid() validates RFC 4122 (version/variant bits),
+ * which rejects valid database UUIDs that don't follow RFC strictly.
+ * This regex validates the 8-4-4-4-12 format without version checks.
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const uuidFormat = (fieldName = "ID") =>
+  z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
 
 // === Enum Schemas ===
 
-export const tableStatusSchema = z.enum(['inactive', 'active', 'closed']);
+export const tableStatusSchema = z.enum(["inactive", "active", "closed"]);
 export const gameTypeSchema = z.enum([
-  'blackjack',
-  'poker',
-  'roulette',
-  'baccarat',
+  "blackjack",
+  "poker",
+  "roulette",
+  "baccarat",
 ]);
-export const snapshotTypeSchema = z.enum(['open', 'close', 'rundown']);
+export const snapshotTypeSchema = z.enum(["open", "close", "rundown"]);
 
 // === Chipset Schema ===
 
@@ -31,37 +46,37 @@ export const snapshotTypeSchema = z.enum(['open', 'close', 'rundown']);
  */
 export const chipsetSchema = z.record(
   z.string(),
-  z.number().int().min(0, 'Chip quantity must be non-negative'),
+  z.number().int().min(0, "Chip quantity must be non-negative"),
 );
 
 // === Table Lifecycle Schemas ===
 
 export const activateTableSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
+  table_id: uuidFormat("table ID"),
 });
 
 export const deactivateTableSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
+  table_id: uuidFormat("table ID"),
 });
 
 export const closeTableSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
+  table_id: uuidFormat("table ID"),
 });
 
 // === Dealer Schemas ===
 
 export const assignDealerSchema = z.object({
-  staff_id: z.string().uuid('Invalid staff ID format'),
+  staff_id: uuidFormat("staff ID"),
 });
 
 // === Inventory Snapshot Schema ===
 
 export const logInventorySnapshotSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
+  table_id: uuidFormat("table ID"),
   snapshot_type: snapshotTypeSchema,
   chipset: chipsetSchema,
-  counted_by: z.string().uuid().optional(),
-  verified_by: z.string().uuid().optional(),
+  counted_by: uuidFormat("staff ID").optional(),
+  verified_by: uuidFormat("staff ID").optional(),
   discrepancy_cents: z.number().int().optional(),
   note: z.string().max(500).optional(),
 });
@@ -69,35 +84,35 @@ export const logInventorySnapshotSchema = z.object({
 // === Fill/Credit Schemas ===
 
 export const requestTableFillSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
-  request_id: z.string().min(1, 'Request ID is required'), // Idempotency key
+  table_id: uuidFormat("table ID"),
+  request_id: z.string().min(1, "Request ID is required"), // Idempotency key
   chipset: chipsetSchema,
-  amount_cents: z.number().int().positive('Amount must be positive'),
-  requested_by: z.string().uuid('Invalid staff ID format'),
-  delivered_by: z.string().uuid('Invalid staff ID format'),
-  received_by: z.string().uuid('Invalid staff ID format'),
-  slip_no: z.string().min(1, 'Slip number is required'),
+  amount_cents: z.number().int().positive("Amount must be positive"),
+  requested_by: uuidFormat("staff ID"),
+  delivered_by: uuidFormat("staff ID"),
+  received_by: uuidFormat("staff ID"),
+  slip_no: z.string().min(1, "Slip number is required"),
 });
 
 export const requestTableCreditSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
-  request_id: z.string().min(1, 'Request ID is required'), // Idempotency key
+  table_id: uuidFormat("table ID"),
+  request_id: z.string().min(1, "Request ID is required"), // Idempotency key
   chipset: chipsetSchema,
-  amount_cents: z.number().int().positive('Amount must be positive'),
-  authorized_by: z.string().uuid('Invalid staff ID format'),
-  sent_by: z.string().uuid('Invalid staff ID format'),
-  received_by: z.string().uuid('Invalid staff ID format'),
-  slip_no: z.string().min(1, 'Slip number is required'),
+  amount_cents: z.number().int().positive("Amount must be positive"),
+  authorized_by: uuidFormat("staff ID"),
+  sent_by: uuidFormat("staff ID"),
+  received_by: uuidFormat("staff ID"),
+  slip_no: z.string().min(1, "Slip number is required"),
 });
 
 // === Drop Event Schema ===
 
 export const logDropEventSchema = z.object({
-  table_id: z.string().uuid('Invalid table ID format'),
-  drop_box_id: z.string().min(1, 'Drop box ID is required'),
-  seal_no: z.string().min(1, 'Seal number is required'),
-  removed_by: z.string().uuid('Invalid staff ID format'),
-  witnessed_by: z.string().uuid('Invalid staff ID format'),
+  table_id: uuidFormat("table ID"),
+  drop_box_id: z.string().min(1, "Drop box ID is required"),
+  seal_no: z.string().min(1, "Seal number is required"),
+  removed_by: uuidFormat("staff ID"),
+  witnessed_by: uuidFormat("staff ID"),
   removed_at: z.string().datetime().optional(),
   delivered_at: z.string().datetime().optional(),
   delivered_scan_at: z.string().datetime().optional(),
@@ -120,7 +135,7 @@ export const tableListQuerySchema = z.object({
 });
 
 export const tableRouteParamsSchema = z.object({
-  tableId: z.string().uuid('Invalid table ID format'),
+  tableId: uuidFormat("table ID"),
 });
 
 // === Transport Type Exports (HTTP-only; map to camelCase DTOs in services) ===

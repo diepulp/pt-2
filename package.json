@@ -1,8 +1,9 @@
 {
   "private": true,
   "scripts": {
-    "dev": "next dev --experimental-https --webpack",
-    "dev:webpack": "next dev --experimental-https --webpack",
+    "dev:kill": "./scripts/dev-cleanup.sh",
+    "dev": "npm run dev:kill && next dev --webpack",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "build:webpack": "next build --webpack",
     "start": "next start",

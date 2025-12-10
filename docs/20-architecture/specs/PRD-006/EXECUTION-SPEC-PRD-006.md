@@ -9,11 +9,25 @@ mvp_phase: 2  # Session Management + UI
 
 # Workstream Definitions
 workstreams:
+  WS0:
+    name: Seat Occupancy Constraint Migration
+    description: Add unique constraint to prevent multiple active slips per seat (table_id, seat_number) WHERE status IN ('open', 'paused')
+    agent: backend-architect
+    depends_on: []
+    outputs:
+      - supabase/migrations/YYYYMMDD_seat_occupancy_unique_constraint.sql
+    gate: migration-apply
+    estimated_complexity: low
+    notes: |
+      Business rule resolved 2025-12-09: One player per seat enforced.
+      Partial unique index prevents duplicate active slips at same seat.
+      RatingSlipService.start() will receive constraint violation error.
+
   WS1:
     name: TableLayoutTerminal Enhancement
     description: Add dashboard props to existing component (tableId, gameType, tableStatus, activeSlipsCount, variant, isSelected, onTableAction)
     agent: pt2-frontend-implementer
-    depends_on: []
+    depends_on: [WS0]
     outputs:
       - components/table/table-layout-terminal.tsx
     gate: type-check
@@ -34,16 +48,18 @@ workstreams:
 
   WS2:
     name: Dashboard Page & Layout
-    description: Main dashboard page with stats bar, table grid, and expanded view
+    description: Main pit dashboard page content with stats bar, table grid, and expanded view
     agent: pt2-frontend-implementer
     depends_on: [WS1]
     outputs:
-      - app/dashboard/page.tsx
-      - app/dashboard/layout.tsx
+      - app/(dashboard)/pit/page.tsx  # Content for existing scaffold at /pit route
       - components/dashboard/stats-bar.tsx
       - components/dashboard/table-grid.tsx
     gate: type-check
     estimated_complexity: medium
+    notes: |
+      Dashboard layout already exists at app/(dashboard)/layout.tsx (UI-SCAFFOLD-001).
+      This workstream adds content to the scaffolded /pit page.
 
   WS4:
     name: Slip Management UI
@@ -80,8 +96,13 @@ workstreams:
 
 # Execution Phases (topologically sorted, parallelized where possible)
 execution_phases:
+  - name: Phase 0 - Database Constraint
+    description: Add seat occupancy unique constraint (blocks duplicate slips per seat)
+    parallel: [WS0]
+    gates: [migration-apply]
+
   - name: Phase 1 - Foundation
-    description: Component enhancement + data layer (no dependencies)
+    description: Component enhancement + data layer (depends on WS0)
     parallel: [WS1, WS3]
     gates: [type-check]
 
@@ -102,6 +123,10 @@ execution_phases:
 
 # Validation Gates
 gates:
+  migration-apply:
+    command: npx supabase db push
+    success_criteria: "Migration applies successfully, no constraint violations on existing data"
+
   type-check:
     command: npm run type-check
     success_criteria: "Exit code 0, no TypeScript errors"
@@ -123,18 +148,23 @@ external_dependencies:
   - prd: PRD-000
     service: CasinoService
     required_for: "Gaming day context, casino settings"
-  - prd: PRD-HZ-001
+    status: COMPLETE
+  - prd: PRD-007
     service: TableContextService
     required_for: "Table state machine, seat occupancy"
-  - prd: PRD-003
+    status: COMPLETE
+  - prd: PRD-002
     service: RatingSlipService
     required_for: "Slip lifecycle (start/pause/resume/close)"
+    status: COMPLETE
   - prd: PRD-003
     service: PlayerService
     required_for: "Player search for new slip creation"
+    status: COMPLETE
   - prd: PRD-003
     service: VisitService
     required_for: "Check-in/check-out context"
+    status: COMPLETE
 
 # Risks and Mitigations
 risks:
@@ -144,15 +174,22 @@ risks:
     mitigation: "WS5 is P1 scope; P0 uses polling/manual refresh"
   - risk: "Large table counts (>20) may affect performance"
     mitigation: "Virtualize grid if needed; test with 50 tables"
+  - risk: "Seat movement tracking adds complexity to slip management"
+    mitigation: "Close existing slip and start new slip at new seat (two-step flow for MVP)"
 
-# Open Questions (from PRD)
-open_questions:
+# Resolved Questions (from PRD)
+resolved_questions:
   - question: "Show closed/inactive tables or filter them?"
-    recommendation: "Show all, dim inactive/closed"
+    decision: "Show all, dim inactive/closed"
   - question: "How to handle multiple slips per seat?"
-    recommendation: "Show most recent only; list all in detail view"
+    decision: "ONE PLAYER PER SEAT ENFORCED. Multiple active slips per seat NOT allowed."
+    details: |
+      - DB unique constraint: (table_id, seat_number) WHERE status IN ('open', 'paused')
+      - UI blocks new slip at occupied seat with error message
+      - Seat available only when slip closed or player moves
+    resolved_date: "2025-12-09"
   - question: "Include gaming day context in stats bar?"
-    recommendation: "Yes, show current gaming day from CasinoService"
+    decision: "Yes, show current gaming day from CasinoService"
 
 ---
 
@@ -161,6 +198,13 @@ open_questions:
 ## Overview
 
 The Pit Dashboard is the primary operational interface for pit bosses to manage gaming tables, active rating slips, and player sessions in real-time. This completes GATE-2 (Session Management + UI) and unblocks Phase 3 (Rewards & Compliance).
+
+**Prerequisites Complete**:
+- ✅ UI-SCAFFOLD-001: Dashboard shell, route groups `(public)/(dashboard)`, sidebar navigation
+- ✅ PRD-007: TableContextService (Pattern A, state machine, dealer rotation)
+- ✅ PRD-002: RatingSlipService (Pattern B, lifecycle, pause tracking)
+- ✅ PRD-003: PlayerService + VisitService (Pattern B, search, enrollment)
+- ✅ PRD-000: CasinoService (temporal authority, gaming day)
 
 ## Scope
 
@@ -185,12 +229,50 @@ The Pit Dashboard is the primary operational interface for pit bosses to manage 
 
 ## Architecture Context
 
+- **Route Structure**: `app/(dashboard)/pit/page.tsx` - uses Next.js route groups per UI-SCAFFOLD-001
 - **TableLayoutTerminal**: Existing component at `components/table/table-layout-terminal.tsx` - needs 7 new props
 - **Services**: All backend services complete (CasinoService, TableContextService, RatingSlipService, PlayerService, VisitService)
 - **State Management**: React Query for server state, component state for UI interactions
 - **RLS**: Dashboard respects casino-scoped RLS - users only see their casino's tables
+- **Seat Occupancy**: Enforced via partial unique index `(table_id, seat_number) WHERE status IN ('open', 'paused')`
 
 ## Workstream Details
+
+### WS0: Seat Occupancy Constraint Migration
+
+**Purpose**: Enforce business rule that only one active rating slip can exist per seat at a table.
+
+**Background (Resolved 2025-12-09)**:
+The question "How to handle multiple slips per seat?" has been resolved: **Multiple active slips per seat are NOT allowed.** Two players cannot occupy one seat simultaneously.
+
+**Deliverables**:
+1. Migration file: `supabase/migrations/YYYYMMDD_seat_occupancy_unique_constraint.sql`
+
+**Migration SQL**:
+```sql
+-- Enforce one active rating slip per seat per table
+-- Partial unique index only applies to open/paused slips (not closed)
+CREATE UNIQUE INDEX IF NOT EXISTS idx_rating_slip_active_seat_unique
+ON rating_slip (table_id, seat_number)
+WHERE status IN ('open', 'paused') AND seat_number IS NOT NULL;
+
+COMMENT ON INDEX idx_rating_slip_active_seat_unique IS
+  'Business rule: One player per seat. Prevents duplicate active slips at same table+seat. Resolved 2025-12-09.';
+```
+
+**Error Handling**:
+When `rpc_start_rating_slip` violates this constraint, the error should be caught and mapped to a user-friendly message:
+- Postgres error: `23505` (unique_violation)
+- Domain error: `SEAT_ALREADY_OCCUPIED`
+- User message: "This seat already has an active rating slip. Please choose a different seat or close the existing slip."
+
+**Acceptance Criteria**:
+- [ ] Migration applies without errors
+- [ ] Existing data has no conflicts (no duplicate active slips per seat)
+- [ ] `RatingSlipService.start()` returns appropriate error for occupied seat
+- [ ] Error code added to `lib/errors/domains/rating-slip.ts`
+
+---
 
 ### WS1: TableLayoutTerminal Enhancement
 
@@ -229,17 +311,19 @@ The Pit Dashboard is the primary operational interface for pit bosses to manage 
 
 ### WS2: Dashboard Page & Layout
 
-**Purpose**: Create the main dashboard page with layout components.
+**Purpose**: Add content to the scaffolded pit dashboard page.
+
+**Context**: Dashboard layout already exists at `app/(dashboard)/layout.tsx` (UI-SCAFFOLD-001). This workstream adds operational content to the `/pit` page.
 
 **Deliverables**:
-1. `app/dashboard/page.tsx` - Main page with data fetching
-2. `app/dashboard/layout.tsx` - Dashboard shell/nav
-3. `components/dashboard/stats-bar.tsx` - Top stats display
-4. `components/dashboard/table-grid.tsx` - Grid of table thumbnails
+1. `app/(dashboard)/pit/page.tsx` - Pit dashboard content with data fetching
+2. `components/dashboard/stats-bar.tsx` - Top stats display (active tables, open slips, checked-in players)
+3. `components/dashboard/table-grid.tsx` - Grid of table thumbnails with selection
 
 **Acceptance Criteria**:
-- [ ] Page renders at `/dashboard`
+- [ ] Page renders at `/pit` with operational content
 - [ ] Stats bar shows 3 metrics (active tables, open slips, checked-in players)
+- [ ] Stats bar includes current gaming day context (CasinoService)
 - [ ] Clicking table thumbnail sets selected table state
 - [ ] Selected table shows expanded TableLayoutTerminal
 - [ ] Type-check passes
@@ -249,13 +333,28 @@ The Pit Dashboard is the primary operational interface for pit bosses to manage 
 **Purpose**: Build UI for managing rating slips from the dashboard.
 
 **Deliverables**:
-1. `active-slips-panel.tsx` - List of active slips with actions
-2. `new-slip-modal.tsx` - Modal for creating new slip
-3. `seat-context-menu.tsx` - Right-click/tap menu on seat
+1. `components/dashboard/active-slips-panel.tsx` - List of active slips with actions
+2. `components/dashboard/new-slip-modal.tsx` - Modal for creating new slip
+3. `components/dashboard/seat-context-menu.tsx` - Right-click/tap menu on seat
+
+**Business Rule - Seat Occupancy (Resolved 2025-12-09)**:
+- **One player per seat**: Two players cannot occupy one seat simultaneously
+- **Occupied seat detection**: Before starting a new slip, check if seat has an active slip
+- **UI behavior**: Display error toast/banner when attempting to assign player to occupied seat
+- **DB enforcement**: Unique constraint `(table_id, seat_number) WHERE status IN ('open', 'paused')` prevents duplicates
+
+**Use Case: Player Seat Movement (PRD Use Case 6)**:
+Floor supervisors need to track players that move seats. MVP flow:
+1. Close existing slip at original seat
+2. Start new slip at new seat/table
+3. UI should guide user through two-step flow with confirmation
 
 **Acceptance Criteria**:
 - [ ] Slip actions call RatingSlipService lifecycle methods
-- [ ] New slip modal has player search integration
+- [ ] New slip modal has player search integration (PlayerService.search)
+- [ ] **Occupied seat shows warning/disabled state** (cannot start new slip)
+- [ ] **Error handling for duplicate seat attempts** (DB constraint violation → user-friendly message: "This seat already has an active rating slip")
+- [ ] Seat movement flow: Close slip → Start new slip (two-step with confirmation)
 - [ ] Optimistic updates via React Query mutations
 - [ ] Type-check passes
 
@@ -290,8 +389,18 @@ The Pit Dashboard is the primary operational interface for pit bosses to manage 
 
 ## Definition of Done
 
-- [ ] Dashboard loads at `/dashboard` within 2.5s LCP target
-- [ ] All 6 workstreams complete
-- [ ] All gates pass (type-check, lint, test-pass, build)
+- [ ] Pit Dashboard loads at `/pit` within 2.5s LCP target
+- [ ] All 7 workstreams complete (WS0-WS6)
+- [ ] All gates pass (migration-apply, type-check, lint, test-pass, build)
+- [ ] Seat occupancy constraint enforced (DB unique index + SEAT_ALREADY_OCCUPIED error code)
 - [ ] MVP-ROADMAP.md updated with GATE-2 completion
 - [ ] PRD-006 status changed to "Complete"
+
+---
+
+## Revision History
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-12-09 | Lead Architect | Initial EXECUTION-SPEC with WS0-WS6 |
+| 1.1 | 2025-12-09 | Lead Architect | Aligned with PRD updates: `/pit` route (not `/dashboard`), route group paths `app/(dashboard)/pit/`, added UI-SCAFFOLD-001 prerequisites, updated external dependency PRD refs (PRD-007 for TableContext, PRD-002 for RatingSlip), added Use Case 6 (seat movement), added seat movement risk mitigation |

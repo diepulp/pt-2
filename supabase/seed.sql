@@ -589,12 +589,104 @@ INSERT INTO mtl_audit_note (id, mtl_entry_id, staff_id, note) VALUES
   ('a6000000-0000-0000-0000-000000000002', 'a5000000-0000-0000-0000-000000000004', '5a000000-0000-0000-0000-000000000007', 'VIP cross-property player. Verified Diamond status. Cash transaction documented.');
 
 -- ============================================================================
+-- 17. DEVELOPMENT AUTH USER
+-- ============================================================================
+-- Creates a test auth user for local development and integration testing.
+-- This user is linked to Marcus Thompson (pit boss) at Casino 1.
+--
+-- Credentials:
+--   Email: pitboss@dev.local
+--   Password: devpass123
+--
+-- WARNING: This user should ONLY exist in development/test databases.
+-- ============================================================================
+
+-- Create dev auth user
+-- Note: encrypted_password is bcrypt hash of 'devpass123'
+-- Generated with: SELECT crypt('devpass123', gen_salt('bf'));
+-- IMPORTANT: GoTrue cannot handle NULL for string columns - must use empty strings
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  aud,
+  role,
+  created_at,
+  updated_at,
+  confirmation_token,
+  recovery_token,
+  -- GoTrue requires these to be non-NULL (empty string, not NULL)
+  email_change,
+  email_change_token_new,
+  email_change_token_current,
+  phone,
+  phone_change,
+  phone_change_token
+) VALUES (
+  'a0000000-0000-0000-0000-000000000de0', -- Using valid hex UUID
+  '00000000-0000-0000-0000-000000000000',
+  'pitboss@dev.local',
+  crypt('devpass123', gen_salt('bf')),
+  NOW(),
+  '{"provider": "email", "providers": ["email"]}',
+  '{"name": "Marcus Thompson (Dev)", "role": "pit_boss"}',
+  'authenticated',
+  'authenticated',
+  NOW(),
+  NOW(),
+  '',
+  '',
+  -- Empty strings for GoTrue compatibility
+  '',
+  '',
+  '',
+  '',
+  '',
+  ''
+) ON CONFLICT (id) DO NOTHING;
+
+-- Link dev auth user to Marcus Thompson staff record
+UPDATE staff
+SET user_id = 'a0000000-0000-0000-0000-000000000de0'
+WHERE id = '5a000000-0000-0000-0000-000000000001';
+
+-- Create identity for email login
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+) VALUES (
+  'a0000000-0000-0000-0000-000000000de0',
+  'a0000000-0000-0000-0000-000000000de0',
+  '{"sub": "a0000000-0000-0000-0000-000000000de0", "email": "pitboss@dev.local"}',
+  'email',
+  'pitboss@dev.local',
+  NOW(),
+  NOW(),
+  NOW()
+) ON CONFLICT (provider, provider_id) DO NOTHING;
+
+-- ============================================================================
 -- SEED COMPLETE
 -- ============================================================================
 --
 -- NOTE: The chk_staff_role_user_id constraint is DISABLED for this seed data.
 -- In production, pit_boss and admin staff would require linked auth.users.
 -- For local development/testing, we use mock staff without auth integration.
+--
+-- DEV USER CREDENTIALS (for integration testing):
+--   Email: pitboss@dev.local
+--   Password: devpass123
+--   Staff: Marcus Thompson (Pit Boss, Casino 1)
 --
 -- Summary:
 -- - 1 Company

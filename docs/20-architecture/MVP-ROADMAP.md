@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 1.5.0
+**Version**: 1.6.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-12-07
+**Updated**: 2025-12-09
 **Owner**: Lead Architect
 
 ---
@@ -21,7 +21,8 @@
 | **1** | **EXEC-VSE-001** | **COMPLETE** ✅ | VisitService Evolution (ghost visits, 3 archetypes) |
 | **2** | **PRD-007** | **COMPLETE** ✅ | TableContextService (Pattern A, 5 workstreams) |
 | **2** | **PRD-002** | **COMPLETE** ✅ | RatingSlipService (Pattern B, 12 workstreams) |
-| **2** | **PRD-006** | **Draft** | Pit Dashboard UI (GATE-2 blocker) |
+| **2** | **UI-SCAFFOLD-001** | **COMPLETE** ✅ | Dashboard shell, route groups, sidebar, mobile nav |
+| **2** | **PRD-006** | **In Progress** | Pit Dashboard Content (scaffold ready, components pending) |
 | 3 | PRD-004 | **Partial** | Mid-Session Loyalty (routes exist, service factory incomplete) |
 | 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
 | 3 | PRD-001 | **Partial** | Player Financial Service (routes exist, keys only) |
@@ -69,6 +70,20 @@
 > - **Transport**: 10 Route Handlers + 5 Server Actions (dual-entry pattern)
 > - **State Machine**: inactive → active → closed with cross-context validation
 > - **Tests**: 62 mapper tests passing
+>
+> **PRD-002 Complete (2025-12-05)**: RatingSlipService implemented per Pattern B:
+> - **12 Workstreams**: State machine, duration calculation, pause tracking, cross-context queries
+> - **Service Layer**: DTOs, schemas, keys, selects, mappers, crud, queries
+> - **Transport**: 6 Route Handlers (start, pause, resume, close, get, duration)
+> - **State Machine**: `open` ↔ `paused` → `closed` (terminal) via RPC
+> - **Tests**: 4 test files (mappers, queries, integration, service)
+>
+> **UI-SCAFFOLD-001 Complete (2025-12-08)**: Dashboard shell and navigation:
+> - **Route Groups**: `(public)` for auth, `(dashboard)` for protected routes
+> - **Navigation**: shadcn/ui Sidebar with collapsible icon mode, mobile bottom nav
+> - **Typography**: JetBrains Mono + DM Sans via next/font/google
+> - **Components**: `components/layout/*` (5 files), `components/shared/*` (2 files)
+> - **Routes Scaffolded**: /pit, /players, /loyalty, /compliance, /settings/*
 
 ---
 
@@ -92,7 +107,7 @@ Establishes a complete implementation baseline for MVP delivery, addressing gaps
 | **Service Layer** | **~85%** | 5/6 core services implemented (Casino, Player, Visit, TableContext, RatingSlip) |
 | **API Routes** | **~85%** | Core routes deployed; table-context + rating-slip routes restored |
 | **React Query Keys** | **Complete** | Key factories for all implemented services |
-| **UI Components** | Minimal | Landing page, auth forms, shadcn/ui base, prototype components |
+| **UI Components** | **Scaffold Complete** | Dashboard shell, route groups, sidebar navigation, mobile nav |
 | **Horizontal Infra** | **COMPLETE** ✅ | withServerAction, ServiceResult, error mapping, query client |
 
 ### Critical Gaps
@@ -115,8 +130,12 @@ SESSION MANAGEMENT ✅ COMPLETE (PRD-002, PRD-007)
 ├── RatingSlipService - IMPLEMENTED (PRD-002, Pattern B, 2025-12-05) ✅
 └── Both services follow bounded context rules with cross-context queries
 
-UI LAYER (GATE-2 Blocker - Required to demo/test)
-├── Pit Dashboard (table status, active slips) ❌
+UI LAYER ✅ SCAFFOLD COMPLETE (UI-SCAFFOLD-001)
+├── Dashboard shell with route groups: (public), (dashboard) ✅
+├── Sidebar navigation with collapsible mode ✅
+├── Mobile bottom nav for pit floor ✅
+├── Typography: JetBrains Mono + DM Sans ✅
+├── Pit Dashboard page (content pending) - /pit
 ├── Rating Slip Management UI (routes ready, UI pending)
 ├── Player Check-in Flow (routes ready, UI pending)
 └── Loyalty Rewards Display (routes ready, UI pending)
@@ -434,36 +453,73 @@ services/visit/
 - Idempotency support for fill/credit operations via request_id
 - ChipsetPayload (Record<string, number>) for JSONB chip denomination counts
 
-### 2.2 RatingSlipService — ❌ REMOVED
+### 2.2 RatingSlipService — COMPLETE ✅
 
 **PRD Reference**: PRD-002
-**Status**: DELETED (2025-12-02) — Implementation had architectural issues
+**Completed**: 2025-12-05
+**Pattern**: Pattern B (Canonical CRUD) with RPC-backed state machine
 
 | Layer | Item | Location | Status |
 |-------|------|----------|--------|
-| **Migration** | Pause tracking | `supabase/migrations/20251128221408_rating_slip_pause_tracking.sql` | ✅ (DB schema intact) |
-| **Migration** | Seat number | `supabase/migrations/20251125214329_add_rating_slip_seat_number.sql` | ✅ (DB schema intact) |
-| **Service** | RatingSlipService | `services/rating-slip/` | ❌ DELETED |
-| **Routes** | Rating slip API | `app/api/v1/rating-slips/**`, `app/api/v1/rating-slip/**` | ❌ DELETED |
-| **Tests** | Service tests | `services/rating-slip/*.test.ts` | ❌ DELETED |
+| **Migration** | Pause tracking | `supabase/migrations/20251128221408_rating_slip_pause_tracking.sql` | ✅ |
+| **Migration** | Seat number | `supabase/migrations/20251125214329_add_rating_slip_seat_number.sql` | ✅ |
+| **DTOs** | RatingSlipDTO, RatingSlipWithPausesDTO, etc. | `services/rating-slip/dtos.ts` | ✅ |
+| **Schemas** | Zod validation schemas | `services/rating-slip/schemas.ts` | ✅ |
+| **Keys** | Query key factory | `services/rating-slip/keys.ts` | ✅ |
+| **Selects** | Named column projections | `services/rating-slip/selects.ts` | ✅ |
+| **Mappers** | Row→DTO transformers | `services/rating-slip/mappers.ts` | ✅ |
+| **CRUD** | RPC-backed state operations | `services/rating-slip/crud.ts` | ✅ |
+| **Queries** | Cross-context queries (hasOpenSlipsForTable) | `services/rating-slip/queries.ts` | ✅ |
+| **Service** | RatingSlipService factory | `services/rating-slip/index.ts` | ✅ |
+| **HTTP** | API client functions | `services/rating-slip/http.ts` | ✅ |
+| **Routes** | 6 Route Handlers | `app/api/v1/rating-slips/**` | ✅ |
+| **Tests** | 4 test files (mappers, queries, integration, service) | `services/rating-slip/__tests__/` | ✅ |
 
-**Rebuild Requirements** (when PRD-002 implementation begins):
-- Must follow Pattern B: `selects.ts`, `mappers.ts`, `crud.ts`
-- State machine for slip lifecycle (start → pause → resume → close)
-- Duration calculation excluding pauses
-- Type-safe Row→DTO mappers with zero `as` assertions
-- Tests in `__tests__/` subdirectory per ADR-002
+**Implementation Highlights**:
+- State machine: `open` ↔ `paused` → `closed` (terminal)
+- Duration calculation excludes paused intervals via `rpc_get_rating_slip_duration`
+- Cross-context query `hasOpenSlipsForTable()` consumed by TableContextService
+- Visit validation: ghost visits (player_id = null) cannot have rating slips
 
-### 2.3 Pit Dashboard — PRD-006
+### 2.3 UI Scaffold — COMPLETE ✅
+
+**PRD Reference**: UI-SCAFFOLD-001
+**Completed**: 2025-12-08
+
+| Item | Location | Description | Status |
+|------|----------|-------------|--------|
+| **Root layout** | `app/layout.tsx` | Providers, fonts (JetBrains Mono + DM Sans) | ✅ |
+| **Dashboard layout** | `app/(dashboard)/layout.tsx` | Sidebar shell with SidebarInset | ✅ |
+| **Public layout** | `app/(public)/layout.tsx` | Auth flow layout | ✅ |
+| **Sidebar** | `components/layout/app-sidebar.tsx` | Collapsible nav with icon mode | ✅ |
+| **Nav main** | `components/layout/nav-main.tsx` | Dashboard navigation items | ✅ |
+| **Nav user** | `components/layout/nav-user.tsx` | User dropdown menu | ✅ |
+| **Bottom nav** | `components/layout/bottom-nav.tsx` | Mobile pit floor navigation | ✅ |
+| **Header** | `components/layout/header.tsx` | Breadcrumb + sidebar trigger | ✅ |
+| **Logo** | `components/shared/logo.tsx` | PT-2 branding component | ✅ |
+| **Gaming day** | `components/shared/gaming-day-indicator.tsx` | Shift context display | ✅ |
+
+**Dashboard Routes Scaffolded**:
+- `/pit` - Pit Dashboard (content pending)
+- `/players` - Player Management (content pending)
+- `/loyalty` - Loyalty Center (content pending)
+- `/compliance` - Compliance Monitor (content pending)
+- `/settings` - Settings hub
+- `/settings/casino` - Casino configuration
+- `/settings/staff` - Staff management
+
+### 2.4 Pit Dashboard Content — PRD-006
 
 **PRD Reference**: PRD-006-pit-dashboard.md
+**Status**: PENDING (scaffold ready, content to implement)
 **Critical UI Component** - Primary operational interface (GATE-2 blocker)
 
 | Item | Location | Description | Priority |
 |------|----------|-------------|----------|
-| Dashboard layout | `app/pit-terminal/page.tsx` | Main pit operations view | P0 |
-| Table terminal | `components/table/table-layout-terminal.tsx` | Visual table status | P0 |
+| Dashboard content | `app/(dashboard)/pit/page.tsx` | Main pit operations view | P0 |
+| Table terminal | `components/table/table-layout-terminal.tsx` | Visual table status (exists) | P0 |
 | Active slips panel | `components/dashboard/active-slips.tsx` | Current sessions | P0 |
+| Table grid | `components/dashboard/table-grid.tsx` | Table selection grid | P0 |
 | Player activity | `components/dashboard/player-activity.tsx` | Recent check-ins | P1 |
 | Realtime updates | `hooks/use-dashboard-realtime.ts` | Supabase channels | P1 |
 
@@ -544,17 +600,19 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 - [x] All routes use `withServerAction` middleware — 10 Route Handlers
 - [x] Mapper tests pass — 62 tests for TableContext
 
-**Gate 2 Definition of Done**: 🟡 SERVICES COMPLETE, UI PENDING
-- [ ] Pit Dashboard operational ← **BLOCKER: Not started (PRD-006)**
+**Gate 2 Definition of Done**: 🟡 SERVICES COMPLETE, UI SCAFFOLD COMPLETE, CONTENT PENDING
+- [ ] Pit Dashboard content operational ← **BLOCKER: Scaffold ready, content pending (PRD-006)**
 - [x] Table open/close from API ← COMPLETE (activate/deactivate/close routes)
 - [x] Rating slip start/pause/resume/close from API ← COMPLETE (PRD-002)
+- [x] Dashboard shell with navigation ← COMPLETE (UI-SCAFFOLD-001)
 - [ ] Real-time updates working
 - [ ] p95 dashboard LCP ≤ 2.5s
 
 **To Complete GATE-2**:
 1. ~~Implement PRD-007 TableContextService~~ ✅ DONE
 2. ~~Implement PRD-002 RatingSlipService~~ ✅ DONE
-3. Execute PRD-006 Pit Dashboard UI ← **NEXT**
+3. ~~Implement UI-SCAFFOLD-001~~ ✅ DONE
+4. Execute PRD-006 Pit Dashboard Content ← **NEXT**
 
 ---
 
@@ -616,52 +674,74 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 
 ```
 app/
-├── layout.tsx                      # Root layout with providers
-├── page.tsx                        # Landing/redirect
-├── auth/                           # Auth flows (exists)
-├── dashboard/
-│   ├── layout.tsx                  # Dashboard shell
-│   ├── page.tsx                    # Pit dashboard (main)
-│   ├── tables/
-│   │   └── [id]/page.tsx          # Table detail view
-│   └── players/
-│       └── [id]/page.tsx          # Player detail view
-└── api/
-    ├── casino/                     # Casino routes
-    ├── players/                    # Player routes
-    ├── visit/                      # Visit routes
-    ├── tables/                     # Table routes
-    ├── rating-slips/               # Rating slip routes
-    └── loyalty/                    # Loyalty routes
+├── layout.tsx                      # Root layout with providers, fonts
+├── (public)/                       # Route group: unauthenticated
+│   ├── layout.tsx                  # Public layout (no sidebar)
+│   ├── page.tsx                    # Landing page
+│   └── auth/                       # Auth flows
+│       ├── login/page.tsx
+│       ├── sign-up/page.tsx
+│       ├── forgot-password/page.tsx
+│       └── update-password/page.tsx
+├── (dashboard)/                    # Route group: authenticated
+│   ├── layout.tsx                  # Dashboard shell with sidebar
+│   ├── pit/page.tsx                # Pit Dashboard (main) ✅ scaffolded
+│   ├── players/page.tsx            # Player management ✅ scaffolded
+│   ├── loyalty/page.tsx            # Loyalty center ✅ scaffolded
+│   ├── compliance/page.tsx         # Compliance monitor ✅ scaffolded
+│   └── settings/
+│       ├── page.tsx                # Settings hub ✅ scaffolded
+│       ├── casino/page.tsx         # Casino config ✅ scaffolded
+│       └── staff/page.tsx          # Staff management ✅ scaffolded
+├── api/v1/                         # API routes (versioned)
+│   ├── casinos/                    # Casino CRUD + settings/staff
+│   ├── players/                    # Player CRUD + enrollment
+│   ├── visits/                     # Visit CRUD + active check
+│   ├── tables/                     # Table lifecycle + dealer
+│   ├── table-context/              # Chip custody operations
+│   ├── rating-slips/               # Rating slip lifecycle
+│   ├── loyalty/                    # Balances, ledger, mid-session
+│   ├── finance/                    # Financial transactions
+│   └── mtl/                        # MTL entries + audit
+└── actions/
+    └── table-context/              # Server Actions (5 actions)
 
 components/
+├── layout/                         # ✅ UI-SCAFFOLD-001 complete
+│   ├── app-sidebar.tsx             # Collapsible sidebar
+│   ├── nav-main.tsx                # Main nav items
+│   ├── nav-user.tsx                # User dropdown
+│   ├── bottom-nav.tsx              # Mobile pit floor nav
+│   └── header.tsx                  # Breadcrumb + triggers
+├── shared/                         # ✅ UI-SCAFFOLD-001 complete
+│   ├── logo.tsx                    # PT-2 branding
+│   └── gaming-day-indicator.tsx    # Shift context
 ├── ui/                             # shadcn/ui base (exists)
-├── dashboard/
+├── table/                          # Table components (exists)
+│   ├── table-layout-terminal.tsx   # Semi-circular table visual
+│   └── ...
+├── dashboard/                      # TO BUILD (PRD-006)
 │   ├── table-grid.tsx
 │   ├── active-slips.tsx
 │   ├── stats-cards.tsx
 │   └── player-activity.tsx
-├── table/
-│   ├── table-card.tsx
-│   ├── table-actions.tsx
-│   └── table-detail.tsx
-├── rating-slip/
+├── rating-slip/                    # TO BUILD
 │   ├── slip-card.tsx
 │   ├── slip-modal.tsx
 │   ├── slip-timer.tsx
 │   └── slip-actions.tsx
-├── player/
+├── player/                         # TO BUILD
 │   ├── player-search.tsx
 │   ├── player-card.tsx
 │   └── player-select.tsx
-├── visit/
+├── visit/                          # TO BUILD
 │   ├── check-in-dialog.tsx
 │   └── visit-summary.tsx
-├── loyalty/
+├── loyalty/                        # TO BUILD
 │   ├── reward-dialog.tsx
 │   ├── points-display.tsx
 │   └── tier-badge.tsx
-└── mtl/
+└── mtl/                            # TO BUILD
     └── proximity-badge.tsx
 ```
 
@@ -753,13 +833,15 @@ graph LR
 
 ## Next Actions
 
-> **Updated 2025-12-07**: Phase 2 services complete (PRD-002, PRD-007), UI pending
+> **Updated 2025-12-09**: Phase 2 services complete, UI scaffold complete, dashboard content pending
 
-1. **Immediate (P0)**: Execute PRD-006 — Pit Dashboard UI (GATE-2 blocker)
-   - **WS1**: Enhance `TableLayoutTerminal` with dashboard props
-   - **WS2**: Create dashboard page and layout
-   - **WS3**: Implement dashboard data hooks
-   - **WS4**: Build slip management UI
+1. **Immediate (P0)**: Execute PRD-006 — Pit Dashboard Content (GATE-2 blocker)
+   - UI scaffold ready at `app/(dashboard)/pit/page.tsx`
+   - **WS1**: Build dashboard data hooks (useTables, useActiveSlips)
+   - **WS2**: Create `components/dashboard/table-grid.tsx` with table selection
+   - **WS3**: Create `components/dashboard/active-slips.tsx` panel
+   - **WS4**: Create `components/dashboard/stats-cards.tsx` summary
+   - **WS5**: Enhance `TableLayoutTerminal` with dashboard integration props
    - See `docs/10-prd/PRD-006-pit-dashboard.md` for full workstream breakdown
 2. **Short-term**: Complete Phase 3 service factories (Pattern B)
    - LoyaltyService factory (routes exist, logic deleted — rebuild required)
@@ -781,7 +863,8 @@ graph LR
 - **PRD-003B**: VisitService Pattern B Refactor (COMPLETE)
 - **PRD-004**: Mid-Session Loyalty
 - **PRD-005**: Compliance Monitoring
-- **PRD-006**: Pit Dashboard UI (Draft)
+- **PRD-006**: Pit Dashboard UI (In Progress - scaffold complete, content pending)
+- **UI-SCAFFOLD-001**: Dashboard Shell (COMPLETE 2025-12-08)
 - **ADR-002**: Test File Organization (tests in `__tests__/` subdirectories)
 - **ADR-012**: Error Handling Layers (with Addendum for cross-context propagation)
 - **VIS-001**: Vision & Scope

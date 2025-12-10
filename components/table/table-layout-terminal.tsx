@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import * as React from 'react';
+import * as React from "react";
 
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 interface SeatOccupant {
   firstName: string;
@@ -14,6 +14,14 @@ interface TableLayoutTerminalProps {
   onSeatClick?: (index: number, occupant: SeatOccupant | null) => void;
   isLoading?: boolean;
   dealerName?: string;
+  // Dashboard-specific props (WS1: PRD-006)
+  tableId?: string;
+  gameType?: string;
+  tableStatus?: "active" | "inactive" | "closed";
+  activeSlipsCount?: number;
+  variant?: "full" | "compact";
+  isSelected?: boolean;
+  onTableAction?: (action: "open" | "close" | "details") => void;
 }
 
 // Modern Minimalist Theme
@@ -54,14 +62,187 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     onSeatClick,
     isLoading = false,
     dealerName,
+    tableId,
+    gameType,
+    tableStatus = "active",
+    activeSlipsCount,
+    variant = "full",
+    isSelected = false,
+    onTableAction,
   }) {
     const positions = React.useMemo(
       () => calculateSeatPositions(seats.length),
       [seats.length],
     );
 
+    const isCompact = variant === "compact";
+
+    // Compact variant: Render thumbnail with metadata overlay
+    if (isCompact) {
+      return (
+        <div
+          className={cn(
+            "relative group rounded-lg overflow-hidden border transition-all duration-200",
+            "w-[100px] h-[80px]", // Fixed compact size
+            isSelected
+              ? "border-accent/80 ring-2 ring-accent/40 shadow-lg"
+              : "border-border/50 hover:border-accent/50",
+            tableStatus === "inactive" && "opacity-60",
+            tableStatus === "closed" && "opacity-40 grayscale",
+          )}
+        >
+          {/* Table ID Badge */}
+          {tableId && (
+            <div className="absolute top-1 left-1 z-10 px-1.5 py-0.5 rounded bg-background/90 border border-border/50 backdrop-blur-sm">
+              <span className="text-[9px] font-bold text-foreground">
+                {tableId}
+              </span>
+            </div>
+          )}
+
+          {/* Active Slips Count Badge */}
+          {activeSlipsCount !== undefined && activeSlipsCount > 0 && (
+            <div className="absolute top-1 right-1 z-10 px-1.5 py-0.5 rounded-full bg-accent text-accent-foreground">
+              <span className="text-[9px] font-bold">{activeSlipsCount}</span>
+            </div>
+          )}
+
+          {/* Game Type & Status Badge */}
+          {gameType && (
+            <div className="absolute bottom-1 left-1 z-10 px-1.5 py-0.5 rounded bg-muted/90 border border-border/50 backdrop-blur-sm">
+              <span className="text-[8px] font-semibold uppercase text-muted-foreground">
+                {gameType}
+              </span>
+            </div>
+          )}
+
+          {/* Status Indicator */}
+          <div className="absolute bottom-1 right-1 z-10">
+            <div
+              className={cn(
+                "w-2 h-2 rounded-full",
+                tableStatus === "active" &&
+                  "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]",
+                tableStatus === "inactive" && "bg-yellow-500",
+                tableStatus === "closed" && "bg-gray-500",
+              )}
+            />
+          </div>
+
+          {/* Simplified table visualization */}
+          <div className="absolute inset-0 bg-gradient-to-b from-card/80 via-card/60 to-background/80">
+            {/* Table arc shape */}
+            <div className="absolute inset-x-[8%] top-[15%] bottom-[5%] rounded-t-[50%] border border-border/30 bg-card/40" />
+
+            {/* Seat indicators (simplified) */}
+            <div className="absolute inset-0 flex items-start justify-center gap-1 pt-2">
+              {seats.slice(0, Math.min(seats.length, 7)).map((occupant, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    occupant
+                      ? "bg-accent shadow-[0_0_4px_hsl(var(--accent)/0.6)]"
+                      : "bg-muted border border-border/40",
+                  )}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Full variant: Original full-featured rendering
     return (
-      <section aria-label="Table layout" className="relative w-full">
+      <section
+        aria-label="Table layout"
+        className={cn(
+          "relative w-full",
+          isSelected &&
+            "ring-2 ring-accent/50 ring-offset-4 ring-offset-background rounded-lg",
+        )}
+      >
+        {/* Table metadata header (full variant only) */}
+        {(tableId || gameType || activeSlipsCount !== undefined) && (
+          <div className="flex items-center justify-between mb-3 px-2">
+            <div className="flex items-center gap-3">
+              {tableId && (
+                <div className="px-2 py-1 rounded-md bg-card border border-border/50">
+                  <span className="text-sm font-bold text-foreground">
+                    {tableId}
+                  </span>
+                </div>
+              )}
+              {gameType && (
+                <div className="px-2 py-1 rounded-md bg-muted/50 border border-border/40">
+                  <span className="text-xs font-semibold uppercase text-muted-foreground">
+                    {gameType}
+                  </span>
+                </div>
+              )}
+              {/* Table status indicator */}
+              <div className="flex items-center gap-1.5">
+                <div
+                  className={cn(
+                    "w-2 h-2 rounded-full",
+                    tableStatus === "active" &&
+                      "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]",
+                    tableStatus === "inactive" && "bg-yellow-500",
+                    tableStatus === "closed" && "bg-gray-500",
+                  )}
+                />
+                <span className="text-xs font-medium text-muted-foreground capitalize">
+                  {tableStatus}
+                </span>
+              </div>
+            </div>
+
+            {/* Active slips count */}
+            {activeSlipsCount !== undefined && (
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">
+                  Active Slips:
+                </span>
+                <div className="px-2 py-1 rounded-full bg-accent text-accent-foreground">
+                  <span className="text-xs font-bold">{activeSlipsCount}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Quick actions */}
+            {onTableAction && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onTableAction("details")}
+                  className="px-2 py-1 rounded text-xs font-medium hover:bg-muted transition-colors"
+                  aria-label="View table details"
+                >
+                  Details
+                </button>
+                {tableStatus === "closed" && (
+                  <button
+                    onClick={() => onTableAction("open")}
+                    className="px-2 py-1 rounded text-xs font-medium text-green-600 hover:bg-green-50 dark:hover:bg-green-950 transition-colors"
+                    aria-label="Open table"
+                  >
+                    Open
+                  </button>
+                )}
+                {tableStatus === "active" && (
+                  <button
+                    onClick={() => onTableAction("close")}
+                    className="px-2 py-1 rounded text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950 transition-colors"
+                    aria-label="Close table"
+                  >
+                    Close
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Ambient glow behind table */}
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] aspect-[3/2] rounded-full blur-3xl opacity-20 pointer-events-none bg-accent/20" />
 
@@ -70,12 +251,12 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
           {/* Table surface */}
           <div
             className={cn(
-              'absolute inset-x-[5%] top-[8%] bottom-0',
-              'rounded-t-[50%]',
-              'border border-border/50',
-              'shadow-[inset_0_2px_40px_rgba(0,0,0,0.4),_0_16px_48px_-8px_rgba(0,0,0,0.4),_0_0_0_1px_rgba(255,255,255,0.05)]',
-              'overflow-hidden',
-              'bg-gradient-to-b from-card via-card/90 to-background',
+              "absolute inset-x-[5%] top-[8%] bottom-0",
+              "rounded-t-[50%]",
+              "border border-border/50",
+              "shadow-[inset_0_2px_40px_rgba(0,0,0,0.4),_0_16px_48px_-8px_rgba(0,0,0,0.4),_0_0_0_1px_rgba(255,255,255,0.05)]",
+              "overflow-hidden",
+              "bg-gradient-to-b from-card via-card/90 to-background",
             )}
           >
             {/* Subtle noise texture overlay */}
@@ -141,8 +322,8 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   key={i}
                   onClick={() => onSeatClick?.(i, occupant)}
                   className={cn(
-                    'group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-hidden',
-                    'animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both',
+                    "group absolute -translate-x-1/2 -translate-y-1/2 focus:outline-hidden",
+                    "animate-in fade-in slide-in-from-bottom-2 duration-500 fill-mode-both",
                   )}
                   style={{
                     left: pos.left,
@@ -158,36 +339,36 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   {/* Seat glow effect on hover/occupied */}
                   <div
                     className={cn(
-                      'absolute inset-0 rounded-full blur-md transition-opacity duration-300',
+                      "absolute inset-0 rounded-full blur-md transition-opacity duration-300",
                       occupant
-                        ? 'bg-accent/40 opacity-100'
-                        : 'bg-accent/20 opacity-0 group-hover:opacity-100',
+                        ? "bg-accent/40 opacity-100"
+                        : "bg-accent/20 opacity-0 group-hover:opacity-100",
                     )}
-                    style={{ transform: 'scale(1.4)' }}
+                    style={{ transform: "scale(1.4)" }}
                   />
 
                   {/* Main seat circle - responsive sizing */}
                   <div
                     className={cn(
-                      'relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full',
-                      'border backdrop-blur-sm',
-                      'transition-all duration-300 ease-out',
+                      "relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full",
+                      "border backdrop-blur-sm",
+                      "transition-all duration-300 ease-out",
                       occupant
-                        ? 'border-accent/60 bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]'
-                        : 'border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]',
-                      'group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10',
-                      'group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background',
+                        ? "border-accent/60 bg-accent/20 shadow-[0_0_20px_hsl(var(--accent)/0.3)]"
+                        : "border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]",
+                      "group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10",
+                      "group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
                     )}
                   >
                     {/* Seat number */}
                     <span
                       className={cn(
-                        'absolute inset-0 grid place-items-center font-semibold transition-all duration-300',
+                        "absolute inset-0 grid place-items-center font-semibold transition-all duration-300",
                         occupant
-                          ? 'text-accent-foreground text-xs sm:text-sm'
-                          : 'text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground',
+                          ? "text-accent-foreground text-xs sm:text-sm"
+                          : "text-muted-foreground text-[10px] sm:text-xs group-hover:text-foreground",
                       )}
-                      style={{ fontVariantNumeric: 'tabular-nums' }}
+                      style={{ fontVariantNumeric: "tabular-nums" }}
                     >
                       {i + 1}
                     </span>
@@ -199,33 +380,33 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   {/* Status badge */}
                   <span
                     className={cn(
-                      'absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2',
-                      'rounded-full px-1.5 sm:px-2 py-0.5',
-                      'text-[7px] sm:text-[9px] font-bold tracking-wider uppercase',
-                      'transition-all duration-300',
-                      'shadow-xs',
+                      "absolute -bottom-2 sm:-bottom-2.5 left-1/2 -translate-x-1/2",
+                      "rounded-full px-1.5 sm:px-2 py-0.5",
+                      "text-[7px] sm:text-[9px] font-bold tracking-wider uppercase",
+                      "transition-all duration-300",
+                      "shadow-xs",
                       occupant
-                        ? 'bg-accent text-accent-foreground'
-                        : 'bg-muted text-muted-foreground border border-border/50',
-                      'group-hover:scale-105',
+                        ? "bg-accent text-accent-foreground"
+                        : "bg-muted text-muted-foreground border border-border/50",
+                      "group-hover:scale-105",
                     )}
                   >
-                    {occupant ? 'Taken' : 'Open'}
+                    {occupant ? "Taken" : "Open"}
                   </span>
 
                   {/* Player name tooltip on hover for occupied seats */}
                   {occupant && (
                     <div
                       className={cn(
-                        'absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2',
-                        'px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md',
-                        'bg-popover border border-border',
-                        'text-[9px] sm:text-[11px] font-medium text-popover-foreground whitespace-nowrap',
-                        'opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100',
-                        'transition-all duration-200',
-                        'shadow-lg',
-                        'pointer-events-none',
-                        'z-20',
+                        "absolute -top-8 sm:-top-10 left-1/2 -translate-x-1/2",
+                        "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md",
+                        "bg-popover border border-border",
+                        "text-[9px] sm:text-[11px] font-medium text-popover-foreground whitespace-nowrap",
+                        "opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100",
+                        "transition-all duration-200",
+                        "shadow-lg",
+                        "pointer-events-none",
+                        "z-20",
                       )}
                     >
                       {occupant.firstName} {occupant.lastName}
