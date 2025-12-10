@@ -1,10 +1,13 @@
 # ISSUE-002: RLS Context RPC Injection Failure
 
-**Status:** Open
+**Status:** ✅ RESOLVED
 **Priority:** P0 - Blocking
 **Created:** 2025-12-10
-**Affects:** All API endpoints using `withServerAction` middleware
+**Updated:** 2025-12-10
+**Resolved:** 2025-12-10
+**Affects:** `/api/v1/visits` endpoint (joins to RLS-enabled `player` table)
 **Related:** ADR-015, ISSUE-001 (regression)
+**Remediation:** [REM-ISSUE-002](remediation/REM-ISSUE-002-rls-hybrid-policies.md)
 
 ## Summary
 
@@ -203,6 +206,103 @@ for (const stmt of statements) {
 - [ ] Verify DEV_RLS_CONTEXT UUIDs match seed data
 - [ ] Complete WS6 integration tests
 - [ ] Update EXECUTION-SPEC-ADR-015.md with findings
+
+## Diagnosis Update (2025-12-10)
+
+### Confirmed Root Cause
+
+The original diagnosis was **partially incorrect**. Refined findings:
+
+| Original Assumption | Actual Finding |
+|---------------------|----------------|
+| RPC call failing | RPC works, but context lost due to **transaction isolation** |
+| All endpoints affected | Only endpoints joining RLS-enabled tables affected |
+| Migration applied | WS4 hybrid policies **NOT applied** despite file existing |
+
+### Key Evidence
+
+```sql
+-- Database has OLD pattern (vulnerable):
+casino_id = (current_setting('app.casino_id', true))::uuid
+
+-- Migration file has NEW pattern (fixed, but not applied):
+casino_id = COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, jwt_fallback)
+```
+
+### Why `/api/v1/visits` Fails But Others Work
+
+| Table | RLS Enabled | Policy Evaluated | Result |
+|-------|-------------|------------------|--------|
+| `gaming_table` | No | N/A | 200 OK |
+| `rating_slip` | No | N/A | 200 OK |
+| `player` (via visit join) | **Yes** | `player_select_enrolled` | **500 Error** |
+
+## FINAL ROOT CAUSE (2025-12-10)
+
+### Migration Conflict Identified
+
+The ADR-015 hybrid policies were **applied and then overwritten** by a later migration:
+
+| Migration | Timestamp | Effect |
+|-----------|-----------|--------|
+| `20251209183401_adr015_hybrid_rls_policies.sql` | 18:34:01 | Created hybrid policies with JWT fallback |
+| `20251209215834_sync_remote_changes.sql` | 21:58:34 | **OVERWROTE** with old policies (no JWT fallback) |
+
+**The Smoking Gun:**
+```sql
+-- Line 24-29 in sync_remote_changes.sql
+create policy "staff_read"
+on "public"."staff"
+using ((casino_id = (current_setting('app.casino_id'::text, true))::uuid));
+-- Missing: auth.uid() guard, JWT fallback
+```
+
+This explains the CLI dissonance:
+- CLI showed migrations as "applied" - they WERE applied
+- Database had old policies - because sync_remote_changes ran AFTER ADR-015
+- Remote schema drift caused auto-generated migration to overwrite local changes
+
+### Resolution
+
+See [REM-ISSUE-002: Migration Conflict Resolution](remediation/REM-ISSUE-002-migration-conflict-resolution.md)
+
+**Required Actions:**
+```bash
+# 1. Delete conflicting migration
+rm supabase/migrations/20251209215834_sync_remote_changes.sql
+
+# 2. Reset database (manual - blocked by destructive hook)
+npx supabase db reset
+```
+
+## Resolution (2025-12-10)
+
+### Actions Taken
+
+1. **Deleted conflicting migration:** `supabase/migrations/20251209215834_sync_remote_changes.sql`
+2. **Executed database reset:** `npx supabase db reset`
+3. **Verified ADR-015 hybrid policies applied:**
+   ```sql
+   -- Confirmed Pattern C in player_select_enrolled policy:
+   COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid,
+            (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)
+   ```
+4. **Endpoint test passed:** `/api/v1/visits` returns 200
+
+### Verification Results
+
+| Check | Result |
+|-------|--------|
+| Hybrid policies applied | ✅ COALESCE/NULLIF pattern confirmed |
+| auth.uid() guard present | ✅ |
+| JWT fallback present | ✅ |
+| `/api/v1/visits` status | ✅ 200 OK |
+
+### Lessons Learned
+
+1. **Remote schema drift is dangerous** - auto-generated `sync_remote_changes` migrations can overwrite intentional local changes
+2. **CI should validate migrations** - add pre-commit hook to detect old RLS patterns
+3. **WS6 integration tests would have caught this** - prioritize test coverage
 
 ## Related
 
