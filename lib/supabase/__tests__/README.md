@@ -6,7 +6,31 @@ This directory contains integration tests for the RLS (Row-Level Security) conte
 
 ## Test Files
 
-- `rls-context.integration.test.ts` - Integration tests for RLS context injection
+### Core RLS Tests
+- `rls-context.integration.test.ts` - Core RLS context injection tests (12 tests)
+  - Transaction-wrapped injection
+  - RPC function validation
+  - Hybrid policy fallback
+  - Context parameter validation
+
+### Policy Enforcement Tests
+- `rls-policy-enforcement.integration.test.ts` - RLS policy enforcement across tables (16 tests)
+  - Visit table RLS policies
+  - Gaming table RLS policies
+  - Player table RLS policies (global with casino-scoped access)
+  - Casino settings RLS policies
+  - Staff table RLS policies
+  - Multi-table queries with RLS
+  - NULL context handling (JWT fallback)
+
+### Pooling Safety Tests
+- `rls-pooling-safety.integration.test.ts` - Connection pooling safety tests (14 tests)
+  - Transaction-local context persistence
+  - Concurrent request simulation (10, 50, 100 requests)
+  - Context isolation between clients
+  - RPC function atomicity
+  - Correlation ID tracking
+  - Connection pool exhaustion simulation
 
 ## Prerequisites
 
@@ -31,19 +55,31 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 
 ## Running Tests
 
-### Run all RLS context tests
+### Run all RLS tests
 ```bash
+npm test -- lib/supabase/__tests__/
+```
+
+### Run specific test suites
+```bash
+# Core RLS context tests (12 tests - fast, ~1s)
 npm test -- lib/supabase/__tests__/rls-context.integration.test.ts
+
+# Policy enforcement tests (16 tests - moderate, ~2s)
+npm test -- lib/supabase/__tests__/rls-policy-enforcement.integration.test.ts
+
+# Pooling safety tests (14 tests - slow, ~5-10s)
+npm test -- lib/supabase/__tests__/rls-pooling-safety.integration.test.ts
 ```
 
 ### Run with watch mode
 ```bash
-npm run test:watch -- lib/supabase/__tests__/rls-context.integration.test.ts
+npm run test:watch -- lib/supabase/__tests__/
 ```
 
 ### Run with coverage
 ```bash
-npm run test:coverage -- lib/supabase/__tests__/rls-context.integration.test.ts
+npm run test:coverage -- lib/supabase/__tests__/
 ```
 
 ## Troubleshooting
@@ -90,30 +126,89 @@ Integration tests create and tear down test data which can take time.
 npm test -- lib/supabase/__tests__/rls-context.integration.test.ts --testTimeout=30000
 ```
 
-## Test Coverage
+## Test Coverage Summary
 
-The integration tests cover:
+### Total: 42 Tests across 3 Test Suites
 
-1. **Transaction-Wrapped Injection**
-   - Context persistence across multiple queries
-   - Cross-tenant access rejection
-   - Rapid sequential request handling
+#### 1. rls-context.integration.test.ts (12 tests)
+**Transaction-Wrapped Injection:**
+- Context persistence across multiple queries
+- Cross-tenant access rejection
+- Rapid sequential request handling
 
-2. **RPC Function Validation**
-   - Valid parameter handling
-   - Optional correlation_id support
-   - Invalid input error handling
-   - Multiple staff role support
+**RPC Function Validation:**
+- Valid parameter handling
+- Optional correlation_id support
+- Invalid input error handling
+- Multiple staff role support
 
-3. **Hybrid Policy Fallback**
-   - SET LOCAL context variable usage
-   - COALESCE(current_setting, jwt_claim) pattern
-   - Request isolation verification
+**Hybrid Policy Fallback:**
+- SET LOCAL context variable usage
+- COALESCE(current_setting, jwt_claim) pattern
+- Request isolation verification
 
-4. **Context Parameter Validation**
-   - Required parameter enforcement
-   - Optional parameter handling
-   - UUID format validation
+**Context Parameter Validation:**
+- Required parameter enforcement
+- Optional parameter handling
+- UUID format validation
+
+#### 2. rls-policy-enforcement.integration.test.ts (16 tests)
+**Visit Table RLS Policies:**
+- Staff can read visits from their own casino
+- Staff cannot read visits from other casinos
+- Casino isolation between concurrent requests
+
+**Gaming Table RLS Policies:**
+- Tables filtered by casino_id
+- Multiple tables per casino
+- Same label allowed in different casinos
+
+**Player Table RLS Policies:**
+- Staff can read players enrolled in their casino
+- Staff cannot see players not enrolled in their casino
+
+**Casino Settings RLS Policies:**
+- Staff can read their own casino settings
+- Settings are properly casino-scoped
+
+**Staff Table RLS Policies:**
+- Staff members filtered by casino_id
+- Staff belong to correct casino
+
+**Multi-Table Queries:**
+- RLS enforced across joined tables
+- Complex queries with multiple casino-scoped tables
+
+**NULL Context Handling:**
+- Queries work when SET LOCAL context is NULL
+- NULLIF pattern handles empty strings correctly
+
+#### 3. rls-pooling-safety.integration.test.ts (14 tests)
+**Transaction-Local Context Persistence:**
+- Context persists within transaction
+- Multiple RPC calls without leakage
+- Rapid context switching between three casinos
+
+**Concurrent Request Simulation:**
+- 10 concurrent requests without cross-contamination
+- Different staff roles in concurrent requests
+- 50 concurrent context switches
+
+**Context Isolation:**
+- No context sharing between client instances
+- Interleaved operations from multiple clients
+
+**RPC Function Atomicity:**
+- All context variables set atomically
+- Errors handled gracefully without partial context
+
+**Correlation ID Tracking:**
+- Correlation ID accepted and set
+- NULL correlation_id handled
+- Different correlation IDs for concurrent requests
+
+**Connection Pool Exhaustion:**
+- 100 concurrent requests (stress test)
 
 ## Architecture References
 
