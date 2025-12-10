@@ -5,11 +5,13 @@ owner: Security
 status: Active
 affects: []
 created: 2025-11-02
-last_review: 2025-11-13
-updated: 2025-11-13
+last_review: 2025-12-10
+updated: 2025-12-10
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
 ---
+
+> **CRITICAL UPDATE (2025-12-10):** The `SET LOCAL` context injection pattern documented below has a **known issue with Supabase connection pooling**. See **ADR-015** for the fix. New implementations MUST use transaction-wrapped context injection or JWT claims.
 
 ## Overview
 
@@ -501,9 +503,11 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 - **Migration Analysis**: `docs/audits/RLS_DOCUMENTATION_DRIFT_ANALYSIS_2025-11-13.md`
 - **RLS Context**: `lib/supabase/rls-context.ts`
 - **WRAPPER**: `lib/server-actions/with-server-action-wrapper.ts`
+- **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (Connection pooling fix)
 
 ---
 
-**Status**: ✅ Updated to canonical pattern (2025-11-13)
+**Status**: ⚠️ Pending ADR-015 implementation (2025-12-10)
 **Migration**: ⚠️ Schema ready, policies pending deployment
-**Next**: Deploy RLS policies per priority order above
+**Blocker**: SET LOCAL fails with Supabase connection pooling - see ADR-015
+**Next**: Implement transaction-wrapped context injection per ADR-015
