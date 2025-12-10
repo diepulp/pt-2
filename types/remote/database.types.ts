@@ -1693,7 +1693,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1706,6 +1705,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1996,6 +1996,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      set_rls_context: {
+        Args: {
+          p_actor_id: string
+          p_casino_id: string
+          p_correlation_id?: string
+          p_staff_role: string
+        }
+        Returns: undefined
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }

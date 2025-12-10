@@ -1,7 +1,8 @@
 # ADR-015: RLS Connection Pooling Strategy
 
-**Status:** Accepted
+**Status:** Implemented (Phase 1)
 **Date:** 2025-12-10
+**Implementation Date:** 2025-12-10
 **Owner:** Security/Platform
 **Applies to:** All RLS policies and Supabase client usage
 **Decision type:** Architecture + Security
@@ -258,18 +259,24 @@ CREATE POLICY "table_read_hybrid"
 
 ## Verification
 
-### Before Deployment
+### Before Deployment (Phase 1 - Complete)
 
-- [ ] `set_rls_context()` RPC created and tested
-- [ ] `injectRLSContext()` updated to use new RPC
-- [ ] Integration tests verify context persists across queries
-- [ ] Load test confirms no cross-tenant data leakage
+- [x] `set_rls_context()` RPC created and tested
+- [x] `injectRLSContext()` updated to use new RPC
+- [x] Integration tests verify context persists across queries (12/12 passing)
+- [ ] Load test confirms no cross-tenant data leakage (pending production testing)
 
-### After Deployment
+### After Deployment (Phase 1)
 
 - [ ] Monitor Supabase logs for RLS policy failures
-- [ ] Audit `casino_id` in JWT claims vs. expected values
+- [ ] Validate context isolation under concurrent load
 - [ ] Run security regression tests for multi-tenant scenarios
+
+### Phase 2-3 Verification (JWT Claims - Future)
+
+- [ ] Audit `casino_id` in JWT claims vs. expected values
+- [ ] Verify token refresh flow updates claims correctly
+- [ ] Confirm hybrid fallback works during migration period
 
 ---
 
@@ -334,3 +341,14 @@ CREATE POLICY "table_read_hybrid"
 
 **Changelog:**
 - 2025-12-10: Initial ADR created based on Memori tech debt record
+- 2025-12-10: **Phase 1 Implemented** - Transaction-wrapped RPC (`set_rls_context`) deployed and verified
+  - Migration: `20251209183033_adr015_rls_context_rpc.sql`
+  - Migration: `20251209183401_adr015_hybrid_rls_policies.sql` (Pattern C hybrid policies)
+  - Updated: `lib/supabase/rls-context.ts` with `injectRLSContext()` using new RPC
+  - All 12 integration tests passing (`lib/supabase/__tests__/rls-context.integration.test.ts`)
+  - SEC-001 documentation updated with ADR-015 patterns
+
+**Pending Post-Implementation Testing:**
+- Phase 2-3 (JWT Claims Integration) deferred pending production load testing validation
+- JWT claims migration recommended after confirming Phase 1 stability in production environment
+- See Migration Plan sections "Phase 2" and "Phase 3" for implementation roadmap

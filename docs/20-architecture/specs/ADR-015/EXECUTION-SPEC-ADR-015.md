@@ -163,6 +163,33 @@ risks:
 - Session mode connections for admin operations
 - Individual policy migration per table (bulk migration in WS4)
 
+## Implementation Status (Prior Work)
+
+The following items were completed in commit `e3ce26b` (2025-12-09) as part of ADR-015 strategy formulation:
+
+| Item | Status | File/Location |
+|------|--------|---------------|
+| ADR-015 created | ✅ Complete | `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` |
+| Staff RLS bootstrap fix | ✅ Complete | `supabase/migrations/20251209023430_fix_staff_rls_bootstrap.sql` |
+| rls-security-specialist agent | ✅ Complete | `.claude/agents/rls-security-specialist.md` |
+| SEC-001 blocker status | ✅ Complete | `docs/30-security/SEC-001-rls-policy-matrix.md` |
+| Dev mode auth bypass | ✅ Complete | `lib/supabase/dev-context.ts` |
+
+**Remaining Work** (addressed by this EXECUTION-SPEC):
+
+| Workstream | Status | Gap Description |
+|------------|--------|-----------------|
+| WS1: Database RPC Layer | ❌ Pending | `set_rls_context()` RPC not created; `injectRLSContext()` still uses per-statement `exec_sql` loop |
+| WS2: TypeScript Integration | ❌ Pending | `lib/supabase/rls-context.ts:100-105` uses old pattern |
+| WS3: Middleware Validation | ❌ Pending | RLS middleware not integrated with transaction-wrapped pattern |
+| WS4: Hybrid RLS Policies | ⚠️ Partial | Only `staff` table has hybrid policy; `visit`, `rating_slip`, `gaming_table`, `player_casino`, `dealer_rotation` need Pattern C |
+| WS5: SEC-001 Update | ⚠️ Partial | ADR-015 blocker noted but canonical policy patterns not updated to Pattern A/B/C templates |
+| WS6: Integration Tests | ❌ Pending | No tests validate RLS context persistence across pooled connections |
+
+**Key Insight**: Commit `e3ce26b` was **strategy formulation** (ADR + bootstrap fix + dev bypass). This EXECUTION-SPEC implements the **actual solution** (transaction-wrapped RPC + hybrid policies + tests).
+
+---
+
 ## Architecture Context
 
 **References**:
