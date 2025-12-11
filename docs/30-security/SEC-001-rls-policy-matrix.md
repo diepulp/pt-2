@@ -28,7 +28,9 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 - `set_rls_context()` RPC (ADR-015) - Migration `20251209183033_adr015_rls_context_rpc.sql`
 - Unique index `staff_user_id_unique` - Partial (where user_id is not null)
 
-**RLS Policies**: ✅ **HYBRID PATTERN DEPLOYED** (Pattern C - Transaction-wrapped with JWT fallback)
+**RLS Policies**: ✅ **HYBRID PATTERN DEPLOYED** (Pattern C - Transaction-wrapped with JWT fallback). All new/updated policies must use:
+  - `COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)`
+  - `COALESCE(NULLIF(current_setting('app.actor_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid)` for actor alignment when applicable.
 
 **Application Layer**: ⚠️ **IN PROGRESS**
 - `withServerAction` wrapper - Updated for ADR-015
@@ -570,7 +572,10 @@ const supabase = createClient(
 -- ❌ BAD: Hard to audit, prone to logic errors
 create policy "complex_bad"
   on visit for select using (
-    casino_id = current_setting('app.casino_id')::uuid
+    casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
     OR current_setting('app.staff_role') = 'admin'
     OR current_setting('app.permissions')::jsonb @> '["global.read"]'
     OR is_public = true
@@ -583,8 +588,18 @@ create policy "complex_bad"
 -- ✅ GOOD: One path, easy to verify
 create policy "simple_good"
   on visit for select using (
-    auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
-    AND casino_id = current_setting('app.casino_id')::uuid
+    auth.uid() = (
+      select user_id
+      from staff
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
+    )
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
@@ -604,6 +619,7 @@ create policy "simple_good"
 - [ ] Policies use hybrid `COALESCE()` pattern for `casino_id` resolution:
   - `NULLIF(current_setting('app.casino_id', true), '')::uuid` (transaction context)
   - `(auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid` (JWT fallback)
+- [ ] Actor identity/role checks use hybrid `COALESCE()` for `app.actor_id` / `app.staff_role` with JWT fallback (`staff_id`, `staff_role`).
 - [ ] Read policies defined for `SELECT`.
 - [ ] Write policies defined for `INSERT`, `UPDATE`, `DELETE` as appropriate.
 - [ ] Role-gated policies check `staff.casino_id` matches context (no cross-casino role checks).

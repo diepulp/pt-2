@@ -53,7 +53,7 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 
 ## Implementation Notes
 
-- **Staff roles** (`dealer`, `pit_boss`, `admin`, `cashier`) are stored in the `staff.role` column and validated via `current_setting('app.staff_role')` (ADR-017). The `casino_id` scope is enforced via `current_setting('app.casino_id')`.
+- **Staff roles** (`dealer`, `pit_boss`, `admin`, `cashier`) are stored in the `staff.role` column and validated via hybrid context (ADR-015 + ADR-017): `COALESCE(NULLIF(current_setting('app.staff_role', true), ''), auth.jwt() -> 'app_metadata' ->> 'staff_role')`. The `casino_id` scope is enforced via `COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)`.
 - **Cashier role assignment** is restricted to admin-only workflows (Staff Admin UI). Direct SQL grants are prohibited in production.
 - **Service claims** (`compliance`, `reward_issuer`, `automation`) must be minted by the authentication gateway with explicit expiration and scoping to a single `casino_id`.
 - Direct table grants should mirror the matrix; any deviation requires a Security-approved ADR.
@@ -74,4 +74,3 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 |---------|------|---------|
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to `staff_role` enum. Updated issuer and description. Updated implementation notes for staff role validation pattern. |
 | 1.0.0 | 2025-11-02 | Initial version. |
-

@@ -550,11 +550,17 @@ create policy "mtl_entry_read_compliance"
   for select using (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('compliance', 'admin')
       and status = 'active'
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
@@ -565,11 +571,17 @@ create policy "mtl_entry_insert_cashier"
   for insert with check (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('cashier', 'admin')
       and status = 'active'
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
 create policy "mtl_entry_no_updates"
@@ -588,13 +600,19 @@ create policy "mtl_audit_note_read_compliance"
   for select using (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('compliance', 'admin')
       and status = 'active'
     )
     AND (
       select casino_id from mtl_entry where id = mtl_entry_id
-    ) = current_setting('app.casino_id')::uuid
+    ) = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
 create policy "mtl_audit_note_insert_compliance"
@@ -602,13 +620,19 @@ create policy "mtl_audit_note_insert_compliance"
   for insert with check (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('compliance', 'admin')
       and status = 'active'
     )
     AND (
       select casino_id from mtl_entry where id = mtl_entry_id
-    ) = current_setting('app.casino_id')::uuid
+    ) = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 

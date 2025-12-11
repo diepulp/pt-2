@@ -30,11 +30,23 @@ const supabase = createClient(url, SERVICE_KEY); // ❌ Privilege escalation ris
 
 **✅ REQUIRED:**
 ```sql
--- Canonical RLS pattern: auth + session context
-create policy "visit read same casino"
+-- Hybrid RLS pattern: transaction context + JWT fallback (ADR-015 Pattern C)
+create policy "visit read hybrid"
   on visit for select using (
-    auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
-    AND casino_id = current_setting('app.casino_id')::uuid
+    -- Verify authenticated staff (actor_id from SET LOCAL or JWT staff_id)
+    auth.uid() = (
+      select user_id
+      from staff
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
+    )
+    -- Verify casino scope (SET LOCAL with JWT fallback)
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
 -- Always use anon key with user context
@@ -69,56 +81,69 @@ const supabase = createClient(url, ANON_KEY); // ✅ User context only
    ```
    **Risk**: Cross-tenant data leakage, privilege escalation
 
-3. **JWT claim overload**: Auth tokens carry business logic
+3. **Unvalidated JWT claim reliance (legacy)**: Policies depended solely on JWT claims without DB context
    ```typescript
    // ❌ BEFORE: RLS reads from JWT claims
    auth.jwt() ->> 'casino_id'
    auth.jwt() ->> 'permissions'
    ```
-   **Risk**: Token size bloat, stale claims, inconsistent state
+   **Risk**: Token size bloat, stale claims, inconsistent state. **ADR-015 Fix**: Keep claims lean (`casino_id`, `staff_id`, `staff_role`) and use them only as fallback to transaction context.
 
 ---
 
 ## Solution Architecture
 
-### 1. Canonical RLS Pattern (SET LOCAL + current_setting)
+### 1. Canonical RLS Pattern (ADR-015 Hybrid)
 
-**Pattern:**
+**Pattern (Pattern C - Hybrid with JWT fallback):**
 ```sql
 -- Enable RLS
 alter table visit enable row level security;
 
--- Canonical read policy
-create policy "visit read same casino"
+-- Canonical read policy (connection-pooling safe)
+create policy "visit read hybrid"
   on visit for select using (
-    -- Actor identity check
+    -- Actor identity check (transaction context OR JWT staff_id)
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
     )
-    -- Casino scope check
-    AND casino_id = current_setting('app.casino_id')::uuid
+    -- Casino scope check (transaction context OR JWT casino_id)
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
--- Canonical write policy (role-gated)
+-- Canonical write policy (role-gated, hybrid)
 create policy "visit insert authorized roles"
   on visit for insert with check (
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('pit_boss', 'admin')
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
-**Why this works:**
-1. **`auth.uid()`**: Validates user is authenticated (from Supabase auth)
-2. **`current_setting('app.actor_id')`**: Injected by WRAPPER via `SET LOCAL`
-3. **`current_setting('app.casino_id')`**: Injected by WRAPPER via `SET LOCAL`
-4. **No OR trees**: Single, deterministic path
+**Why this works (ADR-015 compliant):**
+1. **`auth.uid()`**: Validates user is authenticated (Supabase auth)
+2. **`current_setting('app.actor_id')` / `current_setting('app.casino_id')`**: Injected by `set_rls_context()` via `SET LOCAL` (transaction scoped)
+3. **JWT fallback (`auth.jwt() -> 'app_metadata'`)**: Survives connection pooling when context is absent
+4. **COALESCE/NULLIF**: Prevents empty-string settings from bypassing policies
+5. **No OR trees**: Single, deterministic path with explicit fallback
 
 ---
 
@@ -212,6 +237,8 @@ BEGIN
 END;
 $$;
 ```
+
+**Hybrid enforcement:** Policies use ADR-015 Pattern C (`COALESCE(current_setting(...), auth.jwt()->'app_metadata'...)`). `set_rls_context()` supplies deterministic `actor_id`/`casino_id`/`staff_role` values; JWT claims provide a pooling-safe fallback when context is not set (e.g., direct Supabase client queries).
 
 <details>
 <summary>❌ Legacy Pattern (DEPRECATED - fails with connection pooling)</summary>
@@ -365,9 +392,15 @@ create policy "visit_read_same_casino"
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
@@ -428,24 +461,30 @@ where role in ('pit_boss', 'admin') and user_id is null;
 
 ## RLS Policy Templates
 
-### Template 1: Read Access (Casino-Scoped)
+### Template 1: Read Access (Hybrid - ADR-015 Pattern C)
 
 ```sql
-create policy "{table}_read_same_casino"
+create policy "{table}_read_hybrid"
   on {schema}.{table}
   for select using (
-    -- Verify authenticated user
+    -- Verify authenticated staff
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
     )
-    -- Verify casino scope
-    AND casino_id = current_setting('app.casino_id')::uuid
+    -- Verify casino scope (SET LOCAL + JWT fallback)
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
-### Template 2: Write Access (Role-Gated)
+### Template 2: Write Access (Role-Gated, Hybrid)
 
 ```sql
 create policy "{table}_insert_authorized_roles"
@@ -455,16 +494,22 @@ create policy "{table}_insert_authorized_roles"
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('pit_boss', 'admin')
       and status = 'active'
     )
     -- Verify casino scope
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
-### Template 3: Append-Only Ledger (Finance, Loyalty)
+### Template 3: Append-Only Ledger (Hybrid)
 
 ```sql
 -- Insert only (no updates/deletes)
@@ -474,10 +519,16 @@ create policy "{table}_append_authorized"
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('cashier', 'admin')
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
 -- Explicitly deny updates
@@ -491,7 +542,7 @@ create policy "{table}_no_deletes"
   for delete using (false);
 ```
 
-### Template 4: Admin Override (Global Access)
+### Template 4: Admin Override (Hybrid, Global Access)
 
 ```sql
 create policy "{table}_admin_global_access"
@@ -500,14 +551,17 @@ create policy "{table}_admin_global_access"
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role = 'admin'
       and status = 'active'
     )
   );
 ```
 
-**NOTE:** Use admin override sparingly. Prefer casino-scoped policies.
+**NOTE:** Use admin override sparingly. Prefer casino-scoped hybrid policies.
 
 ---
 
@@ -563,7 +617,7 @@ $$;
 
 ### Step 3: Migrate RLS Policies (Table by Table)
 
-**Example: `visit` table**
+**Example: `visit` table (Hybrid Pattern C)**
 
 ```sql
 -- Drop existing policies (if any)
@@ -572,15 +626,21 @@ drop policy if exists "visit_read_access" on visit;
 -- Enable RLS
 alter table visit enable row level security;
 
--- Apply canonical policy
-create policy "visit_read_same_casino"
+-- Apply canonical hybrid policies (connection pooling safe)
+create policy "visit_read_hybrid"
   on visit for select using (
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 
 create policy "visit_insert_authorized"
@@ -588,10 +648,16 @@ create policy "visit_insert_authorized"
     auth.uid() = (
       select user_id
       from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('pit_boss', 'admin')
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
@@ -668,7 +734,10 @@ values ('player-uuid', 'casino-uuid-2', now());
 ```sql
 -- ❌ BAD: 6-way OR (hard to audit)
 using (
-  casino_id = current_setting('app.casino_id')::uuid
+  casino_id = COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  )
   OR current_setting('app.staff_role') = 'admin'
   OR current_setting('app.permissions')::jsonb @> '["global.read"]'::jsonb
   OR ...
@@ -680,8 +749,18 @@ using (
 ```sql
 -- ✅ GOOD: One path (easy to audit)
 using (
-  auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid)
-  AND casino_id = current_setting('app.casino_id')::uuid
+  auth.uid() = (
+    select user_id
+    from staff
+    where id = COALESCE(
+      NULLIF(current_setting('app.actor_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+    )
+  )
+  AND casino_id = COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  )
 )
 ```
 
@@ -709,8 +788,13 @@ using (auth.jwt() ->> 'casino_id' = casino_id::text)
 ### ✅ DO: Database session context
 
 ```sql
--- ✅ GOOD: Fresh from DB, SET LOCAL controlled
-using (casino_id = current_setting('app.casino_id')::uuid)
+-- ✅ GOOD: Fresh from DB, SET LOCAL controlled with JWT fallback (ADR-015)
+using (
+  casino_id = COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  )
+)
 ```
 
 ---
@@ -748,9 +832,10 @@ VALUES (gen_random_uuid(), '00000000-0000-0000-0000-000000000002', now());
 -- Expected: violates row-level security policy (casino_id mismatch)
 
 -- Test hybrid fallback (JWT claims)
--- Ensure test user has app_metadata.casino_id set in Supabase Auth
+-- Ensure test user has app_metadata.casino_id AND app_metadata.staff_id set in Supabase Auth
+-- Run in a new session WITHOUT calling set_rls_context() to validate fallback
 SELECT count(*) FROM visit;
--- Should still return casino-scoped results via JWT fallback
+-- Should still return casino-scoped results via JWT fallback (Pattern C)
 ```
 
 ---

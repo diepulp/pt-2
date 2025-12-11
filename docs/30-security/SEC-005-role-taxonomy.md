@@ -57,19 +57,25 @@ create type staff_role as enum ('dealer', 'pit_boss', 'admin', 'cashier');
 -- Admin read access (casino-scoped)
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and role = 'admin'
   and status = 'active'
 )
-AND casino_id = current_setting('app.casino_id')::uuid
+AND casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
 ```
 
 **Realtime**: Can join all casino-scoped channels
 
 **Claims Context**:
-- `app.actor_id`: staff.id
-- `app.casino_id`: staff.casino_id
-- `app.staff_role`: 'admin'
+- `app.actor_id`: staff.id (transaction context) with JWT fallback `app_metadata.staff_id`
+- `app.casino_id`: staff.casino_id (transaction context) with JWT fallback `app_metadata.casino_id`
+- `app.staff_role`: 'admin' (transaction context) with JWT fallback `app_metadata.staff_role`
 
 ---
 
@@ -98,28 +104,40 @@ AND casino_id = current_setting('app.casino_id')::uuid
 -- Pit boss read access (casino-scoped)
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and role = 'pit_boss'
   and status = 'active'
 )
-AND casino_id = current_setting('app.casino_id')::uuid
+AND casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
 
 -- Pit boss write access (operations tables)
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and role in ('pit_boss', 'admin')
   and status = 'active'
 )
-AND casino_id = current_setting('app.casino_id')::uuid
+AND casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
 ```
 
 **Realtime**: Can join casino-scoped operational channels (visits, rating slips, table context, loyalty)
 
 **Claims Context**:
-- `app.actor_id`: staff.id
-- `app.casino_id`: staff.casino_id
-- `app.staff_role`: 'pit_boss'
+- `app.actor_id`: staff.id (transaction context) with JWT fallback `app_metadata.staff_id`
+- `app.casino_id`: staff.casino_id (transaction context) with JWT fallback `app_metadata.casino_id`
+- `app.staff_role`: 'pit_boss' (transaction context) with JWT fallback `app_metadata.staff_role`
 
 ---
 
@@ -183,22 +201,31 @@ AND casino_id = current_setting('app.casino_id')::uuid
 **RLS Pattern**:
 ```sql
 -- Cashier financial transaction access
--- Uses current_setting('app.staff_role') as the ONLY authority
+-- Hybrid Pattern C (ADR-015): transaction context with JWT fallback
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and status = 'active'
 )
-AND current_setting('app.staff_role', true) IN ('cashier', 'admin')
-AND casino_id = current_setting('app.casino_id')::uuid
+AND COALESCE(
+  NULLIF(current_setting('app.staff_role', true), ''),
+  (auth.jwt() -> 'app_metadata' ->> 'staff_role')
+) IN ('cashier', 'admin')
+AND casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
 ```
 
 **Realtime**: Can join finance and loyalty channels (casino-scoped)
 
 **Claims Context**:
-- `app.actor_id`: staff.id
-- `app.casino_id`: staff.casino_id
-- `app.staff_role`: 'cashier'
+- `app.actor_id`: staff.id (transaction context) with JWT fallback `app_metadata.staff_id`
+- `app.casino_id`: staff.casino_id (transaction context) with JWT fallback `app_metadata.casino_id`
+- `app.staff_role`: 'cashier' (transaction context) with JWT fallback `app_metadata.staff_role`
 
 **Implementation Notes**:
 - Cashier is a `staff_role` enum value (per ADR-017)
@@ -238,11 +265,17 @@ Service claims are additional roles beyond the core `staff_role` enum. They are 
 -- Compliance read access
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and role in ('compliance', 'admin')
   and status = 'active'
 )
-AND casino_id = current_setting('app.casino_id')::uuid
+AND casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
 
 -- Compliance audit note append
 create policy "mtl_audit_note_compliance_append"
@@ -250,21 +283,27 @@ create policy "mtl_audit_note_compliance_append"
   for insert with check (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('compliance', 'admin')
       and status = 'active'
     )
     AND (select casino_id from mtl_entry where id = mtl_entry_id)
-        = current_setting('app.casino_id')::uuid
+        = COALESCE(
+            NULLIF(current_setting('app.casino_id', true), '')::uuid,
+            (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+          )
   );
 ```
 
 **Realtime**: Can join MTL read channels (casino-scoped)
 
 **Claims Context**:
-- `app.actor_id`: staff.id
-- `app.casino_id`: staff.casino_id
-- `app.staff_role`: 'compliance'
+- `app.actor_id`: staff.id (transaction context) with JWT fallback `app_metadata.staff_id`
+- `app.casino_id`: staff.casino_id (transaction context) with JWT fallback `app_metadata.casino_id`
+- `app.staff_role`: 'compliance' (transaction context) with JWT fallback `app_metadata.staff_role`
 
 **Implementation Notes**:
 - Compliance role may be added to `staff_role` enum in future
@@ -298,7 +337,10 @@ create policy "mtl_audit_note_compliance_append"
 -- Enforced within rpc_issue_mid_session_reward
 auth.uid() = (
   select user_id from staff
-  where id = current_setting('app.actor_id')::uuid
+  where id = COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  )
   and role in ('reward_issuer', 'pit_boss', 'admin')
   and status = 'active'
 )
@@ -307,9 +349,9 @@ auth.uid() = (
 **Realtime**: Can join loyalty channels (casino-scoped)
 
 **Claims Context**:
-- `app.actor_id`: staff.id
-- `app.casino_id`: staff.casino_id
-- `app.staff_role`: 'reward_issuer'
+- `app.actor_id`: staff.id (transaction context) with JWT fallback `app_metadata.staff_id`
+- `app.casino_id`: staff.casino_id (transaction context) with JWT fallback `app_metadata.casino_id`
+- `app.staff_role`: 'reward_issuer' (transaction context) with JWT fallback `app_metadata.staff_role`
 
 ---
 
@@ -676,18 +718,24 @@ create policy "visit_read_bad"
 - No casino scope enforcement
 - Bypasses `staff` table validation
 
-### ✅ DO: Use Database Session Context
+### ✅ DO: Use Hybrid Context (ADR-015 Pattern C)
 
 ```sql
--- GOOD: Fresh from database, strongly typed
+-- GOOD: Fresh from database, pooling safe with JWT fallback
 create policy "visit_read_good"
   on visit for select using (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('pit_boss', 'admin')
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 
@@ -738,10 +786,16 @@ create policy "simple_good"
   on visit for select using (
     auth.uid() = (
       select user_id from staff
-      where id = current_setting('app.actor_id')::uuid
+      where id = COALESCE(
+        NULLIF(current_setting('app.actor_id', true), '')::uuid,
+        (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+      )
       and role in ('pit_boss', 'admin')
     )
-    AND casino_id = current_setting('app.casino_id')::uuid
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
   );
 ```
 

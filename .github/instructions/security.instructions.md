@@ -16,10 +16,10 @@ rules:
 
 rls_tenancy:
   - NO service keys in runtime (anon key + user context only).
-  - ALL operations inject RLS context via SET LOCAL: getAuthContext() + injectRLSContext().
-  - Canonical RLS pattern: auth.uid() = (select user_id from staff where id = current_setting('app.actor_id')::uuid) AND casino_id = current_setting('app.casino_id')::uuid.
+  - ALL operations inject RLS context via `getAuthContext()` + `injectRLSContext()` calling `set_rls_context()` (ADR-015 transaction-wrapped).
+  - Canonical RLS pattern (ADR-015 Pattern C): `auth.uid() IS NOT NULL` AND casino/staff resolution via `COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)` and `COALESCE(NULLIF(current_setting('app.actor_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid)`.
   - NO complex OR trees in RLS policies (single deterministic path only).
-  - RLS policies use current_setting() not JWT claims (avoids token bloat + stale claims).
+  - JWT app_metadata (`casino_id`, `staff_id`, `staff_role`) is required fallback for pooling; keep claims lean.
   - Append-only ledgers (finance, loyalty, MTL) enforce RLS + block updates/deletes.
 
 validation:
