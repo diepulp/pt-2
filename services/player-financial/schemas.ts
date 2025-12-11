@@ -191,6 +191,17 @@ export type FinancialTxnRouteParams = z.infer<
   typeof financialTxnRouteParamsSchema
 >;
 
+/**
+ * Schema for visit financial summary route params.
+ */
+export const visitFinancialSummaryRouteParamsSchema = z.object({
+  visitId: uuidFormat("visit ID"),
+});
+
+export type VisitFinancialSummaryRouteParams = z.infer<
+  typeof visitFinancialSummaryRouteParamsSchema
+>;
+
 // === Re-exports for route handler convenience ===
 
 export { z };
