@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
       audit_log: {
@@ -132,42 +137,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      chat_history: {
-        Row: {
-          ai_output: string
-          chat_id: string
-          metadata_json: Json | null
-          model: string
-          namespace: string
-          session_id: string
-          timestamp: string
-          tokens_used: number | null
-          user_input: string
-        }
-        Insert: {
-          ai_output: string
-          chat_id: string
-          metadata_json?: Json | null
-          model: string
-          namespace: string
-          session_id: string
-          timestamp: string
-          tokens_used?: number | null
-          user_input: string
-        }
-        Update: {
-          ai_output?: string
-          chat_id?: string
-          metadata_json?: Json | null
-          model?: string
-          namespace?: string
-          session_id?: string
-          timestamp?: string
-          tokens_used?: number | null
-          user_input?: string
-        }
-        Relationships: []
       }
       company: {
         Row: {
@@ -696,117 +665,6 @@ export type Database = {
           },
         ]
       }
-      long_term_memory: {
-        Row: {
-          access_count: number | null
-          actionability_score: number | null
-          category_primary: string
-          classification: string
-          classification_reason: string | null
-          confidence_score: number | null
-          conscious_processed: boolean | null
-          created_at: string
-          duplicate_of: string | null
-          entities_json: Json | null
-          extraction_timestamp: string
-          importance_score: number
-          is_current_project: boolean | null
-          is_preference: boolean | null
-          is_skill_knowledge: boolean | null
-          is_user_context: boolean | null
-          keywords_json: Json | null
-          last_accessed: string | null
-          memory_id: string
-          memory_importance: string
-          namespace: string
-          novelty_score: number | null
-          original_chat_id: string | null
-          processed_data: Json
-          processed_for_duplicates: boolean | null
-          promotion_eligible: boolean | null
-          related_memories_json: Json | null
-          relevance_score: number | null
-          retention_type: string
-          search_vector: unknown
-          searchable_content: string
-          summary: string
-          supersedes_json: Json | null
-          topic: string | null
-        }
-        Insert: {
-          access_count?: number | null
-          actionability_score?: number | null
-          category_primary: string
-          classification: string
-          classification_reason?: string | null
-          confidence_score?: number | null
-          conscious_processed?: boolean | null
-          created_at: string
-          duplicate_of?: string | null
-          entities_json?: Json | null
-          extraction_timestamp: string
-          importance_score: number
-          is_current_project?: boolean | null
-          is_preference?: boolean | null
-          is_skill_knowledge?: boolean | null
-          is_user_context?: boolean | null
-          keywords_json?: Json | null
-          last_accessed?: string | null
-          memory_id: string
-          memory_importance: string
-          namespace: string
-          novelty_score?: number | null
-          original_chat_id?: string | null
-          processed_data: Json
-          processed_for_duplicates?: boolean | null
-          promotion_eligible?: boolean | null
-          related_memories_json?: Json | null
-          relevance_score?: number | null
-          retention_type: string
-          search_vector?: unknown
-          searchable_content: string
-          summary: string
-          supersedes_json?: Json | null
-          topic?: string | null
-        }
-        Update: {
-          access_count?: number | null
-          actionability_score?: number | null
-          category_primary?: string
-          classification?: string
-          classification_reason?: string | null
-          confidence_score?: number | null
-          conscious_processed?: boolean | null
-          created_at?: string
-          duplicate_of?: string | null
-          entities_json?: Json | null
-          extraction_timestamp?: string
-          importance_score?: number
-          is_current_project?: boolean | null
-          is_preference?: boolean | null
-          is_skill_knowledge?: boolean | null
-          is_user_context?: boolean | null
-          keywords_json?: Json | null
-          last_accessed?: string | null
-          memory_id?: string
-          memory_importance?: string
-          namespace?: string
-          novelty_score?: number | null
-          original_chat_id?: string | null
-          processed_data?: Json
-          processed_for_duplicates?: boolean | null
-          promotion_eligible?: boolean | null
-          related_memories_json?: Json | null
-          relevance_score?: number | null
-          retention_type?: string
-          search_vector?: unknown
-          searchable_content?: string
-          summary?: string
-          supersedes_json?: Json | null
-          topic?: string | null
-        }
-        Relationships: []
-      }
       loyalty_ledger: {
         Row: {
           average_bet: number | null
@@ -1121,37 +979,49 @@ export type Database = {
           amount: number
           casino_id: string
           created_at: string
+          created_by_staff_id: string | null
+          direction: Database["public"]["Enums"]["financial_direction"]
           gaming_day: string | null
           id: string
           idempotency_key: string | null
           player_id: string
           rating_slip_id: string | null
+          related_transaction_id: string | null
+          source: Database["public"]["Enums"]["financial_source"]
           tender_type: string | null
-          visit_id: string | null
+          visit_id: string
         }
         Insert: {
           amount: number
           casino_id: string
           created_at?: string
+          created_by_staff_id?: string | null
+          direction: Database["public"]["Enums"]["financial_direction"]
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id: string
           rating_slip_id?: string | null
+          related_transaction_id?: string | null
+          source: Database["public"]["Enums"]["financial_source"]
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id: string
         }
         Update: {
           amount?: number
           casino_id?: string
           created_at?: string
+          created_by_staff_id?: string | null
+          direction?: Database["public"]["Enums"]["financial_direction"]
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id?: string
           rating_slip_id?: string | null
+          related_transaction_id?: string | null
+          source?: Database["public"]["Enums"]["financial_source"]
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1159,6 +1029,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -1173,6 +1050,13 @@ export type Database = {
             columns: ["rating_slip_id"]
             isOneToOne: false
             referencedRelation: "rating_slip"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "player_financial_transaction"
             referencedColumns: ["id"]
           },
           {
@@ -1233,6 +1117,7 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
+          player_id: string
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -1246,6 +1131,7 @@ export type Database = {
           end_time?: string | null
           game_settings?: Json | null
           id?: string
+          player_id: string
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
@@ -1259,6 +1145,7 @@ export type Database = {
           end_time?: string | null
           game_settings?: Json | null
           id?: string
+          player_id?: string
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
@@ -1272,6 +1159,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_slip_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
             referencedColumns: ["id"]
           },
           {
@@ -1368,68 +1262,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casino"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      short_term_memory: {
-        Row: {
-          access_count: number | null
-          category_primary: string
-          chat_id: string | null
-          created_at: string
-          expires_at: string | null
-          importance_score: number
-          is_permanent_context: boolean | null
-          last_accessed: string | null
-          memory_id: string
-          namespace: string
-          processed_data: Json
-          retention_type: string
-          search_vector: unknown
-          searchable_content: string
-          summary: string
-        }
-        Insert: {
-          access_count?: number | null
-          category_primary: string
-          chat_id?: string | null
-          created_at: string
-          expires_at?: string | null
-          importance_score: number
-          is_permanent_context?: boolean | null
-          last_accessed?: string | null
-          memory_id: string
-          namespace: string
-          processed_data: Json
-          retention_type: string
-          search_vector?: unknown
-          searchable_content: string
-          summary: string
-        }
-        Update: {
-          access_count?: number | null
-          category_primary?: string
-          chat_id?: string | null
-          created_at?: string
-          expires_at?: string | null
-          importance_score?: number
-          is_permanent_context?: boolean | null
-          last_accessed?: string | null
-          memory_id?: string
-          namespace?: string
-          processed_data?: Json
-          retention_type?: string
-          search_vector?: unknown
-          searchable_content?: string
-          summary?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "short_term_memory_chat_id_fkey"
-            columns: ["chat_id"]
-            isOneToOne: false
-            referencedRelation: "chat_history"
-            referencedColumns: ["chat_id"]
           },
         ]
       }
@@ -1825,7 +1657,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      visit_financial_summary: {
+        Row: {
+          casino_id: string | null
+          first_transaction_at: string | null
+          last_transaction_at: string | null
+          net_amount: number | null
+          total_in: number | null
+          total_out: number | null
+          transaction_count: number | null
+          visit_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       compute_gaming_day:
@@ -1887,6 +1746,18 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_player_id: string
+              p_rating_slip_id?: string
+              p_tender_type?: string
+              p_visit_id?: string
+            }
+            Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_casino_id: string
+              p_created_at?: string
               p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
@@ -1900,12 +1771,38 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_created_by_staff_id: string
+              p_direction: Database["public"]["Enums"]["financial_direction"]
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
-              p_tender_type?: string
-              p_visit_id?: string
+              p_related_transaction_id?: string
+              p_source: Database["public"]["Enums"]["financial_source"]
+              p_tender_type: string
+              p_visit_id: string
             }
-            Returns: string
+            Returns: {
+              amount: number
+              casino_id: string
+              created_at: string
+              created_by_staff_id: string | null
+              direction: Database["public"]["Enums"]["financial_direction"]
+              gaming_day: string | null
+              id: string
+              idempotency_key: string | null
+              player_id: string
+              rating_slip_id: string | null
+              related_transaction_id: string | null
+              source: Database["public"]["Enums"]["financial_source"]
+              tender_type: string | null
+              visit_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "player_financial_transaction"
+              isOneToOne: true
+              isSetofReturn: false
+            }
           }
       rpc_create_floor_layout: {
         Args: {
@@ -2031,6 +1928,7 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
+          player_id: string
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -2121,6 +2019,7 @@ export type Database = {
           end_time: string | null
           game_settings: Json | null
           id: string
+          player_id: string
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -2135,66 +2034,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_start_rating_slip:
-        | {
-            Args: {
-              p_actor_id: string
-              p_casino_id: string
-              p_game_settings: Json
-              p_player_id: string
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              average_bet: number | null
-              casino_id: string
-              end_time: string | null
-              game_settings: Json | null
-              id: string
-              policy_snapshot: Json | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_actor_id: string
-              p_casino_id: string
-              p_game_settings: Json
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              average_bet: number | null
-              casino_id: string
-              end_time: string | null
-              game_settings: Json | null
-              id: string
-              policy_snapshot: Json | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_start_rating_slip: {
+        Args: {
+          p_actor_id: string
+          p_casino_id: string
+          p_game_settings: Json
+          p_player_id: string
+          p_seat_number: string
+          p_table_id: string
+          p_visit_id: string
+        }
+        Returns: {
+          average_bet: number | null
+          casino_id: string
+          end_time: string | null
+          game_settings: Json | null
+          id: string
+          player_id: string
+          policy_snapshot: Json | null
+          seat_number: string | null
+          start_time: string
+          status: Database["public"]["Enums"]["rating_slip_status"]
+          table_id: string
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rating_slip"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_update_table_status: {
         Args: {
           p_actor_id: string
@@ -2235,6 +2105,8 @@ export type Database = {
       }
     }
     Enums: {
+      financial_direction: "in" | "out"
+      financial_source: "pit" | "cage" | "system"
       floor_layout_status: "draft" | "review" | "approved" | "archived"
       floor_layout_version_status:
         | "draft"
@@ -2249,7 +2121,7 @@ export type Database = {
         | "promotion"
         | "correction"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
-      staff_role: "dealer" | "pit_boss" | "admin"
+      staff_role: "dealer" | "pit_boss" | "admin" | "cashier"
       staff_status: "active" | "inactive"
       table_status: "inactive" | "active" | "closed"
       visit_kind:
@@ -2383,6 +2255,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      financial_direction: ["in", "out"],
+      financial_source: ["pit", "cage", "system"],
       floor_layout_status: ["draft", "review", "approved", "archived"],
       floor_layout_version_status: [
         "draft",
@@ -2399,7 +2273,7 @@ export const Constants = {
         "correction",
       ],
       rating_slip_status: ["open", "paused", "closed", "archived"],
-      staff_role: ["dealer", "pit_boss", "admin"],
+      staff_role: ["dealer", "pit_boss", "admin", "cashier"],
       staff_status: ["active", "inactive"],
       table_status: ["inactive", "active", "closed"],
       visit_kind: [
@@ -2410,4 +2284,3 @@ export const Constants = {
     },
   },
 } as const
-

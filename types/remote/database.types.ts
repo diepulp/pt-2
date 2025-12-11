@@ -979,37 +979,49 @@ export type Database = {
           amount: number
           casino_id: string
           created_at: string
+          created_by_staff_id: string | null
+          direction: Database["public"]["Enums"]["financial_direction"]
           gaming_day: string | null
           id: string
           idempotency_key: string | null
           player_id: string
           rating_slip_id: string | null
+          related_transaction_id: string | null
+          source: Database["public"]["Enums"]["financial_source"]
           tender_type: string | null
-          visit_id: string | null
+          visit_id: string
         }
         Insert: {
           amount: number
           casino_id: string
           created_at?: string
+          created_by_staff_id?: string | null
+          direction: Database["public"]["Enums"]["financial_direction"]
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id: string
           rating_slip_id?: string | null
+          related_transaction_id?: string | null
+          source: Database["public"]["Enums"]["financial_source"]
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id: string
         }
         Update: {
           amount?: number
           casino_id?: string
           created_at?: string
+          created_by_staff_id?: string | null
+          direction?: Database["public"]["Enums"]["financial_direction"]
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id?: string
           rating_slip_id?: string | null
+          related_transaction_id?: string | null
+          source?: Database["public"]["Enums"]["financial_source"]
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1017,6 +1029,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -1031,6 +1050,13 @@ export type Database = {
             columns: ["rating_slip_id"]
             isOneToOne: false
             referencedRelation: "rating_slip"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_related_transaction_id_fkey"
+            columns: ["related_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "player_financial_transaction"
             referencedColumns: ["id"]
           },
           {
@@ -1241,7 +1267,7 @@ export type Database = {
       }
       staff: {
         Row: {
-          casino_id: string | null
+          casino_id: string
           created_at: string
           email: string | null
           employee_id: string | null
@@ -1253,7 +1279,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
-          casino_id?: string | null
+          casino_id: string
           created_at?: string
           email?: string | null
           employee_id?: string | null
@@ -1265,7 +1291,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
-          casino_id?: string | null
+          casino_id?: string
           created_at?: string
           email?: string | null
           employee_id?: string | null
@@ -1631,7 +1657,34 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      visit_financial_summary: {
+        Row: {
+          casino_id: string | null
+          first_transaction_at: string | null
+          last_transaction_at: string | null
+          net_amount: number | null
+          total_in: number | null
+          total_out: number | null
+          transaction_count: number | null
+          visit_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_financial_transaction_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       compute_gaming_day:
@@ -1712,6 +1765,44 @@ export type Database = {
               p_visit_id?: string
             }
             Returns: string
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_casino_id: string
+              p_created_at?: string
+              p_created_by_staff_id: string
+              p_direction: Database["public"]["Enums"]["financial_direction"]
+              p_idempotency_key?: string
+              p_player_id: string
+              p_rating_slip_id?: string
+              p_related_transaction_id?: string
+              p_source: Database["public"]["Enums"]["financial_source"]
+              p_tender_type: string
+              p_visit_id: string
+            }
+            Returns: {
+              amount: number
+              casino_id: string
+              created_at: string
+              created_by_staff_id: string | null
+              direction: Database["public"]["Enums"]["financial_direction"]
+              gaming_day: string | null
+              id: string
+              idempotency_key: string | null
+              player_id: string
+              rating_slip_id: string | null
+              related_transaction_id: string | null
+              source: Database["public"]["Enums"]["financial_source"]
+              tender_type: string | null
+              visit_id: string
+            }
+            SetofOptions: {
+              from: "*"
+              to: "player_financial_transaction"
+              isOneToOne: true
+              isSetofReturn: false
+            }
           }
       rpc_create_floor_layout: {
         Args: {
@@ -2008,8 +2099,14 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sync_staff_jwt_claims: {
+        Args: { p_staff_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
+      financial_direction: "in" | "out"
+      financial_source: "pit" | "cage" | "system"
       floor_layout_status: "draft" | "review" | "approved" | "archived"
       floor_layout_version_status:
         | "draft"
@@ -2024,7 +2121,7 @@ export type Database = {
         | "promotion"
         | "correction"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
-      staff_role: "dealer" | "pit_boss" | "admin"
+      staff_role: "dealer" | "pit_boss" | "admin" | "cashier"
       staff_status: "active" | "inactive"
       table_status: "inactive" | "active" | "closed"
       visit_kind:
@@ -2158,6 +2255,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      financial_direction: ["in", "out"],
+      financial_source: ["pit", "cage", "system"],
       floor_layout_status: ["draft", "review", "approved", "archived"],
       floor_layout_version_status: [
         "draft",
@@ -2174,7 +2273,7 @@ export const Constants = {
         "correction",
       ],
       rating_slip_status: ["open", "paused", "closed", "archived"],
-      staff_role: ["dealer", "pit_boss", "admin"],
+      staff_role: ["dealer", "pit_boss", "admin", "cashier"],
       staff_status: ["active", "inactive"],
       table_status: ["inactive", "active", "closed"],
       visit_kind: [
