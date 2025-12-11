@@ -29,6 +29,11 @@ import {
   toVisitFinancialSummaryDTO,
   toVisitFinancialSummaryDTOOrNull,
 } from "./mappers";
+import {
+  FINANCIAL_TXN_SELECT,
+  FINANCIAL_TXN_SELECT_LIST,
+  VISIT_SUMMARY_SELECT,
+} from "./selects";
 
 // === Error Mapping ===
 
@@ -196,7 +201,7 @@ export async function getById(
   try {
     const { data, error } = await supabase
       .from("player_financial_transaction")
-      .select("*")
+      .select(FINANCIAL_TXN_SELECT)
       .eq("id", id)
       .single();
 
@@ -235,7 +240,7 @@ export async function getByIdempotencyKey(
   try {
     const { data, error } = await supabase
       .from("player_financial_transaction")
-      .select("*")
+      .select(FINANCIAL_TXN_SELECT)
       .eq("casino_id", casinoId)
       .eq("idempotency_key", idempotencyKey)
       .maybeSingle();
@@ -282,7 +287,7 @@ export async function list(
     // Start query builder
     let queryBuilder = supabase
       .from("player_financial_transaction")
-      .select("*")
+      .select(FINANCIAL_TXN_SELECT_LIST)
       .order("created_at", { ascending: false });
 
     // Apply filters
@@ -374,7 +379,7 @@ export async function getVisitSummary(
   try {
     const { data, error } = await supabase
       .from("visit_financial_summary")
-      .select("*")
+      .select(VISIT_SUMMARY_SELECT)
       .eq("visit_id", visitId)
       .single();
 
