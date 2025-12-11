@@ -346,7 +346,7 @@ When invoked after `lead-architect` skill:
 For MVP progress tracking, record service completion:
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 INSERT INTO memori.memories (user_id, content, category, metadata, confidence)
 VALUES (
     'skill_mvp_progress',

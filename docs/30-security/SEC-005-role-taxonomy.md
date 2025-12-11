@@ -3,9 +3,10 @@ id: SEC-005
 title: Role Taxonomy and Capabilities Matrix
 owner: Security
 status: Active
-affects: [SEC-001, SEC-003]
+affects: [SEC-001, SEC-003, PRD-008, PRD-009, ADR-017]
 created: 2025-11-17
-last_review: 2025-11-17
+last_review: 2025-12-10
+version: 1.2.0
 ---
 
 ## Purpose
@@ -25,10 +26,10 @@ This document defines the complete role taxonomy for the PT-2 casino management 
 
 ### Primary Staff Roles (`staff_role` enum)
 
-The `staff_role` enum defines three core roles stored in the `staff` table:
+The `staff_role` enum defines four core roles stored in the `staff` table:
 
 ```sql
-create type staff_role as enum ('dealer','pit_boss','admin');
+create type staff_role as enum ('dealer', 'pit_boss', 'admin', 'cashier');
 ```
 
 #### 1. Admin
@@ -88,7 +89,7 @@ AND casino_id = current_setting('app.casino_id')::uuid
 - **TableContextService**: Full read/write on gaming tables, settings, dealer rotations, chip custody (fills, drops, credits, inventory)
 - **RatingSlipService**: Full read/write on rating slips and telemetry updates
 - **LoyaltyService**: Read on loyalty balances; can approve mid-session rewards via RPC
-- **PlayerFinancialService**: Read-only on financial transactions
+- **PlayerFinancialService**: Read on financial transactions; Write table buy-ins via `rpc_create_financial_txn` (direction='in', tender_type IN ('cash','chips'), requires visit_id)
 - **MTLService**: No access
 - **FloorLayoutService**: Read-only on floor layouts
 
@@ -157,17 +158,16 @@ AND casino_id = current_setting('app.casino_id')::uuid
 
 ---
 
-### Service Claims (Extended Roles)
-
-Service claims are additional roles beyond the core `staff_role` enum. They are issued as JWT claims by the authentication gateway for specific service operations. Unlike staff roles, service claims are not stored in the database but are injected via session context.
-
 #### 4. Cashier
 
-**Definition**: Financial service role for cashiering transactions and player financial operations.
+**Definition**: Financial service role for cage operations, player financial transactions, and cashiering workflows. Cashiers process buy-ins, cash-outs, marker issuance/settlement, and manage chip custody operations.
 
-**Issuer**: Authentication gateway (explicit JWT claim)
+**Authentication**: REQUIRED
+- `staff.user_id` MUST reference `auth.users.id`
+- Must authenticate via Supabase Auth
+- RLS context injected via `withServerAction` wrapper
 
-**Scope**: Single casino, time-limited
+**Role Assignment**: Assignment of `staff.role = 'cashier'` is restricted to admin-only workflows (see SEC-003 / Staff Admin UI). Direct SQL grants are prohibited in production environments.
 
 **Capabilities**:
 - **CasinoService**: Read-only on casino settings
@@ -177,18 +177,19 @@ Service claims are additional roles beyond the core `staff_role` enum. They are 
 - **RatingSlipService**: Read-only on rating slips
 - **LoyaltyService**: Read-only on loyalty balances
 - **PlayerFinancialService**: Full read; Write via `rpc_create_financial_txn` only
-- **MTLService**: Read-only on MTL entries (for reconciliation)
+- **MTLService**: Read-only on MTL entries (for reconciliation); Write to create MTL entries for large transactions
 - **FloorLayoutService**: No access
 
 **RLS Pattern**:
 ```sql
--- Cashier financial transaction insert
+-- Cashier financial transaction access
+-- Uses current_setting('app.staff_role') as the ONLY authority
 auth.uid() = (
   select user_id from staff
   where id = current_setting('app.actor_id')::uuid
-  and role in ('cashier', 'admin')
   and status = 'active'
 )
+AND current_setting('app.staff_role', true) IN ('cashier', 'admin')
 AND casino_id = current_setting('app.casino_id')::uuid
 ```
 
@@ -200,11 +201,18 @@ AND casino_id = current_setting('app.casino_id')::uuid
 - `app.staff_role`: 'cashier'
 
 **Implementation Notes**:
-- Cashier may be implemented as custom enum value added to `staff_role` in future
-- Currently modeled as service claim for flexibility
+- Cashier is a `staff_role` enum value (per ADR-017)
+- Uses same authentication flow as pit_boss/admin
 - All financial mutations MUST use `x-idempotency-key` header
+- Single-role limitation: staff record has exactly one role (future ADR may add capabilities)
 
 ---
+
+### Service Claims (Extended Roles)
+
+Service claims are additional roles beyond the core `staff_role` enum. They are issued as JWT claims by the authentication gateway for specific service operations. Unlike staff roles, service claims are not stored in the database but are injected via session context.
+
+> **Note**: As of ADR-017, **cashier** is now a primary staff role (not a service claim). The remaining service claims below are reserved for future specialized operations.
 
 #### 5. Compliance
 
@@ -446,12 +454,18 @@ For operations requiring multiple role capabilities:
 | Role | Read Transactions | Create Transaction (RPC) | View Aggregations |
 |------|-------------------|--------------------------|-------------------|
 | Admin | ✅ | ✅ | ✅ |
-| Pit Boss | ✅ | ❌ | ✅ |
+| Pit Boss | ✅ | ⚠️ (table buy-ins only) | ✅ |
 | Cashier | ✅ | ✅ | ✅ |
 | Compliance | ✅ | ❌ | ✅ |
 | Reward Issuer | ❌ | ❌ | ❌ |
 | Automation | ❌ | ❌ | ❌ |
 | Dealer | ❌ | ❌ | ❌ |
+
+**Pit Boss Write Constraints** (amended 2025-12-10):
+- `direction` MUST be `'in'` (buy-ins only; cash-outs require cashier)
+- `tender_type` MUST be `'cash'` or `'chips'` (markers require cashier approval)
+- `visit_id` MUST be provided (transaction linked to active session)
+- **Rationale**: Pit bosses record table-side buy-ins during player sessions (PRD-008 cash-in form)
 
 ### MTL Service (Compliance)
 
@@ -517,7 +531,7 @@ export async function getAuthContext(
     .select('id, casino_id, role')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .in('role', ['pit_boss', 'admin']) // Exclude dealers
+    .in('role', ['pit_boss', 'admin', 'cashier']) // Exclude dealers
     .single();
 
   if (staffError || !staff || !staff.casino_id) {
@@ -698,7 +712,7 @@ const { data: staff } = await supabase
   .from('staff')
   .select('id, casino_id, role')
   .eq('user_id', user.id)
-  .in('role', ['pit_boss', 'admin']) // Dealers excluded
+  .in('role', ['pit_boss', 'admin', 'cashier']) // Dealers excluded
   .single();
 ```
 
@@ -797,5 +811,13 @@ To deprecate a role:
 ---
 
 **Status**: ✅ Active
-**Version**: 1.0.0
-**Last Updated**: 2025-11-17
+**Version**: 1.2.0
+**Last Updated**: 2025-12-10
+
+### Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.2.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to primary `staff_role` enum. Updated enum definition, authentication flow, and all RLS patterns to use `current_setting('app.staff_role')` as the **only** authority. Removed references to cashier as JWT claim. |
+| 1.1.0 | 2025-12-10 | Added pit_boss write access to PlayerFinancialService for table buy-ins (direction='in', tender_type IN ('cash','chips'), requires visit_id). Aligned with PRD-008/PRD-009 business requirements. |
+| 1.0.0 | 2025-11-17 | Initial release |

@@ -1,25 +1,26 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v3.0.0)
+title: Service Layer Architecture Diagram (v3.1.0)
 owner: Architecture
 status: Accepted
-last_review: 2025-12-06
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014]
+last_review: 2025-12-11
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014, ADR-015]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 3.0.0
-**Date**: 2025-12-06
-**Status**: Accepted (Aligned with SRM v4.0.0 + SEC-001 + ADR-013 + ADR-014)
+**Version**: 3.1.0
+**Date**: 2025-12-11
+**Status**: Accepted (Aligned with SRM v4.3.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
 
 **Canonical References** (SDLC Taxonomy Peers):
-- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.0.0)
+- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.3.0)
 - **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
 - **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
+- **RLS Pooling**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (JWT claims, Pattern C hybrid)
 - **Edge Transport**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (withServerAction middleware)
 - **Server Actions Split**: `docs/70-governance/SERVER_ACTIONS_ARCHITECTURE.md` (form vs React Query routing contract)
 - **State Management**: `docs/80-adrs/ADR-003-state-management-strategy.md` (React Query v5)
@@ -1117,14 +1118,19 @@ export async function mutateEntity(input: DTO) {
   const idempotencyKey = headers().get('x-idempotency-key');
 
   return withServerAction(correlationId, async (supabase) => {
-    // RLS context injection via set_rls_context() RPC (ADR-015)
-    // Automatically sets app.actor_id, app.casino_id, app.staff_role, and application_name
-    // in a single transaction-safe call
     const rlsContext = await getAuthContext(supabase);
-    await injectRLSContext(supabase, rlsContext, correlationId);
 
-    // All downstream RPCs/audit inherit correlation context
-    return await service.mutate(input, { idempotencyKey });
+    // ADR-015: Context + mutation MUST execute in the same transaction/RPC.
+    // The service method must invoke an ADR-015-compliant RPC that wraps
+    // set_rls_context + the business statement together (or rely on JWT-only policies).
+    // Do not issue a separate set_rls_context call followed by a standalone query.
+    const result = await service.mutateWithContext(input, {
+      rlsContext,
+      correlationId,
+      idempotencyKey,
+    });
+
+    return result;
   });
 }
 ```
@@ -1425,6 +1431,8 @@ This pattern ensures:
 4. **JWT fallback** via `auth.jwt() -> 'app_metadata' ->> 'casino_id'`
 5. **Connection pooling safe** - all SET LOCAL in single transaction
 
+**Execution rule**: Context injection and the dependent query must execute within the same transaction/RPC. Do not call `set_rls_context` and then issue separate statements; use ADR-015-compliant RPCs that wrap both steps (or rely solely on JWT policies). For administrative batch work that needs persistent session state, use session-mode connections (port 5432).
+
 ---
 
 ### RLS Context Interface & Policy Templates
@@ -1435,11 +1443,12 @@ This pattern ensures:
 >
 > **Implementation**: `lib/supabase/rls-context.ts`
 
-### Key Principles
+### Key Principles (ADR-015 Compliant)
 
-- ❌ **No JWT claims for business logic** - All context via SET LOCAL
+- ✅ **JWT claims for tenant scoping** - `casino_id`, `staff_id`, `staff_role` in `app_metadata` (ADR-015 Phase 2)
+- ✅ **Hybrid context injection** - Transaction-wrapped SET LOCAL with JWT fallback (Pattern C)
 - ❌ **No service keys in runtime** - All operations use anon key + user authentication
-- ✅ **Casino scoping mandatory** - Every query scoped by `current_setting('app.casino_id')`
+- ✅ **Casino scoping mandatory** - Every query scoped by `COALESCE(current_setting('app.casino_id', true), auth.jwt()->'app_metadata'->>'casino_id')`
 - ✅ **Actor tracking** - `current_setting('app.actor_id')` for audit trails
 
 ---
@@ -1508,12 +1517,21 @@ This pattern ensures:
 
 ## Document History
 
-**Version**: 3.0.0
-**Date**: 2025-12-06
-**Status**: Accepted (Aligned with SRM v4.0.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014)
+**Version**: 3.1.0
+**Date**: 2025-12-11
+**Status**: Accepted (Aligned with SRM v4.3.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.1.0 (2025-12-11)** - ADR-015 Phase 2 Alignment + PlayerFinancialService:
+- ✅ Updated Key Principles section for ADR-015 JWT claims strategy (Phase 2)
+- ✅ Changed "No JWT claims for business logic" to "JWT claims for tenant scoping"
+- ✅ Added hybrid context injection principle (Pattern C: SET LOCAL + JWT fallback)
+- ✅ Updated casino scoping to use COALESCE pattern from ADR-015
+- ✅ Added ADR-015 to affects list
+- ✅ Updated SRM reference from v4.0.0 to v4.3.0 (PlayerFinancialService implemented)
+- ✅ Updated canonical references to include ADR-015
 
 **v3.0.0 (2025-12-06)** - DRY Reduction (SLAD Audit 2025-12-06):
 - ✅ Removed Error Mapping section (~60 lines) → Reference ERROR_TAXONOMY_AND_RESILIENCE.md
@@ -1596,9 +1614,10 @@ This pattern ensures:
 
 | SDLC Peer | Status | Notes |
 |-----------|--------|-------|
-| SRM v4.0.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns |
+| SRM v4.3.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, PlayerFinancialService |
 | DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Quick reference table, detailed patterns externalized |
 | SEC-001 | ✅ ALIGNED | RLS patterns externalized, key principles retained |
+| ADR-015 | ✅ ALIGNED | JWT claims Phase 2, hybrid Pattern C, connection pooling |
 | EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
 | ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized |
 | REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |

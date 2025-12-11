@@ -18,9 +18,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/database.types';
 import { injectRLSContext } from '@/lib/supabase/rls-context';
 import type { RLSContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -60,7 +60,8 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       });
 
     if (authError1) {
-      const { data: existingUsers } = await serviceClient.auth.admin.listUsers();
+      const { data: existingUsers } =
+        await serviceClient.auth.admin.listUsers();
       const existing = existingUsers?.users?.find(
         (u) => u.email === 'test-rls-policy-1@example.com',
       );
@@ -81,7 +82,8 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       });
 
     if (authError2) {
-      const { data: existingUsers } = await serviceClient.auth.admin.listUsers();
+      const { data: existingUsers } =
+        await serviceClient.auth.admin.listUsers();
       const existing = existingUsers?.users?.find(
         (u) => u.email === 'test-rls-policy-2@example.com',
       );
@@ -297,8 +299,14 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
     await serviceClient.from('visit').delete().eq('id', testVisit2Id);
     await serviceClient.from('gaming_table').delete().eq('id', testTable1Id);
     await serviceClient.from('gaming_table').delete().eq('id', testTable2Id);
-    await serviceClient.from('player_casino').delete().eq('player_id', testPlayer1Id);
-    await serviceClient.from('player_casino').delete().eq('player_id', testPlayer2Id);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('player_id', testPlayer1Id);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('player_id', testPlayer2Id);
     await serviceClient.from('player').delete().eq('id', testPlayer1Id);
     await serviceClient.from('player').delete().eq('id', testPlayer2Id);
     await serviceClient.from('staff').delete().eq('id', testStaff1Id);
@@ -506,15 +514,21 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
         staffRole: 'pit_boss',
       };
 
-      await injectRLSContext(authClient1, context1, 'test-player-read-enrolled');
+      await injectRLSContext(
+        authClient1,
+        context1,
+        'test-player-read-enrolled',
+      );
 
       // Query players - should see only players enrolled in Casino 1
       const { data, error } = await authClient1
         .from('player')
-        .select(`
+        .select(
+          `
           *,
           player_casino!inner(casino_id)
-        `)
+        `,
+        )
         .eq('player_casino.casino_id', testCasino1Id);
 
       expect(error).toBeNull();
@@ -532,15 +546,21 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
         staffRole: 'pit_boss',
       };
 
-      await injectRLSContext(authClient1, context1, 'test-player-read-not-enrolled');
+      await injectRLSContext(
+        authClient1,
+        context1,
+        'test-player-read-not-enrolled',
+      );
 
       // Query for Player 2 (enrolled in Casino 2)
       const { data, error } = await authClient1
         .from('player')
-        .select(`
+        .select(
+          `
           *,
           player_casino!inner(casino_id)
-        `)
+        `,
+        )
         .eq('player_casino.casino_id', testCasino1Id)
         .eq('id', testPlayer2Id);
 
@@ -656,10 +676,12 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       // Query visits with related data
       const { data, error } = await authClient1
         .from('visit')
-        .select(`
+        .select(
+          `
           *,
           player:player_id(first_name, last_name)
-        `)
+        `,
+        )
         .eq('casino_id', testCasino1Id);
 
       expect(error).toBeNull();
@@ -683,14 +705,16 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       // Complex query: visits with player data
       const { data, error } = await authClient1
         .from('visit')
-        .select(`
+        .select(
+          `
           *,
           player:player_id(
             first_name,
             last_name,
             player_casino!inner(casino_id)
           )
-        `)
+        `,
+        )
         .eq('casino_id', testCasino1Id);
 
       expect(error).toBeNull();

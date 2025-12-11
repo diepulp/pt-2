@@ -237,6 +237,7 @@ After completing a workstream, respond with this exact format:
 - `/home/diepulp/projects/pt-2/services/{domain}/dtos.ts` - Type definitions
 - `/home/diepulp/projects/pt-2/services/{domain}/crud.ts` - Database operations
 - `/home/diepulp/projects/pt-2/services/{domain}/index.ts` - Service factory
+- `/home/diepulp/projects/pt-2/services/{domain}/selects.ts` - Named column sets
 - `/home/diepulp/projects/pt-2/hooks/{domain}/use-{domain}-realtime.ts` - Realtime subscription (if applicable)
 
 ### Gate Validation

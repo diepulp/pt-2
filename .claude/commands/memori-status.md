@@ -14,7 +14,7 @@ Run the following SQL queries to get a comprehensive status report:
 ### 1. Namespace Hierarchy Overview
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     CASE
         WHEN user_id = 'pt2_project' THEN '1. pt2_project'
@@ -46,7 +46,7 @@ ORDER BY
 ### 2. Total Memory Summary
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     COUNT(*) as total_memories,
     COUNT(*) FILTER (WHERE expires_at IS NULL) as permanent,
@@ -60,7 +60,7 @@ FROM memori.memories;
 ### 3. Category Distribution
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     category,
     COUNT(*) as count,
@@ -74,7 +74,7 @@ ORDER BY count DESC;
 ### 4. Session Checkpoint Status (Tier 4)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     COUNT(*) as total,
@@ -93,7 +93,7 @@ ORDER BY last_checkpoint DESC;
 ### 5. Recent Activity (Last 7 Days)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     category,
@@ -110,7 +110,7 @@ LIMIT 15;
 ### 6. Domain Tag Distribution
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     tag,
     COUNT(*) as count

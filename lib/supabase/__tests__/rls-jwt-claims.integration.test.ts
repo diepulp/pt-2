@@ -362,11 +362,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       expect(userDataBefore?.user?.app_metadata?.staff_role).toBe('pit_boss');
 
       // Update staff role via service layer
-      const updatedStaff = await updateStaff(
-        serviceClient,
-        testStaffId1,
-        { role: 'admin' },
-      );
+      const updatedStaff = await updateStaff(serviceClient, testStaffId1, {
+        role: 'admin',
+      });
 
       expect(updatedStaff.role).toBe('admin');
 
@@ -393,11 +391,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       expect(userDataBefore?.user?.app_metadata?.casino_id).toBe(testCasinoId);
 
       // Update staff casino_id via service layer
-      const updatedStaff = await updateStaff(
-        serviceClient,
-        testStaffId2,
-        { casino_id: testCasino2Id },
-      );
+      const updatedStaff = await updateStaff(serviceClient, testStaffId2, {
+        casino_id: testCasino2Id,
+      });
 
       expect(updatedStaff.casino_id).toBe(testCasino2Id);
 
@@ -424,15 +420,11 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       const claimsBefore = userDataBefore?.user?.app_metadata;
 
       // Update non-RLS fields (first_name, last_name, email)
-      await updateStaff(
-        serviceClient,
-        testStaffId1,
-        {
-          first_name: 'Updated',
-          last_name: 'Name',
-          email: 'updated@example.com',
-        },
-      );
+      await updateStaff(serviceClient, testStaffId1, {
+        first_name: 'Updated',
+        last_name: 'Name',
+        email: 'updated@example.com',
+      });
 
       // Verify JWT claims unchanged
       const { data: userDataAfter } =
@@ -451,14 +443,10 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       const correlationId = 'test-jwt-update-004';
 
       // Update both role and casino_id
-      const updatedStaff = await updateStaff(
-        serviceClient,
-        testStaffId1,
-        {
-          role: 'pit_boss',
-          casino_id: testCasino2Id,
-        },
-      );
+      const updatedStaff = await updateStaff(serviceClient, testStaffId1, {
+        role: 'pit_boss',
+        casino_id: testCasino2Id,
+      });
 
       expect(updatedStaff.role).toBe('pit_boss');
       expect(updatedStaff.casino_id).toBe(testCasino2Id);
@@ -517,7 +505,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       // if the trigger function doesn't have proper permissions to update auth.users
       // This test verifies the trigger exists but may need manual verification
       if (!appMetadata?.casino_id) {
-        console.warn('Trigger may not have executed - manually syncing for test');
+        console.warn(
+          'Trigger may not have executed - manually syncing for test',
+        );
         await syncUserRLSClaims(testUserId3, {
           casino_id: testCasinoId,
           staff_role: 'pit_boss',
@@ -567,7 +557,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
 
       // Note: If trigger didn't update, manually sync for test continuation
       if (appMetadata?.staff_role !== 'admin') {
-        console.warn('Trigger may not have updated - manually syncing for test');
+        console.warn(
+          'Trigger may not have updated - manually syncing for test',
+        );
         await syncUserRLSClaims(testUserId3, {
           casino_id: testCasinoId,
           staff_role: 'admin',
@@ -616,7 +608,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
 
       // Note: If trigger didn't update, manually sync for test continuation
       if (appMetadata?.casino_id !== testCasino2Id) {
-        console.warn('Trigger may not have updated - manually syncing for test');
+        console.warn(
+          'Trigger may not have updated - manually syncing for test',
+        );
         await syncUserRLSClaims(testUserId3, {
           casino_id: testCasino2Id,
           staff_role: 'admin',
@@ -681,7 +675,9 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
 
       const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
       if (!anonKey) {
-        console.warn('Skipping RLS policy test: NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+        console.warn(
+          'Skipping RLS policy test: NEXT_PUBLIC_SUPABASE_ANON_KEY not set',
+        );
         return;
       }
 

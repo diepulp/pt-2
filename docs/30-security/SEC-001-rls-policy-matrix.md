@@ -3,13 +3,14 @@ id: SEC-001
 title: Casino-Scoped RLS Policy Matrix
 owner: Security
 status: Active
-affects: []
+affects: [SEC-005, ADR-017]
 created: 2025-11-02
 last_review: 2025-12-10
 updated: 2025-12-10
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: ADR-015
+related_adrs: [ADR-015, ADR-017]
+version: 1.2.0
 ---
 
 ## Overview
@@ -61,7 +62,7 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 | LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. |
 | TableContextService (Operational) | `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation` | Authenticated operations staff for same `casino_id` | Admin + `pit_boss` roles | Trigger `assert_table_context_casino` enforces table/casino alignment. |
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
-| PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance & compliance staff in same `casino_id` | `rpc_create_financial_txn` (cashier/compliance services) | Append-only ledger; deletes disabled; gaming day derived via trigger. |
+| PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance, compliance & pit_boss staff in same `casino_id` | `rpc_create_financial_txn` (cashier/admin: full access; pit_boss: table buy-ins only per SEC-005 v1.1.0) | Append-only ledger; deletes disabled; gaming day derived via trigger. Pit boss constraints: direction='in', tender_type IN ('cash','chips'), visit_id required. |
 | MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. |
 
 ---
@@ -211,7 +212,8 @@ create policy "{table_name}_update_authorized_roles"
 **Role Variations**:
 - Admin only: `role = 'admin'`
 - Operations: `role in ('pit_boss', 'admin')`
-- Cashier/Compliance: Add custom roles as needed (requires extending `staff_role` enum)
+- Financial: `role in ('cashier', 'admin')` - Cashier is a primary `staff_role` enum value (ADR-017)
+- Compliance: `role in ('compliance', 'admin')` - Future service claim (see SEC-005)
 
 **Connection Pooling Safe**: Uses hybrid context resolution for both role check and casino scope verification.
 
@@ -290,6 +292,60 @@ create policy "{table_name}_admin_global_access"
 
 ---
 
+### Template 5: RPC Casino Scope Validation (Required for All Mutations)
+
+**Use For**: All service-owned RPCs that accept `casino_id` as a parameter
+
+**Pattern**:
+
+```sql
+CREATE OR REPLACE FUNCTION rpc_example_mutation(
+  p_casino_id uuid,
+  p_other_params text
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_context_casino_id uuid;
+BEGIN
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- CASINO SCOPE VALIDATION (SEC-001, SEC-003)
+  -- RPC must validate casino_id alignment - never trust caller input alone
+  -- ═══════════════════════════════════════════════════════════════════════════
+  v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+
+  IF v_context_casino_id IS NULL THEN
+    RAISE EXCEPTION 'RLS context not set: app.casino_id is required';
+  END IF;
+
+  IF p_casino_id != v_context_casino_id THEN
+    RAISE EXCEPTION 'casino_id mismatch: caller provided % but context is %',
+      p_casino_id, v_context_casino_id;
+  END IF;
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Proceed with mutation...
+END;
+$$;
+```
+
+**Why This Matters**:
+- RLS policies provide defense-in-depth but RPCs run as `SECURITY DEFINER`
+- Caller-provided `casino_id` could differ from authenticated context
+- Explicit validation prevents privilege escalation before INSERT/UPDATE
+- SEC-003:60 mandates: "validate both role/claim and casino_id parity before executing mutations"
+
+**Alternative**: Derive `casino_id` from context instead of accepting as parameter:
+```sql
+-- Option B: No p_casino_id parameter; always use context
+v_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+INSERT INTO table (casino_id, ...) VALUES (v_casino_id, ...);
+```
+
+---
+
 ## RLS Context Injection (ADR-015)
 
 **Required**: All Server Actions MUST use `withServerAction` wrapper to inject RLS context.
@@ -324,7 +380,7 @@ export async function getAuthContext(
     .select('id, casino_id, role')
     .eq('user_id', user.id)
     .eq('status', 'active')
-    .in('role', ['pit_boss', 'admin']) // Exclude dealers (non-authenticated)
+    .in('role', ['pit_boss', 'admin', 'cashier']) // Exclude dealers (non-authenticated)
     .single();
 
   if (staffError || !staff || !staff.casino_id) {
@@ -656,3 +712,13 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 **Migration**: ✅ Schema deployed, `set_rls_context()` RPC active
 **Pattern**: Pattern C (Hybrid) - Transaction-wrapped context with JWT fallback
 **Next**: Migrate existing policies to hybrid pattern, update application layer to use `set_rls_context()`
+
+---
+
+### Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.2.0 | 2025-12-10 | Added **Template 5: RPC Casino Scope Validation**. Documents required pattern for service-owned RPCs to validate `p_casino_id` matches `current_setting('app.casino_id')`. |
+| 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Added cashier to authenticated staff roles. Updated Role Variations to document cashier as primary `staff_role` enum value. |
+| 1.0.0 | 2025-12-10 | Initial version with ADR-015 compliance. |

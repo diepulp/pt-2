@@ -24,9 +24,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/database.types';
 import { injectRLSContext, getAuthContext } from '@/lib/supabase/rls-context';
 import type { RLSContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -482,9 +482,7 @@ describe('RLS Context Integration (ADR-015)', () => {
       };
 
       // Should not throw when correlation_id is undefined
-      await expect(
-        injectRLSContext(supabase, context),
-      ).resolves.not.toThrow();
+      await expect(injectRLSContext(supabase, context)).resolves.not.toThrow();
     });
 
     it('should validate UUIDs are properly formatted', async () => {

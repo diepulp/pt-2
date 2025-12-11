@@ -22,7 +22,7 @@ Query the Memori PostgreSQL database for architectural knowledge using the conso
 
 ## Database Configuration
 
-- **Container:** `supabase_db_pt-2`
+- **Container:** `memori-db`
 - **Schema:** `memori`
 - **Table:** `memori.memories`
 
@@ -31,7 +31,7 @@ Query the Memori PostgreSQL database for architectural knowledge using the conso
 Execute the queries below based on the `$ARGUMENTS` value. Run the appropriate SQL queries using:
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "QUERY_HERE"
+docker exec memori-db psql -U memori -d memori -c "QUERY_HERE"
 ```
 
 ---
@@ -47,7 +47,7 @@ Run ALL queries below and compile a comprehensive report.
 ### 1. Architectural Decisions Summary
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     category,
@@ -69,7 +69,7 @@ LIMIT 20;
 ### 2. Pattern Usage Analysis
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'pattern' as pattern,
     metadata->>'pattern_used' as pattern_used,
@@ -91,7 +91,7 @@ ORDER BY usage_count DESC;
 ### Service Pattern (A/B/C) Analysis
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'type' as type,
@@ -109,7 +109,7 @@ LIMIT 15;
 ### Architecture Preferences
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'type' as preference_type,
@@ -128,7 +128,7 @@ ORDER BY (metadata->>'importance')::float DESC NULLS LAST;
 ### Documentation Regressions & Schema Issues
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'regression_type' as regression_type,
@@ -155,7 +155,7 @@ LIMIT 20;
 ### Technical Debt Assessments
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'debt_category' as category,
@@ -190,7 +190,7 @@ LIMIT 20;
 ### Compliance & Security Designs
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'compliance_requirements' as requirements,
@@ -218,7 +218,7 @@ LIMIT 15;
 ### MVP Implementation Progress
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'service_name' as service,
     metadata->>'prd_reference' as prd,
@@ -237,7 +237,7 @@ LIMIT 20;
 ### MVP Milestone Transitions
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'phase' as phase,
     metadata->>'phase_name' as name,
@@ -256,7 +256,7 @@ LIMIT 10;
 ### MVP PRD Status
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'prd_id' as prd,
     metadata->>'status' as status,
@@ -273,7 +273,7 @@ ORDER BY created_at DESC;
 ### Lead Architect Session Checkpoints (with TTL)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     LEFT(metadata->>'current_task', 60) as task,
@@ -297,7 +297,7 @@ LIMIT 5;
 ### Memory Distribution by Namespace (4-Tier View)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     CASE
         WHEN user_id = 'pt2_project' THEN 'Tier 1: pt2_project'
@@ -329,7 +329,7 @@ ORDER BY
 ### Category Breakdown
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     category,
     COUNT(*) as count,
@@ -343,7 +343,7 @@ ORDER BY count DESC;
 ### Total Memory Count with TTL Summary
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     COUNT(*) as total_memories,
     COUNT(*) FILTER (WHERE expires_at IS NULL) as permanent,
@@ -360,7 +360,7 @@ FROM memori.memories;
 ### By Service Domain (with tags)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     COALESCE(
         metadata->>'service',
@@ -499,7 +499,7 @@ memori.record_memory(
 
 ```bash
 # Check if Memori schema exists
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "\dt memori.*"
+docker exec memori-db psql -U memori -d memori -c "\dt memori.*"
 
 # Check if Supabase is running
 docker ps | grep supabase
@@ -515,7 +515,7 @@ npx supabase stop && npx supabase start
 ### Check for Expired Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT user_id, COUNT(*) as expired_count
 FROM memori.memories
 WHERE expires_at IS NOT NULL AND expires_at <= NOW()

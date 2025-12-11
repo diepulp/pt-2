@@ -162,7 +162,7 @@ After running, summarize any items requiring attention:
 ### Pattern Execution Summary
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'pattern_used' as pattern,
     metadata->>'outcome' as outcome,
@@ -179,7 +179,7 @@ ORDER BY pattern, outcome;
 ### Recent Skill Executions
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     LEFT(metadata->>'task', 50) as task,
     metadata->>'pattern_used' as pattern,
@@ -198,7 +198,7 @@ LIMIT 10;
 ### Active vs Expired Session Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     COUNT(*) FILTER (WHERE expires_at IS NULL OR expires_at > NOW()) as active,
@@ -214,7 +214,7 @@ ORDER BY user_id;
 ### Pending Primitive Proposals
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     metadata->>'id' as proposal_id,
     metadata->>'primitive_file' as file,

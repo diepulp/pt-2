@@ -127,7 +127,7 @@ After running the code, summarize:
 ### View Latest Checkpoint
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     content,
     metadata->>'current_task' as task,
@@ -147,7 +147,7 @@ LIMIT 1;
 ### View All Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     LEFT(metadata->>'current_task', 60) as task,
     metadata->>'checkpoint_reason' as reason,
@@ -164,7 +164,7 @@ LIMIT 10;
 ### Count Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT COUNT(*) as checkpoint_count
 FROM memori.memories
 WHERE user_id = 'pt2_project'

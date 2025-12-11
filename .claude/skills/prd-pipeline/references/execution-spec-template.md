@@ -25,7 +25,7 @@ workstreams:
   WS1:
     name: Database Layer
     description: Migration, RLS policies, type generation
-    agent: backend-service-builder
+    agent: backend-developer          # subagent_type for Task tool
     depends_on: []
     outputs:
       - supabase/migrations/YYYYMMDDHHMMSS_description.sql
@@ -37,7 +37,7 @@ workstreams:
   WS2:
     name: Service Layer
     description: Service factory, keys, HTTP fetchers
-    agent: backend-service-builder
+    agent: backend-developer          # subagent_type for Task tool
     depends_on: [WS1]
     outputs:
       - services/{domain}/index.ts
@@ -50,7 +50,7 @@ workstreams:
   WS3:
     name: Route Handlers
     description: API routes with withServerAction middleware
-    agent: api-builder
+    agent: api-expert                 # subagent_type for Task tool
     depends_on: [WS2]
     outputs:
       - app/api/v1/{domain}/route.ts
@@ -61,7 +61,7 @@ workstreams:
   WS4:
     name: React Query Hooks
     description: Query and mutation hooks for client consumption
-    agent: backend-service-builder
+    agent: backend-developer          # subagent_type for Task tool
     depends_on: [WS2, WS3]
     outputs:
       - hooks/{domain}/index.ts
@@ -73,7 +73,7 @@ workstreams:
   WS5:
     name: Tests
     description: Unit and integration tests
-    agent: backend-service-builder
+    agent: backend-developer          # subagent_type for Task tool
     depends_on: [WS2, WS3, WS4]
     outputs:
       - services/{domain}/*.test.ts
@@ -280,7 +280,7 @@ mvp_phase: 1
 workstreams:
   WS1:
     name: Database Layer
-    agent: backend-service-builder
+    agent: backend-developer
     depends_on: []
     outputs:
       - supabase/migrations/20251130_player_visit.sql
@@ -290,7 +290,7 @@ workstreams:
 
   WS2:
     name: PlayerService
-    agent: backend-service-builder
+    agent: backend-developer
     depends_on: [WS1]
     outputs:
       - services/player/index.ts
@@ -299,7 +299,7 @@ workstreams:
 
   WS3:
     name: VisitService
-    agent: backend-service-builder
+    agent: backend-developer
     depends_on: [WS1]
     outputs:
       - services/visit/index.ts
@@ -308,7 +308,7 @@ workstreams:
 
   WS4:
     name: Player Routes
-    agent: api-builder
+    agent: api-expert
     depends_on: [WS2]
     outputs:
       - app/api/v1/players/route.ts
@@ -317,7 +317,7 @@ workstreams:
 
   WS5:
     name: Visit Routes
-    agent: api-builder
+    agent: api-expert
     depends_on: [WS3]
     outputs:
       - app/api/v1/visits/route.ts
@@ -326,7 +326,7 @@ workstreams:
 
   WS6:
     name: Tests
-    agent: backend-service-builder
+    agent: backend-developer
     depends_on: [WS2, WS3, WS4, WS5]
     outputs:
       - services/player/*.test.ts

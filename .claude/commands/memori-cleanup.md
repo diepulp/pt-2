@@ -28,7 +28,7 @@ Purge expired session checkpoints and stale memories from the Memori database.
 Show what would be deleted without making changes:
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 -- Preview: Expired memories that would be deleted
 SELECT
     user_id as namespace,
@@ -46,7 +46,7 @@ LIMIT 20;
 ```
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 -- Preview: Summary of expired entries by namespace
 SELECT
     user_id as namespace,
@@ -68,7 +68,7 @@ ORDER BY expired_count DESC;
 **CAUTION:** This permanently deletes data. Run preview first to verify.
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 -- Delete expired session checkpoints and other TTL memories
 WITH deleted AS (
     DELETE FROM memori.memories
@@ -89,7 +89,7 @@ ORDER BY user_id, category;
 After deletion, run a summary:
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 -- Verify cleanup: Show remaining TTL entries
 SELECT
     user_id as namespace,
@@ -127,7 +127,7 @@ For automated cleanup, add a cron job or scheduled task:
 
 ```bash
 # Daily cleanup at 3 AM (add to crontab)
-0 3 * * * docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "DELETE FROM memori.memories WHERE expires_at IS NOT NULL AND expires_at <= NOW();"
+0 3 * * * docker exec memori-db psql -U memori -d memori -c "DELETE FROM memori.memories WHERE expires_at IS NOT NULL AND expires_at <= NOW();"
 ```
 
 Or use PostgreSQL's `pg_cron` extension if available:

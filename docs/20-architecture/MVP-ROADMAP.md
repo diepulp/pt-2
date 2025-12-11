@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 1.6.0
+**Version**: 1.9.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-12-09
+**Updated**: 2025-12-11
 **Owner**: Lead Architect
 
 ---
@@ -22,10 +22,11 @@
 | **2** | **PRD-007** | **COMPLETE** ✅ | TableContextService (Pattern A, 5 workstreams) |
 | **2** | **PRD-002** | **COMPLETE** ✅ | RatingSlipService (Pattern B, 12 workstreams) |
 | **2** | **UI-SCAFFOLD-001** | **COMPLETE** ✅ | Dashboard shell, route groups, sidebar, mobile nav |
-| **2** | **PRD-006** | **In Progress** | Pit Dashboard Content (scaffold ready, components pending) |
+| **2** | **PRD-006** | **~85% Complete** | Pit Dashboard Content (components built, hooks complete, realtime working) |
+| **2** | **PRD-008** | **Draft** | Rating Slip Modal Service Integration (component exists, BFF pending) |
 | 3 | PRD-004 | **Partial** | Mid-Session Loyalty (routes exist, service factory incomplete) |
 | 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
-| 3 | PRD-001 | **Partial** | Player Financial Service (routes exist, keys only) |
+| **3** | **PRD-009** | **COMPLETE** ✅ | PlayerFinancialService (Pattern A, 5 workstreams, 78 tests) |
 
 > **PRD-HZ-001 Complete (2025-11-29)**: All 4 workstreams delivered:
 > - WS1: Middleware architecture (6 modules)
@@ -84,6 +85,26 @@
 > - **Typography**: JetBrains Mono + DM Sans via next/font/google
 > - **Components**: `components/layout/*` (5 files), `components/shared/*` (2 files)
 > - **Routes Scaffolded**: /pit, /players, /loyalty, /compliance, /settings/*
+>
+> **PRD-006 ~85% Complete (2025-12-10)**: Pit Dashboard Content implemented:
+> - **Components**: `components/dashboard/*` (6 files: pit-dashboard-client, active-slips-panel, new-slip-modal, stats-bar, table-grid, seat-context-menu)
+> - **Hooks**: `hooks/dashboard/*` (4 hooks: useDashboardTables, useDashboardStats, useActiveSlipsForDashboard, useDashboardRealtime)
+> - **Realtime**: Supabase channel subscriptions with connection status indicator
+> - **Remaining**: Rating slip modal integration (PRD-008), TableLayoutTerminal compact mode
+>
+> **ADR-015 Implemented (2025-12-10)**: RLS Connection Pooling Strategy:
+> - **Phase 2**: JWT claims integration (`casino_id`, `staff_id` in token metadata)
+> - **Transaction Wrapper**: Context injection via transaction-wrapped SET LOCAL
+> - **Tests**: 4 integration test files (rls-context, rls-jwt-claims, rls-policy-enforcement, rls-pooling-safety)
+> - **Migration**: `20251210001858_adr015_backfill_jwt_claims.sql`
+>
+> **PRD-009 Complete (2025-12-11)**: PlayerFinancialService implemented per Pattern A:
+> - **5 Phases**: Schema/DTOs, Service Layer, API Routes, React Query Hooks, Tests
+> - **Service Layer**: DTOs, schemas, keys, mappers, crud, http (7 files)
+> - **Transport**: 3 Route Handlers (transactions CRUD, visit financial summary)
+> - **Hooks**: 4 React Query hooks (useFinancialTransactions, useVisitFinancialSummary, mutations)
+> - **Tests**: 78 tests passing (mappers: 44, service: 17, RLS integration: 17)
+> - **Commits**: 5f4522b (Phase 1), ccf9e98 (Phases 2-4), 3ec0caf (Phase 5 tests)
 
 ---
 
@@ -104,10 +125,10 @@ Establishes a complete implementation baseline for MVP delivery, addressing gaps
 | Layer | Status | Evidence |
 |-------|--------|----------|
 | **Database Schema** | **~95%** | 17 migrations deployed; types generated |
-| **Service Layer** | **~85%** | 5/6 core services implemented (Casino, Player, Visit, TableContext, RatingSlip) |
-| **API Routes** | **~85%** | Core routes deployed; table-context + rating-slip routes restored |
+| **Service Layer** | **~90%** | 6/7 core services implemented (Casino, Player, Visit, TableContext, RatingSlip, PlayerFinancial) |
+| **API Routes** | **~90%** | Core routes deployed; player-financial routes added |
 | **React Query Keys** | **Complete** | Key factories for all implemented services |
-| **UI Components** | **Scaffold Complete** | Dashboard shell, route groups, sidebar navigation, mobile nav |
+| **UI Components** | **~85%** | Dashboard shell + pit dashboard content (6 components, 4 hooks, realtime) |
 | **Horizontal Infra** | **COMPLETE** ✅ | withServerAction, ServiceResult, error mapping, query client |
 
 ### Critical Gaps
@@ -130,19 +151,21 @@ SESSION MANAGEMENT ✅ COMPLETE (PRD-002, PRD-007)
 ├── RatingSlipService - IMPLEMENTED (PRD-002, Pattern B, 2025-12-05) ✅
 └── Both services follow bounded context rules with cross-context queries
 
-UI LAYER ✅ SCAFFOLD COMPLETE (UI-SCAFFOLD-001)
+UI LAYER ~85% COMPLETE (UI-SCAFFOLD-001 + PRD-006)
 ├── Dashboard shell with route groups: (public), (dashboard) ✅
 ├── Sidebar navigation with collapsible mode ✅
 ├── Mobile bottom nav for pit floor ✅
 ├── Typography: JetBrains Mono + DM Sans ✅
-├── Pit Dashboard page (content pending) - /pit
-├── Rating Slip Management UI (routes ready, UI pending)
+├── Pit Dashboard components ✅ (pit-dashboard-client, stats-bar, table-grid, active-slips-panel, new-slip-modal, seat-context-menu)
+├── Dashboard hooks ✅ (useDashboardTables, useDashboardStats, useActiveSlipsForDashboard, useDashboardRealtime)
+├── Realtime subscriptions ✅ (Supabase channels with status indicator)
+├── Rating Slip Modal - component exists, service integration pending (PRD-008)
 ├── Player Check-in Flow (routes ready, UI pending)
 └── Loyalty Rewards Display (routes ready, UI pending)
 
-PHASE 3 SERVICES (Partial - routes exist, factories incomplete)
+PHASE 3 SERVICES (In Progress - 1/3 complete)
+├── PlayerFinancialService - COMPLETE ✅ (PRD-009, Pattern A, 78 tests, 2025-12-11)
 ├── LoyaltyService - keys only (mid-session-reward.ts DELETED)
-├── PlayerFinancialService - keys only
 └── MTLService - keys only (view-model.ts DELETED)
 
 PROGRESS TRACKING ✅ INTEGRATED
@@ -421,7 +444,7 @@ services/visit/
 
 **Timeline**: Operational features with dashboard
 **Approach**: VERTICAL + UI focus
-**Status**: ✅ SERVICES COMPLETE — UI implementation pending (PRD-006)
+**Status**: ✅ SERVICES COMPLETE — UI ~85% complete (PRD-006), modal integration pending (PRD-008)
 
 ### 2.1 TableContextService — COMPLETE ✅
 
@@ -508,20 +531,32 @@ services/visit/
 - `/settings/casino` - Casino configuration
 - `/settings/staff` - Staff management
 
-### 2.4 Pit Dashboard Content — PRD-006
+### 2.4 Pit Dashboard Content — PRD-006 (~85% COMPLETE)
 
 **PRD Reference**: PRD-006-pit-dashboard.md
-**Status**: PENDING (scaffold ready, content to implement)
-**Critical UI Component** - Primary operational interface (GATE-2 blocker)
+**Status**: ~85% COMPLETE (components built, hooks complete, realtime working)
+**Completed**: 2025-12-10
 
-| Item | Location | Description | Priority |
-|------|----------|-------------|----------|
-| Dashboard content | `app/(dashboard)/pit/page.tsx` | Main pit operations view | P0 |
-| Table terminal | `components/table/table-layout-terminal.tsx` | Visual table status (exists) | P0 |
-| Active slips panel | `components/dashboard/active-slips.tsx` | Current sessions | P0 |
-| Table grid | `components/dashboard/table-grid.tsx` | Table selection grid | P0 |
-| Player activity | `components/dashboard/player-activity.tsx` | Recent check-ins | P1 |
-| Realtime updates | `hooks/use-dashboard-realtime.ts` | Supabase channels | P1 |
+| Item | Location | Description | Status |
+|------|----------|-------------|--------|
+| Dashboard page | `app/(dashboard)/pit/page.tsx` | Server component with auth context | ✅ |
+| Dashboard client | `components/dashboard/pit-dashboard-client.tsx` | Main interactive component | ✅ |
+| Table terminal | `components/table/table-layout-terminal.tsx` | Visual table status (enhanced) | ✅ |
+| Active slips panel | `components/dashboard/active-slips-panel.tsx` | Current sessions with actions | ✅ |
+| Table grid | `components/dashboard/table-grid.tsx` | Table selection grid | ✅ |
+| Stats bar | `components/dashboard/stats-bar.tsx` | Aggregate stats display | ✅ |
+| New slip modal | `components/dashboard/new-slip-modal.tsx` | Create new rating slip | ✅ |
+| Seat context menu | `components/dashboard/seat-context-menu.tsx` | Seat interaction utilities | ✅ |
+| Dashboard tables hook | `hooks/dashboard/use-dashboard-tables.ts` | Tables with slip counts | ✅ |
+| Dashboard stats hook | `hooks/dashboard/use-dashboard-stats.ts` | Aggregate stats | ✅ |
+| Dashboard slips hook | `hooks/dashboard/use-dashboard-slips.ts` | Active slips for table | ✅ |
+| Realtime hook | `hooks/dashboard/use-dashboard-realtime.tsx` | Supabase channels | ✅ |
+| Rating slip modal | `components/modals/rating-slip/rating-slip-modal.tsx` | Edit slip modal (service integration pending) | 🔄 |
+
+**Remaining for GATE-2**:
+- [ ] Rating slip modal service integration (PRD-008)
+- [ ] TableLayoutTerminal compact mode for grid thumbnails
+- [ ] E2E testing and LCP measurement
 
 **Dashboard Wireframe** (Updated: Uses `TableLayoutTerminal` component):
 ```
@@ -594,25 +629,55 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 | `selectedTable` state | Highlight when selected in grid | P1 |
 | `Table min/max` state | Display table limits on the layout
 
+### 2.5 Rating Slip Modal Integration — PRD-008
+
+**PRD Reference**: PRD-008-rating-slip-modal-integration.md
+**Status**: DRAFT (component exists, BFF endpoint pending)
+**Dependencies**: LoyaltyService balance query, PlayerFinancialService foundation
+
+| Workstream | Description | Status |
+|------------|-------------|--------|
+| WS1 | LoyaltyService `getPlayerBalance()` query | ❌ Pending |
+| WS2 | PlayerFinancialService foundation (Pattern A) | ❌ Pending |
+| WS3 | BFF aggregation endpoint `/api/v1/rating-slips/[id]/modal-data` | ❌ Pending |
+| WS4 | Modal service integration (replace placeholders) | ❌ Pending |
+| WS5 | Move Player flow (close + start with same visit_id) | ❌ Pending |
+| WS6 | Testing & validation | ❌ Pending |
+
+**Modal Component Exists**:
+- `components/modals/rating-slip/rating-slip-modal.tsx` (main modal)
+- Form sections: average-bet, cash-in, chips-taken, start-time, move-player
+- `increment-button-group.tsx` utility component
+- Documentation: README.md, MIGRATION_NOTES.md
+
 **Validation Gate 2.1-2.2**: ✅ PASSED (services complete)
 - [x] TableContextService state machine — COMPLETE (PRD-007, 2025-12-07)
 - [x] RatingSlipService lifecycle with pause tracking — COMPLETE (PRD-002, 2025-12-05)
 - [x] All routes use `withServerAction` middleware — 10 Route Handlers
 - [x] Mapper tests pass — 62 tests for TableContext
 
-**Gate 2 Definition of Done**: 🟡 SERVICES COMPLETE, UI SCAFFOLD COMPLETE, CONTENT PENDING
-- [ ] Pit Dashboard content operational ← **BLOCKER: Scaffold ready, content pending (PRD-006)**
+**Validation Gate 2.3-2.4**: 🟡 ~85% COMPLETE (UI built, modal integration pending)
+- [x] Pit Dashboard components built — 6 components in `components/dashboard/`
+- [x] Dashboard hooks implemented — 4 hooks in `hooks/dashboard/`
+- [x] Real-time updates working — Supabase channels with status indicator
+- [ ] Rating slip modal service integration (PRD-008) ← **REMAINING BLOCKER**
+- [ ] p95 dashboard LCP ≤ 2.5s (needs measurement)
+
+**Gate 2 Definition of Done**: 🟡 ~85% COMPLETE
+- [x] Pit Dashboard content operational ← COMPLETE (PRD-006)
 - [x] Table open/close from API ← COMPLETE (activate/deactivate/close routes)
 - [x] Rating slip start/pause/resume/close from API ← COMPLETE (PRD-002)
 - [x] Dashboard shell with navigation ← COMPLETE (UI-SCAFFOLD-001)
-- [ ] Real-time updates working
-- [ ] p95 dashboard LCP ≤ 2.5s
+- [x] Real-time updates working ← COMPLETE (Supabase channels)
+- [ ] Rating slip modal service integration (PRD-008) ← **REMAINING**
+- [ ] p95 dashboard LCP ≤ 2.5s ← **NEEDS MEASUREMENT**
 
 **To Complete GATE-2**:
 1. ~~Implement PRD-007 TableContextService~~ ✅ DONE
 2. ~~Implement PRD-002 RatingSlipService~~ ✅ DONE
 3. ~~Implement UI-SCAFFOLD-001~~ ✅ DONE
-4. Execute PRD-006 Pit Dashboard Content ← **NEXT**
+4. ~~Execute PRD-006 Pit Dashboard Content~~ ✅ ~85% DONE
+5. Execute PRD-008 Rating Slip Modal Integration ← **NEXT**
 
 ---
 
@@ -636,17 +701,39 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 | **Hook** | `useIssueMidSessionReward` | `hooks/use-loyalty.ts` | ❌ Pending |
 | **UI** | Reward dialog | `components/loyalty/reward-dialog.tsx` | ❌ Pending |
 
-### 3.2 PlayerFinancialService — PARTIAL
+### 3.2 PlayerFinancialService — COMPLETE ✅
 
-**PRD Reference**: PRD-001 (feature-flagged)
+**PRD Reference**: PRD-009 (Pattern A, Contract-First)
+**Completed**: 2025-12-11
+**Pattern**: Pattern A with manual DTOs, idempotent RPC, direction enum
 
 | Layer | Item | Location | Status |
 |-------|------|----------|--------|
-| **Keys** | Query key factory | `services/finance/keys.ts` | ✅ |
-| **Routes** | Transactions | `app/api/v1/finance/transactions/**` | ✅ |
-| **Service** | PlayerFinancialService | `services/finance/index.ts` | ❌ Pending |
-| **RPC** | `rpc_create_financial_txn` | Database function | ❌ Pending |
-| **UI** | Finance entry form | `components/finance/entry-form.tsx` | ❌ Pending |
+| **DTOs** | FinancialTransactionDTO, VisitFinancialSummaryDTO, CreateFinancialTxnInput | `services/player-financial/dtos.ts` | ✅ |
+| **Schemas** | Zod validation (11 schemas) | `services/player-financial/schemas.ts` | ✅ |
+| **Keys** | Query key factory | `services/player-financial/keys.ts` | ✅ |
+| **Mappers** | Row→DTO transformers (6 mapper families) | `services/player-financial/mappers.ts` | ✅ |
+| **CRUD** | RPC-backed operations with error mapping | `services/player-financial/crud.ts` | ✅ |
+| **Service** | PlayerFinancialService factory | `services/player-financial/index.ts` | ✅ |
+| **HTTP** | Client fetchers | `services/player-financial/http.ts` | ✅ |
+| **Routes** | 3 Route Handlers | `app/api/v1/financial-transactions/**`, `app/api/v1/visits/[visitId]/financial-summary` | ✅ |
+| **Hooks** | 4 React Query hooks | `hooks/player-financial/` | ✅ |
+| **Tests** | 78 tests (mappers: 44, service: 17, RLS: 17) | `services/player-financial/__tests__/`, `lib/supabase/__tests__/rls-financial.integration.test.ts` | ✅ |
+
+**Implementation Highlights**:
+- **Pattern A**: Manual DTOs for cross-context consumption (append-only ledger)
+- **Direction Enum**: `'in'` (buy-in, marker issued) | `'out'` (cashout, marker repaid)
+- **Source Enum**: `'pit'` | `'cage'` | `'system'`
+- **Idempotency**: Supported via `idempotency_key` column with unique constraint
+- **RLS Integration**: Casino-scoped via hybrid RLS policies (ADR-015)
+- **Visit Financial Summary**: Aggregated view with totals for in/out/net
+
+**Commits**:
+- `5f4522b` Phase 1: Database schema and DTOs
+- `ccf9e98` Phases 2-4: Service layer, routes, hooks
+- `3ec0caf` Phase 5: Test coverage (78 tests)
+
+**Unblocks**: PRD-008 WS2 (Rating Slip Modal cash-in integration)
 
 ### 3.3 MTLService — PARTIAL
 
@@ -833,40 +920,91 @@ graph LR
 
 ## Next Actions
 
-> **Updated 2025-12-09**: Phase 2 services complete, UI scaffold complete, dashboard content pending
+> **Updated 2025-12-11**: PRD-009 PlayerFinancialService COMPLETE (78 tests), Phase 3 now 1/3 done
 
-1. **Immediate (P0)**: Execute PRD-006 — Pit Dashboard Content (GATE-2 blocker)
-   - UI scaffold ready at `app/(dashboard)/pit/page.tsx`
-   - **WS1**: Build dashboard data hooks (useTables, useActiveSlips)
-   - **WS2**: Create `components/dashboard/table-grid.tsx` with table selection
-   - **WS3**: Create `components/dashboard/active-slips.tsx` panel
-   - **WS4**: Create `components/dashboard/stats-cards.tsx` summary
-   - **WS5**: Enhance `TableLayoutTerminal` with dashboard integration props
-   - See `docs/10-prd/PRD-006-pit-dashboard.md` for full workstream breakdown
-2. **Short-term**: Complete Phase 3 service factories (Pattern B)
-   - LoyaltyService factory (routes exist, logic deleted — rebuild required)
+1. **Immediate (P0)**: Execute PRD-008 — Rating Slip Modal Service Integration (GATE-2 remaining blocker)
+   - Modal component exists at `components/modals/rating-slip/rating-slip-modal.tsx`
+   - **WS1**: Add `getPlayerBalance()` to LoyaltyService
+   - **WS2**: ~~Create PlayerFinancialService foundation (Pattern A)~~ ✅ COMPLETE (PRD-009)
+   - **WS3**: Build BFF endpoint `/api/v1/rating-slips/[id]/modal-data`
+   - **WS4**: Wire modal to services (replace placeholder types)
+   - **WS5**: Implement Move Player flow (close + start with same visit_id)
+   - See `docs/10-prd/PRD-008-rating-slip-modal-integration.md` for full workstream breakdown
+2. **Short-term**: Complete GATE-2 validation
+   - Measure p95 dashboard LCP (target ≤ 2.5s)
+   - TableLayoutTerminal compact mode for grid thumbnails
+   - E2E test coverage for pit dashboard flows
+3. **Medium-term**: Complete remaining Phase 3 service factories
+   - LoyaltyService factory (routes exist, need full service layer)
    - MTLService factory (routes exist, view-model deleted — rebuild required)
-   - PlayerFinancialService factory (routes exist, keys only)
-3. **Medium-term**: Real-time updates via Supabase channels (PRD-006 WS5)
+   - ~~PlayerFinancialService factory~~ ✅ COMPLETE (PRD-009, 2025-12-11)
 4. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
+
+---
+
+## Planned ADRs (Post-MVP)
+
+| ADR | Title | Status | Target Phase | Rationale |
+|-----|-------|--------|--------------|-----------|
+| **ADR-016** | Finance Outbox Pattern | Planned | Post-MVP | Transactional outbox for async payment gateway webhooks |
+
+### ADR-016: Finance Outbox Pattern (Planned)
+
+**Problem**: MVP financial transactions are synchronous. Post-MVP payment gateway integrations (credit card processors, casino cage systems) require guaranteed delivery with at-least-once semantics.
+
+**Proposed Solution**: Transactional outbox pattern using `finance_outbox` table:
+
+```sql
+-- Planned: finance_outbox table
+CREATE TABLE finance_outbox (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  transaction_id uuid NOT NULL REFERENCES player_financial_transaction(id),
+  event_type text NOT NULL, -- 'TXN_CREATED', 'TXN_VOIDED', etc.
+  payload jsonb NOT NULL,   -- Serialized webhook payload
+  status text NOT NULL DEFAULT 'pending', -- 'pending', 'sent', 'failed'
+  retry_count int DEFAULT 0,
+  created_at timestamptz DEFAULT now(),
+  processed_at timestamptz
+);
+
+-- Index for polling processor
+CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
+  WHERE status = 'pending';
+```
+
+**Pattern**: Insert to `finance_outbox` within same transaction as `player_financial_transaction`. Background worker polls and delivers to external systems.
+
+**Why Deferred**:
+- No payment gateway integration in MVP scope
+- Adds operational complexity (worker process, retry logic, dead-letter handling)
+- Current tender types (`cash`, `chips`, `marker`) are pit-floor only
+
+**Trigger for Implementation**:
+- PRD for payment gateway integration approved
+- External system webhook contracts defined
+- SLA requirements for delivery latency established
 
 ---
 
 ## References
 
-- **PRD-000**: CasinoService (Root Authority)
-- **PRD-001**: Player Management System Requirements
+- **PRD-000**: CasinoService (Root Authority) — COMPLETE
+- **PRD-001**: Player Management System Requirements — Partial
 - **PRD-002**: RatingSlipService (COMPLETE 2025-12-05, Pattern B, 12 workstreams)
+- **PRD-003**: Player Intake & Visit — COMPLETE
+- **PRD-003A**: PlayerService Pattern B Refactor — COMPLETE
+- **PRD-003B**: VisitService Pattern B Refactor — COMPLETE
+- **PRD-004**: Mid-Session Loyalty — Partial
+- **PRD-005**: Compliance Monitoring — Partial
+- **PRD-006**: Pit Dashboard UI (~85% COMPLETE 2025-12-10, 6 components, 4 hooks, realtime)
 - **PRD-007**: TableContextService (COMPLETE 2025-12-07, Pattern A, 5 workstreams)
-- **PRD-003**: Player Intake & Visit
-- **PRD-003A**: PlayerService Pattern B Refactor (COMPLETE)
-- **PRD-003B**: VisitService Pattern B Refactor (COMPLETE)
-- **PRD-004**: Mid-Session Loyalty
-- **PRD-005**: Compliance Monitoring
-- **PRD-006**: Pit Dashboard UI (In Progress - scaffold complete, content pending)
+- **PRD-008**: Rating Slip Modal Integration (DRAFT 2025-12-10, BFF + service integration)
+- **PRD-009**: PlayerFinancialService (COMPLETE 2025-12-11, Pattern A, 78 tests)
 - **UI-SCAFFOLD-001**: Dashboard Shell (COMPLETE 2025-12-08)
 - **ADR-002**: Test File Organization (tests in `__tests__/` subdirectories)
 - **ADR-012**: Error Handling Layers (with Addendum for cross-context propagation)
+- **ADR-015**: RLS Connection Pooling Strategy (Phase 2 COMPLETE 2025-12-10, JWT claims)
+- **ADR-016**: Finance Outbox Pattern (PLANNED, post-MVP payment gateway integration)
 - **VIS-001**: Vision & Scope
-- **SRM**: Service Responsibility Matrix v3.1.0
+- **SRM**: Service Responsibility Matrix v4.0.0
 - **BALANCED_ARCHITECTURE_QUICK**: Slicing decision guide

@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-version: 4.0.0
+version: 4.3.0
 status: CANONICAL
-effective: 2025-12-06
+effective: 2025-12-11
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -12,12 +12,13 @@ source_of_truth:
   - docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md
   - docs/20-architecture/EDGE_TRANSPORT_POLICY.md
   - docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
+  - docs/80-adrs/ADR-017-cashier-role-implementation.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.0.0 (Reduced to Registry + Invariants)
-> **Date**: 2025-12-06
+> **Version**: 4.3.0 (PlayerFinancialService Implemented)
+> **Date**: 2025-12-11
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -41,6 +42,10 @@ source_of_truth:
 
 ## Change Log
 
+- **4.3.0 (2025-12-11)** – **PlayerFinancialService IMPLEMENTED** (PRD-009): Full Pattern A implementation with 78 tests. Service layer: DTOs, schemas, keys, mappers, crud, http. Transport: 3 Route Handlers + 4 React Query hooks. Enums: `financial_direction` ('in'|'out'), `financial_source` ('pit'|'cage'|'system'), `tender_type`. RLS: Hybrid policies per ADR-015. Commits: 5f4522b, ccf9e98, 3ec0caf.
+- **4.2.1 (2025-12-11)** – Finance outbox deferred: Removed `finance_outbox` from current ownership (post-MVP per ADR-016). Added MVP Egress contract: synchronous only, no external side effects. MTLService integration via triggers remains in scope.
+- **4.2.0 (2025-12-11)** – Finance scope alignment: `visit_id` changed from optional to **required** for FinanceService consumption. Added `visit_id NOT NULL` to PlayerFinancialService schema invariants. Removed "buy-ins" from cashier cage operations (incorrect terminology - players cash out at cage, not buy-in). Cashier workflows limited to: cash-outs and marker settlements.
+- **4.1.0 (2025-12-10)** – ADR-017 compliance: Added `cashier` to `staff_role` enum. Documented cashier role capabilities in PlayerFinancialService section. Updated cross-context consumption rules.
 - **4.0.0 (2025-12-06)** – Major reduction per SRM/SLAD audit. Removed full DDL, error codes, middleware details, and RLS templates. Now a registry + invariants document only. Implementation patterns moved to SLAD. References canonical docs for all duplicated content.
 - **3.1.1 (2025-12-06)** – RatingSlip `player_id` removal per EXEC-VSE-001.
 - **3.1.0 (2025-11-13)** – Security & tenancy upgrade landed.
@@ -85,8 +90,10 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational** | VisitService | visit | Session lifecycle (3 archetypes) |
 | **Telemetry** | RatingSlipService | rating_slip, rating_slip_pause | Gameplay measurement |
 | **Reward** | LoyaltyService | player_loyalty, loyalty_ledger, loyalty_outbox | Reward policy & assignment |
-| **Finance** | PlayerFinancialService | player_financial_transaction, finance_outbox | Financial ledger (SoT) |
+| **Finance** | PlayerFinancialService | player_financial_transaction | Financial ledger (SoT) ¹ |
 | **Compliance** | MTLService | mtl_entry, mtl_audit_note | AML/CTR compliance |
+
+> ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 
 ---
 
@@ -186,7 +193,7 @@ Approved JSON blobs (all others require first-class columns):
 |----------|--------------|
 | RatingSlipService | `visit_id` FK (NOT NULL) |
 | LoyaltyService | Visit DTOs, `visit_kind` for accrual eligibility |
-| FinanceService | `visit_id` FK (optional) |
+| FinanceService | `visit_id` FK (**required for MVP**) |
 | MTLService | `visit_id` FK (optional) |
 
 **Full Schema**: `supabase/migrations/` (search: `create table visit`)
@@ -362,11 +369,30 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ---
 
-## PlayerFinancialService (Finance Context)
+## PlayerFinancialService (Finance Context) ✅ IMPLEMENTED
 
-**Owns**: `player_financial_transaction`, `finance_outbox`
+**Owns**: `player_financial_transaction`
+
+**Planned (post-MVP)**: `finance_outbox` — ADR-016 for payment gateway integration
 
 **Bounded Context**: "What monetary transactions occurred?"
+
+**Implementation Status** (PRD-009, 2025-12-11):
+- **Pattern**: A (Contract-First with manual DTOs)
+- **Service Layer**: `services/player-financial/` (dtos, schemas, keys, mappers, crud, http, index)
+- **Transport**: 3 Route Handlers (`/api/v1/financial-transactions/**`, `/api/v1/visits/[visitId]/financial-summary`)
+- **Hooks**: 4 React Query hooks (`hooks/player-financial/`)
+- **Tests**: 78 tests (mappers: 44, service: 17, RLS integration: 17)
+
+### Role Capabilities (ADR-017)
+
+| Role | Read | Write (via RPC) | Constraints |
+|------|------|-----------------|-------------|
+| `admin` | ✅ | ✅ Full access | — |
+| `cashier` | ✅ | ✅ Full access | Cage operations: cash-outs, marker settlements |
+| `pit_boss` | ✅ | ⚠️ Limited | Table buy-ins only: `direction='in'`, `tender_type IN ('cash','chips')`, `visit_id` required |
+| `compliance` | ✅ | ❌ | Read-only for audit |
+| `dealer` | ❌ | ❌ | No access |
 
 ### Schema Invariants
 
@@ -374,18 +400,37 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 |-------|--------|------------|-------|
 | `player_financial_transaction` | `player_id` | NOT NULL | Transaction owner |
 | `player_financial_transaction` | `casino_id` | NOT NULL | Casino scoping |
-| `player_financial_transaction` | `amount` | NOT NULL | Transaction amount |
+| `player_financial_transaction` | `visit_id` | **NOT NULL** | **Required for MVP** (prevents orphan transactions) |
+| `player_financial_transaction` | `amount` | NOT NULL, CHECK > 0 | Always positive |
+| `player_financial_transaction` | `direction` | NOT NULL, enum | `financial_direction` ('in'\|'out') |
+| `player_financial_transaction` | `source` | NOT NULL, enum | `financial_source` ('pit'\|'cage'\|'system') |
+| `player_financial_transaction` | `tender_type` | NOT NULL, enum | `tender_type` ('cash'\|'chips'\|'marker') |
 | `player_financial_transaction` | `gaming_day` | Trigger-derived | From `casino_settings.gaming_day_start_time` |
-| `player_financial_transaction` | `idempotency_key` | UNIQUE (partial) | Prevents duplicates |
+| `player_financial_transaction` | `idempotency_key` | UNIQUE (partial) | Casino-scoped, prevents duplicates |
+| `player_financial_transaction` | `created_by` | NOT NULL, FK | Staff who created transaction |
+| `player_financial_transaction` | `notes` | NULLABLE | Optional transaction notes |
+| `player_financial_transaction` | `related_transaction_id` | NULLABLE, FK | Self-reference for voids/adjustments |
 
 ### Contracts
 
-- **RPC**: `rpc_create_financial_txn` - canonical write path
+- **RPC**: `rpc_create_financial_txn` - canonical write path with idempotency support
+- **Role validation**: Hybrid per ADR-015 — RLS policies check `COALESCE(current_setting('app.staff_role', true), auth.jwt()->>'staff_role')` to remain pooling-safe. Application layer MUST inject context via transaction-wrapped RPC (or JWT claims) before writes.
 - **Trigger**: `trg_fin_gaming_day` populates `gaming_day` (callers MUST omit)
-- **Outbox**: `finance_outbox` for downstream side effects
 - **Immutability**: Append-only ledger; no deletes
+- **View**: `visit_financial_summary` - Aggregated totals per visit (total_in, total_out, net_amount)
+- **MVP Egress**: Synchronous only; no external side effects. MTLService integration via triggers.
+- **Outbox (post-MVP)**: `finance_outbox` for payment gateway integration (ADR-016 planned)
 
-**Full Schema**: `supabase/migrations/` (search: `create table player_financial_transaction`)
+### DTOs (Pattern A - Manual)
+
+| DTO | Purpose | Location |
+|-----|---------|----------|
+| `FinancialTransactionDTO` | Read DTO for transaction details | `services/player-financial/dtos.ts` |
+| `CreateFinancialTxnInput` | Write DTO for transaction creation | `services/player-financial/dtos.ts` |
+| `VisitFinancialSummaryDTO` | Aggregated visit totals | `services/player-financial/dtos.ts` |
+| `ListFinancialTxnFilters` | Query filters for list operations | `services/player-financial/dtos.ts` |
+
+**Full Schema**: `supabase/migrations/20251211015115_prd009_player_financial_service.sql`
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#playerfinancialservice`
 
 ---
@@ -421,7 +466,7 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 ## Centralized Enum Catalog
 
 ```sql
-create type staff_role as enum ('dealer','pit_boss','admin');
+create type staff_role as enum ('dealer','pit_boss','admin','cashier');
 create type staff_status as enum ('active','inactive');
 create type game_type as enum ('blackjack','poker','roulette','baccarat');
 create type table_status as enum ('inactive','active','closed');
@@ -429,6 +474,10 @@ create type loyalty_reason as enum ('mid_session','session_end','manual_adjustme
 create type visit_kind as enum ('reward_identified','gaming_identified_rated','gaming_ghost_unrated');
 create type floor_layout_status as enum ('draft','review','approved','archived');
 create type floor_layout_version_status as enum ('draft','pending_activation','active','retired');
+-- PlayerFinancialService enums (PRD-009)
+create type financial_direction as enum ('in','out');
+create type financial_source as enum ('pit','cage','system');
+create type tender_type as enum ('cash','chips','marker');
 ```
 
 **Change policy**: Additive values only; removals require deprecation plus data rewrite.
@@ -443,7 +492,7 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 | RatingSlipService | VisitService | `visit_id` FK, Visit DTOs |
 | LoyaltyService | RatingSlipService | `rating_slip_id` FK, telemetry DTOs |
 | LoyaltyService | VisitService | Visit DTOs, `visit_kind` check |
-| FinanceService | VisitService | `visit_id` FK (optional) |
+| FinanceService | VisitService | `visit_id` FK (**required for MVP**) |
 | MTLService | FinanceService | Reconciliation via triggers |
 | TableContextService | RatingSlipService | Published query/DTO `hasOpenSlipsForTable` (open-slip guard) |
 | TableContextService | FloorLayoutService | `floor_layout.activated` events |
@@ -462,8 +511,10 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 | `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` | Domain error codes, retry policies |
 | `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` | Middleware chain, header requirements |
 | `docs/30-security/SEC-001-rls-policy-matrix.md` | RLS templates, policy matrix |
+| `docs/30-security/SEC-005-role-taxonomy.md` | Role definitions, capabilities matrix |
 | `docs/30-security/SECURITY_TENANCY_UPGRADE.md` | RLS context injection |
 | `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` | RLS connection pooling, Pattern C (Hybrid) |
+| `docs/80-adrs/ADR-017-cashier-role-implementation.md` | Cashier role as staff_role enum |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
 
 ---
@@ -482,7 +533,8 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 
 ---
 
-**Document Version**: 4.0.0
+**Document Version**: 4.3.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
+**Updated**: 2025-12-11 (PRD-009 PlayerFinancialService Implemented)
 **Status**: CANONICAL - Registry + Invariants Only

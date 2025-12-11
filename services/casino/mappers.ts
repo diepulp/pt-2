@@ -42,12 +42,14 @@ type CasinoSettingsSelectedRow = {
 /**
  * Type for staff rows returned by STAFF_SELECT_PUBLIC query.
  * Must match: "id, first_name, last_name, role, status, employee_id, casino_id"
+ *
+ * Note: 'cashier' role added per ADR-017
  */
 type StaffSelectedRow = {
   id: string;
   first_name: string;
   last_name: string;
-  role: "dealer" | "pit_boss" | "admin";
+  role: "dealer" | "pit_boss" | "admin" | "cashier";
   status: "active" | "inactive";
   employee_id: string | null;
   casino_id: string;

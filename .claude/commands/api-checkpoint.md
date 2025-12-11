@@ -148,7 +148,7 @@ EOF
 ### View Latest Checkpoint (with TTL)
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     LEFT(metadata->>'current_task', 60) as task,
@@ -169,7 +169,7 @@ LIMIT 1;
 ### View All Active Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     LEFT(metadata->>'current_task', 60) as task,
@@ -188,7 +188,7 @@ LIMIT 10;
 ### View Expired Checkpoints
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     user_id as namespace,
     LEFT(metadata->>'current_task', 60) as task,
@@ -207,7 +207,7 @@ LIMIT 10;
 ### Count Active vs Expired
 
 ```bash
-docker exec supabase_db_pt-2 psql -U postgres -d postgres -c "
+docker exec memori-db psql -U memori -d memori -c "
 SELECT
     COUNT(*) FILTER (WHERE expires_at IS NULL OR expires_at > NOW()) as active,
     COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW()) as expired

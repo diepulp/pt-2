@@ -4,6 +4,7 @@ import {
   isDevAuthBypassEnabled,
 } from "@/lib/supabase/dev-context";
 import { getAuthContext } from "@/lib/supabase/rls-context";
+import { createServiceClient } from "@/lib/supabase/service";
 
 import type { Middleware, MiddlewareContext } from "./types";
 
@@ -18,22 +19,26 @@ import type { Middleware, MiddlewareContext } from "./types";
  * Populates ctx.rlsContext for downstream middleware.
  *
  * DEV MODE: When NODE_ENV=development and DEV_AUTH_BYPASS is not 'false',
- * injects mock RLS context to allow API testing without authentication.
+ * injects mock RLS context AND swaps to service role client to bypass RLS.
+ * This is necessary because RLS policies require auth.uid() which is NULL
+ * without a browser session.
  *
  * @throws DomainError UNAUTHORIZED - No authenticated user
  * @throws DomainError FORBIDDEN - User not active staff or no casino
  */
 export function withAuth<T>(): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
-    // DEV MODE: Use mock context for local development
+    // DEV MODE: Use mock context and service client for local development
     if (isDevAuthBypassEnabled()) {
       console.warn(
-        "[DEV AUTH] Using mock RLS context:",
+        "[DEV AUTH] Using mock RLS context + service client:",
         DEV_RLS_CONTEXT.staffRole,
         "@",
         DEV_RLS_CONTEXT.casinoId.slice(0, 8),
       );
       ctx.rlsContext = DEV_RLS_CONTEXT;
+      // Swap to service role client to bypass RLS auth.uid() check
+      ctx.supabase = createServiceClient();
       return next();
     }
 

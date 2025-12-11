@@ -2,10 +2,11 @@
 id: SEC-003
 title: Casino-Scoped RBAC Matrix
 owner: Security
-status: Draft
-affects: [SEC-001, SEC-002]
+status: Active
+affects: [SEC-001, SEC-005, ADR-017]
 created: 2025-11-02
-last_review: 2025-11-02
+last_review: 2025-12-10
+version: 1.1.0
 ---
 
 ## Purpose
@@ -16,10 +17,10 @@ Baseline the role-based access control model that complements the casino-scoped 
 
 | Role / Claim | Issuer | Description |
 | --- | --- | --- |
-| `dealer` | `staff_role` enum | Non-authenticated scheduling metadata only. Dealers are tracked in the system for operational visibility (dealer rotations, table assignments) but have ZERO application permissions |
-| `pit_boss` | `staff_role` enum |Table-level operator; submits telemetry and session updates. Supervises tables; approves table configuration changes and reward escalations. |
+| `dealer` | `staff_role` enum | Non-authenticated scheduling metadata only. Dealers are tracked in the system for operational visibility (dealer rotations, table assignments) but have ZERO application permissions. |
+| `pit_boss` | `staff_role` enum | Table-level operator; submits telemetry and session updates. Supervises tables; approves table configuration changes and reward escalations. |
 | `admin` | `staff_role` enum | Casino administrator; manages staff and foundational configuration. |
-| `cashier` | Service claim (`auth.jwt()` scope) | Initiates cashiering transactions through finance service RPCs. |
+| `cashier` | `staff_role` enum | Financial service role for cage operations, player transactions, and cashiering workflows. Uses same auth flow as pit_boss/admin (ADR-017). Role assignment restricted to admin-only workflows. |
 | `compliance` | Service claim (`auth.jwt()` scope) | Reviews financial/MTL ledgers, appends compliance audit notes. |
 | `reward_issuer` | Service claim (`auth.jwt()` scope) | Issues loyalty rewards via the mid-session reward RPC. |
 | `automation` | Service claim (`auth.jwt()` scope) | Limited automation accounts for scheduled configuration updates. |
@@ -38,17 +39,23 @@ Baseline the role-based access control model that complements the casino-scoped 
 | **RatingSlip**<br/>Update telemetry state | ✅ (own submissions) | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
 | **LoyaltyService**<br/>Read loyalty ledger/balances | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ✅ | ◻️ |
 | **LoyaltyService**<br/>Append rewards | ◻️ | ✅ (approve) | ✅ | ◻️ | ◻️ | ✅ | ◻️ |
-| **PlayerFinancialService**<br/>Read financial ledger | ◻️ | ◻️ | ✅ | ✅ | ✅ | ◻️ | ◻️ |
-| **PlayerFinancialService**<br/>Record financial txn | ◻️ | ◻️ | ◻️ | ✅ (via `rpc_create_financial_txn`) | ◻️ | ◻️ | ◻️ |
+| **PlayerFinancialService**<br/>Read financial ledger | ◻️ | ✅ | ✅ | ✅ | ✅ | ◻️ | ◻️ |
+| **PlayerFinancialService**<br/>Record financial txn | ◻️ | ⚠️ (table buy-ins only) | ✅ | ✅ (via `rpc_create_financial_txn`) | ◻️ | ◻️ | ◻️ |
 | **MTLService**<br/>Read compliance ledger | ◻️ | ◻️ | ✅ | ◻️ | ✅ | ◻️ | ◻️ |
 | **MTLService**<br/>Append compliance notes | ◻️ | ◻️ | ◻️ | ◻️ | ✅ | ◻️ | ◻️ |
 
-Legend: ✅ allowed, ◻️ not permitted.
+Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
+
+**Pit Boss Financial Write Constraints** (SEC-005 v1.1.0):
+- `direction` MUST be `'in'` (buy-ins only)
+- `tender_type` MUST be `'cash'` or `'chips'` (no markers)
+- `visit_id` MUST be provided (linked to active session)
 
 ## Implementation Notes
 
-- Map staff roles (`dealer`, `pit_boss`, `admin`) from Supabase JWT claims; ensure the `casino_id` claim is present for same-casino enforcement.
-- Service claims (`cashier`, `compliance`, `reward_issuer`, `automation`) must be minted by the authentication gateway with explicit expiration and scoping to a single `casino_id`.
+- **Staff roles** (`dealer`, `pit_boss`, `admin`, `cashier`) are stored in the `staff.role` column and validated via `current_setting('app.staff_role')` (ADR-017). The `casino_id` scope is enforced via `current_setting('app.casino_id')`.
+- **Cashier role assignment** is restricted to admin-only workflows (Staff Admin UI). Direct SQL grants are prohibited in production.
+- **Service claims** (`compliance`, `reward_issuer`, `automation`) must be minted by the authentication gateway with explicit expiration and scoping to a single `casino_id`.
 - Direct table grants should mirror the matrix; any deviation requires a Security-approved ADR.
 - For capabilities mediated by RPCs, policies must validate both role/claim and `casino_id` parity before executing mutations.
 
@@ -58,4 +65,13 @@ Legend: ✅ allowed, ◻️ not permitted.
 - [ ] Corresponding RLS policies in `SEC-001` reference the same claim names.
 - [ ] Supabase policy definitions and automation tokens enforce the disallowances (`◻️`) above.
 - [ ] Changes to ledger access trigger cross-review with finance/compliance owners.
+
+---
+
+## Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to `staff_role` enum. Updated issuer and description. Updated implementation notes for staff role validation pattern. |
+| 1.0.0 | 2025-11-02 | Initial version. |
 

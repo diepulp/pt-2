@@ -20,9 +20,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/database.types';
 import { injectRLSContext } from '@/lib/supabase/rls-context';
 import type { RLSContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -164,12 +164,18 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
   afterAll(async () => {
     // Clean up in reverse order
-    await supabase.from('staff').delete().in('id', [testStaff1Id, testStaff2Id, testStaff3Id]);
+    await supabase
+      .from('staff')
+      .delete()
+      .in('id', [testStaff1Id, testStaff2Id, testStaff3Id]);
     await supabase
       .from('casino_settings')
       .delete()
       .in('casino_id', [testCasino1Id, testCasino2Id, testCasino3Id]);
-    await supabase.from('casino').delete().in('id', [testCasino1Id, testCasino2Id, testCasino3Id]);
+    await supabase
+      .from('casino')
+      .delete()
+      .in('id', [testCasino1Id, testCasino2Id, testCasino3Id]);
 
     // Clean up users
     await Promise.all([
@@ -315,7 +321,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           .eq('casino_id', context.casinoId)
           .single();
 
-        return { index, expectedCasinoId: context.casinoId, actualCasinoId: data?.casino_id };
+        return {
+          index,
+          expectedCasinoId: context.casinoId,
+          actualCasinoId: data?.casino_id,
+        };
       });
 
       const results = await Promise.all(requests);
@@ -357,7 +367,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       // Execute all requests concurrently
       const results = await Promise.all(
         requests.map(async ({ context, correlationId }) => {
-          const client = createClient<Database>(supabaseUrl, supabaseServiceKey);
+          const client = createClient<Database>(
+            supabaseUrl,
+            supabaseServiceKey,
+          );
           await injectRLSContext(client, context, correlationId);
 
           const { data } = await client
@@ -399,7 +412,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
       const results = await Promise.all(
         requests.map(async ({ context, index }) => {
-          const client = createClient<Database>(supabaseUrl, supabaseServiceKey);
+          const client = createClient<Database>(
+            supabaseUrl,
+            supabaseServiceKey,
+          );
           await injectRLSContext(client, context, `burst-${index}`);
 
           const { data, error } = await client
@@ -653,7 +669,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
     });
 
     it('should track different correlation IDs for concurrent requests', async () => {
-      const correlationIds = Array.from({ length: 5 }, (_, i) => `concurrent-cid-${i}`);
+      const correlationIds = Array.from(
+        { length: 5 },
+        (_, i) => `concurrent-cid-${i}`,
+      );
 
       const requests = correlationIds.map(async (cid, index) => {
         const client = createClient<Database>(supabaseUrl, supabaseServiceKey);
@@ -716,7 +735,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       // Execute all requests concurrently (simulates pool exhaustion)
       const results = await Promise.all(
         requests.map(async ({ context, index }) => {
-          const client = createClient<Database>(supabaseUrl, supabaseServiceKey);
+          const client = createClient<Database>(
+            supabaseUrl,
+            supabaseServiceKey,
+          );
 
           try {
             await injectRLSContext(client, context, `pool-exhaust-${index}`);
