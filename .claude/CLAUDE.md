@@ -32,18 +32,18 @@ npm run db:types         # Regenerate types after migrations
 
 Use **`docs/patterns/SDLC_DOCS_TAXONOMY.md`** to locate documentation by category:
 
-| Category | What It Contains | Location |
-|----------|------------------|----------|
-| **V&S** | Vision, goals, scope | `docs/00-vision/` |
-| **PRD** | Product requirements, features | `docs/10-prd/` |
-| **ARCH** | Service architecture, bounded contexts | `docs/20-architecture/` |
-| **API/DATA** | OpenAPI specs, DTOs, schema | `docs/25-api-data/` |
-| **SEC/RBAC** | RLS policies, role matrix | `docs/30-security/` |
-| **DEL/QA** | Test strategy, quality gates | `docs/40-quality/` |
-| **OPS/SRE** | Observability, runbooks | `docs/50-ops/` |
-| **REL** | Release notes, rollout plans | `docs/60-release/` |
-| **GOV** | Standards, anti-patterns, guardrails | `docs/70-governance/` |
-| **ADR** | Architecture decision records | `docs/80-adrs/` |
+| Category     | What It Contains                       | Location                |
+| ------------ | -------------------------------------- | ----------------------- |
+| **V&S**      | Vision, goals, scope                   | `docs/00-vision/`       |
+| **PRD**      | Product requirements, features         | `docs/10-prd/`          |
+| **ARCH**     | Service architecture, bounded contexts | `docs/20-architecture/` |
+| **API/DATA** | OpenAPI specs, DTOs, schema            | `docs/25-api-data/`     |
+| **SEC/RBAC** | RLS policies, role matrix              | `docs/30-security/`     |
+| **DEL/QA**   | Test strategy, quality gates           | `docs/40-quality/`      |
+| **OPS/SRE**  | Observability, runbooks                | `docs/50-ops/`          |
+| **REL**      | Release notes, rollout plans           | `docs/60-release/`      |
+| **GOV**      | Standards, anti-patterns, guardrails   | `docs/70-governance/`   |
+| **ADR**      | Architecture decision records          | `docs/80-adrs/`         |
 
 **Start here**: `docs/INDEX.md` for full documentation index.
 
@@ -82,3 +82,4 @@ These files provide compressed context from 200k+ words of documentation:
 - Functional factories for services, not classes
 - No `as any`, no `console.*` in production
 - See `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` before adding abstractions
+- "Supabase migrations MUST follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` ( \_descriptive_name.sql)."

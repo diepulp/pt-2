@@ -2,13 +2,15 @@
 # ==============================================================================
 # Service Layer Anti-Pattern Detection (Pattern-Aware)
 # ==============================================================================
-# Version: 2.4.0
-# Date: 2025-12-03
+# Version: 2.5.0
+# Date: 2025-12-11
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 #   - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md
 #   - ADR-013: docs/80-adrs/ADR-013-zod-validation-schemas.md (Zod schemas)
+#   - ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md (RLS)
+#   - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md (Pattern C)
 #   - Workflow: docs/20-architecture/specs/WORKFLOW-PRD-002-parallel-execution.md
 #
 # This script runs BEFORE lint-staged. Additional AST-based checks run via ESLint:
@@ -570,6 +572,226 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
 fi
 
 # ==============================================================================
+# Check 12: Deprecated exec_sql RPC BANNED (ADR-015)
+# ==============================================================================
+# The exec_sql() loop pattern fails with connection pooling. All context
+# injection must use set_rls_context() RPC for atomic SET LOCAL execution.
+STAGED_TS_FILES=$(git diff --cached --name-only | grep '\.ts$' | grep -v '/types/' | grep -v '__tests__' | grep -v '\.test\.ts$' || true)
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  EXEC_SQL_VIOLATIONS=""
+  for file in $STAGED_TS_FILES; do
+    # Check for exec_sql RPC calls (excluding type definitions)
+    if grep -qE "\.rpc\(['\"]exec_sql['\"]" "$file" 2>/dev/null; then
+      EXEC_SQL_VIOLATIONS="$EXEC_SQL_VIOLATIONS
+  - $file"
+      grep -n "\.rpc.*exec_sql" "$file" 2>/dev/null | head -3 | while read -r line; do
+        echo "    $line"
+      done
+    fi
+  done
+
+  if [ -n "$EXEC_SQL_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Deprecated exec_sql RPC usage (ADR-015)"
+    echo ""
+    echo "The exec_sql() loop pattern FAILS with Supabase connection pooling."
+    echo "Each call may execute on a different pooled connection."
+    echo ""
+    echo "Files with violations:$EXEC_SQL_VIOLATIONS"
+    echo ""
+    echo "Fix: Use set_rls_context() RPC instead:"
+    echo ""
+    echo "  ❌ WRONG (DEPRECATED - fails with connection pooling):"
+    echo "  for (const stmt of statements) {"
+    echo "    await supabase.rpc('exec_sql', { sql: stmt });"
+    echo "  }"
+    echo ""
+    echo "  ✅ CORRECT (ADR-015 compliant):"
+    echo "  await supabase.rpc('set_rls_context', {"
+    echo "    p_actor_id: context.actorId,"
+    echo "    p_casino_id: context.casinoId,"
+    echo "    p_staff_role: context.staffRole,"
+    echo "  });"
+    echo ""
+    echo "Reference: ADR-015, SEC-001 (Pattern C)"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
+# Check 13: Direct SET LOCAL strings BANNED outside canonical files (ADR-015)
+# ==============================================================================
+# SET LOCAL must only appear in:
+#   - lib/supabase/rls-context.ts (canonical implementation)
+#   - lib/server-actions/middleware/rls.ts (middleware comments)
+#   - Test files (__tests__/*.ts)
+#   - Documentation/comments
+# Direct SET LOCAL in service code bypasses the atomic RPC wrapper.
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  SETLOCAL_VIOLATIONS=""
+  CANONICAL_RLS_FILES="lib/supabase/rls-context.ts lib/server-actions/middleware/rls.ts"
+
+  for file in $STAGED_TS_FILES; do
+    # Skip canonical files and tests
+    SKIP_FILE=0
+    for canonical in $CANONICAL_RLS_FILES; do
+      if echo "$file" | grep -q "$canonical"; then
+        SKIP_FILE=1
+        break
+      fi
+    done
+    if [ $SKIP_FILE -eq 1 ]; then continue; fi
+    if echo "$file" | grep -q "__tests__"; then continue; fi
+    if echo "$file" | grep -q "\.test\.ts$"; then continue; fi
+
+    # Check for SET LOCAL string literals (not in comments)
+    # Look for: 'SET LOCAL' or "SET LOCAL" or `SET LOCAL`
+    if grep -qE "['\"\`]SET LOCAL" "$file" 2>/dev/null; then
+      SETLOCAL_VIOLATIONS="$SETLOCAL_VIOLATIONS
+  - $file"
+      grep -nE "['\"\`]SET LOCAL" "$file" 2>/dev/null | head -3 | while read -r line; do
+        echo "    $line"
+      done
+    fi
+  done
+
+  if [ -n "$SETLOCAL_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Direct SET LOCAL strings outside canonical files (ADR-015)"
+    echo ""
+    echo "SET LOCAL must only be used via set_rls_context() RPC."
+    echo "Direct SET LOCAL strings bypass the atomic transaction wrapper."
+    echo ""
+    echo "Files with violations:$SETLOCAL_VIOLATIONS"
+    echo ""
+    echo "Fix: Use injectRLSContext() from canonical location:"
+    echo ""
+    echo "  ❌ WRONG:"
+    echo "  await supabase.rpc('exec_sql', { sql: \"SET LOCAL app.casino_id = 'uuid'\" });"
+    echo ""
+    echo "  ✅ CORRECT:"
+    echo "  import { injectRLSContext } from '@/lib/supabase/rls-context';"
+    echo "  await injectRLSContext(supabase, context, correlationId);"
+    echo ""
+    echo "Canonical files: lib/supabase/rls-context.ts"
+    echo "Reference: ADR-015, SEC-001"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
+# Check 14: current_setting without JWT fallback in TypeScript (ADR-015)
+# ==============================================================================
+# TypeScript code that builds SQL with current_setting('app.casino_id')
+# without COALESCE fallback may fail when JWT claims are used.
+# This is a warning only since most code should use RPC wrappers.
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  CURRENTSETTING_WARNINGS=""
+
+  for file in $STAGED_TS_FILES; do
+    # Skip test files and canonical RLS files
+    if echo "$file" | grep -q "__tests__"; then continue; fi
+    if echo "$file" | grep -q "\.test\.ts$"; then continue; fi
+
+    # Check for current_setting without COALESCE in string literals
+    if grep -qE "current_setting\(['\"]app\." "$file" 2>/dev/null; then
+      if ! grep -q "COALESCE" "$file" 2>/dev/null; then
+        CURRENTSETTING_WARNINGS="$CURRENTSETTING_WARNINGS
+  - $file"
+      fi
+    fi
+  done
+
+  if [ -n "$CURRENTSETTING_WARNINGS" ]; then
+    echo "⚠️  CHECK 14 WARNING: current_setting() without COALESCE fallback"
+    echo ""
+    echo "Files to verify:$CURRENTSETTING_WARNINGS"
+    echo ""
+    echo "If building SQL that uses current_setting('app.casino_id'),"
+    echo "ensure it includes JWT fallback for connection pooling safety."
+    echo ""
+    echo "ADR-015 Pattern C (Hybrid):"
+    echo "  COALESCE("
+    echo "    NULLIF(current_setting('app.casino_id', true), '')::uuid,"
+    echo "    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid"
+    echo "  )"
+    echo ""
+    echo "Reference: ADR-015, SEC-001 Pattern C"
+    echo ""
+    # Warning only, not blocking
+  fi
+fi
+
+# ==============================================================================
+# Check 15: Staff mutations without JWT claims sync (ADR-015 Phase 2)
+# ==============================================================================
+# When creating/updating staff with user_id (pit_boss, admin), JWT claims must
+# be synced via syncUserRLSClaims(). The database trigger provides backup,
+# but application-layer sync ensures immediate consistency.
+#
+# Canonical implementation: services/casino/crud.ts (createStaff, updateStaff)
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  JWT_SYNC_WARNINGS=""
+
+  for file in $STAGED_TS_FILES; do
+    # Skip test files, types, and canonical implementation
+    if echo "$file" | grep -q "__tests__"; then continue; fi
+    if echo "$file" | grep -q "\.test\.ts$"; then continue; fi
+    if echo "$file" | grep -q "/types/"; then continue; fi
+    if echo "$file" | grep -q "services/casino/crud.ts"; then continue; fi
+    if echo "$file" | grep -q "lib/supabase/auth-admin.ts"; then continue; fi
+
+    # Check for staff table INSERT operations
+    HAS_STAFF_INSERT=$(grep -c "\.from(['\"]staff['\"]).*\.insert\|\.insert.*staff" "$file" 2>/dev/null || true)
+
+    # Check for staff table UPDATE operations
+    HAS_STAFF_UPDATE=$(grep -c "\.from(['\"]staff['\"]).*\.update\|\.update.*staff" "$file" 2>/dev/null || true)
+
+    if [ "$HAS_STAFF_INSERT" -gt 0 ] || [ "$HAS_STAFF_UPDATE" -gt 0 ]; then
+      # Check if file imports syncUserRLSClaims
+      HAS_JWT_SYNC=$(grep -c "syncUserRLSClaims" "$file" 2>/dev/null || true)
+
+      if [ "$HAS_JWT_SYNC" -eq 0 ]; then
+        JWT_SYNC_WARNINGS="$JWT_SYNC_WARNINGS
+  - $file (staff INSERT/UPDATE without syncUserRLSClaims)"
+      fi
+    fi
+  done
+
+  if [ -n "$JWT_SYNC_WARNINGS" ]; then
+    echo "⚠️  CHECK 15 WARNING: Staff mutations without JWT claims sync (ADR-015 Phase 2)"
+    echo ""
+    echo "Files to verify:$JWT_SYNC_WARNINGS"
+    echo ""
+    echo "When creating/updating staff with user_id, JWT claims should be synced"
+    echo "for immediate consistency with RLS policies."
+    echo ""
+    echo "The database trigger 'trg_sync_staff_jwt_claims' provides backup sync,"
+    echo "but application-layer sync via syncUserRLSClaims() is recommended."
+    echo ""
+    echo "Pattern (from services/casino/crud.ts):"
+    echo "  import { syncUserRLSClaims } from '@/lib/supabase/auth-admin';"
+    echo ""
+    echo "  // After creating staff with user_id:"
+    echo "  if (input.user_id && input.casino_id) {"
+    echo "    await syncUserRLSClaims(input.user_id, {"
+    echo "      casino_id: input.casino_id,"
+    echo "      staff_role: input.role,"
+    echo "      staff_id: data.id,"
+    echo "    });"
+    echo "  }"
+    echo ""
+    echo "Reference: ADR-015 Phase 2, services/casino/crud.ts"
+    echo ""
+    # Warning only - database trigger provides backup
+  fi
+fi
+
+# ==============================================================================
 # Summary
 # ==============================================================================
 if [ $VIOLATIONS_FOUND -eq 1 ]; then
@@ -582,12 +804,20 @@ if [ $VIOLATIONS_FOUND -eq 1 ]; then
   echo "  - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
   echo "  - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
   echo "  - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md"
+  echo "  - ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md"
+  echo "  - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md"
   echo ""
   echo "DTO Pattern Quick Reference:"
   echo "  ALL PATTERNS: DTOs must be in dtos.ts (inline DTOs BANNED)"
   echo "  Pattern A (Loyalty, Finance, MTL, TableContext): interface OK, mappers.ts REQUIRED"
   echo "  Pattern B (Player, Visit, Casino, FloorLayout): interface BANNED, use type + Pick/Omit"
   echo "  Pattern C (RatingSlip): Hybrid - per-DTO basis (still requires dtos.ts)"
+  echo ""
+  echo "RLS Pattern Quick Reference (ADR-015):"
+  echo "  ✅ Use: injectRLSContext() from lib/supabase/rls-context.ts"
+  echo "  ✅ Use: set_rls_context() RPC (atomic transaction wrapper)"
+  echo "  ❌ Ban: exec_sql() loop pattern (connection pooling fails)"
+  echo "  ❌ Ban: Direct SET LOCAL strings in service code"
   echo ""
   exit 1
 fi

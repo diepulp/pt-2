@@ -71,6 +71,7 @@ class MemoriClient:
         "skill:skill-creator": "pt2_project",
         "skill:api-builder": "arch_decisions",
         "skill:mvp-progress": "mvp_progress",
+        "skill:rls-expert": "arch_decisions",
     }
 
     # Skills that support session checkpoints (ephemeral, 7-day TTL)

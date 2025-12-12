@@ -2,16 +2,19 @@
 # ==============================================================================
 # Migration Safety Check - RLS Policy Protection
 # ==============================================================================
-# Version: 1.0.0
-# Date: 2025-12-09
+# Version: 2.0.0
+# Date: 2025-12-11
 # References:
-#   - ISSUE-002: sync_remote_changes.sql overwrote ADR-015 hybrid RLS policies
 #   - ADR-015: RLS Connection Pooling Strategy (Hybrid Pattern C)
+#   - SEC-001: Casino-Scoped RLS Policy Matrix (Pattern C)
+#   - SEC-002: Casino-Scoped Security Model (Context Injection)
+#   - ISSUE-002: sync_remote_changes.sql overwrote ADR-015 hybrid RLS policies
 #
 # Prevents accidental RLS policy regressions from:
 #   1. Supabase CLI auto-generated sync_remote_changes.sql files
 #   2. Migrations that modify RLS policies without explicit review markers
 #   3. Policy changes that may lack ADR-015 hybrid fallback pattern
+#   4. Missing set_rls_context() RPC or JWT claims patterns
 # ==============================================================================
 
 echo "🔒 Checking migration safety (RLS policy protection)..."
@@ -150,6 +153,58 @@ for FILE in $MIGRATION_FILES; do
 done
 
 # ==============================================================================
+# Check 3a: Validate ADR-015 hybrid actor_id pattern (staff identity)
+# Policies using app.actor_id should include JWT fallback (staff_id)
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  HAS_ACTOR_ID_CHECK=$(git diff --cached "$FILE" | grep -c "current_setting('app.actor_id'" || true)
+
+  if [ "$HAS_ACTOR_ID_CHECK" -gt 0 ]; then
+    HAS_ACTOR_HYBRID=$(git diff --cached "$FILE" | grep -c "COALESCE.*current_setting('app.actor_id'.*auth\.jwt.*app_metadata.*staff_id" || true)
+
+    if [ "$HAS_ACTOR_HYBRID" -eq 0 ]; then
+      echo "⚠️  CHECK 3A WARNING: actor_id check lacks ADR-015 hybrid fallback (staff_id)"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "REQUIRED PATTERN (ADR-015 Hybrid):"
+      echo "  id = COALESCE("
+      echo "    NULLIF(current_setting('app.actor_id', true), '')::uuid,"
+      echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid"
+      echo "  )"
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+done
+
+# ==============================================================================
+# Check 3b: Validate ADR-015 hybrid staff_role pattern
+# Policies using app.staff_role should include JWT fallback (staff_role)
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  HAS_STAFF_ROLE_CHECK=$(git diff --cached "$FILE" | grep -c "current_setting('app.staff_role'" || true)
+
+  if [ "$HAS_STAFF_ROLE_CHECK" -gt 0 ]; then
+    HAS_ROLE_HYBRID=$(git diff --cached "$FILE" | grep -c "COALESCE.*current_setting('app.staff_role'.*auth\.jwt.*app_metadata.*staff_role" || true)
+
+    if [ "$HAS_ROLE_HYBRID" -eq 0 ]; then
+      echo "⚠️  CHECK 3B WARNING: staff_role check lacks ADR-015 hybrid fallback (staff_role claim)"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "REQUIRED PATTERN (ADR-015 Hybrid):"
+      echo "  COALESCE("
+      echo "    NULLIF(current_setting('app.staff_role', true), ''),"
+      echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_role')"
+      echo "  )"
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+done
+
+# ==============================================================================
 # Check 4: Ensure auth.uid() guard on all policies
 # All RLS policies must include auth.uid() IS NOT NULL
 # ==============================================================================
@@ -189,6 +244,113 @@ for FILE in $MIGRATION_FILES; do
         WARNINGS_FOUND=1
       fi
     done
+  fi
+done
+
+# ==============================================================================
+# Check 5: Protect ADR-015 critical infrastructure (set_rls_context, JWT triggers)
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  # Check for modifications to set_rls_context RPC
+  HAS_RLS_CONTEXT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*set_rls_context' || true)
+  HAS_RLS_CONTEXT_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*set_rls_context' || true)
+
+  # Check for modifications to JWT claims trigger
+  HAS_JWT_TRIGGER_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP TRIGGER.*sync_staff_jwt_claims\|trg_sync_staff_jwt_claims' || true)
+
+  # Check for modifications to JWT claims sync function
+  HAS_JWT_FUNC_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*sync_staff_jwt_claims' || true)
+
+  if [ "$HAS_RLS_CONTEXT_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops set_rls_context() RPC"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • set_rls_context() is ADR-015 infrastructure for RLS context injection"
+    echo "  • Dropping this function breaks all RLS policy enforcement"
+    echo "  • Required by withServerAction middleware and withRLS middleware"
+    echo ""
+    echo "REQUIRED ACTIONS:"
+    echo "  1. Verify this is intentional (replacement migration?)"
+    echo "  2. Add 'ADR-015' reference to migration header"
+    echo "  3. Ensure replacement function is created in same migration"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  if [ "$HAS_RLS_CONTEXT_REPLACE" -gt 0 ]; then
+    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015' || true)
+    if [ "$HAS_ADR_REFERENCE" -eq 0 ]; then
+      echo "⚠️  CHECK 5 WARNING: Migration modifies set_rls_context() without ADR-015 reference"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "This function is ADR-015 critical infrastructure."
+      echo "Add 'ADR-015' reference to migration header to confirm intentional change."
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+
+  if [ "$HAS_JWT_TRIGGER_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops JWT claims sync trigger"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • trg_sync_staff_jwt_claims is ADR-015 Phase 2 infrastructure"
+    echo "  • This trigger syncs staff.casino_id to auth.users.app_metadata"
+    echo "  • Required for JWT fallback in hybrid RLS policies (Pattern C)"
+    echo ""
+    echo "REQUIRED ACTIONS:"
+    echo "  1. Verify this is intentional"
+    echo "  2. Add 'ADR-015' reference to migration header"
+    echo "  3. Ensure JWT claims sync still works after migration"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+
+  if [ "$HAS_JWT_FUNC_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops sync_staff_jwt_claims() function"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • sync_staff_jwt_claims() is ADR-015 Phase 2 infrastructure"
+    echo "  • This function syncs staff claims to auth.users.app_metadata"
+    echo "  • Used by trigger and application layer (services/casino/crud.ts)"
+    echo "  • Required for JWT fallback in hybrid RLS policies (Pattern C)"
+    echo ""
+    echo "REQUIRED ACTIONS:"
+    echo "  1. Verify this is intentional (replacement migration?)"
+    echo "  2. Add 'ADR-015' reference to migration header"
+    echo "  3. Ensure JWT claims sync still works after migration"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+done
+
+# ==============================================================================
+# Check 6: Detect legacy exec_sql() usage in migrations
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  # Check for new exec_sql function creation (deprecated pattern)
+  HAS_EXEC_SQL=$(git diff --cached "$FILE" | grep -c '^+.*CREATE.*FUNCTION.*exec_sql' || true)
+
+  if [ "$HAS_EXEC_SQL" -gt 0 ]; then
+    echo "⚠️  CHECK 6 WARNING: Migration creates exec_sql() function (deprecated)"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "The exec_sql() RPC is DEPRECATED per ADR-015."
+    echo "This pattern fails with Supabase connection pooling."
+    echo ""
+    echo "Use set_rls_context() instead for context injection."
+    echo ""
+    echo "Reference: ADR-015 (RLS Connection Pooling Strategy)"
+    echo ""
+    WARNINGS_FOUND=1
   fi
 done
 

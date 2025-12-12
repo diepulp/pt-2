@@ -12286,3 +12286,853 @@ else:
     print("❌ No checkpoint found in skill_lead_architect namespace.")
     print("Save a checkpoint first with: /arch-checkpoint save")
 EOF
+2025-12-11T22:43:01Z	shell.exec	sh -n /home/diepulp/projects/pt-2/.husky/pre-commit-migration-safety.sh && echo "✅ migration-safety.sh syntax OK"
+2025-12-11T22:43:03Z	shell.exec	sh -n /home/diepulp/projects/pt-2/.husky/pre-commit-service-check.sh && echo "✅ service-check.sh syntax OK"
+2025-12-11T22:43:10Z	shell.exec	sh -n /home/diepulp/projects/pt-2/.husky/pre-commit-api-sanity.sh && echo "✅ api-sanity.sh syntax OK"
+2025-12-11T22:48:08Z	shell.exec	sh -n /home/diepulp/projects/pt-2/.husky/pre-commit-migration-safety.sh && echo "✅ migration-safety.sh syntax OK"
+2025-12-11T22:48:08Z	shell.exec	sh -n /home/diepulp/projects/pt-2/.husky/pre-commit-service-check.sh && echo "✅ service-check.sh syntax OK"
+2025-12-11T22:49:46Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    content,
+    metadata->>'type' as type,
+    metadata->>'relevant_docs' as relevant_docs,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (content ILIKE '%ADR-015%'
+       OR content ILIKE '%connection pool%'
+       OR content ILIKE '%RLS context%'
+       OR content ILIKE '%JWT claims%'
+       OR content ILIKE '%SET LOCAL%'
+       OR metadata::text ILIKE '%ADR-015%')
+ORDER BY created_at DESC
+LIMIT 15;
+"
+2025-12-11T22:49:46Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    content,
+    metadata->>'compliance_requirements' as requirements,
+    metadata->>'rls_policies' as rls_policies,
+    metadata->>'type' as type,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (content ILIKE '%RLS%'
+       OR content ILIKE '%security%'
+       OR content ILIKE '%pooling%'
+       OR metadata::text ILIKE '%rls%')
+ORDER BY created_at DESC
+LIMIT 15;
+"
+2025-12-11T22:49:55Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    content,
+    metadata->>'type' as type,
+    metadata->>'debt_category' as debt_category,
+    metadata->>'severity' as severity,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (content ILIKE '%loyalty%'
+       OR metadata::text ILIKE '%loyalty%')
+ORDER BY created_at DESC
+LIMIT 10;
+"
+2025-12-11T22:49:55Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    CASE
+        WHEN user_id = 'pt2_project' THEN 'Tier 1: pt2_project'
+        WHEN user_id = 'arch_decisions' THEN 'Tier 2: arch_decisions'
+        WHEN user_id = 'mvp_progress' THEN 'Tier 3: mvp_progress'
+        WHEN user_id LIKE 'session_%' THEN 'Tier 4: session_* (ephemeral)'
+        ELSE 'Legacy: ' || user_id
+    END as tier,
+    user_id as namespace,
+    COUNT(*) as memory_count
+FROM memori.memories
+GROUP BY user_id
+ORDER BY
+    CASE
+        WHEN user_id = 'pt2_project' THEN 1
+        WHEN user_id = 'arch_decisions' THEN 2
+        WHEN user_id = 'mvp_progress' THEN 3
+        WHEN user_id LIKE 'session_%' THEN 4
+        ELSE 5
+    END;
+"
+2025-12-11T22:50:27Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Record ADR-015 comprehensive strategy
+memori.record_memory(
+    content="ADR-015 RLS Connection Pooling Strategy (Implemented Phase 1+2): Primary=Transaction-wrapped context via set_rls_context() RPC. Secondary=JWT claims in auth.users.app_metadata. Hybrid Pattern C policies use COALESCE(current_setting('app.casino_id',true), auth.jwt()->'app_metadata'->>'casino_id'). SET LOCAL alone FAILS with Supavisor transaction-mode pooling.",
+    category="rules",
+    metadata={
+        "type": "architectural_decision",
+        "adr": "ADR-015",
+        "pattern": "Pattern C (Hybrid)",
+        "status": "implemented",
+        "phase": "Phase 1+2 complete, Phase 3 pending",
+        "relevant_docs": ["docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md", "docs/30-security/SEC-001-rls-policy-matrix.md", "docs/30-security/SECURITY_TENANCY_UPGRADE.md"],
+        "key_migration": "20251209183033_adr015_rls_context_rpc.sql"
+    },
+    importance=0.95,
+    tags=["architectural-decision", "rls", "security", "ADR-015", "connection-pooling"]
+)
+
+print("✅ Recorded ADR-015 comprehensive strategy")
+EOF
+2025-12-11T22:50:29Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Record ADR-015 RLS Policy Patterns
+memori.record_memory(
+    content="ADR-015 RLS Policy Patterns: Pattern A (JWT-based)=No SET LOCAL, use auth.jwt()->'app_metadata'. Pattern B (Transaction-wrapped)=set_rls_context() RPC then query. Pattern C (Hybrid)=COALESCE fallback, preferred for migration. All policies MUST check auth.uid() IS NOT NULL. SECURITY DEFINER RPCs for write operations.",
+    category="skills",
+    metadata={
+        "type": "rls_pattern_catalog",
+        "patterns": ["Pattern A (JWT)", "Pattern B (Transaction)", "Pattern C (Hybrid)"],
+        "preferred": "Pattern C (Hybrid)",
+        "relevant_docs": ["docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md", "docs/30-security/SEC-001-rls-policy-matrix.md"]
+    },
+    importance=0.9,
+    tags=["rls-patterns", "security", "ADR-015"]
+)
+
+print("✅ Recorded ADR-015 RLS policy patterns")
+EOF
+2025-12-11T22:50:31Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Record LoyaltyService technical debt
+memori.record_memory(
+    content="CRITICAL TECH DEBT: LoyaltyService rpc_issue_mid_session_reward BROKEN. References rating_slip.player_id which was DROPPED in migration 20251207024918. Must JOIN visit to get player_id. Also: NO RLS policies on player_loyalty/loyalty_ledger tables (security gap). Pre-dates ADR-015.",
+    category="rules",
+    metadata={
+        "type": "tech_debt",
+        "debt_category": "security",
+        "severity": "critical",
+        "service": "LoyaltyService",
+        "affected_rpc": "rpc_issue_mid_session_reward",
+        "root_cause": "Migration dropped rating_slip.player_id but RPC not updated",
+        "remediation": "1. Fix RPC to JOIN visit for player_id. 2. Enable RLS with ADR-015 Pattern C. 3. Add SECURITY DEFINER.",
+        "relevant_docs": ["supabase/migrations/20251207024918_rating_slip_drop_player_id.sql"]
+    },
+    importance=0.95,
+    tags=["tech-debt", "critical", "loyalty", "rpc", "broken"]
+)
+
+print("✅ Recorded LoyaltyService critical tech debt")
+EOF
+2025-12-11T22:50:33Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Record JWT Claims integration
+memori.record_memory(
+    content="ADR-015 Phase 2 JWT Claims: Staff JWT app_metadata contains casino_id, staff_role, staff_id. Synced via lib/supabase/auth-admin.ts syncUserRLSClaims(). Trigger trg_sync_staff_jwt_claims auto-syncs on staff table changes. Backfill migration: 20251210001858_adr015_backfill_jwt_claims.sql. Hybrid RLS policies fall back to JWT when SET LOCAL unavailable.",
+    category="skills",
+    metadata={
+        "type": "architectural_decision",
+        "adr": "ADR-015",
+        "phase": "Phase 2",
+        "claims": ["casino_id", "staff_role", "staff_id"],
+        "sync_function": "syncUserRLSClaims",
+        "sync_trigger": "trg_sync_staff_jwt_claims",
+        "relevant_docs": ["lib/supabase/auth-admin.ts", "docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md"]
+    },
+    importance=0.85,
+    tags=["jwt-claims", "authentication", "ADR-015", "security"]
+)
+
+print("✅ Recorded JWT claims integration")
+EOF
+2025-12-11T22:50:44Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    LEFT(content, 100) as content_preview,
+    metadata->>'type' as type,
+    metadata->>'severity' as severity,
+    created_at
+FROM memori.memories
+WHERE user_id = 'arch_decisions'
+  AND (content ILIKE '%ADR-015%'
+       OR content ILIKE '%loyalty%'
+       OR content ILIKE '%JWT%')
+ORDER BY created_at DESC
+LIMIT 10;
+"
+2025-12-11T22:51:53Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="LoyaltyService Compliance Rectification - ADR-015 alignment and broken RPC fix",
+    reason="manual",
+    decisions_made=[
+        "RECTIFY (not rebuild) LoyaltyService - schema is sound, fix RPC + add RLS + extend service",
+        "rpc_issue_mid_session_reward is BROKEN - references dropped rating_slip.player_id column",
+        "No RLS policies exist on player_loyalty, loyalty_ledger, loyalty_outbox tables (security gap)",
+        "ADR-015 Pattern C (Hybrid) required: COALESCE(current_setting, jwt->>'claim')",
+        "Service factory follows PlayerFinancialService Pattern A reference",
+        "Theo calculation already exists in lib/theo.ts - LoyaltyService consumes it",
+        "PRD-008 blocked pending LoyaltyService.getPlayerBalance() implementation"
+    ],
+    files_modified=[
+        "Arch memory updated: 4 new entries (ADR-015 strategy, RLS patterns, JWT claims, LoyaltyService tech debt)"
+    ],
+    validation_gates_passed=[
+        "Context gathering complete",
+        "ADR-015 compliance gap analysis complete",
+        "Arch memory updated with ADR-015 decisions"
+    ],
+    open_questions=[
+        "User approved RECTIFY approach - ready for implementation"
+    ],
+    next_steps=[
+        "Migration 1: Fix rpc_issue_mid_session_reward (JOIN visit for player_id)",
+        "Migration 2: Enable RLS on loyalty tables with ADR-015 Pattern C policies",
+        "Migration 3: Add rpc_issue_session_end_reward for session-end points",
+        "Service Factory: Create dtos.ts, schemas.ts, crud.ts, mappers.ts, selects.ts, http.ts, index.ts",
+        "Add getPlayerBalance(playerId, casinoId) to unblock PRD-008 BFF",
+        "Add React Query hooks: usePlayerLoyaltyBalance, useLoyaltyLedger"
+    ],
+    key_insights=[
+        "rpc_issue_mid_session_reward broken since migration 20251207024918 dropped rating_slip.player_id",
+        "Player identity must be derived via JOIN: rating_slip -> visit -> visit.player_id",
+        "loyalty tables have NO RLS - critical security gap pre-dating ADR-015",
+        "ADR-015 Phase 1+2 implemented but Loyalty not migrated",
+        "lib/theo.ts provides pure calculation functions - LoyaltyService applies them",
+        "PRD-008 (Rating Slip Modal) is GATE-2 blocker needing LoyaltyService balance query"
+    ],
+    spec_file=None,
+    workflow="loyalty-rectification",
+    notes="User confirmed RECTIFY approach. Ready to implement migration + service factory."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-11T22:53:46Z	shell.exec	echo "=== ADR-015 TypeScript Audit: player-financial service ===" && echo "" && echo "--- Check 12: Deprecated exec_sql RPC usage ---" && grep -rn "\.rpc.*exec_sql" /home/diepulp/projects/pt-2/services/player-financial/ 2>/dev/null || echo "✅ No exec_sql RPC usage found" && echo "" && echo "--- Check 13: Direct SET LOCAL strings ---" && grep -rn "'SET LOCAL\|\"SET LOCAL\|\`SET LOCAL" /home/diepulp/projects/pt-2/services/player-financial/ 2>/dev/null || echo "✅ No direct SET LOCAL strings found" && echo "" && echo "--- Check 14: current_setting without COALESCE ---" && for f in /home/diepulp/projects/pt-2/services/player-financial/*.ts; do if grep -q "current_setting.*app\." "$f" 2>/dev/null; then if ! grep -q "COALESCE" "$f" 2>/dev/null; then echo "⚠️  $f has current_setting without COALESCE"; fi; fi; done && echo "✅ current_setting check complete" && echo "" && echo "--- Check 15: Staff mutations without JWT sync (N/A for player-financial) ---" && echo "✅ Not applicable - player-financial doesn't manage staff"
+2025-12-11T22:53:55Z	shell.exec	echo "=== ADR-015 SQL Migration Audit: player_financial_transaction RLS ===" && echo "" && echo "--- Searching for RLS policies on player_financial_transaction ---" && grep -rn "CREATE POLICY.*player_financial\|player_financial_transaction.*POLICY\|POLICY.*player_financial" /home/diepulp/projects/pt-2/supabase/migrations/ 2>/dev/null | head -20
+2025-12-11T22:54:00Z	shell.exec	echo "=== Searching migrations for player_financial_transaction ===" && grep -rln "player_financial_transaction" /home/diepulp/projects/pt-2/supabase/migrations/ 2>/dev/null
+2025-12-11T22:54:06Z	shell.exec	echo "=== Checking baseline migration for player_financial_transaction RLS ===" && grep -A 20 "player_financial_transaction" /home/diepulp/projects/pt-2/supabase/migrations/00000000000000_baseline_srm.sql | grep -E "POLICY|RLS|enable row|casino_id|current_setting|auth\." | head -30
+2025-12-11T22:54:11Z	shell.exec	echo "=== Searching for all RLS policies in migrations ===" && grep -rn "CREATE POLICY\|enable row level security" /home/diepulp/projects/pt-2/supabase/migrations/ 2>/dev/null | grep -i "player_financial\|finance" | head -20
+2025-12-11T22:54:17Z	shell.exec	echo "=== Checking rpc_create_financial_txn for ADR-015 compliance ===" && grep -A 80 "CREATE.*FUNCTION.*rpc_create_financial_txn\|rpc_create_fin" /home/diepulp/projects/pt-2/supabase/migrations/00000000000000_baseline_srm.sql | head -100
+2025-12-11T22:54:26Z	shell.exec	echo "=== Checking player_financial_transaction table for RLS ===" && grep -B5 -A30 "create table player_financial_transaction" /home/diepulp/projects/pt-2/supabase/migrations/00000000000000_baseline_srm.sql | head -50
+2025-12-11T22:54:32Z	shell.exec	echo "=== Searching for RLS on player_financial_transaction in all migrations ===" && grep -rn "player_financial_transaction.*row level\|row level.*player_financial_transaction\|alter table player_financial_transaction enable" /home/diepulp/projects/pt-2/supabase/migrations/ 2>/dev/null
+2025-12-11T22:54:44Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-11T22:55:03Z	shell.exec	echo "=== Checking Critical Finance Tables for RLS ===" && echo "" && echo "--- player_financial_transaction ---" && grep -n "player_financial_transaction.*row level\|enable row level.*player_financial" /home/diepulp/projects/pt-2/supabase/migrations/*.sql 2>/dev/null || echo "❌ NO RLS ENABLED" && echo "" && echo "--- loyalty_ledger ---" && grep -n "loyalty_ledger.*row level\|enable row level.*loyalty_ledger" /home/diepulp/projects/pt-2/supabase/migrations/*.sql 2>/dev/null || echo "❌ NO RLS ENABLED" && echo "" && echo "--- mtl_entry ---" && grep -n "mtl_entry.*row level\|enable row level.*mtl_entry" /home/diepulp/projects/pt-2/supabase/migrations/*.sql 2>/dev/null || echo "❌ NO RLS ENABLED"
+2025-12-11T22:55:09Z	shell.exec	echo "=== Checking rpc_create_financial_txn for casino_id validation ===" && grep -A 50 "create.*function.*rpc_create_financial_txn" /home/diepulp/projects/pt-2/supabase/migrations/*.sql 2>/dev/null | grep -E "current_setting\('app\.casino_id|v_context_casino|casino_id.*mismatch" || echo "❌ NO CASINO_ID VALIDATION in RPC"
+2025-12-11T23:24:51Z	shell.exec	find /home/diepulp/projects/pt-2/supabase/migrations -type f -name "*.sql" | sort
+2025-12-11T23:24:55Z	shell.exec	find /home/diepulp/projects/pt-2/supabase/migrations -type f -name "*player*financial*" -o -name "*prd009*" | sort
+2025-12-11T23:24:59Z	shell.exec	ls -1 /home/diepulp/projects/pt-2/supabase/migrations/ | grep -E "player|financial|prd009" | tail -20
+2025-12-11T23:24:59Z	shell.exec	ls -1t /home/diepulp/projects/pt-2/supabase/migrations/ | head -5
+2025-12-11T23:25:02Z	shell.exec	ls -1t /home/diepulp/projects/pt-2/supabase/migrations/ | head -10
+2025-12-11T23:25:03Z	shell.exec	grep -l "POLICY\|ENABLE ROW LEVEL SECURITY" /home/diepulp/projects/pt-2/supabase/migrations/*.sql | sort
+2025-12-11T23:25:05Z	shell.exec	ls -1 /home/diepulp/projects/pt-2/supabase/migrations/ | grep -E "^2025121[0-9]|^20251211" | sort
+2025-12-11T23:25:05Z	shell.exec	grep -l "current_setting\|COALESCE\|app\.casino_id\|auth\.jwt" /home/diepulp/projects/pt-2/supabase/migrations/*.sql 2>/dev/null | tail -15
+2025-12-11T23:25:11Z	shell.exec	find /home/diepulp/projects/pt-2 -name "*.ts" -o -name "*.tsx" | xargs grep -l "set_rls_context\|injectRLSContext" | head -10
+2025-12-11T23:25:15Z	shell.exec	find /home/diepulp/projects/pt-2/app -name "*.ts" -type f | grep -E "route|action" | head -10
+2025-12-11T23:25:18Z	shell.exec	grep -n "current_setting\|COALESCE\|NULLIF" /home/diepulp/projects/pt-2/supabase/migrations/20251129230733_prd003_player_visit_rls.sql | head -20
+2025-12-11T23:25:21Z	shell.exec	find /home/diepulp/projects/pt-2/app/api -name "route.ts" | xargs grep -l "injectRLSContext\|getAuthContext" | head -5
+2025-12-11T23:25:32Z	shell.exec	ls -la /home/diepulp/projects/pt-2/services/ | grep "^d" | awk '{print $NF}' | grep -v "^\."
+2025-12-11T23:29:01Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+# Record the ADR-015 compliance patch decision
+context.record_decision(
+    decision="ADR-015 RLS Compliance Patch",
+    rationale="""Comprehensive patch to address RLS policy regressions:
+1. Fixed broken rpc_issue_mid_session_reward (references dropped rating_slip.player_id)
+2. Upgraded casino_settings policies from non-compliant to Pattern C
+3. Upgraded staff policies (4 of 5) from partial to full Pattern C compliance
+4. Enabled RLS on 16 tables that were missing protection entirely
+
+Tables patched with RLS:
+- player_loyalty, loyalty_ledger, loyalty_outbox (Loyalty domain)
+- player_financial_transaction, finance_outbox (Finance domain)
+- mtl_entry, mtl_audit_note (Compliance/MTL domain)
+- game_settings, gaming_table_settings (Telemetry domain)
+- table_inventory_snapshot, table_fill, table_credit, table_drop_event (Table Context domain)
+- audit_log, report (Audit domain)
+
+Pattern C (Hybrid) applied consistently:
+  auth.uid() IS NOT NULL
+  AND casino_id = COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  )""",
+    file_reference="supabase/migrations/20251212000000_adr015_rls_compliance_patch.sql",
+    tags=["ADR-015", "RLS", "security", "patch", "compliance"]
+)
+
+print("✅ Decision recorded in architecture memory")
+EOF
+2025-12-11T23:29:14Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Store the decision directly
+memori.store(
+    key="adr015_rls_compliance_patch",
+    content="""ADR-015 RLS Compliance Patch - Comprehensive fix for RLS policy regressions
+
+SUMMARY:
+Migration 20251212000000_adr015_rls_compliance_patch.sql addresses all RLS gaps:
+
+1. BROKEN RPC FIX:
+   - rpc_issue_mid_session_reward: Fixed reference to dropped rating_slip.player_id
+   - Now derives player_id via JOIN: rating_slip -> visit -> visit.player_id
+
+2. NON-COMPLIANT POLICY UPGRADES:
+   - casino_settings: 2 policies upgraded to Pattern C
+   - staff: 4 policies upgraded to Pattern C (staff_write/update/delete + improved staff_read)
+
+3. TABLES WITH NEW RLS (16 total):
+   Loyalty: player_loyalty, loyalty_ledger, loyalty_outbox
+   Finance: player_financial_transaction, finance_outbox
+   MTL: mtl_entry, mtl_audit_note
+   Telemetry: game_settings, gaming_table_settings
+   Table Context: table_inventory_snapshot, table_fill, table_credit, table_drop_event
+   Audit: audit_log, report
+
+PATTERN C (Hybrid) Applied:
+  auth.uid() IS NOT NULL
+  AND casino_id = COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  )
+
+FILE: supabase/migrations/20251212000000_adr015_rls_compliance_patch.sql""",
+    tags=["ADR-015", "RLS", "security", "patch", "decision"]
+)
+
+print("✅ Decision stored in Memori")
+EOF
+2025-12-11T23:32:20Z	shell.exec	ls -la /home/diepulp/projects/pt-2/supabase/migrations/*.sql | tail -20
+2025-12-11T23:32:28Z	shell.exec	cd /home/diepulp/projects/pt-2/supabase/migrations && \
+TIMESTAMP=$(date +%Y%m%d%H%M%S) && \
+mv 20251212000000_adr015_rls_compliance_patch.sql "${TIMESTAMP}_adr015_rls_compliance_patch.sql" && \
+echo "Renamed to: ${TIMESTAMP}_adr015_rls_compliance_patch.sql"
+2025-12-11T23:35:59Z	shell.exec	find /home/diepulp/projects/pt-2/.claude -type f 2>/dev/null | head -30
+2025-12-11T23:35:59Z	shell.exec	find /home/diepulp/projects/pt-2 -type f -name "*.md" | xargs grep -l "lead-architect\|lead_architect" 2>/dev/null | head -20
+2025-12-11T23:40:34Z	shell.exec	ls -la /home/diepulp/projects/pt-2/docs/issues/remediation/ 2>/dev/null || echo "Directory does not exist"
+2025-12-11T23:55:31Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="ADR-015 RLS Compliance Patch - Complete",
+    reason="manual",
+    decisions_made=[
+        "Created comprehensive RLS patch migration (20251211153228_adr015_rls_compliance_patch.sql)",
+        "Fixed broken rpc_issue_mid_session_reward - derives player_id via JOIN to visit",
+        "Upgraded casino_settings policies (2) to Pattern C",
+        "Upgraded staff policies (4) to Pattern C with bootstrap preservation",
+        "Enabled RLS on 16 tables missing protection (loyalty, finance, MTL, telemetry, table context, audit)",
+        "Updated lead-architect skill with migration naming convention (CRITICAL section)",
+        "Updated backend-service-builder skill with migration naming + ADR-015 RLS patterns",
+        "Updated migration-workflow.md reference with ADR-015 Pattern C (replaced deprecated patterns)"
+    ],
+    files_modified=[
+        "supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql",
+        ".claude/skills/lead-architect/SKILL.md",
+        ".claude/skills/backend-service-builder/SKILL.md",
+        ".claude/skills/backend-service-builder/references/migration-workflow.md",
+        "docs/issues/remediation/REM-ISSUE-003-adr015-rls-compliance-patch.md"
+    ],
+    validation_gates_passed=[
+        "RLS policy audit complete",
+        "Tables missing RLS identified (16)",
+        "Non-compliant policies identified (casino_settings, staff)",
+        "Broken RPC identified (rpc_issue_mid_session_reward)",
+        "Migration created with proper timestamp naming",
+        "Remediation document created"
+    ],
+    open_questions=[],
+    next_steps=[
+        "Apply migration: npx supabase migration up",
+        "Regenerate types: npm run db:types",
+        "Run RLS validation script",
+        "Test loyalty RPC: rpc_issue_mid_session_reward",
+        "Verify no cross-tenant data leakage"
+    ],
+    key_insights=[
+        "16 tables had NO RLS - major security gap pre-dating ADR-015",
+        "rpc_issue_mid_session_reward broken since migration 20251207024918 dropped rating_slip.player_id",
+        "Skills were missing explicit migration naming convention - added CRITICAL sections",
+        "migration-workflow.md had deprecated RLS patterns - updated to Pattern C",
+        "Pattern C template: auth.uid() IS NOT NULL AND casino_id = COALESCE(NULLIF(current_setting(...), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)"
+    ],
+    spec_file="docs/issues/remediation/REM-ISSUE-003-adr015-rls-compliance-patch.md",
+    workflow="adr015-compliance-patch",
+    notes="Patch ready for execution. Skills updated to prevent future naming/pattern violations."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-11T23:55:41Z	shell.exec	cd /home/diepulp/projects/pt-2 && python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="ADR-015 RLS Compliance Patch - Complete",
+    reason="manual",
+    decisions_made=[
+        "Created comprehensive RLS patch migration (20251211153228_adr015_rls_compliance_patch.sql)",
+        "Fixed broken rpc_issue_mid_session_reward - derives player_id via JOIN to visit",
+        "Upgraded casino_settings policies (2) to Pattern C",
+        "Upgraded staff policies (4) to Pattern C with bootstrap preservation",
+        "Enabled RLS on 16 tables missing protection (loyalty, finance, MTL, telemetry, table context, audit)",
+        "Updated lead-architect skill with migration naming convention (CRITICAL section)",
+        "Updated backend-service-builder skill with migration naming + ADR-015 RLS patterns",
+        "Updated migration-workflow.md reference with ADR-015 Pattern C (replaced deprecated patterns)"
+    ],
+    files_modified=[
+        "supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql",
+        ".claude/skills/lead-architect/SKILL.md",
+        ".claude/skills/backend-service-builder/SKILL.md",
+        ".claude/skills/backend-service-builder/references/migration-workflow.md",
+        "docs/issues/remediation/REM-ISSUE-003-adr015-rls-compliance-patch.md"
+    ],
+    validation_gates_passed=[
+        "RLS policy audit complete",
+        "Tables missing RLS identified (16)",
+        "Non-compliant policies identified (casino_settings, staff)",
+        "Broken RPC identified (rpc_issue_mid_session_reward)",
+        "Migration created with proper timestamp naming",
+        "Remediation document created"
+    ],
+    open_questions=[],
+    next_steps=[
+        "Apply migration: npx supabase migration up",
+        "Regenerate types: npm run db:types",
+        "Run RLS validation script",
+        "Test loyalty RPC: rpc_issue_mid_session_reward",
+        "Verify no cross-tenant data leakage"
+    ],
+    key_insights=[
+        "16 tables had NO RLS - major security gap pre-dating ADR-015",
+        "rpc_issue_mid_session_reward broken since migration 20251207024918 dropped rating_slip.player_id",
+        "Skills were missing explicit migration naming convention - added CRITICAL sections",
+        "migration-workflow.md had deprecated RLS patterns - updated to Pattern C",
+        "Pattern C template: auth.uid() IS NOT NULL AND casino_id = COALESCE(NULLIF(current_setting(...), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)"
+    ],
+    spec_file="docs/issues/remediation/REM-ISSUE-003-adr015-rls-compliance-patch.md",
+    workflow="adr015-compliance-patch",
+    notes="Patch ready for execution. Skills updated to prevent future naming/pattern violations."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-11T23:58:22Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-12T00:27:06Z	shell.exec	git show 40eba4d --stat --name-only
+2025-12-12T00:27:06Z	shell.exec	git show 40eba4d --no-stat -p -- "*.md"
+2025-12-12T00:27:12Z	shell.exec	git show 40eba4d -p -- "*.md" | head -500
+2025-12-12T00:28:48Z	shell.exec	chmod +x /home/diepulp/projects/pt-2/scripts/adr015-rls-scanner.sh && /home/diepulp/projects/pt-2/scripts/adr015-rls-scanner.sh
+2025-12-12T00:29:34Z	shell.exec	/home/diepulp/projects/pt-2/scripts/adr015-rls-scanner.sh 2>&1
+2025-12-12T03:37:04Z	shell.exec	docker ps -a --filter "name=supabase" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+2025-12-12T03:37:04Z	shell.exec	docker logs supabase_db_pt-2 2>&1 | tail -50
+2025-12-12T03:37:14Z	shell.exec	docker volume ls --filter "name=supabase"
+2025-12-12T03:37:15Z	shell.exec	cat supabase/config.toml 2>/dev/null | head -50 || echo "No config.toml found"
+2025-12-12T03:37:16Z	shell.exec	supabase --version 2>/dev/null || echo "supabase CLI not in path"
+2025-12-12T03:37:25Z	shell.exec	npx supabase --version
+2025-12-12T03:37:26Z	shell.exec	docker run --rm -v supabase_db_pt-2:/data alpine cat /data/postgresql.conf 2>/dev/null | head -30 || echo "Could not read postgresql.conf from volume"
+2025-12-12T03:37:36Z	shell.exec	docker run --rm -v supabase_db_pt-2:/data alpine cat /data/postgresql.conf 2>/dev/null | grep -E "(include|conf.d)" || echo "No include directives found"
+2025-12-12T03:37:37Z	shell.exec	docker run --rm -v supabase_db_pt-2:/data alpine tail -20 /data/postgresql.conf 2>/dev/null
+2025-12-12T03:37:46Z	shell.exec	npx supabase stop --no-backup 2>&1
+2025-12-12T03:37:53Z	shell.exec	npx supabase start 2>&1
+2025-12-12T03:38:32Z	shell.exec	ls -la supabase/migrations/*adr015*finance* 2>/dev/null
+2025-12-12T03:39:03Z	shell.exec	npx supabase db reset 2>&1
+2025-12-12T03:39:08Z	shell.exec	npx supabase start 2>&1
+2025-12-12T03:40:19Z	shell.exec	ls -la supabase/migrations/*.sql | tail -10
+2025-12-12T03:40:38Z	shell.exec	npx supabase stop 2>&1
+2025-12-12T03:40:55Z	shell.exec	npx supabase start 2>&1
+2025-12-12T03:41:27Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "SELECT enum_range(NULL::staff_role);"
+2025-12-12T03:41:28Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "SELECT policyname FROM pg_policies WHERE tablename = 'player_financial_transaction';"
+2025-12-12T03:41:34Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "\dt public.*" 2>&1 | head -30
+2025-12-12T03:41:34Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "SELECT * FROM supabase_migrations.schema_migrations ORDER BY version DESC LIMIT 5;" 2>&1
+2025-12-12T04:12:16Z	shell.exec	python3 /home/diepulp/projects/pt-2/.claude/skills/skill-creator/scripts/init_skill.py rls-expert --path /home/diepulp/projects/pt-2/.claude/skills
+2025-12-12T04:16:53Z	shell.exec	rm /home/diepulp/projects/pt-2/.claude/skills/rls-expert/references/api_reference.md /home/diepulp/projects/pt-2/.claude/skills/rls-expert/scripts/example.py /home/diepulp/projects/pt-2/.claude/skills/rls-expert/assets/example_asset.txt && rmdir /home/diepulp/projects/pt-2/.claude/skills/rls-expert/scripts /home/diepulp/projects/pt-2/.claude/skills/rls-expert/assets
+2025-12-12T04:17:01Z	shell.exec	python3 /home/diepulp/projects/pt-2/.claude/skills/skill-creator/scripts/package_skill.py /home/diepulp/projects/pt-2/.claude/skills/rls-expert
+2025-12-12T04:17:10Z	shell.exec	ls -la /home/diepulp/projects/pt-2/.claude/skills/rls-expert/ && echo "---" && ls -la /home/diepulp/projects/pt-2/.claude/skills/rls-expert/references/
+2025-12-12T04:19:22Z	shell.exec	ls -1 /home/diepulp/projects/pt-2/supabase/migrations/*.sql | xargs -I {} basename {} | grep -E "^2025121[0-1]" | sort
+2025-12-12T04:19:36Z	shell.exec	mv /home/diepulp/projects/pt-2/supabase/migrations/20251211165000_adr015_add_cashier_role.sql /home/diepulp/projects/pt-2/supabase/migrations/20251211161847_adr015_add_cashier_role.sql
+2025-12-12T04:19:41Z	shell.exec	ls -1 /home/diepulp/projects/pt-2/supabase/migrations/*.sql | xargs -I {} basename {} | grep -E "^20251211" | sort
+2025-12-12T04:21:43Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    user_id as namespace,
+    category,
+    LEFT(content, 80) as content_preview,
+    metadata->>'type' as type,
+    metadata->>'pattern' as pattern,
+    metadata->>'importance' as importance,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (category IN ('skills', 'rules', 'preferences')
+       OR metadata->>'type' LIKE '%decision%'
+       OR metadata->>'type' LIKE '%architectural%')
+ORDER BY created_at DESC
+LIMIT 20;
+"
+2025-12-12T04:21:44Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    metadata->>'pattern' as pattern,
+    metadata->>'pattern_used' as pattern_used,
+    COUNT(*) as usage_count,
+    AVG((metadata->>'importance')::float) as avg_importance
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'pattern' IS NOT NULL
+       OR metadata->>'pattern_used' IS NOT NULL)
+GROUP BY metadata->>'pattern', metadata->>'pattern_used'
+ORDER BY usage_count DESC;
+"
+2025-12-12T04:21:44Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    CASE
+        WHEN user_id = 'pt2_project' THEN 'Tier 1: pt2_project'
+        WHEN user_id = 'arch_decisions' THEN 'Tier 2: arch_decisions'
+        WHEN user_id = 'mvp_progress' THEN 'Tier 3: mvp_progress'
+        WHEN user_id LIKE 'session_%' THEN 'Tier 4: session_* (ephemeral)'
+        ELSE 'Legacy: ' || user_id
+    END as tier,
+    user_id as namespace,
+    COUNT(*) as memory_count,
+    COUNT(DISTINCT category) as categories,
+    MAX(created_at) as last_activity,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at > NOW()) as with_ttl,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW()) as expired
+FROM memori.memories
+GROUP BY user_id
+ORDER BY
+    CASE
+        WHEN user_id = 'pt2_project' THEN 1
+        WHEN user_id = 'arch_decisions' THEN 2
+        WHEN user_id = 'mvp_progress' THEN 3
+        WHEN user_id LIKE 'session_%' THEN 4
+        ELSE 5
+    END,
+    memory_count DESC;
+"
+2025-12-12T07:51:18Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    user_id as namespace,
+    category,
+    LEFT(content, 80) as content_preview,
+    metadata->>'type' as type,
+    metadata->>'pattern' as pattern,
+    metadata->>'importance' as importance,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (category IN ('skills', 'rules', 'preferences')
+       OR metadata->>'type' LIKE '%decision%'
+       OR metadata->>'type' LIKE '%architectural%')
+ORDER BY created_at DESC
+LIMIT 20;
+"
+2025-12-12T07:51:18Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    metadata->>'pattern' as pattern,
+    metadata->>'pattern_used' as pattern_used,
+    COUNT(*) as usage_count,
+    AVG((metadata->>'importance')::float) as avg_importance
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND (metadata->>'pattern' IS NOT NULL
+       OR metadata->>'pattern_used' IS NOT NULL)
+GROUP BY metadata->>'pattern', metadata->>'pattern_used'
+ORDER BY usage_count DESC;
+"
+2025-12-12T07:51:18Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    CASE
+        WHEN user_id = 'pt2_project' THEN 'Tier 1: pt2_project'
+        WHEN user_id = 'arch_decisions' THEN 'Tier 2: arch_decisions'
+        WHEN user_id = 'mvp_progress' THEN 'Tier 3: mvp_progress'
+        WHEN user_id LIKE 'session_%' THEN 'Tier 4: session_* (ephemeral)'
+        ELSE 'Legacy: ' || user_id
+    END as tier,
+    user_id as namespace,
+    COUNT(*) as memory_count,
+    COUNT(DISTINCT category) as categories,
+    MAX(created_at) as last_activity,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at > NOW()) as with_ttl,
+    COUNT(*) FILTER (WHERE expires_at IS NOT NULL AND expires_at <= NOW()) as expired
+FROM memori.memories
+GROUP BY user_id
+ORDER BY
+    CASE
+        WHEN user_id = 'pt2_project' THEN 1
+        WHEN user_id = 'arch_decisions' THEN 2
+        WHEN user_id = 'mvp_progress' THEN 3
+        WHEN user_id LIKE 'session_%' THEN 4
+        ELSE 5
+    END,
+    memory_count DESC;
+"
+2025-12-12T08:00:31Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+# Create client for architectural decisions namespace
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+
+# Record SEC-006 audit approval as architectural decision
+memori.record_memory(
+    content="SEC-006 RLS Strategy Audit APPROVED: 5 critical gaps identified - FloorLayoutService tables missing RLS, 7 SECURITY DEFINER RPCs trust caller casino_id without context validation. Root cause: ADR-015 fixed SET LOCAL pooling but SECURITY DEFINER functions bypass RLS entirely. Remediation: Apply SEC-001 Template 5 to all RPCs, enable RLS on floor layout tables with Pattern C policies.",
+    category="rules",
+    metadata={
+        "type": "architectural_decision",
+        "decision_id": "SEC-006",
+        "status": "approved",
+        "approver": "lead-architect",
+        "pattern": "Pattern C (Hybrid) + Template 5",
+        "affected_services": ["FloorLayoutService", "TableContextService", "LoyaltyService"],
+        "affected_tables": ["floor_layout", "floor_layout_version", "floor_pit", "floor_table_slot", "floor_layout_activation"],
+        "affected_rpcs": [
+            "rpc_create_floor_layout",
+            "rpc_activate_floor_layout", 
+            "rpc_log_table_inventory_snapshot",
+            "rpc_request_table_fill",
+            "rpc_request_table_credit",
+            "rpc_log_table_drop",
+            "rpc_issue_mid_session_reward"
+        ],
+        "severity": "critical",
+        "priority": "P0",
+        "related_docs": ["ADR-015", "SEC-001", "SEC-002", "SRM v4.3.0"],
+        "remediation_workstreams": ["WS1-FloorLayout RLS", "WS2-4 RPC hardening", "WS5-6 Ledger policies", "WS7 ADR-018"],
+        "lessons_learned": "SECURITY DEFINER functions bypass RLS - must validate casino context explicitly per SEC-001 Template 5"
+    },
+    importance=0.95,
+    tags=["architectural-decision", "security", "rls", "adr-015", "sec-006", "pattern-c", "template-5"]
+)
+
+print("✓ SEC-006 architectural decision recorded")
+
+# Record the systemic gap finding as a rule
+memori.record_memory(
+    content="RLS SECURITY GAP PATTERN: SECURITY DEFINER functions bypass RLS policies entirely. All RPCs accepting p_casino_id parameter MUST validate against current_setting('app.casino_id') or auth.jwt() claims before mutations. This is now mandatory per SEC-001 Template 5. ADR-018 will formalize this governance.",
+    category="rules",
+    metadata={
+        "type": "security_pattern",
+        "pattern": "RPC Context Validation",
+        "severity": "critical",
+        "enforcement": "mandatory",
+        "validation_code": "v_context_casino_id := COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid); IF p_casino_id != v_context_casino_id THEN RAISE EXCEPTION 'casino_id mismatch'; END IF;",
+        "related_docs": ["SEC-001 Template 5", "SEC-006", "ADR-015", "ADR-018 (pending)"]
+    },
+    importance=0.95,
+    tags=["security-rule", "rls", "security-definer", "mandatory", "template-5"]
+)
+
+print("✓ RLS security gap pattern recorded")
+
+# Record the remediation plan as a tracking item
+memori.record_memory(
+    content="SEC-006 REMEDIATION PLAN: P0 (before release) - FloorLayoutService RLS (5 tables) + RPC hardening (7 functions). P1 (this sprint) - Append-only ledger denial policies (4 tables) + finance policy conflict resolution. P2 (next iteration) - ADR-018 governance + pre-commit hook. Single migration: sec006_rls_hardening.sql",
+    category="context",
+    metadata={
+        "type": "remediation_plan",
+        "decision_id": "SEC-006",
+        "p0_items": ["FloorLayoutService RLS", "RPC context validation x7"],
+        "p1_items": ["Append-only denial policies x4", "Finance policy conflict"],
+        "p2_items": ["ADR-018", "Pre-commit hook enhancement"],
+        "migration_file": "YYYYMMDDHHMMSS_sec006_rls_hardening.sql",
+        "definition_of_done": [
+            "All 5 FloorLayoutService tables have RLS enabled",
+            "All 7 RPCs validate casino context per Template 5",
+            "4 append-only ledgers have no_update/no_delete policies",
+            "Integration tests verify cross-casino isolation",
+            "ADR-018 drafted and approved"
+        ]
+    },
+    importance=0.9,
+    tags=["remediation", "sec-006", "tracking", "p0-critical"]
+)
+
+print("✓ SEC-006 remediation plan recorded")
+
+print("\n=== Memori Update Complete ===")
+EOF
+2025-12-12T08:00:41Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    LEFT(content, 100) as content_preview,
+    metadata->>'type' as type,
+    metadata->>'decision_id' as decision_id,
+    metadata->>'pattern' as pattern,
+    metadata->>'importance' as importance,
+    created_at
+FROM memori.memories
+WHERE user_id = 'arch_decisions'
+  AND (metadata->>'decision_id' = 'SEC-006' 
+       OR content ILIKE '%SEC-006%')
+ORDER BY created_at DESC
+LIMIT 5;
+"
+2025-12-12T08:00:46Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    LEFT(content, 100) as content_preview,
+    metadata->>'type' as type,
+    metadata->>'pattern' as pattern,
+    metadata->>'enforcement' as enforcement,
+    created_at
+FROM memori.memories
+WHERE user_id = 'arch_decisions'
+  AND metadata->>'type' = 'security_pattern'
+ORDER BY created_at DESC
+LIMIT 3;
+"
+2025-12-12T08:02:32Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+# Current session state for SEC-006 RLS audit approval
+result = context.save_checkpoint(
+    current_task="SEC-006 RLS Strategy Audit - APPROVED with conditions. Remediation workstreams defined.",
+    reason="manual",
+    decisions_made=[
+        "SEC-006 audit APPROVED by Lead Architect with conditions",
+        "P0 remediation required before next release: FloorLayoutService RLS (5 tables) + RPC hardening (7 functions)",
+        "P1 remediation scheduled for current sprint: Append-only ledger denial policies + finance policy conflict",
+        "ADR-018 required to formalize SECURITY DEFINER governance pattern",
+        "Root cause identified: SECURITY DEFINER functions bypass RLS - must validate context per SEC-001 Template 5",
+        "Pattern C (Hybrid) + Template 5 is canonical approach for RPC hardening",
+        "company/casino tables RLS deferred (risk accepted for MVP)"
+    ],
+    files_modified=[
+        "docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md (created + approval added)"
+    ],
+    validation_gates_passed=[
+        "GATE-AUDIT: RLS audit completed with 5 critical, 4 high, 3 medium findings",
+        "GATE-ARCH-REVIEW: Lead Architect validated against SRM v4.3.0",
+        "GATE-MEMORI: Decisions recorded to arch_decisions namespace"
+    ],
+    open_questions=[
+        "When to schedule remediation migration implementation?",
+        "Should ADR-018 be drafted before or after remediation migration?"
+    ],
+    next_steps=[
+        "Create migration: YYYYMMDDHHMMSS_sec006_rls_hardening.sql",
+        "Section 1: FloorLayoutService RLS + Pattern C policies (5 tables)",
+        "Section 2: RPC context validation (7 functions per SEC-001 Template 5)",
+        "Section 3: Append-only ledger denial policies (4 tables)",
+        "Draft ADR-018 SECURITY DEFINER governance",
+        "Update SEC-001 with mandatory RPC validation clause",
+        "Add pre-commit hook for SECURITY DEFINER validation"
+    ],
+    key_insights=[
+        "ADR-015 fixed SET LOCAL pooling but SECURITY DEFINER functions bypass RLS entirely",
+        "7 RPCs trust caller-provided p_casino_id without validating against context",
+        "FloorLayoutService was created before RLS enforcement standard established",
+        "Subquery pattern required for tables without direct casino_id (floor_layout_version, floor_pit, floor_table_slot)"
+    ],
+    spec_file="docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md",
+    workflow="RLS Audit → Approval → Remediation",
+    notes="Context at 83% - checkpoint saved for session continuity"
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-12T08:03:05Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF

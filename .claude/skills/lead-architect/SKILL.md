@@ -97,7 +97,33 @@ Update canonical docs atomically:
 - Type `supabase` as `SupabaseClient<Database>`
 - Single source of truth: `types/database.types.ts`
 
+### Migration Naming Convention (CRITICAL)
+
+**Format:** `YYYYMMDDHHMMSS_description.sql`
+
+```bash
+# Generate timestamp for new migration:
+date +%Y%m%d%H%M%S
+# Example: 20251211153228
+
+# Correct naming:
+20251211153228_adr015_rls_compliance_patch.sql
+20251210001858_adr015_backfill_jwt_claims.sql
+
+# WRONG - will be rejected:
+20251212000000_some_migration.sql  # Placeholder zeros
+migration_name.sql                  # Missing timestamp
+2025-12-11_migration.sql           # Wrong format
+```
+
+**Always** generate a real timestamp when creating migrations. Never use placeholder values like `000000`.
+
 ### Anti-Patterns (Critical)
+
+**Migration:**
+- Placeholder timestamps (`20251212000000`)
+- Missing timestamp prefix
+- Non-numeric timestamp formats
 
 **Service Layer:**
 - Class-based services

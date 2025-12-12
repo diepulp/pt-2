@@ -103,6 +103,25 @@ Authoritative governance documents referenced by this skill:
 
 ---
 
+## Critical Conventions
+
+### Migration Naming (MUST FOLLOW)
+
+```bash
+# Format: YYYYMMDDHHMMSS_description.sql
+# Generate timestamp:
+date +%Y%m%d%H%M%S
+
+# ✅ Correct: 20251211153228_add_player_achievements.sql
+# ❌ Wrong:   20251212000000_description.sql (placeholder zeros)
+```
+
+### RLS Policies (ADR-015 Pattern C)
+
+All new RLS policies MUST use Pattern C with JWT fallback. See `references/migration-workflow.md`.
+
+---
+
 ## Final Checklist
 
 Before marking service implementation complete, verify:
@@ -113,5 +132,7 @@ Before marking service implementation complete, verify:
 - [ ] Tests in `__tests__/` subdirectory (ADR-002)
 - [ ] All validation scripts pass
 - [ ] Documentation consistency check run
+- [ ] Migration follows `YYYYMMDDHHMMSS_description.sql` naming
+- [ ] RLS policies use ADR-015 Pattern C (hybrid with JWT fallback)
 
 For detailed checklist, load `references/validation-checklist.md`.

@@ -127,59 +127,113 @@ npm test -- schema-verification
 
 ---
 
-## RLS Policy Patterns
+## RLS Policy Patterns (ADR-015 Pattern C - Hybrid)
 
-### Pattern 1: Casino-Scoped Read
+**CRITICAL**: All RLS policies MUST use ADR-015 Pattern C (Hybrid with JWT fallback).
+
+### Pattern C Explained
 
 ```sql
-CREATE POLICY "casino_staff_view_{table}"
+-- ADR-015 Pattern C: Hybrid with Fallback
+-- 1. auth.uid() IS NOT NULL - Guards against unauthenticated access
+-- 2. COALESCE with NULLIF - Tries session context first, handles empty strings
+-- 3. JWT fallback - Falls back to JWT claims if session context empty
+
+casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
+```
+
+### Pattern 1: Casino-Scoped Read (ADR-015)
+
+```sql
+CREATE POLICY "{table}_select_same_casino"
   ON {table}
   FOR SELECT
-  TO authenticated
   USING (
-    casino_id IN (
-      SELECT casino_id FROM staff WHERE id = auth.uid()
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
     )
   );
 ```
 
-### Pattern 2: Casino-Scoped Write
+### Pattern 2: Casino-Scoped Write - Pit Boss/Admin (ADR-015)
 
 ```sql
-CREATE POLICY "casino_staff_insert_{table}"
+CREATE POLICY "{table}_insert_staff"
   ON {table}
   FOR INSERT
-  TO authenticated
   WITH CHECK (
-    casino_id IN (
-      SELECT casino_id FROM staff WHERE id = auth.uid()
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
     )
+    AND COALESCE(
+      NULLIF(current_setting('app.staff_role', true), ''),
+      (auth.jwt() -> 'app_metadata' ->> 'staff_role')
+    ) IN ('pit_boss', 'admin')
   );
 ```
 
-### Pattern 3: Player Self-Access
+### Pattern 3: Casino-Scoped Update - Pit Boss/Admin (ADR-015)
 
 ```sql
-CREATE POLICY "player_view_own_{table}"
+CREATE POLICY "{table}_update_staff"
   ON {table}
-  FOR SELECT
-  TO authenticated
-  USING (player_id = auth.uid());
+  FOR UPDATE
+  USING (
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+    )
+    AND COALESCE(
+      NULLIF(current_setting('app.staff_role', true), ''),
+      (auth.jwt() -> 'app_metadata' ->> 'staff_role')
+    ) IN ('pit_boss', 'admin')
+  );
 ```
 
-### Pattern 4: Admin Access
+### Pattern 4: Admin-Only Access (ADR-015)
 
 ```sql
-CREATE POLICY "admin_full_access_{table}"
+CREATE POLICY "{table}_admin_only"
   ON {table}
   FOR ALL
-  TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM staff
-      WHERE id = auth.uid()
-      AND role = 'admin'
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
     )
+    AND COALESCE(
+      NULLIF(current_setting('app.staff_role', true), ''),
+      (auth.jwt() -> 'app_metadata' ->> 'staff_role')
+    ) = 'admin'
+  );
+```
+
+### ❌ DEPRECATED: Pre-ADR-015 Patterns (DO NOT USE)
+
+```sql
+-- ❌ WRONG: Missing auth.uid() guard, no JWT fallback
+CREATE POLICY "old_pattern"
+  ON {table}
+  FOR SELECT
+  USING (
+    casino_id = current_setting('app.casino_id', true)::uuid
+  );
+
+-- ❌ WRONG: Subquery to staff table (pre-ADR-015)
+CREATE POLICY "old_subquery_pattern"
+  ON {table}
+  FOR SELECT
+  USING (
+    casino_id IN (SELECT casino_id FROM staff WHERE id = auth.uid())
   );
 ```
 

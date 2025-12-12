@@ -1,17 +1,19 @@
 #!/bin/sh
 # ==============================================================================
-# API Route Handler Sanity Checks (PRD-HZ-001 + ADR-013 Compliant)
+# API Route Handler Sanity Checks (PRD-HZ-001 + ADR-013 + ADR-015 Compliant)
 # ==============================================================================
-# Version: 2.1.0
-# Date: 2025-12-03
+# Version: 2.2.0
+# Date: 2025-12-11
 # References:
 #   - PRD-HZ-001: Gate 0 Horizontal Infrastructure
 #   - WORKFLOW-WS5: API Route Handler Migration
 #   - VALIDATION-PRD-HZ-001: DoD Checklist
 #   - ADR-013: Zod Validation Schemas Standard
+#   - ADR-015: RLS Connection Pooling Strategy (withServerAction → RLS injection)
+#   - SEC-001: Casino-Scoped RLS Policy Matrix
 #
 # Ensures app/api/v1 handlers follow canonical patterns established by
-# horizontal infrastructure (withServerAction middleware, idempotency, etc.)
+# horizontal infrastructure (withServerAction middleware, RLS injection, etc.)
 # ==============================================================================
 
 echo "🔍 Checking API route handler standards (PRD-HZ-001)..."

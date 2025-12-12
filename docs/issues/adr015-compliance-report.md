@@ -1,6 +1,6 @@
 # ADR-015 RLS Compliance Report
 
-**Generated:** 2025-12-11T16:51:44-08:00
+**Generated:** 2025-12-11T19:55:35-08:00
 **Scanner:** scripts/adr015-rls-scanner.sh
 **Reference:** docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md
 
@@ -10,7 +10,7 @@
 
 | Metric | Value |
 |--------|-------|
-| Files Scanned | 24 |
+| Files Scanned | 26 |
 | Files with Issues | 4 |
 | Total Issues | 63 |
 

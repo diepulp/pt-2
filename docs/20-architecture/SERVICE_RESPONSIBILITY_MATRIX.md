@@ -414,7 +414,7 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 ### Contracts
 
 - **RPC**: `rpc_create_financial_txn` - canonical write path with idempotency support
-- **Role validation**: Hybrid per ADR-015 — RLS policies check `COALESCE(current_setting('app.staff_role', true), auth.jwt()->>'staff_role')` to remain pooling-safe. Application layer MUST inject context via transaction-wrapped RPC (or JWT claims) before writes.
+- **Role validation**: Hybrid per ADR-015 — RLS policies check `COALESCE(current_setting('app.staff_role', true), auth.jwt()->>'staff_role')` and `COALESCE(current_setting('app.casino_id', true), (auth.jwt()->>'casino_id')::uuid)` to remain pooling-safe. Application layer MUST inject context via transaction-wrapped RPC (or JWT claims) before writes.
 - **Trigger**: `trg_fin_gaming_day` populates `gaming_day` (callers MUST omit)
 - **Immutability**: Append-only ledger; no deletes
 - **View**: `visit_financial_summary` - Aggregated totals per visit (total_in, total_out, net_amount)

@@ -1,11 +1,20 @@
 // ==============================================================================
 // lint-staged Configuration
 // ==============================================================================
-// Version: 2.0.0
-// Date: 2025-11-28
+// Version: 2.1.0
+// Date: 2025-12-11
 //
 // Scope: Production code only (app, components, hooks, lib, services, utils)
 // Excludes: Agent configs, skills, memory files, generated files, docs
+//
+// Note: RLS/ADR-015 pattern checks run BEFORE lint-staged in:
+//   - .husky/pre-commit-migration-safety.sh (SQL migrations)
+//   - .husky/pre-commit-service-check.sh (TypeScript services)
+//   - .husky/pre-commit-api-sanity.sh (API routes)
+//
+// References:
+//   - ADR-015: RLS Connection Pooling Strategy
+//   - SEC-001: Casino-Scoped RLS Policy Matrix
 // ==============================================================================
 
 export default {

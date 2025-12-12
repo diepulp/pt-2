@@ -1135,6 +1135,8 @@ export async function mutateEntity(input: DTO) {
 }
 ```
 
+> `mutateWithContext` here is illustrative: call your domain’s ADR-015-compliant entrypoint (e.g., an RPC that wraps context + mutation in one transaction, or a JWT-only path when policies are JWT-first and claims are already present in `auth.jwt().app_metadata`).
+
 **See**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` for implementation details.
 
 **Database Usage**:
