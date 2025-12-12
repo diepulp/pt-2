@@ -5,12 +5,12 @@ owner: Security
 status: Active
 affects: [SEC-005, ADR-017]
 created: 2025-11-02
-last_review: 2025-12-10
-updated: 2025-12-10
+last_review: 2025-12-12
+updated: 2025-12-12
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017]
-version: 1.2.0
+related_adrs: [ADR-015, ADR-017, ADR-018]
+version: 1.3.0
 ---
 
 ## Overview
@@ -297,6 +297,8 @@ create policy "{table_name}_admin_global_access"
 ### Template 5: RPC Casino Scope Validation (Required for All Mutations)
 
 **Use For**: All service-owned RPCs that accept `casino_id` as a parameter
+
+> **MANDATORY (ADR-018):** All SECURITY DEFINER functions that accept `p_casino_id` as a parameter MUST include this validation block. This is enforced by pre-commit hook. See `docs/80-adrs/ADR-018-security-definer-governance.md` for rationale.
 
 **Pattern**:
 
@@ -735,6 +737,7 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3.0 | 2025-12-12 | **ADR-018 Reference**: Template 5 marked as MANDATORY for SECURITY DEFINER functions. Added cross-reference to ADR-018 governance pattern. |
 | 1.2.0 | 2025-12-10 | Added **Template 5: RPC Casino Scope Validation**. Documents required pattern for service-owned RPCs to validate `p_casino_id` matches `current_setting('app.casino_id')`. |
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Added cashier to authenticated staff roles. Updated Role Variations to document cashier as primary `staff_role` enum value. |
 | 1.0.0 | 2025-12-10 | Initial version with ADR-015 compliance. |

@@ -2,20 +2,21 @@
 id: SEC-006
 title: RLS Strategy Audit Report
 owner: Security
-status: APPROVED - Remediation In Progress
+status: APPROVED - P0 Remediation Complete
 created: 2025-12-11
 approved: 2025-12-11
 approver: Lead Architect
 audit_type: System-wide RLS Gap Analysis
-reference: ADR-015, SEC-001, SEC-002, SEC-003, SEC-005
+reference: ADR-015, ADR-018, SEC-001, SEC-002, SEC-003, SEC-005
 auditor: rls-expert skill
 severity_summary:
   critical: 5
   high: 4
   medium: 3
 remediation_tracking:
-  p0_status: pending
-  p1_status: pending
+  p0_status: complete
+  p0_migration: 20251212080915_sec006_rls_hardening.sql
+  p1_status: complete
   p2_status: deferred
 ---
 
@@ -483,6 +484,9 @@ fi
 |------|--------|
 | 2025-12-11 | Initial audit created |
 | 2025-12-11 | **APPROVED** - Lead Architect review completed with conditions |
+| 2025-12-12 | **P0 REMEDIATION COMPLETE** - Migration `20251212080915_sec006_rls_hardening.sql` created |
+| 2025-12-12 | **P1 REMEDIATION COMPLETE** - Append-only denial policies included in migration |
+| 2025-12-12 | **ADR-018** drafted - SECURITY DEFINER governance pattern documented |
 
 ---
 
