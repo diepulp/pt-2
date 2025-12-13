@@ -1,10 +1,10 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2025-11-20
-**Taxonomy Version**: 1.1 (SDLC-Aligned + Emerging Categories)
+**Last Updated**: 2025-12-12
+**Taxonomy Version**: 1.2 (SEC-006 RLS Hardening)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
-**SRM Status**: Compressed (2,127 → 1,848 lines, 13% reduction)
+**SRM Status**: v4.4.0 (SEC-006 RLS Hardening, ADR-018 Governance)
 **Purpose**: Navigation hub and document registry for PT-2 architecture documentation
 
 ---
@@ -132,19 +132,22 @@
 
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
-| SEC-001 | RLS Policy Matrix | Active | `30-security/SEC-001-rls-policy-matrix.md` |
+| SEC-001 | RLS Policy Matrix v1.3 | Active | `30-security/SEC-001-rls-policy-matrix.md` |
 | SEC-005 | Role Taxonomy | Active | `30-security/SEC-005-role-taxonomy.md` |
+| SEC-006 | RLS Strategy Audit | Complete | `30-security/SEC-006-rls-strategy-audit-2025-12-11.md` |
 | COMP-002 | MTL Compliance Standard | Active | `30-security/compliance/COMP-002-mtl-compliance-standard.md` |
 
 **Purpose**: RLS policies, RBAC matrix, threat model, secrets handling, compliance
 
 **Key Documents**:
-- **SEC-001**: RLS policy catalog per table with predicate patterns
-- **SEC-005**: Role capabilities matrix (admin, pit_boss, cage, compliance, dealer)
+- **SEC-001**: RLS policy catalog per table with predicate patterns (Templates 1-6)
+- **SEC-005**: Role capabilities matrix (admin, pit_boss, cashier, compliance, dealer)
+- **SEC-006**: RLS audit findings (FloorLayoutService, SECURITY DEFINER hardening)
 - **COMP-002**: MTL/AML compliance thresholds, retention, audit requirements
 
 **Security Model**:
-- Casino-scoped tenancy with RLS
+- Casino-scoped tenancy with RLS (ADR-015 Pattern C hybrid)
+- SECURITY DEFINER governance (ADR-018 Template 5)
 - No service keys in runtime (anon key + user context)
 - WRAPPER pattern for context injection
 
@@ -286,6 +289,10 @@
 | ADR-009 | Balanced Architecture Intake | Accepted | - | - |
 | ADR-010 | DTO Compliance Gate | Accepted | - | - |
 | ADR-011 | Over-Engineering Guardrail | Accepted | - | - |
+| ADR-014 | Ghost Gaming Visits | Implemented | 2025-11-xx | - |
+| ADR-015 | RLS Connection Pooling Strategy | Implemented | 2025-12-10 | - |
+| ADR-017 | Cashier Role Implementation | Implemented | 2025-12-10 | - |
+| ADR-018 | SECURITY DEFINER Governance | Implemented | 2025-12-12 | - |
 
 **Location**: `80-adrs/`
 
@@ -373,34 +380,37 @@
 
 ---
 
-## 📝 Recent Changes (2025-11-20)
+## 📝 Recent Changes (2025-12-12)
 
-### INDEX.md Refactored to Registry-Only ✅
+### SEC-006 RLS Hardening & ADR-018 Governance ✅
+
+**What Changed**:
+- ✅ SEC-006 RLS audit complete - FloorLayoutService full RLS coverage (5 tables)
+- ✅ ADR-018 created - SECURITY DEFINER function governance (Template 5)
+- ✅ 7 SECURITY DEFINER RPCs hardened with context validation
+- ✅ Append-only denial policies added to 4 ledger tables
+- ✅ SEC-001 updated to v1.3.0 with Template 5 (mandatory) and Template 6 (subquery)
+- ✅ SRM updated to v4.4.0 with SEC-006 references
+- ✅ SECURITY_TENANCY_UPGRADE.md updated with Templates 5 & 6
+- ✅ ADR registry updated with ADR-015, ADR-017, ADR-018
+
+**Security Improvements**:
+- SECURITY DEFINER functions now validate `p_casino_id` against authenticated context
+- FloorLayoutService tables use Pattern C (hybrid) with subquery pattern for derived tables
+- Ledger tables (`loyalty_ledger`, `mtl_entry`, `*_outbox`) have explicit denial policies
+
+**Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
+
+### Previous: INDEX.md Refactored to Registry-Only (2025-11-20)
 
 **What Changed**:
 - ✅ Removed project status sections (Phase Completion, Service Layer Status)
-- ✅ Removed Learning Paths section (content outdated, references broken)
-- ✅ Removed Reorganization Status section (completed work, no longer relevant)
 - ✅ Fixed broken file path references to match current taxonomy structure
 - ✅ Clarified purpose: Navigation hub and document registry only
-- ✅ Simplified Quick Start by Role with corrected paths
-- ✅ Updated "Recent Changes" to reflect this refactor
-
-**Rationale**:
-- Per `SDLC_DOCS_TAXONOMY.md:172`, INDEX.md purpose is "listing id → title → status → link"
-- Project status tracking mechanism to be devised separately
-- Prevents documentation drift and stale status information
-- Maintains INDEX.md as stable navigation reference
-
-**Impact**:
-- INDEX.md now serves single, clear purpose: document discovery
-- Status tracking decoupled from navigation (prevents staleness)
-- All file references verified and corrected
-- Aligns with SDLC taxonomy definition
 
 ---
 
-**Index Version**: 2.2.0 (Registry-Only)
-**Last Updated**: 2025-11-20
+**Index Version**: 2.3.0 (SEC-006 RLS Hardening)
+**Last Updated**: 2025-12-12
 **Maintained By**: Development Team
 **Next Review**: Weekly

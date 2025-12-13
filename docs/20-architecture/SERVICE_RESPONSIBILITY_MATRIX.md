@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-version: 4.3.0
+version: 4.4.0
 status: CANONICAL
-effective: 2025-12-11
+effective: 2025-12-12
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -13,12 +13,13 @@ source_of_truth:
   - docs/20-architecture/EDGE_TRANSPORT_POLICY.md
   - docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
   - docs/80-adrs/ADR-017-cashier-role-implementation.md
+  - docs/80-adrs/ADR-018-security-definer-governance.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.3.0 (PlayerFinancialService Implemented)
-> **Date**: 2025-12-11
+> **Version**: 4.4.0 (SEC-006 RLS Hardening)
+> **Date**: 2025-12-12
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -42,6 +43,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.4.0 (2025-12-12)** – **SEC-006 RLS Hardening**: FloorLayoutService full RLS coverage (5 tables). All 7 SECURITY DEFINER RPCs hardened with Template 5 context validation (ADR-018). Append-only denial policies added to ledger tables. See `docs/80-adrs/ADR-018-security-definer-governance.md` and migration `20251212080915_sec006_rls_hardening.sql`.
 - **4.3.0 (2025-12-11)** – **PlayerFinancialService IMPLEMENTED** (PRD-009): Full Pattern A implementation with 78 tests. Service layer: DTOs, schemas, keys, mappers, crud, http. Transport: 3 Route Handlers + 4 React Query hooks. Enums: `financial_direction` ('in'|'out'), `financial_source` ('pit'|'cage'|'system'), `tender_type`. RLS: Hybrid policies per ADR-015. Commits: 5f4522b, ccf9e98, 3ec0caf.
 - **4.2.1 (2025-12-11)** – Finance outbox deferred: Removed `finance_outbox` from current ownership (post-MVP per ADR-016). Added MVP Egress contract: synchronous only, no external side effects. MTLService integration via triggers remains in scope.
 - **4.2.0 (2025-12-11)** – Finance scope alignment: `visit_id` changed from optional to **required** for FinanceService consumption. Added `visit_id NOT NULL` to PlayerFinancialService schema invariants. Removed "buy-ins" from cashier cage operations (incorrect terminology - players cash out at cage, not buy-in). Cashier workflows limited to: cash-outs and marker settlements.
@@ -347,6 +349,8 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 **Bounded Context**: "What does the gaming floor look like, and which layout is currently active?"
 
+**Security Status (SEC-006)**: ✅ Full RLS coverage implemented (2025-12-12). See ADR-018 for SECURITY DEFINER governance.
+
 ### Schema Invariants
 
 | Table | Column | Constraint | Notes |
@@ -363,9 +367,21 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 - **Events**: `floor_layout.activated` emitted with layout + version metadata
 - **Consumer**: TableContext listens and reconciles table activation state
+- **RPCs**: `rpc_create_floor_layout`, `rpc_activate_floor_layout` — SECURITY DEFINER with Template 5 context validation (ADR-018)
+
+### RLS Policy Architecture (SEC-006)
+
+| Table | Pattern | Notes |
+|-------|---------|-------|
+| `floor_layout` | Template 1 (direct `casino_id`) | Standard hybrid policy |
+| `floor_layout_activation` | Template 1 (direct `casino_id`) | Standard hybrid policy |
+| `floor_layout_version` | Template 6 (subquery via `layout_id`) | Derives casino from parent |
+| `floor_pit` | Template 6 (2-level subquery) | `layout_version_id` → `layout_id` → `casino_id` |
+| `floor_table_slot` | Template 6 (2-level subquery) | `layout_version_id` → `layout_id` → `casino_id` |
 
 **Full Schema**: `supabase/migrations/` (search: `create table floor_layout`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#floorlayoutservice`
+**RLS Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
 
 ---
 
@@ -512,9 +528,11 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` | Middleware chain, header requirements |
 | `docs/30-security/SEC-001-rls-policy-matrix.md` | RLS templates, policy matrix |
 | `docs/30-security/SEC-005-role-taxonomy.md` | Role definitions, capabilities matrix |
+| `docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md` | RLS audit findings and remediation |
 | `docs/30-security/SECURITY_TENANCY_UPGRADE.md` | RLS context injection |
 | `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` | RLS connection pooling, Pattern C (Hybrid) |
 | `docs/80-adrs/ADR-017-cashier-role-implementation.md` | Cashier role as staff_role enum |
+| `docs/80-adrs/ADR-018-security-definer-governance.md` | SECURITY DEFINER function governance |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
 
 ---
@@ -533,8 +551,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.3.0
+**Document Version**: 4.4.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2025-12-11 (PRD-009 PlayerFinancialService Implemented)
+**Updated**: 2025-12-12 (SEC-006 RLS Hardening, ADR-018 SECURITY DEFINER Governance)
 **Status**: CANONICAL - Registry + Invariants Only

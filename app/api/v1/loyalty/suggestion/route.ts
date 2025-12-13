@@ -1,11 +1,11 @@
 /**
- * Loyalty Ledger Route
+ * Loyalty Suggestion Route
  *
- * GET /api/v1/loyalty/ledger - Paginated ledger entries
+ * GET /api/v1/loyalty/suggestion - Evaluate session reward suggestion (read-only)
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  * Pattern: PRD-004 Loyalty Service
- * Pagination: Keyset-based with opaque cursor
+ * Idempotency: Not required (read-only operation)
  */
 
 import type { NextRequest } from 'next/server';
@@ -19,33 +19,36 @@ import {
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import { createLoyaltyService } from '@/services/loyalty';
-import { ledgerListQuerySchema } from '@/services/loyalty/schemas';
+import { suggestionQuerySchema } from '@/services/loyalty/schemas';
 
 /**
- * GET /api/v1/loyalty/ledger
+ * GET /api/v1/loyalty/suggestion
  *
- * Gets paginated ledger entries for a player.
- * Uses keyset pagination with (created_at DESC, id ASC) ordering.
- * Query params: casinoId, playerId, cursor?, limit?, ratingSlipId?, visitId?, reason?, fromDate?, toDate?
+ * Evaluates session reward suggestion (read-only).
+ * Does NOT mint points - used for UI preview during active sessions.
+ * Query params: ratingSlipId (required), asOfTs (optional)
  */
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
     const supabase = await createClient();
-    const query = parseQuery(request, ledgerListQuerySchema);
+    const query = parseQuery(request, suggestionQuerySchema);
 
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
         const service = createLoyaltyService(mwCtx.supabase);
 
-        const page = await service.getLedger(query);
+        const suggestion = await service.evaluateSuggestion(
+          query.ratingSlipId,
+          query.asOfTs,
+        );
 
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: page,
+          data: suggestion,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -53,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
       {
         domain: 'loyalty',
-        action: 'ledger',
+        action: 'suggestion',
         correlationId: ctx.requestId,
       },
     );

@@ -2,8 +2,9 @@
 
 **Status**: MANDATORY (Enforced at edge + database layer)
 **Effective**: 2025-11-09
-**Updated**: 2025-12-10
+**Updated**: 2025-12-12
 **Purpose**: Eliminate privilege escalation via service keys; enforce multi-tenant isolation via RLS
+**Related**: ADR-015 (Connection Pooling), ADR-018 (SECURITY DEFINER Governance), SEC-006 (RLS Audit)
 
 > **⚠️ ADR-015 UPDATE (2025-12-10)**: This document has been superseded by ADR-015 for connection pooling strategy. The `exec_sql` pattern documented below is **DEPRECATED**. Use `set_rls_context()` RPC instead.
 >
@@ -565,6 +566,106 @@ create policy "{table}_admin_global_access"
 
 ---
 
+### Template 5: SECURITY DEFINER Context Validation (MANDATORY - ADR-018)
+
+**Use For**: All SECURITY DEFINER functions that accept `p_casino_id` as a parameter
+
+> **⚠️ MANDATORY (ADR-018)**: All SECURITY DEFINER functions bypass RLS entirely. Functions accepting `p_casino_id` MUST validate against authenticated context to prevent privilege escalation. See `docs/80-adrs/ADR-018-security-definer-governance.md`.
+
+**Pattern (SEC-006 Hardened)**:
+
+```sql
+CREATE OR REPLACE FUNCTION rpc_example_mutation(
+  p_casino_id uuid,
+  p_other_params text
+) RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_context_casino_id uuid;
+BEGIN
+  -- ═══════════════════════════════════════════════════════════════════════════
+  -- CASINO SCOPE VALIDATION (SEC-001 Template 5, ADR-018)
+  -- MANDATORY for all SECURITY DEFINER functions accepting p_casino_id
+  -- ═══════════════════════════════════════════════════════════════════════════
+  v_context_casino_id := COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  );
+
+  IF v_context_casino_id IS NULL THEN
+    RAISE EXCEPTION 'RLS context not set: app.casino_id is required';
+  END IF;
+
+  IF p_casino_id IS DISTINCT FROM v_context_casino_id THEN
+    RAISE EXCEPTION 'casino_id mismatch: caller provided % but context is %',
+      p_casino_id, v_context_casino_id;
+  END IF;
+  -- ═══════════════════════════════════════════════════════════════════════════
+
+  -- Proceed with mutation only after validation passes
+  INSERT INTO table_name (casino_id, ...) VALUES (p_casino_id, ...);
+END;
+$$;
+```
+
+**Why This Is Critical**:
+- SECURITY DEFINER functions run with function owner's privileges, **bypassing all RLS**
+- Without validation, caller-provided `p_casino_id` enables cross-tenant data access
+- SEC-006 audit identified 7 vulnerable RPCs (now hardened)
+
+**Hardened Functions (SEC-006)**:
+| Function | Service | Validation Added |
+|----------|---------|------------------|
+| `rpc_create_floor_layout` | FloorLayoutService | ✅ 2025-12-12 |
+| `rpc_activate_floor_layout` | FloorLayoutService | ✅ 2025-12-12 |
+| `rpc_log_table_inventory_snapshot` | TableContextService | ✅ 2025-12-12 |
+| `rpc_request_table_fill` | TableContextService | ✅ 2025-12-12 |
+| `rpc_request_table_credit` | TableContextService | ✅ 2025-12-12 |
+| `rpc_log_table_drop` | TableContextService | ✅ 2025-12-12 |
+| `rpc_issue_mid_session_reward` | LoyaltyService | ✅ 2025-12-12 |
+
+---
+
+### Template 6: Derived Casino Scope (Subquery Pattern)
+
+**Use For**: Tables without direct `casino_id` that derive scope from parent FK
+
+> **SEC-006 Pattern**: For tables like `floor_layout_version`, `floor_pit`, `floor_table_slot` that reference parent tables containing the `casino_id`.
+
+**Pattern (Pattern C variant with EXISTS subquery)**:
+
+```sql
+-- For tables deriving casino_id from parent (e.g., floor_pit → floor_layout_version → floor_layout)
+CREATE POLICY floor_pit_select_same_casino ON floor_pit
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND EXISTS (
+      SELECT 1 FROM floor_layout_version flv
+      JOIN floor_layout fl ON fl.id = flv.layout_id
+      WHERE flv.id = floor_pit.layout_version_id
+        AND fl.casino_id = COALESCE(
+          NULLIF(current_setting('app.casino_id', true), '')::uuid,
+          (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+        )
+    )
+  );
+```
+
+**When to Use**:
+- Child tables with no direct `casino_id` column
+- Multi-level hierarchies (slot → version → layout → casino)
+- Preserves normalization while enforcing RLS
+
+**Applied To (SEC-006)**:
+- `floor_layout_version` → via `layout_id` → `floor_layout.casino_id`
+- `floor_pit` → via `layout_version_id` → `floor_layout_version.layout_id` → `floor_layout.casino_id`
+- `floor_table_slot` → via `layout_version_id` → `floor_layout_version.layout_id` → `floor_layout.casino_id`
+
+---
+
 ## Migration Guide
 
 ### Step 1: Add `user_id` to `staff` Table
@@ -713,17 +814,19 @@ values ('player-uuid', 'casino-uuid-2', now());
 
 ## RLS Policy Matrix (By Service)
 
+> **SEC-006 Update (2025-12-12)**: FloorLayoutService tables now have full RLS coverage with Pattern C policies. Tables without direct `casino_id` use Template 6 (subquery pattern).
+
 | Service | Tables | Read Policy | Write Policy | Notes |
 |---------|--------|-------------|--------------|-------|
 | **Casino** | `staff`, `casino_settings` | Same casino | Admin only | Root authority |
 | **Player** | `player_casino` | Same casino | Enrollment service | Membership writes |
 | **Visit** | `visit` | Same casino | Pit boss, admin | Session lifecycle |
-| **Loyalty** | `player_loyalty`, `loyalty_ledger` | Same casino | RPC only (append) | Idempotency enforced |
+| **Loyalty** | `player_loyalty`, `loyalty_ledger` | Same casino | RPC only (append) | Idempotency enforced; denial policies |
 | **Finance** | `player_financial_transaction` | Same casino | RPC only (append) | Append-only ledger |
-| **MTL** | `mtl_entry`, `mtl_audit_note` | Compliance roles | Cashier, compliance | Immutable log |
-| **Table Context** | `gaming_table`, `dealer_rotation` | Operations staff | Pit boss, admin | Operational control |
+| **MTL** | `mtl_entry`, `mtl_audit_note` | Compliance roles | Cashier, compliance | Immutable log; denial policies |
+| **Table Context** | `gaming_table`, `dealer_rotation`, `table_*` | Operations staff | Pit boss, admin | RPCs hardened (Template 5) |
 | **Rating Slip** | `rating_slip` | Same casino | Telemetry service | Policy snapshot |
-| **Floor Layout** | `floor_layout`, `floor_pit` | Same casino | Admin only | Layout design |
+| **Floor Layout** | `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation` | Same casino (Template 1 + Template 6) | Pit boss, admin; Delete: admin only | **SEC-006**: Full RLS; subquery pattern for derived tables; RPCs hardened (Template 5) |
 
 ---
 
@@ -842,19 +945,22 @@ SELECT count(*) FROM visit;
 
 ## References
 
-- **ADR-015 (Canonical)**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
+- **ADR-015 (Canonical)**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Connection pooling, Pattern C
+- **ADR-018**: `docs/80-adrs/ADR-018-security-definer-governance.md` - SECURITY DEFINER function governance
+- **SEC-001**: `docs/30-security/SEC-001-rls-policy-matrix.md` - Policy matrix and templates
+- **SEC-006**: `docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md` - RLS audit findings and remediation
 - **RLS Context**: `lib/supabase/rls-context.ts`
 - **JWT Sync**: `lib/supabase/auth-admin.ts` (Phase 2 JWT claims)
 - **WRAPPER Integration**: `lib/server-actions/with-server-action-wrapper.ts`
-- **Policy Matrix**: `docs/30-security/SEC-001-rls-policy-matrix.md`
 - **SRM Security Section**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 - **RPC Migration**: `supabase/migrations/20251209183033_adr015_rls_context_rpc.sql`
 - **JWT Backfill Migration**: `supabase/migrations/20251210001858_adr015_backfill_jwt_claims.sql`
+- **SEC-006 Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql` - FloorLayout RLS + RPC hardening
 
 ---
 
 **Effective Date**: 2025-11-09
-**Updated**: 2025-12-10 (ADR-015 patterns)
+**Updated**: 2025-12-12 (SEC-006 remediation, ADR-018 governance)
 **Enforcement**: Mandatory for all edge operations and database access
 **Migration**: Staged rollout per service (Priority: Finance → Loyalty → Visit → Others)
-**Status**: Phase 1+2 implemented. Phase 3 (policy modernization) pending.
+**Status**: Phase 1+2+3 implemented. SEC-006 RLS hardening complete (FloorLayoutService + RPC validation).

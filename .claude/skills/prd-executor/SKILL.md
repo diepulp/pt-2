@@ -7,6 +7,7 @@ Orchestrates PRD implementation workflows by parsing workflow specs and delegati
 ## When to Use
 
 Invoke when:
+
 - User provides a `WORKFLOW-PRD-XXX.md` spec
 - Multi-workstream implementation is needed
 - Parallel execution with dependency tracking required
@@ -21,6 +22,7 @@ Read docs/20-architecture/specs/WORKFLOW-PRD-{XXX}-*.md
 ```
 
 Extract:
+
 - Work stream list with descriptions
 - Dependency graph (which WS blocks which)
 - Acceptance criteria per work stream
@@ -30,14 +32,15 @@ Extract:
 
 Map work streams to capability agents:
 
-| Work Stream Type | Delegate To |
-|-----------------|-------------|
-| Database migrations, RLS, RPCs | `pt2-service-implementer` |
+| Work Stream Type               | Delegate To               |
+| ------------------------------ | ------------------------- |
+| RLS, RPCs                      | `rls-security-specialist` |
+| Database migrations            | `backend-developer`       |
 | Service layer (business logic) | `pt2-service-implementer` |
-| API route handlers | `pt2-service-implementer` |
-| React hooks, components | `pt2-frontend-implementer` |
-| Unit/integration tests | `pt2-service-implementer` |
-| E2E tests | `pt2-frontend-implementer` |
+| API route handlers             | `api-expert`              |
+| React hooks, components        | `front-end-design-pt-2`   |
+| Unit/integration tests         | `backend-developer`       |
+| E2E tests                      | `front-end-design-pt-2`   |
 
 ### Phase 3: Execute with Dependency Tracking
 
@@ -83,6 +86,7 @@ Execute work stream {WS-N} from {PRD-XXX}:
 {extracted acceptance criteria}
 
 **Anti-patterns to Avoid**:
+
 - {V1}: Use type guards, not `as` casting
 - {V2}: Services throw DomainError, transport returns ServiceResult
 - {V4}: Use getAuthContext(), never headers for casino context
@@ -104,6 +108,7 @@ Execute work stream {WS-N} from {PRD-XXX}:
 {extracted acceptance criteria}
 
 **Patterns**:
+
 - Generic mutation key arrays (W1 fix)
 - Query invalidation on mutation success
 - Idempotency keys via crypto.randomUUID()
@@ -117,6 +122,7 @@ npm run type-check && npm run lint
 ## Parallel Execution Example
 
 For PRD-002 with dependency graph:
+
 ```
 WS-1 ──┬──> WS-2 ──┬──> WS-4 ──> WS-5
        │          │
@@ -126,6 +132,7 @@ WS-1 ──┬──> WS-2 ──┬──> WS-4 ──> WS-5
 ```
 
 Execute as:
+
 ```
 # Tier 1 (foundation)
 Task(pt2-service-implementer, "Execute WS-1: Database Layer for PRD-002")
@@ -145,17 +152,17 @@ Task(pt2-frontend-implementer, "Execute WS-6C: E2E Tests")
 
 ## Benefits Over Workflow-Specific Agents
 
-| Aspect | 6 Workflow Agents | PRD Executor Skill |
-|--------|-------------------|-------------------|
-| Reusability | PRD-002 only | Any PRD |
-| Maintenance | Edit 6 files | Edit 1 skill + 2 agents |
-| Agent sprawl | 6 per PRD | 0 new agents |
-| Pattern updates | Propagate to all | Single source |
-| Context efficiency | Duplicated | Shared via skills |
+| Aspect             | 6 Workflow Agents | PRD Executor Skill      |
+| ------------------ | ----------------- | ----------------------- |
+| Reusability        | PRD-002 only      | Any PRD                 |
+| Maintenance        | Edit 6 files      | Edit 1 skill + 2 agents |
+| Agent sprawl       | 6 per PRD         | 0 new agents            |
+| Pattern updates    | Propagate to all  | Single source           |
+| Context efficiency | Duplicated        | Shared via skills       |
 
 ## Reference Documents
 
 - Workflow specs: `docs/20-architecture/specs/WORKFLOW-PRD-*.md`
 - Service patterns: `.claude/skills/backend-service-builder/references/`
-- Frontend patterns: `.claude/skills/frontend-design/references/`
+- Frontend patterns: `.claude/skills/frontend-design-pt-2/references`
 - Anti-patterns: `memory/anti-patterns.memory.md`

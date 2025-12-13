@@ -1,5 +1,14 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+/**
+ * Floor Layout List/Create Route
+ *
+ * GET /api/v1/floor-layouts - List floor layouts with filters
+ * POST /api/v1/floor-layouts - Create new floor layout
+ *
+ * Security: Uses withServerAction middleware for auth, RLS, audit.
+ * Pattern: PRD-004 Floor Layout Service
+ */
+
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -9,85 +18,129 @@ import {
   requireIdempotencyKey,
   successResponse,
 } from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
+import { createFloorLayoutService } from '@/services/floor-layout';
+import {
+  createFloorLayoutSchema,
+  floorLayoutListQuerySchema,
+} from '@/services/floor-layout/schemas';
 
-const listQuerySchema = z.object({
-  casino_id: z.string().uuid(),
-  status: z.enum(['draft', 'review', 'approved', 'archived']).optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-});
-
-const layoutCreateSchema = z.object({
-  casino_id: z.string().uuid(),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  created_by: z.string().uuid(),
-});
-
+/**
+ * GET /api/v1/floor-layouts
+ *
+ * List floor layouts with optional filters.
+ * Query params: casino_id, status?, cursor?, limit?
+ *
+ * RLS scopes results to casino automatically.
+ */
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    const query = parseQuery(request, listQuerySchema);
     const supabase = await createClient();
+    const query = parseQuery(request, floorLayoutListQuerySchema);
 
-    const limit = query.limit ?? 20;
-    let dbQuery = supabase
-      .from('floor_layout')
-      .select('*')
-      .eq('casino_id', query.casino_id)
-      .order('created_at', { ascending: false })
-      .order('id', { ascending: false })
-      .limit(limit);
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        const service = createFloorLayoutService(mwCtx.supabase);
 
-    if (query.status) {
-      dbQuery = dbQuery.eq('status', query.status);
+        const { items, cursor } = await service.listLayouts({
+          casino_id: query.casino_id,
+          status: query.status,
+          cursor: query.cursor,
+          limit: query.limit,
+        });
+
+        return {
+          ok: true as const,
+          code: 'OK' as const,
+          data: {
+            items,
+            cursor,
+          },
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: 'floor-layout',
+        action: 'list',
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
     }
-
-    if (query.cursor) {
-      dbQuery = dbQuery.lt('created_at', query.cursor);
-    }
-
-    const { data, error } = await dbQuery;
-    if (error) {
-      throw error;
-    }
-
-    const items = data ?? [];
-    const nextCursor =
-      items.length === limit ? items[items.length - 1]?.created_at : undefined;
-
-    return successResponse(ctx, {
-      items,
-      next_cursor: nextCursor ?? undefined,
-    });
+    return successResponse(ctx, result.data);
   } catch (error) {
     return errorResponse(ctx, error);
   }
 }
 
+/**
+ * POST /api/v1/floor-layouts
+ *
+ * Create a new floor layout.
+ * Requires Idempotency-Key header.
+ * Uses rpc_create_floor_layout RPC for transactional creation.
+ *
+ * Returns 201 on success.
+ */
 export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    requireIdempotencyKey(request);
-    const body = await readJsonBody<unknown>(request);
-    const payload = layoutCreateSchema.parse(body);
-
+    const idempotencyKey = requireIdempotencyKey(request);
     const supabase = await createClient();
-    const { data, error } = await supabase.rpc('rpc_create_floor_layout', {
-      p_casino_id: payload.casino_id,
-      p_name: payload.name,
-      p_description: payload.description ?? '',
-      p_created_by: payload.created_by,
-    });
+    const body = await readJsonBody(request);
+    const payload = createFloorLayoutSchema.parse(body);
 
-    if (error) {
-      throw error;
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        // Call RPC with validated payload
+        const { data, error } = await mwCtx.supabase.rpc(
+          'rpc_create_floor_layout',
+          {
+            p_casino_id: payload.casino_id,
+            p_name: payload.name,
+            p_description: payload.description,
+            p_created_by: payload.created_by,
+          },
+        );
+
+        if (error) {
+          throw error;
+        }
+
+        return {
+          ok: true as const,
+          code: 'OK' as const,
+          data,
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: 'floor-layout',
+        action: 'create',
+        requireIdempotency: true,
+        idempotencyKey,
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
     }
 
-    return successResponse(ctx, data);
+    // Return 201 Created for new layout
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

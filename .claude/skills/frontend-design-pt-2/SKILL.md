@@ -1,4 +1,4 @@
----
+  ---
 name: frontend-design-pt-2
 description: Create distinctive, production-grade frontend interfaces with high design quality for PT-2 architecture. Use this skill when building web components, pages, or applications that require React 19, Next.js 16 App Router, Tailwind v4, or shadcn/ui. NOT for backend services, API routes, database migrations, or RLS policies.
 license: Complete terms in LICENSE.txt

@@ -1,11 +1,11 @@
 /**
- * Loyalty Ledger Route
+ * Loyalty Promotion Route
  *
- * GET /api/v1/loyalty/ledger - Paginated ledger entries
+ * POST /api/v1/loyalty/promotion - Apply promotional overlay credit
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  * Pattern: PRD-004 Loyalty Service
- * Pagination: Keyset-based with opaque cursor
+ * Idempotency: Required header - dedupes via ledger hash
  */
 
 import type { NextRequest } from 'next/server';
@@ -13,39 +13,45 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
-  parseQuery,
+  readJsonBody,
+  requireIdempotencyKey,
   successResponse,
 } from '@/lib/http/service-response';
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import { createLoyaltyService } from '@/services/loyalty';
-import { ledgerListQuerySchema } from '@/services/loyalty/schemas';
+import { applyPromotionInputSchema } from '@/services/loyalty/schemas';
 
 /**
- * GET /api/v1/loyalty/ledger
+ * POST /api/v1/loyalty/promotion
  *
- * Gets paginated ledger entries for a player.
- * Uses keyset pagination with (created_at DESC, id ASC) ordering.
- * Query params: casinoId, playerId, cursor?, limit?, ratingSlipId?, visitId?, reason?, fromDate?, toDate?
+ * Applies a promotional overlay credit.
+ * Business uniqueness: one promotion per campaign per slip.
+ * Requires Idempotency-Key header.
+ * Returns 201 for new promotion, 200 for replay.
  */
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
+    const idempotencyKey = requireIdempotencyKey(request);
     const supabase = await createClient();
-    const query = parseQuery(request, ledgerListQuerySchema);
+    const body = await readJsonBody(request);
+
+    // Validate input
+    const input = applyPromotionInputSchema.parse(body);
 
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
         const service = createLoyaltyService(mwCtx.supabase);
 
-        const page = await service.getLedger(query);
+        const data = await service.applyPromotion(input);
 
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: page,
+          data,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -53,7 +59,9 @@ export async function GET(request: NextRequest) {
       },
       {
         domain: 'loyalty',
-        action: 'ledger',
+        action: 'promotion',
+        requireIdempotency: true,
+        idempotencyKey,
         correlationId: ctx.requestId,
       },
     );
@@ -61,7 +69,10 @@ export async function GET(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data);
+
+    // Return 201 for new promotion, 200 for replay (idempotent)
+    const status = result.data?.isExisting ? 200 : 201;
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }

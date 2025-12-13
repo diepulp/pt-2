@@ -205,7 +205,83 @@ INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
 - **SEC-003**: `docs/30-security/SEC-003-rbac-matrix.md` - RBAC matrix
 - **SEC-005**: `docs/30-security/SEC-005-role-taxonomy.md` - Role definitions
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pooling strategy
+- **ADR-018**: `docs/80-adrs/ADR-018-sec006-security-hardening.md` - SEC-006 formalization
 - **Implementation**: `lib/supabase/rls-context.ts` - TypeScript context injection
+
+## Security Patches Reference
+
+### SEC-006: RLS Hardening (2025-12-12)
+
+**Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
+
+Remediated P0/P1 gaps from RLS strategy audit:
+
+| Section | What Was Fixed |
+|---------|----------------|
+| **FloorLayoutService RLS** | Enabled RLS + Pattern C policies for 5 tables (`floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation`) |
+| **RPC Context Validation** | Added Template 5 validation to 7 SECURITY DEFINER functions |
+| **Append-Only Ledgers** | Added `no_updates`/`no_deletes` denial policies to 4 ledger tables |
+
+**Hardened RPCs (SEC-006)**:
+- `rpc_create_floor_layout`
+- `rpc_activate_floor_layout`
+- `rpc_log_table_inventory_snapshot`
+- `rpc_request_table_fill`
+- `rpc_request_table_credit`
+- `rpc_log_table_drop`
+- `rpc_issue_mid_session_reward`
+
+**Ledgers with denial policies**:
+- `loyalty_ledger`
+- `mtl_entry`
+- `finance_outbox`
+- `loyalty_outbox`
+
+### SEC-007: Rating Slip RPC Hardening (2025-12-12)
+
+**Migration**: `supabase/migrations/20251212081000_sec007_rating_slip_rpc_hardening.sql`
+
+Post-SEC-006 audit discovered additional SECURITY DEFINER RPCs without context validation:
+
+**Hardened RPCs (SEC-007)**:
+- `rpc_update_table_status` - Table status transitions
+- `rpc_start_rating_slip` - Create new rating slip (also dropped legacy 7-param version)
+- `rpc_pause_rating_slip` - Pause rating slip
+- `rpc_resume_rating_slip` - Resume paused rating slip
+- `rpc_close_rating_slip` - Close rating slip with duration
+
+**Status after SEC-006 + SEC-007**: 14/14 SECURITY DEFINER RPCs have Template 5 context validation.
+
+### Template 5 Context Validation Pattern
+
+All hardened RPCs now include this validation block:
+
+```sql
+-- ═══════════════════════════════════════════════════════════════════════
+-- CASINO SCOPE VALIDATION (SEC-001 Template 5, SEC-00X)
+-- ═══════════════════════════════════════════════════════════════════════
+v_context_casino_id := COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+);
+
+IF v_context_casino_id IS NULL THEN
+  RAISE EXCEPTION 'RLS context not set: app.casino_id is required';
+END IF;
+
+IF p_casino_id IS DISTINCT FROM v_context_casino_id THEN
+  RAISE EXCEPTION 'casino_id mismatch: caller provided % but context is %',
+    p_casino_id, v_context_casino_id;
+END IF;
+-- ═══════════════════════════════════════════════════════════════════════
+```
+
+### Key Learnings from SEC-006/SEC-007
+
+1. **COMMENT ON FUNCTION** requires full signature when multiple overloads exist
+2. **Derived casino scope** (e.g., `floor_pit` → `floor_layout_version` → `floor_layout`) uses EXISTS subqueries
+3. **Denial policies** use pattern `auth.uid() IS NOT NULL AND false` for consistent behavior
+4. **Legacy function cleanup**: DROP old signatures before CREATE OR REPLACE when param count changes
 
 ## Memory Recording Protocol
 

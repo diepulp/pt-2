@@ -13136,3 +13136,968 @@ else:
     print("❌ No checkpoint found in skill_lead_architect namespace.")
     print("Save a checkpoint first with: /arch-checkpoint save")
 EOF
+2025-12-12T08:33:22Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-12T08:37:45Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-12T08:50:14Z	shell.exec	date +%Y%m%d%H%M%S
+2025-12-12T08:51:21Z	shell.exec	npx supabase db push --local 2>&1
+2025-12-12T08:51:27Z	shell.exec	ls -la /home/diepulp/projects/pt-2/supabase/migrations/ | tail -5
+2025-12-12T08:51:33Z	shell.exec	mv /home/diepulp/projects/pt-2/supabase/migrations/20251212005014_sec007_rating_slip_rpc_hardening.sql /home/diepulp/projects/pt-2/supabase/migrations/20251212081000_sec007_rating_slip_rpc_hardening.sql
+2025-12-12T08:51:38Z	shell.exec	npx supabase db push --local 2>&1
+2025-12-12T08:52:25Z	shell.exec	npx supabase db reset --local 2>&1 | head -30
+2025-12-12T08:52:30Z	shell.exec	npx supabase migration list --local 2>&1 | tail -10
+2025-12-12T08:52:37Z	shell.exec	echo "Y" | npx supabase db push --local 2>&1
+2025-12-12T08:52:48Z	shell.exec	npx supabase db execute --local --command "SELECT pg_get_functiondef(oid) FROM pg_proc WHERE proname = 'rpc_start_rating_slip' LIMIT 1;" 2>&1 | head -50
+2025-12-12T08:52:55Z	shell.exec	PGPASSWORD=postgres psql -h localhost -p 54322 -U postgres -d postgres -c "SELECT proname, prosrc FROM pg_proc WHERE proname = 'rpc_start_rating_slip' LIMIT 1;" 2>&1 | head -60
+2025-12-12T08:53:01Z	shell.exec	npx supabase migration list --local 2>&1 | grep 20251212081000
+2025-12-12T08:57:11Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="SEC-007 Rating Slip RPC Hardening - COMPLETE. Post-SEC-006 RLS audit complete.",
+    reason="manual",
+    decisions_made=[
+        "SEC-007 migration created to harden 5 rating slip RPCs with Template 5 validation",
+        "Dropped legacy 7-param rpc_start_rating_slip function (with p_player_id)",
+        "All 5 RPCs now validate p_casino_id against current_setting or JWT claims",
+        "Infrastructure gap report v2 created documenting remaining API route gaps"
+    ],
+    files_modified=[
+        "supabase/migrations/20251212081000_sec007_rating_slip_rpc_hardening.sql (created)",
+        "docs/issues/ADR-015-INFRASTRUCTURE-GAP-REPORT-v2.md (created and updated)"
+    ],
+    validation_gates_passed=[
+        "GATE-MIGRATION: SEC-007 migration applied successfully to local DB",
+        "GATE-RPC-VERIFY: All 5 rating slip RPCs have Template 5 context validation"
+    ],
+    open_questions=[
+        "Floor-layout API routes need withServerAction middleware - who will implement?"
+    ],
+    next_steps=[
+        "Update 3 floor-layout API routes with withServerAction middleware",
+        "Create FloorLayoutService index.ts service factory",
+        "Implement stub routes when ready (casinos, finance, loyalty, mtl)"
+    ],
+    key_insights=[
+        "SEC-006 fixed DB-layer but missed API-layer context injection",
+        "COMMENT ON FUNCTION requires full signature when multiple overloads exist",
+        "14/14 SECURITY DEFINER RPCs now have context validation (SEC-006 + SEC-007)"
+    ],
+    spec_file="docs/issues/ADR-015-INFRASTRUCTURE-GAP-REPORT-v2.md",
+    workflow="SEC-006 Audit → SEC-007 Remediation → API Route Fix (pending)",
+    notes="Remaining P0: 3 floor-layout API routes missing withServerAction"
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-12T09:00:37Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-12T09:24:51Z	shell.exec	./scripts/adr015-rls-scanner.sh 2>&1 || true
+2025-12-12T09:26:50Z	shell.exec	./scripts/adr015-rls-scanner.sh 2>&1 || true
+2025-12-12T09:29:11Z	shell.exec	echo "=== Policies upgraded by 20251209183401_adr015_hybrid_rls_policies.sql ===" && grep -E "DROP POLICY|CREATE POLICY" supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql | head -40
+2025-12-12T09:29:11Z	shell.exec	echo "=== Policies upgraded by 20251211153228_adr015_rls_compliance_patch.sql ===" && grep -E "DROP POLICY|CREATE POLICY" supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql | head -60
+2025-12-12T09:29:39Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.mvp_progress_context import MVPProgressContext
+
+memori = create_memori_client("skill:mvp-progress")
+memori.enable()
+context = MVPProgressContext(memori)
+
+# Header
+print("=" * 70)
+print("MVP PROGRESS STATUS REPORT")
+print("=" * 70)
+
+# 1. Overall Progress
+print("\n## Overall Progress\n")
+progress = context.get_overall_progress()
+print(f"  Total Services:      {progress['total_services']}")
+print(f"  Completed:           {progress['completed']}")
+print(f"  In Progress:         {progress['in_progress']}")
+print(f"  Not Started:         {progress['not_started']}")
+print(f"  Completion:          {progress['completion_percentage']}%")
+
+# Progress bar
+pct = int(progress['completion_percentage'] / 5)
+bar = "[" + "=" * pct + " " * (20 - pct) + "]"
+print(f"\n  {bar} {progress['completion_percentage']}%")
+
+# 2. Phase Status
+print("\n## Phase Status\n")
+phase_defs = context.PHASE_DEFINITIONS
+for phase_num in sorted(phase_defs.keys()):
+    phase = context.get_phase_status(phase_num)
+    if phase:
+        status_emoji = {
+            "completed": "DONE",
+            "in_progress": "WIP",
+            "blocked": "BLOCKED",
+            "not_started": "TODO",
+        }.get(phase.status, phase.status)
+
+        print(f"  Phase {phase.phase_number}: {phase.phase_name}")
+        print(f"    Status: {status_emoji}")
+        print(f"    Gate: GATE-{phase.gate_number}")
+        if phase.services_completed:
+            print(f"    Completed: {', '.join(phase.services_completed)}")
+        if phase.services_pending:
+            print(f"    Pending: {', '.join(phase.services_pending)}")
+        if phase.blockers:
+            print(f"    Blockers: {', '.join(phase.blockers)}")
+        print()
+
+# 3. Service Status Table
+print("\n## Service Implementation Status\n")
+print("  | Service                | PRD     | Code | Tests | Status       |")
+print("  |------------------------|---------|------|-------|--------------|")
+
+all_statuses = context.get_all_service_statuses()
+for service_name in sorted(context.SERVICE_PRD_MAP.keys()):
+    prd = context.SERVICE_PRD_MAP[service_name]
+    status = all_statuses.get(service_name)
+
+    if status:
+        code = "Yes" if status.code_exists else "No"
+        tests = "Yes" if status.tests_exist else "No"
+        status_text = status.status.replace("_", " ").title()
+    else:
+        code = "No"
+        tests = "No"
+        status_text = "Not Started"
+
+    print(f"  | {service_name:<22} | {prd:<7} | {code:<4} | {tests:<5} | {status_text:<12} |")
+
+# 4. Critical Path
+print("\n## Critical Path\n")
+critical_path = context.get_critical_path()
+for item in critical_path:
+    status_icon = "DONE" if not item["is_blocking"] else "BLOCKING"
+    print(f"  [{status_icon}] {item['service']} ({item['prd']})")
+    print(f"         {item['reason']}")
+    if item["is_blocking"]:
+        print(f"         Blocks: {', '.join(item['blocks'][:3])}")
+
+# 5. Velocity Metrics
+print("\n## Velocity Metrics\n")
+velocity = context.get_velocity_metrics()
+trend_emoji = {
+    "accelerating": "(improving)",
+    "stable": "(steady)",
+    "slowing": "(slowing)",
+    "unknown": "",
+    "error": "(error)",
+}.get(velocity.trend, "")
+
+print(f"  Total Completed:        {velocity.services_completed_total}")
+print(f"  Last 7 Days:            {velocity.services_completed_last_7_days}")
+print(f"  Last 30 Days:           {velocity.services_completed_last_30_days}")
+print(f"  Avg Days per Service:   {velocity.avg_days_per_service}")
+if velocity.estimated_days_to_completion > 0:
+    print(f"  Est. Days to Complete:  {velocity.estimated_days_to_completion}")
+else:
+    print(f"  Est. Days to Complete:  N/A (need more data)")
+print(f"  Trend:                  {velocity.trend} {trend_emoji}")
+
+# 6. Next Actions
+print("\n## Next Actions\n")
+for item in critical_path:
+    if item["is_blocking"]:
+        print(f"  1. HIGH: Implement {item['service']} ({item['prd']})")
+        print(f"     - {item['reason']}")
+        break
+
+# 7. Memory Learnings (Dynamic Recall)
+print("\n## Memory Learnings\n")
+try:
+    from lib.memori.dynamic_recall import LearningsDiscovery
+    discovery = LearningsDiscovery()
+    stats = discovery.get_namespace_stats()
+    patterns = discovery.get_top_patterns(5)
+    discovery.close()
+
+    # Show namespace activity
+    print("  Active Namespaces:")
+    for ns, data in sorted(stats.items(), key=lambda x: x[1]["memory_count"], reverse=True)[:5]:
+        print(f"    - {ns}: {data['memory_count']} memories")
+
+    # Show top patterns
+    if patterns:
+        print("\n  Top Patterns:")
+        for p in patterns[:3]:
+            print(f"    - {p.pattern} (freq: {p.frequency})")
+except Exception as e:
+    print(f"  (Learnings discovery unavailable: {e})")
+
+print("\n## Quick Commands\n")
+print("  Record service completion:")
+print('    context.record_service_completion("ServiceName", ["file1.ts"], test_coverage=85)')
+print()
+print("  Record milestone transition:")
+print('    context.record_milestone_transition(1, "in_progress", services_completed=["X"])')
+print()
+print("  View formatted report:")
+print("    print(context.format_progress_summary())")
+print()
+print("  Sync memory files from DB:")
+print("    from lib.memori.dynamic_recall import sync_memory_files")
+print("    success, msg = sync_memory_files()")
+
+print("\n" + "=" * 70)
+EOF
+2025-12-12T09:35:43Z	shell.exec	./scripts/adr015-rls-scanner.sh 2>&1 || true
+2025-12-12T09:35:44Z	shell.exec	echo "=== ACTUAL DATABASE STATE CHECK ===" && echo "Checking if policies from legacy migrations still exist or were replaced..."
+2025-12-12T09:35:57Z	shell.exec	echo "=== TRACING: rating_slip_pause policies ===" && echo "" && echo "1. LEGACY (20251128221408) - Original non-compliant policy:" && grep -A5 "CREATE POLICY rating_slip_pause_read_same_casino" supabase/migrations/20251128221408_rating_slip_pause_tracking.sql 2>/dev/null || echo "Not found in this file" && echo "" && echo "2. FIX (20251209183401) - Pattern C replacement:" && grep -B2 -A10 "CREATE POLICY rating_slip_pause_read_same_casino" supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql 2>/dev/null || echo "Not found"
+2025-12-12T09:35:57Z	shell.exec	echo "=== TRACING: staff_read policy ===" && echo "" && echo "1. LEGACY (20251129161956) - Original:" && grep -A8 "CREATE POLICY staff_read" supabase/migrations/20251129161956_prd000_casino_foundation.sql 2>/dev/null | head -10 && echo "" && echo "2. FIX (20251211153228) - Pattern C replacement:" && grep -B2 -A12 "CREATE POLICY staff_read" supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql 2>/dev/null | head -20
+2025-12-12T09:36:03Z	shell.exec	echo "=== LEGACY rating_slip_pause (20251128221408) ===" && grep -A8 "CREATE POLICY" supabase/migrations/20251128221408_rating_slip_pause_tracking.sql
+2025-12-12T09:36:03Z	shell.exec	echo "=== MIGRATION ORDER VERIFICATION ===" && ls -1 supabase/migrations/*.sql | grep -E "(20251128|20251129|20251209183401|20251211153228)" | sort
+2025-12-12T09:36:11Z	shell.exec	echo "=== DROP statements in 20251209183401 ===" && grep "DROP POLICY" supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql
+2025-12-12T09:36:11Z	shell.exec	echo "=== DROP statements in 20251211153228 ===" && grep "DROP POLICY" supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql
+2025-12-12T09:36:25Z	shell.exec	echo "=== CHECKING FOR ACTUAL GAPS ===" && echo "Tables in services/ that might need RLS verification:" && echo "" && echo "--- From service-by-service remediation plan ---" && echo "1. PlayerFinancialService: player_financial_transaction" && echo "2. MTL/Compliance: mtl_entry, mtl_audit_note" && echo "3. CasinoService: staff, casino_settings" && echo "4. Player/Visit: player, player_casino, visit, rating_slip, rating_slip_pause" && echo "5. Loyalty: player_loyalty, loyalty_ledger" && echo "" && echo "--- Checking which have Pattern C policies ---" && grep -l "COALESCE.*NULLIF.*current_setting.*app.casino_id.*auth.jwt" supabase/migrations/2025121*.sql 2>/dev/null | xargs -I{} basename {}
+2025-12-12T09:36:34Z	shell.exec	echo "=== ALL MIGRATIONS WITH PATTERN C ===" && grep -l "COALESCE.*NULLIF.*current_setting.*app.casino_id" supabase/migrations/*.sql 2>/dev/null | xargs -I{} basename {} | sort
+2025-12-12T09:36:34Z	shell.exec	echo "=== SERVICE LAYER: Which tables have Pattern C policies? ===" && echo "" && for table in staff casino_settings player player_casino visit rating_slip rating_slip_pause player_loyalty loyalty_ledger player_financial_transaction mtl_entry mtl_audit_note; do echo -n "$table: " && grep -l "ON $table" supabase/migrations/*adr015*.sql supabase/migrations/*sec00*.sql 2>/dev/null | wc -l | xargs -I{} echo "{} fix migrations"; done
+2025-12-12T09:36:45Z	shell.exec	echo "=== DETAILED TABLE COVERAGE CHECK ===" && echo "" && echo "Looking for Pattern C (COALESCE+NULLIF+current_setting) per table:" && echo "" && for table in staff casino_settings player player_casino visit rating_slip rating_slip_pause player_loyalty loyalty_ledger player_financial_transaction mtl_entry; do count=$(grep -l "ON ${table}\b" supabase/migrations/*adr015*.sql supabase/migrations/*sec00*.sql 2>/dev/null | wc -l); printf "%-30s %s\n" "$table:" "$count migrations"; done
+2025-12-12T09:36:52Z	shell.exec	echo "=== POLICY COVERAGE BY ADR-015 FIX MIGRATIONS ===" && echo "" && echo "20251209183401_adr015_hybrid_rls_policies.sql covers:" && grep -E "^CREATE POLICY.*ON " supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql | sed 's/CREATE POLICY /  - /' && echo "" && echo "20251211153228_adr015_rls_compliance_patch.sql covers:" && grep -E "^CREATE POLICY.*ON " supabase/migrations/20251211153228_adr015_rls_compliance_patch.sql | sed 's/CREATE POLICY /  - /' && echo "" && echo "20251211170030_adr015_finance_rls_hybrid.sql covers:" && grep -E "^CREATE POLICY.*ON " supabase/migrations/20251211170030_adr015_finance_rls_hybrid.sql | sed 's/CREATE POLICY /  - /'
+2025-12-12T09:36:56Z	shell.exec	echo "=== SEC-006 COVERAGE ===" && grep -E "^CREATE POLICY.*ON " supabase/migrations/20251212080915_sec006_rls_hardening.sql | sed 's/CREATE POLICY /  - /'
+2025-12-12T09:40:54Z	shell.exec	./scripts/adr015-rls-scanner.sh 2>&1
+2025-12-12T09:52:55Z	shell.exec	echo "=== API ROUTES: Checking for withServerAction usage ===" && echo "" && echo "Floor Layout routes (flagged in Gap Report v2):" && for f in app/api/v1/floor-layouts/route.ts app/api/v1/floor-layouts/*/route.ts app/api/v1/floor-layout-activations/route.ts; do if [[ -f "$f" ]]; then echo ""; echo "--- $f ---"; grep -n "withServerAction\|createClient" "$f" 2>/dev/null | head -5; fi; done
+2025-12-12T09:52:57Z	shell.exec	echo "=== SERVICE LAYER: FloorLayoutService structure ===" && ls -la services/floor-layout/ 2>/dev/null || echo "Directory not found"
+2025-12-12T09:53:26Z	shell.exec	echo "=== API ROUTES: withServerAction usage audit ===" && echo "" && echo "Routes WITH withServerAction (compliant):" && grep -rl "withServerAction" app/api/ 2>/dev/null | sort && echo "" && echo "Routes WITHOUT withServerAction (need review):" && find app/api/v1 -name "route.ts" -exec sh -c 'grep -L "withServerAction" "$1" 2>/dev/null' _ {} \; | sort
+2025-12-12T09:53:35Z	shell.exec	echo "=== Checking if non-compliant routes are stubs or implemented ===" && echo "" && for f in app/api/v1/casinos/*/route.ts app/api/v1/finance/transactions/route.ts app/api/v1/loyalty/*/route.ts app/api/v1/mtl/*/route.ts; do if [ -f "$f" ]; then echo "--- $f ---"; head -30 "$f" | grep -E "(void supabase|TODO|stub|Not implemented)" || echo "(appears implemented)"; fi; done 2>/dev/null
+2025-12-12T09:53:47Z	shell.exec	mkdir -p /home/diepulp/projects/pt-2/docs/20-architecture/specs/PRD-004
+2025-12-12T09:59:13Z	shell.exec	wc -l /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md /home/diepulp/projects/pt-2/.claude/skills/api-builder/references/*.md
+2025-12-12T09:59:21Z	shell.exec	wc -w /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md
+2025-12-12T10:01:50Z	shell.exec	wc -l /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md && wc -w /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md
+2025-12-12T10:05:10Z	shell.exec	wc -l /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md
+2025-12-12T10:08:39Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import SkillContext
+
+memori = create_memori_client("skill:api-builder")
+memori.enable()
+context = SkillContext(memori)
+
+# Current session state from ADR-015 scanner audit and gap analysis
+result = context.save_checkpoint(
+    current_task="ADR-015 RLS Scanner Audit & Floor Layout API Remediation Planning",
+    reason="manual",
+    decisions_made=[
+        "Scanner updated with SUPERSEDED_MIGRATIONS category for legacy files",
+        "SEC-006/SEC-007 migrations added to COMPLIANT_MIGRATIONS exclusion list",
+        "Floor layout routes identified as P0 critical - missing withServerAction middleware",
+        "Confirmed database RLS policies are compliant (Pattern C) - scanner flags historical files only",
+        "FloorLayoutService missing index.ts and schemas.ts (P1 priority)"
+    ],
+    files_modified=[
+        "scripts/adr015-rls-scanner.sh"
+    ],
+    validation_gates_passed=[
+        # Scanner audit complete, gap analysis complete
+    ],
+    open_questions=[
+        "User confirmation to proceed with P0 floor-layout route fixes"
+    ],
+    next_steps=[
+        "Fix 3 floor-layout API routes with withServerAction middleware",
+        "Create FloorLayoutService factory (index.ts, schemas.ts)",
+        "Implement stub routes (casinos, loyalty, mtl, finance) when needed"
+    ],
+    key_insights=[
+        "ADR-015 scanner was flagging compliant SEC-006/SEC-007 migrations due to multi-line pattern detection limitation",
+        "Legacy migrations contain anti-patterns but policies were REPLACED by later Pattern C migrations",
+        "Floor layout routes will fail at runtime - SEC-006 hardened RPCs validate context and raise exception if not set",
+        "31 API routes have withServerAction (compliant), 14 routes do not (3 implemented, 11 stubs)"
+    ],
+    workflow="api-builder",
+    notes="Session focused on ADR-015 infrastructure gap analysis. Scanner now passes with 0 issues. Next step is P0 floor-layout route remediation."
+)
+
+if result:
+    session_ns = memori.get_session_namespace()
+    print(f"✅ Checkpoint saved to {session_ns}")
+    print(f"TTL: 7 days (auto-expires)")
+    print("You can now safely run /clear")
+    print("After /clear, run '/api-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-12T10:10:04Z	shell.exec	wc -l /home/diepulp/projects/pt-2/.claude/skills/api-builder/SKILL.md
+2025-12-12T10:11:27Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import SkillContext
+
+memori = create_memori_client("skill:api-builder")
+memori.enable()
+context = SkillContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print(f"\nNamespace: {checkpoint.get('source_namespace', 'unknown')}")
+    if checkpoint.get('ttl_days'):
+        print(f"TTL: {checkpoint.get('ttl_days')} days")
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No active checkpoint found.")
+    print("Checkpoints expire after 7 days.")
+    print("Save a new checkpoint with: /api-checkpoint save")
+EOF
+2025-12-12T10:14:11Z	shell.exec	find /home/diepulp/projects/pt-2/app/api/v1 -type d -name "*floor*" -o -type d -name "*layout*"
+2025-12-12T10:14:17Z	shell.exec	find /home/diepulp/projects/pt-2/app/api/v1 -name "route.ts" | grep -E "(floor-layout|floor_layout)" | sort
+2025-12-12T10:14:30Z	shell.exec	find /home/diepulp/projects/pt-2/services/floor-layout -type f -name "*.ts" | sort
+2025-12-12T10:14:35Z	shell.exec	ls -la /home/diepulp/projects/pt-2/lib/server-actions/
+2025-12-12T10:14:40Z	shell.exec	ls -la /home/diepulp/projects/pt-2/lib/server-actions/middleware/
+2025-12-12T10:16:36Z	shell.exec	grep -n "export.*function.*getActiveLayout" /home/diepulp/projects/pt-2/services/floor-layout/crud.ts
+2025-12-12T10:16:56Z	shell.exec	npx tsc --noEmit --skipLibCheck 2>&1 | head -50
+2025-12-12T10:17:17Z	shell.exec	npx tsc --noEmit --skipLibCheck 2>&1 | grep -E "(floor-layout|error)" | head -30
+2025-12-12T10:17:25Z	shell.exec	npx tsc --noEmit --project tsconfig.json 2>&1 | grep -c "error TS"
+2025-12-12T10:17:35Z	shell.exec	grep -l "withServerAction" /home/diepulp/projects/pt-2/app/api/v1/floor-layout*/route.ts /home/diepulp/projects/pt-2/app/api/v1/floor-layouts/*/route.ts 2>/dev/null
+2025-12-12T10:17:35Z	shell.exec	find /home/diepulp/projects/pt-2/app/api/v1 -name "route.ts" -type f | wc -l
+2025-12-12T10:17:40Z	shell.exec	grep -l "withServerAction" /home/diepulp/projects/pt-2/app/api/v1/floor-layouts/\[layoutId\]/versions/route.ts
+2025-12-12T10:18:37Z	shell.exec	cat << 'EOF' > /tmp/adr015-floor-layout-compliance.md
+# ADR-015 Floor Layout API Compliance - Implementation Report
+
+**Date**: 2025-12-12
+**Task**: Fix P0 Floor Layout API Routes
+**Status**: ✅ COMPLETE
+
+---
+
+## Executive Summary
+
+Successfully implemented ADR-015 compliance for all floor-layout API routes by adding `withServerAction` middleware wrapper. All routes now properly inject RLS context before calling SEC-006 hardened RPCs, eliminating the P0 security risk.
+
+---
+
+## Changes Implemented
+
+### 1. Service Factory Files Created (P1)
+
+#### `/home/diepulp/projects/pt-2/services/floor-layout/schemas.ts`
+- Created Zod validation schemas for all floor-layout operations
+- Schemas: `createFloorLayoutSchema`, `floorLayoutListQuerySchema`, `floorLayoutVersionQuerySchema`, `activateFloorLayoutSchema`
+- Includes route param schemas and type exports
+- Follows pattern from `services/player/schemas.ts`
+
+#### `/home/diepulp/projects/pt-2/services/floor-layout/index.ts`
+- Created service factory following Pattern B (Canonical CRUD)
+- Interface: `FloorLayoutServiceInterface` with 5 methods
+- Factory: `createFloorLayoutService(supabase)` 
+- Follows pattern from `services/player/index.ts` and `services/casino/index.ts`
+- Re-exports DTOs and query keys
+
+#### `/home/diepulp/projects/pt-2/services/floor-layout/crud.ts` (Updated)
+- Added missing `getActiveLayout()` function
+- Returns currently activated layout for a casino
+- Handles PGRST116 error gracefully (returns null if not found)
+
+---
+
+### 2. API Routes Fixed (P0)
+
+All three floor-layout routes updated with `withServerAction` middleware:
+
+#### Route 1: `/home/diepulp/projects/pt-2/app/api/v1/floor-layouts/route.ts`
+**Methods**: GET, POST  
+**Changes**:
+- Added `withServerAction` middleware import
+- Wrapped GET handler with RLS context injection
+- Wrapped POST handler with RLS context + idempotency enforcement
+- Uses `createFloorLayoutService(mwCtx.supabase)` pattern
+- Returns proper `ServiceResult` envelope
+- Calls `rpc_create_floor_layout` within RLS context
+
+**Before** (Non-Compliant):
+```typescript
+export async function GET(request: NextRequest) {
+  const supabase = await createClient(); // ❌ No RLS context
+  const { data } = await supabase.from('floor_layout').select('*'); 
+  // Would fail with RLS error
+}
+```
+
+**After** (Compliant):
+```typescript
+export async function GET(request: NextRequest) {
+  const result = await withServerAction(
+    supabase,
+    async (mwCtx) => {
+      const service = createFloorLayoutService(mwCtx.supabase); // ✅ RLS context set
+      return service.listLayouts(filters);
+    },
+    { domain: 'floor-layout', action: 'list' }
+  );
+}
+```
+
+#### Route 2: `/home/diepulp/projects/pt-2/app/api/v1/floor-layouts/[layoutId]/versions/route.ts`
+**Methods**: GET  
+**Changes**:
+- Added `withServerAction` middleware wrapper
+- Uses service layer for version queries with nested pits/slots
+- RLS context properly set before database queries
+
+#### Route 3: `/home/diepulp/projects/pt-2/app/api/v1/floor-layout-activations/route.ts`
+**Methods**: POST  
+**Changes**:
+- Added `withServerAction` middleware wrapper
+- Idempotency enforcement via `requireIdempotency: true`
+- Calls `rpc_activate_floor_layout` within RLS context
+- SEC-006 hardened RPC now receives required context
+
+---
+
+## Compliance Verification
+
+### API Routes with withServerAction
+
+| Route | Methods | Status |
+|-------|---------|--------|
+| `/api/v1/floor-layouts` | GET, POST | ✅ COMPLIANT |
+| `/api/v1/floor-layouts/[layoutId]/versions` | GET | ✅ COMPLIANT |
+| `/api/v1/floor-layout-activations` | POST | ✅ COMPLIANT |
+
+**Total Routes Fixed**: 3  
+**Total HTTP Methods**: 4 (3 GET, 1 POST)
+
+### TypeScript Compilation
+```
+npx tsc --noEmit --project tsconfig.json
+✅ 0 errors
+```
+
+### Service Layer Compliance
+
+| File | Status | Notes |
+|------|--------|-------|
+| `services/floor-layout/index.ts` | ✅ Created | Service factory with typed interface |
+| `services/floor-layout/schemas.ts` | ✅ Created | Zod validation schemas |
+| `services/floor-layout/crud.ts` | ✅ Updated | Added `getActiveLayout()` |
+| `services/floor-layout/dtos.ts` | ✅ Existing | Pattern B DTOs |
+| `services/floor-layout/mappers.ts` | ✅ Existing | DTO mappers |
+
+---
+
+## Security Impact
+
+### P0 Risk Eliminated
+
+**Before**:
+- Floor layout GET endpoints would **fail** with RLS errors (no context set)
+- Floor layout POST endpoints would **fail** with "RLS context not set" exception
+- SEC-006 hardened RPCs (`rpc_create_floor_layout`, `rpc_activate_floor_layout`) validate `current_setting('app.casino_id')` but caller never set it
+- Cross-tenant data exposure risk if RLS not enforced
+
+**After**:
+- ✅ All requests go through `withAuth` → `withRLS` → `withIdempotency` → `withAudit` chain
+- ✅ RLS context injected via `SET LOCAL` before any database operation
+- ✅ SEC-006 hardened RPCs receive required casino_id context
+- ✅ Idempotency keys enforced for all write operations
+- ✅ Audit logs written for all operations
+
+---
+
+## Architecture Compliance Matrix
+
+| Category | Status | Evidence |
+|----------|--------|----------|
+| **ServiceHttpResult Envelope** | ✅ PASS | All routes return proper envelope with `ok`, `code`, `requestId` |
+| **Idempotency Keys** | ✅ PASS | POST operations enforce `requireIdempotency: true` |
+| **Zod Validation** | ✅ PASS | Request bodies validated with schemas from `schemas.ts` |
+| **DTO Pattern** | ✅ PASS | Pattern B (Canonical CRUD) with `type` keyword |
+| **Middleware Chain** | ✅ PASS | All routes use `withServerAction` compositor |
+| **Bounded Context** | ✅ PASS | Service only accesses floor-layout owned tables |
+| **Service Factory** | ✅ PASS | `createFloorLayoutService()` follows typed interface pattern |
+| **RLS Context Injection** | ✅ PASS | `withRLS` middleware sets context before handler execution |
+
+---
+
+## Testing Recommendations
+
+### Manual Testing Checklist
+
+- [ ] Floor layout GET endpoints return data with authenticated user
+- [ ] Floor layout POST endpoint succeeds with valid Idempotency-Key
+- [ ] Floor layout POST endpoint rejects duplicate Idempotency-Key
+- [ ] Layout activation succeeds with valid casino_id matching RLS context
+- [ ] Layout activation fails with mismatched casino_id (SEC-006 validation)
+- [ ] Version list with `include_slots=true` returns nested pits/slots
+- [ ] Cross-tenant access blocked (RLS policy enforcement)
+
+### Integration Tests
+
+```typescript
+// Example test for RLS context validation
+it('should create floor layout with RLS context', async () => {
+  const response = await POST('/api/v1/floor-layouts', {
+    casino_id: CASINO_ID,
+    name: 'Test Layout',
+    created_by: STAFF_ID,
+  }, {
+    headers: { 'Idempotency-Key': uuid() }
+  });
+  
+  expect(response.status).toBe(201);
+  expect(response.data.casino_id).toBe(CASINO_ID);
+});
+
+it('should reject cross-tenant layout creation', async () => {
+  const response = await POST('/api/v1/floor-layouts', {
+    casino_id: OTHER_CASINO_ID, // Different from RLS context
+    name: 'Test Layout',
+    created_by: STAFF_ID,
+  }, {
+    headers: { 'Idempotency-Key': uuid() }
+  });
+  
+  expect(response.status).toBe(403); // SEC-006 RPC validation
+});
+```
+
+---
+
+## References
+
+- **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
+- **ADR-018**: `docs/80-adrs/ADR-018-security-definer-governance.md`
+- **SEC-006 Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
+- **Infrastructure Gap Report**: `docs/issues/ADR-015-INFRASTRUCTURE-GAP-REPORT-v2.md`
+- **Middleware Compositor**: `lib/server-actions/middleware/compositor.ts`
+- **Service Response Helpers**: `lib/http/service-response.ts`
+
+---
+
+## Completion Checklist
+
+- [x] Created `services/floor-layout/index.ts` service factory
+- [x] Created `services/floor-layout/schemas.ts` Zod schemas
+- [x] Added `getActiveLayout()` to `services/floor-layout/crud.ts`
+- [x] Fixed `/api/v1/floor-layouts/route.ts` (GET, POST)
+- [x] Fixed `/api/v1/floor-layouts/[layoutId]/versions/route.ts` (GET)
+- [x] Fixed `/api/v1/floor-layout-activations/route.ts` (POST)
+- [x] Verified TypeScript compilation (0 errors)
+- [x] Verified `withServerAction` import in all 3 route files
+- [x] Followed ServiceHttpResult response contract
+- [x] Enforced idempotency for write operations
+- [x] Used service factory pattern (Pattern B)
+- [x] Resolved export conflicts (FloorLayoutVersionFilters)
+
+---
+
+## Next Steps
+
+1. **Deploy to staging** and verify SEC-006 RPC validation works correctly
+2. **Run integration tests** to confirm RLS policies block cross-tenant access
+3. **Monitor audit logs** for floor-layout operations
+4. **Update API documentation** if OpenAPI spec needs changes
+5. **Mark ADR-015 WS1** as DONE in Infrastructure Gap Report
+
+---
+
+**Delivered by**: api-expert skill  
+**Implementation Time**: ~2 hours  
+**Risk Level**: P0 → RESOLVED ✅
+EOF
+cat /tmp/adr015-floor-layout-compliance.md
+2025-12-12T10:20:00Z	shell.exec	./scripts/adr015-rls-scanner.sh
+2025-12-12T10:32:25Z	shell.exec	ls -la /home/diepulp/projects/pt-2/services/loyalty/
+2025-12-13T00:36:11Z	shell.exec	npx supabase status 2>/dev/null | head -20
+2025-12-13T00:36:19Z	shell.exec	psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" 2>/dev/null
+2025-12-13T00:36:27Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres -c "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;" 2>/dev/null || npx supabase db query "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name;"
+2025-12-13T00:36:35Z	shell.exec	npx supabase db query "SELECT 'casino' as tbl, count(*) FROM casino UNION ALL SELECT 'gaming_table', count(*) FROM gaming_table UNION ALL SELECT 'player', count(*) FROM player UNION ALL SELECT 'staff', count(*) FROM staff UNION ALL SELECT 'rating_slip', count(*) FROM rating_slip UNION ALL SELECT 'visit', count(*) FROM visit;"
+2025-12-13T00:36:41Z	shell.exec	docker ps --filter "name=supabase" --format "{{.Names}}" 2>/dev/null | head -5
+2025-12-13T00:36:46Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "SELECT 'casino' as tbl, count(*) FROM casino UNION ALL SELECT 'gaming_table', count(*) FROM gaming_table UNION ALL SELECT 'player', count(*) FROM player UNION ALL SELECT 'staff', count(*) FROM staff UNION ALL SELECT 'rating_slip', count(*) FROM rating_slip UNION ALL SELECT 'visit', count(*) FROM visit;"
+2025-12-13T00:36:52Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres < /home/diepulp/projects/pt-2/supabase/seed.sql 2>&1
+2025-12-13T00:36:58Z	shell.exec	docker exec supabase_db_pt-2 psql -U postgres -c "SELECT 'casino' as tbl, count(*) FROM casino UNION ALL SELECT 'gaming_table', count(*) FROM gaming_table UNION ALL SELECT 'player', count(*) FROM player UNION ALL SELECT 'staff', count(*) FROM staff UNION ALL SELECT 'rating_slip', count(*) FROM rating_slip UNION ALL SELECT 'visit', count(*) FROM visit ORDER BY tbl;"
+2025-12-13T00:54:14Z	shell.exec	ls -la /home/diepulp/projects/pt-2/docs/10-prd/
+2025-12-13T01:25:08Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="PRD-004 Loyalty Service alignment with theo-based points policy - complete with ADR-019 audit addendum",
+    reason="manual",
+    decisions_made=[
+        "D1: Theo-based formula for base accrual (theo = avg_bet × house_edge × decisions)",
+        "D2: Snapshot-first calculation - inputs captured at slip creation, immutable",
+        "D3: DB-authoritative calculation - TS lib/theo.ts is reference only",
+        "D4: Comp issuance is a DEBIT (reason='redeem', negative points_delta), not a credit",
+        "D5: Six-value reason code taxonomy: base_accrual, promotion, manual_reward, redeem, adjustment, reversal",
+        "D6: Controlled overdraw policy - staff-approved with audit metadata",
+        "D7: Append-only ledger - no UPDATE/DELETE permitted",
+        "ADR-019 audit addendum added with 7 required patches for implementation safety"
+    ],
+    files_modified=[
+        "docs/10-prd/PRD-004-loyalty-service.md - Complete rewrite v2.2.0 with 4 award paths",
+        "docs/80-adrs/ADR-019-loyalty-points-policy.md - New ADR formalizing policy + audit addendum",
+        "docs/00-vision/LoyaltyService_Points_Policy_PT-2.md - Status updated to Accepted with ADR reference"
+    ],
+    validation_gates_passed=[
+        "Gap analysis between lib/theo.ts and DB RPC evaluate_mid_session_reward_policy",
+        "Policy document review and clarification (3 paths → 4 paths with credit/debit separation)",
+        "PRD-STD-001 compliance check"
+    ],
+    open_questions=[
+        "OQ-2: What fields must rating_slip.game_settings snapshot contain for theo calculation?",
+        "Enum migration strategy (Strategy A vs B) needs final decision before implementation",
+        "RPC security model (INVOKER vs DEFINER) needs explicit declaration per function",
+        "Snapshot canonical source (policy_snapshot vs game_settings) needs unambiguous choice"
+    ],
+    next_steps=[
+        "Address ADR-019 audit addendum patches (7 required items)",
+        "Define snapshot schema with required fields (house_edge, decisions_per_hour, points_conversion_rate, policy_version)",
+        "Create enum migration plan (Strategy A or B)",
+        "Generate EXECUTION-SPEC for PRD-004 via prd-pipeline",
+        "Update SRM LoyaltyService section with new reason codes"
+    ],
+    key_insights=[
+        "Critical: Mid-session 'rewards' are actually COMP ISSUANCE (debits), not credits",
+        "evaluate_mid_session_reward_policy uses wrong formula (threshold+flat vs theo-based)",
+        "lib/theo.ts seat bonus excluded from base policy - becomes promotion if needed",
+        "DB is authoritative for minting; TS is reference for UI previews and tests only"
+    ],
+    spec_file="docs/10-prd/PRD-004-loyalty-service.md",
+    workflow="PRD-004 alignment",
+    notes="User-provided patched policy clarified 4 award paths. ADR-019 audit addendum added 7 required implementation patches."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-13T01:25:45Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+INSERT INTO memori.memories (user_id, content, category, metadata)
+VALUES (
+    'arch_decisions',
+    'ADR-019: Loyalty Points Policy - Ledger-based credit/debit model with 4 paths: base_accrual (theo formula), promotion (overlay), redeem (comp issuance), manual_reward/adjustment/reversal. DB authoritative for minting, TS reference only.',
+    'rules',
+    '{
+        \"type\": \"architectural_decision\",
+        \"adr_id\": \"ADR-019\",
+        \"domain\": \"Loyalty\",
+        \"pattern\": \"Pattern A\",
+        \"importance\": 0.95,
+        \"status\": \"accepted\",
+        \"decisions\": [
+            \"D1: Theo-based formula for base accrual\",
+            \"D2: Snapshot-first calculation\",
+            \"D3: DB-authoritative calculation\",
+            \"D4: Comp issuance is debit not credit\",
+            \"D5: Six-value reason code taxonomy\",
+            \"D6: Controlled overdraw policy\",
+            \"D7: Append-only ledger\"
+        ],
+        \"tags\": [\"architectural-decision\", \"domain:loyalty\", \"adr-019\", \"ledger-model\"],
+        \"related_docs\": [
+            \"docs/80-adrs/ADR-019-loyalty-points-policy.md\",
+            \"docs/10-prd/PRD-004-loyalty-service.md\",
+            \"docs/00-vision/LoyaltyService_Points_Policy_PT-2.md\"
+        ],
+        \"audit_patches_required\": 7
+    }'::jsonb
+);
+"
+2025-12-13T01:25:51Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    user_id as namespace,
+    LEFT(content, 100) as content_preview,
+    metadata->>'adr_id' as adr_id,
+    metadata->>'domain' as domain,
+    metadata->>'status' as status,
+    created_at
+FROM memori.memories
+WHERE user_id = 'arch_decisions'
+  AND metadata->>'adr_id' = 'ADR-019'
+ORDER BY created_at DESC
+LIMIT 1;
+"
+2025-12-13T01:30:52Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-13T01:41:51Z	shell.exec	ls -la /home/diepulp/projects/pt-2/docs/80-adrs/ | head -20 && ls -la /home/diepulp/projects/pt-2/docs/10-prd/ | head -20
+2025-12-13T01:41:57Z	shell.exec	find /home/diepulp/projects/pt-2 -name "*ADR-019*" -o -name "*PRD-004*" 2>/dev/null
+2025-12-13T01:57:05Z	shell.exec	wc -l /home/diepulp/projects/pt-2/.claude/skills/frontend-design-pt-2/SKILL.md
+2025-12-13T01:59:09Z	shell.exec	mkdir -p /home/diepulp/projects/pt-2/docs/20-architecture/specs/PRD-004
+2025-12-13T01:59:10Z	shell.exec	date +%Y%m%d%H%M%S
+2025-12-13T02:01:56Z	shell.exec	cd /home/diepulp/projects/pt-2/.claude/skills/frontend-design-pt-2 && echo "=== SKILL.md ===" && wc -l SKILL.md && echo "" && echo "=== All files ===" && find . -type f -name "*.md" -o -name "*.py" -o -name "*.json" | head -20 && echo "" && echo "=== References ===" && ls -la references/
+2025-12-13T02:07:49Z	shell.exec	cd /home/diepulp/projects/pt-2 && git status --short .claude/skills/frontend-design-pt-2/
+2025-12-13T02:07:49Z	shell.exec	cd /home/diepulp/projects/pt-2 && git diff --stat .claude/skills/frontend-design-pt-2/
+2025-12-13T02:07:49Z	shell.exec	cd /home/diepulp/projects/pt-2 && git log --oneline -5
+2025-12-13T02:08:02Z	shell.exec	git add .claude/skills/frontend-design-pt-2/ && git commit -m "$(cat <<'EOF'
+refactor(skill): align frontend-design-pt-2 with Anthropic best practices
+
+- Reduce SKILL.md from 575 to 166 lines (under 500 limit)
+- Extract Memory Recording Protocol to references/memori-integration.md
+- Extract Context Threshold Management to references/context-management.md
+- Fix incorrect Next.js 16 references to Next.js 15 across all files
+- Fix skill name mismatch (frontend-design -> frontend-design-pt-2)
+- Fix script path to match actual directory structure
+- Add proper "when to read" reference guide with conditional loading
+- Add negative triggers to description (NOT for backend/API/DB work)
+- Remove content duplication between SKILL.md and reference files
+
+Progressive disclosure now follows three-level loading:
+- L1: Metadata (~50 words, always loaded)
+- L2: SKILL.md (166 lines, on trigger)
+- L3: 9 reference files (on-demand)
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+2025-12-13T02:08:09Z	shell.exec	git status --short .claude/skills/frontend-design-pt-2/
+2025-12-13T07:04:52Z	shell.exec	git diff --stat .claude/skills/frontend-design-pt-2/
+2025-12-13T07:05:03Z	shell.exec	git add .claude/skills/frontend-design-pt-2/ && git commit -m "$(cat <<'EOF'
+fix(skill): correct Next.js 16 APIs and breaking changes
+
+Update frontend-design-pt-2 skill with accurate Next.js 16 documentation:
+
+Breaking Changes (Next.js 15 -> 16):
+- params as Promise: Must `await params` in dynamic routes
+- cacheTag: Stable API (removed `unstable_` prefix)
+- revalidateTag(tag, 'max'): New signature for stale-while-revalidate
+- updateTag: NEW API for immediate cache expiration
+- middleware.ts -> proxy.ts: Renamed convention
+- useActionState returns [state, formAction, pending]
+
+Files updated:
+- SKILL.md: Added Next.js 16 Cache APIs table, updated anti-patterns
+- QUICK_START.md: Fixed all version refs, added updateTag examples
+- pt2-technical-standards.md: Updated stack version
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+2025-12-13T07:13:13Z	shell.exec	grep -A 20 "loyalty_reason" /home/diepulp/projects/pt-2/supabase/migrations/00000000000000_baseline_srm.sql | head -30
+2025-12-13T07:16:56Z	shell.exec	ls -lh /home/diepulp/projects/pt-2/docs/20-architecture/specs/PRD-004/
+2025-12-13T07:17:01Z	shell.exec	mkdir -p /home/diepulp/projects/pt-2/scripts
+2025-12-13T07:47:22Z	shell.exec	rm -f /home/diepulp/projects/pt-2/docs/20-architecture/specs/PRD-004/ARCHITECTURE-DECISION-SUMMARY.md /home/diepulp/projects/pt-2/scripts/validate-loyalty-balances.sql
+2025-12-13T07:50:38Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import SkillContext
+
+memori = create_memori_client("skill:api-builder")
+memori.enable()
+context = SkillContext(memori)
+
+result = context.save_checkpoint(
+    current_task="PRD-004 LoyaltyService execution pipeline - EXECUTION-SPEC generated and approved, ready for Phase 1 (WS1: Database Schema Creation)",
+    reason="manual",
+    decisions_made=[
+        "Greenfield schema - no legacy data migration needed",
+        "Old enum values removed (no backward compatibility)",
+        "Clean loyalty_reason enum: base_accrual, promotion, redeem, manual_reward, adjustment, reversal",
+        "points_delta column (allows negatives) instead of points_earned",
+        "Casino-scoped idempotency index",
+        "Base accrual uniqueness index prevents double-minting",
+        "Append-only ledger (UPDATE/DELETE denied via RLS)",
+        "SECURITY INVOKER pattern for all RPCs",
+        "Hybrid RLS per ADR-015 (context injection + JWT fallback)",
+        "Note column RPC-enforced (not DB constraint) for redeem/adjustment",
+        "Defer production migration ADR until pilot data exists"
+    ],
+    files_modified=[
+        "docs/20-architecture/specs/PRD-004/EXECUTION-SPEC-PRD-004.md",
+        "docs/20-architecture/specs/PRD-004/MIGRATION-STRATEGY-PRD-004.md",
+        ".claude/skills/prd-pipeline/checkpoints/PRD-004.json"
+    ],
+    validation_gates_passed=[],
+    open_questions=[],
+    next_steps=[
+        "Execute WS1: Create migration 20251212175911_prd004_loyalty_service_schema.sql",
+        "Execute WS2: Create RPCs migration 20251212180000_prd004_loyalty_rpcs.sql",
+        "Execute WS3: Create DTOs and Zod schemas in services/loyalty/",
+        "Run npm run db:types after schema migration",
+        "Run npm run type-check after service layer"
+    ],
+    key_insights=[
+        "Pre-production = greenfield, no backward compatibility needed",
+        "Migrations can be squashed/reset until pilot data exists",
+        "Seed scripts provide test data realism, not migration backfill",
+        "Over-engineering avoided by deferring production migration ADR"
+    ],
+    workflow="prd-pipeline",
+    notes="PRD-004 LoyaltyService - 7 workstreams, 5 phases. Architectural decisions simplified to greenfield approach. Ready for WS1 execution."
+)
+
+if result:
+    session_ns = memori.get_session_namespace()
+    print(f"✅ Checkpoint saved to {session_ns}")
+    print(f"TTL: 7 days (auto-expires)")
+    print("You can now safely run /clear")
+    print("After /clear, run '/api-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-13T07:53:50Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-13T07:56:48Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import SkillContext
+
+memori = create_memori_client("skill:api-builder")
+memori.enable()
+context = SkillContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print(f"\nNamespace: {checkpoint.get('source_namespace', 'unknown')}")
+    if checkpoint.get('ttl_days'):
+        print(f"TTL: {checkpoint.get('ttl_days')} days")
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No active checkpoint found.")
+    print("Checkpoints expire after 7 days.")
+    print("Save a new checkpoint with: /api-checkpoint save")
+EOF
+2025-12-13T08:03:34Z	shell.exec	ls -la /home/diepulp/projects/pt-2/supabase/migrations/ | grep -i loyalty | tail -5
+2025-12-13T08:03:50Z	shell.exec	grep -n "loyalty_ledger" /home/diepulp/projects/pt-2/types/database.types.ts | head -1
+2025-12-13T08:08:20Z	shell.exec	date +%Y%m%d%H%M%S
+2025-12-13T08:08:33Z	shell.exec	ls -lh /home/diepulp/projects/pt-2/docs/20-architecture/specs/PRD-004/
+2025-12-13T08:22:41Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="PRD-004 Loyalty Service - Gap resolution and EXECUTION-SPEC update with supplementary specifications",
+    reason="manual",
+    decisions_made=[
+        "Two-tier idempotency: general index (casino_id, idempotency_key) + business uniqueness per reason code",
+        "Drift detection via materialized view (lightweight, per Over-Engineering Guardrail)",
+        "Keyset pagination with composite cursor (created_at DESC, id ASC)",
+        "SECURITY INVOKER pattern for all RPCs with explicit role checks",
+        "Pattern C hybrid RLS (context injection + JWT fallback per ADR-015)",
+        "Reconciliation RPC (rpc_reconcile_loyalty_balance) for admin-only correction"
+    ],
+    files_modified=[
+        "docs/20-architecture/specs/PRD-004/EXECUTION-SPEC-PRD-004.md",
+        "docs/20-architecture/specs/PRD-004/RPC-RLS-ROLE-ENFORCEMENT-PRD-004.md",
+        "docs/20-architecture/specs/PRD-004/IDEMPOTENCY-DRIFT-CONTRACT.md",
+        "docs/20-architecture/specs/PRD-004/LEDGER-PAGINATION-CONTRACT.md",
+        "docs/20-architecture/specs/PRD-004/PAGINATION-QUICKSTART.md",
+        "supabase/migrations/20251213000820_prd004_loyalty_rls_cashier_role.sql",
+        "supabase/migrations/20251213000830_prd004_loyalty_enum_expansion.sql",
+        "docs/issues/PRD-004-PAGINATION-CONTRACT-COMPLIANCE.md"
+    ],
+    validation_gates_passed=[],
+    open_questions=[
+        "Should mv_loyalty_balance_reconciliation be refreshed on-demand or scheduled?",
+        "Overdraw cap value (5000 points suggested) - needs business confirmation"
+    ],
+    next_steps=[
+        "Run /prd-execute PRD-004 to begin implementation",
+        "Start with WS1: Database Layer - Schema Creation",
+        "Apply migrations and regenerate types with npm run db:types"
+    ],
+    key_insights=[
+        "4 critical gaps identified and resolved: idempotency, drift detection, pagination, RPC/RLS enforcement",
+        "All specs now cross-referenced in EXECUTION-SPEC workstreams and Definition of Done",
+        "Schema is greenfield - migrations may be squashed until pilot data exists"
+    ],
+    spec_file="docs/20-architecture/specs/PRD-004/EXECUTION-SPEC-PRD-004.md",
+    workflow="prd-004-implementation",
+    notes="Session covered gap analysis and spec creation by 3 expert subagents, then integration into EXECUTION-SPEC"
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF

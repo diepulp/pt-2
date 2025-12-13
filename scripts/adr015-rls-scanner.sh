@@ -24,17 +24,34 @@ GREEN='\033[0;32m'
 NC='\033[0m' # No Color
 
 # ADR-015 compliant migrations (known good - skip for regression detection)
+# Updated 2025-12-12: Added SEC-006/SEC-007 hardening migrations
 COMPLIANT_MIGRATIONS=(
   "20251209183033_adr015_rls_context_rpc.sql"
   "20251209183401_adr015_hybrid_rls_policies.sql"
   "20251210001858_adr015_backfill_jwt_claims.sql"
   "20251211153228_adr015_rls_compliance_patch.sql"
+  "20251211161847_adr015_add_cashier_role.sql"
+  "20251211170030_adr015_finance_rls_hybrid.sql"
+  "20251211172516_adr015_financial_rpc_hardening.sql"
+  "20251212080915_sec006_rls_hardening.sql"
+  "20251212081000_sec007_rating_slip_rpc_hardening.sql"
+)
+
+# Superseded migrations - policies in these files were REPLACED by later Pattern C migrations
+# These are historical records; the database has compliant policies from the fix migrations
+# Format: "migration_file|fixed_by_migration"
+SUPERSEDED_MIGRATIONS=(
+  "20251128221408_rating_slip_pause_tracking.sql|20251209183401_adr015_hybrid_rls_policies.sql"
+  "20251129161956_prd000_casino_foundation.sql|20251211153228_adr015_rls_compliance_patch.sql"
+  "20251129230733_prd003_player_visit_rls.sql|20251209183401_adr015_hybrid_rls_policies.sql"
+  "20251209023430_fix_staff_rls_bootstrap.sql|20251211153228_adr015_rls_compliance_patch.sql"
 )
 
 # Counters
 total_files=0
 files_with_issues=0
 total_issues=0
+superseded_files=0
 declare -A issue_counts
 
 # Initialize issue counters
@@ -59,6 +76,30 @@ is_compliant_migration() {
   return 1
 }
 
+is_superseded_migration() {
+  local filename="$1"
+  for entry in "${SUPERSEDED_MIGRATIONS[@]}"; do
+    local superseded_file="${entry%%|*}"
+    if [[ "$filename" == *"$superseded_file" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+get_superseded_by() {
+  local filename="$1"
+  for entry in "${SUPERSEDED_MIGRATIONS[@]}"; do
+    local superseded_file="${entry%%|*}"
+    local fixed_by="${entry##*|}"
+    if [[ "$filename" == *"$superseded_file" ]]; then
+      echo "$fixed_by"
+      return 0
+    fi
+  done
+  echo ""
+}
+
 scan_file() {
   local file="$1"
   local filename=$(basename "$file")
@@ -68,6 +109,14 @@ scan_file() {
   # Skip known compliant migrations
   if is_compliant_migration "$filename"; then
     [[ "$VERBOSE" == "true" ]] && echo -e "${GREEN}SKIP${NC} $filename (ADR-015 compliant)"
+    return 0
+  fi
+
+  # Skip superseded migrations (policies replaced by later fix migrations)
+  if is_superseded_migration "$filename"; then
+    local fixed_by=$(get_superseded_by "$filename")
+    superseded_files=$((superseded_files + 1))
+    echo -e "${YELLOW}SUPERSEDED${NC} $filename (fixed by $fixed_by)"
     return 0
   fi
 
@@ -223,6 +272,7 @@ generate_report() {
 | Metric | Value |
 |--------|-------|
 | Files Scanned | $total_files |
+| Files Superseded | $superseded_files |
 | Files with Issues | $files_with_issues |
 | Total Issues | $total_issues |
 
@@ -297,6 +347,21 @@ $(printf -- '- %s\n' "${COMPLIANT_MIGRATIONS[@]}")
 
 ---
 
+## Superseded (Policies Replaced)
+
+The following legacy migrations contained non-compliant policies that were **replaced** by later Pattern C migrations.
+The database has compliant policies; these files are historical records only.
+
+| Legacy Migration | Fixed By |
+|------------------|----------|
+$(for entry in "${SUPERSEDED_MIGRATIONS[@]}"; do
+  file="${entry%%|*}"
+  fixed="${entry##*|}"
+  echo "| $file | $fixed |"
+done)
+
+---
+
 ## Next Actions
 
 EOF
@@ -343,6 +408,7 @@ main() {
   echo "========================================"
   echo ""
   echo "Files scanned:     $total_files"
+  echo "Files superseded:  $superseded_files (policies replaced by later migrations)"
   echo "Files with issues: $files_with_issues"
   echo "Total issues:      $total_issues"
   echo ""

@@ -1,11 +1,11 @@
 /**
- * Loyalty Ledger Route
+ * Player Loyalty Balance Route
  *
- * GET /api/v1/loyalty/ledger - Paginated ledger entries
+ * GET /api/v1/players/{playerId}/loyalty - Player loyalty balance and tier info
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  * Pattern: PRD-004 Loyalty Service
- * Pagination: Keyset-based with opaque cursor
+ * Idempotency: Not required (read-only operation)
  */
 
 import type { NextRequest } from 'next/server';
@@ -19,33 +19,37 @@ import {
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import { createLoyaltyService } from '@/services/loyalty';
-import { ledgerListQuerySchema } from '@/services/loyalty/schemas';
+import { balanceQuerySchema } from '@/services/loyalty/schemas';
 
 /**
- * GET /api/v1/loyalty/ledger
+ * GET /api/v1/players/{playerId}/loyalty
  *
- * Gets paginated ledger entries for a player.
- * Uses keyset pagination with (created_at DESC, id ASC) ordering.
- * Query params: casinoId, playerId, cursor?, limit?, ratingSlipId?, visitId?, reason?, fromDate?, toDate?
+ * Gets player loyalty balance and tier info.
+ * Returns null if player has no loyalty record.
+ * Query params: casinoId (required)
  */
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  segmentData: { params: Promise<{ playerId: string }> },
+) {
   const ctx = createRequestContext(request);
 
   try {
+    const { playerId } = await segmentData.params;
     const supabase = await createClient();
-    const query = parseQuery(request, ledgerListQuerySchema);
+    const query = parseQuery(request, balanceQuerySchema);
 
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
         const service = createLoyaltyService(mwCtx.supabase);
 
-        const page = await service.getLedger(query);
+        const balance = await service.getBalance(playerId, query.casinoId);
 
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: page,
+          data: balance,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -53,7 +57,7 @@ export async function GET(request: NextRequest) {
       },
       {
         domain: 'loyalty',
-        action: 'ledger',
+        action: 'get-balance',
         correlationId: ctx.requestId,
       },
     );

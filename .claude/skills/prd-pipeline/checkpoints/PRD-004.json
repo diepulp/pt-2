@@ -1,0 +1,13 @@
+{
+  "prd": "PRD-004",
+  "prd_title": "Loyalty Service - Ledger-Based Points System",
+  "current_phase": 0,
+  "status": "initialized",
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "artifacts": {},
+  "gates_passed": [],
+  "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
+  "timestamp": "2025-12-12T17:59:11Z"
+}

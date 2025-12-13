@@ -7,13 +7,14 @@ description: Build PT-2 API endpoints following SDLC taxonomy (API/DATA category
 
 ## Overview
 
-This skill guides implementation of PT-2 API endpoints following the SDLC documentation taxonomy **API/DATA** category (`docs/25-api-data/`). It provides:
+This skill guides implementation of PT-2 API endpoints following the SDLC documentation taxonomy **API/DATA** category (`docs/25-api-data/`).
 
-1. **Contract-first API development** (OpenAPI → Types → Implementation)
-2. **Route Handler patterns** for React Query integration
-3. **DTO compliance validation** (Pattern A vs B rules)
-4. **OpenAPI alignment verification**
-5. **Response contract enforcement** (`ServiceHttpResult<T>`)
+**Capabilities:**
+- Contract-first API development (OpenAPI → Types → Implementation)
+- Route Handler patterns for React Query integration
+- DTO compliance validation (Pattern A vs B rules)
+- OpenAPI alignment verification
+- Response contract enforcement (`ServiceHttpResult<T>`)
 
 **Use this skill when:**
 - Creating a new API route (e.g., "Add endpoint for player search")
@@ -22,212 +23,69 @@ This skill guides implementation of PT-2 API endpoints following the SDLC docume
 - Validating API implementation before merge
 
 **Do NOT use for:**
-- Backend service implementation (use `backend-service-builder` skill)
-- Frontend development (use `frontend-design` skill)
-- Architecture design (use `lead-architect` skill)
+- Backend service implementation → use `backend-service-builder` skill
+- Frontend development → use `frontend-design` skill
+- Architecture design → use `lead-architect` skill
+- RLS policies or database security → use `rls-expert` skill
 - Simple code fixes without API changes
 
 ---
 
-## Memory Recording Protocol 🧠
-
-This skill tracks execution outcomes to build API pattern knowledge.
-
-### Memory Activation Model
-
-Memory is **automatically activated** when this skill is invoked via the `Skill` tool.
-
-**How automatic activation works:**
-1. `PreToolUse` hook detects `Skill` tool invocation
-2. `skill-init-memori.sh` extracts skill name and initializes namespace
-3. Memori client is enabled for `skill_api_builder` namespace
-4. All subsequent memory operations use the skill namespace
-
-### Skill Execution Tracking
-
-Record complete execution outcomes after API implementation:
-
-```python
-from lib.memori import create_memori_client, SkillContext
-
-# Initialize Memori for this skill
-memori = create_memori_client("skill:api-builder")
-memori.enable()  # REQUIRED: Activates memory recording
-context = SkillContext(memori)
-
-# Record skill execution outcome
-context.record_skill_execution(
-    skill_name="api-builder",
-    task="Create player search endpoint",
-    outcome="success",  # or "failure", "partial"
-    pattern_used="Route Handler with ServiceHttpResult",
-    validation_results={
-        "openapi_aligned": True,
-        "dto_pattern_valid": True,
-        "idempotency_enforced": True,
-        "response_contract_valid": True
-    },
-    files_created=[
-        "app/api/v1/players/search/route.ts",
-        "services/player/dto.ts"
-    ],
-    issues_encountered=[
-        "Initially missing idempotency check (fixed)"
-    ],
-    lessons_learned=[
-        "Search endpoints need pagination support",
-        "Query params require Zod coercion for numbers"
-    ]
-)
-```
-
-### Query Past Patterns Before Starting
-
-Before implementing an API, check what patterns worked:
-
-```python
-# Search for similar past API implementations
-past_apis = memori.search_learnings(
-    query="API endpoint implementation",
-    tags=["api", "route-handler"],
-    category="skills",
-    limit=5
-)
-
-if past_apis:
-    print(f"\n📚 Learning from {len(past_apis)} past implementations:\n")
-    for api in past_apis:
-        metadata = api.get('metadata', {})
-        print(f"  Task: {metadata.get('task', 'N/A')}")
-        print(f"  Pattern: {metadata.get('pattern_used', 'N/A')}")
-        print(f"  Issues: {metadata.get('issues_encountered', [])}")
-```
-
-### Namespace Reference
-
-The skill uses the namespace `skill_api_builder` in the database. This maps from:
-- Client initialization: `create_memori_client("skill:api-builder")`
-- Database user_id: `skill_api_builder`
-
----
-
-## SDLC Taxonomy Alignment
-
-This skill operates within the **API/DATA** documentation category:
-
-| Category | Location | Purpose |
-|----------|----------|---------|
-| API/DATA | `docs/25-api-data/` | OpenAPI, DTOs, contracts, events |
-
-### Key Documents
-
-- **`API_SURFACE_MVP.md`** - Human-readable API catalogue (source of truth)
-- **`api-surface.openapi.yaml`** - Machine-readable OpenAPI spec
-- **`OPENAPI_QUICKSTART.md`** - Developer workflow guide
-- **`REAL_TIME_EVENTS_MAP.md`** - WebSocket event contracts
-
-### Architecture References
-
-- **`docs/20-architecture/EDGE_TRANSPORT_POLICY.md`** - Transport policy, middleware chain, headers, CI hooks
-- **`docs/20-architecture/BALANCED_ARCHITECTURE_QUICK.md`** - When to use Route Handlers vs Server Actions
-- **`docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`** - Error mapping, HTTP status codes, rate limiting, retry policies
-
-### ADR References
-
-- **ADR-007** - API Surface Catalogue & OpenAPI Contract
-- **ADR-003** - State Management (React Query integration)
-
----
-
-## How to Use This Skill
-
-### Quick Start Examples
+## Quick Start
 
 **Example 1: Create new endpoint**
 ```
 User: "Create an API endpoint for player search"
 
-Process:
-1. Document in API_SURFACE_MVP.md
-2. Update api-surface.openapi.yaml
-3. Generate types: npm run openapi:types
-4. Create route handler following template
-5. Validate compliance
+→ Document in API_SURFACE_MVP.md
+→ Update api-surface.openapi.yaml
+→ Generate types: npm run openapi:types
+→ Create route handler (see references/route-templates.md)
+→ Validate compliance
 ```
 
 **Example 2: Convert Server Action to Route Handler**
 ```
 User: "Convert create-player action to use React Query"
 
-Process:
-1. Identify existing Server Action in app/actions/
-2. Create Route Handler in app/api/v1/
-3. Add Idempotency-Key enforcement
-4. Update client to use React Query mutation
-5. Validate response contract
+→ Identify existing Server Action in app/actions/
+→ Create Route Handler in app/api/v1/
+→ Add Idempotency-Key enforcement
+→ Update client to use React Query mutation
+→ Validate response contract
 ```
 
 **Example 3: Validate existing API**
 ```
 User: "Check if player API follows standards"
 
-Process:
-1. Run validate_route.py on route handlers
-2. Run check_openapi_alignment.py for spec consistency
-3. Run validate_dto_patterns.py on DTOs
-4. Report findings and suggest fixes
+→ Run validate_route.py on route handlers
+→ Run check_openapi_alignment.py for spec consistency
+→ Run validate_dto_patterns.py on DTOs
+→ Report findings and suggest fixes
 ```
 
 ---
 
 ## API Implementation Workflow
 
-Follow these steps when building new API endpoints.
-
 ### Step 1: Document the API
 
 **1a. Update API Surface Catalogue**
 
 Add entry to `docs/25-api-data/API_SURFACE_MVP.md`:
-
-```markdown
-### {METHOD} /api/v1/{domain}/{path}
-- **Request**: {RequestDTO}
-- **Response**: {ResponseDTO}
-- **Notes**: {Operational notes}
-- **Idempotency**: Required (for writes)
-- **Auth**: Required roles
-```
+- Method and path
+- Request/Response DTOs
+- Idempotency requirements
+- Auth requirements
 
 **1b. Update OpenAPI Specification**
 
-Add to `docs/25-api-data/api-surface.openapi.yaml`:
-
-```yaml
-/api/v1/{domain}/{path}:
-  {method}:
-    summary: {Description}
-    operationId: {operationId}
-    tags:
-      - {Domain}
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            $ref: '#/components/schemas/{RequestDTO}'
-    responses:
-      '200':
-        description: Success
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ServiceHttpResult_{ResponseDTO}'
-      '400':
-        $ref: '#/components/responses/ValidationError'
-      '404':
-        $ref: '#/components/responses/NotFound'
-```
+Add route to `docs/25-api-data/api-surface.openapi.yaml` with:
+- Operation summary and tags
+- Request body schema reference
+- Response schema (`ServiceHttpResult_{ResponseDTO}`)
+- Error responses (400, 404, etc.)
 
 **1c. Regenerate Types**
 
@@ -240,129 +98,55 @@ npm run openapi:sync
 
 ### Step 2: Create DTOs and Zod Schemas
 
-**Read**: `references/api-patterns.md` for complete DTO rules
+**Read:** `references/api-patterns.md` § DTO Patterns for complete rules and examples.
 
-**Pattern Selection**:
-- **Pattern A** (manual interfaces) - Complex business logic (Loyalty, Finance)
-- **Pattern B** (Pick/Omit) - Simple CRUD (Player, Visit)
+**Pattern Selection:**
+| Service Type | Pattern | When to Use |
+|--------------|---------|-------------|
+| Pattern A | Manual interfaces | Complex business logic (Loyalty, Finance) |
+| Pattern B | Pick/Omit from Database types | Simple CRUD (Player, Visit) |
 
-**2a. Create DTOs** (`services/{domain}/dto.ts`)
-
-Pattern B Example:
-```typescript
-import type { Database } from '@/types/database.types';
-import { z } from 'zod';
-
-// Response DTO - derived from Row
-export type PlayerDTO = Pick<
-  Database['public']['Tables']['player']['Row'],
-  'id' | 'first_name' | 'last_name' | 'created_at'
->;
-
-// Request DTO - derived from Insert
-export type PlayerCreateDTO = Pick<
-  Database['public']['Tables']['player']['Insert'],
-  'first_name' | 'last_name' | 'birth_date'
->;
-
-// Zod schema for validation
-export const PlayerCreateSchema = z.object({
-  first_name: z.string().min(1).max(100),
-  last_name: z.string().min(1).max(100),
-  birth_date: z.string().date().optional(),
-});
-```
-
-**Critical Rules**:
+**Critical Rules:**
 - Pattern B: MUST use `type` with Pick/Omit (NO interfaces)
-- Pattern B: Create DTOs use `Insert` not `Row`
-- Zod schemas MUST match DTO structure
+- Pattern B: Create DTOs derive from `Insert` not `Row`
+- Zod schemas MUST mirror DTO structure exactly
+- Location: `services/{domain}/dto.ts`
 
 ---
 
 ### Step 3: Create Route Handler
 
-**Read**: `references/route-templates.md` for complete templates
+**Read:** `references/route-templates.md` for ready-to-use templates.
 
-**3a. File Location**
-
+**File Location:**
 ```
-app/api/v1/{domain}/route.ts          # Collection endpoints
-app/api/v1/{domain}/[id]/route.ts     # Resource endpoints
-app/api/v1/{domain}/{action}/route.ts # Action endpoints
-```
-
-**3b. Standard Handler Template**
-
-```typescript
-// app/api/v1/{domain}/route.ts
-import type { NextRequest } from 'next/server';
-import {
-  createRequestContext,
-  errorResponse,
-  requireIdempotencyKey,
-  successResponse
-} from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
-import { create{Domain}Service } from '@/services/{domain}';
-import { {Domain}CreateSchema } from '@/services/{domain}/dto';
-import { createClient } from '@/lib/supabase/server';
-
-export const dynamic = 'force-dynamic';
-
-export async function POST(request: NextRequest) {
-  const ctx = createRequestContext(request);
-
-  try {
-    const supabase = await createClient();
-    const idempotencyKey = requireIdempotencyKey(request);
-    const body = await request.json();
-    const input = {Domain}CreateSchema.parse(body);
-
-    const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
-        return service.create(input);
-      },
-      {
-        supabase,
-        action: '{domain}.create',
-        entity: '{domain}',
-        idempotencyKey,
-        requestId: ctx.requestId,
-      },
-    );
-
-    if (!result.ok) {
-      return errorResponse(ctx, result);
-    }
-
-    return successResponse(ctx, result.data, result.code, 201);
-  } catch (err) {
-    return errorResponse(ctx, err);
-  }
-}
+app/api/v1/{domain}/route.ts          # Collection (POST, GET list)
+app/api/v1/{domain}/[id]/route.ts     # Resource (GET, PATCH, DELETE)
+app/api/v1/{domain}/{action}/route.ts # Action (POST)
 ```
 
-**3c. Next.js 15 Dynamic Routes**
+**Available Templates:**
+1. Create Resource (POST)
+2. Get Single Resource (GET with ID)
+3. Update Resource (PATCH)
+4. List with Pagination (GET)
+5. RPC-Based Action
+6. Search Endpoint
+7. Nested Resource
 
-```typescript
-// For [id] params - MUST await Promise
-export async function GET(
-  request: NextRequest,
-  segmentData: { params: Promise<{ id: string }> }
-) {
-  const params = await segmentData.params; // Required in Next.js 15
-  const { id } = params;
-  // ...
-}
-```
+**Required Elements:**
+- `export const dynamic = 'force-dynamic'`
+- `createRequestContext(request)` for tracing
+- `requireIdempotencyKey(request)` for writes
+- `withServerAction()` wrapper for all service calls
+- Zod validation before service call
+- Next.js 15: `await segmentData.params` for dynamic routes
 
 ---
 
 ### Step 4: Required Headers
 
-**Write Operations (POST/PATCH/DELETE)**:
+**Write Operations (POST/PATCH/DELETE):**
 
 | Header | Required | Purpose |
 |--------|----------|---------|
@@ -370,32 +154,83 @@ export async function GET(
 | `Idempotency-Key` | Yes | Dedupe via ledger/constraint |
 | `Authorization` | Yes | Bearer token |
 
-**Enforcement**:
-```typescript
-const idempotencyKey = requireIdempotencyKey(request);
+---
+
+### RLS Awareness (ADR-015 + SEC-006)
+
+**Row-Level Security is automatically enforced** via the middleware chain:
+
 ```
+withAuth() → withRLS() → withIdempotency() → withAudit() → withTracing()
+```
+
+**What `withRLS` does (ADR-015 compliant):**
+- Calls `set_rls_context()` RPC (transaction-wrapped, pooling-safe)
+- RLS policies use **Pattern C Hybrid**: transaction context + JWT fallback
+- All downstream queries are automatically casino-scoped
+
+**Pattern C Resolution (canonical):**
+```sql
+casino_id = COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
+```
+
+**SEC-006 Critical Finding: SECURITY DEFINER Bypass**
+
+SECURITY DEFINER RPCs **bypass RLS entirely**. If your API calls an RPC:
+- Verify it validates `p_casino_id` against context (SEC-001 Template 5)
+- Never trust caller-provided `p_casino_id` without validation
+- See ADR-018 for SECURITY DEFINER governance
+
+**SEC-001 Template 5 Pattern (required for all SECURITY DEFINER RPCs):**
+```sql
+v_context_casino_id uuid := COALESCE(
+  NULLIF(current_setting('app.casino_id', true), '')::uuid,
+  (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+);
+IF p_casino_id IS DISTINCT FROM v_context_casino_id THEN
+  RAISE EXCEPTION 'casino_id context mismatch';
+END IF;
+```
+
+**API Builder Responsibilities:**
+- Ensure DTOs include `casino_id` where required by the schema
+- Trust that RLS enforces tenant isolation at the database level
+- Do NOT add manual `WHERE casino_id = ...` filters (RLS handles this)
+- Never use legacy `SET LOCAL` loops (ADR-015 anti-pattern)
+- Verify RPCs your API calls have proper context validation (SEC-006)
+
+**When to use `rls-expert` skill:**
+- Creating new database tables that need RLS policies
+- Implementing SECURITY DEFINER RPCs (requires Template 5 validation)
+- Troubleshooting multi-tenant data access issues
+- Auditing policies for ADR-015/SEC-006 compliance
+
+**References:**
+- `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
+- `docs/30-security/SEC-006-rls-strategy-audit-2025-12-11.md`
+- `docs/80-adrs/ADR-018-security-definer-governance.md`
+- `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` § Middleware Chain
 
 ---
 
 ### Step 5: Response Contract
 
-All endpoints MUST return `ServiceHttpResult<T>`:
+All endpoints MUST return `ServiceHttpResult<T>`.
 
-```typescript
-interface ServiceHttpResult<T> {
-  ok: boolean;              // True if succeeded
-  code: string;             // 'OK', 'NOT_FOUND', etc.
-  status: number;           // HTTP status
-  requestId: string;        // Trace ID
-  durationMs: number;       // Processing time
-  timestamp: string;        // ISO 8601
-  data?: T;                 // Success payload
-  error?: string;           // Error message
-  details?: unknown;        // Error context
-}
-```
+**Read:** `references/api-patterns.md` § Response Contract for full interface.
 
-**Use helpers from** `lib/http/service-response.ts`:
+**Key Fields:**
+- `ok: boolean` - Success indicator
+- `code: string` - Domain code ('OK', 'NOT_FOUND', etc.)
+- `status: number` - HTTP status
+- `requestId: string` - Trace ID
+- `data?: T` - Success payload
+- `error?: string` - Error message
+
+**Helpers:** `lib/http/service-response.ts`
 - `successResponse(ctx, data, code, status?)`
 - `errorResponse(ctx, error)`
 
@@ -403,82 +238,39 @@ interface ServiceHttpResult<T> {
 
 ### Step 6: Create React Query Hook
 
-**Read**: `references/api-patterns.md` § React Query Integration
+**Read:** `references/api-patterns.md` § React Query Integration for complete patterns.
 
-```typescript
-// hooks/use-{domain}.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { {domain}Keys } from '@/services/{domain}/keys';
-import type { {Domain}CreateDTO, {Domain}DTO } from '@/services/{domain}/dto';
+**Location:** `hooks/use-{domain}.ts`
 
-export function useCreate{Domain}() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async (input: {Domain}CreateDTO) => {
-      const res = await fetch('/api/v1/{domain}', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Idempotency-Key': crypto.randomUUID(),
-        },
-        body: JSON.stringify(input),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        throw new Error(json.error || 'Unknown error');
-      }
-      return json.data as {Domain}DTO;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: {domain}Keys.root });
-    },
-  });
-}
-```
+**Requirements:**
+- Include `Idempotency-Key` header for mutations
+- Parse `ServiceHttpResult` envelope
+- Invalidate queries on success
+- Use key factory from `services/{domain}/keys.ts`
 
 ---
 
 ### Step 7: Validate Implementation
 
 **7a. Route Handler Validation**
-
 ```bash
 .claude/skills/api-builder/scripts/validate_route.py app/api/v1/{domain}/route.ts
 ```
-
-Checks:
-- File location and naming
-- Required imports
-- Idempotency enforcement
-- withServerAction usage
-- Response contract compliance
-- Next.js 15 params handling
+Checks: file location, imports, idempotency, withServerAction, response contract, Next.js 15 params
 
 **7b. OpenAPI Alignment**
-
 ```bash
 .claude/skills/api-builder/scripts/check_openapi_alignment.py {domain}
 ```
-
-Checks:
-- Routes in spec exist as handlers
-- Handler methods match spec
-- Undocumented routes flagged
+Checks: routes in spec exist as handlers, method coverage, undocumented routes
 
 **7c. DTO Pattern Validation**
-
 ```bash
 .claude/skills/api-builder/scripts/validate_dto_patterns.py services/{domain}/dto.ts
 ```
-
-Checks:
-- Pattern A/B compliance
-- Zod schema alignment
-- Anti-patterns (any types, ReturnType)
+Checks: Pattern A/B compliance, Zod alignment, anti-patterns
 
 **7d. Type Check**
-
 ```bash
 npm run type-check
 ```
@@ -487,174 +279,75 @@ npm run type-check
 
 ### Step 8: Testing
 
-**Required Tests**:
+**Read:** `references/validation-checklist.md` § Testing Requirements
 
-```typescript
-// app/api/v1/{domain}/__tests__/route.test.ts
-import { describe, it, expect } from 'vitest';
+**Required Test Coverage:**
+- Success path (correct status code)
+- Validation errors (400)
+- Idempotency key enforcement
+- Response envelope shape (`ServiceHttpResult`)
 
-describe('{METHOD} /api/v1/{domain}', () => {
-  it('returns 201 on successful create', async () => {
-    // Test implementation
-  });
-
-  it('returns 400 on validation error', async () => {
-    // Test validation
-  });
-
-  it('requires idempotency key', async () => {
-    // Test header enforcement
-  });
-
-  it('returns ServiceHttpResult envelope', async () => {
-    // Verify response shape
-  });
-});
-```
+**Location:** `app/api/v1/{domain}/__tests__/route.test.ts`
 
 ---
 
-## Transport Architecture Reference
+## Key References
 
-**Canonical Source**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md`
+### SDLC Documents
+| Document | Purpose |
+|----------|---------|
+| `docs/25-api-data/API_SURFACE_MVP.md` | Human-readable API catalogue |
+| `docs/25-api-data/api-surface.openapi.yaml` | Machine-readable OpenAPI spec |
+| `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` | Transport policy, middleware |
+| `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` | Error mapping, rate limits |
 
-PT-2 uses dual transport:
+### ADRs
+- **ADR-007** - API Surface Catalogue & OpenAPI Contract
+- **ADR-003** - State Management (React Query integration)
 
-| Transport | Use Case | Location |
-|-----------|----------|----------|
-| **Route Handlers** | React Query mutations/queries | `app/api/v1/**` |
-| **Server Actions** | Form-based flows | `app/actions/**` |
-
-**Rule**: Route Handlers for React Query, Server Actions for forms.
-
-### Middleware Chain (from EDGE_TRANSPORT_POLICY.md)
-
-```
-withAuth() → withRLS() → withIdempotency() → withAudit() → withTracing()
-```
-
-- **withAuth**: Validates session, staff role, casino membership
-- **withRLS**: Sets `SET LOCAL app.casino_id`, ensures tenant isolation
-- **withIdempotency**: Requires `x-idempotency-key`, scopes by (casino_id, domain)
-- **withAudit**: Writes audit_log with actor_id, correlation_id, DTO hash
-- **withTracing**: Emits telemetry, maps domain errors → HTTP codes
+### Skill Resources
+| Resource | Purpose |
+|----------|---------|
+| `references/api-patterns.md` | Complete API patterns (transport, DTOs, errors, React Query) |
+| `references/route-templates.md` | Ready-to-use route handler templates |
+| `references/validation-checklist.md` | Comprehensive pre-merge checklist |
 
 ---
 
-## Error Code Reference
+## Error Codes Quick Reference
 
-**Full Error Taxonomy**: `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`
-
-### Quick Reference
+**Read:** `references/api-patterns.md` § Error Mapping for complete tables.
 
 | Code | HTTP | When |
 |------|------|------|
 | `OK` | 200 | Success |
 | `VALIDATION_ERROR` | 400 | Invalid input |
-| `FOREIGN_KEY_VIOLATION` | 400 | Invalid reference |
 | `NOT_FOUND` | 404 | Resource not found |
 | `UNIQUE_VIOLATION` | 409 | Duplicate |
 | `UNAUTHORIZED` | 401 | Not authenticated |
 | `FORBIDDEN` | 403 | Not authorized |
-| `INTERNAL_ERROR` | 500 | Server error |
-
-### HTTP Status Mapping Pattern
-
-| Error Pattern | HTTP | Retryable |
-|---------------|------|-----------|
-| `*_NOT_FOUND` | 404 | No |
-| `*_INVALID`, `*_MISMATCH` | 400 | No |
-| `*_ALREADY_*`, `*_DUPLICATE` | 409 | No |
-| `*_CONCURRENT_*` | 409 | Yes |
-| `RATE_LIMIT_EXCEEDED` | 429 | Yes |
-| `INTERNAL_ERROR` | 500 | Yes |
-
-### Rate Limiting (from ERROR_TAXONOMY)
-
-```typescript
-// Rate limits enforced in withServerAction
-| Endpoint | Per Actor | Per Casino |
-|----------|-----------|------------|
-| finance.create-transaction | 10/min | 100/min |
-| loyalty.issue-reward | 20/min | 200/min |
-| visit.check-in | — | 1000/min |
-| *.read | 100/min | 5000/min |
-```
-
----
-
-## Resources
-
-### scripts/
-
-**Validation Scripts**:
-
-- **`validate_route.py`** - Validates route handler structure
-  - Required imports and exports
-  - Idempotency enforcement
-  - Response contract compliance
-  - Next.js 15 patterns
-
-- **`check_openapi_alignment.py`** - Verifies spec-handler alignment
-  - Routes documented vs implemented
-  - Method coverage
-  - DTO alignment hints
-
-- **`validate_dto_patterns.py`** - Validates DTO pattern compliance
-  - Pattern A/B detection
-  - Pick/Omit vs interface rules
-  - Zod schema alignment
-  - Anti-pattern detection
-
-### references/
-
-- **`api-patterns.md`** - Complete API implementation patterns
-  - Transport architecture
-  - Response contracts
-  - DTO patterns A/B
-  - React Query integration
-  - Error mapping
-
-- **`route-templates.md`** - Ready-to-use route handler templates
-  - Create resource (POST)
-  - Get single (GET with ID)
-  - Update (PATCH)
-  - List with pagination
-  - RPC actions
-  - Nested resources
-
-- **`validation-checklist.md`** - Comprehensive pre-merge checklist
-  - Pre-implementation validation
-  - Handler structure
-  - Request handling
-  - Response contract
-  - Error handling
-  - Testing requirements
 
 ---
 
 ## Anti-Patterns
 
-### ❌ DO NOT
+### Avoid
+- Ad-hoc response envelopes (use `ServiceHttpResult<T>`)
+- Skipping idempotency key on writes
+- GET for mutations
+- Direct Supabase access in handlers (use services)
+- `any` types or `as any` casts
+- `ReturnType<typeof ...>` inference
+- Skipping Zod validation
+- Forgetting to await params Promise (Next.js 15)
 
-- Create ad-hoc response envelopes (use `ServiceHttpResult<T>`)
-- Skip idempotency key on write operations
-- Use GET for mutations
-- Access Supabase directly in handlers (use services)
-- Use `any` types or `as any` casts
-- Use `ReturnType<typeof ...>` inference
-- Skip Zod validation
-- Forget to await params Promise (Next.js 15)
-
-### ✅ DO
-
+### Required
 - Document route in API_SURFACE_MVP.md first
 - Update OpenAPI spec before implementing
 - Use `withServerAction` for all service calls
 - Enforce idempotency on writes
 - Return proper HTTP status codes
 - Check `result.ok` before returning success
-- Test error paths
 
 ---
 
@@ -667,7 +360,7 @@ Before marking API implementation complete:
 - [ ] Types regenerated (`npm run openapi:types`)
 - [ ] DTOs follow pattern rules (A or B)
 - [ ] Zod schemas match DTOs
-- [ ] Route handler uses correct file location
+- [ ] Route handler in correct location
 - [ ] Required imports present
 - [ ] `withServerAction` wraps service calls
 - [ ] Idempotency enforced for writes
@@ -679,13 +372,74 @@ Before marking API implementation complete:
 
 ---
 
-## Notes
+## Progressive Workflow
 
-**Progressive Workflow**: Not all steps apply to every task:
-- New endpoint → Full workflow (Steps 1-8)
-- Add method to existing route → Steps 1, 3, 6-8
-- Fix endpoint compliance → Steps 7-8
+Not all steps apply to every task:
 
-**Documentation First**: Always update API_SURFACE_MVP.md and OpenAPI spec before implementing. This ensures contract-first development and prevents drift.
+| Task | Steps |
+|------|-------|
+| New endpoint | 1-8 (full workflow) |
+| Add method to existing route | 1, 3, 6-8 |
+| Fix endpoint compliance | 7-8 |
 
-**Validation Focus**: Run validation scripts frequently. Catch compliance issues early.
+**Documentation First:** Always update API_SURFACE_MVP.md and OpenAPI spec before implementing.
+
+---
+
+## Validation Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/validate_route.py` | Validates route handler structure |
+| `scripts/check_openapi_alignment.py` | Verifies spec-handler alignment |
+| `scripts/validate_dto_patterns.py` | Validates DTO pattern compliance |
+
+---
+
+## Memory Recording Protocol
+
+This skill tracks execution outcomes to build API pattern knowledge.
+
+### Memory Activation
+
+Memory is **automatically activated** when this skill is invoked via the `Skill` tool.
+
+**Namespace:** `skill_api_builder`
+
+### Record Execution Outcomes
+
+After API implementation, record outcomes:
+
+```python
+from lib.memori import create_memori_client, SkillContext
+
+memori = create_memori_client("skill:api-builder")
+memori.enable()
+context = SkillContext(memori)
+
+context.record_skill_execution(
+    skill_name="api-builder",
+    task="Create player search endpoint",
+    outcome="success",
+    pattern_used="Route Handler with ServiceHttpResult",
+    validation_results={
+        "openapi_aligned": True,
+        "dto_pattern_valid": True,
+        "idempotency_enforced": True
+    },
+    files_created=["app/api/v1/players/search/route.ts"],
+    lessons_learned=["Search endpoints need pagination support"]
+)
+```
+
+### Query Past Patterns
+
+Before implementing, check what worked:
+
+```python
+past_apis = memori.search_learnings(
+    query="API endpoint implementation",
+    tags=["api", "route-handler"],
+    limit=5
+)
+```
