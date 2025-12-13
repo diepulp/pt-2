@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 1.9.0
+**Version**: 2.0.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-12-11
+**Updated**: 2025-12-13
 **Owner**: Lead Architect
 
 ---
@@ -24,7 +24,7 @@
 | **2** | **UI-SCAFFOLD-001** | **COMPLETE** ✅ | Dashboard shell, route groups, sidebar, mobile nav |
 | **2** | **PRD-006** | **~85% Complete** | Pit Dashboard Content (components built, hooks complete, realtime working) |
 | **2** | **PRD-008** | **Draft** | Rating Slip Modal Service Integration (component exists, BFF pending) |
-| 3 | PRD-004 | **Partial** | Mid-Session Loyalty (routes exist, service factory incomplete) |
+| **3** | **PRD-004** | **~90% Complete** | LoyaltyService (Pattern A, 7 workstreams, 50 tests, migrations pending remote) |
 | 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
 | **3** | **PRD-009** | **COMPLETE** ✅ | PlayerFinancialService (Pattern A, 5 workstreams, 78 tests) |
 
@@ -105,6 +105,16 @@
 > - **Hooks**: 4 React Query hooks (useFinancialTransactions, useVisitFinancialSummary, mutations)
 > - **Tests**: 78 tests passing (mappers: 44, service: 17, RLS integration: 17)
 > - **Commits**: 5f4522b (Phase 1), ccf9e98 (Phases 2-4), 3ec0caf (Phase 5 tests)
+>
+> **PRD-004 ~90% Complete (2025-12-13)**: LoyaltyService implemented per Pattern A:
+> - **7 Workstreams**: Schema, DTOs, Service Layer, Mappers, API Routes, React Query Hooks, Tests
+> - **Service Layer**: DTOs, schemas, keys, selects, mappers, crud, http (8 files)
+> - **Transport**: 7 Route Handlers (accrue, redeem, manual-credit, promotion, suggestion, ledger, balance)
+> - **Hooks**: 3 React Query hooks (use-loyalty-queries, use-loyalty-mutations)
+> - **Tests**: 50 tests passing (crud: 35, mappers: 15)
+> - **Migrations**: 4 pending remote (schema, RPCs, RLS, enum expansion)
+> - **Commits**: f109946 (WS1-WS7 complete)
+> - **Remaining**: Apply migrations to remote, integration testing, UI components
 
 ---
 
@@ -124,9 +134,9 @@ Establishes a complete implementation baseline for MVP delivery, addressing gaps
 
 | Layer | Status | Evidence |
 |-------|--------|----------|
-| **Database Schema** | **~95%** | 17 migrations deployed; types generated |
-| **Service Layer** | **~90%** | 6/7 core services implemented (Casino, Player, Visit, TableContext, RatingSlip, PlayerFinancial) |
-| **API Routes** | **~90%** | Core routes deployed; player-financial routes added |
+| **Database Schema** | **~95%** | 21 migrations (17 deployed + 4 loyalty pending remote); types generated |
+| **Service Layer** | **~95%** | 7/8 core services implemented (Casino, Player, Visit, TableContext, RatingSlip, PlayerFinancial, Loyalty) |
+| **API Routes** | **~95%** | Core routes deployed; loyalty routes added (7 endpoints) |
 | **React Query Keys** | **Complete** | Key factories for all implemented services |
 | **UI Components** | **~85%** | Dashboard shell + pit dashboard content (6 components, 4 hooks, realtime) |
 | **Horizontal Infra** | **COMPLETE** ✅ | withServerAction, ServiceResult, error mapping, query client |
@@ -163,9 +173,14 @@ UI LAYER ~85% COMPLETE (UI-SCAFFOLD-001 + PRD-006)
 ├── Player Check-in Flow (routes ready, UI pending)
 └── Loyalty Rewards Display (routes ready, UI pending)
 
-PHASE 3 SERVICES (In Progress - 1/3 complete)
+PHASE 3 SERVICES (In Progress - 2/3 complete)
 ├── PlayerFinancialService - COMPLETE ✅ (PRD-009, Pattern A, 78 tests, 2025-12-11)
-├── LoyaltyService - keys only (mid-session-reward.ts DELETED)
+├── LoyaltyService - ~90% COMPLETE (PRD-004, Pattern A, 50 tests, 2025-12-13)
+│   ├── Service layer complete (crud, dtos, mappers, schemas)
+│   ├── 7 route handlers (accrue, redeem, manual-credit, promotion, suggestion, ledger, balance)
+│   ├── React Query hooks (use-loyalty-queries, use-loyalty-mutations)
+│   ├── 4 migrations (schema, RPCs, RLS, enum expansion)
+│   └── PENDING: Apply migrations to remote, integration testing, UI components
 └── MTLService - keys only (view-model.ts DELETED)
 
 PROGRESS TRACKING ✅ INTEGRATED
@@ -685,21 +700,49 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 
 **Timeline**: Business value features
 **Approach**: VERTICAL + HYBRID orchestration
-**Status**: 🔄 PARTIAL - Routes exist, service factories incomplete
+**Status**: 🟡 ~75% COMPLETE - LoyaltyService ~90%, PlayerFinancialService COMPLETE, MTLService pending
 
-### 3.1 LoyaltyService — PARTIAL
+### 3.1 LoyaltyService — ~90% COMPLETE
 
 **PRD Reference**: PRD-004
+**Completed**: 2025-12-13 (WS1-WS7)
+**Pattern**: Pattern A (Contract-First) with idempotent RPCs, keyset pagination
 
 | Layer | Item | Location | Status |
 |-------|------|----------|--------|
+| **DTOs** | AccrueOnCloseOutput, RedeemOutput, LedgerEntryDTO, etc. | `services/loyalty/dtos.ts` | ✅ |
+| **Schemas** | 11 Zod schemas (accrual, redeem, promotion, ledger) | `services/loyalty/schemas.ts` | ✅ |
 | **Keys** | Query key factory | `services/loyalty/keys.ts` | ✅ |
-| **Routes** | Balances, ledger, mid-session | `app/api/v1/loyalty/**` | ✅ |
-| **Logic** | Mid-session reward | `services/loyalty/mid-session-reward.ts` | ❌ DELETED |
-| **Tests** | Unit test | `services/loyalty/__tests__/` | ❌ DELETED |
-| **Service** | LoyaltyService factory | `services/loyalty/index.ts` | ❌ Pending |
-| **Hook** | `useIssueMidSessionReward` | `hooks/use-loyalty.ts` | ❌ Pending |
+| **Selects** | Named column projections | `services/loyalty/selects.ts` | ✅ |
+| **Mappers** | Row→DTO transformers (8 mapper families) | `services/loyalty/mappers.ts` | ✅ |
+| **CRUD** | RPC-backed operations with idempotency | `services/loyalty/crud.ts` | ✅ |
+| **Service** | LoyaltyService factory | `services/loyalty/index.ts` | ✅ |
+| **HTTP** | Client fetchers | `services/loyalty/http.ts` | ✅ |
+| **Routes** | 7 Route Handlers | `app/api/v1/loyalty/**`, `app/api/v1/players/[playerId]/loyalty` | ✅ |
+| **Hooks** | 3 React Query hooks | `hooks/loyalty/` | ✅ |
+| **Tests** | 50 tests (crud: 35, mappers: 15) | `services/loyalty/__tests__/` | ✅ |
+| **Migrations** | 4 migrations (schema, RPCs, RLS, enum) | `supabase/migrations/2025121300*` | ✅ (local) |
+| **Documentation** | EXECUTION-SPEC, ADR-019, contracts | `docs/20-architecture/specs/PRD-004/` | ✅ |
 | **UI** | Reward dialog | `components/loyalty/reward-dialog.tsx` | ❌ Pending |
+
+**Implementation Highlights**:
+- **Pattern A**: Manual DTOs for cross-context consumption (append-only ledger)
+- **Idempotency**: `source_ref` column with unique constraint; RPCs return existing on replay
+- **Keyset Pagination**: Base64url opaque cursors for ledger (created_at DESC, id ASC)
+- **Reason Enum**: `base_accrual`, `promotion`, `redeem`, `manual_reward`, `adjustment`, `reversal`
+- **Route Status Codes**: 200 for replay (existing), 201 for new entries
+- **Schema Compatibility**: Mapper handles old `balance` vs new `current_balance`
+
+**Commits**:
+- `f109946` feat(loyalty): implement PRD-004 Loyalty Service (WS1-WS7)
+
+**Remaining Steps**:
+- [ ] Apply migrations to remote database (20251213003000, 20251213010000)
+- [ ] Integration testing with live database
+- [ ] UI components for loyalty display (reward-dialog, points-display, tier-badge)
+- [ ] Business confirmation on overdraw cap (5000 points)
+
+**Unblocks**: PRD-008 WS1 (Rating Slip Modal loyalty balance display)
 
 ### 3.2 PlayerFinancialService — COMPLETE ✅
 
@@ -920,25 +963,29 @@ graph LR
 
 ## Next Actions
 
-> **Updated 2025-12-11**: PRD-009 PlayerFinancialService COMPLETE (78 tests), Phase 3 now 1/3 done
+> **Updated 2025-12-13**: PRD-004 LoyaltyService ~90% COMPLETE (50 tests), Phase 3 now 2/3 done
 
-1. **Immediate (P0)**: Execute PRD-008 — Rating Slip Modal Service Integration (GATE-2 remaining blocker)
+1. **Immediate (P0)**: Complete PRD-004 LoyaltyService (remaining steps)
+   - Apply migrations to remote database: `20251213003000_prd004_loyalty_service_schema.sql`, `20251213010000_prd004_loyalty_rpcs.sql`
+   - Integration testing with live database (RLS policies, RPC behavior)
+   - Business confirmation on overdraw cap (5000 points default)
+2. **Immediate (P0)**: Execute PRD-008 — Rating Slip Modal Service Integration (GATE-2 remaining blocker)
    - Modal component exists at `components/modals/rating-slip/rating-slip-modal.tsx`
-   - **WS1**: Add `getPlayerBalance()` to LoyaltyService
+   - **WS1**: ~~Add `getPlayerBalance()` to LoyaltyService~~ ✅ COMPLETE (PRD-004)
    - **WS2**: ~~Create PlayerFinancialService foundation (Pattern A)~~ ✅ COMPLETE (PRD-009)
    - **WS3**: Build BFF endpoint `/api/v1/rating-slips/[id]/modal-data`
    - **WS4**: Wire modal to services (replace placeholder types)
    - **WS5**: Implement Move Player flow (close + start with same visit_id)
    - See `docs/10-prd/PRD-008-rating-slip-modal-integration.md` for full workstream breakdown
-2. **Short-term**: Complete GATE-2 validation
+3. **Short-term**: Complete GATE-2 validation
    - Measure p95 dashboard LCP (target ≤ 2.5s)
    - TableLayoutTerminal compact mode for grid thumbnails
    - E2E test coverage for pit dashboard flows
-3. **Medium-term**: Complete remaining Phase 3 service factories
-   - LoyaltyService factory (routes exist, need full service layer)
+4. **Medium-term**: Complete remaining Phase 3 service factories
+   - ~~LoyaltyService factory~~ ✅ ~90% COMPLETE (PRD-004, 2025-12-13) — UI components pending
    - MTLService factory (routes exist, view-model deleted — rebuild required)
    - ~~PlayerFinancialService factory~~ ✅ COMPLETE (PRD-009, 2025-12-11)
-4. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
+5. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
 
 ---
 
@@ -994,7 +1041,7 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **PRD-003**: Player Intake & Visit — COMPLETE
 - **PRD-003A**: PlayerService Pattern B Refactor — COMPLETE
 - **PRD-003B**: VisitService Pattern B Refactor — COMPLETE
-- **PRD-004**: Mid-Session Loyalty — Partial
+- **PRD-004**: LoyaltyService (~90% COMPLETE 2025-12-13, Pattern A, 7 workstreams, 50 tests)
 - **PRD-005**: Compliance Monitoring — Partial
 - **PRD-006**: Pit Dashboard UI (~85% COMPLETE 2025-12-10, 6 components, 4 hooks, realtime)
 - **PRD-007**: TableContextService (COMPLETE 2025-12-07, Pattern A, 5 workstreams)
@@ -1005,6 +1052,7 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **ADR-012**: Error Handling Layers (with Addendum for cross-context propagation)
 - **ADR-015**: RLS Connection Pooling Strategy (Phase 2 COMPLETE 2025-12-10, JWT claims)
 - **ADR-016**: Finance Outbox Pattern (PLANNED, post-MVP payment gateway integration)
+- **ADR-019**: Loyalty Points Policy v2 (2025-12-13, reason codes, idempotency, keyset pagination)
 - **VIS-001**: Vision & Scope
 - **SRM**: Service Responsibility Matrix v4.0.0
 - **BALANCED_ARCHITECTURE_QUICK**: Slicing decision guide
