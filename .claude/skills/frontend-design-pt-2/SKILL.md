@@ -1,6 +1,6 @@
 ---
 name: frontend-design-pt-2
-description: Create distinctive, production-grade frontend interfaces with high design quality for PT-2 architecture. Use this skill when building web components, pages, or applications that require React 19, Next.js 15 App Router, Tailwind v4, or shadcn/ui. NOT for backend services, API routes, database migrations, or RLS policies.
+description: Create distinctive, production-grade frontend interfaces with high design quality for PT-2 architecture. Use this skill when building web components, pages, or applications that require React 19, Next.js 16 App Router, Tailwind v4, or shadcn/ui. NOT for backend services, API routes, database migrations, or RLS policies.
 license: Complete terms in LICENSE.txt
 ---
 
@@ -48,7 +48,7 @@ Read these files **when needed** based on your task:
 Full details in `references/pt2-technical-standards.md`.
 
 - React 19 with App Router (NOT Pages Router)
-- Next.js 15 with async params (`await params` required)
+- Next.js 16 with async params (`await params` required)
 - Tailwind CSS v4 utilities (NOT v3 syntax)
 - shadcn/ui components via MCP server
 - Server Actions for mutations (NOT fetch to API routes)
@@ -134,8 +134,17 @@ See `references/QUICK_START.md` for complete workflow:
 
 For real-time UI updates, use event catalog patterns with TanStack Query cache invalidation. See `references/QUICK_START.md` for code templates.
 
+### Next.js 16 Cache APIs
+
+| Function | Use Case | Behavior |
+|----------|----------|----------|
+| `cacheTag('tag')` | Tag cached data in `'use cache'` functions | Stable API (no `unstable_` prefix) |
+| `revalidateTag('tag', 'max')` | Background revalidation | Stale-while-revalidate semantics |
+| `updateTag('tag')` | Immediate expiration | Read-your-own-writes scenarios |
+
 Key patterns:
-- `revalidateTag(tag)` for Server Component cache
+- `revalidateTag(tag, 'max')` for Server Component cache (stale-while-revalidate)
+- `updateTag(tag)` for immediate cache expiration in Server Actions
 - `queryClient.invalidateQueries()` for TanStack Query
 - Supabase realtime subscriptions for push updates
 - 250-500ms batching for list invalidations
@@ -151,7 +160,9 @@ Key patterns:
 | Hardcoded query keys | Key factories from `keys.ts` |
 | Database types in components | DTOs from service |
 | Spinners for loading | Layout-aware skeletons |
-| `params.id` without await | `const { id } = await params` |
+| `params.id` without await | `const { id } = await params` (Next.js 16) |
+| `revalidateTag(tag)` alone | `revalidateTag(tag, 'max')` for stale-while-revalidate |
+| Manual cache expiration | `updateTag(tag)` for immediate invalidation |
 
 ---
 

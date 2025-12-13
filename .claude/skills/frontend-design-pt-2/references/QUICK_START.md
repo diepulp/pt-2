@@ -44,7 +44,7 @@
 ### Technical Standards (REQUIRED)
 
 ```
-✅ React 19 + Next.js 15 App Router (NOT Pages Router)
+✅ React 19 + Next.js 16 App Router (NOT Pages Router)
 ✅ Tailwind CSS v4 (NOT v3 syntax)
 ✅ shadcn/ui components via MCP (de-facto UI standard)
 ✅ Server Actions for mutations (NOT fetch to API routes)
@@ -52,7 +52,8 @@
 ✅ TypeScript strict mode
 ✅ Loading skeletons (NOT spinners)
 ✅ Lists > 100 items use virtualization
-✅ Dynamic params MUST be awaited (Next.js 15)
+✅ Dynamic params MUST be awaited (Next.js 16)
+✅ Use cacheTag + revalidateTag('tag', 'max') for cache (Next.js 16)
 ```
 
 ### shadcn UI via MCP Server
@@ -102,11 +103,11 @@ export default async function PlayersPage() {
 }
 ```
 
-### Dynamic Route Page (Next.js 15)
+### Dynamic Route Page (Next.js 16)
 
 ```typescript
 // app/{domain}/[id]/page.tsx
-// IMPORTANT: params is now a Promise in Next.js 15
+// IMPORTANT: params is now a Promise in Next.js 16
 
 export default async function PlayerPage({
   params,
@@ -143,7 +144,7 @@ function InteractiveList() {
 }
 ```
 
-### Server Action + Form (React 19 / Next.js 15)
+### Server Action + Form (React 19 / Next.js 16)
 
 ```typescript
 'use client'
@@ -177,12 +178,12 @@ function SubmitButton({ children }: { children: React.ReactNode }) {
 }
 ```
 
-### Server Action with Cache Revalidation (Next.js 15)
+### Server Action with Cache Revalidation (Next.js 16)
 
 ```typescript
 // app/actions/player/create-player-action.ts
 'use server'
-import { revalidateTag } from 'next/cache'
+import { revalidateTag, updateTag } from 'next/cache'
 
 export async function createPlayerAction(prevState: unknown, formData: FormData) {
   const result = await createPlayer({
@@ -190,8 +191,21 @@ export async function createPlayerAction(prevState: unknown, formData: FormData)
   })
 
   if (result.success) {
-    // Invalidate cached data tagged with 'players'
-    revalidateTag('players')
+    // Next.js 16: Use 'max' profile for stale-while-revalidate
+    revalidateTag('players', 'max')
+  }
+
+  return result
+}
+
+// For immediate expiration (read-your-own-writes):
+export async function updatePlayerAction(id: string, formData: FormData) {
+  const result = await updatePlayer(id, formData)
+
+  if (result.success) {
+    // Next.js 16: updateTag for immediate cache expiration
+    updateTag('players')
+    updateTag(`player-${id}`)
   }
 
   return result
@@ -236,12 +250,15 @@ npm test -- --grep "ComponentName"
 
 ---
 
-## Quick Reference: Next.js 15 Breaking Changes
+## Quick Reference: Next.js 16 Breaking Changes
 
-| Before (Next.js 14) | After (Next.js 15) | Notes |
+| Before (Next.js 15) | After (Next.js 16) | Notes |
 |--------------------|--------------------|-------|
 | `params: { id: string }` | `params: Promise<{ id: string }>` | Must `await params` |
-| Sync params access | Async params access | All dynamic route params |
+| `unstable_cacheTag` | `cacheTag` | Stable API (no prefix) |
+| `revalidateTag(tag)` | `revalidateTag(tag, 'max')` | Stale-while-revalidate semantics |
+| N/A | `updateTag(tag)` | Immediate cache expiration |
+| `middleware.ts` | `proxy.ts` | Renamed convention |
 | `[state, formAction]` | `[state, formAction, pending]` | useActionState returns pending |
 
 ---
@@ -257,8 +274,9 @@ npm test -- --grep "ComponentName"
 | Spinners for loading | Layout-aware skeletons |
 | `console.*` in production | Remove or use logger |
 | Manual memoization | Trust React Compiler |
-| `params.id` without await | `const { id } = await params` (Next.js 15) |
-| `revalidateTag(tag)` alone | Use with `revalidatePath()` for full invalidation |
+| `params.id` without await | `const { id } = await params` (Next.js 16) |
+| `revalidateTag(tag)` alone | `revalidateTag(tag, 'max')` for stale-while-revalidate |
+| Manual cache expiration | `updateTag(tag)` for immediate invalidation |
 
 ---
 
