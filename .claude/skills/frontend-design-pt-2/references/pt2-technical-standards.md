@@ -1,7 +1,7 @@
 # PT-2 Frontend Technical Standards
 
 **Source**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` v2.1
-**Stack**: React 19 + **Next.js 16** App Router + Tailwind CSS v4 + TypeScript + shadcn/ui
+**Stack**: React 19 + **Next.js 15** App Router + Tailwind CSS v4 + TypeScript + shadcn/ui
 
 ---
 
@@ -9,7 +9,7 @@
 
 ### Core Technologies
 - **React 19** with React Compiler (automatic optimizations)
-- **Next.js 16 App Router** (not Pages Router)
+- **Next.js 15 App Router** (not Pages Router)
 - **TypeScript** (strict mode enabled)
 - **Tailwind CSS v4** (utility-first styling)
 - **shadcn/ui** component library (copy-paste, not npm package)
