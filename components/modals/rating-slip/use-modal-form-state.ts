@@ -21,8 +21,8 @@ export interface ModalFormState {
   /** Session start time (ISO 8601 datetime-local format) */
   startTime: string;
 
-  /** Cash-in amount (string for input binding) */
-  cashIn: string;
+  /** NEW buy-in amount to record (string for input binding) - NOT the total */
+  newBuyIn: string;
 
   /** Target table ID for move player feature */
   newTableId: string;
@@ -117,7 +117,7 @@ export function useModalFormState(
 
   // Increment numeric field
   const incrementField = (
-    field: "averageBet" | "cashIn" | "chipsTaken",
+    field: "averageBet" | "newBuyIn" | "chipsTaken",
     amount: number,
   ) => {
     setFormState((prev) => {
@@ -127,7 +127,7 @@ export function useModalFormState(
   };
 
   // Decrement numeric field
-  const decrementField = (field: "averageBet" | "cashIn" | "chipsTaken") => {
+  const decrementField = (field: "averageBet" | "newBuyIn" | "chipsTaken") => {
     setFormState((prev) => {
       const currentValue = Number(prev[field]) || 0;
       return { ...prev, [field]: Math.max(0, currentValue - 1).toString() };
@@ -169,7 +169,7 @@ function initializeFormState(data: RatingSlipModalDTO): ModalFormState {
   return {
     averageBet: data.slip.averageBet.toString(),
     startTime: data.slip.startTime.slice(0, 16), // Convert to datetime-local format
-    cashIn: data.financial.totalCashIn.toString(),
+    newBuyIn: "0", // Always start at 0 - user enters NEW buy-in amount
     newTableId: data.slip.tableId,
     newSeatNumber: data.slip.seatNumber || "",
     chipsTaken: "0",
@@ -183,7 +183,7 @@ function getEmptyFormState(): ModalFormState {
   return {
     averageBet: "0",
     startTime: "",
-    cashIn: "0",
+    newBuyIn: "0",
     newTableId: "",
     newSeatNumber: "",
     chipsTaken: "0",

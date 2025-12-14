@@ -19,6 +19,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
+import {
+  RatingSlipModal,
+  type FormState,
+} from "@/components/modals/rating-slip/rating-slip-modal";
 import { TableLayoutTerminal } from "@/components/table/table-layout-terminal";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -29,6 +33,13 @@ import {
   RealtimeStatusIndicator,
   dashboardKeys,
 } from "@/hooks/dashboard";
+import {
+  useSaveWithBuyIn,
+  useCloseWithFinancial,
+  useMovePlayer,
+  useRatingSlipModalData,
+} from "@/hooks/rating-slip-modal";
+import { useAuth } from "@/hooks/use-auth";
 import { useGamingDay } from "@/hooks/use-casino";
 import {
   pauseRatingSlip,
@@ -50,6 +61,9 @@ interface PitDashboardClientProps {
 export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const queryClient = useQueryClient();
 
+  // Auth: Get staff ID from authenticated user
+  const { staffId } = useAuth();
+
   // State: Selected table ID
   const [selectedTableId, setSelectedTableId] = React.useState<string | null>(
     null,
@@ -60,6 +74,12 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const [newSlipSeatNumber, setNewSlipSeatNumber] = React.useState<
     string | undefined
   >();
+
+  // State: Rating slip modal
+  const [selectedSlipId, setSelectedSlipId] = React.useState<string | null>(
+    null,
+  );
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
 
   // Query: Dashboard tables with active slips count
   const {
@@ -90,6 +110,16 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       selectedTableId,
       enabled: true,
     });
+
+  // Query: Modal data (fetched when modal is open)
+  const { data: modalData } = useRatingSlipModalData(
+    isModalOpen ? selectedSlipId : null,
+  );
+
+  // Mutations: Modal operations
+  const saveWithBuyIn = useSaveWithBuyIn();
+  const closeWithFinancial = useCloseWithFinancial();
+  const movePlayer = useMovePlayer();
 
   // Mutations for slip actions
   const pauseMutation = useMutation({
@@ -163,6 +193,66 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     });
   }, [seatOccupants]);
 
+  // Modal callback: Save with optional buy-in
+  const handleSave = async (formState: FormState) => {
+    if (!selectedSlipId || !modalData || !staffId) return;
+
+    try {
+      await saveWithBuyIn.mutateAsync({
+        slipId: selectedSlipId,
+        visitId: modalData.slip.visitId,
+        playerId: modalData.player?.id ?? null,
+        casinoId,
+        staffId,
+        averageBet: Number(formState.averageBet),
+        newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+      });
+    } catch (error) {
+      // Error is handled by mutation state
+      console.error("Save failed:", error);
+    }
+  };
+
+  // Modal callback: Close session with chips-taken
+  const handleCloseSession = async (formState: FormState) => {
+    if (!selectedSlipId || !modalData || !staffId) return;
+
+    try {
+      await closeWithFinancial.mutateAsync({
+        slipId: selectedSlipId,
+        visitId: modalData.slip.visitId,
+        playerId: modalData.player?.id ?? null,
+        casinoId,
+        staffId,
+        chipsTaken: Number(formState.chipsTaken || 0),
+        averageBet: Number(formState.averageBet),
+      });
+      // Close modal after successful close
+      setIsModalOpen(false);
+      setSelectedSlipId(null);
+    } catch (error) {
+      console.error("Close failed:", error);
+    }
+  };
+
+  // Modal callback: Move player to different table/seat
+  const handleMovePlayer = async (formState: FormState) => {
+    if (!selectedSlipId) return;
+
+    try {
+      const result = await movePlayer.mutateAsync({
+        currentSlipId: selectedSlipId,
+        destinationTableId: formState.newTableId,
+        destinationSeatNumber: formState.newSeatNumber || null,
+        averageBet: Number(formState.averageBet),
+      });
+      // Switch to new slip after successful move
+      setSelectedSlipId(result.newSlipId);
+    } catch (error) {
+      console.error("Move failed:", error);
+    }
+  };
+
   // Handle seat click - open new slip modal or show context menu
   const handleSeatClick = (
     index: number,
@@ -171,11 +261,11 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     const seatNumber = String(index + 1);
 
     if (occupant) {
-      // Seat is occupied - find the slip for this seat
+      // Seat is occupied - open modal for this slip
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
-        // For occupied seats, we could show a context menu
-        // For MVP, let's handle through the active slips panel
+        setSelectedSlipId(slipOccupant.slipId);
+        setIsModalOpen(true);
       }
     } else {
       // Seat is empty - open new slip modal
@@ -284,6 +374,10 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
             tableId={selectedTableId ?? undefined}
             casinoId={casinoId}
             onNewSlip={handleNewSlip}
+            onSlipClick={(slipId) => {
+              setSelectedSlipId(slipId);
+              setIsModalOpen(true);
+            }}
           />
         </div>
       </div>
@@ -307,6 +401,28 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
           occupiedSeats={occupiedSeats}
         />
       )}
+
+      {/* Rating Slip Modal */}
+      <RatingSlipModal
+        slipId={selectedSlipId}
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedSlipId(null);
+        }}
+        onSave={handleSave}
+        onCloseSession={handleCloseSession}
+        onMovePlayer={handleMovePlayer}
+        isSaving={saveWithBuyIn.isPending}
+        isClosing={closeWithFinancial.isPending}
+        isMoving={movePlayer.isPending}
+        error={
+          saveWithBuyIn.error?.message ||
+          closeWithFinancial.error?.message ||
+          movePlayer.error?.message ||
+          null
+        }
+      />
     </div>
   );
 }

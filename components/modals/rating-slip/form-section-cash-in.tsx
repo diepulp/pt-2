@@ -10,9 +10,10 @@ import { IncrementButtonGroup } from "./increment-button-group";
 
 interface FormSectionCashInProps {
   value: string;
+  totalCashIn?: number; // Existing total to display (in dollars)
   onChange: (v: string) => void;
   onReset: () => void;
-  incrementHandlers: { cashIn: (amount: number) => void };
+  incrementHandlers: { newBuyIn: (amount: number) => void }; // Changed from cashIn
   decrementHandler: () => void;
   incrementButtons: { amount: number; label: string }[];
   totalChange: number;
@@ -20,6 +21,7 @@ interface FormSectionCashInProps {
 
 const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
   value,
+  totalCashIn,
   onChange,
   onReset,
   incrementHandlers,
@@ -28,9 +30,22 @@ const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
   totalChange,
 }) => (
   <div>
+    {/* Display existing total cash-in (read-only) */}
+    {totalCashIn !== undefined && (
+      <div className="mb-3 p-3 bg-muted rounded-lg">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-muted-foreground">Total Cash In</span>
+          <span className="text-lg font-semibold font-mono">
+            ${totalCashIn.toFixed(2)}
+          </span>
+        </div>
+      </div>
+    )}
+
+    {/* New buy-in input (editable) */}
     <div className="flex justify-between items-center">
-      <label htmlFor="cashIn" className="text-sm font-medium">
-        Cash In
+      <label htmlFor="newBuyIn" className="text-sm font-medium">
+        New Buy-In
       </label>
       <Button onClick={onReset} variant="outline" size="sm">
         Reset
@@ -41,14 +56,14 @@ const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
         <Minus className="h-6 w-6" />
       </Button>
       <Input
-        id="cashIn"
+        id="newBuyIn"
         type="number"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="h-12 text-lg text-center"
       />
       <Button
-        onClick={() => incrementHandlers.cashIn(1)}
+        onClick={() => incrementHandlers.newBuyIn(1)}
         variant="outline"
         size="icon"
       >
@@ -56,9 +71,9 @@ const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
       </Button>
     </div>
     <IncrementButtonGroup
-      type="cashIn"
+      type="newBuyIn"
       incrementButtons={incrementButtons}
-      onIncrement={(_, amount) => incrementHandlers.cashIn(amount)}
+      onIncrement={(_, amount) => incrementHandlers.newBuyIn(amount)}
     />
     <div className="text-sm mt-1 text-muted-foreground">
       Total Change: {totalChange > 0 ? "+" : ""}

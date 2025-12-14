@@ -34,6 +34,8 @@ interface ActiveSlipsPanelProps {
   casinoId: string;
   /** Callback when a new slip should be created */
   onNewSlip?: () => void;
+  /** Callback when a slip card is clicked */
+  onSlipClick?: (slipId: string) => void;
 }
 
 /**
@@ -69,6 +71,7 @@ export function ActiveSlipsPanel({
   tableId,
   casinoId,
   onNewSlip,
+  onSlipClick,
 }: ActiveSlipsPanelProps) {
   const queryClient = useQueryClient();
 
@@ -241,6 +244,7 @@ export function ActiveSlipsPanel({
                 key={slip.id}
                 slip={slip}
                 onAction={(action) => handleAction(slip, action)}
+                onSlipClick={onSlipClick}
                 isLoading={
                   pauseMutation.isPending ||
                   resumeMutation.isPending ||
@@ -260,10 +264,11 @@ export function ActiveSlipsPanel({
 interface SlipCardProps {
   slip: RatingSlipDTO;
   onAction: (action: "pause" | "resume" | "close") => void;
+  onSlipClick?: (slipId: string) => void;
   isLoading: boolean;
 }
 
-function SlipCard({ slip, onAction, isLoading }: SlipCardProps) {
+function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
   const isPaused = slip.status === "paused";
   const isOpen = slip.status === "open";
 
@@ -274,7 +279,9 @@ function SlipCard({ slip, onAction, isLoading }: SlipCardProps) {
         isPaused
           ? "border-yellow-500/50 bg-yellow-500/5"
           : "border-accent/30 bg-accent/5 hover:border-accent/50",
+        onSlipClick && "cursor-pointer",
       )}
+      onClick={() => onSlipClick?.(slip.id)}
     >
       {/* Status indicator */}
       <div
@@ -329,7 +336,10 @@ function SlipCard({ slip, onAction, isLoading }: SlipCardProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onAction("pause")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("pause");
+            }}
             disabled={isLoading}
             className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
           >
@@ -341,7 +351,10 @@ function SlipCard({ slip, onAction, isLoading }: SlipCardProps) {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onAction("resume")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onAction("resume");
+            }}
             disabled={isLoading}
             className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-green-600 hover:text-green-600 dark:text-green-400"
           >
@@ -352,7 +365,10 @@ function SlipCard({ slip, onAction, isLoading }: SlipCardProps) {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => onAction("close")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onAction("close");
+          }}
           disabled={isLoading}
           className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"
         >
