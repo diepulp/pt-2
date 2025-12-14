@@ -10,20 +10,7 @@
 
 import { z } from "zod";
 
-// === UUID Format Schema ===
-
-/**
- * Permissive UUID format validation.
- *
- * Zod's built-in .uuid() validates RFC 4122 (version/variant bits),
- * which rejects valid database UUIDs that don't follow RFC strictly.
- * This regex validates the 8-4-4-4-12 format without version checks.
- */
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-const uuidFormat = (fieldName = "ID") =>
-  z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
+import { uuidSchema } from "@/lib/validation";
 
 // === Rating Slip Status Schema ===
 
@@ -50,9 +37,9 @@ export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
  */
 export const createRatingSlipSchema = z.object({
   /** Required: visit ID (provides player identity) */
-  visit_id: uuidFormat("visit ID"),
+  visit_id: uuidSchema("visit ID"),
   /** Required: gaming table ID */
-  table_id: uuidFormat("table ID"),
+  table_id: uuidSchema("table ID"),
   /** Optional: seat position at table */
   seat_number: z
     .string()
@@ -92,15 +79,15 @@ export type UpdateAverageBetInput = z.infer<typeof updateAverageBetSchema>;
  */
 export const ratingSlipListQuerySchema = z.object({
   /** Filter by gaming table */
-  table_id: uuidFormat("table ID").optional(),
+  table_id: uuidSchema("table ID").optional(),
   /** Filter by visit */
-  visit_id: uuidFormat("visit ID").optional(),
+  visit_id: uuidSchema("visit ID").optional(),
   /** Filter by slip status */
   status: ratingSlipStatusSchema.optional(),
   /** Results per page (default 20, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** Cursor for pagination (slip ID) */
-  cursor: uuidFormat("cursor").optional(),
+  cursor: uuidSchema("cursor").optional(),
 });
 
 export type RatingSlipListQuery = z.infer<typeof ratingSlipListQuerySchema>;
@@ -110,7 +97,7 @@ export type RatingSlipListQuery = z.infer<typeof ratingSlipListQuerySchema>;
  */
 export const activeSlipsQuerySchema = z.object({
   /** Required: gaming table ID */
-  table_id: uuidFormat("table ID"),
+  table_id: uuidSchema("table ID"),
 });
 
 export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
@@ -121,7 +108,7 @@ export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
  * Schema for rating slip detail route params.
  */
 export const ratingSlipRouteParamsSchema = z.object({
-  id: uuidFormat("rating slip ID"),
+  id: uuidSchema("rating slip ID"),
 });
 
 export type RatingSlipRouteParams = z.infer<typeof ratingSlipRouteParamsSchema>;

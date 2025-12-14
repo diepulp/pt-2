@@ -9,13 +9,15 @@
 
 import { z } from "zod";
 
+import { uuidSchema } from "@/lib/validation";
+
 // === Route Params Schema ===
 
 /**
  * Schema for modal-data route params.
  */
 export const modalDataRouteParamsSchema = z.object({
-  id: z.string().uuid("Rating slip ID must be a valid UUID"),
+  id: uuidSchema("Rating slip ID"),
 });
 
 export type ModalDataRouteParams = z.infer<typeof modalDataRouteParamsSchema>;
@@ -26,9 +28,9 @@ export type ModalDataRouteParams = z.infer<typeof modalDataRouteParamsSchema>;
  * Slip section schema.
  */
 export const slipSectionSchema = z.object({
-  id: z.string().uuid(),
-  visitId: z.string().uuid(),
-  tableId: z.string().uuid(),
+  id: uuidSchema("slip ID"),
+  visitId: uuidSchema("visit ID"),
+  tableId: uuidSchema("table ID"),
   tableLabel: z.string(),
   tableType: z.string(),
   seatNumber: z.string().nullable(),
@@ -44,7 +46,7 @@ export const slipSectionSchema = z.object({
  * Player section schema.
  */
 export const playerSectionSchema = z.object({
-  id: z.string().uuid(),
+  id: uuidSchema("player ID"),
   firstName: z.string(),
   lastName: z.string(),
   cardNumber: z.string().nullable(),
@@ -81,7 +83,7 @@ export const financialSectionSchema = z.object({
  * Table option schema.
  */
 export const tableOptionSchema = z.object({
-  id: z.string().uuid(),
+  id: uuidSchema("table ID"),
   label: z.string(),
   type: z.string(),
   status: z.string(),
@@ -109,7 +111,7 @@ export type RatingSlipModalResponse = z.infer<typeof ratingSlipModalSchema>;
  */
 export const movePlayerSchema = z.object({
   /** Target table UUID */
-  destinationTableId: z.string().uuid("Table ID must be a valid UUID"),
+  destinationTableId: uuidSchema("destination table ID"),
   /** Target seat number (optional, null for unseated) */
   destinationSeatNumber: z
     .string()

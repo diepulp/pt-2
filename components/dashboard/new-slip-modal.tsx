@@ -28,12 +28,36 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dashboardKeys } from "@/hooks/dashboard";
+import { FetchError } from "@/lib/http/fetch-json";
 import { cn } from "@/lib/utils";
+import { validateUUIDs, debugLogUUIDs } from "@/lib/validation";
 import type { PlayerSearchResultDTO } from "@/services/player/dtos";
 import { searchPlayers } from "@/services/player/http";
 import type { CreateRatingSlipInput } from "@/services/rating-slip/dtos";
 import { startRatingSlip } from "@/services/rating-slip/http";
 import { startVisit, getActiveVisit } from "@/services/visit/http";
+
+/**
+ * Format validation error details from FetchError for user display.
+ */
+function formatValidationError(err: FetchError): string {
+  if (!err.details) return err.message;
+
+  const details = err.details as {
+    fieldErrors?: Record<string, string[]>;
+    formErrors?: string[];
+  };
+
+  const fieldErrors = details.fieldErrors
+    ? Object.entries(details.fieldErrors)
+        .map(([field, msgs]) => `${field}: ${msgs.join(", ")}`)
+        .join("; ")
+    : "";
+
+  const formErrors = details.formErrors?.join("; ") || "";
+
+  return [fieldErrors, formErrors].filter(Boolean).join(" | ") || err.message;
+}
 
 interface NewSlipModalProps {
   /** Whether the modal is open */
@@ -112,11 +136,26 @@ export function NewSlipModal({
       onOpenChange(false);
     },
     onError: (err: Error) => {
-      // Handle specific error codes
+      // Debug logging for development
+      if (process.env.NODE_ENV === "development") {
+        console.group("[NewSlipModal] Mutation Error");
+        console.error("Error:", err);
+        if (err instanceof FetchError) {
+          console.error("Status:", err.status);
+          console.error("Code:", err.code);
+          console.error("Details:", err.details);
+        }
+        console.groupEnd();
+      }
+
+      // Handle specific error codes with descriptive messages
       if (err.message.includes("SEAT_ALREADY_OCCUPIED")) {
         setError(
           "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
         );
+      } else if (err instanceof FetchError && err.code === "VALIDATION_ERROR") {
+        // Show detailed validation errors
+        setError(formatValidationError(err));
       } else {
         setError(err.message);
       }
@@ -146,17 +185,58 @@ export function NewSlipModal({
       return;
     }
 
+    // Pre-validation: Check UUID formats before making API calls
+    const uuidValidation = validateUUIDs({
+      player_id: selectedPlayer.id,
+      table_id: tableId,
+    });
+
+    if (!uuidValidation.isValid) {
+      // Debug log UUID validation failures
+      debugLogUUIDs("NewSlipModal Pre-validation", {
+        player_id: selectedPlayer.id,
+        table_id: tableId,
+      });
+      setError(`Invalid data: ${uuidValidation.errors.join("; ")}`);
+      return;
+    }
+
     try {
+      // Debug logging for API call inputs
+      if (process.env.NODE_ENV === "development") {
+        console.group("[NewSlipModal] Creating Slip");
+        console.log("Player ID:", selectedPlayer.id);
+        console.log("Table ID:", tableId);
+        console.log("Seat Number:", selectedSeat);
+        console.groupEnd();
+      }
+
       // 1. Ensure player has an active visit (or start one)
       const activeVisitResponse = await getActiveVisit(selectedPlayer.id);
       let visitId: string;
 
       if (activeVisitResponse.has_active_visit && activeVisitResponse.visit) {
         visitId = activeVisitResponse.visit.id;
+        if (process.env.NODE_ENV === "development") {
+          console.log("[NewSlipModal] Using existing visit:", visitId);
+        }
       } else {
         // Start a new visit for the player
         const newVisit = await startVisit(selectedPlayer.id);
         visitId = newVisit.id;
+        if (process.env.NODE_ENV === "development") {
+          console.log("[NewSlipModal] Created new visit:", visitId);
+        }
+      }
+
+      // Pre-validation: Check visit ID format before creating slip
+      const visitValidation = validateUUIDs({ visit_id: visitId });
+      if (!visitValidation.isValid) {
+        debugLogUUIDs("NewSlipModal Visit ID Validation", {
+          visit_id: visitId,
+        });
+        setError(`Invalid visit ID: ${visitValidation.errors.join("; ")}`);
+        return;
       }
 
       // 2. Create the rating slip
@@ -166,7 +246,24 @@ export function NewSlipModal({
         seat_number: selectedSeat,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create slip");
+      // Debug logging for catch block errors
+      if (process.env.NODE_ENV === "development") {
+        console.group("[NewSlipModal] Submission Error");
+        console.error("Error:", err);
+        if (err instanceof FetchError) {
+          console.error("Status:", err.status);
+          console.error("Code:", err.code);
+          console.error("Details:", err.details);
+        }
+        console.groupEnd();
+      }
+
+      // Handle FetchError with detailed messages
+      if (err instanceof FetchError && err.code === "VALIDATION_ERROR") {
+        setError(formatValidationError(err));
+      } else {
+        setError(err instanceof Error ? err.message : "Failed to create slip");
+      }
     }
   };
 

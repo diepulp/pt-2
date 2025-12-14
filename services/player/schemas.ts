@@ -7,7 +7,9 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { z } from 'zod';
+import { z } from "zod";
+
+import { uuidSchema } from "@/lib/validation";
 
 // === Player CRUD Schemas ===
 
@@ -15,15 +17,15 @@ import { z } from 'zod';
 export const createPlayerSchema = z.object({
   first_name: z
     .string()
-    .min(1, 'First name is required')
-    .max(100, 'First name too long'),
+    .min(1, "First name is required")
+    .max(100, "First name too long"),
   last_name: z
     .string()
-    .min(1, 'Last name is required')
-    .max(100, 'Last name too long'),
+    .min(1, "Last name is required")
+    .max(100, "Last name too long"),
   birth_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
     .optional(),
 });
 
@@ -34,13 +36,13 @@ export const updatePlayerSchema = z
     last_name: z.string().min(1).max(100).optional(),
     birth_date: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
       .nullable()
       .optional(),
   })
   .refine(
     (data) => Object.values(data).some((v) => v !== undefined),
-    'At least one field must be provided for update',
+    "At least one field must be provided for update",
   );
 
 // === Player Search/List Schemas ===
@@ -48,9 +50,9 @@ export const updatePlayerSchema = z
 /** Schema for player list query params */
 export const playerListQuerySchema = z.object({
   /** Search query - minimum 2 characters for search */
-  q: z.string().min(2, 'Search query must be at least 2 characters').optional(),
+  q: z.string().min(2, "Search query must be at least 2 characters").optional(),
   /** Filter by enrollment status */
-  status: z.enum(['active', 'inactive']).optional(),
+  status: z.enum(["active", "inactive"]).optional(),
   /** Pagination cursor (ISO timestamp) */
   cursor: z.string().optional(),
   /** Results per page (default 20, max 100) */
@@ -61,7 +63,7 @@ export const playerListQuerySchema = z.object({
 
 /** Schema for enrollment route params */
 export const playerIdParamSchema = z.object({
-  playerId: z.string().uuid('Invalid player ID format'),
+  playerId: uuidSchema("player ID"),
 });
 
 /** Schema for enrollment request body (empty - casino comes from RLS) */
@@ -71,7 +73,7 @@ export const enrollPlayerSchema = z.object({}).strict();
 
 /** Schema for player detail route params */
 export const playerRouteParamsSchema = z.object({
-  playerId: z.string().uuid('Invalid player ID format'),
+  playerId: uuidSchema("player ID"),
 });
 
 // === Type Exports ===
