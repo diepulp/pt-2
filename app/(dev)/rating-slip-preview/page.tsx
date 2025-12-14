@@ -125,6 +125,7 @@ export default function RatingSlipPreviewPage() {
         )}
 
         <RatingSlipModal
+          slipId={null} // Set to actual ID to test service integration
           ratingSlip={mockRatingSlip}
           tables={mockTables}
           isOpen={isOpen}

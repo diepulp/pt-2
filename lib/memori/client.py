@@ -39,6 +39,7 @@ class MemoriClient:
     1. pt2_project      - Project standards + domain knowledge (permanent)
     2. arch_decisions   - Architectural decisions (permanent)
     3. mvp_progress     - MVP tracking (operational)
+    3. issues           - Bug tracking + debugging workflows (operational)
     4. session_*        - Ephemeral checkpoints (7-day TTL)
     """
 
@@ -50,6 +51,9 @@ class MemoriClient:
 
     # Tier 3: MVP progress namespace (operational)
     MVP_NAMESPACE = "mvp_progress"
+
+    # Tier 3: Issues tracking namespace (operational)
+    ISSUES_NAMESPACE = "issues"
 
     # Tier 4: Session checkpoints use dynamic naming: session_{skill}_{YYYY_MM}
     SESSION_TTL_DAYS = 7
@@ -72,6 +76,10 @@ class MemoriClient:
         "skill:api-builder": "arch_decisions",
         "skill:mvp-progress": "mvp_progress",
         "skill:rls-expert": "arch_decisions",
+        "skill:e2e-testing": "pt2_project",
+        # Issues tracking writes to issues namespace
+        "skill:issues": "issues",
+        "debugger": "issues",
     }
 
     # Skills that support session checkpoints (ephemeral, 7-day TTL)
@@ -79,6 +87,8 @@ class MemoriClient:
         "skill:lead-architect": "lead_architect",
         "skill:backend-service-builder": "backend",
         "skill:api-builder": "api",
+        "skill:issues": "issues",
+        "debugger": "issues",
     }
 
     def __init__(

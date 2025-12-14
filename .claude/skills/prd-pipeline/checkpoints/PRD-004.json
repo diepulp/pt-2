@@ -1,13 +1,17 @@
 {
   "prd": "PRD-004",
   "prd_title": "Loyalty Service - Ledger-Based Points System",
-  "current_phase": 0,
-  "status": "initialized",
-  "completed_workstreams": [],
+  "current_phase": 2,
+  "status": "in_progress",
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
   "in_progress_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
-  "artifacts": {},
-  "gates_passed": [],
-  "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
-  "timestamp": "2025-12-12T17:59:11Z"
+  "pending_workstreams": ["WS4", "WS5", "WS6", "WS7"],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20251213003000_prd004_loyalty_service_schema.sql"],
+    "WS2": ["supabase/migrations/20251213010000_prd004_loyalty_rpcs.sql"],
+    "WS3": ["services/loyalty/dtos.ts", "services/loyalty/schemas.ts", "services/loyalty/keys.ts"]
+  },
+  "gates_passed": ["schema-validation", "type-check"],
+  "gates_pending": ["lint", "test-pass"],
+  "timestamp": "2025-12-13T01:15:00Z"
 }

@@ -113,11 +113,13 @@ ORDER BY user_id;
 | Session checkpoints | 7 days | `session_lead_architect_{YYYY_MM}` |
 | Session checkpoints | 7 days | `session_backend_{YYYY_MM}` |
 | Session checkpoints | 7 days | `session_api_{YYYY_MM}` |
+| Session checkpoints | 7 days | `session_issues_{YYYY_MM}` |
 
 **NOT cleaned up (permanent):**
 - `pt2_project` - Project standards, domain knowledge
 - `arch_decisions` - Architectural decisions
 - `mvp_progress` - MVP tracking
+- `issues` - Bug tracking and debugging workflows
 
 ---
 
@@ -180,3 +182,5 @@ MEMORI CLEANUP REPORT
 | `/backend-checkpoint restore` | Restore backend session |
 | `/api-checkpoint restore` | Restore API session |
 | `/arch-checkpoint restore` | Restore architect session |
+| `/issue-checkpoint restore` | Restore debugging session |
+| `/issue-status` | View open issues |

@@ -1270,3 +1270,674 @@ class ArchitectContext:
         except Exception as e:
             logger.warning(f"Failed to query past regressions: {e}")
             return []
+
+
+class IssuesContext:
+    """
+    Issues tracking context manager for bug tracking and debugging workflows.
+
+    Provides specialized memory recording methods for:
+    - Bug/issue logging with severity and reproduction steps
+    - Debugging session checkpoints
+    - Resolution tracking and root cause analysis
+    - Pattern detection for recurring issues
+
+    Namespace: issues (Tier 3 - operational)
+    Session checkpoints: session_issues_{YYYY_MM} (7-day TTL)
+    """
+
+    def __init__(self, memori_client: 'MemoriClient'):
+        """
+        Initialize issues context manager.
+
+        Args:
+            memori_client: Memori client instance
+        """
+        self.memori = memori_client
+        self.skill_namespace = memori_client.chatmode
+
+    def _get_session_namespace(self) -> str:
+        """Get the session namespace for checkpoints, with TTL support."""
+        session_ns = self.memori.get_session_namespace()
+        return session_ns if session_ns else "issues"
+
+    # -------------------------------------------------------------------------
+    # Issue Logging Methods
+    # -------------------------------------------------------------------------
+
+    def log_issue(
+        self,
+        title: str,
+        description: str,
+        severity: str = "medium",  # critical, high, medium, low
+        category: str = "bug",  # bug, error, regression, performance, ux
+        affected_files: Optional[List[str]] = None,
+        reproduction_steps: Optional[List[str]] = None,
+        error_message: Optional[str] = None,
+        stack_trace: Optional[str] = None,
+        related_prd: Optional[str] = None,
+        related_service: Optional[str] = None,
+        tags: Optional[List[str]] = None
+    ) -> Optional[str]:
+        """
+        Log a new issue or bug.
+
+        Args:
+            title: Short issue title
+            description: Detailed description
+            severity: Issue severity (critical, high, medium, low)
+            category: Issue category (bug, error, regression, performance, ux)
+            affected_files: List of affected file paths
+            reproduction_steps: Steps to reproduce
+            error_message: Error message if applicable
+            stack_trace: Stack trace if applicable
+            related_prd: Related PRD identifier
+            related_service: Related service name
+            tags: Additional tags for filtering
+
+        Returns:
+            Issue ID if logged successfully, None otherwise
+        """
+        if not self.memori.enabled:
+            return None
+
+        import psycopg2
+        import json
+        import uuid
+
+        issue_id = f"ISSUE-{uuid.uuid4().hex[:8].upper()}"
+        content = f"[{severity.upper()}] {title}: {description[:200]}"
+
+        metadata = {
+            "type": "issue",
+            "issue_id": issue_id,
+            "title": title,
+            "description": description,
+            "severity": severity,
+            "category": category,
+            "status": "open",
+            "timestamp": datetime.now().isoformat(),
+            "logged_by": self.skill_namespace,
+        }
+
+        if affected_files:
+            metadata["affected_files"] = affected_files
+        if reproduction_steps:
+            metadata["reproduction_steps"] = reproduction_steps
+        if error_message:
+            metadata["error_message"] = error_message
+        if stack_trace:
+            metadata["stack_trace"] = stack_trace[:2000]  # Truncate long traces
+        if related_prd:
+            metadata["related_prd"] = related_prd
+        if related_service:
+            metadata["related_service"] = related_service
+
+        issue_tags = ["issue", severity, category]
+        if tags:
+            issue_tags.extend(tags)
+        metadata["tags"] = issue_tags
+
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata)
+                VALUES (%s, %s, %s, %s)
+            """, ("issues", content, "context", json.dumps(metadata)))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info(f"✅ Issue logged: {issue_id} - {title}")
+            return issue_id
+
+        except Exception as e:
+            logger.error(f"Failed to log issue: {e}")
+            return None
+
+    def update_issue_status(
+        self,
+        issue_id: str,
+        status: str,  # open, investigating, in_progress, resolved, wont_fix
+        notes: Optional[str] = None,
+        resolution: Optional[str] = None,
+        root_cause: Optional[str] = None,
+        fix_commit: Optional[str] = None
+    ) -> bool:
+        """
+        Update issue status.
+
+        Args:
+            issue_id: Issue identifier
+            status: New status
+            notes: Status update notes
+            resolution: Resolution description (for resolved status)
+            root_cause: Root cause analysis
+            fix_commit: Git commit hash that fixes the issue
+
+        Returns:
+            True if updated successfully
+        """
+        if not self.memori.enabled:
+            return False
+
+        import psycopg2
+        import json
+
+        content = f"Issue {issue_id} status update: {status}"
+        if notes:
+            content += f" - {notes[:100]}"
+
+        metadata = {
+            "type": "issue_update",
+            "issue_id": issue_id,
+            "status": status,
+            "timestamp": datetime.now().isoformat(),
+            "updated_by": self.skill_namespace,
+        }
+
+        if notes:
+            metadata["notes"] = notes
+        if resolution:
+            metadata["resolution"] = resolution
+        if root_cause:
+            metadata["root_cause"] = root_cause
+        if fix_commit:
+            metadata["fix_commit"] = fix_commit
+
+        tags = ["issue-update", status]
+        metadata["tags"] = tags
+
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata)
+                VALUES (%s, %s, %s, %s)
+            """, ("issues", content, "context", json.dumps(metadata)))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info(f"✅ Issue {issue_id} updated to: {status}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update issue: {e}")
+            return False
+
+    def log_debugging_step(
+        self,
+        issue_id: str,
+        step_description: str,
+        findings: Optional[str] = None,
+        hypothesis: Optional[str] = None,
+        next_action: Optional[str] = None,
+        files_examined: Optional[List[str]] = None
+    ) -> bool:
+        """
+        Log a debugging step for an issue.
+
+        Args:
+            issue_id: Issue being debugged
+            step_description: What was tried/investigated
+            findings: What was discovered
+            hypothesis: Current hypothesis about the cause
+            next_action: Planned next debugging step
+            files_examined: Files that were examined
+
+        Returns:
+            True if logged successfully
+        """
+        if not self.memori.enabled:
+            return False
+
+        import psycopg2
+        import json
+
+        content = f"Debug {issue_id}: {step_description[:150]}"
+
+        metadata = {
+            "type": "debugging_step",
+            "issue_id": issue_id,
+            "step_description": step_description,
+            "timestamp": datetime.now().isoformat(),
+        }
+
+        if findings:
+            metadata["findings"] = findings
+        if hypothesis:
+            metadata["hypothesis"] = hypothesis
+        if next_action:
+            metadata["next_action"] = next_action
+        if files_examined:
+            metadata["files_examined"] = files_examined
+
+        metadata["tags"] = ["debugging", issue_id]
+
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata)
+                VALUES (%s, %s, %s, %s)
+            """, ("issues", content, "context", json.dumps(metadata)))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.debug(f"Debugging step logged for {issue_id}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to log debugging step: {e}")
+            return False
+
+    # -------------------------------------------------------------------------
+    # Query Methods
+    # -------------------------------------------------------------------------
+
+    def get_open_issues(
+        self,
+        severity: Optional[str] = None,
+        category: Optional[str] = None,
+        limit: int = 20
+    ) -> List[Dict[str, Any]]:
+        """
+        Get open issues, optionally filtered by severity or category.
+
+        Args:
+            severity: Filter by severity
+            category: Filter by category
+            limit: Maximum results
+
+        Returns:
+            List of open issues
+        """
+        if not self.memori.enabled:
+            return []
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            query = """
+                SELECT content, metadata, created_at
+                FROM memori.memories
+                WHERE user_id = 'issues'
+                  AND metadata->>'type' = 'issue'
+                  AND metadata->>'status' IN ('open', 'investigating', 'in_progress')
+            """
+            params = []
+
+            if severity:
+                query += " AND metadata->>'severity' = %s"
+                params.append(severity)
+
+            if category:
+                query += " AND metadata->>'category' = %s"
+                params.append(category)
+
+            query += " ORDER BY created_at DESC LIMIT %s"
+            params.append(limit)
+
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+            results = []
+            for row in rows:
+                metadata = row[1]
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+                metadata["created_at"] = row[2].isoformat() if row[2] else None
+                results.append(metadata)
+
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to get open issues: {e}")
+            return []
+
+    def get_issue_history(self, issue_id: str) -> List[Dict[str, Any]]:
+        """
+        Get full history of an issue including all updates and debugging steps.
+
+        Args:
+            issue_id: Issue identifier
+
+        Returns:
+            List of issue events in chronological order
+        """
+        if not self.memori.enabled:
+            return []
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                SELECT content, metadata, created_at
+                FROM memori.memories
+                WHERE user_id = 'issues'
+                  AND metadata->>'issue_id' = %s
+                ORDER BY created_at ASC
+            """, (issue_id,))
+
+            rows = cur.fetchall()
+
+            results = []
+            for row in rows:
+                metadata = row[1]
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+                metadata["content"] = row[0]
+                metadata["created_at"] = row[2].isoformat() if row[2] else None
+                results.append(metadata)
+
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to get issue history: {e}")
+            return []
+
+    def find_similar_issues(
+        self,
+        error_message: Optional[str] = None,
+        affected_file: Optional[str] = None,
+        service: Optional[str] = None,
+        limit: int = 5
+    ) -> List[Dict[str, Any]]:
+        """
+        Find similar past issues that might be related.
+
+        Args:
+            error_message: Error message to match
+            affected_file: File path to match
+            service: Service name to match
+            limit: Maximum results
+
+        Returns:
+            List of similar issues with resolutions
+        """
+        if not self.memori.enabled:
+            return []
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            # Build query based on available criteria
+            conditions = ["user_id = 'issues'", "metadata->>'type' = 'issue'"]
+            params = []
+
+            if error_message:
+                conditions.append("content_tsv @@ plainto_tsquery('english', %s)")
+                params.append(error_message[:200])
+
+            if service:
+                conditions.append("metadata->>'related_service' = %s")
+                params.append(service)
+
+            query = f"""
+                SELECT content, metadata, created_at
+                FROM memori.memories
+                WHERE {' AND '.join(conditions)}
+                ORDER BY created_at DESC
+                LIMIT %s
+            """
+            params.append(limit)
+
+            cur.execute(query, params)
+            rows = cur.fetchall()
+
+            results = []
+            for row in rows:
+                metadata = row[1]
+                if isinstance(metadata, str):
+                    metadata = json.loads(metadata)
+                metadata["created_at"] = row[2].isoformat() if row[2] else None
+                results.append(metadata)
+
+            cur.close()
+            conn.close()
+
+            return results
+
+        except Exception as e:
+            logger.error(f"Failed to find similar issues: {e}")
+            return []
+
+    # -------------------------------------------------------------------------
+    # Session Checkpoint Methods (for debugging workflow continuity)
+    # -------------------------------------------------------------------------
+
+    def save_checkpoint(
+        self,
+        current_task: str,
+        reason: str = "manual",
+        issue_id: Optional[str] = None,
+        hypothesis: Optional[str] = None,
+        findings: Optional[List[str]] = None,
+        files_examined: Optional[List[str]] = None,
+        next_steps: Optional[List[str]] = None,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Save a debugging session checkpoint.
+
+        Args:
+            current_task: What debugging task is in progress
+            reason: Checkpoint reason
+            issue_id: Issue being investigated
+            hypothesis: Current hypothesis
+            findings: Key findings so far
+            files_examined: Files that have been examined
+            next_steps: Planned next debugging steps
+            notes: Additional notes
+
+        Returns:
+            True if saved successfully
+        """
+        if not self.memori.enabled:
+            return False
+
+        import psycopg2
+        import json
+        from datetime import timedelta
+
+        session_ns = self._get_session_namespace()
+        ttl_days = self.memori.get_session_ttl_days()
+        expires_at = datetime.now() + timedelta(days=ttl_days)
+
+        content = f"Debug checkpoint ({reason}): {current_task}"
+
+        metadata = {
+            "type": "session_checkpoint",
+            "checkpoint_reason": reason,
+            "current_task": current_task,
+            "timestamp": datetime.now().isoformat(),
+            "skill_namespace": self.skill_namespace,
+            "ttl_days": ttl_days,
+        }
+
+        if issue_id:
+            metadata["issue_id"] = issue_id
+        if hypothesis:
+            metadata["hypothesis"] = hypothesis
+        if findings:
+            metadata["findings"] = findings
+        if files_examined:
+            metadata["files_examined"] = files_examined
+        if next_steps:
+            metadata["next_steps"] = next_steps
+        if notes:
+            metadata["notes"] = notes
+
+        metadata["tags"] = ["session-checkpoint", reason]
+
+        try:
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            cur.execute("""
+                INSERT INTO memori.memories (user_id, content, category, metadata, expires_at)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (session_ns, content, "context", json.dumps(metadata), expires_at))
+
+            conn.commit()
+            cur.close()
+            conn.close()
+
+            logger.info(f"✅ Debug checkpoint saved to {session_ns}")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to save checkpoint: {e}")
+            return False
+
+    def load_latest_checkpoint(self) -> Optional[Dict[str, Any]]:
+        """
+        Load the most recent debugging session checkpoint.
+
+        Returns:
+            Checkpoint metadata dict or None if not found
+        """
+        if not self.memori.enabled:
+            return None
+
+        try:
+            import psycopg2
+            import json
+
+            db_url = self.memori.config.database_url.split('?')[0]
+            conn = psycopg2.connect(db_url)
+            cur = conn.cursor()
+            cur.execute("SET search_path TO memori, public")
+
+            session_ns = self._get_session_namespace()
+
+            cur.execute("""
+                SELECT content, metadata, created_at, user_id
+                FROM memori.memories
+                WHERE (user_id = %s OR user_id LIKE 'session_issues_%%')
+                  AND metadata->>'type' = 'session_checkpoint'
+                  AND (expires_at IS NULL OR expires_at > NOW())
+                ORDER BY created_at DESC
+                LIMIT 1
+            """, (session_ns,))
+
+            row = cur.fetchone()
+            cur.close()
+            conn.close()
+
+            if not row:
+                return None
+
+            metadata = row[1]
+            if isinstance(metadata, str):
+                metadata = json.loads(metadata)
+
+            metadata["content"] = row[0]
+            metadata["saved_at"] = row[2].isoformat() if row[2] else None
+            metadata["source_namespace"] = row[3]
+
+            return metadata
+
+        except Exception as e:
+            logger.error(f"Failed to load checkpoint: {e}")
+            return None
+
+    def format_checkpoint_for_resume(self, checkpoint: Optional[Dict[str, Any]] = None) -> str:
+        """
+        Format a checkpoint as markdown for context injection.
+
+        Args:
+            checkpoint: Checkpoint dict (if None, loads latest)
+
+        Returns:
+            Formatted markdown string
+        """
+        if checkpoint is None:
+            checkpoint = self.load_latest_checkpoint()
+
+        if not checkpoint:
+            return "No previous debugging session checkpoint found."
+
+        lines = [
+            "## 🔄 Resumed Debugging Session",
+            "",
+            f"**Saved at:** {checkpoint.get('saved_at', 'unknown')}",
+            f"**Reason:** {checkpoint.get('checkpoint_reason', 'unknown')}",
+            "",
+            f"### Current Task",
+            checkpoint.get('current_task', 'Unknown'),
+            "",
+        ]
+
+        if checkpoint.get('issue_id'):
+            lines.append(f"**Issue:** {checkpoint['issue_id']}")
+
+        if checkpoint.get('hypothesis'):
+            lines.extend(["", "### Current Hypothesis", checkpoint['hypothesis']])
+
+        if checkpoint.get('findings'):
+            lines.extend(["", "### Findings So Far"])
+            for finding in checkpoint['findings']:
+                lines.append(f"- {finding}")
+
+        if checkpoint.get('files_examined'):
+            lines.extend(["", "### Files Examined"])
+            for f in checkpoint['files_examined']:
+                lines.append(f"- {f}")
+
+        if checkpoint.get('next_steps'):
+            lines.extend(["", "### Next Steps"])
+            for step in checkpoint['next_steps']:
+                lines.append(f"- [ ] {step}")
+
+        if checkpoint.get('notes'):
+            lines.extend(["", "### Notes", checkpoint['notes']])
+
+        lines.extend([
+            "",
+            "---",
+            "*Continue debugging from where you left off.*"
+        ])
+
+        return "\n".join(lines)

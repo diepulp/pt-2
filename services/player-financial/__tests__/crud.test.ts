@@ -9,22 +9,23 @@ jest.mock('../mappers', () => ({
 }));
 
 describe('player-financial crud.createTransaction', () => {
-  const rpcRow: Database['public']['Tables']['player_financial_transaction']['Row'] = {
-    id: 'txn-uuid-1',
-    casino_id: 'casino-uuid-1',
-    player_id: 'player-uuid-1',
-    visit_id: 'visit-uuid-1',
-    rating_slip_id: null,
-    amount: 500,
-    direction: 'in',
-    source: 'pit',
-    tender_type: 'cash',
-    created_by_staff_id: 'staff-uuid-1',
-    related_transaction_id: null,
-    created_at: '2025-01-15T10:00:00Z',
-    gaming_day: '2025-01-15',
-    idempotency_key: 'idem-123',
-  };
+  const rpcRow: Database['public']['Tables']['player_financial_transaction']['Row'] =
+    {
+      id: 'txn-uuid-1',
+      casino_id: 'casino-uuid-1',
+      player_id: 'player-uuid-1',
+      visit_id: 'visit-uuid-1',
+      rating_slip_id: null,
+      amount: 500,
+      direction: 'in',
+      source: 'pit',
+      tender_type: 'cash',
+      created_by_staff_id: 'staff-uuid-1',
+      related_transaction_id: null,
+      created_at: '2025-01-15T10:00:00Z',
+      gaming_day: '2025-01-15',
+      idempotency_key: 'idem-123',
+    };
 
   const supabase = {
     rpc: jest.fn(),
@@ -54,10 +55,7 @@ describe('player-financial crud.createTransaction', () => {
       // optional fields omitted to ensure undefined is sent
     };
 
-    await createTransaction(
-      supabase as unknown as any,
-      input,
-    );
+    await createTransaction(supabase as unknown as any, input);
 
     expect(supabase.rpc).toHaveBeenCalledWith('rpc_create_financial_txn', {
       p_casino_id: input.casino_id,

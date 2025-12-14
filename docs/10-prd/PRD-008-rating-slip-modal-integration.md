@@ -21,7 +21,7 @@ The rating slip modal component exists but uses placeholder types and has no int
 | `startTime` | RatingSlipService | Placeholder |
 | `gameTableId` | RatingSlipService | Placeholder |
 | `seatNumber` | RatingSlipService | Placeholder |
-| `points` | LoyaltyService | Placeholder (was incorrectly marked out of scope) |
+| `points` | LoyaltyService | Placeholder (PRD-004 v3 implementation in progress) |
 | `chipsTaken` | PlayerFinancialService (on close) | Placeholder |
 
 Without proper integration:
@@ -91,8 +91,9 @@ Without proper integration:
 **Data Aggregation (BFF)**
 - BFF endpoint fetches data from RatingSlipService, PlayerService, VisitService, LoyaltyService in parallel
 - Response includes denormalized player name (from `visit.player_id` → `player`)
-- Response includes current loyalty balance (from `player_loyalty.balance`)
+- Response includes current loyalty balance (from `player_loyalty.current_balance` via `PlayerLoyaltyDTO`)
 - Response handles null player (ghost visits) gracefully
+- For active sessions, optionally calls `evaluate_session_reward_suggestion` for comp preview
 
 **Save Changes**
 - Call `RatingSlipService.updateAverageBet()` with form values
@@ -111,9 +112,10 @@ Without proper integration:
 - All slips for the visit share session-level aggregation via `visit_id`
 
 **Points Display**
-- Fetch `player_loyalty.balance` via LoyaltyService
+- Fetch `player_loyalty.current_balance` via LoyaltyService (`PlayerLoyaltyDTO.currentBalance`)
 - Display in modal footer as "Current Points"
 - Points tracked per `(player_id, casino_id)` composite key
+- Note: Points are credits (positive balance); comp issuance creates debits (per ADR-019 v2)
 
 ### 5.2 Non-Functional Requirements
 
@@ -123,16 +125,23 @@ Without proper integration:
 
 ### 5.3 Architectural Requirements
 
-**Bounded Context Compliance (SRM v4.0.0)**
+**Bounded Context Compliance (SRM v4.4.0)**
 
 | Field | Owner Service | Access Pattern |
 |-------|---------------|----------------|
 | `playerName` | PlayerService | Via VisitService DTO (visit includes player reference) |
 | `averageBet` | RatingSlipService | Direct DTO |
-| `cashIn` | PlayerFinancialService | Query by `visit_id` + type='buy_in' |
+| `cashIn` | PlayerFinancialService | Query by `visit_id` + direction='in' |
 | `startTime` | RatingSlipService | Direct DTO |
-| `points` | LoyaltyService | Query `player_loyalty.balance` |
-| `chipsTaken` | PlayerFinancialService | Mutation on close |
+| `points` | LoyaltyService | Query `player_loyalty.current_balance` via `PlayerLoyaltyDTO` |
+| `chipsTaken` | PlayerFinancialService | Mutation on close (direction='out') |
+
+**RLS Compliance (ADR-015)**
+
+All RLS policies use Pattern C (Hybrid with Fallback):
+- Primary: JWT claims (`auth.jwt() -> 'app_metadata' ->> 'casino_id'`)
+- Fallback: Session context (`current_setting('app.casino_id', true)`)
+- All service queries benefit from connection pooling compatibility
 
 **Key Invariant (PRD-002 §7.2)**: `table_id` and `seat_number` are immutable on `rating_slip`. Player movement requires close + start, not update.
 
@@ -210,25 +219,28 @@ Modal Layout:
 | RatingSlipService (PRD-002) | COMPLETE | Slip lifecycle, average_bet update |
 | PlayerService (PRD-003) | COMPLETE | Player identity |
 | VisitService (PRD-003) | COMPLETE | Visit anchor, player reference |
-| LoyaltyService | PARTIAL | `player_loyalty` table exists, query needed |
-| PlayerFinancialService | NOT STARTED | Schema exists, service layer needed |
+| LoyaltyService (PRD-004) | COMPLETE | 4-path ledger model per ADR-019 v2, hooks in `hooks/loyalty/` |
+| PlayerFinancialService (PRD-009) | COMPLETE | SRM v4.3.0, 78 tests passing |
 | TableContextService (PRD-007) | COMPLETE | Table list for move dropdown |
 | Modal Component | EXISTS | `components/modals/rating-slip/rating-slip-modal.tsx` |
+| ADR-015 (RLS Connection Pooling) | IMPLEMENTED | Phase 2 - JWT claims + Pattern C hybrid |
+| ADR-019 v2 (Loyalty Points Policy) | ACCEPTED | DB-authoritative ledger model |
 
-**Service Layer Gaps**
+**Service Layer Status (Updated 2025-12-13)**
 
-| Service | Gap | Required For |
-|---------|-----|--------------|
-| LoyaltyService | No `getPlayerBalance()` query | Points display |
-| PlayerFinancialService | No service layer | Cash-in, chips-taken recording |
+| Service | Status | Hooks Available |
+|---------|--------|-----------------|
+| LoyaltyService | ✅ COMPLETE | `usePlayerLoyalty`, `useLoyaltySuggestion`, `useLoyaltyLedger`, `useRedeem`, `useManualCredit`, `useApplyPromotion` |
+| PlayerFinancialService | ✅ COMPLETE | `useFinancialTransactions`, `useFinancialSummary`, `useRecordTransaction` |
 
 ### 7.2 Risks & Open Questions
 
 | Risk | Mitigation |
 |------|------------|
-| PlayerFinancialService not implemented | Create minimal service with `recordTransaction()` for close flow |
-| LoyaltyService balance query missing | Add `getPlayerBalance(playerId, casinoId)` to existing service |
+| ~~LoyaltyService still in progress~~ | ✅ RESOLVED - PRD-004 v3 hooks fully implemented |
+| Semantic clarity: "mid-session rewards" | Per ADR-019 v2, these are **comp issuance (debits)**, not credits. Base accrual happens only on slip close. |
 | Move player destination validation | Query active slips before starting new slip |
+| Snapshot population gaps | Rating slip must have `policy_snapshot.loyalty` populated for base accrual (see PRD-004 §7.2) |
 
 **Design Decisions:**
 
@@ -270,12 +282,15 @@ The release is considered **Done** when:
 - [ ] BFF endpoint respects RLS (user's casino only)
 - [ ] All mutations require authenticated session
 - [ ] Financial transactions require pit_boss or higher role
+- [ ] RLS uses ADR-015 Pattern C (hybrid JWT + session context fallback)
+- [ ] Comp issuance (redemption) requires `pit_boss|cashier|admin` per ADR-019 v2
 
 **Architecture Compliance**
 - [ ] No direct cross-context table access
 - [ ] All service consumption via DTOs/published queries
 - [ ] Idempotency keys on all mutations
 - [ ] Zero `as` type assertions
+- [ ] LoyaltyService RPCs are SECURITY INVOKER (per ADR-019 v2)
 
 **Testing**
 - [ ] Unit tests for BFF data aggregation
@@ -290,12 +305,15 @@ The release is considered **Done** when:
 ## 9. Related Documents
 
 - **Vision / Strategy:** `docs/00-vision/VIS-001-VISION-AND-SCOPE.md`
-- **Architecture / SRM:** `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v4.0.0)
+- **Architecture / SRM:** `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v4.4.0)
 - **Service Layer (SLAD):** `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
 - **RatingSlipService:** `docs/10-prd/PRD-002-rating-slip-service.md`
+- **LoyaltyService:** `docs/10-prd/PRD-004-loyalty-service.md` (v3.0.0)
 - **Pit Dashboard:** `docs/10-prd/PRD-006-pit-dashboard.md`
 - **Visit Archetypes:** `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md`
 - **Financial Fields Removal:** `docs/80-adrs/ADR-006-rating-slip-financial-removal.md`
+- **Loyalty Points Policy:** `docs/80-adrs/ADR-019-loyalty-points-policy_v2.md` ← **NEW**
+- **RLS Connection Pooling:** `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` ← **NEW**
 - **DTO Standard:** `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
 - **Schema / Types:** `types/database.types.ts`
 - **RLS Policy Matrix:** `docs/30-security/SEC-001-rls-policy-matrix.md`
@@ -303,34 +321,47 @@ The release is considered **Done** when:
 
 ## 10. Implementation Workstreams
 
-### WS1: LoyaltyService Balance Query
+> **Status Update (2025-12-13):** WS1 and WS2 are COMPLETE. WS3 (BFF Aggregation) is now unblocked.
+
+### WS1: LoyaltyService Integration → **COMPLETE**
 **Agent:** backend-developer
-**Effort:** Small
+**Effort:** ~~Small~~ → **COMPLETE** (PRD-004 v3 hooks implemented)
+**Dependencies:** PRD-004 v3 ✅
+
+- ~~Add `getPlayerBalance(playerId, casinoId)` to LoyaltyService~~ ✅ `usePlayerLoyalty` hook
+- ~~Query `player_loyalty` table for balance~~ ✅ `PlayerLoyaltyDTO.currentBalance`
+- ~~Add React Query hook `usePlayerLoyaltyBalance`~~ ✅ `hooks/loyalty/use-loyalty-queries.ts`
+- ~~Wire up `evaluate_session_reward_suggestion` for comp preview~~ ✅ `useLoyaltySuggestion` hook
+
+**Available Hooks (PRD-004):**
+| Hook | Purpose |
+|------|---------|
+| `usePlayerLoyalty(playerId, casinoId)` | Balance + tier display |
+| `useLoyaltySuggestion(ratingSlipId)` | Session comp preview (read-only) |
+| `useLoyaltyLedger(query)` | Paginated ledger history |
+| `useRedeem()` | Comp issuance (debit) mutation |
+
+### WS2: PlayerFinancialService Foundation → **COMPLETE**
+**Agent:** backend-developer
+**Effort:** ~~Medium~~ → **COMPLETE** (PRD-009, SRM v4.3.0)
 **Dependencies:** None
 
-- Add `getPlayerBalance(playerId, casinoId)` to LoyaltyService
-- Query `player_loyalty` table for balance
-- Add React Query hook `usePlayerLoyaltyBalance`
+- ~~Create `services/player-financial/` with Pattern A structure~~ ✅
+- ~~Implement `recordTransaction()` for buy-in and chips-taken~~ ✅
+- ~~Create `dtos.ts`, `schemas.ts`, `crud.ts`, `index.ts`~~ ✅
+- ~~Add RLS policies for `player_financial_transaction`~~ ✅ ADR-015 Pattern C
 
-### WS2: PlayerFinancialService Foundation
-**Agent:** backend-developer
-**Effort:** Medium
-**Dependencies:** None (parallel with WS1)
-
-- Create `services/player-financial/` with Pattern A structure
-- Implement `recordTransaction()` for buy-in and chips-taken
-- Create `dtos.ts`, `schemas.ts`, `crud.ts`, `index.ts`
-- Add RLS policies for `player_financial_transaction`
-
-### WS3: BFF Aggregation Endpoint
+### WS3: BFF Aggregation Endpoint → **READY TO START**
 **Agent:** api-expert
 **Effort:** Medium
-**Dependencies:** WS1, WS2
+**Dependencies:** WS1 ✅, WS2 ✅
 
 - Create `app/api/v1/rating-slips/[id]/modal-data/route.ts`
 - Aggregate from RatingSlip, Player, Visit, Loyalty, Financial services
 - Define `RatingSlipModalDTO` response schema
 - Parallel service calls with `Promise.all()`
+- Include `evaluate_session_reward_suggestion` output for active sessions
+- Use ADR-015 Pattern C for RLS context
 
 ### WS4: Modal Service Integration
 **Agent:** pt2-frontend-implementer
@@ -367,3 +398,5 @@ The release is considered **Done** when:
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2025-12-10 | Lead Architect | Initial draft with corrected bounded context ownership |
+| 1.1 | 2025-12-13 | Lead Architect | **ADR alignment update**: Updated for ADR-019 v2 (4-path loyalty model, comp issuance semantics), ADR-015 Pattern C (hybrid RLS), PRD-004 v3 (LoyaltyService in progress), PRD-009 (PlayerFinancialService COMPLETE). Updated dependencies table, added RLS compliance requirements, corrected `player_loyalty.balance` → `current_balance`. |
+| 1.2 | 2025-12-13 | Lead Architect | **WS1 COMPLETE**: LoyaltyService hooks fully implemented (`usePlayerLoyalty`, `useLoyaltySuggestion`, `useLoyaltyLedger`, `useRedeem`). WS3 now unblocked. Added hooks reference table. |

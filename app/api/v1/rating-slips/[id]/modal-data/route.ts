@@ -18,6 +18,7 @@
  */
 
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 import { DomainError } from "@/lib/errors/domain-errors";
 import {
@@ -236,7 +237,31 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     );
 
     if (!result.ok) {
-      return errorResponse(ctx, result);
+      // result is a ServiceResult, convert to HTTP response directly
+      const status =
+        result.code === "NOT_FOUND"
+          ? 404
+          : result.code === "FORBIDDEN"
+            ? 403
+            : result.code === "UNAUTHORIZED"
+              ? 401
+              : result.code === "VALIDATION_ERROR"
+                ? 400
+                : 500;
+
+      return NextResponse.json(
+        {
+          ok: false,
+          code: result.code,
+          status,
+          error: result.error ?? "Unknown error",
+          details: result.details,
+          requestId: ctx.requestId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        },
+        { status },
+      );
     }
     return successResponse(ctx, result.data);
   } catch (error) {

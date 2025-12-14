@@ -1,7 +1,7 @@
 # Phase Status Snapshot
-last_updated: 2025-11-30
-current_phase: "Phase 2"
-implementation_status: "9/13 services implemented (69%)"
+last_updated: 2025-12-13
+current_phase: "Phase 2 (Active), Phase 3 (WIP)"
+implementation_status: "10/13 services implemented (76.9%)"
 canonical_source: "Memori engine (skill:mvp-progress namespace)"
 canonical_roadmap: "docs/20-architecture/MVP-ROADMAP.md"
 sources:
@@ -10,30 +10,33 @@ sources:
   - docs/10-prd/PRD-000-casino-foundation.md
   - docs/10-prd/PRD-001_Player_Management_System_Requirements.md
   - docs/10-prd/PRD-002-table-rating-core.md
+  - docs/10-prd/PRD-004-loyalty-service.md
+  - docs/10-prd/PRD-007-table-context-service.md
 
 ## PRD Coverage Status
 
 | PRD | Scope | Status |
 |-----|-------|--------|
 | PRD-000 | CasinoService (Root Authority) | Implemented |
-| PRD-001 | Player Management (MVP Overview) | Accepted |
-| PRD-002 | Table & Rating Core | Pending (services removed) |
-| PRD-003 | Player Intake & Visit | Implemented (2025-11-30) |
-| PRD-004 | Mid-Session Loyalty | Draft |
-| PRD-005 | Compliance Monitoring (MTL) | Draft |
+| PRD-001 | PlayerFinancialService | Implemented (2025-12-13) |
+| PRD-002 | RatingSlipService | Implemented |
+| PRD-003 | PlayerService + VisitService | Implemented |
+| PRD-004 | LoyaltyService | Partial (~90% complete) |
+| PRD-005 | MTLService | Partial (Read-Only MVP) |
+| PRD-007 | TableContextService | Implemented |
 
 ## Implementation Status (Per MVP-ROADMAP)
 
-### Phase 0: Horizontal Infrastructure (GATE-0)
+### Phase 0: Horizontal Infrastructure (GATE-0) ✅ COMPLETE
 
 | Component | Reference | Code Exists | Tests | Status |
 |-----------|-----------|-------------|-------|--------|
-| TransportLayer | MVP-ROADMAP | Yes | No | Implemented |
-| ErrorTaxonomy | MVP-ROADMAP | Yes | No | Implemented |
-| ServiceResultPattern | MVP-ROADMAP | Yes | No | Implemented |
-| QueryInfra | MVP-ROADMAP | Yes | No | Implemented |
+| TransportLayer | MVP-ROADMAP | Yes | Yes | Implemented |
+| ErrorTaxonomy | MVP-ROADMAP | Yes | Yes | Implemented |
+| ServiceResultPattern | MVP-ROADMAP | Yes | Yes | Implemented |
+| QueryInfra | MVP-ROADMAP | Yes | Yes | Implemented |
 
-### Phase 1: Core Services (GATE-1)
+### Phase 1: Core Services (GATE-1) ✅ COMPLETE
 
 | Service | PRD | Code Exists | Tests | Status |
 |---------|-----|-------------|-------|--------|
@@ -41,29 +44,32 @@ sources:
 | PlayerService | PRD-003 | Yes | Yes | Implemented |
 | VisitService | PRD-003 | Yes | Yes | Implemented |
 
-### Phase 2: Session Management + UI (GATE-2)
+### Phase 2: Session Management + UI (GATE-2) 🔄 IN PROGRESS
 
 | Service | PRD | Code Exists | Tests | Status |
 |---------|-----|-------------|-------|--------|
-| TableContextService | PRD-002 | No | No | Removed (rebuild when needed) |
-| RatingSlipService | PRD-002 | No | No | Removed (rebuild when needed) |
-| PitDashboard | MVP-ROADMAP | No | No | Not Started |
+| TableContextService | PRD-007 | Yes | Yes | Implemented |
+| RatingSlipService | PRD-002 | Yes | Yes | Implemented |
+| PitDashboard | MVP-ROADMAP | No | No | In Progress |
 
-### Phase 3: Rewards & Compliance (GATE-3)
+### Phase 3: Rewards & Compliance (GATE-3) 🔄 IN PROGRESS
 
 | Service | PRD | Code Exists | Tests | Status |
 |---------|-----|-------------|-------|--------|
-| LoyaltyService | PRD-004 | No | No | Not Started |
-| PlayerFinancialService | PRD-001 | No | No | Not Started (Feature-Flagged) |
-| MTLService | PRD-005 | No | No | Not Started (Read-Only MVP) |
+| LoyaltyService | PRD-004 | Yes | Yes | Partial (~90%) |
+| PlayerFinancialService | PRD-001 | Yes | Yes | Implemented |
+| MTLService | PRD-005 | Yes | Yes | Partial (Read-Only MVP) |
 
 ## Critical Path
 
 ```
-GATE-0 (Horizontal) → CasinoService → PlayerService → VisitService → RatingSlipService → PitDashboard → LoyaltyService
+GATE-0 ✅ → GATE-1 ✅ → TableContext ✅ → RatingSlip ✅ → PitDashboard 🔄 → LoyaltyService 🔄 → MTL 🔄
 ```
 
-**Current Blocker**: PitDashboard must be implemented to complete Phase 2. Phase 1 is complete.
+**Current Focus**:
+- PitDashboard (In Progress) - blocks Phase 2 completion
+- LoyaltyService (~90% complete) - finalize remaining workstreams
+- MTLService (Read-Only MVP) - partial implementation
 
 ## Next Actions
 
@@ -72,19 +78,25 @@ GATE-0 (Horizontal) → CasinoService → PlayerService → VisitService → Rat
 2. ~~HIGH: Implement CasinoService (PRD-000)~~ ✅ COMPLETE
 
 3. ~~**HIGH (P0)**: Implement PlayerService + VisitService (PRD-003)~~ ✅ COMPLETE
-   - PlayerService: Player profile, enrollment, search
-   - VisitService: Check-in/check-out lifecycle
-   - RLS policies for player/visit tables
-   - React Query hooks for UI integration
 
-4. **HIGH**: Build Pit Dashboard skeleton (MVP-ROADMAP)
+4. ~~**HIGH**: Implement TableContextService (PRD-007)~~ ✅ COMPLETE
+
+5. ~~**HIGH**: Implement RatingSlipService (PRD-002)~~ ✅ COMPLETE
+
+6. ~~**HIGH**: Implement PlayerFinancialService (PRD-001)~~ ✅ COMPLETE
+
+7. **HIGH (ACTIVE)**: Complete Pit Dashboard (MVP-ROADMAP)
    - Table status grid
    - Active rating slips panel
    - Real-time updates via Supabase channels
 
-5. MEDIUM: Integrate RatingSlipService with PlayerService/VisitService
-   - Wire up player selection in rating slip creation
-   - Link visits to rating slips
+8. **HIGH**: Finalize LoyaltyService (PRD-004) - ~90% complete
+   - Complete remaining workstreams (WS8+)
+   - Integration with RatingSlipService
+
+9. **MEDIUM**: Complete MTLService (PRD-005) - Read-Only MVP
+   - Cash transaction logging
+   - AML/CTR compliance basics
 
 ## Progress Tracking
 

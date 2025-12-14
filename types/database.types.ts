@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -667,47 +687,53 @@ export type Database = {
       }
       loyalty_ledger: {
         Row: {
-          average_bet: number | null
+          campaign_id: string | null
           casino_id: string
           created_at: string
-          duration_seconds: number | null
-          game_type: Database["public"]["Enums"]["game_type"] | null
           id: string
           idempotency_key: string | null
+          metadata: Json
+          note: string | null
           player_id: string
-          points_earned: number
+          points_delta: number
           rating_slip_id: string | null
           reason: Database["public"]["Enums"]["loyalty_reason"]
+          source_id: string | null
+          source_kind: string | null
           staff_id: string | null
           visit_id: string | null
         }
         Insert: {
-          average_bet?: number | null
+          campaign_id?: string | null
           casino_id: string
           created_at?: string
-          duration_seconds?: number | null
-          game_type?: Database["public"]["Enums"]["game_type"] | null
           id?: string
           idempotency_key?: string | null
+          metadata?: Json
+          note?: string | null
           player_id: string
-          points_earned: number
+          points_delta: number
           rating_slip_id?: string | null
-          reason?: Database["public"]["Enums"]["loyalty_reason"]
+          reason: Database["public"]["Enums"]["loyalty_reason"]
+          source_id?: string | null
+          source_kind?: string | null
           staff_id?: string | null
           visit_id?: string | null
         }
         Update: {
-          average_bet?: number | null
+          campaign_id?: string | null
           casino_id?: string
           created_at?: string
-          duration_seconds?: number | null
-          game_type?: Database["public"]["Enums"]["game_type"] | null
           id?: string
           idempotency_key?: string | null
+          metadata?: Json
+          note?: string | null
           player_id?: string
-          points_earned?: number
+          points_delta?: number
           rating_slip_id?: string | null
           reason?: Database["public"]["Enums"]["loyalty_reason"]
+          source_id?: string | null
+          source_kind?: string | null
           staff_id?: string | null
           visit_id?: string | null
         }
@@ -745,54 +771,6 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      loyalty_outbox: {
-        Row: {
-          attempt_count: number
-          casino_id: string
-          created_at: string
-          event_type: string
-          id: string
-          ledger_id: string
-          payload: Json
-          processed_at: string | null
-        }
-        Insert: {
-          attempt_count?: number
-          casino_id: string
-          created_at?: string
-          event_type: string
-          id?: string
-          ledger_id: string
-          payload: Json
-          processed_at?: string | null
-        }
-        Update: {
-          attempt_count?: number
-          casino_id?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          ledger_id?: string
-          payload?: Json
-          processed_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "loyalty_outbox_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loyalty_outbox_ledger_id_fkey"
-            columns: ["ledger_id"]
-            isOneToOne: false
-            referencedRelation: "loyalty_ledger"
             referencedColumns: ["id"]
           },
         ]
@@ -980,48 +958,48 @@ export type Database = {
           casino_id: string
           created_at: string
           created_by_staff_id: string | null
-          direction: Database["public"]["Enums"]["financial_direction"]
+          direction: Database["public"]["Enums"]["financial_direction"] | null
           gaming_day: string | null
           id: string
           idempotency_key: string | null
           player_id: string
           rating_slip_id: string | null
           related_transaction_id: string | null
-          source: Database["public"]["Enums"]["financial_source"]
+          source: Database["public"]["Enums"]["financial_source"] | null
           tender_type: string | null
-          visit_id: string
+          visit_id: string | null
         }
         Insert: {
           amount: number
           casino_id: string
           created_at?: string
           created_by_staff_id?: string | null
-          direction: Database["public"]["Enums"]["financial_direction"]
+          direction?: Database["public"]["Enums"]["financial_direction"] | null
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id: string
           rating_slip_id?: string | null
           related_transaction_id?: string | null
-          source: Database["public"]["Enums"]["financial_source"]
+          source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
-          visit_id: string
+          visit_id?: string | null
         }
         Update: {
           amount?: number
           casino_id?: string
           created_at?: string
           created_by_staff_id?: string | null
-          direction?: Database["public"]["Enums"]["financial_direction"]
+          direction?: Database["public"]["Enums"]["financial_direction"] | null
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
           player_id?: string
           rating_slip_id?: string | null
           related_transaction_id?: string | null
-          source?: Database["public"]["Enums"]["financial_source"]
+          source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
-          visit_id?: string
+          visit_id?: string | null
         }
         Relationships: [
           {
@@ -1029,13 +1007,6 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_financial_transaction_created_by_staff_id_fkey"
-            columns: ["created_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -1053,13 +1024,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "player_financial_transaction_related_transaction_id_fkey"
-            columns: ["related_transaction_id"]
-            isOneToOne: false
-            referencedRelation: "player_financial_transaction"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "player_financial_transaction_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
@@ -1070,24 +1034,24 @@ export type Database = {
       }
       player_loyalty: {
         Row: {
-          balance: number
           casino_id: string
+          current_balance: number
           player_id: string
           preferences: Json
           tier: string | null
           updated_at: string
         }
         Insert: {
-          balance?: number
           casino_id: string
+          current_balance?: number
           player_id: string
           preferences?: Json
           tier?: string | null
           updated_at?: string
         }
         Update: {
-          balance?: number
           casino_id?: string
+          current_balance?: number
           player_id?: string
           preferences?: Json
           tier?: string | null
@@ -1114,10 +1078,12 @@ export type Database = {
         Row: {
           average_bet: number | null
           casino_id: string
+          duration_seconds: number | null
           end_time: string | null
+          final_average_bet: number | null
           game_settings: Json | null
           id: string
-          player_id: string
+          pause_intervals: unknown[] | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -1128,10 +1094,12 @@ export type Database = {
         Insert: {
           average_bet?: number | null
           casino_id: string
+          duration_seconds?: number | null
           end_time?: string | null
+          final_average_bet?: number | null
           game_settings?: Json | null
           id?: string
-          player_id: string
+          pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
@@ -1142,10 +1110,12 @@ export type Database = {
         Update: {
           average_bet?: number | null
           casino_id?: string
+          duration_seconds?: number | null
           end_time?: string | null
+          final_average_bet?: number | null
           game_settings?: Json | null
           id?: string
-          player_id?: string
+          pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
           seat_number?: string | null
           start_time?: string
@@ -1159,13 +1129,6 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rating_slip_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
             referencedColumns: ["id"]
           },
           {
@@ -1657,6 +1620,31 @@ export type Database = {
       }
     }
     Views: {
+      mv_loyalty_balance_reconciliation: {
+        Row: {
+          casino_id: string | null
+          entry_count: number | null
+          last_entry_at: string | null
+          ledger_balance: number | null
+          player_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_ledger_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_ledger_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit_financial_summary: {
         Row: {
           casino_id: string | null
@@ -1687,6 +1675,13 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_theo_from_snapshot: {
+        Args: {
+          p_loyalty_snapshot: Json
+          p_slip_record: Record<string, unknown>
+        }
+        Returns: number
+      }
       compute_gaming_day:
         | {
             Args: { p_casino_id: string; p_timestamp?: string }
@@ -1704,7 +1699,31 @@ export type Database = {
           recommended_points: number
         }[]
       }
+      evaluate_session_reward_suggestion: {
+        Args: { p_as_of_ts?: string; p_rating_slip_id: string }
+        Returns: {
+          max_recommended_points: number
+          notes: string
+          policy_version: string
+          suggested_points: number
+          suggested_theo: number
+        }[]
+      }
       exec_sql: { Args: { sql: string }; Returns: undefined }
+      rpc_accrue_on_close: {
+        Args: {
+          p_casino_id: string
+          p_idempotency_key: string
+          p_rating_slip_id: string
+        }
+        Returns: {
+          balance_after: number
+          is_existing: boolean
+          ledger_id: string
+          points_delta: number
+          theo: number
+        }[]
+      }
       rpc_activate_floor_layout: {
         Args: {
           p_activated_by: string
@@ -1728,6 +1747,21 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_apply_promotion: {
+        Args: {
+          p_bonus_points: number
+          p_campaign_id: string
+          p_casino_id: string
+          p_idempotency_key: string
+          p_promo_multiplier: number
+          p_rating_slip_id: string
+        }
+        Returns: {
+          is_existing: boolean
+          ledger_id: string
+          promo_points_delta: number
+        }[]
+      }
       rpc_close_rating_slip: {
         Args: {
           p_actor_id: string
@@ -1746,6 +1780,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1758,7 +1793,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1778,7 +1812,7 @@ export type Database = {
               p_rating_slip_id?: string
               p_related_transaction_id?: string
               p_source: Database["public"]["Enums"]["financial_source"]
-              p_tender_type: string
+              p_tender_type?: string
               p_visit_id: string
             }
             Returns: {
@@ -1786,16 +1820,18 @@ export type Database = {
               casino_id: string
               created_at: string
               created_by_staff_id: string | null
-              direction: Database["public"]["Enums"]["financial_direction"]
+              direction:
+                | Database["public"]["Enums"]["financial_direction"]
+                | null
               gaming_day: string | null
               id: string
               idempotency_key: string | null
               player_id: string
               rating_slip_id: string | null
               related_transaction_id: string | null
-              source: Database["public"]["Enums"]["financial_source"]
+              source: Database["public"]["Enums"]["financial_source"] | null
               tender_type: string | null
-              visit_id: string
+              visit_id: string | null
             }
             SetofOptions: {
               from: "*"
@@ -1830,24 +1866,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_get_player_ledger: {
+        Args: {
+          p_casino_id: string
+          p_cursor_created_at?: string
+          p_cursor_id?: string
+          p_limit?: number
+          p_player_id: string
+        }
+        Returns: {
+          campaign_id: string
+          casino_id: string
+          created_at: string
+          has_more: boolean
+          id: string
+          idempotency_key: string
+          metadata: Json
+          note: string
+          player_id: string
+          points_delta: number
+          rating_slip_id: string
+          reason: Database["public"]["Enums"]["loyalty_reason"]
+          source_id: string
+          source_kind: string
+          staff_id: string
+          visit_id: string
+        }[]
+      }
       rpc_get_rating_slip_duration: {
         Args: { p_as_of?: string; p_rating_slip_id: string }
         Returns: number
-      }
-      rpc_issue_mid_session_reward: {
-        Args: {
-          p_casino_id: string
-          p_idempotency_key?: string
-          p_player_id: string
-          p_points: number
-          p_rating_slip_id: string
-          p_reason?: Database["public"]["Enums"]["loyalty_reason"]
-          p_staff_id: string
-        }
-        Returns: {
-          balance_after: number
-          ledger_id: string
-        }[]
       }
       rpc_log_table_drop: {
         Args: {
@@ -1916,6 +1964,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_manual_credit: {
+        Args: {
+          p_awarded_by_staff_id: string
+          p_casino_id: string
+          p_idempotency_key: string
+          p_note: string
+          p_player_id: string
+          p_points: number
+        }
+        Returns: {
+          balance_after: number
+          is_existing: boolean
+          ledger_id: string
+          points_delta: number
+        }[]
+      }
       rpc_pause_rating_slip: {
         Args: {
           p_actor_id: string
@@ -1925,10 +1989,12 @@ export type Database = {
         Returns: {
           average_bet: number | null
           casino_id: string
+          duration_seconds: number | null
           end_time: string | null
+          final_average_bet: number | null
           game_settings: Json | null
           id: string
-          player_id: string
+          pause_intervals: unknown[] | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -1942,6 +2008,35 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_reconcile_loyalty_balance: {
+        Args: { p_casino_id: string; p_player_id: string }
+        Returns: {
+          drift_detected: boolean
+          new_balance: number
+          old_balance: number
+        }[]
+      }
+      rpc_redeem: {
+        Args: {
+          p_allow_overdraw?: boolean
+          p_casino_id: string
+          p_idempotency_key: string
+          p_issued_by_staff_id: string
+          p_note: string
+          p_player_id: string
+          p_points: number
+          p_reference?: string
+          p_reward_id?: string
+        }
+        Returns: {
+          balance_after: number
+          balance_before: number
+          is_existing: boolean
+          ledger_id: string
+          overdraw_applied: boolean
+          points_delta: number
+        }[]
       }
       rpc_request_table_credit: {
         Args: {
@@ -2016,10 +2111,12 @@ export type Database = {
         Returns: {
           average_bet: number | null
           casino_id: string
+          duration_seconds: number | null
           end_time: string | null
+          final_average_bet: number | null
           game_settings: Json | null
           id: string
-          player_id: string
+          pause_intervals: unknown[] | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -2039,7 +2136,6 @@ export type Database = {
           p_actor_id: string
           p_casino_id: string
           p_game_settings: Json
-          p_player_id: string
           p_seat_number: string
           p_table_id: string
           p_visit_id: string
@@ -2047,10 +2143,12 @@ export type Database = {
         Returns: {
           average_bet: number | null
           casino_id: string
+          duration_seconds: number | null
           end_time: string | null
+          final_average_bet: number | null
           game_settings: Json | null
           id: string
-          player_id: string
+          pause_intervals: unknown[] | null
           policy_snapshot: Json | null
           seat_number: string | null
           start_time: string
@@ -2115,13 +2213,14 @@ export type Database = {
         | "retired"
       game_type: "blackjack" | "poker" | "roulette" | "baccarat"
       loyalty_reason:
-        | "mid_session"
-        | "session_end"
-        | "manual_adjustment"
+        | "base_accrual"
         | "promotion"
-        | "correction"
+        | "redeem"
+        | "manual_reward"
+        | "adjustment"
+        | "reversal"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
-      staff_role: "dealer" | "pit_boss" | "admin" | "cashier"
+      staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
       table_status: "inactive" | "active" | "closed"
       visit_kind:
@@ -2253,6 +2352,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       financial_direction: ["in", "out"],
@@ -2266,14 +2368,15 @@ export const Constants = {
       ],
       game_type: ["blackjack", "poker", "roulette", "baccarat"],
       loyalty_reason: [
-        "mid_session",
-        "session_end",
-        "manual_adjustment",
+        "base_accrual",
         "promotion",
-        "correction",
+        "redeem",
+        "manual_reward",
+        "adjustment",
+        "reversal",
       ],
       rating_slip_status: ["open", "paused", "closed", "archived"],
-      staff_role: ["dealer", "pit_boss", "admin", "cashier"],
+      staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],
       table_status: ["inactive", "active", "closed"],
       visit_kind: [
@@ -2284,3 +2387,4 @@ export const Constants = {
     },
   },
 } as const
+

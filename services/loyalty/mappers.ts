@@ -19,8 +19,8 @@ import type {
   PlayerLoyaltyDTO,
   RedeemOutput,
   SessionRewardSuggestionOutput,
-} from './dtos';
-import { encodeLedgerCursor } from './schemas';
+} from "./dtos";
+import { encodeLedgerCursor } from "./schemas";
 
 // === RPC Response Types ===
 
@@ -120,6 +120,84 @@ export interface PlayerLoyaltyRow {
   updated_at: string;
 }
 
+// === Type Guards ===
+
+function isAccrueOnCloseRpcResponse(v: unknown): v is AccrueOnCloseRpcResponse {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "ledger_id" in v &&
+    "points_delta" in v &&
+    "theo" in v &&
+    "balance_after" in v &&
+    "is_existing" in v
+  );
+}
+
+function isRedeemRpcResponse(v: unknown): v is RedeemRpcResponse {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "ledger_id" in v &&
+    "points_delta" in v &&
+    "balance_before" in v &&
+    "balance_after" in v &&
+    "overdraw_applied" in v &&
+    "is_existing" in v
+  );
+}
+
+function isManualCreditRpcResponse(v: unknown): v is ManualCreditRpcResponse {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "ledger_id" in v &&
+    "points_delta" in v &&
+    "balance_after" in v &&
+    "is_existing" in v
+  );
+}
+
+function isApplyPromotionRpcResponse(
+  v: unknown,
+): v is ApplyPromotionRpcResponse {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "ledger_id" in v &&
+    "promo_points_delta" in v &&
+    "is_existing" in v
+  );
+}
+
+function isSessionSuggestionRpcResponse(
+  v: unknown,
+): v is SessionSuggestionRpcResponse {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "suggested_theo" in v &&
+    "suggested_points" in v &&
+    "policy_version" in v &&
+    "max_recommended_points" in v &&
+    "notes" in v
+  );
+}
+
+function isLedgerRpcRow(v: unknown): v is LedgerRpcRow {
+  return (
+    typeof v === "object" &&
+    v !== null &&
+    "id" in v &&
+    "casino_id" in v &&
+    "player_id" in v &&
+    "points_delta" in v &&
+    "reason" in v &&
+    "created_at" in v &&
+    "has_more" in v
+  );
+}
+
 // === Accrual Mappers ===
 
 /**
@@ -135,6 +213,17 @@ export function toAccrueOnCloseOutput(
     balanceAfter: response.balance_after,
     isExisting: response.is_existing,
   };
+}
+
+/**
+ * Parses unknown RPC response to AccrueOnCloseOutput.
+ * @throws Error if response shape is invalid
+ */
+export function parseAccrueOnCloseResponse(row: unknown): AccrueOnCloseOutput {
+  if (!isAccrueOnCloseRpcResponse(row)) {
+    throw new Error("Invalid AccrueOnClose RPC response structure");
+  }
+  return toAccrueOnCloseOutput(row);
 }
 
 // === Redemption Mappers ===
@@ -153,6 +242,17 @@ export function toRedeemOutput(response: RedeemRpcResponse): RedeemOutput {
   };
 }
 
+/**
+ * Parses unknown RPC response to RedeemOutput.
+ * @throws Error if response shape is invalid
+ */
+export function parseRedeemResponse(row: unknown): RedeemOutput {
+  if (!isRedeemRpcResponse(row)) {
+    throw new Error("Invalid Redeem RPC response structure");
+  }
+  return toRedeemOutput(row);
+}
+
 // === Manual Credit Mappers ===
 
 /**
@@ -169,6 +269,17 @@ export function toManualCreditOutput(
   };
 }
 
+/**
+ * Parses unknown RPC response to ManualCreditOutput.
+ * @throws Error if response shape is invalid
+ */
+export function parseManualCreditResponse(row: unknown): ManualCreditOutput {
+  if (!isManualCreditRpcResponse(row)) {
+    throw new Error("Invalid ManualCredit RPC response structure");
+  }
+  return toManualCreditOutput(row);
+}
+
 // === Promotion Mappers ===
 
 /**
@@ -182,6 +293,19 @@ export function toApplyPromotionOutput(
     promoPointsDelta: response.promo_points_delta,
     isExisting: response.is_existing,
   };
+}
+
+/**
+ * Parses unknown RPC response to ApplyPromotionOutput.
+ * @throws Error if response shape is invalid
+ */
+export function parseApplyPromotionResponse(
+  row: unknown,
+): ApplyPromotionOutput {
+  if (!isApplyPromotionRpcResponse(row)) {
+    throw new Error("Invalid ApplyPromotion RPC response structure");
+  }
+  return toApplyPromotionOutput(row);
 }
 
 // === Session Suggestion Mappers ===
@@ -201,13 +325,26 @@ export function toSessionSuggestionOutput(
   };
 }
 
+/**
+ * Parses unknown RPC response to SessionRewardSuggestionOutput.
+ * @throws Error if response shape is invalid
+ */
+export function parseSessionSuggestionResponse(
+  row: unknown,
+): SessionRewardSuggestionOutput {
+  if (!isSessionSuggestionRpcResponse(row)) {
+    throw new Error("Invalid SessionSuggestion RPC response structure");
+  }
+  return toSessionSuggestionOutput(row);
+}
+
 // === Ledger Mappers ===
 
 /**
  * Maps a ledger RPC row to LoyaltyLedgerEntryDTO.
  */
 export function toLoyaltyLedgerEntryDTO(
-  row: Omit<LedgerRpcRow, 'has_more'>,
+  row: Omit<LedgerRpcRow, "has_more">,
 ): LoyaltyLedgerEntryDTO {
   return {
     id: row.id,
@@ -265,6 +402,27 @@ export function toLedgerPageResponse(
     cursor,
     hasMore,
   };
+}
+
+/**
+ * Parses unknown[] RPC response to LedgerPageResponse.
+ * @throws Error if any row shape is invalid
+ */
+export function parseLedgerPageResponse(
+  data: unknown,
+  limit: number,
+): LedgerPageResponse {
+  if (!Array.isArray(data)) {
+    throw new Error("Invalid Ledger RPC response: expected array");
+  }
+  const rows: LedgerRpcRow[] = [];
+  for (const row of data) {
+    if (!isLedgerRpcRow(row)) {
+      throw new Error("Invalid LedgerRpcRow structure");
+    }
+    rows.push(row);
+  }
+  return toLedgerPageResponse(rows, limit);
 }
 
 // === Player Loyalty Mappers ===

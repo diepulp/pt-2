@@ -14,6 +14,10 @@ import type { User } from "@supabase/supabase-js";
 import { useEffect, useState } from "react";
 
 import { createBrowserComponentClient } from "@/lib/supabase/client";
+import {
+  DEV_RLS_CONTEXT,
+  isDevAuthBypassEnabled,
+} from "@/lib/supabase/dev-context";
 
 interface StaffClaims {
   staff_id: string;
@@ -74,6 +78,18 @@ export function useAuth(): UseAuthResult {
 
   // Extract staff claims from app_metadata
   const appMetadata = user?.app_metadata as StaffClaims | undefined;
+
+  // Dev mode fallback: Return mock staff context when not authenticated
+  // This aligns client-side auth with server-side DEV_RLS_CONTEXT
+  if (!user && !isLoading && isDevAuthBypassEnabled()) {
+    return {
+      user: null,
+      staffId: DEV_RLS_CONTEXT.actorId,
+      casinoId: DEV_RLS_CONTEXT.casinoId,
+      staffRole: DEV_RLS_CONTEXT.staffRole,
+      isLoading: false,
+    };
+  }
 
   return {
     user,

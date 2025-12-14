@@ -1,10 +1,10 @@
 // Jest test helpers (project standard)
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { ServiceResult } from '../../lib/http/service-response';
 import type { RLSContext } from '@/lib/supabase/rls-context';
 import type { Database } from '@/types/database.types';
 
+import type { ServiceResult } from '../../lib/http/service-response';
 import type { MiddlewareContext } from '../../types';
 
 /**

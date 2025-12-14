@@ -6,6 +6,7 @@ export type {
   RatingSlipTableDto,
   FormState,
 } from "./rating-slip-modal";
+export { useModalFormState, type ModalFormState } from "./use-modal-form-state";
 export { FormSectionAverageBet } from "./form-section-average-bet";
 export { FormSectionCashIn } from "./form-section-cash-in";
 export { FormSectionChipsTaken } from "./form-section-chips-taken";

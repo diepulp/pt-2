@@ -195,7 +195,17 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
 
   // Modal callback: Save with optional buy-in
   const handleSave = async (formState: FormState) => {
-    if (!selectedSlipId || !modalData || !staffId) return;
+    if (!selectedSlipId || !modalData) {
+      console.error("Save failed: No slip or modal data");
+      return;
+    }
+
+    if (!staffId) {
+      console.error(
+        "Save failed: No staff ID available - authentication required",
+      );
+      return;
+    }
 
     try {
       await saveWithBuyIn.mutateAsync({
@@ -215,7 +225,17 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
 
   // Modal callback: Close session with chips-taken
   const handleCloseSession = async (formState: FormState) => {
-    if (!selectedSlipId || !modalData || !staffId) return;
+    if (!selectedSlipId || !modalData) {
+      console.error("Close failed: No slip or modal data");
+      return;
+    }
+
+    if (!staffId) {
+      console.error(
+        "Close failed: No staff ID available - authentication required",
+      );
+      return;
+    }
 
     try {
       await closeWithFinancial.mutateAsync({
@@ -237,7 +257,10 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
 
   // Modal callback: Move player to different table/seat
   const handleMovePlayer = async (formState: FormState) => {
-    if (!selectedSlipId) return;
+    if (!selectedSlipId) {
+      console.error("Move failed: No slip selected");
+      return;
+    }
 
     try {
       const result = await movePlayer.mutateAsync({

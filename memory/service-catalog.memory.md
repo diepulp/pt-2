@@ -1,19 +1,20 @@
 # Service Catalog Snapshot (SRM v3.0.2)
-last_updated: 2025-11-03
+last_updated: 2025-12-13
 canonical_source: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 detailed_context: context/architecture.context.md
+implementation_status: "10/13 services implemented (76.9%)"
 
 ## 10 Bounded Contexts (Quick Index)
 
-**Foundational**: CasinoService (casino, casino_settings, staff, report)  
-**Identity**: PlayerService (player profile & documents)  
-**Session**: VisitService (visit lifecycle: check-in/out)  
-**Telemetry**: RatingSlipService (gameplay measurement)  
-**Reward**: LoyaltyService (points engine, ledger)  
-**Finance**: PlayerFinancialService (transaction ledger, append-only)  
-**Compliance**: MTLService (immutable cash log, AML/CTR)  
-**Operational**: TableContextService (tables, dealers, fills/drops, chip custody; consumes layout activations)  
-**Operational**: FloorLayoutService (design/version/activation of pits & table placements; emits layout events)  
+**Foundational**: CasinoService (casino, casino_settings, staff, report) ✅ Implemented
+**Identity**: PlayerService (player profile & documents) ✅ Implemented
+**Session**: VisitService (visit lifecycle: check-in/out) ✅ Implemented
+**Telemetry**: RatingSlipService (gameplay measurement) ✅ Implemented
+**Reward**: LoyaltyService (points engine, ledger) 🔄 Partial (~90%)
+**Finance**: PlayerFinancialService (transaction ledger, append-only) ✅ Implemented
+**Compliance**: MTLService (immutable cash log, AML/CTR) 🔄 Partial (Read-Only)
+**Operational**: TableContextService (tables, dealers, fills/drops, chip custody) ✅ Implemented
+**Operational**: FloorLayoutService (design/version/activation of pits & table placements)  
 
 
 ## Key Ownership Patterns

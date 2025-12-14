@@ -20,6 +20,7 @@ SELECT
         WHEN user_id = 'pt2_project' THEN '1. pt2_project'
         WHEN user_id = 'arch_decisions' THEN '2. arch_decisions'
         WHEN user_id = 'mvp_progress' THEN '3. mvp_progress'
+        WHEN user_id = 'issues' THEN '3. issues'
         WHEN user_id LIKE 'session_%' THEN '4. session_* (ephemeral)'
         ELSE '?. ' || user_id || ' (legacy)'
     END as tier,
@@ -36,6 +37,7 @@ ORDER BY
         WHEN user_id = 'pt2_project' THEN 1
         WHEN user_id = 'arch_decisions' THEN 2
         WHEN user_id = 'mvp_progress' THEN 3
+        WHEN user_id = 'issues' THEN 3
         WHEN user_id LIKE 'session_%' THEN 4
         ELSE 5
     END,
@@ -142,6 +144,7 @@ MEMORI STATUS REPORT
 | 1    | pt2_project | xxx | xxx | - | - |
 | 2    | arch_decisions | xxx | xxx | - | - |
 | 3    | mvp_progress | xxx | xxx | - | - |
+| 3    | issues | xxx | xxx | - | - |
 | 4    | session_* | xxx | - | xxx | xxx |
 
 ## Summary
@@ -154,6 +157,7 @@ MEMORI STATUS REPORT
 - lead_architect: x active, x expired
 - backend: x active, x expired
 - api: x active, x expired
+- issues: x active, x expired
 
 ## Actions Required
 - [If expired > 0] Run /memori-cleanup to purge xxx expired entries
@@ -169,9 +173,11 @@ MEMORI STATUS REPORT
 | 1 | `pt2_project` | Project standards, domain knowledge, UI patterns | Permanent |
 | 2 | `arch_decisions` | Architectural decisions, patterns, compliance | Permanent |
 | 3 | `mvp_progress` | MVP implementation tracking | Operational |
+| 3 | `issues` | Bug tracking, debugging workflows | Operational |
 | 4 | `session_lead_architect_{YYYY_MM}` | Architect session checkpoints | 7 days |
 | 4 | `session_backend_{YYYY_MM}` | Backend builder checkpoints | 7 days |
 | 4 | `session_api_{YYYY_MM}` | API builder checkpoints | 7 days |
+| 4 | `session_issues_{YYYY_MM}` | Debugging session checkpoints | 7 days |
 
 ---
 
@@ -183,3 +189,6 @@ MEMORI STATUS REPORT
 | `/arch-memory` | Query architectural decisions |
 | `/memory-recall <query>` | Search memories by topic |
 | `/mvp-status` | Show MVP implementation progress |
+| `/issue-status` | View open issues |
+| `/issue-log <title>` | Log a new issue |
+| `/issue-checkpoint` | Save/restore debugging session |

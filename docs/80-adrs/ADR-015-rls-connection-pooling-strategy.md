@@ -358,12 +358,24 @@ CREATE POLICY "table_read_hybrid"
   - Updated: `services/casino/index.ts` - added updateStaff method
   - Updated: `services/casino/dtos.ts` - added UpdateStaffDTO
 
+-- 2025-12-13: **Phase 1A Implemented** - RPC Context Self-Injection
+  - Discovered: ISSUE-5AD0182D - RPC calls get separate pooled connections
+  - Updated: All rating slip RPCs to self-inject RLS context
+  - Migration: `20251213190000_adr015_fix_rpc_context_injection.sql`
+    - `rpc_start_rating_slip` - added internal set_rls_context call
+    - `rpc_pause_rating_slip` - added internal set_rls_context call
+    - `rpc_resume_rating_slip` - added internal set_rls_context call
+    - `rpc_close_rating_slip` - added internal set_rls_context call
+  - Test: `services/rating-slip/__tests__/rating-slip-move-pooling.test.ts`
+  - Analysis: `/home/diepulp/projects/pt-2/docs/issues/ISSUE-5AD0182D-CONNECTION-POOLING-ANALYSIS.md`
+
 **Phase 2 Verification:**
 - [x] JWT claims synced on staff creation (createStaff)
 - [x] JWT claims synced on staff update (updateStaff - role/casino changes)
 - [x] Database trigger auto-syncs on direct staff table changes
 - [x] Hybrid RLS policies use JWT fallback when SET LOCAL unavailable
-- [ ] Integration tests validate JWT-based RLS (in progress)
+- [x] RPCs self-inject context for connection pooling compatibility
+- [ ] Integration tests validate JWT-based RLS with pooling (in progress)
 
 **Pending (Phase 3):**
 - Monitor JWT claims vs. session variables in production
