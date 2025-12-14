@@ -1,0 +1,62 @@
+{
+  "prd": "PRD-008",
+  "prd_title": "Rating Slip Modal Service Integration",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "hooks/loyalty/use-loyalty-queries.ts",
+      "hooks/loyalty/use-loyalty-mutations.ts",
+      "hooks/loyalty/index.ts",
+      "services/loyalty/index.ts",
+      "services/loyalty/dtos.ts",
+      "services/loyalty/schemas.ts",
+      "services/loyalty/http.ts",
+      "services/loyalty/keys.ts",
+      "services/loyalty/crud.ts",
+      "services/loyalty/mappers.ts"
+    ],
+    "WS2": [
+      "services/player-financial/index.ts",
+      "services/player-financial/dtos.ts",
+      "services/player-financial/schemas.ts",
+      "services/player-financial/crud.ts",
+      "services/player-financial/http.ts",
+      "services/player-financial/keys.ts",
+      "services/player-financial/mappers.ts"
+    ],
+    "WS3": [
+      "services/rating-slip-modal/dtos.ts",
+      "services/rating-slip-modal/schemas.ts",
+      "services/rating-slip-modal/keys.ts",
+      "services/rating-slip-modal/http.ts",
+      "services/rating-slip-modal/index.ts",
+      "app/api/v1/rating-slips/[id]/modal-data/route.ts",
+      "hooks/rating-slip-modal/use-rating-slip-modal.ts",
+      "hooks/rating-slip-modal/index.ts"
+    ],
+    "WS4": [
+      "components/modals/rating-slip/use-modal-form-state.ts",
+      "components/modals/rating-slip/rating-slip-modal.tsx",
+      "components/modals/rating-slip/index.tsx"
+    ],
+    "WS5": [
+      "app/api/v1/rating-slips/[id]/move/route.ts",
+      "services/rating-slip-modal/http.ts",
+      "hooks/rating-slip-modal/use-move-player.ts",
+      "hooks/rating-slip-modal/index.ts"
+    ],
+    "WS6": [
+      "services/rating-slip-modal/__tests__/bff-aggregation.test.ts",
+      "services/rating-slip-modal/__tests__/move-player.test.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check-ws1", "type-check-ws2", "type-check-ws3", "type-check-ws4-ws5", "test-pass", "build"],
+  "gates_pending": [],
+  "execution_spec_path": "docs/20-architecture/specs/PRD-008/EXECUTION-SPEC-PRD-008.md",
+  "timestamp": "2025-12-13T18:00:00Z",
+  "notes": "PRD-008 complete. All 6 workstreams implemented. WS4 and WS5 executed in parallel. All gates passed."
+}
