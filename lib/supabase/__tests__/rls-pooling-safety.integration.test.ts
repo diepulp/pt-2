@@ -20,13 +20,14 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { injectRLSContext } from '@/lib/supabase/rls-context';
-import type { RLSContext } from '@/lib/supabase/rls-context';
-import type { Database } from '@/types/database.types';
+import { injectRLSContext } from '../rls-context';
+import type { RLSContext } from '../rls-context';
+import type { Database } from '../../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
   let supabase: SupabaseClient<Database>;
@@ -711,7 +712,748 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
   });
 
   // ===========================================================================
-  // 6. Connection Pool Exhaustion Simulation
+  // 6. RPC→RPC Context Propagation Tests (ISSUE-B3C8BA48)
+  // ===========================================================================
+
+  describe('RPC to RPC Context Propagation (ADR-015 Phase 1A)', () => {
+    let testVisitId: string;
+    let testTableId: string;
+    let testPlayerId: string;
+
+    beforeAll(async () => {
+      // Create test player (player table doesn't have casino_id directly)
+      const { data: player, error: playerError } = await supabase
+        .from('player')
+        .insert({
+          first_name: 'RPC',
+          last_name: 'Test',
+        })
+        .select()
+        .single();
+
+      if (playerError) throw playerError;
+      testPlayerId = player.id;
+
+      // Enroll player at casino via player_casino junction table
+      const { error: enrollError } = await supabase
+        .from('player_casino')
+        .insert({
+          player_id: testPlayerId,
+          casino_id: testCasino1Id,
+          status: 'active',
+        });
+
+      if (enrollError) throw enrollError;
+
+      // Create test table (uses label + type, not table_number + status)
+      const { data: table, error: tableError } = await supabase
+        .from('gaming_table')
+        .insert({
+          casino_id: testCasino1Id,
+          label: `RPC-TEST-${Date.now()}`,
+          type: 'blackjack',
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (tableError) throw tableError;
+      testTableId = table.id;
+
+      // Create test visit
+      const { data: visit, error: visitError } = await supabase
+        .from('visit')
+        .insert({
+          casino_id: testCasino1Id,
+          player_id: testPlayerId,
+        })
+        .select()
+        .single();
+
+      if (visitError) throw visitError;
+      testVisitId = visit.id;
+    });
+
+    afterAll(async () => {
+      // Clean up in reverse dependency order
+      await supabase.from('rating_slip').delete().eq('visit_id', testVisitId);
+      await supabase.from('visit').delete().eq('id', testVisitId);
+      await supabase.from('gaming_table').delete().eq('id', testTableId);
+      await supabase.from('player_casino').delete().eq('player_id', testPlayerId);
+      await supabase.from('player').delete().eq('id', testPlayerId);
+    });
+
+    it('should maintain context when calling rpc_start then rpc_close (move workflow)', async () => {
+      // This test verifies the fix for ISSUE-B3C8BA48:
+      // When the move endpoint calls close() then start(), each RPC must
+      // self-inject context to work correctly with connection pooling.
+
+      // Step 1: Call rpc_start_rating_slip
+      const { data: startResult, error: startError } = await supabase.rpc(
+        'rpc_start_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_visit_id: testVisitId,
+          p_table_id: testTableId,
+          p_seat_number: '1',
+          p_game_settings: { game_type: 'blackjack' },
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(startError).toBeNull();
+      expect(startResult).toBeTruthy();
+      expect(startResult.status).toBe('open');
+      expect(startResult.casino_id).toBe(testCasino1Id);
+
+      // Step 2: Call rpc_close_rating_slip (simulates move workflow)
+      // In production, this may execute on a DIFFERENT pooled connection
+      const { data: closeResult, error: closeError } = await supabase.rpc(
+        'rpc_close_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_rating_slip_id: startResult.id,
+          p_actor_id: testStaff1Id,
+          p_average_bet: 50.0,
+        },
+      );
+
+      expect(closeError).toBeNull();
+      expect(closeResult).toBeTruthy();
+      expect(closeResult[0].slip.status).toBe('closed');
+      expect(closeResult[0].duration_seconds).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle pause/resume RPCs in sequence', async () => {
+      // Create a new slip for this test
+      const { data: slip, error: startError } = await supabase.rpc(
+        'rpc_start_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_visit_id: testVisitId,
+          p_table_id: testTableId,
+          p_seat_number: '2',
+          p_game_settings: { game_type: 'blackjack' },
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(startError).toBeNull();
+
+      // Pause the slip
+      const { data: pauseResult, error: pauseError } = await supabase.rpc(
+        'rpc_pause_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_rating_slip_id: slip.id,
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(pauseError).toBeNull();
+      expect(pauseResult.status).toBe('paused');
+
+      // Resume the slip (third RPC call - tests context persists)
+      const { data: resumeResult, error: resumeError } = await supabase.rpc(
+        'rpc_resume_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_rating_slip_id: slip.id,
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(resumeError).toBeNull();
+      expect(resumeResult.status).toBe('open');
+
+      // Close the slip (fourth RPC call)
+      const { data: closeResult, error: closeError } = await supabase.rpc(
+        'rpc_close_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_rating_slip_id: slip.id,
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(closeError).toBeNull();
+      expect(closeResult[0].slip.status).toBe('closed');
+    });
+
+    it('should enforce casino isolation between RPC calls', async () => {
+      // Start a slip in casino 1
+      const { data: slip1, error: start1Error } = await supabase.rpc(
+        'rpc_start_rating_slip',
+        {
+          p_casino_id: testCasino1Id,
+          p_visit_id: testVisitId,
+          p_table_id: testTableId,
+          p_seat_number: '3',
+          p_game_settings: { game_type: 'blackjack' },
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(start1Error).toBeNull();
+
+      // Try to close the slip with casino 2 context (should fail)
+      const { error: closeError } = await supabase.rpc(
+        'rpc_close_rating_slip',
+        {
+          p_casino_id: testCasino2Id, // Wrong casino!
+          p_rating_slip_id: slip1.id,
+          p_actor_id: testStaff2Id,
+        },
+      );
+
+      // Should fail due to casino_id mismatch
+      expect(closeError).not.toBeNull();
+      expect(closeError?.message).toMatch(/casino_id mismatch|not found/i);
+
+      // Clean up - close with correct casino
+      await supabase.rpc('rpc_close_rating_slip', {
+        p_casino_id: testCasino1Id,
+        p_rating_slip_id: slip1.id,
+        p_actor_id: testStaff1Id,
+      });
+    });
+
+    it('should handle concurrent RPC calls from different casinos', async () => {
+      // Create test data for casino 2
+      const { data: player2 } = await supabase
+        .from('player')
+        .insert({
+          first_name: 'Concurrent',
+          last_name: 'Test',
+        })
+        .select()
+        .single();
+
+      // Enroll player2 at casino 2
+      await supabase
+        .from('player_casino')
+        .insert({
+          player_id: player2!.id,
+          casino_id: testCasino2Id,
+          status: 'active',
+        });
+
+      const { data: table2 } = await supabase
+        .from('gaming_table')
+        .insert({
+          casino_id: testCasino2Id,
+          label: `CONC-TEST-${Date.now()}`,
+          type: 'roulette',
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      const { data: visit2 } = await supabase
+        .from('visit')
+        .insert({
+          casino_id: testCasino2Id,
+          player_id: player2!.id,
+        })
+        .select()
+        .single();
+
+      try {
+        // Start slips concurrently in both casinos
+        const [result1, result2] = await Promise.all([
+          supabase.rpc('rpc_start_rating_slip', {
+            p_casino_id: testCasino1Id,
+            p_visit_id: testVisitId,
+            p_table_id: testTableId,
+            p_seat_number: '4',
+            p_game_settings: { game_type: 'blackjack' },
+            p_actor_id: testStaff1Id,
+          }),
+          supabase.rpc('rpc_start_rating_slip', {
+            p_casino_id: testCasino2Id,
+            p_visit_id: visit2!.id,
+            p_table_id: table2!.id,
+            p_seat_number: '1',
+            p_game_settings: { game_type: 'roulette' },
+            p_actor_id: testStaff2Id,
+          }),
+        ]);
+
+        expect(result1.error).toBeNull();
+        expect(result2.error).toBeNull();
+
+        // Each slip should be in correct casino
+        expect(result1.data.casino_id).toBe(testCasino1Id);
+        expect(result2.data.casino_id).toBe(testCasino2Id);
+
+        // Close both concurrently
+        const [close1, close2] = await Promise.all([
+          supabase.rpc('rpc_close_rating_slip', {
+            p_casino_id: testCasino1Id,
+            p_rating_slip_id: result1.data.id,
+            p_actor_id: testStaff1Id,
+          }),
+          supabase.rpc('rpc_close_rating_slip', {
+            p_casino_id: testCasino2Id,
+            p_rating_slip_id: result2.data.id,
+            p_actor_id: testStaff2Id,
+          }),
+        ]);
+
+        expect(close1.error).toBeNull();
+        expect(close2.error).toBeNull();
+      } finally {
+        // Cleanup casino 2 test data
+        await supabase.from('rating_slip').delete().eq('visit_id', visit2!.id);
+        await supabase.from('visit').delete().eq('id', visit2!.id);
+        await supabase.from('gaming_table').delete().eq('id', table2!.id);
+        await supabase.from('player_casino').delete().eq('player_id', player2!.id);
+        await supabase.from('player').delete().eq('id', player2!.id);
+      }
+    });
+  });
+
+  // ===========================================================================
+  // 7. Cross-Casino Denial Tests (PRD-010 WS3)
+  // ===========================================================================
+
+  describe('Cross-Casino Denial (PRD-010 WS3)', () => {
+    let testVisit1Id: string;
+    let testVisit2Id: string;
+    let testPlayer1Id: string;
+    let testPlayer2Id: string;
+
+    beforeAll(async () => {
+      // Create players for cross-casino tests
+      const players = await Promise.all([
+        supabase
+          .from('player')
+          .insert({
+            first_name: 'Casino1',
+            last_name: 'Player',
+          })
+          .select()
+          .single(),
+        supabase
+          .from('player')
+          .insert({
+            first_name: 'Casino2',
+            last_name: 'Player',
+          })
+          .select()
+          .single(),
+      ]);
+
+      testPlayer1Id = players[0].data!.id;
+      testPlayer2Id = players[1].data!.id;
+
+      // Enroll players at respective casinos
+      await Promise.all([
+        supabase.from('player_casino').insert({
+          player_id: testPlayer1Id,
+          casino_id: testCasino1Id,
+          status: 'active',
+        }),
+        supabase.from('player_casino').insert({
+          player_id: testPlayer2Id,
+          casino_id: testCasino2Id,
+          status: 'active',
+        }),
+      ]);
+
+      // Create visits for each casino
+      const visits = await Promise.all([
+        supabase
+          .from('visit')
+          .insert({
+            casino_id: testCasino1Id,
+            player_id: testPlayer1Id,
+          })
+          .select()
+          .single(),
+        supabase
+          .from('visit')
+          .insert({
+            casino_id: testCasino2Id,
+            player_id: testPlayer2Id,
+          })
+          .select()
+          .single(),
+      ]);
+
+      testVisit1Id = visits[0].data!.id;
+      testVisit2Id = visits[1].data!.id;
+    });
+
+    afterAll(async () => {
+      // Clean up in reverse dependency order
+      await supabase.from('visit').delete().in('id', [testVisit1Id, testVisit2Id]);
+      await supabase
+        .from('player_casino')
+        .delete()
+        .in('player_id', [testPlayer1Id, testPlayer2Id]);
+      await supabase.from('player').delete().in('id', [testPlayer1Id, testPlayer2Id]);
+    });
+
+    it('should deny read access to other casino visit records', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      // Use anon key with authentication for proper RLS enforcement
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'cross-casino-visit-read');
+
+      // Act: Query all visits (RLS should filter to Casino 1 only)
+      const { data, error } = await anonClient.from('visit').select('id, casino_id');
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+
+      // Assert: Only Casino 1 visits returned
+      const casinoIds = data!.map((v) => v.casino_id);
+      expect(casinoIds).toContain(testCasino1Id);
+      expect(casinoIds).not.toContain(testCasino2Id);
+
+      // Verify Casino 2 visit is completely invisible
+      const { data: casino2Visit } = await anonClient
+        .from('visit')
+        .select('id')
+        .eq('id', testVisit2Id)
+        .maybeSingle();
+
+      expect(casino2Visit).toBeNull();
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny read access to other casino player records', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      // Use anon key with authentication for proper RLS enforcement
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'cross-casino-player-read');
+
+      // Act: Query all players via player_casino junction
+      // (player table has no casino_id, so we test via relationship)
+      const { data, error } = await anonClient
+        .from('player_casino')
+        .select('player_id, casino_id, player:player(id, first_name, last_name)');
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+
+      // Assert: Only Casino 1 player associations returned
+      const casinoIds = data!.map((pc) => pc.casino_id);
+      expect(casinoIds).toContain(testCasino1Id);
+      expect(casinoIds).not.toContain(testCasino2Id);
+
+      // Verify Casino 2 player association is invisible
+      const { data: casino2PlayerCasino } = await anonClient
+        .from('player_casino')
+        .select('player_id')
+        .eq('player_id', testPlayer2Id)
+        .eq('casino_id', testCasino2Id)
+        .maybeSingle();
+
+      expect(casino2PlayerCasino).toBeNull();
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny read access to other casino record (casino table RLS)', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      // Use anon key with authentication for proper RLS enforcement
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'cross-casino-table-read');
+
+      // Act: Query all casinos (should only see own casino)
+      const { data, error } = await anonClient.from('casino').select('id, name');
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+      expect(data!.length).toBeGreaterThan(0);
+
+      // Assert: Only Casino 1 record returned
+      const casinoIds = data!.map((c) => c.id);
+      expect(casinoIds).toContain(testCasino1Id);
+      expect(casinoIds).not.toContain(testCasino2Id);
+      expect(casinoIds).not.toContain(testCasino3Id);
+
+      // Direct query for Casino 2 should return empty (RLS filters it out)
+      const { data: casino2 } = await anonClient
+        .from('casino')
+        .select('id')
+        .eq('id', testCasino2Id)
+        .maybeSingle();
+
+      expect(casino2).toBeNull();
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny insert into other casino tables (visit INSERT denial)', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      // Use anon key with authentication for proper RLS enforcement
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'cross-casino-insert-deny');
+
+      // Act: Attempt to insert visit for Casino 2 (should fail)
+      const { data, error } = await anonClient
+        .from('visit')
+        .insert({
+          casino_id: testCasino2Id, // Wrong casino!
+          player_id: testPlayer2Id,
+        })
+        .select()
+        .single();
+
+      // Assert: Insert rejected (either RLS violation or constraint error)
+      expect(error).not.toBeNull();
+      expect(data).toBeNull();
+
+      // Error should indicate policy violation or constraint failure
+      expect(error!.message).toMatch(
+        /new row violates row-level security policy|violates foreign key constraint|permission denied/i,
+      );
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny cross-casino access via SET LOCAL (authenticated anon client)', async () => {
+      // This test verifies SET LOCAL context is enforced with authenticated client
+      // Use anon key client with user authentication for RLS enforcement
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      // Sign in as test user 1 (linked to staff 1, casino 1)
+      const { error: signInError } = await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      expect(signInError).toBeNull();
+
+      // Set context for Casino 1 via SET LOCAL
+      const { error: rpcError } = await anonClient.rpc('set_rls_context', {
+        p_actor_id: testStaff1Id,
+        p_casino_id: testCasino1Id,
+        p_staff_role: 'pit_boss',
+        p_correlation_id: 'cross-casino-set-local',
+      });
+
+      expect(rpcError).toBeNull();
+
+      // Query casino table - should only see Casino 1
+      const { data, error } = await anonClient.from('casino').select('id, name');
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+
+      const casinoIds = data!.map((c) => c.id);
+      expect(casinoIds).toContain(testCasino1Id);
+      expect(casinoIds).not.toContain(testCasino2Id);
+
+      // Try to query Casino 2 visit - should be invisible
+      const { data: visit2 } = await anonClient
+        .from('visit')
+        .select('id')
+        .eq('id', testVisit2Id)
+        .maybeSingle();
+
+      expect(visit2).toBeNull();
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should handle cross-casino denial in concurrent requests', async () => {
+      // This test simulates multiple staff from different casinos
+      // querying concurrently - no cross-contamination should occur
+      // Uses authenticated anon clients for proper RLS enforcement
+
+      const requests = [
+        {
+          email: 'test-pooling-1@example.com',
+          context: {
+            actorId: testStaff1Id,
+            casinoId: testCasino1Id,
+            staffRole: 'pit_boss',
+          },
+          expectedVisitId: testVisit1Id,
+          forbiddenVisitId: testVisit2Id,
+        },
+        {
+          email: 'test-pooling-2@example.com',
+          context: {
+            actorId: testStaff2Id,
+            casinoId: testCasino2Id,
+            staffRole: 'pit_boss',
+          },
+          expectedVisitId: testVisit2Id,
+          forbiddenVisitId: testVisit1Id,
+        },
+      ];
+
+      const results = await Promise.all(
+        requests.map(async ({ email, context, expectedVisitId, forbiddenVisitId }) => {
+          // Use anon client with authentication for RLS enforcement
+          const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+            auth: { autoRefreshToken: false, persistSession: false },
+          });
+
+          await client.auth.signInWithPassword({
+            email,
+            password: 'test-password-12345',
+          });
+
+          await injectRLSContext(
+            client,
+            context,
+            `concurrent-denial-${context.casinoId}`,
+          );
+
+          const { data: ownVisit } = await client
+            .from('visit')
+            .select('id')
+            .eq('id', expectedVisitId)
+            .maybeSingle();
+
+          const { data: otherVisit } = await client
+            .from('visit')
+            .select('id')
+            .eq('id', forbiddenVisitId)
+            .maybeSingle();
+
+          await client.auth.signOut();
+
+          return {
+            casinoId: context.casinoId,
+            canSeeOwnVisit: ownVisit !== null,
+            canSeeOtherVisit: otherVisit !== null,
+          };
+        }),
+      );
+
+      // Verify each staff can see their own visit but not the other
+      results.forEach((result) => {
+        expect(result.canSeeOwnVisit).toBe(true);
+        expect(result.canSeeOtherVisit).toBe(false);
+      });
+    });
+
+    it('should enforce casino isolation on casino_settings queries', async () => {
+      // Verify casino_settings (a critical config table) respects RLS
+      // Uses authenticated anon clients for proper RLS enforcement
+
+      // Staff A client (Casino 1)
+      const client1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await client1.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context1: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(client1, context1, 'settings-isolation-1');
+
+      const { data: settings1 } = await client1
+        .from('casino_settings')
+        .select('casino_id, timezone');
+
+      expect(settings1).toBeTruthy();
+      const casino1Ids = settings1!.map((s) => s.casino_id);
+      expect(casino1Ids).toContain(testCasino1Id);
+      expect(casino1Ids).not.toContain(testCasino2Id);
+
+      await client1.auth.signOut();
+
+      // Staff B client (Casino 2)
+      const client2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await client2.auth.signInWithPassword({
+        email: 'test-pooling-2@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context2: RLSContext = {
+        actorId: testStaff2Id,
+        casinoId: testCasino2Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(client2, context2, 'settings-isolation-2');
+
+      const { data: settings2 } = await client2
+        .from('casino_settings')
+        .select('casino_id, timezone');
+
+      expect(settings2).toBeTruthy();
+      const casino2Ids = settings2!.map((s) => s.casino_id);
+      expect(casino2Ids).toContain(testCasino2Id);
+      expect(casino2Ids).not.toContain(testCasino1Id);
+
+      await client2.auth.signOut();
+    });
+  });
+
+  // ===========================================================================
+  // 8. Connection Pool Exhaustion Simulation
   // ===========================================================================
 
   describe('Connection Pool Exhaustion Simulation', () => {

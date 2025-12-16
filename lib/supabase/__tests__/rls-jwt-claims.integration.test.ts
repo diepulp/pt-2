@@ -25,7 +25,10 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { syncUserRLSClaims } from '@/lib/supabase/auth-admin';
+import {
+  syncUserRLSClaims,
+  clearUserRLSClaims,
+} from '@/lib/supabase/auth-admin';
 import { createStaff, updateStaff } from '@/services/casino/crud';
 import type { Database } from '@/types/database.types';
 
@@ -463,7 +466,171 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
   });
 
   // ===========================================================================
-  // 3. Database Trigger Sync
+  // 3. JWT Claims Clearing on user_id Removal
+  // ===========================================================================
+
+  describe('JWT Claims Clearing', () => {
+    it('should clear JWT claims when staff user_id is set to NULL', async () => {
+      if (skipIfNoEnv()) return;
+
+      // Correlation ID for traceability
+      const correlationId = 'test-jwt-clear-001';
+      const testEmail = `test-jwt-clear-${Date.now()}@example.com`;
+
+      // First, create a staff member with user_id and verify claims are set
+      const { data: tempUser, error: createUserError } =
+        await serviceClient.auth.admin.createUser({
+          email: testEmail,
+          password: 'test-password-12345',
+          email_confirm: true,
+        });
+
+      if (createUserError || !tempUser?.user?.id) {
+        throw new Error(
+          `Failed to create temporary user for clear test: ${createUserError?.message || 'unknown'}`,
+        );
+      }
+
+      const tempUserId = tempUser.user.id;
+
+      // Create staff with user_id
+      const { data: staff, error: createError } = await serviceClient
+        .from('staff')
+        .insert({
+          first_name: 'Clear',
+          last_name: 'Test',
+          role: 'pit_boss',
+          employee_id: 'JWT-CLEAR-001',
+          casino_id: testCasinoId,
+          user_id: tempUserId,
+        })
+        .select()
+        .single();
+
+      expect(createError).toBeNull();
+      expect(staff).toBeDefined();
+
+      // Wait for trigger to sync claims
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Verify JWT claims were initially set
+      const { data: userDataBefore } =
+        await serviceClient.auth.admin.getUserById(tempUserId);
+
+      const claimsBefore = userDataBefore?.user?.app_metadata;
+
+      // Manually sync if trigger didn't fire (test environment safety)
+      if (!claimsBefore?.casino_id) {
+        await syncUserRLSClaims(tempUserId, {
+          casino_id: testCasinoId,
+          staff_role: 'pit_boss',
+          staff_id: staff!.id,
+        });
+
+        const { data: refreshedData } =
+          await serviceClient.auth.admin.getUserById(tempUserId);
+        expect(refreshedData?.user?.app_metadata?.casino_id).toBe(testCasinoId);
+      }
+
+      // Now clear the user_id (disassociate staff from auth user)
+      const { error: updateError } = await serviceClient
+        .from('staff')
+        .update({ user_id: null })
+        .eq('id', staff!.id);
+
+      expect(updateError).toBeNull();
+
+      // Wait briefly, but the trigger WON'T clear claims (by design)
+      // The trigger only syncs when user_id IS NOT NULL
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Manually clear JWT claims - this is the expected workflow
+      // When user_id is removed, application code must explicitly call clearUserRLSClaims()
+      // The database trigger does not automatically clear claims (it only syncs)
+      await clearUserRLSClaims(tempUserId);
+
+      const { data: userDataAfter } =
+        await serviceClient.auth.admin.getUserById(tempUserId);
+
+      const claimsAfter = userDataAfter?.user?.app_metadata;
+
+      // Claims should be null or undefined after clearing
+      // Supabase removes keys rather than setting to null, so check for falsy
+      expect(claimsAfter?.casino_id).toBeFalsy();
+      expect(claimsAfter?.staff_role).toBeFalsy();
+      expect(claimsAfter?.staff_id).toBeFalsy();
+
+      // Clean up
+      await serviceClient.from('staff').delete().eq('id', staff!.id);
+      await serviceClient.auth.admin.deleteUser(tempUserId);
+    });
+
+    it('should not clear JWT claims when staff is deleted but user_id remains valid', async () => {
+      if (skipIfNoEnv()) return;
+
+      // Correlation ID for traceability
+      const correlationId = 'test-jwt-clear-002';
+
+      // This test verifies that deleting a staff record doesn't automatically
+      // clear JWT claims (must be done explicitly via clearUserRLSClaims)
+
+      const { data: tempUser } = await serviceClient.auth.admin.createUser({
+        email: 'test-jwt-delete-staff@example.com',
+        password: 'test-password-12345',
+        email_confirm: true,
+      });
+
+      if (!tempUser?.user?.id) {
+        throw new Error('Failed to create temporary user for delete test');
+      }
+
+      const tempUserId = tempUser.user.id;
+
+      // Create and sync claims
+      const { data: staff } = await serviceClient
+        .from('staff')
+        .insert({
+          first_name: 'Delete',
+          last_name: 'Test',
+          role: 'pit_boss',
+          employee_id: 'JWT-DELETE-001',
+          casino_id: testCasinoId,
+          user_id: tempUserId,
+        })
+        .select()
+        .single();
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // Manually sync claims
+      await syncUserRLSClaims(tempUserId, {
+        casino_id: testCasinoId,
+        staff_role: 'pit_boss',
+        staff_id: staff!.id,
+      });
+
+      // Verify claims are set
+      const { data: userDataBefore } =
+        await serviceClient.auth.admin.getUserById(tempUserId);
+      expect(userDataBefore?.user?.app_metadata?.casino_id).toBe(testCasinoId);
+
+      // Delete staff record
+      await serviceClient.from('staff').delete().eq('id', staff!.id);
+
+      // Claims should still exist (deletion doesn't trigger clear)
+      const { data: userDataAfter } =
+        await serviceClient.auth.admin.getUserById(tempUserId);
+
+      // Claims remain (must be explicitly cleared)
+      expect(userDataAfter?.user?.app_metadata?.casino_id).toBe(testCasinoId);
+
+      // Clean up
+      await serviceClient.auth.admin.deleteUser(tempUserId);
+    });
+  });
+
+  // ===========================================================================
+  // 4. Database Trigger Sync
   // ===========================================================================
 
   describe('Database Trigger Sync', () => {
@@ -663,7 +830,7 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
   });
 
   // ===========================================================================
-  // 4. RLS Policies Work with JWT Claims (Hybrid Fallback)
+  // 5. RLS Policies Work with JWT Claims (Hybrid Fallback)
   // ===========================================================================
 
   describe('RLS Policies with JWT Claims', () => {
@@ -750,7 +917,7 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
   });
 
   // ===========================================================================
-  // 5. Direct syncUserRLSClaims Function Tests
+  // 6. Direct syncUserRLSClaims Function Tests
   // ===========================================================================
 
   describe('syncUserRLSClaims Function', () => {

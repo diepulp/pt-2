@@ -220,6 +220,9 @@ COMMENT ON FUNCTION rpc_accrue_on_close IS
 -- UPDATE RPC 2: Apply Promotion (also needs ghost visit guard)
 -- ============================================================================
 
+-- Drop existing function first (return type change requires DROP)
+DROP FUNCTION IF EXISTS rpc_apply_promotion(uuid, uuid, text, numeric, int, uuid);
+
 CREATE OR REPLACE FUNCTION rpc_apply_promotion(
   p_casino_id uuid,
   p_rating_slip_id uuid,

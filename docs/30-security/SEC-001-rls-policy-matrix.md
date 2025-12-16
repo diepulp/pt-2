@@ -9,7 +9,7 @@ last_review: 2025-12-12
 updated: 2025-12-12
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017, ADR-018]
+related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020]
 version: 1.3.0
 ---
 
@@ -31,6 +31,8 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 **RLS Policies**: ✅ **HYBRID PATTERN DEPLOYED** (Pattern C - Transaction-wrapped with JWT fallback). All new/updated policies must use:
   - `COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)`
   - `COALESCE(NULLIF(current_setting('app.actor_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid)` for actor alignment when applicable.
+
+**MVP Strategy**: See ADR-020 for Track A (Hybrid) as the MVP architecture. Track B (JWT-only) migration is deferred until production validation prerequisites are met.
 
 **Application Layer**: ⚠️ **IN PROGRESS**
 - `withServerAction` wrapper - Updated for ADR-015
@@ -55,17 +57,17 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 
 ## Policy Matrix
 
-> **Updated 2025-12-06**: Visit Service Evolution (EXEC-VSE-001) - Ghost visits have `player_id = NULL` but are still scoped by `casino_id`.
+> **Updated 2025-12-16**: PRD-010 RLS MVP Hardening - Added `casino` table RLS (P0 fix), `mtl_audit_note` denial policies.
 
 | Context | Tables / Views | Read Access | Write Path | Notes |
 | --- | --- | --- | --- | --- |
-| CasinoService (Foundational) | `staff`, `casino_settings`, `report` | Authenticated staff in same `casino_id` (role-gated) | Admin (`staff_role = 'admin'`) only | `casino_settings` is the sole temporal authority; policies block cross-casino visibility. Dealers excluded (non-authenticated). |
+| CasinoService (Foundational) | `casino`, `staff`, `casino_settings`, `report` | Authenticated staff in same `casino_id` (role-gated) | Admin (`staff_role = 'admin'`) only; `casino` table is read-only (service_role for setup) | `casino_settings` is the sole temporal authority; policies block cross-casino visibility. Dealers excluded (non-authenticated). **PRD-010**: `casino` table now has RLS (Pattern C hybrid). |
 | Player & Visit (Identity & Session) | `player_casino`, `visit` | Authenticated staff in same `casino_id` | Enrollment/Visit services; admin override only | Membership writes funnel through enrollment workflows; prevents cross-property session leakage. **Ghost visits**: `player_id` is NULL but `casino_id` scoping still applies. |
 | LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. |
 | TableContextService (Operational) | `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation` | Authenticated operations staff for same `casino_id` | Admin + `pit_boss` roles | Trigger `assert_table_context_casino` enforces table/casino alignment. |
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
 | PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance, compliance & pit_boss staff in same `casino_id` | `rpc_create_financial_txn` (cashier/admin: full access; pit_boss: table buy-ins only per SEC-005 v1.1.0) | Append-only ledger; deletes disabled; gaming day derived via trigger. Pit boss constraints: direction='in', tender_type IN ('cash','chips'), visit_id required. |
-| MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. |
+| MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. **PRD-010**: `mtl_audit_note` explicit denial policies for UPDATE/DELETE (Template 3). |
 
 ---
 
@@ -718,6 +720,7 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 - **Canonical Guide**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` (AUTHORITATIVE)
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (Connection pooling strategy, Pattern C)
+- **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (MVP strategy - Track A Hybrid)
 - **SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v3.1.0)
 - **Migration Analysis**: `docs/audits/RLS_DOCUMENTATION_DRIFT_ANALYSIS_2025-11-13.md`
 - **RLS Context**: `lib/supabase/rls-context.ts` (Updated for ADR-015)

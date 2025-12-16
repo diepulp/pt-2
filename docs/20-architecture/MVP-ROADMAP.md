@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 2.0.0
+**Version**: 2.2.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2025-12-13
+**Updated**: 2025-12-15
 **Owner**: Lead Architect
 
 ---
@@ -27,6 +27,39 @@
 | **3** | **PRD-004** | **~90% Complete** | LoyaltyService (Pattern A, 7 workstreams, 50 tests, migrations pending remote) |
 | 3 | PRD-005 | **Partial** | Compliance Monitoring (routes exist, view-model exists) |
 | **3** | **PRD-009** | **COMPLETE** ✅ | PlayerFinancialService (Pattern A, 5 workstreams, 78 tests) |
+
+---
+
+## ✅ MVP Blockers (RESOLVED)
+
+### BLOCKER-001: ADR-020 RLS Track A Compliance (HIGH) - **RESOLVED**
+
+**Status:** ✅ **COMPLETE** (2025-12-16)
+**PRD:** [PRD-010-rls-mvp-hardening.md](../10-prd/PRD-010-rls-mvp-hardening.md)
+**ADR:** [ADR-020-rls-track-a-mvp-strategy.md](../80-adrs/ADR-020-rls-track-a-mvp-strategy.md)
+**Owner:** Security/Architecture
+
+**Decision:** Track A (Hybrid) is the MVP RLS architecture. Track B (JWT-only) migration is **deferred** until production validation prerequisites are met.
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| ADR-020 Accepted | ✅ Complete | Track A locked in as MVP strategy |
+| ADR-015 Scanner | ✅ Complete | 0 issues (verified 2025-12-16) |
+| Phase 0: JWT Fix | ✅ Complete | `20251214195201_adr015_prd004_loyalty_rls_fix.sql` deployed |
+| Phase 1: SECURITY DEFINER | ✅ Complete | Scanner validates self-injection (2025-12-16) |
+| Casino Table RLS (P0) | ✅ Complete | `20251216074001_prd010_casino_rls.sql` - Pattern C hybrid |
+| MTL Audit Note Denial | ✅ Complete | `20251216074008_prd010_mtl_audit_note_denial.sql` - Template 3 |
+| Cross-Casino Denial Tests | ✅ Complete | 7 tests in `rls-pooling-safety.integration.test.ts` |
+| Role Boundary Tests | 🔄 Deferred | Per PRD-010 scope - post-MVP |
+| Pooling Sanity Tests | ✅ Complete | 22+ tests passing (rls-pooling-safety, rating-slip-move) |
+| JWT Claims Sync Tests | ✅ Complete | Extended `rls-jwt-claims.integration.test.ts` |
+| Execution Spec | ✅ Complete | `docs/20-architecture/specs/PRD-010/EXECUTION-SPEC-PRD-010.md` |
+
+**Impact:** UNBLOCKED - PRD-008 (rating slip modal) can now ship.
+
+**Unblocks:** GATE-2 completion, Phase 3 final validation
+
+---
 
 > **PRD-HZ-001 Complete (2025-11-29)**: All 4 workstreams delivered:
 > - WS1: Middleware architecture (6 modules)
@@ -92,11 +125,15 @@
 > - **Realtime**: Supabase channel subscriptions with connection status indicator
 > - **Remaining**: Rating slip modal integration (PRD-008), TableLayoutTerminal compact mode
 >
-> **ADR-015 Implemented (2025-12-10)**: RLS Connection Pooling Strategy:
-> - **Phase 2**: JWT claims integration (`casino_id`, `staff_id` in token metadata)
-> - **Transaction Wrapper**: Context injection via transaction-wrapped SET LOCAL
-> - **Tests**: 4 integration test files (rls-context, rls-jwt-claims, rls-policy-enforcement, rls-pooling-safety)
-> - **Migration**: `20251210001858_adr015_backfill_jwt_claims.sql`
+> **ADR-015/ADR-020 RLS Strategy (2025-12-15)**: Track A Hybrid for MVP — **BLOCKER**:
+> - **ADR-020**: Track A (hybrid) decided as MVP architecture; Track B (JWT-only) gated on prerequisites
+> - **Scanner**: Fixed (0 false positives); existing migrations are Pattern C compliant
+> - **Phase 0**: ✅ Loyalty JWT fix deployed (`20251214195201`)
+> - **Phase 1**: 🔄 Scanner passing; SECURITY DEFINER hardening verification pending
+> - **High-Value Tests**: ❌ NOT STARTED (cross-casino denial, role boundary, pooling sanity)
+> - **PRD/SPEC**: ❌ Execution spec needed for ADR-020 Phase 1 implementation
+> - **Tooling**: `scripts/adr015-rls-scanner.sh` updated with statement-level parsing + SECURITY DEFINER check
+> - **Context**: PRD-008 (rating slip modal integration) surfaced RLS issues → led to ADR-020
 >
 > **PRD-009 Complete (2025-12-11)**: PlayerFinancialService implemented per Pattern A:
 > - **5 Phases**: Schema/DTOs, Service Layer, API Routes, React Query Hooks, Tests
@@ -187,6 +224,15 @@ PROGRESS TRACKING ✅ INTEGRATED
 ├── MVPProgressContext with 16 memories recorded
 ├── Service completion tracking via Memori
 └── Velocity metrics available via /mvp-status
+
+RLS STRATEGY 🔄 IN PROGRESS (ADR-015/ADR-020) — MVP BLOCKER
+├── ADR-020 Track A decided as MVP architecture
+├── Scanner fixed (0 false positives; existing migrations compliant)
+├── Phase 0 complete: Loyalty JWT fix deployed
+├── Phase 1 pending: SECURITY DEFINER hardening verification
+├── High-Value Tests: NOT STARTED (cross-casino, role boundary, pooling)
+├── PRD/SPEC: Execution spec needed for implementation
+└── Context: PRD-008 rating slip modal surfaced issues → ADR-020
 ```
 
 ---
@@ -963,13 +1009,23 @@ graph LR
 
 ## Next Actions
 
-> **Updated 2025-12-13**: PRD-004 LoyaltyService ~90% COMPLETE (50 tests), Phase 3 now 2/3 done
+> **Updated 2025-12-15**: ADR-020 Track A strategy decided, implementation pending
 
-1. **Immediate (P0)**: Complete PRD-004 LoyaltyService (remaining steps)
+1. **RLS Implementation (P0 BLOCKER)**: ADR-020 Track A — IN PROGRESS
+   - **Decision**: ADR-020 created (Track A hybrid for MVP, Track B gated)
+   - **Scanner**: Fixed (0 false positives), existing migrations are compliant
+   - **Phase 0**: ✅ Loyalty JWT fix deployed (`20251214195201`)
+   - **Phase 1**: 🔄 Scanner passing, SECURITY DEFINER hardening to verify
+   - **High-Value Tests**: ❌ NOT STARTED (cross-casino denial, role boundary, pooling sanity)
+   - **PRD/SPEC**: ❌ Execution spec needed for Phase 1 implementation
+   - **Context**: PRD-008 (rating slip modal) surfaced RLS issues → led to ADR-020
+
+2. **Immediate (P0)**: Complete PRD-004 LoyaltyService (remaining steps)
    - Apply migrations to remote database: `20251213003000_prd004_loyalty_service_schema.sql`, `20251213010000_prd004_loyalty_rpcs.sql`
    - Integration testing with live database (RLS policies, RPC behavior)
    - Business confirmation on overdraw cap (5000 points default)
-2. **Immediate (P0)**: Execute PRD-008 — Rating Slip Modal Service Integration (GATE-2 remaining blocker)
+
+3. **Immediate (P0)**: Execute PRD-008 — Rating Slip Modal Service Integration (GATE-2 remaining blocker)
    - Modal component exists at `components/modals/rating-slip/rating-slip-modal.tsx`
    - **WS1**: ~~Add `getPlayerBalance()` to LoyaltyService~~ ✅ COMPLETE (PRD-004)
    - **WS2**: ~~Create PlayerFinancialService foundation (Pattern A)~~ ✅ COMPLETE (PRD-009)
@@ -977,15 +1033,18 @@ graph LR
    - **WS4**: Wire modal to services (replace placeholder types)
    - **WS5**: Implement Move Player flow (close + start with same visit_id)
    - See `docs/10-prd/PRD-008-rating-slip-modal-integration.md` for full workstream breakdown
-3. **Short-term**: Complete GATE-2 validation
+
+4. **Short-term**: Complete GATE-2 validation
    - Measure p95 dashboard LCP (target ≤ 2.5s)
    - TableLayoutTerminal compact mode for grid thumbnails
    - E2E test coverage for pit dashboard flows
-4. **Medium-term**: Complete remaining Phase 3 service factories
+
+5. **Medium-term**: Complete remaining Phase 3 service factories
    - ~~LoyaltyService factory~~ ✅ ~90% COMPLETE (PRD-004, 2025-12-13) — UI components pending
    - MTLService factory (routes exist, view-model deleted — rebuild required)
    - ~~PlayerFinancialService factory~~ ✅ COMPLETE (PRD-009, 2025-12-11)
-5. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
+
+6. **Ongoing**: Record progress via `/mvp-status` (Memori integrated)
 
 ---
 
@@ -1053,6 +1112,7 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **ADR-015**: RLS Connection Pooling Strategy (Phase 2 COMPLETE 2025-12-10, JWT claims)
 - **ADR-016**: Finance Outbox Pattern (PLANNED, post-MVP payment gateway integration)
 - **ADR-019**: Loyalty Points Policy v2 (2025-12-13, reason codes, idempotency, keyset pagination)
+- **ADR-020**: RLS Track A Hybrid Strategy for MVP (2025-12-15, Track A locked, Track B gated)
 - **VIS-001**: Vision & Scope
 - **SRM**: Service Responsibility Matrix v4.0.0
 - **BALANCED_ARCHITECTURE_QUICK**: Slicing decision guide
