@@ -1,12 +1,25 @@
 ---
 name: rls-expert
-description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015 compliance. Covers hybrid context injection (Pattern C), JWT fallback strategies, connection pooling compatibility, and role-based access control patterns. (project)
+description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020 compliance. Covers hybrid context injection (Pattern C), JWT fallback strategies, connection pooling compatibility, and role-based access control patterns. (project)
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 ---
 
 # RLS Expert
 
 PT-2 Row-Level Security specialist for implementing secure, connection-pooling-compatible multi-tenant data access.
+
+## Current Strategy (ADR-020)
+
+**Track A (Hybrid) is the MVP architecture.** Track B (JWT-only) is the correct end-state, gated on prerequisites.
+
+| What | Decision |
+|------|----------|
+| MVP Pattern | Pattern C (Hybrid): `COALESCE(current_setting, jwt)` |
+| Context Injection | `set_rls_context()` RPC per request |
+| Auth Guard | `auth.uid() IS NOT NULL` on all policies |
+| Track B Migration | Not scheduled - requires real users, stable RLS, automation |
+
+**When ambiguity arises:** Consult `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` for external validation from AWS, Supabase, Crunchy Data.
 
 ## When to Use This Skill
 
@@ -15,17 +28,18 @@ Invoke this skill when:
 - Implementing or updating RLS policies for existing tables
 - Writing SECURITY DEFINER RPCs that validate casino scope
 - Troubleshooting RLS policy failures or cross-tenant data leakage
-- Auditing policies for ADR-015 connection pooling compliance
+- Auditing policies for ADR-015/ADR-020 compliance
 - Implementing role-gated write access (cashier, pit_boss, admin)
 - Setting up append-only ledger policies (finance, loyalty, MTL)
 
 ## Core Principles
 
 1. **Casino scope is non-negotiable** - Every casino-scoped table MUST enforce `casino_id` in RLS policies
-2. **Hybrid Pattern C is canonical** - All policies use transaction context with JWT fallback
+2. **Pattern C (Hybrid) is canonical for MVP** - Transaction context with JWT fallback (ADR-020)
 3. **Connection pooling safe** - Use `set_rls_context()` RPC, never legacy SET LOCAL loops
 4. **Dealers are excluded** - Dealers have `user_id = NULL` and ZERO application permissions
 5. **No service keys in runtime** - All operations use anon key + user authentication
+6. **Don't rewrite RLS again** - Fix issues incrementally, don't wholesale replace 116 policies
 
 ## Decision Tree: Which Pattern to Use
 
@@ -154,11 +168,13 @@ For comprehensive documentation, load the appropriate reference file:
 
 | Topic | Reference File | When to Load |
 |-------|---------------|--------------|
+| **Strategy Decision** | `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` | Understanding Track A vs Track B decision |
+| **External Validation** | `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` | When ambiguity arises about patterns |
 | Policy Templates | `references/policy-templates.md` | Creating new RLS policies |
 | RPC Patterns | `references/rpc-patterns.md` | Writing SECURITY DEFINER functions |
 | RBAC Matrix | `references/rbac-capabilities.md` | Determining role permissions |
 | Verification | `references/verification-checklist.md` | Auditing/testing policies |
-| ADR-015 Details | `references/adr015-connection-pooling.md` | Understanding pooling issues |
+| ADR-015 Details | `references/adr015-connection-pooling.md` | Understanding pooling technical details |
 
 **Search patterns for detailed docs:**
 ```bash
@@ -200,11 +216,13 @@ INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
 
 ## Canonical Documentation References
 
+- **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data validating PT-2's approach is not homebrew.
+- **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - Track A (hybrid) for MVP, Track B (JWT-only) gated on prerequisites
+- **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pooling strategy technical details
 - **SEC-001**: `docs/30-security/SEC-001-rls-policy-matrix.md` - Policy templates
 - **SEC-002**: `docs/30-security/SEC-002-casino-scoped-security-model.md` - Security boundaries
 - **SEC-003**: `docs/30-security/SEC-003-rbac-matrix.md` - RBAC matrix
 - **SEC-005**: `docs/30-security/SEC-005-role-taxonomy.md` - Role definitions
-- **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pooling strategy
 - **ADR-018**: `docs/80-adrs/ADR-018-sec006-security-hardening.md` - SEC-006 formalization
 - **Implementation**: `lib/supabase/rls-context.ts` - TypeScript context injection
 

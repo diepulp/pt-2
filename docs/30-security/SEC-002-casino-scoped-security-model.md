@@ -7,7 +7,7 @@ affects: [SEC-001]
 created: 2025-11-02
 last_review: 2025-12-10
 updated: 2025-12-10
-related_adrs: ADR-015
+related_adrs: [ADR-015, ADR-020]
 ---
 
 ## Purpose
@@ -40,9 +40,10 @@ Document the security boundaries that govern how PT-2 enforces least-privilege a
 - **Policy Snapshots:** `rating_slip.policy_snapshot` captures the reward policy at issuance to support post-event audits without loosening RLS.
 - **No Cross-Casino Joins:** Queries spanning properties must go through aggregated, pre-authorized views; ad hoc joins using free-form keys are rejected.
 
-## RLS Context Injection (ADR-015)
+## RLS Context Injection (ADR-015, ADR-020)
 
 **Status:** ✅ Implemented (Phase 1 + Phase 2)
+**MVP Strategy (ADR-020):** Track A (Hybrid) is the MVP architecture. Track B (JWT-only) migration deferred until production validation prerequisites are met.
 
 PT-2 uses a hybrid context injection strategy for RLS policies, ensuring compatibility with Supabase connection pooling (Supavisor transaction mode).
 
@@ -92,6 +93,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2025-12-15**: Added ADR-020 reference. Track A Hybrid is MVP architecture per ADR-020.
 - **2025-12-10**: Added RLS Context Injection section (ADR-015 Phase 1+2 implementation). Updated status to Active.
 - **2025-11-02**: Initial draft created.
 

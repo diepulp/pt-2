@@ -3,6 +3,10 @@
 **Purpose**: Security rules for backend services - context derivation, RLS parameters, trust boundaries.
 **Canonical Reference**: V4 violation - casino context from untrusted source
 
+**RLS Strategy**: For RLS pattern questions or ambiguity, consult:
+- `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - External validation (AWS, Supabase, Crunchy Data)
+- `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - Track A (hybrid) for MVP
+
 ---
 
 ## Casino Context Derivation (CRITICAL)

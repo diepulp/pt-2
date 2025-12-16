@@ -48,6 +48,11 @@ last_review: 2025-10-25
   - Transaction-wrapped `set_rls_context()` RPC
   - JWT claims fallback for direct client queries
 
+- **ADR-020** — RLS Track A Hybrid Strategy for MVP (`docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md`)
+  - Track A (Hybrid) is the MVP architecture
+  - `set_rls_context` RPC per request + COALESCE pattern + JWT fallback
+  - Track B (JWT-only) migration gated on production validation prerequisites
+
 ## Related Categories
 
 - **ARCH** (20-architecture): Security architecture patterns

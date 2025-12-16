@@ -107,21 +107,23 @@ services/{domain}/
 
 ## RLS Pattern
 
-```sql
--- Standard user-scoped RLS
-CREATE POLICY "users_own_data" ON table_name
-  USING (auth.uid() = user_id);
+**Canonical Reference:** `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - External validation from AWS, Supabase, Crunchy Data. **Consult this when ambiguity arises** about RLS patterns.
 
--- Staff-scoped (casino context)
+**Strategy:** ADR-020 - Track A (hybrid) for MVP, Track B (JWT-only) gated on prerequisites.
+
+```sql
+-- PT-2 canonical pattern (Pattern C - Hybrid, ADR-015 compliant)
 CREATE POLICY "staff_casino_data" ON table_name
-  USING (
-    EXISTS (
-      SELECT 1 FROM staff
-      WHERE staff.user_id = auth.uid()
-        AND staff.casino_id = table_name.casino_id
+  FOR SELECT USING (
+    auth.uid() IS NOT NULL
+    AND casino_id = COALESCE(
+      NULLIF(current_setting('app.casino_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
     )
   );
 ```
+
+For detailed RLS implementation, use the `rls-expert` skill.
 
 ---
 
@@ -321,3 +323,5 @@ done
 - **Over-Engineering Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`
 - **Frontend Standard**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` (Next.js 16 patterns)
 - **Next.js 16 Docs**: Context7 `/vercel/next.js/v16.0.3`
+- **RLS External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` (AWS, Supabase, Crunchy Data patterns)
+- **ADR-020 RLS Strategy**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (Track A for MVP)

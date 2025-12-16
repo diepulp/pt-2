@@ -2,6 +2,8 @@
 
 Detailed explanation of the RLS connection pooling problem and solution.
 
+> **Strategy Note:** This document covers technical implementation details. For the strategic decision (Track A hybrid for MVP, Track B JWT-only gated on prerequisites), see **ADR-020**. For external pattern validation, see `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md`.
+
 ## The Problem
 
 PT-2 uses Supabase with Supavisor connection pooling in **transaction mode** (port 6543). This creates a critical issue with RLS context injection.

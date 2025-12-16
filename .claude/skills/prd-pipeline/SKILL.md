@@ -158,12 +158,13 @@ Do NOT spawn agents one-at-a-time in separate messages:
 
 | Workstream Type | subagent_type |
 |-----------------|---------------|
-| Database Layer | backend-developer |
-| Service Layer | backend-developer |
-| Route Handlers | api-expert |
+| Database Layer | backend-service-builder |
+| Service Layer | backend-service-builder |
+| Route Handlers | api-builder |
 | React Query Hooks | backend-developer |
-| Tests | backend-developer |
+| Tests | e2e-testing |
 | UI Components | pt2-frontend-implementer |
+| RLS, JWT | rls-expert |
 
 ### Background Execution Workflow
 

@@ -34,6 +34,17 @@ python .claude/skills/lead-architect/scripts/check_primitive_freshness.py
 - Service implementation → Use `backend-service-builder` skill
 - Route Handler implementation → Use `api-builder` skill
 
+## Extended Thinking Triggers
+
+Use specific phrases to allocate thinking budget:
+
+| Phrase | Budget Level | Use Case |
+|--------|--------------|----------|
+| `think` | Low | Simple design, straightforward assertions |
+| `think hard` | Moderate | Complex workflow, edge cases |
+| `think harder` | High | Multi-step verification, architectural |
+| `ultrathink` | Maximum | Critical flow design, security verification | Systems design/architecure decisions
+
 ## Core Workflow
 
 ### Step 1: Discovery

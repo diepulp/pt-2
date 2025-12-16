@@ -1,0 +1,680 @@
+{
+  "audit_metadata": {
+    "date": "2025-12-14",
+    "auditor": "Claude System Architect Sub-agent",
+    "scope": "System-wide auth architecture analysis per ADR-015 and AUTH_ARCH_GAPS_FINDINGS_AND_REMEDIATIONS.md",
+    "context_documents": [
+      "docs/issues/AUTH_ARCH_GAPS_FINDINGS_AND_REMEDIATIONS.md",
+      "docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md",
+      "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
+      "docs/30-security/SEC-001-rls-policy-matrix.md",
+      "docs/issues/RLS-INVESTIGATION-FINDINGS-20251214.md"
+    ]
+  },
+
+  "gap_validation": {
+    "gap_1_sticky_context_pooling": {
+      "status": "PARTIALLY_REMEDIATED",
+      "validation": "CONFIRMED",
+      "evidence": [
+        "ADR-015 Phase 1 implemented transaction-wrapped RPC (set_rls_context)",
+        "ADR-015 Phase 1A implemented RPC self-injection for rating slip RPCs",
+        "Migration 20251209183033_adr015_rls_context_rpc.sql creates set_rls_context() SECURITY DEFINER",
+        "Migration 20251213190000_adr015_fix_rpc_context_injection.sql adds self-injection to 4 RPCs",
+        "However: Only rating slip RPCs have self-injection; other bounded contexts still vulnerable"
+      ],
+      "current_mitigation": "Transaction-wrapped set_rls_context() RPC ensures SET LOCAL persists within same pooled connection transaction",
+      "remaining_risk": "Multi-step workflows outside rating slip service still susceptible to context loss if not wrapped properly",
+      "affected_bounded_contexts": [
+        "FloorLayoutService (rpc_create_floor_layout, rpc_activate_floor_layout)",
+        "PlayerFinancialService (rpc_create_financial_txn)",
+        "LoyaltyService (rpc_issue_mid_session_reward - TBD verification)",
+        "TableContextService (chip custody RPCs)"
+      ]
+    },
+
+    "gap_2_execution_identity_ambiguity": {
+      "status": "ACTIVE_VULNERABILITY",
+      "validation": "CONFIRMED",
+      "evidence": [
+        "lib/server-actions/middleware/auth.ts lines 32-42: DEV mode swaps to service client",
+        "lib/supabase/service.ts: createServiceClient() bypasses RLS completely",
+        "DEV_AUTH_BYPASS environment variable gates service role usage in development",
+        "No audit trail when service role client is used (auth.uid() returns NULL)"
+      ],
+      "current_state": {
+        "dev_mode": "Service role client used when DEV_AUTH_BYPASS=true (default in development)",
+        "production_mode": "Real user JWT required, but service client still accessible",
+        "service_client_usage": "Available via createServiceClient() - no governance preventing misuse"
+      },
+      "security_implications": [
+        "User actions in dev mode execute with postgres role, bypassing RLS",
+        "auth.uid() checks fail in dev mode (returns NULL)",
+        "No attribution in audit_log when service client used",
+        "Risk of service client leaking into production code paths"
+      ],
+      "recommended_mitigation": "Enforce JWT-only execution for user-path operations; restrict service client to system-path only with explicit audit"
+    },
+
+    "gap_3_security_definer_bypass": {
+      "status": "PARTIALLY_GOVERNED",
+      "validation": "CONFIRMED_WITH_GOVERNANCE",
+      "evidence": [
+        "ADR-018 SECURITY DEFINER governance implemented (referenced in SRM v4.4.0)",
+        "10 migrations contain SECURITY DEFINER functions",
+        "Rating slip RPCs (4 functions) hardened with Template 5 context validation",
+        "FloorLayout RPCs (2 functions) hardened with context validation per SEC-006",
+        "set_rls_context() itself is SECURITY DEFINER (necessary for session variable injection)"
+      ],
+      "inventory": {
+        "total_security_definer_functions": "~15-20 estimated (exact count requires full migration scan)",
+        "migrations_with_security_definer": [
+          "20251108195341_table_context_chip_custody.sql",
+          "20251128221408_rating_slip_pause_tracking.sql",
+          "20251129161956_prd000_casino_foundation.sql",
+          "20251207024918_rating_slip_drop_player_id.sql",
+          "20251209183033_adr015_rls_context_rpc.sql",
+          "20251210001858_adr015_backfill_jwt_claims.sql",
+          "20251211153228_adr015_rls_compliance_patch.sql",
+          "20251212080915_sec006_rls_hardening.sql",
+          "20251212081000_sec007_rating_slip_rpc_hardening.sql",
+          "20251213190000_adr015_fix_rpc_context_injection.sql"
+        ],
+        "hardened_rpcs": [
+          "rpc_start_rating_slip",
+          "rpc_pause_rating_slip",
+          "rpc_resume_rating_slip",
+          "rpc_close_rating_slip",
+          "rpc_create_floor_layout",
+          "rpc_activate_floor_layout",
+          "set_rls_context",
+          "sync_staff_jwt_claims"
+        ]
+      },
+      "governance_status": {
+        "adr_018_compliance": "Partial - rating slip and floor layout services compliant",
+        "template_5_pattern": "Context validation at RPC entry (casino_id mismatch checks)",
+        "missing_governance": [
+          "Chip custody RPCs (table_fill, table_credit)",
+          "PlayerFinancialService (rpc_create_financial_txn) - needs ADR-018 audit",
+          "LoyaltyService (rpc_issue_mid_session_reward) - needs ADR-018 audit"
+        ]
+      },
+      "rls_bypass_risk": "SECURITY DEFINER functions can read/write without RLS if not explicitly validated; ADR-018 mitigates but not universally applied"
+    },
+
+    "gap_4_rpc_trust_boundaries": {
+      "status": "INCONSISTENT",
+      "validation": "CONFIRMED",
+      "evidence": [
+        "Rating slip RPCs: Self-inject context + validate casino_id mismatch (lines 66-73 in 20251213190000)",
+        "set_rls_context RPC: No internal validation (trusts caller-provided parameters)",
+        "Floor layout RPCs: Have context validation per SEC-006",
+        "PlayerFinancial RPC: Unknown validation status (not examined in detail)"
+      ],
+      "current_patterns": {
+        "pattern_a_self_sufficient": "Rating slip RPCs self-inject + validate within single transaction",
+        "pattern_b_trust_middleware": "set_rls_context() trusts withServerAction middleware to provide correct values",
+        "pattern_c_mixed": "Some RPCs validate, some don't - inconsistent trust model"
+      },
+      "risk": "RPCs that don't validate caller-provided context parameters can be exploited if middleware bypassed or parameters spoofed",
+      "recommendation": "Standardize on Template 5 pattern (ADR-018) for ALL SECURITY DEFINER RPCs"
+    },
+
+    "gap_5_implicit_context_magic": {
+      "status": "DESIGN_CHOICE_WITH_MIGRATION_PATH",
+      "validation": "ACKNOWLEDGED",
+      "evidence": [
+        "current_setting('app.casino_id') still primary pattern in hybrid policies",
+        "JWT fallback exists but is secondary (COALESCE pattern)",
+        "63 RLS policy anti-patterns found by adr015-rls-scanner.sh (per RLS-INVESTIGATION-FINDINGS-20251214.md)",
+        "Migration to JWT-first deferred to ADR-015 Phase 3"
+      ],
+      "current_state": {
+        "primary_mechanism": "SET LOCAL session variables via set_rls_context() RPC",
+        "fallback_mechanism": "JWT claims (auth.jwt() -> 'app_metadata' ->> 'casino_id')",
+        "migration_status": "Phase 2 complete (JWT backfill), Phase 3 pending (JWT-first policies)"
+      },
+      "complexity_drivers": [
+        "COALESCE expressions in every RLS policy (cognitive load)",
+        "NULLIF wrappers required to prevent empty string casting errors",
+        "Two parallel auth mechanisms to maintain (SET LOCAL + JWT)",
+        "Easy to get wrong (63 broken policies found in recent PRD-004 work)"
+      ],
+      "jwt_first_blockers": [
+        "Requires token refresh on role/casino changes (user friction)",
+        "Dev mode auth bypass pattern incompatible with JWT-only (service client has no JWT)",
+        "Migration effort across ~50+ RLS policies"
+      ]
+    },
+
+    "gap_6_audit_observability": {
+      "status": "PARTIAL_COVERAGE",
+      "validation": "CONFIRMED",
+      "evidence": [
+        "audit_log table exists with casino_id, actor_id, domain, action, details columns",
+        "Rating slip RPCs write audit entries (lines 109-122 in rpc_start_rating_slip)",
+        "No audit when service client used (auth.uid() is NULL, no actor_id)",
+        "DEV mode bypasses attribution entirely",
+        "correlation_id supported in set_rls_context but not universally tracked"
+      ],
+      "coverage_gaps": {
+        "service_role_operations": "No audit trail when createServiceClient() used",
+        "dev_mode_operations": "No actor_id attribution (DEV_RLS_CONTEXT injected but not logged)",
+        "rpc_failures": "No audit of failed authorization checks (exceptions thrown without logging)",
+        "cross_context_calls": "No trace of which service called which RPC"
+      },
+      "audit_quality": {
+        "actor_id": "Present when authenticated user, NULL when service role",
+        "casino_id": "Always present (enforced by RLS)",
+        "correlation_id": "Supported in set_rls_context but not in all code paths",
+        "request_id": "Not consistently captured",
+        "action_details": "JSONB blob - good detail when present"
+      },
+      "recommendation": "Make audit logging mandatory in SECURITY DEFINER RPCs; add service-path audit with system actor"
+    }
+  },
+
+  "risk_matrix": {
+    "critical": [
+      {
+        "risk_id": "RISK-001",
+        "title": "Service Client Leakage into Production User-Path",
+        "gap_source": "GAP 2",
+        "likelihood": "Medium",
+        "impact": "Critical",
+        "description": "createServiceClient() accessible without governance; could be misused to bypass RLS in production",
+        "attack_scenario": "Developer adds service client call to expedite feature without realizing RLS bypass; user actions executed as postgres role",
+        "current_controls": "None - service.ts exports createServiceClient() with warning comment only",
+        "mitigation_priority": "P0"
+      },
+      {
+        "risk_id": "RISK-002",
+        "title": "SECURITY DEFINER RPC Privilege Escalation",
+        "gap_source": "GAP 3",
+        "likelihood": "Low",
+        "impact": "High",
+        "description": "RPCs without Template 5 validation can be exploited if parameters spoofed or middleware bypassed",
+        "attack_scenario": "Authenticated user crafts RPC call with different casino_id; RPC executes without validating caller scope",
+        "current_controls": "ADR-018 governance for rating slip and floor layout; partial coverage",
+        "mitigation_priority": "P1"
+      },
+      {
+        "risk_id": "RISK-003",
+        "title": "RLS Policy Syntax Errors Under Connection Pooling",
+        "gap_source": "GAP 1, GAP 5",
+        "likelihood": "High",
+        "impact": "Medium",
+        "description": "63 RLS anti-patterns found; missing NULLIF wrappers cause runtime UUID casting errors",
+        "attack_scenario": "N/A - availability issue, not security; causes 500 errors when current_setting returns empty string",
+        "current_controls": "adr015-rls-scanner.sh detects patterns; hotfix migration 20251214195201 addresses loyalty service",
+        "mitigation_priority": "P1 (Active incidents)"
+      }
+    ],
+
+    "high": [
+      {
+        "risk_id": "RISK-004",
+        "title": "Multi-Step Workflow Context Loss",
+        "gap_source": "GAP 1",
+        "likelihood": "Medium",
+        "impact": "Medium",
+        "description": "Non-rating-slip services vulnerable to SET LOCAL context loss across RPC boundaries",
+        "attack_scenario": "Workflow with multiple RPC calls fails intermittently due to connection pooling; wrong tenant data returned",
+        "current_controls": "Transaction-wrapped set_rls_context() helps but doesn't solve cross-RPC workflows",
+        "mitigation_priority": "P2"
+      },
+      {
+        "risk_id": "RISK-005",
+        "title": "Audit Attribution Gaps",
+        "gap_source": "GAP 6",
+        "likelihood": "High",
+        "impact": "Medium",
+        "description": "Service client operations and dev mode actions have no actor_id; compliance/forensics impossible",
+        "attack_scenario": "Security incident requires audit trail; service role operations untraceable",
+        "current_controls": "Audit logging present in some RPCs; inconsistent coverage",
+        "mitigation_priority": "P2"
+      }
+    ],
+
+    "medium": [
+      {
+        "risk_id": "RISK-006",
+        "title": "JWT Token Size Bloat",
+        "gap_source": "GAP 5",
+        "likelihood": "Low",
+        "impact": "Low",
+        "description": "Adding casino_id, staff_role, staff_id to JWT increases token size (~50-100 bytes)",
+        "attack_scenario": "N/A - performance concern, not security",
+        "current_controls": "JWT compression; claims limited to 3 fields",
+        "mitigation_priority": "P3 (Monitor only)"
+      },
+      {
+        "risk_id": "RISK-007",
+        "title": "Dev Mode Security Drift",
+        "gap_source": "GAP 2",
+        "likelihood": "Medium",
+        "impact": "Low",
+        "description": "DEV_AUTH_BYPASS pattern diverges from production behavior; bugs hidden until production",
+        "attack_scenario": "RLS policy passes in dev (service client bypasses) but fails in prod (JWT enforcement)",
+        "current_controls": "Can disable via DEV_AUTH_BYPASS=false; integration tests should catch",
+        "mitigation_priority": "P3"
+      }
+    ]
+  },
+
+  "architectural_debt": [
+    {
+      "debt_id": "DEBT-001",
+      "title": "Dual Auth Mechanism Complexity",
+      "description": "Maintaining both SET LOCAL and JWT auth paths increases cognitive load and error surface",
+      "evidence": "COALESCE(NULLIF(...), auth.jwt()...) pattern in 50+ RLS policies; 63 anti-patterns found",
+      "cost": "High - every new policy requires careful COALESCE construction; easy to get wrong",
+      "benefit_of_fix": "Single source of truth (JWT-only); simpler policies; better pooling performance",
+      "migration_effort": "High - 50+ policies to rewrite; requires ADR-015 Phase 3 execution",
+      "recommended_timeline": "Post-MVP (Phase 3)"
+    },
+    {
+      "debt_id": "DEBT-002",
+      "title": "Inconsistent RPC Security Patterns",
+      "description": "Some RPCs self-validate (Template 5), others trust middleware; no universal standard",
+      "evidence": "Rating slip RPCs have casino_id mismatch checks; set_rls_context does not; financial/loyalty RPCs unknown",
+      "cost": "Medium - security gaps emerge when new RPCs added without Template 5 pattern",
+      "benefit_of_fix": "Defense in depth; explicit trust boundaries at every RPC",
+      "migration_effort": "Medium - audit all SECURITY DEFINER RPCs; add Template 5 validation",
+      "recommended_timeline": "Next sprint (P1)"
+    },
+    {
+      "debt_id": "DEBT-003",
+      "title": "Service Client Governance Gap",
+      "description": "No technical control preventing service client misuse in user-path code",
+      "evidence": "createServiceClient() exported from lib/supabase/service.ts; only warning comment",
+      "cost": "Critical - accidental RLS bypass risk",
+      "benefit_of_fix": "Prevent privilege escalation; enforce least-privilege",
+      "migration_effort": "Low - add ESLint rule to ban service client outside system-path; refactor dev mode pattern",
+      "recommended_timeline": "Immediate (P0)"
+    },
+    {
+      "debt_id": "DEBT-004",
+      "title": "Audit Logging Not First-Class",
+      "description": "Audit trail inconsistent; not enforced as contract of SECURITY DEFINER RPCs",
+      "evidence": "Some RPCs write audit_log, others don't; no audit when service client used",
+      "cost": "High - compliance gaps; forensics impossible for service-path operations",
+      "benefit_of_fix": "Full attribution; compliance readiness; incident response capability",
+      "migration_effort": "Medium - add audit requirement to ADR-018; update all RPCs",
+      "recommended_timeline": "Pre-production hardening"
+    }
+  ],
+
+  "migration_path": [
+    {
+      "phase": "Immediate (P0)",
+      "timeline": "This sprint",
+      "objectives": [
+        "Fix 63 RLS policy anti-patterns from adr015-rls-scanner.sh",
+        "Implement ESLint rule to ban createServiceClient() import outside system-path files",
+        "Document service-path vs user-path execution boundaries"
+      ],
+      "deliverables": [
+        "Migration: Fix remaining loyalty/financial RLS policies with ADR-015 Pattern C",
+        "ESLint config: no-restricted-imports for lib/supabase/service.ts",
+        "ADR update: Service client governance policy"
+      ],
+      "validation": [
+        "adr015-rls-scanner.sh reports 0 anti-patterns",
+        "ESLint passes with service client ban rule",
+        "All E2E tests pass (modal-data endpoint functional)"
+      ]
+    },
+    {
+      "phase": "Short-term (P1)",
+      "timeline": "Next 2 sprints",
+      "objectives": [
+        "Audit all SECURITY DEFINER RPCs for ADR-018 Template 5 compliance",
+        "Add casino_id mismatch validation to all user-path RPCs",
+        "Standardize audit logging in all SECURITY DEFINER functions"
+      ],
+      "deliverables": [
+        "SECURITY DEFINER inventory document (table of functions with compliance status)",
+        "Migrations: Add Template 5 validation to chip custody, financial, loyalty RPCs",
+        "ADR-018 update: Mandatory audit logging requirement"
+      ],
+      "validation": [
+        "100% of SECURITY DEFINER RPCs have explicit authorization checks",
+        "100% of user-path RPCs write audit_log entries",
+        "Security review pass"
+      ]
+    },
+    {
+      "phase": "Medium-term (P2)",
+      "timeline": "Post-MVP (2-3 months)",
+      "objectives": [
+        "Migrate RLS policies to JWT-first pattern (ADR-015 Phase 3)",
+        "Remove SET LOCAL dependency from standard user-path operations",
+        "Implement system actor pattern for service-path audit trail"
+      ],
+      "deliverables": [
+        "Migrations: Rewrite 50+ RLS policies to use auth.jwt() as primary (COALESCE removal)",
+        "System actor table + audit logging for service client operations",
+        "Documentation: JWT-only RLS pattern as canonical"
+      ],
+      "validation": [
+        "SET LOCAL only used for admin/migration tasks (session mode port 5432)",
+        "All user-path operations use JWT claims exclusively",
+        "Audit coverage 100% (including service-path)"
+      ]
+    },
+    {
+      "phase": "Long-term (P3)",
+      "timeline": "6+ months",
+      "objectives": [
+        "Deprecate SET LOCAL pattern entirely",
+        "Migrate to JWT-only authorization (single source of truth)",
+        "Remove hybrid COALESCE patterns from all policies"
+      ],
+      "deliverables": [
+        "Remove set_rls_context() RPC (no longer needed)",
+        "Remove withRLS middleware (JWT-only, no session variable injection)",
+        "Simplified RLS policy templates (auth.jwt() only)"
+      ],
+      "validation": [
+        "current_setting('app.*') appears in 0 RLS policies",
+        "All policies use auth.jwt() -> 'app_metadata' exclusively",
+        "Performance benchmarks show improvement (fewer RPCs per request)"
+      ]
+    }
+  ],
+
+  "blockers": [
+    {
+      "blocker_id": "BLOCK-001",
+      "title": "Dev Mode Incompatible with JWT-Only",
+      "description": "DEV_AUTH_BYPASS pattern uses service client which has no JWT; JWT-only policies would break local development",
+      "impact": "Blocks ADR-015 Phase 3 (JWT-only migration)",
+      "affected_features": [
+        "Local development without Supabase auth session",
+        "API route testing via Playwright/Postman",
+        "Integration tests that bypass auth"
+      ],
+      "resolution_options": [
+        {
+          "option": "A",
+          "description": "Require real auth in dev mode; seed dev users with JWT claims",
+          "pros": "Dev parity with production; tests real auth flow",
+          "cons": "Friction in local dev; requires login for every test"
+        },
+        {
+          "option": "B",
+          "description": "Inject mock JWT claims into service client for dev mode",
+          "pros": "Preserves dev UX; JWT-only policies work",
+          "cons": "Service client with JWT is non-standard; Supabase API may not support"
+        },
+        {
+          "option": "C",
+          "description": "Use anon client + dev user session token",
+          "pros": "Standard Supabase pattern; real JWT with seeded claims",
+          "cons": "Requires session management in dev mode"
+        }
+      ],
+      "recommended_resolution": "Option C - use anon client with seeded dev user; update DEV_AUTH_BYPASS to inject session token instead of swapping client",
+      "effort": "Medium (2-3 days)",
+      "priority": "Required for Phase 3"
+    },
+    {
+      "blocker_id": "BLOCK-002",
+      "title": "Role/Casino Change Requires Re-login",
+      "description": "JWT claims only update on token refresh; changing staff role or casino requires user to log out/in",
+      "impact": "User friction for admin operations (role changes, casino transfers)",
+      "affected_features": [
+        "Admin panel: Change staff role",
+        "Multi-casino staff: Switch active casino",
+        "Staff transfers between properties"
+      ],
+      "resolution_options": [
+        {
+          "option": "A",
+          "description": "Force logout on role/casino change",
+          "pros": "Simple; guarantees JWT freshness",
+          "cons": "Poor UX; user loses session state"
+        },
+        {
+          "option": "B",
+          "description": "Trigger client-side token refresh via Supabase SDK",
+          "pros": "Seamless UX; JWT updates without logout",
+          "cons": "Requires client callback; race conditions possible"
+        },
+        {
+          "option": "C",
+          "description": "Keep hybrid pattern for role changes (SET LOCAL override)",
+          "pros": "Instant updates; no re-login",
+          "cons": "Blocks full JWT-only migration; maintains complexity"
+        }
+      ],
+      "recommended_resolution": "Option B - implement token refresh trigger; acceptable UX tradeoff",
+      "effort": "Low (1 day)",
+      "priority": "Required for Phase 3"
+    },
+    {
+      "blocker_id": "BLOCK-003",
+      "title": "Multi-Casino Staff Switching",
+      "description": "PT-2 future scope includes staff working across multiple casinos; JWT can only hold one casino_id",
+      "impact": "Architectural constraint for multi-casino feature",
+      "affected_features": [
+        "Future: Regional manager role",
+        "Future: Casino group operations",
+        "Future: Cross-property reporting"
+      ],
+      "resolution_options": [
+        {
+          "option": "A",
+          "description": "JWT contains active_casino_id; user switches via API call + token refresh",
+          "pros": "Single-tenant RLS policies unchanged; clear active context",
+          "cons": "UX friction; requires switching before cross-casino operations"
+        },
+        {
+          "option": "B",
+          "description": "JWT contains casino_ids array; RLS policies use ANY(casino_ids)",
+          "pros": "Seamless multi-casino access",
+          "cons": "Breaks tenant isolation model; RLS complexity increases"
+        },
+        {
+          "option": "C",
+          "description": "Multi-casino users have separate accounts per casino",
+          "pros": "Preserves single-tenant model; clear audit trail",
+          "cons": "User friction; multiple logins"
+        }
+      ],
+      "recommended_resolution": "Option A - defer to post-MVP; revisit in multi-casino ADR",
+      "effort": "N/A (future)",
+      "priority": "Not blocking MVP"
+    }
+  ],
+
+  "recommendations": [
+    {
+      "rec_id": "REC-001",
+      "priority": "P0",
+      "title": "Implement Service Client Governance",
+      "rationale": "Prevent accidental RLS bypass; critical security control",
+      "actions": [
+        "Add ESLint no-restricted-imports rule for lib/supabase/service.ts",
+        "Allow import only from system-path files (lib/jobs/*, scripts/*, migrations/*)",
+        "Refactor DEV_AUTH_BYPASS to use anon client + seeded session instead of service client",
+        "Document service-path vs user-path boundaries in governance docs"
+      ],
+      "success_criteria": [
+        "ESLint fails if service.ts imported from app/ or services/ directories",
+        "Dev mode uses authenticated session (not service client)",
+        "Security review approves service client usage policy"
+      ],
+      "owner": "Security/Platform team",
+      "timeline": "This sprint"
+    },
+    {
+      "rec_id": "REC-002",
+      "priority": "P0",
+      "title": "Complete RLS Policy Remediation",
+      "rationale": "Fix active production incidents (500 errors from UUID casting)",
+      "actions": [
+        "Apply ADR-015 Pattern C to all 63 anti-pattern instances from scanner",
+        "Run adr015-rls-scanner.sh until 0 violations",
+        "Add scanner to CI/CD pipeline to prevent regression",
+        "Update SEC-001 with examples of common mistakes"
+      ],
+      "success_criteria": [
+        "adr015-rls-scanner.sh reports 0 anti-patterns",
+        "modal-data endpoint returns 200 with loyalty data",
+        "All E2E tests pass",
+        "CI blocks merges with RLS anti-patterns"
+      ],
+      "owner": "Platform team",
+      "timeline": "This sprint"
+    },
+    {
+      "rec_id": "REC-003",
+      "priority": "P1",
+      "title": "Audit and Harden All SECURITY DEFINER RPCs",
+      "rationale": "Eliminate privilege escalation attack surface",
+      "actions": [
+        "Inventory all SECURITY DEFINER functions (estimated 15-20)",
+        "For each RPC: verify Template 5 compliance (casino_id mismatch check)",
+        "Add audit_log writes to all user-path RPCs",
+        "Update ADR-018 with mandatory requirements"
+      ],
+      "success_criteria": [
+        "100% of SECURITY DEFINER RPCs have explicit authorization checks",
+        "Inventory table exists in docs/30-security/ with compliance status",
+        "All user-path RPCs write audit entries"
+      ],
+      "owner": "Security team",
+      "timeline": "Next 2 sprints"
+    },
+    {
+      "rec_id": "REC-004",
+      "priority": "P1",
+      "title": "Standardize Audit Logging as First-Class Contract",
+      "rationale": "Enable compliance and forensics; close GAP 6",
+      "actions": [
+        "Update ADR-018: Audit logging mandatory for SECURITY DEFINER RPCs",
+        "Add audit_log helper function for consistent format",
+        "Implement system actor for service-path operations",
+        "Add correlation_id tracking across all code paths"
+      ],
+      "success_criteria": [
+        "Every SECURITY DEFINER RPC writes audit_log entry",
+        "Service client operations logged with system actor_id",
+        "correlation_id present in all audit entries",
+        "Audit coverage report shows 100%"
+      ],
+      "owner": "Platform team",
+      "timeline": "Next 2 sprints"
+    },
+    {
+      "rec_id": "REC-005",
+      "priority": "P2",
+      "title": "Execute ADR-015 Phase 3 (JWT-First Migration)",
+      "rationale": "Reduce architectural complexity; improve connection pooling performance",
+      "actions": [
+        "Resolve BLOCK-001 (dev mode JWT compatibility)",
+        "Resolve BLOCK-002 (token refresh UX)",
+        "Rewrite 50+ RLS policies to use auth.jwt() as primary",
+        "Deprecate set_rls_context() RPC and withRLS middleware",
+        "Remove COALESCE(current_setting...) patterns"
+      ],
+      "success_criteria": [
+        "All user-path operations use JWT exclusively",
+        "SET LOCAL only used for admin/migration tasks",
+        "RLS policy templates simplified (no COALESCE)",
+        "Performance benchmarks show improvement"
+      ],
+      "owner": "Platform team",
+      "timeline": "Post-MVP (2-3 months)"
+    },
+    {
+      "rec_id": "REC-006",
+      "priority": "P3",
+      "title": "Document Service-Path vs User-Path Boundaries",
+      "rationale": "Clarify execution identity model; prevent architecture drift",
+      "actions": [
+        "Create docs/30-security/EXECUTION_IDENTITY_MODEL.md",
+        "Define user-path (JWT required) vs system-path (service client allowed)",
+        "List approved service-path use cases (migrations, cron jobs, admin scripts)",
+        "Add architecture decision flowchart for 'should I use service client?'"
+      ],
+      "success_criteria": [
+        "Documentation approved by security team",
+        "All developers trained on execution identity model",
+        "Code review checklist includes identity verification"
+      ],
+      "owner": "Architecture team",
+      "timeline": "Next sprint"
+    }
+  ],
+
+  "assessment_summary": {
+    "overall_posture": "TRANSITIONAL_WITH_ACTIVE_RISKS",
+    "maturity_level": "Level 2 - Defined (transitioning to Level 3 - Managed)",
+    "key_findings": [
+      "ADR-015 Phase 1/2 successfully mitigates connection pooling issues for rating slip service",
+      "Hybrid RLS pattern (Pattern C) works but introduces complexity and error surface (63 anti-patterns found)",
+      "SECURITY DEFINER governance partially implemented (ADR-018); not universally applied",
+      "Service client usage ungoverned; critical vulnerability to RLS bypass",
+      "Audit logging inconsistent; gaps prevent compliance readiness",
+      "JWT-first migration path clear (Phase 3) but blocked by dev mode pattern and UX concerns"
+    ],
+    "rpc_self_injection_sustainability": {
+      "verdict": "SUSTAINABLE_SHORT_TERM",
+      "rationale": "RPC self-injection (Phase 1A) solves immediate pooling issues and is defensible as defense-in-depth. However, it perpetuates dual-mechanism complexity (SET LOCAL + JWT). Long-term sustainability requires migration to JWT-only (Phase 3).",
+      "trade_offs": {
+        "pros": [
+          "Fixes connection pooling context loss immediately",
+          "Works with existing middleware (minimal refactor)",
+          "Explicit validation at RPC boundary (defense in depth)"
+        ],
+        "cons": [
+          "Every RPC must self-inject (boilerplate and cognitive load)",
+          "Still relies on session variables (architectural complexity)",
+          "Doesn't solve dev mode service client issue"
+        ]
+      },
+      "recommendation": "Continue RPC self-injection for new RPCs in short term; prioritize JWT-only migration for long-term simplification"
+    },
+    "jwt_only_migration_feasibility": {
+      "verdict": "FEASIBLE_WITH_BLOCKERS_RESOLVED",
+      "blockers": [
+        "BLOCK-001: Dev mode incompatible with JWT-only (requires auth session)",
+        "BLOCK-002: Role/casino changes require re-login (UX friction)"
+      ],
+      "effort_estimate": "4-6 weeks (2 sprints) to resolve blockers + migrate policies",
+      "risk_level": "Medium - requires careful rollout with feature flags; regression risk on RLS policies",
+      "recommendation": "Prioritize blocker resolution in next sprint; execute Phase 3 migration post-MVP"
+    },
+    "bounded_contexts_at_risk": [
+      {
+        "context": "FloorLayoutService",
+        "risk": "Medium",
+        "reason": "RPCs have context validation (SEC-006) but not self-injection; vulnerable if middleware bypassed"
+      },
+      {
+        "context": "PlayerFinancialService",
+        "risk": "Medium",
+        "reason": "RPC validation status unknown; SECURITY DEFINER governance not confirmed"
+      },
+      {
+        "context": "LoyaltyService",
+        "risk": "High (recently mitigated)",
+        "reason": "63 RLS anti-patterns found in PRD-004 migrations; hotfix 20251214195201 deployed but needs verification"
+      },
+      {
+        "context": "TableContextService",
+        "risk": "Medium",
+        "reason": "Chip custody RPCs have SECURITY DEFINER but validation status unknown"
+      }
+    ],
+    "migration_path_viability": {
+      "patch_approach": "VIABLE - RPC self-injection + hybrid policies sustainable for MVP",
+      "overhaul_approach": "VIABLE_POST_MVP - JWT-only requires blocker resolution and multi-sprint effort",
+      "recommended_strategy": "Hybrid: Continue patch approach through MVP; execute overhaul (Phase 3) in post-MVP hardening phase"
+    }
+  }
+}

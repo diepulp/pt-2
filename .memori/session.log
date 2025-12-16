@@ -2917,3 +2917,287 @@
 [2025-12-14T00:47:31-08:00] [context] Initializing new context session for chatmode: main
 [2025-12-14T00:47:31-08:00] Session already initialized (chatmode: main)
 [2025-12-14T00:47:33-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:50:51-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:50:51-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:50:54-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:52:36-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:52:36-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:52:39-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:52:49-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:52:49-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:52:52-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:53:29-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:53:29-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:53:31-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:54:38-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:54:38-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:54:41-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:55:36-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:55:36-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:55:39-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:56:27-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T00:56:27-08:00] Session already initialized (chatmode: main)
+[2025-12-14T00:56:29-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T00:56:38-08:00] [skill] Skill invoked: e2e-testing
+[2025-12-14T00:56:41-08:00] [skill] ✅ Memori enabled for skill: e2e-testing (namespace: skill_e2e_testing)
+[2025-12-14T19:34:34-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T19:34:34-08:00] Session already initialized (chatmode: main)
+[2025-12-14T19:34:37-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T19:40:27-08:00] Session already initialized (chatmode: main)
+[2025-12-14T19:40:27-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T19:40:29-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T19:46:38-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T19:46:38-08:00] Session already initialized (chatmode: main)
+[2025-12-14T19:46:40-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:03:18-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:03:18-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:03:20-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:04:07-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:04:07-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:04:09-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:11:04-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:11:04-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:11:06-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:11:52-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:11:52-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:11:54-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:36:15-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:36:15-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:36:18-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:38:29-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:38:29-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:38:31-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:38:44-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:38:44-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:38:46-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T20:42:33-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T20:42:33-08:00] Session already initialized (chatmode: main)
+[2025-12-14T20:42:35-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-14T22:33:02-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-14T22:33:02-08:00] Session already initialized (chatmode: main)
+[2025-12-14T22:33:05-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T12:41:05-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T12:41:05-08:00] Session already initialized (chatmode: main)
+[2025-12-15T12:41:08-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T12:54:43-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T12:54:43-08:00] Session already initialized (chatmode: main)
+[2025-12-15T12:54:46-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T12:58:23-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T12:58:23-08:00] Session already initialized (chatmode: main)
+[2025-12-15T12:58:25-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T12:59:51-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T12:59:51-08:00] Session already initialized (chatmode: main)
+[2025-12-15T12:59:53-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:09:47-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:09:47-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:09:48-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:10:06-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:10:06-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:10:07-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:14:41-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:14:41-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:14:43-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:16:33-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:16:33-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:16:35-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:18:23-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:18:23-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:18:25-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:20:19-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:20:19-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:20:21-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:20:26-08:00] [skill] Skill invoked: lead-architect
+[2025-12-15T13:20:28-08:00] [skill] ✅ Memori enabled for skill: lead-architect (namespace: skill_lead_architect)
+[2025-12-15T13:25:05-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:25:05-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:25:07-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:51:18-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:51:18-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:51:20-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T13:56:30-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T13:56:30-08:00] Session already initialized (chatmode: main)
+[2025-12-15T13:56:32-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:04:06-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:04:06-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:04:08-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:25:15-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:25:15-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:25:17-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:26:23-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:26:23-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:26:25-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:28:36-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:28:36-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:28:38-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:34:58-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:34:58-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:35:00-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:47:21-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:47:21-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:47:23-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T14:56:47-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T14:56:47-08:00] Session already initialized (chatmode: main)
+[2025-12-15T14:56:49-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:02:35-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:02:35-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:02:37-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:02:41-08:00] [skill] Skill invoked: rls-expert
+[2025-12-15T15:02:43-08:00] [skill] ✅ Memori enabled for skill: rls-expert (namespace: skill_rls_expert)
+[2025-12-15T15:06:54-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:06:54-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:06:55-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:13:55-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:13:55-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:13:57-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:14:35-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:14:35-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:14:37-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:16:52-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:16:52-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:16:54-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:37:07-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:37:07-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:37:09-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:37:27-08:00] [skill] Skill invoked: e2e-testing
+[2025-12-15T15:37:29-08:00] [skill] ✅ Memori enabled for skill: e2e-testing (namespace: skill_e2e_testing)
+[2025-12-15T15:38:04-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:38:04-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:38:17-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:38:17-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:38:19-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:41:21-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:41:21-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:41:23-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:41:32-08:00] [skill] Skill invoked: rls-expert
+[2025-12-15T15:41:34-08:00] [skill] ✅ Memori enabled for skill: rls-expert (namespace: skill_rls_expert)
+[2025-12-15T15:42:26-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:42:26-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:42:28-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:44:24-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:44:24-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:44:26-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:44:32-08:00] [skill] Skill invoked: lead-architect
+[2025-12-15T15:44:34-08:00] [skill] ✅ Memori enabled for skill: lead-architect (namespace: skill_lead_architect)
+[2025-12-15T15:46:34-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:46:34-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:46:36-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:48:33-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:48:33-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:48:35-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:50:13-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:50:13-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:50:15-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:55:08-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:55:08-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:55:10-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:55:19-08:00] [skill] Skill invoked: e2e-testing
+[2025-12-15T15:55:21-08:00] [skill] ✅ Memori enabled for skill: e2e-testing (namespace: skill_e2e_testing)
+[2025-12-15T15:56:18-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:56:18-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:56:20-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:58:34-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:58:34-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:58:36-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T15:59:21-08:00] Session already initialized (chatmode: main)
+[2025-12-15T15:59:21-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T15:59:23-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:03:32-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T16:03:32-08:00] Session already initialized (chatmode: main)
+[2025-12-15T16:03:34-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:03:40-08:00] [skill] Skill invoked: lead-architect
+[2025-12-15T16:03:42-08:00] [skill] ✅ Memori enabled for skill: lead-architect (namespace: skill_lead_architect)
+[2025-12-15T16:04:26-08:00] Session already initialized (chatmode: main)
+[2025-12-15T16:04:26-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T16:04:28-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:05:51-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T16:05:51-08:00] Session already initialized (chatmode: main)
+[2025-12-15T16:05:53-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:05:58-08:00] [skill] Skill invoked: prd-writer
+[2025-12-15T16:06:00-08:00] [skill] ✅ Memori enabled for skill: prd-writer (namespace: skill_prd_writer)
+[2025-12-15T16:10:26-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T16:10:26-08:00] Session already initialized (chatmode: main)
+[2025-12-15T16:10:28-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:34:11-08:00] Session already initialized (chatmode: main)
+[2025-12-15T16:34:11-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-15T16:34:17-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-15T16:36:34-08:00] [skill] Skill invoked: prd-writer
+[2025-12-15T16:36:36-08:00] [skill] ✅ Memori enabled for skill: prd-writer (namespace: skill_prd_writer)
+[2025-12-16T06:52:39-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T06:52:39-08:00] Session already initialized (chatmode: main)
+[2025-12-16T06:52:41-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T06:56:53-08:00] Session already initialized (chatmode: main)
+[2025-12-16T06:56:53-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T06:56:55-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T06:58:12-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T06:58:12-08:00] Session already initialized (chatmode: main)
+[2025-12-16T06:58:14-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:06:37-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:06:37-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:06:39-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:07:10-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:07:10-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:07:12-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:10:14-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:10:14-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:10:16-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:10:21-08:00] [skill] Skill invoked: prd-pipeline
+[2025-12-16T07:10:22-08:00] [skill] ✅ Memori enabled for skill: prd-pipeline (namespace: skill_prd_pipeline)
+[2025-12-16T07:11:59-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:11:59-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:12:01-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:19:03-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:19:03-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:19:05-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:24:42-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:24:42-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:24:44-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:27:19-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:27:19-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:27:21-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:30:42-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:30:42-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:30:44-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:31:03-08:00] [skill] Skill invoked: lead-architect
+[2025-12-16T07:31:05-08:00] [skill] ✅ Memori enabled for skill: lead-architect (namespace: skill_lead_architect)
+[2025-12-16T07:31:16-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:31:16-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:31:18-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:31:44-08:00] [skill] Skill invoked: rls-expert
+[2025-12-16T07:31:46-08:00] [skill] ✅ Memori enabled for skill: rls-expert (namespace: skill_rls_expert)
+[2025-12-16T07:32:46-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:32:46-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:32:48-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:33:03-08:00] [skill] Skill invoked: backend-service-builder
+[2025-12-16T07:33:05-08:00] [skill] ✅ Memori enabled for skill: backend-service-builder (namespace: skill_backend_service_builder)
+[2025-12-16T07:33:42-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:33:42-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:33:45-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:35:43-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:35:43-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:35:45-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:41:57-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:41:57-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:42:00-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:44:06-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:44:06-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:44:08-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:47:45-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:47:45-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:47:47-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T07:59:08-08:00] Session already initialized (chatmode: main)
+[2025-12-16T07:59:08-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T07:59:10-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T08:04:30-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T08:04:30-08:00] Session already initialized (chatmode: main)
+[2025-12-16T08:04:32-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T08:06:14-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T08:06:14-08:00] Session already initialized (chatmode: main)
+[2025-12-16T08:06:16-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T08:07:24-08:00] [skill] Skill invoked: e2e-testing
+[2025-12-16T08:07:26-08:00] [skill] ✅ Memori enabled for skill: e2e-testing (namespace: skill_e2e_testing)
+[2025-12-16T08:15:09-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T08:15:09-08:00] Session already initialized (chatmode: main)
+[2025-12-16T08:15:11-08:00] [context] Context session initialization failed (graceful degradation)
+[2025-12-16T08:18:14-08:00] [context] Initializing new context session for chatmode: main
+[2025-12-16T08:18:14-08:00] Session already initialized (chatmode: main)
+[2025-12-16T08:18:16-08:00] [context] Context session initialization failed (graceful degradation)

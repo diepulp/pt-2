@@ -1,0 +1,531 @@
+{
+  "audit_date": "2025-12-14",
+  "audit_scope": "RPC inventory, service layer patterns, and authorization architecture",
+  "context_document": "AUTH_ARCH_GAPS_FINDINGS_AND_REMEDIATIONS.md",
+  "summary": {
+    "total_rpcs": 22,
+    "security_definer_count": 14,
+    "security_invoker_count": 8,
+    "self_injecting_rpcs": 4,
+    "jwt_first_rpcs": 8,
+    "hybrid_pattern_rpcs": 10,
+    "high_risk_count": 3,
+    "medium_risk_count": 4,
+    "low_risk_count": 15
+  },
+  "rpc_inventory": [
+    {
+      "name": "set_rls_context",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251209183033_adr015_rls_context_rpc.sql",
+      "purpose": "Transaction-wrapped RLS context injection for pooling compatibility",
+      "self_injects_context": false,
+      "authorization_checks": false,
+      "jwt_fallback": false,
+      "callable_by": ["authenticated"],
+      "risk_level": "LOW",
+      "notes": "Infrastructure RPC. Sets SET LOCAL variables in single transaction. No business logic.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_start_rating_slip",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251213190000_adr015_fix_rpc_context_injection.sql",
+      "purpose": "Create new rating slip with visit/table validation",
+      "self_injects_context": true,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Calls set_rls_context internally, validates p_casino_id matches context",
+      "risk_level": "LOW",
+      "notes": "Pattern C (Hybrid). Self-injects context via set_rls_context(). Validates casino_id match. ADR-015 Phase 1A compliant.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_pause_rating_slip",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251213190000_adr015_fix_rpc_context_injection.sql",
+      "purpose": "Pause open rating slip",
+      "self_injects_context": true,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Calls set_rls_context internally, validates p_casino_id matches context",
+      "risk_level": "LOW",
+      "notes": "Pattern C (Hybrid). Self-injects context. FOR UPDATE locking prevents race conditions.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_resume_rating_slip",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251213190000_adr015_fix_rpc_context_injection.sql",
+      "purpose": "Resume paused rating slip",
+      "self_injects_context": true,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Calls set_rls_context internally, validates p_casino_id matches context",
+      "risk_level": "LOW",
+      "notes": "Pattern C (Hybrid). Self-injects context. Closes pause interval atomically.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_close_rating_slip",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251213190000_adr015_fix_rpc_context_injection.sql",
+      "purpose": "Close rating slip and calculate duration",
+      "self_injects_context": true,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Calls set_rls_context internally, validates p_casino_id matches context",
+      "risk_level": "LOW",
+      "notes": "Pattern C (Hybrid). Self-injects context. Terminal state transition with duration calc.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_update_table_status",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212081000_sec007_rating_slip_rpc_hardening.sql",
+      "purpose": "Update gaming table status",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "MEDIUM",
+      "notes": "Pattern C (Hybrid). Does NOT self-inject. Relies on external context or JWT. Pooling risk if context not injected before call.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "remediation_needed": "Convert to self-injection pattern like rating slip RPCs"
+    },
+    {
+      "name": "rpc_create_floor_layout",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Create floor layout with initial version",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "MEDIUM",
+      "notes": "Pattern C (Hybrid). Does NOT self-inject. SEC-006 hardened but needs self-injection.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "remediation_needed": "Add set_rls_context() call at top of function"
+    },
+    {
+      "name": "rpc_activate_floor_layout",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Activate floor layout version",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "MEDIUM",
+      "notes": "Pattern C (Hybrid). Does NOT self-inject. Idempotent via ON CONFLICT.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "remediation_needed": "Add set_rls_context() call at top of function"
+    },
+    {
+      "name": "rpc_log_table_inventory_snapshot",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Log table chip inventory snapshot",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "dealer", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "MEDIUM",
+      "notes": "Pattern C (Hybrid). Does NOT self-inject. Audit-critical data.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "remediation_needed": "Add set_rls_context() call at top of function"
+    },
+    {
+      "name": "rpc_request_table_fill",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Request chip fill for gaming table",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "HIGH",
+      "notes": "Pattern C (Hybrid). Financial operation. Does NOT self-inject. CRITICAL: Chip movement audit trail.",
+      "gap_3_risk": true,
+      "gap_4_compliant": true,
+      "remediation_needed": "PRIORITY: Add set_rls_context() call. Financial audit critical."
+    },
+    {
+      "name": "rpc_request_table_credit",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Request chip credit from gaming table",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "HIGH",
+      "notes": "Pattern C (Hybrid). Financial operation. Does NOT self-inject. CRITICAL: Chip movement audit trail.",
+      "gap_3_risk": true,
+      "gap_4_compliant": true,
+      "remediation_needed": "PRIORITY: Add set_rls_context() call. Financial audit critical."
+    },
+    {
+      "name": "rpc_log_table_drop",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251212080915_sec006_rls_hardening.sql",
+      "purpose": "Log table chip drop event",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "dealer", "admin"],
+      "context_validation": "Validates casino_id match via COALESCE(SET LOCAL, JWT)",
+      "risk_level": "HIGH",
+      "notes": "Pattern C (Hybrid). Financial audit event. Does NOT self-inject. CRITICAL: Drop events feed revenue calculations.",
+      "gap_3_risk": true,
+      "gap_4_compliant": true,
+      "remediation_needed": "PRIORITY: Add set_rls_context() call. Financial audit critical."
+    },
+    {
+      "name": "compute_gaming_day",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251129161956_prd000_casino_foundation.sql",
+      "purpose": "Calculate gaming day from timestamp and casino shift start",
+      "self_injects_context": false,
+      "authorization_checks": false,
+      "jwt_fallback": false,
+      "callable_by": ["public"],
+      "risk_level": "LOW",
+      "notes": "Pure calculation function. No authorization needed. Takes timestamp + shift as args.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_accrue_on_close",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Mint base loyalty points on rating slip close",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match AND role gate (pit_boss, admin)",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). RLS enforced on INSERT. Idempotent via business uniqueness.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "best_practice": "Exemplary SECURITY INVOKER pattern with explicit role gate"
+    },
+    {
+      "name": "rpc_redeem",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Issue comp redemption (debit loyalty points)",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "cashier", "admin"],
+      "context_validation": "Validates casino_id match AND role gate. Overdraw requires pit_boss/admin.",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). Row-level locking (FOR UPDATE). Overdraw authorization logic.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "best_practice": "Demonstrates proper concurrency control and tiered authorization"
+    },
+    {
+      "name": "rpc_manual_credit",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Issue manual loyalty credit (service recovery)",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match AND role gate (pit_boss, admin only - cashier excluded)",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). Stricter role gate than redeem. Audit trail mandatory.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "best_practice": "Proper separation of privileges (cashier cannot issue manual credits)"
+    },
+    {
+      "name": "rpc_apply_promotion",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Apply promotional bonus points to rating slip",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["pit_boss", "admin"],
+      "context_validation": "Validates casino_id match AND role gate (pit_boss, admin)",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). Business uniqueness: one campaign per slip.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "evaluate_session_reward_suggestion",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Calculate suggested comp value (read-only preview)",
+      "self_injects_context": false,
+      "authorization_checks": false,
+      "jwt_fallback": false,
+      "callable_by": ["authenticated"],
+      "function_volatility": "STABLE",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Read-only helper. RLS enforced on SELECT. No minting. UI preview function.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_reconcile_loyalty_balance",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Reconcile balance from ledger sum (admin-only)",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["admin"],
+      "context_validation": "Validates casino_id match AND role gate (admin ONLY)",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). Strictest role gate. Drift detection recovery.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "best_practice": "Admin-only privilege properly enforced"
+    },
+    {
+      "name": "rpc_get_player_ledger",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "purpose": "Paginated ledger retrieval with keyset cursor",
+      "self_injects_context": false,
+      "authorization_checks": false,
+      "jwt_fallback": false,
+      "callable_by": ["authenticated"],
+      "function_volatility": "STABLE",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Read-only. RLS enforced on SELECT. Keyset pagination (created_at DESC, id ASC).",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    },
+    {
+      "name": "rpc_create_financial_txn",
+      "security_mode": "SECURITY INVOKER",
+      "migration": "20251211172516_adr015_financial_rpc_hardening.sql",
+      "purpose": "Create player financial transaction (buy-in, cash-out)",
+      "self_injects_context": false,
+      "authorization_checks": true,
+      "jwt_fallback": true,
+      "callable_by": ["cashier", "admin"],
+      "context_validation": "Validates casino_id AND actor_id match. Role gate: cashier/admin. Verifies staff.user_id = auth.uid().",
+      "risk_level": "LOW",
+      "notes": "SECURITY INVOKER. Pattern A (JWT-first). Triple validation: casino_id, actor_id, staff lookup. Idempotent via ON CONFLICT.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true,
+      "best_practice": "Comprehensive identity validation including staff.user_id check"
+    },
+    {
+      "name": "sync_staff_jwt_claims",
+      "security_mode": "SECURITY DEFINER",
+      "migration": "20251210001858_adr015_backfill_jwt_claims.sql",
+      "purpose": "Update auth.users.raw_app_meta_data with staff context",
+      "self_injects_context": false,
+      "authorization_checks": false,
+      "jwt_fallback": false,
+      "callable_by": ["system"],
+      "risk_level": "LOW",
+      "notes": "System function. Updates Supabase Auth metadata. Called by trigger. No user-facing exposure.",
+      "gap_3_risk": false,
+      "gap_4_compliant": true
+    }
+  ],
+  "service_layer_analysis": {
+    "rpc_call_pattern": "Direct supabase.rpc() calls in crud.ts layer",
+    "context_injection": "withServerAction wrapper calls injectRLSContext() via set_rls_context RPC before handler executes",
+    "pooling_compatibility": {
+      "status": "PARTIALLY_COMPLIANT",
+      "self_injecting_rpcs": [
+        "rpc_start_rating_slip",
+        "rpc_pause_rating_slip",
+        "rpc_resume_rating_slip",
+        "rpc_close_rating_slip"
+      ],
+      "external_context_rpcs": [
+        "rpc_update_table_status",
+        "rpc_create_floor_layout",
+        "rpc_activate_floor_layout",
+        "rpc_log_table_inventory_snapshot",
+        "rpc_request_table_fill",
+        "rpc_request_table_credit",
+        "rpc_log_table_drop"
+      ],
+      "jwt_only_rpcs": [
+        "rpc_accrue_on_close",
+        "rpc_redeem",
+        "rpc_manual_credit",
+        "rpc_apply_promotion",
+        "rpc_reconcile_loyalty_balance",
+        "rpc_create_financial_txn"
+      ]
+    },
+    "multi_rpc_workflows": [
+      {
+        "workflow": "Close rating slip → Accrue loyalty points",
+        "rpcs": ["rpc_close_rating_slip", "rpc_accrue_on_close"],
+        "pooling_safe": true,
+        "notes": "Both RPCs validate context independently. rpc_close_rating_slip self-injects. rpc_accrue_on_close uses JWT."
+      },
+      {
+        "workflow": "Table fill → Inventory snapshot",
+        "rpcs": ["rpc_request_table_fill", "rpc_log_table_inventory_snapshot"],
+        "pooling_safe": false,
+        "notes": "RISK: Both rely on external context. If withServerAction context lost between calls, casino_id validation may fail.",
+        "remediation": "Convert to self-injection OR wrapper RPC for atomic operation"
+      }
+    ],
+    "error_handling": "Service layer maps database errors to domain errors via mapDatabaseError(). Prevents raw Postgres codes (23505, 23503, PGRST116) from leaking."
+  },
+  "gap_validation": {
+    "gap_3_security_definer_bypass": {
+      "status": "MITIGATED",
+      "findings": [
+        "All SECURITY DEFINER RPCs have explicit casino_id validation",
+        "Rating slip RPCs (4) self-inject context via set_rls_context()",
+        "Floor layout + table context RPCs (7) validate context but do NOT self-inject (MEDIUM RISK)",
+        "Financial RPCs use SECURITY INVOKER instead of DEFINER (best practice)",
+        "No SECURITY DEFINER RPCs skip authorization checks"
+      ],
+      "high_risk_rpcs": [
+        "rpc_request_table_fill (chip movement audit)",
+        "rpc_request_table_credit (chip movement audit)",
+        "rpc_log_table_drop (revenue calculation dependency)"
+      ],
+      "remediation": "Add self-injection pattern to 7 SECURITY DEFINER RPCs that currently rely on external context"
+    },
+    "gap_4_rpcs_as_trust_boundaries": {
+      "status": "COMPLIANT",
+      "findings": [
+        "All user-facing RPCs validate casino_id explicitly",
+        "All mutating RPCs have role gates (pit_boss, admin, cashier)",
+        "Read-only RPCs rely on RLS (SECURITY INVOKER)",
+        "Idempotency keys used for write operations",
+        "Audit logging present in SECURITY DEFINER RPCs"
+      ],
+      "best_practices_observed": [
+        "SECURITY INVOKER preferred for new loyalty RPCs (Pattern A)",
+        "Tiered authorization (e.g., overdraw requires higher role)",
+        "Row-level locking for concurrency (FOR UPDATE)",
+        "Business uniqueness constraints (one accrual per slip)"
+      ]
+    }
+  },
+  "recommendations": [
+    {
+      "priority": "P0_CRITICAL",
+      "title": "Add self-injection to financial chip movement RPCs",
+      "rpcs_affected": [
+        "rpc_request_table_fill",
+        "rpc_request_table_credit",
+        "rpc_log_table_drop"
+      ],
+      "rationale": "These RPCs feed financial audit trail and revenue calculations. Pooling context loss could cause attribution errors or security gaps.",
+      "implementation": "Add `PERFORM set_rls_context(p_actor_id, p_casino_id, v_staff_role);` at top of each function body, matching rpc_start_rating_slip pattern.",
+      "validation": "Integration test: Call RPC twice in different transactions, verify context persists."
+    },
+    {
+      "priority": "P1_HIGH",
+      "title": "Add self-injection to floor layout RPCs",
+      "rpcs_affected": ["rpc_create_floor_layout", "rpc_activate_floor_layout"],
+      "rationale": "Floor layout changes are infrequent but operationally critical. Pooling risk lower than financial RPCs but still present.",
+      "implementation": "Add set_rls_context() call at function start."
+    },
+    {
+      "priority": "P1_HIGH",
+      "title": "Add self-injection to table inventory snapshot RPC",
+      "rpcs_affected": ["rpc_log_table_inventory_snapshot"],
+      "rationale": "Inventory snapshots support chip reconciliation. Mis-attributed snapshots could cause accounting drift.",
+      "implementation": "Add set_rls_context() call at function start."
+    },
+    {
+      "priority": "P2_MEDIUM",
+      "title": "Migrate SECURITY DEFINER RPCs to SECURITY INVOKER where possible",
+      "rationale": "ADR-015 Phase 3 goal: JWT-first/JWT-only enforcement. SECURITY INVOKER forces explicit RLS reliance.",
+      "candidates": ["rpc_update_table_status (simple status update)"],
+      "blockers": [
+        "Floor layout RPCs insert into multiple tables (need DEFINER for cross-table atomicity)",
+        "Chip custody RPCs write audit records (may need DEFINER for audit table access)"
+      ],
+      "next_steps": "Audit each DEFINER RPC to determine if INVOKER + RLS sufficient."
+    },
+    {
+      "priority": "P2_MEDIUM",
+      "title": "Document RPC wrapper pattern for multi-step workflows",
+      "rationale": "GAP 1 remediation option: wrapper RPCs eliminate multi-transaction pooling risk.",
+      "example": "rpc_close_and_accrue(slip_id) wraps close + accrual in single transaction.",
+      "trade_off": "Reduces flexibility (forces specific workflow) but guarantees atomicity.",
+      "decision_needed": "Architect decision: when to use wrapper vs. idempotent separate calls."
+    },
+    {
+      "priority": "P3_LOW",
+      "title": "Add service role monitoring to detect identity leakage (GAP 2)",
+      "rationale": "Ensure user-path operations never execute with service role JWT.",
+      "implementation": "Middleware: Check auth.uid() presence. Log warning if service role detected in user-facing endpoint.",
+      "validation": "Observability query: Count requests by (endpoint, role, auth_method)."
+    },
+    {
+      "priority": "P3_LOW",
+      "title": "Standardize RPC error messages for consistent service layer mapping",
+      "rationale": "Service layer mapDatabaseError() relies on message text matching. Fragile if messages change.",
+      "proposal": "Define error code enum in Postgres (e.g., 'LOYALTY_INSUFFICIENT_BALANCE') and return via SQLSTATE or metadata field.",
+      "benefit": "Type-safe error mapping, no string parsing."
+    }
+  ],
+  "next_artifacts": [
+    {
+      "artifact": "ADR-020: RPC Authorization Patterns",
+      "content": "Codify SECURITY DEFINER vs INVOKER decision tree. When to self-inject vs JWT-only. Wrapper RPC vs separate calls."
+    },
+    {
+      "artifact": "Migration: SEC-007 Self-Injection Patch",
+      "content": "Apply set_rls_context() to 7 remaining SECURITY DEFINER RPCs.",
+      "estimated_effort": "2-4 hours (straightforward pattern replication)"
+    },
+    {
+      "artifact": "Test Suite: RPC Pooling Safety",
+      "content": "Integration tests for multi-transaction RPC sequences. Verify context isolation and persistence.",
+      "reference": "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts (existing foundation)"
+    },
+    {
+      "artifact": "RPC Inventory Dashboard",
+      "content": "Queryable JSON schema for ops team. Filter by security_mode, risk_level, authorization_pattern.",
+      "format": "This JSON file + web UI or CLI query tool"
+    }
+  ],
+  "compliance_summary": {
+    "adr_015_phase_1a_compliance": {
+      "rating_slip_rpcs": "FULLY_COMPLIANT (4/4 self-inject)",
+      "table_context_rpcs": "PARTIALLY_COMPLIANT (0/7 self-inject, all validate)",
+      "loyalty_rpcs": "FULLY_COMPLIANT (8/8 JWT-first SECURITY INVOKER)",
+      "financial_rpcs": "FULLY_COMPLIANT (1/1 JWT-first SECURITY INVOKER)"
+    },
+    "gap_3_definer_bypass": "MITIGATED (all RPCs validate casino_id, no blind trust)",
+    "gap_4_trust_boundaries": "COMPLIANT (explicit authorization in all mutating RPCs)",
+    "gap_5_implicit_context": "PARTIALLY_ADDRESSED (4 RPCs self-inject, 8 JWT-only, 7 external-context)",
+    "overall_security_posture": "GOOD with targeted remediation needed for 7 SECURITY DEFINER RPCs"
+  }
+}

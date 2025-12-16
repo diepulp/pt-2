@@ -7,7 +7,8 @@ created: 2025-12-11
 approved: 2025-12-11
 approver: Lead Architect
 audit_type: System-wide RLS Gap Analysis
-reference: ADR-015, ADR-018, SEC-001, SEC-002, SEC-003, SEC-005
+reference: ADR-015, ADR-018, ADR-020, SEC-001, SEC-002, SEC-003, SEC-005
+related_adrs: [ADR-015, ADR-018, ADR-020]
 auditor: rls-expert skill
 severity_summary:
   critical: 5
@@ -24,7 +25,7 @@ remediation_tracking:
 
 **Audit Date:** 2025-12-11
 **Audit Type:** System-wide RLS Gap Analysis
-**Reference:** ADR-015, SEC-001, SEC-002, SEC-003, SEC-005
+**Reference:** ADR-015, ADR-018, ADR-020, SEC-001, SEC-002, SEC-003, SEC-005
 **Auditor:** rls-expert skill
 
 ---
@@ -34,6 +35,8 @@ remediation_tracking:
 The ADR-015 connection pooling fix surfaced a broader pattern of RLS vulnerabilities across the PT-2 codebase. This audit identifies **5 critical gaps**, **4 high-severity issues**, and **3 medium-severity compliance deviations** that require remediation.
 
 **Key Finding:** The `set_rls_context()` RPC and Pattern C (hybrid) policies are correctly implemented for most tables. However, **SECURITY DEFINER functions bypass RLS** and several RPCs trust caller-provided `p_casino_id` without validating against injected context—defeating the protection ADR-015 provides.
+
+**Architecture Note (2025-12-15):** ADR-020 has formalized the Pattern C (hybrid) architecture as the MVP strategy. This audit's findings and remediation align with ADR-020's Track A requirements: `set_rls_context` RPC per request + COALESCE pattern policies + JWT fallback.
 
 ---
 
@@ -487,12 +490,15 @@ fi
 | 2025-12-12 | **P0 REMEDIATION COMPLETE** - Migration `20251212080915_sec006_rls_hardening.sql` created |
 | 2025-12-12 | **P1 REMEDIATION COMPLETE** - Append-only denial policies included in migration |
 | 2025-12-12 | **ADR-018** drafted - SECURITY DEFINER governance pattern documented |
+| 2025-12-15 | **ADR-020 REFERENCE ADDED** - Pattern C (hybrid) formalized as MVP architecture (Track A) |
 
 ---
 
 ## Related Documents
 
-- `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
+- `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Connection pooling fix (Phase 1)
+- `docs/80-adrs/ADR-018-security-definer-governance.md` - SECURITY DEFINER patterns
+- `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - **Track A (hybrid) as MVP architecture**
 - `docs/30-security/SEC-001-rls-policy-matrix.md`
 - `docs/30-security/SEC-002-casino-scoped-security-model.md`
 - `docs/30-security/SEC-003-rbac-matrix.md`

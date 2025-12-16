@@ -1,0 +1,347 @@
+{
+  "audit_metadata": {
+    "timestamp": "2025-12-14T20:15:00Z",
+    "auditor": "RLS Security Specialist Agent",
+    "adr_reference": "ADR-015",
+    "auth_arch_document": "AUTH_ARCH_GAPS_FINDINGS_AND_REMEDIATIONS.md",
+    "total_migrations_scanned": 28,
+    "total_policies_found": 128
+  },
+  "compliance_summary": {
+    "total_policies_scanned": 116,
+    "compliant_count": 65,
+    "non_compliant_count": 51,
+    "superseded_count": 12,
+    "compliance_rate_active_policies": "56%"
+  },
+  "pattern_distribution": {
+    "pattern_a_jwt_only": 0,
+    "pattern_b_transaction_wrapped": 0,
+    "pattern_c_hybrid_compliant": 65,
+    "non_compliant_bare_session": 33,
+    "non_compliant_jwt_only_no_fallback": 12,
+    "non_compliant_missing_auth_uid": 2,
+    "non_compliant_missing_role_hybrid": 16
+  },
+  "critical_fixes_needed": [
+    {
+      "priority": "P0",
+      "migration": "20251213003000_prd004_loyalty_service_schema.sql",
+      "issue": "WRONG_JWT_PATH",
+      "description": "Loyalty policies use auth.jwt()->>'casino_id' instead of auth.jwt()->'app_metadata'->>'casino_id'",
+      "affected_policies": [
+        "loyalty_ledger_select",
+        "loyalty_ledger_insert",
+        "player_loyalty_select",
+        "player_loyalty_insert",
+        "player_loyalty_update",
+        "player_loyalty_deny_delete"
+      ],
+      "impact": "JWT fallback ALWAYS fails - policies are session-only, vulnerable to pooling failures",
+      "remediation_migration": "20251214_220000_adr015_loyalty_context_final_fix.sql"
+    },
+    {
+      "priority": "P0",
+      "migration": "20251213003000_prd004_loyalty_service_schema.sql",
+      "issue": "MISSING_NULLIF_WRAPPER",
+      "description": "Missing NULLIF wrapper allows empty string to pass tenancy check",
+      "affected_policies": [
+        "loyalty_ledger_select",
+        "loyalty_ledger_insert",
+        "player_loyalty_select",
+        "player_loyalty_insert",
+        "player_loyalty_update"
+      ],
+      "impact": "Empty RLS context may bypass casino_id validation - potential cross-tenant data leakage",
+      "remediation_migration": "20251214_220000_adr015_loyalty_context_final_fix.sql"
+    },
+    {
+      "priority": "P1",
+      "migration": "20251213010000_prd004_loyalty_rpcs.sql",
+      "issue": "INCOMPLETE_HYBRID_PATTERN_IN_RPCS",
+      "description": "Loyalty RPCs use NULLIF but missing COALESCE+JWT fallback",
+      "affected_rpcs": [
+        "rpc_accrue_loyalty_points",
+        "rpc_redeem_loyalty_points",
+        "rpc_adjust_loyalty_balance",
+        "rpc_get_player_loyalty_balance",
+        "rpc_get_loyalty_ledger_history"
+      ],
+      "impact": "RPC fails if session context not set, even when JWT claims valid - reduces pooling resilience",
+      "remediation_migration": "20251214_221000_adr015_loyalty_rpc_hybrid_completion.sql"
+    },
+    {
+      "priority": "P1",
+      "migration": "20251213190000_adr015_fix_rpc_context_injection.sql",
+      "issue": "INCOMPLETE_HYBRID_PATTERN_IN_RPCS",
+      "description": "Rating slip RPCs self-inject context without JWT fallback",
+      "affected_rpcs": [
+        "rpc_start_rating_slip",
+        "rpc_pause_rating_slip",
+        "rpc_resume_rating_slip",
+        "rpc_close_rating_slip"
+      ],
+      "impact": "RPC fails if both session and JWT context missing - should gracefully fall back to JWT",
+      "remediation_migration": "20251214_222000_adr015_rating_slip_rpc_hybrid_completion.sql"
+    }
+  ],
+  "by_bounded_context": {
+    "casino_context": {
+      "tables": ["casino_settings", "staff"],
+      "total_policies": 8,
+      "compliant": 8,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251211153228_adr015_rls_compliance_patch.sql",
+      "pattern": "Pattern C Hybrid"
+    },
+    "player_visit_context": {
+      "tables": ["player", "player_casino", "visit"],
+      "total_policies": 9,
+      "compliant": 9,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251209183401_adr015_hybrid_rls_policies.sql",
+      "pattern": "Pattern C Hybrid"
+    },
+    "rating_slip_context": {
+      "tables": ["rating_slip", "rating_slip_pause"],
+      "total_policies": 6,
+      "compliant": 6,
+      "non_compliant": 0,
+      "status": "COMPLIANT (Policies) / PARTIAL (RPCs)",
+      "fixed_by": "20251209183401_adr015_hybrid_rls_policies.sql",
+      "pattern": "Pattern C Hybrid",
+      "rpc_issues": "Self-injection in 4 RPCs uses incomplete hybrid pattern (P1)"
+    },
+    "floor_layout_context": {
+      "tables": [
+        "floor_layout",
+        "floor_layout_version",
+        "floor_pit",
+        "floor_table_slot",
+        "floor_layout_activation"
+      ],
+      "total_policies": 18,
+      "compliant": 18,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251212080915_sec006_rls_hardening.sql",
+      "pattern": "Pattern C Hybrid with role-based subqueries"
+    },
+    "finance_mtl_context": {
+      "tables": [
+        "player_financial_transaction",
+        "finance_outbox",
+        "mtl_entry",
+        "mtl_audit_note"
+      ],
+      "total_policies": 8,
+      "compliant": 8,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251211153228_adr015_rls_compliance_patch.sql + 20251211170030_adr015_finance_rls_hybrid.sql",
+      "pattern": "Pattern C Hybrid with append-only enforcement"
+    },
+    "loyalty_context": {
+      "tables": ["loyalty_ledger", "player_loyalty", "loyalty_outbox"],
+      "total_policies": 13,
+      "compliant": 0,
+      "non_compliant": 13,
+      "status": "NON_COMPLIANT",
+      "issues": [
+        "Wrong JWT path (auth.jwt()->>'X' vs auth.jwt()->'app_metadata'->>'X')",
+        "Missing NULLIF wrapper on current_setting",
+        "Missing auth.uid() on deny policies",
+        "Inconsistent RPC validation patterns"
+      ],
+      "migrations_affected": [
+        "20251213000820_prd004_loyalty_rls_cashier_role.sql",
+        "20251213003000_prd004_loyalty_service_schema.sql",
+        "20251213010000_prd004_loyalty_rpcs.sql"
+      ],
+      "fix_deployed": "20251214195201_adr015_prd004_loyalty_rls_fix.sql",
+      "fix_status": "Partial - still has wrong JWT path in original schema migration"
+    },
+    "table_chip_context": {
+      "tables": [
+        "table_inventory_snapshot",
+        "table_fill",
+        "table_credit",
+        "table_drop_event"
+      ],
+      "total_policies": 12,
+      "compliant": 12,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251211153228_adr015_rls_compliance_patch.sql",
+      "pattern": "Pattern C Hybrid"
+    },
+    "gaming_table_context": {
+      "tables": [
+        "gaming_table",
+        "gaming_table_settings",
+        "game_settings",
+        "dealer_rotation"
+      ],
+      "total_policies": 12,
+      "compliant": 12,
+      "non_compliant": 0,
+      "status": "COMPLIANT",
+      "fixed_by": "20251211153228_adr015_rls_compliance_patch.sql + 20251209183401_adr015_hybrid_rls_policies.sql",
+      "pattern": "Pattern C Hybrid"
+    }
+  },
+  "migration_recommendations": [
+    {
+      "priority": "P0",
+      "name": "20251214_220000_adr015_loyalty_context_final_fix.sql",
+      "description": "Fix wrong JWT paths and missing NULLIF wrappers in loyalty policies",
+      "actions": [
+        "DROP + RECREATE loyalty_ledger_select with correct JWT path",
+        "DROP + RECREATE loyalty_ledger_insert with correct JWT path",
+        "DROP + RECREATE loyalty_ledger_deny_update with auth.uid() guard",
+        "DROP + RECREATE loyalty_ledger_deny_delete with auth.uid() guard",
+        "DROP + RECREATE player_loyalty_select with correct JWT path",
+        "DROP + RECREATE player_loyalty_insert with correct JWT path",
+        "DROP + RECREATE player_loyalty_update with correct JWT path",
+        "DROP + RECREATE player_loyalty_deny_delete with correct JWT path",
+        "Add NULLIF wrapper to all current_setting() calls",
+        "Update scanner to mark 20251213003000 as superseded"
+      ],
+      "estimated_downtime": "None (policies replaced atomically)",
+      "testing_required": [
+        "JWT fallback test with empty session context",
+        "Cross-tenant isolation test",
+        "Role-based authorization test"
+      ]
+    },
+    {
+      "priority": "P1",
+      "name": "20251214_221000_adr015_loyalty_rpc_hybrid_completion.sql",
+      "description": "Complete Pattern C hybrid in loyalty RPC functions",
+      "actions": [
+        "Update rpc_accrue_loyalty_points: add COALESCE(NULLIF(...), JWT) for casino_id",
+        "Update rpc_accrue_loyalty_points: add COALESCE(NULLIF(...), JWT) for staff_role",
+        "Update rpc_redeem_loyalty_points: add full hybrid pattern",
+        "Update rpc_adjust_loyalty_balance: add full hybrid pattern",
+        "Update rpc_get_player_loyalty_balance: add full hybrid pattern",
+        "Update rpc_get_loyalty_ledger_history: add full hybrid pattern"
+      ],
+      "estimated_downtime": "None (functions replaced atomically)",
+      "testing_required": [
+        "RPC invocation without session context (JWT-only)",
+        "RPC invocation with session context (session-first)",
+        "RPC casino_id mismatch validation"
+      ]
+    },
+    {
+      "priority": "P1",
+      "name": "20251214_222000_adr015_rating_slip_rpc_hybrid_completion.sql",
+      "description": "Complete Pattern C hybrid in rating slip RPC self-injection",
+      "actions": [
+        "Update rpc_start_rating_slip: derive context with COALESCE+JWT before set_rls_context()",
+        "Update rpc_pause_rating_slip: derive context with COALESCE+JWT before set_rls_context()",
+        "Update rpc_resume_rating_slip: derive context with COALESCE+JWT before set_rls_context()",
+        "Update rpc_close_rating_slip: derive context with COALESCE+JWT before set_rls_context()"
+      ],
+      "estimated_downtime": "None (functions replaced atomically)",
+      "testing_required": [
+        "Rating slip lifecycle without session context",
+        "Rating slip creation under pooling (separate connections)"
+      ]
+    }
+  ],
+  "adr015_phase_status": {
+    "phase_1_transaction_wrapped_rpc": {
+      "status": "COMPLETE",
+      "migration": "20251209183033_adr015_rls_context_rpc.sql",
+      "details": "set_rls_context() RPC created, integrated in lib/supabase/rls-context.ts"
+    },
+    "phase_2_jwt_claims_integration": {
+      "status": "COMPLETE",
+      "migration": "20251210001858_adr015_backfill_jwt_claims.sql",
+      "details": "JWT claims sync on staff CRUD, trigger active, backfill executed"
+    },
+    "phase_3_policy_modernization": {
+      "status": "PARTIAL",
+      "progress": "56%",
+      "details": "65 of 116 active policies migrated to Pattern C. Loyalty context (13 policies) non-compliant."
+    }
+  },
+  "verification_checklist": {
+    "all_policies_have_auth_uid_guard": false,
+    "all_policies_have_auth_uid_guard_details": "2 missing: loyalty_ledger_deny_update, loyalty_ledger_deny_delete",
+    "no_bare_current_setting_without_jwt_fallback": false,
+    "no_bare_current_setting_count": 33,
+    "no_jwt_only_without_session_fallback": false,
+    "no_jwt_only_count": 12,
+    "rpc_context_injection_pooling_safe": false,
+    "rpc_context_injection_details": "Rating slip RPCs use incomplete pattern, loyalty RPCs missing COALESCE",
+    "no_cross_tenant_data_leakage_vectors": false,
+    "cross_tenant_risk": "Loyalty policies with wrong JWT path + missing NULLIF create leakage risk"
+  },
+  "security_risk_assessment": {
+    "p0_risks": [
+      {
+        "risk": "Cross-tenant data leakage in loyalty context",
+        "likelihood": "Medium (requires empty RLS context + simultaneous queries)",
+        "impact": "High (PII exposure, regulatory violation)",
+        "mitigation": "Deploy 20251214_220000 migration immediately"
+      },
+      {
+        "risk": "Intermittent loyalty operation failures under pooling",
+        "likelihood": "High (connection pooling in transaction mode)",
+        "impact": "Medium (operational disruption, user experience degradation)",
+        "mitigation": "Deploy 20251214_220000 + 20251214_221000 migrations"
+      }
+    ],
+    "p1_risks": [
+      {
+        "risk": "Rating slip operations fail without session context",
+        "likelihood": "Medium (depends on middleware consistency)",
+        "impact": "Medium (operational disruption)",
+        "mitigation": "Deploy 20251214_222000 migration"
+      }
+    ]
+  },
+  "testing_recommendations": [
+    {
+      "test_suite": "Pooling Safety Integration Tests",
+      "file": "lib/supabase/__tests__/rls-loyalty-pooling.integration.test.ts",
+      "scenarios": [
+        "JWT fallback when session context missing",
+        "Empty RLS context gracefully falls back to JWT",
+        "Cross-tenant isolation enforced via JWT",
+        "Role-based authorization via JWT claims"
+      ]
+    },
+    {
+      "test_suite": "Loyalty RPC Pooling Tests",
+      "file": "services/loyalty/__tests__/loyalty-rpc-pooling.test.ts",
+      "scenarios": [
+        "rpc_accrue_loyalty_points without session context",
+        "rpc_redeem_loyalty_points with casino_id mismatch validation",
+        "rpc_adjust_loyalty_balance role authorization"
+      ]
+    },
+    {
+      "test_suite": "Rating Slip RPC Pooling Tests",
+      "file": "services/rating-slip/__tests__/rating-slip-rpc-pooling.test.ts",
+      "scenarios": [
+        "rpc_start_rating_slip derives context from JWT",
+        "rpc_close_rating_slip under separate pooled connections"
+      ]
+    }
+  ],
+  "scanner_updates_required": {
+    "file": "scripts/adr015-rls-scanner.sh",
+    "updates": [
+      "Add 20251213000820_prd004_loyalty_rls_cashier_role.sql to SUPERSEDED_MIGRATIONS",
+      "Add 20251213003000_prd004_loyalty_service_schema.sql to SUPERSEDED_MIGRATIONS",
+      "Add 20251214_220000_adr015_loyalty_context_final_fix.sql to COMPLIANT_MIGRATIONS",
+      "Add 20251214_221000_adr015_loyalty_rpc_hybrid_completion.sql to COMPLIANT_MIGRATIONS",
+      "Add 20251214_222000_adr015_rating_slip_rpc_hybrid_completion.sql to COMPLIANT_MIGRATIONS"
+    ]
+  }
+}

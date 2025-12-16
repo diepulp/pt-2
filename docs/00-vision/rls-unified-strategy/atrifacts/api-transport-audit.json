@@ -1,0 +1,392 @@
+{
+  "audit_metadata": {
+    "date": "2025-12-14",
+    "auditor": "api-expert agent",
+    "scope": "API transport layer authentication flow",
+    "context_document": "docs/issues/AUTH_ARCH_GAPS_FINDINGS_AND_REMEDIATIONS.md",
+    "gaps_addressed": [
+      "GAP 2: Ambiguous execution identity",
+      "GAP 5: Over-reliance on implicit context"
+    ]
+  },
+
+  "auth_flow_diagram": {
+    "layers": [
+      {
+        "name": "Client Request",
+        "components": [
+          "User JWT in Cookie header",
+          "Idempotency-Key header",
+          "fetch() call to /api/v1/*"
+        ],
+        "identity_source": "Supabase Auth session (anon key)"
+      },
+      {
+        "name": "Route Handler",
+        "components": [
+          "createRequestContext()",
+          "createClient() → SSR Supabase client",
+          "withServerAction() wrapper"
+        ],
+        "files": ["app/api/v1/{domain}/route.ts"],
+        "identity_propagation": "User JWT passed to middleware via SupabaseClient"
+      },
+      {
+        "name": "Middleware Chain",
+        "order": [
+          "withTracing",
+          "withAuth",
+          "withRLS",
+          "withIdempotency",
+          "withAudit",
+          "handler"
+        ],
+        "identity_extraction_point": "withAuth() middleware",
+        "context_injection_point": "withRLS() middleware",
+        "identity_leakage_risk": "withAuth() swaps to service role client in dev mode"
+      },
+      {
+        "name": "Database",
+        "rls_pattern": "Hybrid Pattern C (transaction-wrapped with JWT fallback)",
+        "rls_policy_logic": "COALESCE(current_setting('app.casino_id'), auth.jwt()->>'casino_id')",
+        "execution_identity": {
+          "production": "auth.uid() = staff.user_id",
+          "dev_mode": "auth.uid() = NULL (service role bypass)"
+        },
+        "privilege_escalation": [
+          "set_rls_context() SECURITY DEFINER",
+          "move_rating_slip() SECURITY DEFINER",
+          "close_rating_slip() SECURITY DEFINER",
+          "rpc_issue_mid_session_reward() SECURITY DEFINER",
+          "rpc_create_financial_txn() SECURITY DEFINER"
+        ]
+      }
+    ]
+  },
+
+  "user_path_routes": {
+    "count": 51,
+    "total_loc": 1150,
+    "client_type": "createClient() from lib/supabase/server.ts (SSR pattern)",
+    "auth_key": "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+    "identity_model": "User JWT + RLS context injection",
+    "domains": [
+      {
+        "path": "/api/v1/casino",
+        "routes": 5,
+        "operations": ["list", "create", "get", "update", "settings"]
+      },
+      {
+        "path": "/api/v1/rating-slips",
+        "routes": 8,
+        "operations": [
+          "list",
+          "create",
+          "get",
+          "close",
+          "pause",
+          "resume",
+          "move",
+          "duration"
+        ]
+      },
+      {
+        "path": "/api/v1/visits",
+        "routes": 5,
+        "operations": ["list", "create", "get", "close", "active"]
+      },
+      {
+        "path": "/api/v1/players",
+        "routes": 5,
+        "operations": ["list", "create", "get", "enroll", "enrollment"]
+      },
+      {
+        "path": "/api/v1/loyalty",
+        "routes": 7,
+        "operations": [
+          "accrue",
+          "redeem",
+          "manual-credit",
+          "promotion",
+          "suggestion",
+          "balances",
+          "mid-session-reward"
+        ]
+      },
+      {
+        "path": "/api/v1/finance",
+        "routes": 2,
+        "operations": ["list-transactions", "get-transaction"]
+      },
+      {
+        "path": "/api/v1/mtl",
+        "routes": 3,
+        "operations": ["list-entries", "get-entry", "add-audit-note"]
+      },
+      {
+        "path": "/api/v1/tables",
+        "routes": 6,
+        "operations": [
+          "list",
+          "create",
+          "get",
+          "activate",
+          "deactivate",
+          "update-dealer"
+        ]
+      },
+      {
+        "path": "/api/v1/table-context",
+        "routes": 4,
+        "operations": ["fills", "credits", "drop-events", "inventory-snapshots"]
+      },
+      {
+        "path": "/api/v1/floor-layouts",
+        "routes": 3,
+        "operations": ["list", "create", "versions"]
+      },
+      {
+        "path": "/api/v1/casinos",
+        "routes": 3,
+        "operations": ["get-casino", "get-settings", "list-staff"]
+      }
+    ],
+    "auth_pattern_compliance": "100% (all routes use withServerAction middleware)"
+  },
+
+  "service_role_routes": {
+    "production_count": 0,
+    "dev_mode_bypass": {
+      "enabled": true,
+      "condition": "NODE_ENV === 'development' && DEV_AUTH_BYPASS !== 'false'",
+      "file": "lib/server-actions/middleware/auth.ts",
+      "lines": "32-42",
+      "behavior": "Swaps user JWT client to createServiceClient() with service role key",
+      "consequence": "All RLS policies bypassed, auth.uid() = NULL, operations execute as postgres user",
+      "audit_attribution": "Mock DEV_RLS_CONTEXT.actorId"
+    },
+    "legitimate_service_role_usage": [
+      {
+        "function": "syncUserRLSClaims()",
+        "file": "lib/supabase/auth-admin.ts",
+        "purpose": "Update auth.users.app_metadata with RLS claims",
+        "scope": "Server-only (never exposed to browser)"
+      },
+      {
+        "function": "clearUserRLSClaims()",
+        "file": "lib/supabase/auth-admin.ts",
+        "purpose": "Clear RLS claims on staff deactivation",
+        "scope": "Server-only (never exposed to browser)"
+      }
+    ]
+  },
+
+  "identity_leakage_risks": [
+    {
+      "severity": "HIGH",
+      "id": "LEAK-001",
+      "title": "Dev-Mode Service Role Leakage",
+      "location": "lib/server-actions/middleware/auth.ts:32-42",
+      "description": "withAuth() middleware swaps user JWT client for service role client when dev bypass is enabled",
+      "attack_vector": "NODE_ENV=development set in production (deployment misconfiguration)",
+      "consequence": "All user operations execute with service role privileges, bypassing RLS",
+      "current_mitigation": "Environment check (isDevMode()) with console warning",
+      "gap": "No runtime assertion preventing service client in production",
+      "recommendation": "Add production guard to createServiceClient() that throws error if NODE_ENV=production",
+      "estimated_effort": "5 minutes"
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "LEAK-002",
+      "title": "Implicit RLS Context Dependencies",
+      "location": "All route handlers using mwCtx.rlsContext!",
+      "description": "Non-null assertion (!) bypasses compile-time safety; if withAuth() fails to populate rlsContext, runtime error occurs inside service layer",
+      "gap_reference": "GAP 5 (Over-reliance on implicit context)",
+      "consequence": "Error boundary unclear; debugging difficult; could expose partial data",
+      "current_mitigation": "withRLS() throws if ctx.rlsContext missing",
+      "gap": "Service methods assume context is valid without explicit validation",
+      "recommendation": "Explicit validation at route handler boundary before service calls",
+      "estimated_effort": "1 hour across all routes"
+    },
+    {
+      "severity": "MEDIUM",
+      "id": "LEAK-003",
+      "title": "SECURITY DEFINER RPC Authorization Gaps",
+      "location": "supabase/migrations/*.sql (10+ SECURITY DEFINER functions)",
+      "description": "SECURITY DEFINER RPCs run as postgres user, bypassing RLS; if RPC doesn't explicitly validate authorization, caller-provided args are trusted",
+      "affected_rpcs": [
+        "set_rls_context()",
+        "move_rating_slip()",
+        "close_rating_slip()",
+        "rpc_issue_mid_session_reward()",
+        "rpc_create_financial_txn()"
+      ],
+      "gap": "No systematic casino_id validation against auth.jwt() in RPC bodies",
+      "consequence": "Caller could pass arbitrary casino_id and operate cross-tenant",
+      "recommendation": "Add explicit JWT claims validation to all SECURITY DEFINER RPCs",
+      "estimated_effort": "2-3 days (inventory + remediation)"
+    },
+    {
+      "severity": "LOW",
+      "id": "LEAK-004",
+      "title": "JWT Staleness",
+      "location": "lib/supabase/auth-admin.ts:64-83 (syncUserRLSClaims)",
+      "description": "app_metadata.casino_id set at login; if staff casino assignment changes, JWT remains stale until re-login",
+      "current_mitigation": "Hybrid RLS policies use COALESCE(current_setting(...), auth.jwt()), so set_rls_context() overrides stale JWT",
+      "gap": "If withRLS() middleware is skipped (skipAuth: true), policies fall back to stale JWT claims",
+      "consequence": "Staff could access old casino's data briefly",
+      "recommendation": "Force token refresh on casino_id change or require re-login",
+      "estimated_effort": "1-2 days"
+    }
+  ],
+
+  "implicit_context_dependencies": [
+    {
+      "dependency": "Middleware Ordering",
+      "critical_path": "withAuth() → withRLS() → handler",
+      "file": "lib/server-actions/middleware/compositor.ts:106-109",
+      "implicit_contract": [
+        "withAuth() MUST populate ctx.rlsContext",
+        "withRLS() MUST run after withAuth() (depends on ctx.rlsContext)",
+        "Handler MUST NOT execute if auth chain fails"
+      ],
+      "failure_mode": "If middleware order reversed or withAuth() fails silently, withRLS() throws INTERNAL_ERROR",
+      "recommendation": "Use TypeScript branded types to make dependency explicit (AuthenticatedContext type)"
+    },
+    {
+      "dependency": "Service Method Casino Scope Assumption",
+      "pattern": "Services assume casino_id in DB matches RLS context",
+      "helper_function": "assertCasinoScope() in lib/supabase/rls-context.ts:111-117",
+      "usage": "Rarely called explicitly; most services trust RLS to enforce scope",
+      "gap": "If RLS policy has bug or set_rls_context() is bypassed, service operates on wrong casino's data",
+      "recommendation": "Enforce assertCasinoScope() in all write operations before mutation"
+    },
+    {
+      "dependency": "Transaction-Local Context Persistence",
+      "pattern": "set_rls_context() RPC sets transaction-local session vars",
+      "file": "lib/supabase/rls-context.ts:88-103",
+      "database_implementation": "supabase/migrations/20251209183033_adr015_rls_context_rpc.sql",
+      "assumption": "Subsequent queries inherit transaction-local config",
+      "failure_mode": "Multi-step workflows (close + reopen) may run on different pooled connections",
+      "current_mitigation": "Each SECURITY DEFINER RPC re-validates auth.jwt() claims internally",
+      "recommendation": "Create atomic multi-step RPCs (e.g., close_and_restart_slip) for workflows"
+    }
+  ],
+
+  "recommendations": {
+    "immediate": [
+      {
+        "priority": "HIGH",
+        "id": "REC-001",
+        "title": "Production Service Role Guard",
+        "file": "lib/supabase/service.ts:29",
+        "code_snippet": "if (process.env.NODE_ENV === 'production') { throw new Error('SECURITY: Service client forbidden in production runtime'); }",
+        "estimated_effort": "5 minutes",
+        "risk_reduction": "Eliminates LEAK-001 attack vector"
+      },
+      {
+        "priority": "HIGH",
+        "id": "REC-002",
+        "title": "Explicit RLS Context Validation",
+        "scope": "All route handlers before service calls",
+        "code_snippet": "if (!mwCtx.rlsContext) { throw new DomainError('INTERNAL_ERROR', 'RLS context required'); }",
+        "estimated_effort": "1 hour",
+        "risk_reduction": "Prevents LEAK-002 runtime errors"
+      },
+      {
+        "priority": "MEDIUM",
+        "id": "REC-003",
+        "title": "SECURITY DEFINER Inventory & Audit",
+        "tasks": [
+          "Document all SECURITY DEFINER functions (10+ found)",
+          "Add explicit casino_id validation to each",
+          "Add audit log writes inside privileged RPCs"
+        ],
+        "estimated_effort": "2-3 days",
+        "risk_reduction": "Closes LEAK-003 authorization gaps"
+      }
+    ],
+    "short_term": [
+      {
+        "priority": "MEDIUM",
+        "id": "REC-004",
+        "title": "Typed Middleware Dependencies",
+        "pattern": "type AuthenticatedContext = MiddlewareContext & { rlsContext: RLSContext }",
+        "benefit": "Compile-time enforcement of middleware dependencies",
+        "estimated_effort": "4 hours"
+      },
+      {
+        "priority": "MEDIUM",
+        "id": "REC-005",
+        "title": "Casino Scope Assertions",
+        "pattern": "assertCasinoScope(ctx.rlsContext, slip.casino_id) in all write operations",
+        "benefit": "Defense-in-depth for tenancy boundaries",
+        "estimated_effort": "1 day"
+      },
+      {
+        "priority": "LOW",
+        "id": "REC-006",
+        "title": "Mandatory Audit for Mutations",
+        "pattern": "Fail request if audit write fails for mutations (non-fire-and-forget)",
+        "benefit": "Ensures audit trail completeness",
+        "estimated_effort": "2 hours"
+      }
+    ],
+    "long_term": [
+      {
+        "priority": "STRATEGIC",
+        "id": "REC-007",
+        "title": "Migrate to JWT-Only RLS (ADR-015 Phase 3)",
+        "tasks": [
+          "Deprecate set_rls_context() RPC",
+          "Rely solely on auth.jwt() -> 'app_metadata'",
+          "Eliminate session variable dependencies"
+        ],
+        "benefit": "Perfect connection pooling safety, simpler auth model",
+        "estimated_effort": "1-2 weeks post-MVP",
+        "reference": "docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md"
+      },
+      {
+        "priority": "STRATEGIC",
+        "id": "REC-008",
+        "title": "Atomic Multi-Step RPCs",
+        "pattern": "Combine close + reopen into single SECURITY DEFINER RPC",
+        "benefit": "Eliminate multi-call transaction boundary issues",
+        "estimated_effort": "1 week",
+        "examples": [
+          "close_and_restart_slip()",
+          "transfer_player_across_tables()"
+        ]
+      }
+    ]
+  },
+
+  "compliance_summary": {
+    "overall_assessment": "Architecturally sound with operational complexity",
+    "risk_level": "MEDIUM",
+    "strengths": [
+      "Consistent user JWT enforcement across all 51 API routes",
+      "ADR-015 compliant transaction-wrapped context injection",
+      "Zero production service role leakage (currently)",
+      "Comprehensive middleware chain (auth → RLS → idempotency → audit)"
+    ],
+    "weaknesses": [
+      "Dev-mode service role bypass creates identity ambiguity (GAP 2)",
+      "Implicit RLS context dependencies with non-null assertions (GAP 5)",
+      "SECURITY DEFINER RPCs lack systematic authorization checks",
+      "Audit trail relies on optional context (could be NULL)"
+    ],
+    "gaps_addressed": {
+      "GAP_2_ambiguous_execution_identity": {
+        "finding": "Dev-mode service role bypass (withAuth middleware line 32-42)",
+        "severity": "HIGH in dev/prod parity, MEDIUM in production isolation",
+        "remediation": "REC-001 (production guard)"
+      },
+      "GAP_5_implicit_context_dependencies": {
+        "finding": "Non-null assertions on mwCtx.rlsContext in all route handlers",
+        "severity": "MEDIUM",
+        "remediation": "REC-002 (explicit validation), REC-004 (typed middleware)"
+      }
+    }
+  }
+}
