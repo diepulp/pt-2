@@ -261,6 +261,39 @@ Cross-context query for UI display or capacity planning.
 
 **Returns**: `number` - Count of open/paused slips at the table
 
+## Move Player Operation
+
+Moving a player from one table to another is orchestrated by the **rating-slip-modal BFF service** (`services/rating-slip-modal/`), NOT this domain service. The move operation:
+
+1. **Closes** the current rating slip at the origin table
+2. **Starts** a new rating slip at the destination table with the **same `visit_id`**
+
+This preserves session continuity so financial transactions and loyalty points remain associated with the visit.
+
+**Endpoint**: `POST /api/v1/rating-slips/[id]/move`
+
+```typescript
+// Request body
+{
+  destinationTableId: string;       // Target table UUID
+  destinationSeatNumber?: string;   // Optional seat (null for unseated)
+  averageBet?: number;              // Final avg bet for closing slip
+}
+
+// Response
+{
+  newSlipId: string;    // New slip at destination
+  closedSlipId: string; // Original slip (now closed)
+}
+```
+
+**Why BFF orchestrates (not domain service):**
+- Move requires cross-context coordination (validate destination table)
+- The domain service provides primitives (`close()`, `start()`)
+- BFF handles UI-specific orchestration and idempotency
+
+See: [`services/rating-slip-modal/README.md`](../rating-slip-modal/README.md) for full move documentation.
+
 ## Cross-Context Consumers
 
 | Consumer | Query/DTO | Purpose |
@@ -270,6 +303,7 @@ Cross-context query for UI display or capacity planning.
 | **PlayerFinancialService** | `RatingSlipDTO` | Link transactions to rating sessions |
 | **Pit Dashboard** | `getActiveForTable()` | Display active sessions at tables |
 | **MTLService** | `RatingSlipDTO` | Compliance tracking |
+| **RatingSlipModal BFF** | `close()`, `start()` | Move player orchestration |
 
 ## React Query Keys
 
