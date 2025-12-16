@@ -133,11 +133,10 @@ function mapDatabaseError(error: {
 
 /**
  * Start a new rating slip for a visit at a table.
- * Uses rpc_start_rating_slip which has FOR UPDATE locking.
+ * Uses rpc_start_rating_slip with FOR UPDATE locking and self-injected RLS context.
  *
- * Note: player_id is derived from visit.player_id and passed to the RPC
- * for backward compatibility. Once migration 20251207024918 is applied,
- * the RPC will no longer require p_player_id parameter.
+ * Pre-validates visit state before calling RPC to provide better error messages.
+ * The RPC derives player_id from visit internally (ADR-015 Phase 1A).
  *
  * @param supabase - Supabase client with RLS context
  * @param casinoId - Casino UUID (from middleware context)
@@ -154,8 +153,7 @@ export async function start(
   actorId: string,
   input: CreateRatingSlipInput,
 ): Promise<RatingSlipDTO> {
-  // First, fetch the visit to get player_id (required by current RPC signature)
-  // This will be removed once migration 20251207024918 is applied
+  // Pre-validate visit before calling RPC for better error handling
   const { data: visitData, error: visitError } = await supabase
     .from("visit")
     .select("id, player_id, ended_at, casino_id")
@@ -185,14 +183,10 @@ export async function start(
     );
   }
 
-  // Ghost visits (player_id = null) cannot have rating slips per SRM invariant
-  // Rating slips require identified player for loyalty calculation
-  if (visitData.player_id === null) {
-    throw new DomainError(
-      "RATING_SLIP_INVALID_STATE",
-      "Cannot create rating slip for ghost visit. Player identity required.",
-    );
-  }
+  // Note: Ghost visits (player_id = null) CAN have rating slips per ADR-014.
+  // Rating slips for ghost visits provide compliance-only telemetry for
+  // finance, MTL, and AML tracking. LoyaltyService checks for ghost visits
+  // at accrual time and excludes them from automated point calculation.
 
   const { data, error } = await supabase.rpc("rpc_start_rating_slip", {
     p_casino_id: casinoId,
@@ -201,7 +195,8 @@ export async function start(
     p_table_id: input.table_id,
     p_seat_number: input.seat_number ?? "",
     p_game_settings: input.game_settings ?? {},
-    p_player_id: visitData.player_id,
+    // Note: p_player_id removed per ADR-015 Phase 1A migration 20251213190000
+    // The RPC now derives player_id from visit.player_id internally
   });
 
   if (error) throw mapDatabaseError(error);

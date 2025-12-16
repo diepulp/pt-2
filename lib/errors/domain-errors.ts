@@ -62,7 +62,8 @@ export type LoyaltyErrorCode =
   | "LOYALTY_TIER_INVALID"
   | "LOYALTY_REDEMPTION_FAILED"
   | "LOYALTY_POINTS_NEGATIVE"
-  | "LOYALTY_POLICY_VIOLATION";
+  | "LOYALTY_POLICY_VIOLATION"
+  | "LOYALTY_GHOST_VISIT_EXCLUDED";
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: "Insufficient loyalty points balance",
@@ -72,6 +73,8 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   LOYALTY_REDEMPTION_FAILED: "Loyalty points redemption failed",
   LOYALTY_POINTS_NEGATIVE: "Loyalty points cannot be negative",
   LOYALTY_POLICY_VIOLATION: "Operation violates loyalty policy rules",
+  LOYALTY_GHOST_VISIT_EXCLUDED:
+    "Ghost gaming visits are excluded from automated loyalty accrual (ADR-014)",
 };
 
 // ============================================================================

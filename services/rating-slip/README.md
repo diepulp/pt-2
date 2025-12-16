@@ -13,7 +13,8 @@ RatingSlipService manages gameplay telemetry for rated sessions at gaming tables
 **Key Invariants**:
 - Rating slips are tied to visits (not players directly)
 - Player identity is derived from `visit.player_id` at query time
-- Ghost visits (`player_id = null`) cannot have rating slips
+- Ghost visits (`player_id = null`) CAN have rating slips for compliance-only telemetry (ADR-014)
+- Ghost visit rating slips are excluded from automated loyalty accrual (checked at LoyaltyService)
 - Duration calculation excludes paused intervals (server-authoritative)
 - Only one open/paused slip per visit per table
 
@@ -85,9 +86,11 @@ Creates a new rating slip for a visit at a table.
 - `VISIT_NOT_FOUND` - Referenced visit does not exist
 - `VISIT_NOT_OPEN` - Visit has ended (ended_at is not null)
 - `VISIT_CASINO_MISMATCH` - Visit does not belong to specified casino
-- `RATING_SLIP_INVALID_STATE` - Cannot create slip for ghost visit
 - `TABLE_NOT_FOUND` - Referenced table does not exist
 - `TABLE_NOT_ACTIVE` - Table is not in active status
+
+> **Note**: Ghost visits (player_id = null) are allowed per ADR-014. They create
+> compliance-only rating slips that are excluded from loyalty accrual.
 
 ### pause(casinoId, actorId, slipId)
 
@@ -220,7 +223,7 @@ All state transitions use `FOR UPDATE` row locking to prevent race conditions.
 | `RATING_SLIP_NOT_OPEN` | 409 | Cannot pause a non-open slip |
 | `RATING_SLIP_NOT_PAUSED` | 409 | Cannot resume a non-paused slip |
 | `RATING_SLIP_ALREADY_CLOSED` | 409 | Cannot close an already closed slip |
-| `RATING_SLIP_INVALID_STATE` | 409 | Invalid state transition or ghost visit |
+| `RATING_SLIP_INVALID_STATE` | 409 | Invalid state transition |
 | `VISIT_NOT_FOUND` | 404 | Referenced visit does not exist |
 | `VISIT_NOT_OPEN` | 409 | Visit has ended |
 | `VISIT_CASINO_MISMATCH` | 403 | Visit belongs to different casino |

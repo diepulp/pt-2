@@ -104,6 +104,14 @@ function mapDatabaseError(error: {
     );
   }
 
+  // ADR-014: Ghost visits excluded from loyalty accrual
+  if (message.includes("LOYALTY_GHOST_VISIT_EXCLUDED")) {
+    return new DomainError(
+      "LOYALTY_GHOST_VISIT_EXCLUDED",
+      "Ghost gaming visits are excluded from automated loyalty accrual. Rating slips for ghost visits contain compliance-only telemetry.",
+    );
+  }
+
   if (message.includes("LOYALTY_INSUFFICIENT_BALANCE")) {
     return new DomainError(
       "INSUFFICIENT_BALANCE",

@@ -183,6 +183,7 @@ describe('RatingSlipService', () => {
         expect(result.status).toBe('open');
         expect(result.visit_id).toBe(VISIT_ID);
         expect(result.table_id).toBe(TABLE_ID);
+        // Note: p_player_id removed per ADR-015 Phase 1A - RPC derives from visit internally
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_start_rating_slip', {
           p_casino_id: CASINO_ID,
           p_actor_id: ACTOR_ID,
@@ -190,7 +191,6 @@ describe('RatingSlipService', () => {
           p_table_id: TABLE_ID,
           p_seat_number: '3',
           p_game_settings: {},
-          p_player_id: PLAYER_ID,
         });
       });
 
@@ -240,9 +240,17 @@ describe('RatingSlipService', () => {
         }
       });
 
-      it('should throw RATING_SLIP_INVALID_STATE for ghost visit', async () => {
+      it('should allow ghost visits per ADR-014 (compliance-only telemetry)', async () => {
+        // ADR-014: Ghost gaming visits CAN have rating slips for compliance/finance/MTL
+        // The ghost visit check is done at loyalty accrual time, not at creation time
         mockChain.maybeSingle.mockResolvedValue({
-          data: { ...mockVisitRow, player_id: null },
+          data: { ...mockVisitRow, player_id: null }, // Ghost visit
+          error: null,
+        });
+
+        // Mock the RPC call to succeed
+        mockChain.rpc.mockResolvedValue({
+          data: { ...mockRatingSlipRow, player_id: null },
           error: null,
         });
 
@@ -251,16 +259,12 @@ describe('RatingSlipService', () => {
           table_id: TABLE_ID,
         };
 
-        await expect(
-          crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input),
-        ).rejects.toThrow(DomainError);
+        // Ghost visits should be allowed - RPC will be called
+        const result = await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
 
-        try {
-          await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
-        } catch (error) {
-          expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
-        }
+        // Verify RPC was called (not rejected pre-validation)
+        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_start_rating_slip', expect.any(Object));
+        expect(result).toBeDefined();
       });
 
       it('should throw VISIT_CASINO_MISMATCH for wrong casino', async () => {

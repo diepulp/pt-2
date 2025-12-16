@@ -705,11 +705,14 @@ describe('RatingSlipService Integration Tests', () => {
   });
 
   // =========================================================================
-  // 5. Ghost Visit Validation Tests (ADR-014 compliance)
+  // 5. Ghost Visit Tests (ADR-014 compliance)
   // =========================================================================
 
-  describe('Ghost Visit Validation', () => {
-    it('should reject start for ghost visit (player_id = null)', async () => {
+  describe('Ghost Visit Support (ADR-014)', () => {
+    it('should allow rating slip creation for ghost visits (compliance-only telemetry)', async () => {
+      // ADR-014: Ghost gaming visits CAN have rating slips for compliance/finance/MTL
+      // The ghost visit check is done at loyalty accrual time, not at creation time
+
       // Create a ghost visit (no player_id) directly in db
       const { data: ghostVisit, error: ghostError } = await supabase
         .from('visit')
@@ -724,6 +727,7 @@ describe('RatingSlipService Integration Tests', () => {
 
       if (ghostError) {
         // If constraint prevents this, skip the test (NOT NULL constraint on player_id)
+        // This is acceptable - schema may not support ghost visits in all environments
         return;
       }
 
@@ -739,24 +743,26 @@ describe('RatingSlipService Integration Tests', () => {
         slipIds: [],
       });
 
-      // Try to start slip for ghost visit - should fail
-      await expect(
-        service.start(testCasinoId, testActorId, {
-          visit_id: ghostVisit.id,
-          table_id: testTableId,
-        }),
-      ).rejects.toThrow();
+      // Ghost visits should now be allowed for rating slip creation
+      // This provides compliance-only telemetry per ADR-014
+      const slip = await service.start(testCasinoId, testActorId, {
+        visit_id: ghostVisit.id,
+        table_id: testTableId,
+        seat_number: 'ghost-seat',
+      });
 
-      try {
-        await service.start(testCasinoId, testActorId, {
-          visit_id: ghostVisit.id,
-          table_id: testTableId,
-        });
-      } catch (error) {
-        expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe('RATING_SLIP_INVALID_STATE');
-        expect((error as DomainError).message).toContain('ghost visit');
-      }
+      // Verify slip was created successfully
+      expect(slip).toBeDefined();
+      expect(slip.visit_id).toBe(ghostVisit.id);
+      expect(slip.status).toBe('open');
+
+      // Track slip for cleanup
+      allFixtures[allFixtures.length - 1].slipIds.push(slip.id);
+
+      // Verify slip can be closed (full lifecycle)
+      const closedSlip = await service.close(testCasinoId, testActorId, slip.id);
+      expect(closedSlip.status).toBe('closed');
+      expect(closedSlip.duration_seconds).toBeGreaterThanOrEqual(0);
     });
   });
 
