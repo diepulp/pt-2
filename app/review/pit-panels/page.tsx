@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-import { PanelContainer } from "@/components/pit-panels";
+import { PitPanelsStatic } from "@/components/pit-panels";
 
 export const metadata: Metadata = {
   title: "Pit Panels UI Review | PT-2",
@@ -60,7 +60,7 @@ export default function PitPanelsReviewPage() {
 
             {/* Panel Container */}
             <div className="h-[700px]">
-              <PanelContainer tableName="BJ-01" />
+              <PitPanelsStatic tableName="BJ-01" />
             </div>
           </div>
 
@@ -70,6 +70,11 @@ export default function PitPanelsReviewPage() {
               name="PanelContainer"
               description="Main container with vertical tab navigation"
               path="components/pit-panels/panel-container.tsx"
+            />
+            <ComponentCard
+              name="TablesPanel"
+              description="Table layout with seat positions and player info"
+              path="components/pit-panels/tables-panel.tsx"
             />
             <ComponentCard
               name="InventoryPanel"

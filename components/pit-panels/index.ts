@@ -1,6 +1,10 @@
+export { PitPanelsClient } from "./pit-panels-client";
+export { PitPanelsStatic } from "./pit-panels-static";
 export { PanelContainer } from "./panel-container";
+export { ActivityPanel } from "./activity-panel";
 export { InventoryPanel } from "./inventory-panel";
 export { AnalyticsPanel } from "./analytics-panel";
+export { TablesPanel } from "./tables-panel";
 export { BankSummary } from "./bank-summary";
 export { ChipCountsDisplay } from "./chip-counts-display";
 export { ChipDenomination } from "./chip-denomination";

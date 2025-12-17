@@ -16,7 +16,7 @@
 
 import { redirect } from "next/navigation";
 
-import { PitDashboardClient } from "@/components/dashboard/pit-dashboard-client";
+import { PitPanelsClient } from "@/components/pit-panels";
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
@@ -55,24 +55,8 @@ export default async function PitPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1
-            className="text-2xl font-bold uppercase tracking-widest"
-            style={{ fontFamily: "monospace" }}
-          >
-            Pit Dashboard
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Real-time table operations and floor overview
-          </p>
-        </div>
-      </div>
-
-      {/* Dashboard Content (Client Component) */}
-      <PitDashboardClient casinoId={casinoId} />
+    <div className="h-[calc(100vh-4rem)]">
+      <PitPanelsClient casinoId={casinoId} />
     </div>
   );
 }

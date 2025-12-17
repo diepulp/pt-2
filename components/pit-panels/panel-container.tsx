@@ -1,61 +1,198 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Package, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import {
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Package,
+  TrendingUp,
+} from "lucide-react";
+import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RealtimeStatusIndicator } from "@/hooks/dashboard";
+import type {
+  DashboardTableDTO,
+  DashboardStats,
+} from "@/hooks/dashboard/types";
 import { cn } from "@/lib/utils";
+import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 
+import { ActivityPanel } from "./activity-panel";
 import { AnalyticsPanel } from "./analytics-panel";
 import { InventoryPanel } from "./inventory-panel";
+import { TablesPanel } from "./tables-panel";
+
+interface SeatOccupant {
+  firstName: string;
+  lastName: string;
+  slipId?: string;
+}
 
 interface PanelContainerProps {
-  tableName?: string;
+  casinoId: string;
+  tableName: string;
   className?: string;
+
+  // Tables data
+  tables: DashboardTableDTO[];
+  selectedTableId: string | null;
+  selectedTable: DashboardTableDTO | null;
+  seats: (SeatOccupant | null)[];
+  activeSlips: RatingSlipDTO[];
+  stats: DashboardStats | null;
+  isLoading: boolean;
+  gamingDay: { date: string } | null;
+  realtimeConnected: boolean;
+  realtimeError: Error | null;
+
+  // Callbacks
+  onTableSelect: (tableId: string) => void;
+  onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
+  onNewSlip: () => void;
+  onSlipClick: (slipId: string) => void;
 }
 
 /**
  * Panel Container - Main container with vertical tab navigation
- * Static UI for review, with collapsible sidebar navigation
+ * Tabbed interface for Tables, Inventory, and Analytics panels
  */
 export function PanelContainer({
-  tableName = "BJ-01",
+  casinoId,
+  tableName,
   className,
+  tables,
+  selectedTableId,
+  selectedTable,
+  seats,
+  activeSlips,
+  stats,
+  isLoading,
+  gamingDay,
+  realtimeConnected,
+  realtimeError,
+  onTableSelect,
+  onSeatClick,
+  onNewSlip,
+  onSlipClick,
 }: PanelContainerProps) {
-  const [activePanel, setActivePanel] = useState("inventory");
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [activePanel, setActivePanel] = React.useState("tables");
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
-  // Static notification counts for demo
-  const notifications = {
-    inventory: 2,
-    analytics: 0,
-  };
+  // Notification counts from real data
+  const notifications = React.useMemo(
+    () => ({
+      tables: activeSlips.length,
+      activity: activeSlips.length,
+      inventory: 0, // TODO: Wire to inventory data when available
+      analytics: 0,
+    }),
+    [activeSlips.length],
+  );
 
   const panels = [
+    {
+      id: "tables",
+      label: "Tables",
+      icon: LayoutGrid,
+      shortcut: "⌘1",
+      notifications: notifications.tables,
+    },
+    {
+      id: "activity",
+      label: "Activity",
+      icon: Activity,
+      shortcut: "⌘2",
+      notifications: notifications.activity,
+    },
     {
       id: "inventory",
       label: "Inventory",
       icon: Package,
-      shortcut: "⌘2",
+      shortcut: "⌘3",
       notifications: notifications.inventory,
     },
     {
       id: "analytics",
       label: "Analytics",
       icon: TrendingUp,
-      shortcut: "⌘3",
+      shortcut: "⌘4",
       notifications: notifications.analytics,
     },
   ];
 
+  // Keyboard shortcuts
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey) {
+        switch (e.key) {
+          case "1":
+            e.preventDefault();
+            setActivePanel("tables");
+            break;
+          case "2":
+            e.preventDefault();
+            setActivePanel("activity");
+            break;
+          case "3":
+            e.preventDefault();
+            setActivePanel("inventory");
+            break;
+          case "4":
+            e.preventDefault();
+            setActivePanel("analytics");
+            break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const renderActivePanel = () => {
     switch (activePanel) {
+      case "tables":
+        return (
+          <TablesPanel
+            tableName={tableName}
+            selectedTable={selectedTable}
+            seats={seats}
+            activeSlips={activeSlips}
+            isLoading={isLoading}
+            onSeatClick={onSeatClick}
+            onNewSlip={onNewSlip}
+          />
+        );
+      case "activity":
+        return (
+          <ActivityPanel
+            tableName={tableName}
+            activeSlips={activeSlips}
+            seats={seats}
+            isLoading={isLoading}
+            onSlipClick={onSlipClick}
+          />
+        );
+      case "inventory":
+        return <InventoryPanel tableName={tableName} />;
       case "analytics":
         return <AnalyticsPanel tableName={tableName} />;
       default:
-        return <InventoryPanel tableName={tableName} />;
+        return (
+          <TablesPanel
+            tableName={tableName}
+            selectedTable={selectedTable}
+            seats={seats}
+            activeSlips={activeSlips}
+            isLoading={isLoading}
+            onSeatClick={onSeatClick}
+            onNewSlip={onNewSlip}
+          />
+        );
     }
   };
 
@@ -161,13 +298,29 @@ export function PanelContainer({
 
         {/* Bottom info when expanded */}
         {!isCollapsed && (
-          <div className="p-3 border-t border-border/40">
-            <div className="text-xs text-muted-foreground/60 font-mono">
-              Shift: Day
+          <div className="p-3 border-t border-border/40 space-y-2">
+            {/* Realtime status */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground/60 font-mono">
+                Realtime:
+              </span>
+              <RealtimeStatusIndicator
+                isConnected={realtimeConnected}
+                error={realtimeError}
+              />
             </div>
-            <div className="text-xs text-muted-foreground/60 font-mono">
-              Pit: Main Floor
-            </div>
+            {/* Gaming day */}
+            {gamingDay && (
+              <div className="text-xs text-muted-foreground/60 font-mono">
+                Day: {gamingDay.date}
+              </div>
+            )}
+            {/* Active tables */}
+            {stats && (
+              <div className="text-xs text-muted-foreground/60 font-mono">
+                Tables: {stats.activeTablesCount}
+              </div>
+            )}
           </div>
         )}
       </div>
