@@ -19786,3 +19786,302 @@ WHERE user_id = 'arch_decisions'
 ORDER BY created_at DESC
 LIMIT 5;
 "
+2025-12-16T22:18:46Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="PRD-010 RLS MVP Hardening - COMPLETE",
+    reason="manual",
+    decisions_made=[
+        "ADR-020 Track A (Hybrid RLS) confirmed as MVP architecture",
+        "Pattern C COALESCE with JWT fallback is the standard",
+        "Track B deferred until production stability prerequisites met",
+        "RLS tests must use authenticated anon clients, not service role",
+        "BLOCKER-001 resolved with casino table RLS + mtl_audit_note denial policies"
+    ],
+    files_modified=[
+        "supabase/migrations/20251216074001_prd010_casino_rls.sql",
+        "supabase/migrations/20251216074008_prd010_mtl_audit_note_denial.sql",
+        "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts (25 tests)",
+        "lib/supabase/__tests__/rls-jwt-claims.integration.test.ts (19 tests)",
+        "docs/10-prd/PRD-010-rls-mvp-hardening.md",
+        "docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md",
+        "docs/20-architecture/MVP-ROADMAP.md",
+        "docs/30-security/SEC-001-rls-policy-matrix.md"
+    ],
+    validation_gates_passed=[
+        "schema-validation (migrations applied)",
+        "test-pass (44 RLS tests passing)",
+        "lint (documentation updated)",
+        "adr015-scanner (0 issues)"
+    ],
+    open_questions=[],
+    next_steps=[
+        "Push commit d3642fa to origin/main",
+        "Deploy migrations to staging environment",
+        "Monitor RLS policy performance in production",
+        "Consider Track B migration when MVP stable (3+ months)"
+    ],
+    key_insights=[
+        "Service role always bypasses RLS - tests must use authenticated anon clients",
+        "Pattern C hybrid: COALESCE(SET LOCAL context, JWT fallback) + auth.uid() check",
+        "Casino table was P0 security gap - had NO RLS policies",
+        "mtl_audit_note denial policies need auth.uid() check for ADR-015 compliance"
+    ],
+    spec_file="docs/20-architecture/specs/PRD-010/EXECUTION-SPEC-PRD-010.md",
+    workflow="prd-pipeline",
+    notes="PRD-010 fully implemented. Commit d3642fa. All 6 workstreams complete. BLOCKER-001 resolved."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-16T22:20:00Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-16T22:31:20Z	shell.exec	python3 .claude/skills/skill-creator/scripts/init_skill.py qa-specialist --path .claude/skills
+2025-12-16T22:35:18Z	shell.exec	chmod +x /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/scripts/run-quality-gate.sh
+2025-12-16T22:35:25Z	shell.exec	rm -f /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/scripts/example.py /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/references/api_reference.md /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/assets/example_asset.txt && rmdir /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/assets 2>/dev/null || true && ls -la /home/diepulp/projects/pt-2/.claude/skills/qa-specialist/
+2025-12-16T22:35:52Z	shell.exec	python3 .claude/skills/skill-creator/scripts/package_skill.py .claude/skills/qa-specialist
+2025-12-16T22:36:02Z	shell.exec	rm /home/diepulp/projects/pt-2/qa-specialist.zip && ls -la .claude/skills/qa-specialist/
+2025-12-16T22:44:39Z	shell.exec	npm run type-check 2>&1 | grep -A 5 "rls-pooling-safety"
+2025-12-16T22:44:47Z	shell.exec	npx tsc --noEmit 2>&1 | grep -A 10 "rls-pooling-safety" | head -50
+2025-12-16T22:44:56Z	shell.exec	npm run type-check 2>&1 | tail -100
+2025-12-16T22:45:04Z	shell.exec	npm run test -- --testPathPattern="rls-pooling-safety" --no-coverage 2>&1 | head -100
+2025-12-16T22:45:12Z	shell.exec	npm run test -- --testNamePattern="RLS Connection Pooling" --no-coverage 2>&1 | tail -50
+2025-12-16T22:45:33Z	shell.exec	grep -A 25 "rpc_pause_rating_slip:" /home/diepulp/projects/pt-2/types/database.types.ts | head -30
+2025-12-16T22:45:33Z	shell.exec	grep -A 20 "rpc_start_rating_slip:" /home/diepulp/projects/pt-2/types/database.types.ts | head -25
+2025-12-16T22:45:33Z	shell.exec	grep -A 25 "rpc_resume_rating_slip:" /home/diepulp/projects/pt-2/types/database.types.ts | head -30
+2025-12-16T22:46:23Z	shell.exec	npm run type-check 2>&1
+2025-12-16T22:46:32Z	shell.exec	npm run test -- --testNamePattern="RPC to RPC Context Propagation" --no-coverage 2>&1 | tail -50
+2025-12-16T22:46:43Z	shell.exec	npx tsc --noEmit /home/diepulp/projects/pt-2/lib/supabase/__tests__/rls-pooling-safety.integration.test.ts 2>&1
+2025-12-16T22:46:53Z	shell.exec	find /home/diepulp/projects/pt-2/app/api -name "route.ts" | grep -i rating | head -20
+2025-12-16T22:47:03Z	shell.exec	npm run type-check 2>&1
+2025-12-16T22:47:05Z	shell.exec	ls -la /home/diepulp/projects/pt-2/services/rating-slip-modal/ 2>/dev/null | head -30
+2025-12-16T22:47:14Z	shell.exec	find /home/diepulp/projects/pt-2/app/api/v1/rating-slips -name "*average*" -o -name "*bet*" 2>/dev/null
+2025-12-16T22:47:14Z	shell.exec	ls -la /home/diepulp/projects/pt-2/app/api/v1/rating-slips/[id]/ 2>/dev/null
+2025-12-16T22:47:19Z	shell.exec	grep -r "average-bet" /home/diepulp/projects/pt-2/app/api --include="*.ts" 2>/dev/null
+2025-12-16T22:47:19Z	shell.exec	grep -r "updateAverageBet" /home/diepulp/projects/pt-2/app/api --include="*.ts" 2>/dev/null
+2025-12-16T22:47:29Z	shell.exec	grep -n "describe\|it(" /home/diepulp/projects/pt-2/services/rating-slip/__tests__/rating-slip.service.test.ts | head -50
+2025-12-16T22:47:30Z	shell.exec	npm run type-check 2>&1
+2025-12-16T22:47:37Z	shell.exec	find /home/diepulp/projects/pt-2/hooks -name "*move*" -o -name "*rating-slip-modal*" 2>/dev/null
+2025-12-16T22:47:37Z	shell.exec	ls -la /home/diepulp/projects/pt-2/hooks/rating-slip-modal/ 2>/dev/null
+2025-12-16T22:47:58Z	shell.exec	ls -la /home/diepulp/projects/pt-2/lib/supabase/rls-context.ts 2>&1
+2025-12-16T22:48:11Z	shell.exec	cat /home/diepulp/projects/pt-2/jest.config.js 2>/dev/null || cat /home/diepulp/projects/pt-2/jest.config.ts 2>/dev/null || cat /home/diepulp/projects/pt-2/jest.config.mjs 2>/dev/null
+2025-12-16T22:48:17Z	shell.exec	cat /home/diepulp/projects/pt-2/tsconfig.json
+2025-12-16T22:48:27Z	shell.exec	npm run type-check 2>&1 | head -50
+2025-12-16T22:48:41Z	shell.exec	npm test -- --testPathPattern="rls-pooling-safety" --passWithNoTests 2>&1 | head -50
+2025-12-16T22:48:47Z	shell.exec	npm test -- --testPathPatterns="rls-pooling-safety" --passWithNoTests 2>&1 | head -80
+2025-12-16T22:49:55Z	shell.exec	npm run type-check 2>&1
+2025-12-16T22:51:22Z	shell.exec	python3 .claude/skills/skill-creator/scripts/package_skill.py .claude/skills/qa-specialist 2>&1 | head -20
+2025-12-16T22:51:30Z	shell.exec	rm /home/diepulp/projects/pt-2/qa-specialist.zip && echo "Skill updated successfully!"
+2025-12-16T22:53:52Z	shell.exec	npx tsc --noEmit lib/supabase/__tests__/rls-jwt-claims.integration.test.ts 2>&1
+2025-12-16T22:55:06Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+checkpoint = context.load_latest_checkpoint()
+if checkpoint:
+    print(context.format_checkpoint_for_resume(checkpoint))
+    print("\n✅ Session restored. Continue from the next steps above.")
+else:
+    print("❌ No checkpoint found in skill_lead_architect namespace.")
+    print("Save a checkpoint first with: /arch-checkpoint save")
+EOF
+2025-12-16T22:55:15Z	shell.exec	npm test -- --testPathPatterns="rls-jwt-claims" --passWithNoTests 2>&1 | head -40
+2025-12-16T22:55:25Z	shell.exec	npm run type-check 2>&1
+2025-12-16T23:02:42Z	shell.exec	find /home/diepulp/projects/pt-2 -maxdepth 2 -name "jest.config.*" -o -name "playwright.config.*" 2>/dev/null
+2025-12-16T23:02:46Z	shell.exec	find /home/diepulp/projects/pt-2 -type f -name "*.md" | grep -iE "(SEC-001|ADR-020|ADR-015)" | head -20
+2025-12-16T23:02:53Z	shell.exec	find /home/diepulp/projects/pt-2/docs -name "*pooling*" -o -name "*supavisor*" 2>/dev/null | head -20
+2025-12-16T23:02:55Z	shell.exec	find /home/diepulp/projects/pt-2 -name "*.test.ts" -o -name "*.spec.ts" | grep -v node_modules | head -20
+2025-12-16T23:02:56Z	shell.exec	find /home/diepulp/projects/pt-2/docs -name "*role*" -o -name "*auth*" | grep -E "\.(md|txt)$" | head -15
+2025-12-16T23:02:56Z	shell.exec	ls -la /home/diepulp/projects/pt-2/supabase/migrations/ | tail -20
+2025-12-16T23:03:03Z	shell.exec	find /home/diepulp/projects/pt-2 -path "*/e2e/*.ts" -not -path "*/node_modules/*" -not -path "*/trees/*" 2>/dev/null
+2025-12-16T23:03:03Z	shell.exec	ls -la /home/diepulp/projects/pt-2/e2e/ 2>/dev/null || echo "No e2e directory found"
+2025-12-16T23:03:03Z	shell.exec	grep -r "dealer" /home/diepulp/projects/pt-2/docs --include="*.md" | grep -iE "(authentication|auth|no auth|null|cannot)" | head -10
+2025-12-16T23:06:16Z	shell.exec	npm test lib/supabase/__tests__/rls*.test.ts 2>&1 | tail -50
+2025-12-16T23:06:47Z	shell.exec	ls -lt /home/diepulp/projects/pt-2/supabase/migrations/ | head -20
+2025-12-16T23:11:02Z	shell.exec	grep -E "SUPABASE_URL|DATABASE_URL|DB_" .env.local .env 2>/dev/null | head -10
+2025-12-16T23:11:02Z	shell.exec	supabase status 2>/dev/null | grep -E "API URL|DB URL|port" || echo "Supabase CLI not running or not installed"
+2025-12-16T23:13:01Z	shell.exec	npx supabase db reset
+2025-12-16T23:14:41Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+from lib.memori.skill_context import ArchitectContext
+
+memori = create_memori_client("skill:lead-architect")
+memori.enable()
+context = ArchitectContext(memori)
+
+result = context.save_checkpoint(
+    current_task="PRD-010 Post-RLS Hardening Testing Strategy - Analysis Complete",
+    reason="manual",
+    decisions_made=[
+        "Dealer role removed from role boundary tests (has no auth rights per SEC-005)",
+        "Valid authenticated roles: pit_boss, admin, cashier only",
+        "Supavisor pooling validation by design - local Supabase CLI lacks pooler (port 6543)",
+        "Pattern C hybrid (COALESCE + JWT fallback) is pooling-safe regardless of connection method",
+        "89 RLS integration tests passing - comprehensive coverage exists",
+        "WS7 Role Boundary Tests remain deferred per PRD-010 scope"
+    ],
+    files_modified=[
+        "docs/20-architecture/specs/PRD-010/EXECUTION-SPEC-PRD-010.md (removed dealer from WS7, updated DoD)"
+    ],
+    validation_gates_passed=[
+        "test-pass (89 RLS tests passing)",
+        "EXECUTION-SPEC corrected for dealer role"
+    ],
+    open_questions=[
+        "Should WS7 role boundary tests be implemented now or remain deferred?",
+        "Is staging environment Supavisor smoke test needed for extra confidence?"
+    ],
+    next_steps=[
+        "Optionally implement role-boundary.integration.test.ts (pit_boss, admin, cashier)",
+        "Consider staging smoke test against Supavisor endpoint (port 6543)",
+        "Update EXECUTION-SPEC Testing section checkboxes based on decision"
+    ],
+    key_insights=[
+        "Local Supabase CLI runs PostgreSQL directly - no Supavisor pooler available",
+        "Remote Supavisor available at aws-1-us-east-2.pooler.supabase.com:6543",
+        "Pattern C hybrid design ensures pooling safety - validated by design not infrastructure",
+        "111 tests reported by agents but 89 actually run - discrepancy due to test counting method"
+    ],
+    spec_file="docs/20-architecture/specs/PRD-010/EXECUTION-SPEC-PRD-010.md",
+    workflow="prd-pipeline",
+    notes="Testing strategy synthesis complete. E2E agent and QA specialist agents provided comprehensive analysis. Main gap is WS7 role boundary tests (deferred). Supavisor validation is by design since local env lacks pooler."
+)
+
+if result:
+    print("✅ Checkpoint saved successfully!")
+    print("You can now safely run /clear")
+    print("After /clear, run '/arch-checkpoint restore' to resume")
+else:
+    print("❌ Checkpoint save failed!")
+EOF
+2025-12-17T00:03:32Z	shell.exec	date +"%Y%m%d%H%M%S"
+2025-12-17T00:03:53Z	shell.exec	npx supabase db reset 2>&1 | tail -50
+2025-12-17T00:03:59Z	shell.exec	npx supabase db lint 2>&1 | head -50
+2025-12-17T00:04:07Z	shell.exec	npx supabase db lint 2>&1 | grep -A5 "security_definer\|visit_financial_summary\|0010" || echo "No security_definer_view lint found"
+2025-12-17T00:04:14Z	shell.exec	npx supabase db execute --sql "SELECT c.relname AS view_name, COALESCE(c.reloptions::text, '{}') AS options, CASE WHEN c.reloptions @> ARRAY['security_invoker=true'] THEN 'SECURITY INVOKER' ELSE 'SECURITY DEFINER (default)' END AS security_mode FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname = 'public' AND c.relname = 'visit_financial_summary' AND c.relkind = 'v';" 2>&1
+2025-12-17T00:04:21Z	shell.exec	psql "postgresql://postgres:postgres@localhost:54322/postgres" -c "SELECT c.relname AS view_name, COALESCE(c.reloptions::text, '{}') AS options, CASE WHEN c.reloptions @> ARRAY['security_invoker=true'] THEN 'SECURITY INVOKER' ELSE 'SECURITY DEFINER (default)' END AS security_mode FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname = 'public' AND c.relname = 'visit_financial_summary' AND c.relkind = 'v';" 2>&1
+2025-12-17T00:04:26Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres -c "SELECT c.relname AS view_name, COALESCE(c.reloptions::text, '{}') AS options, CASE WHEN c.reloptions @> ARRAY['security_invoker=true'] THEN 'SECURITY INVOKER' ELSE 'SECURITY DEFINER (default)' END AS security_mode FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname = 'public' AND c.relname = 'visit_financial_summary' AND c.relkind = 'v';" 2>&1
+2025-12-17T00:04:31Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres -c "ALTER VIEW public.visit_financial_summary SET (security_invoker = true); COMMENT ON VIEW public.visit_financial_summary IS 'Aggregated financial summary per visit. Uses SECURITY INVOKER to enforce RLS from player_financial_transaction. Used by PlayerFinancialService.getVisitSummary() for rating slip modal display.';" 2>&1
+2025-12-17T00:04:36Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres -c "SELECT c.relname AS view_name, COALESCE(c.reloptions::text, '{}') AS options, CASE WHEN c.reloptions @> ARRAY['security_invoker=true'] THEN 'SECURITY INVOKER ✓' ELSE 'SECURITY DEFINER (default)' END AS security_mode FROM pg_class c JOIN pg_namespace n ON c.relnamespace = n.oid WHERE n.nspname = 'public' AND c.relname = 'visit_financial_summary' AND c.relkind = 'v';" 2>&1
+2025-12-17T00:04:45Z	shell.exec	docker exec -i supabase_db_pt-2 psql -U postgres << 'EOF'
+-- Test that RLS works through the view with SECURITY INVOKER
+-- First, check that player_financial_transaction has RLS enabled
+SELECT 
+  c.relname AS table_name,
+  c.relrowsecurity AS rls_enabled,
+  c.relforcerowsecurity AS rls_forced
+FROM pg_class c
+JOIN pg_namespace n ON c.relnamespace = n.oid
+WHERE n.nspname = 'public' 
+  AND c.relname = 'player_financial_transaction';
+
+-- Show the RLS policies on the underlying table
+SELECT 
+  polname AS policy_name,
+  polcmd AS command,
+  CASE polcmd 
+    WHEN 'r' THEN 'SELECT'
+    WHEN 'a' THEN 'INSERT'
+    WHEN 'w' THEN 'UPDATE'
+    WHEN 'd' THEN 'DELETE'
+    WHEN '*' THEN 'ALL'
+  END AS operation
+FROM pg_policy
+WHERE polrelid = 'public.player_financial_transaction'::regclass;
+EOF
+2025-12-17T00:14:00Z	shell.exec	python3 << 'EOF'
+from lib.memori import create_memori_client
+
+memori = create_memori_client("skill:lead-architect")  # Maps to arch_decisions
+memori.enable()
+
+memori.record_memory(
+    content="TECH DEBT: Supavisor pooling (port 6543) cannot be validated locally - local Supabase CLI runs PostgreSQL directly without pooler. Pattern C hybrid validated by design but not infrastructure-tested.",
+    category="rules",
+    metadata={
+        "type": "tech_debt",
+        "debt_category": "testing_gap",
+        "severity": "low",
+        "impact": "RLS pooling behavior validated by SQL pattern design (COALESCE + JWT fallback) but not tested against actual Supavisor endpoint",
+        "remediation_strategy": "Run RLS tests against staging Supabase with Supavisor endpoint (aws-1-us-east-2.pooler.supabase.com:6543) before production deploy",
+        "priority": "P2",
+        "affected_systems": ["RLS tests", "PRD-010"],
+        "root_cause": "Local development environment limitation - Supabase CLI does not include Supavisor pooler",
+        "workaround": "Pattern C hybrid design ensures pooling safety by design; 89 integration tests validate SQL patterns",
+        "prd_reference": "PRD-010"
+    },
+    importance=0.7,
+    tags=["tech-debt", "testing", "supavisor", "pooling", "PRD-010", "infrastructure"]
+)
+
+print("✅ Technical debt recorded in arch_decisions namespace")
+EOF
+2025-12-17T00:14:10Z	shell.exec	docker exec memori-db psql -U memori -d memori -c "
+SELECT
+    content,
+    metadata->>'debt_category' as category,
+    metadata->>'severity' as severity,
+    metadata->>'priority' as priority,
+    metadata->>'remediation_strategy' as remediation,
+    created_at
+FROM memori.memories
+WHERE user_id IN ('arch_decisions', 'pt2_project')
+  AND metadata->>'type' = 'tech_debt'
+ORDER BY created_at DESC
+LIMIT 5;
+"
+2025-12-17T00:14:32Z	shell.exec	git status
+2025-12-17T00:14:32Z	shell.exec	git diff --staged
+2025-12-17T00:14:32Z	shell.exec	git log --oneline -5
+2025-12-17T00:14:38Z	shell.exec	git diff supabase/migrations/20251216160332_fix_visit_financial_summary_security_invoker.sql
+2025-12-17T00:14:47Z	shell.exec	git add supabase/migrations/20251216160332_fix_visit_financial_summary_security_invoker.sql && git commit -m "$(cat <<'EOF'
+fix(security): convert visit_financial_summary to SECURITY INVOKER
+
+Resolves Supabase DB Advisor lint 0010_security_definer_view.
+
+The view was created without security_invoker=true, causing PostgreSQL
+to default to SECURITY DEFINER. This bypassed RLS policies on the
+underlying player_financial_transaction table.
+
+Change: ALTER VIEW SET (security_invoker = true)
+
+This ensures Pattern C (Hybrid) RLS policies are enforced when
+querying through the view, maintaining casino-scoped data isolation.
+
+🤖 Generated with [Claude Code](https://claude.com/claude-code)
+
+Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+EOF
+)"
+2025-12-17T00:14:53Z	shell.exec	git status && git log --oneline -3
+2025-12-17T00:18:13Z	shell.exec	grep -E "@radix-ui/react-(tabs|scroll-area)" package.json || echo "NOT_FOUND"
+2025-12-17T00:18:28Z	shell.exec	mkdir -p /home/diepulp/projects/pt-2/components/pit-panels

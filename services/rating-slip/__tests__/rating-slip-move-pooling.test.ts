@@ -20,9 +20,9 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from '@/lib/errors/domain-errors';
-import { injectRLSContext } from '@/lib/supabase/rls-context';
-import type { Database } from '@/types/database.types';
+import { DomainError } from '../../../lib/errors/domain-errors';
+import { injectRLSContext } from '../../../lib/supabase/rls-context';
+import type { Database } from '../../../types/database.types';
 
 import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 

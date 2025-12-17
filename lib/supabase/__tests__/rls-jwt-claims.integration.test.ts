@@ -28,9 +28,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import {
   syncUserRLSClaims,
   clearUserRLSClaims,
-} from '@/lib/supabase/auth-admin';
-import { createStaff, updateStaff } from '@/services/casino/crud';
-import type { Database } from '@/types/database.types';
+} from '../auth-admin';
+import { createStaff, updateStaff } from '../../../services/casino/crud';
+import type { Database } from '../../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -122,7 +122,8 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       // If user already exists, try to get them
       const { data: existingUsers } =
         await serviceClient.auth.admin.listUsers();
-      const existing = existingUsers?.users?.find(
+      const users = existingUsers?.users ?? [];
+      const existing = users.find(
         (u) => u.email === 'test-jwt-claims-1@example.com',
       );
       if (existing) {
@@ -144,7 +145,8 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
     if (authError2) {
       const { data: existingUsers } =
         await serviceClient.auth.admin.listUsers();
-      const existing = existingUsers?.users?.find(
+      const users = existingUsers?.users ?? [];
+      const existing = users.find(
         (u) => u.email === 'test-jwt-claims-2@example.com',
       );
       if (existing) {
@@ -166,7 +168,8 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
     if (authError3) {
       const { data: existingUsers } =
         await serviceClient.auth.admin.listUsers();
-      const existing = existingUsers?.users?.find(
+      const users = existingUsers?.users ?? [];
+      const existing = users.find(
         (u) => u.email === 'test-jwt-claims-3@example.com',
       );
       if (existing) {
@@ -240,6 +243,7 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
         last_name: 'PitBoss',
         role: 'pit_boss',
         employee_id: 'JWT-TEST-001',
+        email: 'test-jwt-claims-1@example.com',
         casino_id: testCasinoId,
         user_id: testUserId1,
       });
@@ -271,6 +275,7 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
         last_name: 'Admin',
         role: 'admin',
         employee_id: 'JWT-TEST-002',
+        email: 'test-jwt-claims-2@example.com',
         casino_id: testCasinoId,
         user_id: testUserId2,
       });

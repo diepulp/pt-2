@@ -79,7 +79,7 @@ workstreams:
 
   WS7:
     name: Role Boundary Tests (P1)
-    description: Verify role-based access control (dealer vs pit_boss vs admin permissions) per ADR-020
+    description: Verify role-based access control (pit_boss vs admin vs cashier permissions) per ADR-020. NOTE - dealer has no auth rights (user_id=NULL constraint).
     agent: backend-developer
     depends_on: [WS1]
     outputs:
@@ -162,7 +162,7 @@ Complete ADR-020 Track A (Hybrid RLS) requirements for MVP readiness. This PRD a
 - Add `no_updates` and `no_deletes` policies to `mtl_audit_note`
 - Verify SECURITY DEFINER RPC compliance (SEC-006/SEC-007 already implemented)
 - Cross-casino denial tests
-- Role boundary tests (dealer vs pit_boss vs admin)
+- Role boundary tests (pit_boss vs admin vs cashier) - NOTE: dealer has no auth rights
 - JWT claims sync integration tests
 - Documentation updates (SEC-001, ADR-020)
 
@@ -355,10 +355,16 @@ SEC-006 (`20251212080915_sec006_rls_hardening.sql`) and SEC-007 (`20251212081000
 
 **Purpose**: Verify role-based access control per ADR-020 MVP requirements.
 
+**IMPORTANT**: The `dealer` role has NO authentication rights. Dealers are tracked for scheduling/operational visibility only. Per SEC-005 v1.2.0: `staff.user_id` MUST be NULL for dealers (database constraint enforces). Dealers are NOT part of RLS testing because they cannot authenticate.
+
+**Valid Authenticated Roles**:
+- `pit_boss` - Operations manager, limited finance (table buy-ins only)
+- `admin` - Full read/write access within casino scope
+- `cashier` - Financial transactions (all types)
+
 **Deliverables**:
 1. New test file `role-boundary.integration.test.ts`
 2. Tests for:
-   - Dealers cannot access any data (user_id = NULL)
    - Pit boss has limited finance access (buy-ins only)
    - Admin has full read/write access
    - Cashier has full finance transaction access
@@ -366,11 +372,6 @@ SEC-006 (`20251212080915_sec006_rls_hardening.sql`) and SEC-007 (`20251212081000
 **Test Template**:
 ```typescript
 describe('Role Boundary Tests (ADR-020)', () => {
-  it('should deny all access to dealers (no user_id)', async () => {
-    // Setup: Dealer record with user_id = NULL
-    // Assert: Cannot authenticate, no RLS context possible
-  });
-
   it('should allow pit_boss limited finance access', async () => {
     // Setup: Pit boss context
     // Act: Attempt various finance operations
@@ -393,9 +394,9 @@ describe('Role Boundary Tests (ADR-020)', () => {
 
 **Acceptance Criteria**:
 - [ ] All role boundary tests pass
-- [ ] Dealer exclusion verified
 - [ ] Pit boss finance constraints verified
-- [ ] Admin/cashier full access verified
+- [ ] Admin full casino-scoped access verified
+- [ ] Cashier full finance access verified
 
 ## Definition of Done
 
@@ -406,7 +407,7 @@ describe('Role Boundary Tests (ADR-020)', () => {
 
 **Testing**:
 - [ ] Cross-casino denial tests passing
-- [ ] Role boundary tests passing (dealer, pit_boss, admin, cashier)
+- [ ] Role boundary tests passing (pit_boss, admin, cashier) - dealer excluded (no auth rights)
 - [ ] JWT claims sync tests passing
 - [ ] All tests pass under Supavisor pooling mode
 

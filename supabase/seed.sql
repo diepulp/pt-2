@@ -159,7 +159,7 @@ INSERT INTO player_casino (player_id, casino_id, status) VALUES
 -- 9. PLAYER LOYALTY (Initial balances and tiers)
 -- ============================================================================
 
-INSERT INTO player_loyalty (player_id, casino_id, balance, tier, preferences) VALUES
+INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier, preferences) VALUES
   -- Casino 1 loyalty
   ('a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 15000, 'Gold', '{"comps": true, "email_offers": true}'),
   ('a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 50000, 'Platinum', '{"comps": true, "email_offers": true, "host_assigned": true}'),
@@ -254,9 +254,12 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 -- --------------------------------
 -- PAUSED RATING SLIPS (Player on break)
 -- --------------------------------
+-- NEW ARCHITECTURE: pause_intervals tstzrange[] column on rating_slip
+-- No longer using separate rating_slip_pause table
 
 -- Player 2: On break from blackjack (paused slip)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+-- pause_intervals contains open-ended range (current pause, no end time)
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status, pause_intervals) VALUES
   (
     'd1000000-0000-0000-0000-000000000004',
     'ca000000-0000-0000-0000-000000000001',
@@ -267,18 +270,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     500.00,
     NOW() - INTERVAL '3 hours',
     NULL,
-    'paused'
-  );
-
--- Pause record for Player 2
-INSERT INTO rating_slip_pause (id, rating_slip_id, casino_id, started_at, ended_at, created_by) VALUES
-  (
-    'e1000000-0000-0000-0000-000000000001',
-    'd1000000-0000-0000-0000-000000000004',
-    'ca000000-0000-0000-0000-000000000001',
-    NOW() - INTERVAL '30 minutes',
-    NULL,  -- Still paused
-    '5a000000-0000-0000-0000-000000000001'
+    'paused',
+    ARRAY[tstzrange(NOW() - INTERVAL '30 minutes', NULL)]  -- Active pause (open-ended)
   );
 
 -- --------------------------------
@@ -301,7 +294,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 5: Yesterday's long session with pauses (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+-- pause_intervals contains two completed pause ranges (both have end times)
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status, pause_intervals) VALUES
   (
     'd1000000-0000-0000-0000-000000000006',
     'ca000000-0000-0000-0000-000000000001',
@@ -312,26 +306,11 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     1000.00,
     NOW() - INTERVAL '1 day' - INTERVAL '7 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '3 hours',
-    'closed'
-  );
-
--- Pause records for Player 5's closed session (two breaks)
-INSERT INTO rating_slip_pause (id, rating_slip_id, casino_id, started_at, ended_at, created_by) VALUES
-  (
-    'e1000000-0000-0000-0000-000000000002',
-    'd1000000-0000-0000-0000-000000000006',
-    'ca000000-0000-0000-0000-000000000001',
-    NOW() - INTERVAL '1 day' - INTERVAL '6 hours',
-    NOW() - INTERVAL '1 day' - INTERVAL '5 hours' - INTERVAL '30 minutes',
-    '5a000000-0000-0000-0000-000000000001'
-  ),
-  (
-    'e1000000-0000-0000-0000-000000000003',
-    'd1000000-0000-0000-0000-000000000006',
-    'ca000000-0000-0000-0000-000000000001',
-    NOW() - INTERVAL '1 day' - INTERVAL '4 hours' - INTERVAL '30 minutes',
-    NOW() - INTERVAL '1 day' - INTERVAL '4 hours',
-    '5a000000-0000-0000-0000-000000000002'
+    'closed',
+    ARRAY[
+      tstzrange(NOW() - INTERVAL '1 day' - INTERVAL '6 hours', NOW() - INTERVAL '1 day' - INTERVAL '5 hours' - INTERVAL '30 minutes'),
+      tstzrange(NOW() - INTERVAL '1 day' - INTERVAL '4 hours' - INTERVAL '30 minutes', NOW() - INTERVAL '1 day' - INTERVAL '4 hours')
+    ]  -- Two completed pauses
   );
 
 -- Player 6: Yesterday's roulette session (closed)
@@ -401,10 +380,15 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 -- ============================================================================
 -- 12. LOYALTY LEDGER (Points earned from sessions)
 -- ============================================================================
+-- NEW ARCHITECTURE (PRD-004/ADR-019 v2):
+--   - points_delta (signed int, was points_earned)
+--   - reason enum: base_accrual, promotion, redeem, manual_reward, adjustment, reversal
+--   - metadata jsonb: holds theo_cents, average_bet, duration_seconds, game_type, etc.
+--   - source_kind/source_id for provenance tracking
 
 -- Points from yesterday's sessions
-INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_earned, reason, average_bet, duration_seconds, game_type) VALUES
-  -- Player 1's session
+INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_delta, reason, source_kind, source_id, metadata) VALUES
+  -- Player 1's session (base_accrual on slip close)
   (
     '11000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
@@ -413,88 +397,75 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'b1000000-0000-0000-0000-000000000005',
     '5a000000-0000-0000-0000-000000000001',
     350,
-    'session_end',
-    175.00,
-    7200,
-    'blackjack'
+    'base_accrual',
+    'rating_slip',
+    'd1000000-0000-0000-0000-000000000005',
+    '{"theo_cents": 3500, "average_bet": 175.00, "duration_seconds": 7200, "game_type": "blackjack", "house_edge": 0.005}'
   ),
-  -- Player 5's long session (mid-session + end)
+  -- Player 5's long session (base_accrual on slip close)
   (
     '11000000-0000-0000-0000-000000000002',
     'ca000000-0000-0000-0000-000000000001',
     'a1000000-0000-0000-0000-000000000005',
     'd1000000-0000-0000-0000-000000000006',
     'b1000000-0000-0000-0000-000000000006',
-    '5a000000-0000-0000-0000-000000000001',
-    500,
-    'mid_session',
-    1000.00,
-    3600,
-    'blackjack'
-  ),
-  (
-    '11000000-0000-0000-0000-000000000003',
-    'ca000000-0000-0000-0000-000000000001',
-    'a1000000-0000-0000-0000-000000000005',
-    'd1000000-0000-0000-0000-000000000006',
-    'b1000000-0000-0000-0000-000000000006',
     '5a000000-0000-0000-0000-000000000002',
     2000,
-    'session_end',
-    1000.00,
-    12600,
-    'blackjack'
+    'base_accrual',
+    'rating_slip',
+    'd1000000-0000-0000-0000-000000000006',
+    '{"theo_cents": 20000, "average_bet": 1000.00, "duration_seconds": 12600, "game_type": "blackjack", "house_edge": 0.005}'
   ),
-  -- Player 6's roulette session
+  -- Player 6's roulette session (base_accrual)
   (
-    '11000000-0000-0000-0000-000000000004',
+    '11000000-0000-0000-0000-000000000003',
     'ca000000-0000-0000-0000-000000000001',
     'a1000000-0000-0000-0000-000000000006',
     'd1000000-0000-0000-0000-000000000007',
     'b1000000-0000-0000-0000-000000000007',
     '5a000000-0000-0000-0000-000000000002',
     100,
-    'session_end',
-    50.00,
-    3600,
-    'roulette'
+    'base_accrual',
+    'rating_slip',
+    'd1000000-0000-0000-0000-000000000007',
+    '{"theo_cents": 1000, "average_bet": 50.00, "duration_seconds": 3600, "game_type": "roulette", "house_edge": 0.053}'
   );
 
 -- Historical points
-INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_earned, reason, average_bet, duration_seconds, game_type, created_at) VALUES
+INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_delta, reason, source_kind, source_id, metadata, created_at) VALUES
   -- Player 2's poker session
   (
-    '11000000-0000-0000-0000-000000000005',
+    '11000000-0000-0000-0000-000000000004',
     'ca000000-0000-0000-0000-000000000001',
     'a1000000-0000-0000-0000-000000000002',
     'd1000000-0000-0000-0000-000000000008',
     'b1000000-0000-0000-0000-000000000008',
     '5a000000-0000-0000-0000-000000000001',
     1500,
-    'session_end',
-    750.00,
-    14400,
-    'poker',
+    'base_accrual',
+    'rating_slip',
+    'd1000000-0000-0000-0000-000000000008',
+    '{"theo_cents": 15000, "average_bet": 750.00, "duration_seconds": 14400, "game_type": "poker", "house_edge": 0.025}',
     NOW() - INTERVAL '3 days'
   ),
   -- Player 5's high-roller session
   (
-    '11000000-0000-0000-0000-000000000006',
+    '11000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000001',
     'a1000000-0000-0000-0000-000000000005',
     'd1000000-0000-0000-0000-000000000009',
     'b1000000-0000-0000-0000-000000000009',
     '5a000000-0000-0000-0000-000000000001',
     5000,
-    'session_end',
-    2500.00,
-    18000,
-    'blackjack',
+    'base_accrual',
+    'rating_slip',
+    'd1000000-0000-0000-0000-000000000009',
+    '{"theo_cents": 50000, "average_bet": 2500.00, "duration_seconds": 18000, "game_type": "blackjack", "house_edge": 0.005}',
     NOW() - INTERVAL '5 days'
   ),
-  -- Manual adjustment for Player 2 (promotion)
+  -- Promotion credit for Player 2
   (
-    '11000000-0000-0000-0000-000000000007',
+    '11000000-0000-0000-0000-000000000006',
     'ca000000-0000-0000-0000-000000000001',
     'a1000000-0000-0000-0000-000000000002',
     NULL,
@@ -502,9 +473,9 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     '5a000000-0000-0000-0000-000000000006',
     10000,
     'promotion',
+    'campaign',
     NULL,
-    NULL,
-    NULL,
+    '{"campaign_name": "Welcome Bonus", "description": "New player signup bonus"}',
     NOW() - INTERVAL '7 days'
   );
 
@@ -699,10 +670,10 @@ INSERT INTO auth.identities (
 -- - 10 Visits (4 active, 6 closed)
 -- - 10 Rating slips:
 --     - 4 Open (active gameplay)
---     - 1 Paused (player on break)
---     - 5 Closed (completed sessions)
--- - 3 Rating slip pause records
--- - 7 Loyalty ledger entries
+--     - 1 Paused (player on break, with pause_intervals)
+--     - 5 Closed (completed sessions, 1 with pause_intervals history)
+-- - pause_intervals stored inline on rating_slip (NEW ARCHITECTURE)
+-- - 6 Loyalty ledger entries (NEW ARCHITECTURE: points_delta, metadata jsonb)
 -- - 12 Financial transactions
 -- - 7 Dealer rotations
 -- - 5 Audit log entries

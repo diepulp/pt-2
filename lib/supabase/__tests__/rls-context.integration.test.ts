@@ -24,9 +24,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { injectRLSContext, getAuthContext } from '@/lib/supabase/rls-context';
-import type { RLSContext } from '@/lib/supabase/rls-context';
-import type { Database } from '@/types/database.types';
+import { injectRLSContext, getAuthContext } from '../rls-context';
+import type { RLSContext } from '../rls-context';
+import type { Database } from '../../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
