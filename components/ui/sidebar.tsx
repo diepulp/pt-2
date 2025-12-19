@@ -155,6 +155,7 @@ function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
+  hoverExpand = false,
   className,
   children,
   ...props
@@ -162,8 +163,38 @@ function Sidebar({
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  /** Enable hover-triggered expansion (only works with collapsible="icon") */
+  hoverExpand?: boolean;
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const { isMobile, state, openMobile, setOpenMobile, setOpen } = useSidebar();
+  const hoverTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Hover handlers for expand on hover behavior
+  const handleMouseEnter = React.useCallback(() => {
+    if (!hoverExpand || isMobile || collapsible !== "icon") return;
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setOpen(true);
+  }, [hoverExpand, isMobile, collapsible, setOpen]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    if (!hoverExpand || isMobile || collapsible !== "icon") return;
+    // Small delay before collapsing to allow moving between elements
+    hoverTimeoutRef.current = setTimeout(() => {
+      setOpen(false);
+    }, 150);
+  }, [hoverExpand, isMobile, collapsible, setOpen]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) {
+        clearTimeout(hoverTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (collapsible === "none") {
     return (
@@ -205,6 +236,10 @@ function Sidebar({
     );
   }
 
+  // Desktop hover-expand: show opaque underlay strip behind sidebar (prevents bleed-through)
+  const showUnderlay =
+    hoverExpand && collapsible === "icon" && state === "expanded";
+
   return (
     <div
       className="group peer text-sidebar-foreground hidden md:block"
@@ -213,30 +248,64 @@ function Sidebar({
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
+      data-hover-expand={hoverExpand ? "true" : undefined}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
+      {/* Opaque underlay strip - only behind sidebar area, not full viewport */}
+      {showUnderlay && (
+        <div
+          data-slot="sidebar-underlay"
+          className={cn(
+            "fixed inset-y-0 z-40 bg-background pointer-events-none",
+            side === "left" ? "left-0" : "right-0",
+          )}
+          style={{ width: "var(--sidebar-width)" }}
+          aria-hidden="true"
+        />
+      )}
       {/* This is what handles the sidebar gap on desktop */}
+      {/* When hoverExpand is true, gap stays at icon width to prevent layout shift */}
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
-          "group-data-[collapsible=offcanvas]:w-0",
+          "relative bg-transparent transition-[width] duration-200 ease-linear",
           "group-data-[side=right]:rotate-180",
-          variant === "floating" || variant === "inset"
-            ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+          // When hoverExpand is enabled, always use icon width (no push)
+          hoverExpand && collapsible === "icon"
+            ? "w-(--sidebar-width-icon)"
+            : cn(
+                "w-(--sidebar-width)",
+                "group-data-[collapsible=offcanvas]:w-0",
+                variant === "floating" || variant === "inset"
+                  ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
+                  : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)",
+              ),
         )}
       />
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear md:flex",
+          "fixed inset-y-0 hidden h-svh transition-[left,right,width] duration-200 ease-linear md:flex",
+          // z-index: higher when hoverExpand to overlay content
+          hoverExpand && collapsible === "icon" ? "z-50" : "z-10",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
-          // Adjust the padding for floating and inset variants.
-          variant === "floating" || variant === "inset"
-            ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
-            : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+          // When hoverExpand, use full width when expanded (overlay mode)
+          hoverExpand && collapsible === "icon"
+            ? cn(
+                "w-(--sidebar-width) bg-sidebar",
+                "group-data-[state=collapsed]:w-(--sidebar-width-icon)",
+                side === "left" ? "border-r shadow-xl" : "border-l shadow-xl",
+              )
+            : cn(
+                "w-(--sidebar-width)",
+                // Adjust the padding for floating and inset variants.
+                variant === "floating" || variant === "inset"
+                  ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
+                  : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
+              ),
           className,
         )}
         {...props}

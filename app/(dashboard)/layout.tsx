@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { Header } from "@/components/layout/header";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function DashboardLayout({
@@ -20,13 +19,15 @@ export default async function DashboardLayout({
   //   redirect("/auth/login");
   // }
 
+  // Main sidebar collapsed width: 56px (3.5rem / w-14)
   return (
-    <SidebarProvider>
+    <div className="flex min-h-screen w-full flex-col bg-background">
       <AppSidebar />
-      <SidebarInset>
+      {/* Main content offset by collapsed sidebar width */}
+      <div className="flex flex-1 flex-col ml-14">
         <Header />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
-      </SidebarInset>
-    </SidebarProvider>
+      </div>
+    </div>
   );
 }
