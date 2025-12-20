@@ -1,0 +1,142 @@
+{
+  "description": "PT-2 Performance SLO Framework (OPS-PE-006)",
+  "generated_at": "2025-12-20T20:00:00Z",
+  "version": "1.0",
+  "reference": "docs/50-ops/OBSERVABILITY_SPEC.md",
+  "slos": [
+    {
+      "service": "RatingSlip",
+      "operation": "UpdateTelemetry",
+      "p50_target_ms": 50,
+      "p95_target_ms": 80,
+      "p99_target_ms": 150,
+      "metric_name": "ratingslip_update_latency_p95",
+      "alert_threshold_ms": 100,
+      "error_budget_pct": 0.1,
+      "critical_down": false,
+      "category": "fast"/"standard"/"complex"
+    },
+    {
+      "service": "Loyalty",
+      "operation": "IssueReward",
+      "p50_target_ms": 60,
+      "p95_target_ms": 100,
+      "p99_target_ms": 200,
+      "metric_name": "loyalty_reward_latency_p95",
+      "alert_threshold_ms": 150,
+      "error_budget_pct": 0.1,
+      "critical_down": false,
+      "category": "standard"
+    },
+    {
+      "service": "TableContext",
+      "operation": "FillRequest",
+      "p50_target_ms": 60000,
+      "p95_target_ms": 120000,
+      "p99_target_ms": 180000,
+      "metric_name": "table_fill_completion_time_p95",
+      "alert_threshold_ms": 180000,
+      "error_budget_pct": 0.05,
+      "critical_down": false,
+      "category": "background"
+    },
+    {
+      "service": "TableContext",
+      "operation": "CreditRequest",
+      "p50_target_ms": 60000,
+      "p95_target_ms": 120000,
+      "p99_target_ms": 180000,
+      "metric_name": "table_credit_completion_time_p95",
+      "alert_threshold_ms": 180000,
+      "error_budget_pct": 0.05,
+      "critical_down": false,
+      "category": "background"
+    },
+    {
+      "service": "Finance",
+      "operation": "CreateTransaction",
+      "p50_target_ms": 30,
+      "p95_target_ms": 50,
+      "p99_target_ms": 100,
+      "metric_name": "finance_create_txn_latency_p95",
+      "alert_threshold_ms": 75,
+      "error_budget_pct": 0.05,
+      "critical_down": true,
+      "category": "fast"
+    },
+    {
+      "service": "FloorLayout",
+      "operation": "ActivateLayout",
+      "p50_target_ms": 120,
+      "p95_target_ms": 200,
+      "p99_target_ms": 400,
+      "metric_name": "floor_layout_activation_latency_p95",
+      "alert_threshold_ms": 300,
+      "error_budget_pct": 0.1,
+      "critical_down": false,
+      "category": "standard"
+    },
+    {
+      "service": "Player",
+      "operation": "SearchPlayers",
+      "p50_target_ms": 80,
+      "p95_target_ms": 250,
+      "p99_target_ms": 500,
+      "metric_name": "player_search_latency_p95",
+      "alert_threshold_ms": 375,
+      "error_budget_pct": 0.1,
+      "critical_down": false,
+      "category": "standard"
+    },
+    {
+      "service": "Visit",
+      "operation": "ListVisits",
+      "p50_target_ms": 100,
+      "p95_target_ms": 250,
+      "p99_target_ms": 500,
+      "metric_name": "visit_list_latency_p95",
+      "alert_threshold_ms": 375,
+      "error_budget_pct": 0.1,
+      "critical_down": false,
+      "category": "standard"
+    }
+  ],
+  "connection_pool": {
+    "utilization_target_pct": 70,
+    "alert_threshold_pct": 85,
+    "wait_time_target_ms": 10,
+    "wait_time_alert_ms": 50,
+    "idle_connections_target_pct": 20,
+    "idle_connections_alert_pct": 10
+  },
+  "rls_budget": {
+    "simple_tenant_filter": 10,
+    "role_based_access": 20,
+    "complex_subquery": 50
+  },
+  "observability": {
+    "dashboard":"p95 - Requests/sec",
+    "alertrule.stack":"PT-2 Performance Repos",
+    "correlation_required": true,
+    "audit_trail": true
+  },
+  "alert_escalation": {
+    "P1": {
+      "conditions": ["> p99 >5x SLO", "> Error rate >90%"],
+      "response": "page-oncall-immediately"
+    },
+    "P2": {
+      "conditions": ["> p95 >2x SLO", "> Error rate >1%"],
+      "response": "slack-alert"
+    }
+  },
+  "monitoring": {
+    "prometheus_metrics": true,
+    "alerts_stack": "grafana",
+    "dashboards": [
+      "p95 API Latency",
+      "Error Rate",
+      "Database Connection Pool"
+    ]
+  }
+}

@@ -14,7 +14,7 @@ import type {
   PlayerDTO,
   PlayerEnrollmentDTO,
   PlayerSearchResultDTO,
-} from './dtos';
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -43,15 +43,14 @@ type EnrollmentSelectedRow = {
 
 /**
  * Type for rows returned by PLAYER_SEARCH_SELECT query.
- * Nested player object from join with enrollment status.
+ * Player table with nested player_casino enrollment status.
+ * Uses !inner join so player_casino is always present (at least one).
  */
 type PlayerSearchSelectedRow = {
-  player: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  } | null;
-  status: string;
+  id: string;
+  first_name: string;
+  last_name: string;
+  player_casino: { status: string }[];
 };
 
 // === Player Mappers ===
@@ -116,30 +115,29 @@ export function toEnrollmentDTOOrNull(
 
 /**
  * Maps a search result row to PlayerSearchResultDTO.
- * Returns null if player data is missing (shouldn't happen with proper RLS).
+ * Takes first enrollment status from player_casino array.
  */
 export function toPlayerSearchResultDTO(
   row: PlayerSearchSelectedRow,
-): PlayerSearchResultDTO | null {
-  if (!row.player) return null;
+): PlayerSearchResultDTO {
+  // Get first enrollment status (should always have at least one due to !inner join)
+  const enrollmentStatus = row.player_casino[0]?.status;
 
   return {
-    id: row.player.id,
-    first_name: row.player.first_name,
-    last_name: row.player.last_name,
-    full_name: `${row.player.first_name} ${row.player.last_name}`,
-    enrollment_status: row.status === 'active' ? 'enrolled' : 'not_enrolled',
+    id: row.id,
+    first_name: row.first_name,
+    last_name: row.last_name,
+    full_name: `${row.first_name} ${row.last_name}`,
+    enrollment_status:
+      enrollmentStatus === "active" ? "enrolled" : "not_enrolled",
   };
 }
 
 /**
  * Maps an array of search result rows to PlayerSearchResultDTO[].
- * Filters out any rows with null player data.
  */
 export function toPlayerSearchResultDTOList(
   rows: PlayerSearchSelectedRow[],
 ): PlayerSearchResultDTO[] {
-  return rows
-    .map(toPlayerSearchResultDTO)
-    .filter((dto): dto is PlayerSearchResultDTO => dto !== null);
+  return rows.map(toPlayerSearchResultDTO);
 }

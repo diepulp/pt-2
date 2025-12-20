@@ -1,10 +1,20 @@
+---
+id: OPS-001
+title: PT-2 Observability Specification
+version: 1.1.0
+status: Canonical
+owner: SRE/Platform
+created: 2025-11-10
+last_review: 2025-12-20
+affects: [ARCH-SRM, API-*, SEC-*]
+---
+
 # PT-2 Observability Specification
 
-**Status**: Accepted
-**Version**: 1.0
-**Date**: 2025-11-10
+**Status**: Canonical
+**Version**: 1.1.0
+**Date**: 2025-12-20
 **Owner**: SRE/Platform
-**Source**: Extracted from [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
 
 ---
 
@@ -22,7 +32,7 @@ This document consolidates observability patterns from the Service Responsibilit
 
 ## 1. Correlation & Tracing
 
-**Reference**: SRM §16-17, EDGE_TRANSPORT_POLICY.md
+**Reference**: [EDGE_TRANSPORT_POLICY.md](../20-architecture/EDGE_TRANSPORT_POLICY.md)
 
 ### 1.1 Correlation ID Requirements
 
@@ -67,7 +77,7 @@ $$;
 
 ## 2. Audit Logging
 
-**Reference**: SRM §19, SRM:1573-1574
+**Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md §CasinoService.Contracts](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#casinoservice-foundational-context), `supabase/migrations/`
 
 ### 2.1 Canonical Audit Shape
 
@@ -167,7 +177,7 @@ LIMIT 100;
 
 ## 3. Service SLO Budgets
 
-**Reference**: SRM:1798-1799, SRM:1576
+**Reference**: This specification is the canonical source for SLO budgets.
 
 ### 3.1 Performance Budgets by Service
 
@@ -238,7 +248,7 @@ export async function withMetrics<T>(
 
 ## 4. Events & Cache Invalidation
 
-**Reference**: SRM:1570-1574, ADR-004
+**Reference**: [ADR-004-real-time-strategy.md](../80-adrs/ADR-004-real-time-strategy.md)
 
 ### 4.1 Domain Event Patterns
 
@@ -340,7 +350,7 @@ export function invalidateByDomainEvent(
 
 ## 5. Service-Specific KPIs
 
-**Reference**: SRM:1576
+**Reference**: This specification is the canonical source for service KPIs.
 
 ### 5.1 TableContextService KPIs
 
@@ -429,14 +439,15 @@ annotations:
 
 ## 8. References
 
-- **SRM Observability**: [SERVICE_RESPONSIBILITY_MATRIX.md §19](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md)
+- **Service Responsibility Matrix**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) (CasinoService owns `audit_log`)
 - **Edge Transport Policy**: [EDGE_TRANSPORT_POLICY.md](../20-architecture/EDGE_TRANSPORT_POLICY.md)
-- **Real-time Strategy**: [ADR-004](../80-adrs/ADR-004-real-time-strategy.md)
+- **Real-time Strategy**: [ADR-004-real-time-strategy.md](../80-adrs/ADR-004-real-time-strategy.md)
 - **Error Taxonomy**: [ERROR_TAXONOMY_AND_RESILIENCE.md](../70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md)
-- **Audit Log Schema**: audit_log table in SRM §882-1006 (CasinoService)
+- **Audit Log Schema**: `supabase/migrations/` (search: `create table audit_log`)
 
 ---
 
-**Document Status**: v1.0 - Extracted from SRM patterns
+**Document Status**: v1.1.0 - Canonical observability specification
+**Last Updated**: 2025-12-20
 **Next Review**: After first production deployment
 **Owner**: SRE/Platform

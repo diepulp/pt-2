@@ -184,15 +184,38 @@ if (!result.success) {
 
 ## React 19 Hooks
 
+### Quick Reference
+
+| Hook | Import | Purpose |
+|------|--------|---------|
+| `useActionState` | `react` | Form state + pending + action |
+| `useFormStatus` | `react-dom` | Nested submit button state |
+| `useOptimistic` | `react` | Optimistic UI updates |
+| `use()` | `react` | Read promises/context in render |
+
 ### useActionState (Forms)
 
 ```typescript
+// React 19: Returns [state, formAction, isPending]
 const [state, formAction, isPending] = useActionState(serverAction, null)
 
 <form action={formAction}>
+  <Input name="name" required />
+  {state?.errors?.name && <FieldError>{state.errors.name}</FieldError>}
   <Button disabled={isPending}>{isPending ? 'Saving...' : 'Save'}</Button>
-  {state?.error && <Error>{state.error.message}</Error>}
 </form>
+```
+
+### useFormStatus (Nested Submit)
+
+```typescript
+import { useFormStatus } from 'react-dom'
+
+// MUST be inside <form> element
+function SubmitButton({ children }) {
+  const { pending } = useFormStatus()
+  return <Button disabled={pending}>{pending ? 'Saving...' : children}</Button>
+}
 ```
 
 ### useOptimistic (Idempotent Only)
@@ -202,7 +225,46 @@ const [optimistic, addOptimistic] = useOptimistic(
   items,
   (state, newItem) => [...state, { ...newItem, pending: true }]
 )
+
+// Use in form action
+async function handleSubmit(formData) {
+  addOptimistic({ id: 'temp', text: formData.get('text'), pending: true })
+  await createAction(formData)
+}
 ```
+
+### use() Hook (Read Resources in Render)
+
+```typescript
+import { use, Suspense } from 'react'
+
+// Read promise in render (suspends until resolved)
+function PlayerCard({ playerPromise }: { playerPromise: Promise<Player> }) {
+  const player = use(playerPromise)  // Suspends here
+  return <div>{player.name}</div>
+}
+
+// Wrap with Suspense
+<Suspense fallback={<Skeleton />}>
+  <PlayerCard playerPromise={fetchPlayer(id)} />
+</Suspense>
+
+// Conditional context read (new in React 19)
+if (showTheme) {
+  const theme = use(ThemeContext)  // Allowed conditionally!
+}
+```
+
+### When to Use What
+
+| Need | Solution |
+|------|----------|
+| Form with Server Action | `useActionState` |
+| Reusable submit button | `useFormStatus` |
+| Instant UI feedback | `useOptimistic` |
+| One-time promise in render | `use()` + Suspense |
+| Conditional context | `use(Context)` |
+| Cached server data | TanStack Query |
 
 ---
 

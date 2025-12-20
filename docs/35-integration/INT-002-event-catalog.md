@@ -37,7 +37,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - All events include `casino_id`, relevant IDs, and `at` timestamp
 - Idempotent payloads required (safe for replay/duplicate delivery)
 
-**SRM Reference**: Lines 365, 863-864
+**SRM Reference**
 
 ---
 

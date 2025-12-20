@@ -276,15 +276,22 @@ const getCachedPlayer = unstable_cache(
 )
 ```
 
-### New React 19 Hooks (useActionState with pending)
+### React 19 Hooks Reference
+
+| Hook | Import | Purpose |
+|------|--------|---------|
+| `useActionState` | `react` | Form state + pending + action |
+| `useFormStatus` | `react-dom` | Nested submit button state |
+| `useOptimistic` | `react` | Optimistic UI updates |
+| `use()` | `react` | Read promises/context in render |
 
 ```typescript
 'use client'
-import { useActionState, useOptimistic } from 'react'
+import { use, useActionState, useOptimistic, Suspense } from 'react'
 import { useFormStatus } from 'react-dom'
 import { createPlayerAction } from '@/app/actions/player/create-player-action'
 
-// useActionState now returns pending state directly (React 19)
+// useActionState returns [state, formAction, isPending] in React 19
 function PlayerForm() {
   const [state, formAction, isPending] = useActionState(createPlayerAction, null)
 
@@ -300,7 +307,7 @@ function PlayerForm() {
   )
 }
 
-// Alternative: useFormStatus for nested submit buttons
+// useFormStatus for nested submit buttons (must be inside <form>)
 function SubmitButton() {
   const { pending } = useFormStatus()
   return (
@@ -310,8 +317,8 @@ function SubmitButton() {
   )
 }
 
+// useOptimistic for instant UI feedback
 function TodoList({ todos }: { todos: Todo[] }) {
-  // Optimistic UI updates
   const [optimisticTodos, addOptimisticTodo] = useOptimistic(
     todos,
     (state, newTodo: string) => [...state, { id: 'temp', text: newTodo, pending: true }]
@@ -329,6 +336,31 @@ function TodoList({ todos }: { todos: Todo[] }) {
       <button>Add</button>
     </form>
   )
+}
+
+// use() hook — read promises directly in render (React 19)
+function PlayerDetails({ playerPromise }: { playerPromise: Promise<Player> }) {
+  const player = use(playerPromise)  // Suspends until resolved
+  return <div>{player.name}</div>
+}
+
+// Parent wraps with Suspense
+function PlayerPage({ id }: { id: string }) {
+  const playerPromise = fetchPlayer(id)  // Start fetch immediately
+  return (
+    <Suspense fallback={<PlayerSkeleton />}>
+      <PlayerDetails playerPromise={playerPromise} />
+    </Suspense>
+  )
+}
+
+// use() can read context conditionally (new in React 19)
+function ConditionalTheme({ showTheme }: { showTheme: boolean }) {
+  if (showTheme) {
+    const theme = use(ThemeContext)  // Conditional context read allowed!
+    return <div style={{ color: theme.primary }}>Themed</div>
+  }
+  return <div>Default</div>
 }
 ```
 

@@ -144,6 +144,54 @@ function InteractiveList() {
 }
 ```
 
+### React 19 `use()` Hook — Async Data in Client Components
+
+```typescript
+'use client'
+import { use, Suspense } from 'react'
+
+// use() unwraps promises directly in render (suspends until resolved)
+function PlayerCard({ playerPromise }: { playerPromise: Promise<Player> }) {
+  const player = use(playerPromise)  // React 19: read promise in render
+  return (
+    <Card>
+      <CardHeader>{player.name}</CardHeader>
+      <CardContent>{player.email}</CardContent>
+    </Card>
+  )
+}
+
+// Parent initiates fetch, passes promise to child
+function PlayerSection({ playerId }: { playerId: string }) {
+  // Start fetching immediately (before render)
+  const playerPromise = fetchPlayer(playerId)
+
+  return (
+    <Suspense fallback={<PlayerSkeleton />}>
+      <PlayerCard playerPromise={playerPromise} />
+    </Suspense>
+  )
+}
+
+// use() can also read context conditionally (new in React 19)
+function ConditionalAuth() {
+  const isLoggedIn = useIsLoggedIn()
+  if (isLoggedIn) {
+    const user = use(UserContext)  // Conditional context read allowed!
+    return <UserProfile user={user} />
+  }
+  return <LoginPrompt />
+}
+```
+
+**When to use `use()` vs TanStack Query:**
+| Scenario | Solution |
+|----------|----------|
+| One-time async data in render | `use()` with Suspense |
+| Cached data with refetch/mutations | TanStack Query |
+| Conditional context reading | `use(Context)` |
+| Server data with complex state | TanStack Query |
+
 ### Server Action + Form (React 19 / Next.js 16)
 
 ```typescript

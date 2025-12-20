@@ -177,7 +177,7 @@ export async function updatePlayer(
  * Supports multi-word queries (e.g., "John Smith") by matching:
  * - Each word against first_name OR last_name
  * - Prefix matching on first 3 characters for flexibility
- * RLS automatically scopes to enrolled players via player_casino join.
+ * RLS automatically scopes to enrolled players via !inner join to player_casino.
  */
 export async function searchPlayers(
   supabase: SupabaseClient<Database>,
@@ -191,37 +191,26 @@ export async function searchPlayers(
     return [];
   }
 
-  // Build OR conditions for each word matching first_name or last_name
-  // Use first 3 chars as prefix for flexible matching
-  // Escape spaces manually without encoding % wildcards
-  const escapePattern = (str: string): string => str.replace(/ /g, "%20");
-
-  // For single word, use simple OR; for multiple words, all words must match
-  let queryBuilder = supabase
-    .from("player_casino")
-    .select(PLAYER_SEARCH_SELECT);
+  // Query from player table with !inner join to player_casino for RLS
+  let queryBuilder = supabase.from("player").select(PLAYER_SEARCH_SELECT);
 
   if (words.length === 1) {
-    // Single word: match first_name OR last_name
+    // Single word: match first_name OR last_name with prefix
     const prefix = words[0].length >= 3 ? words[0].substring(0, 3) : words[0];
-    const pattern = escapePattern(`${prefix}%`);
+    const pattern = `${prefix}%`;
     queryBuilder = queryBuilder.or(
-      `player.first_name.ilike.${pattern},player.last_name.ilike.${pattern}`,
+      `first_name.ilike.${pattern},last_name.ilike.${pattern}`,
     );
   } else {
     // Multiple words: first word matches first_name, second matches last_name (or vice versa)
     const [first, second] = words;
-    const firstPrefix = escapePattern(
-      `${first.length >= 3 ? first.substring(0, 3) : first}%`,
-    );
-    const secondPrefix = escapePattern(
-      `${second.length >= 3 ? second.substring(0, 3) : second}%`,
-    );
+    const firstPrefix = `${first.length >= 3 ? first.substring(0, 3) : first}%`;
+    const secondPrefix = `${second.length >= 3 ? second.substring(0, 3) : second}%`;
 
     // Match: (first_name~first AND last_name~second) OR (first_name~second AND last_name~first)
     queryBuilder = queryBuilder.or(
-      `and(player.first_name.ilike.${firstPrefix},player.last_name.ilike.${secondPrefix}),` +
-        `and(player.first_name.ilike.${secondPrefix},player.last_name.ilike.${firstPrefix})`,
+      `and(first_name.ilike.${firstPrefix},last_name.ilike.${secondPrefix}),` +
+        `and(first_name.ilike.${secondPrefix},last_name.ilike.${firstPrefix})`,
     );
   }
 

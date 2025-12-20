@@ -33,6 +33,7 @@ Read these files **when needed** based on your task:
 | When You Need | Read This |
 |---------------|-----------|
 | Implementation workflow, code templates | `references/QUICK_START.md` |
+| React 19 hooks (`use()`, `useActionState`, `useOptimistic`) | `references/frontend-rules.md` → React 19 Hooks |
 | State management (TanStack Query, Zustand) | `references/ADR-003-state-management-strategy.md` |
 | Tailwind v4, shadcn setup, React 19 specifics | `references/pt2-technical-standards.md` |
 | Service layer integration patterns | `references/pt2-architecture-integration.md` |
@@ -54,6 +55,201 @@ Full details in `references/pt2-technical-standards.md`.
 - Server Actions for mutations (NOT fetch to API routes)
 - TanStack Query for client-side data
 - TypeScript strict mode
+
+---
+
+## React 19 Patterns (CRITICAL)
+
+React 19 introduces new hooks and patterns. **Use these idiomatically**.
+
+### Core React 19 Hooks
+
+| Hook | Purpose | When to Use |
+|------|---------|-------------|
+| `useActionState` | Form state + pending + action | All Server Action forms |
+| `useFormStatus` | Nested submit button state | Reusable submit components |
+| `useOptimistic` | Optimistic UI updates | Idempotent operations only |
+| `use()` | Read promises/context in render | Async data in Client Components |
+
+### `use()` Hook — Read Resources in Render
+
+```typescript
+'use client'
+import { use, Suspense } from 'react'
+
+// use() unwraps promises directly in render
+function PlayerDetails({ playerPromise }: { playerPromise: Promise<Player> }) {
+  const player = use(playerPromise)  // Suspends until resolved
+  return <div>{player.name}</div>
+}
+
+// Parent passes promise, child uses Suspense
+function PlayerPage({ id }: { id: string }) {
+  const playerPromise = fetchPlayer(id)  // Start fetching immediately
+  return (
+    <Suspense fallback={<PlayerSkeleton />}>
+      <PlayerDetails playerPromise={playerPromise} />
+    </Suspense>
+  )
+}
+
+// use() also reads context conditionally
+function ConditionalTheme({ showTheme }: { showTheme: boolean }) {
+  if (showTheme) {
+    const theme = use(ThemeContext)  // Allowed in React 19!
+    return <div style={{ color: theme.primary }}>Themed</div>
+  }
+  return <div>Default</div>
+}
+```
+
+### `useActionState` — Server Action Forms
+
+```typescript
+'use client'
+import { useActionState } from 'react'
+
+function CreatePlayerForm() {
+  // Returns: [state, formAction, isPending]
+  const [state, formAction, isPending] = useActionState(
+    createPlayerAction,
+    null  // Initial state
+  )
+
+  return (
+    <form action={formAction}>
+      <Input name="name" required />
+      <Input name="email" type="email" required />
+
+      {/* Field-level errors from state */}
+      {state?.errors?.name && <FieldError>{state.errors.name}</FieldError>}
+
+      {/* Form-level errors */}
+      {state?.error && <FormError>{state.error.message}</FormError>}
+
+      {/* Success feedback */}
+      {state?.success && <SuccessMessage>Player created!</SuccessMessage>}
+
+      <Button type="submit" disabled={isPending}>
+        {isPending ? 'Creating...' : 'Create Player'}
+      </Button>
+    </form>
+  )
+}
+```
+
+### `useFormStatus` — Nested Submit Components
+
+```typescript
+'use client'
+import { useFormStatus } from 'react-dom'
+
+// Must be INSIDE a <form> element
+function SubmitButton({ children }: { children: React.ReactNode }) {
+  const { pending, data, method, action } = useFormStatus()
+
+  return (
+    <Button type="submit" disabled={pending}>
+      {pending ? 'Saving...' : children}
+    </Button>
+  )
+}
+
+// Usage in form
+function PlayerForm() {
+  return (
+    <form action={createPlayerAction}>
+      <Input name="name" />
+      <SubmitButton>Create Player</SubmitButton>  {/* Gets pending state */}
+    </form>
+  )
+}
+```
+
+### `useOptimistic` — Instant UI Feedback
+
+```typescript
+'use client'
+import { useOptimistic } from 'react'
+
+function TodoList({ todos }: { todos: Todo[] }) {
+  const [optimisticTodos, addOptimistic] = useOptimistic(
+    todos,
+    (state, newTodo: Todo) => [...state, { ...newTodo, pending: true }]
+  )
+
+  async function handleAdd(formData: FormData) {
+    const text = formData.get('text') as string
+    // Show immediately
+    addOptimistic({ id: 'temp', text, pending: true })
+    // Then persist
+    await createTodoAction({ text })
+  }
+
+  return (
+    <form action={handleAdd}>
+      <Input name="text" />
+      <Button type="submit">Add</Button>
+      <ul>
+        {optimisticTodos.map(todo => (
+          <li key={todo.id} className={todo.pending ? 'opacity-50' : ''}>
+            {todo.text}
+          </li>
+        ))}
+      </ul>
+    </form>
+  )
+}
+```
+
+### Server Action Patterns
+
+```typescript
+// app/actions/player/create-player-action.ts
+'use server'
+import { revalidateTag, updateTag } from 'next/cache'
+import { z } from 'zod'
+
+const schema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+})
+
+export type CreatePlayerState = {
+  success?: boolean
+  error?: { message: string }
+  errors?: { name?: string; email?: string }
+}
+
+export async function createPlayerAction(
+  prevState: CreatePlayerState | null,
+  formData: FormData
+): Promise<CreatePlayerState> {
+  // 1. Parse and validate
+  const parsed = schema.safeParse({
+    name: formData.get('name'),
+    email: formData.get('email'),
+  })
+
+  if (!parsed.success) {
+    return {
+      errors: parsed.error.flatten().fieldErrors,
+    }
+  }
+
+  // 2. Execute mutation
+  const result = await createPlayer(parsed.data)
+
+  if (!result.success) {
+    return { error: result.error }
+  }
+
+  // 3. Invalidate cache
+  revalidateTag('players', 'max')  // Next.js 16 stale-while-revalidate
+
+  return { success: true }
+}
+```
 
 ### shadcn/ui Access
 

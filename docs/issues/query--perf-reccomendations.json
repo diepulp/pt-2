@@ -1,0 +1,1252 @@
+[
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.audit_log\\` has a foreign key \\`audit_log_actor_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "audit_log",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "audit_log_actor_id_fkey",
+      "fkey_columns": [4]
+    },
+    "cache_key": "unindexed_foreign_keys_public_audit_log_audit_log_actor_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.audit_log\\` has a foreign key \\`audit_log_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "audit_log",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "audit_log_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_audit_log_audit_log_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.casino\\` has a foreign key \\`casino_company_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "casino",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "casino_company_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_casino_casino_company_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.dealer_rotation\\` has a foreign key \\`dealer_rotation_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "dealer_rotation",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "dealer_rotation_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_dealer_rotation_dealer_rotation_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.dealer_rotation\\` has a foreign key \\`dealer_rotation_staff_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "dealer_rotation",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "dealer_rotation_staff_id_fkey",
+      "fkey_columns": [4]
+    },
+    "cache_key": "unindexed_foreign_keys_public_dealer_rotation_dealer_rotation_staff_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.finance_outbox\\` has a foreign key \\`finance_outbox_ledger_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "finance_outbox",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "finance_outbox_ledger_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_finance_outbox_finance_outbox_ledger_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout\\` has a foreign key \\`floor_layout_approved_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_approved_by_fkey",
+      "fkey_columns": [8]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_floor_layout_approved_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout\\` has a foreign key \\`floor_layout_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_created_by_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_floor_layout_created_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout\\` has a foreign key \\`floor_layout_reviewed_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_reviewed_by_fkey",
+      "fkey_columns": [7]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_floor_layout_reviewed_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout_activation\\` has a foreign key \\`floor_layout_activation_activated_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout_activation",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_activation_activated_by_fkey",
+      "fkey_columns": [4]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_activation_floor_layout_activation_activated_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout_activation\\` has a foreign key \\`floor_layout_activation_layout_version_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout_activation",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_activation_layout_version_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_activation_floor_layout_activation_layout_version_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_layout_version\\` has a foreign key \\`floor_layout_version_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_layout_version",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_layout_version_created_by_fkey",
+      "fkey_columns": [7]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_layout_version_floor_layout_version_created_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_table_slot\\` has a foreign key \\`floor_table_slot_pit_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_table_slot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_table_slot_pit_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_table_slot_floor_table_slot_pit_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.floor_table_slot\\` has a foreign key \\`floor_table_slot_preferred_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "floor_table_slot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "floor_table_slot_preferred_table_id_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_floor_table_slot_floor_table_slot_preferred_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.gaming_table\\` has a foreign key \\`gaming_table_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "gaming_table",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "gaming_table_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_gaming_table_gaming_table_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.gaming_table_settings\\` has a foreign key \\`gaming_table_settings_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "gaming_table_settings",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "gaming_table_settings_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_gaming_table_settings_gaming_table_settings_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.gaming_table_settings\\` has a foreign key \\`gaming_table_settings_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "gaming_table_settings",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "gaming_table_settings_table_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_gaming_table_settings_gaming_table_settings_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.loyalty_ledger\\` has a foreign key \\`loyalty_ledger_staff_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "loyalty_ledger",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "loyalty_ledger_staff_id_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_loyalty_ledger_loyalty_ledger_staff_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.loyalty_ledger\\` has a foreign key \\`loyalty_ledger_visit_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "loyalty_ledger",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "loyalty_ledger_visit_id_fkey",
+      "fkey_columns": [5]
+    },
+    "cache_key": "unindexed_foreign_keys_public_loyalty_ledger_loyalty_ledger_visit_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_audit_note\\` has a foreign key \\`mtl_audit_note_mtl_entry_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_audit_note",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_audit_note_mtl_entry_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_audit_note_mtl_audit_note_mtl_entry_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_audit_note\\` has a foreign key \\`mtl_audit_note_staff_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_audit_note",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_audit_note_staff_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_audit_note_mtl_audit_note_staff_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_entry\\` has a foreign key \\`mtl_entry_patron_uuid_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_entry",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_entry_patron_uuid_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_entry_mtl_entry_patron_uuid_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_entry\\` has a foreign key \\`mtl_entry_rating_slip_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_entry",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_entry_rating_slip_id_fkey",
+      "fkey_columns": [5]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_entry_mtl_entry_rating_slip_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_entry\\` has a foreign key \\`mtl_entry_staff_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_entry",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_entry_staff_id_fkey",
+      "fkey_columns": [4]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_entry_mtl_entry_staff_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.mtl_entry\\` has a foreign key \\`mtl_entry_visit_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "mtl_entry",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "mtl_entry_visit_id_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_mtl_entry_mtl_entry_visit_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.player_financial_transaction\\` has a foreign key \\`player_financial_transaction_rating_slip_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "player_financial_transaction",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "player_financial_transaction_rating_slip_id_fkey",
+      "fkey_columns": [5]
+    },
+    "cache_key": "unindexed_foreign_keys_public_player_financial_transaction_player_financial_transaction_rating_slip_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.player_financial_transaction\\` has a foreign key \\`player_financial_transaction_visit_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "player_financial_transaction",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "player_financial_transaction_visit_id_fkey",
+      "fkey_columns": [4]
+    },
+    "cache_key": "unindexed_foreign_keys_public_player_financial_transaction_player_financial_transaction_visit_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.player_loyalty\\` has a foreign key \\`player_loyalty_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "player_loyalty",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "player_loyalty_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_player_loyalty_player_loyalty_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.rating_slip\\` has a foreign key \\`rating_slip_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "rating_slip",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "rating_slip_casino_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_rating_slip_rating_slip_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.rating_slip_pause\\` has a foreign key \\`rating_slip_pause_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "rating_slip_pause",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "rating_slip_pause_casino_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_rating_slip_pause_rating_slip_pause_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.rating_slip_pause\\` has a foreign key \\`rating_slip_pause_created_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "rating_slip_pause",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "rating_slip_pause_created_by_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_rating_slip_pause_rating_slip_pause_created_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.report\\` has a foreign key \\`report_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "report",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "report_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_report_report_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.staff\\` has a foreign key \\`staff_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "staff",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "staff_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_staff_staff_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_credit\\` has a foreign key \\`table_credit_authorized_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_credit",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_credit_authorized_by_fkey",
+      "fkey_columns": [7]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_credit_table_credit_authorized_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_credit\\` has a foreign key \\`table_credit_received_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_credit",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_credit_received_by_fkey",
+      "fkey_columns": [9]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_credit_table_credit_received_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_credit\\` has a foreign key \\`table_credit_sent_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_credit",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_credit_sent_by_fkey",
+      "fkey_columns": [8]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_credit_table_credit_sent_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_credit\\` has a foreign key \\`table_credit_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_credit",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_credit_table_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_credit_table_credit_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_drop_event\\` has a foreign key \\`table_drop_event_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_drop_event",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_drop_event_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_drop_event_table_drop_event_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_drop_event\\` has a foreign key \\`table_drop_event_removed_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_drop_event",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_drop_event_removed_by_fkey",
+      "fkey_columns": [8]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_drop_event_table_drop_event_removed_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_drop_event\\` has a foreign key \\`table_drop_event_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_drop_event",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_drop_event_table_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_drop_event_table_drop_event_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_drop_event\\` has a foreign key \\`table_drop_event_witnessed_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_drop_event",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_drop_event_witnessed_by_fkey",
+      "fkey_columns": [9]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_drop_event_table_drop_event_witnessed_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_fill\\` has a foreign key \\`table_fill_delivered_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_fill",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_fill_delivered_by_fkey",
+      "fkey_columns": [8]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_fill_table_fill_delivered_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_fill\\` has a foreign key \\`table_fill_received_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_fill",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_fill_received_by_fkey",
+      "fkey_columns": [9]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_fill_table_fill_received_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_fill\\` has a foreign key \\`table_fill_requested_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_fill",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_fill_requested_by_fkey",
+      "fkey_columns": [7]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_fill_table_fill_requested_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_fill\\` has a foreign key \\`table_fill_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_fill",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_fill_table_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_fill_table_fill_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_inventory_snapshot\\` has a foreign key \\`table_inventory_snapshot_casino_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_inventory_snapshot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_inventory_snapshot_casino_id_fkey",
+      "fkey_columns": [2]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_inventory_snapshot_table_inventory_snapshot_casino_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_inventory_snapshot\\` has a foreign key \\`table_inventory_snapshot_counted_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_inventory_snapshot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_inventory_snapshot_counted_by_fkey",
+      "fkey_columns": [6]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_inventory_snapshot_table_inventory_snapshot_counted_by_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_inventory_snapshot\\` has a foreign key \\`table_inventory_snapshot_table_id_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_inventory_snapshot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_inventory_snapshot_table_id_fkey",
+      "fkey_columns": [3]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_inventory_snapshot_table_inventory_snapshot_table_id_fkey"
+  },
+  {
+    "name": "unindexed_foreign_keys",
+    "title": "Unindexed foreign keys",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Identifies foreign key constraints without a covering index, which can impact database performance.",
+    "detail": "Table \\`public.table_inventory_snapshot\\` has a foreign key \\`table_inventory_snapshot_verified_by_fkey\\` without a covering index. This can lead to suboptimal query performance.",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0001_unindexed_foreign_keys",
+    "metadata": {
+      "name": "table_inventory_snapshot",
+      "type": "table",
+      "schema": "public",
+      "fkey_name": "table_inventory_snapshot_verified_by_fkey",
+      "fkey_columns": [7]
+    },
+    "cache_key": "unindexed_foreign_keys_public_table_inventory_snapshot_table_inventory_snapshot_verified_by_fkey"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_player_name_trgm\\` on table \\`public.player\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "player",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_player_ix_player_name_trgm"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_player_names_lower\\` on table \\`public.player\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "player",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_player_ix_player_names_lower"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_visit_by_casino_date\\` on table \\`public.visit\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "visit",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_visit_ix_visit_by_casino_date"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_visit_by_kind\\` on table \\`public.visit\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "visit",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_visit_ix_visit_by_kind"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_rating_slip_table_seat_status\\` on table \\`public.rating_slip\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "rating_slip",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_rating_slip_idx_rating_slip_table_seat_status"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_loyalty_ledger_player_time\\` on table \\`public.loyalty_ledger\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "loyalty_ledger",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_loyalty_ledger_ix_loyalty_ledger_player_time"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_loyalty_ledger_rating_slip\\` on table \\`public.loyalty_ledger\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "loyalty_ledger",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_loyalty_ledger_ix_loyalty_ledger_rating_slip"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_loyalty_ledger_pagination\\` on table \\`public.loyalty_ledger\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "loyalty_ledger",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_loyalty_ledger_ix_loyalty_ledger_pagination"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_fin_txn_player_time\\` on table \\`public.player_financial_transaction\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "player_financial_transaction",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_player_financial_transaction_ix_fin_txn_player_time"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_mtl_casino_time\\` on table \\`public.mtl_entry\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "mtl_entry",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_mtl_entry_ix_mtl_casino_time"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_floor_layout_casino\\` on table \\`public.floor_layout\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "floor_layout",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_floor_layout_ix_floor_layout_casino"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_floor_layout_version_layout\\` on table \\`public.floor_layout_version\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "floor_layout_version",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_floor_layout_version_ix_floor_layout_version_layout"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_floor_pit_layout\\` on table \\`public.floor_pit\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "floor_pit",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_floor_pit_ix_floor_pit_layout"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_floor_table_slot_layout\\` on table \\`public.floor_table_slot\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "floor_table_slot",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_floor_table_slot_ix_floor_table_slot_layout"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_floor_layout_activation_casino\\` on table \\`public.floor_layout_activation\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "floor_layout_activation",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_floor_layout_activation_ix_floor_layout_activation_casino"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`ix_finance_outbox_unprocessed\\` on table \\`public.finance_outbox\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "finance_outbox",
+      "type": "table",
+      "schema": "public"
+    },
+    "cache_key": "unused_index_public_finance_outbox_ix_finance_outbox_unprocessed"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_sessions_user\\` on table \\`context.sessions\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "sessions",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_sessions_idx_sessions_user"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_sessions_chatmode\\` on table \\`context.sessions\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "sessions",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_sessions_idx_sessions_chatmode"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_sessions_started_at\\` on table \\`context.sessions\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "sessions",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_sessions_idx_sessions_started_at"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_sessions_active\\` on table \\`context.sessions\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "sessions",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_sessions_idx_sessions_active"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_session_events_session\\` on table \\`context.session_events\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "session_events",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_session_events_idx_session_events_session"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_session_events_type\\` on table \\`context.session_events\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "session_events",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_session_events_idx_session_events_type"
+  },
+  {
+    "name": "unused_index",
+    "title": "Unused Index",
+    "level": "INFO",
+    "facing": "EXTERNAL",
+    "categories": ["PERFORMANCE"],
+    "description": "Detects if an index has never been used and may be a candidate for removal.",
+    "detail": "Index \\`idx_session_events_created_at\\` on table \\`context.session_events\\` has not been used",
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0005_unused_index",
+    "metadata": {
+      "name": "session_events",
+      "type": "table",
+      "schema": "context"
+    },
+    "cache_key": "unused_index_context_session_events_idx_session_events_created_at"
+  }
+]

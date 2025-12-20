@@ -78,6 +78,7 @@ class MemoriClient:
         "skill:rls-expert": "arch_decisions",
         "skill:e2e-testing": "pt2_project",
         "skill:qa-specialist": "pt2_project",
+        "skill:performance-engineer": "arch_decisions",
         # Issues tracking writes to issues namespace
         "skill:issues": "issues",
         "debugger": "issues",
