@@ -10,10 +10,10 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md §341-342
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { DomainError } from '@/lib/errors/domain-errors';
-import type { Database } from '@/types/database.types';
+import { DomainError } from "@/lib/errors/domain-errors";
+import type { Database } from "@/types/database.types";
 
 import type {
   CreatePlayerDTO,
@@ -22,7 +22,7 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from './dtos';
+} from "./dtos";
 import {
   toEnrollmentDTO,
   toEnrollmentDTOOrNull,
@@ -30,12 +30,12 @@ import {
   toPlayerDTOList,
   toPlayerDTOOrNull,
   toPlayerSearchResultDTOList,
-} from './mappers';
+} from "./mappers";
 import {
   ENROLLMENT_SELECT,
   PLAYER_SEARCH_SELECT,
   PLAYER_SELECT,
-} from './selects';
+} from "./selects";
 
 // === Error Mapping ===
 
@@ -47,13 +47,13 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  if (error.code === '23505') {
-    return new DomainError('PLAYER_ALREADY_EXISTS', 'Player already exists');
+  if (error.code === "23505") {
+    return new DomainError("PLAYER_ALREADY_EXISTS", "Player already exists");
   }
-  if (error.code === '23503') {
-    return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
+  if (error.code === "23503") {
+    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
   }
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
 }
 
 // === Player CRUD ===
@@ -67,9 +67,9 @@ export async function getPlayerById(
   playerId: string,
 ): Promise<PlayerDTO | null> {
   const { data, error } = await supabase
-    .from('player')
+    .from("player")
     .select(PLAYER_SELECT)
-    .eq('id', playerId)
+    .eq("id", playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -87,9 +87,9 @@ export async function listPlayers(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from('player')
+    .from("player")
     .select(PLAYER_SELECT)
-    .order('created_at', { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(limit + 1);
 
   // Apply search filter if provided
@@ -100,7 +100,7 @@ export async function listPlayers(
 
   // Apply cursor-based pagination
   if (filters.cursor) {
-    query = query.lt('created_at', filters.cursor);
+    query = query.lt("created_at", filters.cursor);
   }
 
   const { data, error } = await query;
@@ -126,7 +126,7 @@ export async function createPlayer(
   input: CreatePlayerDTO,
 ): Promise<PlayerDTO> {
   const { data, error } = await supabase
-    .from('player')
+    .from("player")
     .insert({
       first_name: input.first_name,
       last_name: input.last_name,
@@ -154,15 +154,15 @@ export async function updatePlayer(
   if (input.birth_date !== undefined) updateData.birth_date = input.birth_date;
 
   const { data, error } = await supabase
-    .from('player')
+    .from("player")
     .update(updateData)
-    .eq('id', playerId)
+    .eq("id", playerId)
     .select(PLAYER_SELECT)
     .single();
 
   if (error) {
-    if (error.code === 'PGRST116') {
-      throw new DomainError('PLAYER_NOT_FOUND');
+    if (error.code === "PGRST116") {
+      throw new DomainError("PLAYER_NOT_FOUND");
     }
     throw mapDatabaseError(error);
   }
@@ -174,7 +174,9 @@ export async function updatePlayer(
 
 /**
  * Search players by name with enrollment status.
- * Uses ILIKE with trigram index for fuzzy matching.
+ * Supports multi-word queries (e.g., "John Smith") by matching:
+ * - Each word against first_name OR last_name
+ * - Prefix matching on first 3 characters for flexibility
  * RLS automatically scopes to enrolled players via player_casino join.
  */
 export async function searchPlayers(
@@ -182,15 +184,48 @@ export async function searchPlayers(
   query: string,
   limit: number = 20,
 ): Promise<PlayerSearchResultDTO[]> {
-  const searchPattern = `%${query}%`;
+  // Split query into words and filter empty strings
+  const words = query.trim().split(/\s+/).filter(Boolean);
 
-  const { data, error } = await supabase
-    .from('player_casino')
-    .select(PLAYER_SEARCH_SELECT)
-    .or(
-      `player.first_name.ilike.${searchPattern},player.last_name.ilike.${searchPattern}`,
-    )
-    .limit(limit);
+  if (words.length === 0) {
+    return [];
+  }
+
+  // Build OR conditions for each word matching first_name or last_name
+  // Use first 3 chars as prefix for flexible matching
+  // Escape spaces manually without encoding % wildcards
+  const escapePattern = (str: string): string => str.replace(/ /g, "%20");
+
+  // For single word, use simple OR; for multiple words, all words must match
+  let queryBuilder = supabase
+    .from("player_casino")
+    .select(PLAYER_SEARCH_SELECT);
+
+  if (words.length === 1) {
+    // Single word: match first_name OR last_name
+    const prefix = words[0].length >= 3 ? words[0].substring(0, 3) : words[0];
+    const pattern = escapePattern(`${prefix}%`);
+    queryBuilder = queryBuilder.or(
+      `player.first_name.ilike.${pattern},player.last_name.ilike.${pattern}`,
+    );
+  } else {
+    // Multiple words: first word matches first_name, second matches last_name (or vice versa)
+    const [first, second] = words;
+    const firstPrefix = escapePattern(
+      `${first.length >= 3 ? first.substring(0, 3) : first}%`,
+    );
+    const secondPrefix = escapePattern(
+      `${second.length >= 3 ? second.substring(0, 3) : second}%`,
+    );
+
+    // Match: (first_name~first AND last_name~second) OR (first_name~second AND last_name~first)
+    queryBuilder = queryBuilder.or(
+      `and(player.first_name.ilike.${firstPrefix},player.last_name.ilike.${secondPrefix}),` +
+        `and(player.first_name.ilike.${secondPrefix},player.last_name.ilike.${firstPrefix})`,
+    );
+  }
+
+  const { data, error } = await queryBuilder.limit(limit);
 
   if (error) throw mapDatabaseError(error);
   return toPlayerSearchResultDTOList(data ?? []);
@@ -214,18 +249,18 @@ export async function enrollPlayer(
   }
 
   const { data, error } = await supabase
-    .from('player_casino')
+    .from("player_casino")
     .insert({
       player_id: playerId,
       casino_id: casinoId,
-      status: 'active',
+      status: "active",
     })
     .select(ENROLLMENT_SELECT)
     .single();
 
   if (error) {
     // Handle duplicate enrollment (race condition or re-enrollment)
-    if (error.code === '23505') {
+    if (error.code === "23505") {
       const existingEnrollment = await getPlayerEnrollment(
         supabase,
         playerId,
@@ -234,7 +269,7 @@ export async function enrollPlayer(
       if (existingEnrollment) {
         return existingEnrollment;
       }
-      throw new DomainError('PLAYER_ENROLLMENT_DUPLICATE');
+      throw new DomainError("PLAYER_ENROLLMENT_DUPLICATE");
     }
     throw mapDatabaseError(error);
   }
@@ -252,10 +287,10 @@ export async function getPlayerEnrollment(
   casinoId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from('player_casino')
+    .from("player_casino")
     .select(ENROLLMENT_SELECT)
-    .eq('player_id', playerId)
-    .eq('casino_id', casinoId)
+    .eq("player_id", playerId)
+    .eq("casino_id", casinoId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -271,9 +306,9 @@ export async function getPlayerEnrollmentByPlayerId(
   playerId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from('player_casino')
+    .from("player_casino")
     .select(ENROLLMENT_SELECT)
-    .eq('player_id', playerId)
+    .eq("player_id", playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
