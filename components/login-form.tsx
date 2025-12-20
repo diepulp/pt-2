@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getErrorMessage } from "@/lib/errors/error-utils";
 import { createBrowserComponentClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -41,8 +42,8 @@ export function LoginForm({
       if (error) throw error;
       // Update this route to redirect to an authenticated route. The user already has an active session.
       router.push("/pit");
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "An error occurred");
+    } catch (error) {
+      setError(getErrorMessage(error));
     } finally {
       setIsLoading(false);
     }

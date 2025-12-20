@@ -25,6 +25,7 @@ export interface ServiceResult<T> {
   data?: T;
   error?: string;
   details?: unknown;
+  retryable?: boolean;
   requestId: string;
   durationMs: number;
   timestamp: string;
@@ -145,6 +146,7 @@ export function errorResponse(
       status: error.httpStatus,
       error: error.message,
       details: error.details,
+      retryable: error.retryable,
     });
     return NextResponse.json(result, { status: result.status });
   }

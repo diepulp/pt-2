@@ -41,6 +41,7 @@ import {
 } from "@/hooks/rating-slip-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useGamingDay } from "@/hooks/use-casino";
+import { logError } from "@/lib/errors/error-utils";
 import {
   pauseRatingSlip,
   resumeRatingSlip,
@@ -218,8 +219,8 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
       });
     } catch (error) {
-      // Error is handled by mutation state
-      console.error("Save failed:", error);
+      // Structured logging; mutation state handles UI feedback
+      logError(error, { component: "PitDashboard", action: "saveWithBuyIn" });
     }
   };
 
@@ -251,7 +252,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       setIsModalOpen(false);
       setSelectedSlipId(null);
     } catch (error) {
-      console.error("Close failed:", error);
+      logError(error, { component: "PitDashboard", action: "closeSession" });
     }
   };
 
@@ -272,7 +273,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       // Switch to new slip after successful move
       setSelectedSlipId(result.newSlipId);
     } catch (error) {
-      console.error("Move failed:", error);
+      logError(error, { component: "PitDashboard", action: "movePlayer" });
     }
   };
 

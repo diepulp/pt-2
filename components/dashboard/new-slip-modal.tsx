@@ -28,7 +28,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { dashboardKeys } from "@/hooks/dashboard";
-import { FetchError } from "@/lib/http/fetch-json";
+import {
+  logError,
+  getErrorMessage,
+  formatValidationError,
+  isFetchError,
+  isConflictError,
+  isValidationError,
+} from "@/lib/errors/error-utils";
 import { cn } from "@/lib/utils";
 import { validateUUIDs, debugLogUUIDs } from "@/lib/validation";
 import type { PlayerSearchResultDTO } from "@/services/player/dtos";
@@ -36,28 +43,6 @@ import { searchPlayers } from "@/services/player/http";
 import type { CreateRatingSlipInput } from "@/services/rating-slip/dtos";
 import { startRatingSlip } from "@/services/rating-slip/http";
 import { startVisit, getActiveVisit } from "@/services/visit/http";
-
-/**
- * Format validation error details from FetchError for user display.
- */
-function formatValidationError(err: FetchError): string {
-  if (!err.details) return err.message;
-
-  const details = err.details as {
-    fieldErrors?: Record<string, string[]>;
-    formErrors?: string[];
-  };
-
-  const fieldErrors = details.fieldErrors
-    ? Object.entries(details.fieldErrors)
-        .map(([field, msgs]) => `${field}: ${msgs.join(", ")}`)
-        .join("; ")
-    : "";
-
-  const formErrors = details.formErrors?.join("; ") || "";
-
-  return [fieldErrors, formErrors].filter(Boolean).join(" | ") || err.message;
-}
 
 interface NewSlipModalProps {
   /** Whether the modal is open */
@@ -136,28 +121,18 @@ export function NewSlipModal({
       onOpenChange(false);
     },
     onError: (err: Error) => {
-      // Debug logging for development
-      if (process.env.NODE_ENV === "development") {
-        console.group("[NewSlipModal] Mutation Error");
-        console.error("Error:", err);
-        if (err instanceof FetchError) {
-          console.error("Status:", err.status);
-          console.error("Code:", err.code);
-          console.error("Details:", err.details);
-        }
-        console.groupEnd();
-      }
+      // Structured logging (development only, properly serialized)
+      logError(err, { component: "NewSlipModal", action: "createSlip" });
 
-      // Handle specific error codes with descriptive messages
-      if (err.message.includes("SEAT_ALREADY_OCCUPIED")) {
+      // Handle specific error cases with user-friendly messages
+      if (isFetchError(err) && err.code === "SEAT_ALREADY_OCCUPIED") {
         setError(
           "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
         );
-      } else if (err instanceof FetchError && err.code === "VALIDATION_ERROR") {
-        // Show detailed validation errors
+      } else if (isValidationError(err)) {
         setError(formatValidationError(err));
       } else {
-        setError(err.message);
+        setError(getErrorMessage(err));
       }
     },
   });
@@ -246,23 +221,14 @@ export function NewSlipModal({
         seat_number: selectedSeat,
       });
     } catch (err) {
-      // Debug logging for catch block errors
-      if (process.env.NODE_ENV === "development") {
-        console.group("[NewSlipModal] Submission Error");
-        console.error("Error:", err);
-        if (err instanceof FetchError) {
-          console.error("Status:", err.status);
-          console.error("Code:", err.code);
-          console.error("Details:", err.details);
-        }
-        console.groupEnd();
-      }
+      // Structured logging (development only, properly serialized)
+      logError(err, { component: "NewSlipModal", action: "visitSetup" });
 
-      // Handle FetchError with detailed messages
-      if (err instanceof FetchError && err.code === "VALIDATION_ERROR") {
+      // Handle validation errors with detailed messages
+      if (isValidationError(err)) {
         setError(formatValidationError(err));
       } else {
-        setError(err instanceof Error ? err.message : "Failed to create slip");
+        setError(getErrorMessage(err));
       }
     }
   };
