@@ -81,6 +81,23 @@ export function PanelContainer({
 }: PanelContainerProps) {
   const [activePanel, setActivePanel] = React.useState("tables");
   const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const drawerRef = React.useRef<HTMLDivElement>(null);
+
+  // Close drawer when clicking outside
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        !isCollapsed &&
+        drawerRef.current &&
+        !drawerRef.current.contains(event.target as Node)
+      ) {
+        setIsCollapsed(true);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isCollapsed]);
 
   // Notification counts from real data
   const notifications = React.useMemo(
@@ -198,22 +215,23 @@ export function PanelContainer({
 
   return (
     <div
-      className={cn(
-        "flex h-full bg-background border-l border-border/40",
-        className,
-      )}
+      className={cn("relative h-full bg-background overflow-hidden", className)}
     >
-      {/* Vertical Tab Navigation */}
+      {/* Panel Content - Full width with left padding for collapsed drawer */}
+      <div className="h-full flex flex-col pl-14 ">{renderActivePanel()}</div>
+
+      {/* Vertical Tab Navigation - Overlay drawer on LEFT */}
       <div
+        ref={drawerRef}
         className={cn(
-          "flex flex-col border-r border-border/40 bg-muted/20 transition-all duration-300",
-          isCollapsed ? "w-16" : "w-52",
+          "absolute inset-y-0 left-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 z-20 shadow-lg",
+          isCollapsed ? "w-14" : "w-52",
         )}
       >
         {/* Collapse Toggle Header */}
-        <div className="flex items-center justify-between p-3 border-b border-border/40">
+        <div className="flex items-center justify-between p-2.5 border-b border-border/40 h-11">
           {!isCollapsed && (
-            <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
+            <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Table Ops
             </span>
           )}
@@ -221,7 +239,11 @@ export function PanelContainer({
             variant="ghost"
             size="icon"
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="h-7 w-7 text-muted-foreground hover:text-foreground"
+            className={cn(
+              "h-7 w-7 text-muted-foreground hover:text-foreground",
+              isCollapsed && "mx-auto",
+            )}
+            title={isCollapsed ? "Expand panel" : "Collapse panel"}
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />
@@ -296,38 +318,45 @@ export function PanelContainer({
           </TabsList>
         </Tabs>
 
-        {/* Bottom info when expanded */}
-        {!isCollapsed && (
-          <div className="p-3 border-t border-border/40 space-y-2">
-            {/* Realtime status */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground/60 font-mono">
-                Realtime:
-              </span>
-              <RealtimeStatusIndicator
-                isConnected={realtimeConnected}
-                error={realtimeError}
-              />
-            </div>
-            {/* Gaming day */}
-            {gamingDay && (
-              <div className="text-xs text-muted-foreground/60 font-mono">
-                Day: {gamingDay.date}
+        {/* Bottom info - collapsed shows only status indicator */}
+        <div
+          className={cn(
+            "border-t border-border/40",
+            isCollapsed ? "p-2 flex justify-center" : "p-3 space-y-2",
+          )}
+        >
+          {isCollapsed ? (
+            <RealtimeStatusIndicator
+              isConnected={realtimeConnected}
+              error={realtimeError}
+            />
+          ) : (
+            <>
+              {/* Realtime status */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground/60 font-mono">
+                  Realtime:
+                </span>
+                <RealtimeStatusIndicator
+                  isConnected={realtimeConnected}
+                  error={realtimeError}
+                />
               </div>
-            )}
-            {/* Active tables */}
-            {stats && (
-              <div className="text-xs text-muted-foreground/60 font-mono">
-                Tables: {stats.activeTablesCount}
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Panel Content */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {renderActivePanel()}
+              {/* Gaming day */}
+              {gamingDay && (
+                <div className="text-xs text-muted-foreground/60 font-mono">
+                  Day: {gamingDay.date}
+                </div>
+              )}
+              {/* Active tables */}
+              {stats && (
+                <div className="text-xs text-muted-foreground/60 font-mono">
+                  Tables: {stats.activeTablesCount}
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

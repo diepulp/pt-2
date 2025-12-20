@@ -5,7 +5,6 @@ import * as React from "react";
 
 import { TableLayoutTerminal } from "@/components/table";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { DashboardTableDTO } from "@/hooks/dashboard/types";
 import { cn } from "@/lib/utils";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
@@ -89,26 +88,24 @@ export function TablesPanel({
 
   if (isLoading) {
     return (
-      <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex items-center justify-between p-3 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/10 border border-accent/20">
-              <LayoutGrid className="h-5 w-5 text-accent" />
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-accent/10 border border-accent/20">
+              <LayoutGrid className="h-4 w-4 text-accent" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">
+              <h2 className="text-base font-semibold tracking-tight">
                 Table Layout
               </h2>
-              <p className="text-sm text-muted-foreground">Loading...</p>
+              <p className="text-xs text-muted-foreground">Loading...</p>
             </div>
           </div>
         </div>
-        <ScrollArea className="flex-1">
-          <div className="p-4 space-y-6">
-            <div className="h-32 animate-pulse rounded-lg bg-muted/50" />
-            <div className="h-64 animate-pulse rounded-lg bg-muted/50" />
-          </div>
-        </ScrollArea>
+        <div className="flex-1 flex flex-col p-3 gap-3">
+          <div className="h-20 animate-pulse rounded-lg bg-muted/50 shrink-0" />
+          <div className="flex-1 animate-pulse rounded-lg bg-muted/50" />
+        </div>
       </div>
     );
   }
@@ -124,124 +121,110 @@ export function TablesPanel({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Panel Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/10 border border-accent/20">
-            <LayoutGrid className="h-5 w-5 text-accent" />
+    <div className="flex flex-col h-full overflow-hidden">
+      {/* Panel Header - Compact */}
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 border border-accent/20">
+            <LayoutGrid className="h-4 w-4 text-accent" />
           </div>
           <div>
-            <h2 className="text-lg font-semibold tracking-tight">
-              Table Layout
+            <h2 className="text-sm font-semibold tracking-tight">
+              {tableName}
             </h2>
-            <p className="text-sm text-muted-foreground">
-              {tableName} • Last activity: {lastActivity}
+            <p className="text-xs text-muted-foreground">
+              Last: {lastActivity}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            onClick={onNewSlip}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <UserPlus className="h-4 w-4 mr-2" />
-            New Slip
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          onClick={onNewSlip}
+          className="h-7 text-xs bg-accent text-accent-foreground hover:bg-accent/90"
+        >
+          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
+          New Slip
+        </Button>
       </div>
 
-      {/* Panel Content */}
-      <ScrollArea className="flex-1">
-        <div className="p-4 space-y-6">
-          {/* Stats Summary Card - with LED accent strip */}
-          <div className="relative overflow-hidden p-4 rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm">
-            {/* LED accent strip */}
-            <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
+      {/* Panel Content - No scroll, flex layout */}
+      <div className="flex-1 flex flex-col p-3 gap-3 min-h-0">
+        {/* Stats Summary - Compact */}
+        <div className="relative overflow-hidden px-3 py-2.5 rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm shrink-0">
+          {/* LED accent strip */}
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
 
-            {/* Grid overlay for depth */}
-            <div
-              className="absolute inset-0 pointer-events-none opacity-[0.02]"
-              style={{
-                backgroundImage:
-                  "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-                backgroundSize: "20px 20px",
-              }}
+          <div className="relative grid grid-cols-4 gap-3">
+            <StatItem
+              icon={Users}
+              label="Seats"
+              value={`${occupiedSeats}/${totalSeats}`}
+              subtext="occupied"
             />
-
-            <div className="relative grid grid-cols-4 gap-4">
-              <StatItem
-                icon={Users}
-                label="Seats"
-                value={`${occupiedSeats}/${totalSeats}`}
-                subtext="occupied"
-              />
-              <StatItem
-                label="Avg Session"
-                value={avgSessionTime}
-                subtext="duration"
-              />
-              <StatItem
-                label="Active Slips"
-                value={activeSlipsCount.toString()}
-                subtext="rating slips"
-                highlight
-              />
-              <StatItem
-                label="Table Status"
-                value={selectedTable.status}
-                subtext="current state"
-                positive={selectedTable.status === "active"}
-              />
-            </div>
-          </div>
-
-          {/* Table Layout Visualization */}
-          <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm">
-            {/* Section Header */}
-            <div className="flex items-center justify-between p-4 border-b border-border/30">
-              <h3 className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
-                Seat Positions
-              </h3>
-              <div className="flex items-center gap-4 text-xs">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-accent shadow-[0_0_8px_hsl(var(--accent)/0.5)]" />
-                  <span className="text-muted-foreground font-medium">
-                    Occupied
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-muted border border-border/50" />
-                  <span className="text-muted-foreground/70 font-medium">
-                    Available
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* Table Terminal Component */}
-            <div className="p-6 bg-gradient-to-b from-background/50 to-background/80">
-              <TableLayoutTerminal
-                seats={seats}
-                dealerName={undefined}
-                tableId={selectedTable.label}
-                gameType={selectedTable.type}
-                tableStatus={selectedTable.status}
-                activeSlipsCount={selectedTable.activeSlipsCount}
-                variant="full"
-                onSeatClick={onSeatClick}
-              />
-            </div>
+            <StatItem
+              label="Avg Session"
+              value={avgSessionTime}
+              subtext="duration"
+            />
+            <StatItem
+              label="Active Slips"
+              value={activeSlipsCount.toString()}
+              subtext="rating"
+              highlight
+            />
+            <StatItem
+              label="Status"
+              value={selectedTable.status}
+              subtext="current"
+              positive={selectedTable.status === "active"}
+            />
           </div>
         </div>
-      </ScrollArea>
+
+        {/* Table Layout - Fills remaining space */}
+        <div className="flex-1 relative overflow-hidden rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm flex flex-col min-h-0">
+          {/* Section Header - Compact */}
+          <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 shrink-0">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+              Seat Positions
+            </h3>
+            <div className="flex items-center gap-3 text-[10px]">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+                <span className="text-muted-foreground font-medium">
+                  Occupied
+                </span>
+              </div>
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 rounded-full bg-muted border border-border/50" />
+                <span className="text-muted-foreground/70 font-medium">
+                  Available
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Terminal - Centered, no scroll */}
+          <div className="flex-1 flex items-center justify-center p-3 bg-gradient-to-b from-background/50 to-background/80 min-h-0">
+            <TableLayoutTerminal
+              seats={seats}
+              dealerName={undefined}
+              tableId={selectedTable.label}
+              gameType={selectedTable.type}
+              tableStatus={selectedTable.status}
+              activeSlipsCount={selectedTable.activeSlipsCount}
+              variant="full"
+              onSeatClick={onSeatClick}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-/** Stat display item with PT-2 styling */
+/** Stat display item with PT-2 styling - Compact */
 function StatItem({
   icon: Icon,
   label,
@@ -258,14 +241,14 @@ function StatItem({
   positive?: boolean;
 }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        {Icon && <Icon className="h-4 w-4" />}
-        <span className="text-xs uppercase tracking-wide">{label}</span>
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1.5 text-muted-foreground">
+        {Icon && <Icon className="h-3 w-3" />}
+        <span className="text-[10px] uppercase tracking-wide">{label}</span>
       </div>
       <div
         className={cn(
-          "font-mono text-xl font-bold tracking-tight",
+          "font-mono text-base font-bold tracking-tight",
           highlight && "text-accent",
           positive && "text-emerald-400",
           !highlight && !positive && "text-foreground",
@@ -273,7 +256,7 @@ function StatItem({
       >
         {value}
       </div>
-      <div className="text-xs text-muted-foreground/60">{subtext}</div>
+      <div className="text-[10px] text-muted-foreground/60">{subtext}</div>
     </div>
   );
 }

@@ -54,8 +54,9 @@ export default async function PitPage() {
     redirect("/auth/login");
   }
 
+  // Height: viewport - header (4rem) - main padding (3rem = p-6 top + bottom)
   return (
-    <div className="h-[calc(100vh-4rem)]">
+    <div className="h-[calc(100vh-7rem)] overflow-hidden">
       <PitPanelsClient casinoId={casinoId} />
     </div>
   );
