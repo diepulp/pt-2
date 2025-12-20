@@ -1,9 +1,8 @@
 "use client";
 
-import { Eye, User } from "lucide-react";
+import { User } from "lucide-react";
 import * as React from "react";
 
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 import { ActivityVisualizationPanel } from "./activity-visualization-panel";
@@ -14,9 +13,6 @@ import { NotesPanel } from "./notes-panel";
 import { PlayerProfilePanel } from "./player-profile-panel";
 import { PlayerSearchCommand } from "./player-search-command";
 import { SessionControlPanel } from "./session-control-panel";
-
-// Demo mode player ID - triggers mock data in all panels
-const DEMO_PLAYER_ID = "__demo__";
 
 interface PlayerDashboardProps {
   className?: string;
@@ -37,24 +33,10 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
   const [selectedPlayerId, setSelectedPlayerId] = React.useState<string | null>(
     null,
   );
-  const [isDemoMode, setIsDemoMode] = React.useState(false);
 
   const handleSelectPlayer = (playerId: string) => {
     setSelectedPlayerId(playerId || null);
-    setIsDemoMode(false);
   };
-
-  const handleDemoMode = () => {
-    setSelectedPlayerId(DEMO_PLAYER_ID);
-    setIsDemoMode(true);
-  };
-
-  const handleExitDemo = () => {
-    setSelectedPlayerId(null);
-    setIsDemoMode(false);
-  };
-
-  const effectivePlayerId = selectedPlayerId;
 
   return (
     <div className={cn("space-y-4", className)}>
@@ -63,52 +45,21 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
         <div className="flex-1">
           <PlayerSearchCommand
             onSelectPlayer={handleSelectPlayer}
-            selectedPlayerId={isDemoMode ? null : selectedPlayerId}
+            selectedPlayerId={selectedPlayerId}
           />
         </div>
-        {!isDemoMode && !selectedPlayerId && (
-          <Button
-            onClick={handleDemoMode}
-            variant="outline"
-            className="h-10 px-4 bg-accent/10 border-accent/30 text-accent hover:bg-accent/20 hover:text-accent shrink-0"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            View Demo
-          </Button>
-        )}
       </div>
 
-      {/* Demo Mode Banner */}
-      {isDemoMode && (
-        <div className="flex items-center justify-between px-4 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
-          <div className="flex items-center gap-2 text-sm text-amber-400">
-            <Eye className="h-4 w-4" />
-            <span className="font-medium">Demo Mode</span>
-            <span className="text-amber-400/70">
-              — Viewing layout with mock data
-            </span>
-          </div>
-          <Button
-            onClick={handleExitDemo}
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-amber-400 hover:text-amber-300 hover:bg-amber-500/20"
-          >
-            Exit Demo
-          </Button>
-        </div>
-      )}
-
-      {effectivePlayerId ? (
+      {selectedPlayerId ? (
         <div className="space-y-4">
           {/* Row 1: Profile + Session Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <PlayerProfilePanel playerId={effectivePlayerId} />
+              <PlayerProfilePanel playerId={selectedPlayerId} />
             </div>
             <div className="lg:col-span-1">
               <SessionControlPanel
-                playerId={effectivePlayerId}
+                playerId={selectedPlayerId}
                 className="h-full"
               />
             </div>
@@ -117,11 +68,11 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
           {/* Row 2: Metrics + Compliance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <MetricsPanel
-              playerId={effectivePlayerId}
+              playerId={selectedPlayerId}
               className="min-h-[400px]"
             />
             <CompliancePanel
-              playerId={effectivePlayerId}
+              playerId={selectedPlayerId}
               className="min-h-[400px]"
             />
           </div>
@@ -130,17 +81,17 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
               <ActivityVisualizationPanel
-                playerId={effectivePlayerId}
+                playerId={selectedPlayerId}
                 className="min-h-[420px]"
               />
             </div>
             <div className="lg:col-span-1 space-y-4">
               <NotesPanel
-                playerId={effectivePlayerId}
+                playerId={selectedPlayerId}
                 className="min-h-[200px]"
               />
               <LoyaltyPanel
-                playerId={effectivePlayerId}
+                playerId={selectedPlayerId}
                 className="min-h-[200px]"
               />
             </div>
@@ -148,13 +99,13 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
         </div>
       ) : (
         /* Empty State */
-        <EmptyState onViewDemo={handleDemoMode} />
+        <EmptyState />
       )}
     </div>
   );
 }
 
-function EmptyState({ onViewDemo }: { onViewDemo: () => void }) {
+function EmptyState() {
   return (
     <div className="relative overflow-hidden rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
       {/* Background pattern */}
@@ -190,15 +141,6 @@ function EmptyState({ onViewDemo }: { onViewDemo: () => void }) {
           view their profile, session activity, performance metrics, and loyalty
           status.
         </p>
-
-        {/* View Demo Button */}
-        <Button
-          onClick={onViewDemo}
-          className="mb-6 bg-accent text-accent-foreground hover:bg-accent/90"
-        >
-          <Eye className="h-4 w-4 mr-2" />
-          View Demo with Mock Data
-        </Button>
 
         {/* Quick tips */}
         <div className="flex flex-wrap items-center justify-center gap-3">

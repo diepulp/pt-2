@@ -1,36 +1,11 @@
 "use client";
 
-import {
-  Award,
-  Calendar,
-  Mail,
-  MapPin,
-  Phone,
-  User,
-  UserCircle,
-} from "lucide-react";
+import { Award, Calendar, Loader2, User, UserCircle } from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { usePlayer } from "@/hooks/player/use-player";
 import { cn } from "@/lib/utils";
-
-// Mock player profile - will be replaced with service layer
-const MOCK_PROFILE = {
-  id: "p1",
-  firstName: "Marcus",
-  lastName: "Chen",
-  email: "m.chen@example.com",
-  phone: "+1 (555) 234-5678",
-  dob: "1985-03-15",
-  gender: "M",
-  address: "Los Angeles, CA",
-  memberSince: "2019-06-22",
-  tier: "platinum",
-  playerId: "PLY-10847",
-  status: "active" as const,
-  currentTable: "BJ-04",
-  avatarUrl: null,
-};
 
 interface PlayerProfilePanelProps {
   playerId: string | null;
@@ -41,45 +16,54 @@ export function PlayerProfilePanel({
   playerId,
   className,
 }: PlayerProfilePanelProps) {
-  // In production, this would fetch from the player service
-  const profile = playerId ? MOCK_PROFILE : null;
+  const { data: player, isLoading, error } = usePlayer(playerId || "");
 
-  const getTierConfig = (tier: string) => {
-    switch (tier) {
-      case "diamond":
-        return {
-          color: "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
-          glow: "shadow-[0_0_12px_rgba(6,182,212,0.3)]",
-          icon: "bg-gradient-to-br from-cyan-400 to-blue-500",
-        };
-      case "platinum":
-        return {
-          color: "bg-purple-500/20 text-purple-400 border-purple-500/30",
-          glow: "shadow-[0_0_12px_rgba(168,85,247,0.3)]",
-          icon: "bg-gradient-to-br from-purple-400 to-pink-500",
-        };
-      case "gold":
-        return {
-          color: "bg-amber-500/20 text-amber-400 border-amber-500/30",
-          glow: "shadow-[0_0_12px_rgba(245,158,11,0.3)]",
-          icon: "bg-gradient-to-br from-amber-400 to-orange-500",
-        };
-      case "silver":
-        return {
-          color: "bg-slate-400/20 text-slate-400 border-slate-400/30",
-          glow: "",
-          icon: "bg-gradient-to-br from-slate-400 to-slate-500",
-        };
-      default:
-        return {
-          color: "bg-muted text-muted-foreground border-border",
-          glow: "",
-          icon: "bg-muted",
-        };
-    }
-  };
+  // Loading state
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          className,
+        )}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+        <div className="flex flex-col items-center justify-center h-full p-8">
+          <Loader2 className="h-8 w-8 text-accent/70 animate-spin" />
+          <p className="text-sm text-muted-foreground mt-4">
+            Loading player profile...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  if (!profile) {
+  // Error state
+  if (error) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          className,
+        )}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+        <div className="flex flex-col items-center justify-center h-full p-8">
+          <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-4">
+            <UserCircle className="h-8 w-8 text-red-400/70" />
+          </div>
+          <p className="text-sm font-medium text-red-400">
+            Error loading profile
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            {error.message || "Unknown error"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!playerId || !player) {
     return (
       <div
         className={cn(
@@ -103,11 +87,21 @@ export function PlayerProfilePanel({
     );
   }
 
-  const tierConfig = getTierConfig(profile.tier);
-  const age = Math.floor(
-    (Date.now() - new Date(profile.dob).getTime()) /
-      (365.25 * 24 * 60 * 60 * 1000),
-  );
+  // Calculate age from birth_date
+  const age = player.birth_date
+    ? Math.floor(
+        (Date.now() - new Date(player.birth_date).getTime()) /
+          (365.25 * 24 * 60 * 60 * 1000),
+      )
+    : null;
+
+  // Format member since date
+  const memberSince = player.created_at
+    ? new Date(player.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      })
+    : "N/A";
 
   return (
     <div
@@ -131,22 +125,10 @@ export function PlayerProfilePanel({
         </div>
         <Badge
           variant="outline"
-          className={cn(
-            "capitalize text-[10px] h-5",
-            profile.status === "active"
-              ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-              : "bg-slate-500/20 text-slate-400 border-slate-500/30",
-          )}
+          className="capitalize text-[10px] h-5 bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
         >
-          <div
-            className={cn(
-              "w-1.5 h-1.5 rounded-full mr-1.5",
-              profile.status === "active"
-                ? "bg-emerald-500 animate-pulse"
-                : "bg-slate-500",
-            )}
-          />
-          {profile.status}
+          <div className="w-1.5 h-1.5 rounded-full mr-1.5 bg-emerald-500 animate-pulse" />
+          Active
         </Badge>
       </div>
 
@@ -155,53 +137,27 @@ export function PlayerProfilePanel({
         {/* Avatar & Basic Info */}
         <div className="flex items-start gap-4 mb-6">
           {/* Avatar */}
-          <div className={cn("relative", tierConfig.glow)}>
-            <div
-              className={cn(
-                "w-20 h-20 rounded-xl flex items-center justify-center text-white font-bold text-2xl",
-                tierConfig.icon,
-              )}
-            >
-              {profile.firstName[0]}
-              {profile.lastName[0]}
-            </div>
-            {/* Tier badge */}
-            <div
-              className={cn(
-                "absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded text-[9px] font-bold uppercase border",
-                tierConfig.color,
-              )}
-            >
-              {profile.tier}
+          <div className="relative">
+            <div className="w-20 h-20 rounded-xl flex items-center justify-center text-white font-bold text-2xl bg-gradient-to-br from-accent/40 to-accent/60">
+              {player.first_name[0]}
+              {player.last_name[0]}
             </div>
           </div>
 
           {/* Name & ID */}
           <div className="flex-1 min-w-0">
             <h4 className="text-xl font-bold tracking-tight">
-              {profile.firstName} {profile.lastName}
+              {player.first_name} {player.last_name}
             </h4>
             <div className="flex items-center gap-2 mt-1">
               <span className="text-xs font-mono text-muted-foreground">
-                {profile.playerId}
+                {player.id.slice(0, 8).toUpperCase()}
               </span>
-              {profile.currentTable && (
-                <Badge
-                  variant="outline"
-                  className="text-[10px] h-4 px-1.5 border-accent/30 text-accent bg-accent/5"
-                >
-                  {profile.currentTable}
-                </Badge>
-              )}
             </div>
             <div className="flex items-center gap-1 mt-2">
               <Award className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">
-                Member since{" "}
-                {new Date(profile.memberSince).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "numeric",
-                })}
+                Member since {memberSince}
               </span>
             </div>
           </div>
@@ -209,24 +165,27 @@ export function PlayerProfilePanel({
 
         {/* Details Grid */}
         <div className="grid grid-cols-2 gap-3">
+          {age && player.birth_date && (
+            <DetailItem
+              icon={Calendar}
+              label="Age"
+              value={`${age} years`}
+              subtext={`Born ${new Date(player.birth_date).toLocaleDateString(
+                "en-US",
+                {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                },
+              )}`}
+            />
+          )}
           <DetailItem
-            icon={Mail}
-            label="Email"
-            value={profile.email}
+            icon={User}
+            label="Player ID"
+            value={player.id}
             truncate
           />
-          <DetailItem icon={Phone} label="Phone" value={profile.phone} />
-          <DetailItem
-            icon={Calendar}
-            label="Age"
-            value={`${age} years`}
-            subtext={`Born ${new Date(profile.dob).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}`}
-          />
-          <DetailItem icon={MapPin} label="Location" value={profile.address} />
         </div>
       </div>
     </div>
@@ -240,7 +199,7 @@ function DetailItem({
   subtext,
   truncate,
 }: {
-  icon: typeof Mail;
+  icon: typeof Calendar;
   label: string;
   value: string;
   subtext?: string;

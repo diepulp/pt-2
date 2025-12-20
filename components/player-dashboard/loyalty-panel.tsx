@@ -1,64 +1,24 @@
 "use client";
 
-import { Award, Crown, Gift, Sparkles, Star, Trophy, Zap } from "lucide-react";
+import {
+  Award,
+  Crown,
+  Gift,
+  Loader2,
+  Sparkles,
+  Star,
+  Trophy,
+  Zap,
+} from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { usePlayerLoyalty } from "@/hooks/loyalty/use-loyalty-queries";
+import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
 type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum" | "diamond";
-
-// Mock loyalty data - will be replaced with service layer
-const MOCK_LOYALTY: {
-  tier: LoyaltyTier;
-  pointsBalance: number;
-  pointsTotal: number;
-  nextTier: LoyaltyTier | null;
-  nextTierPoints: number;
-  progress: number;
-  benefits: Array<{ id: string; name: string; isActive: boolean }>;
-  achievements: Array<{
-    id: string;
-    name: string;
-    icon: string;
-    points: number;
-  }>;
-  offers: Array<{
-    id: string;
-    title: string;
-    description: string;
-    expires: string;
-    value: number;
-  }>;
-} = {
-  tier: "platinum",
-  pointsBalance: 24750,
-  pointsTotal: 156200,
-  nextTier: "diamond",
-  nextTierPoints: 200000,
-  progress: 78,
-  benefits: [
-    { id: "b1", name: "Priority Seating", isActive: true },
-    { id: "b2", name: "Complimentary Drinks", isActive: true },
-    { id: "b3", name: "Exclusive Events", isActive: true },
-    { id: "b4", name: "Personal Host", isActive: false },
-  ],
-  achievements: [
-    { id: "a1", name: "High Roller", icon: "🎰", points: 500 },
-    { id: "a2", name: "Lucky Streak", icon: "🍀", points: 250 },
-    { id: "a3", name: "VIP Regular", icon: "⭐", points: 1000 },
-  ],
-  offers: [
-    {
-      id: "o1",
-      title: "Double Points Weekend",
-      description: "Earn 2x points on all table games",
-      expires: "2024-01-28",
-      value: 500,
-    },
-  ],
-};
 
 const TIER_CONFIG = {
   bronze: {
@@ -104,7 +64,57 @@ interface LoyaltyPanelProps {
 }
 
 export function LoyaltyPanel({ playerId, className }: LoyaltyPanelProps) {
-  if (!playerId) {
+  const { casinoId } = useAuth();
+  const {
+    data: loyalty,
+    isLoading,
+    error,
+  } = usePlayerLoyalty(playerId || undefined, casinoId || undefined);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          className,
+        )}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-accent/30 to-transparent" />
+        <div className="flex flex-col items-center justify-center h-full p-6">
+          <Loader2 className="h-6 w-6 text-accent/70 animate-spin" />
+          <p className="text-xs text-muted-foreground mt-3">
+            Loading loyalty data...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div
+        className={cn(
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          className,
+        )}
+      >
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500/30 to-transparent" />
+        <div className="flex flex-col items-center justify-center h-full p-6">
+          <Award className="h-6 w-6 text-red-400/70 mb-2" />
+          <p className="text-xs font-medium text-red-400">
+            Error loading loyalty
+          </p>
+          <p className="text-[10px] text-muted-foreground/60 mt-1">
+            {error.message || "Unknown error"}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!playerId || !loyalty) {
     return (
       <div
         className={cn(
@@ -125,22 +135,17 @@ export function LoyaltyPanel({ playerId, className }: LoyaltyPanelProps) {
     );
   }
 
-  const {
-    tier,
-    pointsBalance,
-    pointsTotal,
-    nextTier,
-    nextTierPoints,
-    progress,
-    benefits,
-    achievements,
-    offers,
-  } = MOCK_LOYALTY;
-
+  // Parse tier from loyalty data
+  const tier = (loyalty.tier?.toLowerCase() || "bronze") as LoyaltyTier;
   const tierConfig = TIER_CONFIG[tier];
   const TierIcon = tierConfig.icon;
 
-  const pointsToNext = nextTierPoints - pointsTotal;
+  // Current balance
+  const pointsBalance = loyalty.currentBalance;
+
+  // Note: We don't have total lifetime points, progression, or benefits in the DTO yet
+  // These features require additional services (player-analytics)
+  const hasProgression = false;
 
   return (
     <div
@@ -217,115 +222,24 @@ export function LoyaltyPanel({ playerId, className }: LoyaltyPanelProps) {
             </div>
           </div>
 
-          {/* Progress to next tier */}
-          {nextTier && (
-            <div className="space-y-1.5">
-              <div className="h-2 rounded-full bg-muted/50 overflow-hidden">
-                <div
-                  className={cn(
-                    "h-full rounded-full transition-all duration-700",
-                    tier === "platinum" ? "bg-purple-500" : "bg-accent",
-                  )}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <div className="flex items-center justify-between text-[10px]">
-                <span className="text-muted-foreground">
-                  {pointsTotal.toLocaleString()} earned
-                </span>
-                <span
-                  className={cn(
-                    "font-medium",
-                    TIER_CONFIG[nextTier as keyof typeof TIER_CONFIG]?.color,
-                  )}
-                >
-                  {pointsToNext.toLocaleString()} to {nextTier}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Active Benefits */}
-        <div className="space-y-1.5">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1">
-            Active Benefits
-          </span>
-          <div className="grid grid-cols-2 gap-1.5">
-            {benefits.slice(0, 4).map((benefit) => (
-              <div
-                key={benefit.id}
-                className={cn(
-                  "flex items-center gap-1.5 p-1.5 rounded text-xs",
-                  benefit.isActive
-                    ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
-                    : "bg-muted/20 border border-border/30 text-muted-foreground",
-                )}
-              >
-                <Gift className="h-3 w-3 shrink-0" />
-                <span className="truncate">{benefit.name}</span>
-              </div>
-            ))}
+          {/* Tier progression info */}
+          <div className="text-center mt-2">
+            <p className="text-[10px] text-muted-foreground">
+              Current {tier} tier member
+            </p>
           </div>
         </div>
 
-        {/* Achievements */}
-        {achievements.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1">
-              Achievements
-            </span>
-            <div className="flex gap-2">
-              {achievements.map((achievement) => (
-                <div
-                  key={achievement.id}
-                  className="flex-1 text-center p-2 rounded-lg bg-muted/20 border border-border/30 hover:border-accent/30 transition-colors"
-                >
-                  <div className="text-xl mb-0.5">{achievement.icon}</div>
-                  <div className="text-[10px] font-medium truncate">
-                    {achievement.name}
-                  </div>
-                  <div className="text-[9px] text-muted-foreground">
-                    +{achievement.points}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Special Offers */}
-        {offers.length > 0 && (
-          <div className="space-y-1.5">
-            <span className="text-[10px] text-muted-foreground uppercase tracking-wide px-1">
-              Special Offers
-            </span>
-            {offers.map((offer) => (
-              <div
-                key={offer.id}
-                className="p-2.5 rounded-lg bg-gradient-to-r from-accent/10 to-purple-500/10 border border-accent/30"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <Zap className="h-3.5 w-3.5 text-accent" />
-                      <span className="text-sm font-medium">{offer.title}</span>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      {offer.description}
-                    </p>
-                    <p className="text-[10px] text-amber-400 mt-1">
-                      Expires {new Date(offer.expires).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <Badge className="shrink-0 bg-accent text-accent-foreground text-[10px] h-5">
-                    +{offer.value}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {/* Additional loyalty info */}
+        <div className="p-3 rounded-lg bg-muted/20 border border-border/30">
+          <p className="text-xs text-muted-foreground text-center">
+            Additional loyalty features coming soon
+          </p>
+          <p className="text-[10px] text-muted-foreground/60 text-center mt-1">
+            Benefits, achievements, and offers will be available in a future
+            release
+          </p>
+        </div>
       </div>
     </div>
   );
