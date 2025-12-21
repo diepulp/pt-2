@@ -52,7 +52,6 @@ import {
   mapSlipsToOccupants,
 } from "../dashboard/seat-context-menu";
 
-import { MobileTableOpsDrawer } from "./mobile-table-ops-drawer";
 import { PanelContainer } from "./panel-container";
 
 interface PitPanelsClientProps {
@@ -349,12 +348,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         <PanelContainer {...panelProps} />
       </div>
 
-      {/* Mobile: Simplified layout with bottom drawer FAB */}
+      {/* Mobile: Panel container with bottom navigation tabs */}
       <div className="md:hidden h-full">
-        {/* Mobile content view - shows current panel without sidebar */}
         <PanelContainer {...panelProps} mobileMode />
-        {/* Mobile drawer FAB trigger */}
-        <MobileTableOpsDrawer {...panelProps} />
       </div>
 
       {/* New Slip Modal */}

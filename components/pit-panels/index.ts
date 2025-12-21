@@ -1,7 +1,6 @@
 export { PitPanelsClient } from "./pit-panels-client";
 export { PitPanelsStatic } from "./pit-panels-static";
 export { PanelContainer } from "./panel-container";
-export { MobileTableOpsDrawer } from "./mobile-table-ops-drawer";
 export { ActivityPanel } from "./activity-panel";
 export { InventoryPanel } from "./inventory-panel";
 export { AnalyticsPanel } from "./analytics-panel";
