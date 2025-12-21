@@ -9,11 +9,11 @@ export const metadata: Metadata = {
 
 /**
  * Pit Panels Review Page
- * Dedicated route for reviewing the pit panels UI with system dark theme
+ * Dedicated route for reviewing the pit panels UI with PT-2 Industrial Light theme
  */
 export default function PitPanelsReviewPage() {
   return (
-    <div className="dark min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground">
       {/* Header */}
       <header className="border-b border-border/40 bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4">
@@ -120,7 +120,7 @@ export default function PitPanelsReviewPage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>PT-2 Pit Station • UI Review Mode</span>
-            <span className="font-mono">Theme: Dark Industrial</span>
+            <span className="font-mono">Theme: PT-2 Industrial Light</span>
           </div>
         </div>
       </footer>

@@ -10,7 +10,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
 
 import { FormSectionAverageBet } from "./form-section-average-bet";
@@ -18,6 +17,7 @@ import { FormSectionCashIn } from "./form-section-cash-in";
 import { FormSectionChipsTaken } from "./form-section-chips-taken";
 import { FormSectionMovePlayer } from "./form-section-move-player";
 import { FormSectionStartTime } from "./form-section-start-time";
+import { RatingSlipModalSkeleton } from "./rating-slip-modal-skeleton";
 import { useModalFormState, type ModalFormState } from "./use-modal-form-state";
 
 /**
@@ -199,24 +199,9 @@ export function RatingSlipModal({
     updateField("newSeatNumber", e.target.value);
   };
 
-  // Loading skeleton
+  // Loading skeleton - mirrors actual modal structure
   if (isLoading || legacyIsLoading) {
-    return (
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Loading Rating Slip...</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-6">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-          </div>
-        </DialogContent>
-      </Dialog>
-    );
+    return <RatingSlipModalSkeleton isOpen={isOpen} onClose={onClose} />;
   }
 
   // Error state
@@ -288,8 +273,8 @@ export function RatingSlipModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>
             Rating Slip - {playerName}
             {modalData?.player?.cardNumber && (
@@ -300,7 +285,7 @@ export function RatingSlipModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
               {error}
@@ -435,44 +420,44 @@ export function RatingSlipModal({
               </div>
             )}
           </div>
+        </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2">
-            <Button
-              type="button"
-              className="flex-1"
-              onClick={() =>
-                onSave({
-                  ...formState,
-                  cashIn: formState.newBuyIn,
-                } as FormState)
-              }
-              disabled={isSaving || !isDirty}
-            >
-              {isSaving ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              className="flex-1"
-              onClick={() =>
-                onCloseSession({
-                  ...formState,
-                  cashIn: formState.newBuyIn,
-                } as FormState)
-              }
-              disabled={isClosing || !!error}
-            >
-              {isClosing ? (
-                "Closing..."
-              ) : (
-                <>
-                  <X className="h-4 w-4 mr-2" />
-                  Close Session
-                </>
-              )}
-            </Button>
-          </div>
+        {/* Action Buttons - Fixed at bottom */}
+        <div className="flex gap-2 flex-shrink-0 pt-4 border-t border-border">
+          <Button
+            type="button"
+            className="flex-1"
+            onClick={() =>
+              onSave({
+                ...formState,
+                cashIn: formState.newBuyIn,
+              } as FormState)
+            }
+            disabled={isSaving || !isDirty}
+          >
+            {isSaving ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            className="flex-1"
+            onClick={() =>
+              onCloseSession({
+                ...formState,
+                cashIn: formState.newBuyIn,
+              } as FormState)
+            }
+            disabled={isClosing || !!error}
+          >
+            {isClosing ? (
+              "Closing..."
+            ) : (
+              <>
+                <X className="h-4 w-4 mr-2" />
+                Close Session
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
