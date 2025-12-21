@@ -9,11 +9,12 @@
  * Workstream: WS4 (CasinoService Route Handler Tests)
  */
 
-import { GET } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { GET } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({
@@ -28,7 +29,10 @@ describe('GET /api/v1/casinos/[casinoId]', () => {
   });
 
   it('accepts request with valid signature', async () => {
-    const request = createMockRequest('GET', `/api/v1/casinos/${TEST_CASINO_ID}`);
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/casinos/${TEST_CASINO_ID}`,
+    );
     const params = createMockRouteParams({ casinoId: TEST_CASINO_ID });
 
     expect(request).toBeInstanceOf(Request);

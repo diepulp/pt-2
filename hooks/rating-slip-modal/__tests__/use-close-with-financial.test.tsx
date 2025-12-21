@@ -117,7 +117,9 @@ describe('useCloseWithFinancial', () => {
       averageBet: 100,
     });
 
-    expect(closeRatingSlip).toHaveBeenCalledWith('slip-1', { average_bet: 100 });
+    expect(closeRatingSlip).toHaveBeenCalledWith('slip-1', {
+      average_bet: 100,
+    });
   });
 
   it('should skip chips-taken transaction for ghost visit (null playerId)', async () => {

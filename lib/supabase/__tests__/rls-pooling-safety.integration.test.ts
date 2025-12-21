@@ -20,9 +20,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from '../../../types/database.types';
 import { injectRLSContext } from '../rls-context';
 import type { RLSContext } from '../rls-context';
-import type { Database } from '../../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -778,7 +778,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       await supabase.from('rating_slip').delete().eq('visit_id', testVisitId);
       await supabase.from('visit').delete().eq('id', testVisitId);
       await supabase.from('gaming_table').delete().eq('id', testTableId);
-      await supabase.from('player_casino').delete().eq('player_id', testPlayerId);
+      await supabase
+        .from('player_casino')
+        .delete()
+        .eq('player_id', testPlayerId);
       await supabase.from('player').delete().eq('id', testPlayerId);
     });
 
@@ -814,7 +817,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           p_rating_slip_id: startResult!.id,
           p_actor_id: testStaff1Id,
           p_average_bet: 50.0,
-        }
+        },
       );
 
       expect(closeError).toBeNull();
@@ -934,13 +937,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         .single();
 
       // Enroll player2 at casino 2
-      await supabase
-        .from('player_casino')
-        .insert({
-          player_id: player2!.id,
-          casino_id: testCasino2Id,
-          status: 'active',
-        });
+      await supabase.from('player_casino').insert({
+        player_id: player2!.id,
+        casino_id: testCasino2Id,
+        status: 'active',
+      });
 
       const { data: table2 } = await supabase
         .from('gaming_table')
@@ -1013,7 +1014,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         await supabase.from('rating_slip').delete().eq('visit_id', visit2!.id);
         await supabase.from('visit').delete().eq('id', visit2!.id);
         await supabase.from('gaming_table').delete().eq('id', table2!.id);
-        await supabase.from('player_casino').delete().eq('player_id', player2!.id);
+        await supabase
+          .from('player_casino')
+          .delete()
+          .eq('player_id', player2!.id);
         await supabase.from('player').delete().eq('id', player2!.id);
       }
     });
@@ -1093,12 +1097,18 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
     afterAll(async () => {
       // Clean up in reverse dependency order
-      await supabase.from('visit').delete().in('id', [testVisit1Id, testVisit2Id]);
+      await supabase
+        .from('visit')
+        .delete()
+        .in('id', [testVisit1Id, testVisit2Id]);
       await supabase
         .from('player_casino')
         .delete()
         .in('player_id', [testPlayer1Id, testPlayer2Id]);
-      await supabase.from('player').delete().in('id', [testPlayer1Id, testPlayer2Id]);
+      await supabase
+        .from('player')
+        .delete()
+        .in('id', [testPlayer1Id, testPlayer2Id]);
     });
 
     it('should deny read access to other casino visit records', async () => {
@@ -1121,7 +1131,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       await injectRLSContext(anonClient, context, 'cross-casino-visit-read');
 
       // Act: Query all visits (RLS should filter to Casino 1 only)
-      const { data, error } = await anonClient.from('visit').select('id, casino_id');
+      const { data, error } = await anonClient
+        .from('visit')
+        .select('id, casino_id');
 
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -1166,7 +1178,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       // (player table has no casino_id, so we test via relationship)
       const { data, error } = await anonClient
         .from('player_casino')
-        .select('player_id, casino_id, player:player(id, first_name, last_name)');
+        .select(
+          'player_id, casino_id, player:player(id, first_name, last_name)',
+        );
 
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -1209,7 +1223,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       await injectRLSContext(anonClient, context, 'cross-casino-table-read');
 
       // Act: Query all casinos (should only see own casino)
-      const { data, error } = await anonClient.from('casino').select('id, name');
+      const { data, error } = await anonClient
+        .from('casino')
+        .select('id, name');
 
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -1300,7 +1316,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       expect(rpcError).toBeNull();
 
       // Query casino table - should only see Casino 1
-      const { data, error } = await anonClient.from('casino').select('id, name');
+      const { data, error } = await anonClient
+        .from('casino')
+        .select('id, name');
 
       expect(error).toBeNull();
       expect(data).toBeTruthy();
@@ -1350,43 +1368,49 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       ];
 
       const results = await Promise.all(
-        requests.map(async ({ email, context, expectedVisitId, forbiddenVisitId }) => {
-          // Use anon client with authentication for RLS enforcement
-          const client = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-            auth: { autoRefreshToken: false, persistSession: false },
-          });
+        requests.map(
+          async ({ email, context, expectedVisitId, forbiddenVisitId }) => {
+            // Use anon client with authentication for RLS enforcement
+            const client = createClient<Database>(
+              supabaseUrl,
+              supabaseAnonKey,
+              {
+                auth: { autoRefreshToken: false, persistSession: false },
+              },
+            );
 
-          await client.auth.signInWithPassword({
-            email,
-            password: 'test-password-12345',
-          });
+            await client.auth.signInWithPassword({
+              email,
+              password: 'test-password-12345',
+            });
 
-          await injectRLSContext(
-            client,
-            context,
-            `concurrent-denial-${context.casinoId}`,
-          );
+            await injectRLSContext(
+              client,
+              context,
+              `concurrent-denial-${context.casinoId}`,
+            );
 
-          const { data: ownVisit } = await client
-            .from('visit')
-            .select('id')
-            .eq('id', expectedVisitId)
-            .maybeSingle();
+            const { data: ownVisit } = await client
+              .from('visit')
+              .select('id')
+              .eq('id', expectedVisitId)
+              .maybeSingle();
 
-          const { data: otherVisit } = await client
-            .from('visit')
-            .select('id')
-            .eq('id', forbiddenVisitId)
-            .maybeSingle();
+            const { data: otherVisit } = await client
+              .from('visit')
+              .select('id')
+              .eq('id', forbiddenVisitId)
+              .maybeSingle();
 
-          await client.auth.signOut();
+            await client.auth.signOut();
 
-          return {
-            casinoId: context.casinoId,
-            canSeeOwnVisit: ownVisit !== null,
-            canSeeOtherVisit: otherVisit !== null,
-          };
-        }),
+            return {
+              casinoId: context.casinoId,
+              canSeeOwnVisit: ownVisit !== null,
+              canSeeOtherVisit: otherVisit !== null,
+            };
+          },
+        ),
       );
 
       // Verify each staff can see their own visit but not the other

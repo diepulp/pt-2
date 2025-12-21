@@ -760,7 +760,11 @@ describe('RatingSlipService Integration Tests', () => {
       allFixtures[allFixtures.length - 1].slipIds.push(slip.id);
 
       // Verify slip can be closed (full lifecycle)
-      const closedSlip = await service.close(testCasinoId, testActorId, slip.id);
+      const closedSlip = await service.close(
+        testCasinoId,
+        testActorId,
+        slip.id,
+      );
       expect(closedSlip.status).toBe('closed');
       expect(closedSlip.duration_seconds).toBeGreaterThanOrEqual(0);
     });

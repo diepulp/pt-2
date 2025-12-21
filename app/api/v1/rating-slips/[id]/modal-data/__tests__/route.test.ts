@@ -7,8 +7,12 @@
  * Part of QA-ROUTE-TESTING execution (ISSUE-607F9CCB)
  */
 
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
 import { GET } from '../route';
-import { createMockRequest, createMockRouteParams } from '@/lib/testing/route-test-helpers';
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
@@ -78,7 +82,10 @@ describe('GET /api/v1/rating-slips/[id]/modal-data', () => {
   });
 
   it('returns 200 with modal data on success', async () => {
-    const request = createMockRequest('GET', `/api/v1/rating-slips/${slipId}/modal-data`);
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/rating-slips/${slipId}/modal-data`,
+    );
     const routeParams = createMockRouteParams({ id: slipId });
     const response = await GET(request, routeParams);
     expect(response.status).toBe(200);

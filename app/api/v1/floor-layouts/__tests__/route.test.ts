@@ -10,8 +10,9 @@
  * Workstream: WS9 (QA-ROUTE-TESTING-FLOOR-LAYOUT)
  */
 
-import { GET, POST } from '../route';
 import { createMockRequest } from '@/lib/testing/route-test-helpers';
+
+import { GET, POST } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

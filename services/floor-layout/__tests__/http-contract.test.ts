@@ -11,11 +11,12 @@
  */
 
 // Import http.ts functions
+import * as versionsRoute from '@/app/api/v1/floor-layouts/[layoutId]/versions/route';
+import * as layoutsRoute from '@/app/api/v1/floor-layouts/route';
+
 import * as http from '../http';
 
 // Import route modules to verify exports exist
-import * as layoutsRoute from '@/app/api/v1/floor-layouts/route';
-import * as versionsRoute from '@/app/api/v1/floor-layouts/[layoutId]/versions/route';
 
 describe('http.ts ↔ route.ts contract', () => {
   describe('Layout collection endpoints (/api/v1/floor-layouts)', () => {

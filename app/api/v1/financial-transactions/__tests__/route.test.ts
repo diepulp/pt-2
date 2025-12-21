@@ -10,8 +10,9 @@
  * Workstream: WS7 (PRD-011 Phase 3 - FinancialService)
  */
 
-import { GET, POST } from '../route';
 import { createMockRequest } from '@/lib/testing/route-test-helpers';
+
+import { GET, POST } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({
@@ -159,37 +160,45 @@ describe('POST /api/v1/financial-transactions', () => {
   });
 
   it('requires Idempotency-Key header', async () => {
-    const request = createMockRequest('POST', '/api/v1/financial-transactions', {
-      body: {
-        player_id: '123e4567-e89b-12d3-a456-426614174000',
-        amount: 1000,
-        direction: 'in',
-        source: 'pit',
-        tender_type: 'cash',
+    const request = createMockRequest(
+      'POST',
+      '/api/v1/financial-transactions',
+      {
+        body: {
+          player_id: '123e4567-e89b-12d3-a456-426614174000',
+          amount: 1000,
+          direction: 'in',
+          source: 'pit',
+          tender_type: 'cash',
+        },
       },
-    });
+    );
     const response = await POST(request);
 
     expect(response.status).toBe(400);
   });
 
   it('returns 201 on successful creation (pit boss)', async () => {
-    const request = createMockRequest('POST', '/api/v1/financial-transactions', {
-      headers: {
-        'Idempotency-Key': 'test-key-123',
-        'Content-Type': 'application/json',
+    const request = createMockRequest(
+      'POST',
+      '/api/v1/financial-transactions',
+      {
+        headers: {
+          'Idempotency-Key': 'test-key-123',
+          'Content-Type': 'application/json',
+        },
+        body: {
+          casino_id: '123e4567-e89b-12d3-a456-426614174010',
+          player_id: '123e4567-e89b-12d3-a456-426614174000',
+          visit_id: '123e4567-e89b-12d3-a456-426614174001',
+          amount: 1000,
+          direction: 'in',
+          source: 'pit',
+          tender_type: 'cash',
+          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
+        },
       },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174010',
-        player_id: '123e4567-e89b-12d3-a456-426614174000',
-        visit_id: '123e4567-e89b-12d3-a456-426614174001',
-        amount: 1000,
-        direction: 'in',
-        source: 'pit',
-        tender_type: 'cash',
-        created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
-      },
-    });
+    );
     const response = await POST(request);
     const body = await response.json();
 
@@ -206,45 +215,53 @@ describe('POST /api/v1/financial-transactions', () => {
   });
 
   it('includes required visit_id', async () => {
-    const request = createMockRequest('POST', '/api/v1/financial-transactions', {
-      headers: {
-        'Idempotency-Key': 'test-key-124',
-        'Content-Type': 'application/json',
+    const request = createMockRequest(
+      'POST',
+      '/api/v1/financial-transactions',
+      {
+        headers: {
+          'Idempotency-Key': 'test-key-124',
+          'Content-Type': 'application/json',
+        },
+        body: {
+          casino_id: '123e4567-e89b-12d3-a456-426614174010',
+          player_id: '123e4567-e89b-12d3-a456-426614174000',
+          visit_id: '123e4567-e89b-12d3-a456-426614174001',
+          amount: 1000,
+          direction: 'in',
+          source: 'pit',
+          tender_type: 'cash',
+          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
+        },
       },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174010',
-        player_id: '123e4567-e89b-12d3-a456-426614174000',
-        visit_id: '123e4567-e89b-12d3-a456-426614174001',
-        amount: 1000,
-        direction: 'in',
-        source: 'pit',
-        tender_type: 'cash',
-        created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
-      },
-    });
+    );
     const response = await POST(request);
 
     expect(response.status).toBe(201);
   });
 
   it('accepts optional rating_slip_id', async () => {
-    const request = createMockRequest('POST', '/api/v1/financial-transactions', {
-      headers: {
-        'Idempotency-Key': 'test-key-125',
-        'Content-Type': 'application/json',
+    const request = createMockRequest(
+      'POST',
+      '/api/v1/financial-transactions',
+      {
+        headers: {
+          'Idempotency-Key': 'test-key-125',
+          'Content-Type': 'application/json',
+        },
+        body: {
+          casino_id: '123e4567-e89b-12d3-a456-426614174010',
+          player_id: '123e4567-e89b-12d3-a456-426614174000',
+          visit_id: '123e4567-e89b-12d3-a456-426614174001',
+          rating_slip_id: '123e4567-e89b-12d3-a456-426614174002',
+          amount: 1000,
+          direction: 'in',
+          source: 'pit',
+          tender_type: 'cash',
+          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
+        },
       },
-      body: {
-        casino_id: '123e4567-e89b-12d3-a456-426614174010',
-        player_id: '123e4567-e89b-12d3-a456-426614174000',
-        visit_id: '123e4567-e89b-12d3-a456-426614174001',
-        rating_slip_id: '123e4567-e89b-12d3-a456-426614174002',
-        amount: 1000,
-        direction: 'in',
-        source: 'pit',
-        tender_type: 'cash',
-        created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
-      },
-    });
+    );
     const response = await POST(request);
 
     expect(response.status).toBe(201);

@@ -260,10 +260,18 @@ describe('RatingSlipService', () => {
         };
 
         // Ghost visits should be allowed - RPC will be called
-        const result = await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
+        const result = await crud.start(
+          mockSupabase,
+          CASINO_ID,
+          ACTOR_ID,
+          input,
+        );
 
         // Verify RPC was called (not rejected pre-validation)
-        expect(mockChain.rpc).toHaveBeenCalledWith('rpc_start_rating_slip', expect.any(Object));
+        expect(mockChain.rpc).toHaveBeenCalledWith(
+          'rpc_start_rating_slip',
+          expect.any(Object),
+        );
         expect(result).toBeDefined();
       });
 

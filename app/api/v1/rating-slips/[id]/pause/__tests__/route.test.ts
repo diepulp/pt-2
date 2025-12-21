@@ -7,8 +7,12 @@
  * Part of QA-ROUTE-TESTING execution (ISSUE-607F9CCB)
  */
 
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
 import { POST } from '../route';
-import { createMockRequest, createMockRouteParams } from '@/lib/testing/route-test-helpers';
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
@@ -38,16 +42,23 @@ describe('POST /api/v1/rating-slips/[id]/pause', () => {
   });
 
   it('requires Idempotency-Key header', async () => {
-    const request = createMockRequest('POST', `/api/v1/rating-slips/${slipId}/pause`);
+    const request = createMockRequest(
+      'POST',
+      `/api/v1/rating-slips/${slipId}/pause`,
+    );
     const routeParams = createMockRouteParams({ id: slipId });
     const response = await POST(request, routeParams);
     expect(response.status).toBe(400);
   });
 
   it('returns 200 on success', async () => {
-    const request = createMockRequest('POST', `/api/v1/rating-slips/${slipId}/pause`, {
-      headers: { 'Idempotency-Key': 'test-key' },
-    });
+    const request = createMockRequest(
+      'POST',
+      `/api/v1/rating-slips/${slipId}/pause`,
+      {
+        headers: { 'Idempotency-Key': 'test-key' },
+      },
+    );
     const routeParams = createMockRouteParams({ id: slipId });
     const response = await POST(request, routeParams);
     expect(response.status).toBe(200);

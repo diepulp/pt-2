@@ -11,16 +11,17 @@
  */
 
 // Import http.ts functions
+import * as averageBetRoute from '@/app/api/v1/rating-slips/[id]/average-bet/route';
+import * as closeRoute from '@/app/api/v1/rating-slips/[id]/close/route';
+import * as durationRoute from '@/app/api/v1/rating-slips/[id]/duration/route';
+import * as pauseRoute from '@/app/api/v1/rating-slips/[id]/pause/route';
+import * as resumeRoute from '@/app/api/v1/rating-slips/[id]/resume/route';
+import * as resourceRoute from '@/app/api/v1/rating-slips/[id]/route';
+import * as collectionRoute from '@/app/api/v1/rating-slips/route';
+
 import * as http from '../http';
 
 // Import route modules to verify exports exist
-import * as collectionRoute from '@/app/api/v1/rating-slips/route';
-import * as resourceRoute from '@/app/api/v1/rating-slips/[id]/route';
-import * as pauseRoute from '@/app/api/v1/rating-slips/[id]/pause/route';
-import * as resumeRoute from '@/app/api/v1/rating-slips/[id]/resume/route';
-import * as closeRoute from '@/app/api/v1/rating-slips/[id]/close/route';
-import * as durationRoute from '@/app/api/v1/rating-slips/[id]/duration/route';
-import * as averageBetRoute from '@/app/api/v1/rating-slips/[id]/average-bet/route';
 
 describe('http.ts ↔ route.ts contract', () => {
   describe('Collection endpoints (/api/v1/rating-slips)', () => {

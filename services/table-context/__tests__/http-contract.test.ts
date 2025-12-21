@@ -12,22 +12,23 @@
  */
 
 // Import http.ts functions
-import * as http from '../http';
 
 // Import route modules to verify exports exist
 // Table routes (/api/v1/tables)
-import * as tablesRoute from '@/app/api/v1/tables/route';
-import * as tableDetailRoute from '@/app/api/v1/tables/[tableId]/route';
+import * as creditsRoute from '@/app/api/v1/table-context/credits/route';
+import * as dropEventsRoute from '@/app/api/v1/table-context/drop-events/route';
+import * as fillsRoute from '@/app/api/v1/table-context/fills/route';
+import * as inventorySnapshotsRoute from '@/app/api/v1/table-context/inventory-snapshots/route';
 import * as activateRoute from '@/app/api/v1/tables/[tableId]/activate/route';
 import * as closeRoute from '@/app/api/v1/tables/[tableId]/close/route';
 import * as deactivateRoute from '@/app/api/v1/tables/[tableId]/deactivate/route';
 import * as dealerRoute from '@/app/api/v1/tables/[tableId]/dealer/route';
 
 // Table context routes (/api/v1/table-context)
-import * as creditsRoute from '@/app/api/v1/table-context/credits/route';
-import * as dropEventsRoute from '@/app/api/v1/table-context/drop-events/route';
-import * as fillsRoute from '@/app/api/v1/table-context/fills/route';
-import * as inventorySnapshotsRoute from '@/app/api/v1/table-context/inventory-snapshots/route';
+import * as tableDetailRoute from '@/app/api/v1/tables/[tableId]/route';
+import * as tablesRoute from '@/app/api/v1/tables/route';
+
+import * as http from '../http';
 
 describe('http.ts ↔ route.ts contract', () => {
   describe('Collection endpoints (/api/v1/tables)', () => {

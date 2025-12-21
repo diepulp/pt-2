@@ -9,11 +9,12 @@
  * Workstream: WS3 (TableService Route Handler Tests)
  */
 
-import { POST, DELETE } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { POST, DELETE } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

@@ -9,11 +9,12 @@
  * Workstream: WS3 (TableService Route Handler Tests)
  */
 
-import { GET } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { GET } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({
@@ -56,10 +57,7 @@ describe('GET /api/v1/tables/[tableId]', () => {
   });
 
   it('accepts valid tableId param', async () => {
-    const request = createMockRequest(
-      'GET',
-      `/api/v1/tables/${TABLE_ID}`,
-    );
+    const request = createMockRequest('GET', `/api/v1/tables/${TABLE_ID}`);
     const params = createMockRouteParams({ tableId: TABLE_ID });
     const response = await GET(request, params);
     expect(response).toBeDefined();

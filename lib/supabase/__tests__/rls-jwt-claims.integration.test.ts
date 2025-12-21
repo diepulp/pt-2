@@ -25,12 +25,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  syncUserRLSClaims,
-  clearUserRLSClaims,
-} from '../auth-admin';
 import { createStaff, updateStaff } from '../../../services/casino/crud';
 import type { Database } from '../../../types/database.types';
+import { syncUserRLSClaims, clearUserRLSClaims } from '../auth-admin';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

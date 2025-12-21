@@ -9,11 +9,12 @@
  * Workstream: WS4 (CasinoService Route Handler Tests)
  */
 
-import { GET } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { GET } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

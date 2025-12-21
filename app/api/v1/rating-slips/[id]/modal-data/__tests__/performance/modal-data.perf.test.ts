@@ -1,8 +1,8 @@
 /**
  * @jest-environment node
  */
-import { createMockRequest } from '@/lib/testing/route-test-helpers';
 import { GET } from '@/app/api/v1/rating-slips/[id]/modal-data/route';
+import { createMockRequest } from '@/lib/testing/route-test-helpers';
 
 describe('modal-data performance', () => {
   const SAMPLE_SIZE = 10; // Reduced for unit test speed

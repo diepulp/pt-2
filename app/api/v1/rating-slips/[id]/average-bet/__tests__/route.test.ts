@@ -7,8 +7,12 @@
  * Part of QA-ROUTE-TESTING execution (ISSUE-607F9CCB)
  */
 
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
 import { PATCH } from '../route';
-import { createMockRequest, createMockRouteParams } from '@/lib/testing/route-test-helpers';
 
 jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn(),
@@ -41,19 +45,27 @@ describe('PATCH /api/v1/rating-slips/[id]/average-bet', () => {
   });
 
   it('requires Idempotency-Key header', async () => {
-    const request = createMockRequest('PATCH', `/api/v1/rating-slips/${slipId}/average-bet`, {
-      body: { average_bet: 50 },
-    });
+    const request = createMockRequest(
+      'PATCH',
+      `/api/v1/rating-slips/${slipId}/average-bet`,
+      {
+        body: { average_bet: 50 },
+      },
+    );
     const routeParams = createMockRouteParams({ id: slipId });
     const response = await PATCH(request, routeParams);
     expect(response.status).toBe(400);
   });
 
   it('returns 200 on success with valid body', async () => {
-    const request = createMockRequest('PATCH', `/api/v1/rating-slips/${slipId}/average-bet`, {
-      headers: { 'Idempotency-Key': 'test-key' },
-      body: { average_bet: 50 },
-    });
+    const request = createMockRequest(
+      'PATCH',
+      `/api/v1/rating-slips/${slipId}/average-bet`,
+      {
+        headers: { 'Idempotency-Key': 'test-key' },
+        body: { average_bet: 50 },
+      },
+    );
     const routeParams = createMockRouteParams({ id: slipId });
     const response = await PATCH(request, routeParams);
     expect(response.status).toBe(200);

@@ -8,13 +8,13 @@
  * @see docs/70-governance/HOOKS_STANDARD.md
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook } from '@testing-library/react';
 
-import { useUIStore } from "@/store/ui-store";
+import { useUIStore } from '@/store/ui-store';
 
-import { useModal } from "../use-modal";
+import { useModal } from '../use-modal';
 
-describe("useModal", () => {
+describe('useModal', () => {
   // Reset store state before each test
   beforeEach(() => {
     const { result } = renderHook(() => useUIStore());
@@ -23,8 +23,8 @@ describe("useModal", () => {
     });
   });
 
-  describe("state selection", () => {
-    it("should return modal state properties", () => {
+  describe('state selection', () => {
+    it('should return modal state properties', () => {
       const { result } = renderHook(() => useModal());
 
       expect(result.current).toMatchObject({
@@ -34,33 +34,33 @@ describe("useModal", () => {
       });
     });
 
-    it("should return action methods", () => {
+    it('should return action methods', () => {
       const { result } = renderHook(() => useModal());
 
-      expect(typeof result.current.open).toBe("function");
-      expect(typeof result.current.close).toBe("function");
+      expect(typeof result.current.open).toBe('function');
+      expect(typeof result.current.close).toBe('function');
     });
   });
 
-  describe("modal operations", () => {
-    it("should open modal with type and data", () => {
+  describe('modal operations', () => {
+    it('should open modal with type and data', () => {
       const { result } = renderHook(() => useModal());
 
       act(() => {
-        result.current.open("rating-slip", { slipId: "test-123" });
+        result.current.open('rating-slip', { slipId: 'test-123' });
       });
 
       expect(result.current.isOpen).toBe(true);
-      expect(result.current.type).toBe("rating-slip");
-      expect(result.current.data).toEqual({ slipId: "test-123" });
+      expect(result.current.type).toBe('rating-slip');
+      expect(result.current.data).toEqual({ slipId: 'test-123' });
     });
 
-    it("should close modal", () => {
+    it('should close modal', () => {
       const { result } = renderHook(() => useModal());
 
       // Open first
       act(() => {
-        result.current.open("new-slip");
+        result.current.open('new-slip');
       });
 
       expect(result.current.isOpen).toBe(true);
@@ -75,8 +75,8 @@ describe("useModal", () => {
     });
   });
 
-  describe("useShallow behavior", () => {
-    it("should provide stable references for unchanged state", () => {
+  describe('useShallow behavior', () => {
+    it('should provide stable references for unchanged state', () => {
       const { result, rerender } = renderHook(() => useModal());
 
       const initialOpen = result.current.open;
@@ -91,20 +91,20 @@ describe("useModal", () => {
     });
   });
 
-  describe("synchronization with store", () => {
-    it("should reflect store changes", () => {
+  describe('synchronization with store', () => {
+    it('should reflect store changes', () => {
       const { result: modal } = renderHook(() => useModal());
       const { result: store } = renderHook(() => useUIStore());
 
       // Modify store directly
       act(() => {
-        store.current.openModal("player-search", { query: "test" });
+        store.current.openModal('player-search', { query: 'test' });
       });
 
       // Modal hook should reflect the change
       expect(modal.current.isOpen).toBe(true);
-      expect(modal.current.type).toBe("player-search");
-      expect(modal.current.data).toEqual({ query: "test" });
+      expect(modal.current.type).toBe('player-search');
+      expect(modal.current.data).toEqual({ query: 'test' });
     });
   });
 });

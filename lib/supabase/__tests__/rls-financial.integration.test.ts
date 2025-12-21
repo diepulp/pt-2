@@ -18,9 +18,9 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 // eslint-disable-next-line no-restricted-imports -- Integration tests require direct Supabase client
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+import type { Database } from '../../../types/database.types';
 import { injectRLSContext } from '../rls-context';
 import type { RLSContext } from '../rls-context';
-import type { Database } from '../../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;

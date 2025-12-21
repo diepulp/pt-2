@@ -11,13 +11,14 @@
  */
 
 // Import http.ts functions
+import * as financeTransactionDetailRoute from '@/app/api/v1/finance/transactions/[transactionId]/route';
+import * as financeTransactionsRoute from '@/app/api/v1/finance/transactions/route';
+import * as financialTransactionDetailRoute from '@/app/api/v1/financial-transactions/[id]/route';
+import * as financialTransactionsRoute from '@/app/api/v1/financial-transactions/route';
+
 import * as http from '../http';
 
 // Import route modules to verify exports exist
-import * as financialTransactionsRoute from '@/app/api/v1/financial-transactions/route';
-import * as financialTransactionDetailRoute from '@/app/api/v1/financial-transactions/[id]/route';
-import * as financeTransactionsRoute from '@/app/api/v1/finance/transactions/route';
-import * as financeTransactionDetailRoute from '@/app/api/v1/finance/transactions/[transactionId]/route';
 
 describe('http.ts ↔ route.ts contract', () => {
   describe('Collection endpoints (/api/v1/financial-transactions)', () => {

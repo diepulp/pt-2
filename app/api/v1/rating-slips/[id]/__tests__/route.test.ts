@@ -7,8 +7,12 @@
  * Created for QA-ROUTE-TESTING (ISSUE-607F9CCB).
  */
 
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
 import { GET } from '../route';
-import { createMockRequest, createMockRouteParams } from '@/lib/testing/route-test-helpers';
 
 // Mock dependencies
 jest.mock('@/lib/supabase/server', () => ({
@@ -21,7 +25,7 @@ jest.mock('@/lib/server-actions/middleware', () => ({
       supabase: {},
       correlationId: 'test-correlation-id',
       rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
-    })
+    }),
   ),
 }));
 

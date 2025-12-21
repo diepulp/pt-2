@@ -17,13 +17,19 @@
  * @see ADR-015 Connection Pooling Strategy
  */
 
-import { describe, it, expect, beforeEach, afterEach, beforeAll } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+} from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '../../../lib/errors/domain-errors';
 import { injectRLSContext } from '../../../lib/supabase/rls-context';
 import type { Database } from '../../../types/database.types';
-
 import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 
 // Test environment
@@ -79,7 +85,7 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
       // Act
       // Simulate move endpoint flow
       const closedSlip = await service.close(casinoId, actorId, originSlip.id, {
-        average_bet: 50.00,
+        average_bet: 50.0,
       });
 
       const newSlip = await service.start(casinoId, actorId, {
@@ -121,7 +127,11 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act - Run moves concurrently (simulates production load)
       const movePromises = fixtures.map(async (fixture) => {
-        const closedSlip = await service.close(casinoId, actorId, fixture.slipId);
+        const closedSlip = await service.close(
+          casinoId,
+          actorId,
+          fixture.slipId,
+        );
         const newSlip = await service.start(casinoId, actorId, {
           visit_id: fixture.visitId,
           table_id: fixture.destTableId,
@@ -143,8 +153,10 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
     it('should preserve context isolation between different casino scoping', async () => {
       // Arrange
-      const { casinoId: casino1Id, actorId: actor1Id } = await ensureStaffContext(supabase);
-      const { casinoId: casino2Id, actorId: actor2Id } = await ensureStaffContext(supabase); // Different casino
+      const { casinoId: casino1Id, actorId: actor1Id } =
+        await ensureStaffContext(supabase);
+      const { casinoId: casino2Id, actorId: actor2Id } =
+        await ensureStaffContext(supabase); // Different casino
 
       const player1Id = await createTestPlayer(supabase, casino1Id);
       const player2Id = await createTestPlayer(supabase, casino2Id);
@@ -351,9 +363,15 @@ async function createMoveFixture(
   return { slipId: slip.id, visitId, destTableId };
 }
 
-async function cleanupTestFixtures(supabase: SupabaseClient<Database>, correlationId: string) {
+async function cleanupTestFixtures(
+  supabase: SupabaseClient<Database>,
+  correlationId: string,
+) {
   // Clean up test data based on correlation ID
-  await supabase.from('audit_log').delete().like('details->>correlation_id', `${correlationId}%`);
+  await supabase
+    .from('audit_log')
+    .delete()
+    .like('details->>correlation_id', `${correlationId}%`);
 }
 
 async function simulateConnectionPoolReset() {

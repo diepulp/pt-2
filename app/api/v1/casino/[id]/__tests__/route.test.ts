@@ -7,11 +7,12 @@
  * Workstream: WS4 (CasinoService Route Handler Tests)
  */
 
-import { GET, PATCH, DELETE } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { GET, PATCH, DELETE } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({
@@ -37,7 +38,10 @@ describe('GET /api/v1/casino/[id]', () => {
   });
 
   it('accepts request with valid signature', async () => {
-    const request = createMockRequest('GET', `/api/v1/casino/${TEST_CASINO_ID}`);
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/casino/${TEST_CASINO_ID}`,
+    );
     const params = createMockRouteParams({ id: TEST_CASINO_ID });
 
     expect(request).toBeInstanceOf(Request);
@@ -51,13 +55,17 @@ describe('PATCH /api/v1/casino/[id]', () => {
   });
 
   it('accepts request with valid signature', async () => {
-    const request = createMockRequest('PATCH', `/api/v1/casino/${TEST_CASINO_ID}`, {
-      headers: {
-        'content-type': 'application/json',
-        'idempotency-key': 'test-key',
+    const request = createMockRequest(
+      'PATCH',
+      `/api/v1/casino/${TEST_CASINO_ID}`,
+      {
+        headers: {
+          'content-type': 'application/json',
+          'idempotency-key': 'test-key',
+        },
+        body: { name: 'Updated Casino' },
       },
-      body: { name: 'Updated Casino' },
-    });
+    );
     const params = createMockRouteParams({ id: TEST_CASINO_ID });
 
     expect(request).toBeInstanceOf(Request);
@@ -71,11 +79,15 @@ describe('DELETE /api/v1/casino/[id]', () => {
   });
 
   it('accepts request with valid signature', async () => {
-    const request = createMockRequest('DELETE', `/api/v1/casino/${TEST_CASINO_ID}`, {
-      headers: {
-        'idempotency-key': 'test-key',
+    const request = createMockRequest(
+      'DELETE',
+      `/api/v1/casino/${TEST_CASINO_ID}`,
+      {
+        headers: {
+          'idempotency-key': 'test-key',
+        },
       },
-    });
+    );
     const params = createMockRouteParams({ id: TEST_CASINO_ID });
 
     expect(request).toBeInstanceOf(Request);

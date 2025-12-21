@@ -12,8 +12,9 @@
  * Workstream: WS7 (PRD-011 Phase 3 - FinancialService)
  */
 
-import { GET, POST } from '../route';
 import { createMockRequest } from '@/lib/testing/route-test-helpers';
+
+import { GET, POST } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

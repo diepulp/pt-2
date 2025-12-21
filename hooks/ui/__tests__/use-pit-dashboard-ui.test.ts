@@ -8,53 +8,53 @@
  * @see docs/70-governance/HOOKS_STANDARD.md
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook } from '@testing-library/react';
 
-import { usePitDashboardStore } from "@/store/pit-dashboard-store";
+import { usePitDashboardStore } from '@/store/pit-dashboard-store';
 
-import { usePitDashboardUI } from "../use-pit-dashboard-ui";
+import { usePitDashboardUI } from '../use-pit-dashboard-ui';
 
-describe("usePitDashboardUI", () => {
+describe('usePitDashboardUI', () => {
   // Reset store state before each test
   beforeEach(() => {
     const { result } = renderHook(() => usePitDashboardStore());
     act(() => {
       result.current.clearSelection();
-      result.current.setActivePanel("tables");
+      result.current.setActivePanel('tables');
     });
   });
 
-  describe("state selection", () => {
-    it("should return all dashboard state properties", () => {
+  describe('state selection', () => {
+    it('should return all dashboard state properties', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       expect(result.current).toMatchObject({
         selectedTableId: null,
         selectedSlipId: null,
-        activePanel: "tables",
+        activePanel: 'tables',
         newSlipSeatNumber: undefined,
       });
     });
 
-    it("should return all action methods", () => {
+    it('should return all action methods', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
-      expect(typeof result.current.setSelectedTable).toBe("function");
-      expect(typeof result.current.setSelectedSlip).toBe("function");
-      expect(typeof result.current.setActivePanel).toBe("function");
-      expect(typeof result.current.setNewSlipSeatNumber).toBe("function");
-      expect(typeof result.current.clearSelection).toBe("function");
+      expect(typeof result.current.setSelectedTable).toBe('function');
+      expect(typeof result.current.setSelectedSlip).toBe('function');
+      expect(typeof result.current.setActivePanel).toBe('function');
+      expect(typeof result.current.setNewSlipSeatNumber).toBe('function');
+      expect(typeof result.current.clearSelection).toBe('function');
     });
   });
 
-  describe("table operations", () => {
-    it("should set and clear selected table", () => {
+  describe('table operations', () => {
+    it('should set and clear selected table', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       act(() => {
-        result.current.setSelectedTable("table-uuid");
+        result.current.setSelectedTable('table-uuid');
       });
-      expect(result.current.selectedTableId).toBe("table-uuid");
+      expect(result.current.selectedTableId).toBe('table-uuid');
 
       act(() => {
         result.current.setSelectedTable(null);
@@ -63,14 +63,14 @@ describe("usePitDashboardUI", () => {
     });
   });
 
-  describe("slip operations", () => {
-    it("should set and clear selected slip", () => {
+  describe('slip operations', () => {
+    it('should set and clear selected slip', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       act(() => {
-        result.current.setSelectedSlip("slip-uuid");
+        result.current.setSelectedSlip('slip-uuid');
       });
-      expect(result.current.selectedSlipId).toBe("slip-uuid");
+      expect(result.current.selectedSlipId).toBe('slip-uuid');
 
       act(() => {
         result.current.setSelectedSlip(null);
@@ -79,30 +79,30 @@ describe("usePitDashboardUI", () => {
     });
   });
 
-  describe("panel navigation", () => {
-    it("should navigate between panels", () => {
+  describe('panel navigation', () => {
+    it('should navigate between panels', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       act(() => {
-        result.current.setActivePanel("activity");
+        result.current.setActivePanel('activity');
       });
-      expect(result.current.activePanel).toBe("activity");
+      expect(result.current.activePanel).toBe('activity');
 
       act(() => {
-        result.current.setActivePanel("analytics");
+        result.current.setActivePanel('analytics');
       });
-      expect(result.current.activePanel).toBe("analytics");
+      expect(result.current.activePanel).toBe('analytics');
     });
   });
 
-  describe("new slip seat number", () => {
-    it("should set and clear seat number", () => {
+  describe('new slip seat number', () => {
+    it('should set and clear seat number', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       act(() => {
-        result.current.setNewSlipSeatNumber("3");
+        result.current.setNewSlipSeatNumber('3');
       });
-      expect(result.current.newSlipSeatNumber).toBe("3");
+      expect(result.current.newSlipSeatNumber).toBe('3');
 
       act(() => {
         result.current.setNewSlipSeatNumber(undefined);
@@ -111,16 +111,16 @@ describe("usePitDashboardUI", () => {
     });
   });
 
-  describe("clear selection", () => {
-    it("should clear all selections but keep panel", () => {
+  describe('clear selection', () => {
+    it('should clear all selections but keep panel', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       // Set up state
       act(() => {
-        result.current.setSelectedTable("table-1");
-        result.current.setSelectedSlip("slip-1");
-        result.current.setNewSlipSeatNumber("5");
-        result.current.setActivePanel("activity");
+        result.current.setSelectedTable('table-1');
+        result.current.setSelectedSlip('slip-1');
+        result.current.setNewSlipSeatNumber('5');
+        result.current.setActivePanel('activity');
       });
 
       // Clear selection
@@ -132,12 +132,12 @@ describe("usePitDashboardUI", () => {
       expect(result.current.selectedSlipId).toBeNull();
       expect(result.current.newSlipSeatNumber).toBeUndefined();
       // Panel should remain
-      expect(result.current.activePanel).toBe("activity");
+      expect(result.current.activePanel).toBe('activity');
     });
   });
 
-  describe("useShallow behavior", () => {
-    it("should provide stable references for unchanged state", () => {
+  describe('useShallow behavior', () => {
+    it('should provide stable references for unchanged state', () => {
       const { result, rerender } = renderHook(() => usePitDashboardUI());
 
       const initialSetSelectedTable = result.current.setSelectedTable;
@@ -152,38 +152,38 @@ describe("usePitDashboardUI", () => {
     });
   });
 
-  describe("synchronization with store", () => {
-    it("should reflect store changes", () => {
+  describe('synchronization with store', () => {
+    it('should reflect store changes', () => {
       const { result: hook } = renderHook(() => usePitDashboardUI());
       const { result: store } = renderHook(() => usePitDashboardStore());
 
       // Modify store directly
       act(() => {
-        store.current.setSelectedTable("from-store");
-        store.current.setActivePanel("inventory");
+        store.current.setSelectedTable('from-store');
+        store.current.setActivePanel('inventory');
       });
 
       // Hook should reflect the change
-      expect(hook.current.selectedTableId).toBe("from-store");
-      expect(hook.current.activePanel).toBe("inventory");
+      expect(hook.current.selectedTableId).toBe('from-store');
+      expect(hook.current.activePanel).toBe('inventory');
     });
   });
 
-  describe("component workflow simulation", () => {
-    it("should handle table selection → slip modal workflow", () => {
+  describe('component workflow simulation', () => {
+    it('should handle table selection → slip modal workflow', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       // Simulate: User clicks on table in grid
       act(() => {
-        result.current.setSelectedTable("blackjack-1");
+        result.current.setSelectedTable('blackjack-1');
       });
-      expect(result.current.selectedTableId).toBe("blackjack-1");
+      expect(result.current.selectedTableId).toBe('blackjack-1');
 
       // Simulate: User clicks on occupied seat
       act(() => {
-        result.current.setSelectedSlip("slip-at-seat-3");
+        result.current.setSelectedSlip('slip-at-seat-3');
       });
-      expect(result.current.selectedSlipId).toBe("slip-at-seat-3");
+      expect(result.current.selectedSlipId).toBe('slip-at-seat-3');
 
       // Simulate: User closes modal
       act(() => {
@@ -191,23 +191,23 @@ describe("usePitDashboardUI", () => {
       });
 
       // Table selection should persist
-      expect(result.current.selectedTableId).toBe("blackjack-1");
+      expect(result.current.selectedTableId).toBe('blackjack-1');
       expect(result.current.selectedSlipId).toBeNull();
     });
 
-    it("should handle new slip creation workflow", () => {
+    it('should handle new slip creation workflow', () => {
       const { result } = renderHook(() => usePitDashboardUI());
 
       // Select table
       act(() => {
-        result.current.setSelectedTable("roulette-2");
+        result.current.setSelectedTable('roulette-2');
       });
 
       // Click empty seat - set seat number for new slip form
       act(() => {
-        result.current.setNewSlipSeatNumber("4");
+        result.current.setNewSlipSeatNumber('4');
       });
-      expect(result.current.newSlipSeatNumber).toBe("4");
+      expect(result.current.newSlipSeatNumber).toBe('4');
 
       // Form submitted, clear seat number
       act(() => {

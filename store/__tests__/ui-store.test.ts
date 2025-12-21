@@ -8,11 +8,11 @@
  * @see docs/80-adrs/ADR-003-state-management-strategy.md
  */
 
-import { act, renderHook } from "@testing-library/react";
+import { act, renderHook } from '@testing-library/react';
 
-import { useUIStore } from "../ui-store";
+import { useUIStore } from '../ui-store';
 
-describe("useUIStore", () => {
+describe('useUIStore', () => {
   // Reset store state before each test
   beforeEach(() => {
     const { result } = renderHook(() => useUIStore());
@@ -25,8 +25,8 @@ describe("useUIStore", () => {
     });
   });
 
-  describe("modal state", () => {
-    it("should initialize with closed modal state", () => {
+  describe('modal state', () => {
+    it('should initialize with closed modal state', () => {
       const { result } = renderHook(() => useUIStore());
 
       expect(result.current.modal).toEqual({
@@ -36,40 +36,40 @@ describe("useUIStore", () => {
       });
     });
 
-    it("should open modal with type and data", () => {
+    it('should open modal with type and data', () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.openModal("rating-slip", { slipId: "test-123" });
+        result.current.openModal('rating-slip', { slipId: 'test-123' });
       });
 
       expect(result.current.modal).toEqual({
-        type: "rating-slip",
+        type: 'rating-slip',
         isOpen: true,
-        data: { slipId: "test-123" },
+        data: { slipId: 'test-123' },
       });
     });
 
-    it("should open modal without data", () => {
+    it('should open modal without data', () => {
       const { result } = renderHook(() => useUIStore());
 
       act(() => {
-        result.current.openModal("new-slip");
+        result.current.openModal('new-slip');
       });
 
       expect(result.current.modal).toEqual({
-        type: "new-slip",
+        type: 'new-slip',
         isOpen: true,
         data: undefined,
       });
     });
 
-    it("should close modal and reset state", () => {
+    it('should close modal and reset state', () => {
       const { result } = renderHook(() => useUIStore());
 
       // First open a modal
       act(() => {
-        result.current.openModal("player-search", { query: "John" });
+        result.current.openModal('player-search', { query: 'John' });
       });
 
       expect(result.current.modal.isOpen).toBe(true);
@@ -86,37 +86,37 @@ describe("useUIStore", () => {
       });
     });
 
-    it("should allow opening different modal types", () => {
+    it('should allow opening different modal types', () => {
       const { result } = renderHook(() => useUIStore());
 
       // Open rating-slip modal
       act(() => {
-        result.current.openModal("rating-slip");
+        result.current.openModal('rating-slip');
       });
-      expect(result.current.modal.type).toBe("rating-slip");
+      expect(result.current.modal.type).toBe('rating-slip');
 
       // Switch to new-slip modal
       act(() => {
-        result.current.openModal("new-slip");
+        result.current.openModal('new-slip');
       });
-      expect(result.current.modal.type).toBe("new-slip");
+      expect(result.current.modal.type).toBe('new-slip');
 
       // Switch to player-search modal
       act(() => {
-        result.current.openModal("player-search");
+        result.current.openModal('player-search');
       });
-      expect(result.current.modal.type).toBe("player-search");
+      expect(result.current.modal.type).toBe('player-search');
     });
   });
 
-  describe("sidebar state", () => {
-    it("should initialize with sidebar expanded", () => {
+  describe('sidebar state', () => {
+    it('should initialize with sidebar expanded', () => {
       const { result } = renderHook(() => useUIStore());
 
       expect(result.current.sidebarCollapsed).toBe(false);
     });
 
-    it("should toggle sidebar state", () => {
+    it('should toggle sidebar state', () => {
       const { result } = renderHook(() => useUIStore());
 
       // Toggle to collapsed
@@ -133,8 +133,8 @@ describe("useUIStore", () => {
     });
   });
 
-  describe("devtools integration", () => {
-    it("should have devtools-compatible action names", () => {
+  describe('devtools integration', () => {
+    it('should have devtools-compatible action names', () => {
       // This test verifies that actions are named for Redux DevTools tracing
       // The store uses devtools middleware with action names like:
       // - "ui/openModal"
@@ -144,26 +144,26 @@ describe("useUIStore", () => {
       const { result } = renderHook(() => useUIStore());
 
       // Verify actions exist and are callable
-      expect(typeof result.current.openModal).toBe("function");
-      expect(typeof result.current.closeModal).toBe("function");
-      expect(typeof result.current.toggleSidebar).toBe("function");
+      expect(typeof result.current.openModal).toBe('function');
+      expect(typeof result.current.closeModal).toBe('function');
+      expect(typeof result.current.toggleSidebar).toBe('function');
     });
   });
 
-  describe("state isolation", () => {
-    it("should share state across multiple hook instances", () => {
+  describe('state isolation', () => {
+    it('should share state across multiple hook instances', () => {
       const { result: hook1 } = renderHook(() => useUIStore());
       const { result: hook2 } = renderHook(() => useUIStore());
 
       // Modify state from first hook
       act(() => {
-        hook1.current.openModal("rating-slip", { id: "shared" });
+        hook1.current.openModal('rating-slip', { id: 'shared' });
       });
 
       // Verify second hook sees the same state
       expect(hook2.current.modal.isOpen).toBe(true);
-      expect(hook2.current.modal.type).toBe("rating-slip");
-      expect(hook2.current.modal.data).toEqual({ id: "shared" });
+      expect(hook2.current.modal.type).toBe('rating-slip');
+      expect(hook2.current.modal.data).toEqual({ id: 'shared' });
     });
   });
 });

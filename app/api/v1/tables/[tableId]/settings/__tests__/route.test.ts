@@ -9,11 +9,12 @@
  * Workstream: WS5 (Tests)
  */
 
-import { GET, PATCH } from '../route';
 import {
   createMockRequest,
   createMockRouteParams,
 } from '@/lib/testing/route-test-helpers';
+
+import { GET, PATCH } from '../route';
 
 // Mock Supabase client
 jest.mock('@/lib/supabase/server', () => ({

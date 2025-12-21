@@ -68,7 +68,9 @@ describe('useSaveWithBuyIn', () => {
       newBuyIn: 0,
     });
 
-    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', { average_bet: 25 });
+    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', {
+      average_bet: 25,
+    });
     expect(createFinancialTransaction).not.toHaveBeenCalled();
   });
 
@@ -98,7 +100,9 @@ describe('useSaveWithBuyIn', () => {
       tender_type: 'cash',
       created_by_staff_id: 'staff-1',
     });
-    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', { average_bet: 25 });
+    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', {
+      average_bet: 25,
+    });
   });
 
   it('should convert dollars to cents correctly', async () => {
@@ -139,7 +143,9 @@ describe('useSaveWithBuyIn', () => {
     });
 
     expect(createFinancialTransaction).not.toHaveBeenCalled();
-    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', { average_bet: 25 });
+    expect(updateAverageBet).toHaveBeenCalledWith('slip-1', {
+      average_bet: 25,
+    });
   });
 
   it('should invalidate correct queries on success', async () => {

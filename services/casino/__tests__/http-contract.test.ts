@@ -11,14 +11,15 @@
  */
 
 // Import http.ts functions
-import * as http from '../http';
 
 // Import route modules to verify exports exist
-import * as casinoRoute from '@/app/api/v1/casino/route';
 import * as casinoDetailRoute from '@/app/api/v1/casino/[id]/route';
+import * as gamingDayRoute from '@/app/api/v1/casino/gaming-day/route';
+import * as casinoRoute from '@/app/api/v1/casino/route';
 import * as settingsRoute from '@/app/api/v1/casino/settings/route';
 import * as staffRoute from '@/app/api/v1/casino/staff/route';
-import * as gamingDayRoute from '@/app/api/v1/casino/gaming-day/route';
+
+import * as http from '../http';
 
 describe('http.ts ↔ route.ts contract', () => {
   describe('Collection endpoints (/api/v1/casino)', () => {
