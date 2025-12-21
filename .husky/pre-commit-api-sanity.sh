@@ -187,6 +187,7 @@ for file in $ROUTE_FILES; do
     casinos) SERVICE_DOMAIN="casino" ;;
     players) SERVICE_DOMAIN="player" ;;
     visits) SERVICE_DOMAIN="visit" ;;
+    rating-slips) SERVICE_DOMAIN="rating-slip" ;;
     *) SERVICE_DOMAIN="$DOMAIN" ;;
   esac
 
