@@ -347,10 +347,10 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                     style={{ transform: "scale(1.4)" }}
                   />
 
-                  {/* Main seat circle - responsive sizing */}
+                  {/* Main seat circle - responsive sizing with larger touch targets on mobile */}
                   <div
                     className={cn(
-                      "relative w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full",
+                      "relative w-12 h-12 sm:w-12 sm:h-12 md:w-14 md:h-14 rounded-full",
                       "border backdrop-blur-sm",
                       "transition-all duration-300 ease-out",
                       occupant
@@ -358,6 +358,8 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                         : "border-border/40 bg-card/40 shadow-[0_8px_20px_rgba(0,0,0,0.3)]",
                       "group-hover:scale-110 group-hover:border-accent/50 group-hover:bg-accent/10",
                       "group-focus-visible:ring-2 group-focus-visible:ring-ring group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-background",
+                      // Touch-friendly: ensure minimum 44x44px tap target
+                      "min-w-[44px] min-h-[44px]",
                     )}
                   >
                     {/* Seat number */}

@@ -149,13 +149,13 @@ export function TablesPanel({
       </div>
 
       {/* Panel Content - No scroll, flex layout */}
-      <div className="flex-1 flex flex-col p-3 gap-3 min-h-0">
-        {/* Stats Summary - Compact */}
-        <div className="relative overflow-hidden px-3 py-2.5 rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm shrink-0">
+      <div className="flex-1 flex flex-col p-2 sm:p-3 gap-2 sm:gap-3 min-h-0">
+        {/* Stats Summary - Responsive grid: 2 cols mobile, 4 cols desktop */}
+        <div className="relative overflow-hidden px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm shrink-0">
           {/* LED accent strip */}
           <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
 
-          <div className="relative grid grid-cols-4 gap-3">
+          <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
             <StatItem
               icon={Users}
               label="Seats"
@@ -184,20 +184,20 @@ export function TablesPanel({
 
         {/* Table Layout - Fills remaining space */}
         <div className="flex-1 relative overflow-hidden rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm flex flex-col min-h-0">
-          {/* Section Header - Compact */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-border/30 shrink-0">
-            <h3 className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          {/* Section Header - Compact, responsive */}
+          <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 border-b border-border/30 shrink-0">
+            <h3 className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-muted-foreground">
               Seat Positions
             </h3>
-            <div className="flex items-center gap-3 text-[10px]">
+            <div className="flex items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px]">
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
                 <span className="text-muted-foreground font-medium">
                   Occupied
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <div className="w-2 h-2 rounded-full bg-muted border border-border/50" />
+                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-muted border border-border/50" />
                 <span className="text-muted-foreground/70 font-medium">
                   Available
                 </span>
@@ -205,8 +205,8 @@ export function TablesPanel({
             </div>
           </div>
 
-          {/* Table Terminal - Centered, no scroll */}
-          <div className="flex-1 flex items-center justify-center p-3 bg-gradient-to-b from-background/50 to-background/80 min-h-0">
+          {/* Table Terminal - Centered, responsive padding */}
+          <div className="flex-1 flex items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-background/50 to-background/80 min-h-0">
             <TableLayoutTerminal
               seats={seats}
               dealerName={undefined}

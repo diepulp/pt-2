@@ -38,6 +38,7 @@ import {
 } from "@/hooks/rating-slip-modal";
 import { useAuth } from "@/hooks/use-auth";
 import { useGamingDay } from "@/hooks/use-casino";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { logError } from "@/lib/errors/error-utils";
 import {
   pauseRatingSlip,
@@ -51,6 +52,7 @@ import {
   mapSlipsToOccupants,
 } from "../dashboard/seat-context-menu";
 
+import { MobileTableOpsDrawer } from "./mobile-table-ops-drawer";
 import { PanelContainer } from "./panel-container";
 
 interface PitPanelsClientProps {
@@ -63,6 +65,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
 
   // Auth: Get staff ID from authenticated user
   const { staffId } = useAuth();
+
+  // Responsive: Detect mobile viewport
+  const isMobile = useIsMobile();
 
   // State: Selected table ID
   const [selectedTableId, setSelectedTableId] = React.useState<string | null>(
@@ -317,28 +322,40 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     );
   }
 
+  // Shared props for both mobile drawer and desktop panel
+  const panelProps = {
+    casinoId,
+    tableName: selectedTable?.label ?? "No Table",
+    tables,
+    selectedTableId,
+    selectedTable: selectedTable ?? null,
+    seats,
+    activeSlips,
+    stats: stats ?? null,
+    isLoading: tablesLoading || statsLoading,
+    gamingDay: gamingDayString ? { date: gamingDayString } : null,
+    realtimeConnected,
+    realtimeError,
+    onTableSelect: setSelectedTableId,
+    onSeatClick: handleSeatClick,
+    onNewSlip: handleNewSlip,
+    onSlipClick: handleSlipClick,
+  };
+
   return (
     <>
-      <PanelContainer
-        casinoId={casinoId}
-        tableName={selectedTable?.label ?? "No Table"}
-        // Tables data
-        tables={tables}
-        selectedTableId={selectedTableId}
-        selectedTable={selectedTable ?? null}
-        seats={seats}
-        activeSlips={activeSlips}
-        stats={stats ?? null}
-        isLoading={tablesLoading || statsLoading}
-        gamingDay={gamingDayString ? { date: gamingDayString } : null}
-        realtimeConnected={realtimeConnected}
-        realtimeError={realtimeError}
-        // Callbacks
-        onTableSelect={setSelectedTableId}
-        onSeatClick={handleSeatClick}
-        onNewSlip={handleNewSlip}
-        onSlipClick={handleSlipClick}
-      />
+      {/* Desktop: Full panel container with sidebar (hidden on mobile) */}
+      <div className="hidden md:block h-full">
+        <PanelContainer {...panelProps} />
+      </div>
+
+      {/* Mobile: Simplified layout with bottom drawer FAB */}
+      <div className="md:hidden h-full">
+        {/* Mobile content view - shows current panel without sidebar */}
+        <PanelContainer {...panelProps} mobileMode />
+        {/* Mobile drawer FAB trigger */}
+        <MobileTableOpsDrawer {...panelProps} />
+      </div>
 
       {/* New Slip Modal */}
       {selectedTableId && (
