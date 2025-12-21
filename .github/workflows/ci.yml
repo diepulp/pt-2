@@ -30,6 +30,12 @@ jobs:
         run: npm test schema-verification
         continue-on-error: false
 
+      - name: Route Handler Tests
+        run: npm test -- app/api/v1/
+
+      - name: HTTP Contract Tests
+        run: npm test -- services/*/__tests__/http-contract
+
       - name: Unit & Integration tests
         run: npm run test:ci
 

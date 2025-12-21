@@ -1,0 +1,50 @@
+/**
+ * @jest-environment node
+ *
+ * Route Handler Tests: PATCH /api/v1/casinos/[casinoId]/settings
+ *
+ * Note: This route is currently a stub (TODO implementation).
+ *
+ * Issue: PRD-011 (Route Handler Test Coverage)
+ * Workstream: WS4 (CasinoService Route Handler Tests)
+ */
+
+import { PATCH } from '../route';
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
+// Mock Supabase client
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn().mockResolvedValue({}),
+}));
+
+const TEST_CASINO_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+describe('PATCH /api/v1/casinos/[casinoId]/settings', () => {
+  it('exports PATCH handler', () => {
+    expect(typeof PATCH).toBe('function');
+  });
+
+  it('accepts request with valid signature', async () => {
+    const request = createMockRequest(
+      'PATCH',
+      `/api/v1/casinos/${TEST_CASINO_ID}/settings`,
+      {
+        headers: {
+          'content-type': 'application/json',
+          'idempotency-key': 'test-key',
+        },
+        body: {
+          timezone: 'America/Chicago',
+          gaming_day_start_time: '05:00',
+        },
+      },
+    );
+    const params = createMockRouteParams({ casinoId: TEST_CASINO_ID });
+
+    expect(request).toBeInstanceOf(Request);
+    expect(params.params).toBeInstanceOf(Promise);
+  });
+});

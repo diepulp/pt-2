@@ -1,0 +1,90 @@
+{
+  "prd": "PRD-011",
+  "prd_title": "Route Handler Test Coverage Initiative",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS11"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "services/player/__tests__/http-contract.test.ts",
+      "app/api/v1/players/__tests__/route.test.ts",
+      "app/api/v1/players/[playerId]/__tests__/route.test.ts",
+      "app/api/v1/players/[playerId]/enroll/__tests__/route.test.ts",
+      "app/api/v1/players/[playerId]/enrollment/__tests__/route.test.ts",
+      "app/api/v1/players/[playerId]/loyalty/__tests__/route.test.ts"
+    ],
+    "WS2": [
+      "services/visit/__tests__/http-contract.test.ts",
+      "app/api/v1/visits/__tests__/route.test.ts",
+      "app/api/v1/visits/active/__tests__/route.test.ts",
+      "app/api/v1/visits/[visitId]/__tests__/route.test.ts",
+      "app/api/v1/visits/[visitId]/close/__tests__/route.test.ts"
+    ],
+    "WS3": [
+      "services/table-context/__tests__/http-contract.test.ts",
+      "app/api/v1/tables/__tests__/route.test.ts",
+      "app/api/v1/tables/[tableId]/__tests__/route.test.ts",
+      "app/api/v1/tables/[tableId]/activate/__tests__/route.test.ts",
+      "app/api/v1/tables/[tableId]/close/__tests__/route.test.ts",
+      "app/api/v1/tables/[tableId]/deactivate/__tests__/route.test.ts",
+      "app/api/v1/tables/[tableId]/dealer/__tests__/route.test.ts"
+    ],
+    "WS4": [
+      "services/casino/__tests__/http-contract.test.ts",
+      "app/api/v1/casino/__tests__/route.test.ts",
+      "app/api/v1/casino/[id]/__tests__/route.test.ts",
+      "app/api/v1/casino/staff/__tests__/route.test.ts",
+      "app/api/v1/casino/settings/__tests__/route.test.ts",
+      "app/api/v1/casino/gaming-day/__tests__/route.test.ts",
+      "app/api/v1/casinos/[casinoId]/__tests__/route.test.ts",
+      "app/api/v1/casinos/[casinoId]/settings/__tests__/route.test.ts",
+      "app/api/v1/casinos/[casinoId]/staff/__tests__/route.test.ts"
+    ],
+    "WS5": [
+      "services/loyalty/__tests__/http-contract.test.ts",
+      "app/api/v1/loyalty/accrue/__tests__/route.test.ts",
+      "app/api/v1/loyalty/ledger/__tests__/route.test.ts",
+      "app/api/v1/loyalty/redeem/__tests__/route.test.ts",
+      "app/api/v1/loyalty/manual-credit/__tests__/route.test.ts",
+      "app/api/v1/loyalty/promotion/__tests__/route.test.ts",
+      "app/api/v1/loyalty/suggestion/__tests__/route.test.ts",
+      "app/api/v1/loyalty/balances/__tests__/route.test.ts",
+      "app/api/v1/loyalty/mid-session-reward/__tests__/route.test.ts"
+    ],
+    "WS6": [
+      "app/api/v1/table-context/credits/__tests__/route.test.ts",
+      "app/api/v1/table-context/drop-events/__tests__/route.test.ts",
+      "app/api/v1/table-context/fills/__tests__/route.test.ts",
+      "app/api/v1/table-context/inventory-snapshots/__tests__/route.test.ts"
+    ],
+    "WS7": [
+      "services/player-financial/__tests__/http-contract.test.ts",
+      "app/api/v1/financial-transactions/__tests__/route.test.ts",
+      "app/api/v1/financial-transactions/[id]/__tests__/route.test.ts",
+      "app/api/v1/finance/transactions/__tests__/route.test.ts",
+      "app/api/v1/finance/transactions/[transactionId]/__tests__/route.test.ts"
+    ],
+    "WS8": [
+      "app/api/v1/mtl/entries/__tests__/route.test.ts",
+      "app/api/v1/mtl/entries/[entryId]/__tests__/route.test.ts",
+      "app/api/v1/mtl/entries/[entryId]/audit-notes/__tests__/route.test.ts"
+    ],
+    "WS9": [
+      "services/floor-layout/__tests__/http-contract.test.ts",
+      "app/api/v1/floor-layouts/__tests__/route.test.ts",
+      "app/api/v1/floor-layouts/[layoutId]/versions/__tests__/route.test.ts",
+      "app/api/v1/floor-layout-activations/__tests__/route.test.ts"
+    ],
+    "WS10": [
+      ".github/workflows/ci.yml"
+    ],
+    "WS11": [
+      "docs/40-quality/QA-005-route-handler-testing.md"
+    ]
+  },
+  "gates_passed": ["test-pass-phase1", "test-pass-phase2", "test-pass-phase3", "lint-phase4"],
+  "gates_pending": [],
+  "timestamp": "2025-12-21T11:00:00Z"
+}

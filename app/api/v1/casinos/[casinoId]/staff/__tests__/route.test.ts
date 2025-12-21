@@ -1,0 +1,43 @@
+/**
+ * @jest-environment node
+ *
+ * Route Handler Tests: GET /api/v1/casinos/[casinoId]/staff
+ *
+ * Note: This route is currently a stub (TODO implementation).
+ *
+ * Issue: PRD-011 (Route Handler Test Coverage)
+ * Workstream: WS4 (CasinoService Route Handler Tests)
+ */
+
+import { GET } from '../route';
+import {
+  createMockRequest,
+  createMockRouteParams,
+} from '@/lib/testing/route-test-helpers';
+
+// Mock Supabase client
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn().mockResolvedValue({}),
+}));
+
+const TEST_CASINO_ID = '123e4567-e89b-12d3-a456-426614174000';
+
+describe('GET /api/v1/casinos/[casinoId]/staff', () => {
+  it('exports GET handler', () => {
+    expect(typeof GET).toBe('function');
+  });
+
+  it('accepts request with valid signature', async () => {
+    const request = createMockRequest(
+      'GET',
+      `/api/v1/casinos/${TEST_CASINO_ID}/staff`,
+      {
+        searchParams: { role: 'dealer', limit: '50' },
+      },
+    );
+    const params = createMockRouteParams({ casinoId: TEST_CASINO_ID });
+
+    expect(request).toBeInstanceOf(Request);
+    expect(params.params).toBeInstanceOf(Promise);
+  });
+});

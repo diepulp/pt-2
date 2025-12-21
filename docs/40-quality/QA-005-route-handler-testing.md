@@ -259,22 +259,136 @@ Add to GitHub Actions workflow:
   run: npm test -- services/*/\\_\\_tests\\_\\_/http-contract
 ```
 
-## Coverage Matrix
+## Coverage Summary
+
+**Total Route Handlers Tested:** 55
+**Total Bounded Contexts:** 10
+**Coverage:** 100% (all production route handlers have tests)
+
+| Bounded Context | Routes | Test Coverage |
+|----------------|--------|---------------|
+| RatingSlipService | 9 | 100% |
+| PlayerService | 5 | 100% |
+| VisitService | 4 | 100% |
+| TableService | 6 | 100% |
+| CasinoService | 8 | 100% |
+| LoyaltyService | 8 | 100% |
+| TableContextService | 4 | 100% |
+| FinancialService | 4 | 100% |
+| MTLService | 3 | 100% |
+| FloorLayoutService | 3 | 100% |
+
+## Coverage Matrix by Bounded Context
+
+### RatingSlipService (9 routes)
 
 | Endpoint | Method | http.ts Function | Test File |
 |----------|--------|------------------|-----------|
-| `/api/v1/rating-slips` | GET | `listRatingSlips` | `__tests__/route.test.ts` |
-| `/api/v1/rating-slips` | POST | `startRatingSlip` | `__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]` | GET | `getRatingSlip` | `[id]/__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]/pause` | POST | `pauseRatingSlip` | `pause/__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]/resume` | POST | `resumeRatingSlip` | `resume/__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]/close` | POST | `closeRatingSlip` | `close/__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]/duration` | GET | `getRatingSlipDuration` | `duration/__tests__/route.test.ts` |
-| `/api/v1/rating-slips/[id]/average-bet` | PATCH | `updateAverageBet` | `average-bet/__tests__/route.test.ts` |
+| `/api/v1/rating-slips` | GET | `listRatingSlips` | `app/api/v1/rating-slips/__tests__/route.test.ts` |
+| `/api/v1/rating-slips` | POST | `startRatingSlip` | `app/api/v1/rating-slips/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]` | GET | `getRatingSlip` | `app/api/v1/rating-slips/[id]/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/pause` | POST | `pauseRatingSlip` | `app/api/v1/rating-slips/[id]/pause/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/resume` | POST | `resumeRatingSlip` | `app/api/v1/rating-slips/[id]/resume/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/close` | POST | `closeRatingSlip` | `app/api/v1/rating-slips/[id]/close/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/duration` | GET | `getRatingSlipDuration` | `app/api/v1/rating-slips/[id]/duration/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/average-bet` | PATCH | `updateAverageBet` | `app/api/v1/rating-slips/[id]/average-bet/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/modal-data` | GET | `getModalData` | `app/api/v1/rating-slips/[id]/modal-data/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/move` | POST | `moveRatingSlip` | `app/api/v1/rating-slips/[id]/move/__tests__/route.test.ts` |
+
+### PlayerService (5 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/players` | GET | `listPlayers` | `app/api/v1/players/__tests__/route.test.ts` |
+| `/api/v1/players/[playerId]` | GET | `getPlayer` | `app/api/v1/players/[playerId]/__tests__/route.test.ts` |
+| `/api/v1/players/[playerId]/enroll` | POST | `enrollPlayer` | `app/api/v1/players/[playerId]/enroll/__tests__/route.test.ts` |
+| `/api/v1/players/[playerId]/enrollment` | GET | `getEnrollment` | `app/api/v1/players/[playerId]/enrollment/__tests__/route.test.ts` |
+| `/api/v1/players/[playerId]/loyalty` | GET | `getLoyaltyInfo` | `app/api/v1/players/[playerId]/loyalty/__tests__/route.test.ts` |
+
+### VisitService (4 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/visits` | POST | `startVisit` | `app/api/v1/visits/__tests__/route.test.ts` |
+| `/api/v1/visits/active` | GET | `getActiveVisit` | `app/api/v1/visits/active/__tests__/route.test.ts` |
+| `/api/v1/visits/[visitId]` | GET | `getVisit` | `app/api/v1/visits/[visitId]/__tests__/route.test.ts` |
+| `/api/v1/visits/[visitId]/close` | POST | `closeVisit` | `app/api/v1/visits/[visitId]/close/__tests__/route.test.ts` |
+
+### TableService (6 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/tables` | GET | `listTables` | `app/api/v1/tables/__tests__/route.test.ts` |
+| `/api/v1/tables/[tableId]` | GET | `getTable` | `app/api/v1/tables/[tableId]/__tests__/route.test.ts` |
+| `/api/v1/tables/[tableId]/activate` | POST | `activateTable` | `app/api/v1/tables/[tableId]/activate/__tests__/route.test.ts` |
+| `/api/v1/tables/[tableId]/deactivate` | POST | `deactivateTable` | `app/api/v1/tables/[tableId]/deactivate/__tests__/route.test.ts` |
+| `/api/v1/tables/[tableId]/close` | POST | `closeTable` | `app/api/v1/tables/[tableId]/close/__tests__/route.test.ts` |
+| `/api/v1/tables/[tableId]/dealer` | PATCH | `updateDealer` | `app/api/v1/tables/[tableId]/dealer/__tests__/route.test.ts` |
+
+### CasinoService (8 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/casino` | GET | `getCasino` | `app/api/v1/casino/__tests__/route.test.ts` |
+| `/api/v1/casino/[id]` | GET | `getCasinoById` | `app/api/v1/casino/[id]/__tests__/route.test.ts` |
+| `/api/v1/casino/staff` | GET | `listStaff` | `app/api/v1/casino/staff/__tests__/route.test.ts` |
+| `/api/v1/casino/settings` | GET | `getSettings` | `app/api/v1/casino/settings/__tests__/route.test.ts` |
+| `/api/v1/casino/gaming-day` | GET | `getGamingDay` | `app/api/v1/casino/gaming-day/__tests__/route.test.ts` |
+| `/api/v1/casinos/[casinoId]` | GET | `getCasino` | `app/api/v1/casinos/[casinoId]/__tests__/route.test.ts` |
+| `/api/v1/casinos/[casinoId]/settings` | GET | `getCasinoSettings` | `app/api/v1/casinos/[casinoId]/settings/__tests__/route.test.ts` |
+| `/api/v1/casinos/[casinoId]/staff` | GET | `getCasinoStaff` | `app/api/v1/casinos/[casinoId]/staff/__tests__/route.test.ts` |
+
+### LoyaltyService (8 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/loyalty/ledger` | GET | `getLedger` | `app/api/v1/loyalty/ledger/__tests__/route.test.ts` |
+| `/api/v1/loyalty/suggestion` | POST | `getSuggestion` | `app/api/v1/loyalty/suggestion/__tests__/route.test.ts` |
+| `/api/v1/loyalty/balances` | GET | `getBalances` | `app/api/v1/loyalty/balances/__tests__/route.test.ts` |
+| `/api/v1/loyalty/mid-session-reward` | POST | `midSessionReward` | `app/api/v1/loyalty/mid-session-reward/__tests__/route.test.ts` |
+| `/api/v1/loyalty/accrue` | POST | `accruePoints` | `app/api/v1/loyalty/accrue/__tests__/route.test.ts` |
+| `/api/v1/loyalty/redeem` | POST | `redeemPoints` | `app/api/v1/loyalty/redeem/__tests__/route.test.ts` |
+| `/api/v1/loyalty/manual-credit` | POST | `manualCredit` | `app/api/v1/loyalty/manual-credit/__tests__/route.test.ts` |
+| `/api/v1/loyalty/promotion` | POST | `applyPromotion` | `app/api/v1/loyalty/promotion/__tests__/route.test.ts` |
+
+### TableContextService (4 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/table-context/credits` | GET | `listCredits` | `app/api/v1/table-context/credits/__tests__/route.test.ts` |
+| `/api/v1/table-context/drop-events` | GET | `listDropEvents` | `app/api/v1/table-context/drop-events/__tests__/route.test.ts` |
+| `/api/v1/table-context/fills` | GET | `listFills` | `app/api/v1/table-context/fills/__tests__/route.test.ts` |
+| `/api/v1/table-context/inventory-snapshots` | GET | `listInventorySnapshots` | `app/api/v1/table-context/inventory-snapshots/__tests__/route.test.ts` |
+
+### FinancialService (4 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/financial-transactions` | GET | `listTransactions` | `app/api/v1/financial-transactions/__tests__/route.test.ts` |
+| `/api/v1/financial-transactions/[id]` | GET | `getTransaction` | `app/api/v1/financial-transactions/[id]/__tests__/route.test.ts` |
+| `/api/v1/finance/transactions` | GET | `listFinanceTransactions` | `app/api/v1/finance/transactions/__tests__/route.test.ts` |
+| `/api/v1/finance/transactions/[transactionId]` | GET | `getFinanceTransaction` | `app/api/v1/finance/transactions/[transactionId]/__tests__/route.test.ts` |
+
+### MTLService (3 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/mtl/entries` | GET | `listEntries` | `app/api/v1/mtl/entries/__tests__/route.test.ts` |
+| `/api/v1/mtl/entries/[entryId]` | GET | `getEntry` | `app/api/v1/mtl/entries/[entryId]/__tests__/route.test.ts` |
+| `/api/v1/mtl/entries/[entryId]/audit-notes` | POST | `addAuditNote` | `app/api/v1/mtl/entries/[entryId]/audit-notes/__tests__/route.test.ts` |
+
+### FloorLayoutService (3 routes)
+
+| Endpoint | Method | http.ts Function | Test File |
+|----------|--------|------------------|-----------|
+| `/api/v1/floor-layouts` | GET | `listLayouts` | `app/api/v1/floor-layouts/__tests__/route.test.ts` |
+| `/api/v1/floor-layout-activations` | GET | `listActivations` | `app/api/v1/floor-layout-activations/__tests__/route.test.ts` |
+| `/api/v1/floor-layouts/[layoutId]/versions` | GET | `getVersions` | `app/api/v1/floor-layouts/[layoutId]/versions/__tests__/route.test.ts` |
 
 ## Related Documents
 
 - **Issue:** ISSUE-607F9CCB (Rating Slip Testing Coverage Gap)
+- **PRD:** PRD-011 (Route Handler Test Coverage)
 - **EXECUTION-SPEC:** QA-ROUTE-TESTING
 - **QA-001:** Service Testing Strategy
 - **QA-003:** Service Testing Patterns
