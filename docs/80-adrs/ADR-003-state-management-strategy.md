@@ -314,13 +314,19 @@ const updateVisit = useServiceMutation(updateVisitAction, {
 ---
 
 ## Implementation Evidence
-(unchanged; update docs & tests to reflect v5 pagination and key factories)
 
-- Query Client: `lib/query-client.ts`  
-- Hook templates: `hooks/shared/use-service-query.ts`, `use-service-mutation.ts`  
-- Domain key factories: **NEW** `services/*/keys.ts` (add per domain)  
-- Hook Guidelines: `hooks/shared/README.md` (add v5 pagination & placeholder section)  
-- UI Stores: `store/ui-store.ts`, `store/player-store.ts`
+- Query Client: `lib/query-client.ts`
+- Hook templates: `hooks/shared/use-service-query.ts`, `use-service-mutation.ts`
+- Domain key factories: `services/*/keys.ts` (per domain)
+- Hook Guidelines: `hooks/shared/README.md`
+- **UI Stores** (PRD-013 implemented 2025-12-21):
+  - `store/ui-store.ts` — Modal state, sidebar collapse
+  - `store/pit-dashboard-store.ts` — Table/slip selection, panel navigation
+  - `store/index.ts` — Barrel exports
+- **UI Hooks** (PRD-013 implemented 2025-12-21):
+  - `hooks/ui/use-modal.ts` — Modal state selector with `useShallow`
+  - `hooks/ui/use-pit-dashboard-ui.ts` — Dashboard UI selector with `useShallow`
+  - `hooks/ui/index.ts` — Barrel exports
 
 ---
 

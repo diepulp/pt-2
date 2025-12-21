@@ -18,9 +18,11 @@ import type {
   DashboardTableDTO,
   DashboardStats,
 } from "@/hooks/dashboard/types";
+import { usePitDashboardUI } from "@/hooks/ui";
 import { useSwipe } from "@/hooks/utilities";
 import { cn } from "@/lib/utils";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+import type { PanelType } from "@/store/pit-dashboard-store";
 
 import { ActivityPanel } from "./activity-panel";
 import { AnalyticsPanel } from "./analytics-panel";
@@ -40,7 +42,6 @@ interface PanelContainerProps {
 
   // Tables data
   tables: DashboardTableDTO[];
-  selectedTableId: string | null;
   selectedTable: DashboardTableDTO | null;
   seats: (SeatOccupant | null)[];
   activeSlips: RatingSlipDTO[];
@@ -51,7 +52,6 @@ interface PanelContainerProps {
   realtimeError: Error | null;
 
   // Callbacks
-  onTableSelect: (tableId: string) => void;
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
   onSlipClick: (slipId: string) => void;
@@ -66,13 +66,14 @@ interface PanelContainerProps {
 /**
  * Panel Container - Main container with vertical tab navigation
  * Tabbed interface for Tables, Inventory, and Analytics panels
+ *
+ * PRD-013: Refactored to consume activePanel state from Zustand store
  */
 export function PanelContainer({
   casinoId,
   tableName,
   className,
   tables,
-  selectedTableId,
   selectedTable,
   seats,
   activeSlips,
@@ -81,13 +82,14 @@ export function PanelContainer({
   gamingDay,
   realtimeConnected,
   realtimeError,
-  onTableSelect,
   onSeatClick,
   onNewSlip,
   onSlipClick,
   mobileMode = false,
 }: PanelContainerProps) {
-  const [activePanel, setActivePanel] = React.useState("tables");
+  // PRD-013: Consume UI state from Zustand store
+  const { activePanel, setActivePanel } = usePitDashboardUI();
+
   const [isCollapsed, setIsCollapsed] = React.useState(false);
   const drawerRef = React.useRef<HTMLDivElement>(null);
 
@@ -158,13 +160,13 @@ export function PanelContainer({
     onSwipeLeft: () => {
       const currentIndex = panelIds.indexOf(activePanel);
       if (currentIndex < panelIds.length - 1) {
-        setActivePanel(panelIds[currentIndex + 1]);
+        setActivePanel(panelIds[currentIndex + 1] as typeof activePanel);
       }
     },
     onSwipeRight: () => {
       const currentIndex = panelIds.indexOf(activePanel);
       if (currentIndex > 0) {
-        setActivePanel(panelIds[currentIndex - 1]);
+        setActivePanel(panelIds[currentIndex - 1] as typeof activePanel);
       }
     },
   });
@@ -280,7 +282,7 @@ export function PanelContainer({
           <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-t border-border/40">
             <Tabs
               value={activePanel}
-              onValueChange={setActivePanel}
+              onValueChange={(value) => setActivePanel(value as PanelType)}
               className="h-full"
             >
               <TabsList className="grid grid-cols-4 h-full bg-transparent p-0">
@@ -380,7 +382,7 @@ export function PanelContainer({
           {/* Panel Tabs */}
           <Tabs
             value={activePanel}
-            onValueChange={setActivePanel}
+            onValueChange={(value) => setActivePanel(value as PanelType)}
             orientation="vertical"
             className="flex-1"
           >

@@ -36,6 +36,7 @@ import {
   useMovePlayer,
   useRatingSlipModalData,
 } from "@/hooks/rating-slip-modal";
+import { useModal, usePitDashboardUI } from "@/hooks/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useGamingDay } from "@/hooks/use-casino";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -68,22 +69,23 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // Responsive: Detect mobile viewport
   const isMobile = useIsMobile();
 
-  // State: Selected table ID
-  const [selectedTableId, setSelectedTableId] = React.useState<string | null>(
-    null,
-  );
+  // Zustand: Modal state
+  const {
+    isOpen: isModalOpen,
+    type: modalType,
+    open: openModal,
+    close: closeModal,
+  } = useModal();
 
-  // State: New slip modal
-  const [newSlipModalOpen, setNewSlipModalOpen] = React.useState(false);
-  const [newSlipSeatNumber, setNewSlipSeatNumber] = React.useState<
-    string | undefined
-  >();
-
-  // State: Rating slip modal
-  const [selectedSlipId, setSelectedSlipId] = React.useState<string | null>(
-    null,
-  );
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
+  // Zustand: Pit dashboard UI state
+  const {
+    selectedTableId,
+    selectedSlipId,
+    newSlipSeatNumber,
+    setSelectedTable,
+    setSelectedSlip,
+    setNewSlipSeatNumber,
+  } = usePitDashboardUI();
 
   // Query: Dashboard tables with active slips count
   const {
@@ -162,13 +164,13 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     if (!selectedTableId && tables.length > 0) {
       const firstActive = tables.find((t) => t.status === "active");
       if (firstActive) {
-        setSelectedTableId(firstActive.id);
+        setSelectedTable(firstActive.id);
       } else {
         // Fallback to first table if no active tables
-        setSelectedTableId(tables[0].id);
+        setSelectedTable(tables[0].id);
       }
     }
-  }, [tables, selectedTableId]);
+  }, [tables, selectedTableId, setSelectedTable]);
 
   // Get selected table details
   const selectedTable = React.useMemo(
@@ -244,8 +246,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         averageBet: Number(formState.averageBet),
       });
       // Close modal after successful close
-      setIsModalOpen(false);
-      setSelectedSlipId(null);
+      closeModal();
+      setSelectedSlip(null);
     } catch (error) {
       logError(error, { component: "PitPanels", action: "closeSession" });
     }
@@ -265,7 +267,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         averageBet: Number(formState.averageBet),
       });
       // Switch to new slip after successful move
-      setSelectedSlipId(result.newSlipId);
+      setSelectedSlip(result.newSlipId);
     } catch (error) {
       logError(error, { component: "PitPanels", action: "movePlayer" });
     }
@@ -282,26 +284,26 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       // Seat is occupied - open modal for this slip
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
-        setSelectedSlipId(slipOccupant.slipId);
-        setIsModalOpen(true);
+        setSelectedSlip(slipOccupant.slipId);
+        openModal("rating-slip", { slipId: slipOccupant.slipId });
       }
     } else {
       // Seat is empty - open new slip modal
       setNewSlipSeatNumber(seatNumber);
-      setNewSlipModalOpen(true);
+      openModal("new-slip", { seatNumber });
     }
   };
 
   // Handle opening new slip modal (from panel button)
   const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
-    setNewSlipModalOpen(true);
+    openModal("new-slip", {});
   };
 
   // Handle slip click from active slips list
   const handleSlipClick = (slipId: string) => {
-    setSelectedSlipId(slipId);
-    setIsModalOpen(true);
+    setSelectedSlip(slipId);
+    openModal("rating-slip", { slipId });
   };
 
   // Handle errors
@@ -322,11 +324,11 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   }
 
   // Shared props for both mobile drawer and desktop panel
+  // PRD-013: Removed selectedTableId and onTableSelect (now in store)
   const panelProps = {
     casinoId,
     tableName: selectedTable?.label ?? "No Table",
     tables,
-    selectedTableId,
     selectedTable: selectedTable ?? null,
     seats,
     activeSlips,
@@ -335,7 +337,6 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     gamingDay: gamingDayString ? { date: gamingDayString } : null,
     realtimeConnected,
     realtimeError,
-    onTableSelect: setSelectedTableId,
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
     onSlipClick: handleSlipClick,
@@ -356,8 +357,10 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       {/* New Slip Modal */}
       {selectedTableId && (
         <NewSlipModal
-          open={newSlipModalOpen}
-          onOpenChange={setNewSlipModalOpen}
+          open={isModalOpen && modalType === "new-slip"}
+          onOpenChange={(open) => {
+            if (!open) closeModal();
+          }}
           tableId={selectedTableId}
           casinoId={casinoId}
           initialSeatNumber={newSlipSeatNumber}
@@ -368,10 +371,10 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       {/* Rating Slip Modal */}
       <RatingSlipModal
         slipId={selectedSlipId}
-        isOpen={isModalOpen}
+        isOpen={isModalOpen && modalType === "rating-slip"}
         onClose={() => {
-          setIsModalOpen(false);
-          setSelectedSlipId(null);
+          closeModal();
+          setSelectedSlip(null);
         }}
         onSave={handleSave}
         onCloseSession={handleCloseSession}

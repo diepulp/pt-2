@@ -69,8 +69,60 @@ React Query’s docs treat **focus refetching** as the main guardrail for keepin
     use-mtl-create-entry.ts
     index.ts
   ui/                         # Zustand-only UI hooks (no server calls)
-    use-player-filters.ts
-    use-ui.ts
+    use-modal.ts              # Modal state selector (PRD-013)
+    use-pit-dashboard-ui.ts   # Pit dashboard UI selector (PRD-013)
+    index.ts                  # Barrel export
+```
+
+### UI Hooks (Zustand selectors)
+
+UI hooks consume Zustand stores and expose focused selectors. They MUST:
+- Use `useShallow` from `zustand/react/shallow` to prevent unnecessary re-renders
+- Include `'use client'` directive
+- Never make server calls
+
+```ts
+// hooks/ui/use-modal.ts
+'use client';
+
+import { useUIStore } from '@/store/ui-store';
+import { useShallow } from 'zustand/react/shallow';
+
+export function useModal() {
+  return useUIStore(
+    useShallow((s) => ({
+      isOpen: s.modal.isOpen,
+      type: s.modal.type,
+      data: s.modal.data,
+      open: s.openModal,
+      close: s.closeModal,
+    }))
+  );
+}
+```
+
+```ts
+// hooks/ui/use-pit-dashboard-ui.ts
+'use client';
+
+import { usePitDashboardStore } from '@/store/pit-dashboard-store';
+import { useShallow } from 'zustand/react/shallow';
+
+export function usePitDashboardUI() {
+  return usePitDashboardStore(
+    useShallow((s) => ({
+      selectedTableId: s.selectedTableId,
+      selectedSlipId: s.selectedSlipId,
+      activePanel: s.activePanel,
+      newSlipSeatNumber: s.newSlipSeatNumber,
+      setSelectedTable: s.setSelectedTable,
+      setSelectedSlip: s.setSelectedSlip,
+      setActivePanel: s.setActivePanel,
+      setNewSlipSeatNumber: s.setNewSlipSeatNumber,
+      clearSelection: s.clearSelection,
+    }))
+  );
+}
 ```
 > Path aliases recommended:
 > - `@/hooks` → `/hooks`
