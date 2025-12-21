@@ -2,10 +2,16 @@
 
 import { LayoutGrid, Users, UserPlus } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { TableLayoutTerminal } from "@/components/table";
+import { TableLimitsDialog } from "@/components/table/table-limits-dialog";
 import { Button } from "@/components/ui/button";
 import type { DashboardTableDTO } from "@/hooks/dashboard/types";
+import {
+  useTableSettings,
+  useUpdateTableLimits,
+} from "@/hooks/table-context/use-table-settings";
 import { cn } from "@/lib/utils";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 
@@ -85,6 +91,26 @@ export function TablesPanel({
       hour12: true,
     });
   }, [activeSlips]);
+
+  // Table limits state and hooks
+  const [limitsDialogOpen, setLimitsDialogOpen] = React.useState(false);
+  const tableId = selectedTable?.id ?? "";
+  const { data: tableSettings } = useTableSettings(tableId);
+  const { mutateAsync: updateLimits, isPending: isUpdatingLimits } =
+    useUpdateTableLimits(tableId);
+
+  const handleSaveLimits = React.useCallback(
+    async (minBet: number, maxBet: number) => {
+      try {
+        await updateLimits({ min_bet: minBet, max_bet: maxBet });
+        toast.success("Table limits updated");
+        setLimitsDialogOpen(false);
+      } catch {
+        toast.error("Failed to update limits");
+      }
+    },
+    [updateLimits],
+  );
 
   if (isLoading) {
     return (
@@ -214,12 +240,25 @@ export function TablesPanel({
               gameType={selectedTable.type}
               tableStatus={selectedTable.status}
               activeSlipsCount={selectedTable.activeSlipsCount}
+              minBet={tableSettings?.min_bet}
+              maxBet={tableSettings?.max_bet}
+              onEditLimits={() => setLimitsDialogOpen(true)}
               variant="full"
               onSeatClick={onSeatClick}
             />
           </div>
         </div>
       </div>
+
+      {/* Table Limits Dialog */}
+      <TableLimitsDialog
+        open={limitsDialogOpen}
+        onOpenChange={setLimitsDialogOpen}
+        currentMinBet={tableSettings?.min_bet ?? 0}
+        currentMaxBet={tableSettings?.max_bet ?? 0}
+        onSave={handleSaveLimits}
+        isLoading={isUpdatingLimits}
+      />
     </div>
   );
 }
