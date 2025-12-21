@@ -1,5 +1,6 @@
 "use client";
 
+import { Pencil } from "lucide-react";
 import * as React from "react";
 
 import { cn } from "@/lib/utils";
@@ -22,6 +23,10 @@ interface TableLayoutTerminalProps {
   variant?: "full" | "compact";
   isSelected?: boolean;
   onTableAction?: (action: "open" | "close" | "details") => void;
+  // Betting limits (PRD-012)
+  minBet?: number;
+  maxBet?: number;
+  onEditLimits?: () => void;
 }
 
 // Modern Minimalist Theme
@@ -69,6 +74,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     variant = "full",
     isSelected = false,
     onTableAction,
+    minBet,
+    maxBet,
+    onEditLimits,
   }) {
     const positions = React.useMemo(
       () => calculateSeatPositions(seats.length),
@@ -179,6 +187,23 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   <span className="text-xs font-semibold uppercase text-muted-foreground">
                     {gameType}
                   </span>
+                </div>
+              )}
+              {/* Betting limits badge (PRD-012) */}
+              {minBet !== undefined && maxBet !== undefined && (
+                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/10 border border-accent/30">
+                  <span className="text-xs font-semibold text-accent-foreground">
+                    ${minBet} – ${maxBet}
+                  </span>
+                  {onEditLimits && (
+                    <button
+                      onClick={onEditLimits}
+                      className="ml-0.5 p-0.5 rounded hover:bg-accent/20 transition-colors"
+                      aria-label="Edit table limits"
+                    >
+                      <Pencil className="size-3 text-accent-foreground" />
+                    </button>
+                  )}
                 </div>
               )}
               {/* Table status indicator */}

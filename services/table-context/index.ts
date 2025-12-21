@@ -11,9 +11,9 @@
  * @see SLAD §308-348
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
 import {
   getInventoryHistory,
@@ -21,13 +21,13 @@ import {
   logInventorySnapshot,
   requestTableCredit,
   requestTableFill,
-} from './chip-custody';
-import { getActiveTables, getTableById, listTables } from './crud';
+} from "./chip-custody";
+import { getActiveTables, getTableById, listTables } from "./crud";
 import {
   assignDealer,
   endDealerRotation,
   getCurrentDealer,
-} from './dealer-rotation';
+} from "./dealer-rotation";
 import type {
   ChipsetPayload,
   DealerRotationDTO,
@@ -44,9 +44,12 @@ import type {
   TableFillDTO,
   TableInventorySnapshotDTO,
   TableListFilters,
+  TableSettingsDTO,
   TableStatus,
-} from './dtos';
-import { activateTable, closeTable, deactivateTable } from './table-lifecycle';
+  UpdateTableLimitsDTO,
+} from "./dtos";
+import { activateTable, closeTable, deactivateTable } from "./table-lifecycle";
+import { getTableSettings, updateTableLimits } from "./table-settings";
 
 // Re-export DTOs and keys for consumers
 export type {
@@ -65,9 +68,11 @@ export type {
   TableFillDTO,
   TableInventorySnapshotDTO,
   TableListFilters,
+  TableSettingsDTO,
   TableStatus,
+  UpdateTableLimitsDTO,
 };
-export { tableContextKeys } from './keys';
+export { tableContextKeys } from "./keys";
 
 // === Service Interface ===
 
@@ -96,7 +101,7 @@ export interface TableContextServiceInterface {
   getTable(tableId: string, casinoId: string): Promise<GamingTableDTO>;
   listTables(
     casinoId: string,
-    filters?: Omit<TableListFilters, 'casinoId'>,
+    filters?: Omit<TableListFilters, "casinoId">,
   ): Promise<GamingTableDTO[]>;
   getActiveTables(casinoId: string): Promise<GamingTableWithDealerDTO[]>;
 
@@ -112,6 +117,17 @@ export interface TableContextServiceInterface {
     casinoId: string,
     limit?: number,
   ): Promise<TableInventorySnapshotDTO[]>;
+
+  // Table settings (betting limits)
+  getTableSettings(
+    tableId: string,
+    casinoId: string,
+  ): Promise<TableSettingsDTO>;
+  updateTableLimits(
+    tableId: string,
+    casinoId: string,
+    data: UpdateTableLimitsDTO,
+  ): Promise<TableSettingsDTO>;
 }
 
 // === Service Factory ===
@@ -151,5 +167,11 @@ export function createTableContextService(
     logDropEvent: (input) => logDropEvent(supabase, input),
     getInventoryHistory: (tableId, casinoId, limit) =>
       getInventoryHistory(supabase, tableId, casinoId, limit),
+
+    // Table settings (betting limits)
+    getTableSettings: (tableId, casinoId) =>
+      getTableSettings(supabase, tableId, casinoId),
+    updateTableLimits: (tableId, casinoId, data) =>
+      updateTableLimits(supabase, tableId, casinoId, data),
   };
 }

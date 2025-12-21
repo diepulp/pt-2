@@ -19,6 +19,7 @@ import type {
   TableCreditDTO,
   TableDropEventDTO,
   TableListFilters,
+  TableSettingsDTO,
 } from "./dtos";
 import type {
   LogInventorySnapshotRequestBody,
@@ -26,6 +27,7 @@ import type {
   RequestTableCreditRequestBody,
   LogDropEventRequestBody,
   AssignDealerRequestBody,
+  UpdateTableLimitsRequestBody,
 } from "./schemas";
 
 const BASE_URL = "/api/v1";
@@ -206,5 +208,28 @@ export async function logDropEvent(
       "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
+  });
+}
+
+// === Table Settings (Betting Limits) ===
+
+export async function fetchTableSettings(
+  tableId: string,
+): Promise<TableSettingsDTO> {
+  return fetchJSON<TableSettingsDTO>(`${BASE_URL}/tables/${tableId}/settings`);
+}
+
+export async function patchTableLimits(
+  tableId: string,
+  data: UpdateTableLimitsRequestBody,
+  idempotencyKey?: string,
+): Promise<TableSettingsDTO> {
+  return fetchJSON<TableSettingsDTO>(`${BASE_URL}/tables/${tableId}/settings`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+    },
+    body: JSON.stringify(data),
   });
 }

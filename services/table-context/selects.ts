@@ -99,3 +99,15 @@ export const TABLE_DROP_EVENT_SELECT = `
   delivered_scan_at,
   note
 ` as const;
+
+// Table settings projection
+export const GAMING_TABLE_SETTINGS_SELECT = `
+  id,
+  casino_id,
+  table_id,
+  min_bet,
+  max_bet,
+  active_from,
+  active_to,
+  rotation_interval_minutes
+` as const;

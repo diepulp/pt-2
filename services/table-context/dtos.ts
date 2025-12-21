@@ -8,11 +8,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 298-333
  */
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
 // === Enum Types ===
-export type TableStatus = Database['public']['Enums']['table_status'];
-export type GameType = Database['public']['Enums']['game_type'];
+export type TableStatus = Database["public"]["Enums"]["table_status"];
+export type GameType = Database["public"]["Enums"]["game_type"];
 
 // === Chipset Type (JSONB payload) ===
 /** Denomination to quantity mapping for chip counts */
@@ -85,7 +85,7 @@ export interface EndDealerRotationInput {
 
 // === Inventory Snapshot DTOs ===
 
-export type SnapshotType = 'open' | 'close' | 'rundown';
+export type SnapshotType = "open" | "close" | "rundown";
 
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC return type with JSONB chipset
 export interface TableInventorySnapshotDTO {
@@ -220,3 +220,29 @@ export type DealerRotationFilters = {
   staffId?: string;
   activeOnly?: boolean;
 };
+
+// === Table Settings (Betting Limits) DTOs ===
+
+/** Table settings with betting limits */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: includes settings with game defaults
+export interface TableSettingsDTO {
+  id: string;
+  casino_id: string;
+  table_id: string;
+  min_bet: number;
+  max_bet: number;
+  active_from: string;
+}
+
+/** Input for updating table limits - both required, never null */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: input DTO with validation, not direct table row mapping
+export interface UpdateTableLimitsDTO {
+  min_bet: number;
+  max_bet: number;
+}
+
+/** Input for getTableSettings with auto-create */
+export interface GetTableSettingsInput {
+  tableId: string;
+  casinoId: string;
+}

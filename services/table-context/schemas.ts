@@ -156,3 +156,19 @@ export type RequestTableCreditRequestBody = z.infer<
 export type LogDropEventRequestBody = z.infer<typeof logDropEventSchema>;
 export type TableListQueryParams = z.infer<typeof tableListQuerySchema>;
 export type TableRouteParams = z.infer<typeof tableRouteParamsSchema>;
+
+// === Table Settings (Betting Limits) Schemas ===
+
+export const updateTableLimitsSchema = z
+  .object({
+    min_bet: z.number().nonnegative("Min bet must be non-negative"),
+    max_bet: z.number().nonnegative("Max bet must be non-negative"),
+  })
+  .refine((data) => data.min_bet <= data.max_bet, {
+    message: "min_bet must be less than or equal to max_bet",
+    path: ["min_bet"],
+  });
+
+export type UpdateTableLimitsRequestBody = z.infer<
+  typeof updateTableLimitsSchema
+>;
