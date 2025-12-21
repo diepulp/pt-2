@@ -9,7 +9,7 @@ workstreams:
   WS1:
     name: Core Store Implementation
     description: Create player-dashboard-store.ts and selector hook following PRD-014 patterns
-    agent: frontend-design-pt-2
+    agent: backend-service-builder
     depends_on: []
     outputs:
       - store/player-dashboard-store.ts
