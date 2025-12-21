@@ -39,7 +39,7 @@ export function useTableSettings(tableId: string) {
 /**
  * Updates table betting limits.
  * Generates idempotency key per mutation call.
- * Invalidates settings cache on success.
+ * Immediately updates cache with returned data on success.
  *
  * @param tableId - Table UUID
  */
@@ -47,14 +47,15 @@ export function useUpdateTableLimits(tableId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
+    // Mutation key ensures hook recreates when tableId changes
+    mutationKey: ["update-table-limits", tableId],
     mutationFn: async (data: UpdateTableLimitsDTO) => {
       const idempotencyKey = crypto.randomUUID();
       return patchTableLimits(tableId, data, idempotencyKey);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: tableContextKeys.settings(tableId),
-      });
+    onSuccess: (data) => {
+      // Immediately update cache with returned data for instant UI feedback
+      queryClient.setQueryData(tableContextKeys.settings(tableId), data);
     },
   });
 }

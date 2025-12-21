@@ -191,17 +191,17 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
               )}
               {/* Betting limits badge (PRD-012) */}
               {minBet !== undefined && maxBet !== undefined && (
-                <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-accent/10 border border-accent/30">
-                  <span className="text-xs font-semibold text-accent-foreground">
-                    ${minBet} – ${maxBet}
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/40 dark:border-emerald-400/30">
+                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                    ${minBet.toLocaleString()} – ${maxBet.toLocaleString()}
                   </span>
                   {onEditLimits && (
                     <button
                       onClick={onEditLimits}
-                      className="ml-0.5 p-0.5 rounded hover:bg-accent/20 transition-colors"
+                      className="ml-0.5 p-0.5 rounded hover:bg-emerald-500/20 dark:hover:bg-emerald-400/20 transition-colors"
                       aria-label="Edit table limits"
                     >
-                      <Pencil className="size-3 text-accent-foreground" />
+                      <Pencil className="size-3 text-emerald-600 dark:text-emerald-400" />
                     </button>
                   )}
                 </div>

@@ -90,7 +90,7 @@ export async function activateTable(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
   });
 }
@@ -103,7 +103,7 @@ export async function deactivateTable(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
   });
 }
@@ -116,7 +116,7 @@ export async function closeTable(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
   });
 }
@@ -132,7 +132,7 @@ export async function assignDealer(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -145,7 +145,7 @@ export async function endDealerRotation(
   return fetchJSON<DealerRotationDTO>(`${BASE_URL}/tables/${tableId}/dealer`, {
     method: "DELETE",
     headers: {
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
   });
 }
@@ -162,7 +162,7 @@ export async function logInventorySnapshot(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+        "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
       },
       body: JSON.stringify(input),
     },
@@ -177,7 +177,7 @@ export async function requestTableFill(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -191,7 +191,7 @@ export async function requestTableCredit(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -205,7 +205,7 @@ export async function logDropEvent(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -228,7 +228,7 @@ export async function patchTableLimits(
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
+      "idempotency-key": idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(data),
   });
