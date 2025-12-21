@@ -6,7 +6,7 @@ docs:
   supporting:
     - docs/25-api-data/README.md
     - docs/70-governance/SERVICE_TEMPLATE.md
-    - docs/70-governance/ANTI_PATTERN_CATALOG.md
+    - docs/70-governance/anti-patterns/01-service-layer.md
     - docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md
     - docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md
     - docs/30-security/SECURITY_TENANCY_UPGRADE.md

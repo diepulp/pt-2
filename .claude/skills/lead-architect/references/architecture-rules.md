@@ -319,7 +319,7 @@ done
 - **DTO_CANONICAL_STANDARD**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (v2.1.0 - MANDATORY)
 - **ADR-013 Zod Schemas**: `docs/80-adrs/ADR-013-zod-validation-schemas.md` (MANDATORY for HTTP services)
 - **DTO_CATALOG**: `docs/25-api-data/DTO_CATALOG.md`
-- **Anti-Pattern Catalog**: `docs/70-governance/ANTI_PATTERN_CATALOG.md`
+- **Anti-Pattern Catalog**: `docs/70-governance/anti-patterns/INDEX.md` (modular: 01-service-layer, 02-security, 06-architecture)
 - **Over-Engineering Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`
 - **Frontend Standard**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` (Next.js 16 patterns)
 - **Next.js 16 Docs**: Context7 `/vercel/next.js/v16.0.3`

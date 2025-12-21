@@ -20,7 +20,7 @@ memory:
       mechanism: ".claude/CLAUDE.md @ references"
       files_loaded:
         - .github/memory/project.memory.md
-        - .github/memory/anti-patterns.memory.md
+        - memory/anti-patterns.memory.md
         - .github/memory/architecture-decisions.memory.md
         - .github/memory/phase-status.memory.md
         - .github/memory/service-catalog.memory.md

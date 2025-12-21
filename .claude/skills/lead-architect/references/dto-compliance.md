@@ -387,5 +387,5 @@ grep -rn "Tables\[" services/ | grep -v "own table"
 |----------|---------|
 | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` | Full DTO rules (v2.1.0 MANDATORY) |
 | `docs/25-api-data/DTO_CATALOG.md` | Aspirational DTO catalog |
-| `docs/70-governance/ANTI_PATTERN_CATALOG.md` | Full anti-pattern list |
+| `docs/70-governance/anti-patterns/04-type-system.md` | Type & DTO anti-patterns |
 | `.claude/skills/backend-service-builder/references/dto-rules.md` | Implementation guide |

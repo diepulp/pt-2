@@ -243,7 +243,7 @@ These skills prevent the following anti-patterns (from ANTI_PATTERN_CATALOG.md):
 - **DTO Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
 - **RLS Policies**: `docs/30-security/SEC-001-rls-policy-matrix.md`
 - **Migration Standards**: `docs/60-release/MIGRATION_NAMING_STANDARD.md`
-- **Anti-Patterns**: `docs/70-governance/ANTI_PATTERN_CATALOG.md`
+- **Anti-Patterns**: `docs/70-governance/anti-patterns/INDEX.md` (modular catalog)
 - **SDLC Taxonomy**: `docs/patterns/SDLC_DOCS_TAXONOMY.md`
 
 ### Project Standards

@@ -299,6 +299,6 @@ When patterns are insufficient:
 | ADRs | `docs/80-adrs/` |
 | RLS/RBAC | `docs/30-security/` |
 | API contracts | `docs/25-api-data/` |
-| Anti-patterns | `docs/70-governance/ANTI_PATTERN_CATALOG.md` |
+| Anti-patterns | `docs/70-governance/anti-patterns/INDEX.md` (modular) |
 | Taxonomy (master index) | `docs/SDLC_DOCS_TAXONOMY.md` |
 | Next.js 16 Docs | Context7 `/vercel/next.js/v16.0.3` |

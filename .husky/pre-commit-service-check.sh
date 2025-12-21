@@ -7,7 +7,7 @@
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
-#   - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md
+#   - Anti-Patterns: docs/70-governance/anti-patterns/01-service-layer.md (modular)
 #   - ADR-013: docs/80-adrs/ADR-013-zod-validation-schemas.md (Zod schemas)
 #   - ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md (RLS)
 #   - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md (Pattern C)
@@ -803,7 +803,7 @@ if [ $VIOLATIONS_FOUND -eq 1 ]; then
   echo "References:"
   echo "  - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md"
   echo "  - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
-  echo "  - Anti-Patterns: docs/70-governance/ANTI_PATTERN_CATALOG.md"
+  echo "  - Anti-Patterns: docs/70-governance/anti-patterns/01-service-layer.md"
   echo "  - ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md"
   echo "  - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md"
   echo ""

@@ -361,7 +361,7 @@ ctx.record_service_completion(
 | Full validation checklist | `references/validation-checklist.md` |
 | Service patterns (full) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | Service boundaries (full) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| Anti-patterns | `docs/70-governance/ANTI_PATTERN_CATALOG.md` |
+| Anti-patterns | `docs/70-governance/anti-patterns/INDEX.md` (modular) |
 | Testing strategy | `docs/40-quality/QA-001-service-testing-strategy.md` |
 | TDD standard | `docs/40-quality/QA-004-tdd-standard.md` |
 | MVP Progress Tracker | `lib/memori/mvp_progress_context.py` |

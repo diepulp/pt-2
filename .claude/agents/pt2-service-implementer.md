@@ -228,13 +228,14 @@ When invoked as part of an EXECUTION-SPEC workstream:
 | `lib/errors/domain-errors.ts` | DomainError class |
 | `lib/server-actions/with-server-action-wrapper.ts` | Server action wrapper |
 | `services/shared/key-utils.ts` | Query key serialization |
-| `docs/70-governance/ANTI_PATTERN_CATALOG.md` | Anti-patterns & violations |
+| `docs/70-governance/anti-patterns/INDEX.md` | Anti-patterns index (modular) |
+| `docs/70-governance/anti-patterns/01-service-layer.md` | Service layer anti-patterns |
 
 ---
 
 ## Anti-Pattern Awareness (CRITICAL)
 
-**Before implementing, review** `docs/70-governance/ANTI_PATTERN_CATALOG.md` v1.2.0
+**Before implementing, review** `docs/70-governance/anti-patterns/01-service-layer.md` (service layer module)
 
 ### Service Layer Violations (STOP if encountered)
 - ❌ `ReturnType<typeof createXService>` - use explicit interface
