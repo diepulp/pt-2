@@ -208,6 +208,17 @@ export interface RatingSlipServiceInterface {
    * @param casinoId - Casino UUID for RLS scoping
    */
   countOpenSlipsForTable(tableId: string, casinoId: string): Promise<number>;
+
+  // === Batch Queries ===
+
+  /**
+   * Batch query for occupied seats across multiple tables.
+   * Eliminates N+1 pattern in modal-data endpoint.
+   *
+   * @param tableIds - Array of gaming table UUIDs
+   * @returns Map of table_id → occupied seat numbers
+   */
+  getOccupiedSeatsByTables(tableIds: string[]): Promise<Map<string, string[]>>;
 }
 
 // === Service Factory ===
@@ -249,6 +260,10 @@ export function createRatingSlipService(
       hasOpenSlipsForTable(supabase, tableId, casinoId),
     countOpenSlipsForTable: (tableId, casinoId) =>
       countOpenSlipsForTable(supabase, tableId, casinoId),
+
+    // Batch queries
+    getOccupiedSeatsByTables: (tableIds) =>
+      crud.getOccupiedSeatsByTables(supabase, tableIds),
   };
 }
 

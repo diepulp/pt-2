@@ -11,10 +11,13 @@
  * - LoyaltyService - Points balance and suggestion
  * - PlayerFinancialService - Financial summary
  *
+ * Response Headers:
+ * - X-Query-Timings: JSON object with phase timings (phaseA, phaseB, phaseC, total) in milliseconds
+ *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  *
  * @see PRD-008 Rating Slip Modal Integration
- * @see EXECUTION-SPEC-PRD-008.md WS3
+ * @see EXECUTION-SPEC-PRD-008.md WS3, WS5
  */
 
 import type { NextRequest } from "next/server";
@@ -49,6 +52,43 @@ import { createVisitService } from "@/services/visit";
 type RouteParams = { params: Promise<{ id: string }> };
 
 /**
+ * Helper function to fetch loyalty data (balance + suggestion) in parallel.
+ * Suggestion evaluation can fail for various reasons, so we catch errors.
+ */
+async function getLoyaltyData(
+  loyaltyService: ReturnType<typeof createLoyaltyService>,
+  playerId: string,
+  casinoId: string,
+  slip: { status: string },
+  slipId: string,
+): Promise<{
+  balance: Awaited<ReturnType<typeof loyaltyService.getBalance>> | null;
+  suggestion: {
+    suggestedPoints: number;
+    suggestedTheo: number;
+    policyVersion: string;
+  } | null;
+}> {
+  const [balance, suggestionResult] = await Promise.all([
+    loyaltyService.getBalance(playerId, casinoId),
+    slip.status === "open"
+      ? loyaltyService.evaluateSuggestion(slipId).catch(() => null)
+      : Promise.resolve(null),
+  ]);
+
+  // Build suggestion DTO if evaluation succeeded
+  const suggestion = suggestionResult
+    ? {
+        suggestedPoints: suggestionResult.suggestedPoints,
+        suggestedTheo: suggestionResult.suggestedTheo,
+        policyVersion: suggestionResult.policyVersion,
+      }
+    : null;
+
+  return { balance, suggestion };
+}
+
+/**
  * GET /api/v1/rating-slips/[id]/modal-data
  *
  * Fetch aggregated modal data for a rating slip.
@@ -67,6 +107,10 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
+        // Query timing instrumentation
+        const timings: Record<string, number> = {};
+        const totalStart = performance.now();
+
         // Create service instances
         const ratingSlipService = createRatingSlipService(mwCtx.supabase);
         const visitService = createVisitService(mwCtx.supabase);
@@ -75,7 +119,10 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const financialService = createPlayerFinancialService(mwCtx.supabase);
         const tableContextService = createTableContextService(mwCtx.supabase);
 
-        // 1. Get the rating slip with pause history
+        // === PHASE A: Sequential (required dependencies) ===
+        const phaseAStart = performance.now();
+
+        // 1. Get the rating slip with pause history (required first)
         const slipWithPauses = await ratingSlipService.getById(params.id);
 
         if (!slipWithPauses) {
@@ -86,7 +133,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           );
         }
 
-        // 2. Get the visit to find player_id
+        // 2. Get the visit to find player_id (requires visit_id from slip)
         const visit = await visitService.getById(slipWithPauses.visit_id);
 
         if (!visit) {
@@ -104,16 +151,44 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         }
         const { casinoId } = mwCtx.rlsContext;
 
-        // 3. Get the table info for display
-        const table = await tableContextService.getTable(
-          slipWithPauses.table_id,
-          casinoId,
-        );
+        timings.phaseA = Math.round(performance.now() - phaseAStart);
 
-        // 4. Get duration (uses RPC that excludes paused intervals)
-        const durationSeconds = await ratingSlipService.getDuration(params.id);
+        // === PHASE B: Parallel (independent queries) ===
+        const phaseBStart = performance.now();
 
-        // 5. Build slip section DTO
+        const [table, durationSeconds, player, financialSummary, activeTables] =
+          await Promise.all([
+            tableContextService.getTable(slipWithPauses.table_id, casinoId),
+            ratingSlipService.getDuration(params.id),
+            visit.player_id ? playerService.getById(visit.player_id) : null,
+            financialService.getVisitSummary(visit.id),
+            tableContextService.getActiveTables(casinoId),
+          ]);
+
+        timings.phaseB = Math.round(performance.now() - phaseBStart);
+
+        // === PHASE C: Parallel (player-dependent + batch seats) ===
+        const phaseCStart = performance.now();
+
+        const tableIds = activeTables.map((t) => t.id);
+        const [loyaltyData, occupiedSeatsMap] = await Promise.all([
+          player
+            ? getLoyaltyData(
+                loyaltyService,
+                visit.player_id!,
+                casinoId,
+                slipWithPauses,
+                params.id,
+              )
+            : Promise.resolve(null),
+          ratingSlipService.getOccupiedSeatsByTables(tableIds),
+        ]);
+
+        timings.phaseC = Math.round(performance.now() - phaseCStart);
+
+        // === Build Response DTOs ===
+
+        // Slip section
         const slipSection: SlipSectionDTO = {
           id: slipWithPauses.id,
           visitId: slipWithPauses.visit_id,
@@ -129,87 +204,46 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           durationSeconds,
         };
 
-        // 6. Get player info (if not ghost visit)
+        // Player section
         let playerSection: PlayerSectionDTO | null = null;
-        if (visit.player_id) {
-          const player = await playerService.getById(visit.player_id);
-          if (player) {
-            playerSection = {
-              id: player.id,
-              firstName: player.first_name,
-              lastName: player.last_name,
-              cardNumber: null, // Card number from enrollment, not in PlayerDTO
-            };
-          }
+        if (player) {
+          playerSection = {
+            id: player.id,
+            firstName: player.first_name,
+            lastName: player.last_name,
+            cardNumber: null, // Card number from enrollment, not in PlayerDTO
+          };
         }
 
-        // 7. Get loyalty info (if player exists)
+        // Loyalty section
         let loyaltySection: LoyaltySectionDTO | null = null;
-        if (visit.player_id) {
-          const balance = await loyaltyService.getBalance(
-            visit.player_id,
-            casinoId,
-          );
-
-          if (balance) {
-            // Only get suggestion for open slips
-            let suggestion = null;
-            if (slipWithPauses.status === "open") {
-              try {
-                const suggestionResult =
-                  await loyaltyService.evaluateSuggestion(params.id);
-                suggestion = {
-                  suggestedPoints: suggestionResult.suggestedPoints,
-                  suggestedTheo: suggestionResult.suggestedTheo,
-                  policyVersion: suggestionResult.policyVersion,
-                };
-              } catch {
-                // Suggestion evaluation can fail for various reasons
-                // (no policy snapshot, etc.) - don't fail the whole request
-                suggestion = null;
-              }
-            }
-
-            loyaltySection = {
-              currentBalance: balance.currentBalance,
-              tier: balance.tier,
-              suggestion,
-            };
-          }
+        if (loyaltyData) {
+          loyaltySection = {
+            currentBalance: loyaltyData.balance?.currentBalance ?? 0,
+            tier: loyaltyData.balance?.tier ?? "bronze",
+            suggestion: loyaltyData.suggestion,
+          };
         }
 
-        // 8. Get financial summary for the visit
-        const financialSummary = await financialService.getVisitSummary(
-          visit.id,
-        );
+        // Financial section
         const financialSection: FinancialSectionDTO = {
           totalCashIn: financialSummary.total_in,
           totalChipsOut: financialSummary.total_out,
           netPosition: financialSummary.net_amount,
         };
 
-        // 9. Get active tables with occupied seats for move player feature
-        const activeTables =
-          await tableContextService.getActiveTables(casinoId);
-
-        // For each active table, get the occupied seats
-        const tablesWithSeats = await Promise.all(
-          activeTables.map(async (t) => {
-            const activeSlips = await ratingSlipService.getActiveForTable(t.id);
-            const occupiedSeats = activeSlips
-              .filter((s) => s.seat_number)
-              .map((s) => s.seat_number as string);
-
-            const tableOption: TableOptionDTO = {
-              id: t.id,
-              label: t.label,
-              type: t.type,
-              status: t.status,
-              occupiedSeats,
-            };
-            return tableOption;
-          }),
-        );
+        // Tables section (using batch query results)
+        const tablesWithSeats = activeTables.map((t) => {
+          const occupiedSeats = occupiedSeatsMap.get(t.id) ?? [];
+          const tableOption: TableOptionDTO = {
+            id: t.id,
+            label: t.label,
+            type: t.type,
+            status: t.status,
+            occupiedSeats,
+          };
+          return tableOption;
+        });
 
         // Build the full modal DTO
         const modalData: RatingSlipModalDTO = {
@@ -220,6 +254,9 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           tables: tablesWithSeats,
         };
 
+        // Calculate total timing
+        timings.total = Math.round(performance.now() - totalStart);
+
         return {
           ok: true as const,
           code: "OK" as const,
@@ -227,6 +264,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
+          timings, // Include timings for header injection
         };
       },
       {
@@ -263,7 +301,30 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         { status },
       );
     }
-    return successResponse(ctx, result.data);
+
+    // Extract timings if present (from extended result)
+    const timings = (
+      result as typeof result & { timings?: Record<string, number> }
+    ).timings;
+
+    // Build success response body
+    const responseBody = {
+      ok: true as const,
+      code: "OK" as const,
+      status: 200,
+      data: result.data,
+      requestId: ctx.requestId,
+      durationMs: Date.now() - ctx.startedAt,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Build response with optional timing header
+    const headers: HeadersInit = {};
+    if (timings) {
+      headers["X-Query-Timings"] = JSON.stringify(timings);
+    }
+
+    return NextResponse.json(responseBody, { status: 200, headers });
   } catch (error) {
     return errorResponse(ctx, error);
   }

@@ -591,3 +591,44 @@ export async function updateAverageBet(
 
   return toRatingSlipDTO(data);
 }
+
+// === Batch Queries ===
+
+/**
+ * Batch query for occupied seats across multiple tables.
+ * Eliminates N+1 pattern in modal-data endpoint.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param tableIds - Array of gaming table UUIDs
+ * @returns Map of table_id → occupied seat numbers
+ */
+export async function getOccupiedSeatsByTables(
+  supabase: SupabaseClient<Database>,
+  tableIds: string[],
+): Promise<Map<string, string[]>> {
+  if (tableIds.length === 0) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from("rating_slip")
+    .select("table_id, seat_number")
+    .in("table_id", tableIds)
+    .in("status", ["open", "paused"])
+    .not("seat_number", "is", null);
+
+  if (error) throw mapDatabaseError(error);
+
+  // Group by table_id
+  const result = new Map<string, string[]>();
+  for (const row of data ?? []) {
+    const tableId = row.table_id;
+    const seatNumber = row.seat_number;
+    if (tableId && seatNumber) {
+      const seats = result.get(tableId) ?? [];
+      seats.push(seatNumber);
+      result.set(tableId, seats);
+    }
+  }
+  return result;
+}

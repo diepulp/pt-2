@@ -35,6 +35,7 @@ jest.mock('@/services/rating-slip', () => ({
     }),
     getDuration: jest.fn().mockResolvedValue(3600),
     getActiveForTable: jest.fn().mockResolvedValue([]),
+    getOccupiedSeatsByTables: jest.fn().mockResolvedValue(new Map()),
   })),
 }));
 
