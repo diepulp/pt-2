@@ -1559,6 +1559,11 @@ class IssuesContext:
         """
         Get open issues, optionally filtered by severity or category.
 
+        Uses event sourcing: checks both original issue status AND any subsequent
+        issue_update events to determine current status. An issue is open if:
+        1. Original status is open/investigating/in_progress, AND
+        2. No later issue_update event has status resolved/wont_fix
+
         Args:
             severity: Filter by severity
             category: Filter by category
@@ -1579,24 +1584,33 @@ class IssuesContext:
             cur = conn.cursor()
             cur.execute("SET search_path TO memori, public")
 
+            # Use a subquery to exclude issues that have been resolved/wont_fix
+            # via a later issue_update event
             query = """
-                SELECT content, metadata, created_at
-                FROM memori.memories
-                WHERE user_id = 'issues'
-                  AND metadata->>'type' = 'issue'
-                  AND metadata->>'status' IN ('open', 'investigating', 'in_progress')
+                SELECT i.content, i.metadata, i.created_at
+                FROM memori.memories i
+                WHERE i.user_id = 'issues'
+                  AND i.metadata->>'type' = 'issue'
+                  AND i.metadata->>'status' IN ('open', 'investigating', 'in_progress')
+                  AND NOT EXISTS (
+                      SELECT 1 FROM memori.memories u
+                      WHERE u.user_id = 'issues'
+                        AND u.metadata->>'type' = 'issue_update'
+                        AND u.metadata->>'issue_id' = i.metadata->>'issue_id'
+                        AND u.metadata->>'status' IN ('resolved', 'wont_fix')
+                  )
             """
             params = []
 
             if severity:
-                query += " AND metadata->>'severity' = %s"
+                query += " AND i.metadata->>'severity' = %s"
                 params.append(severity)
 
             if category:
-                query += " AND metadata->>'category' = %s"
+                query += " AND i.metadata->>'category' = %s"
                 params.append(category)
 
-            query += " ORDER BY created_at DESC LIMIT %s"
+            query += " ORDER BY i.created_at DESC LIMIT %s"
             params.append(limit)
 
             cur.execute(query, params)

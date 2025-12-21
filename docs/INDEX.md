@@ -67,6 +67,7 @@
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
 | PRD-001 | Player Management System Requirements | Active | `10-prd/PRD-001_Player_Management_System_Requirements.md` |
+| PRD-011 | Route Handler Test Coverage Initiative | Draft | `10-prd/PRD-011-route-handler-test-coverage.md` |
 
 **Purpose**: User stories, acceptance criteria, release goals
 
@@ -181,6 +182,7 @@
 | QA-002 | CI/CD Quality Gates | Draft | `40-quality/QA-002-quality-gates.md` |
 | QA-003 | Service Testing Patterns & Examples | Draft | `40-quality/QA-003-service-testing-patterns.md` |
 | QA-004 | Test-Driven Development (TDD) Standard | Draft | `40-quality/QA-004-tdd-standard.md` |
+| QA-005 | Route Handler Testing Patterns | Active | `40-quality/QA-005-route-handler-testing.md` |
 
 **Purpose**: Test strategy, coverage goals, quality gates, performance budgets, TDD workflows
 

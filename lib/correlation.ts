@@ -8,8 +8,8 @@
  * explicit parameter threading.
  */
 
-import { AsyncLocalStorage } from 'async_hooks';
-import { randomUUID } from 'crypto';
+import { AsyncLocalStorage } from "async_hooks";
+import { randomUUID } from "crypto";
 
 interface CorrelationContext {
   correlationId: string;
@@ -40,19 +40,12 @@ export function getCorrelationId(): string | null {
  * Set correlation ID in async context
  * Primarily used by withServerAction wrapper
  *
+ * Note: Nested requests may legitimately update correlation context.
+ * P3 fix (ISSUE-983EFA10): Removed console.warn to reduce log noise.
+ *
  * @param correlationId - Correlation ID to store
  */
 export function setCorrelationId(correlationId: string): void {
-  const currentContext = correlationStorage.getStore();
-  if (currentContext) {
-    // Warn if overwriting existing correlation ID
-    if (currentContext.correlationId !== correlationId) {
-      console.warn(
-        `[correlation] Overwriting existing correlation ID: ${currentContext.correlationId} -> ${correlationId}`,
-      );
-    }
-  }
-
   const newContext: CorrelationContext = {
     correlationId,
     createdAt: new Date(),

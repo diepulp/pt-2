@@ -104,20 +104,19 @@ const MOCK_STATS: DashboardStats = {
 /**
  * Static wrapper for PanelContainer with mock data.
  * Used for design review and component documentation.
+ *
+ * PRD-013: Updated to remove selectedTableId and onTableSelect props
  */
 export function PitPanelsStatic({
   tableName = "BJ-01",
   className,
 }: PitPanelsStaticProps) {
-  const [selectedTableId] = React.useState("table-1");
-
   return (
     <PanelContainer
       casinoId="mock-casino"
       tableName={tableName}
       className={className}
       tables={MOCK_TABLES}
-      selectedTableId={selectedTableId}
       selectedTable={MOCK_TABLES[0]}
       seats={MOCK_SEATS}
       activeSlips={MOCK_ACTIVE_SLIPS}
@@ -126,7 +125,6 @@ export function PitPanelsStatic({
       gamingDay={MOCK_STATS.gamingDay ? { date: MOCK_STATS.gamingDay } : null}
       realtimeConnected={true}
       realtimeError={null}
-      onTableSelect={() => {}}
       onSeatClick={() => {}}
       onNewSlip={() => {}}
       onSlipClick={() => {}}

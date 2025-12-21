@@ -21,24 +21,25 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 308-350
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
-import * as crud from './crud';
+import * as crud from "./crud";
 import type {
   ActiveVisitDTO,
   CloseVisitDTO,
   CreateGhostGamingVisitDTO,
+  StartVisitResultDTO,
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from './dtos';
+} from "./dtos";
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from './dtos';
-export * from './http';
-export * from './keys';
+export * from "./dtos";
+export * from "./http";
+export * from "./keys";
 
 // === Service Interface ===
 
@@ -72,11 +73,13 @@ export interface VisitServiceInterface {
    * Idempotent - returns existing active visit if one exists.
    * Defaults to visit_kind = 'gaming_identified_rated'.
    *
+   * Returns StartVisitResultDTO with isNew flag (P2 fix: ISSUE-983EFA10).
+   *
    * @deprecated Use createGamingVisit or createRewardVisit for explicit archetypes.
    * @param playerId - Player UUID
    * @param casinoId - Casino UUID (from middleware context)
    */
-  startVisit(playerId: string, casinoId: string): Promise<VisitDTO>;
+  startVisit(playerId: string, casinoId: string): Promise<StartVisitResultDTO>;
 
   /**
    * Close a visit (check-out).

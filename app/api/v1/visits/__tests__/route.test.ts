@@ -39,15 +39,17 @@ jest.mock('@/services/visit', () => ({
       items: [],
       cursor: null,
     }),
+    // P2 fix (ISSUE-983EFA10): startVisit now returns { visit, isNew }
     startVisit: jest.fn().mockResolvedValue({
-      id: 'visit-123',
-      player_id: 'player-1',
-      casino_id: 'casino-1',
-      visit_date: '2025-01-01',
-      check_in: '2025-01-01T10:00:00Z',
-      check_out: null,
-      created_at: '2025-01-01T10:00:00Z',
-      updated_at: '2025-01-01T10:00:00Z',
+      visit: {
+        id: 'visit-123',
+        player_id: 'player-1',
+        casino_id: 'casino-1',
+        visit_kind: 'gaming_identified_rated',
+        started_at: '2025-01-01T10:00:00Z',
+        ended_at: null,
+      },
+      isNew: true,
     }),
     getActiveForPlayer: jest.fn().mockResolvedValue({
       has_active_visit: false,

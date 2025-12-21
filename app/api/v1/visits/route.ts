@@ -110,12 +110,9 @@ export async function POST(request: NextRequest) {
       async (mwCtx) => {
         const service = createVisitService(mwCtx.supabase);
 
-        // Check for existing active visit first (to determine status code)
-        const { has_active_visit } = await service.getActiveForPlayer(
-          input.player_id,
-        );
-
-        const visit = await service.startVisit(
+        // P2 fix (ISSUE-983EFA10): startVisit now returns { visit, isNew }
+        // eliminating redundant getActiveForPlayer check
+        const { visit, isNew } = await service.startVisit(
           input.player_id,
           mwCtx.rlsContext!.casinoId,
         );
@@ -124,7 +121,7 @@ export async function POST(request: NextRequest) {
           ok: true as const,
           code: "OK" as const,
           data: visit,
-          isNew: !has_active_visit,
+          isNew,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),

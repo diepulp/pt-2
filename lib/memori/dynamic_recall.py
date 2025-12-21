@@ -63,18 +63,21 @@ class DynamicRecall:
     that skills can call at workflow start to inject relevant context.
     """
 
-    # Default database URL
-    DEFAULT_DB_URL = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+    # Default database URL (memori Docker container on port 5433)
+    DEFAULT_DB_URL = "postgresql://memori:memori_dev@127.0.0.1:5433/memori"
 
-    # Namespace mappings (from client.py)
+    # Namespace mappings (synced with client.py CHATMODE_USER_IDS)
     NAMESPACE_MAP = {
-        "architect": "pt2_architect",
-        "skill:lead-architect": "skill_lead_architect",
-        "skill:backend-service-builder": "skill_backend_service_builder",
-        "skill:frontend-design": "skill_frontend_design",
-        "skill:api-builder": "skill_api_builder",
-        "skill:mvp-progress": "skill_mvp_progress",
-        "skill:skill-creator": "skill_skill_creator",
+        "architect": "arch_decisions",
+        "skill:lead-architect": "arch_decisions",
+        "skill:backend-service-builder": "pt2_project",
+        "skill:frontend-design": "pt2_project",
+        "skill:api-builder": "arch_decisions",
+        "skill:mvp-progress": "mvp_progress",
+        "skill:skill-creator": "pt2_project",
+        "skill:issues": "issues",
+        "debugger": "issues",
+        "main": "pt2_project",
     }
 
     def __init__(self, database_url: Optional[str] = None):
@@ -143,9 +146,9 @@ class DynamicRecall:
         if include_cross_namespace:
             # Add related namespaces for cross-learning
             namespaces_to_search.extend([
-                "skill_lead_architect",
-                "skill_backend_service_builder",
-                "skill_api_builder",
+                "arch_decisions",
+                "pt2_project",
+                "mvp_progress",
             ])
             # Deduplicate
             namespaces_to_search = list(set(namespaces_to_search))
@@ -378,7 +381,7 @@ class MemoryFileSync:
         self.project_root = Path(project_root) if project_root else self._detect_project_root()
         self.db_url = database_url or os.getenv(
             "MEMORI_DATABASE_URL",
-            "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+            "postgresql://memori:memori_dev@127.0.0.1:5433/memori"
         )
         self._conn = None
 
@@ -431,7 +434,7 @@ class MemoryFileSync:
                     metadata->>'prd_reference' as prd_ref,
                     created_at
                 FROM memori.memories
-                WHERE user_id = 'skill_mvp_progress'
+                WHERE user_id = 'mvp_progress'
                   AND metadata->>'type' = 'service_status'
                 ORDER BY metadata->>'service_name', created_at DESC
             """)
@@ -447,7 +450,7 @@ class MemoryFileSync:
                     metadata->>'services_pending' as pending,
                     created_at
                 FROM memori.memories
-                WHERE user_id = 'skill_mvp_progress'
+                WHERE user_id = 'mvp_progress'
                   AND metadata->>'type' = 'milestone_transition'
                 ORDER BY metadata->>'phase', created_at DESC
             """)
@@ -700,7 +703,7 @@ class LearningsDiscovery:
         """
         self.db_url = database_url or os.getenv(
             "MEMORI_DATABASE_URL",
-            "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+            "postgresql://memori:memori_dev@127.0.0.1:5433/memori"
         )
         self._conn = None
 
