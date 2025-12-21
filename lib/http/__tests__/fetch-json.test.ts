@@ -84,7 +84,7 @@ describe('mutateJSON', () => {
         method: 'POST',
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
-          'x-idempotency-key': 'idem-key-123',
+          'Idempotency-Key': 'idem-key-123',
         }),
         body: JSON.stringify({ name: 'Test' }),
       }),

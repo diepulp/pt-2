@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 
 import type { NextRequest } from "next/server";
+
+import { IDEMPOTENCY_HEADER } from "./headers";
+
+export { IDEMPOTENCY_HEADER };
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
@@ -47,8 +51,6 @@ const RESULT_CODE_HTTP_STATUS: Record<ResultCode, number> = {
   RATE_LIMIT_EXCEEDED: 429,
   IDEMPOTENCY_CONFLICT: 409,
 };
-
-export const IDEMPOTENCY_HEADER = "idempotency-key";
 
 export function toHttpStatus(code: ResultCode): number {
   return RESULT_CODE_HTTP_STATUS[code] ?? 500;

@@ -9,6 +9,7 @@
  */
 
 import { fetchJSON } from "@/lib/http/fetch-json";
+import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
 
 import type {
   MovePlayerInput,
@@ -87,7 +88,7 @@ export async function movePlayer(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Idempotency-Key": idempotencyKey,
+      [IDEMPOTENCY_HEADER]: idempotencyKey,
     },
     body: JSON.stringify(input),
   });

@@ -1,0 +1,20 @@
+{
+  "prd": "PRD-014",
+  "prd_title": "Idempotency Header Standardization",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["lib/http/headers.ts"],
+    "WS2": ["lib/http/fetch-json.ts"],
+    "WS3": ["lib/http/service-response.ts"],
+    "WS4": ["services/rating-slip-modal/http.ts"],
+    "WS5": ["lib/http/__tests__/fetch-json.test.ts"],
+    "WS6": ["docs/70-governance/anti-patterns/09-http-headers.md"]
+  },
+  "gates_passed": ["type-check", "test-pass"],
+  "gates_pending": ["build"],
+  "timestamp": "2025-12-21T00:03:00Z"
+}

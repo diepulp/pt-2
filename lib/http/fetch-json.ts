@@ -1,3 +1,4 @@
+import { IDEMPOTENCY_HEADER } from "./headers";
 import type { ServiceHttpResult } from "./service-response";
 
 /**
@@ -124,7 +125,7 @@ export async function mutateJSON<T, D = unknown>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "x-idempotency-key": idempotencyKey,
+      [IDEMPOTENCY_HEADER]: idempotencyKey,
       ...options?.headers,
     },
     body: JSON.stringify(data),
