@@ -107,9 +107,20 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        // Query timing instrumentation
+        // Query timing instrumentation - granular per-query tracking
         const timings: Record<string, number> = {};
         const totalStart = performance.now();
+
+        // Helper to time individual queries
+        async function timed<T>(
+          name: string,
+          fn: () => Promise<T>,
+        ): Promise<T> {
+          const start = performance.now();
+          const result = await fn();
+          timings[name] = Math.round(performance.now() - start);
+          return result;
+        }
 
         // Create service instances
         const ratingSlipService = createRatingSlipService(mwCtx.supabase);
@@ -123,7 +134,9 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const phaseAStart = performance.now();
 
         // 1. Get the rating slip with pause history (required first)
-        const slipWithPauses = await ratingSlipService.getById(params.id);
+        const slipWithPauses = await timed("A1_getSlip", () =>
+          ratingSlipService.getById(params.id),
+        );
 
         if (!slipWithPauses) {
           throw new DomainError(
@@ -134,7 +147,9 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         }
 
         // 2. Get the visit to find player_id (requires visit_id from slip)
-        const visit = await visitService.getById(slipWithPauses.visit_id);
+        const visit = await timed("A2_getVisit", () =>
+          visitService.getById(slipWithPauses.visit_id),
+        );
 
         if (!visit) {
           throw new DomainError(
@@ -158,11 +173,23 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         const [table, durationSeconds, player, financialSummary, activeTables] =
           await Promise.all([
-            tableContextService.getTable(slipWithPauses.table_id, casinoId),
-            ratingSlipService.getDuration(params.id),
-            visit.player_id ? playerService.getById(visit.player_id) : null,
-            financialService.getVisitSummary(visit.id),
-            tableContextService.getActiveTables(casinoId),
+            timed("B1_getTable", () =>
+              tableContextService.getTable(slipWithPauses.table_id, casinoId),
+            ),
+            timed("B2_getDuration", () =>
+              ratingSlipService.getDuration(params.id),
+            ),
+            visit.player_id
+              ? timed("B3_getPlayer", () =>
+                  playerService.getById(visit.player_id!),
+                )
+              : Promise.resolve(null),
+            timed("B4_getFinancial", () =>
+              financialService.getVisitSummary(visit.id),
+            ),
+            timed("B5_getActiveTables", () =>
+              tableContextService.getActiveTables(casinoId),
+            ),
           ]);
 
         timings.phaseB = Math.round(performance.now() - phaseBStart);
@@ -173,15 +200,19 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const tableIds = activeTables.map((t) => t.id);
         const [loyaltyData, occupiedSeatsMap] = await Promise.all([
           player
-            ? getLoyaltyData(
-                loyaltyService,
-                visit.player_id!,
-                casinoId,
-                slipWithPauses,
-                params.id,
+            ? timed("C1_getLoyalty", () =>
+                getLoyaltyData(
+                  loyaltyService,
+                  visit.player_id!,
+                  casinoId,
+                  slipWithPauses,
+                  params.id,
+                ),
               )
             : Promise.resolve(null),
-          ratingSlipService.getOccupiedSeatsByTables(tableIds),
+          timed("C2_getOccupiedSeats", () =>
+            ratingSlipService.getOccupiedSeatsByTables(tableIds),
+          ),
         ]);
 
         timings.phaseC = Math.round(performance.now() - phaseCStart);
