@@ -5,18 +5,16 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { usePlayer } from "@/hooks/player/use-player";
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 interface PlayerProfilePanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function PlayerProfilePanel({
-  playerId,
-  className,
-}: PlayerProfilePanelProps) {
-  const { data: player, isLoading, error } = usePlayer(playerId || "");
+export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
+  const { data: player, isLoading, error } = usePlayer(selectedPlayerId || "");
 
   // Loading state
   if (isLoading) {
@@ -63,7 +61,7 @@ export function PlayerProfilePanel({
     );
   }
 
-  if (!playerId || !player) {
+  if (!selectedPlayerId || !player) {
     return (
       <div
         className={cn(

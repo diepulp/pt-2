@@ -4,27 +4,23 @@ import { Loader2, Settings } from "lucide-react";
 import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { useActiveVisit } from "@/hooks/visit/use-active-visit";
 import { cn } from "@/lib/utils";
 
 import { UnderDevelopmentIndicator } from "./under-development-indicator";
 
 interface SessionControlPanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function SessionControlPanel({
-  playerId,
-  className,
-}: SessionControlPanelProps) {
+export function SessionControlPanel({ className }: SessionControlPanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
   const {
     data: activeVisit,
     isLoading,
     error,
-  } = useActiveVisit(playerId || "", {
-    enabled: !!playerId,
-  });
+  } = useActiveVisit(selectedPlayerId || "");
 
   // Loading state
   if (isLoading) {
@@ -69,7 +65,7 @@ export function SessionControlPanel({
     );
   }
 
-  if (!playerId) {
+  if (!selectedPlayerId) {
     return (
       <div
         className={cn(

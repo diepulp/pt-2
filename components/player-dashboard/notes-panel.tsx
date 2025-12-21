@@ -3,17 +3,19 @@
 import { FileText } from "lucide-react";
 import * as React from "react";
 
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 import { UnderDevelopmentIndicator } from "./under-development-indicator";
 
 interface NotesPanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function NotesPanel({ playerId, className }: NotesPanelProps) {
-  if (!playerId) {
+export function NotesPanel({ className }: NotesPanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
+
+  if (!selectedPlayerId) {
     return (
       <div
         className={cn(

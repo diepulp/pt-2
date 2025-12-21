@@ -3,17 +3,19 @@
 import { Shield } from "lucide-react";
 import * as React from "react";
 
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 import { UnderDevelopmentIndicator } from "./under-development-indicator";
 
 interface CompliancePanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function CompliancePanel({ playerId, className }: CompliancePanelProps) {
-  if (!playerId) {
+export function CompliancePanel({ className }: CompliancePanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
+
+  if (!selectedPlayerId) {
     return (
       <div
         className={cn(

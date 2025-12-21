@@ -1,11 +1,11 @@
 
 # ADR-003: State Management Strategy 
 
-**Status**: ACCEPTED  
-**Date Drafted**: 2025-10-10  
-**Date Accepted**: 2025-10-10  
-**Redacted/Updated**: 2025-10-23  
-**Decision Makers**: Development Team  
+**Status**: ACCEPTED
+**Date Drafted**: 2025-10-10
+**Date Accepted**: 2025-10-10
+**Redacted/Updated**: 2025-12-21
+**Decision Makers**: Development Team
 **Validation**: Phase 3 Waves 1-3 (32 integration tests passing)
 
 > This version folds in review feedback: query-key factories & stability, TanStack Query v5 pagination (`placeholderData` / Infinite Query), refined mutation retry guidance, realtime invalidation hygiene, cache structural sharing notes, and Zustand slices/selectors ergonomics.
@@ -327,6 +327,14 @@ const updateVisit = useServiceMutation(updateVisitAction, {
   - `hooks/ui/use-modal.ts` — Modal state selector with `useShallow`
   - `hooks/ui/use-pit-dashboard-ui.ts` — Dashboard UI selector with `useShallow`
   - `hooks/ui/index.ts` — Barrel exports
+- **UI Stores** (PRD-014 implemented 2025-12-21):
+  - `store/player-dashboard-store.ts` — Player selection state (eliminates prop drilling)
+  - `store/index.ts` — Updated barrel exports with player-dashboard-store
+- **UI Hooks** (PRD-014 implemented 2025-12-21):
+  - `hooks/ui/use-player-dashboard.ts` — Player dashboard selector with `useShallow`
+  - `hooks/ui/index.ts` — Updated barrel exports with usePlayerDashboard
+
+The PRD-014 implementation successfully eliminates prop drilling for `selectedPlayerId` across 7 child components, following the patterns established in PRD-013.
 
 ---
 

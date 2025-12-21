@@ -15,6 +15,7 @@ import * as React from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { usePlayerLoyalty } from "@/hooks/loyalty/use-loyalty-queries";
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { useAuth } from "@/hooks/use-auth";
 import { cn } from "@/lib/utils";
 
@@ -59,17 +60,17 @@ const TIER_CONFIG = {
 };
 
 interface LoyaltyPanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function LoyaltyPanel({ playerId, className }: LoyaltyPanelProps) {
+export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
   const { casinoId } = useAuth();
   const {
     data: loyalty,
     isLoading,
     error,
-  } = usePlayerLoyalty(playerId || undefined, casinoId || undefined);
+  } = usePlayerLoyalty(selectedPlayerId || undefined, casinoId || undefined);
 
   // Loading state
   if (isLoading) {
@@ -114,7 +115,7 @@ export function LoyaltyPanel({ playerId, className }: LoyaltyPanelProps) {
     );
   }
 
-  if (!playerId || !loyalty) {
+  if (!selectedPlayerId || !loyalty) {
     return (
       <div
         className={cn(

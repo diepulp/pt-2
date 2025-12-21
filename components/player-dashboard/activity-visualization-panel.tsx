@@ -3,20 +3,21 @@
 import { Activity } from "lucide-react";
 import * as React from "react";
 
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 import { UnderDevelopmentIndicator } from "./under-development-indicator";
 
 interface ActivityVisualizationPanelProps {
-  playerId: string | null;
   className?: string;
 }
 
 export function ActivityVisualizationPanel({
-  playerId,
   className,
 }: ActivityVisualizationPanelProps) {
-  if (!playerId) {
+  const { selectedPlayerId } = usePlayerDashboard();
+
+  if (!selectedPlayerId) {
     return (
       <div
         className={cn(

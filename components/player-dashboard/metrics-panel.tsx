@@ -3,17 +3,19 @@
 import { BarChart3, TrendingUp } from "lucide-react";
 import * as React from "react";
 
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 import { UnderDevelopmentIndicator } from "./under-development-indicator";
 
 interface MetricsPanelProps {
-  playerId: string | null;
   className?: string;
 }
 
-export function MetricsPanel({ playerId, className }: MetricsPanelProps) {
-  if (!playerId) {
+export function MetricsPanel({ className }: MetricsPanelProps) {
+  const { selectedPlayerId } = usePlayerDashboard();
+
+  if (!selectedPlayerId) {
     return (
       <div
         className={cn(

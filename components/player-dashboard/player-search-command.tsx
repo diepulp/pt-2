@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 import { searchPlayers, type PlayerSearchResultDTO } from "@/services/player";
 
@@ -35,13 +36,12 @@ function toPlayerDisplay(dto: PlayerSearchResultDTO): PlayerDisplay {
 
 interface PlayerSearchCommandProps {
   onSelectPlayer: (playerId: string) => void;
-  selectedPlayerId?: string | null;
 }
 
 export function PlayerSearchCommand({
   onSelectPlayer,
-  selectedPlayerId,
 }: PlayerSearchCommandProps) {
+  const { selectedPlayerId, setSelectedPlayer } = usePlayerDashboard();
   const [open, setOpen] = React.useState(false);
   const [searchTerm, setSearchTerm] = React.useState("");
   const [debouncedSearch, setDebouncedSearch] = React.useState("");
@@ -203,9 +203,10 @@ export function PlayerSearchCommand({
                       <button
                         key={player.id}
                         onClick={() => {
-                          onSelectPlayer(
-                            player.id === selectedPlayerId ? "" : player.id,
-                          );
+                          const newPlayerId =
+                            player.id === selectedPlayerId ? "" : player.id;
+                          onSelectPlayer(newPlayerId);
+                          setSelectedPlayer(newPlayerId || null);
                           setOpen(false);
                           setSearchTerm("");
                         }}

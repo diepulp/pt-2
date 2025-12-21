@@ -3,6 +3,7 @@
 import { User } from "lucide-react";
 import * as React from "react";
 
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
 
 import { ActivityVisualizationPanel } from "./activity-visualization-panel";
@@ -30,12 +31,10 @@ interface PlayerDashboardProps {
  * Design: PT-2 dark industrial aesthetic with cyan accent
  */
 export function PlayerDashboard({ className }: PlayerDashboardProps) {
-  const [selectedPlayerId, setSelectedPlayerId] = React.useState<string | null>(
-    null,
-  );
+  const { selectedPlayerId, setSelectedPlayer } = usePlayerDashboard();
 
   const handleSelectPlayer = (playerId: string) => {
-    setSelectedPlayerId(playerId || null);
+    setSelectedPlayer(playerId || null);
   };
 
   return (
@@ -43,10 +42,7 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
       {/* Player Search/Selector */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
-          <PlayerSearchCommand
-            onSelectPlayer={handleSelectPlayer}
-            selectedPlayerId={selectedPlayerId}
-          />
+          <PlayerSearchCommand onSelectPlayer={handleSelectPlayer} />
         </div>
       </div>
 
@@ -55,45 +51,27 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
           {/* Row 1: Profile + Session Controls */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <PlayerProfilePanel playerId={selectedPlayerId} />
+              <PlayerProfilePanel />
             </div>
             <div className="lg:col-span-1">
-              <SessionControlPanel
-                playerId={selectedPlayerId}
-                className="h-full"
-              />
+              <SessionControlPanel className="h-full" />
             </div>
           </div>
 
           {/* Row 2: Metrics + Compliance */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <MetricsPanel
-              playerId={selectedPlayerId}
-              className="min-h-[400px]"
-            />
-            <CompliancePanel
-              playerId={selectedPlayerId}
-              className="min-h-[400px]"
-            />
+            <MetricsPanel className="min-h-[400px]" />
+            <CompliancePanel className="min-h-[400px]" />
           </div>
 
           {/* Row 3: Activity + Notes/Loyalty */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2">
-              <ActivityVisualizationPanel
-                playerId={selectedPlayerId}
-                className="min-h-[420px]"
-              />
+              <ActivityVisualizationPanel className="min-h-[420px]" />
             </div>
             <div className="lg:col-span-1 space-y-4">
-              <NotesPanel
-                playerId={selectedPlayerId}
-                className="min-h-[200px]"
-              />
-              <LoyaltyPanel
-                playerId={selectedPlayerId}
-                className="min-h-[200px]"
-              />
+              <NotesPanel className="min-h-[200px]" />
+              <LoyaltyPanel className="min-h-[200px]" />
             </div>
           </div>
         </div>
