@@ -1,6 +1,6 @@
 ---
 name: qa-specialist
-description: Conduct comprehensive E2E testing of PT-2 critical workflows, validate quality gates, and produce test coverage reports. This skill should be used when validating critical user journeys (player management, visit lifecycle, rating slip operations, loyalty rewards), executing pre-release quality gates, or investigating test failures and regressions. Orchestrates Playwright test execution and provides actionable quality assessments. (project)
+description: Conduct comprehensive E2E testing of PT-2 critical workflows, validate quality gates, and produce test coverage reports. This skill should be used when validating critical user journeys (player management, visit lifecycle, rating slip operations, loyalty rewards), executing pre-release quality gates, investigating test failures, or validating route handler test coverage (QA-005). Orchestrates Playwright and Jest test execution and provides actionable quality assessments. (project)
 allowed-tools: Read, Write, Edit, Glob, Bash, Grep, TodoWrite, Task
 ---
 
@@ -85,6 +85,122 @@ Per `docs/40-quality/QA-001-service-testing-strategy.md`, E2E tests cover **10% 
 | Accrual on close | Points earned at slip close | `e2e/workflows/loyalty-rewards.spec.ts` |
 | Redemption | Spend loyalty points | `e2e/workflows/loyalty-rewards.spec.ts` |
 | Idempotency | Verify no duplicate rewards | `e2e/workflows/loyalty-rewards.spec.ts` |
+
+---
+
+## Route Handler Testing (QA-005)
+
+Route handler unit tests fill the gap between service layer unit tests (business logic) and E2E tests (full user flows). They verify the HTTP boundary layer: route exports exist, request/response shapes match contracts, and error responses are properly formatted.
+
+**Reference**: `docs/40-quality/QA-005-route-handler-testing.md`
+
+### Test Infrastructure
+
+**Location**: `lib/testing/route-test-helpers.ts`
+
+```typescript
+import { createMockRequest, createMockRouteParams } from '@/lib/testing/route-test-helpers';
+
+// Create mock NextRequest
+const request = createMockRequest('POST', '/api/v1/rating-slips', {
+  headers: { 'Idempotency-Key': 'test-key', 'Content-Type': 'application/json' },
+  body: { player_id: 'uuid', table_id: 'uuid', seat_number: 1 },
+});
+
+// Create mock route params (Next.js 15 async params)
+const routeParams = createMockRouteParams({ id: '123e4567-e89b-12d3-a456-426614174000' });
+```
+
+### Rating Slip Route Tests (9 Test Files)
+
+| Endpoint | Method | Test File |
+|----------|--------|-----------|
+| `/api/v1/rating-slips` | GET, POST | `app/api/v1/rating-slips/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]` | GET | `app/api/v1/rating-slips/[id]/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/pause` | POST | `app/api/v1/rating-slips/[id]/pause/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/resume` | POST | `app/api/v1/rating-slips/[id]/resume/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/close` | POST | `app/api/v1/rating-slips/[id]/close/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/duration` | GET | `app/api/v1/rating-slips/[id]/duration/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/average-bet` | PATCH | `app/api/v1/rating-slips/[id]/average-bet/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/move` | POST | `app/api/v1/rating-slips/[id]/move/__tests__/route.test.ts` |
+| `/api/v1/rating-slips/[id]/modal-data` | GET | `app/api/v1/rating-slips/[id]/modal-data/__tests__/route.test.ts` |
+
+### HTTP Contract Tests
+
+Prevent client → route mismatches by validating every `http.ts` function maps to an existing route export.
+
+**Location**: `services/rating-slip/__tests__/http-contract.test.ts`
+
+```bash
+# Run contract tests
+npm test -- services/rating-slip/__tests__/http-contract.test.ts
+```
+
+### Running Route Handler Tests
+
+```bash
+# Run all rating-slip route tests (38 tests across 10 suites)
+npm test -- app/api/v1/rating-slips
+
+# Run specific action tests
+npm test -- app/api/v1/rating-slips/[id]/pause/__tests__/route.test.ts
+
+# Run with verbose output
+npm test -- app/api/v1/rating-slips --verbose
+
+# Run contract tests
+npm test -- services/rating-slip/__tests__/http-contract
+```
+
+### Key Testing Patterns
+
+1. **Jest Environment Directive** (Required)
+   ```typescript
+   /** @jest-environment node */
+   ```
+
+2. **Mock withServerAction Middleware**
+   ```typescript
+   jest.mock('@/lib/server-actions/middleware', () => ({
+     withServerAction: jest.fn((_, handler) =>
+       handler({
+         supabase: {},
+         correlationId: 'test-correlation-id',
+         rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
+       }),
+     ),
+   }));
+   ```
+
+3. **UUID Validation** - Route params use Zod validation
+   ```typescript
+   // Valid UUID format required
+   const slipId = '123e4567-e89b-12d3-a456-426614174000';
+   ```
+
+4. **Idempotency-Key Header** (Required for mutations)
+   ```typescript
+   const request = createMockRequest('POST', url, {
+     headers: { 'Idempotency-Key': 'unique-key' },
+   });
+   ```
+
+5. **ServiceHttpResult Envelope Validation**
+   ```typescript
+   expect(body).toMatchObject({
+     ok: true,
+     code: 'OK',
+     data: expect.any(Object),
+     requestId: expect.any(String),
+   });
+   ```
+
+### Route Handler Test Quality Gate
+
+- [ ] Route handler tests exist for all API endpoints
+- [ ] HTTP contract tests validate http.ts ↔ route.ts parity
+- [ ] All tests pass: `npm test -- app/api/v1/rating-slips`
+- [ ] No missing route exports (ISSUE-607F9CCB regression prevention)
 
 ---
 
@@ -174,6 +290,12 @@ Before approving a release, verify all gates pass:
 - [ ] Graceful degradation on network failure
 - [ ] Idempotency prevents duplicate mutations
 
+### GATE-5: Route Handler Tests (QA-005)
+- [ ] Route handler tests pass: `npm test -- app/api/v1/rating-slips`
+- [ ] HTTP contract tests pass: `npm test -- services/rating-slip/__tests__/http-contract`
+- [ ] All route exports validated (prevents 404 regressions)
+- [ ] ServiceHttpResult envelope format verified
+
 ---
 
 ## Test Execution Workflow
@@ -242,6 +364,8 @@ Summarize results for stakeholders:
 | Rating Slip Move Player | ✅/❌ | [details] |
 | Rating Slip Modal/BFF | ✅/❌ | [details] |
 | Loyalty Rewards | ✅/❌ | [details] |
+| Route Handler Tests | ✅/❌ | [38 tests, 10 suites] |
+| HTTP Contract Tests | ✅/❌ | [8 contracts validated] |
 
 ### Blockers
 [List any blocking issues]

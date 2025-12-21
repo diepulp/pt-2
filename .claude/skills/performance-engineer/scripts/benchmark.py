@@ -135,7 +135,7 @@ class Benchmarker:
             with open(slo_file) as f:
                 data = json.load(f)
                 self.slo_definitions = {slo.service + ":" + slo.operation: slo for slo in [
-                    BrookSLO(**item) for item in data["slos"]]
+                    BrookSLO(**item) for item in data["slos"]]}
         else:
             self.slo_definitions = {slo.service + ":" + slo.operation: slo for slo in default_slos}
 

@@ -1,0 +1,26 @@
+{
+  "prd": "QA-ROUTE-TESTING",
+  "prd_title": "Route Handler Testing Coverage",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["lib/testing/route-test-helpers.ts"],
+    "WS2": ["app/api/v1/rating-slips/__tests__/route.test.ts"],
+    "WS3": ["app/api/v1/rating-slips/[id]/__tests__/route.test.ts"],
+    "WS4": [
+      "app/api/v1/rating-slips/[id]/pause/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/resume/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/close/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/duration/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/average-bet/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/move/__tests__/route.test.ts",
+      "app/api/v1/rating-slips/[id]/modal-data/__tests__/route.test.ts"
+    ]
+  },
+  "gates_passed": ["type-check", "test-pass", "docs-review"],
+  "gates_pending": [],
+  "timestamp": "2025-12-20T22:55:00Z"
+}

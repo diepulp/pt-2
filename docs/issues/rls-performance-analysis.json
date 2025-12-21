@@ -1,0 +1,499 @@
+{
+  "generatedAt": "2025-12-20T23:35:06.644Z",
+  "summary": {
+    "totalIssues": 94,
+    "authRlsInitplanIssues": 88,
+    "multiplePermissivePolicies": 6,
+    "affectedTables": 15
+  },
+  "authIssuesByTable": {
+    "visit": [
+      {
+        "policyName": "visit_select_same_casino",
+        "detail": "Table \\`public.visit\\` has a row level security policy \\`visit_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "visit_insert_staff",
+        "detail": "Table \\`public.visit\\` has a row level security policy \\`visit_insert_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "visit_update_staff",
+        "detail": "Table \\`public.visit\\` has a row level security policy \\`visit_update_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "player": [
+      {
+        "policyName": "casino_player_casino_select_same_casino",
+        "detail": "Table \\`public.player_casino\\` has a row level security policy \\`player_casino_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "casino_player_casino_insert_staff",
+        "detail": "Table \\`public.player_casino\\` has a row level security policy \\`player_casino_insert_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "casino_player_casino_update_admin",
+        "detail": "Table \\`public.player_casino\\` has a row level security policy \\`player_casino_update_admin\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "player_select_enrolled",
+        "detail": "Table \\`public.player\\` has a row level security policy \\`player_select_enrolled\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "player_insert_admin",
+        "detail": "Table \\`public.player\\` has a row level security policy \\`player_insert_admin\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "player_update_enrolled",
+        "detail": "Table \\`public.player\\` has a row level security policy \\`player_update_enrolled\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "financial_transaction_player_financial_transaction_select_same_casino",
+        "detail": "Table \\`public.player_financial_transaction\\` has a row level security policy \\`player_financial_transaction_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "financial_transaction_player_financial_transaction_insert_cashier",
+        "detail": "Table \\`public.player_financial_transaction\\` has a row level security policy \\`player_financial_transaction_insert_cashier\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "financial_transaction_player_financial_transaction_no_updates",
+        "detail": "Table \\`public.player_financial_transaction\\` has a row level security policy \\`player_financial_transaction_no_updates\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "financial_transaction_player_financial_transaction_no_deletes",
+        "detail": "Table \\`public.player_financial_transaction\\` has a row level security policy \\`player_financial_transaction_no_deletes\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "loyalty_player_loyalty_select",
+        "detail": "Table \\`public.player_loyalty\\` has a row level security policy \\`player_loyalty_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "loyalty_player_loyalty_insert",
+        "detail": "Table \\`public.player_loyalty\\` has a row level security policy \\`player_loyalty_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "loyalty_player_loyalty_update",
+        "detail": "Table \\`public.player_loyalty\\` has a row level security policy \\`player_loyalty_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "loyalty_player_loyalty_deny_delete",
+        "detail": "Table \\`public.player_loyalty\\` has a row level security policy \\`player_loyalty_deny_delete\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "rating": [
+      {
+        "policyName": "slip_pause_rating_slip_pause_read_same_casino",
+        "detail": "Table \\`public.rating_slip_pause\\` has a row level security policy \\`rating_slip_pause_read_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "slip_pause_rating_slip_pause_write_pit_boss",
+        "detail": "Table \\`public.rating_slip_pause\\` has a row level security policy \\`rating_slip_pause_write_pit_boss\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "slip_pause_rating_slip_pause_update_pit_boss",
+        "detail": "Table \\`public.rating_slip_pause\\` has a row level security policy \\`rating_slip_pause_update_pit_boss\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "slip_rating_slip_select_same_casino",
+        "detail": "Table \\`public.rating_slip\\` has a row level security policy \\`rating_slip_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "slip_rating_slip_insert_staff",
+        "detail": "Table \\`public.rating_slip\\` has a row level security policy \\`rating_slip_insert_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "slip_rating_slip_update_staff",
+        "detail": "Table \\`public.rating_slip\\` has a row level security policy \\`rating_slip_update_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "gaming": [
+      {
+        "policyName": "table_gaming_table_select_same_casino",
+        "detail": "Table \\`public.gaming_table\\` has a row level security policy \\`gaming_table_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_gaming_table_insert_admin",
+        "detail": "Table \\`public.gaming_table\\` has a row level security policy \\`gaming_table_insert_admin\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_gaming_table_update_admin",
+        "detail": "Table \\`public.gaming_table\\` has a row level security policy \\`gaming_table_update_admin\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_settings_gaming_table_settings_select",
+        "detail": "Table \\`public.gaming_table_settings\\` has a row level security policy \\`gaming_table_settings_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_settings_gaming_table_settings_insert",
+        "detail": "Table \\`public.gaming_table_settings\\` has a row level security policy \\`gaming_table_settings_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_settings_gaming_table_settings_update",
+        "detail": "Table \\`public.gaming_table_settings\\` has a row level security policy \\`gaming_table_settings_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "dealer": [
+      {
+        "policyName": "rotation_dealer_rotation_select_same_casino",
+        "detail": "Table \\`public.dealer_rotation\\` has a row level security policy \\`dealer_rotation_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "rotation_dealer_rotation_insert_staff",
+        "detail": "Table \\`public.dealer_rotation\\` has a row level security policy \\`dealer_rotation_insert_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "rotation_dealer_rotation_update_staff",
+        "detail": "Table \\`public.dealer_rotation\\` has a row level security policy \\`dealer_rotation_update_staff\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "casino": [
+      {
+        "policyName": "settings_casino_settings_read",
+        "detail": "Table \\`public.casino_settings\\` has a row level security policy \\`casino_settings_read\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "settings_casino_settings_write",
+        "detail": "Table \\`public.casino_settings\\` has a row level security policy \\`casino_settings_write\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "casino_read_own_casino",
+        "detail": "Table \\`public.casino\\` has a row level security policy \\`casino_read_own_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "staff": [
+      {
+        "policyName": "staff_read",
+        "detail": "Table \\`public.staff\\` has a row level security policy \\`staff_read\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "staff_write",
+        "detail": "Table \\`public.staff\\` has a row level security policy \\`staff_write\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "staff_update",
+        "detail": "Table \\`public.staff\\` has a row level security policy \\`staff_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "staff_delete",
+        "detail": "Table \\`public.staff\\` has a row level security policy \\`staff_delete\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "finance": [
+      {
+        "policyName": "outbox_finance_outbox_select",
+        "detail": "Table \\`public.finance_outbox\\` has a row level security policy \\`finance_outbox_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "outbox_finance_outbox_insert",
+        "detail": "Table \\`public.finance_outbox\\` has a row level security policy \\`finance_outbox_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "outbox_finance_outbox_no_updates",
+        "detail": "Table \\`public.finance_outbox\\` has a row level security policy \\`finance_outbox_no_updates\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "outbox_finance_outbox_no_deletes",
+        "detail": "Table \\`public.finance_outbox\\` has a row level security policy \\`finance_outbox_no_deletes\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "mtl": [
+      {
+        "policyName": "entry_mtl_entry_select",
+        "detail": "Table \\`public.mtl_entry\\` has a row level security policy \\`mtl_entry_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "entry_mtl_entry_insert",
+        "detail": "Table \\`public.mtl_entry\\` has a row level security policy \\`mtl_entry_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "audit_note_mtl_audit_note_select",
+        "detail": "Table \\`public.mtl_audit_note\\` has a row level security policy \\`mtl_audit_note_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "audit_note_mtl_audit_note_insert",
+        "detail": "Table \\`public.mtl_audit_note\\` has a row level security policy \\`mtl_audit_note_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "entry_mtl_entry_no_updates",
+        "detail": "Table \\`public.mtl_entry\\` has a row level security policy \\`mtl_entry_no_updates\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "entry_mtl_entry_no_deletes",
+        "detail": "Table \\`public.mtl_entry\\` has a row level security policy \\`mtl_entry_no_deletes\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "audit_note_mtl_audit_note_no_updates",
+        "detail": "Table \\`public.mtl_audit_note\\` has a row level security policy \\`mtl_audit_note_no_updates\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "audit_note_mtl_audit_note_no_deletes",
+        "detail": "Table \\`public.mtl_audit_note\\` has a row level security policy \\`mtl_audit_note_no_deletes\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "game": [
+      {
+        "policyName": "settings_game_settings_select",
+        "detail": "Table \\`public.game_settings\\` has a row level security policy \\`game_settings_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "settings_game_settings_insert",
+        "detail": "Table \\`public.game_settings\\` has a row level security policy \\`game_settings_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "settings_game_settings_update",
+        "detail": "Table \\`public.game_settings\\` has a row level security policy \\`game_settings_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "table": [
+      {
+        "policyName": "inventory_snapshot_table_inventory_snapshot_select",
+        "detail": "Table \\`public.table_inventory_snapshot\\` has a row level security policy \\`table_inventory_snapshot_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "inventory_snapshot_table_inventory_snapshot_insert",
+        "detail": "Table \\`public.table_inventory_snapshot\\` has a row level security policy \\`table_inventory_snapshot_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "fill_table_fill_select",
+        "detail": "Table \\`public.table_fill\\` has a row level security policy \\`table_fill_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "fill_table_fill_insert",
+        "detail": "Table \\`public.table_fill\\` has a row level security policy \\`table_fill_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "fill_table_fill_update",
+        "detail": "Table \\`public.table_fill\\` has a row level security policy \\`table_fill_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "credit_table_credit_select",
+        "detail": "Table \\`public.table_credit\\` has a row level security policy \\`table_credit_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "credit_table_credit_insert",
+        "detail": "Table \\`public.table_credit\\` has a row level security policy \\`table_credit_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "credit_table_credit_update",
+        "detail": "Table \\`public.table_credit\\` has a row level security policy \\`table_credit_update\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "drop_event_table_drop_event_select",
+        "detail": "Table \\`public.table_drop_event\\` has a row level security policy \\`table_drop_event_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "drop_event_table_drop_event_insert",
+        "detail": "Table \\`public.table_drop_event\\` has a row level security policy \\`table_drop_event_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "audit": [
+      {
+        "policyName": "log_audit_log_select",
+        "detail": "Table \\`public.audit_log\\` has a row level security policy \\`audit_log_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "log_audit_log_insert",
+        "detail": "Table \\`public.audit_log\\` has a row level security policy \\`audit_log_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "report": [
+      {
+        "policyName": "report_select",
+        "detail": "Table \\`public.report\\` has a row level security policy \\`report_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "report_insert",
+        "detail": "Table \\`public.report\\` has a row level security policy \\`report_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "floor": [
+      {
+        "policyName": "layout_floor_layout_select_same_casino",
+        "detail": "Table \\`public.floor_layout\\` has a row level security policy \\`floor_layout_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_floor_layout_insert_authorized",
+        "detail": "Table \\`public.floor_layout\\` has a row level security policy \\`floor_layout_insert_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_floor_layout_update_authorized",
+        "detail": "Table \\`public.floor_layout\\` has a row level security policy \\`floor_layout_update_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_floor_layout_delete_admin_only",
+        "detail": "Table \\`public.floor_layout\\` has a row level security policy \\`floor_layout_delete_admin_only\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_version_floor_layout_version_select_same_casino",
+        "detail": "Table \\`public.floor_layout_version\\` has a row level security policy \\`floor_layout_version_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_version_floor_layout_version_insert_authorized",
+        "detail": "Table \\`public.floor_layout_version\\` has a row level security policy \\`floor_layout_version_insert_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_version_floor_layout_version_update_authorized",
+        "detail": "Table \\`public.floor_layout_version\\` has a row level security policy \\`floor_layout_version_update_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "pit_floor_pit_select_same_casino",
+        "detail": "Table \\`public.floor_pit\\` has a row level security policy \\`floor_pit_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "pit_floor_pit_insert_authorized",
+        "detail": "Table \\`public.floor_pit\\` has a row level security policy \\`floor_pit_insert_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "pit_floor_pit_update_authorized",
+        "detail": "Table \\`public.floor_pit\\` has a row level security policy \\`floor_pit_update_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "pit_floor_pit_delete_admin_only",
+        "detail": "Table \\`public.floor_pit\\` has a row level security policy \\`floor_pit_delete_admin_only\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_slot_floor_table_slot_select_same_casino",
+        "detail": "Table \\`public.floor_table_slot\\` has a row level security policy \\`floor_table_slot_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_slot_floor_table_slot_insert_authorized",
+        "detail": "Table \\`public.floor_table_slot\\` has a row level security policy \\`floor_table_slot_insert_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_slot_floor_table_slot_update_authorized",
+        "detail": "Table \\`public.floor_table_slot\\` has a row level security policy \\`floor_table_slot_update_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "table_slot_floor_table_slot_delete_admin_only",
+        "detail": "Table \\`public.floor_table_slot\\` has a row level security policy \\`floor_table_slot_delete_admin_only\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_activation_floor_layout_activation_select_same_casino",
+        "detail": "Table \\`public.floor_layout_activation\\` has a row level security policy \\`floor_layout_activation_select_same_casino\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_activation_floor_layout_activation_insert_authorized",
+        "detail": "Table \\`public.floor_layout_activation\\` has a row level security policy \\`floor_layout_activation_insert_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "layout_activation_floor_layout_activation_update_authorized",
+        "detail": "Table \\`public.floor_layout_activation\\` has a row level security policy \\`floor_layout_activation_update_authorized\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ],
+    "loyalty": [
+      {
+        "policyName": "ledger_loyalty_ledger_select",
+        "detail": "Table \\`public.loyalty_ledger\\` has a row level security policy \\`loyalty_ledger_select\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      },
+      {
+        "policyName": "ledger_loyalty_ledger_insert",
+        "detail": "Table \\`public.loyalty_ledger\\` has a row level security policy \\`loyalty_ledger_insert\\` that re-evaluates current_setting() or auth.<function>() for each row. This produces suboptimal query performance at scale. Resolve the issue by replacing \\`auth.<function>()\\` with \\`(select auth.<function>())\\`. See [docs](https://supabase.com/docs/guides/database/postgres/row-level-security#call-functions-with-select) for more info."
+      }
+    ]
+  },
+  "multiplePolicyIssues": [
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`anon\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_anon_SELECT"
+    },
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`authenticated\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_authenticated_SELECT"
+    },
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`authenticator\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_authenticator_SELECT"
+    },
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`cli_login_postgres\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_cli_login_postgres_SELECT"
+    },
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`dashboard_user\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_dashboard_user_SELECT"
+    },
+    {
+      "name": "multiple_permissive_policies",
+      "title": "Multiple Permissive Policies",
+      "level": "WARN",
+      "facing": "EXTERNAL",
+      "categories": ["PERFORMANCE"],
+      "description": "Detects if multiple permissive row level security policies are present on a table for the same \\`role\\` and \\`action\\` (e.g. insert). Multiple permissive policies are suboptimal for performance as each policy must be executed for every relevant query.",
+      "detail": "Table \\`public.casino_settings\\` has multiple permissive policies for role \\`reporting_reader\\` for action \\`SELECT\\`. Policies include \\`{casino_settings_read,casino_settings_write}\\`",
+      "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0006_multiple_permissive_policies",
+      "metadata": {
+        "name": "casino_settings",
+        "type": "table",
+        "schema": "public"
+      },
+      "cache_key": "multiple_permissive_policies_public_casino_settings_reporting_reader_SELECT"
+    }
+  ],
+  "migrationScript": "/home/diepulp/projects/pt-2/supabase/migrations/rls_performance_auth_subqueries.sql",
+  "recommendations": [
+    "Fix auth function calls by wrapping them in subqueries: auth.uid() → (select auth.uid())",
+    "Fix current_setting calls: current_setting('key') → (select current_setting('key'))",
+    "Test all policy changes in staging before production deployment",
+    "Use EXPLAIN ANALYZE to measure performance improvements",
+    "Consider batching policy updates to minimize downtime"
+  ]
+}

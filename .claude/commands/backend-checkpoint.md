@@ -30,7 +30,7 @@ Immediately run this Python code to restore the session:
 ```bash
 python3 << 'EOF'
 from lib.memori import create_memori_client
-from lib.memori.skill_context import BackendServiceContext
+from lib.memori.backend_service_context import BackendServiceContext
 
 memori = create_memori_client("skill:backend-service-builder")
 memori.enable()
@@ -77,7 +77,7 @@ Then run Python code to save the checkpoint with the gathered information:
 ```bash
 python3 << 'EOF'
 from lib.memori import create_memori_client
-from lib.memori.skill_context import BackendServiceContext
+from lib.memori.backend_service_context import BackendServiceContext
 
 memori = create_memori_client("skill:backend-service-builder")
 memori.enable()

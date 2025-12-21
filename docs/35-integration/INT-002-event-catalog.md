@@ -1,9 +1,17 @@
+---
+id: INT-002
+title: Event Catalog
+version: 1.1.0
+status: Active
+effective: 2025-12-20
+cross_references: [ARCH-SRM, ADR-004]
+---
+
 # INT-002 Event Catalog
 
 **Status**: Active (updated for EXEC-VSE-001)
-**Effective**: 2025-12-06
-**Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
-**Cross-Reference**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md`, `docs/80-adrs/ADR-004-real-time-strategy.md`
+**Effective**: 2025-12-20
+**Cross-Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md), [REAL_TIME_EVENTS_MAP.md](../25-api-data/REAL_TIME_EVENTS_MAP.md), [ADR-004-real-time-strategy.md](../80-adrs/ADR-004-real-time-strategy.md)
 
 > **Updated 2025-12-06**: Visit Service Evolution changes
 > - RatingSlip events: `visit_id` is now required (NOT NULL), `player_id` removed (derived from visit)
@@ -24,7 +32,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - Channel joins are denied unless the caller's role matches the SRM RLS policy (e.g., pit_boss, admin)
 - Hot domains (RatingSlip, TableContext telemetry) broadcast state transitions or periodic snapshots (1-5s) instead of every row mutation to avoid over-subscription
 
-**SRM Reference**: Lines 337, 865-866
+**Reference**: [SEC-001-rls-policy-matrix.md](../30-security/SEC-001-rls-policy-matrix.md)
 
 ---
 
@@ -37,7 +45,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - All events include `casino_id`, relevant IDs, and `at` timestamp
 - Idempotent payloads required (safe for replay/duplicate delivery)
 
-**SRM Reference**
+**Reference**: [SERVICE_RESPONSIBILITY_MATRIX.md](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md) (Cross-Context Consumption Rules)
 
 ---
 
@@ -129,7 +137,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: RatingSlipService
 **Trigger**: New rating slip created via Server Action
 **Channel**: `{casino_id}` (list feed)
-**SRM Reference**: §RatingSlipService
+**Reference**: [SRM §RatingSlipService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#ratingslipservice-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -160,7 +168,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Channels**:
 - `{casino_id}` (list feed)
 - `{casino_id}:{rating_slip_id}` (detail view)
-**SRM Reference**: §RatingSlipService
+**Reference**: [SRM §RatingSlipService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#ratingslipservice-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -194,7 +202,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Channels**:
 - `{casino_id}` (list feed)
 - `{casino_id}:{rating_slip_id}` (detail view)
-**SRM Reference**: §RatingSlipService
+**Reference**: [SRM §RatingSlipService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#ratingslipservice-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -228,7 +236,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: LoyaltyService (via `rpc_issue_mid_session_reward`)
 **Trigger**: Reward issued (mid-session, session-end, manual adjustment, etc.)
 **Channel**: `{casino_id}` (list feed), `{casino_id}:{player_id}` (player-specific)
-**SRM Reference**: Lines 353-363, 863
+**Reference**: [SRM §LoyaltyService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context)
 
 **Payload Schema**:
 ```typescript
@@ -259,7 +267,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: LoyaltyService
 **Trigger**: Player loyalty balance changed
 **Channel**: `{casino_id}:{player_id}`
-**SRM Reference**: Implicit from ledger operations (Lines 1192-1200, 1317-1323)
+**Reference**: [SRM §LoyaltyService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context) (implicit from ledger operations)
 
 **Payload Schema**:
 ```typescript
@@ -289,7 +297,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService (via `rpc_log_table_inventory_snapshot`)
 **Trigger**: Table inventory opened (shift start)
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -320,7 +328,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Table inventory closed (shift end)
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -353,7 +361,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Mid-shift inventory rundown
 **Channel**: `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -379,7 +387,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService (via `rpc_request_table_fill`)
 **Trigger**: Table fill request initiated
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -411,7 +419,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Table fill delivered and received
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -442,7 +450,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService (via `rpc_request_table_credit`)
 **Trigger**: Table credit request initiated (chips to cage)
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -469,7 +477,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Table credit delivered to cage
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -496,7 +504,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService (via `rpc_log_table_drop`)
 **Trigger**: Drop box removed from table
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -526,7 +534,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Drop box delivered to count room
 **Channel**: `{casino_id}`, `{casino_id}:{table_id}`
-**SRM Reference**: Lines 1648
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -552,7 +560,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Table activated (brought into service)
 **Channel**: `{casino_id}`
-**SRM Reference**: Lines 1403-1411, 1650
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -578,7 +586,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: TableContextService
 **Trigger**: Table deactivated (taken out of service)
 **Channel**: `{casino_id}`
-**SRM Reference**: Lines 1403-1411
+**Reference**: [SRM §TableContextService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#tablecontextservice-operational-telemetry-context)
 
 **Payload Schema**:
 ```typescript
@@ -602,7 +610,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: FloorLayoutService (via `rpc_activate_floor_layout`)
 **Trigger**: Floor layout version activated
 **Channel**: `{casino_id}`
-**SRM Reference**: Lines 1663, 1674, 1786-1787
+**Reference**: [SRM §FloorLayoutService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#floorlayoutservice-design--activation-context)
 
 **Payload Schema**:
 ```typescript
@@ -642,14 +650,14 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 
 ---
 
-### FinanceService Events
+### PlayerFinancialService Events
 
 #### `finance.transaction_created`
 
-**Producer**: FinanceService (via `rpc_create_financial_txn`)
+**Producer**: PlayerFinancialService (via `rpc_create_financial_txn`)
 **Trigger**: Financial transaction recorded
 **Channel**: `{casino_id}`, `{casino_id}:{player_id}`
-**SRM Reference**: Lines 1951-1952 (outbox pattern), 2013-2026
+**Reference**: [SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented)
 
 **Payload Schema**:
 ```typescript
@@ -679,10 +687,10 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 
 #### `finance.outbox_processed`
 
-**Producer**: FinanceService background worker
+**Producer**: PlayerFinancialService background worker (post-MVP)
 **Trigger**: Finance outbox event processed (webhook/email sent)
 **Channel**: Internal (worker monitoring)
-**SRM Reference**: Lines 1951-1952, 2013-2026
+**Reference**: [SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented) (outbox is post-MVP per ADR-016)
 
 **Payload Schema**:
 ```typescript
@@ -710,7 +718,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: VisitService
 **Trigger**: Player checked in to casino
 **Channel**: `{casino_id}`
-**SRM Reference**: Lines 1132-1138 (implicit from visit lifecycle)
+**Reference**: [SRM §VisitService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#visitservice-operational-session-context)
 
 **Payload Schema**:
 ```typescript
@@ -735,7 +743,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 **Producer**: VisitService
 **Trigger**: Player checked out of casino
 **Channel**: `{casino_id}`, `{casino_id}:{visit_id}`
-**SRM Reference**: Lines 1132-1138
+**Reference**: [SRM §VisitService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#visitservice-operational-session-context)
 
 **Payload Schema**:
 ```typescript
@@ -761,8 +769,8 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 ## Outbox Event Patterns
 
 **Services with Outbox Tables**:
-- **Loyalty** (`loyalty_outbox`) - Lines 1223-1236
-- **Finance** (`finance_outbox`) - Lines 2013-2026
+- **Loyalty** (`loyalty_outbox`) - [SRM §LoyaltyService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context)
+- **Finance** (`finance_outbox`) - post-MVP per ADR-016 ([SRM §PlayerFinancialService](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#playerfinancialservice-finance-context--implemented))
 
 **Purpose**: Reliable side effect execution (emails, webhooks, external integrations)
 
@@ -773,7 +781,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - Dead-letter alerting after threshold attempts (N)
 - Exponential backoff with jitter for retries
 
-**SRM Reference**: Lines 904, 1861, 1951-1952
+**Reference**: [SRM §LoyaltyService.Contracts](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#loyaltyservice-reward-context), [OBSERVABILITY_SPEC.md](../50-ops/OBSERVABILITY_SPEC.md)
 
 ---
 
@@ -795,7 +803,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - Used in both mutation success handlers and realtime listeners
 - Batched invalidations use `refetchType: 'active'` to avoid background refetch storms
 
-**SRM Reference**: Lines 862-864, 899, 903-905
+**Reference**: [ADR-004-real-time-strategy.md](../80-adrs/ADR-004-real-time-strategy.md)
 
 ---
 
@@ -809,7 +817,7 @@ Centralize domain event contracts, channel naming, payload schemas, and ownershi
 - Prefer **poll + ETag** refresh (React Query refetch with `If-None-Match`) instead of realtime streams
 - Server-side aggregation reduces broadcast volume
 
-**SRM Reference**: Lines 865, 1651
+**Reference**: [OBSERVABILITY_SPEC.md §4.4](../50-ops/OBSERVABILITY_SPEC.md#44-broadcast-throttling)
 
 ---
 
@@ -834,7 +842,7 @@ Full mapping details live in:
 - Event payloads logged to `audit_log` table with correlation ID
 - P95 latency budget: < 80ms for event processing
 
-**SRM Reference**: Lines 33, 1652, 1870
+**Reference**: [OBSERVABILITY_SPEC.md §2](../50-ops/OBSERVABILITY_SPEC.md#2-audit-logging), [SRM §CasinoService.Contracts](../20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md#casinoservice-foundational-context)
 
 ---
 
@@ -842,9 +850,9 @@ Full mapping details live in:
 
 | Event | Producer | Consumers | Payload Keys | Channel |
 |-------|----------|-----------|--------------|---------|
-| `rating_slip.created` | RatingSlip | UI | rating_slip_id, player_id, casino_id, status, at | `{casino_id}` |
-| `rating_slip.updated` | RatingSlip | Loyalty, UI | rating_slip_id, player_id, casino_id, average_bet, minutes_played, game_type, at | `{casino_id}`, `{casino_id}:{rating_slip_id}` |
-| `rating_slip.closed` | RatingSlip | Loyalty, UI | rating_slip_id, player_id, casino_id, end_time, at | `{casino_id}`, `{casino_id}:{rating_slip_id}` |
+| `rating_slip.created` | RatingSlip | UI | rating_slip_id, visit_id, casino_id, table_id, status, at | `{casino_id}` |
+| `rating_slip.updated` | RatingSlip | Loyalty, UI | rating_slip_id, visit_id, casino_id, average_bet, minutes_played, game_type, at | `{casino_id}`, `{casino_id}:{rating_slip_id}` |
+| `rating_slip.closed` | RatingSlip | Loyalty, UI | rating_slip_id, visit_id, casino_id, end_time, at | `{casino_id}`, `{casino_id}:{rating_slip_id}` |
 | `loyalty.ledger_appended` | Loyalty | UI | ledger_id, player_id, points_earned, reason, rating_slip_id, at | `{casino_id}`, `{casino_id}:{player_id}` |
 | `loyalty.balance_updated` | Loyalty | UI | player_id, casino_id, balance, balance_delta, tier, at | `{casino_id}:{player_id}` |
 | `table.inventory_open` | TableContext | UI, Audit | casino_id, table_id, snapshot_id, chipset, counted_by, at | `{casino_id}`, `{casino_id}:{table_id}` |
@@ -859,8 +867,8 @@ Full mapping details live in:
 | `table.activated` | TableContext | UI, FloorLayout | casino_id, table_id, label, type, pit, at | `{casino_id}` |
 | `table.deactivated` | TableContext | UI | casino_id, table_id, at | `{casino_id}` |
 | `floor_layout.activated` | FloorLayout | **TableContext**, Performance, UI | casino_id, layout_id, layout_version_id, activated_by, pits, table_slots, at | `{casino_id}` |
-| `finance.transaction_created` | Finance | UI, MTL, Reports | transaction_id, player_id, casino_id, amount, gaming_day, at | `{casino_id}`, `{casino_id}:{player_id}` |
-| `finance.outbox_processed` | Finance (worker) | Observability, Admin UI | outbox_id, ledger_id, event_type, attempt_count, at | Internal |
+| `finance.transaction_created` | PlayerFinancial | UI, MTL, Reports | transaction_id, player_id, casino_id, amount, gaming_day, at | `{casino_id}`, `{casino_id}:{player_id}` |
+| `finance.outbox_processed` | PlayerFinancial (worker, post-MVP) | Observability, Admin UI | outbox_id, ledger_id, event_type, attempt_count, at | Internal |
 | `visit.checked_in` | Visit | UI, Loyalty | visit_id, player_id, casino_id, started_at, at | `{casino_id}` |
 | `visit.checked_out` | Visit | UI, Loyalty, Reports | visit_id, player_id, casino_id, ended_at, duration_minutes, at | `{casino_id}`, `{casino_id}:{visit_id}` |
 
@@ -878,6 +886,6 @@ Full mapping details live in:
 
 ---
 
-**Last Updated**: 2025-11-17
-**SRM Version**: 3.1.0
+**Last Updated**: 2025-12-20
+**SRM Version**: 4.4.0
 **Schema SHA**: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
