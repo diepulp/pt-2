@@ -22,6 +22,7 @@ import { PanelContainer } from "./panel-container";
 interface PitPanelsStaticProps {
   tableName?: string;
   className?: string;
+  reviewMode?: boolean;
 }
 
 // Mock data for static UI preview
@@ -110,12 +111,14 @@ const MOCK_STATS: DashboardStats = {
 export function PitPanelsStatic({
   tableName = "BJ-01",
   className,
+  reviewMode = false,
 }: PitPanelsStaticProps) {
   return (
     <PanelContainer
       casinoId="mock-casino"
       tableName={tableName}
       className={className}
+      reviewMode={reviewMode}
       tables={MOCK_TABLES}
       selectedTable={MOCK_TABLES[0]}
       seats={MOCK_SEATS}

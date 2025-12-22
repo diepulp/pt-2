@@ -1,4 +1,5 @@
 export { PitPanelsClient } from "./pit-panels-client";
+export { PitPanelsDashboardLayout } from "./pit-panels-dashboard-layout";
 export { PitPanelsStatic } from "./pit-panels-static";
 export { PanelContainer } from "./panel-container";
 export { ActivityPanel } from "./activity-panel";

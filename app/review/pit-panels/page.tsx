@@ -59,8 +59,8 @@ export default function PitPanelsReviewPage() {
             </div>
 
             {/* Panel Container */}
-            <div className="h-[700px]">
-              <PitPanelsStatic tableName="BJ-01" />
+            <div className="h-[720px]">
+              <PitPanelsStatic tableName="BJ-01" reviewMode />
             </div>
           </div>
 

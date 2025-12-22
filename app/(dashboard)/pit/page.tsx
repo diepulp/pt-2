@@ -16,7 +16,7 @@
 
 import { redirect } from "next/navigation";
 
-import { PitPanelsClient } from "@/components/pit-panels";
+import { PitPanelsDashboardLayout } from "@/components/pit-panels";
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
@@ -57,7 +57,7 @@ export default async function PitPage() {
   // Height: viewport - header (4rem) - main padding (3rem = p-6 top + bottom)
   return (
     <div className="h-[calc(100vh-7rem)] overflow-hidden">
-      <PitPanelsClient casinoId={casinoId} />
+      <PitPanelsDashboardLayout casinoId={casinoId} />
     </div>
   );
 }

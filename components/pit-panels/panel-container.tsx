@@ -12,6 +12,11 @@ import * as React from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RealtimeStatusIndicator } from "@/hooks/dashboard";
 import type {
@@ -61,6 +66,10 @@ interface PanelContainerProps {
    * Content fills the full width. Navigation handled by MobileTableOpsDrawer.
    */
   mobileMode?: boolean;
+  /**
+   * Review mode: Adds resizable panels for supporting sections.
+   */
+  reviewMode?: boolean;
 }
 
 /**
@@ -86,11 +95,12 @@ export function PanelContainer({
   onNewSlip,
   onSlipClick,
   mobileMode = false,
+  reviewMode = false,
 }: PanelContainerProps) {
   // PRD-013: Consume UI state from Zustand store
   const { activePanel, setActivePanel } = usePitDashboardUI();
 
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(true);
   const drawerRef = React.useRef<HTMLDivElement>(null);
 
   // Close drawer when clicking outside
@@ -243,107 +253,158 @@ export function PanelContainer({
     }
   };
 
+  const mainPanel = (
+    <div
+      className={cn(
+        "h-full flex flex-col",
+        !mobileMode && "pl-14", // Only add padding for sidebar on desktop
+        mobileMode && "pb-16", // Add padding for bottom navigation tabs on mobile
+      )}
+    >
+      {/* Panel content with swipe handlers for mobile */}
+      <div className="flex-1 flex flex-col overflow-hidden" {...swipeHandlers}>
+        {/* Swipe indicator for mobile */}
+        <div className="md:hidden flex justify-center gap-1.5 py-2">
+          {panelIds.map((id) => (
+            <div
+              key={id}
+              className={cn(
+                "w-1.5 h-1.5 rounded-full transition-all duration-200",
+                activePanel === id ? "w-4 bg-accent" : "bg-muted-foreground/30",
+              )}
+            />
+          ))}
+        </div>
+        {renderActivePanel()}
+      </div>
+
+      {/* Mobile Bottom Navigation Tabs */}
+      {mobileMode && (
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-t border-border/40">
+          <Tabs
+            value={activePanel}
+            onValueChange={(value) => setActivePanel(value as PanelType)}
+            className="h-full"
+          >
+            <TabsList className="grid grid-cols-4 h-full bg-transparent p-0">
+              {panels.map((panel) => {
+                const Icon = panel.icon;
+                const isActive = activePanel === panel.id;
+
+                return (
+                  <TabsTrigger
+                    key={panel.id}
+                    value={panel.id}
+                    className={cn(
+                      "flex flex-col items-center gap-0.5 h-full py-1.5",
+                      "data-[state=active]:bg-accent/10 data-[state=active]:text-accent",
+                      "hover:bg-muted/50 transition-colors",
+                    )}
+                  >
+                    <div className="relative">
+                      <Icon
+                        className={cn(
+                          "h-5 w-5",
+                          isActive ? "text-accent" : "text-muted-foreground",
+                        )}
+                      />
+                      {panel.notifications > 0 && (
+                        <div
+                          className={cn(
+                            "absolute -top-2 -right-2 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground",
+                            "flex items-center justify-center font-bold",
+                          )}
+                        >
+                          {panel.notifications > 9 ? "9+" : panel.notifications}
+                        </div>
+                      )}
+                    </div>
+                    <span
+                      className={cn(
+                        "text-[10px] font-medium",
+                        isActive ? "text-accent" : "text-muted-foreground",
+                      )}
+                    >
+                      {panel.label}
+                    </span>
+                    <span
+                      className={cn(
+                        "absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/60",
+                        isActive && "text-accent/60",
+                      )}
+                    >
+                      {panel.shortcut}
+                    </span>
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </Tabs>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div
       className={cn("relative h-full bg-background overflow-hidden", className)}
     >
       {/* Panel Content - Full width, with left padding for collapsed drawer on desktop and bottom padding for mobile tabs */}
-      <div
-        className={cn(
-          "h-full flex flex-col",
-          !mobileMode && "pl-14", // Only add padding for sidebar on desktop
-          mobileMode && "pb-16", // Add padding for bottom navigation tabs on mobile
-        )}
-      >
-        {/* Panel content with swipe handlers for mobile */}
-        <div
-          className="flex-1 flex flex-col overflow-hidden"
-          {...swipeHandlers}
-        >
-          {/* Swipe indicator for mobile */}
-          <div className="md:hidden flex justify-center gap-1.5 py-2">
-            {panelIds.map((id) => (
-              <div
-                key={id}
-                className={cn(
-                  "w-1.5 h-1.5 rounded-full transition-all duration-200",
-                  activePanel === id
-                    ? "w-4 bg-accent"
-                    : "bg-muted-foreground/30",
-                )}
-              />
-            ))}
-          </div>
-          {renderActivePanel()}
-        </div>
-
-        {/* Mobile Bottom Navigation Tabs */}
-        {mobileMode && (
-          <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16 bg-background/95 backdrop-blur-sm border-t border-border/40">
-            <Tabs
-              value={activePanel}
-              onValueChange={(value) => setActivePanel(value as PanelType)}
-              className="h-full"
-            >
-              <TabsList className="grid grid-cols-4 h-full bg-transparent p-0">
-                {panels.map((panel) => {
-                  const Icon = panel.icon;
-                  const isActive = activePanel === panel.id;
-
-                  return (
-                    <TabsTrigger
-                      key={panel.id}
-                      value={panel.id}
-                      className={cn(
-                        "flex flex-col items-center gap-0.5 h-full py-1.5",
-                        "data-[state=active]:bg-accent/10 data-[state=active]:text-accent",
-                        "hover:bg-muted/50 transition-colors",
-                      )}
-                    >
-                      <div className="relative">
-                        <Icon
-                          className={cn(
-                            "h-5 w-5",
-                            isActive ? "text-accent" : "text-muted-foreground",
-                          )}
-                        />
-                        {panel.notifications > 0 && (
-                          <div
-                            className={cn(
-                              "absolute -top-2 -right-2 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground",
-                              "flex items-center justify-center font-bold",
-                            )}
-                          >
-                            {panel.notifications > 9
-                              ? "9+"
-                              : panel.notifications}
-                          </div>
-                        )}
-                      </div>
-                      <span
-                        className={cn(
-                          "text-[10px] font-medium",
-                          isActive ? "text-accent" : "text-muted-foreground",
-                        )}
-                      >
-                        {panel.label}
-                      </span>
-                      <span
-                        className={cn(
-                          "absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/60",
-                          isActive && "text-accent/60",
-                        )}
-                      >
-                        {panel.shortcut}
-                      </span>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
-            </Tabs>
-          </div>
-        )}
-      </div>
+      {reviewMode && !mobileMode ? (
+        <ResizablePanelGroup direction="horizontal" className="h-full">
+          <ResizablePanel defaultSize={62} minSize={42}>
+            {mainPanel}
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel defaultSize={38} minSize={22}>
+            <ResizablePanelGroup direction="vertical" className="h-full">
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full border-b border-border/40 bg-card/30 px-6 py-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-mono text-muted-foreground">
+                        Review Section A
+                      </p>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Under Construction
+                      </h3>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      Placeholder
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Dedicated review surface for the next pit ops module.
+                  </p>
+                </div>
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={50} minSize={25}>
+                <div className="h-full bg-card/30 px-6 py-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-mono text-muted-foreground">
+                        Review Section B
+                      </p>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Under Construction
+                      </h3>
+                    </div>
+                    <Badge variant="outline" className="text-xs">
+                      Placeholder
+                    </Badge>
+                  </div>
+                  <p className="mt-3 text-xs text-muted-foreground">
+                    Reserve for compliance, alerts, or table insights.
+                  </p>
+                </div>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      ) : (
+        mainPanel
+      )}
 
       {/* Vertical Tab Navigation - Overlay drawer on LEFT (desktop only) */}
       {!mobileMode && (
