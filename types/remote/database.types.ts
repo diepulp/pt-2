@@ -947,7 +947,7 @@ export type Database = {
           related_transaction_id: string | null
           source: Database["public"]["Enums"]["financial_source"] | null
           tender_type: string | null
-          visit_id: string | null
+          visit_id: string
         }
         Insert: {
           amount: number
@@ -963,7 +963,7 @@ export type Database = {
           related_transaction_id?: string | null
           source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id: string
         }
         Update: {
           amount?: number
@@ -979,7 +979,7 @@ export type Database = {
           related_transaction_id?: string | null
           source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
-          visit_id?: string | null
+          visit_id?: string
         }
         Relationships: [
           {
@@ -1056,15 +1056,19 @@ export type Database = {
       }
       rating_slip: {
         Row: {
+          accumulated_seconds: number
           average_bet: number | null
           casino_id: string
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
+          final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
+          previous_slip_id: string | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
@@ -1072,15 +1076,19 @@ export type Database = {
           visit_id: string
         }
         Insert: {
+          accumulated_seconds?: number
           average_bet?: number | null
           casino_id: string
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
+          final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
+          previous_slip_id?: string | null
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
@@ -1088,15 +1096,19 @@ export type Database = {
           visit_id: string
         }
         Update: {
+          accumulated_seconds?: number
           average_bet?: number | null
           casino_id?: string
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
+          final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
+          previous_slip_id?: string | null
           seat_number?: string | null
           start_time?: string
           status?: Database["public"]["Enums"]["rating_slip_status"]
@@ -1109,6 +1121,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_slip_previous_slip_id_fkey"
+            columns: ["previous_slip_id"]
+            isOneToOne: false
+            referencedRelation: "rating_slip"
             referencedColumns: ["id"]
           },
           {
@@ -1812,7 +1831,7 @@ export type Database = {
               related_transaction_id: string | null
               source: Database["public"]["Enums"]["financial_source"] | null
               tender_type: string | null
-              visit_id: string | null
+              visit_id: string
             }
             SetofOptions: {
               from: "*"
@@ -1877,6 +1896,21 @@ export type Database = {
       rpc_get_rating_slip_duration: {
         Args: { p_as_of?: string; p_rating_slip_id: string }
         Returns: number
+      }
+      rpc_issue_mid_session_reward: {
+        Args: {
+          p_casino_id: string
+          p_idempotency_key?: string
+          p_player_id: string
+          p_points: number
+          p_rating_slip_id: string
+          p_reason?: Database["public"]["Enums"]["loyalty_reason"]
+          p_staff_id: string
+        }
+        Returns: {
+          balance_after: number
+          ledger_id: string
+        }[]
       }
       rpc_log_table_drop: {
         Args: {
@@ -1968,15 +2002,19 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accumulated_seconds: number
           average_bet: number | null
           casino_id: string
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
+          final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
+          previous_slip_id: string | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
@@ -2090,15 +2128,19 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accumulated_seconds: number
           average_bet: number | null
           casino_id: string
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
+          final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
+          previous_slip_id: string | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]
@@ -2122,15 +2164,19 @@ export type Database = {
           p_visit_id: string
         }
         Returns: {
+          accumulated_seconds: number
           average_bet: number | null
           casino_id: string
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
+          final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
+          previous_slip_id: string | null
           seat_number: string | null
           start_time: string
           status: Database["public"]["Enums"]["rating_slip_status"]

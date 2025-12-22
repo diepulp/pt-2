@@ -18,12 +18,15 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { VisitLiveViewDTO } from "@/services/visit/dtos";
 import type { Database } from "@/types/database.types";
 
 import * as crud from "./crud";
 import type {
   CloseRatingSlipInput,
   CreateRatingSlipInput,
+  MoveRatingSlipInput,
+  MoveRatingSlipResult,
   RatingSlipDTO,
   RatingSlipListFilters,
   RatingSlipPauseDTO,
@@ -189,6 +192,45 @@ export interface RatingSlipServiceInterface {
    */
   updateAverageBet(slipId: string, averageBet: number): Promise<RatingSlipDTO>;
 
+  // === Move Operations (PRD-016) ===
+
+  /**
+   * Move a player's rating slip to a new table.
+   * Closes current slip and starts new one with continuity metadata.
+   *
+   * PRD-016: Implements session continuity by linking slips in move chain.
+   *
+   * @param casinoId - Casino UUID
+   * @param actorId - Staff actor UUID
+   * @param slipId - Current rating slip UUID
+   * @param input - MoveRatingSlipInput (new_table_id, seat_number?)
+   * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
+   * @throws RATING_SLIP_INVALID_STATE if slip is already closed
+   */
+  move(
+    casinoId: string,
+    actorId: string,
+    slipId: string,
+    input: MoveRatingSlipInput,
+  ): Promise<MoveRatingSlipResult>;
+
+  /**
+   * Get visit live view with session aggregates.
+   *
+   * PRD-016: Provides stable "session slip" view to operators.
+   * ADR-015: Requires casinoId for RLS context self-injection.
+   *
+   * @param casinoId - Casino UUID for RLS context
+   * @param visitId - Visit UUID
+   * @param options - Include segments array, limit
+   * @returns VisitLiveViewDTO with session totals, or null if not found
+   */
+  getVisitLiveView(
+    casinoId: string,
+    visitId: string,
+    options?: { includeSegments?: boolean; segmentsLimit?: number },
+  ): Promise<VisitLiveViewDTO | null>;
+
   // === Published Queries (for cross-context consumption) ===
 
   /**
@@ -254,6 +296,12 @@ export function createRatingSlipService(
     // Update operations
     updateAverageBet: (slipId, averageBet) =>
       crud.updateAverageBet(supabase, slipId, averageBet),
+
+    // Move operations (PRD-016)
+    move: (casinoId, actorId, slipId, input) =>
+      crud.move(supabase, casinoId, actorId, slipId, input),
+    getVisitLiveView: (casinoId, visitId, options) =>
+      crud.getVisitLiveView(supabase, casinoId, visitId, options),
 
     // Published queries (for cross-context consumption)
     hasOpenSlipsForTable: (tableId, casinoId) =>

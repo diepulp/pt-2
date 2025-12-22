@@ -173,3 +173,83 @@ export type ActiveVisitFilters = {
   /** Required: player ID to check */
   player_id: string;
 };
+
+// === Visit Live View DTO (PRD-016) ===
+
+/**
+ * Visit live view with session aggregates.
+ * Response from rpc_get_visit_live_view.
+ *
+ * PRD-016: Provides stable "session slip" view to operators.
+ * Aggregates all rating slips for a visit into session totals.
+ *
+ * @see PRD-016 Rating Slip Session Continuity
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response type with computed aggregates
+export interface VisitLiveViewDTO {
+  /** Visit UUID */
+  visit_id: string;
+  /** Player UUID */
+  player_id: string;
+  /** Player first name */
+  player_first_name: string;
+  /** Player last name */
+  player_last_name: string;
+  /** Visit status: 'open' or 'closed' */
+  visit_status: "open" | "closed";
+  /** Visit start timestamp */
+  started_at: string;
+
+  // Current segment (active slip) - null if no active slip
+  /** Current slip UUID (null if no active slip) */
+  current_segment_slip_id: string | null;
+  /** Current table UUID (null if no active slip) */
+  current_segment_table_id: string | null;
+  /** Current table name (null if no active slip) */
+  current_segment_table_name: string | null;
+  /** Current seat number (null if no active slip) */
+  current_segment_seat_number: string | null;
+  /** Current slip status: 'open' or 'paused' (null if no active slip) */
+  current_segment_status: "open" | "paused" | null;
+  /** Current segment start timestamp (null if no active slip) */
+  current_segment_started_at: string | null;
+  /** Current average bet (null if no active slip) */
+  current_segment_average_bet: number | null;
+
+  // Session totals (aggregated across all slips)
+  /** Total play duration in seconds (closed slips + active slip) */
+  session_total_duration_seconds: number;
+  /** Total buy-in amount (sum of 'in' transactions) */
+  session_total_buy_in: number;
+  /** Total cash-out amount (sum of 'out' transactions) */
+  session_total_cash_out: number;
+  /** Net amount (buy_in - cash_out) */
+  session_net: number;
+  /** Total loyalty points earned (0 until loyalty system implemented) */
+  session_points_earned: number;
+  /** Count of rating slip segments for this visit */
+  session_segment_count: number;
+
+  // Optional segments array (when include_segments=true)
+  /** Array of recent slip segments (optional) */
+  segments?: Array<{
+    /** Slip UUID */
+    slip_id: string;
+    /** Table UUID */
+    table_id: string;
+    /** Table name */
+    table_name: string;
+    /** Seat number (null if not assigned) */
+    seat_number: string | null;
+    /** Slip status */
+    status: string;
+    /** Slip start timestamp */
+    start_time: string;
+    /** Slip end timestamp (null if still open) */
+    end_time: string | null;
+    /** Final duration in seconds (null if not closed) */
+    final_duration_seconds: number | null;
+    /** Average bet (null if not set) */
+    average_bet: number | null;
+  }>;
+}

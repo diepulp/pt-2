@@ -16,6 +16,7 @@
 /**
  * Rating slip basic fields (matches RatingSlipDTO).
  * Excludes player_id - derive from visit.player_id instead.
+ * PRD-016: Includes continuity fields for session tracking.
  */
 export const RATING_SLIP_SELECT = `
   id,
@@ -28,7 +29,11 @@ export const RATING_SLIP_SELECT = `
   status,
   average_bet,
   game_settings,
-  policy_snapshot
+  policy_snapshot,
+  previous_slip_id,
+  move_group_id,
+  accumulated_seconds,
+  final_duration_seconds
 ` as const;
 
 /**
@@ -39,6 +44,7 @@ export const RATING_SLIP_LIST_SELECT = RATING_SLIP_SELECT;
 /**
  * Rating slip with pause history join (matches RatingSlipWithPausesDTO).
  * Uses foreign key relation to join rating_slip_pause.
+ * PRD-016: Includes continuity fields for session tracking.
  */
 export const RATING_SLIP_WITH_PAUSES_SELECT = `
   id,
@@ -52,6 +58,10 @@ export const RATING_SLIP_WITH_PAUSES_SELECT = `
   average_bet,
   game_settings,
   policy_snapshot,
+  previous_slip_id,
+  move_group_id,
+  accumulated_seconds,
+  final_duration_seconds,
   rating_slip_pause (
     id,
     rating_slip_id,

@@ -5,14 +5,19 @@
  *
  * Orchestrates a move operation by:
  * 1. Validating destination table/seat is available
- * 2. Closing the current rating slip
- * 3. Starting a new rating slip at the destination with the SAME visit_id
+ * 2. Calling service.move() to handle close + start with continuity metadata
+ * 3. Returning both closed and new slip IDs plus continuity data
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
- * Pattern: PRD-008 Rating Slip Modal Integration WS5
+ * Pattern: PRD-016 Rating Slip Session Continuity WS5
  *
- * Note: Move preserves visit continuity - the new slip maintains the same visit_id
- * so financial transactions and loyalty points remain associated with the session.
+ * PRD-016: Move preserves session continuity via:
+ * - visit_id (financial/loyalty continuity)
+ * - move_group_id (session linking)
+ * - accumulated_seconds (session totals)
+ * - previous_slip_id (slip chain)
+ *
+ * The service layer handles all continuity metadata population.
  */
 
 import type { NextRequest } from "next/server";
@@ -29,7 +34,10 @@ import {
 } from "@/lib/http/service-response";
 import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
+import {
+  createRatingSlipService,
+  type MoveRatingSlipInput,
+} from "@/services/rating-slip";
 import { ratingSlipRouteParamsSchema } from "@/services/rating-slip/schemas";
 import {
   movePlayerSchema,
@@ -43,13 +51,19 @@ type RouteParams = { params: Promise<{ id: string }> };
 
 /**
  * Response type for move operation.
- * Returns the new slip ID for modal refresh.
+ * Returns the new slip ID for modal refresh plus continuity metadata.
+ *
+ * PRD-016: Includes move group and accumulated seconds for UI display.
  */
 interface MovePlayerResponse {
   /** UUID of the newly created slip at the destination */
   newSlipId: string;
   /** UUID of the closed slip (original) */
   closedSlipId: string;
+  /** Move group ID linking related slips */
+  moveGroupId: string;
+  /** Accumulated play seconds across all slips in the move chain */
+  accumulatedSeconds: number;
 }
 
 /**
@@ -58,11 +72,13 @@ interface MovePlayerResponse {
  * Move a player from current table/seat to a new table/seat.
  * Requires Idempotency-Key header.
  *
+ * PRD-016: Uses service.move() to preserve session continuity metadata.
+ *
  * Returns:
- * - 200: Move successful, returns new slip ID
- * - 400: Destination seat is occupied
+ * - 200: Move successful, returns new and closed slip IDs plus continuity data
+ * - 400: Destination seat is occupied or validation error
  * - 404: Rating slip not found
- * - 409: Rating slip is already closed
+ * - 409: Rating slip is already closed or concurrent move detected
  */
 export async function POST(request: NextRequest, segmentData: RouteParams) {
   const ctx = createRequestContext(request);
@@ -85,7 +101,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         const casinoId = mwCtx.rlsContext!.casinoId;
         const actorId = mwCtx.rlsContext!.actorId;
 
-        // 1. Get the current slip to extract visit_id and validate state
+        // 1. Get the current slip to validate state
         const currentSlip = await service.getById(params.id);
 
         if (!currentSlip) {
@@ -124,23 +140,27 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
           }
         }
 
-        // 3. Close the current slip with optional average_bet
-        const closedSlip = await service.close(casinoId, actorId, params.id, {
-          average_bet: input.averageBet,
-        });
-
-        // 4. Start new slip at destination with SAME visit_id
-        const newSlip = await service.start(casinoId, actorId, {
-          visit_id: currentSlip.visit_id,
-          table_id: input.destinationTableId,
-          seat_number: input.destinationSeatNumber ?? undefined,
-          // Preserve game settings if they exist
+        // 3. Map API input to service input
+        const moveInput: MoveRatingSlipInput = {
+          new_table_id: input.destinationTableId,
+          new_seat_number: input.destinationSeatNumber ?? undefined,
           game_settings: currentSlip.game_settings,
-        });
+        };
 
+        // 4. Execute move via service (handles close + start + continuity metadata)
+        const moveResult = await service.move(
+          casinoId,
+          actorId,
+          params.id,
+          moveInput,
+        );
+
+        // 5. Build response with continuity metadata
         const responseData: MovePlayerResponse = {
-          newSlipId: newSlip.id,
-          closedSlipId: closedSlip.id,
+          newSlipId: moveResult.new_slip.id,
+          closedSlipId: moveResult.closed_slip.id,
+          moveGroupId: moveResult.new_slip.move_group_id!,
+          accumulatedSeconds: moveResult.new_slip.accumulated_seconds,
         };
 
         return {
@@ -173,7 +193,9 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
               : result.code === "VALIDATION_ERROR" ||
                   result.code === "SEAT_ALREADY_OCCUPIED"
                 ? 400
-                : result.code === "RATING_SLIP_ALREADY_CLOSED"
+                : result.code === "RATING_SLIP_ALREADY_CLOSED" ||
+                    result.code === "RATING_SLIP_DUPLICATE" ||
+                    result.code === "CONCURRENT_MOVE_DETECTED"
                   ? 409
                   : 500;
 

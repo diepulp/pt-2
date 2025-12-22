@@ -142,6 +142,21 @@ export const activeVisitQuerySchema = z.object({
   player_id: uuidSchema("player ID"),
 });
 
+// === Live View Schemas (PRD-016) ===
+
+/**
+ * Schema for visit live view query params.
+ * PRD-016: Session aggregates for operators.
+ */
+export const visitLiveViewQuerySchema = z.object({
+  /** Include slip segments array in response */
+  include_segments: z.coerce.boolean().optional().default(false),
+  /** Max segments to return (default 10, max 50) */
+  segments_limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+});
+
+export type VisitLiveViewQuery = z.infer<typeof visitLiveViewQuerySchema>;
+
 // === Route Param Schemas ===
 
 /** Schema for visit detail route params */

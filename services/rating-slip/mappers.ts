@@ -11,7 +11,8 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { Json } from '@/types/database.types';
+import type { VisitLiveViewDTO } from "@/services/visit/dtos";
+import type { Json } from "@/types/database.types";
 
 import type {
   RatingSlipDTO,
@@ -19,7 +20,7 @@ import type {
   RatingSlipStatus,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-} from './dtos';
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -28,6 +29,7 @@ import type {
  * Must match the columns in selects.ts.
  *
  * Note: player_id is NOT included per SRM v4.0.0 invariant.
+ * PRD-016: Includes continuity fields for session tracking.
  */
 type RatingSlipSelectedRow = {
   id: string;
@@ -41,6 +43,10 @@ type RatingSlipSelectedRow = {
   average_bet: number | null;
   game_settings: Json | null;
   policy_snapshot: Json | null;
+  previous_slip_id: string | null;
+  move_group_id: string | null;
+  accumulated_seconds: number;
+  final_duration_seconds: number | null;
 };
 
 /**
@@ -77,6 +83,7 @@ type CloseRatingSlipRpcResponse = {
 /**
  * Maps a selected rating slip row to RatingSlipDTO.
  * Explicitly maps only public fields (no player_id).
+ * PRD-016: Includes continuity fields for session tracking.
  */
 export function toRatingSlipDTO(row: RatingSlipSelectedRow): RatingSlipDTO {
   return {
@@ -91,6 +98,10 @@ export function toRatingSlipDTO(row: RatingSlipSelectedRow): RatingSlipDTO {
     average_bet: row.average_bet,
     game_settings: row.game_settings,
     policy_snapshot: row.policy_snapshot,
+    previous_slip_id: row.previous_slip_id,
+    move_group_id: row.move_group_id,
+    accumulated_seconds: row.accumulated_seconds,
+    final_duration_seconds: row.final_duration_seconds,
   };
 }
 
@@ -125,6 +136,8 @@ export function toRatingSlipWithDurationDTO(
   return {
     ...toRatingSlipDTO(row),
     duration_seconds: durationSeconds,
+    // PRD-016: Include final_duration_seconds (should match duration_seconds after close)
+    final_duration_seconds: durationSeconds,
   };
 }
 
@@ -186,4 +199,85 @@ export function toRatingSlipWithPausesDTOOrNull(
   row: RatingSlipWithPausesSelectedRow | null,
 ): RatingSlipWithPausesDTO | null {
   return row ? toRatingSlipWithPausesDTO(row) : null;
+}
+
+// === Visit Live View Mappers (PRD-016) ===
+
+/**
+ * Type for the raw RPC response from rpc_get_visit_live_view.
+ * The RPC returns JSONB which Supabase parses as unknown.
+ * This type describes the expected shape for validation.
+ */
+type VisitLiveViewRpcResponse = {
+  visit_id: string;
+  player_id: string;
+  player_first_name: string;
+  player_last_name: string;
+  visit_status: "open" | "closed";
+  started_at: string;
+  current_segment_slip_id: string | null;
+  current_segment_table_id: string | null;
+  current_segment_table_name: string | null;
+  current_segment_seat_number: string | null;
+  current_segment_status: "open" | "paused" | null;
+  current_segment_started_at: string | null;
+  current_segment_average_bet: number | null;
+  session_total_duration_seconds: number;
+  session_total_buy_in: number;
+  session_total_cash_out: number;
+  session_net: number;
+  session_points_earned: number;
+  session_segment_count: number;
+  segments?: Array<{
+    slip_id: string;
+    table_id: string;
+    table_name: string;
+    seat_number: string | null;
+    status: string;
+    start_time: string;
+    end_time: string | null;
+    final_duration_seconds: number | null;
+    average_bet: number | null;
+  }>;
+};
+
+/**
+ * Maps RPC response to VisitLiveViewDTO.
+ * Provides type-safe transformation from raw RPC data.
+ */
+export function toVisitLiveViewDTO(
+  data: VisitLiveViewRpcResponse,
+): VisitLiveViewDTO {
+  return {
+    visit_id: data.visit_id,
+    player_id: data.player_id,
+    player_first_name: data.player_first_name,
+    player_last_name: data.player_last_name,
+    visit_status: data.visit_status,
+    started_at: data.started_at,
+    current_segment_slip_id: data.current_segment_slip_id,
+    current_segment_table_id: data.current_segment_table_id,
+    current_segment_table_name: data.current_segment_table_name,
+    current_segment_seat_number: data.current_segment_seat_number,
+    current_segment_status: data.current_segment_status,
+    current_segment_started_at: data.current_segment_started_at,
+    current_segment_average_bet: data.current_segment_average_bet,
+    session_total_duration_seconds: data.session_total_duration_seconds,
+    session_total_buy_in: data.session_total_buy_in,
+    session_total_cash_out: data.session_total_cash_out,
+    session_net: data.session_net,
+    session_points_earned: data.session_points_earned,
+    session_segment_count: data.session_segment_count,
+    segments: data.segments,
+  };
+}
+
+/**
+ * Maps nullable RPC response to VisitLiveViewDTO or null.
+ * Used when RPC returns NULL for non-existent visits.
+ */
+export function toVisitLiveViewDTOOrNull(
+  data: VisitLiveViewRpcResponse | null,
+): VisitLiveViewDTO | null {
+  return data ? toVisitLiveViewDTO(data) : null;
 }

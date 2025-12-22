@@ -17,11 +17,14 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { DomainError } from "@/lib/errors/domain-errors";
+// Note: VisitLiveViewDTO is now accessed via the mapper
 import type { Database } from "@/types/database.types";
 
 import type {
   CloseRatingSlipInput,
   CreateRatingSlipInput,
+  MoveRatingSlipInput,
+  MoveRatingSlipResult,
   RatingSlipDTO,
   RatingSlipListFilters,
   RatingSlipWithDurationDTO,
@@ -32,6 +35,7 @@ import {
   toRatingSlipDTOList,
   toRatingSlipWithDurationDTO,
   toRatingSlipWithPausesDTO,
+  toVisitLiveViewDTOOrNull,
 } from "./mappers";
 import { RATING_SLIP_SELECT, RATING_SLIP_WITH_PAUSES_SELECT } from "./selects";
 
@@ -287,6 +291,7 @@ export async function resume(
 /**
  * Close a rating slip (terminal state).
  * Uses rpc_close_rating_slip which returns duration and slip.
+ * PRD-016: Updates final_duration_seconds on the closed slip for continuity tracking.
  *
  * @param supabase - Supabase client with RLS context
  * @param casinoId - Casino UUID
@@ -323,6 +328,15 @@ export async function close(
       `Rating slip not found: ${slipId}`,
     );
   }
+
+  // PRD-016: Set final_duration_seconds on the closed slip
+  // This field is used by move() to calculate accumulated_seconds for the next slip
+  const { error: updateError } = await supabase
+    .from("rating_slip")
+    .update({ final_duration_seconds: result.duration_seconds })
+    .eq("id", slipId);
+
+  if (updateError) throw mapDatabaseError(updateError);
 
   // The RPC returns { slip: RatingSlipRow, duration_seconds: number }
   return toRatingSlipWithDurationDTO(result.slip, result.duration_seconds);
@@ -590,6 +604,119 @@ export async function updateAverageBet(
   }
 
   return toRatingSlipDTO(data);
+}
+
+// === Move Operation (PRD-016) ===
+
+/**
+ * Move a player's rating slip to a new table.
+ * Closes current slip and starts new one with continuity metadata.
+ *
+ * PRD-016: Implements session continuity by:
+ * 1. Closing current slip (sets final_duration_seconds)
+ * 2. Starting new slip at new table
+ * 3. Populating continuity fields:
+ *    - new.previous_slip_id = old.id
+ *    - new.move_group_id = old.move_group_id ?? old.id
+ *    - new.accumulated_seconds = old.accumulated_seconds + old.final_duration_seconds
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID
+ * @param actorId - Staff actor UUID
+ * @param slipId - Current rating slip UUID
+ * @param input - MoveRatingSlipInput (new_table_id, seat_number?, game_settings?)
+ * @returns MoveRatingSlipResult with closed_slip and new_slip
+ * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
+ * @throws RATING_SLIP_INVALID_STATE if slip is already closed
+ */
+export async function move(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  actorId: string,
+  slipId: string,
+  input: MoveRatingSlipInput,
+): Promise<MoveRatingSlipResult> {
+  // 1. Get the current slip with all fields (including continuity metadata)
+  const currentSlip = await getById(supabase, slipId);
+
+  // 2. Close the current slip (this sets final_duration_seconds)
+  const closedResult = await close(supabase, casinoId, actorId, slipId);
+
+  // 3. Calculate continuity metadata for new slip
+  // If move_group_id is null, this is the first move - use current slip ID as group ID
+  const moveGroupId = currentSlip.move_group_id ?? currentSlip.id;
+
+  // Accumulated seconds includes all prior segments plus the just-closed segment
+  const newAccumulatedSeconds =
+    currentSlip.accumulated_seconds + closedResult.duration_seconds;
+
+  // 4. Start new slip at new table
+  const newSlip = await start(supabase, casinoId, actorId, {
+    visit_id: currentSlip.visit_id,
+    table_id: input.new_table_id,
+    seat_number: input.new_seat_number,
+    game_settings: input.game_settings,
+  });
+
+  // 5. Update new slip with continuity metadata
+  const { data: updatedSlip, error: updateError } = await supabase
+    .from("rating_slip")
+    .update({
+      previous_slip_id: slipId,
+      move_group_id: moveGroupId,
+      accumulated_seconds: newAccumulatedSeconds,
+    })
+    .eq("id", newSlip.id)
+    .select(RATING_SLIP_SELECT)
+    .single();
+
+  if (updateError) throw mapDatabaseError(updateError);
+
+  return {
+    closed_slip: closedResult,
+    new_slip: toRatingSlipDTO(updatedSlip),
+  };
+}
+
+// === Visit Live View (PRD-016) ===
+
+/**
+ * Get visit live view with session aggregates.
+ * Uses rpc_get_visit_live_view to provide stable "session slip" view.
+ *
+ * PRD-016: Provides operators with aggregated session view across all slips.
+ * ADR-015: Passes casinoId for RLS context self-injection.
+ * Returns NULL if visit not found or blocked by RLS.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID for RLS context
+ * @param visitId - Visit UUID
+ * @param options - Optional includeSegments and segmentsLimit
+ * @returns VisitLiveViewDTO with session aggregates, or null if not found
+ */
+export async function getVisitLiveView(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  visitId: string,
+  options?: { includeSegments?: boolean; segmentsLimit?: number },
+) {
+  // Note: RPC not yet in types because migrations haven't been run on remote
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)(
+    "rpc_get_visit_live_view",
+    {
+      p_visit_id: visitId,
+      p_include_segments: options?.includeSegments ?? false,
+      p_segments_limit: options?.segmentsLimit ?? 10,
+      p_casino_id: casinoId,
+    },
+  );
+
+  if (error) throw mapDatabaseError(error);
+
+  // RPC returns JSONB, which Supabase parses as object
+  // Use mapper for type-safe transformation (null if visit not found)
+  return toVisitLiveViewDTOOrNull(data);
 }
 
 // === Batch Queries ===

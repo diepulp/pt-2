@@ -12,13 +12,13 @@
  * @see EXECUTION-SPEC-PRD-002.md
  */
 
-import type { Database, Json } from '@/types/database.types';
+import type { Database, Json } from "@/types/database.types";
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+type RatingSlipRow = Database["public"]["Tables"]["rating_slip"]["Row"];
 type RatingSlipPauseRow =
-  Database['public']['Tables']['rating_slip_pause']['Row'];
+  Database["public"]["Tables"]["rating_slip_pause"]["Row"];
 
 // === Rating Slip Status Enum (derived from database) ===
 
@@ -35,7 +35,7 @@ type RatingSlipPauseRow =
  * @see PRD-002 section 5.1 State Machine
  */
 export type RatingSlipStatus =
-  Database['public']['Enums']['rating_slip_status'];
+  Database["public"]["Enums"]["rating_slip_status"];
 
 // === Rating Slip DTOs ===
 
@@ -52,17 +52,21 @@ export type RatingSlipStatus =
  */
 export type RatingSlipDTO = Pick<
   RatingSlipRow,
-  | 'id'
-  | 'casino_id'
-  | 'visit_id'
-  | 'table_id'
-  | 'seat_number'
-  | 'start_time'
-  | 'end_time'
-  | 'status'
-  | 'average_bet'
-  | 'game_settings'
-  | 'policy_snapshot'
+  | "id"
+  | "casino_id"
+  | "visit_id"
+  | "table_id"
+  | "seat_number"
+  | "start_time"
+  | "end_time"
+  | "status"
+  | "average_bet"
+  | "game_settings"
+  | "policy_snapshot"
+  | "previous_slip_id"
+  | "move_group_id"
+  | "accumulated_seconds"
+  | "final_duration_seconds"
 >;
 
 /**
@@ -99,12 +103,12 @@ export interface RatingSlipWithPausesDTO extends RatingSlipDTO {
  */
 export type RatingSlipPauseDTO = Pick<
   RatingSlipPauseRow,
-  | 'id'
-  | 'rating_slip_id'
-  | 'casino_id'
-  | 'started_at'
-  | 'ended_at'
-  | 'created_by'
+  | "id"
+  | "rating_slip_id"
+  | "casino_id"
+  | "started_at"
+  | "ended_at"
+  | "created_by"
 >;
 
 // === Input DTOs ===
@@ -145,6 +149,37 @@ export interface CloseRatingSlipInput {
 export interface UpdateAverageBetInput {
   /** Average bet amount (positive number) */
   average_bet: number;
+}
+
+// === Move Operation DTOs (PRD-016) ===
+
+/**
+ * Input for moving a rating slip to a new table/seat.
+ * Closes current slip and starts new one with continuity metadata.
+ *
+ * @see PRD-016 Rating Slip Session Continuity
+ */
+export interface MoveRatingSlipInput {
+  /** New table ID to move player to */
+  new_table_id: string;
+  /** New seat number (optional) */
+  new_seat_number?: string;
+  /** Optional: game settings for new slip */
+  game_settings?: Json;
+}
+
+/**
+ * Result of move operation.
+ * Returns both the closed original slip and the new slip with continuity metadata.
+ *
+ * @see PRD-016 Rating Slip Session Continuity
+ */
+
+export interface MoveRatingSlipResult {
+  /** The closed original slip with final_duration_seconds set */
+  closed_slip: RatingSlipWithDurationDTO;
+  /** The new slip at the new table with continuity metadata populated */
+  new_slip: RatingSlipDTO;
 }
 
 // === Filter Types ===
