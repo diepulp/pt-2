@@ -1,0 +1,111 @@
+name: Migration Lint
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**/*.sql'
+
+jobs:
+  rpc-self-injection-check:
+    name: RPC Self-Injection Pattern Compliance
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for git diff
+
+      - name: Check RPC self-injection pattern
+        run: |
+          echo "🔍 Checking RPC self-injection pattern compliance (ADR-015 Phase 1A)..."
+          echo ""
+
+          # Get all modified SQL migration files in this PR
+          MIGRATION_FILES=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep 'supabase/migrations/.*\.sql$' || true)
+
+          if [ -z "$MIGRATION_FILES" ]; then
+            echo "✅ No migration files modified in this PR"
+            exit 0
+          fi
+
+          echo "Migration files to check:"
+          echo "$MIGRATION_FILES" | sed 's/^/  - /'
+          echo ""
+
+          VIOLATIONS_FOUND=0
+
+          # Check each migration file
+          for FILE in $MIGRATION_FILES; do
+            # Skip if file doesn't exist (deletion)
+            if [ ! -f "$FILE" ]; then
+              continue
+            fi
+
+            # Check if file contains RPC function definitions
+            RPC_COUNT=$(grep -icE 'CREATE\s+OR\s+REPLACE\s+FUNCTION\s+rpc_' "$FILE" || true)
+
+            if [ "$RPC_COUNT" -gt 0 ]; then
+              # RPC function(s) found - verify set_rls_context call exists
+              CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context\s*\(' "$FILE" || true)
+
+              if [ "$CONTEXT_CALL" -eq 0 ]; then
+                echo "❌ VIOLATION: $FILE"
+                echo "   Found $RPC_COUNT RPC function(s) but NO set_rls_context call"
+                echo ""
+                VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+              else
+                echo "✅ $FILE: $RPC_COUNT RPC function(s) with set_rls_context"
+              fi
+            fi
+          done
+
+          # Summary and exit
+          if [ "$VIOLATIONS_FOUND" -gt 0 ]; then
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "❌ PR BLOCKED: $VIOLATIONS_FOUND migration(s) violate RPC self-injection rule"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "REQUIRED PATTERN (ADR-015 Phase 1A):"
+            echo "────────────────────────────────────────────────────────────"
+            echo "CREATE OR REPLACE FUNCTION rpc_your_function("
+            echo "  p_casino_id uuid,"
+            echo "  ..."
+            echo ") ..."
+            echo "BEGIN"
+            echo "  -- Extract staff role for self-injection"
+            echo "  v_context_staff_role := COALESCE("
+            echo "    NULLIF(current_setting('app.staff_role', true), ''),"
+            echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_role')::text"
+            echo "  );"
+            echo ""
+            echo "  -- Self-inject context (REQUIRED)"
+            echo "  PERFORM set_rls_context("
+            echo "    COALESCE("
+            echo "      NULLIF(current_setting('app.actor_id', true), '')::uuid,"
+            echo "      (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid"
+            echo "    ),"
+            echo "    p_casino_id,"
+            echo "    v_context_staff_role"
+            echo "  );"
+            echo "  ..."
+            echo "END;"
+            echo "────────────────────────────────────────────────────────────"
+            echo ""
+            echo "REFERENCE:"
+            echo "  • PRD-015: ADR-015 Phase 1A Remediation"
+            echo "  • ISSUE-5FE4A689: RPC self-injection systematic gap"
+            echo "  • See: supabase/migrations/*_prd015_*_self_injection.sql"
+            echo ""
+            echo "WHY REQUIRED:"
+            echo "  • Supabase transaction pooling reuses connections"
+            echo "  • SET LOCAL context is lost between transactions"
+            echo "  • RPC must inject context in same transaction as operation"
+            echo ""
+            exit 1
+          fi
+
+          echo ""
+          echo "✅ All RPC functions follow self-injection pattern"
+          exit 0

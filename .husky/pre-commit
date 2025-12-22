@@ -1,6 +1,9 @@
 # Migration safety checks - prevent RLS policy regressions (ISSUE-002 prevention)
 .husky/pre-commit-migration-safety.sh || exit 1
 
+# RPC self-injection pattern enforcement (PRD-015 - ADR-015 Phase 1A)
+.husky/pre-commit-rpc-lint.sh || exit 1
+
 # API route sanity checks (replaces legacy service guardrails)
 .husky/pre-commit-api-sanity.sh || exit 1
 

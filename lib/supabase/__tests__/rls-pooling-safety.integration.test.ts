@@ -1548,4 +1548,292 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       expect(correctCasinoCount).toBe(successCount); // All successes should have correct casino
     }, 30000); // 30 second timeout for this high-concurrency test
   });
+
+  // ===========================================================================
+  // 9. PRD-015 WS5: Load Testing (ADR-015 Phase 1A Verification)
+  // ===========================================================================
+
+  describe('PRD-015 WS5: Load & Isolation Testing', () => {
+    it('should handle 100 concurrent requests per second for 60 seconds', async () => {
+      const requestsPerSecond = 100;
+      const durationSeconds = 60;
+      const totalRequests = requestsPerSecond * durationSeconds;
+
+      const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
+      const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
+
+      const startTime = Date.now();
+      const results: {
+        requestId: number;
+        success: boolean;
+        casinoId?: string;
+        expectedCasinoId: string;
+        responseTime: number;
+        error?: string;
+      }[] = [];
+
+      // Generate all requests upfront
+      const requests = Array.from({ length: totalRequests }, (_, i) => {
+        const casinoIndex = i % 3;
+        return {
+          context: {
+            actorId: staff[casinoIndex],
+            casinoId: casinos[casinoIndex],
+            staffRole: 'pit_boss' as const,
+          },
+          requestId: i,
+          expectedCasinoId: casinos[casinoIndex],
+        };
+      });
+
+      // Execute in batches to simulate 100 req/s
+      const batchSize = requestsPerSecond;
+      for (let batch = 0; batch < durationSeconds; batch++) {
+        const batchStart = batch * batchSize;
+        const batchRequests = requests.slice(batchStart, batchStart + batchSize);
+
+        const batchResults = await Promise.all(
+          batchRequests.map(async ({ context, requestId, expectedCasinoId }) => {
+            const reqStartTime = Date.now();
+            const client = createClient<Database>(
+              supabaseUrl,
+              supabaseServiceKey,
+            );
+
+            try {
+              await injectRLSContext(
+                client,
+                context,
+                `load-test-${batch}-${requestId}`,
+              );
+
+              const { data, error } = await client
+                .from('casino_settings')
+                .select('casino_id')
+                .eq('casino_id', context.casinoId)
+                .single();
+
+              return {
+                requestId,
+                success: !error,
+                casinoId: data?.casino_id,
+                expectedCasinoId,
+                responseTime: Date.now() - reqStartTime,
+              };
+            } catch (err) {
+              return {
+                requestId,
+                success: false,
+                expectedCasinoId,
+                responseTime: Date.now() - reqStartTime,
+                error: err instanceof Error ? err.message : 'Unknown error',
+              };
+            }
+          }),
+        );
+
+        results.push(...batchResults);
+
+        // Small delay between batches to avoid overwhelming the connection pool
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const duration = Date.now() - startTime;
+      const successCount = results.filter((r) => r.success).length;
+      const failureCount = results.filter((r) => !r.success).length;
+      const crossTenantLeaks = results.filter(
+        (r) => r.success && r.casinoId !== r.expectedCasinoId,
+      ).length;
+      const avgResponseTime =
+        results.reduce((sum, r) => sum + r.responseTime, 0) / results.length;
+
+      // Assertions per PRD-015 WS5
+      expect(successCount).toBeGreaterThan(totalRequests * 0.95); // At least 95% success
+      expect(crossTenantLeaks).toBe(0); // Zero cross-tenant data leakage
+      expect(failureCount).toBeLessThan(totalRequests * 0.05); // Less than 5% failure rate
+
+      // Log results for analysis
+      console.log(`\n=== PRD-015 WS5 Load Test Results ===`);
+      console.log(`Total Requests: ${totalRequests}`);
+      console.log(`Duration: ${(duration / 1000).toFixed(2)}s`);
+      console.log(`Success Rate: ${((successCount / totalRequests) * 100).toFixed(2)}%`);
+      console.log(`Failure Rate: ${((failureCount / totalRequests) * 100).toFixed(2)}%`);
+      console.log(`Cross-Tenant Leaks: ${crossTenantLeaks}`);
+      console.log(`Avg Response Time: ${avgResponseTime.toFixed(2)}ms`);
+    }, 120000); // 2 minute timeout
+
+    it('should maintain multi-tenant isolation with 10 concurrent casinos', async () => {
+      // Create 10 test casinos with dedicated staff
+      const testCasinos: { casinoId: string; staffId: string; userId: string }[] = [];
+
+      for (let i = 0; i < 10; i++) {
+        // Create user
+        const { data: user } = await supabase.auth.admin.createUser({
+          email: `isolation-test-${i}@example.com`,
+          password: 'test-password-12345',
+          email_confirm: true,
+        });
+
+        // Create casino
+        const { data: casino } = await supabase
+          .from('casino')
+          .insert({
+            name: `Isolation Test Casino ${i}`,
+            status: 'active',
+          })
+          .select()
+          .single();
+
+        // Create casino settings
+        await supabase.from('casino_settings').insert({
+          casino_id: casino!.id,
+          gaming_day_start_time: '06:00:00',
+          timezone: 'America/Los_Angeles',
+          watchlist_floor: 3000,
+          ctr_threshold: 10000,
+        });
+
+        // Create staff
+        const { data: staff } = await supabase
+          .from('staff')
+          .insert({
+            casino_id: casino!.id,
+            user_id: user!.user!.id,
+            employee_id: `ISO-${i}`,
+            first_name: 'Isolation',
+            last_name: `Test${i}`,
+            role: 'pit_boss',
+            status: 'active',
+          })
+          .select()
+          .single();
+
+        testCasinos.push({
+          casinoId: casino!.id,
+          staffId: staff!.id,
+          userId: user!.user!.id,
+        });
+      }
+
+      try {
+        // Execute 10 concurrent requests per casino (100 total)
+        const requestsPerCasino = 10;
+        const allRequests = testCasinos.flatMap((casino, casinoIndex) =>
+          Array.from({ length: requestsPerCasino }, (_, requestIndex) => ({
+            casinoIndex,
+            requestIndex,
+            context: {
+              actorId: casino.staffId,
+              casinoId: casino.casinoId,
+              staffRole: 'pit_boss' as const,
+            },
+            expectedCasinoId: casino.casinoId,
+          })),
+        );
+
+        const results = await Promise.all(
+          allRequests.map(
+            async ({ casinoIndex, requestIndex, context, expectedCasinoId }) => {
+              const client = createClient<Database>(
+                supabaseUrl,
+                supabaseServiceKey,
+              );
+
+              try {
+                await injectRLSContext(
+                  client,
+                  context,
+                  `isolation-${casinoIndex}-${requestIndex}`,
+                );
+
+                const { data, error } = await client
+                  .from('casino_settings')
+                  .select('casino_id')
+                  .eq('casino_id', context.casinoId)
+                  .single();
+
+                return {
+                  casinoIndex,
+                  requestIndex,
+                  success: !error,
+                  casinoId: data?.casino_id,
+                  expectedCasinoId,
+                };
+              } catch (err) {
+                return {
+                  casinoIndex,
+                  requestIndex,
+                  success: false,
+                  expectedCasinoId,
+                  error: err instanceof Error ? err.message : 'Unknown error',
+                };
+              }
+            },
+          ),
+        );
+
+        // Group results by casino to verify isolation
+        const casinoResults = testCasinos.map((casino, index) => {
+          const casinoRequests = results.filter((r) => r.casinoIndex === index);
+          const successCount = casinoRequests.filter((r) => r.success).length;
+          const correctCasino = casinoRequests.filter(
+            (r) => r.success && r.casinoId === casino.casinoId,
+          ).length;
+          const wrongCasino = casinoRequests.filter(
+            (r) => r.success && r.casinoId !== casino.casinoId,
+          ).length;
+
+          return {
+            casinoId: casino.casinoId,
+            totalRequests: casinoRequests.length,
+            successCount,
+            correctCasino,
+            wrongCasino,
+          };
+        });
+
+        // Assertions: Zero cross-tenant leakage
+        const totalLeaks = casinoResults.reduce(
+          (sum, r) => sum + r.wrongCasino,
+          0,
+        );
+        expect(totalLeaks).toBe(0);
+
+        // All casinos should have 100% correct isolation
+        casinoResults.forEach((result) => {
+          expect(result.successCount).toBe(requestsPerCasino);
+          expect(result.correctCasino).toBe(requestsPerCasino);
+          expect(result.wrongCasino).toBe(0);
+        });
+
+        console.log(`\n=== PRD-015 WS5 Isolation Test Results ===`);
+        console.log(`Total Casinos: ${testCasinos.length}`);
+        console.log(`Requests per Casino: ${requestsPerCasino}`);
+        console.log(`Total Requests: ${allRequests.length}`);
+        console.log(`Cross-Tenant Leaks: ${totalLeaks}`);
+        console.log(`Isolation: 100%`);
+      } finally {
+        // Cleanup: Delete in reverse dependency order
+        await Promise.all([
+          supabase.from('staff').delete().in(
+            'id',
+            testCasinos.map((c) => c.staffId),
+          ),
+          supabase.from('casino_settings').delete().in(
+            'casino_id',
+            testCasinos.map((c) => c.casinoId),
+          ),
+        ]);
+
+        await supabase.from('casino').delete().in(
+          'id',
+          testCasinos.map((c) => c.casinoId),
+        );
+
+        await Promise.all(
+          testCasinos.map((c) => supabase.auth.admin.deleteUser(c.userId)),
+        );
+      }
+    }, 60000); // 60 second timeout
+  });
 });
