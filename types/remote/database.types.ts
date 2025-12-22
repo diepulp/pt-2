@@ -1582,6 +1582,7 @@ export type Database = {
           id: string
           player_id: string | null
           started_at: string
+          visit_group_id: string
           visit_kind: Database["public"]["Enums"]["visit_kind"]
         }
         Insert: {
@@ -1590,6 +1591,7 @@ export type Database = {
           id?: string
           player_id?: string | null
           started_at?: string
+          visit_group_id: string
           visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Update: {
@@ -1598,6 +1600,7 @@ export type Database = {
           id?: string
           player_id?: string | null
           started_at?: string
+          visit_group_id?: string
           visit_kind?: Database["public"]["Enums"]["visit_kind"]
         }
         Relationships: [
@@ -1687,6 +1690,10 @@ export type Database = {
             Returns: string
           }
         | { Args: { gstart: string; ts: string }; Returns: string }
+      compute_slip_final_seconds: {
+        Args: { p_slip_id: string }
+        Returns: number
+      }
       evaluate_mid_session_reward_policy: {
         Args: {
           p_average_bet: number
@@ -1761,6 +1768,10 @@ export type Database = {
           ledger_id: string
           points_delta: number
         }[]
+      }
+      rpc_check_table_seat_availability: {
+        Args: { p_seat_number: number; p_table_id: string }
+        Returns: Json
       }
       rpc_close_rating_slip: {
         Args: {
@@ -1866,6 +1877,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_get_player_last_session_context: {
+        Args: { p_casino_id: string; p_player_id: string }
+        Returns: Json
+      }
       rpc_get_player_ledger: {
         Args: {
           p_casino_id: string
@@ -1893,9 +1908,35 @@ export type Database = {
           visit_id: string
         }[]
       }
+      rpc_get_player_recent_sessions: {
+        Args: {
+          p_casino_id: string
+          p_cursor?: string
+          p_limit?: number
+          p_player_id: string
+        }
+        Returns: Json
+      }
       rpc_get_rating_slip_duration: {
         Args: { p_as_of?: string; p_rating_slip_id: string }
         Returns: number
+      }
+      rpc_get_visit_last_segment: {
+        Args: { p_visit_id: string }
+        Returns: Json
+      }
+      rpc_get_visit_live_view: {
+        Args: {
+          p_casino_id?: string
+          p_include_segments?: boolean
+          p_segments_limit?: number
+          p_visit_id: string
+        }
+        Returns: Json
+      }
+      rpc_get_visit_loyalty_summary: {
+        Args: { p_visit_id: string }
+        Returns: Json
       }
       rpc_issue_mid_session_reward: {
         Args: {

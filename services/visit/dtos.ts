@@ -36,10 +36,18 @@ export type VisitKind = Database["public"]["Enums"]["visit_kind"];
  *
  * Note: player_id is now nullable (string | null) to support ghost gaming visits.
  * Ghost visits (gaming_ghost_unrated) have player_id = NULL.
+ *
+ * PRD-017: visit_group_id added for session continuity tracking.
  */
 export type VisitDTO = Pick<
   VisitRow,
-  "id" | "player_id" | "casino_id" | "visit_kind" | "started_at" | "ended_at"
+  | "id"
+  | "player_id"
+  | "casino_id"
+  | "visit_kind"
+  | "started_at"
+  | "ended_at"
+  | "visit_group_id"
 >;
 
 /** Visit creation input (casino_id comes from RLS context) */
@@ -252,4 +260,127 @@ export interface VisitLiveViewDTO {
     /** Average bet (null if not set) */
     average_bet: number | null;
   }>;
+}
+
+// === PRD-017: Visit Continuation DTOs ===
+
+/**
+ * Options for recent sessions query.
+ * Used by getPlayerRecentSessions.
+ */
+
+export interface RecentSessionsOptions {
+  /** Max sessions to return (default 5, max 100) */
+  limit?: number;
+  /** Cursor for pagination (base64 encoded ended_at|visit_id) */
+  cursor?: string;
+}
+
+/**
+ * Single session item in recent sessions list.
+ * Response from rpc_get_player_recent_sessions.
+ *
+ * Note: ended_at is nullable for open_visit (null = still open).
+ * For sessions array items, ended_at is always present (closed sessions only).
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response with aggregates
+export interface RecentSessionDTO {
+  /** Visit UUID */
+  visit_id: string;
+  /** Visit group UUID (for session continuity) */
+  visit_group_id: string;
+  /** Session start timestamp */
+  started_at: string;
+  /** Session end timestamp (null for open_visit) */
+  ended_at: string | null;
+  /** Last table UUID player was at */
+  last_table_id: string | null;
+  /** Last table name player was at */
+  last_table_name: string | null;
+  /** Last seat number player occupied */
+  last_seat_number: number | null;
+  /** Total session duration in seconds */
+  total_duration_seconds: number;
+  /** Total buy-in amount */
+  total_buy_in: number;
+  /** Total cash-out amount */
+  total_cash_out: number;
+  /** Net amount (buy_in - cash_out) */
+  net: number;
+  /** Total loyalty points earned */
+  points_earned: number;
+  /** Number of rating slip segments */
+  segment_count: number;
+}
+
+/**
+ * Response from rpc_get_player_recent_sessions.
+ * Includes paginated closed sessions and any current open visit.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response envelope
+export interface RecentSessionsDTO {
+  /** Paginated closed sessions */
+  sessions: RecentSessionDTO[];
+  /** Cursor for next page (null if no more) */
+  next_cursor: string | null;
+  /** Current open visit (if any) */
+  open_visit: RecentSessionDTO | null;
+}
+
+/**
+ * Response from rpc_get_player_last_session_context.
+ * Provides context from last closed session for prefilling continuation form.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response with composed context
+export interface LastSessionContextDTO {
+  /** Visit UUID of last closed session */
+  visit_id: string;
+  /** Visit group UUID for continuity */
+  visit_group_id: string;
+  /** Last table UUID player was at */
+  last_table_id: string;
+  /** Last table name player was at */
+  last_table_name: string;
+  /** Last seat number player occupied */
+  last_seat_number: number;
+  /** Last game settings (game-specific config) */
+  last_game_settings: Record<string, unknown> | null;
+  /** Last average bet amount */
+  last_average_bet: number | null;
+  /** When session ended */
+  ended_at: string;
+}
+
+/**
+ * Request for starting a new visit from a previous session.
+ * Creates new visit with visit_group_id from source visit.
+ */
+
+export interface StartFromPreviousRequest {
+  /** Player UUID */
+  player_id: string;
+  /** Source visit UUID to continue from */
+  source_visit_id: string;
+  /** Destination table UUID */
+  destination_table_id: string;
+  /** Destination seat number */
+  destination_seat_number: number;
+  /** Optional game settings override */
+  game_settings_override?: Record<string, unknown>;
+}
+
+/**
+ * Response from startFromPrevious operation.
+ * Contains new visit and first rating slip IDs.
+ */
+
+export interface StartFromPreviousResponse {
+  /** New visit UUID */
+  visit_id: string;
+  /** Visit group UUID (inherited from source) */
+  visit_group_id: string;
+  /** Active rating slip UUID (first segment) */
+  active_slip_id: string;
+  /** Visit start timestamp */
+  started_at: string;
 }

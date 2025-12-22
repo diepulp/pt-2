@@ -164,6 +164,112 @@ export const visitRouteParamsSchema = z.object({
   visitId: uuidSchema("visit ID"),
 });
 
+// === PRD-017: Visit Continuation Schemas ===
+
+/**
+ * Schema for recent sessions query params.
+ * Validates rpc_get_player_recent_sessions input.
+ */
+export const recentSessionsQuerySchema = z.object({
+  /** Max sessions to return (default 5, max 100) */
+  limit: z.coerce.number().int().min(1).max(100).optional().default(5),
+  /** Cursor for pagination (base64 encoded) */
+  cursor: z.string().optional(),
+});
+
+export type RecentSessionsQuery = z.infer<typeof recentSessionsQuerySchema>;
+
+/**
+ * Schema for start from previous request body.
+ * Validates StartFromPreviousRequest.
+ */
+export const startFromPreviousSchema = z.object({
+  /** Player UUID */
+  player_id: uuidSchema("player ID"),
+  /** Source visit UUID to continue from */
+  source_visit_id: uuidSchema("source visit ID"),
+  /** Destination table UUID */
+  destination_table_id: uuidSchema("destination table ID"),
+  /** Destination seat number (1-based) */
+  destination_seat_number: z
+    .number()
+    .int()
+    .min(1)
+    .max(20, "Seat number must be between 1 and 20"),
+  /** Optional game settings override (JSON object) */
+  game_settings_override: z.record(z.string(), z.unknown()).optional(),
+});
+
+export type StartFromPreviousInput = z.infer<typeof startFromPreviousSchema>;
+
+// === RPC Response Schemas (for runtime validation) ===
+
+/**
+ * Schema for rpc_get_player_recent_sessions response.
+ * Used to validate RPC JSONB output.
+ */
+export const recentSessionsRpcResponseSchema = z.object({
+  sessions: z.array(
+    z.object({
+      visit_id: z.string(),
+      visit_group_id: z.string(),
+      started_at: z.string(),
+      ended_at: z.string(),
+      last_table_id: z.string().nullable(),
+      last_table_name: z.string().nullable(),
+      last_seat_number: z.number().nullable(),
+      total_duration_seconds: z.number(),
+      total_buy_in: z.number(),
+      total_cash_out: z.number(),
+      net: z.number(),
+      points_earned: z.number(),
+      segment_count: z.number(),
+    }),
+  ),
+  next_cursor: z.string().nullable(),
+  open_visit: z
+    .object({
+      visit_id: z.string(),
+      visit_group_id: z.string(),
+      started_at: z.string(),
+      ended_at: z.string().nullable(),
+      last_table_id: z.string().nullable(),
+      last_table_name: z.string().nullable(),
+      last_seat_number: z.number().nullable(),
+      total_duration_seconds: z.number(),
+      total_buy_in: z.number(),
+      total_cash_out: z.number(),
+      net: z.number(),
+      points_earned: z.number(),
+      segment_count: z.number(),
+    })
+    .nullable(),
+});
+
+/**
+ * Schema for rpc_get_player_last_session_context response.
+ * Used to validate RPC JSONB output.
+ */
+export const lastSessionContextRpcResponseSchema = z.object({
+  visit_id: z.string(),
+  visit_group_id: z.string(),
+  last_table_id: z.string(),
+  last_table_name: z.string(),
+  last_seat_number: z.number(),
+  last_game_settings: z.record(z.string(), z.unknown()).nullable(),
+  last_average_bet: z.number().nullable(),
+  ended_at: z.string(),
+});
+
+/**
+ * Schema for rpc_check_table_seat_availability response.
+ * Used to validate RPC JSONB output.
+ */
+export const tableSeatAvailabilityRpcResponseSchema = z.object({
+  is_available: z.boolean(),
+  reason: z.string().nullable(),
+});
+
 // === Type Exports ===
 
 export type StartVisitInput = z.infer<typeof startVisitSchema>;

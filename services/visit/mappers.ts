@@ -13,15 +13,16 @@ import type {
   VisitDTO,
   VisitKind,
   VisitWithPlayerDTO,
-} from './dtos';
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
 /**
  * Type for rows returned by VISIT_SELECT query.
- * Must match: "id, player_id, casino_id, visit_kind, started_at, ended_at"
+ * Must match: "id, player_id, casino_id, visit_kind, started_at, ended_at, visit_group_id"
  *
  * Note: player_id is nullable to support ghost gaming visits (gaming_ghost_unrated).
+ * PRD-017: visit_group_id added for session continuity.
  */
 type VisitSelectedRow = {
   id: string;
@@ -30,6 +31,7 @@ type VisitSelectedRow = {
   visit_kind: VisitKind;
   started_at: string;
   ended_at: string | null;
+  visit_group_id: string;
 };
 
 /**
@@ -38,6 +40,7 @@ type VisitSelectedRow = {
  *
  * Note: player_id is nullable to support ghost gaming visits.
  * When player_id is NULL, the player join also returns NULL.
+ * PRD-017: visit_group_id added for session continuity.
  */
 type VisitWithPlayerSelectedRow = {
   id: string;
@@ -46,6 +49,7 @@ type VisitWithPlayerSelectedRow = {
   visit_kind: VisitKind;
   started_at: string;
   ended_at: string | null;
+  visit_group_id: string;
   player: {
     id: string;
     first_name: string;
@@ -67,6 +71,7 @@ export function toVisitDTO(row: VisitSelectedRow): VisitDTO {
     visit_kind: row.visit_kind,
     started_at: row.started_at,
     ended_at: row.ended_at,
+    visit_group_id: row.visit_group_id,
   };
 }
 
@@ -104,6 +109,7 @@ export function toVisitWithPlayerDTO(
     visit_kind: row.visit_kind,
     started_at: row.started_at,
     ended_at: row.ended_at,
+    visit_group_id: row.visit_group_id,
     player: row.player
       ? {
           id: row.player.id,

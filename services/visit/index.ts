@@ -133,6 +133,51 @@ export interface VisitServiceInterface {
    * @param visitId - Visit UUID to convert
    */
   convertRewardToGaming(visitId: string): Promise<VisitDTO>;
+
+  // === PRD-017: Visit Continuation (WS7) ===
+
+  /**
+   * Get player's recent closed sessions with aggregates.
+   * Returns paginated sessions (last 7 days) plus any current open visit.
+   *
+   * @param casinoId - Casino UUID (from middleware context)
+   * @param playerId - Player UUID
+   * @param options - Pagination options (limit, cursor)
+   */
+  getPlayerRecentSessions(
+    casinoId: string,
+    playerId: string,
+    options?: import("./dtos").RecentSessionsOptions,
+  ): Promise<import("./dtos").RecentSessionsDTO>;
+
+  /**
+   * Get player's last closed session context for prefilling continuation form.
+   * Returns null if player has no closed sessions or last session has no segments.
+   *
+   * @param casinoId - Casino UUID (from middleware context)
+   * @param playerId - Player UUID
+   */
+  getPlayerLastSessionContext(
+    casinoId: string,
+    playerId: string,
+  ): Promise<import("./dtos").LastSessionContextDTO | null>;
+
+  /**
+   * Start a new visit from a previous session.
+   * Implements PRD-017 "Start From Previous" operation.
+   *
+   * Validates source visit, creates new visit with shared visit_group_id,
+   * and creates first rating slip at destination table/seat.
+   *
+   * @param casinoId - Casino UUID (from middleware context)
+   * @param actorId - Staff actor UUID (for rating slip creation)
+   * @param request - Start from previous request
+   */
+  startFromPrevious(
+    casinoId: string,
+    actorId: string,
+    request: import("./dtos").StartFromPreviousRequest,
+  ): Promise<import("./dtos").StartFromPreviousResponse>;
 }
 
 // === Service Factory ===
@@ -166,5 +211,13 @@ export function createVisitService(
       crud.createGhostGamingVisit(supabase, casinoId, input),
     convertRewardToGaming: (visitId) =>
       crud.convertRewardToGaming(supabase, visitId),
+
+    // PRD-017: Visit Continuation (WS7)
+    getPlayerRecentSessions: (casinoId, playerId, options) =>
+      crud.getPlayerRecentSessions(supabase, casinoId, playerId, options),
+    getPlayerLastSessionContext: (casinoId, playerId) =>
+      crud.getPlayerLastSessionContext(supabase, casinoId, playerId),
+    startFromPrevious: (casinoId, actorId, request) =>
+      crud.startFromPrevious(supabase, casinoId, actorId, request),
   };
 }

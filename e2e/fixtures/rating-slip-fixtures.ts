@@ -155,20 +155,33 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
     throw new Error(`Failed to sign in test user: ${signInError?.message}`);
   }
 
-  // Create test player
+  // Create test player (global entity, no casino_id)
   const { data: player, error: playerError } = await supabase
     .from("player")
     .insert({
-      casino_id: casino.id,
       first_name: "John",
       last_name: "TestPlayer",
-      external_id: `${testPrefix}_player_ext`,
     })
     .select()
     .single();
 
   if (playerError || !player) {
     throw new Error(`Failed to create test player: ${playerError?.message}`);
+  }
+
+  // Link player to casino via player_casino junction table
+  const { error: playerCasinoError } = await supabase
+    .from("player_casino")
+    .insert({
+      player_id: player.id,
+      casino_id: casino.id,
+      status: "active",
+    });
+
+  if (playerCasinoError) {
+    throw new Error(
+      `Failed to link player to casino: ${playerCasinoError.message}`,
+    );
   }
 
   // Create player loyalty account
@@ -228,8 +241,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
     .insert({
       casino_id: casino.id,
       player_id: player.id,
-      visit_start_utc: new Date().toISOString(),
-      status: "active",
+      started_at: new Date().toISOString(),
       visit_kind: "gaming_identified_rated",
     })
     .select()
@@ -286,6 +298,10 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       .from("gaming_table")
       .delete()
       .eq("casino_id", casino.id);
+    await cleanupClient
+      .from("player_casino")
+      .delete()
+      .eq("player_id", player.id);
     await cleanupClient.from("player").delete().eq("id", player.id);
     await cleanupClient.from("staff").delete().eq("id", staff.id);
     await cleanupClient

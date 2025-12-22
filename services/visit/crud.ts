@@ -31,6 +31,11 @@ import {
   toVisitWithPlayerDTOList,
 } from "./mappers";
 import {
+  lastSessionContextRpcResponseSchema,
+  recentSessionsRpcResponseSchema,
+  tableSeatAvailabilityRpcResponseSchema,
+} from "./schemas";
+import {
   ACTIVE_VISIT_SELECT,
   VISIT_SELECT,
   VISIT_WITH_PLAYER_SELECT,
@@ -448,4 +453,240 @@ export async function convertRewardToGaming(
   }
 
   return toVisitDTO(data);
+}
+
+// === PRD-017: Visit Continuation Operations ===
+
+/**
+ * Get player's recent closed sessions with aggregates.
+ * Calls rpc_get_player_recent_sessions RPC (WS5).
+ *
+ * Returns paginated sessions (last 7 days) plus any current open visit.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID (from middleware context)
+ * @param playerId - Player UUID
+ * @param options - Pagination options (limit, cursor)
+ */
+export async function getPlayerRecentSessions(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  playerId: string,
+  options: import("./dtos").RecentSessionsOptions = {},
+): Promise<import("./dtos").RecentSessionsDTO> {
+  const limit = options.limit ?? 5;
+  const cursor = options.cursor;
+
+  const { data, error } = await supabase.rpc("rpc_get_player_recent_sessions", {
+    p_casino_id: casinoId,
+    p_player_id: playerId,
+    p_limit: limit,
+    p_cursor: cursor,
+  });
+
+  if (error) throw mapDatabaseError(error);
+  if (!data) {
+    throw new DomainError("INTERNAL_ERROR", "RPC returned null unexpectedly");
+  }
+
+  // Parse and validate JSONB response
+  const parsed = recentSessionsRpcResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      `Invalid RPC response: ${parsed.error.message}`,
+    );
+  }
+
+  return {
+    sessions: parsed.data.sessions,
+    next_cursor: parsed.data.next_cursor,
+    open_visit: parsed.data.open_visit,
+  };
+}
+
+/**
+ * Get player's last closed session context for prefilling continuation form.
+ * Calls rpc_get_player_last_session_context RPC (WS6).
+ *
+ * Returns null if player has no closed sessions or last session has no segments.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID (from middleware context)
+ * @param playerId - Player UUID
+ */
+export async function getPlayerLastSessionContext(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  playerId: string,
+): Promise<import("./dtos").LastSessionContextDTO | null> {
+  const { data, error } = await supabase.rpc(
+    "rpc_get_player_last_session_context",
+    {
+      p_casino_id: casinoId,
+      p_player_id: playerId,
+    },
+  );
+
+  if (error) throw mapDatabaseError(error);
+
+  // RPC returns null if no closed sessions or no segments
+  if (!data) return null;
+
+  // Parse and validate JSONB response
+  const parsed = lastSessionContextRpcResponseSchema.safeParse(data);
+  if (!parsed.success) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      `Invalid RPC response: ${parsed.error.message}`,
+    );
+  }
+
+  return parsed.data;
+}
+
+/**
+ * Start a new visit from a previous session.
+ * Implements PRD-017 "Start From Previous" operation.
+ *
+ * Validation sequence (per PRD-017 5.4):
+ * 1. Source visit exists (404 if not)
+ * 2. Source visit is closed (400 SOURCE_VISIT_NOT_CLOSED if open)
+ * 3. Source visit player_id matches request player_id (400 PLAYER_MISMATCH)
+ * 4. Source visit casino matches actor's casino (403 FORBIDDEN)
+ * 5. No open visit for player (409 VISIT_ALREADY_OPEN - DB constraint enforces)
+ * 6. Destination table/seat available via rpc_check_table_seat_availability (422)
+ *
+ * Creates:
+ * - New visit with visit_group_id = source.visit_group_id (NOT source.id)
+ * - First rating slip (segment) at destination table/seat
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param casinoId - Casino UUID (from middleware context)
+ * @param actorId - Staff actor UUID (for rating slip creation)
+ * @param request - Start from previous request
+ */
+export async function startFromPrevious(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  actorId: string,
+  request: import("./dtos").StartFromPreviousRequest,
+): Promise<import("./dtos").StartFromPreviousResponse> {
+  // 1. Fetch source visit
+  const sourceVisit = await getVisitById(supabase, request.source_visit_id);
+  if (!sourceVisit) {
+    throw new DomainError(
+      "VISIT_NOT_FOUND",
+      `Source visit not found: ${request.source_visit_id}`,
+    );
+  }
+
+  // 2. Validate source visit is closed
+  if (sourceVisit.ended_at === null) {
+    throw new DomainError(
+      "SOURCE_VISIT_NOT_CLOSED",
+      "Cannot continue from an open visit. Close the visit first.",
+    );
+  }
+
+  // 3. Validate player_id matches
+  if (sourceVisit.player_id !== request.player_id) {
+    throw new DomainError(
+      "PLAYER_MISMATCH",
+      `Source visit player_id (${sourceVisit.player_id}) does not match request player_id (${request.player_id})`,
+    );
+  }
+
+  // 4. Validate casino matches (RLS + explicit check)
+  if (sourceVisit.casino_id !== casinoId) {
+    throw new DomainError(
+      "FORBIDDEN",
+      "Source visit belongs to a different casino",
+    );
+  }
+
+  // 5. Check for existing open visit (will also fail on unique constraint)
+  const activeVisit = await getActiveVisitForPlayer(
+    supabase,
+    request.player_id,
+  );
+  if (activeVisit.has_active_visit) {
+    throw new DomainError(
+      "VISIT_ALREADY_OPEN",
+      `Player ${request.player_id} already has an active visit`,
+    );
+  }
+
+  // 6. Validate destination table/seat availability
+  const { data: availabilityData, error: availabilityError } =
+    await supabase.rpc("rpc_check_table_seat_availability", {
+      p_table_id: request.destination_table_id,
+      p_seat_number: request.destination_seat_number,
+    });
+
+  if (availabilityError) throw mapDatabaseError(availabilityError);
+
+  // Parse and validate RPC response
+  const availabilityParsed =
+    tableSeatAvailabilityRpcResponseSchema.safeParse(availabilityData);
+  if (!availabilityParsed.success) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      `Invalid RPC response: ${availabilityParsed.error.message}`,
+    );
+  }
+
+  if (!availabilityParsed.data.is_available) {
+    const reason = availabilityParsed.data.reason ?? "TABLE_NOT_AVAILABLE";
+    throw new DomainError(
+      reason as "TABLE_NOT_AVAILABLE" | "SEAT_OCCUPIED",
+      `Destination table/seat not available: ${availabilityParsed.data.reason}`,
+    );
+  }
+
+  // 7. Create new visit with visit_group_id from source
+  // CRITICAL: Use source.visit_group_id, NOT source.id
+  const { data: newVisit, error: visitError } = await supabase
+    .from("visit")
+    .insert({
+      player_id: request.player_id,
+      casino_id: casinoId,
+      visit_kind: "gaming_identified_rated",
+      visit_group_id: sourceVisit.visit_group_id,
+    })
+    .select(VISIT_SELECT)
+    .single();
+
+  if (visitError) throw mapDatabaseError(visitError);
+
+  // 8. Create first rating slip (segment) via RPC
+  // Uses rpc_start_rating_slip which handles policy snapshot and RLS context
+  const { data: newSlip, error: slipError } = await supabase.rpc(
+    "rpc_start_rating_slip",
+    {
+      p_casino_id: casinoId,
+      p_actor_id: actorId,
+      p_visit_id: newVisit.id,
+      p_table_id: request.destination_table_id,
+      p_seat_number: String(request.destination_seat_number),
+      p_game_settings: (request.game_settings_override ??
+        {}) as import("@/types/database.types").Json,
+    },
+  );
+
+  if (slipError) throw mapDatabaseError(slipError);
+
+  if (!newSlip) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      "rpc_start_rating_slip returned no data",
+    );
+  }
+
+  return {
+    visit_id: newVisit.id,
+    visit_group_id: newVisit.visit_group_id,
+    active_slip_id: newSlip.id,
+    started_at: newVisit.started_at,
+  };
 }
