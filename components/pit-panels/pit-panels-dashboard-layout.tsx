@@ -28,12 +28,22 @@ export function PitPanelsDashboardLayout({
             <PitPanelsClient casinoId={casinoId} />
           </div>
           <PendingSection
-            title="Review Section A"
-            description="Under construction. Reserved for pit workflow review."
+            title="Exceptions & Approvals"
+            description="Under construction. Alerts, approvals, and compliance flags."
+            items={[
+              "Overdue drop pulls",
+              "Fill slip approvals pending",
+              "Closed tables with open slips",
+            ]}
           />
           <PendingSection
-            title="Review Section B"
-            description="Under construction. Placeholder for compliance or alerts."
+            title="Shift Ops"
+            description="Under construction. Dealer coverage, handoffs, and shift notes."
+            items={[
+              "Dealer assignments",
+              "Break/relief schedule",
+              "Shift handoff checklist",
+            ]}
           />
         </div>
       </div>
@@ -50,16 +60,26 @@ export function PitPanelsDashboardLayout({
         <ResizablePanelGroup direction="vertical" className="h-full">
           <ResizablePanel defaultSize={50} minSize={25}>
             <PendingSection
-              title="Review Section A"
-              description="Under construction. Reserved for pit workflow review."
+              title="Exceptions & Approvals"
+              description="Under construction. Alerts, approvals, and compliance flags."
+              items={[
+                "Overdue drop pulls",
+                "Fill slip approvals pending",
+                "Closed tables with open slips",
+              ]}
               className="border-b border-border/40"
             />
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={25}>
             <PendingSection
-              title="Review Section B"
-              description="Under construction. Placeholder for compliance or alerts."
+              title="Shift Ops"
+              description="Under construction. Dealer coverage, handoffs, and shift notes."
+              items={[
+                "Dealer assignments",
+                "Break/relief schedule",
+                "Shift handoff checklist",
+              ]}
             />
           </ResizablePanel>
         </ResizablePanelGroup>
@@ -71,10 +91,12 @@ export function PitPanelsDashboardLayout({
 function PendingSection({
   title,
   description,
+  items,
   className,
 }: {
   title: string;
   description: string;
+  items?: string[];
   className?: string;
 }) {
   return (
@@ -91,6 +113,16 @@ function PendingSection({
         </Badge>
       </div>
       <p className="mt-3 text-xs text-muted-foreground">{description}</p>
+      {items && items.length > 0 && (
+        <ul className="mt-4 space-y-2 text-xs text-muted-foreground">
+          {items.map((item) => (
+            <li key={item} className="flex items-center gap-2">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent/50" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   );
 }

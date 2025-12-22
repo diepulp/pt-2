@@ -151,6 +151,6 @@ END;
 $$;
 
 -- Add function comment documenting ADR-015 compliance
-COMMENT ON FUNCTION rpc_create_financial_txn IS 'ADR-015 Phase 1A: Self-injects RLS context via set_rls_context for connection pooling compatibility. Enforces pit_boss constraints per SEC-005 v1.2.0 (direction=in, tender_type IN (cash, chips)).';
+COMMENT ON FUNCTION rpc_create_financial_txn(uuid, uuid, uuid, numeric, financial_direction, financial_source, uuid, text, uuid, uuid, text, timestamptz) IS 'ADR-015 Phase 1A: Self-injects RLS context via set_rls_context for connection pooling compatibility. Enforces pit_boss constraints per SEC-005 v1.2.0 (direction=in, tender_type IN (cash, chips)).';
 
 COMMIT;

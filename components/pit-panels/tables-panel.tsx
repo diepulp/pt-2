@@ -211,25 +211,6 @@ export function TablesPanel({
         {/* Table Layout - Fills remaining space */}
         <div className="flex-1 relative overflow-hidden rounded-lg border border-border/40 bg-card/30 backdrop-blur-sm flex flex-col min-h-0">
           {/* Section Header - Compact, responsive */}
-          <div className="flex items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 border-b border-border/30 shrink-0">
-            <h3 className="text-[10px] sm:text-xs font-medium uppercase tracking-wider text-muted-foreground">
-              Seat Positions
-            </h3>
-            <div className="flex items-center gap-2 sm:gap-3 text-[9px] sm:text-[10px]">
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-accent shadow-[0_0_6px_hsl(var(--accent)/0.5)]" />
-                <span className="text-muted-foreground font-medium">
-                  Occupied
-                </span>
-              </div>
-              <div className="flex items-center gap-1">
-                <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-muted border border-border/50" />
-                <span className="text-muted-foreground/70 font-medium">
-                  Available
-                </span>
-              </div>
-            </div>
-          </div>
 
           {/* Table Terminal - Centered, responsive padding */}
           <div className="flex-1 flex items-center justify-center p-2 sm:p-3 bg-gradient-to-b from-background/50 to-background/80 min-h-0">

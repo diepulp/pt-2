@@ -639,13 +639,14 @@ CREATE OR REPLACE FUNCTION rpc_apply_promotion(
   p_casino_id uuid,
   p_rating_slip_id uuid,
   p_campaign_id text,
-  p_promo_multiplier numeric,
-  p_bonus_points int,
-  p_idempotency_key uuid
+  p_promo_multiplier numeric DEFAULT NULL,
+  p_bonus_points int DEFAULT 0,
+  p_idempotency_key uuid DEFAULT NULL
 )
 RETURNS TABLE (
   ledger_id uuid,
-  promo_points_delta int,
+  points_delta int,
+  balance_after int,
   is_existing boolean
 )
 LANGUAGE plpgsql
@@ -658,6 +659,7 @@ DECLARE
   v_slip record;
   v_existing_entry record;
   v_player_loyalty_exists boolean;
+  v_balance_after int;
 BEGIN
   -- =======================================================================
   -- SELF-INJECTION: ADR-015 Phase 1A for connection pooling
@@ -725,9 +727,14 @@ BEGIN
 
   IF FOUND THEN
     -- Return existing entry (one promotion per campaign per slip)
+    SELECT current_balance INTO v_balance_after
+    FROM player_loyalty
+    WHERE player_id = v_slip.player_id AND casino_id = p_casino_id;
+
     RETURN QUERY SELECT
       v_existing_entry.id,
       v_existing_entry.points_delta,
+      COALESCE(v_balance_after, 0),
       true;
     RETURN;
   END IF;
@@ -781,7 +788,8 @@ BEGIN
     SET current_balance = current_balance + p_bonus_points,
         updated_at = now()
     WHERE player_id = v_slip.player_id
-      AND casino_id = p_casino_id;
+      AND casino_id = p_casino_id
+    RETURNING current_balance INTO v_balance_after;
   ELSE
     INSERT INTO player_loyalty (
       player_id,
@@ -797,10 +805,11 @@ BEGIN
       NULL,
       '{}',
       now()
-    );
+    )
+    RETURNING current_balance INTO v_balance_after;
   END IF;
 
-  RETURN QUERY SELECT ledger_id, p_bonus_points, false;
+  RETURN QUERY SELECT ledger_id, p_bonus_points, v_balance_after, false;
 END;
 $$;
 
@@ -1041,7 +1050,7 @@ CREATE OR REPLACE FUNCTION rpc_issue_mid_session_reward(
   p_staff_id uuid,
   p_points int,
   p_idempotency_key text DEFAULT NULL,
-  p_reason loyalty_reason DEFAULT 'mid_session'
+  p_reason loyalty_reason DEFAULT 'manual_reward'
 ) RETURNS TABLE (ledger_id uuid, balance_after int)
 LANGUAGE plpgsql
 AS $$
@@ -1117,7 +1126,7 @@ BEGIN
       RETURN QUERY
         SELECT ll.id,
                (
-                 SELECT balance
+                 SELECT current_balance
                    FROM player_loyalty
                   WHERE player_id = p_player_id
                     AND casino_id = p_casino_id
@@ -1135,7 +1144,7 @@ BEGIN
     player_id,
     rating_slip_id,
     staff_id,
-    points_earned,
+    points_delta,
     reason,
     idempotency_key,
     created_at
@@ -1146,20 +1155,20 @@ BEGIN
     p_rating_slip_id,
     p_staff_id,
     p_points,
-    COALESCE(p_reason, 'mid_session'),
+    COALESCE(p_reason, 'manual_reward'),
     p_idempotency_key,
     v_now
   )
   RETURNING id INTO v_ledger_id;
 
   -- Update or insert player_loyalty balance
-  INSERT INTO player_loyalty (player_id, casino_id, balance, updated_at)
+  INSERT INTO player_loyalty (player_id, casino_id, current_balance, updated_at)
   VALUES (p_player_id, p_casino_id, p_points, v_now)
   ON CONFLICT (player_id, casino_id)
   DO UPDATE SET
-    balance = player_loyalty.balance + p_points,
+    current_balance = player_loyalty.current_balance + p_points,
     updated_at = v_now
-  RETURNING balance INTO v_balance_after;
+  RETURNING current_balance INTO v_balance_after;
 
   RETURN QUERY SELECT v_ledger_id, v_balance_after;
 END;
