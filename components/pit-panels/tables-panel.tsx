@@ -1,18 +1,20 @@
 "use client";
 
-import { LayoutGrid, Users, UserPlus } from "lucide-react";
+import { LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
 import { TableLayoutTerminal } from "@/components/table";
 import { TableLimitsDialog } from "@/components/table/table-limits-dialog";
-import { Button } from "@/components/ui/button";
+import {
+  TableToolbar,
+  TableToolbarCompact,
+} from "@/components/table/table-toolbar";
 import type { DashboardTableDTO } from "@/hooks/dashboard/types";
 import {
   useTableSettings,
   useUpdateTableLimits,
 } from "@/hooks/table-context/use-table-settings";
-import { cn } from "@/lib/utils";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 
 interface SeatOccupant {
@@ -47,35 +49,7 @@ export function TablesPanel({
   onSeatClick,
   onNewSlip,
 }: TablesPanelProps) {
-  // Calculate stats from real data
-  const occupiedSeats = seats.filter((s) => s !== null).length;
-  const totalSeats = seats.length;
-  const activeSlipsCount = activeSlips.length;
-
-  // Calculate average session time
-  const avgSessionTime = React.useMemo(() => {
-    if (activeSlips.length === 0) return "0m";
-
-    const totalMinutes = activeSlips.reduce((acc, slip) => {
-      const start = new Date(slip.start_time).getTime();
-      const end = slip.end_time
-        ? new Date(slip.end_time).getTime()
-        : Date.now();
-      return acc + (end - start) / 60000;
-    }, 0);
-
-    const avgMinutes = Math.floor(totalMinutes / activeSlips.length);
-
-    if (avgMinutes < 60) {
-      return `${avgMinutes}m`;
-    }
-
-    const hours = Math.floor(avgMinutes / 60);
-    const minutes = avgMinutes % 60;
-    return `${hours}h ${minutes}m`;
-  }, [activeSlips]);
-
-  // Get last activity time
+  // Get last activity time for header context
   const lastActivity = React.useMemo(() => {
     if (activeSlips.length === 0) return "No activity";
 
@@ -148,8 +122,8 @@ export function TablesPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Panel Header - Compact */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
+      {/* Panel Header - Minimal, table identity only */}
+      <div className="flex items-center px-3 py-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 border border-accent/20">
             <LayoutGrid className="h-4 w-4 text-accent" />
@@ -163,49 +137,27 @@ export function TablesPanel({
             </p>
           </div>
         </div>
-
-        <Button
-          size="sm"
-          onClick={onNewSlip}
-          className="h-7 text-xs bg-accent text-accent-foreground hover:bg-accent/90"
-        >
-          <UserPlus className="h-3.5 w-3.5 mr-1.5" />
-          New Slip
-        </Button>
       </div>
 
       {/* Panel Content - No scroll, flex layout */}
       <div className="flex-1 flex flex-col p-2 sm:p-3 gap-2 sm:gap-3 min-h-0">
-        {/* Stats Summary - Responsive grid: 2 cols mobile, 4 cols desktop */}
-        <div className="relative overflow-hidden px-2 sm:px-3 py-2 sm:py-2.5 rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm shrink-0">
-          {/* LED accent strip */}
-          <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />
-
-          <div className="relative grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-            <StatItem
-              icon={Users}
-              label="Seats"
-              value={`${occupiedSeats}/${totalSeats}`}
-              subtext="occupied"
-            />
-            <StatItem
-              label="Avg Session"
-              value={avgSessionTime}
-              subtext="duration"
-            />
-            <StatItem
-              label="Active Slips"
-              value={activeSlipsCount.toString()}
-              subtext="rating"
-              highlight
-            />
-            <StatItem
-              label="Status"
-              value={selectedTable.status}
-              subtext="current"
-              positive={selectedTable.status === "active"}
-            />
-          </div>
+        {/* Loop-Centric Toolbar - Replaces redundant stat badges */}
+        {/* Responsive: Compact on mobile, full on desktop */}
+        <div className="shrink-0">
+          <TableToolbar
+            tableId={selectedTable.id}
+            tableStatus={selectedTable.status}
+            onNewSlip={onNewSlip}
+            onEditLimits={() => setLimitsDialogOpen(true)}
+            className="hidden sm:flex"
+          />
+          <TableToolbarCompact
+            tableId={selectedTable.id}
+            tableStatus={selectedTable.status}
+            onNewSlip={onNewSlip}
+            onEditLimits={() => setLimitsDialogOpen(true)}
+            className="flex sm:hidden"
+          />
         </div>
 
         {/* Table Layout - Fills remaining space */}
@@ -241,77 +193,5 @@ export function TablesPanel({
         isLoading={isUpdatingLimits}
       />
     </div>
-  );
-}
-
-/** Stat display item with PT-2 styling - Compact */
-function StatItem({
-  icon: Icon,
-  label,
-  value,
-  subtext,
-  highlight,
-  positive,
-}: {
-  icon?: typeof Users;
-  label: string;
-  value: string;
-  subtext: string;
-  highlight?: boolean;
-  positive?: boolean;
-}) {
-  return (
-    <div className="space-y-0.5">
-      <div className="flex items-center gap-1.5 text-muted-foreground">
-        {Icon && <Icon className="h-3 w-3" />}
-        <span className="text-[10px] uppercase tracking-wide">{label}</span>
-      </div>
-      <div
-        className={cn(
-          "font-mono text-base font-bold tracking-tight",
-          highlight && "text-accent",
-          positive && "text-emerald-400",
-          !highlight && !positive && "text-foreground",
-        )}
-      >
-        {value}
-      </div>
-      <div className="text-[10px] text-muted-foreground/60">{subtext}</div>
-    </div>
-  );
-}
-
-/** Action card with hover effects */
-function ActionCard({
-  title,
-  description,
-  icon: Icon,
-  onClick,
-}: {
-  title: string;
-  description: string;
-  icon: typeof Users;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className="group relative overflow-hidden p-4 rounded-lg border border-dashed border-accent/30 bg-card/20 hover:bg-accent/5 hover:border-accent/50 transition-all text-left"
-    >
-      {/* Hover glow effect */}
-      <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-transparent via-accent/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-      <div className="flex items-start gap-3">
-        <div className="flex items-center justify-center w-8 h-8 rounded-md bg-accent/10 border border-accent/20 group-hover:bg-accent/20 transition-colors">
-          <Icon className="h-4 w-4 text-accent" />
-        </div>
-        <div>
-          <h4 className="text-sm font-medium text-foreground group-hover:text-accent transition-colors">
-            {title}
-          </h4>
-          <p className="text-xs text-muted-foreground mt-0.5">{description}</p>
-        </div>
-      </div>
-    </button>
   );
 }
