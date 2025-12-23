@@ -743,10 +743,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
 
       // This test documents expected behavior; actual RLS enforcement
       // requires non-service-role client
-      const liveView = await service.getVisitLiveView(
-        testCasino2Id,
-        visit!.id,
-      );
+      const liveView = await service.getVisitLiveView(testCasino2Id, visit!.id);
 
       // With service role, should still return data
       // In production with RLS-enabled client, this would be NULL

@@ -5,6 +5,8 @@ import * as React from "react";
 
 import { cn } from "@/lib/utils";
 
+import { useSeatPositions } from "./use-seat-positions";
+
 interface SeatOccupant {
   firstName: string;
   lastName: string;
@@ -32,35 +34,6 @@ interface TableLayoutTerminalProps {
 // Modern Minimalist Theme
 // Uses Tailwind semantic tokens: background, card, accent, muted, etc.
 
-/**
- * Calculate seat positions along a semi-circle arc
- * Uses percentage-based positioning for responsiveness
- */
-function calculateSeatPositions(
-  count: number,
-): { left: string; top: string }[] {
-  if (count === 0) return [];
-
-  // Distribute seats along the top arc (180deg to 360deg)
-  // Using percentages relative to container
-  const startAngle = Math.PI; // 180deg (left side)
-  const endAngle = 2 * Math.PI; // 360deg (right side)
-  const step = (endAngle - startAngle) / Math.max(count - 1, 1);
-
-  // Semi-circle parameters (percentage-based)
-  const centerX = 50; // Center horizontally
-  const centerY = 70; // Shifted down to place arc in upper portion
-  const radiusX = 42; // Horizontal radius (percentage of width)
-  const radiusY = 55; // Vertical radius (percentage of height)
-
-  return Array.from({ length: count }).map((_, i) => {
-    const angle = startAngle + step * i;
-    const x = centerX + radiusX * Math.cos(angle);
-    const y = centerY + radiusY * Math.sin(angle);
-    return { left: `${x}%`, top: `${y}%` };
-  });
-}
-
 export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
   function TableLayoutTerminal({
     seats,
@@ -78,10 +51,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     maxBet,
     onEditLimits,
   }) {
-    const positions = React.useMemo(
-      () => calculateSeatPositions(seats.length),
-      [seats.length],
-    );
+    const positions = useSeatPositions(seats.length);
 
     const isCompact = variant === "compact";
 
@@ -189,23 +159,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                   </span>
                 </div>
               )}
-              {/* Betting limits badge (PRD-012) */}
-              {minBet !== undefined && maxBet !== undefined && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/40 dark:border-emerald-400/30">
-                  <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                    ${minBet.toLocaleString()} – ${maxBet.toLocaleString()}
-                  </span>
-                  {onEditLimits && (
-                    <button
-                      onClick={onEditLimits}
-                      className="ml-0.5 p-0.5 rounded hover:bg-emerald-500/20 dark:hover:bg-emerald-400/20 transition-colors"
-                      aria-label="Edit table limits"
-                    >
-                      <Pencil className="size-3 text-emerald-600 dark:text-emerald-400" />
-                    </button>
-                  )}
-                </div>
-              )}
+
               {/* Table status indicator */}
               <div className="flex items-center gap-1.5">
                 <div
@@ -222,18 +176,6 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                 </span>
               </div>
             </div>
-
-            {/* Active slips count */}
-            {activeSlipsCount !== undefined && (
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground">
-                  Active Slips:
-                </span>
-                <div className="px-2 py-1 rounded-full bg-accent text-accent-foreground">
-                  <span className="text-xs font-bold">{activeSlipsCount}</span>
-                </div>
-              </div>
-            )}
 
             {/* Quick actions */}
             {onTableAction && (
@@ -460,6 +402,23 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
               {seats.filter((s) => !s).length} Available
             </span>
           </div>
+          {/* Betting limits badge (PRD-012) */}
+          {minBet !== undefined && maxBet !== undefined && (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/15 dark:bg-emerald-500/20 border border-emerald-500/40 dark:border-emerald-400/30">
+              <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                ${minBet.toLocaleString()} – ${maxBet.toLocaleString()}
+              </span>
+              {onEditLimits && (
+                <button
+                  onClick={onEditLimits}
+                  className="ml-0.5 p-0.5 rounded hover:bg-emerald-500/20 dark:hover:bg-emerald-400/20 transition-colors"
+                  aria-label="Edit table limits"
+                >
+                  <Pencil className="size-3 text-emerald-600 dark:text-emerald-400" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </section>
     );

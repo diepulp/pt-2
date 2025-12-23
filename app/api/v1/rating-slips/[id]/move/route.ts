@@ -133,7 +133,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
           if (seatOccupied) {
             throw new DomainError(
-              "SEAT_ALREADY_OCCUPIED",
+              "SEAT_OCCUPIED",
               `Seat ${input.destinationSeatNumber} is already occupied at the destination table`,
               { httpStatus: 400 },
             );
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
             : result.code === "UNAUTHORIZED"
               ? 401
               : result.code === "VALIDATION_ERROR" ||
-                  result.code === "SEAT_ALREADY_OCCUPIED"
+                  result.code === "SEAT_OCCUPIED"
                 ? 400
                 : result.code === "RATING_SLIP_ALREADY_CLOSED" ||
                     result.code === "RATING_SLIP_DUPLICATE" ||

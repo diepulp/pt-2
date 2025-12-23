@@ -1590,46 +1590,51 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const batchSize = requestsPerSecond;
       for (let batch = 0; batch < durationSeconds; batch++) {
         const batchStart = batch * batchSize;
-        const batchRequests = requests.slice(batchStart, batchStart + batchSize);
+        const batchRequests = requests.slice(
+          batchStart,
+          batchStart + batchSize,
+        );
 
         const batchResults = await Promise.all(
-          batchRequests.map(async ({ context, requestId, expectedCasinoId }) => {
-            const reqStartTime = Date.now();
-            const client = createClient<Database>(
-              supabaseUrl,
-              supabaseServiceKey,
-            );
-
-            try {
-              await injectRLSContext(
-                client,
-                context,
-                `load-test-${batch}-${requestId}`,
+          batchRequests.map(
+            async ({ context, requestId, expectedCasinoId }) => {
+              const reqStartTime = Date.now();
+              const client = createClient<Database>(
+                supabaseUrl,
+                supabaseServiceKey,
               );
 
-              const { data, error } = await client
-                .from('casino_settings')
-                .select('casino_id')
-                .eq('casino_id', context.casinoId)
-                .single();
+              try {
+                await injectRLSContext(
+                  client,
+                  context,
+                  `load-test-${batch}-${requestId}`,
+                );
 
-              return {
-                requestId,
-                success: !error,
-                casinoId: data?.casino_id,
-                expectedCasinoId,
-                responseTime: Date.now() - reqStartTime,
-              };
-            } catch (err) {
-              return {
-                requestId,
-                success: false,
-                expectedCasinoId,
-                responseTime: Date.now() - reqStartTime,
-                error: err instanceof Error ? err.message : 'Unknown error',
-              };
-            }
-          }),
+                const { data, error } = await client
+                  .from('casino_settings')
+                  .select('casino_id')
+                  .eq('casino_id', context.casinoId)
+                  .single();
+
+                return {
+                  requestId,
+                  success: !error,
+                  casinoId: data?.casino_id,
+                  expectedCasinoId,
+                  responseTime: Date.now() - reqStartTime,
+                };
+              } catch (err) {
+                return {
+                  requestId,
+                  success: false,
+                  expectedCasinoId,
+                  responseTime: Date.now() - reqStartTime,
+                  error: err instanceof Error ? err.message : 'Unknown error',
+                };
+              }
+            },
+          ),
         );
 
         results.push(...batchResults);
@@ -1656,15 +1661,23 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       console.log(`\n=== PRD-015 WS5 Load Test Results ===`);
       console.log(`Total Requests: ${totalRequests}`);
       console.log(`Duration: ${(duration / 1000).toFixed(2)}s`);
-      console.log(`Success Rate: ${((successCount / totalRequests) * 100).toFixed(2)}%`);
-      console.log(`Failure Rate: ${((failureCount / totalRequests) * 100).toFixed(2)}%`);
+      console.log(
+        `Success Rate: ${((successCount / totalRequests) * 100).toFixed(2)}%`,
+      );
+      console.log(
+        `Failure Rate: ${((failureCount / totalRequests) * 100).toFixed(2)}%`,
+      );
       console.log(`Cross-Tenant Leaks: ${crossTenantLeaks}`);
       console.log(`Avg Response Time: ${avgResponseTime.toFixed(2)}ms`);
     }, 120000); // 2 minute timeout
 
     it('should maintain multi-tenant isolation with 10 concurrent casinos', async () => {
       // Create 10 test casinos with dedicated staff
-      const testCasinos: { casinoId: string; staffId: string; userId: string }[] = [];
+      const testCasinos: {
+        casinoId: string;
+        staffId: string;
+        userId: string;
+      }[] = [];
 
       for (let i = 0; i < 10; i++) {
         // Create user
@@ -1733,7 +1746,12 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
         const results = await Promise.all(
           allRequests.map(
-            async ({ casinoIndex, requestIndex, context, expectedCasinoId }) => {
+            async ({
+              casinoIndex,
+              requestIndex,
+              context,
+              expectedCasinoId,
+            }) => {
               const client = createClient<Database>(
                 supabaseUrl,
                 supabaseServiceKey,
@@ -1815,20 +1833,29 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       } finally {
         // Cleanup: Delete in reverse dependency order
         await Promise.all([
-          supabase.from('staff').delete().in(
-            'id',
-            testCasinos.map((c) => c.staffId),
-          ),
-          supabase.from('casino_settings').delete().in(
-            'casino_id',
-            testCasinos.map((c) => c.casinoId),
-          ),
+          supabase
+            .from('staff')
+            .delete()
+            .in(
+              'id',
+              testCasinos.map((c) => c.staffId),
+            ),
+          supabase
+            .from('casino_settings')
+            .delete()
+            .in(
+              'casino_id',
+              testCasinos.map((c) => c.casinoId),
+            ),
         ]);
 
-        await supabase.from('casino').delete().in(
-          'id',
-          testCasinos.map((c) => c.casinoId),
-        );
+        await supabase
+          .from('casino')
+          .delete()
+          .in(
+            'id',
+            testCasinos.map((c) => c.casinoId),
+          );
 
         await Promise.all(
           testCasinos.map((c) => supabase.auth.admin.deleteUser(c.userId)),

@@ -147,10 +147,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
       .delete()
       .eq('casino_id', testCasinoId);
     await supabase.from('visit').delete().eq('id', testVisitId);
-    await supabase
-      .from('player_casino')
-      .delete()
-      .eq('player_id', testPlayerId);
+    await supabase.from('player_casino').delete().eq('player_id', testPlayerId);
     await supabase.from('player').delete().eq('id', testPlayerId);
     await supabase
       .from('staff')

@@ -100,7 +100,7 @@ function mapDatabaseError(error: {
       message.includes("seat_number")
     ) {
       return new DomainError(
-        "SEAT_ALREADY_OCCUPIED",
+        "SEAT_OCCUPIED",
         "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
       );
     }

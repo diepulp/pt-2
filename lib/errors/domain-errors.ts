@@ -36,7 +36,12 @@ export type VisitErrorCode =
   | "VISIT_CASINO_MISMATCH"
   | "VISIT_CONCURRENT_MODIFICATION"
   | "VISIT_INVALID_KIND_PLAYER"
-  | "VISIT_INVALID_CONVERSION";
+  | "VISIT_INVALID_CONVERSION"
+  | "SOURCE_VISIT_NOT_CLOSED"
+  | "PLAYER_MISMATCH"
+  | "VISIT_ALREADY_OPEN"
+  | "TABLE_NOT_AVAILABLE"
+  | "SEAT_OCCUPIED";
 
 export const VISIT_ERROR_MESSAGES: Record<VisitErrorCode, string> = {
   VISIT_NOT_FOUND: "Visit session not found",
@@ -49,6 +54,12 @@ export const VISIT_ERROR_MESSAGES: Record<VisitErrorCode, string> = {
     "Ghost visits require NULL player_id; identified visits require player_id",
   VISIT_INVALID_CONVERSION:
     "Only reward_identified visits can be converted to gaming visits",
+  // PRD-017: Visit Continuation errors
+  SOURCE_VISIT_NOT_CLOSED: "Source visit must be closed before continuing",
+  PLAYER_MISMATCH: "Player ID does not match the source visit",
+  VISIT_ALREADY_OPEN: "Player already has an active visit",
+  TABLE_NOT_AVAILABLE: "Destination table is not available",
+  SEAT_OCCUPIED: "Destination seat is already occupied",
 };
 
 // ============================================================================
@@ -89,8 +100,7 @@ export type RatingSlipErrorCode =
   | "RATING_SLIP_INVALID_STATE"
   | "RATING_SLIP_MISSING_REQUIRED_DATA"
   | "RATING_SLIP_CONCURRENT_UPDATE"
-  | "RATING_SLIP_DUPLICATE"
-  | "SEAT_ALREADY_OCCUPIED";
+  | "RATING_SLIP_DUPLICATE";
 
 export const RATING_SLIP_ERROR_MESSAGES: Record<RatingSlipErrorCode, string> = {
   RATING_SLIP_NOT_FOUND: "Rating slip not found",
@@ -104,8 +114,6 @@ export const RATING_SLIP_ERROR_MESSAGES: Record<RatingSlipErrorCode, string> = {
   RATING_SLIP_CONCURRENT_UPDATE: "Rating slip was modified by another process",
   RATING_SLIP_DUPLICATE:
     "An open rating slip already exists for this player at this table",
-  SEAT_ALREADY_OCCUPIED:
-    "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
 };
 
 // ============================================================================

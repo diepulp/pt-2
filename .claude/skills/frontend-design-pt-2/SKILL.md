@@ -39,6 +39,7 @@ Read these files **when needed** based on your task:
 | Service layer integration patterns | `references/pt2-architecture-integration.md` |
 | Condensed technical rules checklist | `references/frontend-rules.md` |
 | UI/UX design system and style guide | `references/pt2-ui-design-system-prototype-style-guide.md` |
+| **Layout strategy, panels, modals, click-reduction** | `references/pt2-layout-strategy.md` |
 | Session memory and pattern tracking | `references/memori-integration.md` |
 | Context threshold and checkpoint management | `references/context-management.md` |
 
@@ -262,6 +263,18 @@ npx shadcn@latest add button dialog form table
 # From registries: @aceternity, @originui, @kokonutui, @tweakcn
 npx shadcn@latest add @aceternity/background-beams
 ```
+
+---
+
+## PT-2 Layout Patterns
+
+**CRITICAL**: Before building PT-2 interfaces, read `references/pt2-layout-strategy.md`.
+
+PT-2 follows a **loop-centric, low-click workflow** optimized for pit operations:
+- **Right panels** replace detail pages (keep list visible)
+- **Modals** only for irreversible/high-risk actions
+- **Command Palette** (Ctrl/⌘+K) for muscle-memory access
+- **Inline row actions** — show 2-3 primary actions, overflow the rest
 
 ---
 

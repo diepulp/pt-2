@@ -66,6 +66,10 @@ const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
     average_bet: 25,
     game_settings: null,
     policy_snapshot: null,
+    previous_slip_id: null,
+    move_group_id: null,
+    accumulated_seconds: 0,
+    final_duration_seconds: null,
   },
   {
     id: "slip-2",
@@ -79,6 +83,10 @@ const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
     average_bet: 50,
     game_settings: null,
     policy_snapshot: null,
+    previous_slip_id: null,
+    move_group_id: null,
+    accumulated_seconds: 0,
+    final_duration_seconds: null,
   },
   {
     id: "slip-3",
@@ -92,6 +100,10 @@ const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
     average_bet: 100,
     game_settings: null,
     policy_snapshot: null,
+    previous_slip_id: null,
+    move_group_id: null,
+    accumulated_seconds: 0,
+    final_duration_seconds: null,
   },
 ];
 
