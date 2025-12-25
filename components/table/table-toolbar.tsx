@@ -9,6 +9,7 @@ import {
   Settings2,
   StickyNote,
   UserCog,
+  UserPlus,
   Users,
 } from "lucide-react";
 import * as React from "react";
@@ -45,6 +46,7 @@ interface TableToolbarProps {
   tableStatus: "active" | "inactive" | "closed";
   onNewSlip: () => void;
   onEditLimits: () => void;
+  onEnrollPlayer?: () => void;
   className?: string;
 }
 
@@ -61,6 +63,7 @@ export function TableToolbar({
   tableStatus,
   onNewSlip,
   onEditLimits,
+  onEnrollPlayer,
   className,
 }: TableToolbarProps) {
   // Placeholder handlers for pending functionality
@@ -114,6 +117,14 @@ export function TableToolbar({
             variant: "accent",
           },
           {
+            id: "enroll-player",
+            icon: UserPlus,
+            label: "Enroll Player",
+            shortcut: "⌘E",
+            onClick:
+              onEnrollPlayer ?? (() => handlePlaceholder("Enroll player")),
+          },
+          {
             id: "view-players",
             icon: Users,
             label: "View Players",
@@ -157,7 +168,7 @@ export function TableToolbar({
         ],
       },
     ],
-    [tableStatus, onNewSlip, onEditLimits, handlePlaceholder],
+    [tableStatus, onNewSlip, onEditLimits, onEnrollPlayer, handlePlaceholder],
   );
 
   return (
@@ -265,6 +276,7 @@ export function TableToolbarCompact({
   tableStatus,
   onNewSlip,
   onEditLimits,
+  onEnrollPlayer,
   className,
 }: TableToolbarProps) {
   const handlePlaceholder = React.useCallback((action: string) => {
@@ -282,6 +294,12 @@ export function TableToolbarCompact({
       label: "New Slip",
       onClick: onNewSlip,
       variant: "accent",
+    },
+    {
+      id: "enroll-player",
+      icon: UserPlus,
+      label: "Enroll",
+      onClick: onEnrollPlayer ?? (() => handlePlaceholder("Enroll player")),
     },
     {
       id: "toggle-status",

@@ -242,6 +242,7 @@ export function PanelContainer({
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}
+            casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
           />
@@ -268,6 +269,7 @@ export function PanelContainer({
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}
+            casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
           />

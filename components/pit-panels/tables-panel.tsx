@@ -4,6 +4,7 @@ import { LayoutGrid } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
 
+import { EnrollPlayerModal } from "@/components/enrollment/enroll-player-modal";
 import { TableLayoutTerminal } from "@/components/table";
 import { TableLimitsDialog } from "@/components/table/table-limits-dialog";
 import {
@@ -30,6 +31,8 @@ interface TablesPanelProps {
   seats: (SeatOccupant | null)[];
   activeSlips: RatingSlipDTO[];
   isLoading: boolean;
+  /** Casino ID for enrollment */
+  casinoId: string;
 
   // Callbacks
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
@@ -46,6 +49,7 @@ export function TablesPanel({
   seats,
   activeSlips,
   isLoading,
+  casinoId,
   onSeatClick,
   onNewSlip,
 }: TablesPanelProps) {
@@ -68,6 +72,8 @@ export function TablesPanel({
 
   // Table limits state and hooks
   const [limitsDialogOpen, setLimitsDialogOpen] = React.useState(false);
+  // Enroll player modal state
+  const [enrollModalOpen, setEnrollModalOpen] = React.useState(false);
   const tableId = selectedTable?.id ?? "";
   const { data: tableSettings } = useTableSettings(tableId);
   const { mutateAsync: updateLimits, isPending: isUpdatingLimits } =
@@ -149,6 +155,7 @@ export function TablesPanel({
             tableStatus={selectedTable.status}
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
+            onEnrollPlayer={() => setEnrollModalOpen(true)}
             className="hidden sm:flex"
           />
           <TableToolbarCompact
@@ -156,6 +163,7 @@ export function TablesPanel({
             tableStatus={selectedTable.status}
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
+            onEnrollPlayer={() => setEnrollModalOpen(true)}
             className="flex sm:hidden"
           />
         </div>
@@ -191,6 +199,14 @@ export function TablesPanel({
         currentMaxBet={tableSettings?.max_bet ?? 0}
         onSave={handleSaveLimits}
         isLoading={isUpdatingLimits}
+      />
+
+      {/* Enroll Player Modal */}
+      <EnrollPlayerModal
+        open={enrollModalOpen}
+        onOpenChange={setEnrollModalOpen}
+        casinoId={casinoId}
+        tableId={selectedTable.id}
       />
     </div>
   );
