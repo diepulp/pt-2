@@ -2,15 +2,16 @@
 # ==============================================================================
 # Service Layer Anti-Pattern Detection (Pattern-Aware)
 # ==============================================================================
-# Version: 2.5.0
-# Date: 2025-12-11
+# Version: 2.6.0
+# Date: 2025-12-25
 # References:
 #   - SLAD: docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
 #   - SRM: docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md
 #   - Anti-Patterns: docs/70-governance/anti-patterns/01-service-layer.md (modular)
 #   - ADR-013: docs/80-adrs/ADR-013-zod-validation-schemas.md (Zod schemas)
 #   - ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md (RLS)
-#   - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md (Pattern C)
+#   - ADR-023: docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md (Pool model)
+#   - SEC-001: docs/30-security/SEC-001-rls-policy-matrix.md (Pattern C, no service keys)
 #   - Workflow: docs/20-architecture/specs/WORKFLOW-PRD-002-parallel-execution.md
 #
 # This script runs BEFORE lint-staged. Additional AST-based checks run via ESLint:
@@ -788,6 +789,64 @@ if [ -n "$STAGED_TS_FILES" ]; then
     echo "Reference: ADR-015 Phase 2, services/casino/crud.ts"
     echo ""
     # Warning only - database trigger provides backup
+  fi
+fi
+
+# ==============================================================================
+# Check 16: Service client import in production paths (SEC-001)
+# ==============================================================================
+# The service client (createServiceClient) bypasses RLS completely.
+# It should ONLY be used in:
+#   - Test files (__tests__/*.ts, *.test.ts)
+#   - Dev auth middleware (lib/server-actions/middleware/auth.ts)
+#   - The service client itself (lib/supabase/service.ts)
+#
+# Using it in production paths (app/, services/, other lib/) is a security violation.
+
+if [ -n "$STAGED_TS_FILES" ]; then
+  SERVICE_CLIENT_VIOLATIONS=""
+
+  for file in $STAGED_TS_FILES; do
+    # Skip test files
+    if echo "$file" | grep -q "__tests__"; then continue; fi
+    if echo "$file" | grep -q "\.test\.ts$\|\.spec\.ts$"; then continue; fi
+
+    # Skip allowed files
+    if echo "$file" | grep -q "lib/supabase/service\.ts$"; then continue; fi
+    if echo "$file" | grep -q "lib/server-actions/middleware/auth\.ts$"; then continue; fi
+
+    # Check for service client import
+    if grep -qE "from ['\"]@/lib/supabase/service['\"]|from ['\"].*lib/supabase/service['\"]" "$file" 2>/dev/null; then
+      SERVICE_CLIENT_VIOLATIONS="$SERVICE_CLIENT_VIOLATIONS
+  - $file"
+      grep -n "lib/supabase/service" "$file" 2>/dev/null | head -3 | while read -r line; do
+        echo "    $line"
+      done
+    fi
+  done
+
+  if [ -n "$SERVICE_CLIENT_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: Service client import in production paths (SEC-001)"
+    echo ""
+    echo "The service client (createServiceClient) BYPASSES RLS completely."
+    echo "It is ONLY allowed in tests and the dev auth middleware."
+    echo ""
+    echo "Files with violations:$SERVICE_CLIENT_VIOLATIONS"
+    echo ""
+    echo "Fix: Use createClient from @/lib/supabase/server instead:"
+    echo ""
+    echo "  ❌ WRONG:"
+    echo "  import { createServiceClient } from '@/lib/supabase/service';"
+    echo ""
+    echo "  ✅ CORRECT:"
+    echo "  import { createClient } from '@/lib/supabase/server';"
+    echo ""
+    echo "WHY: Service client bypasses RLS, allowing access to ALL tenants' data."
+    echo "     Production code must use authenticated client with RLS enforced."
+    echo ""
+    echo "Reference: SEC-001 (no service keys in runtime), ADR-023 (Pool model)"
+    echo ""
+    VIOLATIONS_FOUND=1
   fi
 fi
 

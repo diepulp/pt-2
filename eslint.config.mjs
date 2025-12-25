@@ -31,6 +31,7 @@ const eslintConfig = [
       '.swc/**',
       '.qodo/**',
       '.cursor/**',
+      '.backup/**', // Old backup files, not production code
       'types/database.types.ts', // Generated file, exclude from linting
       'types/remote/**', // Remote generated types
       'next-env.d.ts', // Next.js generated type declarations
@@ -123,6 +124,7 @@ const eslintConfig = [
   // API Routes security configuration - V4 FIX (WORKFLOW-PRD-002)
   {
     files: ['app/api/**/*.ts', 'app/actions/**/*.ts', 'pages/api/**/*.ts'],
+    ignores: ['**/__tests__/**', '**/*.test.ts', '**/*.spec.ts'],
     plugins: {
       'security-rules': {
         rules: {
@@ -133,6 +135,44 @@ const eslintConfig = [
     rules: {
       // V4 FIX: Prevent casino context from headers - security vulnerability
       'security-rules/no-header-casino-context': 'error',
+      // SEC-001: Block service client in production API paths (bypasses RLS)
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/lib/supabase/service',
+              message:
+                'SEC-001: Service client bypasses RLS. Use createClient from @/lib/supabase/server. Only allowed in tests and dev middleware.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Production paths security - Block service client (SEC-001)
+  {
+    files: ['lib/**/*.ts'],
+    ignores: [
+      'lib/supabase/service.ts', // The service client itself
+      'lib/server-actions/middleware/auth.ts', // Dev bypass (gated by isDevAuthBypassEnabled)
+      'lib/**/__tests__/**',
+      'lib/**/*.test.ts',
+    ],
+    rules: {
+      // SEC-001: Block service client in production lib paths
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@/lib/supabase/service',
+              message:
+                'SEC-001: Service client bypasses RLS. Only allowed in service.ts, dev auth middleware, and tests.',
+            },
+          ],
+        },
+      ],
     },
   },
   // Cypress-specific configuration
