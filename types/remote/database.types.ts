@@ -876,23 +876,32 @@ export type Database = {
         Row: {
           birth_date: string | null
           created_at: string
+          email: string | null
           first_name: string
           id: string
           last_name: string
+          middle_name: string | null
+          phone_number: string | null
         }
         Insert: {
           birth_date?: string | null
           created_at?: string
+          email?: string | null
           first_name: string
           id?: string
           last_name: string
+          middle_name?: string | null
+          phone_number?: string | null
         }
         Update: {
           birth_date?: string | null
           created_at?: string
+          email?: string | null
           first_name?: string
           id?: string
           last_name?: string
+          middle_name?: string | null
+          phone_number?: string | null
         }
         Relationships: []
       }
@@ -900,18 +909,21 @@ export type Database = {
         Row: {
           casino_id: string
           enrolled_at: string
+          enrolled_by: string | null
           player_id: string
           status: string
         }
         Insert: {
           casino_id: string
           enrolled_at?: string
+          enrolled_by?: string | null
           player_id: string
           status?: string
         }
         Update: {
           casino_id?: string
           enrolled_at?: string
+          enrolled_by?: string | null
           player_id?: string
           status?: string
         }
@@ -921,6 +933,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_casino_enrolled_by_fkey"
+            columns: ["enrolled_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -1008,6 +1027,121 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_identity: {
+        Row: {
+          address: Json | null
+          birth_date: string | null
+          casino_id: string
+          created_at: string
+          created_by: string
+          document_number_hash: string | null
+          document_number_last4: string | null
+          document_type: string | null
+          expiration_date: string | null
+          eye_color: string | null
+          gender: string | null
+          height: string | null
+          id: string
+          issue_date: string | null
+          issuing_state: string | null
+          player_id: string
+          updated_at: string
+          updated_by: string | null
+          verified_at: string | null
+          verified_by: string | null
+          weight: string | null
+        }
+        Insert: {
+          address?: Json | null
+          birth_date?: string | null
+          casino_id: string
+          created_at?: string
+          created_by: string
+          document_number_hash?: string | null
+          document_number_last4?: string | null
+          document_type?: string | null
+          expiration_date?: string | null
+          eye_color?: string | null
+          gender?: string | null
+          height?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_state?: string | null
+          player_id: string
+          updated_at?: string
+          updated_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          weight?: string | null
+        }
+        Update: {
+          address?: Json | null
+          birth_date?: string | null
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          document_number_hash?: string | null
+          document_number_last4?: string | null
+          document_type?: string | null
+          expiration_date?: string | null
+          eye_color?: string | null
+          gender?: string | null
+          height?: string | null
+          id?: string
+          issue_date?: string | null
+          issuing_state?: string | null
+          player_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          verified_at?: string | null
+          verified_by?: string | null
+          weight?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_player_identity_enrollment"
+            columns: ["casino_id", "player_id"]
+            isOneToOne: true
+            referencedRelation: "player_casino"
+            referencedColumns: ["casino_id", "player_id"]
+          },
+          {
+            foreignKeyName: "player_identity_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_identity_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_identity_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_identity_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_identity_verified_by_fkey"
+            columns: ["verified_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]

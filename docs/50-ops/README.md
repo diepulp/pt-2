@@ -35,6 +35,7 @@ last_review: 2025-10-25
 
 ## Current Documents
 
+- **OPS-002**: Silo Provisioning Playbook — Per-casino dedicated Supabase project deployment
 - **Audit logging patterns** (embedded in SERVER_ACTIONS_ARCHITECTURE.md)
 - **Error mapping** `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md`
 - **Telemetry patterns** (to be documented)

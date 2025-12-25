@@ -212,6 +212,7 @@ export {
   createCasino,
   createStaff,
   deleteCasino,
+  enrollPlayer,
   getCasinoById,
   getCasinoSettings,
   getStaffById,

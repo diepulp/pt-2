@@ -1,5 +1,5 @@
 # Architecture Decisions Snapshot
-last_updated: 2025-11-28
+last_updated: 2025-12-25
 sources:
   - .claude/memory/architecture-decisions.memory.md (detailed)
   - docs/80-adrs/
@@ -11,11 +11,13 @@ key_points:
   - ADR-010: ServiceResult envelope required for all domain mutations; HTTP translation happens at edge layer.
   - ADR-012: Error handling layers - services THROW DomainError; transport layer CATCHES and returns ServiceResult<T>.
   - ADR-014: MTL compliance engine owns cash ledgers; finance integrations must consume published views only.
+  - ADR-023: Multi-tenancy model - Pool primary (shared schema + RLS), Silo escape hatch (per-casino Supabase project). Guardrails: casino-scoped ownership, hybrid RLS mandatory, SECURITY DEFINER governance, append-only ledgers.
 guardrails:
   - Schema-first development using generated types; migrations must precede application code changes.
   - Vertical slice delivery pattern: service factory + server action + UI hook with shared DTOs.
   - Weekly ADR review ensures docs stay aligned; superseded ADRs must be referenced in new decisions.
   - Error handling: Service layer throws DomainError; never return ServiceResult from services (ADR-012).
+  - Multi-tenancy: All tenant-owned tables MUST have casino_id. No cross-casino joins. RLS is primary isolation (ADR-023).
 
 ## Context Management Architecture (2025-11-25)
 

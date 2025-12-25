@@ -8,6 +8,24 @@ allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 
 PT-2 Row-Level Security specialist for implementing secure, connection-pooling-compatible multi-tenant data access.
 
+## Multi-Tenancy Model (ADR-023)
+
+**Official Stance: Pool Primary; Silo Escape Hatch**
+
+| Model | Status | RLS Implication |
+|-------|--------|-----------------|
+| **Pool** | Primary/Default | RLS is the PRIMARY isolation mechanism. All policies must enforce `casino_id` scope |
+| **Silo** | Optional | Same RLS policies apply (defense in depth). Single-tenant project = additional isolation layer |
+
+**Non-Negotiable Guardrails:**
+
+1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
+2. **Hybrid RLS mandatory** — Pattern C with session context + JWT fallback
+3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
+4. **Append-only ledgers** — Finance/loyalty/compliance: denial policies for updates/deletes
+
+**Reference:** `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`
+
 ## Current Strategy (ADR-020)
 
 **Track A (Hybrid) is the MVP architecture.** Track B (JWT-only) is the correct end-state, gated on prerequisites.
@@ -216,14 +234,16 @@ INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
 
 ## Canonical Documentation References
 
+- **ADR-023**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` - **Pool primary, Silo escape hatch** multi-tenancy model
 - **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data validating PT-2's approach is not homebrew.
 - **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - Track A (hybrid) for MVP, Track B (JWT-only) gated on prerequisites
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pooling strategy technical details
 - **SEC-001**: `docs/30-security/SEC-001-rls-policy-matrix.md` - Policy templates
-- **SEC-002**: `docs/30-security/SEC-002-casino-scoped-security-model.md` - Security boundaries
+- **SEC-002**: `docs/30-security/SEC-002-casino-scoped-security-model.md` - Security boundaries (updated with ADR-023)
 - **SEC-003**: `docs/30-security/SEC-003-rbac-matrix.md` - RBAC matrix
 - **SEC-005**: `docs/30-security/SEC-005-role-taxonomy.md` - Role definitions
 - **ADR-018**: `docs/80-adrs/ADR-018-sec006-security-hardening.md` - SEC-006 formalization
+- **OPS-002**: `docs/50-ops/OPS-002-silo-provisioning-playbook.md` - Silo deployment operations
 - **Implementation**: `lib/supabase/rls-context.ts` - TypeScript context injection
 
 ## Security Patches Reference

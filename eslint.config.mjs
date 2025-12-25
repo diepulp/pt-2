@@ -373,6 +373,26 @@ const eslintConfig = [
       'no-console': 'off',
     },
   },
+  // Integration test files (__tests__ directory) - relaxed rules
+  {
+    files: [
+      '__tests__/**/*.test.ts',
+      '__tests__/**/*.spec.ts',
+      '__tests__/**/*.integration.test.ts',
+    ],
+    rules: {
+      // Integration tests need direct Supabase access for setup/teardown
+      'no-restricted-imports': 'off',
+      // Integration tests legitimately use type assertions for setup
+      '@typescript-eslint/consistent-type-assertions': 'off',
+      // Explicit return types not required in tests
+      '@typescript-eslint/explicit-function-return-type': 'off',
+      // Allow console in tests for debugging
+      'no-console': 'off',
+      // Allow @deprecated comments in test expectations
+      'no-warning-comments': 'off',
+    },
+  },
 ];
 
 export default eslintConfig;

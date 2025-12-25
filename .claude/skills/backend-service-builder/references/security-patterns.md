@@ -3,9 +3,30 @@
 **Purpose**: Security rules for backend services - context derivation, RLS parameters, trust boundaries.
 **Canonical Reference**: V4 violation - casino context from untrusted source
 
+**Multi-Tenancy Model (ADR-023):** Pool primary, Silo escape hatch. See guardrails below.
+
 **RLS Strategy**: For RLS pattern questions or ambiguity, consult:
+- `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` - Multi-tenancy model decision
 - `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - External validation (AWS, Supabase, Crunchy Data)
 - `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - Track A (hybrid) for MVP
+
+---
+
+## ADR-023 Guardrails (Non-Negotiables)
+
+When implementing backend services, these multi-tenancy rules are MANDATORY:
+
+| Guardrail | Requirement |
+|-----------|-------------|
+| **Casino-scoped ownership** | Every tenant-owned table MUST have `casino_id` column. No cross-casino joins in services. |
+| **Hybrid RLS** | All queries operate under Pattern C (session context + JWT fallback). Never bypass RLS. |
+| **SECURITY DEFINER governance** | RPCs MUST validate `p_casino_id` matches context (Template 5 pattern). |
+| **Append-only ledgers** | Finance/loyalty/compliance tables: no UPDATE/DELETE. Corrections are new rows. |
+| **No service key in runtime** | Application code uses anon key + user auth. Service key = admin tooling only. |
+
+**Pool vs Silo implications:**
+- Pool (default): RLS is the ONLY isolation. Policies MUST be correct.
+- Silo (escape hatch): Same RLS applies (defense in depth) + infrastructure boundary.
 
 ---
 

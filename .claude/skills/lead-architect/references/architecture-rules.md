@@ -1,9 +1,33 @@
 # Architecture Rules
 
-**Source**: SLAD v2.1.2, SRM v3.1.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013
+**Source**: SLAD v2.1.2, SRM v3.1.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013, ADR-023
 **Stack**: **Next.js 16** + React 19 + Supabase + TypeScript
 
 This document provides condensed patterns and anti-patterns. For the full workflow, see `QUICK_START.md`.
+
+---
+
+## Multi-Tenancy Model (ADR-023)
+
+**Official Stance: Pool Primary; Silo Escape Hatch**
+
+| Model | Status | Description |
+|-------|--------|-------------|
+| **Pool** | Primary/Default | Single Supabase project per env. Shared schema, isolation via `casino_id` + RLS (Pattern C) + RPC governance |
+| **Silo** | Optional | Dedicated Supabase project per casino. Same schema/codebase, for jurisdictional/audit requirements |
+| **Bridge** | Deferred | Schema-per-tenant not selected |
+
+**Non-Negotiable Guardrails:**
+
+1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
+2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015)
+3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
+4. **Append-only ledgers** — Finance/loyalty/compliance: no deletes, idempotency enforced (ADR-021)
+
+**References:**
+- `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`
+- `docs/30-security/SEC-002-casino-scoped-security-model.md`
+- `docs/50-ops/OPS-002-silo-provisioning-playbook.md`
 
 ---
 
@@ -11,9 +35,10 @@ This document provides condensed patterns and anti-patterns. For the full workfl
 
 1. **Types from SOT**: All types derive from `types/database.types.ts`.
 2. **Bounded Contexts**: Services should access tables they own. Cross-context communication uses DTOs.
-3. **KISS/YAGNI**: Keep solutions implementable by a small team.
-4. **Documentation as Product**: Update all affected docs atomically.
-5. **Next.js 16 Patterns**: Use App Router, async params, stable cache APIs.
+3. **Casino-scoped tenancy**: All tenant-owned data must include `casino_id` (ADR-023).
+4. **KISS/YAGNI**: Keep solutions implementable by a small team.
+5. **Documentation as Product**: Update all affected docs atomically.
+6. **Next.js 16 Patterns**: Use App Router, async params, stable cache APIs.
 
 ---
 
@@ -325,3 +350,6 @@ done
 - **Next.js 16 Docs**: Context7 `/vercel/next.js/v16.0.3`
 - **RLS External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` (AWS, Supabase, Crunchy Data patterns)
 - **ADR-020 RLS Strategy**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (Track A for MVP)
+- **ADR-023 Multi-Tenancy**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` (Pool primary, Silo escape hatch)
+- **SEC-002 Security Model**: `docs/30-security/SEC-002-casino-scoped-security-model.md` (Casino-scoped boundaries)
+- **OPS-002 Silo Playbook**: `docs/50-ops/OPS-002-silo-provisioning-playbook.md` (Silo deployment operations)

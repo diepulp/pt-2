@@ -9,11 +9,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md §814-888
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
-import * as crud from './crud';
+import * as crud from "./crud";
 import type {
   CreatePlayerDTO,
   PlayerDTO,
@@ -21,12 +21,12 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from './dtos';
+} from "./dtos";
 
 // Re-export DTOs for consumers
-export * from './dtos';
-export * from './keys';
-export * from './http';
+export * from "./dtos";
+export * from "./keys";
+export * from "./http";
 
 // === Service Interface ===
 
@@ -66,14 +66,11 @@ export interface PlayerServiceInterface {
   update(playerId: string, data: UpdatePlayerDTO): Promise<PlayerDTO>;
 
   /**
-   * Enroll player in the specified casino.
-   * Idempotent - returns existing enrollment if already enrolled.
-   */
-  enroll(playerId: string, casinoId: string): Promise<PlayerEnrollmentDTO>;
-
-  /**
    * Get player enrollment status in current casino.
    * Returns null if not enrolled.
+   *
+   * NOTE: Player enrollment is now owned by CasinoService (ADR-022 SLAD fix).
+   * Use CasinoService.enrollPlayer() for enrollment operations.
    */
   getEnrollment(playerId: string): Promise<PlayerEnrollmentDTO | null>;
 }
@@ -98,9 +95,6 @@ export function createPlayerService(
     create: (input) => crud.createPlayer(supabase, input),
 
     update: (playerId, input) => crud.updatePlayer(supabase, playerId, input),
-
-    enroll: (playerId, casinoId) =>
-      crud.enrollPlayer(supabase, playerId, casinoId),
 
     getEnrollment: (playerId) =>
       crud.getPlayerEnrollmentByPlayerId(supabase, playerId),

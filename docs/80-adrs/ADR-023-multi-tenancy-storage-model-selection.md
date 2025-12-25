@@ -220,10 +220,10 @@ Rejected.
 
 - [x] The tenancy model is explicitly documented and referenced by security governance docs (this ADR, SEC-002)
 - [x] Pool controls implemented and validated (ADR-015, ADR-018, ADR-021, SEC-006)
-- [ ] A "silo provisioning playbook" exists (FUTURE: OPS-002)
+- [x] A "silo provisioning playbook" exists (OPS-002)
 - [x] SECURITY DEFINER pre-commit hook enforcement (ADR-018)
 - [ ] Policy coverage CI gate for tenant-owned tables (FUTURE: extend pre-commit)
-- [ ] A tenant audit/export procedure exists (FUTURE: OPS-003)
+- [x] A tenant audit/export procedure exists (OPS-002 §4: Regulator Export Procedure)
 
 ---
 

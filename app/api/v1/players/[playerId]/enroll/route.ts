@@ -23,6 +23,7 @@ import {
 } from "@/lib/http/service-response";
 import { withServerAction } from "@/lib/server-actions/middleware";
 import { createClient } from "@/lib/supabase/server";
+import { enrollPlayer } from "@/services/casino/crud";
 import { createPlayerService } from "@/services/player/index";
 import { playerRouteParamsSchema } from "@/services/player/schemas";
 
@@ -51,13 +52,17 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        const service = createPlayerService(mwCtx.supabase);
+        const playerService = createPlayerService(mwCtx.supabase);
 
         // Parallelize independent queries (P1 fix: ISSUE-983EFA10)
         const [player, existingEnrollment, staffResult] = await Promise.all([
-          service.getById(params.playerId),
-          service.getEnrollment(params.playerId),
-          mwCtx.supabase.from("staff").select("casino_id").limit(1).single(),
+          playerService.getById(params.playerId),
+          playerService.getEnrollment(params.playerId),
+          mwCtx.supabase
+            .from("staff")
+            .select("id, casino_id")
+            .limit(1)
+            .single(),
         ]);
 
         // Validate player exists
@@ -69,19 +74,23 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         }
 
         const staffData = staffResult.data;
-        if (!staffData?.casino_id) {
+        if (!staffData?.casino_id || !staffData.id) {
           throw new DomainError(
             "UNAUTHORIZED",
-            "Unable to determine casino context",
+            "Unable to determine casino context or staff identity",
             {
               httpStatus: 401,
             },
           );
         }
 
-        const enrollment = await service.enroll(
+        // SLAD Fix (ADR-022): Use CasinoService.enrollPlayer instead of PlayerService
+        // player_casino table is owned by Casino bounded context
+        const enrollment = await enrollPlayer(
+          mwCtx.supabase,
           params.playerId,
           staffData.casino_id,
+          staffData.id, // enrolled_by
         );
 
         return {

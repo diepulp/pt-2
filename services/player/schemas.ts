@@ -76,8 +76,48 @@ export const playerRouteParamsSchema = z.object({
   playerId: uuidSchema("player ID"),
 });
 
+// === Player Identity Schemas (ADR-022) ===
+
+/** Schema for identity address structure */
+export const identityAddressSchema = z
+  .object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    postalCode: z.string().optional(),
+  })
+  .optional();
+
+/** Schema for creating/updating player identity */
+export const playerIdentitySchema = z.object({
+  documentNumber: z.string().min(1, "Document number is required").optional(),
+  birthDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
+    .optional(),
+  gender: z.enum(["m", "f", "x"]).optional(),
+  eyeColor: z.string().max(50).optional(),
+  height: z
+    .string()
+    .regex(/^\d{1,2}-\d{2}$/, 'Height must be in format "6-01"')
+    .optional(),
+  weight: z.string().max(10).optional(),
+  address: identityAddressSchema,
+  issueDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Issue date must be YYYY-MM-DD format")
+    .optional(),
+  expirationDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expiration date must be YYYY-MM-DD format")
+    .optional(),
+  issuingState: z.string().max(50).optional(),
+  documentType: z.enum(["drivers_license", "passport", "state_id"]).optional(),
+});
+
 // === Type Exports ===
 
 export type CreatePlayerInput = z.infer<typeof createPlayerSchema>;
 export type UpdatePlayerInput = z.infer<typeof updatePlayerSchema>;
 export type PlayerListQuery = z.infer<typeof playerListQuerySchema>;
+export type PlayerIdentityInput = z.infer<typeof playerIdentitySchema>;

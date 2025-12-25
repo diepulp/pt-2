@@ -454,3 +454,83 @@ export async function updateStaff(
 
   return toStaffDTO(data);
 }
+
+// === Player Enrollment (ADR-022 SLAD Fix) ===
+
+/**
+ * Enroll player in a casino.
+ *
+ * SLAD ownership: CasinoService owns player_casino table per bounded context.
+ * This is the canonical enrollment operation.
+ *
+ * Idempotent - returns existing enrollment if already enrolled.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param playerId - Player identifier
+ * @param casinoId - Casino identifier
+ * @param enrolledBy - Staff member who enrolled the player
+ * @returns Enrollment DTO
+ *
+ * @throws {DomainError} PLAYER_NOT_FOUND - Player doesn't exist
+ * @throws {DomainError} INTERNAL_ERROR - Database error
+ *
+ * @see ADR-022 EXEC-SPEC Section 8.3
+ * @see DOD-022 Section B7 - Bounded Context Ownership
+ */
+export async function enrollPlayer(
+  supabase: SupabaseClient<Database>,
+  playerId: string,
+  casinoId: string,
+  enrolledBy: string,
+): Promise<PlayerEnrollmentDTO> {
+  const { data, error } = await supabase
+    .from("player_casino")
+    .upsert(
+      {
+        player_id: playerId,
+        casino_id: casinoId,
+        enrolled_by: enrolledBy,
+        status: "active",
+      },
+      {
+        onConflict: "player_id,casino_id",
+      },
+    )
+    .select("player_id, casino_id, status, enrolled_at, enrolled_by")
+    .single();
+
+  if (error) {
+    if (error.code === "23503") {
+      throw new DomainError("PLAYER_NOT_FOUND", "Player does not exist");
+    }
+    throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  }
+
+  return toPlayerEnrollmentDTO(data);
+}
+
+// === Type Definitions for Enrollment ===
+
+type PlayerEnrollmentDTO = {
+  player_id: string;
+  casino_id: string;
+  status: string;
+  enrolled_at: string;
+  enrolled_by: string | null;
+};
+
+function toPlayerEnrollmentDTO(row: {
+  player_id: string;
+  casino_id: string;
+  status: string;
+  enrolled_at: string;
+  enrolled_by: string | null;
+}): PlayerEnrollmentDTO {
+  return {
+    player_id: row.player_id,
+    casino_id: row.casino_id,
+    status: row.status,
+    enrolled_at: row.enrolled_at,
+    enrolled_by: row.enrolled_by,
+  };
+}

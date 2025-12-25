@@ -223,48 +223,16 @@ export async function searchPlayers(
 // === Enrollment ===
 
 /**
- * Enroll player in the specified casino.
- * Idempotent - returns existing enrollment if already enrolled.
+ * IMPORTANT (ADR-022 SLAD Fix):
+ * Player enrollment is now owned by CasinoService, not PlayerService.
+ * Use `enrollPlayer` from `services/casino/crud.ts` instead.
+ *
+ * Rationale: player_casino table is owned by Casino bounded context.
+ * Read operations remain here for convenience.
+ *
+ * @see services/casino/crud.ts enrollPlayer()
+ * @see DOD-022 Section B7 - Bounded Context Ownership
  */
-export async function enrollPlayer(
-  supabase: SupabaseClient<Database>,
-  playerId: string,
-  casinoId: string,
-): Promise<PlayerEnrollmentDTO> {
-  // Check if already enrolled (idempotency)
-  const existing = await getPlayerEnrollment(supabase, playerId, casinoId);
-  if (existing) {
-    return existing;
-  }
-
-  const { data, error } = await supabase
-    .from("player_casino")
-    .insert({
-      player_id: playerId,
-      casino_id: casinoId,
-      status: "active",
-    })
-    .select(ENROLLMENT_SELECT)
-    .single();
-
-  if (error) {
-    // Handle duplicate enrollment (race condition or re-enrollment)
-    if (error.code === "23505") {
-      const existingEnrollment = await getPlayerEnrollment(
-        supabase,
-        playerId,
-        casinoId,
-      );
-      if (existingEnrollment) {
-        return existingEnrollment;
-      }
-      throw new DomainError("PLAYER_ENROLLMENT_DUPLICATE");
-    }
-    throw mapDatabaseError(error);
-  }
-
-  return toEnrollmentDTO(data);
-}
 
 /**
  * Get player enrollment status in a casino.

@@ -11,18 +11,19 @@ workstreams:
     agent: backend-developer
     depends_on: []
     sections: [1, 2, 3]
+    status: COMPLETE
     outputs:
-      - supabase/migrations/YYYYMMDDHHMMSS_adr022_player_contact_columns.sql
-      - supabase/migrations/YYYYMMDDHHMMSS_adr022_player_enrollment_index.sql
-      - supabase/migrations/YYYYMMDDHHMMSS_adr022_player_casino_enrolled_by.sql
-      - supabase/migrations/YYYYMMDDHHMMSS_adr022_player_identity_mvp.sql
-      - supabase/migrations/YYYYMMDDHHMMSS_adr022_identity_immutability_trigger.sql
+      - supabase/migrations/20251225120000_adr022_player_contact_columns.sql
+      - supabase/migrations/20251225120001_adr022_player_enrollment_index.sql
+      - supabase/migrations/20251225120002_adr022_player_casino_enrolled_by.sql
+      - supabase/migrations/20251225120003_adr022_player_identity_mvp.sql
+      - supabase/migrations/20251225120004_adr022_identity_immutability_trigger.sql
     gate: schema-validation
     critical: true
 
   WS2:
     name: RLS Policies (Security Layer)
-    agent: rls-security-specialist
+    agent: rls-expert
     depends_on: [WS1]
     sections: [4]
     outputs:
@@ -34,7 +35,7 @@ workstreams:
 
   WS3:
     name: Service Layer (Identity + Enrollment)
-    agent: backend-developer
+    agent: backend-service-builder
     depends_on: [WS1]
     sections: [8]
     outputs:
@@ -47,7 +48,7 @@ workstreams:
 
   WS4:
     name: UI Components (Document Input)
-    agent: pt2-frontend-implementer
+    agent: frontend-design-pt-2
     depends_on: [WS3]
     sections: [9]
     outputs:
@@ -57,7 +58,7 @@ workstreams:
 
   WS5:
     name: Integration Tests (DoD Gates)
-    agent: backend-developer
+    agent: backend-service-builder
     depends_on: [WS2, WS3]
     sections: []
     outputs:
@@ -68,7 +69,7 @@ workstreams:
 
   WS6:
     name: SLAD Compliance (Bounded Context)
-    agent: backend-developer
+    agent:  backend-service-builder
     depends_on: [WS3]
     sections: []
     outputs:
