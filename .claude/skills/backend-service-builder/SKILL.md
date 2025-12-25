@@ -134,5 +134,28 @@ Before marking service implementation complete, verify:
 - [ ] Documentation consistency check run
 - [ ] Migration follows `YYYYMMDDHHMMSS_description.sql` naming
 - [ ] RLS policies use ADR-015 Pattern C (hybrid with JWT fallback)
+- [ ] **SECURITY DEFINER RPCs self-inject context before data access** (ADR-015)
+
+### RPC Self-Injection Requirement (ADR-015)
+
+Any `SECURITY DEFINER` RPC that accesses casino-scoped data MUST:
+
+1. **Pattern 1 (RLS-only)**: Extract and inject context before queries
+   ```sql
+   v_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+   IF v_casino_id IS NULL THEN
+     v_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+   END IF;
+   PERFORM set_config('app.casino_id', v_casino_id::text, true);
+   ```
+
+2. **Pattern 2 (with p_casino_id param)**: Also validate parameter matches context
+   ```sql
+   IF p_casino_id != v_context_casino_id THEN
+     RAISE EXCEPTION 'casino_id mismatch';
+   END IF;
+   ```
+
+**Pre-commit hook enforces this.** See `docs/70-governance/anti-patterns/07-migrations.md`.
 
 For detailed checklist, load `references/validation-checklist.md`.

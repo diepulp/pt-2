@@ -99,6 +99,92 @@ NOTIFY pgrst, 'reload schema';
 
 ---
 
+## RPC Self-Injection Violations (ADR-015)
+
+### ❌ NEVER create SECURITY DEFINER RPCs without context self-injection
+
+RPCs using `SECURITY DEFINER` bypass RLS. They MUST self-inject context before any data operations.
+
+```sql
+-- ❌ WRONG - No context injection
+CREATE OR REPLACE FUNCTION rpc_get_player_data(p_player_id uuid)
+RETURNS TABLE(...)
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  -- Directly queries without setting context - RLS bypassed!
+  RETURN QUERY SELECT * FROM player WHERE id = p_player_id;
+END;
+$$;
+
+-- ✅ CORRECT - Pattern 1: Self-inject before data access (RLS-only functions)
+CREATE OR REPLACE FUNCTION rpc_get_player_data(p_player_id uuid)
+RETURNS TABLE(...)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_context_casino_id uuid;
+BEGIN
+  -- Self-inject context from JWT/session
+  v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+
+  IF v_context_casino_id IS NULL THEN
+    -- Fallback to JWT claim if available
+    v_context_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+  END IF;
+
+  -- Inject context for RLS policies
+  PERFORM set_config('app.casino_id', v_context_casino_id::text, true);
+
+  -- Now RLS policies will work
+  RETURN QUERY SELECT * FROM player WHERE id = p_player_id;
+END;
+$$;
+
+-- ✅ CORRECT - Pattern 2: Full injection + validation (RPCs with p_casino_id param)
+CREATE OR REPLACE FUNCTION rpc_create_record(p_casino_id uuid, p_name text)
+RETURNS uuid
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_context_casino_id uuid;
+BEGIN
+  -- Extract context
+  v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+
+  IF v_context_casino_id IS NULL THEN
+    v_context_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+  END IF;
+
+  -- Validate parameter matches context
+  IF p_casino_id != v_context_casino_id THEN
+    RAISE EXCEPTION 'casino_id mismatch: caller % context %', p_casino_id, v_context_casino_id;
+  END IF;
+
+  -- Self-inject for RLS
+  PERFORM set_config('app.casino_id', v_context_casino_id::text, true);
+
+  -- Proceed with operation
+  INSERT INTO records (casino_id, name) VALUES (p_casino_id, p_name);
+  RETURN gen_random_uuid();
+END;
+$$;
+```
+
+**Why this matters:**
+- `SECURITY DEFINER` runs as the function owner (superuser), bypassing all RLS
+- Without self-injection, queries return data from ALL casinos
+- Pre-commit hook `check_rpc_context_injection.py` catches violations
+
+**Reference:** See ADR-015 and `.claude/skills/rls-expert/references/rpc-self-injection.md`
+
+---
+
 ## Quick Checklist
 
 - [ ] Migrations use Supabase CLI only
@@ -106,3 +192,4 @@ NOTIFY pgrst, 'reload schema';
 - [ ] Types regenerated after migration (`npm run db:types`)
 - [ ] Migration includes `NOTIFY pgrst, 'reload schema'`
 - [ ] No direct psql usage in runtime
+- [ ] **SECURITY DEFINER RPCs self-inject context (ADR-015)**

@@ -18,6 +18,12 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { RealtimeStatusIndicator } from "@/hooks/dashboard";
 import type {
   DashboardTableDTO,
@@ -103,6 +109,15 @@ export function PanelContainer({
   const [isCollapsed, setIsCollapsed] = React.useState(true);
   const drawerRef = React.useRef<HTMLDivElement>(null);
 
+  // Detect platform for keyboard shortcuts
+  const [isMac, setIsMac] = React.useState(false);
+  React.useEffect(() => {
+    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0);
+  }, []);
+
+  // Cross-platform modifier key display
+  const modKey = isMac ? "⌘" : "Ctrl+";
+
   // Close drawer when clicking outside
   React.useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -130,36 +145,43 @@ export function PanelContainer({
     [activeSlips.length],
   );
 
-  const panels = [
-    {
-      id: "tables",
-      label: "Tables",
-      icon: LayoutGrid,
-      shortcut: "⌘1",
-      notifications: notifications.tables,
-    },
-    {
-      id: "activity",
-      label: "Activity",
-      icon: Activity,
-      shortcut: "⌘2",
-      notifications: notifications.activity,
-    },
-    {
-      id: "inventory",
-      label: "Inventory",
-      icon: Package,
-      shortcut: "⌘3",
-      notifications: notifications.inventory,
-    },
-    {
-      id: "analytics",
-      label: "Analytics",
-      icon: TrendingUp,
-      shortcut: "⌘4",
-      notifications: notifications.analytics,
-    },
-  ];
+  const panels = React.useMemo(
+    () => [
+      {
+        id: "tables",
+        label: "Tables",
+        description: "",
+        icon: LayoutGrid,
+        shortcut: `${modKey}1`,
+        notifications: notifications.tables,
+      },
+      {
+        id: "activity",
+        label: "Activity",
+        description: "",
+        icon: Activity,
+        shortcut: `${modKey}2`,
+        notifications: notifications.activity,
+      },
+      {
+        id: "inventory",
+        label: "Inventory",
+        description: "",
+        icon: Package,
+        shortcut: `${modKey}3`,
+        notifications: notifications.inventory,
+      },
+      {
+        id: "analytics",
+        label: "Analytics",
+        description: "",
+        icon: TrendingUp,
+        shortcut: `${modKey}4`,
+        notifications: notifications.analytics,
+      },
+    ],
+    [modKey, notifications],
+  );
 
   // Panel IDs for swipe navigation
   const panelIds = panels.map((p) => p.id);
@@ -327,14 +349,14 @@ export function PanelContainer({
                     >
                       {panel.label}
                     </span>
-                    <span
+                    <kbd
                       className={cn(
                         "absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/60",
                         isActive && "text-accent/60",
                       )}
                     >
                       {panel.shortcut}
-                    </span>
+                    </kbd>
                   </TabsTrigger>
                 );
               })}
@@ -422,22 +444,30 @@ export function PanelContainer({
                 Table Ops
               </span>
             )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className={cn(
-                "h-7 w-7 text-muted-foreground hover:text-foreground",
-                isCollapsed && "mx-auto",
-              )}
-              title={isCollapsed ? "Expand panel" : "Collapse panel"}
-            >
-              {isCollapsed ? (
-                <ChevronRight className="h-4 w-4" />
-              ) : (
-                <ChevronLeft className="h-4 w-4" />
-              )}
-            </Button>
+            <TooltipProvider delayDuration={0}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsCollapsed(!isCollapsed)}
+                    className={cn(
+                      "h-7 w-7 text-muted-foreground hover:text-foreground",
+                      isCollapsed && "mx-auto",
+                    )}
+                  >
+                    {isCollapsed ? (
+                      <ChevronRight className="h-4 w-4" />
+                    ) : (
+                      <ChevronLeft className="h-4 w-4" />
+                    )}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  {isCollapsed ? "Expand panel" : "Collapse panel"}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
 
           {/* Panel Tabs */}
@@ -447,64 +477,75 @@ export function PanelContainer({
             orientation="vertical"
             className="flex-1"
           >
-            <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 space-y-1">
-              {panels.map((panel) => {
-                const Icon = panel.icon;
-                const isActive = activePanel === panel.id;
+            <TooltipProvider delayDuration={0} skipDelayDuration={0}>
+              <TabsList className="flex flex-col h-auto w-full bg-transparent p-2 space-y-1">
+                {panels.map((panel) => {
+                  const Icon = panel.icon;
+                  const isActive = activePanel === panel.id;
 
-                return (
-                  <TabsTrigger
-                    key={panel.id}
-                    value={panel.id}
-                    className={cn(
-                      "w-full justify-start gap-3 px-3 py-2.5 rounded-lg",
-                      "transition-all duration-200",
-                      "data-[state=active]:bg-accent/10",
-                      "data-[state=active]:text-accent",
-                      "data-[state=active]:border-accent/30",
-                      "data-[state=active]:shadow-sm",
-                      "hover:bg-muted/50",
-                      isCollapsed && "justify-center px-2",
-                    )}
-                    title={
-                      isCollapsed
-                        ? `${panel.label} (${panel.shortcut})`
-                        : undefined
-                    }
-                  >
-                    <div className="relative">
-                      <Icon
-                        className={cn(
-                          "h-5 w-5",
-                          isActive ? "text-accent" : "text-muted-foreground",
-                        )}
-                      />
-                      {panel.notifications > 0 && (
-                        <Badge
-                          className={cn(
-                            "absolute -top-2 -right-2 h-4 w-4 p-0 text-[10px]",
-                            "bg-accent text-accent-foreground border-0",
-                            "flex items-center justify-center",
-                          )}
-                        >
-                          {panel.notifications}
-                        </Badge>
+                  const trigger = (
+                    <TabsTrigger
+                      key={panel.id}
+                      value={panel.id}
+                      className={cn(
+                        "w-full justify-start gap-3 px-3 py-2.5 rounded-lg",
+                        "transition-all duration-200",
+                        "data-[state=active]:bg-accent/10",
+                        "data-[state=active]:text-accent",
+                        "data-[state=active]:border-accent/30",
+                        "data-[state=active]:shadow-sm",
+                        "hover:bg-muted/50",
+                        isCollapsed && "justify-center px-2",
                       )}
-                    </div>
-                    {!isCollapsed && (
-                      <div className="flex flex-1 items-center justify-between">
-                        <span className="text-sm font-medium">
-                          {panel.label}
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          {panel.shortcut}
-                        </span>
+                    >
+                      <div className="relative">
+                        <Icon
+                          className={cn(
+                            "h-5 w-5",
+                            isActive ? "text-accent" : "text-muted-foreground",
+                          )}
+                        />
+                        {panel.notifications > 0 && (
+                          <Badge
+                            className={cn(
+                              "absolute -top-2 -right-2 h-4 w-4 p-0 text-[10px]",
+                              "bg-accent text-accent-foreground border-0",
+                              "flex items-center justify-center",
+                            )}
+                          >
+                            {panel.notifications}
+                          </Badge>
+                        )}
                       </div>
-                    )}
-                  </TabsTrigger>
-                );
-              })}
-            </TabsList>
+                      {!isCollapsed && (
+                        <div className="flex flex-1 items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {panel.label}
+                          </span>
+                          <kbd className="px-1.5 py-0.5 rounded bg-muted/50 text-[10px] font-mono text-muted-foreground">
+                            {panel.shortcut}
+                          </kbd>
+                        </div>
+                      )}
+                    </TabsTrigger>
+                  );
+
+                  // Only show tooltip when collapsed
+                  if (isCollapsed) {
+                    return (
+                      <Tooltip key={panel.id}>
+                        <TooltipTrigger asChild>{trigger}</TooltipTrigger>
+                        <TooltipContent side="right" sideOffset={12}>
+                          {panel.label}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+
+                  return trigger;
+                })}
+              </TabsList>
+            </TooltipProvider>
           </Tabs>
 
           {/* Bottom info - collapsed shows only status indicator */}

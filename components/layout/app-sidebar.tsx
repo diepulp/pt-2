@@ -6,32 +6,44 @@ import * as React from "react";
 
 import { NavMain } from "@/components/layout/nav-main";
 import { NavUser } from "@/components/layout/nav-user";
-import { Logo } from "@/components/shared/logo";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+// Note: Logo import removed - using inline PT badge instead
 
 const navItems = [
   {
     title: "Pit",
+    description: "Table management & floor operations",
     url: "/pit",
     icon: Table2,
   },
   {
     title: "Players",
+    description: "Player profiles & session history",
     url: "/players",
     icon: Users,
   },
   {
     title: "Loyalty",
+    description: "Rewards & point management",
     url: "/loyalty",
     icon: Gift,
   },
   {
     title: "Compliance",
+    description: "MTL & regulatory tracking",
     url: "/compliance",
     icon: Shield,
   },
   {
     title: "Settings",
+    description: "Casino & user preferences",
     url: "/settings",
     icon: Settings,
   },
@@ -89,52 +101,73 @@ export function AppSidebar() {
       />
 
       {/* Collapsed Icon Strip - visible when closed, under navbar */}
-      <div
-        className={cn(
-          "fixed left-0 bottom-0 bg-background border-r border-sidebar-border",
-          "flex flex-col z-30",
-          "transition-opacity duration-200",
-          isOpen ? "opacity-0 pointer-events-none" : "opacity-100",
-        )}
-        style={{
-          width: SIDEBAR_WIDTH_COLLAPSED,
-          top: NAVBAR_HEIGHT,
-        }}
-        onMouseEnter={handleMouseEnter}
-      >
-        {/* Collapsed content - icon-only view */}
-        <div className="flex flex-col h-full">
-          <div className="p-2">
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20">
-              <span className="font-mono text-sm font-bold">PT</span>
+      <TooltipProvider delayDuration={0}>
+        <div
+          className={cn(
+            "fixed left-0 bottom-0 bg-background border-r border-sidebar-border",
+            "flex flex-col z-30",
+            "transition-opacity duration-200",
+            isOpen ? "opacity-0 pointer-events-none" : "opacity-100",
+          )}
+          style={{
+            width: SIDEBAR_WIDTH_COLLAPSED,
+            top: NAVBAR_HEIGHT,
+          }}
+          onMouseEnter={handleMouseEnter}
+        >
+          {/* Collapsed content - icon-only view */}
+          <div className="flex flex-col h-full">
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary border border-sidebar-primary/20 cursor-default">
+                    <span className="font-mono text-sm font-bold">PT</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  PT-2 Pit Station
+                </TooltipContent>
+              </Tooltip>
             </div>
-          </div>
 
-          <div className="flex-1 flex flex-col items-center py-2 gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.title}
-                  href={item.url}
-                  className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent/50 transition-colors duration-75"
-                  title={item.title}
-                >
-                  <Icon className="w-4 h-4" />
-                </Link>
-              );
-            })}
-          </div>
+            <div className="flex-1 flex flex-col items-center py-2 gap-1">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Tooltip key={item.title}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={item.url}
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-muted-foreground hover:text-sidebar-primary hover:bg-sidebar-accent/50 transition-colors duration-75"
+                      >
+                        <Icon className="w-4 h-4" />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" sideOffset={8}>
+                      {item.title}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
 
-          <div className="p-2">
-            <div className="w-8 h-8 rounded-lg bg-sidebar-accent border border-sidebar-border flex items-center justify-center">
-              <span className="text-[10px] font-mono text-muted-foreground">
-                PB
-              </span>
+            <div className="p-2">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="w-8 h-8 rounded-lg bg-sidebar-accent border border-sidebar-border flex items-center justify-center cursor-default">
+                    <span className="text-[10px] font-mono text-muted-foreground">
+                      PB
+                    </span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8}>
+                  Pit Boss
+                </TooltipContent>
+              </Tooltip>
             </div>
           </div>
         </div>
-      </div>
+      </TooltipProvider>
 
       {/* Expanded Panel - slides in from left, under navbar */}
       <div

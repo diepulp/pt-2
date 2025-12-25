@@ -1,25 +1,31 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-version: 4.4.0
+nsversion: 4.9.0
 status: CANONICAL
-effective: 2025-12-12
+effective: 2025-12-25
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
   - docs/30-security/SEC-001-rls-policy-matrix.md
+  - docs/30-security/SEC-002-casino-scoped-security-model.md
   - docs/25-api-data/DTO_CANONICAL_STANDARD.md
   - docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md
   - docs/20-architecture/EDGE_TRANSPORT_POLICY.md
   - docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
   - docs/80-adrs/ADR-017-cashier-role-implementation.md
   - docs/80-adrs/ADR-018-security-definer-governance.md
+  - docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md
+  - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
+  - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
+  - docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md
+  - docs/20-architecture/specs/ADR-022/DOD-022.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.4.0 (SEC-006 RLS Hardening)
-> **Date**: 2025-12-12
+> **Version**: 4.9.0 (ADR-023 Multi-Tenancy: Pool Primary; Silo Optional)
+> **Date**: 2025-12-25
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -43,6 +49,8 @@ source_of_truth:
 
 ## Change Log
 
+- **4.9.0 (2025-12-25)** – **ADR-023 Multi-Tenancy Formalization**: Official tenancy stance declared: Pool Primary; Silo Optional. Added SEC-002 and ADR-023 to source_of_truth. SEC-001/SEC-002 updated with tenancy cross-references. See `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`.
+- **4.8.0 (2025-12-23)** – **ADR-022 v7.1 MVP Scope (Security Audited)**: Adopted production-ready MVP scope with 7-agent security audit. `player_identity` table planned with scanner-shaped schema. Key security fixes: auth.uid() guard (INV-7), actor binding (INV-9), key immutability (INV-10), document hash storage. Tax identity deferred post-MVP. See `docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md`.
 - **4.4.0 (2025-12-12)** – **SEC-006 RLS Hardening**: FloorLayoutService full RLS coverage (5 tables). All 7 SECURITY DEFINER RPCs hardened with Template 5 context validation (ADR-018). Append-only denial policies added to ledger tables. See `docs/80-adrs/ADR-018-security-definer-governance.md` and migration `20251212080915_sec006_rls_hardening.sql`.
 - **4.3.0 (2025-12-11)** – **PlayerFinancialService IMPLEMENTED** (PRD-009): Full Pattern A implementation with 78 tests. Service layer: DTOs, schemas, keys, mappers, crud, http. Transport: 3 Route Handlers + 4 React Query hooks. Enums: `financial_direction` ('in'|'out'), `financial_source` ('pit'|'cage'|'system'), `tender_type`. RLS: Hybrid policies per ADR-015. Commits: 5f4522b, ccf9e98, 3ec0caf.
 - **4.2.1 (2025-12-11)** – Finance outbox deferred: Removed `finance_outbox` from current ownership (post-MVP per ADR-016). Added MVP Egress contract: synchronous only, no external side effects. MTLService integration via triggers remains in scope.
@@ -86,7 +94,7 @@ Approved JSON blobs (all others require first-class columns):
 | Domain | Service | Owns Tables | Bounded Context |
 |--------|---------|-------------|-----------------|
 | **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report | Root temporal authority & global policy |
-| **Identity** | PlayerService | player, player_casino | Identity management |
+| **Identity** | PlayerService | player, player_casino, *player_identity* ² | Identity & enrollment management |
 | **Operational** | TableContextService | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry |
 | **Operational** | FloorLayoutService | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation | Floor design & activation |
 | **Operational** | VisitService | visit | Session lifecycle (3 archetypes) |
@@ -96,6 +104,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Compliance** | MTLService | mtl_entry, mtl_audit_note | AML/CTR compliance |
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
+> ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
 
 ---
 
@@ -138,9 +147,13 @@ Approved JSON blobs (all others require first-class columns):
 
 **Owns**: `player`, `player_casino`
 
-**Bounded Context**: "Who is this player and where are they enrolled?"
+**Planned (MVP)** per ADR-022 v7.1: `player_identity`
 
-### Schema Invariants
+**Deferred (Post-MVP)**: `player_tax_identity`, `player_identity_scan`
+
+**Bounded Context**: "Who is this player, where are they enrolled, and what is their verified identity?"
+
+### Schema Invariants (Implemented)
 
 | Table | Column | Constraint | Notes |
 |-------|--------|------------|-------|
@@ -149,6 +162,48 @@ Approved JSON blobs (all others require first-class columns):
 | `player_casino` | PK | (`player_id`, `casino_id`) | Composite key |
 | `player_casino` | `status` | default 'active' | Enrollment status |
 
+### Identity Tables (Planned — ADR-022 v7.1)
+
+**MVP Scope:**
+- **`player_identity`** — ID document metadata (DOB, address, issuing state, expiration, document number). Casino-scoped with `UNIQUE (casino_id, player_id)`. FK to `player_casino` enforces enrollment prerequisite.
+
+**Deferred (Post-MVP):**
+- **`player_tax_identity`** — Tax identifiers (SSN/TIN). Ultra-restricted RPC-only access.
+- **`player_identity_scan`** — Raw scanner payload for future integration.
+
+**Security Invariants (MVP)** from ADR-022 v7.1:
+- **INV-1**: Casino context binding — derive `casino_id` from session/JWT, never trust caller-provided
+- **INV-2**: Enrollment prerequisite — identity rows require matching `player_casino` enrollment
+- **INV-6**: UPDATE policies require WITH CHECK
+
+**Deferred Invariants (Post-MVP):**
+- INV-3: Least privilege separation (tax identity)
+- INV-4: Tax ID reveal auditing
+- INV-5: Key management (encryption)
+
+### Access Control (MVP — ADR-022 v7.1)
+
+**player_identity** (ID document metadata):
+| Role | Read | Write | Notes |
+|------|------|-------|-------|
+| `pit_boss` | ✅ | ✅ | Primary enrollment role |
+| `admin` | ✅ | ✅ | Full access |
+| `cashier` | ✅ | ❌ | Read-only (verification) |
+| `dealer` | ❌ | ❌ | No PII access |
+
+**Note:** `compliance` role gating deferred to post-MVP (when tax identity is implemented).
+
+### Contracts
+
+**MVP (ADR-022 v7.1):**
+- Standard CRUD operations via PlayerService for `player_identity`
+- Enrollment flow: player → player_casino → player_identity
+
+**Deferred (Post-MVP — Tax Identity):**
+- `player_has_tax_id_on_file(player_id)` — Boolean contract for Finance/MTL
+- `reveal_tax_id(player_id, reason_code, request_id)` — Audited SSN reveal
+- CTR threshold enforcement via Finance/MTL
+
 ### Cross-Context Consumption
 
 | Consumer | Consumes Via |
@@ -156,9 +211,13 @@ Approved JSON blobs (all others require first-class columns):
 | VisitService | Player DTOs for session creation |
 | LoyaltyService | Player identity for rewards |
 | FinanceService | Player identity for transactions |
+| MTLService | `player_has_tax_id_on_file` contract (**post-MVP**) |
 
 **Full Schema**: `supabase/migrations/` (search: `create table player`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit`
+**ADR**: `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md`
+**Exec Spec**: `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md`
+**DoD Gates**: `docs/20-architecture/specs/ADR-022/DOD-022.md`
 
 ---
 
@@ -534,6 +593,9 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/80-adrs/ADR-017-cashier-role-implementation.md` | Cashier role as staff_role enum |
 | `docs/80-adrs/ADR-018-security-definer-governance.md` | SECURITY DEFINER function governance |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
+| `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md` | Player identity decisions (frozen) |
+| `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md` | Player identity implementation |
+| `docs/20-architecture/specs/ADR-022/DOD-022.md` | Player identity DoD gates |
 
 ---
 
@@ -551,8 +613,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.4.0
+**Document Version**: 4.8.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2025-12-12 (SEC-006 RLS Hardening, ADR-018 SECURITY DEFINER Governance)
+**Updated**: 2025-12-23 (ADR-022 v7.1 — MVP Scope, player_identity Planned)
 **Status**: CANONICAL - Registry + Invariants Only

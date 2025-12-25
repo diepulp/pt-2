@@ -5,14 +5,35 @@ owner: Security
 status: Active
 affects: [SEC-001]
 created: 2025-11-02
-last_review: 2025-12-10
-updated: 2025-12-10
-related_adrs: [ADR-015, ADR-020]
+last_review: 2025-12-25
+updated: 2025-12-25
+related_adrs: [ADR-015, ADR-020, ADR-023]
 ---
 
 ## Purpose
 
 Document the security boundaries that govern how PT-2 enforces least-privilege across casino properties. This model clarifies how roles, RLS policies, and service-owned interfaces combine to prevent cross-property data exposure while enabling compliant operations.
+
+## Multi-Tenancy Storage Model (ADR-023)
+
+> **Official Stance: Pool Primary; Silo Optional**
+
+PT-2 adopts a **Pool-based multi-tenancy model** as the default, with **Silo deployment as an explicit escape hatch** for regulated or high-risk customers.
+
+| Model | Status | Description |
+|-------|--------|-------------|
+| **Pool** | Primary/Default | Single Supabase project per environment. Shared schema, tenant isolation via `casino_id` + RLS (hybrid Pattern C) + RPC governance |
+| **Silo** | Optional Escape Hatch | Dedicated Supabase project per casino. Same schema/codebase, offered for jurisdictional or procurement requirements |
+| **Bridge** | Deferred | Schema-per-tenant not selected; complexity without material risk reduction |
+
+**Guardrails (Non-Negotiables):**
+
+1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
+2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015)
+3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
+4. **Append-only ledgers** — Finance/loyalty/compliance: no deletes, idempotency enforced (ADR-021)
+
+**See:** `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` for full decision rationale.
 
 ## Scope Anchors
 
@@ -93,6 +114,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2025-12-25**: Added Multi-Tenancy Storage Model section (ADR-023). Official stance: Pool Primary; Silo Optional.
 - **2025-12-15**: Added ADR-020 reference. Track A Hybrid is MVP architecture per ADR-020.
 - **2025-12-10**: Added RLS Context Injection section (ADR-015 Phase 1+2 implementation). Updated status to Active.
 - **2025-11-02**: Initial draft created.

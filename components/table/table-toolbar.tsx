@@ -193,7 +193,7 @@ export function TableToolbar({
               aria-label={group.label}
             >
               {/* Group label - subtle, abbreviated */}
-              <span className="hidden sm:block px-1.5 text-[9px] font-medium tracking-widest text-muted-foreground/50 uppercase select-none">
+              <span className="hidden sm:block px-1.5 text-[9px] font-medium tracking-widest text-zinc-950 uppercase select-none">
                 {group.label}
               </span>
 
@@ -227,7 +227,7 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
           onClick={action.onClick}
           disabled={action.disabled}
           className={cn(
-            "relative h-7 w-7 rounded-md",
+            "relative h-10 w-10 rounded-md",
             "transition-all duration-150",
             "hover:bg-accent/10 hover:text-accent",
             "focus-visible:ring-1 focus-visible:ring-accent/50",
@@ -242,7 +242,7 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
           )}
           aria-label={action.label}
         >
-          <Icon className="h-3.5 w-3.5" />
+          <Icon className="!size-5" />
         </Button>
       </TooltipTrigger>
       <TooltipContent side="bottom" className="flex items-center gap-2">

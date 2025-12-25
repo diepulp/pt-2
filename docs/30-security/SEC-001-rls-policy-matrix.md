@@ -5,17 +5,19 @@ owner: Security
 status: Active
 affects: [SEC-005, ADR-017]
 created: 2025-11-02
-last_review: 2025-12-12
-updated: 2025-12-12
+last_review: 2025-12-25
+updated: 2025-12-25
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020]
-version: 1.3.0
+related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023]
+version: 1.4.0
 ---
 
 ## Overview
 
 This matrix extracts the canonical Row-Level Security (RLS) expectations from the Service Responsibility Matrix (SRM) and consolidates them for every casino-scoped data set. Use it to verify that each schema change, policy, or RPC preserves the least-privilege model defined by the owning service.
+
+**Tenancy Model (ADR-023)**: Pool Primary; Silo Optional. See `SEC-002` §Multi-Tenancy Storage Model for guardrails.
 
 **Canonical Reference**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` - For complete migration guide, policy templates, and rationale.
 

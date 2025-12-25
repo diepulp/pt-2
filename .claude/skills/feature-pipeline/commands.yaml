@@ -1,0 +1,177 @@
+# Feature Pipeline Slash Commands
+# These commands provide entry points for the feature development pipeline
+
+commands:
+  feature-start:
+    description: "Start a new feature development pipeline at Phase 0"
+    usage: "/feature-start <feature-name>"
+    arguments:
+      - name: feature-name
+        required: true
+        description: "kebab-case feature identifier (e.g., player-identity-enrollment)"
+    example: "/feature-start player-identity-enrollment"
+    workflow: |
+      1. Create feature directory: docs/20-architecture/specs/{feature-name}/
+      2. Initialize checkpoint file with status="initialized"
+      3. Load SRM for ownership analysis
+      4. Guide user through Phase 0: SRM-First Ownership
+      5. Generate Feature Boundary Statement draft
+      6. Wait for gate approval: srm-ownership
+
+  feature-status:
+    description: "Show current feature pipeline status"
+    usage: "/feature-status [feature-name]"
+    arguments:
+      - name: feature-name
+        required: false
+        description: "Feature to check (defaults to most recent)"
+    example: "/feature-status player-identity-enrollment"
+    output: |
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+      Feature Pipeline: {feature-name}
+      ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+      Current Phase: {phase_number} - {phase_name}
+      Status: {in_progress | blocked | complete}
+
+      Gates Passed:
+        ✅ srm-ownership
+        ✅ brief-approved
+        ✅ prd-approved
+        ⏳ sec-approved (current)
+        ⬜ adr-frozen
+        ⬜ dod-executable
+        ⬜ implementation-complete
+
+      Artifacts:
+        Feature Boundary: docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md
+        Feature Brief:    docs/20-architecture/specs/{feature}/FEATURE_BRIEF.md
+        PRD:              docs/10-prd/PRD-{id}.md
+        SEC Note:         (pending)
+        ADR:              (pending)
+        EXEC-SPEC:        (pending)
+        DoD Gates:        (pending)
+
+      Next Action: Complete SEC note for security review
+
+  feature-resume:
+    description: "Resume feature pipeline from last checkpoint"
+    usage: "/feature-resume [feature-name]"
+    arguments:
+      - name: feature-name
+        required: false
+        description: "Feature to resume (defaults to most recent)"
+    example: "/feature-resume player-identity-enrollment"
+    workflow: |
+      1. Load checkpoint from .claude/skills/feature-pipeline/checkpoints/{feature}.json
+      2. Display current phase and pending gates
+      3. Show next action required
+      4. Continue from current phase
+
+  feature-freeze-adr:
+    description: "Freeze ADR as decision-only, extract EXEC-SPEC and DoD"
+    usage: "/feature-freeze-adr <adr-id>"
+    arguments:
+      - name: adr-id
+        required: true
+        description: "ADR identifier (e.g., ADR-022)"
+    example: "/feature-freeze-adr ADR-022"
+    workflow: |
+      1. Read existing ADR document(s)
+      2. Identify durable decisions vs implementation details
+      3. Create three documents:
+         - ADR-{id}_DECISIONS.md (frozen, durable decisions only)
+         - EXEC-SPEC-{id}.md (implementation details, mutable)
+         - DOD-{id}.md (executable gate checklist)
+      4. Update SRM references
+      5. Mark adr-frozen gate as passed
+
+  feature-gate:
+    description: "Run validation for a specific gate"
+    usage: "/feature-gate <gate-name>"
+    arguments:
+      - name: gate-name
+        required: true
+        description: "Gate to validate (srm-ownership, brief-approved, prd-approved, sec-approved, adr-frozen, dod-executable)"
+    example: "/feature-gate dod-executable"
+    gates:
+      srm-ownership:
+        validation: "Ownership sentence exists and is correct"
+        artifact: "FEATURE_BOUNDARY.md"
+      brief-approved:
+        validation: "Feature Brief has 5+ non-goals"
+        artifact: "FEATURE_BRIEF.md"
+      prd-approved:
+        validation: "PRD has testable acceptance criteria"
+        artifact: "PRD-{id}.md"
+      sec-approved:
+        validation: "SEC note covers assets/threats/controls"
+        artifact: "SEC-NOTE-{id}.md"
+      adr-frozen:
+        validation: "ADR contains only durable decisions"
+        artifact: "ADR-{id}_DECISIONS.md"
+      dod-executable:
+        validation: "Every acceptance criterion has a CI command"
+        artifact: "DOD-{id}.md"
+
+# Gate Protocol
+gate_protocol:
+  approval_options:
+    - "y" # Approve and continue
+    - "n" # Reject and provide feedback
+    - "edit" # Modify artifact before approval
+    - "skip" # Skip gate (with justification)
+
+  checkpoint_behavior:
+    on_approval: "Update checkpoint, advance to next phase"
+    on_rejection: "Stay at current phase, record feedback"
+    on_skip: "Record justification, advance with warning"
+
+# Phase Definitions
+phases:
+  0:
+    name: "SRM-First Ownership"
+    gate: "srm-ownership"
+    artifact: "FEATURE_BOUNDARY.md"
+    next: 1
+
+  1:
+    name: "Feature Brief"
+    gate: "brief-approved"
+    artifact: "FEATURE_BRIEF.md"
+    next: 2
+
+  2:
+    name: "PRD"
+    gate: "prd-approved"
+    artifact: "PRD-{id}.md"
+    delegate_to: "prd-writer"
+    next: 3
+
+  3:
+    name: "SEC Note"
+    gate: "sec-approved"
+    artifact: "SEC-NOTE-{id}.md"
+    next: 4
+
+  4:
+    name: "ADR (if needed)"
+    gate: "adr-frozen"
+    artifact: "ADR-{id}_DECISIONS.md"
+    delegate_to: "lead-architect"
+    optional: true
+    next: 5
+
+  5:
+    name: "EXEC-SPEC + DoD"
+    gate: "dod-executable"
+    artifacts:
+      - "EXEC-SPEC-{id}.md"
+      - "DOD-{id}.md"
+    next: 6
+
+  6:
+    name: "Execute"
+    gate: "implementation-complete"
+    delegate_to: "prd-pipeline"
+    terminal: true
