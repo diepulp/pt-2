@@ -84,7 +84,12 @@ export interface MovePlayerMutationInput {
 export function useMovePlayer() {
   const queryClient = useQueryClient();
 
-  return useMutation<MovePlayerResponse, Error, MovePlayerMutationInput>({
+  return useMutation<
+    MovePlayerResponse,
+    Error,
+    MovePlayerMutationInput,
+    { previousData: RatingSlipModalDTO | undefined }
+  >({
     mutationFn: async (input: MovePlayerMutationInput) => {
       const moveInput: MovePlayerInput = {
         destinationTableId: input.destinationTableId,
@@ -105,9 +110,9 @@ export function useMovePlayer() {
       });
 
       // Snapshot previous value for rollback
-      const previousData = queryClient.getQueryData(
-        ratingSlipModalKeys.data(currentSlipId),
-      );
+      const previousData = queryClient.getQueryData<
+        RatingSlipModalDTO | undefined
+      >(ratingSlipModalKeys.data(currentSlipId));
 
       // Optimistically update the slip to show move in progress
       queryClient.setQueryData(

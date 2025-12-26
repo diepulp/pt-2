@@ -212,12 +212,16 @@ export async function startVisit(
   // Create new visit with explicit visit_kind for clarity
   // Note: The unique partial index uq_visit_single_active_identified
   // will prevent race conditions at the database level
+  // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
+  const visitId = crypto.randomUUID();
   const { data, error } = await supabase
     .from("visit")
     .insert({
+      id: visitId,
       player_id: playerId,
       casino_id: casinoId,
       visit_kind: "gaming_identified_rated",
+      visit_group_id: visitId, // Self-reference for new visit group
     })
     .select(VISIT_SELECT)
     .single();
@@ -306,12 +310,16 @@ export async function createRewardVisit(
     return existing.visit;
   }
 
+  // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
+  const visitId = crypto.randomUUID();
   const { data, error } = await supabase
     .from("visit")
     .insert({
+      id: visitId,
       player_id: playerId,
       casino_id: casinoId,
       visit_kind: "reward_identified",
+      visit_group_id: visitId, // Self-reference for new visit group
     })
     .select(VISIT_SELECT)
     .single();
@@ -374,12 +382,17 @@ export async function createGhostGamingVisit(
   // No idempotency check since there's no player to dedupe on
   // table_id and notes are stored for audit/compliance purposes
   void input; // Currently unused - table_id/notes require schema extension
+
+  // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
+  const visitId = crypto.randomUUID();
   const { data, error } = await supabase
     .from("visit")
     .insert({
+      id: visitId,
       player_id: null, // Ghost visit - no player identity
       casino_id: casinoId,
       visit_kind: "gaming_ghost_unrated",
+      visit_group_id: visitId, // Self-reference for new visit group
     })
     .select(VISIT_SELECT)
     .single();

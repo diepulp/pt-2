@@ -160,13 +160,16 @@ export async function createTestScenario(): Promise<TestScenario> {
   }
 
   // Create test visit
+  const visitId = crypto.randomUUID();
   const { data: visit, error: visitError } = await supabase
     .from("visit")
     .insert({
+      id: visitId,
       casino_id: casino.id,
       player_id: player.id,
       started_at: new Date().toISOString(),
       visit_kind: "gaming_identified_rated",
+      visit_group_id: visitId, // Self-reference for new visit group
     })
     .select()
     .single();
