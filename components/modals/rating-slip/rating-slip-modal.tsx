@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import React from "react";
+import React, { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -137,6 +137,9 @@ export function RatingSlipModal({
   tables: legacyTables,
   isLoading: legacyIsLoading,
 }: RatingSlipModalProps) {
+  // React 19: Use useTransition for non-blocking UI during async operations
+  const [isPending, startTransition] = useTransition();
+
   // Fetch modal data from service layer (only when modal is open)
   const {
     data: modalData,
@@ -145,6 +148,7 @@ export function RatingSlipModal({
   } = useRatingSlipModalData(isOpen ? slipId : null);
 
   // Manage form state
+  // Note: Form state is keyed by slip ID in the content div to force reset on slip change
   const {
     formState,
     isDirty,
@@ -285,7 +289,11 @@ export function RatingSlipModal({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto space-y-6 pr-2">
+        {/* Key by slip ID to force form state reset on slip change (React 19 pattern) */}
+        <div
+          key={modalData?.slip.id}
+          className="flex-1 overflow-y-auto space-y-6 pr-2"
+        >
           {error && (
             <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
               {error}
@@ -336,14 +344,19 @@ export function RatingSlipModal({
             selectedTable={selectedTable}
             seatError=""
             onMovePlayer={() =>
-              onMovePlayer({
-                ...formState,
-                cashIn: formState.newBuyIn,
-              } as FormState)
+              startTransition(() => {
+                onMovePlayer({
+                  ...formState,
+                  cashIn: formState.newBuyIn,
+                } as FormState);
+              })
             }
-            isUpdating={isMoving}
+            isUpdating={isPending || isMoving}
             disabled={
-              isMoving || !formState.newTableId || !formState.newSeatNumber
+              isPending ||
+              isMoving ||
+              !formState.newTableId ||
+              !formState.newSeatNumber
             }
           />
 
@@ -428,28 +441,36 @@ export function RatingSlipModal({
             type="button"
             className="flex-1"
             onClick={() =>
-              onSave({
-                ...formState,
-                cashIn: formState.newBuyIn,
-              } as FormState)
+              startTransition(() => {
+                onSave({
+                  ...formState,
+                  cashIn: formState.newBuyIn,
+                } as FormState);
+              })
             }
-            disabled={isSaving || !isDirty}
+            disabled={isPending || isSaving || !isDirty}
           >
-            {isSaving ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
+            {isPending || isSaving
+              ? "Saving..."
+              : isDirty
+                ? "Save Changes"
+                : "No Changes"}
           </Button>
           <Button
             type="button"
             variant="destructive"
             className="flex-1"
             onClick={() =>
-              onCloseSession({
-                ...formState,
-                cashIn: formState.newBuyIn,
-              } as FormState)
+              startTransition(() => {
+                onCloseSession({
+                  ...formState,
+                  cashIn: formState.newBuyIn,
+                } as FormState);
+              })
             }
-            disabled={isClosing || !!error}
+            disabled={isPending || isClosing || !!error}
           >
-            {isClosing ? (
+            {isPending || isClosing ? (
               "Closing..."
             ) : (
               <>

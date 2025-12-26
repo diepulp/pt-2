@@ -7,7 +7,7 @@
  * @see PRD-008 WS4 Modal Service Integration
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 
@@ -43,6 +43,9 @@ export interface ModalFormState {
  * - Reset handlers to revert to original values
  * - Increment/decrement helpers for numeric fields
  *
+ * React 19 Pattern: Uses derived state instead of synchronization useEffect.
+ * The parent component should use a key prop based on slip ID to force re-initialization.
+ *
  * @param modalData - Aggregated modal data from BFF endpoint (null while loading)
  * @returns Form state and handlers
  *
@@ -59,14 +62,15 @@ export interface ModalFormState {
  *     decrementField
  *   } = useModalFormState(data);
  *
+ *   // Parent should key the component for proper reset:
  *   return (
- *     <form>
+ *     <div key={data?.slip.id}>
  *       <Input
  *         value={formState.averageBet}
  *         onChange={(e) => updateField('averageBet', e.target.value)}
  *       />
  *       <Button onClick={() => resetField('averageBet')}>Reset</Button>
- *     </form>
+ *     </div>
  *   );
  * }
  * ```
@@ -74,25 +78,15 @@ export interface ModalFormState {
 export function useModalFormState(
   modalData: RatingSlipModalDTO | null | undefined,
 ) {
-  // Initialize form state from modal data
+  // Initialize form state from modal data (only on mount)
   const [formState, setFormState] = useState<ModalFormState>(() =>
     modalData ? initializeFormState(modalData) : getEmptyFormState(),
   );
 
-  // Track original values for dirty detection
+  // Track original values for dirty detection (only on mount)
   const [originalState, setOriginalState] = useState<ModalFormState>(() =>
     modalData ? initializeFormState(modalData) : getEmptyFormState(),
   );
-
-  // Sync form state when modal data changes
-  useEffect(() => {
-    if (modalData) {
-      const newState = initializeFormState(modalData);
-      setFormState(newState);
-      setOriginalState(newState);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modalData?.slip.id]); // Only reset when slip ID changes, not on every modalData update
 
   // Check if form has unsaved changes
   const isDirty = JSON.stringify(formState) !== JSON.stringify(originalState);

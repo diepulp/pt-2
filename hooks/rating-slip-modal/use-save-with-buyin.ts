@@ -6,6 +6,8 @@
  * 1. Record buy-in transaction (if newBuyIn > 0)
  * 2. Update average_bet via PATCH endpoint
  *
+ * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
+ *
  * @see PRD-008a Rating Slip Modal Dashboard Integration
  */
 
@@ -17,6 +19,7 @@ import { dashboardKeys } from "@/hooks/dashboard/keys";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
 import { createFinancialTransaction } from "@/services/player-financial/http";
 import { updateAverageBet } from "@/services/rating-slip/http";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 export interface SaveWithBuyInInput {
@@ -86,6 +89,44 @@ export function useSaveWithBuyIn() {
 
       // 2. Update average_bet
       return updateAverageBet(slipId, { average_bet: averageBet });
+    },
+    onMutate: async ({ slipId, averageBet }) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({
+        queryKey: ratingSlipModalKeys.data(slipId),
+      });
+
+      // Snapshot previous value for rollback
+      const previousData = queryClient.getQueryData(
+        ratingSlipModalKeys.data(slipId),
+      );
+
+      // Optimistically update the average bet
+      queryClient.setQueryData(
+        ratingSlipModalKeys.data(slipId),
+        (old: RatingSlipModalDTO | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            slip: {
+              ...old.slip,
+              averageBet,
+            },
+          };
+        },
+      );
+
+      // Return context for rollback
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          ratingSlipModalKeys.data(variables.slipId),
+          context.previousData,
+        );
+      }
     },
     onSuccess: (_, { slipId, visitId }) => {
       // Invalidate modal data

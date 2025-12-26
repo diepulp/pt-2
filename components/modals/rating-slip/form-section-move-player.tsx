@@ -33,7 +33,7 @@ interface FormSectionMovePlayerProps {
   disabled: boolean;
 }
 
-const FormSectionMovePlayerComponent: React.FC<FormSectionMovePlayerProps> = ({
+export function FormSectionMovePlayer({
   tables,
   value,
   seatValue,
@@ -44,20 +44,15 @@ const FormSectionMovePlayerComponent: React.FC<FormSectionMovePlayerProps> = ({
   onMovePlayer,
   isUpdating,
   disabled,
-}) => {
-  // Find current table
-  const currentTable = React.useMemo(() => {
-    return tables.find((t) => t.gaming_table_id === value) || null;
-  }, [tables, value]);
-
+}: FormSectionMovePlayerProps) {
+  // Find current table (simple computation, no need for useMemo)
+  const currentTable = tables.find((t) => t.gaming_table_id === value) || null;
   const currentTableName = currentTable?.name || "Unknown Table";
 
-  // Memoize placeholder text
-  const seatPlaceholder = React.useMemo(() => {
-    return selectedTable
-      ? `1-${selectedTable.seats_available ?? "N/A"}`
-      : "Seat number";
-  }, [selectedTable]);
+  // Simple string computation, no need for useMemo
+  const seatPlaceholder = selectedTable
+    ? `1-${selectedTable.seats_available ?? "N/A"}`
+    : "Seat number";
 
   return (
     <div>
@@ -120,6 +115,4 @@ const FormSectionMovePlayerComponent: React.FC<FormSectionMovePlayerProps> = ({
       </Button>
     </div>
   );
-};
-
-export const FormSectionMovePlayer = React.memo(FormSectionMovePlayerComponent);
+}

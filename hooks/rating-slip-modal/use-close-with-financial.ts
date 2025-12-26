@@ -6,6 +6,8 @@
  * 1. Record chips-taken transaction (if chipsTaken > 0)
  * 2. Close the rating slip
  *
+ * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
+ *
  * @see PRD-008a Rating Slip Modal Dashboard Integration
  */
 
@@ -17,6 +19,7 @@ import { dashboardKeys } from "@/hooks/dashboard/keys";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
 import { createFinancialTransaction } from "@/services/player-financial/http";
 import { closeRatingSlip } from "@/services/rating-slip/http";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 export interface CloseWithFinancialInput {
@@ -91,6 +94,44 @@ export function useCloseWithFinancial() {
         slipId,
         averageBet ? { average_bet: averageBet } : undefined,
       );
+    },
+    onMutate: async ({ slipId }) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({
+        queryKey: ratingSlipModalKeys.data(slipId),
+      });
+
+      // Snapshot previous value for rollback
+      const previousData = queryClient.getQueryData(
+        ratingSlipModalKeys.data(slipId),
+      );
+
+      // Optimistically update the slip status to closed
+      queryClient.setQueryData(
+        ratingSlipModalKeys.data(slipId),
+        (old: RatingSlipModalDTO | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            slip: {
+              ...old.slip,
+              status: "closed",
+            },
+          };
+        },
+      );
+
+      // Return context for rollback
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          ratingSlipModalKeys.data(variables.slipId),
+          context.previousData,
+        );
+      }
     },
     onSuccess: (_, { slipId, visitId, casinoId }) => {
       // Invalidate all modal queries (this slip is now closed)

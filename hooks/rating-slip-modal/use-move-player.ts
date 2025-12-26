@@ -4,6 +4,8 @@
  * TanStack Query mutation hook for moving a player to a different table/seat.
  * Orchestrates closing current slip and starting new slip at destination.
  *
+ * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
+ *
  * @see PRD-008 Rating Slip Modal Integration
  * @see EXECUTION-SPEC-PRD-008.md WS5
  */
@@ -13,6 +15,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/hooks/dashboard/keys";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import type {
   MovePlayerInput,
   MovePlayerResponse,
@@ -91,7 +94,49 @@ export function useMovePlayer() {
 
       return movePlayer(input.currentSlipId, moveInput);
     },
+    onMutate: async ({
+      currentSlipId,
+      destinationTableId,
+      destinationSeatNumber,
+    }) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({
+        queryKey: ratingSlipModalKeys.data(currentSlipId),
+      });
 
+      // Snapshot previous value for rollback
+      const previousData = queryClient.getQueryData(
+        ratingSlipModalKeys.data(currentSlipId),
+      );
+
+      // Optimistically update the slip to show move in progress
+      queryClient.setQueryData(
+        ratingSlipModalKeys.data(currentSlipId),
+        (old: RatingSlipModalDTO | undefined) => {
+          if (!old) return old;
+          return {
+            ...old,
+            slip: {
+              ...old.slip,
+              tableId: destinationTableId,
+              seatNumber: destinationSeatNumber,
+            },
+          };
+        },
+      );
+
+      // Return context for rollback
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(
+          ratingSlipModalKeys.data(variables.currentSlipId),
+          context.previousData,
+        );
+      }
+    },
     onSuccess: (data: MovePlayerResponse, variables) => {
       // Invalidate modal data for the old slip (now closed)
       queryClient.invalidateQueries({

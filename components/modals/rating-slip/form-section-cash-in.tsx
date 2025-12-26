@@ -19,7 +19,7 @@ interface FormSectionCashInProps {
   totalChange: number;
 }
 
-const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
+export function FormSectionCashIn({
   value,
   totalCashIn,
   onChange,
@@ -28,58 +28,58 @@ const FormSectionCashInComponent: React.FC<FormSectionCashInProps> = ({
   decrementHandler,
   incrementButtons,
   totalChange,
-}) => (
-  <div>
-    {/* Display existing total cash-in (read-only) */}
-    {totalCashIn !== undefined && (
-      <div className="mb-3 p-3 bg-muted rounded-lg">
-        <div className="flex justify-between items-center">
-          <span className="text-sm text-muted-foreground">Total Cash In</span>
-          <span className="text-lg font-semibold font-mono">
-            ${totalCashIn.toFixed(2)}
-          </span>
+}: FormSectionCashInProps) {
+  return (
+    <div>
+      {/* Display existing total cash-in (read-only) */}
+      {totalCashIn !== undefined && (
+        <div className="mb-3 p-3 bg-muted rounded-lg">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-muted-foreground">Total Cash In</span>
+            <span className="text-lg font-semibold font-mono">
+              ${totalCashIn.toFixed(2)}
+            </span>
+          </div>
         </div>
+      )}
+
+      {/* New buy-in input (editable) */}
+      <div className="flex justify-between items-center">
+        <label htmlFor="newBuyIn" className="text-sm font-medium">
+          New Buy-In
+        </label>
+        <Button onClick={onReset} variant="outline" size="sm">
+          Reset
+        </Button>
       </div>
-    )}
-
-    {/* New buy-in input (editable) */}
-    <div className="flex justify-between items-center">
-      <label htmlFor="newBuyIn" className="text-sm font-medium">
-        New Buy-In
-      </label>
-      <Button onClick={onReset} variant="outline" size="sm">
-        Reset
-      </Button>
-    </div>
-    <div className="flex items-center space-x-2 mt-1">
-      <Button onClick={decrementHandler} variant="outline" size="icon">
-        <Minus className="h-6 w-6" />
-      </Button>
-      <Input
-        id="newBuyIn"
-        type="number"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-12 text-lg text-center"
+      <div className="flex items-center space-x-2 mt-1">
+        <Button onClick={decrementHandler} variant="outline" size="icon">
+          <Minus className="h-6 w-6" />
+        </Button>
+        <Input
+          id="newBuyIn"
+          type="number"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="h-12 text-lg text-center"
+        />
+        <Button
+          onClick={() => incrementHandlers.newBuyIn(1)}
+          variant="outline"
+          size="icon"
+        >
+          <Plus className="h-6 w-6" />
+        </Button>
+      </div>
+      <IncrementButtonGroup
+        type="newBuyIn"
+        incrementButtons={incrementButtons}
+        onIncrement={(_, amount) => incrementHandlers.newBuyIn(amount)}
       />
-      <Button
-        onClick={() => incrementHandlers.newBuyIn(1)}
-        variant="outline"
-        size="icon"
-      >
-        <Plus className="h-6 w-6" />
-      </Button>
+      <div className="text-sm mt-1 text-muted-foreground">
+        Total Change: {totalChange > 0 ? "+" : ""}
+        {totalChange}
+      </div>
     </div>
-    <IncrementButtonGroup
-      type="newBuyIn"
-      incrementButtons={incrementButtons}
-      onIncrement={(_, amount) => incrementHandlers.newBuyIn(amount)}
-    />
-    <div className="text-sm mt-1 text-muted-foreground">
-      Total Change: {totalChange > 0 ? "+" : ""}
-      {totalChange}
-    </div>
-  </div>
-);
-
-export const FormSectionCashIn = React.memo(FormSectionCashInComponent);
+  );
+}

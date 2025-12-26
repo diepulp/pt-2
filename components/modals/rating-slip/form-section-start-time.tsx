@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback } from "react";
+import React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,27 +13,13 @@ interface FormSectionStartTimeProps {
   totalChange: number;
 }
 
-const FormSectionStartTimeComponent: React.FC<FormSectionStartTimeProps> = ({
+export function FormSectionStartTime({
   value,
   onChange,
   onReset,
   handleStartTimeChange,
   totalChange,
-}) => {
-  // Memoize button handlers to prevent unnecessary re-renders
-  const handleSubtract15 = useCallback(
-    () => handleStartTimeChange("subtract", 15),
-    [handleStartTimeChange],
-  );
-  const handleAdd15 = useCallback(
-    () => handleStartTimeChange("add", 15),
-    [handleStartTimeChange],
-  );
-  const handleInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value),
-    [onChange],
-  );
-
+}: FormSectionStartTimeProps) {
   return (
     <div>
       <div className="flex justify-between items-center">
@@ -45,17 +31,23 @@ const FormSectionStartTimeComponent: React.FC<FormSectionStartTimeProps> = ({
         </Button>
       </div>
       <div className="flex items-center space-x-2 mt-1">
-        <Button onClick={handleSubtract15} variant="outline">
+        <Button
+          onClick={() => handleStartTimeChange("subtract", 15)}
+          variant="outline"
+        >
           -15m
         </Button>
         <Input
           id="startTime"
           type="datetime-local"
           value={value}
-          onChange={handleInputChange}
+          onChange={(e) => onChange(e.target.value)}
           className="h-12 text-lg text-center"
         />
-        <Button onClick={handleAdd15} variant="outline">
+        <Button
+          onClick={() => handleStartTimeChange("add", 15)}
+          variant="outline"
+        >
           +15m
         </Button>
       </div>
@@ -65,6 +57,4 @@ const FormSectionStartTimeComponent: React.FC<FormSectionStartTimeProps> = ({
       </div>
     </div>
   );
-};
-
-export const FormSectionStartTime = React.memo(FormSectionStartTimeComponent);
+}
