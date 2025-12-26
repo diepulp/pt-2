@@ -26,7 +26,7 @@ import type {
 // Re-export DTOs for consumers
 export * from "./dtos";
 export * from "./keys";
-export * from "./http";
+// Note: HTTP fetchers are NOT re-exported per GOV-PAT-001 - import directly from "./http"
 
 // === Service Interface ===
 

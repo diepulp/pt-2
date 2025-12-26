@@ -10,6 +10,7 @@
  */
 
 import { fetchJSON } from "@/lib/http/fetch-json";
+import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
 
 import type {
   CreateFinancialTxnInput,
@@ -59,7 +60,7 @@ export async function createFinancialTransaction(
     method: "POST",
     headers: {
       "content-type": "application/json",
-      "idempotency-key": input.idempotency_key || generateIdempotencyKey(),
+      [IDEMPOTENCY_HEADER]: input.idempotency_key || generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });

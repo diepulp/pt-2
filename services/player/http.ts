@@ -3,23 +3,27 @@
  *
  * Client-side fetch functions for PlayerService API endpoints.
  * Uses fetchJSON from @/lib/http/fetch-json for typed responses.
- * All mutations include idempotency-key header.
+ * All mutations include Idempotency-Key header (ADR-021).
  *
  * @see PRD-003 Player & Visit Management
+ * @see ADR-021 Idempotency Header Standardization
  */
 
-import { fetchJSON } from '@/lib/http/fetch-json';
+import { fetchJSON } from "@/lib/http/fetch-json";
+import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
 
 import type {
   CreatePlayerDTO,
   PlayerDTO,
   PlayerEnrollmentDTO,
+  PlayerIdentityDTO,
+  PlayerIdentityInput,
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from './dtos';
+} from "./dtos";
 
-const BASE = '/api/v1/players';
+const BASE = "/api/v1/players";
 
 // === Helper Functions ===
 
@@ -87,10 +91,10 @@ export async function getPlayer(playerId: string): Promise<PlayerDTO> {
  */
 export async function createPlayer(input: CreatePlayerDTO): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(BASE, {
-    method: 'POST',
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      'idempotency-key': generateIdempotencyKey(),
+      "content-type": "application/json",
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
@@ -105,32 +109,58 @@ export async function updatePlayer(
   input: UpdatePlayerDTO,
 ): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(`${BASE}/${playerId}`, {
-    method: 'PATCH',
+    method: "PATCH",
     headers: {
-      'content-type': 'application/json',
-      'idempotency-key': generateIdempotencyKey(),
+      "content-type": "application/json",
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
   });
 }
 
-// === Player Enrollment ===
+// === Player Identity ===
+
+// Note: enrollPlayer() moved to services/casino/http.ts per ADR-022 D5
+// (CasinoService owns player_casino table)
 
 /**
- * Enrolls a player in the current casino.
- * Idempotent - returns existing enrollment if already enrolled.
+ * Upserts player identity information.
+ * Idempotent - creates or updates identity record.
+ *
+ * POST /api/v1/players/{playerId}/identity
  */
-export async function enrollPlayer(
+export async function upsertIdentity(
   playerId: string,
-): Promise<PlayerEnrollmentDTO> {
-  return fetchJSON<PlayerEnrollmentDTO>(`${BASE}/${playerId}/enroll`, {
-    method: 'POST',
+  input: PlayerIdentityInput,
+): Promise<PlayerIdentityDTO> {
+  return fetchJSON<PlayerIdentityDTO>(`${BASE}/${playerId}/identity`, {
+    method: "POST",
     headers: {
-      'content-type': 'application/json',
-      'idempotency-key': generateIdempotencyKey(),
+      "content-type": "application/json",
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify(input),
   });
+}
+
+/**
+ * Gets player identity information.
+ * Returns null if identity not found.
+ *
+ * GET /api/v1/players/{playerId}/identity
+ */
+export async function getIdentity(
+  playerId: string,
+): Promise<PlayerIdentityDTO | null> {
+  try {
+    return await fetchJSON<PlayerIdentityDTO>(`${BASE}/${playerId}/identity`);
+  } catch (error) {
+    // 404 means identity not found
+    if (error instanceof Error && error.message.includes("404")) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -145,7 +175,7 @@ export async function getPlayerEnrollment(
     );
   } catch (error) {
     // 404 means not enrolled
-    if (error instanceof Error && error.message.includes('404')) {
+    if (error instanceof Error && error.message.includes("404")) {
       return null;
     }
     throw error;

@@ -13,7 +13,8 @@ import {
 } from "@/components/ui/popover";
 import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
 import { cn } from "@/lib/utils";
-import { searchPlayers, type PlayerSearchResultDTO } from "@/services/player";
+import type { PlayerSearchResultDTO } from "@/services/player/dtos";
+import { searchPlayers } from "@/services/player/http";
 
 // Transform API response to component format
 interface PlayerDisplay {

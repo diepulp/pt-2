@@ -9,21 +9,20 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
+import { enrollPlayer, type PlayerEnrollmentDTO } from "@/services/casino/http";
 import type {
   CreatePlayerDTO,
   PlayerDTO,
-  PlayerEnrollmentDTO,
   UpdatePlayerDTO,
-} from '@/services/player/dtos';
+} from "@/services/player/dtos";
 import {
   createPlayer,
-  enrollPlayer,
   getPlayerEnrollment,
   updatePlayer,
-} from '@/services/player/http';
-import { playerKeys } from '@/services/player/keys';
+} from "@/services/player/http";
+import { playerKeys } from "@/services/player/keys";
 
 /**
  * Creates a new player.
@@ -76,7 +75,7 @@ export function useEnrollPlayer() {
       queryClient.invalidateQueries({ queryKey: playerKeys.list.scope });
       queryClient.invalidateQueries({ queryKey: playerKeys.detail(playerId) });
       // Invalidate all search queries since enrollment status changed
-      queryClient.invalidateQueries({ queryKey: ['player', 'search'] });
+      queryClient.invalidateQueries({ queryKey: ["player", "search"] });
     },
   });
 }
@@ -98,7 +97,7 @@ export function usePlayerEnrollment(
     // Provide a query hook alternative for read operations
     getEnrollment: () =>
       queryClient.fetchQuery({
-        queryKey: [...playerKeys.detail(playerId), 'enrollment'],
+        queryKey: [...playerKeys.detail(playerId), "enrollment"],
         queryFn: () => getPlayerEnrollment(playerId),
         staleTime: 60_000,
       }),

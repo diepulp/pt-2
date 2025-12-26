@@ -93,8 +93,8 @@ Approved JSON blobs (all others require first-class columns):
 
 | Domain | Service | Owns Tables | Bounded Context |
 |--------|---------|-------------|-----------------|
-| **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report | Root temporal authority & global policy |
-| **Identity** | PlayerService | player, player_casino, *player_identity* ² | Identity & enrollment management |
+| **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino** | Root temporal authority, global policy, & player enrollment |
+| **Identity** | PlayerService | player, *player_identity* ² | Identity management |
 | **Operational** | TableContextService | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry |
 | **Operational** | FloorLayoutService | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation | Floor design & activation |
 | **Operational** | VisitService | visit | Session lifecycle (3 archetypes) |
@@ -110,9 +110,11 @@ Approved JSON blobs (all others require first-class columns):
 
 ## CasinoService (Foundational Context)
 
-**Owns**: `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`
+**Owns**: `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`, `player_casino`
 
-**Bounded Context**: "What are the operational parameters and policy boundaries of this casino property?"
+**Bounded Context**: "What are the operational parameters and policy boundaries of this casino property? Which players are enrolled?"
+
+**Note**: Player enrollment (`player_casino`) is owned by CasinoService per ADR-022 D5.
 
 ### Schema Invariants
 
@@ -145,9 +147,11 @@ Approved JSON blobs (all others require first-class columns):
 
 ## PlayerService (Identity Context)
 
-**Owns**: `player`, `player_casino`
+**Owns**: `player`
 
 **Planned (MVP)** per ADR-022 v7.1: `player_identity`
+
+**Note**: `player_casino` enrollment is owned by CasinoService (ADR-022 D5).
 
 **Deferred (Post-MVP)**: `player_tax_identity`, `player_identity_scan`
 

@@ -32,11 +32,17 @@ import {
   logError,
 } from "@/lib/errors/error-utils";
 import { cn } from "@/lib/utils";
+import { enrollPlayer } from "@/services/casino/http";
 import type {
+  CreatePlayerDTO,
   PlayerIdentityInput,
   PlayerSearchResultDTO,
 } from "@/services/player/dtos";
-import { searchPlayers } from "@/services/player/http";
+import {
+  createPlayer,
+  searchPlayers,
+  upsertIdentity,
+} from "@/services/player/http";
 
 import { IdentityForm } from "./identity-form";
 
@@ -124,23 +130,14 @@ export function EnrollPlayerModal({
       playerId: string;
       identity: PlayerIdentityInput;
     }) => {
-      // TODO: Wire up to actual enrollment API
-      // POST /api/v1/players/{playerId}/enroll
-      const response = await fetch(`/api/v1/players/${data.playerId}/enroll`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          casinoId,
-          identity: data.identity,
-        }),
-      });
+      // Step 1: Enroll player at casino (ADR-022: CasinoService owns player_casino)
+      const enrollment = await enrollPlayer(data.playerId);
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to enroll player");
-      }
+      // Step 2: Capture identity information via service layer HTTP fetcher
+      // Uses the identity API endpoint created per ISSUE-F26FC159 WS1
+      const identity = await upsertIdentity(data.playerId, data.identity);
 
-      return response.json();
+      return { enrollment, identity };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["players"] });
@@ -164,21 +161,11 @@ export function EnrollPlayerModal({
   // Create new player mutation
   const createPlayerMutation = useMutation({
     mutationFn: async (data: { firstName: string; lastName: string }) => {
-      const response = await fetch("/api/v1/players", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          first_name: data.firstName,
-          last_name: data.lastName,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || "Failed to create player");
-      }
-
-      return response.json();
+      const input: CreatePlayerDTO = {
+        first_name: data.firstName,
+        last_name: data.lastName,
+      };
+      return createPlayer(input);
     },
     onSuccess: (data) => {
       // Convert to search result format and proceed to identity step
