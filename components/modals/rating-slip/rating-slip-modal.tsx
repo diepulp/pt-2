@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import React, { useTransition } from "react";
+import React, { useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +11,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
+import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
 
 import { FormSectionAverageBet } from "./form-section-average-bet";
 import { FormSectionCashIn } from "./form-section-cash-in";
@@ -18,17 +19,16 @@ import { FormSectionChipsTaken } from "./form-section-chips-taken";
 import { FormSectionMovePlayer } from "./form-section-move-player";
 import { FormSectionStartTime } from "./form-section-start-time";
 import { RatingSlipModalSkeleton } from "./rating-slip-modal-skeleton";
-import { useModalFormState, type ModalFormState } from "./use-modal-form-state";
 
 /**
- * Legacy form state type for backward compatibility with parent components.
- * @deprecated Use ModalFormState from use-modal-form-state.ts instead
+ * Form state type for action handlers.
+ * Zustand store manages form state internally via useRatingSlipModal hook.
  */
 export interface FormState {
   averageBet: string;
   startTime: string;
-  cashIn: string; // Keep for backward compatibility
-  newBuyIn?: string; // New field
+  cashIn: string; // Maps from newBuyIn for backward compatibility
+  newBuyIn?: string;
   newTableId: string;
   newSeatNumber: string;
   chipsTaken: string;
@@ -63,23 +63,14 @@ interface RatingSlipModalProps {
   /** Close handler */
   onClose: () => void;
 
-  /** Save changes handler */
+  /** Save changes handler - wrapped in useTransition internally */
   onSave: (formState: FormState) => void;
 
-  /** Close session handler */
+  /** Close session handler - wrapped in useTransition internally */
   onCloseSession: (formState: FormState) => void;
 
-  /** Move player handler */
+  /** Move player handler - wrapped in useTransition internally */
   onMovePlayer: (formState: FormState) => void;
-
-  /** Save in progress flag */
-  isSaving?: boolean;
-
-  /** Close session in progress flag */
-  isClosing?: boolean;
-
-  /** Move player in progress flag */
-  isMoving?: boolean;
 
   /** Error message to display */
   error?: string | null;
@@ -97,16 +88,24 @@ interface RatingSlipModalProps {
  * Rating Slip Modal Component
  *
  * Integrated with service layer via TanStack Query.
- * Fetches aggregated data from 5 bounded contexts:
+ * Uses Zustand store for form state management (eliminates prop drilling).
+ *
+ * Data aggregated from 5 bounded contexts:
  * - Rating slip details
  * - Player identity
  * - Loyalty balance and suggestion
  * - Financial summary
  * - Available tables
  *
+ * React 19 Patterns:
+ * - useTransition for non-blocking async operations (no isSaving/isClosing props)
+ * - Zustand store via useRatingSlipModal hook for form state
+ * - Key-based reset pattern for store initialization
+ *
  * @see PRD-008 WS4 Modal Service Integration
+ * @see ZUSTAND-RSM for Zustand integration spec
  * @see useRatingSlipModalData hook for data fetching
- * @see useModalFormState hook for form state management
+ * @see useRatingSlipModal hook for form state
  *
  * @example
  * ```tsx
@@ -117,7 +116,6 @@ interface RatingSlipModalProps {
  *   onSave={handleSave}
  *   onCloseSession={handleClose}
  *   onMovePlayer={handleMove}
- *   isSaving={isSaving}
  * />
  * ```
  */
@@ -128,9 +126,6 @@ export function RatingSlipModal({
   onSave,
   onCloseSession,
   onMovePlayer,
-  isSaving = false,
-  isClosing = false,
-  isMoving = false,
   error = null,
   // Legacy props (ignored if slipId is provided)
   ratingSlip: legacyRatingSlip,
@@ -147,61 +142,25 @@ export function RatingSlipModal({
     error: fetchError,
   } = useRatingSlipModalData(isOpen ? slipId : null);
 
-  // Manage form state
-  // Note: Form state is keyed by slip ID in the content div to force reset on slip change
-  const {
-    formState,
-    isDirty,
-    updateField,
-    resetField,
-    incrementField,
-    decrementField,
-    adjustStartTime,
-  } = useModalFormState(modalData);
+  // Zustand store for form state management (replaces useModalFormState)
+  const { formState, originalState, initializeForm } = useRatingSlipModal();
 
-  // Static increment button configuration
-  const incrementButtons = [
-    { amount: 5, label: "+5" },
-    { amount: 25, label: "+25" },
-    { amount: 100, label: "+100" },
-    { amount: 500, label: "+500" },
-    { amount: 1000, label: "+1000" },
-  ];
+  // Initialize store when modal data changes
+  useEffect(() => {
+    if (modalData) {
+      initializeForm({
+        averageBet: modalData.slip.averageBet.toString(),
+        startTime: modalData.slip.startTime.slice(0, 16),
+        newBuyIn: "0",
+        newTableId: modalData.slip.tableId,
+        newSeatNumber: modalData.slip.seatNumber || "",
+        chipsTaken: "0",
+      });
+    }
+  }, [modalData, initializeForm]);
 
-  // Increment handlers for each field
-  const incrementAverageBet = (amount: number) =>
-    incrementField("averageBet", amount);
-  const incrementNewBuyIn = (amount: number) =>
-    incrementField("newBuyIn", amount);
-  const incrementChipsTaken = (amount: number) =>
-    incrementField("chipsTaken", amount);
-
-  // Decrement handlers
-  const decrementAverageBet = () => decrementField("averageBet");
-  const decrementNewBuyIn = () => decrementField("newBuyIn");
-  const decrementChipsTaken = () => decrementField("chipsTaken");
-
-  // Reset handlers
-  const resetAverageBet = () => resetField("averageBet");
-  const resetNewBuyIn = () => resetField("newBuyIn");
-  const resetStartTime = () => resetField("startTime");
-
-  // Start time adjustment handler
-  const handleStartTimeChange = (
-    action: "add" | "subtract",
-    minutes: number,
-  ) => {
-    adjustStartTime(action, minutes);
-  };
-
-  // Table change handlers
-  const handleTableChange = (tableId: string) => {
-    updateField("newTableId", tableId);
-  };
-
-  const handleSeatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField("newSeatNumber", e.target.value);
-  };
+  // Compute dirty state (derived, not stored)
+  const isDirty = JSON.stringify(formState) !== JSON.stringify(originalState);
 
   // Loading skeleton - mirrors actual modal structure
   if (isLoading || legacyIsLoading) {
@@ -306,41 +265,14 @@ export function RatingSlipModal({
             </div>
           )}
 
-          <FormSectionAverageBet
-            value={formState.averageBet}
-            onChange={(v) => updateField("averageBet", v)}
-            onReset={resetAverageBet}
-            incrementHandlers={{ averageBet: incrementAverageBet }}
-            decrementHandler={decrementAverageBet}
-            incrementButtons={incrementButtons}
-            totalChange={0}
-          />
+          <FormSectionAverageBet />
 
-          <FormSectionCashIn
-            value={formState.newBuyIn}
-            totalCashIn={totalCashIn}
-            onChange={(v) => updateField("newBuyIn", v)}
-            onReset={resetNewBuyIn}
-            incrementHandlers={{ newBuyIn: incrementNewBuyIn }}
-            decrementHandler={decrementNewBuyIn}
-            incrementButtons={incrementButtons}
-            totalChange={0}
-          />
+          <FormSectionCashIn totalCashIn={totalCashIn} />
 
-          <FormSectionStartTime
-            value={formState.startTime}
-            onChange={(v) => updateField("startTime", v)}
-            onReset={resetStartTime}
-            handleStartTimeChange={handleStartTimeChange}
-            totalChange={0}
-          />
+          <FormSectionStartTime />
 
           <FormSectionMovePlayer
             tables={tables}
-            value={formState.newTableId}
-            seatValue={formState.newSeatNumber}
-            onTableChange={handleTableChange}
-            onSeatChange={handleSeatChange}
             selectedTable={selectedTable}
             seatError=""
             onMovePlayer={() =>
@@ -351,22 +283,13 @@ export function RatingSlipModal({
                 } as FormState);
               })
             }
-            isUpdating={isPending || isMoving}
+            isUpdating={isPending}
             disabled={
-              isPending ||
-              isMoving ||
-              !formState.newTableId ||
-              !formState.newSeatNumber
+              isPending || !formState.newTableId || !formState.newSeatNumber
             }
           />
 
-          <FormSectionChipsTaken
-            value={formState.chipsTaken}
-            onChange={(v) => updateField("chipsTaken", v)}
-            incrementHandlers={{ chipsTaken: incrementChipsTaken }}
-            decrementHandler={decrementChipsTaken}
-            incrementButtons={incrementButtons}
-          />
+          <FormSectionChipsTaken />
 
           {/* Financial Summary (if available from service layer) */}
           {modalData && (
@@ -448,13 +371,9 @@ export function RatingSlipModal({
                 } as FormState);
               })
             }
-            disabled={isPending || isSaving || !isDirty}
+            disabled={isPending || !isDirty}
           >
-            {isPending || isSaving
-              ? "Saving..."
-              : isDirty
-                ? "Save Changes"
-                : "No Changes"}
+            {isPending ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
           </Button>
           <Button
             type="button"
@@ -468,9 +387,9 @@ export function RatingSlipModal({
                 } as FormState);
               })
             }
-            disabled={isPending || isClosing || !!error}
+            disabled={isPending || !!error}
           >
-            {isPending || isClosing ? (
+            {isPending ? (
               "Closing..."
             ) : (
               <>

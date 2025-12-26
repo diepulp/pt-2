@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useMovePlayerFields } from "@/hooks/ui";
 
 // Placeholder types - will be replaced with actual service types
 interface RatingSlipTableDto {
@@ -22,10 +23,6 @@ interface RatingSlipTableDto {
 
 interface FormSectionMovePlayerProps {
   tables: RatingSlipTableDto[];
-  value: string;
-  seatValue: string;
-  onTableChange: (tableId: string) => void;
-  onSeatChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   selectedTable: RatingSlipTableDto | null;
   seatError: string;
   onMovePlayer: () => void;
@@ -35,18 +32,17 @@ interface FormSectionMovePlayerProps {
 
 export function FormSectionMovePlayer({
   tables,
-  value,
-  seatValue,
-  onTableChange,
-  onSeatChange,
   selectedTable,
   seatError,
   onMovePlayer,
   isUpdating,
   disabled,
 }: FormSectionMovePlayerProps) {
+  const { tableId, seatNumber, updateField } = useMovePlayerFields();
+
   // Find current table (simple computation, no need for useMemo)
-  const currentTable = tables.find((t) => t.gaming_table_id === value) || null;
+  const currentTable =
+    tables.find((t) => t.gaming_table_id === tableId) || null;
   const currentTableName = currentTable?.name || "Unknown Table";
 
   // Simple string computation, no need for useMemo
@@ -54,26 +50,34 @@ export function FormSectionMovePlayer({
     ? `1-${selectedTable.seats_available ?? "N/A"}`
     : "Seat number";
 
+  const handleTableChange = (value: string) => {
+    updateField("newTableId", value);
+  };
+
+  const handleSeatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    updateField("newSeatNumber", e.target.value);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center">
         <label htmlFor="movePlayerTable" className="text-sm font-medium">
           Move Player
         </label>
-        {value && currentTable && (
+        {tableId && currentTable && (
           <span className="text-xs text-muted-foreground">
             Currently at: {currentTableName}
           </span>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 mt-1">
-        <Select value={value || ""} onValueChange={onTableChange}>
+        <Select value={tableId || ""} onValueChange={handleTableChange}>
           <SelectTrigger id="movePlayerTable">
             <SelectValue placeholder="Select table">
               {currentTable
                 ? `${currentTable.name || "Unnamed Table"} (${currentTable.seats_available} seats)`
-                : value
-                  ? `Table ID: ${value} (Not Found)`
+                : tableId
+                  ? `Table ID: ${tableId} (Not Found)`
                   : "Select table"}
             </SelectValue>
           </SelectTrigger>
@@ -84,7 +88,7 @@ export function FormSectionMovePlayer({
                 value={table.gaming_table_id}
               >
                 {table.name || "Unnamed Table"} ({table.seats_available} seats)
-                {table.gaming_table_id === value && " ✓"}
+                {table.gaming_table_id === tableId && " ✓"}
               </SelectItem>
             ))}
           </SelectContent>
@@ -93,8 +97,8 @@ export function FormSectionMovePlayer({
           <Input
             type="number"
             placeholder={seatPlaceholder}
-            value={seatValue}
-            onChange={onSeatChange}
+            value={seatNumber}
+            onChange={handleSeatChange}
             className={seatError ? "border-red-500" : ""}
           />
           {seatError && (

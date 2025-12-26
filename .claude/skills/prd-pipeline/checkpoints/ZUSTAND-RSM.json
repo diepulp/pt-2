@@ -1,0 +1,47 @@
+{
+  "prd": "ZUSTAND-RSM",
+  "prd_title": "Rating Slip Modal Zustand Integration",
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4a", "WS4b", "WS4c", "WS4d", "WS4e", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "store/rating-slip-modal-store.ts",
+      "store/index.ts"
+    ],
+    "WS2": [
+      "hooks/ui/use-rating-slip-modal.ts",
+      "hooks/ui/index.ts"
+    ],
+    "WS3": [
+      "store/__tests__/rating-slip-modal-store.test.ts"
+    ],
+    "WS4a": [
+      "components/modals/rating-slip/form-section-average-bet.tsx"
+    ],
+    "WS4b": [
+      "components/modals/rating-slip/form-section-cash-in.tsx"
+    ],
+    "WS4c": [
+      "components/modals/rating-slip/form-section-start-time.tsx"
+    ],
+    "WS4d": [
+      "components/modals/rating-slip/form-section-move-player.tsx"
+    ],
+    "WS4e": [
+      "components/modals/rating-slip/form-section-chips-taken.tsx"
+    ],
+    "WS5": [
+      "components/modals/rating-slip/rating-slip-modal.tsx"
+    ],
+    "WS6": [
+      "hooks/ui/__tests__/use-rating-slip-modal.test.ts"
+    ],
+    "WS7": []
+  },
+  "gates_passed": ["type-check", "test-pass", "lint", "build"],
+  "gates_pending": [],
+  "timestamp": "2025-12-26T16:00:00Z"
+}
