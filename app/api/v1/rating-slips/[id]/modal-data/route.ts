@@ -12,12 +12,18 @@
  * - PlayerFinancialService - Financial summary
  *
  * Response Headers:
- * - X-Query-Timings: JSON object with phase timings (phaseA, phaseB, phaseC, total) in milliseconds
+ * - X-Query-Timings: JSON object with phase timings in milliseconds
+ * - X-Query-Path: "rpc" or "legacy" indicating which path was used
+ *
+ * Feature Flag:
+ * - NEXT_PUBLIC_USE_MODAL_BFF_RPC=true: Uses single RPC call (~150ms)
+ * - NEXT_PUBLIC_USE_MODAL_BFF_RPC=false: Uses legacy multi-query path (~600ms)
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  *
  * @see PRD-008 Rating Slip Modal Integration
- * @see EXECUTION-SPEC-PRD-008.md WS3, WS5
+ * @see PRD-018 Rating Slip Modal BFF RPC Implementation
+ * @see docs/20-architecture/specs/PERF-001/BFF-RPC-DESIGN.md
  */
 
 import type { NextRequest } from "next/server";
@@ -44,6 +50,7 @@ import type {
   SlipSectionDTO,
   TableOptionDTO,
 } from "@/services/rating-slip-modal/dtos";
+import { getModalDataViaRPC } from "@/services/rating-slip-modal/rpc";
 import { modalDataRouteParamsSchema } from "@/services/rating-slip-modal/schemas";
 import { createTableContextService } from "@/services/table-context";
 import { createVisitService } from "@/services/visit";
@@ -89,13 +96,23 @@ async function getLoyaltyData(
 }
 
 /**
+ * Check if BFF RPC feature flag is enabled.
+ * Uses NEXT_PUBLIC_USE_MODAL_BFF_RPC environment variable.
+ */
+function isRpcEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_USE_MODAL_BFF_RPC === "true";
+}
+
+/**
  * GET /api/v1/rating-slips/[id]/modal-data
  *
  * Fetch aggregated modal data for a rating slip.
+ * Uses BFF RPC when feature flag is enabled, otherwise falls back to legacy multi-query path.
  * Returns 404 if rating slip not found.
  */
 export async function GET(request: NextRequest, segmentData: RouteParams) {
   const ctx = createRequestContext(request);
+  const useRpc = isRpcEnabled();
 
   try {
     const params = parseParams(
@@ -107,57 +124,6 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        // Query timing instrumentation - granular per-query tracking
-        const timings: Record<string, number> = {};
-        const totalStart = performance.now();
-
-        // Helper to time individual queries
-        async function timed<T>(
-          name: string,
-          fn: () => Promise<T>,
-        ): Promise<T> {
-          const start = performance.now();
-          const result = await fn();
-          timings[name] = Math.round(performance.now() - start);
-          return result;
-        }
-
-        // Create service instances
-        const ratingSlipService = createRatingSlipService(mwCtx.supabase);
-        const visitService = createVisitService(mwCtx.supabase);
-        const playerService = createPlayerService(mwCtx.supabase);
-        const loyaltyService = createLoyaltyService(mwCtx.supabase);
-        const financialService = createPlayerFinancialService(mwCtx.supabase);
-        const tableContextService = createTableContextService(mwCtx.supabase);
-
-        // === PHASE A: Sequential (required dependencies) ===
-        const phaseAStart = performance.now();
-
-        // 1. Get the rating slip with pause history (required first)
-        const slipWithPauses = await timed("A1_getSlip", () =>
-          ratingSlipService.getById(params.id),
-        );
-
-        if (!slipWithPauses) {
-          throw new DomainError(
-            "RATING_SLIP_NOT_FOUND",
-            "Rating slip not found",
-            { httpStatus: 404, details: { slipId: params.id } },
-          );
-        }
-
-        // 2. Get the visit to find player_id (requires visit_id from slip)
-        const visit = await timed("A2_getVisit", () =>
-          visitService.getById(slipWithPauses.visit_id),
-        );
-
-        if (!visit) {
-          throw new DomainError(
-            "VISIT_NOT_FOUND",
-            "Associated visit not found",
-          );
-        }
-
         // Ensure we have RLS context with casino_id
         if (!mwCtx.rlsContext?.casinoId) {
           throw new DomainError("FORBIDDEN", "Casino context required", {
@@ -166,13 +132,88 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         }
         const { casinoId } = mwCtx.rlsContext;
 
-        timings.phaseA = Math.round(performance.now() - phaseAStart);
+        // Query timing instrumentation
+        const timings: Record<string, number> = {};
+        const totalStart = performance.now();
 
-        // === PHASE B: Parallel (independent queries) ===
-        const phaseBStart = performance.now();
+        let modalData: RatingSlipModalDTO;
+        let queryPath: "rpc" | "legacy";
 
-        const [table, durationSeconds, player, financialSummary, activeTables] =
-          await Promise.all([
+        if (useRpc) {
+          // === RPC PATH: Single database round trip ===
+          queryPath = "rpc";
+          const rpcStart = performance.now();
+
+          modalData = await getModalDataViaRPC(
+            mwCtx.supabase,
+            params.id,
+            casinoId,
+          );
+
+          timings.rpc = Math.round(performance.now() - rpcStart);
+        } else {
+          // === LEGACY PATH: Multi-query aggregation ===
+          queryPath = "legacy";
+
+          // Helper to time individual queries
+          async function timed<T>(
+            name: string,
+            fn: () => Promise<T>,
+          ): Promise<T> {
+            const start = performance.now();
+            const result = await fn();
+            timings[name] = Math.round(performance.now() - start);
+            return result;
+          }
+
+          // Create service instances
+          const ratingSlipService = createRatingSlipService(mwCtx.supabase);
+          const visitService = createVisitService(mwCtx.supabase);
+          const playerService = createPlayerService(mwCtx.supabase);
+          const loyaltyService = createLoyaltyService(mwCtx.supabase);
+          const financialService = createPlayerFinancialService(mwCtx.supabase);
+          const tableContextService = createTableContextService(mwCtx.supabase);
+
+          // === PHASE A: Sequential (required dependencies) ===
+          const phaseAStart = performance.now();
+
+          // 1. Get the rating slip with pause history (required first)
+          const slipWithPauses = await timed("A1_getSlip", () =>
+            ratingSlipService.getById(params.id),
+          );
+
+          if (!slipWithPauses) {
+            throw new DomainError(
+              "RATING_SLIP_NOT_FOUND",
+              "Rating slip not found",
+              { httpStatus: 404, details: { slipId: params.id } },
+            );
+          }
+
+          // 2. Get the visit to find player_id (requires visit_id from slip)
+          const visit = await timed("A2_getVisit", () =>
+            visitService.getById(slipWithPauses.visit_id),
+          );
+
+          if (!visit) {
+            throw new DomainError(
+              "VISIT_NOT_FOUND",
+              "Associated visit not found",
+            );
+          }
+
+          timings.phaseA = Math.round(performance.now() - phaseAStart);
+
+          // === PHASE B: Parallel (independent queries) ===
+          const phaseBStart = performance.now();
+
+          const [
+            table,
+            durationSeconds,
+            player,
+            financialSummary,
+            activeTables,
+          ] = await Promise.all([
             timed("B1_getTable", () =>
               tableContextService.getTable(slipWithPauses.table_id, casinoId),
             ),
@@ -192,98 +233,99 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
             ),
           ]);
 
-        timings.phaseB = Math.round(performance.now() - phaseBStart);
+          timings.phaseB = Math.round(performance.now() - phaseBStart);
 
-        // === PHASE C: Parallel (player-dependent + batch seats) ===
-        const phaseCStart = performance.now();
+          // === PHASE C: Parallel (player-dependent + batch seats) ===
+          const phaseCStart = performance.now();
 
-        const tableIds = activeTables.map((t) => t.id);
-        const [loyaltyData, occupiedSeatsMap] = await Promise.all([
-          player
-            ? timed("C1_getLoyalty", () =>
-                getLoyaltyData(
-                  loyaltyService,
-                  visit.player_id!,
-                  casinoId,
-                  slipWithPauses,
-                  params.id,
-                ),
-              )
-            : Promise.resolve(null),
-          timed("C2_getOccupiedSeats", () =>
-            ratingSlipService.getOccupiedSeatsByTables(tableIds),
-          ),
-        ]);
+          const tableIds = activeTables.map((t) => t.id);
+          const [loyaltyData, occupiedSeatsMap] = await Promise.all([
+            player
+              ? timed("C1_getLoyalty", () =>
+                  getLoyaltyData(
+                    loyaltyService,
+                    visit.player_id!,
+                    casinoId,
+                    slipWithPauses,
+                    params.id,
+                  ),
+                )
+              : Promise.resolve(null),
+            timed("C2_getOccupiedSeats", () =>
+              ratingSlipService.getOccupiedSeatsByTables(tableIds),
+            ),
+          ]);
 
-        timings.phaseC = Math.round(performance.now() - phaseCStart);
+          timings.phaseC = Math.round(performance.now() - phaseCStart);
 
-        // === Build Response DTOs ===
+          // === Build Response DTOs ===
 
-        // Slip section
-        const slipSection: SlipSectionDTO = {
-          id: slipWithPauses.id,
-          visitId: slipWithPauses.visit_id,
-          tableId: slipWithPauses.table_id,
-          tableLabel: table.label,
-          tableType: table.type,
-          seatNumber: slipWithPauses.seat_number ?? null,
-          averageBet: slipWithPauses.average_bet ?? 0,
-          startTime: slipWithPauses.start_time,
-          endTime: slipWithPauses.end_time,
-          status: slipWithPauses.status,
-          gamingDay: extractGamingDay(slipWithPauses.start_time),
-          durationSeconds,
-        };
+          // Slip section
+          const slipSection: SlipSectionDTO = {
+            id: slipWithPauses.id,
+            visitId: slipWithPauses.visit_id,
+            tableId: slipWithPauses.table_id,
+            tableLabel: table.label,
+            tableType: table.type,
+            seatNumber: slipWithPauses.seat_number ?? null,
+            averageBet: slipWithPauses.average_bet ?? 0,
+            startTime: slipWithPauses.start_time,
+            endTime: slipWithPauses.end_time,
+            status: slipWithPauses.status,
+            gamingDay: extractGamingDay(slipWithPauses.start_time),
+            durationSeconds,
+          };
 
-        // Player section
-        let playerSection: PlayerSectionDTO | null = null;
-        if (player) {
-          playerSection = {
-            id: player.id,
-            firstName: player.first_name,
-            lastName: player.last_name,
-            cardNumber: null, // Card number from enrollment, not in PlayerDTO
+          // Player section
+          let playerSection: PlayerSectionDTO | null = null;
+          if (player) {
+            playerSection = {
+              id: player.id,
+              firstName: player.first_name,
+              lastName: player.last_name,
+              cardNumber: null, // Card number from enrollment, not in PlayerDTO
+            };
+          }
+
+          // Loyalty section
+          let loyaltySection: LoyaltySectionDTO | null = null;
+          if (loyaltyData) {
+            loyaltySection = {
+              currentBalance: loyaltyData.balance?.currentBalance ?? 0,
+              tier: loyaltyData.balance?.tier ?? "bronze",
+              suggestion: loyaltyData.suggestion,
+            };
+          }
+
+          // Financial section
+          const financialSection: FinancialSectionDTO = {
+            totalCashIn: financialSummary.total_in,
+            totalChipsOut: financialSummary.total_out,
+            netPosition: financialSummary.net_amount,
+          };
+
+          // Tables section (using batch query results)
+          const tablesWithSeats = activeTables.map((t) => {
+            const occupiedSeats = occupiedSeatsMap.get(t.id) ?? [];
+            const tableOption: TableOptionDTO = {
+              id: t.id,
+              label: t.label,
+              type: t.type,
+              status: t.status,
+              occupiedSeats,
+            };
+            return tableOption;
+          });
+
+          // Build the full modal DTO
+          modalData = {
+            slip: slipSection,
+            player: playerSection,
+            loyalty: loyaltySection,
+            financial: financialSection,
+            tables: tablesWithSeats,
           };
         }
-
-        // Loyalty section
-        let loyaltySection: LoyaltySectionDTO | null = null;
-        if (loyaltyData) {
-          loyaltySection = {
-            currentBalance: loyaltyData.balance?.currentBalance ?? 0,
-            tier: loyaltyData.balance?.tier ?? "bronze",
-            suggestion: loyaltyData.suggestion,
-          };
-        }
-
-        // Financial section
-        const financialSection: FinancialSectionDTO = {
-          totalCashIn: financialSummary.total_in,
-          totalChipsOut: financialSummary.total_out,
-          netPosition: financialSummary.net_amount,
-        };
-
-        // Tables section (using batch query results)
-        const tablesWithSeats = activeTables.map((t) => {
-          const occupiedSeats = occupiedSeatsMap.get(t.id) ?? [];
-          const tableOption: TableOptionDTO = {
-            id: t.id,
-            label: t.label,
-            type: t.type,
-            status: t.status,
-            occupiedSeats,
-          };
-          return tableOption;
-        });
-
-        // Build the full modal DTO
-        const modalData: RatingSlipModalDTO = {
-          slip: slipSection,
-          player: playerSection,
-          loyalty: loyaltySection,
-          financial: financialSection,
-          tables: tablesWithSeats,
-        };
 
         // Calculate total timing
         timings.total = Math.round(performance.now() - totalStart);
@@ -296,6 +338,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           durationMs: 0,
           timestamp: new Date().toISOString(),
           timings, // Include timings for header injection
+          queryPath, // Include path indicator
         };
       },
       {
@@ -333,10 +376,13 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       );
     }
 
-    // Extract timings if present (from extended result)
-    const timings = (
-      result as typeof result & { timings?: Record<string, number> }
-    ).timings;
+    // Extract timings and path if present (from extended result)
+    const extendedResult = result as typeof result & {
+      timings?: Record<string, number>;
+      queryPath?: "rpc" | "legacy";
+    };
+    const timings = extendedResult.timings;
+    const queryPath = extendedResult.queryPath;
 
     // Build success response body
     const responseBody = {
@@ -349,10 +395,13 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       timestamp: new Date().toISOString(),
     };
 
-    // Build response with optional timing header
+    // Build response with diagnostic headers
     const headers: HeadersInit = {};
     if (timings) {
       headers["X-Query-Timings"] = JSON.stringify(timings);
+    }
+    if (queryPath) {
+      headers["X-Query-Path"] = queryPath;
     }
 
     return NextResponse.json(responseBody, { status: 200, headers });

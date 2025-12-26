@@ -39,3 +39,6 @@ export { ratingSlipModalKeys } from "./keys";
 
 // Re-export HTTP fetchers
 export { fetchRatingSlipModalData } from "./http";
+
+// Re-export RPC functions (server-side only)
+export { getModalDataViaRPC } from "./rpc";

@@ -2055,6 +2055,10 @@ export type Database = {
         Args: { p_as_of?: string; p_rating_slip_id: string }
         Returns: number
       }
+      rpc_get_rating_slip_modal_data: {
+        Args: { p_casino_id: string; p_slip_id: string }
+        Returns: Json
+      }
       rpc_get_visit_last_segment: {
         Args: { p_visit_id: string }
         Returns: Json
