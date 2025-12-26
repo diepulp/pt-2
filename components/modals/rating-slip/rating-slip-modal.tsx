@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { RefreshCw, X } from "lucide-react";
 import React, { useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -139,7 +139,9 @@ export function RatingSlipModal({
   const {
     data: modalData,
     isLoading,
+    isFetching,
     error: fetchError,
+    refetch,
   } = useRatingSlipModalData(isOpen ? slipId : null);
 
   // Zustand store for form state management (replaces useModalFormState)
@@ -224,15 +226,22 @@ export function RatingSlipModal({
     tables.find((t) => t.gaming_table_id === formState.newTableId) || null;
 
   // Get loyalty data
-  const currentBalance = modalData?.loyalty?.currentBalance || 0;
+  const currentBalance = modalData?.loyalty?.currentBalance ?? 0;
   const suggestedPoints = modalData?.loyalty?.suggestion?.suggestedPoints;
-  const hasLoyaltySuggestion =
-    modalData?.slip.status === "open" && suggestedPoints !== undefined;
 
   // Get financial data for display (in cents, convert to dollars)
+  // Derive computed values from server data + form state (React 19 pattern: no useEffect sync)
   const totalCashIn = modalData ? modalData.financial.totalCashIn / 100 : 0;
-  const totalChipsOut = modalData ? modalData.financial.totalChipsOut / 100 : 0;
-  const netPosition = modalData ? modalData.financial.netPosition / 100 : 0;
+
+  // Chips Taken from form is in dollars, server data is in cents
+  // computedChipsOut = server chips out + pending chips taken
+  const pendingChipsTaken = Number(formState.chipsTaken) || 0;
+  const computedChipsOut = modalData
+    ? (modalData.financial.totalChipsOut + pendingChipsTaken * 100) / 100
+    : 0;
+
+  // Net Position = Cash In - Chips Out (using computed chips out for reactivity)
+  const computedNetPosition = totalCashIn - computedChipsOut;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -292,6 +301,7 @@ export function RatingSlipModal({
           <FormSectionChipsTaken />
 
           {/* Financial Summary (if available from service layer) */}
+          {/* Uses computed values for reactive binding with Chips Taken input */}
           {modalData && (
             <div className="p-4 bg-card border border-border rounded-lg">
               <h3 className="text-sm font-semibold mb-3">Financial Summary</h3>
@@ -302,16 +312,20 @@ export function RatingSlipModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Chips Out:</span>
-                  <span className="font-mono">${totalChipsOut.toFixed(2)}</span>
+                  <span className="font-mono">
+                    ${computedChipsOut.toFixed(2)}
+                  </span>
                 </div>
                 <div className="flex justify-between pt-2 border-t">
                   <span className="font-semibold">Net Position:</span>
                   <span
                     className={`font-mono font-semibold ${
-                      netPosition >= 0 ? "text-green-600" : "text-red-600"
+                      computedNetPosition >= 0
+                        ? "text-green-600"
+                        : "text-red-600"
                     }`}
                   >
-                    ${netPosition.toFixed(2)}
+                    ${computedNetPosition.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -324,20 +338,41 @@ export function RatingSlipModal({
               <span className="text-sm text-muted-foreground">
                 Current Points Balance
               </span>
-              <span className="text-xl font-bold text-primary">
-                {currentBalance.toLocaleString()}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-bold text-primary">
+                  {currentBalance.toLocaleString()}
+                </span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  disabled={isFetching}
+                  onClick={() => {
+                    startTransition(async () => {
+                      await refetch();
+                    });
+                  }}
+                  aria-label="Refresh points balance"
+                >
+                  <RefreshCw
+                    className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+                  />
+                </Button>
+              </div>
             </div>
 
             {/* Session Reward Suggestion (for open slips) */}
-            {hasLoyaltySuggestion && (
+            {modalData?.slip.status === "open" && (
               <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-muted-foreground">
                     Session Reward Estimate
                   </span>
                   <span className="text-lg font-semibold text-green-600">
-                    +{suggestedPoints.toLocaleString()} pts
+                    {suggestedPoints != null
+                      ? `+${suggestedPoints.toLocaleString()} pts`
+                      : "--"}
                   </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">

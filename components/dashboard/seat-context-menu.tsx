@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 
-interface SeatOccupant {
+export interface SeatOccupant {
   firstName: string;
   lastName: string;
   slipId?: string;

@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useStartTimeField } from "@/hooks/ui";
+import { cn } from "@/lib/utils";
 
 /**
  * Calculates the time difference in minutes between two datetime strings.
@@ -25,12 +26,53 @@ function calculateTimeDifference(current: string, original: string): number {
   );
 }
 
+/**
+ * Get current datetime in datetime-local format (YYYY-MM-DDTHH:mm).
+ * Used for max attribute to prevent future times.
+ */
+function getCurrentDateTimeLocal(): string {
+  const now = new Date();
+  // Adjust for timezone offset to get local time in ISO format
+  const offsetMs = now.getTimezoneOffset() * 60 * 1000;
+  const localDate = new Date(now.getTime() - offsetMs);
+  return localDate.toISOString().slice(0, 16);
+}
+
+/**
+ * Validates the start time value.
+ * Returns null if valid, or an error message string if invalid.
+ */
+function validateStartTime(value: string): string | null {
+  if (!value) return null;
+
+  const selectedTime = new Date(value);
+  const now = new Date();
+
+  if (selectedTime > now) {
+    return "Start time cannot be in the future";
+  }
+
+  return null;
+}
+
+/**
+ * Start Time form section for Rating Slip Modal.
+ * Uses native datetime-local input for reliable cross-browser time entry.
+ *
+ * PRD-019: Removed broken +15m/-15m increment buttons that had timezone
+ * parsing issues causing incorrect time calculations.
+ *
+ * @returns Form section with datetime-local input and validation
+ */
 export function FormSectionStartTime() {
-  const { value, originalValue, updateField, resetField, adjustStartTime } =
-    useStartTimeField();
+  const { value, originalValue, updateField, resetField } = useStartTimeField();
 
   // Calculate time difference for display
   const totalChange = calculateTimeDifference(value, originalValue);
+
+  // Validation
+  const validationError = useMemo(() => validateStartTime(value), [value]);
+  const maxDateTime = useMemo(() => getCurrentDateTimeLocal(), []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateField("startTime", e.target.value);
@@ -38,10 +80,6 @@ export function FormSectionStartTime() {
 
   const handleReset = () => {
     resetField("startTime");
-  };
-
-  const handleAdjust = (action: "add" | "subtract", minutes: number) => {
-    adjustStartTime(action, minutes);
   };
 
   return (
@@ -54,21 +92,27 @@ export function FormSectionStartTime() {
           Reset
         </Button>
       </div>
-      <div className="flex items-center space-x-2 mt-1">
-        <Button onClick={() => handleAdjust("subtract", 15)} variant="outline">
-          -15m
-        </Button>
+      <div className="mt-1">
         <Input
           id="startTime"
           type="datetime-local"
           value={value}
           onChange={handleChange}
-          className="h-12 text-lg text-center"
+          max={maxDateTime}
+          className={cn(
+            "h-12 text-lg text-center w-full",
+            validationError &&
+              "border-destructive focus-visible:ring-destructive",
+          )}
+          aria-invalid={!!validationError}
+          aria-describedby={validationError ? "startTime-error" : undefined}
         />
-        <Button onClick={() => handleAdjust("add", 15)} variant="outline">
-          +15m
-        </Button>
       </div>
+      {validationError && (
+        <p id="startTime-error" className="text-sm mt-1 text-destructive">
+          {validationError}
+        </p>
+      )}
       <div className="text-sm mt-1 text-muted-foreground">
         Total Change: {totalChange > 0 ? "+" : ""}
         {totalChange} minutes

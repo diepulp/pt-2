@@ -18,6 +18,8 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import { useOptimistic } from "react";
+import { toast } from "sonner";
 
 import {
   RatingSlipModal,
@@ -51,9 +53,26 @@ import {
 
 import { ActiveSlipsPanel } from "./active-slips-panel";
 import { NewSlipModal } from "./new-slip-modal";
-import { getOccupiedSeats, mapSlipsToOccupants } from "./seat-context-menu";
+import {
+  getOccupiedSeats,
+  mapSlipsToOccupants,
+  type SeatOccupant,
+} from "./seat-context-menu";
 import { StatsBar } from "./stats-bar";
 import { TableGrid } from "./table-grid";
+
+/**
+ * Optimistic move action for seat updates.
+ * Applied immediately before mutation completes.
+ */
+interface OptimisticMoveAction {
+  type: "move";
+  fromSeatNumber: string;
+  toSeatNumber: string | null;
+  toTableId: string;
+  slipId: string;
+  occupant: SeatOccupant;
+}
 
 interface PitDashboardClientProps {
   /** Casino ID from server context */
@@ -183,20 +202,52 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     [activeSlips],
   );
 
-  // Get occupied seat numbers
-  const occupiedSeats = React.useMemo(
-    () => getOccupiedSeats(activeSlips),
-    [activeSlips],
+  // Optimistic seat updates using React 19 useOptimistic
+  // Applies pending move actions immediately for instant UI feedback
+  const [optimisticOccupants, applyOptimisticMove] = useOptimistic(
+    seatOccupants,
+    (
+      currentOccupants: Map<string, SeatOccupant>,
+      action: OptimisticMoveAction,
+    ) => {
+      // Create a new Map to avoid mutating the original
+      const updated = new Map(currentOccupants);
+
+      // If moving within the same table, update seat positions
+      if (action.toTableId === selectedTableId) {
+        // Remove from source seat
+        updated.delete(action.fromSeatNumber);
+
+        // Add to destination seat (if seated, not unseated)
+        if (action.toSeatNumber) {
+          updated.set(action.toSeatNumber, {
+            ...action.occupant,
+            slipId: undefined, // Will get new slip ID after mutation
+            slipStatus: "open",
+          });
+        }
+      } else {
+        // Moving to different table - just remove from current table
+        updated.delete(action.fromSeatNumber);
+      }
+
+      return updated;
+    },
   );
 
-  // Build seats array with occupancy data
+  // Get occupied seat numbers (from optimistic state)
+  const occupiedSeats = React.useMemo(() => {
+    return Array.from(optimisticOccupants.keys());
+  }, [optimisticOccupants]);
+
+  // Build seats array with optimistic occupancy data
   const seats = React.useMemo(() => {
     return Array.from({ length: 7 }, (_, i) => {
       const seatNumber = String(i + 1);
-      const occupant = seatOccupants.get(seatNumber);
+      const occupant = optimisticOccupants.get(seatNumber);
       return occupant ?? null;
     });
-  }, [seatOccupants]);
+  }, [optimisticOccupants]);
 
   // Modal callback: Save with optional buy-in
   const handleSave = async (formState: FormState) => {
@@ -222,7 +273,11 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
       });
+      // PRD-019 WS3: Show success toast and close modal after successful save
+      toast.success("Rating slip saved");
+      closeModal();
     } catch (error) {
+      // Modal stays open on error - error state passed via error prop to RatingSlipModal
       // Structured logging; mutation state handles UI feedback
       logError(error, { component: "PitDashboard", action: "saveWithBuyIn" });
     }
@@ -252,30 +307,61 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         chipsTaken: Number(formState.chipsTaken || 0),
         averageBet: Number(formState.averageBet),
       });
-      // Close modal after successful close
+      // PRD-019 WS3: Show success toast and close modal after successful close
+      toast.success("Session closed");
       closeModal();
     } catch (error) {
+      // Modal stays open on error - error state passed via error prop to RatingSlipModal
       logError(error, { component: "PitDashboard", action: "closeSession" });
     }
   };
 
   // Modal callback: Move player to different table/seat
+  // Uses React 19 useOptimistic for instant seat updates
   const handleMovePlayer = async (formState: FormState) => {
     if (!selectedSlipId) {
-      console.error("Move failed: No slip selected");
+      logError(new Error("Move failed: No slip selected"), {
+        component: "PitDashboard",
+        action: "movePlayer",
+      });
       return;
     }
 
+    // Get current occupant info for optimistic update
+    const currentSlip = activeSlips.find((s) => s.id === selectedSlipId);
+    const currentSeatNumber = currentSlip?.seat_number;
+
+    // Apply optimistic update immediately for instant UI feedback
+    if (currentSeatNumber) {
+      const currentOccupant = seatOccupants.get(currentSeatNumber);
+      if (currentOccupant) {
+        applyOptimisticMove({
+          type: "move",
+          fromSeatNumber: currentSeatNumber,
+          toSeatNumber: formState.newSeatNumber || null,
+          toTableId: formState.newTableId,
+          slipId: selectedSlipId,
+          occupant: currentOccupant,
+        });
+      }
+    }
+
     try {
-      const result = await movePlayer.mutateAsync({
+      await movePlayer.mutateAsync({
         currentSlipId: selectedSlipId,
         destinationTableId: formState.newTableId,
         destinationSeatNumber: formState.newSeatNumber || null,
         averageBet: Number(formState.averageBet),
       });
-      // Switch to new slip after successful move
-      setSelectedSlip(result.newSlipId);
+      // PRD-019 WS2: Do NOT auto-open the new slip modal
+      // User can manually click the destination seat to open the new slip
+      // PRD-019 WS3: Show success toast and close modal after successful move
+      toast.success("Player moved");
+      closeModal();
     } catch (error) {
+      // Modal stays open on error - error state passed via error prop to RatingSlipModal
+      // Optimistic update auto-reverts when mutation fails (useOptimistic behavior)
+      // TanStack Query rollback in use-move-player.ts handles cache rollback
       logError(error, { component: "PitDashboard", action: "movePlayer" });
     }
   };
@@ -433,7 +519,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         />
       )}
 
-      {/* Rating Slip Modal */}
+      {/* Rating Slip Modal - uses useTransition internally for pending states */}
       <RatingSlipModal
         slipId={selectedSlipId}
         isOpen={isModalOpen && modalType === "rating-slip"}
@@ -441,9 +527,6 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         onSave={handleSave}
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
-        isSaving={saveWithBuyIn.isPending}
-        isClosing={closeWithFinancial.isPending}
-        isMoving={movePlayer.isPending}
         error={
           saveWithBuyIn.error?.message ||
           closeWithFinancial.error?.message ||

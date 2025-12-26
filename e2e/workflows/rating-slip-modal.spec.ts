@@ -489,3 +489,359 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     }
   });
 });
+
+/**
+ * PRD-019: Rating Slip Modal UX Refinements Tests
+ *
+ * Tests for the 5 UX defect fixes:
+ * 1. Move player - optimistic seat updates, no auto-open
+ * 2. Save changes - modal closes on success
+ * 3. Points refresh - refetch button works
+ * 4. Financial reactivity - chips taken updates summary
+ * 5. Start time picker - no broken increment buttons
+ *
+ * @see PRD-019 Rating Slip Modal UX Refinements
+ * @see EXECUTION-SPEC-PRD-019.md
+ */
+test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
+  let scenario: RatingSlipTestScenario;
+
+  test.beforeAll(async () => {
+    scenario = await createRatingSlipTestScenario();
+  });
+
+  test.afterAll(async () => {
+    if (scenario) {
+      await scenario.cleanup();
+    }
+  });
+
+  /**
+   * Helper: Authenticate via browser
+   */
+  async function authenticateUser(page: Page) {
+    await page.goto("/auth/login");
+    await page.fill('input[name="email"]', scenario.testEmail);
+    await page.fill('input[name="password"]', scenario.testPassword);
+    await page.click('button[type="submit"]');
+    await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
+  }
+
+  /**
+   * Test 1: Move player shows optimistic seat update, no modal auto-open
+   *
+   * PRD-019 WS1 & WS2:
+   * - Seat changes visible immediately (optimistic update)
+   * - New slip modal does NOT auto-open
+   * - Success toast displayed
+   */
+  test("move player updates seat optimistically without auto-opening new slip modal", async ({
+    page,
+  }) => {
+    // Create a fresh scenario for this test
+    const moveScenario = await createRatingSlipTestScenario();
+
+    try {
+      // Authenticate
+      await page.goto("/auth/login");
+      await page.fill('input[name="email"]', moveScenario.testEmail);
+      await page.fill('input[name="password"]', moveScenario.testPassword);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
+
+      // Navigate to pit dashboard
+      await page.goto("/pit");
+      await page.waitForSelector('[data-testid="table-grid"]', {
+        timeout: 10000,
+      });
+
+      // Click on occupied seat to open modal
+      const seat = page.locator(
+        `[data-seat-number="${moveScenario.seatNumber}"]`,
+      );
+      await seat.click();
+
+      // Wait for modal to open
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      // Select destination table
+      const tableSelect = modal.locator('[data-testid="move-table-select"]');
+      await tableSelect.click();
+      const tableOption = page.locator(
+        `[data-table-option="${moveScenario.secondaryTableId}"]`,
+      );
+      await tableOption.click();
+
+      // Enter destination seat
+      const seatInput = modal.locator('[data-testid="move-seat-input"]');
+      await seatInput.fill("3");
+
+      // Click Move Player
+      const moveButton = modal.locator('button:has-text("Move Player")');
+      await moveButton.click();
+
+      // Wait for success toast (PRD-019 WS3: toast on success)
+      const toast = page.locator('text="Player moved"');
+      await expect(toast).toBeVisible({ timeout: 5000 });
+
+      // Verify modal CLOSES (PRD-019 WS2: no auto-open of new slip)
+      await expect(modal).not.toBeVisible({ timeout: 5000 });
+
+      // Verify original seat is now empty (optimistic update)
+      const originalSeat = page.locator(
+        `[data-seat-number="${moveScenario.seatNumber}"]`,
+      );
+      await expect(originalSeat).not.toHaveAttribute("data-occupied", "true");
+
+      // User can manually click destination seat to open new slip
+      // (Not verifying this as it would require navigating to different table)
+    } finally {
+      await moveScenario.cleanup();
+    }
+  });
+
+  /**
+   * Test 2: Save changes closes modal with success toast
+   *
+   * PRD-019 WS3:
+   * - Modal closes on successful save
+   * - Success toast displayed
+   * - Modal stays open on error
+   */
+  test("save changes closes modal and shows success toast", async ({
+    page,
+  }) => {
+    // Create fresh scenario
+    const saveScenario = await createRatingSlipTestScenario();
+
+    try {
+      // Authenticate
+      await page.goto("/auth/login");
+      await page.fill('input[name="email"]', saveScenario.testEmail);
+      await page.fill('input[name="password"]', saveScenario.testPassword);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
+
+      // Navigate to pit and open modal
+      await page.goto("/pit");
+      await page.waitForSelector('[data-testid="table-grid"]', {
+        timeout: 10000,
+      });
+
+      const seat = page.locator(
+        `[data-seat-number="${saveScenario.seatNumber}"]`,
+      );
+      await seat.click();
+
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      // Make a change (increment average bet)
+      const incrementButton = modal.locator(
+        '[data-testid="average-bet-increment-25"]',
+      );
+      if (await incrementButton.isVisible()) {
+        await incrementButton.click();
+      }
+
+      // Click Save Changes
+      const saveButton = modal.locator('button:has-text("Save Changes")');
+      await saveButton.click();
+
+      // Wait for success toast
+      const toast = page.locator('text="Rating slip saved"');
+      await expect(toast).toBeVisible({ timeout: 5000 });
+
+      // Verify modal closes
+      await expect(modal).not.toBeVisible({ timeout: 5000 });
+    } finally {
+      await saveScenario.cleanup();
+    }
+  });
+
+  /**
+   * Test 3: Points refresh button fetches current balance
+   *
+   * PRD-019 WS4:
+   * - Refresh button visible next to points
+   * - Loading spinner appears during fetch
+   * - Balance updates after refresh
+   */
+  test("points refresh button triggers data refetch", async ({ page }) => {
+    // Authenticate
+    await authenticateUser(page);
+
+    // Navigate to pit and open modal
+    await page.goto("/pit");
+    await page.waitForSelector('[data-testid="table-grid"]', {
+      timeout: 10000,
+    });
+
+    const seat = page.locator(`[data-seat-number="${scenario.seatNumber}"]`);
+    await seat.click();
+
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Find refresh button (aria-label="Refresh points balance")
+    const refreshButton = modal.locator(
+      'button[aria-label="Refresh points balance"]',
+    );
+    await expect(refreshButton).toBeVisible();
+
+    // Click refresh
+    await refreshButton.click();
+
+    // Verify loading state (RefreshCw icon should have animate-spin class)
+    const spinningIcon = refreshButton.locator("svg.animate-spin");
+    await expect(spinningIcon).toBeVisible({ timeout: 1000 });
+
+    // Wait for loading to complete
+    await expect(spinningIcon).not.toBeVisible({ timeout: 5000 });
+
+    // Points balance should still be displayed (value may vary)
+    const pointsDisplay = modal.locator("text=/\\d+/").first();
+    await expect(pointsDisplay).toBeVisible();
+  });
+
+  /**
+   * Test 4: Chips taken input reactively updates financial summary
+   *
+   * PRD-019 WS5:
+   * - Entering chips taken immediately updates Chips Out
+   * - Net Position recalculates
+   * - No save required for display update
+   */
+  test("chips taken input reactively updates financial summary", async ({
+    page,
+  }) => {
+    // Create scenario with known financial state
+    const financialScenario = await createRatingSlipTestScenario();
+
+    try {
+      // Add initial cash-in transaction
+      await createTestTransaction(
+        financialScenario.casinoId,
+        financialScenario.visitId,
+        financialScenario.playerId,
+        financialScenario.staffId,
+        "in",
+        10000, // $100.00
+        "cash",
+      );
+
+      // Authenticate
+      await page.goto("/auth/login");
+      await page.fill('input[name="email"]', financialScenario.testEmail);
+      await page.fill('input[name="password"]', financialScenario.testPassword);
+      await page.click('button[type="submit"]');
+      await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
+
+      // Navigate to pit and open modal
+      await page.goto("/pit");
+      await page.waitForSelector('[data-testid="table-grid"]', {
+        timeout: 10000,
+      });
+
+      const seat = page.locator(
+        `[data-seat-number="${financialScenario.seatNumber}"]`,
+      );
+      await seat.click();
+
+      const modal = page.locator('[role="dialog"]');
+      await expect(modal).toBeVisible({ timeout: 5000 });
+
+      // Note initial Chips Out value (should be $0.00)
+      const chipsOutDisplay = modal.locator(
+        '[data-testid="financial-summary"] >> text=/Chips Out.*\\$[\\d.]+/',
+      );
+      await expect(chipsOutDisplay).toContainText("$0.00");
+
+      // Enter chips taken value ($50)
+      const chipsTakenInput = modal.locator(
+        '[data-testid="chips-taken-input"]',
+      );
+      await chipsTakenInput.fill("50");
+
+      // Wait a moment for reactive update
+      await page.waitForTimeout(100);
+
+      // Verify Chips Out updated immediately (should now show $50.00)
+      await expect(chipsOutDisplay).toContainText("$50.00");
+
+      // Verify Net Position recalculated
+      // Net = Cash In ($100) - Chips Out ($50) = $50.00
+      const netPositionDisplay = modal.locator(
+        '[data-testid="financial-summary"] >> text=/Net Position.*\\$[\\d.]+/',
+      );
+      await expect(netPositionDisplay).toContainText("$50.00");
+    } finally {
+      await financialScenario.cleanup();
+    }
+  });
+
+  /**
+   * Test 5: Start time picker - no broken increment buttons
+   *
+   * PRD-019 WS6:
+   * - No +15m/-15m buttons exist (removed)
+   * - Datetime-local input works for direct entry
+   * - Total Change displays minutes difference
+   * - Future time shows validation error
+   */
+  test("start time uses datetime picker without broken increment buttons", async ({
+    page,
+  }) => {
+    // Authenticate
+    await authenticateUser(page);
+
+    // Navigate to pit and open modal
+    await page.goto("/pit");
+    await page.waitForSelector('[data-testid="table-grid"]', {
+      timeout: 10000,
+    });
+
+    const seat = page.locator(`[data-seat-number="${scenario.seatNumber}"]`);
+    await seat.click();
+
+    const modal = page.locator('[role="dialog"]');
+    await expect(modal).toBeVisible({ timeout: 5000 });
+
+    // Verify NO +15m/-15m buttons exist (PRD-019 WS6: removed broken buttons)
+    const plus15Button = modal.locator('button:has-text("+15m")');
+    const minus15Button = modal.locator('button:has-text("-15m")');
+    await expect(plus15Button).not.toBeVisible();
+    await expect(minus15Button).not.toBeVisible();
+
+    // Verify datetime-local input exists and works
+    const startTimeInput = modal.locator(
+      'input#startTime[type="datetime-local"]',
+    );
+    await expect(startTimeInput).toBeVisible();
+
+    // Get current value
+    const currentValue = await startTimeInput.inputValue();
+    expect(currentValue).toBeTruthy();
+
+    // Verify "Total Change" display exists
+    const totalChangeDisplay = modal.locator("text=/Total Change.*minutes/");
+    await expect(totalChangeDisplay).toBeVisible();
+
+    // Try setting a future time - should show validation error
+    const futureDate = new Date();
+    futureDate.setHours(futureDate.getHours() + 2);
+    const futureValue = futureDate.toISOString().slice(0, 16);
+
+    await startTimeInput.fill(futureValue);
+
+    // Verify validation error appears
+    const validationError = modal.locator(
+      'text="Start time cannot be in the future"',
+    );
+    await expect(validationError).toBeVisible({ timeout: 2000 });
+
+    // Input should have error styling (border-destructive class)
+    await expect(startTimeInput).toHaveClass(/border-destructive/);
+  });
+});
