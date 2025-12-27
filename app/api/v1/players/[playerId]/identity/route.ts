@@ -11,24 +11,24 @@
  * Upsert is idempotent - updating identity replaces existing record.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { PlayerIdentityInput } from "@/services/player/dtos";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { PlayerIdentityInput } from '@/services/player/dtos';
 import {
   getIdentityByPlayerId,
   upsertIdentity,
-} from "@/services/player/identity";
-import { playerRouteParamsSchema } from "@/services/player/schemas";
+} from '@/services/player/identity';
+import { playerRouteParamsSchema } from '@/services/player/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ playerId: string }> };
@@ -57,22 +57,20 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        // Get staff info for actor_id and casino_id
-        const { data: staffData, error: staffError } = await mwCtx.supabase
-          .from("staff")
-          .select("id, casino_id")
-          .limit(1)
-          .single();
-
-        if (staffError || !staffData?.casino_id || !staffData.id) {
+        // Use RLS context for actor_id and casino_id (populated by withAuth middleware)
+        // ISSUE-2875ACCF Fix: Using rlsContext ensures created_by matches app.actor_id
+        // which is required by the player_identity INSERT RLS policy (INV-9 actor binding)
+        if (!mwCtx.rlsContext) {
           throw new DomainError(
-            "UNAUTHORIZED",
-            "Unable to determine casino context or staff identity",
+            'UNAUTHORIZED',
+            'Unable to determine casino context or staff identity',
             {
               httpStatus: 401,
             },
           );
         }
+
+        const { actorId, casinoId } = mwCtx.rlsContext;
 
         // Check if identity already exists
         const existingIdentity = await getIdentityByPlayerId(
@@ -83,15 +81,15 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         // Upsert identity using service layer
         const identity = await upsertIdentity(
           mwCtx.supabase,
-          staffData.casino_id,
+          casinoId,
           params.playerId,
           body,
-          staffData.id,
+          actorId,
         );
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: identity,
           isNew: !existingIdentity,
           requestId: mwCtx.correlationId,
@@ -100,8 +98,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "player",
-        action: "upsert-identity",
+        domain: 'player',
+        action: 'upsert-identity',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -114,7 +112,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
     // Return 201 for new identity, 200 for existing
     const status = (result as { isNew?: boolean }).isNew ? 201 : 200;
-    return successResponse(ctx, result.data, "OK", status);
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }
@@ -145,7 +143,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         );
 
         if (!identity) {
-          throw new DomainError("PLAYER_NOT_FOUND", "Identity not found", {
+          throw new DomainError('PLAYER_NOT_FOUND', 'Identity not found', {
             httpStatus: 404,
             details: { playerId: params.playerId },
           });
@@ -153,7 +151,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: identity,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -161,8 +159,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "player",
-        action: "get-identity",
+        domain: 'player',
+        action: 'get-identity',
         correlationId: ctx.requestId,
       },
     );
@@ -171,7 +169,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       return errorResponse(ctx, result);
     }
 
-    return successResponse(ctx, result.data, "OK");
+    return successResponse(ctx, result.data, 'OK');
   } catch (error) {
     return errorResponse(ctx, error);
   }
