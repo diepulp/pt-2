@@ -45,3 +45,38 @@ guardrails:
 - lib/context/ (6 modules, ~2,200 lines): session.py, models.py, builder.py, compaction.py, hooks.py, handoff.py
 - lib/memori/ (2 new modules, ~1,000 lines): retrieval.py, pipeline.py
 - Migration: supabase/migrations/20251125141315_context_session_layer.sql
+
+## Performance Patterns (2025-12-26)
+
+### GOV-PAT-003: BFF RPC Aggregation Pattern
+
+**Status:** Validated (PRD-018)
+
+**Problem:** API endpoints aggregating data from multiple bounded contexts suffer from:
+- Multiple database round trips (6+ queries)
+- Network latency multiplication
+- Connection pool pressure
+
+**Solution:** Single PostgreSQL RPC function that:
+1. Performs all JOINs server-side
+2. Returns complete DTO as JSONB
+3. Uses SECURITY INVOKER (inherits RLS)
+
+**When to Apply:**
+- High-frequency endpoint (>100x/day)
+- Cross-context aggregation (3+ bounded contexts)
+- Stable schema, read-only operation
+- Latency > 300ms despite parallelization
+
+**Reference Implementation:**
+- Migration: `supabase/migrations/20251226123939_prd018_modal_bff_rpc.sql`
+- Service: `services/rating-slip-modal/rpc.ts`
+- Pattern doc: `docs/70-governance/patterns/performance/GOV-PAT-003-bff-rpc-aggregation.md`
+
+**Results:** 69% latency reduction (755ms → 237ms)
+
+**Key Points:**
+- Always use SECURITY INVOKER (not DEFINER)
+- Always validate casino_id (defense-in-depth)
+- Always use type guard for JSONB response
+- Always use feature flag for staged rollout
