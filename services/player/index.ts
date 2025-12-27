@@ -16,6 +16,7 @@ import type { Database } from "@/types/database.types";
 import * as crud from "./crud";
 import type {
   CreatePlayerDTO,
+  CreatePlayerWithContextDTO,
   PlayerDTO,
   PlayerEnrollmentDTO,
   PlayerListFilters,
@@ -57,8 +58,13 @@ export interface PlayerServiceInterface {
 
   /**
    * Create a new player profile.
+   *
+   * Uses SECURITY DEFINER RPC for ADR-015 compliance.
+   * Requires casino_id and actor_id from RLS context.
+   *
+   * @see ISSUE-EC10252F - RLS Policy Violation Fix
    */
-  create(data: CreatePlayerDTO): Promise<PlayerDTO>;
+  create(data: CreatePlayerWithContextDTO): Promise<PlayerDTO>;
 
   /**
    * Update player profile.

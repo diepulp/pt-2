@@ -399,8 +399,13 @@ export async function listForTable(
     .limit(limit + 1);
 
   // Apply status filter
+  // PRD-020: 'active' is alias for open+paused
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    if (filters.status === "active") {
+      query = query.in("status", ["open", "paused"]);
+    } else {
+      query = query.eq("status", filters.status);
+    }
   }
 
   // Apply cursor for pagination
@@ -528,8 +533,13 @@ export async function listAll(
     .limit(limit + 1);
 
   // Apply status filter
+  // PRD-020: 'active' is alias for open+paused
   if (filters.status) {
-    query = query.eq("status", filters.status);
+    if (filters.status === "active") {
+      query = query.in("status", ["open", "paused"]);
+    } else {
+      query = query.eq("status", filters.status);
+    }
   }
 
   // Apply cursor for pagination

@@ -197,6 +197,7 @@ export interface MovePlayerInput {
 
 /**
  * Response from move player operation.
+ * PRD-020: Enhanced response with seat state arrays for cache optimization.
  */
 
 export interface MovePlayerResponse {
@@ -204,4 +205,29 @@ export interface MovePlayerResponse {
   newSlipId: string;
   /** UUID of the closed slip (original) */
   closedSlipId: string;
+  /** UUID linking all slips in the move chain */
+  moveGroupId: string;
+  /** Total seconds played across all moves */
+  accumulatedSeconds: number;
+  /** UUID of the source table */
+  sourceTableId: string;
+  /** Occupied seat numbers at source table after move */
+  sourceTableSeats: string[];
+  /** Occupied seat numbers at destination table after move */
+  destinationTableSeats: string[];
+  /** Summary of the new slip for immediate UI update */
+  newSlip: NewSlipSummaryDTO;
+}
+
+/**
+ * Lightweight summary of new slip for immediate UI update.
+ * PRD-020: Eliminates need for post-move refetch.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response section
+export interface NewSlipSummaryDTO {
+  id: string;
+  tableId: string;
+  seatNumber: string | null;
+  status: RatingSlipStatus;
+  startTime: string;
 }

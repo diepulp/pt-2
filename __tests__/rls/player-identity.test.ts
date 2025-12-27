@@ -18,9 +18,9 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '../../types/database.types';
 import { injectRLSContext } from '../../lib/supabase/rls-context';
 import type { RLSContext } from '../../lib/supabase/rls-context';
+import type { Database } from '../../types/database.types';
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -250,10 +250,22 @@ describe('player-identity RLS Policies (ADR-022)', () => {
 
   afterAll(async () => {
     // Cleanup test data
-    await serviceClient.from('player_identity').delete().eq('casino_id', casino1Id);
-    await serviceClient.from('player_identity').delete().eq('casino_id', casino2Id);
-    await serviceClient.from('player_casino').delete().eq('casino_id', casino1Id);
-    await serviceClient.from('player_casino').delete().eq('casino_id', casino2Id);
+    await serviceClient
+      .from('player_identity')
+      .delete()
+      .eq('casino_id', casino1Id);
+    await serviceClient
+      .from('player_identity')
+      .delete()
+      .eq('casino_id', casino2Id);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casino1Id);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casino2Id);
     await serviceClient.from('player').delete().eq('id', player1Id);
     await serviceClient.from('player').delete().eq('id', player2Id);
     await serviceClient.from('staff').delete().eq('casino_id', casino1Id);
@@ -342,13 +354,11 @@ describe('player-identity RLS Policies (ADR-022)', () => {
     });
 
     it('cashier CANNOT write player_identity', async () => {
-      const { error } = await cashierClient1
-        .from('player_identity')
-        .insert({
-          casino_id: casino1Id,
-          player_id: player1Id,
-          created_by: cashier1Id,
-        });
+      const { error } = await cashierClient1.from('player_identity').insert({
+        casino_id: casino1Id,
+        player_id: player1Id,
+        created_by: cashier1Id,
+      });
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('42501'); // RLS policy violation
@@ -366,13 +376,11 @@ describe('player-identity RLS Policies (ADR-022)', () => {
     });
 
     it('dealer CANNOT write player_identity', async () => {
-      const { error } = await dealerClient1
-        .from('player_identity')
-        .insert({
-          casino_id: casino1Id,
-          player_id: player1Id,
-          created_by: dealer1Id,
-        });
+      const { error } = await dealerClient1.from('player_identity').insert({
+        casino_id: casino1Id,
+        player_id: player1Id,
+        created_by: dealer1Id,
+      });
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('42501'); // RLS policy violation
@@ -381,13 +389,11 @@ describe('player-identity RLS Policies (ADR-022)', () => {
 
   describe('B2. Actor Binding (INV-9, DOD-022)', () => {
     it('created_by must match current actor', async () => {
-      const { error } = await pitBossClient1
-        .from('player_identity')
-        .insert({
-          casino_id: casino1Id,
-          player_id: player1Id,
-          created_by: admin1Id, // Spoofed actor
-        });
+      const { error } = await pitBossClient1.from('player_identity').insert({
+        casino_id: casino1Id,
+        player_id: player1Id,
+        created_by: admin1Id, // Spoofed actor
+      });
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('42501'); // RLS WITH CHECK violation
@@ -401,14 +407,12 @@ describe('player-identity RLS Policies (ADR-022)', () => {
         .select('id')
         .single();
 
-      const { error } = await pitBossClient1
-        .from('player_casino')
-        .insert({
-          player_id: newPlayer!.id,
-          casino_id: casino1Id,
-          status: 'active',
-          enrolled_by: admin1Id, // Spoofed actor
-        });
+      const { error } = await pitBossClient1.from('player_casino').insert({
+        player_id: newPlayer!.id,
+        casino_id: casino1Id,
+        status: 'active',
+        enrolled_by: admin1Id, // Spoofed actor
+      });
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('42501'); // RLS WITH CHECK violation
@@ -457,13 +461,11 @@ describe('player-identity RLS Policies (ADR-022)', () => {
     });
 
     it('cannot write to other casino', async () => {
-      const { error } = await pitBossClient1
-        .from('player_identity')
-        .insert({
-          casino_id: casino2Id, // Different casino
-          player_id: player2Id,
-          created_by: pitBoss1Id,
-        });
+      const { error } = await pitBossClient1.from('player_identity').insert({
+        casino_id: casino2Id, // Different casino
+        player_id: player2Id,
+        created_by: pitBoss1Id,
+      });
 
       expect(error).toBeDefined();
       expect(error?.code).toBe('42501'); // RLS violation
@@ -564,7 +566,10 @@ describe('player-identity RLS Policies (ADR-022)', () => {
 
     it('hybrid policies use JWT fallback', async () => {
       // Even without explicit context injection, JWT claims should work
-      const bareClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+      const bareClient = createClient<Database>(
+        supabaseUrl,
+        supabaseServiceKey,
+      );
 
       // Set JWT claims in app_metadata
       await serviceClient.auth.admin.updateUserById(user1Id, {

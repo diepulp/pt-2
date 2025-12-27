@@ -111,10 +111,13 @@ describe('RPC Security - Cross-Casino Isolation', () => {
     expect(result.slip.id).toBe(SLIP_ID);
 
     // Verify correct parameters passed
-    expect(supabase.rpc).toHaveBeenCalledWith('rpc_get_rating_slip_modal_data', {
-      p_slip_id: SLIP_ID,
-      p_casino_id: CASINO_A_ID,
-    });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'rpc_get_rating_slip_modal_data',
+      {
+        p_slip_id: SLIP_ID,
+        p_casino_id: CASINO_A_ID,
+      },
+    );
   });
 
   it('does NOT silently filter cross-casino data - throws explicit error', async () => {
@@ -139,7 +142,8 @@ describe('RPC Security - Cross-Casino Isolation', () => {
     // Even if RLS policies were misconfigured, the RPC function validates casino_id
     const supabase = createMockSupabaseWithRpc(null, {
       code: 'P0001',
-      message: 'CASINO_MISMATCH: Caller provided casino-evil but context is casino-good',
+      message:
+        'CASINO_MISMATCH: Caller provided casino-evil but context is casino-good',
     });
 
     await expect(
@@ -283,7 +287,8 @@ describe('RPC Security - Defense-in-Depth Casino Validation', () => {
     // RPC function validates and rejects before executing JOINs
     const supabase = createMockSupabaseWithRpc(null, {
       code: 'P0001',
-      message: 'CASINO_MISMATCH: Caller provided wrong-casino but context is correct-casino',
+      message:
+        'CASINO_MISMATCH: Caller provided wrong-casino but context is correct-casino',
     });
 
     await expect(
@@ -324,7 +329,9 @@ describe('RPC Security - Error Message Security', () => {
       const domainError = error as DomainError;
 
       // Verify error message is generic and doesn't expose internal IDs
-      expect(domainError.message).toBe('Casino context mismatch - access denied');
+      expect(domainError.message).toBe(
+        'Casino context mismatch - access denied',
+      );
 
       // Sensitive details are in details object (not exposed to UI)
       expect(domainError.details).toMatchObject({
@@ -410,7 +417,8 @@ describe('RPC Security - Multi-Tenant Scenarios', () => {
     // Attacker tries to manipulate casino_id parameter to access other tenant's data
     const supabase = createMockSupabaseWithRpc(null, {
       code: 'P0001',
-      message: 'CASINO_MISMATCH: Caller provided attacker-casino but context is victim-casino',
+      message:
+        'CASINO_MISMATCH: Caller provided attacker-casino but context is victim-casino',
     });
 
     await expect(

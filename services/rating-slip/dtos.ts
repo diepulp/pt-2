@@ -185,16 +185,23 @@ export interface MoveRatingSlipResult {
 // === Filter Types ===
 
 /**
+ * Status filter values for rating slip list queries.
+ * PRD-020: Includes 'active' alias for open+paused slips.
+ */
+export type RatingSlipQueryStatus = RatingSlipStatus | "active"; // PRD-020: Alias for open+paused
+
+/**
  * Filters for rating slip list queries.
  * All filters are optional; omit for unfiltered list.
+ * PRD-020: status accepts 'active' which expands to open+paused.
  */
 export type RatingSlipListFilters = {
   /** Filter by gaming table */
   table_id?: string;
   /** Filter by visit */
   visit_id?: string;
-  /** Filter by slip status */
-  status?: RatingSlipStatus;
+  /** Filter by slip status. PRD-020: 'active' = open+paused */
+  status?: RatingSlipQueryStatus;
   /** Results per page (default 20) */
   limit?: number;
   /** Cursor for pagination (slip ID) */

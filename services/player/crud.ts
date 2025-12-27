@@ -17,6 +17,7 @@ import type { Database } from "@/types/database.types";
 
 import type {
   CreatePlayerDTO,
+  CreatePlayerWithContextDTO,
   PlayerDTO,
   PlayerEnrollmentDTO,
   PlayerListFilters,
@@ -120,23 +121,60 @@ export async function listPlayers(
 
 /**
  * Create a new player profile.
+ *
+ * Uses rpc_create_player SECURITY DEFINER function to bypass transaction
+ * isolation issues with connection pooling (ADR-015 Pattern A).
+ *
+ * @param supabase - Supabase client
+ * @param input - Player data with RLS context (casino_id, actor_id required)
+ * @returns Created player DTO
+ * @throws DomainError on validation or authorization failure
+ *
+ * @see ISSUE-EC10252F - RLS Policy Violation Fix
+ * @see ADR-015 Pattern A (SECURITY DEFINER RPCs)
  */
 export async function createPlayer(
   supabase: SupabaseClient<Database>,
-  input: CreatePlayerDTO,
+  input: CreatePlayerWithContextDTO,
 ): Promise<PlayerDTO> {
-  const { data, error } = await supabase
-    .from("player")
-    .insert({
-      first_name: input.first_name,
-      last_name: input.last_name,
-      birth_date: input.birth_date ?? null,
-    })
-    .select(PLAYER_SELECT)
-    .single();
+  // Use RPC for transaction-safe creation with RLS context
+  const { data, error } = await supabase.rpc("rpc_create_player", {
+    p_casino_id: input.casino_id,
+    p_actor_id: input.actor_id,
+    p_first_name: input.first_name,
+    p_last_name: input.last_name,
+    p_birth_date: input.birth_date ?? undefined,
+  });
 
-  if (error) throw mapDatabaseError(error);
-  return toPlayerDTO(data);
+  if (error) {
+    // Map RPC-specific error codes
+    if (error.message?.includes("Unauthorized")) {
+      throw new DomainError("FORBIDDEN", error.message);
+    }
+    if (error.message?.includes("Actor not found")) {
+      throw new DomainError("FORBIDDEN", "Invalid staff context");
+    }
+    throw mapDatabaseError(error);
+  }
+
+  // RPC returns JSONB with camelCase keys, map to PlayerDTO
+  // Note: player table has created_at but not updated_at
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC JSONB response needs type mapping
+  const rpcResult = data as {
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthDate: string | null;
+    createdAt: string;
+  };
+
+  return {
+    id: rpcResult.id,
+    first_name: rpcResult.firstName,
+    last_name: rpcResult.lastName,
+    birth_date: rpcResult.birthDate,
+    created_at: rpcResult.createdAt,
+  };
 }
 
 /**

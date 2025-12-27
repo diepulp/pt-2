@@ -21,11 +21,13 @@ service: PrimaryServiceName
 mvp_phase: 1  # 0=Horizontal, 1=Core, 2=Session, 3=Rewards
 
 # Workstream Definitions
+# Executor Types: "skill" (Skill tool) or "task-agent" (Task tool with subagent_type)
 workstreams:
   WS1:
     name: Database Layer
     description: Migration, RLS policies, type generation
-    agent: backend-developer          # subagent_type for Task tool
+    executor: backend-service-builder  # Skill name
+    executor_type: skill
     depends_on: []
     outputs:
       - supabase/migrations/YYYYMMDDHHMMSS_description.sql
@@ -37,7 +39,8 @@ workstreams:
   WS2:
     name: Service Layer
     description: Service factory, keys, HTTP fetchers
-    agent: backend-developer          # subagent_type for Task tool
+    executor: backend-service-builder  # Skill name
+    executor_type: skill
     depends_on: [WS1]
     outputs:
       - services/{domain}/index.ts
@@ -50,7 +53,8 @@ workstreams:
   WS3:
     name: Route Handlers
     description: API routes with withServerAction middleware
-    agent: api-expert                 # subagent_type for Task tool
+    executor: api-builder              # Skill name
+    executor_type: skill
     depends_on: [WS2]
     outputs:
       - app/api/v1/{domain}/route.ts
@@ -61,7 +65,8 @@ workstreams:
   WS4:
     name: React Query Hooks
     description: Query and mutation hooks for client consumption
-    agent: backend-developer          # subagent_type for Task tool
+    executor: typescript-pro           # Task agent subagent_type
+    executor_type: task-agent
     depends_on: [WS2, WS3]
     outputs:
       - hooks/{domain}/index.ts
@@ -73,7 +78,8 @@ workstreams:
   WS5:
     name: Tests
     description: Unit and integration tests
-    agent: backend-developer          # subagent_type for Task tool
+    executor: typescript-pro           # Task agent subagent_type
+    executor_type: task-agent
     depends_on: [WS2, WS3, WS4]
     outputs:
       - services/{domain}/*.test.ts
@@ -245,7 +251,8 @@ Reference relevant SRM sections, ADRs, or architectural decisions.
 |-------|------|-------------|
 | `name` | string | Workstream display name |
 | `description` | string | Brief description |
-| `agent` | string | Capability agent to delegate to |
+| `executor` | string | Executor name (skill name or Task agent subagent_type) |
+| `executor_type` | string | "skill" or "task-agent" |
 | `depends_on` | array | Workstream IDs that must complete first |
 | `outputs` | array | Expected file outputs (glob patterns OK) |
 | `gate` | string | Validation gate to run after completion |
@@ -268,7 +275,7 @@ Reference relevant SRM sections, ADRs, or architectural decisions.
 
 ---
 
-## Example: PRD-003 (Player/Visit)
+## Example: PRD-003 (Player/Visit) - Backend Focus
 
 ```yaml
 ---
@@ -280,7 +287,8 @@ mvp_phase: 1
 workstreams:
   WS1:
     name: Database Layer
-    agent: backend-developer
+    executor: backend-service-builder
+    executor_type: skill
     depends_on: []
     outputs:
       - supabase/migrations/20251130_player_visit.sql
@@ -290,7 +298,8 @@ workstreams:
 
   WS2:
     name: PlayerService
-    agent: backend-developer
+    executor: backend-service-builder
+    executor_type: skill
     depends_on: [WS1]
     outputs:
       - services/player/index.ts
@@ -299,7 +308,8 @@ workstreams:
 
   WS3:
     name: VisitService
-    agent: backend-developer
+    executor: backend-service-builder
+    executor_type: skill
     depends_on: [WS1]
     outputs:
       - services/visit/index.ts
@@ -308,7 +318,8 @@ workstreams:
 
   WS4:
     name: Player Routes
-    agent: api-expert
+    executor: api-builder
+    executor_type: skill
     depends_on: [WS2]
     outputs:
       - app/api/v1/players/route.ts
@@ -317,7 +328,8 @@ workstreams:
 
   WS5:
     name: Visit Routes
-    agent: api-expert
+    executor: api-builder
+    executor_type: skill
     depends_on: [WS3]
     outputs:
       - app/api/v1/visits/route.ts
@@ -326,7 +338,8 @@ workstreams:
 
   WS6:
     name: Tests
-    agent: backend-developer
+    executor: typescript-pro
+    executor_type: task-agent
     depends_on: [WS2, WS3, WS4, WS5]
     outputs:
       - services/player/*.test.ts
@@ -351,3 +364,151 @@ execution_phases:
     gates: [test-pass]
 ---
 ```
+
+---
+
+## Example: ZUSTAND-RSM (Frontend Focus) - Zustand Integration
+
+This example shows the correct executor assignments for frontend-focused PRDs involving
+Zustand stores, React 19 hooks, and component refactoring.
+
+```yaml
+---
+prd: ZUSTAND-RSM
+prd_title: "Rating Slip Modal Zustand Integration"
+service: RatingSlipModalStore
+mvp_phase: 2
+
+workstreams:
+  WS1:
+    name: Zustand Store & Exports
+    description: Create rating-slip-modal-store.ts with devtools middleware
+    executor: typescript-pro           # Pure TypeScript store definition
+    executor_type: task-agent
+    depends_on: []
+    outputs:
+      - store/rating-slip-modal-store.ts
+      - store/index.ts
+    gate: type-check
+    estimated_complexity: medium
+
+  WS2:
+    name: Selector Hooks
+    description: Create field-specific selector hooks with useShallow
+    executor: frontend-design-pt-2     # React 19 hook patterns, useShallow
+    executor_type: skill
+    depends_on: [WS1]
+    outputs:
+      - hooks/ui/use-rating-slip-modal.ts
+      - hooks/ui/index.ts
+    gate: type-check
+    estimated_complexity: medium
+
+  WS3:
+    name: Store Unit Tests
+    description: Comprehensive unit tests for store actions
+    executor: typescript-pro           # Jest tests
+    executor_type: task-agent
+    depends_on: [WS1]
+    outputs:
+      - store/__tests__/rating-slip-modal-store.test.ts
+    gate: test-pass
+    estimated_complexity: medium
+
+  # Form section refactors can run in parallel (WS4a-WS4e)
+  WS4a:
+    name: Refactor FormSectionAverageBet
+    description: Replace prop drilling with useAverageBetField() hook
+    executor: frontend-design-pt-2     # React 19 component refactoring
+    executor_type: skill
+    depends_on: [WS2]
+    outputs:
+      - components/modals/rating-slip/form-section-average-bet.tsx
+    gate: type-check
+    estimated_complexity: medium
+
+  WS4b:
+    name: Refactor FormSectionCashIn
+    description: Replace prop drilling with useNewBuyInField() hook
+    executor: frontend-design-pt-2     # React 19 component refactoring
+    executor_type: skill
+    depends_on: [WS2]
+    outputs:
+      - components/modals/rating-slip/form-section-cash-in.tsx
+    gate: type-check
+    estimated_complexity: medium
+
+  # ... WS4c, WS4d, WS4e follow same pattern ...
+
+  WS5:
+    name: Modal Integration & Cleanup
+    description: Update RatingSlipModal to use store, remove loading state props
+    executor: frontend-design-pt-2     # React 19 patterns (useTransition, key-based reset)
+    executor_type: skill
+    depends_on: [WS4a, WS4b]  # All WS4x workstreams
+    outputs:
+      - components/modals/rating-slip/rating-slip-modal.tsx
+    gate: type-check
+    estimated_complexity: high
+
+  WS6:
+    name: Hook Integration Tests
+    description: Integration tests for form section hooks
+    executor: typescript-pro           # Jest/React Testing Library
+    executor_type: task-agent
+    depends_on: [WS5]
+    outputs:
+      - hooks/ui/__tests__/use-rating-slip-modal.test.ts
+    gate: test-pass
+    estimated_complexity: medium
+
+  WS7:
+    name: Quality Validation
+    description: Final validation gates
+    executor: qa-specialist            # Quality gates
+    executor_type: skill
+    depends_on: [WS5, WS6]
+    outputs: []
+    gate: build
+    estimated_complexity: low
+
+execution_phases:
+  - name: Phase 1 - Store Foundation
+    parallel: [WS1]
+    gates: [type-check]
+
+  - name: Phase 2 - Hooks & Store Tests
+    parallel: [WS2, WS3]
+    gates: [type-check, test-pass]
+
+  - name: Phase 3 - Form Section Refactors (Parallelized)
+    parallel: [WS4a, WS4b]  # All form sections run concurrently
+    gates: [type-check]
+
+  - name: Phase 4 - Modal Integration
+    parallel: [WS5]
+    gates: [type-check]
+
+  - name: Phase 5 - Final Tests & Validation
+    parallel: [WS6, WS7]
+    gates: [test-pass, build]
+---
+```
+
+### Frontend Executor Selection Guide
+
+| Workstream Type | Executor | Rationale |
+|-----------------|----------|-----------|
+| Zustand store creation | `typescript-pro` | Pure TypeScript, devtools middleware, type-safe actions |
+| Selector hooks (useShallow) | `frontend-design-pt-2` | React 19 hook patterns, optimization |
+| Store unit tests | `typescript-pro` | Jest testing patterns |
+| Component refactors (prop drilling → hooks) | `frontend-design-pt-2` | React 19 compliance, PT-2 patterns |
+| Modal integration (useTransition) | `frontend-design-pt-2` | React 19 concurrent features |
+| Hook integration tests | `typescript-pro` | Jest/React Testing Library |
+| Quality validation | `qa-specialist` | Final gates, DevTools verification |
+
+**Key Insight**: `frontend-design-pt-2` should be used for any workstream requiring:
+- React 19 hook patterns (useTransition, useShallow, useActionState)
+- Component refactoring that eliminates anti-patterns
+- PT-2-specific layout or UX patterns
+- ADR-003 Zustand conventions in React components

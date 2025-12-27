@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -1925,6 +1945,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1937,7 +1958,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2010,6 +2030,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_create_player: {
+        Args: {
+          p_actor_id: string
+          p_birth_date?: string
+          p_casino_id: string
+          p_first_name: string
+          p_last_name: string
+        }
+        Returns: Json
       }
       rpc_get_player_last_session_context: {
         Args: { p_casino_id: string; p_player_id: string }
@@ -2558,6 +2588,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       financial_direction: ["in", "out"],
@@ -2590,3 +2623,4 @@ export const Constants = {
     },
   },
 } as const
+

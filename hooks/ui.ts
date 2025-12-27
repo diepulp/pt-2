@@ -10,6 +10,15 @@ import type {
 // Re-export UI hooks (PRD-013: Zustand state management)
 export { useModal } from "./ui/use-modal";
 export { usePitDashboardUI } from "./ui/use-pit-dashboard-ui";
+export { usePlayerDashboard } from "./ui/use-player-dashboard";
+export {
+  useRatingSlipModal,
+  useAverageBetField,
+  useNewBuyInField,
+  useStartTimeField,
+  useMovePlayerFields,
+  useChipsTakenField,
+} from "./ui/use-rating-slip-modal";
 
 const TOAST_LIMIT = 1;
 const TOAST_REMOVE_DELAY = 1000000;

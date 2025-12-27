@@ -2011,6 +2011,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_create_player: {
+        Args: {
+          p_actor_id: string
+          p_birth_date?: string
+          p_casino_id: string
+          p_first_name: string
+          p_last_name: string
+        }
+        Returns: Json
+      }
       rpc_get_player_last_session_context: {
         Args: { p_casino_id: string; p_player_id: string }
         Returns: Json

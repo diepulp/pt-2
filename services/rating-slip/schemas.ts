@@ -27,6 +27,21 @@ export const ratingSlipStatusSchema = z.enum([
 
 export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
 
+/**
+ * Schema for rating slip query status filter.
+ * PRD-020: Includes 'active' alias for open+paused slips.
+ * Used in list queries; 'active' is expanded to ['open', 'paused'] in crud.
+ */
+export const ratingSlipQueryStatusSchema = z.enum([
+  "open",
+  "paused",
+  "closed",
+  "archived",
+  "active", // PRD-020: Alias for open+paused
+]);
+
+export type RatingSlipQueryStatus = z.infer<typeof ratingSlipQueryStatusSchema>;
+
 // === Rating Slip Create/Update Schemas ===
 
 /**
@@ -76,14 +91,15 @@ export type UpdateAverageBetInput = z.infer<typeof updateAverageBetSchema>;
 
 /**
  * Schema for rating slip list query params.
+ * PRD-020: Uses ratingSlipQueryStatusSchema which includes 'active' alias.
  */
 export const ratingSlipListQuerySchema = z.object({
   /** Filter by gaming table */
   table_id: uuidSchema("table ID").optional(),
   /** Filter by visit */
   visit_id: uuidSchema("visit ID").optional(),
-  /** Filter by slip status */
-  status: ratingSlipStatusSchema.optional(),
+  /** Filter by slip status. PRD-020: 'active' = open+paused */
+  status: ratingSlipQueryStatusSchema.optional(),
   /** Results per page (default 20, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** Cursor for pagination (slip ID) */

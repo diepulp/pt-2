@@ -127,13 +127,13 @@ When a phase has `parallel: [WS2, WS3]`, spawn BOTH agents in ONE message with `
 │ SINGLE MESSAGE containing MULTIPLE Task tool invocations:      │
 ├─────────────────────────────────────────────────────────────────┤
 │ Task 1:                                                         │
-│   subagent_type: "backend-developer"                            │
+│   subagent_type: "backend-service-builder"                      │
 │   description: "WS2: Service Layer"                             │
 │   prompt: "Execute workstream WS2 for PRD-003..."               │
 │   run_in_background: true                                       │
 ├─────────────────────────────────────────────────────────────────┤
 │ Task 2:                                                         │
-│   subagent_type: "api-expert"                                   │
+│   subagent_type: "api-builder"                                  │
 │   description: "WS3: Route Handlers"                            │
 │   prompt: "Execute workstream WS3 for PRD-003..."               │
 │   run_in_background: true                                       │
@@ -154,17 +154,63 @@ Do NOT spawn agents one-at-a-time in separate messages:
    Then: TaskOutput(WS2_id, block=true) + TaskOutput(WS3_id, block=true)
 ```
 
-### Agent Type Mapping
+### Executor Registry
 
-| Workstream Type | subagent_type |
-|-----------------|---------------|
-| Database Layer | backend-service-builder |
-| Service Layer | backend-service-builder |
-| Route Handlers | api-builder |
-| React Query Hooks | backend-developer |
-| Tests | e2e-testing |
-| UI Components | pt2-frontend-implementer |
-| RLS, JWT | rls-expert |
+The pipeline uses two executor types: **Task Agents** (spawned via Task tool) and **Skills** (invoked via Skill tool).
+
+#### Task Agents (via `Task` tool with `subagent_type`)
+
+| subagent_type | Purpose |
+|---------------|---------|
+| `typescript-pro` | TypeScript architecture, type-safe code, React hooks, unit tests |
+| `general-purpose` | Research, code search, multi-step generic tasks |
+| `Explore` | Fast codebase exploration, file patterns, keyword search |
+| `Plan` | Software architect for implementation planning |
+
+#### Skills (via `Skill` tool)
+
+| Skill Name | Purpose |
+|------------|---------|
+| `backend-service-builder` | PT-2 service layer, DTOs, migrations, bounded contexts |
+| `api-builder` | API endpoints, OpenAPI contracts, route handlers |
+| `frontend-design-pt-2` | PT-2 React 19 components, Zustand integration, useTransition patterns |
+| `rls-expert` | Row-Level Security policies, RLS debugging |
+| `e2e-testing` | Playwright E2E tests, TDD workflow |
+| `qa-specialist` | Quality gates, test coverage validation |
+| `performance-engineer` | Query performance, SLOs, benchmarks |
+| `lead-architect` | System architecture, ADRs, EXECUTION-SPEC generation |
+
+**NOTE**: `frontend-design-pt-2` (project skill) replaces `frontend-design:frontend-design` (plugin).
+The project skill has PT-2-specific knowledge including React 19 patterns, ADR-003 Zustand conventions,
+and layout strategy that the generic plugin lacks.
+
+#### Workstream → Executor Mapping
+
+| Workstream Type | Executor | Executor Type |
+|-----------------|----------|---------------|
+| Database Layer | `backend-service-builder` | Skill |
+| Service Layer | `backend-service-builder` | Skill |
+| Route Handlers | `api-builder` | Skill |
+| React Query Hooks | `typescript-pro` | Task Agent |
+| Unit/Integration Tests | `typescript-pro` | Task Agent |
+| Hook Integration Tests | `typescript-pro` | Task Agent |
+| E2E Tests | `e2e-testing` | Skill |
+| **Zustand Stores** | `typescript-pro` | Task Agent |
+| **Selector Hooks (useShallow)** | `frontend-design-pt-2` | Skill |
+| **React 19 Component Refactors** | `frontend-design-pt-2` | Skill |
+| **Modal Integration (useTransition)** | `frontend-design-pt-2` | Skill |
+| UI Components (new) | `frontend-design-pt-2` | Skill |
+| RLS Policies | `rls-expert` | Skill |
+| Performance | `performance-engineer` | Skill |
+| Quality Gates | `qa-specialist` | Skill |
+| Exploration/Research | `Explore` | Task Agent |
+| Architecture Planning | `Plan` | Task Agent |
+
+**Frontend Workstream Guidelines**:
+- **Zustand Store creation** (`store/*.ts`): Use `typescript-pro` for pure TypeScript store with devtools
+- **Selector Hooks** (`hooks/ui/*.ts`): Use `frontend-design-pt-2` for React 19 hook patterns (useShallow)
+- **Component Refactors** (prop drilling → hooks): Use `frontend-design-pt-2` for React 19 compliance
+- **Modal Integration** (useTransition, key-based reset): Use `frontend-design-pt-2`
 
 ### Background Execution Workflow
 
@@ -210,25 +256,21 @@ After all phases complete:
 
 ## Workstream Execution
 
-### Delegation to Capability Agents
+### Delegation to Executors
 
-Each workstream delegates to a specialized agent. Use the `subagent_type` values below with the Task tool:
+Each workstream delegates to a specialized executor. Use the correct invocation method based on executor type:
 
-| Workstream Type | subagent_type | Capability |
-|-----------------|---------------|------------|
-| Database Layer | `backend-developer` | Migration, RLS, types |
-| Service Layer | `backend-developer` | Factory, DTOs, keys |
-| Route Handlers | `api-expert` | Routes with middleware |
-| React Query Hooks | `backend-developer` | Query/mutation hooks |
-| Tests | `backend-developer` | Unit + integration tests |
-| UI Components | `pt2-frontend-implementer` | React components |
+**For Task Agents**: Use `Task` tool with `subagent_type` parameter
+```
+Task(subagent_type="typescript-pro", description="...", prompt="...", run_in_background=true)
+```
 
-**Available Agent Types** (for reference):
-- `backend-developer` - Lightweight backend implementation
-- `api-expert` - API endpoints, Route Handlers, DTOs
-- `pt2-frontend-implementer` - React/Next.js UI components
-- `pt2-service-implementer` - Full-stack bounded context services
-- `rls-security-specialist` - RLS policies, security
+**For Skills**: Use `Skill` tool with skill name
+```
+Skill(skill="backend-service-builder", args="...")
+```
+
+See **Executor Registry** section above for the complete mapping of workstream types to executors and their invocation methods.
 
 ### Agent Prompt Template
 
@@ -393,15 +435,20 @@ When invoked with `--resume`:
 
 ## Integration Points
 
-| Primitive | Role in Pipeline |
-|-----------|------------------|
-| `lead-architect` skill | Generates EXECUTION-SPEC from PRD |
-| `backend-developer` agent | Executes DB/Service/Test workstreams |
-| `api-expert` agent | Executes Route Handler workstreams |
-| `pt2-frontend-implementer` agent | Executes UI workstreams |
-| `/validation-gate` command | Runs validation commands |
-| `MVPProgressContext` | Records service completion |
-| `/mvp-status` command | Final status display |
+| Executor | Type | Role in Pipeline |
+|----------|------|------------------|
+| `lead-architect` | Skill | Generates EXECUTION-SPEC from PRD |
+| `backend-service-builder` | Skill | Executes DB/Service workstreams |
+| `api-builder` | Skill | Executes Route Handler workstreams |
+| `frontend-design-pt-2` | Skill | UI components, React 19 refactors, selector hooks, modal integration |
+| `e2e-testing` | Skill | Executes E2E test workstreams |
+| `rls-expert` | Skill | Executes RLS policy workstreams |
+| `qa-specialist` | Skill | Executes quality gate workstreams |
+| `typescript-pro` | Task Agent | Zustand stores, React Query hooks, unit tests |
+| `Explore` | Task Agent | Codebase exploration tasks |
+| `/validation-gate` | Command | Runs validation commands |
+| `MVPProgressContext` | Memory | Records service completion |
+| `/mvp-status` | Command | Final status display |
 
 ---
 
@@ -518,15 +565,29 @@ Resuming from Phase 3...
 | `references/execution-spec-template.md` | YAML + markdown template |
 | `references/gate-protocol.md` | Gate approval UX specification |
 
-### Related Skills and Agents
+### Related Executors
 
-| Skill/Agent | subagent_type | When Used |
-|-------------|---------------|-----------|
-| `lead-architect` skill | (skill invocation) | EXECUTION-SPEC generation |
-| `backend-developer` agent | `backend-developer` | DB/Service/Test workstreams |
-| `api-expert` agent | `api-expert` | Route handler workstreams |
-| `pt2-frontend-implementer` agent | `pt2-frontend-implementer` | UI workstreams |
-| `pt2-service-implementer` agent | `pt2-service-implementer` | Full-stack bounded context |
+#### Skills (Skill tool)
+
+| Skill | When Used |
+|-------|-----------|
+| `lead-architect` | EXECUTION-SPEC generation |
+| `backend-service-builder` | DB/Service workstreams |
+| `api-builder` | Route handler workstreams |
+| `frontend-design-pt-2` | UI components, React 19 refactoring, selector hooks, modal integration |
+| `e2e-testing` | Playwright E2E tests |
+| `rls-expert` | RLS policies, security |
+| `qa-specialist` | Quality gates, validation |
+| `performance-engineer` | Query optimization, benchmarks |
+
+#### Task Agents (Task tool with subagent_type)
+
+| subagent_type | When Used |
+|---------------|-----------|
+| `typescript-pro` | Zustand stores, React Query hooks, unit/integration tests, TypeScript code |
+| `general-purpose` | Research, complex multi-step tasks |
+| `Explore` | Codebase exploration, file search |
+| `Plan` | Architecture planning, design |
 
 ### Commands
 

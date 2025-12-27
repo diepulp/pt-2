@@ -182,16 +182,88 @@ if (!result.success) {
 
 ---
 
+## React 19 Anti-Patterns (CRITICAL GUARDRAILS)
+
+**These patterns cause regressions. NEVER use them.**
+
+| Anti-Pattern | Why It's Wrong | Correct Pattern |
+|--------------|----------------|-----------------|
+| `useEffect` to sync state with props | Creates render loops, stale data, eslint-disable comments | Key-based reset or derived state |
+| Manual `useState` for loading (`isSaving`) | Blocks UI, no concurrent rendering | `useTransition` with `isPending` |
+| Mutations without optimistic updates | User waits for server confirmation | TanStack Query `onMutate` + rollback |
+| `React.memo` on simple components | React 19 Compiler handles this | Remove unless profiled |
+| `useMemo`/`useCallback` for trivial ops | Overhead without benefit | Direct computation or inline functions |
+| Loading state props (`isSaving`, `isClosing`) | Prop drilling, component coupling | `useTransition` at action site |
+
+### Key-Based Reset Pattern (Replaces useEffect Sync)
+
+```typescript
+// ❌ FORBIDDEN
+useEffect(() => {
+  setFormData(initialData)  // Sync anti-pattern
+}, [initialData])
+
+// ✅ CORRECT: Key-based reset forces remount
+<ModalContent key={dataId} initialData={initialData} />
+```
+
+### TanStack Query Optimistic Updates
+
+```typescript
+const mutation = useMutation({
+  mutationFn: updatePlayer,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries({ queryKey: playerKeys.detail(id) })
+    const previous = queryClient.getQueryData(playerKeys.detail(id))
+    queryClient.setQueryData(
+      playerKeys.detail(id),
+      (old: PlayerDTO | undefined) => old ? { ...old, ...newData } : old
+    )
+    return { previous }
+  },
+  onError: (err, newData, context) => {
+    if (context?.previous) {
+      queryClient.setQueryData(playerKeys.detail(id), context.previous)
+    }
+  },
+  onSettled: () => queryClient.invalidateQueries({ queryKey: playerKeys.detail(id) })
+})
+```
+
+---
+
 ## React 19 Hooks
 
 ### Quick Reference
 
 | Hook | Import | Purpose |
 |------|--------|---------|
+| `useTransition` | `react` | **Non-blocking async operations (MANDATORY for buttons)** |
 | `useActionState` | `react` | Form state + pending + action |
 | `useFormStatus` | `react-dom` | Nested submit button state |
 | `useOptimistic` | `react` | Optimistic UI updates |
 | `use()` | `react` | Read promises/context in render |
+
+### useTransition (Non-Blocking Async — MANDATORY)
+
+```typescript
+import { useTransition } from 'react'
+
+function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
+  const [isPending, startTransition] = useTransition()
+
+  return (
+    <Button
+      disabled={isPending}
+      onClick={() => startTransition(async () => await onSave())}
+    >
+      {isPending ? 'Saving...' : 'Save'}
+    </Button>
+  )
+}
+```
+
+**REQUIRED for**: All async button clicks, saves, closes, navigation
 
 ### useActionState (Forms)
 
@@ -274,7 +346,13 @@ if (showTheme) {
 |---------|-------|-----|
 | `console.*` | Production noise | Remove or use logger |
 | `as any` | Type safety bypass | Proper typing |
-| Manual `useMemo`/`useCallback` | React Compiler handles | Remove unless profiled |
+| `useEffect` to sync state with props | Render loops, stale data | Key-based reset or derived state |
+| Manual `useState` for loading | Blocks UI, no concurrency | `useTransition` with `isPending` |
+| `React.memo` on simple components | React 19 Compiler handles | Remove unless profiled |
+| `useMemo`/`useCallback` for trivial ops | Overhead without benefit | Direct computation |
+| Loading state props (`isSaving`) | Prop drilling, coupling | `useTransition` at action site |
+| Mutations without optimistic updates | Slow perceived performance | TanStack Query `onMutate` |
+| `eslint-disable exhaustive-deps` | Masking useEffect problems | Fix the pattern instead |
 | Prop drilling > 2 levels | Poor composition | Context or Zustand |
 | `fetch()` for mutations | Bypass Server Actions | Use Server Action |
 | Inline styles | Inconsistent styling | Tailwind utilities |

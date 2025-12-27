@@ -108,7 +108,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
     );
   }
 
-  // Create test auth user
+  // Create test auth user with app_metadata for RLS (ADR-015 Pattern C)
   const testEmail = `${testPrefix}_staff@test.com`;
   const testPassword = "TestPassword123!";
 
@@ -117,6 +117,10 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       email: testEmail,
       password: testPassword,
       email_confirm: true,
+      app_metadata: {
+        casino_id: casino.id,
+        staff_role: "admin",
+      },
     });
 
   if (authCreateError || !authData.user) {
@@ -144,9 +148,32 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
     throw new Error(`Failed to create test staff: ${staffError?.message}`);
   }
 
-  // Sign in to get auth token
+  // Update user's app_metadata with staff_id (for RLS context)
+  const { error: updateMetadataError } =
+    await supabase.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: casino.id,
+        staff_id: staff.id,
+        staff_role: "admin",
+      },
+    });
+
+  if (updateMetadataError) {
+    throw new Error(
+      `Failed to update user metadata: ${updateMetadataError.message}`,
+    );
+  }
+
+  // Sign in to get auth token (use separate client to preserve service role)
+  const authClient = createClient<Database>(
+    supabaseUrl,
+    supabaseServiceRoleKey,
+    {
+      auth: { autoRefreshToken: false, persistSession: false },
+    },
+  );
   const { data: signInData, error: signInError } =
-    await supabase.auth.signInWithPassword({
+    await authClient.auth.signInWithPassword({
       email: testEmail,
       password: testPassword,
     });
@@ -156,6 +183,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   }
 
   // Create test player (global entity, no casino_id)
+  // Continue using service role client for data setup
   const { data: player, error: playerError } = await supabase
     .from("player")
     .insert({
@@ -198,6 +226,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   }
 
   // Create primary test table (active)
+  // Note: min_bet/max_bet are in table_settings, not gaming_table
   const { data: table, error: tableError } = await supabase
     .from("gaming_table")
     .insert({
@@ -205,8 +234,6 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       label: "BJ-01",
       type: "blackjack",
       status: "active",
-      min_bet: 1000, // $10.00 in cents
-      max_bet: 50000, // $500.00 in cents
     })
     .select()
     .single();
@@ -223,8 +250,6 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       label: "BJ-02",
       type: "blackjack",
       status: "active",
-      min_bet: 2500, // $25.00 in cents
-      max_bet: 100000, // $1000.00 in cents
     })
     .select()
     .single();
@@ -355,7 +380,7 @@ export async function createTestTransaction(
       casino_id: casinoId,
       visit_id: visitId,
       player_id: playerId,
-      staff_id: staffId,
+      created_by_staff_id: staffId,
       direction,
       amount,
       tender_type: tenderType,

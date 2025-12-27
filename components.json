@@ -10,6 +10,7 @@
     "cssVariables": true,
     "prefix": ""
   },
+  "iconLibrary": "lucide",
   "aliases": {
     "components": "@/components",
     "utils": "@/lib/utils",
@@ -17,12 +18,12 @@
     "lib": "@/lib",
     "hooks": "@/hooks"
   },
-  "iconLibrary": "lucide",
   "registries": {
     "@magicui": "https://magicui.design/r/{name}.json",
     "@aceternity": "https://ui.aceternity.com/r/{name}.json",
     "@originui": "https://originui.com/r/{name}.json",
     "@kokonutui": "https://kokonutui.com/r/{name}.json",
-    "@tweakcn": "https://tweakcn.com/r/{name}.json"
+    "@tweakcn": "https://tweakcn.com/r/{name}.json",
+    "@eldoraui": "https://eldoraui.site/r/{name}.json"
   }
 }

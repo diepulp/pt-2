@@ -33,7 +33,8 @@ Read these files **when needed** based on your task:
 | When You Need | Read This |
 |---------------|-----------|
 | Implementation workflow, code templates | `references/QUICK_START.md` |
-| React 19 hooks (`use()`, `useActionState`, `useOptimistic`) | `references/frontend-rules.md` → React 19 Hooks |
+| **React 19 anti-patterns to AVOID** | `references/frontend-rules.md` → React 19 Anti-Patterns |
+| React 19 hooks (`useTransition`, `useActionState`, `useOptimistic`) | `references/frontend-rules.md` → React 19 Hooks |
 | State management (TanStack Query, Zustand) | `references/ADR-003-state-management-strategy.md` |
 | Tailwind v4, shadcn setup, React 19 specifics | `references/pt2-technical-standards.md` |
 | Service layer integration patterns | `references/pt2-architecture-integration.md` |
@@ -59,6 +60,148 @@ Full details in `references/pt2-technical-standards.md`.
 
 ---
 
+## React 19 Anti-Patterns (CRITICAL GUARDRAILS)
+
+**These patterns cause regressions. NEVER use them.**
+
+### 1. useEffect Synchronization Anti-Pattern
+
+```typescript
+// ❌ FORBIDDEN: Syncing state with props via useEffect
+function Modal({ initialData }) {
+  const [formData, setFormData] = useState(initialData)
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    setFormData(initialData)  // ❌ Creates render loops, stale data
+  }, [initialData])
+}
+
+// ✅ CORRECT: Key-based reset
+function Modal({ initialData, dataId }) {
+  return <ModalContent key={dataId} initialData={initialData} />
+}
+
+// ✅ CORRECT: Derived state (no state needed)
+function Modal({ initialData }) {
+  const derivedValue = initialData.value * 2  // Calculate during render
+}
+```
+
+**Rule**: If you need `eslint-disable` for exhaustive-deps, you're doing it wrong.
+
+### 2. Manual Pending States (Missing useTransition)
+
+```typescript
+// ❌ FORBIDDEN: Manual loading state management
+function SaveButton({ onSave }) {
+  const [isSaving, setIsSaving] = useState(false)
+
+  const handleClick = async () => {
+    setIsSaving(true)
+    await onSave()
+    setIsSaving(false)  // ❌ Blocks UI, no concurrent rendering
+  }
+}
+
+// ✅ CORRECT: useTransition for non-blocking updates
+function SaveButton({ onSave }) {
+  const [isPending, startTransition] = useTransition()
+
+  const handleClick = () => {
+    startTransition(async () => {
+      await onSave()  // ✅ UI stays responsive
+    })
+  }
+
+  return <Button disabled={isPending}>{isPending ? 'Saving...' : 'Save'}</Button>
+}
+```
+
+### 3. Missing Optimistic Updates
+
+```typescript
+// ❌ FORBIDDEN: Wait for server confirmation
+const mutation = useMutation({
+  mutationFn: updatePlayer,
+  onSuccess: () => queryClient.invalidateQueries()
+  // User sees stale data until refetch completes
+})
+
+// ✅ CORRECT: TanStack Query optimistic updates
+const mutation = useMutation({
+  mutationFn: updatePlayer,
+  onMutate: async (newData) => {
+    await queryClient.cancelQueries({ queryKey: playerKeys.detail(id) })
+    const previous = queryClient.getQueryData(playerKeys.detail(id))
+
+    // Optimistically update cache
+    queryClient.setQueryData(
+      playerKeys.detail(id),
+      (old: PlayerDTO | undefined) => old ? { ...old, ...newData } : old
+    )
+
+    return { previous }  // For rollback
+  },
+  onError: (err, newData, context) => {
+    // Rollback on error
+    if (context?.previous) {
+      queryClient.setQueryData(playerKeys.detail(id), context.previous)
+    }
+  },
+  onSettled: () => queryClient.invalidateQueries({ queryKey: playerKeys.detail(id) })
+})
+```
+
+### 4. Over-Memoization
+
+```typescript
+// ❌ FORBIDDEN: Unnecessary memoization
+const FormSection = React.memo(({ value, onChange }) => {  // ❌ React Compiler handles this
+  const derivedValue = useMemo(() => value * 2, [value])   // ❌ Trivial computation
+  const handleChange = useCallback((e) => onChange(e.target.value), [onChange])  // ❌ Overhead
+  return <Input value={derivedValue} onChange={handleChange} />
+})
+
+// ✅ CORRECT: Let React 19 Compiler optimize
+function FormSection({ value, onChange }) {
+  const derivedValue = value * 2  // Direct computation
+  return <Input value={derivedValue} onChange={(e) => onChange(e.target.value)} />
+}
+```
+
+**When memoization IS needed**:
+- Expensive computations (>1ms, measured via profiler)
+- Referential equality for effects dependencies
+- Context value objects (prevent consumer re-renders)
+
+### 5. Props for Loading States (Anti-Pattern)
+
+```typescript
+// ❌ FORBIDDEN: Passing loading state as props
+interface ModalProps {
+  isSaving: boolean    // ❌ Manual state threading
+  isClosing: boolean   // ❌ Prop drilling
+  isMoving: boolean    // ❌ Component coupling
+}
+
+// ✅ CORRECT: useTransition at the action site
+function ActionButton({ onAction, children }) {
+  const [isPending, startTransition] = useTransition()
+
+  return (
+    <Button
+      disabled={isPending}
+      onClick={() => startTransition(() => onAction())}
+    >
+      {isPending ? 'Processing...' : children}
+    </Button>
+  )
+}
+```
+
+---
+
 ## React 19 Patterns (CRITICAL)
 
 React 19 introduces new hooks and patterns. **Use these idiomatically**.
@@ -67,10 +210,63 @@ React 19 introduces new hooks and patterns. **Use these idiomatically**.
 
 | Hook | Purpose | When to Use |
 |------|---------|-------------|
+| `useTransition` | Non-blocking async operations | **All async button clicks, saves, closes** |
 | `useActionState` | Form state + pending + action | All Server Action forms |
 | `useFormStatus` | Nested submit button state | Reusable submit components |
 | `useOptimistic` | Optimistic UI updates | Idempotent operations only |
 | `use()` | Read promises/context in render | Async data in Client Components |
+
+### `useTransition` — Non-Blocking Async Operations (MANDATORY)
+
+```typescript
+'use client'
+import { useTransition } from 'react'
+
+// ✅ REQUIRED for all async button operations
+function SaveButton({ onSave }: { onSave: () => Promise<void> }) {
+  const [isPending, startTransition] = useTransition()
+
+  return (
+    <Button
+      disabled={isPending}
+      onClick={() => {
+        startTransition(async () => {
+          await onSave()  // UI stays responsive during async operation
+        })
+      }}
+    >
+      {isPending ? 'Saving...' : 'Save'}
+    </Button>
+  )
+}
+
+// ✅ Multiple transitions in one component
+function ModalActions({ onSave, onClose, onMove }) {
+  const [isPending, startTransition] = useTransition()
+
+  // All actions share the same isPending state
+  const handleSave = () => startTransition(async () => await onSave())
+  const handleClose = () => startTransition(async () => await onClose())
+  const handleMove = () => startTransition(async () => await onMove())
+
+  return (
+    <div className="flex gap-2">
+      <Button onClick={handleSave} disabled={isPending}>Save</Button>
+      <Button onClick={handleClose} disabled={isPending}>Close</Button>
+      <Button onClick={handleMove} disabled={isPending}>Move</Button>
+    </div>
+  )
+}
+```
+
+**When to use useTransition**:
+- Button clicks that trigger async operations
+- Navigation that loads data
+- Any state update that might suspend
+
+**When NOT to use useTransition**:
+- Forms with Server Actions (use `useActionState` instead)
+- Synchronous state updates
 
 ### `use()` Hook — Read Resources in Render
 
@@ -325,6 +521,20 @@ See `references/QUICK_START.md` for complete workflow:
 3. **Implementation Checklist** — Technical standards validation
 4. **Code Templates** — Copy-paste patterns for each scenario
 5. **Validate** — Type check, lint, test
+6. **React 19 Compliance Check** — See checklist below
+
+### React 19 Compliance Checklist (MANDATORY)
+
+Before marking implementation complete, verify ALL:
+
+- [ ] **No `useEffect` sync patterns** — State from props uses key-based reset or computed during render
+- [ ] **No manual loading states** — All async buttons use `useTransition`, not `useState(false)`
+- [ ] **Mutations have optimistic updates** — TanStack Query `onMutate` with rollback on error
+- [ ] **No unnecessary memoization** — `React.memo`, `useMemo`, `useCallback` only for profiled expensive ops
+- [ ] **No loading state props** — `useTransition` colocated with action, not passed as props
+- [ ] **No `eslint-disable exhaustive-deps`** — If needed, the pattern is wrong; fix it
+
+**If any checkbox fails, fix before committing.**
 
 ### State Management Rules
 
@@ -364,6 +574,13 @@ Key patterns:
 
 | Anti-Pattern | Correct Pattern |
 |--------------|-----------------|
+| `useEffect` to sync state with props | Key-based reset or derived state |
+| Manual `useState` for loading (`isSaving`) | `useTransition` with `isPending` |
+| Mutations without optimistic updates | TanStack Query `onMutate` + rollback |
+| `React.memo` on simple components | Remove (React 19 Compiler handles) |
+| `useMemo`/`useCallback` for trivial ops | Direct computation or inline functions |
+| Loading state props (`isSaving`, `isClosing`) | `useTransition` at action site |
+| `eslint-disable exhaustive-deps` | Fix the pattern (key-based reset) |
 | `fetch()` in Server Component | Direct service call |
 | `fetch()` for mutations | Server Action |
 | Hardcoded query keys | Key factories from `keys.ts` |

@@ -254,21 +254,27 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   };
 
   // Modal callback: Move player to different table/seat
+  // PRD-020: Fixed to close modal and clear state on success
   const handleMovePlayer = async (formState: FormState) => {
-    if (!selectedSlipId) {
+    if (!selectedSlipId || !selectedTableId) {
       return;
     }
 
     try {
-      const result = await movePlayer.mutateAsync({
+      await movePlayer.mutateAsync({
         currentSlipId: selectedSlipId,
+        sourceTableId: selectedTableId,
         destinationTableId: formState.newTableId,
         destinationSeatNumber: formState.newSeatNumber || null,
         averageBet: Number(formState.averageBet),
+        casinoId,
       });
-      // Switch to new slip after successful move
-      setSelectedSlip(result.newSlipId);
+      // PRD-020: Close modal and clear state after successful move
+      // (matches handleCloseSession behavior)
+      closeModal();
+      setSelectedSlip(null);
     } catch (error) {
+      // Error: keep modal open so user can see error and retry
       logError(error, { component: "PitPanels", action: "movePlayer" });
     }
   };
@@ -368,7 +374,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         />
       )}
 
-      {/* Rating Slip Modal */}
+      {/* Rating Slip Modal - uses useTransition internally for pending states */}
       <RatingSlipModal
         slipId={selectedSlipId}
         isOpen={isModalOpen && modalType === "rating-slip"}
@@ -379,9 +385,6 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onSave={handleSave}
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
-        isSaving={saveWithBuyIn.isPending}
-        isClosing={closeWithFinancial.isPending}
-        isMoving={movePlayer.isPending}
         error={
           saveWithBuyIn.error?.message ||
           closeWithFinancial.error?.message ||

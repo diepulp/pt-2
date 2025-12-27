@@ -14,7 +14,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { DomainError } from "@/lib/errors/domain-errors";
 import type { Database } from "@/types/database.types";
 
-import type { RatingSlipModalDTO } from "./dtos";
+import type {
+  MovePlayerInput,
+  MovePlayerResponse,
+  RatingSlipModalDTO,
+} from "./dtos";
 
 /**
  * Raw RPC response shape from PostgreSQL.
@@ -259,4 +263,179 @@ export async function getModalDataViaRPC(
   };
 
   return modalData;
+}
+
+// === Move Player RPC (PRD-020) ===
+
+/**
+ * Raw RPC response shape from rpc_move_player.
+ * Maps to MovePlayerResponse structure.
+ */
+interface RpcMovePlayerResponse {
+  closedSlipId: string;
+  newSlipId: string;
+  moveGroupId: string;
+  accumulatedSeconds: number;
+  sourceTableId: string;
+  sourceTableSeats: string[];
+  destinationTableSeats: string[];
+  newSlip: {
+    id: string;
+    tableId: string;
+    seatNumber: string | null;
+    status: string;
+    startTime: string;
+  };
+}
+
+/**
+ * Type guard for move player RPC response validation.
+ */
+function isValidRpcMovePlayerResponse(
+  data: unknown,
+): data is RpcMovePlayerResponse {
+  if (!data || typeof data !== "object") return false;
+
+  const obj = data as Record<string, unknown>;
+
+  if (typeof obj.closedSlipId !== "string") return false;
+  if (typeof obj.newSlipId !== "string") return false;
+  if (typeof obj.moveGroupId !== "string") return false;
+  if (typeof obj.accumulatedSeconds !== "number") return false;
+  if (typeof obj.sourceTableId !== "string") return false;
+  if (!Array.isArray(obj.sourceTableSeats)) return false;
+  if (!Array.isArray(obj.destinationTableSeats)) return false;
+  if (!obj.newSlip || typeof obj.newSlip !== "object") return false;
+
+  const newSlip = obj.newSlip as Record<string, unknown>;
+  if (typeof newSlip.id !== "string") return false;
+  if (typeof newSlip.tableId !== "string") return false;
+  if (typeof newSlip.status !== "string") return false;
+  if (typeof newSlip.startTime !== "string") return false;
+
+  return true;
+}
+
+/**
+ * Moves a player to a different table/seat via the consolidated RPC.
+ *
+ * PRD-020: Reduces 4 DB round-trips to 1, latency from ~700ms to ~150ms.
+ * Single transaction with FOR UPDATE locking for safety.
+ *
+ * Security:
+ * - Uses SECURITY DEFINER with self-injected RLS context (ADR-015)
+ * - Casino scope validated within RPC
+ * - Seat availability checked atomically
+ *
+ * @param supabase - Authenticated Supabase client
+ * @param casinoId - Casino UUID
+ * @param actorId - Staff actor UUID
+ * @param slipId - Rating slip UUID to move
+ * @param input - Move destination details
+ * @returns MovePlayerResponse - Enhanced response with seat arrays
+ * @throws DomainError with specific codes:
+ *   - RATING_SLIP_NOT_FOUND (404)
+ *   - RATING_SLIP_ALREADY_CLOSED (409)
+ *   - SEAT_OCCUPIED (400)
+ *
+ * @example
+ * ```ts
+ * const result = await movePlayerViaRPC(supabase, casinoId, actorId, slipId, {
+ *   destinationTableId: 'table-uuid',
+ *   destinationSeatNumber: '3',
+ *   averageBet: 25,
+ * });
+ * // Single round trip, ~150ms
+ * // result.sourceTableSeats and result.destinationTableSeats for cache update
+ * ```
+ */
+export async function movePlayerViaRPC(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  actorId: string,
+  slipId: string,
+  input: MovePlayerInput,
+): Promise<MovePlayerResponse> {
+  // Call the consolidated RPC
+  // Note: rpc_move_player is not in generated types yet (migration not applied)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)("rpc_move_player", {
+    p_casino_id: casinoId,
+    p_actor_id: actorId,
+    p_slip_id: slipId,
+    p_new_table_id: input.destinationTableId,
+    p_new_seat_number: input.destinationSeatNumber ?? null,
+    p_average_bet: input.averageBet ?? null,
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+
+    if (message.includes("RATING_SLIP_NOT_FOUND")) {
+      throw new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found", {
+        httpStatus: 404,
+        details: { slipId },
+      });
+    }
+
+    if (message.includes("RATING_SLIP_ALREADY_CLOSED")) {
+      throw new DomainError(
+        "RATING_SLIP_ALREADY_CLOSED",
+        "Cannot move a closed rating slip",
+        { httpStatus: 409, details: { slipId } },
+      );
+    }
+
+    if (message.includes("SEAT_OCCUPIED")) {
+      throw new DomainError(
+        "SEAT_OCCUPIED",
+        `Seat ${input.destinationSeatNumber} is already occupied at the destination table`,
+        { httpStatus: 400, details: { seat: input.destinationSeatNumber } },
+      );
+    }
+
+    // Generic database error
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      `Move player RPC failed: ${error.message}`,
+      { httpStatus: 500, details: { code: error.code, hint: error.hint } },
+    );
+  }
+
+  if (!data) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      "No data returned from move player RPC",
+      { httpStatus: 500, details: { slipId } },
+    );
+  }
+
+  // Validate RPC response shape
+  if (!isValidRpcMovePlayerResponse(data)) {
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      "Invalid move player RPC response structure",
+      { httpStatus: 500, details: { slipId, received: typeof data } },
+    );
+  }
+
+  // Map to MovePlayerResponse with proper typing
+  const response: MovePlayerResponse = {
+    newSlipId: data.newSlipId,
+    closedSlipId: data.closedSlipId,
+    moveGroupId: data.moveGroupId,
+    accumulatedSeconds: data.accumulatedSeconds,
+    sourceTableId: data.sourceTableId,
+    sourceTableSeats: data.sourceTableSeats,
+    destinationTableSeats: data.destinationTableSeats,
+    newSlip: {
+      id: data.newSlip.id,
+      tableId: data.newSlip.tableId,
+      seatNumber: data.newSlip.seatNumber,
+      status: data.newSlip.status as MovePlayerResponse["newSlip"]["status"],
+      startTime: data.newSlip.startTime,
+    },
+  };
+
+  return response;
 }

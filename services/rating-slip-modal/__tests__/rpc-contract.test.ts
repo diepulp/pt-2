@@ -670,7 +670,9 @@ describe('RPC Contract - Complete RatingSlipModalDTO', () => {
     }
 
     // Current table should be in tables list
-    const currentTable = result.tables.find((t) => t.id === result.slip.tableId);
+    const currentTable = result.tables.find(
+      (t) => t.id === result.slip.tableId,
+    );
     if (result.tables.length > 0) {
       // If tables are returned, current table should be among them
       expect(currentTable).toBeDefined();

@@ -5,6 +5,7 @@ import React from "react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -110,6 +111,9 @@ export function RatingSlipModalSkeleton({
             <AnimatedSkeleton className="h-6 w-36 rounded" delay={0} />
             <AnimatedSkeleton className="h-5 w-24 rounded" delay={25} />
           </DialogTitle>
+          <DialogDescription className="sr-only">
+            Loading rating slip data...
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6 pr-2">

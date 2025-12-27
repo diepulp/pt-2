@@ -327,8 +327,11 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       return;
     }
 
+    // Capture slip ID before closing modal (selectedSlipId may change)
+    const slipIdToMove = selectedSlipId;
+
     // Get current occupant info for optimistic update
-    const currentSlip = activeSlips.find((s) => s.id === selectedSlipId);
+    const currentSlip = activeSlips.find((s) => s.id === slipIdToMove);
     const currentSeatNumber = currentSlip?.seat_number;
 
     // Apply optimistic update immediately for instant UI feedback
@@ -340,28 +343,37 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
           fromSeatNumber: currentSeatNumber,
           toSeatNumber: formState.newSeatNumber || null,
           toTableId: formState.newTableId,
-          slipId: selectedSlipId,
+          slipId: slipIdToMove,
           occupant: currentOccupant,
         });
       }
     }
 
+    // PRD-019: Close modal immediately for responsive UX (optimistic close)
+    // User sees instant feedback; mutation runs in background
+    closeModal();
+
     try {
+      // Only include averageBet if it's positive (schema requires positive if provided)
+      const averageBet = Number(formState.averageBet);
+      // PRD-020: Added sourceTableId and casinoId for targeted cache invalidation
       await movePlayer.mutateAsync({
-        currentSlipId: selectedSlipId,
+        currentSlipId: slipIdToMove,
+        sourceTableId: selectedTableId!,
         destinationTableId: formState.newTableId,
         destinationSeatNumber: formState.newSeatNumber || null,
-        averageBet: Number(formState.averageBet),
+        casinoId,
+        ...(averageBet > 0 ? { averageBet } : {}),
       });
       // PRD-019 WS2: Do NOT auto-open the new slip modal
       // User can manually click the destination seat to open the new slip
-      // PRD-019 WS3: Show success toast and close modal after successful move
+      // PRD-019 WS3: Show success toast after successful move
       toast.success("Player moved");
-      closeModal();
     } catch (error) {
-      // Modal stays open on error - error state passed via error prop to RatingSlipModal
+      // Show error toast since modal is already closed
       // Optimistic update auto-reverts when mutation fails (useOptimistic behavior)
       // TanStack Query rollback in use-move-player.ts handles cache rollback
+      toast.error("Failed to move player");
       logError(error, { component: "PitDashboard", action: "movePlayer" });
     }
   };
@@ -527,6 +539,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         onSave={handleSave}
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
+        isMovePlayerPending={movePlayer.isPending}
         error={
           saveWithBuyIn.error?.message ||
           closeWithFinancial.error?.message ||

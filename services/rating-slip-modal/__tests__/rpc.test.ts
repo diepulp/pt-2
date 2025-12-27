@@ -189,10 +189,13 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
     const result = await getModalDataViaRPC(supabase, SLIP_ID, CASINO_ID);
 
     // Verify RPC was called with correct parameters
-    expect(supabase.rpc).toHaveBeenCalledWith('rpc_get_rating_slip_modal_data', {
-      p_slip_id: SLIP_ID,
-      p_casino_id: CASINO_ID,
-    });
+    expect(supabase.rpc).toHaveBeenCalledWith(
+      'rpc_get_rating_slip_modal_data',
+      {
+        p_slip_id: SLIP_ID,
+        p_casino_id: CASINO_ID,
+      },
+    );
 
     // Verify DTO structure
     expect(result).toMatchObject<RatingSlipModalDTO>({

@@ -137,9 +137,6 @@ export default function RatingSlipPreviewPage() {
           onCloseSession={handleCloseSession}
           onMovePlayer={handleMovePlayer}
           isLoading={isLoading}
-          isSaving={isSaving}
-          isClosing={isClosing}
-          isMoving={isMoving}
           error={error}
         />
       </div>

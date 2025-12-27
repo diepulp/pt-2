@@ -8,7 +8,7 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from "next/server";
 
 import {
   createRequestContext,
@@ -17,19 +17,19 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/middleware';
-import { createClient } from '@/lib/supabase/server';
+} from "@/lib/http/service-response";
+import { withServerAction } from "@/lib/server-actions/middleware";
+import { createClient } from "@/lib/supabase/server";
 import type {
   CreatePlayerDTO,
   PlayerDTO,
   PlayerSearchResultDTO,
-} from '@/services/player/dtos';
-import { createPlayerService } from '@/services/player/index';
+} from "@/services/player/dtos";
+import { createPlayerService } from "@/services/player/index";
 import {
   createPlayerSchema,
   playerListQuerySchema,
-} from '@/services/player/schemas';
+} from "@/services/player/schemas";
 
 /**
  * GET /api/v1/players
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
           const items = await service.search(query.q!, query.limit);
           return {
             ok: true as const,
-            code: 'OK' as const,
+            code: "OK" as const,
             data: {
               items: items as PlayerSearchResultDTO[],
               cursor: null as string | null,
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest) {
           };
         },
         {
-          domain: 'player',
-          action: 'search',
+          domain: "player",
+          action: "search",
           correlationId: ctx.requestId,
         },
       );
@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: 'OK' as const,
+          code: "OK" as const,
           data: {
             items: items as PlayerDTO[],
             cursor,
@@ -100,8 +100,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: 'player',
-        action: 'list',
+        domain: "player",
+        action: "list",
         correlationId: ctx.requestId,
       },
     );
@@ -121,6 +121,9 @@ export async function GET(request: NextRequest) {
  * Create a new player.
  * Requires Idempotency-Key header.
  * Returns 201 on success.
+ *
+ * Uses SECURITY DEFINER RPC for ADR-015 compliance.
+ * @see ISSUE-EC10252F - RLS Policy Violation Fix
  */
 export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -136,13 +139,30 @@ export async function POST(request: NextRequest) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
+        // Ensure RLS context is available (middleware should always provide this)
+        if (!mwCtx.rlsContext) {
+          return {
+            ok: false as const,
+            code: "INTERNAL_ERROR" as const,
+            error: "RLS context not available",
+            requestId: mwCtx.correlationId,
+            durationMs: 0,
+            timestamp: new Date().toISOString(),
+          };
+        }
+
         const service = createPlayerService(mwCtx.supabase);
 
-        const player = await service.create(input);
+        // Pass RLS context to service for SECURITY DEFINER RPC
+        const player = await service.create({
+          ...input,
+          casino_id: mwCtx.rlsContext.casinoId,
+          actor_id: mwCtx.rlsContext.actorId,
+        });
 
         return {
           ok: true as const,
-          code: 'OK' as const,
+          code: "OK" as const,
           data: player,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -150,8 +170,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: 'player',
-        action: 'create',
+        domain: "player",
+        action: "create",
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -161,7 +181,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, 'OK', 201);
+    return successResponse(ctx, result.data, "OK", 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

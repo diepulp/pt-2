@@ -26,16 +26,22 @@ import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 /**
  * Mutation input for moving a player.
  * Includes the current slip ID and the destination details.
+ *
+ * PRD-020: Added sourceTableId and casinoId for targeted cache invalidation
  */
 export interface MovePlayerMutationInput {
   /** Current rating slip UUID being closed */
   currentSlipId: string;
+  /** Source table UUID (for targeted cache invalidation) */
+  sourceTableId: string;
   /** Target table UUID */
   destinationTableId: string;
   /** Target seat number (optional, null for unseated) */
   destinationSeatNumber?: string | null;
   /** Optional: final average bet for the current slip being closed */
   averageBet?: number;
+  /** Casino ID (for stats invalidation) */
+  casinoId?: string;
 }
 
 /**
@@ -91,10 +97,13 @@ export function useMovePlayer() {
     { previousData: RatingSlipModalDTO | undefined }
   >({
     mutationFn: async (input: MovePlayerMutationInput) => {
+      // Only include averageBet if it's positive (schema requires positive if provided)
       const moveInput: MovePlayerInput = {
         destinationTableId: input.destinationTableId,
         destinationSeatNumber: input.destinationSeatNumber,
-        averageBet: input.averageBet,
+        ...(input.averageBet && input.averageBet > 0
+          ? { averageBet: input.averageBet }
+          : {}),
       };
 
       return movePlayer(input.currentSlipId, moveInput);
@@ -143,42 +152,37 @@ export function useMovePlayer() {
       }
     },
     onSuccess: (data: MovePlayerResponse, variables) => {
-      // Invalidate modal data for the old slip (now closed)
+      // PRD-020: Targeted cache invalidation (reduces 12+ requests to ~4)
+      // Only invalidate the specific tables affected by the move
+
+      // 1. Invalidate active slips for SOURCE table only
       queryClient.invalidateQueries({
-        queryKey: ratingSlipModalKeys.data(variables.currentSlipId),
+        queryKey: dashboardKeys.activeSlips(variables.sourceTableId),
       });
 
-      // Invalidate modal data for the new slip (force fresh fetch)
+      // 2. Invalidate active slips for DESTINATION table only
       queryClient.invalidateQueries({
-        queryKey: ratingSlipModalKeys.data(data.newSlipId),
+        queryKey: dashboardKeys.activeSlips(variables.destinationTableId),
       });
 
-      // Invalidate all modal queries (in case any are cached)
+      // 3. Invalidate slips queries for source and destination tables
+      // (uses the serialized filter key pattern)
       queryClient.invalidateQueries({
-        queryKey: ratingSlipModalKeys.scope,
+        queryKey: dashboardKeys.slips(variables.sourceTableId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.slips(variables.destinationTableId),
       });
 
-      // Invalidate dashboard queries to reflect the move
-      // Tables query needs refresh (occupancy changed)
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables.scope,
-      });
+      // 4. Invalidate stats if casinoId provided (counts may change)
+      if (variables.casinoId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.stats(variables.casinoId),
+        });
+      }
 
-      // Slips queries need refresh (active slips changed at both tables)
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.slips.scope,
-      });
-
-      // Stats queries need refresh (may affect table counts)
-      queryClient.invalidateQueries({
-        predicate: (query) => {
-          return (
-            Array.isArray(query.queryKey) &&
-            query.queryKey[0] === "dashboard" &&
-            query.queryKey[1] === "stats"
-          );
-        },
-      });
+      // NOTE: Modal queries NOT invalidated - modal closes after move (PRD-020)
+      // NOTE: tables.scope NOT invalidated - prevents full re-render cascade
     },
   });
 }
