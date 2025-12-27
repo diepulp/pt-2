@@ -83,11 +83,16 @@ export function ActiveSlipsPanel({
   } = useActiveSlipsForDashboard(tableId);
 
   // Mutation: Pause a slip
+  // PRD-020: Use targeted invalidation to prevent N×2 HTTP cascade
   const pauseMutation = useMutation({
     mutationFn: pauseRatingSlip,
     onSuccess: () => {
-      // Invalidate relevant queries
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate this table's slips
+      if (tableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(tableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -98,7 +103,12 @@ export function ActiveSlipsPanel({
   const resumeMutation = useMutation({
     mutationFn: resumeRatingSlip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate this table's slips
+      if (tableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(tableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -109,13 +119,16 @@ export function ActiveSlipsPanel({
   const closeMutation = useMutation({
     mutationFn: (slipId: string) => closeRatingSlip(slipId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate this table's slips
+      if (tableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(tableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables.scope,
-      });
+      // PRD-020: Do NOT invalidate tables.scope - prevents re-render cascade
     },
   });
 

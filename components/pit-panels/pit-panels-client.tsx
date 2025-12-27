@@ -128,10 +128,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const movePlayer = useMovePlayer();
 
   // Mutations for slip actions
+  // PRD-020: Use targeted invalidation to prevent N×2 HTTP cascade
   const pauseMutation = useMutation({
     mutationFn: pauseRatingSlip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate the selected table's slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -141,7 +147,12 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const resumeMutation = useMutation({
     mutationFn: resumeRatingSlip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate the selected table's slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -151,11 +162,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const closeMutation = useMutation({
     mutationFn: (slipId: string) => closeRatingSlip(slipId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // Targeted: only invalidate the selected table's slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // PRD-020: Do NOT invalidate tables.scope - prevents re-render cascade
     },
   });
 

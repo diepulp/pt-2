@@ -140,6 +140,7 @@ export function useDashboardRealtime({
     }
 
     // Handle slip changes
+    // PRD-020: Use TARGETED invalidation to prevent N×2 HTTP cascade
     function handleSlipChange(
       payload: RealtimePostgresChangesPayload<RatingSlipRow>,
     ) {
@@ -148,18 +149,28 @@ export function useDashboardRealtime({
       const record = payload.new as RatingSlipRow | undefined;
       const oldRecord = payload.old as Partial<RatingSlipRow> | undefined;
 
-      // Determine which table was affected
-      const affectedTableId = record?.table_id ?? oldRecord?.table_id;
+      // Determine which table(s) were affected
+      const newTableId = record?.table_id;
+      const oldTableId = oldRecord?.table_id;
 
-      // Invalidate slips queries
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.slips.scope,
-      });
-
-      // If this affects the selected table's active slips, invalidate that specifically
-      if (selectedTableId && affectedTableId === selectedTableId) {
+      // PRD-020: Targeted invalidation - only invalidate affected table(s)
+      // This prevents the N×2 cascade where ALL tables would refetch
+      if (newTableId) {
         queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(selectedTableId),
+          queryKey: dashboardKeys.activeSlips(newTableId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.slips(newTableId),
+        });
+      }
+
+      // If table changed (move operation), also invalidate the old table
+      if (oldTableId && oldTableId !== newTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(oldTableId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.slips(oldTableId),
         });
       }
 
@@ -168,10 +179,8 @@ export function useDashboardRealtime({
         queryKey: dashboardKeys.stats(casinoId),
       });
 
-      // Invalidate tables (activeSlipsCount may have changed)
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables.scope,
-      });
+      // PRD-020: Do NOT invalidate tables.scope - this triggers re-renders
+      // The table card's activeSlipsCount will be updated by the targeted slip invalidation
     }
 
     // Cleanup on unmount
