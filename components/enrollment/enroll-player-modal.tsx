@@ -28,7 +28,6 @@ import { Separator } from "@/components/ui/separator";
 import {
   getErrorMessage,
   isFetchError,
-  isValidationError,
   logError,
 } from "@/lib/errors/error-utils";
 import { cn } from "@/lib/utils";
@@ -244,7 +243,7 @@ export function EnrollPlayerModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
         {/* Header with step indicator */}
         <DialogHeader className="flex-shrink-0">
           <div className="flex items-center gap-3">
@@ -480,7 +479,7 @@ export function EnrollPlayerModal({
         ) : (
           <form
             onSubmit={handleEnroll}
-            className="flex flex-col flex-1 min-h-0"
+            className="flex flex-col flex-1 min-h-0 "
           >
             {/* Selected player indicator */}
             <div className="flex items-center gap-3 rounded-lg border border-accent/30 bg-accent/5 p-3 mb-4 flex-shrink-0">
@@ -497,13 +496,14 @@ export function EnrollPlayerModal({
             </div>
 
             {/* Scrollable identity form */}
-            <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
               <IdentityForm
                 value={identityData}
                 onChange={setIdentityData}
                 disabled={isPending}
+                className="pb-6"
               />
-            </ScrollArea>
+            </div>
 
             {/* Footer */}
             <DialogFooter className="flex-shrink-0 pt-4 border-t mt-4">
