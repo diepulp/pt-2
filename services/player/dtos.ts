@@ -30,6 +30,18 @@ export type CreatePlayerDTO = Pick<
   "first_name" | "last_name" | "birth_date"
 >;
 
+/**
+ * Player creation with RLS context (ADR-015 Pattern A).
+ * Used when calling the rpc_create_player SECURITY DEFINER function.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC input, combines table-derived type with RLS context
+export type CreatePlayerWithContextDTO = CreatePlayerDTO & {
+  /** Casino ID from RLS context */
+  casino_id: string;
+  /** Actor (staff) ID from RLS context */
+  actor_id: string;
+};
+
 /** Player update input (all fields optional) */
 export type UpdatePlayerDTO = Partial<
   Pick<PlayerInsert, "first_name" | "last_name" | "birth_date">
