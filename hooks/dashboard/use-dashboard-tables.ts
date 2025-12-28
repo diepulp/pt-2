@@ -4,18 +4,19 @@
  * Fetches all gaming tables for a casino with dashboard-specific metadata
  * including active slips count per table.
  *
- * Uses TableContextService for table data and RatingSlipService for slip counts.
+ * ISSUE-DD2C45CA: Uses batch RPC to replace N×2 HTTP pattern (8 requests → 1).
+ * RPC: rpc_get_dashboard_tables_with_counts
  *
  * @see PRD-006 Pit Dashboard UI
  * @see EXECUTION-SPEC-PRD-006.md WS3
+ * @see ISSUE-DD2C45CA Dashboard HTTP Request Cascade Remediation
  */
 
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
 
-import { listRatingSlips } from "@/services/rating-slip/http";
-import { fetchTables } from "@/services/table-context/http";
+import { createBrowserComponentClient } from "@/lib/supabase/client";
 
 import { dashboardKeys } from "./keys";
 import type { DashboardTableDTO, DashboardTablesFilters } from "./types";
@@ -23,10 +24,14 @@ import type { DashboardTableDTO, DashboardTablesFilters } from "./types";
 /**
  * Fetches all tables for a casino with active slips count.
  *
+ * ISSUE-DD2C45CA: Refactored to use single RPC call instead of N×2 HTTP pattern.
+ * Before: 8 HTTP requests (4 tables × 2 status queries)
+ * After: 1 RPC call (87.5% reduction)
+ *
  * This hook:
- * 1. Fetches all tables (or filtered by status/type/pit)
- * 2. For each table, counts active (open + paused) rating slips
- * 3. Returns enriched DashboardTableDTO array
+ * 1. Calls rpc_get_dashboard_tables_with_counts RPC
+ * 2. Applies client-side filters if needed
+ * 3. Returns DashboardTableDTO array
  *
  * @param casinoId - Casino UUID (required)
  * @param filters - Optional filters for status, type, pit
@@ -46,44 +51,34 @@ export function useDashboardTables(
   return useQuery({
     queryKey: dashboardKeys.tables(casinoId!, filters),
     queryFn: async (): Promise<DashboardTableDTO[]> => {
-      // Fetch tables with optional filters
-      const tables = await fetchTables({
-        status: filters.status,
-        type: filters.type,
-        pit: filters.pit,
-        // No limit for dashboard - show all tables
-      });
+      const supabase = createBrowserComponentClient();
 
-      // Fetch active slip counts for each table in parallel
-      const tablesWithSlipCounts = await Promise.all(
-        tables.map(async (table) => {
-          // Fetch open and paused slips for this table
-          const [openResult, pausedResult] = await Promise.all([
-            listRatingSlips({ table_id: table.id, status: "open", limit: 100 }),
-            listRatingSlips({
-              table_id: table.id,
-              status: "paused",
-              limit: 100,
-            }),
-          ]);
-
-          const activeSlipsCount =
-            openResult.items.length + pausedResult.items.length;
-
-          // Return enriched DTO
-          const dashboardTable: DashboardTableDTO = {
-            ...table,
-            // GamingTableDTO fields are spread above
-            // Add current_dealer as null since fetchTables doesn't include dealer
-            current_dealer: null,
-            activeSlipsCount,
-          };
-
-          return dashboardTable;
-        }),
+      // Single RPC call replaces N×2 HTTP pattern
+      // casinoId is guaranteed to be defined here due to enabled: !!casinoId
+      const { data, error } = await supabase.rpc(
+        "rpc_get_dashboard_tables_with_counts",
+        { p_casino_id: casinoId! },
       );
 
-      return tablesWithSlipCounts;
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // RPC returns jsonb array matching DashboardTableDTO structure
+      let tables = (data as unknown as DashboardTableDTO[]) ?? [];
+
+      // Apply client-side filters if needed
+      if (filters.status) {
+        tables = tables.filter((t) => t.status === filters.status);
+      }
+      if (filters.type) {
+        tables = tables.filter((t) => t.type === filters.type);
+      }
+      if (filters.pit) {
+        tables = tables.filter((t) => t.pit === filters.pit);
+      }
+
+      return tables;
     },
     enabled: !!casinoId,
     staleTime: 30_000, // 30 seconds - tables don't change frequently

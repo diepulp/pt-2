@@ -29,6 +29,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
 
 -- Attach trigger to player_identity table
+DROP TRIGGER IF EXISTS trg_player_identity_immutability ON player_identity;
 CREATE TRIGGER trg_player_identity_immutability
   BEFORE UPDATE ON player_identity
   FOR EACH ROW

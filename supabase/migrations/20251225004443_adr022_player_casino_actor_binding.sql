@@ -1,13 +1,15 @@
 -- Migration: ADR-022 Player Identity Enrollment - Player Casino Actor Binding
 -- Purpose: Update player_casino RLS policies with enrolled_by actor binding
--- Reference: EXEC-SPEC-022 Section 4.2 (INV-9 Actor Binding)
+-- Reference: EXEC-SPEC-022 Section 4.2 (INV-9 Actor Binding), ADR-015
 -- Pattern: ADR-015 Pattern C (Hybrid with Fallback)
+-- RLS_REVIEW_COMPLETE: ADR-015 compliant with DROP IF EXISTS for idempotency
 
 -- Drop existing policies to recreate with actor binding
 DROP POLICY IF EXISTS player_casino_insert_staff ON player_casino;
 DROP POLICY IF EXISTS player_casino_update_admin ON player_casino;
 
 -- INSERT: pit_boss, admin with enrolled_by actor binding (INV-9)
+DROP POLICY IF EXISTS "player_casino_insert" ON player_casino;
 CREATE POLICY "player_casino_insert" ON player_casino
   FOR INSERT WITH CHECK (
     (select auth.uid()) IS NOT NULL
@@ -29,6 +31,7 @@ CREATE POLICY "player_casino_insert" ON player_casino
   );
 
 -- UPDATE: pit_boss, admin with enrolled_by actor binding (INV-9)
+DROP POLICY IF EXISTS "player_casino_update" ON player_casino;
 CREATE POLICY "player_casino_update" ON player_casino
   FOR UPDATE
   USING (

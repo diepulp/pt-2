@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1210,6 +1185,7 @@ export type Database = {
       }
       rating_slip: {
         Row: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -1230,6 +1206,7 @@ export type Database = {
           visit_id: string
         }
         Insert: {
+          accrual_kind?: string
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id: string
@@ -1250,6 +1227,7 @@ export type Database = {
           visit_id: string
         }
         Update: {
+          accrual_kind?: string
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id?: string
@@ -2041,6 +2019,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_get_dashboard_tables_with_counts: {
+        Args: { p_casino_id: string }
+        Returns: Json
+      }
       rpc_get_player_last_session_context: {
         Args: { p_casino_id: string; p_player_id: string }
         Returns: Json
@@ -2204,6 +2186,17 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_move_player: {
+        Args: {
+          p_actor_id: string
+          p_average_bet?: number
+          p_casino_id: string
+          p_new_seat_number?: string
+          p_new_table_id: string
+          p_slip_id: string
+        }
+        Returns: Json
+      }
       rpc_pause_rating_slip: {
         Args: {
           p_actor_id: string
@@ -2211,6 +2204,7 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -2337,6 +2331,7 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -2373,6 +2368,7 @@ export type Database = {
           p_visit_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -2588,9 +2584,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       financial_direction: ["in", "out"],

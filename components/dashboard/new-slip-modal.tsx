@@ -112,12 +112,18 @@ export function NewSlipModal({
       return startRatingSlip(input);
     },
     onSuccess: () => {
-      // Invalidate all relevant queries
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
+      // Only invalidate this table's active slips - not all slips via .scope
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.activeSlips(tableId),
+      });
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // TARGETED: Invalidate tables for this casino only (occupancy changed)
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.tables(casinoId),
+      });
       onOpenChange(false);
     },
     onError: (err: Error) => {

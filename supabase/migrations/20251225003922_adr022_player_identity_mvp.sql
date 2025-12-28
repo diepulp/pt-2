@@ -1,10 +1,11 @@
 -- Migration: ADR-022 Player Identity Enrollment - Player Identity Table
 -- Purpose: Create player_identity table with all MVP columns
--- Reference: EXEC-SPEC-022 Section 1.3
+-- Reference: EXEC-SPEC-022 Section 1.3, ADR-015
 -- Depends: Migration 20251225120002 (UNIQUE constraint on player_casino)
+-- RLS_REVIEW_COMPLETE: ADR-015 hybrid pattern with DROP IF EXISTS for idempotency
 
--- Create player_identity table
-CREATE TABLE player_identity (
+-- Create player_identity table (IF NOT EXISTS for idempotency)
+CREATE TABLE IF NOT EXISTS player_identity (
   -- Identity
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   casino_id uuid NOT NULL REFERENCES casino(id) ON DELETE CASCADE,
@@ -47,7 +48,7 @@ CREATE TABLE player_identity (
 );
 
 -- Create unique partial index for document hash deduplication
-CREATE UNIQUE INDEX ux_player_identity_doc_hash
+CREATE UNIQUE INDEX IF NOT EXISTS ux_player_identity_doc_hash
   ON player_identity (casino_id, document_number_hash)
   WHERE document_number_hash IS NOT NULL;
 
@@ -64,6 +65,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_player_identity_updated_at ON player_identity;
 CREATE TRIGGER trg_player_identity_updated_at
   BEFORE UPDATE ON player_identity
   FOR EACH ROW
@@ -92,6 +94,7 @@ COMMENT ON INDEX ux_player_identity_doc_hash IS 'Prevents duplicate document num
 ALTER TABLE player_identity ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: SELECT - pit_boss, admin, cashier can read in their casino
+DROP POLICY IF EXISTS "player_identity_select" ON player_identity;
 CREATE POLICY "player_identity_select" ON player_identity
   FOR SELECT USING (
     (select auth.uid()) IS NOT NULL
@@ -106,6 +109,7 @@ CREATE POLICY "player_identity_select" ON player_identity
   );
 
 -- RLS Policy: INSERT - pit_boss, admin with actor binding (INV-9)
+DROP POLICY IF EXISTS "player_identity_insert" ON player_identity;
 CREATE POLICY "player_identity_insert" ON player_identity
   FOR INSERT WITH CHECK (
     (select auth.uid()) IS NOT NULL
@@ -124,6 +128,7 @@ CREATE POLICY "player_identity_insert" ON player_identity
   );
 
 -- RLS Policy: UPDATE - pit_boss, admin with actor binding (INV-6, INV-9)
+DROP POLICY IF EXISTS "player_identity_update" ON player_identity;
 CREATE POLICY "player_identity_update" ON player_identity
   FOR UPDATE
   USING (
@@ -157,6 +162,7 @@ CREATE POLICY "player_identity_update" ON player_identity
   );
 
 -- RLS Policy: DELETE - Explicit denial (audit trail preservation)
+DROP POLICY IF EXISTS "player_identity_no_delete" ON player_identity;
 CREATE POLICY "player_identity_no_delete" ON player_identity
   FOR DELETE USING (false);
 

@@ -146,10 +146,16 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const movePlayer = useMovePlayer();
 
   // Mutations for slip actions
+  // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
   const pauseMutation = useMutation({
     mutationFn: pauseRatingSlip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -159,7 +165,12 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const resumeMutation = useMutation({
     mutationFn: resumeRatingSlip,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
@@ -169,11 +180,19 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const closeMutation = useMutation({
     mutationFn: (slipId: string) => closeRatingSlip(slipId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.slips.scope });
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.stats(casinoId),
       });
-      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // TARGETED: Invalidate tables for this casino only (occupancy changed)
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.tables(casinoId),
+      });
     },
   });
 
@@ -285,8 +304,8 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
 
   // Modal callback: Close session with chips-taken
   const handleCloseSession = async (formState: FormState) => {
-    if (!selectedSlipId || !ratingSlipModalData) {
-      console.error("Close failed: No slip or modal data");
+    if (!selectedSlipId || !ratingSlipModalData || !selectedTableId) {
+      console.error("Close failed: No slip, modal data, or table ID");
       return;
     }
 
@@ -303,6 +322,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         visitId: ratingSlipModalData.slip.visitId,
         playerId: ratingSlipModalData.player?.id ?? null,
         casinoId,
+        tableId: selectedTableId,
         staffId,
         chipsTaken: Number(formState.chipsTaken || 0),
         averageBet: Number(formState.averageBet),

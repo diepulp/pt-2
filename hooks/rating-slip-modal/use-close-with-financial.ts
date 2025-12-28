@@ -31,6 +31,8 @@ export interface CloseWithFinancialInput {
   playerId: string | null;
   /** Casino ID for transaction recording and cache invalidation */
   casinoId: string;
+  /** Table ID for targeted activeSlips cache invalidation */
+  tableId: string;
   /** Staff ID for transaction recording */
   staffId: string;
   /** Chips taken amount in dollars (will be converted to cents) */
@@ -133,7 +135,7 @@ export function useCloseWithFinancial() {
         );
       }
     },
-    onSuccess: (_, { slipId, visitId, casinoId }) => {
+    onSuccess: (_, { slipId, visitId, casinoId, tableId }) => {
       // Invalidate all modal queries (this slip is now closed)
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.scope,
@@ -144,14 +146,15 @@ export function useCloseWithFinancial() {
         queryKey: playerFinancialKeys.visitSummary(visitId),
       });
 
-      // Invalidate dashboard tables (occupancy changed)
+      // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
+      // Only invalidate this table's active slips - not all slips via .scope
       queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables.scope,
+        queryKey: dashboardKeys.activeSlips(tableId),
       });
 
-      // Invalidate dashboard slips
+      // TARGETED: Invalidate tables for this casino only (occupancy changed)
       queryClient.invalidateQueries({
-        queryKey: dashboardKeys.slips.scope,
+        queryKey: dashboardKeys.tables(casinoId),
       });
 
       // Invalidate dashboard stats
