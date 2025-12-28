@@ -1,0 +1,27 @@
+{
+  "prd": "ISSUE-752833A6",
+  "prd_title": "Policy Snapshot Remediation",
+  "current_phase": 2,
+  "status": "in_progress",
+  "completed_workstreams": ["WS1"],
+  "in_progress_workstreams": ["WS2"],
+  "pending_workstreams": ["WS3", "WS4"],
+  "artifacts": {
+    "execution_spec": "docs/20-architecture/specs/ISSUE-752833A6/EXECUTION-SPEC-752833A6.md",
+    "WS1": [
+      "supabase/migrations/20251227170749_fix_policy_snapshot_population.sql",
+      "supabase/migrations/20251227170840_harden_accrual_json_casting.sql"
+    ]
+  },
+  "gates_passed": ["spec_approved", "schema-validation-ws1"],
+  "gates_pending": ["schema-validation-ws2", "test-pass", "build"],
+  "review_notes": [
+    "CHECK constraint fixed: added IS NOT NULL guard",
+    "JSON casting hygiene: NULLIF + COALESCE pattern for read path",
+    "Join path verified: gaming_table.type -> game_settings.game_type",
+    "Backfill step added: existing NULL rows -> compliance_only before CHECK",
+    "compliance_only test cases added to WS3",
+    "WS3 updated to use e2e-testing skill"
+  ],
+  "timestamp": "2025-12-27T17:10:00Z"
+}

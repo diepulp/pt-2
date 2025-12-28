@@ -2184,6 +2184,17 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_move_player: {
+        Args: {
+          p_actor_id: string
+          p_average_bet?: number
+          p_casino_id: string
+          p_new_seat_number?: string
+          p_new_table_id: string
+          p_slip_id: string
+        }
+        Returns: Json
+      }
       rpc_pause_rating_slip: {
         Args: {
           p_actor_id: string
