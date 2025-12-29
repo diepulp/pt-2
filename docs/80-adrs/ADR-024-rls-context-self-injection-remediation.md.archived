@@ -1,0 +1,471 @@
+# ADR-024: RLS Context Self-Injection Anti-Pattern Remediation
+
+**Status:** Proposed
+**Date:** 2025-12-29
+**Owner:** Security/Platform
+**Decision type:** Security + Architecture
+**Supersedes:** Partially supersedes ADR-015 Phase 1A "self-injection" pattern
+**Related:** ADR-015, ADR-020, SEC-001, SEC-002
+
+---
+
+## Context
+
+### The Vulnerability
+
+ADR-015 Phase 1A introduced "RPC self-injection" where RPCs call `set_rls_context()` internally to ensure context is set within the same transaction. The implementation uses this pattern:
+
+```sql
+-- Current "self-injection" pattern (VULNERABLE)
+v_context_staff_role := COALESCE(
+  NULLIF(current_setting('app.staff_role', true), ''),
+  (auth.jwt() -> 'app_metadata' ->> 'staff_role')
+);
+
+PERFORM set_rls_context(
+  COALESCE(
+    NULLIF(current_setting('app.actor_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+  ),
+  COALESCE(
+    NULLIF(current_setting('app.casino_id', true), '')::uuid,
+    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+  ),
+  v_context_staff_role
+);
+```
+
+**Critical Issue:** This pattern is vulnerable to **context spoofing** because:
+
+1. `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` is callable by the `authenticated` role
+2. Session variables (`app.actor_id`, `app.casino_id`, `app.staff_role`) are user-writable via `set_rls_context()`
+3. COALESCE prioritizes session variables over JWT claims
+4. RPCs read from `current_setting()` which returns attacker-controlled values
+
+### Attack Vector
+
+An authenticated attacker can:
+
+```sql
+-- Step 1: Poison session variables
+SELECT set_rls_context(
+  'attacker-chosen-staff-id'::uuid,
+  'target-casino-id'::uuid,
+  'admin'
+);
+
+-- Step 2: Call any affected RPC
+SELECT rpc_get_visit_loyalty_summary('some-visit-id'::uuid);
+-- RPC reads poisoned current_setting() values
+-- RPC operates with spoofed context, bypassing tenant isolation
+```
+
+**Impact:** Multi-tenant isolation is compromised. Attackers can:
+- Access data from other casinos
+- Escalate their role to `admin` or `pit_boss`
+- Impersonate other staff members
+
+### Affected RPCs (16 total)
+
+**WS2 Loyalty RPCs (7):**
+- `rpc_accrue_on_close`
+- `rpc_redeem`
+- `rpc_manual_credit`
+- `rpc_apply_promotion`
+- `rpc_reconcile_loyalty_balance`
+- `rpc_get_player_ledger`
+- `rpc_issue_mid_session_reward`
+
+**PRD-017 Visit/Analytics RPCs (5):**
+- `rpc_check_table_seat_availability`
+- `rpc_get_visit_loyalty_summary`
+- `rpc_get_visit_last_segment`
+- `rpc_get_player_recent_sessions`
+- `rpc_get_player_last_session_context`
+
+**PRD-016/018/Dashboard RPCs (4):**
+- `rpc_get_visit_live_view`
+- `rpc_get_rating_slip_modal_data`
+- `rpc_get_dashboard_tables_with_counts`
+- Latest versions of `rpc_accrue_on_close`, `rpc_start_rating_slip`
+
+---
+
+## Decision
+
+### Replace Spoofable Context Injection with Authoritative Derivation
+
+Create a new function `set_rls_context_from_staff()` that:
+
+1. Takes **NO spoofable parameters** (only optional correlation_id for tracing)
+2. Derives `staff_id` from JWT `app_metadata.staff_id` claim (authoritative source)
+3. Binds `staff_id` claim to `auth.uid()` (prevents mis-issued token escalation)
+4. Looks up `casino_id` and `role` from the `staff` table (authoritative source)
+5. Validates staff is `active` and casino-scoped before setting context
+6. Sets transaction-local context via `SET LOCAL` (pooler-safe)
+7. Caps correlation_id length/charset to protect logs
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_rls_context_from_staff(
+  p_correlation_id text DEFAULT NULL
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+DECLARE
+  v_staff_id uuid;
+  v_casino_id uuid;
+  v_role text;
+  v_correlation_id text;
+BEGIN
+  -- Guard correlation_id for log safety
+  IF p_correlation_id IS NOT NULL THEN
+    v_correlation_id := regexp_replace(p_correlation_id, '[^a-zA-Z0-9:_\\-\\.]+', '', 'g');
+    v_correlation_id := left(v_correlation_id, 64);
+  END IF;
+
+  -- Derive staff_id from JWT (authoritative, not spoofable)
+  v_staff_id := NULLIF((auth.jwt() -> 'app_metadata' ->> 'staff_id'), '')::uuid;
+
+  IF v_staff_id IS NULL THEN
+    -- Fallback: map auth.uid() to staff.user_id
+    BEGIN
+      SELECT s.id INTO STRICT v_staff_id
+      FROM public.staff s
+      WHERE s.user_id = auth.uid();
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+      v_staff_id := NULL;
+    END;
+  ELSE
+    -- Bind staff_id claim to auth.uid() to prevent mis-issued token escalation
+    BEGIN
+      SELECT s.id INTO STRICT v_staff_id
+      FROM public.staff s
+      WHERE s.id = v_staff_id
+        AND s.user_id = auth.uid();
+    EXCEPTION WHEN NO_DATA_FOUND THEN
+      v_staff_id := NULL;
+    END;
+  END IF;
+
+  IF v_staff_id IS NULL THEN
+    RAISE EXCEPTION 'UNAUTHORIZED: staff identity not found'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Derive casino_id and role from staff table (authoritative, not spoofable)
+  SELECT s.casino_id, s.role::text
+  INTO v_casino_id, v_role
+  FROM public.staff s
+  WHERE s.id = v_staff_id
+    AND s.status = 'active'
+    AND s.casino_id IS NOT NULL;
+
+  IF v_casino_id IS NULL OR v_role IS NULL THEN
+    RAISE EXCEPTION 'FORBIDDEN: staff not active or not casino-scoped'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  -- Transaction-local context (pooler-safe SET LOCAL)
+  PERFORM set_config('app.actor_id', v_staff_id::text, true);
+  PERFORM set_config('app.casino_id', v_casino_id::text, true);
+  PERFORM set_config('app.staff_role', v_role, true);
+
+  IF v_correlation_id IS NOT NULL THEN
+    PERFORM set_config('application_name', v_correlation_id, true);
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_rls_context_from_staff(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_rls_context_from_staff(text) TO authenticated;
+```
+
+**SECURITY DEFINER hygiene:**
+- Set `search_path = pg_catalog, public` (prevents function hijack via shadowed objects).
+- Own the function with a least-privileged role that can read `public.staff` but has no broad DDL rights.
+- The function only reads `staff` for the caller and writes `app.*` via `SET LOCAL`, so it does not expose data beyond identity binding.
+
+### Update All Affected RPCs
+
+Replace the vulnerable self-injection pattern:
+
+**BEFORE (vulnerable):**
+```sql
+PERFORM set_rls_context(
+  COALESCE(NULLIF(current_setting('app.actor_id', true), '')::uuid, jwt...),
+  COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, jwt...),
+  v_context_staff_role
+);
+```
+
+**AFTER (secure):**
+```sql
+-- Authoritative context injection (no spoofable params)
+PERFORM set_rls_context_from_staff();
+```
+
+### Deprecate Old set_rls_context()
+
+After all RPCs are updated:
+
+```sql
+-- Remove ability for callers to forge context
+REVOKE EXECUTE ON FUNCTION public.set_rls_context(uuid, uuid, text, text) FROM authenticated;
+
+COMMENT ON FUNCTION public.set_rls_context IS
+  'DEPRECATED: Use set_rls_context_from_staff() instead. This function accepts spoofable parameters.';
+```
+
+### Define Ops Lane (Internal Context Setter)
+
+Create a separate internal setter callable only by a privileged DB role (service_role or a dedicated ops role):
+
+```sql
+CREATE OR REPLACE FUNCTION public.set_rls_context_internal(
+  p_actor_id uuid,
+  p_casino_id uuid,
+  p_staff_role text,
+  p_correlation_id text DEFAULT NULL
+) RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, public
+AS $$
+BEGIN
+  -- Strict validation for ops lane goes here (e.g., actor exists, casino exists).
+  PERFORM set_config('app.actor_id', p_actor_id::text, true);
+  PERFORM set_config('app.casino_id', p_casino_id::text, true);
+  PERFORM set_config('app.staff_role', p_staff_role, true);
+
+  IF p_correlation_id IS NOT NULL THEN
+    PERFORM set_config('application_name', p_correlation_id, true);
+  END IF;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.set_rls_context_internal(uuid, uuid, text, text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.set_rls_context_internal(uuid, uuid, text, text) TO service_role;
+```
+
+---
+
+## Alternatives Considered
+
+### Option A: Harden set_rls_context() with Validation
+
+Add validation to `set_rls_context()` to verify parameters match JWT claims:
+
+```sql
+-- Require p_actor_id match derived staff id
+-- Require p_casino_id match staff.casino_id
+-- Require p_staff_role match staff.role
+```
+
+**Rejected:** This adds complexity and still requires trusting input parameters. Cleaner to remove parameters entirely.
+
+### Option B: JWT-Only Pattern (ADR-015 Phase 3)
+
+Remove `SET LOCAL` entirely, use only `auth.jwt()` in RLS policies:
+
+```sql
+casino_id = (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+```
+
+**Deferred:** This is the correct long-term solution (Track B per ADR-020), but requires rewriting 116 RLS policies. The current fix (authoritative derivation) can be implemented faster and provides equivalent security.
+
+### Option C: Must-Match Pattern in RLS Policies
+
+Require session vars to match JWT when both exist:
+
+```sql
+(
+  current_setting('app.casino_id', true) IS NULL
+  OR current_setting('app.casino_id', true)::uuid =
+     (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+)
+AND casino_id = (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
+```
+
+**Deferred:** Requires updating all 116 RLS policies. The RPC-level fix is more targeted, but we will document and audit remaining `COALESCE` sites and consider must-match for critical tables as defense-in-depth.
+
+---
+
+## Consequences
+
+### Positive
+
+- **Security:** Eliminates context spoofing attack vector
+- **Trust Boundary:** Context is now derived from authoritative sources (JWT + staff table), not spoofable parameters
+- **Defense in Depth:** Even if an attacker finds another way to set session vars, RPCs will overwrite them with authoritative values
+- **Minimal Blast Radius:** Changes are contained to RPC definitions; RLS policies unchanged
+- **Backward Compatible:** RPCs still set the same `app.*` context vars; downstream behavior identical
+
+### Negative
+
+- **Staff Table Lookup:** Each RPC call now queries the `staff` table (indexed lookup by `id` and/or `user_id`)
+- **Migration Effort:** 16 RPCs need to be updated
+- **Breaking Change (Minor):** Any code that relied on pre-setting session vars before calling RPCs will no longer work (this is the intended security fix)
+
+### Neutral
+
+- `set_rls_context()` remains available for internal/migration use, but revoked from `authenticated`
+- RLS policies continue to use `COALESCE(current_setting(), jwt)` pattern; this is now safe only if we enforce the invariant that no client-callable code can set `app.*` except `set_rls_context_from_staff()`, and we maintain an explicit audit list of remaining `COALESCE` sites with rationale
+- No changes to TypeScript service layer required
+
+---
+
+## Rationale
+
+### Why This Fix Over Track B Migration
+
+| Factor | set_rls_context_from_staff() | Track B (JWT-only) |
+|--------|------------------------------|---------------------|
+| Scope | 16 RPCs | 116 RLS policies |
+| Risk | Low (RPC definitions only) | High (all data access) |
+| Timeline | 1 migration | Multiple migrations |
+| Security | Equivalent (authoritative source) | Equivalent (JWT is authoritative) |
+| Pooling | Compatible (SET LOCAL) | Native (no SET LOCAL) |
+
+Track B is the correct end-state architecture, but this fix provides immediate security remediation with minimal risk.
+
+### Why Derive from Staff Table
+
+The `staff` table is the authoritative source for:
+- `casino_id`: Which casino a staff member belongs to
+- `role`: What permissions they have
+- `status`: Whether they're active
+
+JWT claims are synced from this table (per ADR-015 Phase 2), but deriving at RPC time ensures:
+1. No stale JWT claims (role changes take effect immediately)
+2. Inactive staff are blocked even with valid JWTs
+3. Casino assignment changes are enforced immediately
+4. Deterministic identity binding when `staff.user_id` is unique (use `SELECT INTO STRICT`)
+
+---
+
+## Migration Plan
+
+### Phase 1: Deploy New Function
+
+**Migration:** `YYYYMMDDHHMMSS_adr024_rls_context_from_staff.sql`
+
+1. Create `set_rls_context_from_staff()` function
+2. Grant execute to `authenticated`
+3. Add unique index/constraint on `staff.user_id` (deterministic lookup and performance)
+4. Create `set_rls_context_internal(...)` and grant to `service_role` (ops lane)
+
+### Phase 2: Update Affected RPCs
+
+**Migration:** `YYYYMMDDHHMMSS_adr024_rpc_remediation.sql`
+
+Update all 16 RPCs via `CREATE OR REPLACE`:
+- Remove `v_context_staff_role` extraction block
+- Remove `PERFORM set_rls_context(COALESCE(...), ...)` block
+- Add `PERFORM set_rls_context_from_staff();`
+
+### Phase 3: Deprecate Old Function
+
+**Migration:** `YYYYMMDDHHMMSS_adr024_deprecate_old_context.sql`
+
+1. `REVOKE EXECUTE ON FUNCTION set_rls_context(...) FROM authenticated`
+2. Add deprecation comment
+
+### Rollout Sequencing (No Gap)
+
+Ship in one deployment window to avoid a spoofable gap:
+1) Create `set_rls_context_from_staff()`
+2) Update all affected RPCs to call it
+3) Revoke `set_rls_context(...)` from `authenticated`
+
+If a single transaction is not feasible, steps (2) and (3) must be applied together.
+
+---
+
+## Verification
+
+### Pre-Deployment
+
+- [ ] `set_rls_context_from_staff()` created and unit tested
+- [ ] All 16 RPCs updated with new pattern
+- [ ] Integration tests verify context derived correctly from JWT
+- [ ] Security test: verify spoofed session vars are overwritten
+- [ ] Audit list of remaining `COALESCE(current_setting(), jwt)` sites with rationale and owner
+
+### Post-Deployment
+
+- [ ] Monitor Supabase logs for `UNAUTHORIZED` / `FORBIDDEN` exceptions (legitimate failures)
+- [ ] Verify no cross-tenant data access in audit_log
+- [ ] Load test confirms no performance regression (staff table indexed)
+
+### Security Validation
+
+```sql
+-- This attack should now fail
+SELECT set_rls_context('attacker-id'::uuid, 'target-casino'::uuid, 'admin');
+SELECT rpc_get_visit_loyalty_summary('some-visit-id'::uuid);
+-- Expected: RPC derives context from JWT, ignores poisoned session vars
+```
+
+### Production-Readiness Gates
+
+- Negative tests: deprecated `set_rls_context` fails for `authenticated`; poisoned session vars cannot cross casino boundary
+- Staff status: inactive staff cannot derive context; downstream queries fail
+- RLS coverage: verify casino-scoped reads anywhere `COALESCE` remains
+- Pooling: transaction pooling does not leak context across calls
+- Auditability: audit_log actor/casino attribution is derived, not caller-supplied
+
+### Pilot Definition of Done (DoD)
+
+1) **Security invariant enforced**
+- `set_rls_context(...)` is not executable by `authenticated` or `PUBLIC`.
+- Only `set_rls_context_from_staff()` is callable by client roles.
+- DoD check: `select has_function_privilege('authenticated', 'public.set_rls_context(uuid,uuid,text,text)', 'execute');` returns false.
+
+2) **Identity binding is correct**
+- Staff identity is bound to `auth.uid()` even when `staff_id` claim exists.
+- Inactive staff are blocked.
+- DoD check: a mismatched `staff_id` claim fails and does not set context.
+
+3) **Pooling safety proven**
+- Context is set via `SET LOCAL` and does not leak across transactions.
+- DoD check: under transaction pooling, two sequential requests in different casinos do not cross-tenant.
+
+4) **Deterministic staff lookup**
+- Either `staff.user_id` is unique or lookup hard-fails on duplicates (no `LIMIT 1` ambiguity).
+- DoD check: no nondeterministic staff lookup paths remain.
+
+5) **Updated RPC surface uses new setter**
+- All client-callable RPCs that depend on session vars call `set_rls_context_from_staff()`.
+- No client-callable RPC accepts casino_id/actor_id as user input (ops-only exceptions allowed).
+- DoD check: search confirms no remaining calls to old setter in client RPCs.
+
+### Pilot Explicitly Out of Scope
+
+- Enterprise multi-tenant model / multi-casino staff
+- Must-match RLS everywhere
+- CI scanners to detect future `app.*` setters
+- Perfect ops lane with auditing
+
+---
+
+## References
+
+- [ADR-015: RLS Connection Pooling Strategy](./ADR-015-rls-connection-pooling-strategy.md)
+- [ADR-020: RLS Track A MVP Strategy](./ADR-020-rls-track-a-mvp-strategy.md)
+- [Analysis: RLS Context Self-Injection Anti-Pattern](../issues/loyalty-ledger/RLS_CONTEXT_SELF_INJECTION_ANTIPATTERN_REMEDIATION_PLAN.md)
+- [SEC-001: RLS Policy Matrix](../30-security/SEC-001-rls-policy-matrix.md)
+
+---
+
+## Changelog
+
+- 2025-12-29: Initial ADR created based on security audit findings
+  - Identified trust-boundary vulnerability in ADR-015 Phase 1A "self-injection" pattern
+  - Proposed `set_rls_context_from_staff()` as authoritative replacement
+  - Catalogued 16 affected RPCs across loyalty, visit, and dashboard domains
+- 2025-12-29: Production-readiness corrections applied per audit
+  - Bound `staff_id` claim to `auth.uid()` and removed nondeterministic lookup
+  - Added ops lane, rollout sequencing, and explicit verification gates
+  - Clarified COALESCE invariant and added audit list requirement

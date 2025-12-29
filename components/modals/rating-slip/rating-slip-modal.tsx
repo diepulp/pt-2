@@ -223,7 +223,7 @@ export function RatingSlipModal({
               An error occurred while loading the rating slip data.
             </DialogDescription>
           </DialogHeader>
-          <div className="p-4 bg-destructive/10 text-destructive rounded-lg">
+          <div className="p-4 bg-red-950/80 text-red-200 border border-red-800 rounded-lg font-medium">
             {fetchError.message || "Failed to load rating slip data"}
           </div>
           <Button onClick={onClose}>Close</Button>
@@ -316,7 +316,7 @@ export function RatingSlipModal({
           className="flex-1 overflow-y-auto space-y-6 pr-2"
         >
           {error && (
-            <div className="p-3 bg-destructive/10 text-destructive rounded-lg text-sm">
+            <div className="p-3 bg-red-950/80 text-red-200 border border-red-800 rounded-lg text-sm font-medium">
               {error}
             </div>
           )}

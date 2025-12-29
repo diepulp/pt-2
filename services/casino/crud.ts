@@ -483,6 +483,7 @@ export async function enrollPlayer(
   casinoId: string,
   enrolledBy: string,
 ): Promise<PlayerEnrollmentDTO> {
+  // Step 1: Create player_casino enrollment
   const { data, error } = await supabase
     .from("player_casino")
     .upsert(
@@ -505,6 +506,10 @@ export async function enrollPlayer(
     }
     throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
   }
+
+  // NOTE: player_loyalty is created atomically by rpc_create_player (SECURITY DEFINER).
+  // CasinoService must NOT write to player_loyalty (SRM bounded-context: LoyaltyService owns it).
+  // See ISSUE-B5894ED8 remediation path for rationale.
 
   return toPlayerEnrollmentDTO(data);
 }

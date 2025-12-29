@@ -114,15 +114,15 @@ INSERT INTO gaming_table (id, casino_id, label, pit, type, status) VALUES
 -- 6. GAME SETTINGS (Per casino, per game type)
 -- ============================================================================
 
-INSERT INTO game_settings (id, casino_id, game_type, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes) VALUES
+INSERT INTO game_settings (id, casino_id, game_type, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes, points_conversion_rate, point_multiplier) VALUES
   -- Casino 1
-  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.005, 60, 7, 30),
-  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'Texas Hold''em', 50.00, 10000.00, 0.025, 30, 9, 60),
-  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'American Roulette', 10.00, 2000.00, 0.053, 40, 8, 30),
-  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 0.011, 80, 7, 30),
+  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.005, 60, 7, 30, 10.0, 1.0),
+  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'Texas Hold''em', 50.00, 10000.00, 0.025, 30, 9, 60, 8.0, 1.0),
+  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'American Roulette', 10.00, 2000.00, 0.053, 40, 8, 30, 12.0, 1.0),
+  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 0.011, 80, 7, 30, 10.0, 1.5),
   -- Casino 2
-  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.004, 50, 6, 45),
-  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 0.010, 70, 7, 60);
+  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.004, 50, 6, 45, 15.0, 2.0),
+  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 0.010, 70, 7, 60, 20.0, 2.5);
 
 -- ============================================================================
 -- 7. PLAYERS (6 players)
@@ -204,10 +204,12 @@ INSERT INTO visit (id, player_id, casino_id, started_at, ended_at) VALUES
 -- --------------------------------
 -- OPEN RATING SLIPS (Active play)
 -- --------------------------------
+-- NOTE: policy_snapshot populated per ADR-019 D2 with loyalty accrual parameters
+-- accrual_kind defaults to 'loyalty' for normal rated gameplay
 
 -- Player 1: Currently playing blackjack (open slip)
 -- Note: player_id derived from visit.player_id per SRM v4.0.0
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
@@ -215,6 +217,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000001',
     '3',
     '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
+    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     150.00,
     NOW() - INTERVAL '90 minutes',
     NULL,
@@ -222,7 +226,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 3: Currently playing poker (open slip)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000002',
     'ca000000-0000-0000-0000-000000000001',
@@ -230,6 +234,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000002',
     '5',
     '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 0.025}',
+    '{"loyalty": {"house_edge": 0.025, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     200.00,
     NOW() - INTERVAL '45 minutes',
     NULL,
@@ -237,7 +243,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 4: Just sat down at roulette (open slip, no average_bet yet)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000003',
     'ca000000-0000-0000-0000-000000000001',
@@ -245,6 +251,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000003',
     '1',
     '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 0.053}',
+    '{"loyalty": {"house_edge": 0.053, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     NULL,
     NOW() - INTERVAL '15 minutes',
     NULL,
@@ -259,7 +267,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 
 -- Player 2: On break from blackjack (paused slip)
 -- pause_intervals contains open-ended range (current pause, no end time)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status, pause_intervals) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, pause_intervals) VALUES
   (
     'd1000000-0000-0000-0000-000000000004',
     'ca000000-0000-0000-0000-000000000001',
@@ -267,6 +275,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000001',
     '6',
     '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
+    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     500.00,
     NOW() - INTERVAL '3 hours',
     NULL,
@@ -279,7 +289,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 -- --------------------------------
 
 -- Player 1: Yesterday's blackjack session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000001',
@@ -287,6 +297,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000001',
     '4',
     '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
+    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     175.00,
     NOW() - INTERVAL '1 day' - INTERVAL '4 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
@@ -295,7 +307,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 
 -- Player 5: Yesterday's long session with pauses (closed)
 -- pause_intervals contains two completed pause ranges (both have end times)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status, pause_intervals) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, pause_intervals) VALUES
   (
     'd1000000-0000-0000-0000-000000000006',
     'ca000000-0000-0000-0000-000000000001',
@@ -303,6 +315,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000001',
     '1',
     '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
+    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     1000.00,
     NOW() - INTERVAL '1 day' - INTERVAL '7 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '3 hours',
@@ -314,7 +328,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 6: Yesterday's roulette session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000007',
     'ca000000-0000-0000-0000-000000000001',
@@ -322,6 +336,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000003',
     '7',
     '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 0.053}',
+    '{"loyalty": {"house_edge": 0.053, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     50.00,
     NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '1 hour',
@@ -329,7 +345,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 2: Last week's session at Casino 1 (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000008',
     'ca000000-0000-0000-0000-000000000001',
@@ -337,6 +353,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000002',
     '2',
     '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 0.025}',
+    '{"loyalty": {"house_edge": 0.025, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     750.00,
     NOW() - INTERVAL '3 days' - INTERVAL '5 hours',
     NOW() - INTERVAL '3 days' - INTERVAL '1 hour',
@@ -344,7 +362,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
   );
 
 -- Player 5: Historical high-roller session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000009',
     'ca000000-0000-0000-0000-000000000001',
@@ -352,6 +370,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000001',
     '1',
     '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
+    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     2500.00,
     NOW() - INTERVAL '5 days' - INTERVAL '8 hours',
     NOW() - INTERVAL '5 days' - INTERVAL '3 hours',
@@ -362,8 +382,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 -- Casino 2: Rating slips
 -- --------------------------------
 
--- Player 5: Currently playing at Casino 2 (open slip)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, average_bet, start_time, end_time, status) VALUES
+-- Player 5: Currently playing at Casino 2 (open slip) - VIP baccarat with higher multipliers
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
   (
     'd1000000-0000-0000-0000-000000000010',
     'ca000000-0000-0000-0000-000000000002',
@@ -371,6 +391,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     '6a000000-0000-0000-0000-000000000006',
     '3',
     '{"game_type": "baccarat", "min_bet": 500, "max_bet": 100000, "house_edge": 0.010}',
+    '{"loyalty": {"house_edge": 0.010, "decisions_per_hour": 70, "points_conversion_rate": 20.0, "point_multiplier": 2.5, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    'loyalty',
     5000.00,
     NOW() - INTERVAL '2 hours',
     NULL,
@@ -665,6 +687,7 @@ INSERT INTO auth.identities (
 -- - 10 Staff members (pit bosses, dealers, admins)
 -- - 6 Gaming tables (3 active at Casino 1, 1 inactive, 2 at Casino 2)
 -- - 6 Game settings (per casino, per game type)
+--     - Includes points_conversion_rate and point_multiplier (ISSUE-752833A6)
 -- - 6 Players with casino enrollments
 -- - 9 Player loyalty records (with tiers)
 -- - 10 Visits (4 active, 6 closed)
@@ -672,7 +695,11 @@ INSERT INTO auth.identities (
 --     - 4 Open (active gameplay)
 --     - 1 Paused (player on break, with pause_intervals)
 --     - 5 Closed (completed sessions, 1 with pause_intervals history)
+--     - All slips include policy_snapshot.loyalty (ADR-019 D2)
+--     - All slips include accrual_kind='loyalty' (ADR-014)
 -- - pause_intervals stored inline on rating_slip (NEW ARCHITECTURE)
+-- - policy_snapshot JSONB with loyalty accrual parameters (ISSUE-752833A6)
+-- - accrual_kind discriminator for loyalty vs compliance_only (ADR-014)
 -- - 6 Loyalty ledger entries (NEW ARCHITECTURE: points_delta, metadata jsonb)
 -- - 12 Financial transactions
 -- - 7 Dealer rotations

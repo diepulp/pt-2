@@ -1190,6 +1190,7 @@ export type Database = {
       }
       rating_slip: {
         Row: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -1210,6 +1211,7 @@ export type Database = {
           visit_id: string
         }
         Insert: {
+          accrual_kind?: string
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id: string
@@ -1230,6 +1232,7 @@ export type Database = {
           visit_id: string
         }
         Update: {
+          accrual_kind?: string
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id?: string
@@ -2021,6 +2024,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_get_dashboard_tables_with_counts: {
+        Args: { p_casino_id: string }
+        Returns: Json
+      }
       rpc_get_player_last_session_context: {
         Args: { p_casino_id: string; p_player_id: string }
         Returns: Json
@@ -2202,6 +2209,7 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -2328,6 +2336,7 @@ export type Database = {
           p_rating_slip_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
@@ -2364,6 +2373,7 @@ export type Database = {
           p_visit_id: string
         }
         Returns: {
+          accrual_kind: string
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string

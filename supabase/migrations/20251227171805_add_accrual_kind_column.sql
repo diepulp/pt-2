@@ -77,6 +77,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_context_casino_id uuid;
+  v_context_staff_role text;
   v_result rating_slip;
   v_player_id UUID;
   v_visit_kind visit_kind;
@@ -84,6 +85,24 @@ DECLARE
   v_policy_snapshot JSONB;
   v_game_settings_lookup RECORD;
 BEGIN
+  -- =======================================================================
+  -- SELF-INJECTION: ADR-015 Phase 1A for connection pooling
+  -- =======================================================================
+  v_context_staff_role := COALESCE(
+    NULLIF(current_setting('app.staff_role', true), ''),
+    (auth.jwt() -> 'app_metadata' ->> 'staff_role')::text
+  );
+
+  PERFORM set_rls_context(
+    COALESCE(
+      NULLIF(current_setting('app.actor_id', true), '')::uuid,
+      (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid
+    ),
+    p_casino_id,
+    v_context_staff_role
+  );
+  -- =======================================================================
+
   -- ═══════════════════════════════════════════════════════════════════════
   -- CASINO SCOPE VALIDATION (SEC-001 Template 5, SEC-007)
   -- ═══════════════════════════════════════════════════════════════════════

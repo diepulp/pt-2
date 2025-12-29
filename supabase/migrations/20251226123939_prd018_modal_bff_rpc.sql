@@ -160,10 +160,11 @@ BEGIN
   -- ═══════════════════════════════════════════════════════════════════════
   -- 2. FETCH VISIT AND PLAYER
   -- ═══════════════════════════════════════════════════════════════════════
+  -- FIX: Removed duplicate "p.id AS player_id" that was overwriting v.player_id
+  -- causing NULL when LEFT JOIN didn't match (ISSUE-AE49B5DD)
   SELECT
     v.id AS visit_id,
     v.player_id,
-    p.id AS player_id,
     p.first_name,
     p.last_name
   INTO v_visit
