@@ -1,36 +1,35 @@
-'use client';
+"use client";
 
-import { Button } from '@heroui/button';
-import { Card, CardBody, CardHeader } from '@heroui/card';
-import { Input, Textarea } from '@heroui/input';
-import { Select, SelectItem } from '@heroui/select';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { MailIcon, MapPinIcon, PhoneIcon, SendIcon } from 'lucide-react';
-import { motion, useInView } from 'motion/react';
-import { useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { z } from 'zod';
+import { Button } from "@heroui/button";
+import { Card, CardBody, CardHeader } from "@heroui/card";
+import { Input, Textarea } from "@heroui/input";
+import { Select, SelectItem } from "@heroui/select";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { MailIcon, MapPinIcon, PhoneIcon, SendIcon } from "lucide-react";
+import { motion, useInView } from "motion/react";
+import { useRef, useState } from "react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
 
-import { useToast } from '@/hooks/ui';
+import { toast } from "@/hooks/ui";
 
 const formSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters.'),
-  email: z.string().email('Please enter a valid email address.'),
-  companyName: z.string().min(2, 'Company name must be at least 2 characters.'),
-  casinoSize: z.string().min(1, 'Please select your casino size.'),
-  message: z.string().min(10, 'Message must be at least 10 characters.'),
+  name: z.string().min(2, "Name must be at least 2 characters."),
+  email: z.string().email("Please enter a valid email address."),
+  companyName: z.string().min(2, "Company name must be at least 2 characters."),
+  casinoSize: z.string().min(1, "Please select your casino size."),
+  message: z.string().min(10, "Message must be at least 10 characters."),
 });
 
 export function ContactSection() {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, amount: 0.2 });
-  const { toast } = useToast();
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    companyName: '',
-    casinoSize: '',
-    message: '',
+    name: "",
+    email: "",
+    companyName: "",
+    casinoSize: "",
+    message: "",
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -63,23 +62,21 @@ export function ContactSection() {
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      toast({
-        title: 'Demo Request Received',
+      toast.success("Demo Request Received", {
         description:
-          'Thank you for your interest. Our team will contact you shortly.',
+          "Thank you for your interest. Our team will contact you shortly.",
       });
 
       setFormData({
-        name: '',
-        email: '',
-        companyName: '',
-        casinoSize: '',
-        message: '',
+        name: "",
+        email: "",
+        companyName: "",
+        casinoSize: "",
+        message: "",
       });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Something went wrong. Please try again.',
+      toast.error("Error", {
+        description: "Something went wrong. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
@@ -89,7 +86,7 @@ export function ContactSection() {
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -118,7 +115,7 @@ export function ContactSection() {
         <motion.div
           ref={ref}
           initial="hidden"
-          animate={isInView ? 'visible' : 'hidden'}
+          animate={isInView ? "visible" : "hidden"}
           variants={containerVariants}
           className="max-w-6xl mx-auto"
         >
@@ -215,7 +212,7 @@ export function ContactSection() {
                       placeholder="John Smith"
                       value={formData.name}
                       onValueChange={(value) =>
-                        handleInputChange('name', value)
+                        handleInputChange("name", value)
                       }
                       isInvalid={!!errors.name}
                       errorMessage={errors.name}
@@ -230,7 +227,7 @@ export function ContactSection() {
                       type="email"
                       value={formData.email}
                       onValueChange={(value) =>
-                        handleInputChange('email', value)
+                        handleInputChange("email", value)
                       }
                       isInvalid={!!errors.email}
                       errorMessage={errors.email}
@@ -244,7 +241,7 @@ export function ContactSection() {
                       placeholder="Grand Palace Casino"
                       value={formData.companyName}
                       onValueChange={(value) =>
-                        handleInputChange('companyName', value)
+                        handleInputChange("companyName", value)
                       }
                       isInvalid={!!errors.companyName}
                       errorMessage={errors.companyName}
@@ -261,7 +258,7 @@ export function ContactSection() {
                       }
                       onSelectionChange={(keys) => {
                         const value = Array.from(keys)[0] as string;
-                        handleInputChange('casinoSize', value || '');
+                        handleInputChange("casinoSize", value || "");
                       }}
                       isInvalid={!!errors.casinoSize}
                       errorMessage={errors.casinoSize}
@@ -284,7 +281,7 @@ export function ContactSection() {
                       placeholder="Tell us about your specific needs and questions..."
                       value={formData.message}
                       onValueChange={(value: string) =>
-                        handleInputChange('message', value)
+                        handleInputChange("message", value)
                       }
                       isInvalid={!!errors.message}
                       errorMessage={errors.message}
@@ -306,7 +303,7 @@ export function ContactSection() {
                         )
                       }
                     >
-                      {isSubmitting ? 'Sending...' : 'Request Demo'}
+                      {isSubmitting ? "Sending..." : "Request Demo"}
                     </Button>
                   </form>
                 </CardBody>

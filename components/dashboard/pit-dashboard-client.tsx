@@ -19,7 +19,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { useOptimistic } from "react";
-import { toast } from "sonner";
 
 import {
   RatingSlipModal,
@@ -41,10 +40,14 @@ import {
   useMovePlayer,
   useRatingSlipModalData,
 } from "@/hooks/rating-slip-modal";
-import { useModal, usePitDashboardUI } from "@/hooks/ui";
+import { toast, useModal, usePitDashboardUI } from "@/hooks/ui";
 import { useAuth } from "@/hooks/use-auth";
 import { useGamingDay } from "@/hooks/use-casino";
-import { logError } from "@/lib/errors/error-utils";
+import {
+  getErrorMessage,
+  logError,
+  isFetchError,
+} from "@/lib/errors/error-utils";
 import {
   pauseRatingSlip,
   resumeRatingSlip,
@@ -296,9 +299,12 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       toast.success("Rating slip saved");
       closeModal();
     } catch (error) {
-      // Modal stays open on error - error state passed via error prop to RatingSlipModal
-      // Structured logging; mutation state handles UI feedback
-      logError(error, { component: "PitDashboard", action: "saveWithBuyIn" });
+      // Show user-friendly error toast (same pattern as movePlayer)
+      toast.error("Error", { description: getErrorMessage(error) });
+      // Only log unexpected errors (not business validation errors)
+      if (!isFetchError(error) || error.status >= 500) {
+        logError(error, { component: "PitDashboard", action: "saveWithBuyIn" });
+      }
     }
   };
 
@@ -331,8 +337,12 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       toast.success("Session closed");
       closeModal();
     } catch (error) {
-      // Modal stays open on error - error state passed via error prop to RatingSlipModal
-      logError(error, { component: "PitDashboard", action: "closeSession" });
+      // Show user-friendly error toast (same pattern as movePlayer)
+      toast.error("Error", { description: getErrorMessage(error) });
+      // Only log unexpected errors (not business validation errors)
+      if (!isFetchError(error) || error.status >= 500) {
+        logError(error, { component: "PitDashboard", action: "closeSession" });
+      }
     }
   };
 
@@ -390,11 +400,14 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       // PRD-019 WS3: Show success toast after successful move
       toast.success("Player moved");
     } catch (error) {
-      // Show error toast since modal is already closed
+      // Show error toast with specific message since modal is already closed
       // Optimistic update auto-reverts when mutation fails (useOptimistic behavior)
       // TanStack Query rollback in use-move-player.ts handles cache rollback
-      toast.error("Failed to move player");
-      logError(error, { component: "PitDashboard", action: "movePlayer" });
+      toast.error("Error", { description: getErrorMessage(error) });
+      // Only log unexpected errors (not business errors like SEAT_OCCUPIED)
+      if (!isFetchError(error) || error.status >= 500) {
+        logError(error, { component: "PitDashboard", action: "movePlayer" });
+      }
     }
   };
 
@@ -555,17 +568,16 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       <RatingSlipModal
         slipId={selectedSlipId}
         isOpen={isModalOpen && modalType === "rating-slip"}
-        onClose={closeModal}
+        onClose={() => {
+          closeModal();
+          // Reset mutation states to prevent stale errors affecting other slips
+          saveWithBuyIn.reset();
+          closeWithFinancial.reset();
+        }}
         onSave={handleSave}
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
-        error={
-          saveWithBuyIn.error?.message ||
-          closeWithFinancial.error?.message ||
-          movePlayer.error?.message ||
-          null
-        }
       />
     </div>
   );
