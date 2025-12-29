@@ -18,6 +18,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
+import { toast } from "sonner";
 
 import {
   RatingSlipModal,
@@ -195,16 +196,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   );
 
   // Map slips to seat occupants
+  // Optimistic updates now handled via TanStack Query cache in useMovePlayer
   const seatOccupants = React.useMemo(
     () => mapSlipsToOccupants(activeSlips),
     [activeSlips],
   );
 
   // Get occupied seat numbers
-  const occupiedSeats = React.useMemo(
-    () => getOccupiedSeats(activeSlips),
-    [activeSlips],
-  );
+  const occupiedSeats = React.useMemo(() => {
+    return Array.from(seatOccupants.keys());
+  }, [seatOccupants]);
 
   // Build seats array with occupancy data
   const seats = React.useMemo(() => {
@@ -243,7 +244,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
 
   // Modal callback: Close session with chips-taken
   const handleCloseSession = async (formState: FormState) => {
-    if (!selectedSlipId || !modalData) {
+    if (!selectedSlipId || !modalData || !selectedTableId) {
       return;
     }
 
@@ -257,6 +258,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         visitId: modalData.slip.visitId,
         playerId: modalData.player?.id ?? null,
         casinoId,
+        tableId: selectedTableId,
         staffId,
         chipsTaken: Number(formState.chipsTaken || 0),
         averageBet: Number(formState.averageBet),
@@ -270,27 +272,40 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   };
 
   // Modal callback: Move player to different table/seat
-  // PRD-020: Fixed to close modal and clear state on success
+  // Optimistic updates handled via TanStack Query cache in useMovePlayer
   const handleMovePlayer = async (formState: FormState) => {
-    if (!selectedSlipId || !selectedTableId) {
+    if (!selectedSlipId) {
+      logError(new Error("Move failed: No slip selected"), {
+        component: "PitPanels",
+        action: "movePlayer",
+      });
       return;
     }
 
+    // Capture slip ID before closing modal (selectedSlipId may change)
+    const slipIdToMove = selectedSlipId;
+
+    // Close modal immediately for responsive UX
+    closeModal();
+    setSelectedSlip(null);
+
     try {
+      // Only include averageBet if it's positive (schema requires positive if provided)
+      const averageBet = Number(formState.averageBet);
       await movePlayer.mutateAsync({
-        currentSlipId: selectedSlipId,
-        sourceTableId: selectedTableId,
+        currentSlipId: slipIdToMove,
+        sourceTableId: selectedTableId!,
         destinationTableId: formState.newTableId,
         destinationSeatNumber: formState.newSeatNumber || null,
-        averageBet: Number(formState.averageBet),
         casinoId,
+        ...(averageBet > 0 ? { averageBet } : {}),
       });
-      // PRD-020: Close modal and clear state after successful move
-      // (matches handleCloseSession behavior)
-      closeModal();
-      setSelectedSlip(null);
+      // Show success toast after successful move
+      toast.success("Player moved");
     } catch (error) {
-      // Error: keep modal open so user can see error and retry
+      // Show error toast since modal is already closed
+      // TanStack Query rollback in use-move-player.ts handles cache rollback
+      toast.error("Failed to move player");
       logError(error, { component: "PitPanels", action: "movePlayer" });
     }
   };
@@ -401,6 +416,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onSave={handleSave}
         onCloseSession={handleCloseSession}
         onMovePlayer={handleMovePlayer}
+        isMovePlayerPending={movePlayer.isPending}
         error={
           saveWithBuyIn.error?.message ||
           closeWithFinancial.error?.message ||

@@ -15,6 +15,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/hooks/dashboard/keys";
+import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import type {
   MovePlayerInput,
@@ -87,6 +88,15 @@ export interface MovePlayerMutationInput {
  * }
  * ```
  */
+/**
+ * Context for rollback on error.
+ */
+interface MovePlayerContext {
+  previousModalData: RatingSlipModalDTO | undefined;
+  previousSourceSlips: RatingSlipDTO[] | undefined;
+  previousDestSlips: RatingSlipDTO[] | undefined;
+}
+
 export function useMovePlayer() {
   const queryClient = useQueryClient();
 
@@ -94,7 +104,7 @@ export function useMovePlayer() {
     MovePlayerResponse,
     Error,
     MovePlayerMutationInput,
-    { previousData: RatingSlipModalDTO | undefined }
+    MovePlayerContext
   >({
     mutationFn: async (input: MovePlayerMutationInput) => {
       // Only include averageBet if it's positive (schema requires positive if provided)
@@ -110,6 +120,7 @@ export function useMovePlayer() {
     },
     onMutate: async ({
       currentSlipId,
+      sourceTableId,
       destinationTableId,
       destinationSeatNumber,
     }) => {
@@ -117,13 +128,32 @@ export function useMovePlayer() {
       await queryClient.cancelQueries({
         queryKey: ratingSlipModalKeys.data(currentSlipId),
       });
+      await queryClient.cancelQueries({
+        queryKey: dashboardKeys.activeSlips(sourceTableId),
+      });
+      if (sourceTableId !== destinationTableId) {
+        await queryClient.cancelQueries({
+          queryKey: dashboardKeys.activeSlips(destinationTableId),
+        });
+      }
 
-      // Snapshot previous value for rollback
-      const previousData = queryClient.getQueryData<
+      // Snapshot previous values for rollback
+      const previousModalData = queryClient.getQueryData<
         RatingSlipModalDTO | undefined
       >(ratingSlipModalKeys.data(currentSlipId));
 
-      // Optimistically update the slip to show move in progress
+      const previousSourceSlips = queryClient.getQueryData<RatingSlipDTO[]>(
+        dashboardKeys.activeSlips(sourceTableId),
+      );
+
+      const previousDestSlips =
+        sourceTableId !== destinationTableId
+          ? queryClient.getQueryData<RatingSlipDTO[]>(
+              dashboardKeys.activeSlips(destinationTableId),
+            )
+          : undefined;
+
+      // Optimistically update the modal slip data
       queryClient.setQueryData(
         ratingSlipModalKeys.data(currentSlipId),
         (old: RatingSlipModalDTO | undefined) => {
@@ -139,15 +169,49 @@ export function useMovePlayer() {
         },
       );
 
+      // Optimistically update source table's activeSlips
+      queryClient.setQueryData(
+        dashboardKeys.activeSlips(sourceTableId),
+        (old: RatingSlipDTO[] | undefined) => {
+          if (!old) return old;
+
+          if (sourceTableId === destinationTableId) {
+            // Same table move (seat change): update the slip's seat_number
+            return old.map((slip) =>
+              slip.id === currentSlipId
+                ? { ...slip, seat_number: destinationSeatNumber ?? null }
+                : slip,
+            );
+          } else {
+            // Cross-table move: remove slip from source table
+            return old.filter((slip) => slip.id !== currentSlipId);
+          }
+        },
+      );
+
       // Return context for rollback
-      return { previousData };
+      return { previousModalData, previousSourceSlips, previousDestSlips };
     },
-    onError: (err, variables, context) => {
-      // Rollback on error
-      if (context?.previousData) {
+    onError: (_err, variables, context) => {
+      // Rollback modal data on error
+      if (context?.previousModalData) {
         queryClient.setQueryData(
           ratingSlipModalKeys.data(variables.currentSlipId),
-          context.previousData,
+          context.previousModalData,
+        );
+      }
+      // Rollback source table's activeSlips on error
+      if (context?.previousSourceSlips) {
+        queryClient.setQueryData(
+          dashboardKeys.activeSlips(variables.sourceTableId),
+          context.previousSourceSlips,
+        );
+      }
+      // Rollback destination table's activeSlips on error (if different table)
+      if (context?.previousDestSlips) {
+        queryClient.setQueryData(
+          dashboardKeys.activeSlips(variables.destinationTableId),
+          context.previousDestSlips,
         );
       }
     },
