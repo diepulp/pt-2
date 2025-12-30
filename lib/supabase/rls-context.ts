@@ -67,15 +67,20 @@ export async function getAuthContext(
 /**
  * Inject RLS context via SET LOCAL (transaction-wrapped)
  *
- * Uses set_rls_context() RPC per ADR-015 to ensure all SET LOCAL
- * statements execute in the same transaction, fixing connection
- * pooling issues with Supavisor transaction mode.
+ * Uses set_rls_context_from_staff() RPC per ADR-024 to ensure secure
+ * context injection. The RPC derives actor_id, casino_id, and staff_role
+ * from auth.uid() and the staff table - NOT from caller-provided params.
  *
- * Pattern:
+ * ADR-024 Security Model:
+ * - Context is derived from auth.uid() binding to staff.user_id
+ * - No spoofable parameters accepted from client
+ * - Staff must be active with valid casino assignment
+ *
+ * Pattern (in SQL):
  * ```sql
- * SET LOCAL app.actor_id = 'uuid';
- * SET LOCAL app.casino_id = 'uuid';
- * SET LOCAL app.staff_role = 'admin';
+ * SET LOCAL app.actor_id = <derived from staff.id>;
+ * SET LOCAL app.casino_id = <derived from staff.casino_id>;
+ * SET LOCAL app.staff_role = <derived from staff.role>;
  * SET LOCAL application_name = 'correlation-id';
  * ```
  *
@@ -84,16 +89,20 @@ export async function getAuthContext(
  * current_setting('app.casino_id')::uuid
  * current_setting('app.actor_id')::uuid
  * ```
+ *
+ * @param supabase - Authenticated Supabase client
+ * @param _context - DEPRECATED: Context is now derived server-side (kept for API compat)
+ * @param correlationId - Optional trace ID for observability
  */
 export async function injectRLSContext(
   supabase: SupabaseClient<Database>,
-  context: RLSContext,
+  _context: RLSContext,
   correlationId?: string,
 ): Promise<void> {
-  const { error } = await supabase.rpc("set_rls_context", {
-    p_actor_id: context.actorId,
-    p_casino_id: context.casinoId,
-    p_staff_role: context.staffRole,
+  // ADR-024: Call secure context injection that derives from auth.uid()
+  // The context parameter is ignored - kept for backward API compatibility
+  // The SQL function validates staff identity against auth.uid()
+  const { error } = await supabase.rpc("set_rls_context_from_staff", {
     p_correlation_id: correlationId,
   });
 

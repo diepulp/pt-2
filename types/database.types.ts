@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
       audit_log: {
@@ -1175,6 +1180,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "player_loyalty_player_casino_fk"
+            columns: ["player_id", "casino_id"]
+            isOneToOne: true
+            referencedRelation: "player_casino"
+            referencedColumns: ["player_id", "casino_id"]
+          },
+          {
             foreignKeyName: "player_loyalty_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -1923,7 +1935,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -1936,6 +1947,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2077,7 +2089,6 @@ export type Database = {
       }
       rpc_get_visit_live_view: {
         Args: {
-          p_casino_id?: string
           p_include_segments?: boolean
           p_segments_limit?: number
           p_visit_id: string
@@ -2427,6 +2438,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      set_rls_context_from_staff: {
+        Args: { p_correlation_id?: string }
+        Returns: undefined
+      }
+      set_rls_context_internal: {
+        Args: {
+          p_actor_id: string
+          p_casino_id: string
+          p_correlation_id?: string
+          p_staff_role: string
+        }
+        Returns: undefined
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       sync_staff_jwt_claims: {
@@ -2616,4 +2640,3 @@ export const Constants = {
     },
   },
 } as const
-

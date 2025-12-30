@@ -2089,7 +2089,6 @@ export type Database = {
       }
       rpc_get_visit_live_view: {
         Args: {
-          p_casino_id?: string
           p_include_segments?: boolean
           p_segments_limit?: number
           p_visit_id: string

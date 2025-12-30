@@ -1,10 +1,12 @@
 # ISSUE-B5894ED8: Loyalty Ledger Instantiation Gap
 
-**Status:** P0 Database Fix Complete | P0 Service Layer Fix Requires Refactor
+**Status:** ✅ P0 COMPLETE | ⚠️ P1 In Progress | ❌ P2 Pending
 **Date:** 2025-12-29
-**Severity:** P0 (Production Bug)
+**P0 Gate Passed:** 2025-12-30
+**Severity:** P0 (Production Bug) — P0 Blocking Work Complete
 **Affects:** LoyaltyService, CasinoService, Enrollment Flow
 **Related Issues:** ISSUE-AE49B5DD (column collision), ISSUE-752833A6 (policy snapshot)
+**Blocking ADR:** ADR-024 (deployed first to establish secure RLS foundation)
 
 ---
 
@@ -28,34 +30,35 @@
 
 ## Root Cause Analysis
 
-### Confirmed Bug: player_loyalty Not Created on Enrollment
+### ~~Confirmed Bug: player_loyalty Not Created on Enrollment~~ — FIXED
 
-| Component | Creates `player` | Creates `player_casino` | Creates `player_loyalty` |
-|-----------|------------------|-------------------------|--------------------------|
-| `enrollPlayer()` (services/casino/crud.ts:480-510) | No | Yes | **No** |
-| `rpc_create_player` (migration 20251227034101) | Yes | Yes | **No** |
-| `seed.sql` (lines 144-173) | Yes | Yes | Yes **MASKS BUG** |
+| Component | Creates `player` | Creates `player_casino` | Creates `player_loyalty` | Status |
+|-----------|------------------|-------------------------|--------------------------|--------|
+| `enrollPlayer()` (services/casino/crud.ts:480-515) | No | Yes | No (correct per SRM) | ✅ Fixed |
+| `rpc_create_player` (migration 20251229020455) | Yes | Yes | **Yes** | ✅ Fixed |
+| `seed.sql` (lines 144-173) | Yes | Yes | Yes (direct insert) | ⚠️ P1 |
 
-### Code Evidence
+### Code Evidence (Post-Fix)
 
-**services/casino/crud.ts:480-510** - `enrollPlayer()` only creates `player_casino`:
+**services/casino/crud.ts:480-515** - `enrollPlayer()` is now SRM-compliant:
 ```typescript
 export async function enrollPlayer(...) {
   const { data, error } = await supabase
-    .from("player_casino")  // Only creates player_casino
+    .from("player_casino")  // Only writes to CasinoService-owned table
     .upsert({ player_id: playerId, casino_id: casinoId, ... })
     .select("player_id, casino_id, status, enrolled_at, enrolled_by")
     .single();
-  // NO player_loyalty creation!
+
+  // NOTE: player_loyalty is created atomically by rpc_create_player (SECURITY DEFINER).
+  // CasinoService must NOT write to player_loyalty (SRM bounded-context: LoyaltyService owns it).
+  // See ISSUE-B5894ED8 remediation path for rationale.
+
+  return toPlayerEnrollmentDTO(data);
 }
 ```
 
-**seed.sql:144-173** - Explicitly creates both (masking the bug):
+**seed.sql:162** - Still uses direct insert (P1 pending fix):
 ```sql
--- Section 8: player_casino enrollment
-INSERT INTO player_casino (player_id, casino_id, status) VALUES ...
-
--- Section 9: player_loyalty (EXPLICIT CREATION)
 INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier, preferences) VALUES ...
 ```
 
@@ -101,7 +104,7 @@ IF NOT EXISTS (
 END IF;
 ```
 
-**Status:** ❌ Not yet implemented
+**Status:** ✅ Done in `20251229154020_adr024_loyalty_rpcs.sql` (ADR-024 superseded with secure pattern)
 
 ### Tertiary: Enforce Invariants at DB Level
 
@@ -124,7 +127,7 @@ ALTER TABLE public.player_loyalty
   ON DELETE CASCADE;
 ```
 
-**Status:** ❌ Not yet implemented
+**Status:** ✅ Done in `20251229024258_issue_b5894ed8_p0_blockers.sql` (backfill + FK constraint)
 
 ---
 
@@ -189,37 +192,27 @@ Because provisioning is now in the enrollment RPC (SECURITY DEFINER), the RLS IN
 
 ## Current Implementation Status
 
-### ✅ Completed (Correct)
+### ✅ Completed (P0 + P1 Core)
 
 | Item | File | Notes |
 |------|------|-------|
 | RPC creates `player_loyalty` atomically | `20251229020455_fix_loyalty_instantiation_gap.sql` | SECURITY DEFINER, respects SRM |
+| Hard-fail in `rpc_accrue_on_close` | `20251229154020_adr024_loyalty_rpcs.sql` | ADR-024 compliant, uses `set_rls_context_from_staff()` |
+| Service layer SRM-compliant | `services/casino/crud.ts:480-515` | No cross-context writes |
+| Backfill missing `player_loyalty` | `20251229024258_issue_b5894ed8_p0_blockers.sql` | Idempotent INSERT |
+| FK constraint enforced | `20251229024258_issue_b5894ed8_p0_blockers.sql` | `ON DELETE CASCADE` |
+| Ledger idempotency indexes | `20251229024258_issue_b5894ed8_p0_blockers.sql` | `base_accrual_uk`, `idempotency_uk` |
 
-### ❌ Needs Refactor (Bounded-Context Violation)
-
-| Item | File | Issue |
-|------|------|-------|
-| Service layer creates `player_loyalty` | `services/casino/crud.ts:516-528` | CasinoService writing Loyalty-owned data |
-
-**Current code (to be removed):**
-```typescript
-// In enrollPlayer() - BOUNDED-CONTEXT VIOLATION
-const { error: loyaltyError } = await supabase.from("player_loyalty").upsert(
-  { player_id: playerId, casino_id: casinoId, ... },
-  { onConflict: "player_id,casino_id", ignoreDuplicates: true }
-);
-```
-
-**Fix:** Remove this block. The RPC already handles it atomically.
-
-### ❌ Not Yet Implemented
+### ⚠️ P1 Remaining
 
 | Item | Description | Priority |
 |------|-------------|----------|
-| Remove lazy-create from `rpc_accrue_on_close` | Hard-fail if no loyalty account | P0 |
-| FK constraint: `player_loyalty` → `player_casino` | Enforce at DB level | P1 |
 | Seed.sql uses enrollment path | Stop direct `player_loyalty` inserts | P1 |
-| Backfill migration | Create missing `player_loyalty` for existing enrollments | P1 |
+
+### ❌ P2 (Follow-up)
+
+| Item | Description | Priority |
+|------|-------------|----------|
 | Integration test | Enrollment → loyalty invariant | P2 |
 | ADR for loyalty initialization timing | Document the lifecycle | P2 |
 | SRM update | Add `player_loyalty` lifecycle notes | P2 |
@@ -228,20 +221,20 @@ const { error: loyaltyError } = await supabase.from("player_loyalty").upsert(
 
 ## Remediation Checklist
 
-### P0 (Must Ship Together)
+### P0 (Must Ship Together) — ✅ COMPLETE
 
 - [x] Add `player_loyalty` creation to `rpc_create_player` (migration done)
-- [ ] Remove lazy-create from `rpc_accrue_on_close` (hard fail)
-- [ ] Remove cross-context write from `enrollPlayer()` (service layer)
+- [x] Remove lazy-create from `rpc_accrue_on_close` (hard fail) — ADR-024 migration
+- [x] Remove cross-context write from `enrollPlayer()` (service layer) — Verified 2025-12-30
 
-### P1 (Immediately After P0)
+### P1 (Immediately After P0) — ⚠️ IN PROGRESS
 
-- [ ] Add unique + FK constraints for `player_loyalty`
-- [ ] Backfill migration for already-enrolled rows missing loyalty
-- [ ] Seed uses enrollment path, not direct inserts
-- [ ] Commit uncommitted migrations (column collision, self-injection, player lookup)
+- [x] Add unique + FK constraints for `player_loyalty` — `20251229024258_issue_b5894ed8_p0_blockers.sql`
+- [x] Backfill migration for already-enrolled rows missing loyalty — Same migration
+- [ ] Seed uses enrollment path, not direct inserts — **Pending**
+- [x] Commit uncommitted migrations — All committed in `b14c6bf`
 
-### P2 (Follow-up)
+### P2 (Follow-up) — ❌ PENDING
 
 - [ ] Integration test: enrollment provisions loyalty account
 - [ ] Document `player_loyalty` lifecycle in SRM
@@ -251,12 +244,12 @@ const { error: loyaltyError } = await supabase.from("player_loyalty").upsert(
 
 ## Acceptance Criteria (Definition of Done)
 
-- [ ] Enrolling a player results in both `player_casino` and `player_loyalty` existing (same request)
-- [ ] `rpc_accrue_on_close` no longer creates `player_loyalty`
-- [ ] `enrollPlayer()` does NOT write to `player_loyalty` (SRM compliance)
-- [ ] Constraints prevent duplicates and prevent loyalty without enrollment
-- [ ] `seed.sql` uses enrollment path, not direct table inserts for loyalty
-- [ ] Integration test covers enrollment + accrual under at least one "non-admin" role
+- [x] Enrolling a player results in both `player_casino` and `player_loyalty` existing (same request) — `rpc_create_player`
+- [x] `rpc_accrue_on_close` no longer creates `player_loyalty` — Hard-fails with `PLAYER_LOYALTY_MISSING`
+- [x] `enrollPlayer()` does NOT write to `player_loyalty` (SRM compliance) — Verified 2025-12-30
+- [x] Constraints prevent duplicates and prevent loyalty without enrollment — FK + PK enforced
+- [ ] `seed.sql` uses enrollment path, not direct table inserts for loyalty — **Pending (P1)**
+- [ ] Integration test covers enrollment + accrual under at least one "non-admin" role — **Pending (P2)**
 
 ---
 
@@ -297,25 +290,37 @@ All agents confirmed:
 
 ### ISSUE-AE49B5DD: Column Collision in rpc_get_rating_slip_modal_data
 
-**Status:** Fix exists but uncommitted
+**Status:** ✅ Resolved — Superseded by ADR-024 loyalty RPCs migration
 
 ### ISSUE-752833A6: Policy Snapshot Remediation
 
-**Status:** Fixes in uncommitted migrations:
-- `20251228225240_repair_rpc_self_injection.sql`
-- `20251228225241_fix_accrue_player_lookup.sql`
+**Status:** ✅ Resolved — Fixes deployed in ADR-024 commit `c0cde02`
+
+### ADR-024: RLS Context Self-Injection Remediation
+
+**Status:** ✅ Deployed — Prerequisite for B5894ED8 (secure RLS foundation)
 
 ---
 
 ## References
 
+### Architecture
 - `docs/80-adrs/ADR-019-loyalty-points-policy_v2.md` - Ledger-based credit/debit model
 - `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md` - Player identity decisions
+- `docs/80-adrs/ADR-024_DECISIONS.md` - RLS context self-injection remediation
 - `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` - Bounded context ownership
 - `docs/20-architecture/specs/PRD-004/EXECUTION-SPEC-PRD-004.md` - Loyalty service implementation spec
 - `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` - Ghost visit handling
-- `services/casino/crud.ts:480-538` - enrollPlayer() implementation
+
+### Service Layer
+- `services/casino/crud.ts:480-515` - enrollPlayer() implementation (SRM-compliant)
+
+### Migrations (Deployed)
 - `supabase/migrations/20251229020455_fix_loyalty_instantiation_gap.sql` - rpc_create_player fix
+- `supabase/migrations/20251229024258_issue_b5894ed8_p0_blockers.sql` - Backfill + FK + hard-fail
+- `supabase/migrations/20251229152317_adr024_rls_context_from_staff.sql` - Secure context setter
+- `supabase/migrations/20251229154020_adr024_loyalty_rpcs.sql` - ADR-024 compliant loyalty RPCs
+- `supabase/migrations/20251229155051_adr024_deprecate_old_context.sql` - Old setter revoked
 - `supabase/migrations/20251214195201_adr015_prd004_loyalty_rls_fix.sql` - player_loyalty RLS policies
 
 ---
@@ -328,3 +333,7 @@ All agents confirmed:
 | 2025-12-29 | Claude Opus 4.5 | P0 database fix: migration 20251229020455 |
 | 2025-12-29 | Claude Opus 4.5 | P0 service fix: added to enrollPlayer() |
 | 2025-12-29 | Claude Opus 4.5 | Incorporated remediation path: identified service-layer fix as bounded-context violation, updated checklist |
+| 2025-12-29 | Claude Opus 4.5 | ADR-024 deployed: secure RLS context injection, all loyalty RPCs updated |
+| 2025-12-29 | Claude Opus 4.5 | B5894ED8 P0 blockers migration: backfill + FK constraint + hard-fail pattern |
+| 2025-12-30 | RLS Expert | P0 gate audit: PASSED — all security invariants verified, service layer SRM-compliant |
+| 2025-12-30 | Claude Opus 4.5 | **P0 gate passed:** P0 complete, P1 in progress (seed.sql pending), P2 backlog |
