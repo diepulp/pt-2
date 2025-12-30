@@ -2,9 +2,10 @@
 # ==============================================================================
 # Migration Safety Check - RLS Policy Protection
 # ==============================================================================
-# Version: 2.0.0
-# Date: 2025-12-11
+# Version: 3.0.0
+# Date: 2025-12-29
 # References:
+#   - ADR-024: RLS Context Self-Injection Remediation (CURRENT)
 #   - ADR-015: RLS Connection Pooling Strategy (Hybrid Pattern C)
 #   - SEC-001: Casino-Scoped RLS Policy Matrix (Pattern C)
 #   - SEC-002: Casino-Scoped Security Model (Context Injection)
@@ -14,7 +15,12 @@
 #   1. Supabase CLI auto-generated sync_remote_changes.sql files
 #   2. Migrations that modify RLS policies without explicit review markers
 #   3. Policy changes that may lack ADR-015 hybrid fallback pattern
-#   4. Missing set_rls_context() RPC or JWT claims patterns
+#   4. Missing context injection (set_rls_context_from_staff or set_rls_context)
+#
+# ADR-024 Update:
+#   - set_rls_context_from_staff() is now the PREFERRED context injection
+#   - set_rls_context() is deprecated but still accepted for legacy migrations
+#   - Modifications to set_rls_context infrastructure require ADR-024 reference
 # ==============================================================================
 
 echo "🔒 Checking migration safety (RLS policy protection)..."
@@ -181,11 +187,21 @@ done
 # ==============================================================================
 # Check 3b: Validate ADR-015 hybrid staff_role pattern
 # Policies using app.staff_role should include JWT fallback (staff_role)
+# NOTE: ADR-024 migrations using set_rls_context_from_staff() are exempt since
+#       they derive staff_role from the staff table authoritatively.
 # ==============================================================================
 for FILE in $MIGRATION_FILES; do
   HAS_STAFF_ROLE_CHECK=$(git diff --cached "$FILE" | grep -c "current_setting('app.staff_role'" || true)
 
   if [ "$HAS_STAFF_ROLE_CHECK" -gt 0 ]; then
+    # Check if using ADR-024 authoritative context injection (exempt from hybrid check)
+    HAS_ADR024_PATTERN=$(git diff --cached "$FILE" | grep -c 'set_rls_context_from_staff' || true)
+
+    if [ "$HAS_ADR024_PATTERN" -gt 0 ]; then
+      # ADR-024 pattern: staff_role is derived from staff table, not JWT
+      continue
+    fi
+
     HAS_ROLE_HYBRID=$(git diff --cached "$FILE" | grep -c "COALESCE.*current_setting('app.staff_role'.*auth\.jwt.*app_metadata.*staff_role" || true)
 
     if [ "$HAS_ROLE_HYBRID" -eq 0 ]; then
@@ -193,7 +209,10 @@ for FILE in $MIGRATION_FILES; do
       echo ""
       echo "File: $FILE"
       echo ""
-      echo "REQUIRED PATTERN (ADR-015 Hybrid):"
+      echo "PREFERRED SOLUTION (ADR-024):"
+      echo "  PERFORM set_rls_context_from_staff();  -- Derives staff_role from staff table"
+      echo ""
+      echo "ALTERNATIVE (ADR-015 Hybrid):"
       echo "  COALESCE("
       echo "    NULLIF(current_setting('app.staff_role', true), ''),"
       echo "    (auth.jwt() -> 'app_metadata' ->> 'staff_role')"
@@ -248,12 +267,21 @@ for FILE in $MIGRATION_FILES; do
 done
 
 # ==============================================================================
-# Check 5: Protect ADR-015 critical infrastructure (set_rls_context, JWT triggers)
+# Check 5: Protect RLS context infrastructure (set_rls_context*, JWT triggers)
+# ADR-024 adds set_rls_context_from_staff() as the preferred pattern.
 # ==============================================================================
 for FILE in $MIGRATION_FILES; do
-  # Check for modifications to set_rls_context RPC
-  HAS_RLS_CONTEXT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*set_rls_context' || true)
-  HAS_RLS_CONTEXT_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*set_rls_context' || true)
+  # Check for modifications to set_rls_context RPC (legacy)
+  HAS_RLS_CONTEXT_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*set_rls_context[^_]' || true)
+  HAS_RLS_CONTEXT_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*set_rls_context[^_]' || true)
+
+  # Check for modifications to set_rls_context_from_staff (ADR-024)
+  HAS_RLS_FROM_STAFF_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*set_rls_context_from_staff' || true)
+  HAS_RLS_FROM_STAFF_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*set_rls_context_from_staff' || true)
+
+  # Check for modifications to set_rls_context_internal (ADR-024 ops lane)
+  HAS_RLS_INTERNAL_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*set_rls_context_internal' || true)
+  HAS_RLS_INTERNAL_REPLACE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE OR REPLACE FUNCTION.*set_rls_context_internal' || true)
 
   # Check for modifications to JWT claims trigger
   HAS_JWT_TRIGGER_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP TRIGGER.*sync_staff_jwt_claims\|trg_sync_staff_jwt_claims' || true)
@@ -261,36 +289,82 @@ for FILE in $MIGRATION_FILES; do
   # Check for modifications to JWT claims sync function
   HAS_JWT_FUNC_DROP=$(git diff --cached "$FILE" | grep -c '^+.*DROP FUNCTION.*sync_staff_jwt_claims' || true)
 
+  # Check for ADR reference (accepts both ADR-015 and ADR-024)
+  HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015\|ADR-024' || true)
+
+  # Check for REVOKE on set_rls_context (ADR-024 deprecation pattern)
+  HAS_REVOKE_PATTERN=$(git diff --cached "$FILE" | grep -c '^+.*REVOKE.*set_rls_context' || true)
+
   if [ "$HAS_RLS_CONTEXT_DROP" -gt 0 ]; then
-    echo "❌ CHECK 5 FAILED: Migration drops set_rls_context() RPC"
+    # Dropping set_rls_context - only allowed with ADR-024 reference (full migration to new pattern)
+    if [ "$HAS_ADR_REFERENCE" -eq 0 ]; then
+      echo "❌ CHECK 5 FAILED: Migration drops set_rls_context() RPC without ADR reference"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS CRITICAL:"
+      echo "  • set_rls_context() is RLS context injection infrastructure"
+      echo "  • Dropping without ADR-024 reference suggests unintentional removal"
+      echo ""
+      echo "REQUIRED ACTIONS:"
+      echo "  1. If migrating to ADR-024 pattern: add 'ADR-024' reference"
+      echo "  2. Ensure set_rls_context_from_staff() is available before dropping"
+      echo ""
+      VIOLATIONS_FOUND=1
+    fi
+  fi
+
+  if [ "$HAS_RLS_CONTEXT_REPLACE" -gt 0 ] || [ "$HAS_REVOKE_PATTERN" -gt 0 ]; then
+    if [ "$HAS_ADR_REFERENCE" -eq 0 ]; then
+      echo "⚠️  CHECK 5 WARNING: Migration modifies set_rls_context() without ADR reference"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "This function is critical RLS infrastructure."
+      echo "Add 'ADR-015' or 'ADR-024' reference to migration header to confirm intentional change."
+      echo ""
+      WARNINGS_FOUND=1
+    fi
+  fi
+
+  # Protect ADR-024 infrastructure (set_rls_context_from_staff)
+  if [ "$HAS_RLS_FROM_STAFF_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops set_rls_context_from_staff() (ADR-024 critical)"
     echo ""
     echo "File: $FILE"
     echo ""
     echo "WHY THIS IS CRITICAL:"
-    echo "  • set_rls_context() is ADR-015 infrastructure for RLS context injection"
-    echo "  • Dropping this function breaks all RLS policy enforcement"
-    echo "  • Required by withServerAction middleware and withRLS middleware"
-    echo ""
-    echo "REQUIRED ACTIONS:"
-    echo "  1. Verify this is intentional (replacement migration?)"
-    echo "  2. Add 'ADR-015' reference to migration header"
-    echo "  3. Ensure replacement function is created in same migration"
+    echo "  • set_rls_context_from_staff() is the ADR-024 authoritative context injection"
+    echo "  • All client-callable RPCs depend on this function"
+    echo "  • Dropping breaks RLS enforcement for all operations"
     echo ""
     VIOLATIONS_FOUND=1
   fi
 
-  if [ "$HAS_RLS_CONTEXT_REPLACE" -gt 0 ]; then
-    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015' || true)
+  if [ "$HAS_RLS_FROM_STAFF_REPLACE" -gt 0 ]; then
     if [ "$HAS_ADR_REFERENCE" -eq 0 ]; then
-      echo "⚠️  CHECK 5 WARNING: Migration modifies set_rls_context() without ADR-015 reference"
+      echo "⚠️  CHECK 5 WARNING: Migration modifies set_rls_context_from_staff() without ADR reference"
       echo ""
       echo "File: $FILE"
       echo ""
-      echo "This function is ADR-015 critical infrastructure."
-      echo "Add 'ADR-015' reference to migration header to confirm intentional change."
+      echo "This function is ADR-024 critical infrastructure."
+      echo "Add 'ADR-024' reference to migration header to confirm intentional change."
       echo ""
       WARNINGS_FOUND=1
     fi
+  fi
+
+  # Protect ADR-024 ops lane (set_rls_context_internal)
+  if [ "$HAS_RLS_INTERNAL_DROP" -gt 0 ]; then
+    echo "❌ CHECK 5 FAILED: Migration drops set_rls_context_internal() (ADR-024 ops lane)"
+    echo ""
+    echo "File: $FILE"
+    echo ""
+    echo "WHY THIS IS CRITICAL:"
+    echo "  • set_rls_context_internal() is the ADR-024 ops lane for service_role"
+    echo "  • Required for migrations, admin operations, and internal tooling"
+    echo ""
+    VIOLATIONS_FOUND=1
   fi
 
   if [ "$HAS_JWT_TRIGGER_DROP" -gt 0 ]; then

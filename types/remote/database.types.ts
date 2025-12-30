@@ -1180,6 +1180,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "player_loyalty_player_casino_fk"
+            columns: ["player_id", "casino_id"]
+            isOneToOne: true
+            referencedRelation: "player_casino"
+            referencedColumns: ["player_id", "casino_id"]
+          },
+          {
             foreignKeyName: "player_loyalty_player_id_fkey"
             columns: ["player_id"]
             isOneToOne: false
@@ -2424,6 +2431,19 @@ export type Database = {
         }
       }
       set_rls_context: {
+        Args: {
+          p_actor_id: string
+          p_casino_id: string
+          p_correlation_id?: string
+          p_staff_role: string
+        }
+        Returns: undefined
+      }
+      set_rls_context_from_staff: {
+        Args: { p_correlation_id?: string }
+        Returns: undefined
+      }
+      set_rls_context_internal: {
         Args: {
           p_actor_id: string
           p_casino_id: string
