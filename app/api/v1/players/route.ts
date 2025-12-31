@@ -154,10 +154,10 @@ export async function POST(request: NextRequest) {
         const service = createPlayerService(mwCtx.supabase);
 
         // Pass RLS context to service for SECURITY DEFINER RPC
+        // ADR-024: actor_id is now derived internally via set_rls_context_from_staff()
         const player = await service.create({
           ...input,
           casino_id: mwCtx.rlsContext.casinoId,
-          actor_id: mwCtx.rlsContext.actorId,
         });
 
         return {

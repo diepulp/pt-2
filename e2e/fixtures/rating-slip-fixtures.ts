@@ -12,6 +12,9 @@ import { createClient } from "@supabase/supabase-js";
 
 import type { Database } from "@/types/database.types";
 
+/** Game type enum from database */
+type GameType = Database["public"]["Enums"]["game_type"];
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -280,7 +283,19 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   }
 
   // Create rating slip (open status, at seat 1)
+  // Include policy_snapshot with loyalty for accrual_kind='loyalty' constraint
   const seatNumber = "1";
+  const policySnapshot = {
+    loyalty: {
+      house_edge: 1.5,
+      decisions_per_hour: 70,
+      points_conversion_rate: 10.0,
+      point_multiplier: 1.0,
+    },
+    game_type: "blackjack",
+    captured_at: new Date().toISOString(),
+  };
+
   const { data: ratingSlip, error: slipError } = await supabase
     .from("rating_slip")
     .insert({
@@ -291,6 +306,8 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       average_bet: 2500, // $25.00 in cents
       status: "open",
       start_time: new Date().toISOString(),
+      policy_snapshot: policySnapshot,
+      accrual_kind: "loyalty", // Enable loyalty accrual
     })
     .select()
     .single();
@@ -452,4 +469,172 @@ export async function getTransactionsForVisit(visitId: string) {
   }
 
   return data;
+}
+
+// === Loyalty Verification Helpers (ISSUE-47B1DFF1) ===
+
+/**
+ * Gets loyalty ledger entries for a player.
+ * Used to verify accrual occurred after rating slip close.
+ *
+ * @see ISSUE-47B1DFF1 Loyalty accrual integration
+ */
+export async function getLoyaltyLedgerForPlayer(
+  playerId: string,
+  casinoId: string,
+) {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("loyalty_ledger")
+    .select(
+      "id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at",
+    )
+    .eq("player_id", playerId)
+    .eq("casino_id", casinoId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to get loyalty ledger: ${error.message}`);
+  }
+
+  // Extract theo from metadata for convenience
+  return data.map((entry) => ({
+    ...entry,
+    theo: (entry.metadata as Record<string, unknown>)?.theo as
+      | number
+      | undefined,
+  }));
+}
+
+/**
+ * Gets loyalty ledger entries for a specific rating slip.
+ * Used to verify accrual is linked to the correct slip.
+ */
+export async function getLoyaltyLedgerForSlip(ratingSlipId: string) {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("loyalty_ledger")
+    .select(
+      "id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at",
+    )
+    .eq("rating_slip_id", ratingSlipId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Failed to get loyalty ledger for slip: ${error.message}`);
+  }
+
+  // Extract theo from metadata for convenience
+  return data.map((entry) => ({
+    ...entry,
+    theo: (entry.metadata as Record<string, unknown>)?.theo as
+      | number
+      | undefined,
+  }));
+}
+
+/**
+ * Gets player loyalty balance and tier.
+ * Used to verify balance increased after accrual.
+ */
+export async function getPlayerLoyaltyBalance(
+  playerId: string,
+  casinoId: string,
+) {
+  const supabase = createServiceClient();
+
+  const { data, error } = await supabase
+    .from("player_loyalty")
+    .select("player_id, casino_id, current_balance, tier, updated_at")
+    .eq("player_id", playerId)
+    .eq("casino_id", casinoId)
+    .single();
+
+  if (error && error.code !== "PGRST116") {
+    // PGRST116 = no rows (player may not have loyalty record yet)
+    throw new Error(`Failed to get player loyalty: ${error.message}`);
+  }
+
+  return data;
+}
+
+/**
+ * Creates or ensures player_loyalty record exists.
+ * Required for accrual to work (rpc_accrue_on_close requires existing record).
+ */
+export async function ensurePlayerLoyaltyRecord(
+  playerId: string,
+  casinoId: string,
+  initialBalance: number = 0,
+) {
+  const supabase = createServiceClient();
+
+  // Try to insert, ignore if already exists (upsert pattern)
+  const { error } = await supabase.from("player_loyalty").upsert(
+    {
+      player_id: playerId,
+      casino_id: casinoId,
+      current_balance: initialBalance,
+      tier: "bronze",
+    },
+    {
+      onConflict: "player_id,casino_id",
+      ignoreDuplicates: true,
+    },
+  );
+
+  if (error) {
+    throw new Error(`Failed to ensure player loyalty record: ${error.message}`);
+  }
+}
+
+/**
+ * Creates game_settings for a casino (required for policy_snapshot).
+ * The rating slip needs policy_snapshot.loyalty to be populated for accrual to work.
+ */
+export async function ensureGameSettings(
+  casinoId: string,
+  gameType: GameType = "blackjack",
+) {
+  const supabase = createServiceClient();
+
+  const { error } = await supabase.from("game_settings").upsert(
+    {
+      casino_id: casinoId,
+      game_type: gameType,
+      name: `${gameType} Standard`, // Required field
+      house_edge: 1.5, // 1.5%
+      decisions_per_hour: 70,
+      points_conversion_rate: 10.0,
+      point_multiplier: 1.0,
+      seats_available: 7,
+    },
+    {
+      onConflict: "casino_id,game_type",
+      ignoreDuplicates: false, // Always update if exists
+    },
+  );
+
+  if (error) {
+    throw new Error(`Failed to ensure game settings: ${error.message}`);
+  }
+}
+
+/**
+ * Creates a policy_snapshot object for rating slip creation.
+ * Required when accrual_kind = 'loyalty' per chk_policy_snapshot_if_loyalty constraint.
+ */
+export function createPolicySnapshot(gameType: GameType = "blackjack") {
+  return {
+    loyalty: {
+      house_edge: 1.5,
+      decisions_per_hour: 70,
+      points_conversion_rate: 10.0,
+      point_multiplier: 1.0,
+    },
+    game_type: gameType,
+    captured_at: new Date().toISOString(),
+  };
 }

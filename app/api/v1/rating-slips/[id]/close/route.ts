@@ -9,7 +9,7 @@
  * Note: Closing is a terminal state transition. Returns duration_seconds.
  */
 
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from "next/server";
 
 import {
   createRequestContext,
@@ -18,15 +18,15 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/middleware';
-import { createClient } from '@/lib/supabase/server';
-import type { CloseRatingSlipInput } from '@/services/rating-slip';
-import { createRatingSlipService } from '@/services/rating-slip';
+} from "@/lib/http/service-response";
+import { withServerAction } from "@/lib/server-actions/middleware";
+import { createClient } from "@/lib/supabase/server";
+import type { CloseRatingSlipInput } from "@/services/rating-slip";
+import { createRatingSlipService } from "@/services/rating-slip";
 import {
   closeRatingSlipSchema,
   ratingSlipRouteParamsSchema,
-} from '@/services/rating-slip/schemas';
+} from "@/services/rating-slip/schemas";
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -64,16 +64,16 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
       async (mwCtx) => {
         const service = createRatingSlipService(mwCtx.supabase);
 
+        // ADR-024: actor_id now derived internally via set_rls_context_from_staff()
         const slipWithDuration = await service.close(
           mwCtx.rlsContext!.casinoId,
-          mwCtx.rlsContext!.actorId,
           params.id,
           input,
         );
 
         return {
           ok: true as const,
-          code: 'OK' as const,
+          code: "OK" as const,
           data: slipWithDuration,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -81,8 +81,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: 'rating-slip',
-        action: 'close',
+        domain: "rating-slip",
+        action: "close",
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

@@ -9,7 +9,7 @@
  * Note: Requires slip to be in "paused" state.
  */
 
-import type { NextRequest } from 'next/server';
+import type { NextRequest } from "next/server";
 
 import {
   createRequestContext,
@@ -17,11 +17,11 @@ import {
   parseParams,
   requireIdempotencyKey,
   successResponse,
-} from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/middleware';
-import { createClient } from '@/lib/supabase/server';
-import { createRatingSlipService } from '@/services/rating-slip';
-import { ratingSlipRouteParamsSchema } from '@/services/rating-slip/schemas';
+} from "@/lib/http/service-response";
+import { withServerAction } from "@/lib/server-actions/middleware";
+import { createClient } from "@/lib/supabase/server";
+import { createRatingSlipService } from "@/services/rating-slip";
+import { ratingSlipRouteParamsSchema } from "@/services/rating-slip/schemas";
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -49,15 +49,15 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
       async (mwCtx) => {
         const service = createRatingSlipService(mwCtx.supabase);
 
+        // ADR-024: actor_id now derived internally via set_rls_context_from_staff()
         const slip = await service.resume(
           mwCtx.rlsContext!.casinoId,
-          mwCtx.rlsContext!.actorId,
           params.id,
         );
 
         return {
           ok: true as const,
-          code: 'OK' as const,
+          code: "OK" as const,
           data: slip,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -65,8 +65,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: 'rating-slip',
-        action: 'resume',
+        domain: "rating-slip",
+        action: "resume",
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
