@@ -6,6 +6,7 @@ import { toast } from "sonner";
 
 import { EnrollPlayerModal } from "@/components/enrollment/enroll-player-modal";
 import { TableLayoutTerminal } from "@/components/table";
+import type { PitMapPit } from "@/components/table/pit-map-selector";
 import { TableLimitsDialog } from "@/components/table/table-limits-dialog";
 import {
   TableToolbar,
@@ -34,6 +35,12 @@ interface TablesPanelProps {
   /** Casino ID for enrollment */
   casinoId: string;
 
+  // Pit navigation
+  pits?: PitMapPit[];
+  selectedPitId?: string | null;
+  onSelectTable?: (tableId: string, pitId: string) => void;
+  onSelectPit?: (pitId: string) => void;
+
   // Callbacks
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
@@ -50,6 +57,10 @@ export function TablesPanel({
   activeSlips,
   isLoading,
   casinoId,
+  pits,
+  selectedPitId,
+  onSelectTable,
+  onSelectPit,
   onSeatClick,
   onNewSlip,
 }: TablesPanelProps) {
@@ -156,6 +167,11 @@ export function TablesPanel({
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
             onEnrollPlayer={() => setEnrollModalOpen(true)}
+            pits={pits}
+            selectedPitId={selectedPitId}
+            selectedTableId={selectedTable.id}
+            onSelectTable={onSelectTable}
+            onSelectPit={onSelectPit}
             className="hidden sm:flex"
           />
           <TableToolbarCompact
@@ -164,6 +180,11 @@ export function TablesPanel({
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
             onEnrollPlayer={() => setEnrollModalOpen(true)}
+            pits={pits}
+            selectedPitId={selectedPitId}
+            selectedTableId={selectedTable.id}
+            onSelectTable={onSelectTable}
+            onSelectPit={onSelectPit}
             className="flex sm:hidden"
           />
         </div>

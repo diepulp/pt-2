@@ -25,6 +25,12 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
+import {
+  PitMapSelector,
+  PitMapSelectorCompact,
+  type PitMapPit,
+} from "./pit-map-selector";
+
 interface ToolbarAction {
   id: string;
   icon: React.ElementType;
@@ -48,6 +54,12 @@ interface TableToolbarProps {
   onEditLimits: () => void;
   onEnrollPlayer?: () => void;
   className?: string;
+  /** Pit navigation props */
+  pits?: PitMapPit[];
+  selectedPitId?: string | null;
+  selectedTableId?: string | null;
+  onSelectTable?: (tableId: string, pitId: string) => void;
+  onSelectPit?: (pitId: string) => void;
 }
 
 /**
@@ -65,6 +77,11 @@ export function TableToolbar({
   onEditLimits,
   onEnrollPlayer,
   className,
+  pits,
+  selectedPitId,
+  selectedTableId,
+  onSelectTable,
+  onSelectPit,
 }: TableToolbarProps) {
   // Placeholder handlers for pending functionality
   const handlePlaceholder = React.useCallback((action: string) => {
@@ -216,6 +233,26 @@ export function TableToolbar({
           </React.Fragment>
         ))}
 
+        {/* Spacer to push pit selector to the right */}
+        <div className="flex-1" />
+
+        {/* Pit Map Selector - Navigation (rightmost) */}
+        {pits && pits.length > 0 && onSelectTable && onSelectPit && (
+          <>
+            <Separator
+              orientation="vertical"
+              className="h-6 mx-1 bg-border/40"
+            />
+            <PitMapSelector
+              pits={pits}
+              selectedPitId={selectedPitId ?? null}
+              selectedTableId={selectedTableId ?? null}
+              onSelectTable={onSelectTable}
+              onSelectPit={onSelectPit}
+            />
+          </>
+        )}
+
         {/* Bottom accent line */}
         <div className="absolute bottom-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-border/30 to-transparent" />
       </div>
@@ -278,6 +315,11 @@ export function TableToolbarCompact({
   onEditLimits,
   onEnrollPlayer,
   className,
+  pits,
+  selectedPitId,
+  selectedTableId,
+  onSelectTable,
+  onSelectPit,
 }: TableToolbarProps) {
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
@@ -343,6 +385,26 @@ export function TableToolbarCompact({
         {priorityActions.map((action) => (
           <ToolbarButton key={action.id} action={action} />
         ))}
+
+        {/* Spacer to push pit selector to the right */}
+        <div className="flex-1" />
+
+        {/* Compact Pit Selector (rightmost) */}
+        {pits && pits.length > 0 && onSelectTable && onSelectPit && (
+          <>
+            <Separator
+              orientation="vertical"
+              className="h-5 mx-0.5 bg-border/40"
+            />
+            <PitMapSelectorCompact
+              pits={pits}
+              selectedPitId={selectedPitId ?? null}
+              selectedTableId={selectedTableId ?? null}
+              onSelectTable={onSelectTable}
+              onSelectPit={onSelectPit}
+            />
+          </>
+        )}
       </div>
     </TooltipProvider>
   );

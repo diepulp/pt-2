@@ -46,6 +46,10 @@ import {
   isFetchError,
 } from "@/lib/errors/error-utils";
 import {
+  groupTablesByPit,
+  findPitIdForTable,
+} from "@/lib/utils/group-tables-by-pit";
+import {
   pauseRatingSlip,
   resumeRatingSlip,
   closeRatingSlip,
@@ -196,6 +200,34 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const selectedTable = React.useMemo(
     () => tables.find((t) => t.id === selectedTableId),
     [tables, selectedTableId],
+  );
+
+  // Compute pits from tables for pit map selector
+  const pits = React.useMemo(() => groupTablesByPit(tables), [tables]);
+
+  // Find current pit ID based on selected table
+  const selectedPitId = React.useMemo(
+    () => findPitIdForTable(pits, selectedTableId),
+    [pits, selectedTableId],
+  );
+
+  // Handle table selection from pit map selector
+  const handleSelectTable = React.useCallback(
+    (tableId: string, _pitId: string) => {
+      setSelectedTable(tableId);
+    },
+    [setSelectedTable],
+  );
+
+  // Handle pit selection (select first table in pit)
+  const handleSelectPit = React.useCallback(
+    (pitId: string) => {
+      const pit = pits.find((p) => p.id === pitId);
+      if (pit && pit.tables.length > 0) {
+        setSelectedTable(pit.tables[0].id);
+      }
+    },
+    [pits, setSelectedTable],
   );
 
   // Map slips to seat occupants
@@ -391,6 +423,12 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     gamingDay: gamingDayString ? { date: gamingDayString } : null,
     realtimeConnected,
     realtimeError,
+    // Pit navigation
+    pits,
+    selectedPitId,
+    onSelectTable: handleSelectTable,
+    onSelectPit: handleSelectPit,
+    // Callbacks
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
     onSlipClick: handleSlipClick,

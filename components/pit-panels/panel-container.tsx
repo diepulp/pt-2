@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import * as React from "react";
 
+import type { PitMapPit } from "@/components/table/pit-map-selector";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,6 +63,12 @@ interface PanelContainerProps {
   realtimeConnected: boolean;
   realtimeError: Error | null;
 
+  // Pit navigation
+  pits?: PitMapPit[];
+  selectedPitId?: string | null;
+  onSelectTable?: (tableId: string, pitId: string) => void;
+  onSelectPit?: (pitId: string) => void;
+
   // Callbacks
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
@@ -97,6 +104,10 @@ export function PanelContainer({
   gamingDay,
   realtimeConnected,
   realtimeError,
+  pits,
+  selectedPitId,
+  onSelectTable,
+  onSelectPit,
   onSeatClick,
   onNewSlip,
   onSlipClick,
@@ -245,6 +256,10 @@ export function PanelContainer({
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            pits={pits}
+            selectedPitId={selectedPitId}
+            onSelectTable={onSelectTable}
+            onSelectPit={onSelectPit}
           />
         );
       case "activity":
@@ -272,6 +287,10 @@ export function PanelContainer({
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            pits={pits}
+            selectedPitId={selectedPitId}
+            onSelectTable={onSelectTable}
+            onSelectPit={onSelectPit}
           />
         );
     }
