@@ -82,3 +82,25 @@ export function findPitIdForTable(
 
   return null;
 }
+
+/**
+ * Finds the pit label for a given table ID.
+ *
+ * @param pits - Array of pits with nested tables
+ * @param tableId - The table ID to find
+ * @returns The pit label or null if not found
+ */
+export function findPitLabelForTable(
+  pits: PitMapPit[],
+  tableId: string | null,
+): string | null {
+  if (!tableId) return null;
+
+  for (const pit of pits) {
+    if (pit.tables.some((t) => t.id === tableId)) {
+      return pit.label;
+    }
+  }
+
+  return null;
+}

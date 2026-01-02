@@ -8,10 +8,12 @@ export type PanelType = "tables" | "activity" | "inventory" | "analytics";
 interface PitDashboardStore {
   selectedTableId: string | null;
   selectedSlipId: string | null;
+  selectedPitLabel: string | null;
   activePanel: PanelType;
   newSlipSeatNumber: string | undefined;
   setSelectedTable: (id: string | null) => void;
   setSelectedSlip: (id: string | null) => void;
+  setSelectedPitLabel: (label: string | null) => void;
   setActivePanel: (panel: PanelType) => void;
   setNewSlipSeatNumber: (seat: string | undefined) => void;
   clearSelection: () => void;
@@ -22,6 +24,7 @@ export const usePitDashboardStore = create<PitDashboardStore>()(
     (set) => ({
       selectedTableId: null,
       selectedSlipId: null,
+      selectedPitLabel: null,
       activePanel: "tables",
       newSlipSeatNumber: undefined,
       setSelectedTable: (id) =>
@@ -32,6 +35,12 @@ export const usePitDashboardStore = create<PitDashboardStore>()(
         ),
       setSelectedSlip: (id) =>
         set({ selectedSlipId: id }, undefined, "pit-dashboard/setSelectedSlip"),
+      setSelectedPitLabel: (label) =>
+        set(
+          { selectedPitLabel: label },
+          undefined,
+          "pit-dashboard/setSelectedPitLabel",
+        ),
       setActivePanel: (panel) =>
         set({ activePanel: panel }, undefined, "pit-dashboard/setActivePanel"),
       setNewSlipSeatNumber: (seat) =>
@@ -45,6 +54,7 @@ export const usePitDashboardStore = create<PitDashboardStore>()(
           {
             selectedTableId: null,
             selectedSlipId: null,
+            selectedPitLabel: null,
             newSlipSeatNumber: undefined,
           },
           undefined,

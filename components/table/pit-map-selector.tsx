@@ -49,21 +49,24 @@ interface PitMapSelectorProps {
 
 const STATUS_CONFIG: Record<
   TableStatus,
-  { color: string; bg: string; label: string }
+  { color: string; bg: string; ring: string; label: string }
 > = {
   active: {
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/20",
+    color: "text-emerald-600 dark:text-emerald-400",
+    bg: "bg-emerald-500/15 dark:bg-emerald-500/20",
+    ring: "ring-emerald-500/50 dark:ring-emerald-500/40",
     label: "Open",
   },
   inactive: {
-    color: "text-amber-400",
-    bg: "bg-amber-500/20",
+    color: "text-amber-600 dark:text-amber-400",
+    bg: "bg-amber-500/15 dark:bg-amber-500/20",
+    ring: "ring-amber-500/50 dark:ring-amber-500/40",
     label: "Idle",
   },
   closed: {
-    color: "text-zinc-500",
-    bg: "bg-zinc-500/20",
+    color: "text-zinc-500 dark:text-zinc-500",
+    bg: "bg-zinc-500/15 dark:bg-zinc-500/20",
+    ring: "ring-zinc-500/50 dark:ring-zinc-500/40",
     label: "Closed",
   },
 };
@@ -177,7 +180,9 @@ export function PitMapSelector({
                 compact ? "size-3.5" : "size-4",
                 currentTable
                   ? STATUS_CONFIG[currentTable.status].color
-                  : "text-muted-foreground",
+                  : currentPit
+                    ? "text-accent"
+                    : "text-muted-foreground",
               )}
             />
             <span className="truncate font-medium">
@@ -256,17 +261,17 @@ export function PitMapSelector({
                         </span>
                         <span className="flex items-center gap-1.5 text-[10px] font-mono">
                           {stats.active > 0 && (
-                            <span className="text-emerald-400">
+                            <span className="text-emerald-600 dark:text-emerald-400">
                               {stats.active}
                             </span>
                           )}
                           {stats.inactive > 0 && (
-                            <span className="text-amber-400">
+                            <span className="text-amber-600 dark:text-amber-400">
                               {stats.inactive}
                             </span>
                           )}
                           {stats.closed > 0 && (
-                            <span className="text-zinc-500">
+                            <span className="text-zinc-600 dark:text-zinc-500">
                               {stats.closed}
                             </span>
                           )}
@@ -295,11 +300,7 @@ export function PitMapSelector({
                               "size-2 rounded-full shrink-0",
                               statusConfig.bg,
                               "ring-1 ring-inset",
-                              table.status === "active" &&
-                                "ring-emerald-500/40",
-                              table.status === "inactive" &&
-                                "ring-amber-500/40",
-                              table.status === "closed" && "ring-zinc-500/40",
+                              statusConfig.ring,
                             )}
                           />
 
@@ -351,7 +352,9 @@ export function PitMapSelector({
               <span className="text-muted-foreground">
                 {totalStats.tables} tables
               </span>
-              <span className="text-emerald-400">{totalStats.active} open</span>
+              <span className="text-emerald-600 dark:text-emerald-400">
+                {totalStats.active} open
+              </span>
             </span>
           </div>
         </Command>

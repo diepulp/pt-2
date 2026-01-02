@@ -13,10 +13,12 @@ export function usePitDashboardUI() {
     useShallow((s) => ({
       selectedTableId: s.selectedTableId,
       selectedSlipId: s.selectedSlipId,
+      selectedPitLabel: s.selectedPitLabel,
       activePanel: s.activePanel,
       newSlipSeatNumber: s.newSlipSeatNumber,
       setSelectedTable: s.setSelectedTable,
       setSelectedSlip: s.setSelectedSlip,
+      setSelectedPitLabel: s.setSelectedPitLabel,
       setActivePanel: s.setActivePanel,
       setNewSlipSeatNumber: s.setNewSlipSeatNumber,
       clearSelection: s.clearSelection,

@@ -48,6 +48,7 @@ import {
 import {
   groupTablesByPit,
   findPitIdForTable,
+  findPitLabelForTable,
 } from "@/lib/utils/group-tables-by-pit";
 import {
   pauseRatingSlip,
@@ -92,6 +93,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     newSlipSeatNumber,
     setSelectedTable,
     setSelectedSlip,
+    setSelectedPitLabel,
     setNewSlipSeatNumber,
   } = usePitDashboardUI();
 
@@ -211,6 +213,12 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     [pits, selectedTableId],
   );
 
+  // Sync pit label to store for header breadcrumb
+  React.useEffect(() => {
+    const pitLabel = findPitLabelForTable(pits, selectedTableId);
+    setSelectedPitLabel(pitLabel);
+  }, [pits, selectedTableId, setSelectedPitLabel]);
+
   // Handle table selection from pit map selector
   const handleSelectTable = React.useCallback(
     (tableId: string, _pitId: string) => {
@@ -267,6 +275,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         visitId: modalData.slip.visitId,
         playerId: modalData.player?.id ?? null,
         casinoId,
+        tableId: modalData.slip.tableId,
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
