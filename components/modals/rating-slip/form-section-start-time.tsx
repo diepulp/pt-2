@@ -59,12 +59,15 @@ function validateStartTime(value: string): string | null {
  * Start Time form section for Rating Slip Modal.
  * Uses native datetime-local input for reliable cross-browser time entry.
  *
+ * React 19 Performance: Wrapped in React.memo to prevent parent re-renders
+ * from triggering unnecessary reconciliation.
+ *
  * PRD-019: Removed broken +15m/-15m increment buttons that had timezone
  * parsing issues causing incorrect time calculations.
  *
  * @returns Form section with datetime-local input and validation
  */
-export function FormSectionStartTime() {
+export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
   const { value, originalValue, updateField, resetField } = useStartTimeField();
 
   // Calculate time difference for display
@@ -74,13 +77,17 @@ export function FormSectionStartTime() {
   const validationError = useMemo(() => validateStartTime(value), [value]);
   const maxDateTime = useMemo(() => getCurrentDateTimeLocal(), []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField("startTime", e.target.value);
-  };
+  // Event handlers - wrapped in useCallback for stable references
+  const handleChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateField("startTime", e.target.value);
+    },
+    [updateField],
+  );
 
-  const handleReset = () => {
+  const handleReset = React.useCallback(() => {
     resetField("startTime");
-  };
+  }, [resetField]);
 
   return (
     <div>
@@ -119,4 +126,4 @@ export function FormSectionStartTime() {
       </div>
     </div>
   );
-}
+});

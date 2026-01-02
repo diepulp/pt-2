@@ -1,7 +1,13 @@
 "use client";
 
 import { RefreshCw, X } from "lucide-react";
-import React, { useEffect, useRef, useTransition } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useTransition,
+} from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -205,7 +211,64 @@ export function RatingSlipModal({
   }, [isOpen]);
 
   // Compute dirty state (derived, not stored)
-  const isDirty = JSON.stringify(formState) !== JSON.stringify(originalState);
+  // React 19 Performance: Use field-by-field comparison instead of JSON.stringify
+  // to avoid blocking the main thread on every render
+  const isDirty = useMemo(() => {
+    return (
+      formState.averageBet !== originalState.averageBet ||
+      formState.startTime !== originalState.startTime ||
+      formState.newBuyIn !== originalState.newBuyIn ||
+      formState.newTableId !== originalState.newTableId ||
+      formState.newSeatNumber !== originalState.newSeatNumber ||
+      formState.chipsTaken !== originalState.chipsTaken
+    );
+  }, [formState, originalState]);
+
+  // React 19 Performance: Memoize tables array to prevent new reference on every render
+  // IMPORTANT: All hooks must be called before any early returns (Rules of Hooks)
+  const tables = useMemo(() => {
+    if (!modalData) return legacyTables || [];
+    return modalData.tables.map((t) => ({
+      gaming_table_id: t.id,
+      name: t.label,
+      seats_available: 12, // Not critical for UI, placeholder
+    }));
+  }, [modalData?.tables, legacyTables]);
+
+  // React 19 Performance: Extract inline handlers to useCallback for stable references
+  // IMPORTANT: All hooks must be called before any early returns (Rules of Hooks)
+  const handleMovePlayer = useCallback(() => {
+    onMovePlayer({
+      ...formState,
+      cashIn: formState.newBuyIn,
+    } as FormState);
+  }, [formState, onMovePlayer]);
+
+  const handleSave = useCallback(() => {
+    startTransition(() => {
+      onSave({
+        ...formState,
+        cashIn: formState.newBuyIn,
+      } as FormState);
+    });
+  }, [formState, onSave, startTransition]);
+
+  const handleCloseSession = useCallback(() => {
+    startTransition(() => {
+      onCloseSession({
+        ...formState,
+        cashIn: formState.newBuyIn,
+      } as FormState);
+    });
+  }, [formState, onCloseSession, startTransition]);
+
+  const handleRefresh = useCallback(() => {
+    startTransition(async () => {
+      await refetch();
+    });
+  }, [refetch, startTransition]);
+
+  // === EARLY RETURNS (after all hooks) ===
 
   // Loading skeleton - mirrors actual modal structure
   if (isLoading || legacyIsLoading) {
@@ -252,6 +315,8 @@ export function RatingSlipModal({
     );
   }
 
+  // === DERIVED STATE (after early returns, uses modalData safely) ===
+
   // Legacy mode: use props if modalData not available
   // TODO: Remove once all consumers are updated
   const isLegacyMode = !modalData && legacyRatingSlip;
@@ -262,14 +327,6 @@ export function RatingSlipModal({
       ? `${modalData.player.firstName} ${modalData.player.lastName}`
       : "Ghost Visit"
     : legacyRatingSlip?.playerName || "Unknown Player";
-
-  const tables = modalData
-    ? modalData.tables.map((t) => ({
-        gaming_table_id: t.id,
-        name: t.label,
-        seats_available: 12, // Not critical for UI, placeholder
-      }))
-    : legacyTables || [];
 
   const selectedTable =
     tables.find((t) => t.gaming_table_id === formState.newTableId) || null;
@@ -337,13 +394,7 @@ export function RatingSlipModal({
             tables={tables}
             selectedTable={selectedTable}
             seatError=""
-            onMovePlayer={() => {
-              // Call handler directly - parent manages async and modal close
-              onMovePlayer({
-                ...formState,
-                cashIn: formState.newBuyIn,
-              } as FormState);
-            }}
+            onMovePlayer={handleMovePlayer}
             isUpdating={isMovePlayerPending}
             disabled={
               isMovePlayerPending ||
@@ -402,11 +453,7 @@ export function RatingSlipModal({
                   size="icon"
                   className="h-7 w-7"
                   disabled={isFetching}
-                  onClick={() => {
-                    startTransition(async () => {
-                      await refetch();
-                    });
-                  }}
+                  onClick={handleRefresh}
                   aria-label="Refresh points balance"
                 >
                   <RefreshCw
@@ -452,14 +499,7 @@ export function RatingSlipModal({
           <Button
             type="button"
             className="flex-1"
-            onClick={() =>
-              startTransition(() => {
-                onSave({
-                  ...formState,
-                  cashIn: formState.newBuyIn,
-                } as FormState);
-              })
-            }
+            onClick={handleSave}
             disabled={isPending || !isDirty}
           >
             {isPending ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
@@ -468,14 +508,7 @@ export function RatingSlipModal({
             type="button"
             variant="destructive"
             className="flex-1"
-            onClick={() =>
-              startTransition(() => {
-                onCloseSession({
-                  ...formState,
-                  cashIn: formState.newBuyIn,
-                } as FormState);
-              })
-            }
+            onClick={handleCloseSession}
             disabled={isPending || !!error}
           >
             {isPending ? (

@@ -22,7 +22,18 @@ interface FormSectionCashInProps {
   totalCashIn?: number; // Existing total to display (in dollars)
 }
 
-export function FormSectionCashIn({ totalCashIn }: FormSectionCashInProps) {
+/**
+ * Cash-In form section for Rating Slip Modal.
+ * Uses Zustand store via useNewBuyInField hook for optimized re-renders.
+ *
+ * React 19 Performance: Wrapped in React.memo to prevent parent re-renders
+ * from triggering unnecessary reconciliation.
+ *
+ * @returns Form section with total cash-in display and new buy-in input
+ */
+export const FormSectionCashIn = React.memo(function FormSectionCashIn({
+  totalCashIn,
+}: FormSectionCashInProps) {
   // Hook into Zustand store for newBuyIn field
   const {
     value,
@@ -36,22 +47,28 @@ export function FormSectionCashIn({ totalCashIn }: FormSectionCashInProps) {
   // Calculate derived state - total change from original value
   const totalChange = Number(value) - Number(originalValue);
 
-  // Event handlers
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField("newBuyIn", e.target.value);
-  };
+  // Event handlers - wrapped in useCallback for stable references
+  const handleChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateField("newBuyIn", e.target.value);
+    },
+    [updateField],
+  );
 
-  const handleReset = () => {
+  const handleReset = React.useCallback(() => {
     resetField("newBuyIn");
-  };
+  }, [resetField]);
 
-  const handleIncrement = (amount: number) => {
-    incrementField("newBuyIn", amount);
-  };
+  const handleIncrement = React.useCallback(
+    (amount: number) => {
+      incrementField("newBuyIn", amount);
+    },
+    [incrementField],
+  );
 
-  const handleDecrement = () => {
+  const handleDecrement = React.useCallback(() => {
     decrementField("newBuyIn");
-  };
+  }, [decrementField]);
 
   return (
     <div>
@@ -106,4 +123,4 @@ export function FormSectionCashIn({ totalCashIn }: FormSectionCashInProps) {
       </div>
     </div>
   );
-}
+});

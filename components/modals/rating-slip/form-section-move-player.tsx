@@ -30,7 +30,16 @@ interface FormSectionMovePlayerProps {
   disabled: boolean;
 }
 
-export function FormSectionMovePlayer({
+/**
+ * Move Player form section for Rating Slip Modal.
+ * Uses Zustand store via useMovePlayerFields hook for optimized re-renders.
+ *
+ * React 19 Performance: Wrapped in React.memo to prevent parent re-renders
+ * from triggering unnecessary reconciliation.
+ *
+ * @returns Form section with table selector, seat input, and move button
+ */
+export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
   tables,
   selectedTable,
   seatError,
@@ -50,13 +59,20 @@ export function FormSectionMovePlayer({
     ? `1-${selectedTable.seats_available ?? "N/A"}`
     : "Seat number";
 
-  const handleTableChange = (value: string) => {
-    updateField("newTableId", value);
-  };
+  // Event handlers - wrapped in useCallback for stable references
+  const handleTableChange = React.useCallback(
+    (value: string) => {
+      updateField("newTableId", value);
+    },
+    [updateField],
+  );
 
-  const handleSeatChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    updateField("newSeatNumber", e.target.value);
-  };
+  const handleSeatChange = React.useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      updateField("newSeatNumber", e.target.value);
+    },
+    [updateField],
+  );
 
   return (
     <div>
@@ -119,4 +135,4 @@ export function FormSectionMovePlayer({
       </Button>
     </div>
   );
-}
+});

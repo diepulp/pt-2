@@ -291,6 +291,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         visitId: ratingSlipModalData.slip.visitId,
         playerId: ratingSlipModalData.player?.id ?? null,
         casinoId,
+        tableId: ratingSlipModalData.slip.tableId,
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),

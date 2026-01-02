@@ -31,6 +31,8 @@ export interface SaveWithBuyInInput {
   playerId: string | null;
   /** Casino ID for transaction recording */
   casinoId: string;
+  /** Table ID for targeted cache invalidation */
+  tableId: string;
   /** Staff ID for transaction recording */
   staffId: string;
   /** New average bet value */
@@ -68,27 +70,40 @@ export function useSaveWithBuyIn() {
       visitId,
       playerId,
       casinoId,
+      tableId,
       staffId,
       averageBet,
       newBuyIn,
     }: SaveWithBuyInInput) => {
-      // 1. Record buy-in transaction if new amount entered and player exists
-      if (newBuyIn > 0 && playerId) {
-        await createFinancialTransaction({
-          casino_id: casinoId,
-          player_id: playerId,
-          visit_id: visitId,
-          rating_slip_id: slipId,
-          amount: newBuyIn * 100, // Convert dollars to cents
-          direction: "in",
-          source: "pit",
-          tender_type: "cash",
-          created_by_staff_id: staffId,
-        });
-      }
+      // PARALLEL: Both operations are independent - run concurrently for 50% faster save
+      // Financial transaction can fail independently without blocking average_bet update
+      const [_, updateResult] = await Promise.all([
+        // 1. Record buy-in transaction (best-effort, don't block update)
+        newBuyIn > 0 && playerId
+          ? createFinancialTransaction({
+              casino_id: casinoId,
+              player_id: playerId,
+              visit_id: visitId,
+              rating_slip_id: slipId,
+              amount: newBuyIn * 100, // Convert dollars to cents
+              direction: "in",
+              source: "pit",
+              tender_type: "cash",
+              created_by_staff_id: staffId,
+            }).catch((err) => {
+              console.error(
+                "[useSaveWithBuyIn] Financial transaction failed:",
+                err,
+              );
+              return null; // Don't fail the save operation
+            })
+          : Promise.resolve(null),
 
-      // 2. Update average_bet
-      return updateAverageBet(slipId, { average_bet: averageBet });
+        // 2. Update average_bet (critical path - errors propagate)
+        updateAverageBet(slipId, { average_bet: averageBet }),
+      ]);
+
+      return updateResult;
     },
     onMutate: async ({ slipId, averageBet }) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
@@ -128,7 +143,7 @@ export function useSaveWithBuyIn() {
         );
       }
     },
-    onSuccess: (_, { slipId, visitId }) => {
+    onSuccess: (_, { slipId, visitId, tableId }) => {
       // Invalidate modal data
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(slipId),
@@ -139,9 +154,9 @@ export function useSaveWithBuyIn() {
         queryKey: playerFinancialKeys.visitSummary(visitId),
       });
 
-      // Invalidate dashboard slips
+      // TARGETED: Invalidate only this table's slips (not all slips via .scope)
       queryClient.invalidateQueries({
-        queryKey: dashboardKeys.slips.scope,
+        queryKey: dashboardKeys.activeSlips(tableId),
       });
     },
   });

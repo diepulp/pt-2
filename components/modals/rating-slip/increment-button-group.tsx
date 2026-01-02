@@ -11,7 +11,7 @@ interface IncrementButton {
 
 interface IncrementButtonGroupProps {
   type: string;
-  incrementButtons: IncrementButton[];
+  incrementButtons: readonly IncrementButton[];
   onIncrement: (type: string, amount: number) => void;
   className?: string;
 }
