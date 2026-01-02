@@ -3,15 +3,17 @@ id: SEC-003
 title: Casino-Scoped RBAC Matrix
 owner: Security
 status: Active
-affects: [SEC-001, SEC-005, ADR-017]
+affects: [SEC-001, SEC-005, ADR-017, ADR-024]
 created: 2025-11-02
-last_review: 2025-12-10
-version: 1.1.0
+last_review: 2025-12-31
+version: 1.2.0
 ---
 
 ## Purpose
 
 Baseline the role-based access control model that complements the casino-scoped RLS policies. This matrix aligns staff roles and service claims with the data domains they can read or mutate, ensuring consistency across Supabase policies, JWT claims, and service-owned RPCs.
+
+This matrix predates ADR-024; treat it as a baseline, not the final word on SECURITY DEFINER RPC allowlists.
 
 ## Role Registry
 
@@ -54,6 +56,8 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 ## Implementation Notes
 
 - **Staff roles** (`dealer`, `pit_boss`, `admin`, `cashier`) are stored in the `staff.role` column and validated via hybrid context (ADR-015 + ADR-017): `COALESCE(NULLIF(current_setting('app.staff_role', true), ''), auth.jwt() -> 'app_metadata' ->> 'staff_role')`. The `casino_id` scope is enforced via `COALESCE(NULLIF(current_setting('app.casino_id', true), '')::uuid, (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid)`.
+- **ADR-024 enforcement**: SECURITY DEFINER RPCs must call `set_rls_context_from_staff()` and enforce role allowlists inside the function body (do not rely on RLS to gate). Client-supplied actor ids must be ignored or removed; attribution comes from the derived context (`app.actor_id`).
+- **Dealer role** remains non-authenticated scheduling metadata; dealer accounts do not authenticate into application RPCs.
 - **Cashier role assignment** is restricted to admin-only workflows (Staff Admin UI). Direct SQL grants are prohibited in production.
 - **Service claims** (`compliance`, `reward_issuer`, `automation`) must be minted by the authentication gateway with explicit expiration and scoping to a single `casino_id`.
 - Direct table grants should mirror the matrix; any deviation requires a Security-approved ADR.
@@ -72,5 +76,6 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.2.0 | 2025-12-31 | **ADR-024 alignment**: Documented SECURITY DEFINER allowlist enforcement and derived actor attribution. |
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to `staff_role` enum. Updated issuer and description. Updated implementation notes for staff role validation pattern. |
 | 1.0.0 | 2025-11-02 | Initial version. |

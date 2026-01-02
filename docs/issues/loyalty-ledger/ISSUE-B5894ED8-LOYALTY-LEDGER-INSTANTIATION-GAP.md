@@ -1,6 +1,6 @@
 # ISSUE-B5894ED8: Loyalty Ledger Instantiation Gap
 
-**Status:** ✅ P0 COMPLETE | ⚠️ P1 In Progress | ❌ P2 Pending
+**Status:** ✅ P0 COMPLETE | ✅ P1 COMPLETE | ❌ P2 Pending
 **Date:** 2025-12-29
 **P0 Gate Passed:** 2025-12-30
 **Severity:** P0 (Production Bug) — P0 Blocking Work Complete
@@ -203,11 +203,11 @@ Because provisioning is now in the enrollment RPC (SECURITY DEFINER), the RLS IN
 | FK constraint enforced | `20251229024258_issue_b5894ed8_p0_blockers.sql` | `ON DELETE CASCADE` |
 | Ledger idempotency indexes | `20251229024258_issue_b5894ed8_p0_blockers.sql` | `base_accrual_uk`, `idempotency_uk` |
 
-### ⚠️ P1 Remaining
+### ✅ P1 Complete
 
-| Item | Description | Priority |
-|------|-------------|----------|
-| Seed.sql uses enrollment path | Stop direct `player_loyalty` inserts | P1 |
+| Item | Description | Status |
+|------|-------------|--------|
+| Seed.sql uses enrollment path | Derived from player_casino enrollments | ✅ Done |
 
 ### ❌ P2 (Follow-up)
 
@@ -227,11 +227,11 @@ Because provisioning is now in the enrollment RPC (SECURITY DEFINER), the RLS IN
 - [x] Remove lazy-create from `rpc_accrue_on_close` (hard fail) — ADR-024 migration
 - [x] Remove cross-context write from `enrollPlayer()` (service layer) — Verified 2025-12-30
 
-### P1 (Immediately After P0) — ⚠️ IN PROGRESS
+### P1 (Immediately After P0) — ✅ COMPLETE
 
 - [x] Add unique + FK constraints for `player_loyalty` — `20251229024258_issue_b5894ed8_p0_blockers.sql`
 - [x] Backfill migration for already-enrolled rows missing loyalty — Same migration
-- [ ] Seed uses enrollment path, not direct inserts — **Pending**
+- [x] Seed uses enrollment path, not direct inserts — `supabase/seed.sql` refactored 2025-12-30
 - [x] Commit uncommitted migrations — All committed in `b14c6bf`
 
 ### P2 (Follow-up) — ❌ PENDING
@@ -248,7 +248,7 @@ Because provisioning is now in the enrollment RPC (SECURITY DEFINER), the RLS IN
 - [x] `rpc_accrue_on_close` no longer creates `player_loyalty` — Hard-fails with `PLAYER_LOYALTY_MISSING`
 - [x] `enrollPlayer()` does NOT write to `player_loyalty` (SRM compliance) — Verified 2025-12-30
 - [x] Constraints prevent duplicates and prevent loyalty without enrollment — FK + PK enforced
-- [ ] `seed.sql` uses enrollment path, not direct table inserts for loyalty — **Pending (P1)**
+- [x] `seed.sql` uses enrollment path, not direct table inserts for loyalty — Refactored 2025-12-30
 - [ ] Integration test covers enrollment + accrual under at least one "non-admin" role — **Pending (P2)**
 
 ---
@@ -337,3 +337,4 @@ All agents confirmed:
 | 2025-12-29 | Claude Opus 4.5 | B5894ED8 P0 blockers migration: backfill + FK constraint + hard-fail pattern |
 | 2025-12-30 | RLS Expert | P0 gate audit: PASSED — all security invariants verified, service layer SRM-compliant |
 | 2025-12-30 | Claude Opus 4.5 | **P0 gate passed:** P0 complete, P1 in progress (seed.sql pending), P2 backlog |
+| 2025-12-30 | Claude Opus 4.5 | **P1 complete:** Refactored seed.sql to derive player_loyalty from player_casino enrollments |
