@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "dev:kill": "./scripts/dev-cleanup.sh",
+    "dev:kill": "uv run scripts/dev-cleanup.sh",
     "dev": "npm run dev:kill && next dev --webpack",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
@@ -122,6 +122,7 @@
     "@types/react-dom": "^19",
     "@types/swagger-ui-react": "^5.18.0",
     "cypress": "^15.3.0",
+    "dotenv": "^17.2.3",
     "eslint": "^9",
     "eslint-config-next": "15.3.1",
     "eslint-config-prettier": "^10.1.8",
