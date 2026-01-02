@@ -9,6 +9,7 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 
+import { ExceptionsApprovalsPanel } from "./exceptions-approvals-panel";
 import { PitPanelsClient } from "./pit-panels-client";
 
 interface PitPanelsDashboardLayoutProps {
@@ -27,15 +28,9 @@ export function PitPanelsDashboardLayout({
           <div className="min-h-[420px]">
             <PitPanelsClient casinoId={casinoId} />
           </div>
-          <PendingSection
-            title="Exceptions & Approvals"
-            description="Under construction. Alerts, approvals, and compliance flags."
-            items={[
-              "Overdue drop pulls",
-              "Fill slip approvals pending",
-              "Closed tables with open slips",
-            ]}
-          />
+          <div className="min-h-[280px] rounded-lg border border-border/40 overflow-hidden">
+            <ExceptionsApprovalsPanel />
+          </div>
           <PendingSection
             title="Shift Ops"
             description="Under construction. Dealer coverage, handoffs, and shift notes."
@@ -59,16 +54,9 @@ export function PitPanelsDashboardLayout({
       <ResizablePanel defaultSize={36} minSize={24}>
         <ResizablePanelGroup direction="vertical" className="h-full">
           <ResizablePanel defaultSize={50} minSize={25}>
-            <PendingSection
-              title="Exceptions & Approvals"
-              description="Under construction. Alerts, approvals, and compliance flags."
-              items={[
-                "Overdue drop pulls",
-                "Fill slip approvals pending",
-                "Closed tables with open slips",
-              ]}
-              className="border-b border-border/40"
-            />
+            <div className="h-full border-b border-border/40">
+              <ExceptionsApprovalsPanel />
+            </div>
           </ResizablePanel>
           <ResizableHandle withHandle />
           <ResizablePanel defaultSize={50} minSize={25}>
