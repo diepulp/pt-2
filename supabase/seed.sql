@@ -1,4 +1,4 @@
--- PT-2 Seed Data
+  -- PT-2 Seed Data
 -- Purpose: Populate database with realistic test data for all rating slip workflows
 -- Coverage: 2 casinos, 6 players, 3 tables, all rating slip states
 -- Created: 2025-12-02
@@ -114,15 +114,18 @@ INSERT INTO gaming_table (id, casino_id, label, pit, type, status) VALUES
 -- 6. GAME SETTINGS (Per casino, per game type)
 -- ============================================================================
 
+-- NOTE: house_edge is stored as PERCENTAGE (e.g., 0.5 = 0.5%, not 0.005)
+-- The calculate_theo_from_snapshot function divides by 100, so:
+--   0.5% house edge → store as 0.5 → formula uses 0.5/100 = 0.005
 INSERT INTO game_settings (id, casino_id, game_type, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes, points_conversion_rate, point_multiplier) VALUES
   -- Casino 1
-  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.005, 60, 7, 30, 10.0, 1.0),
-  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'Texas Hold''em', 50.00, 10000.00, 0.025, 30, 9, 60, 8.0, 1.0),
-  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'American Roulette', 10.00, 2000.00, 0.053, 40, 8, 30, 12.0, 1.0),
-  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 0.011, 80, 7, 30, 10.0, 1.5),
+  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.5, 60, 7, 30, 10.0, 1.0),
+  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'Texas Hold''em', 50.00, 10000.00, 2.5, 30, 9, 60, 8.0, 1.0),
+  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'American Roulette', 10.00, 2000.00, 5.3, 40, 8, 30, 12.0, 1.0),
+  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 1.1, 80, 7, 30, 10.0, 1.5),
   -- Casino 2
-  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.004, 50, 6, 45, 15.0, 2.0),
-  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 0.010, 70, 7, 60, 20.0, 2.5);
+  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.4, 50, 6, 45, 15.0, 2.0),
+  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 1.0, 70, 7, 60, 20.0, 2.5);
 
 -- ============================================================================
 -- 7. PLAYERS (6 players)
@@ -156,21 +159,57 @@ INSERT INTO player_casino (player_id, casino_id, status) VALUES
   ('a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'active');
 
 -- ============================================================================
--- 9. PLAYER LOYALTY (Initial balances and tiers)
+-- 9. PLAYER LOYALTY (Derived from enrollments)
+-- ============================================================================
+-- ISSUE-B5894ED8 P1 FIX: Instead of direct inserts that mask the production bug,
+-- we derive player_loyalty records from player_casino enrollments.
+-- This mimics the production path where rpc_create_player atomically creates both.
+--
+-- Step 1: Auto-create player_loyalty for all enrolled players (like rpc_create_player does)
+-- Step 2: Update with seed-specific balances/tiers for test scenarios
 -- ============================================================================
 
-INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier, preferences) VALUES
-  -- Casino 1 loyalty
-  ('a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 15000, 'Gold', '{"comps": true, "email_offers": true}'),
-  ('a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 50000, 'Platinum', '{"comps": true, "email_offers": true, "host_assigned": true}'),
-  ('a1000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 2500, 'Silver', '{"comps": true}'),
-  ('a1000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 500, 'Bronze', '{}'),
-  ('a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 120000, 'Diamond', '{"comps": true, "email_offers": true, "host_assigned": true, "vip_lounge": true}'),
-  ('a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 100, 'Bronze', '{}'),
-  -- Casino 2 loyalty (cross-property players)
-  ('a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000002', 8000, 'Gold', '{"comps": true}'),
-  ('a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000002', 25000, 'Platinum', '{"comps": true, "host_assigned": true}'),
-  ('a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 75000, 'Diamond', '{"comps": true, "vip_lounge": true}');
+-- Step 1: Create player_loyalty for all enrollments (mimics rpc_create_player behavior)
+INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier, preferences, updated_at)
+SELECT
+  pc.player_id,
+  pc.casino_id,
+  0,              -- Initial balance (ADR-019: ledger-based, starts at 0)
+  NULL,           -- No tier yet (assigned after earning thresholds)
+  '{}'::jsonb,    -- Empty preferences
+  NOW()
+FROM player_casino pc
+ON CONFLICT (player_id, casino_id) DO NOTHING;
+
+-- Step 2: Update with seed-specific test data (tiers, balances, preferences)
+-- Casino 1 loyalty
+UPDATE player_loyalty SET current_balance = 15000, tier = 'Gold', preferences = '{"comps": true, "email_offers": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000001' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+UPDATE player_loyalty SET current_balance = 50000, tier = 'Platinum', preferences = '{"comps": true, "email_offers": true, "host_assigned": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000002' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+UPDATE player_loyalty SET current_balance = 2500, tier = 'Silver', preferences = '{"comps": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000003' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+UPDATE player_loyalty SET current_balance = 500, tier = 'Bronze', preferences = '{}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000004' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+UPDATE player_loyalty SET current_balance = 120000, tier = 'Diamond', preferences = '{"comps": true, "email_offers": true, "host_assigned": true, "vip_lounge": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+UPDATE player_loyalty SET current_balance = 100, tier = 'Bronze', preferences = '{}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000006' AND casino_id = 'ca000000-0000-0000-0000-000000000001';
+
+-- Casino 2 loyalty (cross-property players)
+UPDATE player_loyalty SET current_balance = 8000, tier = 'Gold', preferences = '{"comps": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000001' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
+
+UPDATE player_loyalty SET current_balance = 25000, tier = 'Platinum', preferences = '{"comps": true, "host_assigned": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000002' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
+
+UPDATE player_loyalty SET current_balance = 75000, tier = 'Diamond', preferences = '{"comps": true, "vip_lounge": true}'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
 
 -- ============================================================================
 -- 10. VISITS
@@ -216,8 +255,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000001',
     '6a000000-0000-0000-0000-000000000001',
     '3',
-    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
-    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.5}',
+    '{"loyalty": {"house_edge": 0.5, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     150.00,
     NOW() - INTERVAL '90 minutes',
@@ -233,8 +272,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000003',
     '6a000000-0000-0000-0000-000000000002',
     '5',
-    '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 0.025}',
-    '{"loyalty": {"house_edge": 0.025, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 2.5}',
+    '{"loyalty": {"house_edge": 2.5, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     200.00,
     NOW() - INTERVAL '45 minutes',
@@ -250,8 +289,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000004',
     '6a000000-0000-0000-0000-000000000003',
     '1',
-    '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 0.053}',
-    '{"loyalty": {"house_edge": 0.053, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 5.3}',
+    '{"loyalty": {"house_edge": 5.3, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     NULL,
     NOW() - INTERVAL '15 minutes',
@@ -274,8 +313,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000002',
     '6a000000-0000-0000-0000-000000000001',
     '6',
-    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
-    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.5}',
+    '{"loyalty": {"house_edge": 0.5, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     500.00,
     NOW() - INTERVAL '3 hours',
@@ -296,8 +335,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000005',
     '6a000000-0000-0000-0000-000000000001',
     '4',
-    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
-    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.5}',
+    '{"loyalty": {"house_edge": 0.5, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     175.00,
     NOW() - INTERVAL '1 day' - INTERVAL '4 hours',
@@ -314,8 +353,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000006',
     '6a000000-0000-0000-0000-000000000001',
     '1',
-    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
-    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.5}',
+    '{"loyalty": {"house_edge": 0.5, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     1000.00,
     NOW() - INTERVAL '1 day' - INTERVAL '7 hours',
@@ -335,8 +374,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000007',
     '6a000000-0000-0000-0000-000000000003',
     '7',
-    '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 0.053}',
-    '{"loyalty": {"house_edge": 0.053, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "roulette", "min_bet": 10, "max_bet": 2000, "house_edge": 5.3}',
+    '{"loyalty": {"house_edge": 5.3, "decisions_per_hour": 40, "points_conversion_rate": 12.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     50.00,
     NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
@@ -352,8 +391,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000008',
     '6a000000-0000-0000-0000-000000000002',
     '2',
-    '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 0.025}',
-    '{"loyalty": {"house_edge": 0.025, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "poker", "min_bet": 50, "max_bet": 10000, "house_edge": 2.5}',
+    '{"loyalty": {"house_edge": 2.5, "decisions_per_hour": 30, "points_conversion_rate": 8.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     750.00,
     NOW() - INTERVAL '3 days' - INTERVAL '5 hours',
@@ -369,8 +408,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000009',
     '6a000000-0000-0000-0000-000000000001',
     '1',
-    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.005}',
-    '{"loyalty": {"house_edge": 0.005, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "blackjack", "min_bet": 25, "max_bet": 5000, "house_edge": 0.5}',
+    '{"loyalty": {"house_edge": 0.5, "decisions_per_hour": 60, "points_conversion_rate": 10.0, "point_multiplier": 1.0, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     2500.00,
     NOW() - INTERVAL '5 days' - INTERVAL '8 hours',
@@ -390,8 +429,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     'b1000000-0000-0000-0000-000000000010',
     '6a000000-0000-0000-0000-000000000006',
     '3',
-    '{"game_type": "baccarat", "min_bet": 500, "max_bet": 100000, "house_edge": 0.010}',
-    '{"loyalty": {"house_edge": 0.010, "decisions_per_hour": 70, "points_conversion_rate": 20.0, "point_multiplier": 2.5, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
+    '{"game_type": "baccarat", "min_bet": 500, "max_bet": 100000, "house_edge": 1.0}',
+    '{"loyalty": {"house_edge": 1.0, "decisions_per_hour": 70, "points_conversion_rate": 20.0, "point_multiplier": 2.5, "policy_version": "loyalty_points_v1"}, "_source": {"house_edge": "game_settings", "decisions_per_hour": "game_settings", "points_conversion_rate": "game_settings", "point_multiplier": "game_settings"}}',
     'loyalty',
     5000.00,
     NOW() - INTERVAL '2 hours',
@@ -422,7 +461,7 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'base_accrual',
     'rating_slip',
     'd1000000-0000-0000-0000-000000000005',
-    '{"theo_cents": 3500, "average_bet": 175.00, "duration_seconds": 7200, "game_type": "blackjack", "house_edge": 0.005}'
+    '{"theo_cents": 3500, "average_bet": 175.00, "duration_seconds": 7200, "game_type": "blackjack", "house_edge": 0.5}'
   ),
   -- Player 5's long session (base_accrual on slip close)
   (
@@ -436,7 +475,7 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'base_accrual',
     'rating_slip',
     'd1000000-0000-0000-0000-000000000006',
-    '{"theo_cents": 20000, "average_bet": 1000.00, "duration_seconds": 12600, "game_type": "blackjack", "house_edge": 0.005}'
+    '{"theo_cents": 20000, "average_bet": 1000.00, "duration_seconds": 12600, "game_type": "blackjack", "house_edge": 0.5}'
   ),
   -- Player 6's roulette session (base_accrual)
   (
@@ -450,7 +489,7 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'base_accrual',
     'rating_slip',
     'd1000000-0000-0000-0000-000000000007',
-    '{"theo_cents": 1000, "average_bet": 50.00, "duration_seconds": 3600, "game_type": "roulette", "house_edge": 0.053}'
+    '{"theo_cents": 1000, "average_bet": 50.00, "duration_seconds": 3600, "game_type": "roulette", "house_edge": 5.3}'
   );
 
 -- Historical points
@@ -467,7 +506,7 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'base_accrual',
     'rating_slip',
     'd1000000-0000-0000-0000-000000000008',
-    '{"theo_cents": 15000, "average_bet": 750.00, "duration_seconds": 14400, "game_type": "poker", "house_edge": 0.025}',
+    '{"theo_cents": 15000, "average_bet": 750.00, "duration_seconds": 14400, "game_type": "poker", "house_edge": 2.5}',
     NOW() - INTERVAL '3 days'
   ),
   -- Player 5's high-roller session
@@ -482,7 +521,7 @@ INSERT INTO loyalty_ledger (id, casino_id, player_id, rating_slip_id, visit_id, 
     'base_accrual',
     'rating_slip',
     'd1000000-0000-0000-0000-000000000009',
-    '{"theo_cents": 50000, "average_bet": 2500.00, "duration_seconds": 18000, "game_type": "blackjack", "house_edge": 0.005}',
+    '{"theo_cents": 50000, "average_bet": 2500.00, "duration_seconds": 18000, "game_type": "blackjack", "house_edge": 0.5}',
     NOW() - INTERVAL '5 days'
   ),
   -- Promotion credit for Player 2
