@@ -126,7 +126,7 @@ export async function listPlayers(
  * isolation issues with connection pooling (ADR-015 Pattern A).
  *
  * @param supabase - Supabase client
- * @param input - Player data with RLS context (casino_id, actor_id required)
+ * @param input - Player data with RLS context (casino_id required)
  * @returns Created player DTO
  * @throws DomainError on validation or authorization failure
  *
@@ -140,7 +140,6 @@ export async function createPlayer(
   // Use RPC for transaction-safe creation with RLS context
   const { data, error } = await supabase.rpc("rpc_create_player", {
     p_casino_id: input.casino_id,
-    p_actor_id: input.actor_id,
     p_first_name: input.first_name,
     p_last_name: input.last_name,
     p_birth_date: input.birth_date ?? undefined,

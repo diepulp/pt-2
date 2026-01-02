@@ -106,7 +106,6 @@ export interface LogInventorySnapshotInput {
   tableId: string;
   snapshotType: SnapshotType;
   chipset: ChipsetPayload;
-  countedBy?: string;
   verifiedBy?: string;
   discrepancyCents?: number;
   note?: string;
@@ -135,7 +134,6 @@ export interface RequestTableFillInput {
   requestId: string; // Idempotency key
   chipset: ChipsetPayload;
   amountCents: number;
-  requestedBy: string;
   deliveredBy: string;
   receivedBy: string;
   slipNo: string;
@@ -164,7 +162,6 @@ export interface RequestTableCreditInput {
   requestId: string; // Idempotency key
   chipset: ChipsetPayload;
   amountCents: number;
-  authorizedBy: string;
   sentBy: string;
   receivedBy: string;
   slipNo: string;
@@ -194,7 +191,6 @@ export interface LogDropEventInput {
   tableId: string;
   dropBoxId: string;
   sealNo: string;
-  removedBy: string;
   witnessedBy: string;
   removedAt?: string;
   deliveredAt?: string;

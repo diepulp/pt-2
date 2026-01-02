@@ -815,7 +815,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         {
           p_casino_id: testCasino1Id,
           p_rating_slip_id: startResult!.id,
-          p_actor_id: testStaff1Id,
           p_average_bet: 50.0,
         },
       );
@@ -849,7 +848,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         {
           p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -863,7 +861,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         {
           p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -877,7 +874,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         {
           p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -909,7 +905,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         {
           p_casino_id: testCasino2Id, // Wrong casino!
           p_rating_slip_id: slip1!.id,
-          p_actor_id: testStaff2Id,
         },
       );
 
@@ -921,7 +916,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
-        p_actor_id: testStaff1Id,
       });
     });
 
@@ -998,12 +992,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           supabase.rpc('rpc_close_rating_slip', {
             p_casino_id: testCasino1Id,
             p_rating_slip_id: result1.data!.id,
-            p_actor_id: testStaff1Id,
           }),
           supabase.rpc('rpc_close_rating_slip', {
             p_casino_id: testCasino2Id,
             p_rating_slip_id: result2.data!.id,
-            p_actor_id: testStaff2Id,
           }),
         ]);
 

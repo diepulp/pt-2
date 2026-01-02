@@ -25,7 +25,6 @@ export const createFloorLayoutSchema = z.object({
     .max(500, "Description too long")
     .optional()
     .default(""),
-  created_by: uuidSchema("staff ID"),
 });
 
 /** Schema for floor layout list query params */
@@ -60,7 +59,6 @@ export const floorLayoutVersionQuerySchema = z.object({
 export const activateFloorLayoutSchema = z.object({
   casino_id: uuidSchema("casino ID"),
   layout_version_id: uuidSchema("layout version ID"),
-  activated_by: uuidSchema("staff ID"),
   activation_request_id: uuidSchemaOptional("request ID"),
 });
 

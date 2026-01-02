@@ -38,8 +38,6 @@ export type CreatePlayerDTO = Pick<
 export type CreatePlayerWithContextDTO = CreatePlayerDTO & {
   /** Casino ID from RLS context */
   casino_id: string;
-  /** Actor (staff) ID from RLS context */
-  actor_id: string;
 };
 
 /** Player update input (all fields optional) */

@@ -329,7 +329,6 @@ function isValidRpcMovePlayerResponse(
  *
  * @param supabase - Authenticated Supabase client
  * @param casinoId - Casino UUID
- * @param actorId - Staff actor UUID
  * @param slipId - Rating slip UUID to move
  * @param input - Move destination details
  * @returns MovePlayerResponse - Enhanced response with seat arrays
@@ -340,7 +339,7 @@ function isValidRpcMovePlayerResponse(
  *
  * @example
  * ```ts
- * const result = await movePlayerViaRPC(supabase, casinoId, actorId, slipId, {
+ * const result = await movePlayerViaRPC(supabase, casinoId, slipId, {
  *   destinationTableId: 'table-uuid',
  *   destinationSeatNumber: '3',
  *   averageBet: 25,
@@ -352,7 +351,6 @@ function isValidRpcMovePlayerResponse(
 export async function movePlayerViaRPC(
   supabase: SupabaseClient<Database>,
   casinoId: string,
-  actorId: string,
   slipId: string,
   input: MovePlayerInput,
 ): Promise<MovePlayerResponse> {
@@ -361,7 +359,6 @@ export async function movePlayerViaRPC(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase.rpc as any)("rpc_move_player", {
     p_casino_id: casinoId,
-    p_actor_id: actorId,
     p_slip_id: slipId,
     p_new_table_id: input.destinationTableId,
     p_new_seat_number: input.destinationSeatNumber ?? null,

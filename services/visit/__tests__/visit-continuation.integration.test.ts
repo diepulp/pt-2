@@ -504,7 +504,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
         await supabase.rpc('rpc_close_rating_slip', {
           p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
-          p_actor_id: testActor1Id,
         });
       }
 
@@ -711,7 +710,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
-        p_actor_id: testActor1Id,
         p_average_bet: 50.0,
       });
 
@@ -742,7 +740,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: slip2!.id,
-        p_actor_id: testActor1Id,
         p_average_bet: 75.0,
       });
 
@@ -799,7 +796,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: slip!.id,
-        p_actor_id: testActor1Id,
       });
 
       // Query from casino 2 (should return null due to RPC filter)
@@ -846,7 +842,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
-        p_actor_id: testActor1Id,
       });
 
       // Start from previous
@@ -1129,7 +1124,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       await supabase.rpc('rpc_close_rating_slip', {
         p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
-        p_actor_id: testActor1Id,
       });
 
       // Start from previous with NEW game settings

@@ -60,7 +60,7 @@ export interface PlayerServiceInterface {
    * Create a new player profile.
    *
    * Uses SECURITY DEFINER RPC for ADR-015 compliance.
-   * Requires casino_id and actor_id from RLS context.
+   * Requires casino_id from RLS context.
    *
    * @see ISSUE-EC10252F - RLS Policy Violation Fix
    */

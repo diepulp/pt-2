@@ -75,7 +75,6 @@ export const logInventorySnapshotSchema = z.object({
   table_id: uuidFormat("table ID"),
   snapshot_type: snapshotTypeSchema,
   chipset: chipsetSchema,
-  counted_by: uuidFormat("staff ID").optional(),
   verified_by: uuidFormat("staff ID").optional(),
   discrepancy_cents: z.number().int().optional(),
   note: z.string().max(500).optional(),
@@ -88,7 +87,6 @@ export const requestTableFillSchema = z.object({
   request_id: z.string().min(1, "Request ID is required"), // Idempotency key
   chipset: chipsetSchema,
   amount_cents: z.number().int().positive("Amount must be positive"),
-  requested_by: uuidFormat("staff ID"),
   delivered_by: uuidFormat("staff ID"),
   received_by: uuidFormat("staff ID"),
   slip_no: z.string().min(1, "Slip number is required"),
@@ -99,7 +97,6 @@ export const requestTableCreditSchema = z.object({
   request_id: z.string().min(1, "Request ID is required"), // Idempotency key
   chipset: chipsetSchema,
   amount_cents: z.number().int().positive("Amount must be positive"),
-  authorized_by: uuidFormat("staff ID"),
   sent_by: uuidFormat("staff ID"),
   received_by: uuidFormat("staff ID"),
   slip_no: z.string().min(1, "Slip number is required"),
@@ -111,7 +108,6 @@ export const logDropEventSchema = z.object({
   table_id: uuidFormat("table ID"),
   drop_box_id: z.string().min(1, "Drop box ID is required"),
   seal_no: z.string().min(1, "Seal number is required"),
-  removed_by: uuidFormat("staff ID"),
   witnessed_by: uuidFormat("staff ID"),
   removed_at: z.string().datetime().optional(),
   delivered_at: z.string().datetime().optional(),
