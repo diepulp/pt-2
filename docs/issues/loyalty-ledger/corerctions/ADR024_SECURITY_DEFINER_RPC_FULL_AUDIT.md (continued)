@@ -1,0 +1,69 @@
+This is redundant and expands the attack surface. The actor identity is already derived from `set_rls_context_from_staff()` and should not be client-provided for SECURITY DEFINER commands.
+
+**Required fix:** remove actor parameters from signatures and use `v_context_actor_id` for attribution.  
+If signature changes are blocked, ignore client actor params and use the derived context only.
+
+---
+
+## 3) Audit correctness bug in rpc_close_rating_slip (P0)
+
+`previous_status` is logged after the update, which records the new status (`closed`) instead of the prior status.
+
+**Required fix:** capture `v_prev_status` immediately after `SELECT ... FOR UPDATE` and use it in audit details.
+
+---
+
+## 4) SECURITY DEFINER boundary requires explicit authorization (P1 design)
+
+All RPCs remain SECURITY DEFINER. This is acceptable only if each function fully enforces identity, casino scope, role authorization, and row ownership internally. If not, the functions bypass RLS and table grants.
+
+**Required decision:**  
+- Keep SECURITY DEFINER and add explicit checks; or  
+- Pivot to SECURITY INVOKER and move permissions into RLS policies.
+
+---
+
+## 5) JWT-first / must-match RLS dependency (P1 system)
+
+Functions rely on `current_setting('app.*')` after `set_rls_context_from_staff()`. This is safe only if RLS policies are updated to JWT-first or must-match patterns (no session override).
+
+**Required fix:** confirm deployment of the RLS policy update across the affected tables.
+
+---
+
+# Per-RPC notes
+
+- `rpc_activate_floor_layout`: no role gate; `p_activated_by` is client-supplied actor id.
+- `rpc_close_rating_slip`: no role gate; redundant `p_actor_id`; audit `previous_status` bug.
+- `rpc_create_floor_layout`: no role gate; `p_created_by` redundant.
+- `rpc_create_player`: role gate present; still uses `p_actor_id` (redundant per ADR-024 expectations).
+- `rpc_log_table_drop`: no role gate; `p_removed_by` redundant; other actor fields are client-supplied.
+- `rpc_log_table_inventory_snapshot`: no role gate; `p_counted_by` redundant; `p_verified_by` client-supplied.
+- `rpc_move_player`: no role gate; `p_actor_id` redundant.
+- `rpc_pause_rating_slip`: no role gate; `p_actor_id` redundant.
+- `rpc_request_table_credit`: no role gate; `p_authorized_by` redundant; `p_sent_by`/`p_received_by` client-supplied.
+- `rpc_request_table_fill`: no role gate; `p_requested_by` redundant; `p_delivered_by`/`p_received_by` client-supplied.
+- `rpc_resume_rating_slip`: no role gate; `p_actor_id` redundant.
+- `rpc_update_table_status`: no role gate; `p_actor_id` redundant.
+
+---
+
+# Remediation recommendation (minimal churn)
+
+1) Add staff-role allowlist checks per RPC (map to `SEC-003` and domain policy; document deltas because SEC-003 is pre-ADR-024).  
+2) Remove/ignore client actor ids; use `v_context_actor_id` for all audit attribution.  
+3) Fix `rpc_close_rating_slip` audit `previous_status` capture.  
+4) Verify RLS policies are JWT-first or must-match for affected tables.
+
+---
+
+# Ship gate checklist
+
+## P0 blockers
+- [ ] Staff-role authorization enforced on each SECURITY DEFINER RPC
+- [ ] Client-supplied actor ids removed or ignored
+- [ ] `rpc_close_rating_slip` audit `previous_status` captured pre-update
+
+## P1 hardening
+- [ ] RLS policies updated to JWT-first or must-match (no session override)
+- [ ] `SEC-003` RBAC taxonomy updated to reflect ADR-024 semantics
