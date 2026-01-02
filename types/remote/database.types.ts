@@ -1876,7 +1876,6 @@ export type Database = {
       }
       rpc_activate_floor_layout: {
         Args: {
-          p_activated_by: string
           p_casino_id: string
           p_layout_version_id: string
           p_request_id: string
@@ -1919,7 +1918,6 @@ export type Database = {
       }
       rpc_close_rating_slip: {
         Args: {
-          p_actor_id: string
           p_average_bet?: number
           p_casino_id: string
           p_rating_slip_id: string
@@ -1996,12 +1994,7 @@ export type Database = {
             }
           }
       rpc_create_floor_layout: {
-        Args: {
-          p_casino_id: string
-          p_created_by: string
-          p_description: string
-          p_name: string
-        }
+        Args: { p_casino_id: string; p_description: string; p_name: string }
         Returns: {
           approved_by: string | null
           casino_id: string
@@ -2023,7 +2016,6 @@ export type Database = {
       }
       rpc_create_player: {
         Args: {
-          p_actor_id: string
           p_birth_date?: string
           p_casino_id: string
           p_first_name: string
@@ -2123,7 +2115,6 @@ export type Database = {
           p_gaming_day?: string
           p_note?: string
           p_removed_at?: string
-          p_removed_by: string
           p_seal_no: string
           p_seq_no?: number
           p_table_id: string
@@ -2155,7 +2146,6 @@ export type Database = {
         Args: {
           p_casino_id: string
           p_chipset: Json
-          p_counted_by?: string
           p_discrepancy_cents?: number
           p_note?: string
           p_snapshot_type: string
@@ -2199,7 +2189,6 @@ export type Database = {
       }
       rpc_move_player: {
         Args: {
-          p_actor_id: string
           p_average_bet?: number
           p_casino_id: string
           p_new_seat_number?: string
@@ -2209,11 +2198,7 @@ export type Database = {
         Returns: Json
       }
       rpc_pause_rating_slip: {
-        Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_rating_slip_id: string
-        }
+        Args: { p_casino_id: string; p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -2274,7 +2259,6 @@ export type Database = {
       rpc_request_table_credit: {
         Args: {
           p_amount_cents: number
-          p_authorized_by: string
           p_casino_id: string
           p_chipset: Json
           p_received_by: string
@@ -2311,7 +2295,6 @@ export type Database = {
           p_delivered_by: string
           p_received_by: string
           p_request_id: string
-          p_requested_by: string
           p_slip_no: string
           p_table_id: string
         }
@@ -2336,11 +2319,7 @@ export type Database = {
         }
       }
       rpc_resume_rating_slip: {
-        Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_rating_slip_id: string
-        }
+        Args: { p_casino_id: string; p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -2406,29 +2385,52 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_update_table_status: {
-        Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_new_status: Database["public"]["Enums"]["table_status"]
-          p_table_id: string
-        }
-        Returns: {
-          casino_id: string
-          created_at: string
-          id: string
-          label: string
-          pit: string | null
-          status: Database["public"]["Enums"]["table_status"]
-          type: Database["public"]["Enums"]["game_type"]
-        }
-        SetofOptions: {
-          from: "*"
-          to: "gaming_table"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      rpc_update_table_status:
+        | {
+            Args: {
+              p_casino_id: string
+              p_new_status: Database["public"]["Enums"]["table_status"]
+              p_table_id: string
+            }
+            Returns: {
+              casino_id: string
+              created_at: string
+              id: string
+              label: string
+              pit: string | null
+              status: Database["public"]["Enums"]["table_status"]
+              type: Database["public"]["Enums"]["game_type"]
+            }
+            SetofOptions: {
+              from: "*"
+              to: "gaming_table"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_actor_id: string
+              p_casino_id: string
+              p_new_status: Database["public"]["Enums"]["table_status"]
+              p_table_id: string
+            }
+            Returns: {
+              casino_id: string
+              created_at: string
+              id: string
+              label: string
+              pit: string | null
+              status: Database["public"]["Enums"]["table_status"]
+              type: Database["public"]["Enums"]["game_type"]
+            }
+            SetofOptions: {
+              from: "*"
+              to: "gaming_table"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       set_rls_context: {
         Args: {
           p_actor_id: string
