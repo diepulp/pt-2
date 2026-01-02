@@ -74,14 +74,12 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
       supabase,
       async (mwCtx) => {
         const casinoId = mwCtx.rlsContext!.casinoId;
-        const actorId = mwCtx.rlsContext!.actorId;
 
         // PRD-020: Use consolidated RPC for single-transaction move
         // All validation (slip state, seat availability) happens atomically in RPC
         const responseData: MovePlayerResponse = await movePlayerViaRPC(
           mwCtx.supabase,
           casinoId,
-          actorId,
           params.id,
           input,
         );
