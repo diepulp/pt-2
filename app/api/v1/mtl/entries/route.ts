@@ -1,5 +1,19 @@
-import { NextRequest } from 'next/server';
-import { z } from 'zod';
+/**
+ * MTL Entry List/Create Route
+ *
+ * GET /api/v1/mtl/entries - List MTL entries with filters
+ * POST /api/v1/mtl/entries - Create new MTL entry (idempotent)
+ *
+ * Security: Uses withServerAction middleware for auth, RLS, audit.
+ * Authorization per ADR-025:
+ * - Entry READ: pit_boss, cashier, admin
+ * - Entry WRITE: pit_boss, cashier, admin
+ *
+ * @see PRD-005 MTL Service
+ * @see ADR-025 MTL Authorization Model
+ */
+
+import type { NextRequest } from "next/server";
 
 import {
   createRequestContext,
@@ -8,62 +22,135 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from '@/lib/http/service-response';
-import { createClient } from '@/lib/supabase/server';
+} from "@/lib/http/service-response";
+import { withServerAction } from "@/lib/server-actions/middleware";
+import { assertRole } from "@/lib/supabase/rls-context";
+import { createClient } from "@/lib/supabase/server";
+import { createMtlService } from "@/services/mtl";
+import {
+  createMtlEntrySchema,
+  mtlEntryListQuerySchema,
+} from "@/services/mtl/schemas";
 
-const mtlEntryCreateSchema = z.object({
-  casino_id: z.string().uuid(),
-  patron_uuid: z.string().uuid(),
-  staff_id: z.string().uuid().optional(),
-  rating_slip_id: z.string().uuid().optional(),
-  visit_id: z.string().uuid().optional(),
-  amount: z.number(),
-  direction: z.enum(['in', 'out']),
-  area: z.string().optional(),
-  idempotency_key: z.string().optional(),
-  created_at: z.string().optional(),
-});
-
-const mtlEntriesQuerySchema = z.object({
-  casino_id: z.string().uuid(),
-  patron_uuid: z.string().uuid().optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
-  min_amount: z.coerce.number().optional(),
-});
-
-export async function POST(request: NextRequest) {
+/**
+ * GET /api/v1/mtl/entries
+ *
+ * List MTL entries with optional filters.
+ * Query params: casino_id, patron_uuid?, gaming_day?, min_amount?, txn_type?, source?, entry_badge?, cursor?, limit?
+ */
+export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    const headerIdempotencyKey = requireIdempotencyKey(request);
-    const body = await readJsonBody<unknown>(request);
-    const payload = mtlEntryCreateSchema.parse(body);
-    void headerIdempotencyKey; // TODO: Use alongside payload.idempotency_key
-
     const supabase = await createClient();
-    void supabase; // TODO: Pass to MtlService.createEntry
-    void payload;
+    const query = parseQuery(request, mtlEntryListQuerySchema);
 
-    // TODO: Invoke MtlService.createEntry and return the result
-    return successResponse(ctx, null);
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        // ADR-025: Entry READ allowed for pit_boss, cashier, admin
+        assertRole(mwCtx.rlsContext!, ["pit_boss", "cashier", "admin"]);
+
+        const service = createMtlService(mwCtx.supabase);
+
+        // Use casino_id from RLS context if not provided in query
+        const filters = {
+          casino_id: query.casino_id || mwCtx.rlsContext!.casinoId,
+          patron_uuid: query.patron_uuid,
+          gaming_day: query.gaming_day,
+          min_amount: query.min_amount,
+          txn_type: query.txn_type,
+          source: query.source,
+          entry_badge: query.entry_badge,
+          cursor: query.cursor,
+          limit: query.limit,
+        };
+
+        const response = await service.listEntries(filters);
+
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: response,
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "mtl",
+        action: "list-entries",
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
+    }
+    return successResponse(ctx, result.data);
   } catch (error) {
     return errorResponse(ctx, error);
   }
 }
 
-export async function GET(request: NextRequest) {
+/**
+ * POST /api/v1/mtl/entries
+ *
+ * Create a new MTL entry (append-only).
+ * Idempotent via (casino_id, idempotency_key) unique index.
+ * Requires Idempotency-Key header.
+ * Returns 201 on new entry, 200 on idempotent duplicate.
+ */
+export async function POST(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
-    const query = parseQuery(request, mtlEntriesQuerySchema);
-
+    const idempotencyKey = requireIdempotencyKey(request);
     const supabase = await createClient();
-    void supabase; // TODO: Pass to MtlService.listEntries
-    void query;
+    const body = await readJsonBody(request);
 
-    // TODO: Invoke MtlService.listEntries and return the result
-    return successResponse(ctx, { items: [], next_cursor: undefined });
+    // Validate input
+    const input = createMtlEntrySchema.parse(body);
+
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        // ADR-025: Entry WRITE allowed for pit_boss, cashier, admin
+        assertRole(mwCtx.rlsContext!, ["pit_boss", "cashier", "admin"]);
+
+        const service = createMtlService(mwCtx.supabase);
+
+        // Use casino_id from RLS context, override any client-provided value for security
+        const entry = await service.createEntry({
+          ...input,
+          casino_id: mwCtx.rlsContext!.casinoId,
+          idempotency_key: input.idempotency_key || idempotencyKey,
+        });
+
+        return {
+          ok: true as const,
+          code: "OK" as const,
+          data: entry,
+          requestId: mwCtx.correlationId,
+          durationMs: 0,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: "mtl",
+        action: "create-entry",
+        requireIdempotency: true,
+        idempotencyKey,
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
+    }
+
+    // Return 201 Created for new MTL entry
+    return successResponse(ctx, result.data, "OK", 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

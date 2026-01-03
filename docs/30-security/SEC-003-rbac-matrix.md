@@ -3,10 +3,10 @@ id: SEC-003
 title: Casino-Scoped RBAC Matrix
 owner: Security
 status: Active
-affects: [SEC-001, SEC-005, ADR-017, ADR-024]
+affects: [SEC-001, SEC-005, ADR-017, ADR-024, ADR-025]
 created: 2025-11-02
 last_review: 2025-12-31
-version: 1.2.0
+version: 1.3.0
 ---
 
 ## Purpose
@@ -43,8 +43,9 @@ This matrix predates ADR-024; treat it as a baseline, not the final word on SECU
 | **LoyaltyService**<br/>Append rewards | ◻️ | ✅ (approve) | ✅ | ◻️ | ◻️ | ✅ | ◻️ |
 | **PlayerFinancialService**<br/>Read financial ledger | ◻️ | ✅ | ✅ | ✅ | ✅ | ◻️ | ◻️ |
 | **PlayerFinancialService**<br/>Record financial txn | ◻️ | ⚠️ (table buy-ins only) | ✅ | ✅ (via `rpc_create_financial_txn`) | ◻️ | ◻️ | ◻️ |
-| **MTLService**<br/>Read compliance ledger | ◻️ | ◻️ | ✅ | ◻️ | ✅ | ◻️ | ◻️ |
-| **MTLService**<br/>Append compliance notes | ◻️ | ◻️ | ◻️ | ◻️ | ✅ | ◻️ | ◻️ |
+| **MTLService**<br/>Read compliance ledger | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
+| **MTLService**<br/>Record entry (INSERT) | ◻️ | ✅ | ✅ | ✅ | ◻️ | ◻️ | ◻️ |
+| **MTLService**<br/>Append audit notes | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
 
 Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 
@@ -52,6 +53,10 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 - `direction` MUST be `'in'` (buy-ins only)
 - `tender_type` MUST be `'cash'` or `'chips'` (no markers)
 - `visit_id` MUST be provided (linked to active session)
+
+### MTL Authorization (ADR-025)
+
+MTL uses `staff_role` for MVP authorization. The `compliance` service claim is reserved for future cross-casino or separation-of-duties requirements. See [ADR-025](../80-adrs/ADR-025-mtl-authorization-model.md) for the authoritative MTL access matrix.
 
 ## Implementation Notes
 
@@ -76,6 +81,7 @@ Legend: ✅ allowed, ◻️ not permitted, ⚠️ conditional (see notes).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.3.0 | 2026-01-02 | **ADR-025 MTL Authorization**: MTL uses `staff_role` (pit_boss, cashier, admin) not compliance service-claim. Updated matrix rows; added carve-out section. |
 | 1.2.0 | 2025-12-31 | **ADR-024 alignment**: Documented SECURITY DEFINER allowlist enforcement and derived actor attribution. |
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to `staff_role` enum. Updated issuer and description. Updated implementation notes for staff role validation pattern. |
 | 1.0.0 | 2025-11-02 | Initial version. |

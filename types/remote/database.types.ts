@@ -801,11 +801,15 @@ export type Database = {
           casino_id: string
           created_at: string
           direction: string
+          gaming_day: string | null
           id: string
           idempotency_key: string | null
+          occurred_at: string
           patron_uuid: string
           rating_slip_id: string | null
+          source: Database["public"]["Enums"]["mtl_source"]
           staff_id: string | null
+          txn_type: Database["public"]["Enums"]["mtl_txn_type"]
           visit_id: string | null
         }
         Insert: {
@@ -814,11 +818,15 @@ export type Database = {
           casino_id: string
           created_at?: string
           direction: string
+          gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
+          occurred_at?: string
           patron_uuid: string
           rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["mtl_source"]
           staff_id?: string | null
+          txn_type?: Database["public"]["Enums"]["mtl_txn_type"]
           visit_id?: string | null
         }
         Update: {
@@ -827,11 +835,15 @@ export type Database = {
           casino_id?: string
           created_at?: string
           direction?: string
+          gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
+          occurred_at?: string
           patron_uuid?: string
           rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["mtl_source"]
           staff_id?: string | null
+          txn_type?: Database["public"]["Enums"]["mtl_txn_type"]
           visit_id?: string | null
         }
         Relationships: [
@@ -1766,6 +1778,41 @@ export type Database = {
       }
     }
     Views: {
+      mtl_gaming_day_summary: {
+        Row: {
+          casino_id: string | null
+          count_in: number | null
+          count_out: number | null
+          entry_count: number | null
+          first_in_at: string | null
+          first_out_at: string | null
+          gaming_day: string | null
+          last_in_at: string | null
+          last_out_at: string | null
+          max_single_in: number | null
+          max_single_out: number | null
+          patron_uuid: string | null
+          total_in: number | null
+          total_out: number | null
+          total_volume: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mtl_entry_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mtl_entry_patron_uuid_fkey"
+            columns: ["patron_uuid"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_loyalty_balance_reconciliation: {
         Row: {
           casino_id: string | null
@@ -2477,6 +2524,13 @@ export type Database = {
         | "manual_reward"
         | "adjustment"
         | "reversal"
+      mtl_source: "table" | "cage" | "kiosk" | "other"
+      mtl_txn_type:
+        | "buy_in"
+        | "cash_out"
+        | "marker"
+        | "front_money"
+        | "chip_fill"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
@@ -2629,6 +2683,14 @@ export const Constants = {
         "manual_reward",
         "adjustment",
         "reversal",
+      ],
+      mtl_source: ["table", "cage", "kiosk", "other"],
+      mtl_txn_type: [
+        "buy_in",
+        "cash_out",
+        "marker",
+        "front_money",
+        "chip_fill",
       ],
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],

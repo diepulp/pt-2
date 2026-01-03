@@ -29,6 +29,9 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+playwright-report/data/
+cypress/downloads/
+cypress/screenshots/
 
 # env files (can opt-in for committing if needed)
 .env*.local
@@ -49,7 +52,7 @@ next-env.d.ts
 
 # OpenAPI generated clients
 /generated
-.claude/skills.backup/
+
 
 #venv
 /.venv/
@@ -62,3 +65,5 @@ certificates
 .agent/
 .memori/session.log
 .tool-usage.log
+.claude/skills.backup/
+.claude/settings.json
