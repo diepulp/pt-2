@@ -30,8 +30,8 @@
 | **2** | **PRD-019** | **COMPLETE** ✅ | Rating Slip Modal UX Refinements |
 | **2** | **PRD-020** | **COMPLETE** ✅ | Move Player Modal Defects (policy snapshot fix) |
 | **3** | **PRD-004** | **COMPLETE** ✅ | LoyaltyService (Pattern A, 8 routes, 50+ tests, E2E tests) |
-| 3 | PRD-005 | **Partial** | Compliance/MTL Monitoring (routes exist, view-model exists, UI pending) |
 | **3** | **PRD-009** | **COMPLETE** ✅ | PlayerFinancialService (Pattern A, 5 workstreams, 78 tests) |
+| **3** | **PRD-005** | **COMPLETE** ✅ | MTLService (Pattern A, AML/CTR compliance, 12 workstreams) |
 | **SEC** | **ADR-022** | **COMPLETE** ✅ | Player Identity & Enrollment Architecture (8 migrations) |
 | **SEC** | **ADR-024** | **COMPLETE** ✅ | RLS Context Spoofing Remediation (16 RPCs hardened) |
 
@@ -846,7 +846,7 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 
 **Timeline**: Business value features
 **Approach**: VERTICAL + HYBRID orchestration
-**Status**: 🟡 **~90% COMPLETE** — LoyaltyService COMPLETE, PlayerFinancialService COMPLETE, MTLService partial
+**Status**: ✅ **COMPLETE** — LoyaltyService COMPLETE, PlayerFinancialService COMPLETE, MTLService COMPLETE
 
 ### 3.1 LoyaltyService — COMPLETE ✅
 
@@ -922,35 +922,46 @@ The existing `components/table/table-layout-terminal.tsx` provides:
 
 **Unblocks**: PRD-008 WS2 (Rating Slip Modal cash-in integration)
 
-### 3.3 MTLService — PARTIAL
+### 3.3 MTLService — COMPLETE ✅
 
-**PRD Reference**: PRD-005 (read-only MVP)
+**PRD Reference**: PRD-005
+**Completed**: 2026-01-03
+**Pattern**: Pattern A (Contract-First) with two-tier badge system, append-only ledger
 
 | Layer | Item | Location | Status |
 |-------|------|----------|--------|
+| **Migration** | Schema, RLS, triggers | `supabase/migrations/20260103002836_prd005_mtl_service.sql`, `20260103004320_prd005_mtl_occurred_at_and_guards.sql` | ✅ |
+| **DTOs** | MtlEntryDTO, MtlGamingDaySummaryDTO, CreateMtlEntryInput, etc. | `services/mtl/dtos.ts` | ✅ |
+| **Schemas** | Zod validation (direction, txn_type, source enums) | `services/mtl/schemas.ts` | ✅ |
 | **Keys** | Query key factory | `services/mtl/keys.ts` | ✅ |
-| **Routes** | Entries, audit-notes | `app/api/v1/mtl/**` | ✅ |
-| **View Model** | MTL calculations (deriveThresholdBadge, toReadonlyMtlEntryView) | `services/mtl/view-model.ts` | ✅ |
-| **Tests** | Unit test | `services/mtl/__tests__/view-model.test.ts` | ✅ |
-| **Service** | MTLService factory | `services/mtl/index.ts` | ❌ Pending |
-| **UI** | Threshold proximity badge | `components/mtl/proximity-badge.tsx` | ❌ Pending |
+| **Selects** | Named column projections | `services/mtl/selects.ts` | ✅ |
+| **Mappers** | Row→DTO with badge computation | `services/mtl/mappers.ts` | ✅ |
+| **CRUD** | Append-only operations (no UPDATE/DELETE) | `services/mtl/crud.ts` | ✅ |
+| **Service** | MTLService factory | `services/mtl/index.ts` | ✅ |
+| **HTTP** | Client fetchers | `services/mtl/http.ts` | ✅ |
+| **View Model** | Badge derivation, thresholds | `services/mtl/view-model.ts` | ✅ |
+| **Routes** | 5 Route Handlers | `app/api/v1/mtl/**` (entries, entries/[id], entries/[id]/audit-notes, gaming-day-summary) | ✅ |
+| **Hooks** | 4 React Query hooks | `hooks/mtl/` (use-mtl-entries, use-mtl-mutations, use-gaming-day-summary) | ✅ |
+| **Tests** | Mapper tests, RLS integration tests, route tests | `services/mtl/__tests__/`, `lib/supabase/__tests__/rls-mtl.integration.test.ts` | ✅ |
+| **UI** | 7 components | `components/mtl/` (compliance-dashboard, gaming-day-summary, entry-list, entry-detail, entry-badge, agg-badge, audit-note-form) | ✅ |
+| **ADR** | Authorization model | `docs/80-adrs/ADR-025-mtl-authorization-model.md` | ✅ |
 
-**View Model Details** (existing):
-- `CasinoThresholds` interface (watchlistFloor, ctrThreshold)
-- `ThresholdBadge` type ('none' | 'watchlist_near' | 'ctr_near' | 'ctr_met')
-- `deriveThresholdBadge()` - Calculates badge based on amount vs thresholds
-- `toReadonlyMtlEntryView()` - Maps MTL entry record to readonly view with badge
+**Implementation Highlights**:
+- **Two-Tier Badge System**: Entry badges (Tier 1, UX) + Aggregate badges (Tier 2, COMPLIANCE AUTHORITY)
+- **CTR Threshold**: Strictly `>` (not `>=`) per 31 CFR § 1021.311 ("more than $10,000")
+- **Append-Only Enforcement**: Belt+suspenders via RLS (no UPDATE/DELETE policies) + REVOKE privileges + BEFORE triggers
+- **ADR-015 Hybrid RLS**: Pattern C with JWT fallback and auth.uid() guards
+- **Gaming Day Summary View**: Per-patron daily aggregates with separate cash-in/cash-out tracking
+- **Idempotent Entry Creation**: `idempotency_key` column with casino-scoped unique constraint
+- **Paper Form UX**: `occurred_at` for user-entered transaction time vs `created_at` for audit trail
+- **Authorization (ADR-025)**: staff_role-based (pit_boss/cashier for INSERT, pit_boss/admin for audit notes)
 
-**Remaining**:
-- [ ] Full service factory implementation
-- [ ] UI components (proximity-badge, MTL dashboard panel)
-
-**Gate 3 Definition of Done**:
-- [ ] Mid-session rewards issuable from UI
-- [ ] Rewards idempotent (no duplicates)
-- [ ] Finance entry (feature-flagged)
-- [ ] MTL threshold badges visible
-- [ ] Zero stuck rating slips
+**Gate 3 Definition of Done**: ✅ **COMPLETE** (2026-01-03)
+- [x] Mid-session rewards issuable from UI ← COMPLETE (PRD-004)
+- [x] Rewards idempotent (no duplicates) ← COMPLETE (source_ref unique constraint)
+- [x] Finance entry (feature-flagged) ← COMPLETE (PRD-009)
+- [x] MTL threshold badges visible ← COMPLETE (PRD-005, two-tier badge system)
+- [x] Zero stuck rating slips ← COMPLETE (state machine validation)
 
 ---
 
@@ -1117,46 +1128,49 @@ graph LR
 
 ## Next Actions
 
-> **Updated 2026-01-02**: GATE-2 COMPLETE, Phase 3 ~90% complete, security hardening done
+> **Updated 2026-01-03**: GATE-3 COMPLETE, all core services implemented, MVP ready
 
 ### ✅ Completed Since Last Update
 
-1. **RLS Security (ADR-024)**: COMPLETE ✅
+1. **MTLService (PRD-005)**: COMPLETE ✅ (2026-01-03)
+   - Full Pattern A implementation with 12 workstreams
+   - Two-tier badge system: Entry badges (UX) + Aggregate badges (Compliance)
+   - CTR threshold logic per 31 CFR § 1021.311
+   - Append-only enforcement (RLS + REVOKE + BEFORE triggers)
+   - 7 UI components including ComplianceDashboard
+   - ADR-025 authorization model documented
+
+2. **RLS Security (ADR-024)**: COMPLETE ✅
    - All 16 client-callable RPCs hardened with `set_rls_context_from_staff()`
    - Context spoofing vulnerability eliminated
    - 8 migrations deployed (2025-12-29 through 2025-12-31)
 
-2. **PRD-008 Rating Slip Modal Integration**: COMPLETE ✅
+3. **PRD-008 Rating Slip Modal Integration**: COMPLETE ✅
    - BFF RPC endpoint operational (~150ms latency)
    - Service layer complete (services/rating-slip-modal/)
    - E2E tests passing
 
-3. **LoyaltyService (PRD-004)**: COMPLETE ✅
+4. **LoyaltyService (PRD-004)**: COMPLETE ✅
    - All 8 route handlers deployed and tested
    - E2E tests passing
    - ADR-024 RPC hardening complete
 
-4. **Player Identity (ADR-022)**: COMPLETE ✅
+5. **Player Identity (ADR-022)**: COMPLETE ✅
    - 8 migrations deployed
    - Actor binding and immutability triggers in place
 
 ### Remaining Work
 
-1. **MTLService Completion** (PRD-005)
-   - Keys and view-model exist
-   - Service factory implementation pending
-   - UI components pending (proximity-badge, dashboard panel)
-
-2. **UI Polish**
+1. **UI Polish**
    - Loyalty UI components (reward-dialog, points-display, tier-badge)
    - Player Check-in Flow UI
    - p95 dashboard LCP measurement
 
-3. **Seed Data Cleanup** (P2)
+2. **Seed Data Cleanup** (P2)
    - `seed.sql` should use `rpc_create_player` instead of direct inserts
    - Per ISSUE-B5894ED8 remediation
 
-4. **Documentation Sync**
+3. **Documentation Sync**
    - Update MVPProgressContext service statuses via Memori
    - Phase status records for completed gates
 
@@ -1167,7 +1181,7 @@ graph LR
 | **GATE-0** | ✅ COMPLETE | 2025-11-29 |
 | **GATE-1** | ✅ COMPLETE | 2025-11-30 |
 | **GATE-2** | ✅ COMPLETE | 2025-12-31 |
-| **GATE-3** | 🟡 ~90% | Target: TBD |
+| **GATE-3** | ✅ COMPLETE | 2026-01-03 |
 
 ### MVP Readiness
 
@@ -1180,7 +1194,7 @@ graph LR
 | Financial Service | ✅ COMPLETE |
 | RLS Security | ✅ COMPLETE |
 | E2E Tests | ✅ COMPLETE |
-| MTL Service | 🟡 Partial |
+| MTL Service | ✅ COMPLETE |
 | UI Polish | 🟡 ~95% |
 
 ---
@@ -1240,7 +1254,7 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **PRD-003A**: PlayerService Pattern B Refactor — COMPLETE ✅
 - **PRD-003B**: VisitService Pattern B Refactor — COMPLETE ✅
 - **PRD-004**: LoyaltyService (COMPLETE 2025-12-31, Pattern A, 8 routes, 50+ tests, E2E) ✅
-- **PRD-005**: Compliance/MTL Monitoring — Partial (view-model exists, UI pending)
+- **PRD-005**: MTLService (COMPLETE 2026-01-03, Pattern A, 12 workstreams, two-tier badges, compliance dashboard) ✅
 - **PRD-006**: Pit Dashboard UI (COMPLETE 2025-12-31, 14 pit-panel components) ✅
 - **PRD-007**: TableContextService (COMPLETE 2025-12-07, Pattern A, 5 workstreams) ✅
 - **PRD-008**: Rating Slip Modal Integration (COMPLETE 2025-12-29, BFF RPC) ✅
@@ -1265,6 +1279,7 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **ADR-022**: Player Identity & Enrollment Architecture (COMPLETE 2025-12-27, 8 migrations) ✅
 - **ADR-023**: Multi-tenancy Storage Model Selection
 - **ADR-024**: RLS Context Spoofing Remediation (COMPLETE 2025-12-31, 16 RPCs hardened) ✅
+- **ADR-025**: MTL Authorization Model (COMPLETE 2026-01-03, staff_role-based, no service claims) ✅
 
 ### Other
 
