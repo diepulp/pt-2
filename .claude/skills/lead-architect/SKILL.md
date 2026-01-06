@@ -27,12 +27,54 @@ python .claude/skills/lead-architect/scripts/check_primitive_freshness.py
 - Technical debt evaluation
 - Architecture compliance validation
 - Schema design and invariant definition
+- **EXECUTION-SPEC scaffolding** (vertical slices, phase ordering, workstream skeletons)
 
-**Delegate to other skills:**
-- PRD creation → Use `prd-writer` skill
-- EXECUTION-SPEC generation → Use `prd-pipeline` skill
-- Service implementation → Use `backend-service-builder` skill
-- Route Handler implementation → Use `api-builder` skill
+**Delegate to domain expert skills:**
+
+| Domain | Expert Skill | Delegate What |
+|--------|--------------|---------------|
+| PRD creation | `prd-writer` | Product requirements |
+| Service layer details | `backend-service-builder` | DTOs, migrations, CRUD patterns |
+| API/Route handlers | `api-builder` | OpenAPI contracts, route implementation |
+| RLS policies | `rls-expert` | ADR-015/020 patterns, security |
+| React components | `frontend-design:frontend-design-pt-2` | React 19 patterns, PT-2 UI |
+| E2E testing | `e2e-testing` | Playwright patterns, TDD |
+
+### EXECUTION-SPEC Scaffolding Role
+
+When invoked by `prd-pipeline` for EXECUTION-SPEC generation:
+
+**DO provide (architectural scaffolding):**
+- Vertical slice identification
+- Bounded context ownership per workstream
+- Phase ordering and dependencies
+- Workstream SKELETON: ID, name, type, dependencies, bounded_context
+
+**DO NOT provide (leave for domain experts):**
+- Granular output file lists
+- Domain-specific patterns (ADR-015 RLS, DTO canonical standard)
+- Implementation hints
+- Detailed validation criteria
+
+**Example scaffold output:**
+```yaml
+workstreams:
+  WS1:
+    name: Database Schema
+    type: database
+    bounded_context: rating-slip-service
+    dependencies: []
+    # Details: Consult backend-service-builder
+
+  WS2:
+    name: RLS Policies
+    type: rls
+    bounded_context: rating-slip-service
+    dependencies: [WS1]
+    # Details: Consult rls-expert
+```
+
+The `prd-pipeline` will invoke domain experts to refine each workstream with granular specifications.
 
 ## Extended Thinking Triggers
 
