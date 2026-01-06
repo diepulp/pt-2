@@ -884,6 +884,96 @@ export type Database = {
           },
         ]
       }
+      pit_cash_observation: {
+        Row: {
+          amount: number
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string
+          direction: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          observed_at: string
+          player_id: string
+          rating_slip_id: string | null
+          source: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        Insert: {
+          amount: number
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at?: string
+          created_by_staff_id: string
+          direction?: string
+          gaming_day: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          observed_at?: string
+          player_id: string
+          rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        Update: {
+          amount?: number
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id?: string
+          created_at?: string
+          created_by_staff_id?: string
+          direction?: string
+          gaming_day?: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          observed_at?: string
+          player_id?: string
+          rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["observation_source"]
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pit_cash_observation_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "rating_slip"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player: {
         Row: {
           birth_date: string | null
@@ -2531,6 +2621,8 @@ export type Database = {
         | "marker"
         | "front_money"
         | "chip_fill"
+      observation_amount_kind: "estimate" | "cage_confirmed"
+      observation_source: "walk_with" | "phone_confirmed" | "observed"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
@@ -2692,6 +2784,8 @@ export const Constants = {
         "front_money",
         "chip_fill",
       ],
+      observation_amount_kind: ["estimate", "cage_confirmed"],
+      observation_source: ["walk_with", "phone_confirmed", "observed"],
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],

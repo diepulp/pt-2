@@ -1,0 +1,20 @@
+{
+  "prd": "PRD-OPS-CASH-OBS-001",
+  "prd_title": "Operational Cash-Out Observations (Walk-With / Chips Taken)",
+  "current_phase": 1,
+  "status": "in_progress",
+  "completed_workstreams": ["WS1", "WS2"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS3", "WS4", "WS5"],
+  "artifacts": {
+    "WS1": [
+      "supabase/migrations/20260106021105_prd_ops_cash_obs_001_pit_cash_observation.sql"
+    ],
+    "WS2": [
+      "supabase/migrations/20260106021106_prd_ops_cash_obs_001_rpc.sql"
+    ]
+  },
+  "gates_passed": ["schema-validation"],
+  "gates_pending": ["type-check", "test-pass", "rls-test"],
+  "timestamp": "2026-01-06T02:15:00Z"
+}
