@@ -207,3 +207,63 @@ export type RatingSlipListFilters = {
   /** Cursor for pagination (slip ID) */
   cursor?: string;
 };
+
+// === Pit Cash Observation DTOs (PRD-OPS-CASH-OBS-001) ===
+// pit_cash_observation is owned by RatingSlipService per SRM v4.0.0
+
+type PitCashObservationRow =
+  Database["public"]["Tables"]["pit_cash_observation"]["Row"];
+
+/**
+ * Input for creating a pit cash observation.
+ * Uses camelCase for client-side consistency.
+ *
+ * @see PRD-OPS-CASH-OBS-001
+ */
+export type CreatePitCashObservationInput = {
+  /** Visit ID (required) - observation is visit-scoped */
+  visitId: string;
+  /** Amount in dollars (required, must be > 0) */
+  amount: number;
+  /** Rating slip ID (optional) - convenience link */
+  ratingSlipId?: string;
+  /** Amount kind: 'estimate' (default) or 'cage_confirmed' */
+  amountKind?: Database["public"]["Enums"]["observation_amount_kind"];
+  /** Source: 'walk_with' (default), 'phone_confirmed', or 'observed' */
+  source?: Database["public"]["Enums"]["observation_source"];
+  /** Timestamp of observation (optional, defaults to now) */
+  observedAt?: string;
+  /** Optional note */
+  note?: string;
+  /** Idempotency key for deduplication (optional) */
+  idempotencyKey?: string;
+};
+
+/**
+ * CamelCase DTO for pit cash observation response.
+ * Maps from snake_case RPC response to client-friendly format.
+ *
+ * Pattern A: Contract-First camelCase DTO with explicit mapping.
+ * This is a computed/mapped response type, not a raw Row.
+ *
+ * @see PRD-OPS-CASH-OBS-001
+ * @see DTO_CANONICAL_STANDARD.md §3.1 Pattern A
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First camelCase DTO for RPC response mapping per PRD-OPS-CASH-OBS-001
+export type PitCashObservationDTO = {
+  id: PitCashObservationRow["id"];
+  casinoId: PitCashObservationRow["casino_id"];
+  gamingDay: PitCashObservationRow["gaming_day"];
+  playerId: PitCashObservationRow["player_id"];
+  visitId: PitCashObservationRow["visit_id"];
+  ratingSlipId: PitCashObservationRow["rating_slip_id"];
+  direction: PitCashObservationRow["direction"];
+  amount: PitCashObservationRow["amount"];
+  amountKind: PitCashObservationRow["amount_kind"];
+  source: PitCashObservationRow["source"];
+  observedAt: PitCashObservationRow["observed_at"];
+  createdByStaffId: PitCashObservationRow["created_by_staff_id"];
+  note: PitCashObservationRow["note"];
+  idempotencyKey: PitCashObservationRow["idempotency_key"];
+  createdAt: PitCashObservationRow["created_at"];
+};

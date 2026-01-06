@@ -17,7 +17,6 @@ import { renderHook, waitFor } from "@testing-library/react";
 import { type ReactNode } from "react";
 
 // Mock dependencies
-jest.mock("@/services/pit-observation/http");
 jest.mock("@/services/rating-slip/http");
 jest.mock("@/services/loyalty/http");
 jest.mock("@/hooks/ui", () => ({
@@ -41,10 +40,10 @@ jest.mock("@/services/player-financial/http", () => ({
 import { toast } from "@/hooks/ui";
 import { accrueOnClose } from "@/services/loyalty/http";
 import {
+  closeRatingSlip,
   createPitCashObservation,
   PitObservationError,
-} from "@/services/pit-observation/http";
-import { closeRatingSlip } from "@/services/rating-slip/http";
+} from "@/services/rating-slip/http";
 
 import { useCloseWithFinancial } from "../use-close-with-financial";
 

@@ -28,10 +28,10 @@ import { toast } from "@/hooks/ui";
 import { accrueOnClose } from "@/services/loyalty/http";
 import { loyaltyKeys } from "@/services/loyalty/keys";
 import {
+  closeRatingSlip,
   createPitCashObservation,
   PitObservationError,
-} from "@/services/pit-observation/http";
-import { closeRatingSlip } from "@/services/rating-slip/http";
+} from "@/services/rating-slip/http";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 

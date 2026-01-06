@@ -10,6 +10,23 @@
 
 import { z } from "zod";
 
+// === UUID Format Schema ===
+
+/**
+ * Permissive UUID format validation.
+ *
+ * Zod's built-in .uuid() validates RFC 4122 (version/variant bits),
+ * which rejects valid database UUIDs that don't follow RFC strictly.
+ * This regex validates the 8-4-4-4-12 format without version checks.
+ *
+ * @see services/player-financial/schemas.ts for canonical pattern
+ */
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+const uuidFormat = (fieldName = "ID") =>
+  z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
+
 // ============================================================================
 // Enum Schemas
 // ============================================================================
@@ -49,11 +66,11 @@ export const aggBadgeSchema = z.enum([
  */
 export const createMtlEntrySchema = z
   .object({
-    patron_uuid: z.string().uuid("Invalid patron UUID"),
-    casino_id: z.string().uuid("Invalid casino UUID"),
-    staff_id: z.string().uuid("Invalid staff UUID").optional(),
-    rating_slip_id: z.string().uuid("Invalid rating slip UUID").optional(),
-    visit_id: z.string().uuid("Invalid visit UUID").optional(),
+    patron_uuid: uuidFormat("patron UUID"),
+    casino_id: uuidFormat("casino UUID"),
+    staff_id: uuidFormat("staff UUID").optional(),
+    rating_slip_id: uuidFormat("rating slip UUID").optional(),
+    visit_id: uuidFormat("visit UUID").optional(),
     amount: z
       .number()
       .positive("Amount must be positive")
@@ -92,8 +109,8 @@ export type CreateMtlEntryInput = z.infer<typeof createMtlEntrySchema>;
  * Schema for creating MTL audit note
  */
 export const createMtlAuditNoteSchema = z.object({
-  mtl_entry_id: z.string().uuid("Invalid entry UUID"),
-  staff_id: z.string().uuid("Invalid staff UUID"),
+  mtl_entry_id: uuidFormat("entry UUID"),
+  staff_id: uuidFormat("staff UUID"),
   note: z
     .string()
     .min(1, "Note is required")
@@ -110,8 +127,8 @@ export type CreateMtlAuditNoteInput = z.infer<typeof createMtlAuditNoteSchema>;
  * Schema for MTL entry list query parameters
  */
 export const mtlEntryListQuerySchema = z.object({
-  casino_id: z.string().uuid("Invalid casino UUID"),
-  patron_uuid: z.string().uuid("Invalid patron UUID").optional(),
+  casino_id: uuidFormat("casino UUID"),
+  patron_uuid: uuidFormat("patron UUID").optional(),
   gaming_day: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
@@ -130,11 +147,11 @@ export type MtlEntryListQuery = z.infer<typeof mtlEntryListQuerySchema>;
  * Schema for Gaming Day Summary query parameters
  */
 export const mtlGamingDaySummaryQuerySchema = z.object({
-  casino_id: z.string().uuid("Invalid casino UUID"),
+  casino_id: uuidFormat("casino UUID"),
   gaming_day: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
-  patron_uuid: z.string().uuid("Invalid patron UUID").optional(),
+  patron_uuid: uuidFormat("patron UUID").optional(),
   agg_badge_in: aggBadgeSchema.optional(),
   agg_badge_out: aggBadgeSchema.optional(),
   min_total_in: z.coerce.number().nonnegative().optional(),
@@ -155,7 +172,7 @@ export type MtlGamingDaySummaryQuery = z.infer<
  * Schema for entry detail route parameters
  */
 export const mtlEntryRouteParamsSchema = z.object({
-  entryId: z.string().uuid("Invalid entry ID format"),
+  entryId: uuidFormat("entry ID"),
 });
 
 export type MtlEntryRouteParams = z.infer<typeof mtlEntryRouteParamsSchema>;
@@ -164,7 +181,7 @@ export type MtlEntryRouteParams = z.infer<typeof mtlEntryRouteParamsSchema>;
  * Schema for audit note route parameters
  */
 export const mtlAuditNoteRouteParamsSchema = z.object({
-  entryId: z.string().uuid("Invalid entry ID format"),
+  entryId: uuidFormat("entry ID"),
 });
 
 export type MtlAuditNoteRouteParams = z.infer<
