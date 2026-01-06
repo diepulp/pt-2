@@ -27,7 +27,10 @@ version: 1.1.0
 | `references/execution-spec-template.md` | YAML + markdown template for workstreams |
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
+| `references/critic-checklist.md` | EXECUTION-SPEC quality validation criteria |
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC before execution |
+| `scripts/query-learnings.py` | Query historical pipeline learnings |
+| `scripts/record-execution.py` | Record execution outcomes to Memori |
 
 ---
 
@@ -45,6 +48,69 @@ PRD Document → EXECUTION-SPEC → [Validate] → Phased Execution → Completi
 - **Gate approval**: Pause after each phase for human review
 - **Preserve on failure**: Keep completed artifacts for manual fix and resume
 - **Parallel execution**: Run independent workstreams concurrently
+
+---
+
+## Self-Improvement Loop
+
+The pipeline includes adaptive learning mechanisms via Memori integration.
+
+### Pre-Execution Memory Recall
+
+Before Phase 1, query past learnings for context:
+
+```bash
+uv run .claude/skills/prd-pipeline/scripts/query-learnings.py \
+    --prd {PRD-ID} \
+    --domain {bounded_context} \
+    --limit 5
+```
+
+**Inject learnings into EXECUTION-SPEC generation:**
+- Similar PRD outcomes (success/failure patterns)
+- Common gate failures for workstream types
+- Executor effectiveness trends
+
+### Post-Completion Recording
+
+After Phase 4 (or on failure), record execution outcome:
+
+```bash
+uv run .claude/skills/prd-pipeline/scripts/record-execution.py \
+    --checkpoint .claude/skills/prd-pipeline/checkpoints/{PRD-ID}.json \
+    --lessons "Lesson 1" "Lesson 2"
+```
+
+### Gate Failure Analysis
+
+When a gate fails, query historical fixes:
+
+```python
+from lib.memori import create_memori_client
+from lib.memori.pipeline_context import PipelineContext
+
+memori = create_memori_client("skill:prd-pipeline")
+memori.enable()
+context = PipelineContext(memori)
+
+# Get fix suggestions from history
+suggestions = context.suggest_fix_from_history(
+    gate_type="type-check",
+    error_pattern="Property does not exist"
+)
+
+for fix in suggestions:
+    print(f"Previous fix: {fix['fix_applied']}")
+    print(f"Auto-fixable: {fix['was_auto_fixed']}")
+```
+
+### Regression Alerts
+
+The system automatically detects when:
+- Executor success rates decline below 70%
+- Gate pass rates decline below 80%
+
+Alerts are displayed in the post-completion summary.
 
 ---
 

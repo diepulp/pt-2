@@ -14,6 +14,7 @@ from .workflow_state import WorkflowStateManager
 from .chatmode_context import ChatmodeContext
 from .skill_context import SkillContext, ValidationContext, ArchitectContext
 from .backend_service_context import BackendServiceContext, PatternStats, PrimitiveProposal, RegressionAlert
+from .pipeline_context import PipelineContext, ExecutorStats, GateStats, PipelineRegressionAlert
 from .mvp_progress_context import (
     MVPProgressContext,
     ServiceStatus,
@@ -52,11 +53,16 @@ __all__ = [
     "SkillContext",
     "ValidationContext",
     "ArchitectContext",
-    # Self-Improving Intelligence
+    # Self-Improving Intelligence - Backend
     "BackendServiceContext",
     "PatternStats",
     "PrimitiveProposal",
     "RegressionAlert",
+    # Self-Improving Intelligence - Pipeline
+    "PipelineContext",
+    "ExecutorStats",
+    "GateStats",
+    "PipelineRegressionAlert",
     # MVP Progress Tracking
     "MVPProgressContext",
     "ServiceStatus",
