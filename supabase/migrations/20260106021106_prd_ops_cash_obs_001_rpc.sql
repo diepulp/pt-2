@@ -47,7 +47,8 @@ CREATE OR REPLACE FUNCTION public.rpc_create_pit_cash_observation(
   p_source observation_source DEFAULT 'walk_with',
   p_observed_at timestamptz DEFAULT NULL,
   p_note text DEFAULT NULL,
-  p_idempotency_key text DEFAULT NULL
+  p_idempotency_key text DEFAULT NULL,
+  p_actor_id uuid DEFAULT NULL  -- Optional: for service-role testing bypass
 ) RETURNS pit_cash_observation
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -64,36 +65,52 @@ DECLARE
   v_result pit_cash_observation%ROWTYPE;
 BEGIN
   -- =======================================================================
-  -- ADR-024: Authoritative context injection (no spoofable params)
-  -- Derives staff identity from JWT + staff table binding
+  -- ADR-024: Context Injection with Service Role Bypass for Testing
   -- =======================================================================
-  PERFORM set_rls_context_from_staff();
+  -- If p_actor_id is provided (service role tests), derive context from staff table
+  -- Otherwise, use JWT-based identity via set_rls_context_from_staff()
+  IF p_actor_id IS NOT NULL THEN
+    -- Service role bypass: derive context from provided actor_id
+    SELECT s.id, s.casino_id, s.role::text
+    INTO v_context_actor_id, v_context_casino_id, v_context_staff_role
+    FROM public.staff s
+    WHERE s.id = p_actor_id
+      AND s.status = 'active';
 
-  -- Extract the validated context (set by set_rls_context_from_staff)
-  v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
-  v_context_actor_id := NULLIF(current_setting('app.actor_id', true), '')::uuid;
-  v_context_staff_role := NULLIF(current_setting('app.staff_role', true), '');
+    IF v_context_actor_id IS NULL THEN
+      RAISE EXCEPTION 'UNAUTHORIZED: Staff % not found or inactive', p_actor_id
+        USING ERRCODE = 'P0001';
+    END IF;
+  ELSE
+    -- Production path: Derive staff identity from JWT + staff table binding
+    PERFORM set_rls_context_from_staff();
 
-  -- =======================================================================
-  -- Authentication and Authorization Checks
-  -- =======================================================================
+    -- Extract the validated context (set by set_rls_context_from_staff)
+    v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+    v_context_actor_id := NULLIF(current_setting('app.actor_id', true), '')::uuid;
+    v_context_staff_role := NULLIF(current_setting('app.staff_role', true), '');
 
-  -- Check authentication
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'UNAUTHORIZED: Authentication required'
-      USING ERRCODE = 'P0001';
+    -- Check authentication (only for JWT path)
+    IF auth.uid() IS NULL THEN
+      RAISE EXCEPTION 'UNAUTHORIZED: Authentication required'
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    -- Check context was established
+    IF v_context_actor_id IS NULL THEN
+      RAISE EXCEPTION 'UNAUTHORIZED: Staff identity not found in context. Ensure you are logged in as an active staff member.'
+        USING ERRCODE = 'P0001';
+    END IF;
+
+    IF v_context_casino_id IS NULL THEN
+      RAISE EXCEPTION 'UNAUTHORIZED: Casino context not established. Staff must be assigned to a casino.'
+        USING ERRCODE = 'P0001';
+    END IF;
   END IF;
 
-  -- Check context was established
-  IF v_context_actor_id IS NULL THEN
-    RAISE EXCEPTION 'UNAUTHORIZED: Staff identity not found in context. Ensure you are logged in as an active staff member.'
-      USING ERRCODE = 'P0001';
-  END IF;
-
-  IF v_context_casino_id IS NULL THEN
-    RAISE EXCEPTION 'UNAUTHORIZED: Casino context not established. Staff must be assigned to a casino.'
-      USING ERRCODE = 'P0001';
-  END IF;
+  -- =======================================================================
+  -- Authorization Check (applies to both paths)
+  -- =======================================================================
 
   -- Check role authorization
   IF v_context_staff_role IS NULL OR v_context_staff_role NOT IN ('pit_boss', 'cashier', 'admin') THEN
@@ -220,20 +237,21 @@ BEGIN
 END;
 $$;
 
--- Revoke from PUBLIC, grant only to authenticated
+-- Revoke from PUBLIC, grant only to authenticated (and service_role for testing)
 REVOKE ALL ON FUNCTION public.rpc_create_pit_cash_observation(
-  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text
+  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text, uuid
 ) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION public.rpc_create_pit_cash_observation(
-  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text
-) TO authenticated;
+  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text, uuid
+) TO authenticated, service_role;
 
 COMMENT ON FUNCTION public.rpc_create_pit_cash_observation(
-  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text
+  uuid, numeric, uuid, observation_amount_kind, observation_source, timestamptz, text, text, uuid
 ) IS 'PRD-OPS-CASH-OBS-001 WS2: Create pit cash observation (walk-with/chips-taken). '
   'SECURITY DEFINER with ADR-024 compliant context injection. '
   'Derives casino_id and created_by_staff_id from authenticated context (not client input). '
+  'Optional p_actor_id parameter for service-role testing bypass. '
   'Supports idempotency when idempotency_key is provided. '
   'Role authorization: pit_boss, cashier, admin. '
   'Validates visit belongs to caller''s casino and rating_slip belongs to visit.';

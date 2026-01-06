@@ -1,20 +1,26 @@
 {
   "prd": "PRD-OPS-CASH-OBS-001",
   "prd_title": "Operational Cash-Out Observations (Walk-With / Chips Taken)",
-  "current_phase": 1,
+  "current_phase": 3,
   "status": "in_progress",
-  "completed_workstreams": ["WS1", "WS2"],
-  "in_progress_workstreams": [],
-  "pending_workstreams": ["WS3", "WS4", "WS5"],
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "in_progress_workstreams": ["WS5"],
+  "pending_workstreams": [],
+  "deferred_workstreams": ["WS4"],
   "artifacts": {
     "WS1": [
       "supabase/migrations/20260106021105_prd_ops_cash_obs_001_pit_cash_observation.sql"
     ],
     "WS2": [
       "supabase/migrations/20260106021106_prd_ops_cash_obs_001_rpc.sql"
+    ],
+    "WS3": [
+      "services/pit-observation/http.ts",
+      "hooks/rating-slip-modal/use-close-with-financial.ts"
     ]
   },
-  "gates_passed": ["schema-validation"],
-  "gates_pending": ["type-check", "test-pass", "rls-test"],
-  "timestamp": "2026-01-06T02:15:00Z"
+  "gates_passed": ["schema-validation", "type-check"],
+  "gates_pending": ["test-pass", "rls-test"],
+  "deferred_reason": "WS4 blocked on PRD-0xx Shift Dashboards (Path B fact tables not implemented)",
+  "timestamp": "2026-01-06T02:45:00Z"
 }

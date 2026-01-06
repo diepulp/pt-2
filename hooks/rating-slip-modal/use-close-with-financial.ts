@@ -1,15 +1,20 @@
 /**
  * Close With Financial Mutation Hook
  *
- * Handles closing a rating slip with optional chips-taken recording and loyalty accrual.
+ * Handles closing a rating slip with optional chips-taken observation and loyalty accrual.
  * Combines three operations:
- * 1. Record chips-taken transaction (if chipsTaken > 0)
+ * 1. Record chips-taken observation (if chipsTaken > 0) - writes to pit_cash_observation
  * 2. Close the rating slip
  * 3. Trigger loyalty accrual (for non-ghost visits, best-effort)
+ *
+ * IMPORTANT: Chips-taken now records to pit_cash_observation (operational telemetry),
+ * NOT player_financial_transaction (authoritative ledger). This is per PRD-OPS-CASH-OBS-001.
+ * Errors are surfaced via toast notification, not silently caught.
  *
  * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
  *
  * @see PRD-008a Rating Slip Modal Dashboard Integration
+ * @see PRD-OPS-CASH-OBS-001 Operational Cash-Out Observations
  * @see ISSUE-47B1DFF1 Loyalty accrual integration
  */
 
@@ -19,9 +24,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/hooks/dashboard/keys";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
+import { toast } from "@/hooks/ui";
 import { accrueOnClose } from "@/services/loyalty/http";
 import { loyaltyKeys } from "@/services/loyalty/keys";
-import { createFinancialTransaction } from "@/services/player-financial/http";
+import {
+  createPitCashObservation,
+  PitObservationError,
+} from "@/services/pit-observation/http";
 import { closeRatingSlip } from "@/services/rating-slip/http";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
@@ -37,9 +46,9 @@ export interface CloseWithFinancialInput {
   casinoId: string;
   /** Table ID for targeted activeSlips cache invalidation */
   tableId: string;
-  /** Staff ID for transaction recording */
+  /** Staff ID (no longer used for observation - derived from auth context) */
   staffId: string;
-  /** Chips taken amount in dollars (will be converted to cents) */
+  /** Chips taken amount in dollars */
   chipsTaken: number;
   /** Optional final average bet to save before closing */
   averageBet?: number;
@@ -76,31 +85,38 @@ export function useCloseWithFinancial() {
       visitId,
       playerId,
       casinoId,
+      tableId,
       staffId,
       chipsTaken,
       averageBet,
     }: CloseWithFinancialInput) => {
-      // PARALLEL: Fire financial transaction and close slip concurrently
-      // These operations are independent - the slip can close even if the financial transaction fails
+      // PARALLEL: Fire pit cash observation and close slip concurrently
+      // These operations are independent - the slip can close even if the observation fails
       const [_, closeResult] = await Promise.all([
-        // 1. Record chips-taken transaction (best-effort, don't block close)
+        // 1. Record chips-taken observation (best-effort, don't block close)
+        // PRD-OPS-CASH-OBS-001: Write to pit_cash_observation, NOT player_financial_transaction
+        // Errors are surfaced via toast (not silently caught)
+        // Only record for non-ghost visits (visits with actual players)
         chipsTaken > 0 && playerId
-          ? createFinancialTransaction({
-              casino_id: casinoId,
-              player_id: playerId,
-              visit_id: visitId,
-              rating_slip_id: slipId,
-              amount: chipsTaken * 100, // Convert dollars to cents
-              direction: "out",
-              source: "pit",
-              tender_type: "chips",
-              created_by_staff_id: staffId,
-            }).catch((err) => {
-              console.error(
-                "[useCloseWithFinancial] Financial transaction failed:",
-                err,
-              );
-              return null; // Don't fail the close operation
+          ? createPitCashObservation({
+              visitId,
+              amount: chipsTaken, // Amount in dollars (RPC expects dollars)
+              ratingSlipId: slipId,
+              amountKind: "estimate",
+              source: "walk_with",
+              // Use slipId as idempotency key to prevent duplicate observations
+              idempotencyKey: `chips-taken-${slipId}`,
+            }).catch((err: unknown) => {
+              // Surface error via toast - don't silently fail
+              const message =
+                err instanceof PitObservationError
+                  ? err.message
+                  : "Failed to record chips taken observation";
+              toast.error("Chips Taken Error", {
+                description: message,
+              });
+              // Don't fail the close operation - observation is best-effort
+              return null;
             })
           : Promise.resolve(null),
 

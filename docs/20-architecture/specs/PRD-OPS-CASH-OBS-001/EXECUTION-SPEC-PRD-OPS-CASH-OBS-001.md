@@ -52,13 +52,15 @@ workstreams:
       - app/*/shift-dashboard/*
     gate: type-check
     estimated_complexity: medium
+    status: DEFERRED
+    deferred_reason: "Shift dashboards (PRD-0xx) not yet implemented. Will be added when dashboard fact tables exist."
 
   WS5:
     name: Tests
-    description: RLS policy tests, regression test for hook, dashboard aggregate coverage
-    executor: e2e-testing
+    description: RLS policy tests, regression test for hook (dashboard tests deferred with WS4)
+    executor: typescript-pro
     executor_type: task-agent
-    depends_on: [WS1, WS2, WS3, WS4]
+    depends_on: [WS1, WS2, WS3]
     outputs:
       - hooks/rating-slip-modal/__tests__/use-close-with-financial.test.tsx
       - lib/supabase/__tests__/rls-pooling-safety.integration.test.ts
@@ -70,14 +72,21 @@ execution_phases:
   - name: Phase 1 - Foundation
     parallel: [WS1, WS2]
     gates: [schema-validation]
+    status: COMPLETE
 
   - name: Phase 2 - Implementation
-    parallel: [WS3, WS4]
+    parallel: [WS3]  # WS4 DEFERRED pending shift dashboards
     gates: [type-check]
 
   - name: Phase 3 - Integration & Tests
     parallel: [WS5]
     gates: [test-pass, rls-test]
+
+# Deferred Workstreams
+deferred:
+  - workstream: WS4
+    reason: "Shift dashboards (PRD-0xx) require Path B fact tables not yet implemented"
+    unblocks_when: "PRD-0xx Shift Dashboards completes Phase 1 (fact tables)"
 
 # Validation Gates
 gates:
@@ -139,8 +148,10 @@ This PRD introduces a **dedicated operational telemetry artifact** — `pit_cash
 - RLS policies for casino-scoped INSERT/SELECT for pit_boss, cashier, admin
 - RPC write path that enforces `created_by_staff_id` from context (RLS remains defense-in-depth)
 - Client hook update to write observations
-- Shift dashboard aggregates include observations
 - Unit and integration tests
+
+### Deferred (WS4)
+- Shift dashboard aggregates include observations (blocked on PRD-0xx Shift Dashboards)
 
 ### Out of Scope (PRD Non-Goals)
 - Granting pit boss `direction='out'` permission on PlayerFinancial ledger
@@ -334,9 +345,12 @@ RPC enforces role/casino/actor checks inside the function (SECURITY DEFINER bypa
 
 ## Definition of Done
 
-- [ ] All workstreams complete
+- [x] WS1, WS2 complete (Phase 1)
+- [ ] WS3 complete (Client Integration)
+- [ ] WS5 complete (Tests - excluding dashboard tests)
+- [~] WS4 DEFERRED (Shift Dashboard Consumption - pending PRD-0xx)
 - [ ] All gates pass:
-  - [ ] `npm run db:types` (schema-validation)
+  - [x] `npm run db:types` (schema-validation)
   - [ ] `npm run type-check` (type-check)
   - [ ] `npm test hooks/rating-slip-modal/__tests__/use-close-with-financial` (test-pass)
   - [ ] `npm test lib/supabase/__tests__/rls-pooling-safety.integration.test.ts` (rls-test)
@@ -344,4 +358,4 @@ RPC enforces role/casino/actor checks inside the function (SECURITY DEFINER bypa
 - [ ] No silent failures - errors surfaced in UI
 - [ ] `player_financial_transaction` NOT written for chips-taken action
 - [ ] MVP-ROADMAP.md updated (if applicable)
-- [ ] PRD status changed from "Draft" to "Implemented"
+- [ ] PRD status changed from "Draft" to "Implemented" (partial - WS4 deferred)

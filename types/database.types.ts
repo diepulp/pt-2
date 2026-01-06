@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       audit_log: {
@@ -897,6 +872,96 @@ export type Database = {
           },
           {
             foreignKeyName: "mtl_entry_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pit_cash_observation: {
+        Row: {
+          amount: number
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string
+          direction: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          observed_at: string
+          player_id: string
+          rating_slip_id: string | null
+          source: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        Insert: {
+          amount: number
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at?: string
+          created_by_staff_id: string
+          direction?: string
+          gaming_day: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          observed_at?: string
+          player_id: string
+          rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        Update: {
+          amount?: number
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id?: string
+          created_at?: string
+          created_by_staff_id?: string
+          direction?: string
+          gaming_day?: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          observed_at?: string
+          player_id?: string
+          rating_slip_id?: string | null
+          source?: Database["public"]["Enums"]["observation_source"]
+          visit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pit_cash_observation_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "rating_slip"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_visit_id_fkey"
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
@@ -2081,6 +2146,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_create_pit_cash_observation: {
+        Args: {
+          p_amount: number
+          p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          p_idempotency_key?: string
+          p_note?: string
+          p_observed_at?: string
+          p_rating_slip_id?: string
+          p_source?: Database["public"]["Enums"]["observation_source"]
+          p_visit_id: string
+        }
+        Returns: {
+          amount: number
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string
+          direction: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          observed_at: string
+          player_id: string
+          rating_slip_id: string | null
+          source: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pit_cash_observation"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_player: {
         Args: {
           p_birth_date?: string
@@ -2551,6 +2651,8 @@ export type Database = {
         | "marker"
         | "front_money"
         | "chip_fill"
+      observation_amount_kind: "estimate" | "cage_confirmed"
+      observation_source: "walk_with" | "phone_confirmed" | "observed"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
@@ -2684,9 +2786,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       financial_direction: ["in", "out"],
@@ -2715,6 +2814,8 @@ export const Constants = {
         "front_money",
         "chip_fill",
       ],
+      observation_amount_kind: ["estimate", "cage_confirmed"],
+      observation_source: ["walk_with", "phone_confirmed", "observed"],
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],

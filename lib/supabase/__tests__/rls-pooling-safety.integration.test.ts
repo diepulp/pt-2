@@ -1855,4 +1855,428 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       }
     }, 60000); // 60 second timeout
   });
+
+  // ===========================================================================
+  // 10. pit_cash_observation RLS Tests (PRD-OPS-CASH-OBS-001)
+  // ===========================================================================
+
+  describe('pit_cash_observation RLS (PRD-OPS-CASH-OBS-001)', () => {
+    let testVisitId: string;
+    let testTableId: string;
+    let testPlayerId: string;
+    let testRatingSlipId: string;
+
+    beforeAll(async () => {
+      // Create test player
+      const { data: player, error: playerError } = await supabase
+        .from('player')
+        .insert({
+          first_name: 'Observation',
+          last_name: 'Test',
+        })
+        .select()
+        .single();
+
+      if (playerError) throw playerError;
+      testPlayerId = player.id;
+
+      // Enroll player at casino
+      await supabase.from('player_casino').insert({
+        player_id: testPlayerId,
+        casino_id: testCasino1Id,
+        status: 'active',
+      });
+
+      // Create test table
+      const { data: table, error: tableError } = await supabase
+        .from('gaming_table')
+        .insert({
+          casino_id: testCasino1Id,
+          label: `OBS-TEST-${Date.now()}`,
+          type: 'blackjack',
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (tableError) throw tableError;
+      testTableId = table.id;
+
+      // Create test visit (visit_group_id required by schema, but trigger defaults it)
+      const visitGroupId = crypto.randomUUID();
+      const { data: visit, error: visitError } = await supabase
+        .from('visit')
+        .insert({
+          casino_id: testCasino1Id,
+          player_id: testPlayerId,
+          visit_group_id: visitGroupId,
+        })
+        .select()
+        .single();
+
+      if (visitError) throw visitError;
+      testVisitId = visit.id;
+
+      // Create test rating slip
+      const { data: slip, error: slipError } = await supabase
+        .from('rating_slip')
+        .insert({
+          casino_id: testCasino1Id,
+          visit_id: testVisitId,
+          table_id: testTableId,
+          seat_number: '1',
+          status: 'open',
+        })
+        .select()
+        .single();
+
+      if (slipError) throw slipError;
+      testRatingSlipId = slip.id;
+    });
+
+    afterAll(async () => {
+      // Clean up in reverse dependency order
+      await supabase
+        .from('pit_cash_observation')
+        .delete()
+        .eq('visit_id', testVisitId);
+      await supabase.from('rating_slip').delete().eq('visit_id', testVisitId);
+      await supabase.from('visit').delete().eq('id', testVisitId);
+      await supabase.from('gaming_table').delete().eq('id', testTableId);
+      await supabase
+        .from('player_casino')
+        .delete()
+        .eq('player_id', testPlayerId);
+      await supabase.from('player').delete().eq('id', testPlayerId);
+    });
+
+    it('should create observation via RPC with proper staff context', async () => {
+      // Call RPC to create observation (RPC auto-injects context from staff record)
+      const { data, error } = await supabase.rpc(
+        'rpc_create_pit_cash_observation',
+        {
+          p_visit_id: testVisitId,
+          p_amount: 500,
+          p_rating_slip_id: testRatingSlipId,
+          p_amount_kind: 'estimate',
+          p_source: 'walk_with',
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+      expect(data.visit_id).toBe(testVisitId);
+      expect(data.amount).toBe(500);
+      expect(data.direction).toBe('out');
+      expect(data.source).toBe('walk_with');
+      expect(data.created_by_staff_id).toBe(testStaff1Id);
+    });
+
+    it('should read own casino observations with proper context', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(
+        anonClient,
+        context,
+        'pit-cash-obs-read-own-casino',
+      );
+
+      // Act: Query observations
+      const { data, error } = await anonClient
+        .from('pit_cash_observation')
+        .select('*')
+        .eq('visit_id', testVisitId);
+
+      expect(error).toBeNull();
+      expect(data).toBeTruthy();
+      expect(data!.length).toBeGreaterThan(0);
+      expect(data![0].casino_id).toBe(testCasino1Id);
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny cross-casino observation reads', async () => {
+      // Setup: Staff B authenticated for Casino 2
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-2@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff2Id,
+        casinoId: testCasino2Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(
+        anonClient,
+        context,
+        'pit-cash-obs-cross-casino-deny',
+      );
+
+      // Act: Try to query Casino 1's observation (should return empty)
+      const { data, error } = await anonClient
+        .from('pit_cash_observation')
+        .select('*')
+        .eq('visit_id', testVisitId);
+
+      expect(error).toBeNull();
+      // RLS should filter out all Casino 1 observations
+      expect(data).toEqual([]);
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny direct INSERT (must use RPC)', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'pit-cash-obs-direct-insert');
+
+      // Act: Try to insert directly (should fail - INSERT is REVOKED)
+      const { data, error } = await anonClient
+        .from('pit_cash_observation')
+        .insert({
+          casino_id: testCasino1Id,
+          gaming_day: new Date().toISOString().split('T')[0],
+          player_id: testPlayerId,
+          visit_id: testVisitId,
+          rating_slip_id: testRatingSlipId,
+          direction: 'out',
+          amount: 100,
+          amount_kind: 'estimate',
+          source: 'walk_with',
+          observed_at: new Date().toISOString(),
+          created_by_staff_id: testStaff1Id,
+        })
+        .select()
+        .single();
+
+      // Should fail due to REVOKE INSERT
+      expect(error).not.toBeNull();
+      expect(data).toBeNull();
+      expect(error!.message).toMatch(/permission denied|INSERT/i);
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny UPDATE on observations (append-only)', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'pit-cash-obs-update-deny');
+
+      // First, get an existing observation
+      const { data: existing } = await anonClient
+        .from('pit_cash_observation')
+        .select('id')
+        .eq('visit_id', testVisitId)
+        .limit(1)
+        .single();
+
+      if (!existing) {
+        console.log('No observation found to test UPDATE - skipping');
+        await anonClient.auth.signOut();
+        return;
+      }
+
+      // Act: Try to update (should fail - UPDATE is REVOKED)
+      const { data, error } = await anonClient
+        .from('pit_cash_observation')
+        .update({ amount: 999 })
+        .eq('id', existing.id)
+        .select()
+        .single();
+
+      // Should fail due to REVOKE UPDATE
+      expect(error).not.toBeNull();
+      expect(data).toBeNull();
+      expect(error!.message).toMatch(/permission denied|UPDATE/i);
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should deny DELETE on observations (append-only)', async () => {
+      // Setup: Staff A authenticated for Casino 1
+      const anonClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      await anonClient.auth.signInWithPassword({
+        email: 'test-pooling-1@example.com',
+        password: 'test-password-12345',
+      });
+
+      const context: RLSContext = {
+        actorId: testStaff1Id,
+        casinoId: testCasino1Id,
+        staffRole: 'pit_boss',
+      };
+
+      await injectRLSContext(anonClient, context, 'pit-cash-obs-delete-deny');
+
+      // First, get an existing observation
+      const { data: existing } = await anonClient
+        .from('pit_cash_observation')
+        .select('id')
+        .eq('visit_id', testVisitId)
+        .limit(1)
+        .single();
+
+      if (!existing) {
+        console.log('No observation found to test DELETE - skipping');
+        await anonClient.auth.signOut();
+        return;
+      }
+
+      // Act: Try to delete (should fail - DELETE is REVOKED)
+      const { error } = await anonClient
+        .from('pit_cash_observation')
+        .delete()
+        .eq('id', existing.id);
+
+      // Should fail due to REVOKE DELETE
+      expect(error).not.toBeNull();
+      expect(error!.message).toMatch(/permission denied|DELETE/i);
+
+      await anonClient.auth.signOut();
+    });
+
+    it('should handle idempotency key for deduplication', async () => {
+      const idempotencyKey = `test-idempotency-${Date.now()}`;
+
+      // First call - should succeed
+      const { data: first, error: firstError } = await supabase.rpc(
+        'rpc_create_pit_cash_observation',
+        {
+          p_visit_id: testVisitId,
+          p_amount: 200,
+          p_rating_slip_id: testRatingSlipId,
+          p_amount_kind: 'estimate',
+          p_source: 'walk_with',
+          p_idempotency_key: idempotencyKey,
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(firstError).toBeNull();
+      expect(first).toBeTruthy();
+      const firstId = first.id;
+
+      // Second call with same idempotency key - should return existing
+      const { data: second, error: secondError } = await supabase.rpc(
+        'rpc_create_pit_cash_observation',
+        {
+          p_visit_id: testVisitId,
+          p_amount: 200,
+          p_rating_slip_id: testRatingSlipId,
+          p_amount_kind: 'estimate',
+          p_source: 'walk_with',
+          p_idempotency_key: idempotencyKey,
+          p_actor_id: testStaff1Id,
+        },
+      );
+
+      expect(secondError).toBeNull();
+      expect(second).toBeTruthy();
+      // Should return the same observation (idempotent)
+      expect(second.id).toBe(firstId);
+    });
+
+    it('should reject observation for cross-casino visit via RPC', async () => {
+      // Create a visit in Casino 2 for this test
+      const { data: player2 } = await supabase
+        .from('player')
+        .insert({
+          first_name: 'CrossObs',
+          last_name: 'Test',
+        })
+        .select()
+        .single();
+
+      await supabase.from('player_casino').insert({
+        player_id: player2!.id,
+        casino_id: testCasino2Id,
+        status: 'active',
+      });
+
+      const { data: visit2 } = await supabase
+        .from('visit')
+        .insert({
+          casino_id: testCasino2Id,
+          player_id: player2!.id,
+          visit_group_id: crypto.randomUUID(),
+        })
+        .select()
+        .single();
+
+      try {
+        // Staff 1 (Casino 1) tries to create observation for Casino 2 visit
+        const { data, error } = await supabase.rpc(
+          'rpc_create_pit_cash_observation',
+          {
+            p_visit_id: visit2!.id, // Casino 2 visit
+            p_amount: 500,
+            p_amount_kind: 'estimate',
+            p_source: 'walk_with',
+            p_actor_id: testStaff1Id, // Casino 1 staff
+          },
+        );
+
+        // Should fail - casino mismatch
+        expect(error).not.toBeNull();
+        expect(data).toBeNull();
+        // RPC throws FORBIDDEN when visit belongs to different casino
+        expect(error!.message).toMatch(/FORBIDDEN|does not belong|casino/i);
+      } finally {
+        // Cleanup
+        await supabase.from('visit').delete().eq('id', visit2!.id);
+        await supabase
+          .from('player_casino')
+          .delete()
+          .eq('player_id', player2!.id);
+        await supabase.from('player').delete().eq('id', player2!.id);
+      }
+    });
+  });
 });
