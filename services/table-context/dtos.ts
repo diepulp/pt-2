@@ -242,3 +242,80 @@ export interface GetTableSettingsInput {
   tableId: string;
   casinoId: string;
 }
+
+// === Shift Cash Observation Rollup DTOs (PRD-SHIFT-DASHBOARDS v0.2 PATCH) ===
+// TELEMETRY-ONLY: These rollups are observational, NOT authoritative Drop/Win/Hold
+
+/**
+ * Per-table cash observation rollup for shift window.
+ * Pattern A: Contract-First - computed aggregates from RPC.
+ *
+ * @see PRD-SHIFT-DASHBOARDS-v0.2 PATCH
+ * @see SHIFT_METRICS_CATALOG §3.7
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC aggregate response
+export interface CashObsTableRollupDTO {
+  table_id: string;
+  table_label: string;
+  pit: string | null;
+  cash_out_observed_estimate_total: number;
+  cash_out_observed_confirmed_total: number;
+  cash_out_observation_count: number;
+  cash_out_last_observed_at: string | null;
+}
+
+/**
+ * Per-pit cash observation rollup.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC aggregate response
+export interface CashObsPitRollupDTO {
+  pit: string;
+  cash_out_observed_estimate_total: number;
+  cash_out_observed_confirmed_total: number;
+  cash_out_observation_count: number;
+  cash_out_last_observed_at: string | null;
+}
+
+/**
+ * Casino-level cash observation rollup.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC aggregate response
+export interface CashObsCasinoRollupDTO {
+  cash_out_observed_estimate_total: number;
+  cash_out_observed_confirmed_total: number;
+  cash_out_observation_count: number;
+  cash_out_last_observed_at: string | null;
+}
+
+/**
+ * Cash observation spike alert.
+ * TELEMETRY label: This is observational, not authoritative.
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC alert response
+export interface CashObsSpikeAlertDTO {
+  alert_type: "cash_out_observed_spike_telemetry";
+  severity: "info" | "warn" | "critical";
+  entity_type: "table" | "pit";
+  entity_id: string;
+  entity_label: string;
+  observed_value: number;
+  threshold: number;
+  message: string;
+  is_telemetry: true;
+}
+
+// === Shift Cash Obs Input Types ===
+
+export interface ShiftCashObsTimeWindow {
+  casinoId: string; // Cache scoping only; RPC derives casino scope from RLS context.
+  startTs: string; // ISO timestamp
+  endTs: string; // ISO timestamp
+}
+
+export interface ShiftCashObsTableParams extends ShiftCashObsTimeWindow {
+  tableId?: string; // Optional filter to single table
+}
+
+export interface ShiftCashObsPitParams extends ShiftCashObsTimeWindow {
+  pit?: string; // Optional filter to single pit
+}
