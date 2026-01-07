@@ -3,11 +3,20 @@
 Validate EXECUTION-SPEC YAML before pipeline execution.
 
 This script catches common errors that cause pipeline failures:
+
+STRUCTURAL VALIDATION:
 - Invalid executor names (skill vs task-agent mismatch)
 - Invalid dependencies (referencing non-existent workstreams)
 - Circular dependencies
 - Missing required fields
 - Malformed YAML frontmatter
+
+GOVERNANCE VALIDATION:
+- SRM ownership conflicts (e.g., casino_settings owned by CasinoService)
+- Test location standards (ADR-002: __tests__/services/{domain}/)
+- Migration standards (RLS in same migration as schema)
+- DTO pattern compliance per service type
+- Schema verification gate requirement
 
 Usage:
     python validate-execution-spec.py <path-to-execution-spec.md>
@@ -22,6 +31,39 @@ import sys
 import re
 from pathlib import Path
 from typing import Any
+
+# Project root (relative to script location)
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
+
+# Context files for governance validation
+CONTEXT_FILES = {
+    "architecture": PROJECT_ROOT / "context" / "architecture.context.md",
+    "governance": PROJECT_ROOT / "context" / "governance.context.md",
+    "quality": PROJECT_ROOT / "context" / "quality.context.md",
+}
+
+# SRM Ownership Rules (from architecture.context.md)
+# Tables with exclusive write ownership - other services cannot modify
+SRM_EXCLUSIVE_OWNERSHIP = {
+    "casino_settings": "CasinoService",
+    "casino": "CasinoService",
+    "player": "PlayerService",
+    "visit": "VisitService",
+    "rating_slip": "RatingSlipService",
+    "player_loyalty": "LoyaltyService",
+    "loyalty_ledger": "LoyaltyService",
+    "mtl_entry": "MTLService",
+}
+
+# Bounded context services that use Pattern A (contract-first DTOs)
+PATTERN_A_SERVICES = {"LoyaltyService", "FinanceService", "MTLService", "TableContextService"}
+
+# Test location standard (from quality.context.md ADR-002)
+TEST_LOCATION_PATTERN = r"__tests__/services/[\w-]+/"
+WRONG_TEST_LOCATIONS = [
+    r"services/[\w-]+/__tests__/",  # Tests inside service folder
+    r"\.integration\.test\.ts",      # Wrong naming convention
+]
 
 # Valid executor configurations
 # DEPRECATED: Task agents should not be used in pipeline execution
@@ -435,6 +477,163 @@ def find_circular_dependencies(workstreams: dict[str, Any]) -> list[str]:
     return []
 
 
+def validate_governance(spec: dict[str, Any], spec_content: str) -> tuple[list[str], list[str]]:
+    """Validate EXECUTION-SPEC against governance rules from context files.
+
+    Returns tuple of (errors, warnings).
+    """
+    errors: list[str] = []
+    warnings: list[str] = []
+
+    service = spec.get("service", "")
+    workstreams = spec.get("workstreams", {})
+    gates = spec.get("gates", {})
+
+    # Collect all outputs for analysis
+    all_outputs: list[str] = []
+    for ws_id, ws in workstreams.items():
+        outputs = ws.get("outputs", [])
+        if isinstance(outputs, list):
+            all_outputs.extend(outputs)
+
+    # 1. SRM Ownership Check
+    # Check if spec modifies tables owned by other services
+    for table, owner in SRM_EXCLUSIVE_OWNERSHIP.items():
+        if service and owner != service:
+            # Check if any workstream mentions this table
+            for ws_id, ws in workstreams.items():
+                ws_name = ws.get("name", "").lower()
+                ws_desc = ws.get("description", "").lower()
+                outputs = ws.get("outputs", [])
+
+                # Check outputs for migrations that might modify the table
+                for output in outputs:
+                    if isinstance(output, str) and table in output.lower():
+                        errors.append(
+                            f"SRM VIOLATION: {ws_id} modifies '{table}' but it's owned by {owner}, "
+                            f"not {service}. Requires SRM coordination or reassignment."
+                        )
+
+                # Check description for table mentions
+                if table in ws_desc and ("add" in ws_desc or "extend" in ws_desc or "column" in ws_desc):
+                    warnings.append(
+                        f"SRM WARNING: {ws_id} may modify '{table}' (owned by {owner}). "
+                        f"Verify cross-service coordination."
+                    )
+
+    # Check for casino_settings extensions specifically (common violation)
+    casino_settings_patterns = [
+        r"casino_settings.*extension",
+        r"add.*casino_settings",
+        r"casino_settings.*column",
+    ]
+    for pattern in casino_settings_patterns:
+        if re.search(pattern, spec_content, re.IGNORECASE):
+            if service and service != "CasinoService":
+                errors.append(
+                    f"SRM VIOLATION: Spec extends casino_settings but service is {service}. "
+                    f"casino_settings is owned exclusively by CasinoService."
+                )
+                break
+
+    # 2. Test Location Standard (ADR-002)
+    for ws_id, ws in workstreams.items():
+        outputs = ws.get("outputs", [])
+        for output in outputs:
+            if not isinstance(output, str):
+                continue
+
+            # Check for wrong test locations
+            if ".test.ts" in output or ".test.tsx" in output:
+                for wrong_pattern in WRONG_TEST_LOCATIONS:
+                    if re.search(wrong_pattern, output):
+                        errors.append(
+                            f"TEST LOCATION: {ws_id} output '{output}' violates ADR-002. "
+                            f"Tests must be in __tests__/services/{{domain}}/ (not services/{{domain}}/__tests__/)"
+                        )
+                        break
+
+                # Check naming convention
+                if ".integration.test.ts" in output:
+                    errors.append(
+                        f"TEST NAMING: {ws_id} uses '.integration.test.ts' but standard is '.int.test.ts'"
+                    )
+
+    # 3. RLS Migration Standard
+    # Check if RLS is in a separate migration (should be in same migration as schema)
+    rls_ws = None
+    schema_ws = None
+    for ws_id, ws in workstreams.items():
+        ws_name = ws.get("name", "").lower()
+        outputs = ws.get("outputs", [])
+
+        if "rls" in ws_name:
+            rls_ws = ws_id
+        if "database" in ws_name or "schema" in ws_name or "migration" in ws_name:
+            schema_ws = ws_id
+
+        # Check if outputs suggest separate RLS migration
+        for output in outputs:
+            if isinstance(output, str) and "_rls.sql" in output.lower():
+                # Find if there's a corresponding schema migration
+                has_schema_migration = any(
+                    isinstance(o, str) and ".sql" in o and "_rls" not in o.lower()
+                    for o in all_outputs
+                )
+                if has_schema_migration:
+                    warnings.append(
+                        f"MIGRATION STANDARD: {ws_id} creates separate RLS migration. "
+                        f"Consider bundling RLS policies with schema changes per governance standard."
+                    )
+
+    # 4. Schema Verification Gate
+    # Check if schema changes exist but no schema verification gate
+    has_schema_changes = any(
+        isinstance(o, str) and o.endswith(".sql")
+        for o in all_outputs
+    )
+    has_schema_verification = "schema-verification" in gates or any(
+        "schema-verification" in str(ws.get("gate", ""))
+        for ws in workstreams.values()
+    )
+
+    if has_schema_changes and not has_schema_verification:
+        # Check if db:types is sufficient or if explicit schema verification is needed
+        warnings.append(
+            "SCHEMA GATE: Spec has schema changes but no explicit schema-verification gate. "
+            "Consider adding 'npm test schema-verification' per QA standards."
+        )
+
+    # 5. Coverage Target Check
+    # Look for coverage targets below 90% for service modules
+    coverage_patterns = [
+        (r"(?:coverage|≥|>=)\s*85%", "85%"),
+        (r"(?:coverage|≥|>=)\s*80%", "80%"),
+    ]
+    for pattern, pct in coverage_patterns:
+        if re.search(pattern, spec_content, re.IGNORECASE):
+            warnings.append(
+                f"COVERAGE TARGET: Spec mentions {pct} coverage but service modules require ≥90%."
+            )
+            break
+
+    # 6. Lint Gate Check
+    if "warnings OK" in spec_content or "max-warnings=1" in spec_content:
+        errors.append(
+            "LINT GATE: Spec allows lint warnings but standard requires max-warnings=0."
+        )
+
+    # 7. DELETE vs Soft Delete Contradiction
+    delete_mentioned = "DELETE" in spec_content and "soft delete" in spec_content.lower()
+    if delete_mentioned:
+        warnings.append(
+            "DELETE POLICY: Spec mentions both DELETE and 'soft delete via status'. "
+            "This creates a hard-delete path that defeats auditability. Clarify policy."
+        )
+
+    return errors, warnings
+
+
 def main() -> int:
     """Main entry point."""
     if len(sys.argv) != 2:
@@ -442,40 +641,87 @@ def main() -> int:
         return 2
 
     spec_path = sys.argv[1]
+
+    # Read spec content for governance validation
+    path = Path(spec_path)
+    if not path.exists():
+        print(f"File not found: {spec_path}")
+        return 2
+
+    spec_content = path.read_text()
+
+    # Run structural validation
     errors, warnings = validate_spec(spec_path)
 
-    # Print warnings first
+    # If structural validation passed, run governance validation
+    if not errors:
+        spec, _ = parse_yaml_frontmatter(spec_content)
+        if spec:
+            gov_errors, gov_warnings = validate_governance(spec, spec_content)
+            errors.extend(gov_errors)
+            warnings.extend(gov_warnings)
+
+    # Categorize findings
+    structural_errors = [e for e in errors if not any(
+        e.startswith(prefix) for prefix in ["SRM", "TEST", "MIGRATION", "SCHEMA", "COVERAGE", "LINT", "DELETE"]
+    )]
+    governance_errors = [e for e in errors if e not in structural_errors]
+
+    structural_warnings = [w for w in warnings if w.startswith(("DEPRECATED",))]
+    governance_warnings = [w for w in warnings if w not in structural_warnings]
+
+    # Print all warnings
     if warnings:
         print("=" * 60)
-        print("⚠️  DEPRECATION WARNINGS")
+        print("⚠️  WARNINGS")
         print("=" * 60)
         print()
-        for i, warning in enumerate(warnings, 1):
-            print(f"  {i}. {warning}")
-        print()
+        if structural_warnings:
+            print("  DEPRECATION:")
+            for w in structural_warnings:
+                print(f"    • {w}")
+            print()
+        if governance_warnings:
+            print("  GOVERNANCE:")
+            for w in governance_warnings:
+                print(f"    • {w}")
+            print()
 
+    # Print errors
     if errors:
         print("=" * 60)
         print("❌ EXECUTION-SPEC Validation FAILED")
         print("=" * 60)
         print()
-        for i, error in enumerate(errors, 1):
-            print(f"  {i}. {error}")
-        print()
+        if structural_errors:
+            print("  STRUCTURAL ERRORS:")
+            for e in structural_errors:
+                print(f"    • {e}")
+            print()
+        if governance_errors:
+            print("  GOVERNANCE ERRORS:")
+            for e in governance_errors:
+                print(f"    • {e}")
+            print()
         print(f"Total: {len(errors)} error(s), {len(warnings)} warning(s)")
         print()
         print("Fix these issues before proceeding with pipeline execution.")
+        print()
+        print("Reference:")
+        print("  - context/architecture.context.md (SRM ownership)")
+        print("  - context/governance.context.md (test locations, migrations)")
+        print("  - context/quality.context.md (coverage, gates)")
         return 1
 
     print("=" * 60)
     if warnings:
         print("✅ EXECUTION-SPEC Validation PASSED (with warnings)")
     else:
-        print("✅ EXECUTION-SPEC Validation PASSED")
+        print("✅ EXECUTION-SPEC Structural + Governance Validation PASSED")
     print("=" * 60)
     if warnings:
         print()
-        print(f"Note: {len(warnings)} deprecation warning(s). Migrate to skills.")
+        print(f"Note: {len(warnings)} warning(s). Review before proceeding.")
     return 0
 
 

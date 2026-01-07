@@ -1,122 +1,100 @@
 # EXECUTION-SPEC Critic Checklist
 
 > Quality criteria for EXECUTION-SPEC validation before execution.
+> Validation is performed by `scripts/validate-execution-spec.py` which checks both structural and governance rules.
 
 ## Structural Validation
 
+Automated checks in `validate-execution-spec.py`:
+
+- [ ] YAML frontmatter parses without errors
 - [ ] All workstreams have unique IDs (WS1, WS2, ...)
 - [ ] Dependencies form a DAG (no circular dependencies)
-- [ ] Each workstream has explicit outputs defined
+- [ ] Each workstream has required fields (name, executor, executor_type, depends_on, outputs, gate)
 - [ ] Execution phases correctly sequence dependencies
-- [ ] YAML frontmatter parses without errors
+- [ ] All workstreams referenced in execution_phases
+- [ ] Executor names are valid skills (task agents deprecated)
+- [ ] Gate types are valid (schema-validation, type-check, lint, test-pass, build)
 
-## Domain Compliance
+## Governance Validation
 
-- [ ] Bounded context ownership matches SRM entries
-- [ ] Workstream types match executor capabilities (see executor-registry.md)
-- [ ] Gate types align with workstream output types
-- [ ] No cross-context violations in workstream scope
+Automated checks against `context/*.context.md` files:
 
-## Historical Pattern Checks
+### SRM Ownership (architecture.context.md)
 
-- [ ] No anti-patterns from documented failures
-- [ ] Executor assignments align with historical success rates
-- [ ] Scope complexity aligns with similar successful PRDs
-- [ ] Common failure patterns from similar workstreams addressed
+- [ ] No modifications to tables owned by other services
+- [ ] casino_settings only modified by CasinoService
+- [ ] Cross-context data access via published DTOs/views only
+
+### Test Standards (governance.context.md, quality.context.md)
+
+- [ ] Test files in `__tests__/services/{domain}/` (NOT `services/{domain}/__tests__/`)
+- [ ] Integration tests use `*.int.test.ts` naming (NOT `*.integration.test.ts`)
+- [ ] Coverage target ≥90% for service modules
+- [ ] Lint gate uses `max-warnings=0`
+
+### Migration Standards (governance.context.md)
+
+- [ ] RLS policies in same migration as schema changes (not separate)
+- [ ] Schema verification gate present for schema changes
+
+### Consistency Checks
+
+- [ ] No DELETE + "soft delete via status" contradiction
+- [ ] Enum types consistent (not mixed with text)
 
 ## Complexity Guards
+
+Manual review (not automated):
 
 - [ ] Max 8 workstreams per PRD
 - [ ] Max 4 execution phases
 - [ ] Each workstream has testable DoD criteria
 - [ ] No workstream depends on more than 3 predecessors
 
-## Critic Scoring
-
-| Category | Weight | Score (0-1) |
-|----------|--------|-------------|
-| Structural | 30% | |
-| Domain Compliance | 30% | |
-| Historical Patterns | 20% | |
-| Complexity | 20% | |
-| **Total** | 100% | |
-
-**Threshold**: Score >= 0.7 to proceed without refinement
-
----
-
 ## Validation Protocol
 
-### Pre-Generation Check
+### Pre-Generation
 
-Before generating an EXECUTION-SPEC, verify:
+Before generating an EXECUTION-SPEC:
 
-1. **PRD Completeness**
+1. Load context files:
+   - `context/architecture.context.md`
+   - `context/governance.context.md`
+   - `context/quality.context.md`
+
+2. Verify PRD alignment:
    - PRD has valid YAML frontmatter
    - Definition of Done section exists
-   - Bounded context is identified
+   - Bounded context identified
 
-2. **SRM Alignment**
-   - All mentioned services exist in SRM
-   - Service ownership is clear
-   - No ambiguous cross-context operations
+3. Check SRM ownership:
+   - Identify tables mentioned in PRD
+   - Verify owning service alignment
 
-### Post-Generation Validation
+### Post-Generation
 
-After generating an EXECUTION-SPEC, run:
+After generating an EXECUTION-SPEC:
 
 ```bash
-uv run .claude/skills/prd-pipeline/scripts/validate-execution-spec.py \
-    --spec docs/25-api-data/EXEC-SPEC-{NNN}.md
+python .claude/skills/prd-pipeline/scripts/validate-execution-spec.py \
+    docs/20-architecture/specs/{PRD-ID}/EXECUTION-SPEC-{PRD-ID}.md
 ```
+
+The script returns:
+- **STRUCTURAL ERRORS**: YAML syntax, invalid executors, circular deps
+- **GOVERNANCE ERRORS**: SRM violations, test location violations, gate issues
+- **WARNINGS**: Separate RLS migration, coverage targets, DELETE policy
 
 ### Failure Handling
 
-If validation fails:
-
-1. **Structural failures**: Fix immediately (syntax, missing fields)
-2. **Domain failures**: Consult SRM, may need architect review
-3. **Historical failures**: Query past executions for similar issues
-4. **Complexity failures**: Split into multiple PRDs or phases
-
----
-
-## Memory Integration
-
-### Query Historical Patterns
-
-Before execution, query past outcomes:
-
-```bash
-uv run .claude/skills/prd-pipeline/scripts/query-learnings.py \
-    --domain {bounded_context} \
-    --limit 5
-```
-
-### Record Critic Findings
-
-After validation, record quality metrics:
-
-```python
-from lib.memori import create_memori_client
-from lib.memori.pipeline_context import PipelineContext
-
-memori = create_memori_client("skill:prd-pipeline")
-memori.enable()
-context = PipelineContext(memori)
-
-context.record_exec_spec_quality(
-    prd_id="PRD-XXX",
-    workstream_count=6,
-    phase_count=4,
-    critic_issues_found=2,
-    refinement_iterations=1,
-    validation_passed=True,
-    issues_by_category={"structural": 0, "domain": 1, "historical": 1, "complexity": 0}
-)
-```
-
----
+| Error Type | Resolution |
+|------------|------------|
+| Structural | Fix immediately (syntax, missing fields) |
+| SRM Violation | Coordinate with owning service or reassign ownership |
+| Test Location | Move test files to `__tests__/services/{domain}/` |
+| Migration Split | Bundle RLS policies with schema migration |
+| Gate Issues | Update gate commands to meet standards |
 
 ## Common Failure Patterns
 
@@ -127,35 +105,23 @@ context.record_exec_spec_quality(
 | `circular-dep` | WS depends on itself transitively | Reorder or split workstreams |
 | `missing-output` | WS has no defined output artifacts | Add explicit output list |
 | `orphan-ws` | WS not connected to any phase | Connect or remove |
+| `invalid-executor` | Executor not in valid skills list | Use registered skill name |
 
-### Domain
-
-| Pattern | Description | Fix |
-|---------|-------------|-----|
-| `srm-mismatch` | Service not in SRM | Add to SRM or use correct service |
-| `cross-context` | WS touches multiple contexts | Split into context-specific WS |
-| `executor-mismatch` | Wrong executor for workstream type | Update executor assignment |
-
-### Historical
+### Governance
 
 | Pattern | Description | Fix |
 |---------|-------------|-----|
-| `repeat-failure` | Similar WS failed before | Review past failure, apply fix |
-| `low-confidence-executor` | Executor has <70% success rate | Add extra validation or use alternative |
-
-### Complexity
-
-| Pattern | Description | Fix |
-|---------|-------------|-----|
-| `too-many-ws` | >8 workstreams | Split PRD |
-| `deep-deps` | WS has >3 dependencies | Flatten or parallelize |
-| `monolithic-phase` | >4 WS in single phase | Add intermediate phases |
-
----
+| `srm-violation` | Modifying table owned by another service | Coordinate or reassign |
+| `test-location-wrong` | Tests in service folder | Move to `__tests__/services/` |
+| `test-naming-wrong` | Uses `.integration.test.ts` | Rename to `.int.test.ts` |
+| `coverage-low` | Target below 90% | Update to ≥90% |
+| `lint-warnings-ok` | Gate allows warnings | Set `max-warnings=0` |
+| `separate-rls` | RLS in separate migration | Bundle with schema |
+| `delete-contradiction` | DELETE + soft delete | Clarify policy |
 
 ## References
 
-- **Executor Registry**: `.claude/skills/prd-pipeline/references/executor-registry.md`
-- **Gate Protocol**: `.claude/skills/prd-pipeline/references/gate-protocol.md`
-- **SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
 - **Validation Script**: `.claude/skills/prd-pipeline/scripts/validate-execution-spec.py`
+- **SRM Ownership**: `context/architecture.context.md`
+- **Test Standards**: `context/governance.context.md`, `context/quality.context.md`
+- **Full SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`

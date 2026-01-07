@@ -2,6 +2,30 @@
 
 Domain-specific expert skills should be consulted during EXECUTION-SPEC workstream design, not just execution.
 
+**CRITICAL**: All expert consultations MUST include governance context injection (see Context Injection Protocol below).
+
+---
+
+## Context Injection Protocol (REQUIRED)
+
+Before routing to any expert, load these context files:
+
+```
+context/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
+context/governance.context.md    # Service template, migration standards, test locations
+context/quality.context.md       # Test strategy, coverage targets, quality gates
+```
+
+### Context Extraction by Domain
+
+| Expert Skill | Required Context Sections |
+|--------------|---------------------------|
+| `backend-service-builder` | SRM ownership, DTO patterns (Pattern A vs Canonical), migration standards |
+| `rls-expert` | RLS same-migration rule, SEC-003 role taxonomy, SECURITY DEFINER/INVOKER |
+| `api-builder` | Route handler standards, OpenAPI conventions, ServiceHttpResult |
+| `frontend-design:frontend-design-pt-2` | Component patterns, test location, state management (ADR-003) |
+| `qa-specialist` | Coverage targets (≥90%), test naming (*.int.test.ts), quality gates |
+
 ---
 
 ## Sequential Thinking Requirement
@@ -119,7 +143,7 @@ For each workstream in skeleton:
 
 ### Invocation Pattern
 
-When consulting an expert skill, provide this context:
+When consulting an expert skill, provide this context WITH governance context injection:
 
 ```markdown
 **Expert Consultation Request**
@@ -128,17 +152,37 @@ PRD: {PRD_ID}
 Workstream: {WS_ID} - {WS_NAME}
 Type: {workstream_type}
 Bounded Context: {bounded_context}
+Service: {service_name}
 Dependencies: {completed_dependencies}
 
 **Architectural Skeleton from lead-architect:**
 {skeleton_details}
 
+**GOVERNANCE CONTEXT (MUST COMPLY):**
+
+From architecture.context.md:
+- SRM Ownership: {service} owns {tables}. DO NOT modify tables owned by other services.
+- DTO Pattern: {Pattern A if bounded context, Canonical if thin CRUD}
+- Cross-context: Only consume published DTOs/views, no direct table access
+
+From governance.context.md:
+- Test Location: __tests__/services/{domain}/ (NOT services/{domain}/__tests__/)
+- Test Naming: *.int.test.ts (NOT *.integration.test.ts)
+- Migration Standard: RLS policies in SAME migration as schema changes
+- Lint Gate: max-warnings=0 (no warnings allowed)
+
+From quality.context.md:
+- Coverage Target: ≥90% for service modules
+- Schema Gate: Run schema-verification test for schema changes
+
 **Your Task:**
 Refine this workstream specification with domain-specific details:
-1. Detailed outputs (files, types, tests)
+1. Detailed outputs (files, types, tests) - MUST follow governance locations
 2. Patterns to apply (cite ADRs, standards)
-3. Validation criteria
+3. Validation criteria - MUST meet coverage and gate requirements
 4. Implementation hints
+
+⚠️ GOVERNANCE COMPLIANCE IS MANDATORY. Non-compliant outputs will fail validation.
 
 Return enriched workstream YAML.
 ```
@@ -185,21 +229,26 @@ WS2:
 ```
 Phase 1: EXECUTION-SPEC Generation
   │
+  ├─ Step 0: Load Governance Context (REQUIRED)
+  │     Load: architecture.context.md, governance.context.md, quality.context.md
+  │
   ├─ Step 1: Read PRD
   │
-  ├─ Step 2: lead-architect → Architectural Scaffold
+  ├─ Step 2: lead-architect → Architectural Scaffold (with SRM ownership check)
   │     Output: Workstream skeletons with types and dependencies
   │
   ├─ Step 3: Expert Consultation (parallel where possible)
   │     For each workstream:
-  │       - Route to domain expert
+  │       - Route to domain expert WITH governance context
+  │       - Expert refines with compliance constraints
   │       - Collect enriched specification
   │
   ├─ Step 4: Assemble Final EXECUTION-SPEC
   │     Merge expert refinements into complete spec
   │
-  ├─ Step 5: Validate
+  ├─ Step 5: Validate (Structural + Governance)
   │     Run validate-execution-spec.py
+  │     Checks: YAML syntax, executors, SRM ownership, test locations, gates
   │
   └─ Step 6: Initialize Checkpoint
 ```
@@ -209,13 +258,18 @@ Phase 1: EXECUTION-SPEC Generation
 When workstreams have no dependencies on each other's design:
 
 ```
-┌────────────────────────────────────────────────────────┐
-│ SINGLE MESSAGE with MULTIPLE Skill invocations:        │
-├────────────────────────────────────────────────────────┤
-│ Skill 1: backend-service-builder (refine WS1, WS3)     │
-│ Skill 2: rls-expert (refine WS2)                       │
-│ Skill 3: api-builder (refine WS4)                      │
-└────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────────┐
+│ SINGLE MESSAGE with MULTIPLE Skill invocations + CONTEXT:      │
+├────────────────────────────────────────────────────────────────┤
+│ Skill 1: backend-service-builder (refine WS1, WS3 + context)   │
+│ Skill 2: rls-expert (refine WS2 + context)                     │
+│ Skill 3: api-builder (refine WS4 + context)                    │
+└────────────────────────────────────────────────────────────────┘
+
+Each skill receives:
+- Workstream skeleton from lead-architect
+- Governance context (SRM ownership, test locations, coverage targets)
+- Service-specific rules (DTO pattern, migration standards)
 ```
 
 ---
@@ -228,12 +282,17 @@ When workstreams have no dependencies on each other's design:
 | lead-architect for scaffolding | Vertical slicing, bounded contexts are architectural concerns |
 | Experts for refinement | Domain patterns, ADR compliance, PT-2 conventions |
 | Parallel consultation | Independent workstream designs don't need sequencing |
+| **Context injection** | **Prevents governance violations by providing rules at consultation time** |
+| **Deterministic validation** | **Context files are source of truth, not historical patterns** |
 
 ---
 
 ## Related Documents
 
 - `executor-registry.md` - Complete executor mapping
+- `context/architecture.context.md` - SRM ownership, DTO patterns
+- `context/governance.context.md` - Test locations, migration standards
+- `context/quality.context.md` - Coverage targets, quality gates
 - `../lead-architect/SKILL.md` - Architectural scaffolding role
 - `../backend-service-builder/SKILL.md` - Backend domain expertise
 - `../api-builder/SKILL.md` - API domain expertise

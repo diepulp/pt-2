@@ -28,9 +28,7 @@ version: 1.1.0
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
 | `references/critic-checklist.md` | EXECUTION-SPEC quality validation criteria |
-| `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC before execution |
-| `scripts/query-learnings.py` | Query historical pipeline learnings |
-| `scripts/record-execution.py` | Record execution outcomes to Memori |
+| `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
 
 ---
 
@@ -51,77 +49,27 @@ PRD Document → EXECUTION-SPEC → [Validate] → Phased Execution → Completi
 
 ---
 
-## Self-Improvement Loop
-
-The pipeline includes adaptive learning mechanisms via Memori integration.
-
-### Pre-Execution Memory Recall
-
-Before Phase 1, query past learnings for context:
-
-```bash
-uv run .claude/skills/prd-pipeline/scripts/query-learnings.py \
-    --prd {PRD-ID} \
-    --domain {bounded_context} \
-    --limit 5
-```
-
-**Inject learnings into EXECUTION-SPEC generation:**
-- Similar PRD outcomes (success/failure patterns)
-- Common gate failures for workstream types
-- Executor effectiveness trends
-
-### Post-Completion Recording
-
-After Phase 4 (or on failure), record execution outcome:
-
-```bash
-uv run .claude/skills/prd-pipeline/scripts/record-execution.py \
-    --checkpoint .claude/skills/prd-pipeline/checkpoints/{PRD-ID}.json \
-    --lessons "Lesson 1" "Lesson 2"
-```
-
-### Gate Failure Analysis
-
-When a gate fails, query historical fixes:
-
-```python
-from lib.memori import create_memori_client
-from lib.memori.pipeline_context import PipelineContext
-
-memori = create_memori_client("skill:prd-pipeline")
-memori.enable()
-context = PipelineContext(memori)
-
-# Get fix suggestions from history
-suggestions = context.suggest_fix_from_history(
-    gate_type="type-check",
-    error_pattern="Property does not exist"
-)
-
-for fix in suggestions:
-    print(f"Previous fix: {fix['fix_applied']}")
-    print(f"Auto-fixable: {fix['was_auto_fixed']}")
-```
-
-### Regression Alerts
-
-The system automatically detects when:
-- Executor success rates decline below 70%
-- Gate pass rates decline below 80%
-
-Alerts are displayed in the post-completion summary.
-
----
-
 ## Phase 1: EXECUTION-SPEC Generation (Two-Stage)
 
 See `references/expert-routing.md` for full expert consultation protocol.
 
+### Stage 0: Load Governance Context (REQUIRED)
+
+Before any generation, load context files for validation:
+
+```
+context/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
+context/governance.context.md    # Service template, migration standards, test locations
+context/quality.context.md       # Test strategy, coverage targets, quality gates
+```
+
+These files contain deterministic rules that MUST be validated against during spec generation.
+
 ### Stage 1: Architectural Scaffolding
 
 1. Read PRD document from `docs/10-prd/`
-2. Invoke `lead-architect` skill for **scaffolding only**:
+2. **Load context files** (architecture, governance, quality)
+3. Invoke `lead-architect` skill for **scaffolding only**:
    - Vertical slice boundaries
    - Bounded context ownership per workstream
    - Phase ordering and dependencies
@@ -129,9 +77,9 @@ See `references/expert-routing.md` for full expert consultation protocol.
 
    **lead-architect does NOT design granular workstream details.**
 
-### Stage 2: Expert Consultation
+### Stage 2: Expert Consultation (with Context Injection)
 
-3. Route each workstream to its domain expert for refinement:
+4. Route each workstream to its domain expert for refinement **WITH governance context**:
 
    | Workstream Type | Expert Skill |
    |-----------------|--------------|
@@ -143,29 +91,41 @@ See `references/expert-routing.md` for full expert consultation protocol.
    | `unit-tests` (component) | `frontend-design:frontend-design-pt-2` |
    | `e2e-tests` | `e2e-testing` |
 
+   **CRITICAL**: Each expert consultation MUST include:
+   - Relevant sections from `context/architecture.context.md` (SRM ownership, DTO patterns)
+   - Relevant sections from `context/governance.context.md` (test locations, migration standards)
+   - Relevant sections from `context/quality.context.md` (coverage targets, gate requirements)
+
    **Note**: All executors are Skills. Task agents are deprecated for pipeline execution.
 
-4. **Invoke experts IN PARALLEL** when workstreams have no design dependencies:
+5. **Invoke experts IN PARALLEL** when workstreams have no design dependencies:
    ```
    ┌─────────────────────────────────────────────────────────────┐
    │ SINGLE MESSAGE with MULTIPLE Skill/Task invocations:       │
    ├─────────────────────────────────────────────────────────────┤
-   │ Skill(backend-service-builder, "refine WS1, WS3")          │
-   │ Skill(rls-expert, "refine WS2")                            │
-   │ Skill(api-builder, "refine WS4")                           │
+   │ Skill(backend-service-builder, "refine WS1, WS3 + context")│
+   │ Skill(rls-expert, "refine WS2 + context")                  │
+   │ Skill(api-builder, "refine WS4 + context")                 │
    └─────────────────────────────────────────────────────────────┘
    ```
 
 ### Stage 3: Assemble & Validate
 
-5. Merge expert refinements into final EXECUTION-SPEC
-6. Output to `docs/20-architecture/specs/{PRD-ID}/EXECUTION-SPEC-{PRD-ID}.md`
-7. **CRITICAL: Run validation before proceeding**:
+6. Merge expert refinements into final EXECUTION-SPEC
+7. Output to `docs/20-architecture/specs/{PRD-ID}/EXECUTION-SPEC-{PRD-ID}.md`
+8. **CRITICAL: Run validation before proceeding**:
    ```bash
    python .claude/skills/prd-pipeline/scripts/validate-execution-spec.py \
        docs/20-architecture/specs/{PRD-ID}/EXECUTION-SPEC-{PRD-ID}.md
    ```
-8. Initialize checkpoint file immediately (see `references/checkpoint-format.md`)
+
+   The validation script checks:
+   - **Structural**: YAML syntax, executor names, dependencies, gates
+   - **Governance**: SRM ownership, test locations, migration standards, DTO patterns
+
+   Both must pass before proceeding.
+
+9. Initialize checkpoint file immediately (see `references/checkpoint-format.md`)
 
 ---
 
