@@ -1,6 +1,6 @@
 ---
 name: rls-expert
-description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020 compliance. Covers hybrid context injection (Pattern C), JWT fallback strategies, connection pooling compatibility, and role-based access control patterns. (project)
+description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020/ADR-024 compliance. Covers authoritative context derivation via set_rls_context_from_staff() (ADR-024), hybrid RLS patterns (Pattern C), connection pooling compatibility, role-based access control, and MTL authorization (ADR-025). (project)
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 ---
 
@@ -25,6 +25,46 @@ PT-2 Row-Level Security specialist for implementing secure, connection-pooling-c
 4. **Append-only ledgers** — Finance/loyalty/compliance: denial policies for updates/deletes
 
 **Reference:** `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`
+
+## Context Injection Security (ADR-024) ⚠️ CRITICAL
+
+**ADR-024 supersedes the old `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` pattern.**
+
+The old pattern is **DEPRECATED** due to context spoofing vulnerability:
+- `set_rls_context()` was callable by `authenticated` role with spoofable parameters
+- Attackers could access other casinos' data by passing arbitrary `casino_id`
+- Session variables were user-writable, bypassing multi-tenant isolation
+
+### Authoritative Pattern: `set_rls_context_from_staff()`
+
+The new secure function:
+
+```sql
+-- Takes NO spoofable parameters (only optional correlation_id for tracing)
+SELECT set_rls_context_from_staff(p_correlation_id := 'req-123');
+```
+
+**How it works:**
+1. Derives `staff_id` from JWT `app_metadata.staff_id` claim (authoritative)
+2. Binds `staff_id` to `auth.uid()` (prevents mis-issued token escalation)
+3. Looks up `casino_id` and `role` from `staff` table (authoritative)
+4. Validates staff is `active` before setting context
+5. Sets transaction-local context via `SET LOCAL` (pooler-safe)
+
+### Security Invariants (ADR-024)
+
+| INV | Requirement |
+|-----|-------------|
+| INV-1 | `set_rls_context(...)` MUST NOT be executable by `authenticated` or `PUBLIC` |
+| INV-2 | Only `set_rls_context_from_staff()` is callable by client roles |
+| INV-3 | Staff identity MUST be bound to `auth.uid()` even when `staff_id` claim exists |
+| INV-4 | Inactive staff MUST be blocked from deriving context |
+| INV-5 | Context MUST be set via `SET LOCAL` (pooling safety) |
+| INV-6 | Staff lookup MUST be deterministic (unique `staff.user_id` constraint) |
+| INV-7 | All client-callable RPCs MUST call `set_rls_context_from_staff()` |
+| INV-8 | No client-callable RPC may accept `casino_id`/`actor_id` as user input |
+
+**Reference:** `docs/80-adrs/ADR-024_DECISIONS.md` (Frozen)
 
 ## Current Strategy (ADR-020)
 
@@ -120,6 +160,25 @@ COALESCE(
 - `tender_type IN ('cash', 'chips')` (no markers)
 - `visit_id` required (linked to active session)
 
+## MTL Authorization (ADR-025)
+
+MTL (Monetary Transaction Log) uses `staff_role` for authorization, NOT service claims:
+
+| Capability | dealer | pit_boss | cashier | admin |
+|------------|--------|----------|---------|-------|
+| mtl_entry SELECT | ◻️ | ✅ | ✅ | ✅ |
+| mtl_entry INSERT | ◻️ | ✅ | ✅ | ✅ |
+| mtl_entry UPDATE/DELETE | ◻️ | ◻️ | ◻️ | ◻️ |
+| mtl_audit_note SELECT/INSERT | ◻️ | ✅ | ◻️ | ✅ |
+
+**Security Invariants (ADR-025):**
+- INV-1: MTL tables are append-only (no UPDATE/DELETE)
+- INV-2: All MTL writes require `casino_id` match via ADR-024 context
+- INV-3: All MTL reads are casino-scoped
+- INV-4: Actor attribution uses `app.actor_id` from `set_rls_context_from_staff()`
+
+**Reference:** `docs/80-adrs/ADR-025-mtl-authorization-model.md`
+
 ## Anti-Patterns to Avoid
 
 ### DON'T: Legacy SET LOCAL Loop
@@ -160,16 +219,31 @@ END;
 $$;
 ```
 
+### DON'T: Use Old set_rls_context() with Spoofable Parameters (ADR-024)
+
+```sql
+-- WRONG: Deprecated pattern with spoofable parameters
+SELECT set_rls_context(
+  p_actor_id := 'any-uuid',      -- Attacker can impersonate
+  p_casino_id := 'other-casino', -- Attacker can access other tenants
+  p_staff_role := 'admin'        -- Attacker can escalate privileges
+);
+
+-- CORRECT: Use authoritative derivation
+SELECT set_rls_context_from_staff(p_correlation_id := 'req-123');
+```
+
 ## Context Injection (TypeScript)
 
 ```typescript
-// Server Action pattern
+// Server Action pattern (ADR-024 compliant)
 export async function myAction(input: Input) {
   const supabase = await createClient();
 
   return withServerAction(
     async () => {
-      // RLS context automatically injected via set_rls_context() RPC
+      // RLS context automatically injected via set_rls_context_from_staff() RPC
+      // Context derived from JWT + staff table lookup (NO spoofable parameters)
       const { data, error } = await supabase
         .from('table')
         .select('*');
@@ -180,19 +254,25 @@ export async function myAction(input: Input) {
 }
 ```
 
+**Note:** The `withServerAction` wrapper calls `set_rls_context_from_staff()` internally. Do NOT manually call the old `set_rls_context()` with parameters.
+
 ## Detailed References
 
 For comprehensive documentation, load the appropriate reference file:
 
 | Topic | Reference File | When to Load |
 |-------|---------------|--------------|
+| **Context Security** | `docs/80-adrs/ADR-024_DECISIONS.md` | Understanding `set_rls_context_from_staff()` (ADR-024) |
 | **Strategy Decision** | `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` | Understanding Track A vs Track B decision |
 | **External Validation** | `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` | When ambiguity arises about patterns |
+| **MTL Authorization** | `docs/80-adrs/ADR-025-mtl-authorization-model.md` | MTL access via staff_role (not service claims) |
 | Policy Templates | `references/policy-templates.md` | Creating new RLS policies |
 | RPC Patterns | `references/rpc-patterns.md` | Writing SECURITY DEFINER functions |
+| Self-Injection | `references/rpc-self-injection.md` | ⚠️ **DEPRECATED** - see ADR-024 section |
 | RBAC Matrix | `references/rbac-capabilities.md` | Determining role permissions |
 | Verification | `references/verification-checklist.md` | Auditing/testing policies |
 | ADR-015 Details | `references/adr015-connection-pooling.md` | Understanding pooling technical details |
+| Idempotency | `docs/80-adrs/ADR-021-idempotency-header-standardization.md` | Header standardization for RPCs |
 
 **Search patterns for detailed docs:**
 ```bash
@@ -214,35 +294,49 @@ After implementing RLS policies:
 2. **RLS enabled**: `ALTER TABLE {table} ENABLE ROW LEVEL SECURITY`
 3. **Policy patterns**: Confirm hybrid COALESCE pattern with JWT fallback
 4. **Role exclusions**: Dealers automatically excluded via `auth.uid()` check
-5. **Manual test**: Use `set_rls_context()` RPC in SQL console
+5. **ADR-024 compliance**: RPCs use `set_rls_context_from_staff()` (no spoofable params)
 6. **Cross-tenant test**: Verify cannot access other casino's data
 
 ```sql
--- Quick verification test
-SELECT set_rls_context(
-  p_actor_id := 'staff-uuid',
-  p_casino_id := 'casino-uuid',
-  p_staff_role := 'pit_boss'
-);
+-- Quick verification test (ADR-024 compliant)
+-- Use set_rls_context_from_staff() which derives context from JWT + staff table
+SELECT set_rls_context_from_staff(p_correlation_id := 'test-123');
 
--- Should return only casino-scoped data
+-- Should return only casino-scoped data for authenticated staff
 SELECT count(*) FROM your_table;
 
--- Should FAIL (cross-casino access)
+-- Should FAIL (cross-casino access via RLS)
 INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
+
+-- ⚠️ DEPRECATED: Do NOT use the old spoofable pattern
+-- SELECT set_rls_context(p_actor_id, p_casino_id, p_staff_role);
 ```
 
 ## Canonical Documentation References
 
+### Security-Critical (Read These First)
+
+- **ADR-024**: `docs/80-adrs/ADR-024_DECISIONS.md` - **CRITICAL: Context spoofing remediation**. Deprecates `set_rls_context()`, introduces authoritative `set_rls_context_from_staff()`. Frozen.
 - **ADR-023**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` - **Pool primary, Silo escape hatch** multi-tenancy model
-- **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data validating PT-2's approach is not homebrew.
+- **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data.
+
+### Strategy & Patterns
+
 - **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` - Track A (hybrid) for MVP, Track B (JWT-only) gated on prerequisites
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` - Pooling strategy technical details
+- **ADR-025**: `docs/80-adrs/ADR-025-mtl-authorization-model.md` - MTL uses `staff_role` for authorization (not service claims)
+- **ADR-021**: `docs/80-adrs/ADR-021-idempotency-header-standardization.md` - Idempotency header: `Idempotency-Key` (import from `lib/http/headers.ts`)
+
+### Policy & RBAC
+
 - **SEC-001**: `docs/30-security/SEC-001-rls-policy-matrix.md` - Policy templates
 - **SEC-002**: `docs/30-security/SEC-002-casino-scoped-security-model.md` - Security boundaries (updated with ADR-023)
-- **SEC-003**: `docs/30-security/SEC-003-rbac-matrix.md` - RBAC matrix
+- **SEC-003**: `docs/30-security/SEC-003-rbac-matrix.md` - RBAC matrix (amended by ADR-025 for MTL)
 - **SEC-005**: `docs/30-security/SEC-005-role-taxonomy.md` - Role definitions
-- **ADR-018**: `docs/80-adrs/ADR-018-sec006-security-hardening.md` - SEC-006 formalization
+- **ADR-018**: `docs/80-adrs/ADR-018-security-definer-governance.md` - SECURITY DEFINER function governance
+
+### Operations
+
 - **OPS-002**: `docs/50-ops/OPS-002-silo-provisioning-playbook.md` - Silo deployment operations
 - **Implementation**: `lib/supabase/rls-context.ts` - TypeScript context injection
 
@@ -366,3 +460,44 @@ past_patterns = memori.search_learnings(
 
 - Client: `create_memori_client("skill:rls-expert")`
 - Database user_id: `skill_rls_expert`
+
+## Documentation Freshness Checking
+
+This skill tracks source governance documents to detect when primitives may be stale.
+
+### Check Freshness Before Major Updates
+
+```bash
+python .claude/skills/rls-expert/scripts/check_doc_freshness.py
+```
+
+**What it checks:**
+- SHA256 hashes of source ADRs and SEC documents
+- Security-critical documents (ADR-024, ADR-023, ADR-018)
+- Strategy documents (ADR-020, ADR-021, ADR-025)
+- Security policies (SEC-001 through SEC-005)
+
+**Exit codes:**
+- `0` - All documents match expected hashes
+- `1` - One or more documents have changed (skill may need updating)
+
+### Regenerate Manifest After Updates
+
+After updating skill primitives to reflect governance changes:
+
+```bash
+python .claude/skills/rls-expert/scripts/regenerate_manifest.py
+```
+
+### Tracked Source Documents
+
+| Priority | Document | Security Impact |
+|----------|----------|-----------------|
+| **CRITICAL** | ADR-024 | Context spoofing remediation |
+| **CRITICAL** | ADR-023 | Multi-tenant isolation model |
+| **CRITICAL** | ADR-018 | SECURITY DEFINER governance |
+| HIGH | ADR-020 | RLS strategy selection |
+| HIGH | SEC-001 | Policy templates |
+| MEDIUM | ADR-015, ADR-025, SEC-003, SEC-005 | Various patterns |
+
+**Manifest location:** `generated/freshness-manifest.json`

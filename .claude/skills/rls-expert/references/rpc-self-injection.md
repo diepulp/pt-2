@@ -1,4 +1,18 @@
-# RPC Self-Injection Patterns (ADR-015)
+# RPC Self-Injection Patterns
+
+> ## ⚠️ DEPRECATION WARNING (ADR-024)
+>
+> **This document describes the OLD self-injection pattern that is now DEPRECATED.**
+>
+> The `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` pattern allowed context spoofing attacks.
+> All client-callable RPCs must now use `set_rls_context_from_staff()` which derives context authoritatively
+> from JWT claims + staff table lookup.
+>
+> **See:** `docs/80-adrs/ADR-024_DECISIONS.md` and `references/rpc-patterns.md` for the current pattern.
+
+---
+
+## Historical Context (Pre-ADR-024)
 
 SECURITY DEFINER RPCs bypass RLS and must self-inject casino context before accessing data.
 
@@ -8,6 +22,8 @@ SECURITY DEFINER RPCs bypass RLS and must self-inject casino context before acce
 - RLS policies are bypassed entirely in this context
 - Without explicit context injection, queries return data from ALL casinos
 - This is a **critical security violation** - cross-tenant data exposure
+
+**However:** ADR-024 identified that the self-injection pattern itself was vulnerable when using spoofable parameters.
 
 ---
 

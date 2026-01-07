@@ -2,6 +2,20 @@
 
 Patterns for SECURITY DEFINER RPCs that validate casino scope per SEC-001/SEC-003.
 
+## ⚠️ ADR-024 Context Security Update
+
+**The `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` pattern is DEPRECATED.**
+
+All client-callable RPCs must now call `set_rls_context_from_staff()` which:
+- Takes NO spoofable parameters (only optional `p_correlation_id`)
+- Derives `staff_id` from JWT `app_metadata.staff_id` claim
+- Looks up `casino_id` and `role` from `staff` table
+- Validates staff is `active` before setting context
+
+**Reference:** `docs/80-adrs/ADR-024_DECISIONS.md`
+
+---
+
 ## Core Pattern: Casino Scope Validation
 
 Every RPC that accepts `casino_id` as a parameter MUST validate it against context:
@@ -77,38 +91,97 @@ $$;
 
 ---
 
-## set_rls_context() RPC (ADR-015)
+## set_rls_context_from_staff() RPC (ADR-024) ✅ CURRENT
 
-The canonical context injection RPC:
+The authoritative context injection RPC that derives context from JWT + staff table:
 
 ```sql
-CREATE OR REPLACE FUNCTION set_rls_context(
-  p_actor_id uuid,
-  p_casino_id uuid,
-  p_staff_role text,
+CREATE OR REPLACE FUNCTION set_rls_context_from_staff(
   p_correlation_id text DEFAULT NULL
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
+DECLARE
+  v_user_id uuid;
+  v_staff_id uuid;
+  v_jwt_staff_id uuid;
+  v_casino_id uuid;
+  v_staff_role text;
 BEGIN
-  -- SET LOCAL ensures context persists for entire transaction
-  PERFORM set_config('app.actor_id', p_actor_id::text, true);
-  PERFORM set_config('app.casino_id', p_casino_id::text, true);
-  PERFORM set_config('app.staff_role', p_staff_role, true);
+  -- Get authenticated user
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() is null';
+  END IF;
 
+  -- Get staff_id from JWT (authoritative source)
+  v_jwt_staff_id := (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid;
+  IF v_jwt_staff_id IS NULL THEN
+    RAISE EXCEPTION 'JWT missing staff_id claim in app_metadata';
+  END IF;
+
+  -- Lookup staff record and validate user_id binding (INV-3)
+  SELECT id, casino_id, role INTO v_staff_id, v_casino_id, v_staff_role
+  FROM staff
+  WHERE id = v_jwt_staff_id
+    AND user_id = v_user_id  -- Bind to auth.uid() (prevents mis-issued tokens)
+    AND status = 'active';   -- INV-4: Block inactive staff
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Staff not found or inactive for user %', v_user_id;
+  END IF;
+
+  -- Set transaction-local context (INV-5: pooler-safe)
+  PERFORM set_config('app.actor_id', v_staff_id::text, true);
+  PERFORM set_config('app.casino_id', v_casino_id::text, true);
+  PERFORM set_config('app.staff_role', v_staff_role, true);
+
+  -- Correlation ID for tracing (capped length)
   IF p_correlation_id IS NOT NULL THEN
-    PERFORM set_config('application_name', p_correlation_id, true);
+    PERFORM set_config('application_name',
+      left(regexp_replace(p_correlation_id, '[^a-zA-Z0-9_-]', '', 'g'), 63),
+      true);
   END IF;
 END;
 $$;
 ```
 
 **Key Points:**
-- `SECURITY DEFINER` allows the function to set session variables
-- `set_config(..., true)` = SET LOCAL (transaction-scoped)
-- All context is set atomically in one transaction
-- Correlation ID enables request tracing in logs
+- NO spoofable parameters (only optional `p_correlation_id` for tracing)
+- Derives `staff_id` from JWT `app_metadata.staff_id` (authoritative)
+- Binds `staff_id` to `auth.uid()` (prevents mis-issued token escalation)
+- Lookups `casino_id` and `role` from `staff` table
+- Validates staff is `active` (inactive staff blocked)
+- Uses `SET LOCAL` via `set_config(..., true)` (transaction-scoped, pooler-safe)
+- Correlation ID sanitized and length-capped
+
+---
+
+## ⚠️ DEPRECATED: set_rls_context() RPC (Pre-ADR-024)
+
+**DO NOT USE IN NEW CODE.** Execute permission revoked from `authenticated` role.
+
+This pattern is vulnerable to context spoofing:
+
+```sql
+-- DEPRECATED: Spoofable parameters allow cross-tenant access
+CREATE OR REPLACE FUNCTION set_rls_context(
+  p_actor_id uuid,
+  p_casino_id uuid,
+  p_staff_role text,
+  p_correlation_id text DEFAULT NULL
+) RETURNS void
+-- ... vulnerable implementation ...
+```
+
+**Why deprecated:**
+- Accepts `casino_id` as user input → attacker can access any casino's data
+- Accepts `staff_role` as user input → attacker can escalate to `admin`
+- Session variables are user-writable → bypasses multi-tenant isolation
+
+**Migration:** Replace all calls with `set_rls_context_from_staff()`.
 
 ---
 
@@ -269,14 +342,50 @@ $$;
 
 ---
 
+---
+
+## Idempotency Pattern (ADR-021)
+
+RPCs that create records should support idempotency. Use the standardized header name:
+
+```typescript
+// TypeScript: Import from centralized location
+import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+
+const response = await fetch(url, {
+  headers: { [IDEMPOTENCY_HEADER]: idempotencyKey }
+});
+```
+
+**Header name:** `Idempotency-Key` (title case, per IETF draft-ietf-httpapi-idempotency-key-header)
+
+**Anti-pattern (ANT-HTTP-001):** Hardcoded header strings
+
+```typescript
+// ❌ WRONG - string literal
+headers: { "idempotency-key": key }
+
+// ❌ WRONG - different header name
+headers: { "x-idempotency-key": key }
+
+// ✅ CORRECT - import from headers.ts
+import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+headers: { [IDEMPOTENCY_HEADER]: key }
+```
+
+**Reference:** `docs/80-adrs/ADR-021-idempotency-header-standardization.md`
+
+---
+
 ## RPC Security Checklist
 
 - [ ] Uses `SECURITY DEFINER` when needed
 - [ ] Sets `search_path = public` to prevent path injection
+- [ ] Calls `set_rls_context_from_staff()` for context (ADR-024)
 - [ ] Validates `app.casino_id` context is set
 - [ ] Validates `casino_id` parameter matches context (if provided)
 - [ ] Implements role-based access control checks
-- [ ] Supports idempotency via `idempotency_key`
+- [ ] Supports idempotency via `idempotency_key` (ADR-021)
 - [ ] Logs `actor_id` in `created_by`/`updated_by` columns
 - [ ] Validates foreign key relationships belong to same casino
 - [ ] Returns meaningful error messages (without leaking sensitive data)

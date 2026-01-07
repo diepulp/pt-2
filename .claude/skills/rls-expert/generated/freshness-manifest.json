@@ -1,0 +1,166 @@
+{
+  "skill": "rls-expert",
+  "version": "2.0.0",
+  "generated_at": "2026-01-06",
+  "description": "Tracks source governance documents that inform RLS Expert skill primitives",
+  "validation_rules": {
+    "stale_threshold_days": 30,
+    "require_security_critical_match": true
+  },
+  "source_documents": {
+    "ADR-024": {
+      "path": "docs/80-adrs/ADR-024_DECISIONS.md",
+      "sha256": "df8f1e791531560ed68710379c2f30a095b39af93a4576aacc0ce810296d2cc2",
+      "title": "RLS Context Self-Injection Anti-Pattern Remediation",
+      "status": "Frozen",
+      "category": "security_critical",
+      "security_impact": "CRITICAL - Context spoofing vulnerability remediation",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Context Injection Security (ADR-024)",
+        "SKILL.md: Security Invariants table",
+        "SKILL.md: Anti-Patterns (set_rls_context deprecation)",
+        "references/rpc-patterns.md: set_rls_context_from_staff()",
+        "references/rpc-self-injection.md: Deprecation warning"
+      ]
+    },
+    "ADR-023": {
+      "path": "docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md",
+      "sha256": "5e04db3fd0ac2ba8d6bf32d895b7062c74e0611e39f85683de4d31054e76e244",
+      "title": "Multi-Tenancy Storage Model Selection (Pool Primary, Silo Escape Hatch)",
+      "status": "Accepted",
+      "category": "security_critical",
+      "security_impact": "HIGH - Multi-tenant isolation model",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Multi-Tenancy Model (ADR-023)",
+        "SKILL.md: Non-Negotiable Guardrails",
+        "references/policy-templates.md: casino_id enforcement"
+      ]
+    },
+    "ADR-025": {
+      "path": "docs/80-adrs/ADR-025-mtl-authorization-model.md",
+      "sha256": "63890095f7b0484c6f0dd5e51aadc43b8832d54134cbcaeb882b743aa808d8a1",
+      "title": "MTL Authorization Model (staff_role over service-claim)",
+      "status": "Accepted",
+      "category": "strategy",
+      "security_impact": "MEDIUM - MTL access control model",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: MTL Authorization (ADR-025)",
+        "SKILL.md: Canonical Documentation References"
+      ]
+    },
+    "ADR-021": {
+      "path": "docs/80-adrs/ADR-021-idempotency-header-standardization.md",
+      "sha256": "5e91d0a225a65069095b95fc4c214a1ee9967d2a8e14f6471073d61b2f1ee1db",
+      "title": "Idempotency Header Standardization",
+      "status": "Accepted",
+      "category": "strategy",
+      "security_impact": "LOW - Header naming convention",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "references/rpc-patterns.md: Idempotency Pattern (ADR-021)",
+        "SKILL.md: Canonical Documentation References"
+      ]
+    },
+    "ADR-020": {
+      "path": "docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md",
+      "sha256": "714e45b8bc39a41a812a6f8472c3ade02ff4e71310199623f22b852dc44e2862",
+      "title": "RLS Track A MVP Strategy",
+      "status": "Accepted",
+      "category": "strategy",
+      "security_impact": "HIGH - RLS strategy selection",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Current Strategy (ADR-020)",
+        "SKILL.md: Core Principles",
+        "SKILL.md: Quick Reference: Pattern C (Hybrid)",
+        "references/policy-templates.md: COALESCE pattern"
+      ]
+    },
+    "ADR-015": {
+      "path": "docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md",
+      "sha256": "8e98f70be3485561a4a8015c1c81f228a3c9f1645118fe311421a57bab8fcff1",
+      "title": "RLS Connection Pooling Strategy",
+      "status": "Accepted",
+      "category": "strategy",
+      "security_impact": "MEDIUM - Connection pooling compatibility",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Core Principles (SET LOCAL)",
+        "references/adr015-connection-pooling.md",
+        "references/rpc-patterns.md: set_config(true)"
+      ]
+    },
+    "ADR-018": {
+      "path": "docs/80-adrs/ADR-018-security-definer-governance.md",
+      "sha256": "ca8b5c6ca2b9a943331229e7092eefe0102ae63d5f70db22115b7e43a567e002",
+      "title": "SECURITY DEFINER Function Governance",
+      "status": "Accepted",
+      "category": "security_critical",
+      "security_impact": "HIGH - RPC security model",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Non-Negotiable Guardrails (SECURITY DEFINER)",
+        "references/rpc-patterns.md: Casino Scope Validation",
+        "references/rpc-self-injection.md"
+      ]
+    },
+    "SEC-001": {
+      "path": "docs/30-security/SEC-001-rls-policy-matrix.md",
+      "sha256": "7fa4483678ba484b0ee761f821ed37b00f6858d0bb1c5522340930c1c412869d",
+      "title": "RLS Policy Matrix",
+      "status": "Active",
+      "category": "security_policies",
+      "security_impact": "HIGH - Policy templates",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "references/policy-templates.md",
+        "SKILL.md: Canonical Documentation References"
+      ]
+    },
+    "SEC-002": {
+      "path": "docs/30-security/SEC-002-casino-scoped-security-model.md",
+      "sha256": "840e8f5cceb2d5f86c47d0fb622baff66697c5593b4620278a9f4481ae996f60",
+      "title": "Casino-Scoped Security Model",
+      "status": "Active",
+      "category": "security_policies",
+      "security_impact": "HIGH - Security boundaries",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Multi-Tenancy Model",
+        "SKILL.md: Canonical Documentation References"
+      ]
+    },
+    "SEC-003": {
+      "path": "docs/30-security/SEC-003-rbac-matrix.md",
+      "sha256": "86f7cd918e3e798f7a1abdf7b558b59dc538196308b8c9ace2fc36b8889e07b1",
+      "title": "RBAC Matrix",
+      "status": "Active",
+      "category": "security_policies",
+      "security_impact": "MEDIUM - Role capabilities",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Staff Roles Quick Reference",
+        "SKILL.md: MTL Authorization (ADR-025)",
+        "references/rbac-capabilities.md"
+      ]
+    },
+    "SEC-005": {
+      "path": "docs/30-security/SEC-005-role-taxonomy.md",
+      "sha256": "80ec514a496b07feb0f85657b5fa10c6feea60e7365e0cb75d7d54eefa2da882",
+      "title": "Role Taxonomy",
+      "status": "Active",
+      "category": "security_policies",
+      "security_impact": "MEDIUM - Role definitions",
+      "last_verified": "2026-01-06",
+      "skill_sections": [
+        "SKILL.md: Staff Roles Quick Reference",
+        "SKILL.md: Pit Boss Finance Constraints",
+        "references/rbac-capabilities.md"
+      ]
+    }
+  },
+  "regeneration_command": "python .claude/skills/rls-expert/scripts/regenerate_manifest.py"
+}
