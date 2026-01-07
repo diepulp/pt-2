@@ -9,8 +9,8 @@ last_review: 2025-12-25
 updated: 2025-12-25
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023]
-version: 1.4.0
+related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023, ADR-024]
+version: 1.6.0
 ---
 
 ## Overview
@@ -66,6 +66,7 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 | CasinoService (Foundational) | `casino`, `staff`, `casino_settings`, `report` | Authenticated staff in same `casino_id` (role-gated) | Admin (`staff_role = 'admin'`) only; `casino` table is read-only (service_role for setup) | `casino_settings` is the sole temporal authority; policies block cross-casino visibility. Dealers excluded (non-authenticated). **PRD-010**: `casino` table now has RLS (Pattern C hybrid). |
 | Player & Visit (Identity & Session) | `player_casino`, `visit` | Authenticated staff in same `casino_id` | Enrollment/Visit services; admin override only | Membership writes funnel through enrollment workflows; prevents cross-property session leakage. **Ghost visits**: `player_id` is NULL but `casino_id` scoping still applies. |
 | LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. |
+| LoyaltyService (Promo Instruments) | `promo_program`, `promo_coupon` | Authenticated staff in same `casino_id` | `rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`, `rpc_promo_coupon_inventory` | **ADR-024**: RPCs MUST call `set_rls_context_from_staff()` (no spoofable inputs). Nullable `player_id`/`visit_id` (Pattern C hybrid). `promo_coupon` is append-only for issuance; status transitions via RPCs. Idempotency via `validation_number` + `idempotency_key`. |
 | TableContextService (Operational) | `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation` | Authenticated operations staff for same `casino_id` | Admin + `pit_boss` roles | Trigger `assert_table_context_casino` enforces table/casino alignment. |
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
 | PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance, compliance & pit_boss staff in same `casino_id` | `rpc_create_financial_txn` (cashier/admin: full access; pit_boss: table buy-ins only per SEC-005 v1.1.0) | Append-only ledger; deletes disabled; gaming day derived via trigger. Pit boss constraints: direction='in', tender_type IN ('cash','chips'), visit_id required. |
@@ -73,27 +74,31 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 
 ---
 
-## Canonical RLS Pattern (ADR-015 Compliant)
+## Canonical RLS Pattern (ADR-015 + ADR-024 Compliant)
 
 **Prerequisites**:
 - ✅ `staff.user_id uuid references auth.users(id)` (Migration `20251110224223`)
-- ✅ `set_rls_context()` RPC for transaction-wrapped injection (Migration `20251209183033_adr015_rls_context_rpc.sql`)
+- ✅ `set_rls_context_from_staff()` RPC for authoritative context derivation (ADR-024 remediation)
 - ✅ JWT `app_metadata` with `casino_id` for fallback (Supabase Auth)
+
+> ⚠️ **ADR-024 CRITICAL**: `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` is **DEPRECATED** for client-callable RPCs. It accepts spoofable parameters that enable context injection attacks. All new RPCs MUST use `set_rls_context_from_staff()` which derives context authoritatively from JWT + staff table lookup.
 
 **Pattern C (Hybrid)**: Transaction-wrapped context injection with JWT fallback
 
 This pattern ensures:
 1. **User is authenticated** via Supabase auth (`auth.uid()`)
 2. **User is linked to active staff** via `staff.user_id`
-3. **Casino scope injected** via `set_rls_context()` RPC (single transaction)
+3. **Casino scope injected** via `set_rls_context_from_staff()` RPC (ADR-024 - authoritative derivation)
 4. **JWT fallback** via `auth.jwt() -> 'app_metadata' ->> 'casino_id'`
 
 **Why Hybrid?**
-- **Connection pooling safe**: `set_rls_context()` executes all `SET LOCAL` in single transaction
+- **Connection pooling safe**: Context setter executes all `SET LOCAL` in single transaction
 - **JWT fallback**: Works when context injection is not called (direct Supabase client queries)
-- **Migration path**: Allows gradual transition from Pattern B to Pattern A (see ADR-015)
+- **Security (ADR-024)**: Context derived from authoritative sources, not spoofable inputs
 
-**Legacy Pattern (Deprecated)**: The old `exec_sql()` loop pattern fails with Supabase connection pooling. See ADR-015 for details.
+**Deprecated Patterns**:
+- ❌ `exec_sql()` loop pattern - fails with connection pooling (ADR-015)
+- ❌ `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` - spoofable inputs (ADR-024)
 
 ---
 
@@ -128,13 +133,13 @@ create policy "{table_name}_read_hybrid"
 **How it works**:
 1. `auth.uid() IS NOT NULL` - Ensures user is authenticated via Supabase auth
 2. `COALESCE(...)` - Tries transaction context first, falls back to JWT
-3. `current_setting('app.casino_id', true)` - Injected by `set_rls_context()` RPC (ADR-015)
+3. `current_setting('app.casino_id', true)` - Injected by `set_rls_context_from_staff()` RPC (ADR-024)
 4. `NULLIF(..., '')` - Treats empty string as NULL (connection pooling edge case)
 5. `auth.jwt() -> 'app_metadata' ->> 'casino_id'` - JWT fallback for direct client queries
 6. If all conditions match, user can read rows from their casino only
 
 **Connection Pooling Safe**: This pattern works with Supabase transaction-mode pooling because:
-- `set_rls_context()` wraps all `SET LOCAL` in single RPC call (same transaction)
+- `set_rls_context_from_staff()` wraps all `SET LOCAL` in single RPC call (same transaction)
 - JWT fallback ensures policy never fails if context not set
 
 **Dealers**: Automatically excluded (dealers have `user_id = null`, cannot satisfy `auth.uid()` check)
@@ -354,98 +359,97 @@ INSERT INTO table (casino_id, ...) VALUES (v_casino_id, ...);
 
 ---
 
-## RLS Context Injection (ADR-015)
+## RLS Context Injection (ADR-015 + ADR-024)
 
 **Required**: All Server Actions MUST use `withServerAction` wrapper to inject RLS context.
 
-**Implementation** (`lib/supabase/rls-context.ts`):
+> ⚠️ **ADR-024 CRITICAL**: Client-callable RPCs MUST use `set_rls_context_from_staff()` which derives context authoritatively. The old `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` is **DEPRECATED** because it accepts spoofable parameters.
 
-```typescript
-export interface RLSContext {
-  actorId: string;  // staff.id
-  casinoId: string; // staff.casino_id
-  staffRole: string; // staff.role
-}
-
-/**
- * Get authenticated user's casino context
- *
- * Flow:
- * 1. auth.getUser() → user_id from auth.users
- * 2. Query staff: user_id → staff.id, casino_id, role
- * 3. Validate active staff with casino assignment
- */
-export async function getAuthContext(
-  supabase: SupabaseClient<Database>,
-): Promise<RLSContext> {
-  const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    throw new Error('UNAUTHORIZED: No authenticated user');
-  }
-
-  const { data: staff, error: staffError } = await supabase
-    .from('staff')
-    .select('id, casino_id, role')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
-    .in('role', ['pit_boss', 'admin', 'cashier']) // Exclude dealers (non-authenticated)
-    .single();
-
-  if (staffError || !staff || !staff.casino_id) {
-    throw new Error('FORBIDDEN: User is not active staff with casino assignment');
-  }
-
-  return {
-    actorId: staff.id,
-    casinoId: staff.casino_id,
-    staffRole: staff.role,
-  };
-}
-
-/**
- * Inject RLS context via set_rls_context() RPC (ADR-015)
- *
- * This function wraps all SET LOCAL statements in a single transaction-safe RPC call.
- * Connection pooling compatible - all context variables set atomically.
- */
-export async function injectRLSContext(
-  supabase: SupabaseClient<Database>,
-  context: RLSContext,
-  correlationId?: string,
-): Promise<void> {
-  await supabase.rpc('set_rls_context', {
-    p_actor_id: context.actorId,
-    p_casino_id: context.casinoId,
-    p_staff_role: context.staffRole,
-    p_correlation_id: correlationId || null,
-  });
-}
-```
-
-**Database RPC** (Migration `20251209183033_adr015_rls_context_rpc.sql`):
+### Authoritative Context Setter (ADR-024 - REQUIRED for new RPCs)
 
 ```sql
-CREATE OR REPLACE FUNCTION set_rls_context(
-  p_actor_id uuid,
-  p_casino_id uuid,
-  p_staff_role text,
+-- ADR-024: Authoritative context derivation (NO spoofable inputs)
+CREATE OR REPLACE FUNCTION set_rls_context_from_staff(
   p_correlation_id text DEFAULT NULL
 ) RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
+DECLARE
+  v_user_id uuid;
+  v_staff_id uuid;
+  v_casino_id uuid;
+  v_staff_role text;
 BEGIN
-  -- SET LOCAL ensures context persists for entire transaction
-  PERFORM set_config('app.actor_id', p_actor_id::text, true);
-  PERFORM set_config('app.casino_id', p_casino_id::text, true);
-  PERFORM set_config('app.staff_role', p_staff_role, true);
+  -- 1. Get authenticated user from JWT (authoritative)
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'UNAUTHORIZED: No authenticated user';
+  END IF;
+
+  -- 2. Lookup staff from authoritative source (staff table)
+  SELECT id, casino_id, role INTO v_staff_id, v_casino_id, v_staff_role
+  FROM staff
+  WHERE user_id = v_user_id AND status = 'active'
+  LIMIT 1;
+
+  IF v_staff_id IS NULL THEN
+    RAISE EXCEPTION 'FORBIDDEN: User is not active staff';
+  END IF;
+
+  -- 3. Set transaction-local context (pooler-safe)
+  PERFORM set_config('app.actor_id', v_staff_id::text, true);
+  PERFORM set_config('app.casino_id', v_casino_id::text, true);
+  PERFORM set_config('app.staff_role', v_staff_role, true);
 
   IF p_correlation_id IS NOT NULL THEN
-    PERFORM set_config('application_name', p_correlation_id, true);
+    PERFORM set_config('application_name', LEFT(p_correlation_id, 63), true);
   END IF;
 END;
 $$;
 ```
+
+**Security Invariants (ADR-024)**:
+- **INV-7**: All client-callable RPCs MUST call `set_rls_context_from_staff()` as first statement
+- **INV-8**: No client-callable RPC may accept `casino_id`/`actor_id` as user input
+- Context derived from `auth.uid()` → `staff` table lookup (authoritative)
+- Only `correlation_id` allowed as optional input parameter
+
+### TypeScript Implementation (`lib/server-actions/middleware/rls.ts`)
+
+```typescript
+/**
+ * RLS middleware - injects context via set_rls_context_from_staff() (ADR-024)
+ *
+ * Context is derived authoritatively from JWT + staff table.
+ * No spoofable inputs accepted.
+ */
+export function withRLS<T>(): Middleware<T> {
+  return async (ctx, next) => {
+    // Call authoritative context setter (ADR-024)
+    await ctx.supabase.rpc('set_rls_context_from_staff', {
+      p_correlation_id: ctx.correlationId,
+    });
+    return next();
+  };
+}
+```
+
+### Deprecated Pattern (ADR-015 - DO NOT USE for new RPCs)
+
+```sql
+-- ❌ DEPRECATED: Accepts spoofable inputs (ADR-024 security vulnerability)
+CREATE OR REPLACE FUNCTION set_rls_context(
+  p_actor_id uuid,      -- ❌ Spoofable
+  p_casino_id uuid,     -- ❌ Spoofable
+  p_staff_role text,    -- ❌ Spoofable
+  p_correlation_id text DEFAULT NULL
+) RETURNS void
+-- ... omitted - see ADR-024 for deprecation rationale
+```
+
+**When to use deprecated pattern**: ONLY for internal/migration scripts with `service_role`. Never for client-callable RPCs.
 
 **Server Action Example**:
 
@@ -723,18 +727,21 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 - **Canonical Guide**: `docs/30-security/SECURITY_TENANCY_UPGRADE.md` (AUTHORITATIVE)
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (Connection pooling strategy, Pattern C)
 - **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (MVP strategy - Track A Hybrid)
+- **ADR-024**: `docs/80-adrs/ADR-024_DECISIONS.md` (Context self-injection remediation - CRITICAL)
 - **SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v3.1.0)
 - **Migration Analysis**: `docs/audits/RLS_DOCUMENTATION_DRIFT_ANALYSIS_2025-11-13.md`
-- **RLS Context**: `lib/supabase/rls-context.ts` (Updated for ADR-015)
-- **WRAPPER**: `lib/server-actions/with-server-action-wrapper.ts`
-- **RPC Migration**: `supabase/migrations/20251209183033_adr015_rls_context_rpc.sql`
+- **RLS Middleware**: `lib/server-actions/middleware/rls.ts` (ADR-024 compliant)
+- **WRAPPER**: `lib/server-actions/middleware/compositor.ts`
+- **RPC (Authoritative)**: `set_rls_context_from_staff()` (ADR-024)
+- **RPC (Deprecated)**: `set_rls_context()` (ADR-015 - internal use only)
 
 ---
 
-**Status**: ✅ **ADR-015 IMPLEMENTED** (2025-12-10)
-**Migration**: ✅ Schema deployed, `set_rls_context()` RPC active
+**Status**: ✅ **ADR-015 + ADR-024 COMPLIANT** (2026-01-06)
+**Migration**: ✅ Schema deployed, `set_rls_context_from_staff()` RPC for authoritative context
 **Pattern**: Pattern C (Hybrid) - Transaction-wrapped context with JWT fallback
-**Next**: Migrate existing policies to hybrid pattern, update application layer to use `set_rls_context()`
+**Security**: ADR-024 remediation complete - `set_rls_context()` deprecated for client RPCs
+**Next**: All new RPCs must use `set_rls_context_from_staff()` (no spoofable inputs)
 
 ---
 
@@ -742,6 +749,8 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.6.0 | 2026-01-06 | **ADR-024 Alignment**: Updated Canonical RLS Pattern section to require `set_rls_context_from_staff()`. Deprecated `set_rls_context()` for client-callable RPCs. Added security invariants INV-7/INV-8. Updated RLS Context Injection section with authoritative context setter. |
+| 1.5.0 | 2026-01-06 | **PRD-LOYALTY-PROMO**: Added `promo_program`, `promo_coupon` tables to LoyaltyService (Promo Instruments) context. RPCs require ADR-024 compliance (`set_rls_context_from_staff()`). |
 | 1.3.0 | 2025-12-12 | **ADR-018 Reference**: Template 5 marked as MANDATORY for SECURITY DEFINER functions. Added cross-reference to ADR-018 governance pattern. |
 | 1.2.0 | 2025-12-10 | Added **Template 5: RPC Casino Scope Validation**. Documents required pattern for service-owned RPCs to validate `p_casino_id` matches `current_setting('app.casino_id')`. |
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Added cashier to authenticated staff roles. Updated Role Variations to document cashier as primary `staff_role` enum value. |

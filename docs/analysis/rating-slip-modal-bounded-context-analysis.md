@@ -273,7 +273,7 @@ export async function GET(
   );
 
   // 4. Fetch financial data (PlayerFinancialService)
-  const financials = await financeService.getVisitFinancials(slip.visit_id);
+  const financials = await playerFinancialService.getVisitSummary(slip.visit_id);
 
   // 5. Assemble modal DTO
   return ServiceHttpResult.ok({
@@ -378,7 +378,7 @@ import { createRatingSlipService } from '@/services/rating-slip';
 import { createVisitService } from '@/services/visit';
 import { createPlayerService } from '@/services/player';
 import { createLoyaltyService } from '@/services/loyalty';
-import { createFinanceService } from '@/services/finance';
+import { createPlayerFinancialService } from '@/services/player-financial';
 import { ServiceHttpResult } from '@/lib/http/service-response';
 
 export async function GET(
@@ -392,7 +392,7 @@ export async function GET(
   const visitService = createVisitService(supabase);
   const playerService = createPlayerService(supabase);
   const loyaltyService = createLoyaltyService(supabase);
-  const financeService = createFinanceService(supabase);
+  const playerFinancialService = createPlayerFinancialService(supabase);
 
   try {
     // 1. Fetch rating slip
@@ -414,7 +414,7 @@ export async function GET(
 
     // 4. Fetch financial summary
     // NOTE: Requires PlayerFinancialService implementation
-    const financials = await financeService.getVisitFinancials(slip.visit_id);
+    const financials = await playerFinancialService.getVisitSummary(slip.visit_id);
 
     // 5. Assemble DTO
     const modalData = {

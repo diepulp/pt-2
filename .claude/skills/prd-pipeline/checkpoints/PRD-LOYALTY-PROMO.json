@@ -1,0 +1,129 @@
+{
+  "prd": "PRD-LOYALTY-PROMO",
+  "prd_title": "LoyaltyService Extension — Promotional Instruments (Match Play)",
+  "prd_source": "docs/00-vision/loyalty-service-extension/LOYALTY_PROMO_INSTRUMENTS_EXTENSION_v0.1_REDACTED.md",
+  "current_phase": 0,
+  "status": "ready_for_approval",
+  "pipeline_stage": "approval_gate",
+
+  "spec_version": "v2.1",
+  "spec_location": "docs/20-architecture/specs/PRD-LOYALTY-PROMO/EXECUTION-SPEC-LOYALTY-PROMO.md",
+  "spec_updated_at": "2026-01-06T18:00:00Z",
+  "spec_changes": [
+    "Added WS6: Alert Thresholds Configuration (CasinoService-owned)",
+    "Added WS7: Promo Exposure Rollup Queries (LoyaltyService-owned)",
+    "Added WS8: Dashboard Promo Lens UI (Dashboard bounded context)",
+    "Restructured phases: 5 phases (was 6)",
+    "WS1+WS6 run parallel in Phase 1",
+    "WS2+WS7 run parallel in Phase 2",
+    "WS3+WS4 run parallel in Phase 3",
+    "WS8 in dedicated Phase 4 (Dashboard Integration)",
+    "WS5 remains in Phase 5 (Testing)"
+  ],
+
+  "stage1_scaffold": {
+    "completed_at": "2026-01-06T00:00:00Z",
+    "workstream_count": 8,
+    "phase_count": 5,
+    "expert_routing": {
+      "WS1": "backend-service-builder",
+      "WS2": "backend-service-builder",
+      "WS3": "api-builder",
+      "WS4": "frontend-design-pt-2",
+      "WS5": "backend-service-builder",
+      "WS6": "backend-service-builder",
+      "WS7": "backend-service-builder",
+      "WS8": "frontend-design-pt-2"
+    },
+    "rls_consultation_required": ["WS1"],
+    "qa_consultation_recommended": ["WS5"]
+  },
+
+  "stage2_consultations": {
+    "backend-service-builder": {
+      "workstreams": ["WS1", "WS2", "WS5", "WS6", "WS7"],
+      "status": "completed",
+      "refinements_received": true
+    },
+    "rls-expert": {
+      "workstreams": ["WS1"],
+      "status": "completed",
+      "refinements_received": true,
+      "note": "ADR-024 security requirements integrated"
+    },
+    "api-builder": {
+      "workstreams": ["WS3"],
+      "status": "completed",
+      "refinements_received": true
+    },
+    "frontend-design-pt-2": {
+      "workstreams": ["WS4", "WS8"],
+      "status": "completed",
+      "refinements_received": true
+    },
+    "qa-specialist": {
+      "workstreams": ["WS5"],
+      "status": "completed",
+      "refinements_received": true
+    }
+  },
+
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"],
+
+  "workstream_summary": {
+    "WS1": {"name": "Database Layer (Schema + RLS)", "executor": "backend-service-builder", "type": "database"},
+    "WS2": {"name": "Service Layer Extension", "executor": "backend-service-builder", "type": "service-layer"},
+    "WS3": {"name": "Route Handlers", "executor": "api-builder", "type": "route-handlers"},
+    "WS4": {"name": "React Query Hooks", "executor": "frontend-design-pt-2", "type": "react-query-hooks"},
+    "WS5": {"name": "Tests", "executor": "backend-service-builder", "type": "unit-tests"},
+    "WS6": {"name": "Alert Thresholds Configuration", "executor": "backend-service-builder", "type": "database"},
+    "WS7": {"name": "Promo Exposure Rollup Queries", "executor": "backend-service-builder", "type": "database"},
+    "WS8": {"name": "Dashboard Promo Lens UI", "executor": "frontend-design-pt-2", "type": "react-components"}
+  },
+
+  "execution_phases": [
+    {"name": "Phase 1 - Foundation", "parallel": ["WS1", "WS6"], "gates": ["schema-validation"], "status": "pending"},
+    {"name": "Phase 2 - Service Layer + Rollups", "parallel": ["WS2", "WS7"], "gates": ["type-check", "schema-validation"], "status": "pending"},
+    {"name": "Phase 3 - Transport", "parallel": ["WS3", "WS4"], "gates": ["lint", "type-check"], "status": "pending"},
+    {"name": "Phase 4 - Dashboard Integration", "parallel": ["WS8"], "gates": ["type-check"], "status": "pending"},
+    {"name": "Phase 5 - Testing", "parallel": ["WS5"], "gates": ["test-pass"], "status": "pending"}
+  ],
+
+  "gates_passed": [],
+  "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
+
+  "findings_baseline": {
+    "high": [
+      "security-definer-read: rpc_promo_coupon_inventory should be SECURITY INVOKER",
+      "missing-audit-log: Mutations need audit logging with correlation IDs",
+      "auto-generated-idempotency: validation_number must be REQUIRED input"
+    ],
+    "medium": [
+      "casino-settings-gap: promo_require_exact_match, promo_allow_anonymous_issuance missing",
+      "prd-derivation-gap: program status/start_at/end_at fields for 'is active' check",
+      "file-layout-divergence: promo-dtos.ts should be dtos.ts",
+      "coverage-target-low: 85% should be 90%",
+      "test-naming-wrong: .integration.test.ts should be .int.test.ts",
+      "lint-allows-warnings: should be max-warnings=0"
+    ],
+    "low": [
+      "rbac-unmapped: roles not mapped to SEC-003"
+    ]
+  },
+
+  "findings_comparison": {
+    "baseline_count": 10,
+    "fixed_count": 10,
+    "remaining_count": 0,
+    "high_fixed": 3,
+    "medium_fixed": 6,
+    "low_fixed": 1,
+    "comparison_result": "ALL_FINDINGS_ADDRESSED"
+  },
+
+  "timestamp": "2026-01-06T18:00:00Z",
+  "validation_passed": true,
+  "resume_instructions": "EXECUTION-SPEC v2.1 updated with WS6/WS7/WS8 for alert thresholds, promo rollups, and dashboard promo lens. All 10 original findings addressed. Awaiting user approval before Phase 1 execution."
+}

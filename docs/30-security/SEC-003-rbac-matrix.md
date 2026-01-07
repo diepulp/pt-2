@@ -6,7 +6,7 @@ status: Active
 affects: [SEC-001, SEC-005, ADR-017, ADR-024, ADR-025]
 created: 2025-11-02
 last_review: 2025-12-31
-version: 1.3.0
+version: 1.4.0
 ---
 
 ## Purpose
@@ -41,6 +41,10 @@ This matrix predates ADR-024; treat it as a baseline, not the final word on SECU
 | **RatingSlip**<br/>Update telemetry state | ✅ (own submissions) | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
 | **LoyaltyService**<br/>Read loyalty ledger/balances | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ✅ | ◻️ |
 | **LoyaltyService**<br/>Append rewards | ◻️ | ✅ (approve) | ✅ | ◻️ | ◻️ | ✅ | ◻️ |
+| **LoyaltyService (Promo)**<br/>Read promo programs/coupons | ◻️ | ✅ | ✅ | ◻️ | ✅ | ◻️ | ◻️ |
+| **LoyaltyService (Promo)**<br/>Issue promo coupon | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
+| **LoyaltyService (Promo)**<br/>Void/replace promo coupon | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
+| **LoyaltyService (Promo)**<br/>Query promo inventory | ◻️ | ✅ | ✅ | ◻️ | ✅ | ◻️ | ◻️ |
 | **PlayerFinancialService**<br/>Read financial ledger | ◻️ | ✅ | ✅ | ✅ | ✅ | ◻️ | ◻️ |
 | **PlayerFinancialService**<br/>Record financial txn | ◻️ | ⚠️ (table buy-ins only) | ✅ | ✅ (via `rpc_create_financial_txn`) | ◻️ | ◻️ | ◻️ |
 | **MTLService**<br/>Read compliance ledger | ◻️ | ✅ | ✅ | ◻️ | ◻️ | ◻️ | ◻️ |
@@ -81,6 +85,7 @@ MTL uses `staff_role` for MVP authorization. The `compliance` service claim is r
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.4.0 | 2026-01-06 | **PRD-LOYALTY-PROMO**: Added LoyaltyService (Promo) capabilities - read programs/coupons, issue, void/replace, query inventory. pit_boss and admin have full access; compliance has read/inventory access for audit. |
 | 1.3.0 | 2026-01-02 | **ADR-025 MTL Authorization**: MTL uses `staff_role` (pit_boss, cashier, admin) not compliance service-claim. Updated matrix rows; added carve-out section. |
 | 1.2.0 | 2025-12-31 | **ADR-024 alignment**: Documented SECURITY DEFINER allowlist enforcement and derived actor attribution. |
 | 1.1.0 | 2025-12-10 | **ADR-017 Compliance**: Promoted cashier from service claim to `staff_role` enum. Updated issuer and description. Updated implementation notes for staff role validation pattern. |

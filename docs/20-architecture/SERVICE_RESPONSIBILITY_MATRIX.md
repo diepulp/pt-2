@@ -98,8 +98,8 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational** | TableContextService | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry |
 | **Operational** | FloorLayoutService | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation | Floor design & activation |
 | **Operational** | VisitService | visit | Session lifecycle (3 archetypes) |
-| **Telemetry** | RatingSlipService | rating_slip, rating_slip_pause | Gameplay measurement |
-| **Reward** | LoyaltyService | player_loyalty, loyalty_ledger, loyalty_outbox | Reward policy & assignment |
+| **Telemetry** | RatingSlipService | rating_slip, rating_slip_pause, pit_cash_observation | Gameplay measurement |
+| **Reward** | LoyaltyService | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon | Reward policy & assignment |
 | **Finance** | PlayerFinancialService | player_financial_transaction | Financial ledger (SoT) ¹ |
 | **Compliance** | MTLService | mtl_entry, mtl_audit_note | AML/CTR compliance |
 
@@ -123,6 +123,8 @@ Approved JSON blobs (all others require first-class columns):
 | `casino_settings` | `casino_id` | NOT NULL, UNIQUE | 1:1 with casino |
 | `casino_settings` | `gaming_day_start_time` | NOT NULL, default '06:00' | Temporal authority |
 | `casino_settings` | `timezone` | NOT NULL | Required for gaming day calc |
+| `casino_settings` | `promo_require_exact_match` | NOT NULL, default true | Promo policy control |
+| `casino_settings` | `promo_allow_anonymous_issuance` | NOT NULL, default true | Promo policy control |
 | `staff` | `user_id` | references auth.users(id) | Auth linkage (NULL for dealers) |
 | `staff` | `role` | NOT NULL, enum | No default; explicit assignment |
 | `staff` | `casino_id` | references casino(id) | Casino scoping |
@@ -268,7 +270,7 @@ Approved JSON blobs (all others require first-class columns):
 
 ## RatingSlipService (Telemetry Context)
 
-**Owns**: `rating_slip`, `rating_slip_pause`
+**Owns**: `rating_slip`, `rating_slip_pause`, `pit_cash_observation`
 
 **Bounded Context**: "What gameplay activity occurred?"
 
@@ -288,6 +290,11 @@ Approved JSON blobs (all others require first-class columns):
 | `rating_slip_pause` | `ended_at` | NULLABLE | NULL = currently paused |
 | `rating_slip_pause` | `created_by` | FK to staff | Actor tracking |
 | `rating_slip_pause` | — | CHECK constraint | `ended_at IS NULL OR ended_at > started_at` |
+| `pit_cash_observation` | `casino_id` | NOT NULL, immutable | Casino scoping |
+| `pit_cash_observation` | `visit_id` | NOT NULL, immutable | Visit-scoped telemetry |
+| `pit_cash_observation` | `observed_at` | NOT NULL | Observation timestamp |
+| `pit_cash_observation` | `amount` | CHECK constraint | `amount > 0` |
+| `pit_cash_observation` | `created_by_staff_id` | FK to staff | Actor tracking |
 
 **Key Invariant**: Player identity derived from `visit.player_id`. RatingSlip does NOT have its own `player_id` column.
 
@@ -332,9 +339,9 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ## LoyaltyService (Reward Context)
 
-**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`
+**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon`
 
-**Bounded Context**: "What is this gameplay worth in rewards?"
+**Bounded Context**: "What is this gameplay worth in rewards, and what promotional instruments have been issued?"
 
 **Canonical Stance**: Loyalty is the sole source of truth for rewards. RatingSlip stores telemetry only.
 

@@ -2151,6 +2151,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_create_pit_cash_observation: {
+        Args: {
+          p_actor_id?: string
+          p_amount: number
+          p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
+          p_idempotency_key?: string
+          p_note?: string
+          p_observed_at?: string
+          p_rating_slip_id?: string
+          p_source?: Database["public"]["Enums"]["observation_source"]
+          p_visit_id: string
+        }
+        Returns: {
+          amount: number
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string
+          direction: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          observed_at: string
+          player_id: string
+          rating_slip_id: string | null
+          source: Database["public"]["Enums"]["observation_source"]
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pit_cash_observation"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_player: {
         Args: {
           p_birth_date?: string
