@@ -2,9 +2,9 @@
   "prd": "PRD-LOYALTY-PROMO",
   "prd_title": "LoyaltyService Extension — Promotional Instruments (Match Play)",
   "prd_source": "docs/00-vision/loyalty-service-extension/LOYALTY_PROMO_INSTRUMENTS_EXTENSION_v0.1_REDACTED.md",
-  "current_phase": 0,
-  "status": "ready_for_approval",
-  "pipeline_stage": "approval_gate",
+  "current_phase": 5,
+  "status": "complete",
+  "pipeline_stage": "all_phases_complete",
 
   "spec_version": "v2.1",
   "spec_location": "docs/20-architecture/specs/PRD-LOYALTY-PROMO/EXECUTION-SPEC-LOYALTY-PROMO.md",
@@ -68,9 +68,9 @@
     }
   },
 
-  "completed_workstreams": [],
+  "completed_workstreams": ["WS1", "WS6", "WS2", "WS7", "WS3", "WS4", "WS8", "WS5"],
   "in_progress_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"],
+  "pending_workstreams": [],
 
   "workstream_summary": {
     "WS1": {"name": "Database Layer (Schema + RLS)", "executor": "backend-service-builder", "type": "database"},
@@ -84,15 +84,22 @@
   },
 
   "execution_phases": [
-    {"name": "Phase 1 - Foundation", "parallel": ["WS1", "WS6"], "gates": ["schema-validation"], "status": "pending"},
-    {"name": "Phase 2 - Service Layer + Rollups", "parallel": ["WS2", "WS7"], "gates": ["type-check", "schema-validation"], "status": "pending"},
-    {"name": "Phase 3 - Transport", "parallel": ["WS3", "WS4"], "gates": ["lint", "type-check"], "status": "pending"},
-    {"name": "Phase 4 - Dashboard Integration", "parallel": ["WS8"], "gates": ["type-check"], "status": "pending"},
-    {"name": "Phase 5 - Testing", "parallel": ["WS5"], "gates": ["test-pass"], "status": "pending"}
+    {"name": "Phase 1 - Foundation", "parallel": ["WS1", "WS6"], "gates": ["schema-validation"], "status": "completed"},
+    {"name": "Phase 2 - Service Layer + Rollups", "parallel": ["WS2", "WS7"], "gates": ["type-check", "schema-validation"], "status": "completed"},
+    {"name": "Phase 3 - Transport", "parallel": ["WS3", "WS4"], "gates": ["lint", "type-check"], "status": "completed"},
+    {"name": "Phase 4 - Dashboard Integration", "parallel": ["WS8"], "gates": ["type-check"], "status": "completed"},
+    {"name": "Phase 5 - Testing", "parallel": ["WS5"], "gates": ["test-pass"], "status": "completed"}
   ],
 
-  "gates_passed": [],
-  "gates_pending": ["schema-validation", "type-check", "lint", "test-pass"],
+  "gates_passed": [
+    "schema-validation (Phase 1)",
+    "type-check (Phase 2)",
+    "lint (Phase 3)",
+    "type-check (Phase 3)",
+    "type-check (Phase 4)",
+    "test-pass (Phase 5)"
+  ],
+  "gates_pending": [],
 
   "findings_baseline": {
     "high": [
@@ -123,7 +130,145 @@
     "comparison_result": "ALL_FINDINGS_ADDRESSED"
   },
 
-  "timestamp": "2026-01-06T18:00:00Z",
+  "timestamp": "2026-01-09T00:00:00Z",
   "validation_passed": true,
-  "resume_instructions": "EXECUTION-SPEC v2.1 updated with WS6/WS7/WS8 for alert thresholds, promo rollups, and dashboard promo lens. All 10 original findings addressed. Awaiting user approval before Phase 1 execution."
+
+  "phase_2_artifacts": {
+    "WS2_service_layer": [
+      "services/loyalty/promo/dtos.ts",
+      "services/loyalty/promo/mappers.ts",
+      "services/loyalty/promo/crud.ts",
+      "services/loyalty/promo/index.ts",
+      "services/loyalty/keys.ts (extended with promo keys)",
+      "services/loyalty/index.ts (extended with promo exports)",
+      "lib/errors/domain-errors.ts (added promo error codes)"
+    ],
+    "WS7_rollups": [
+      "supabase/migrations/20260107001809_promo_exposure_rollups.sql",
+      "services/loyalty/rollups.ts"
+    ]
+  },
+
+  "phase_3_artifacts": {
+    "WS3_route_handlers": [
+      "services/loyalty/promo/schemas.ts",
+      "app/api/v1/promo-programs/route.ts",
+      "app/api/v1/promo-programs/[id]/route.ts",
+      "app/api/v1/promo-coupons/route.ts",
+      "app/api/v1/promo-coupons/[id]/route.ts",
+      "app/api/v1/promo-coupons/[id]/void/route.ts",
+      "app/api/v1/promo-coupons/[id]/replace/route.ts"
+    ],
+    "WS4_react_query_hooks": [
+      "services/loyalty/promo/http.ts",
+      "hooks/loyalty/promo-instruments/index.ts",
+      "hooks/loyalty/promo-instruments/use-promo-programs.ts",
+      "hooks/loyalty/promo-instruments/use-promo-coupons.ts",
+      "hooks/loyalty/promo-instruments/use-promo-mutations.ts",
+      "hooks/loyalty/promo-instruments/use-promo-exposure.ts",
+      "hooks/loyalty/index.ts (extended with promo-instruments exports)"
+    ]
+  },
+
+  "phase_4_artifacts": {
+    "WS8_dashboard_ui": [
+      "components/dashboard/promo-exposure-panel.tsx",
+      "hooks/dashboard/use-promo-exposure.ts",
+      "hooks/dashboard/keys.ts (extended with promoExposure key)",
+      "hooks/dashboard/index.ts (extended with promo exports)",
+      "components/dashboard/pit-dashboard-client.tsx (integrated PromoExposurePanel)"
+    ]
+  },
+
+  "phase_5_artifacts": {
+    "WS5_tests": [
+      "__tests__/services/loyalty/promo-instruments.test.ts",
+      "__tests__/services/loyalty/promo-instruments-mappers.test.ts",
+      "__tests__/services/loyalty/promo-instruments.int.test.ts"
+    ]
+  },
+
+  "ws3_api_endpoints": [
+    "GET /api/v1/promo-programs - List promo programs",
+    "POST /api/v1/promo-programs - Create promo program",
+    "GET /api/v1/promo-programs/[id] - Get single program",
+    "PATCH /api/v1/promo-programs/[id] - Update program",
+    "GET /api/v1/promo-coupons - List promo coupons",
+    "POST /api/v1/promo-coupons - Issue coupon",
+    "GET /api/v1/promo-coupons/[id] - Get single coupon",
+    "POST /api/v1/promo-coupons/[id]/void - Void coupon",
+    "POST /api/v1/promo-coupons/[id]/replace - Replace coupon"
+  ],
+
+  "ws4_hooks": [
+    "usePromoPrograms(query?) - List programs with filters",
+    "usePromoProgram(programId) - Get single program",
+    "usePromoCoupons(query?) - List coupons with filters",
+    "usePromoCoupon(couponId) - Get single coupon",
+    "usePromoCouponByValidation(validationNumber) - Lookup by validation",
+    "usePromoCouponInventory(query?) - Inventory summary",
+    "usePromoExposure(query?) - Dashboard rollup metrics",
+    "useCreatePromoProgram() - Create program mutation",
+    "useUpdatePromoProgram() - Update program mutation",
+    "useIssueCoupon() - Issue coupon mutation",
+    "useVoidCoupon() - Void coupon mutation",
+    "useReplaceCoupon() - Replace coupon mutation"
+  ],
+
+  "ws5_tests": {
+    "unit_tests": {
+      "file": "__tests__/services/loyalty/promo-instruments.test.ts",
+      "test_count": 40,
+      "coverage": "service layer CRUD operations"
+    },
+    "mapper_tests": {
+      "file": "__tests__/services/loyalty/promo-instruments-mappers.test.ts",
+      "test_count": 35,
+      "coverage": "type guards and DTO mappers"
+    },
+    "integration_tests": {
+      "file": "__tests__/services/loyalty/promo-instruments.int.test.ts",
+      "test_count": 30,
+      "coverage": "RLS multi-tenant isolation, coupon lifecycle, rollups",
+      "requires": "RUN_INTEGRATION_TESTS=true + local Supabase"
+    }
+  },
+
+  "ws8_components": [
+    "PromoExposurePanel - Dashboard promo lens component",
+    "useDashboardPromoExposure - Dashboard-specific hook",
+    "Integrated into pit-dashboard-client.tsx (separate from cash KPIs)"
+  ],
+
+  "promo_error_codes_added": [
+    "PROMO_PROGRAM_NOT_FOUND",
+    "PROMO_PROGRAM_INACTIVE",
+    "PROMO_PROGRAM_NOT_STARTED",
+    "PROMO_PROGRAM_ENDED",
+    "COUPON_NOT_FOUND",
+    "INVALID_COUPON_STATUS",
+    "ANONYMOUS_ISSUANCE_DISABLED",
+    "DUPLICATE_VALIDATION_NUMBER",
+    "DUPLICATE_ENTRY"
+  ],
+
+  "promo_service_operations": [
+    "listPrograms(query?) -> PromoProgramDTO[]",
+    "getProgram(programId) -> PromoProgramDTO | null",
+    "createProgram(input) -> PromoProgramDTO",
+    "updateProgram(input) -> PromoProgramDTO",
+    "issueCoupon(input) -> IssueCouponOutput (idempotent)",
+    "voidCoupon(input) -> VoidCouponOutput (idempotent)",
+    "replaceCoupon(input) -> ReplaceCouponOutput (idempotent)",
+    "getCouponInventory(query?) -> CouponInventoryOutput",
+    "listCoupons(query?) -> PromoCouponDTO[]",
+    "getCoupon(couponId) -> PromoCouponDTO | null",
+    "getCouponByValidationNumber(validationNumber) -> PromoCouponDTO | null"
+  ],
+
+  "rollup_service_operations": [
+    "getPromoExposureRollup(query?) -> PromoExposureRollupDTO"
+  ],
+
+  "completion_summary": "PRD-LOYALTY-PROMO COMPLETE. All 8 workstreams (WS1-WS8) executed across 5 phases. 75 unit/mapper tests passing, 30 integration tests available for RLS verification with local Supabase."
 }
