@@ -122,6 +122,141 @@ export const staffListQuerySchema = z.object({
     .default(20),
 });
 
+// === Alert Threshold Schemas (PRD-LOYALTY-PROMO WS6) ===
+
+/** Base schema for enabled thresholds */
+const alertThresholdConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+});
+
+/** Table idle threshold schema */
+export const tableIdleThresholdSchema = alertThresholdConfigSchema.extend({
+  warn_minutes: z.number().int().positive().default(20),
+  critical_minutes: z.number().int().positive().default(45),
+});
+
+/** Slip duration threshold schema */
+export const slipDurationThresholdSchema = alertThresholdConfigSchema.extend({
+  warn_hours: z.number().int().positive().default(4),
+  critical_hours: z.number().int().positive().default(8),
+});
+
+/** Pause duration threshold schema */
+export const pauseDurationThresholdSchema = alertThresholdConfigSchema.extend({
+  warn_minutes: z.number().int().positive().default(30),
+});
+
+/** Drop anomaly threshold schema */
+export const dropAnomalyThresholdSchema = alertThresholdConfigSchema.extend({
+  mad_multiplier: z.number().positive().default(3),
+  fallback_percent: z.number().positive().default(50),
+});
+
+/** Hold deviation threshold schema (disabled by default) */
+export const holdDeviationThresholdSchema = alertThresholdConfigSchema.extend({
+  enabled: z.boolean().default(false), // Override default - disabled until trusted
+  deviation_pp: z.number().positive().default(10),
+  extreme_low: z.number().default(-5),
+  extreme_high: z.number().positive().default(40),
+});
+
+/** Promo issuance spike threshold schema */
+export const promoIssuanceSpikeThresholdSchema =
+  alertThresholdConfigSchema.extend({
+    mad_multiplier: z.number().positive().default(3),
+    fallback_percent: z.number().positive().default(100),
+  });
+
+/** Promo void rate threshold schema */
+export const promoVoidRateThresholdSchema = alertThresholdConfigSchema.extend({
+  warn_percent: z.number().positive().max(100).default(5),
+});
+
+/** Outstanding aging threshold schema */
+export const outstandingAgingThresholdSchema =
+  alertThresholdConfigSchema.extend({
+    max_age_hours: z.number().int().positive().default(24),
+    max_value_dollars: z.number().positive().default(2000),
+    max_coupon_count: z.number().int().positive().default(25),
+  });
+
+/** Baseline configuration schema */
+export const alertBaselineConfigSchema = z.object({
+  window_days: z.number().int().positive().default(7),
+  method: z.enum(["median_mad", "mean_stddev"]).default("median_mad"),
+  min_history_days: z.number().int().positive().default(3),
+});
+
+/**
+ * Complete alert thresholds schema with defaults
+ *
+ * @see docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md
+ */
+export const alertThresholdsSchema = z.object({
+  table_idle: tableIdleThresholdSchema.default({
+    enabled: true,
+    warn_minutes: 20,
+    critical_minutes: 45,
+  }),
+  slip_duration: slipDurationThresholdSchema.default({
+    enabled: true,
+    warn_hours: 4,
+    critical_hours: 8,
+  }),
+  pause_duration: pauseDurationThresholdSchema.default({
+    enabled: true,
+    warn_minutes: 30,
+  }),
+  drop_anomaly: dropAnomalyThresholdSchema.default({
+    enabled: true,
+    mad_multiplier: 3,
+    fallback_percent: 50,
+  }),
+  hold_deviation: holdDeviationThresholdSchema.default({
+    enabled: false,
+    deviation_pp: 10,
+    extreme_low: -5,
+    extreme_high: 40,
+  }),
+  promo_issuance_spike: promoIssuanceSpikeThresholdSchema.default({
+    enabled: true,
+    mad_multiplier: 3,
+    fallback_percent: 100,
+  }),
+  promo_void_rate: promoVoidRateThresholdSchema.default({
+    enabled: true,
+    warn_percent: 5,
+  }),
+  outstanding_aging: outstandingAgingThresholdSchema.default({
+    enabled: true,
+    max_age_hours: 24,
+    max_value_dollars: 2000,
+    max_coupon_count: 25,
+  }),
+  baseline: alertBaselineConfigSchema.default({
+    window_days: 7,
+    method: "median_mad",
+    min_history_days: 3,
+  }),
+});
+
+/** Partial schema for updating alert thresholds (deep partial) */
+export const updateAlertThresholdsSchema = z
+  .object({
+    table_idle: tableIdleThresholdSchema.partial().optional(),
+    slip_duration: slipDurationThresholdSchema.partial().optional(),
+    pause_duration: pauseDurationThresholdSchema.partial().optional(),
+    drop_anomaly: dropAnomalyThresholdSchema.partial().optional(),
+    hold_deviation: holdDeviationThresholdSchema.partial().optional(),
+    promo_issuance_spike: promoIssuanceSpikeThresholdSchema
+      .partial()
+      .optional(),
+    promo_void_rate: promoVoidRateThresholdSchema.partial().optional(),
+    outstanding_aging: outstandingAgingThresholdSchema.partial().optional(),
+    baseline: alertBaselineConfigSchema.partial().optional(),
+  })
+  .partial();
+
 // === Type Exports (inferred from schemas) ===
 
 export type CreateCasinoInput = z.infer<typeof createCasinoSchema>;
@@ -133,3 +268,7 @@ export type CreateStaffInput = z.infer<typeof createStaffSchema>;
 export type GamingDayQuery = z.infer<typeof gamingDayQuerySchema>;
 export type CasinoListQuery = z.infer<typeof casinoListQuerySchema>;
 export type StaffListQuery = z.infer<typeof staffListQuerySchema>;
+export type AlertThresholdsInput = z.infer<typeof alertThresholdsSchema>;
+export type UpdateAlertThresholdsInput = z.infer<
+  typeof updateAlertThresholdsSchema
+>;

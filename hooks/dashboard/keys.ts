@@ -60,6 +60,18 @@ export const dashboardKeys = {
    */
   stats: (casinoId: string) => [...ROOT, "stats", casinoId] as const,
 
+  // === Promo Exposure Queries (PRD-LOYALTY-PROMO) ===
+
+  /**
+   * Promo exposure rollup for dashboard "Promo Lens" section.
+   * Separate from cash KPIs per DoD requirement.
+   */
+  promoExposure: (
+    casinoId: string,
+    filters: { gamingDay?: string; shiftId?: string } = {},
+  ) =>
+    [...ROOT, "promo-exposure", casinoId, serializeFilters(filters)] as const,
+
   // === Invalidation Helpers ===
 
   /**

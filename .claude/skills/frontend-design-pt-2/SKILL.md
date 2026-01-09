@@ -32,6 +32,7 @@ Read these files **when needed** based on your task:
 
 | When You Need | Read This |
 |---------------|-----------|
+| **Shift Dashboards UI (cash obs telemetry)** | `references/shift-dashboards-context.md` |
 | Implementation workflow, code templates | `references/QUICK_START.md` |
 | **React 19 anti-patterns to AVOID** | `references/frontend-rules.md` → React 19 Anti-Patterns |
 | React 19 hooks (`useTransition`, `useActionState`, `useOptimistic`) | `references/frontend-rules.md` → React 19 Hooks |

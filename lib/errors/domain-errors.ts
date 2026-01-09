@@ -74,7 +74,17 @@ export type LoyaltyErrorCode =
   | "LOYALTY_REDEMPTION_FAILED"
   | "LOYALTY_POINTS_NEGATIVE"
   | "LOYALTY_POLICY_VIOLATION"
-  | "LOYALTY_GHOST_VISIT_EXCLUDED";
+  | "LOYALTY_GHOST_VISIT_EXCLUDED"
+  // Promo Instrument Errors (PRD-LOYALTY-PROMO)
+  | "PROMO_PROGRAM_NOT_FOUND"
+  | "PROMO_PROGRAM_INACTIVE"
+  | "PROMO_PROGRAM_NOT_STARTED"
+  | "PROMO_PROGRAM_ENDED"
+  | "COUPON_NOT_FOUND"
+  | "INVALID_COUPON_STATUS"
+  | "ANONYMOUS_ISSUANCE_DISABLED"
+  | "DUPLICATE_VALIDATION_NUMBER"
+  | "DUPLICATE_ENTRY";
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: "Insufficient loyalty points balance",
@@ -86,6 +96,18 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   LOYALTY_POLICY_VIOLATION: "Operation violates loyalty policy rules",
   LOYALTY_GHOST_VISIT_EXCLUDED:
     "Ghost gaming visits are excluded from automated loyalty accrual (ADR-014)",
+  // Promo Instrument Errors (PRD-LOYALTY-PROMO)
+  PROMO_PROGRAM_NOT_FOUND:
+    "Promo program not found or belongs to different casino",
+  PROMO_PROGRAM_INACTIVE: "Promo program is not active",
+  PROMO_PROGRAM_NOT_STARTED: "Promo program has not started yet",
+  PROMO_PROGRAM_ENDED: "Promo program has ended",
+  COUPON_NOT_FOUND: "Promo coupon not found or belongs to different casino",
+  INVALID_COUPON_STATUS: "Coupon cannot be modified in its current status",
+  ANONYMOUS_ISSUANCE_DISABLED: "Casino requires player for promo issuance",
+  DUPLICATE_VALIDATION_NUMBER:
+    "A coupon with this validation number already exists",
+  DUPLICATE_ENTRY: "Duplicate entry detected",
 };
 
 // ============================================================================

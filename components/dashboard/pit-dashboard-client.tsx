@@ -31,6 +31,7 @@ import {
   useDashboardStats,
   useActiveSlipsForDashboard,
   useDashboardRealtime,
+  useDashboardPromoExposure,
   RealtimeStatusIndicator,
   dashboardKeys,
 } from "@/hooks/dashboard";
@@ -56,6 +57,7 @@ import {
 
 import { ActiveSlipsPanel } from "./active-slips-panel";
 import { NewSlipModal } from "./new-slip-modal";
+import { PromoExposurePanel } from "./promo-exposure-panel";
 import {
   getOccupiedSeats,
   mapSlipsToOccupants,
@@ -137,6 +139,15 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       selectedTableId,
       enabled: true,
     });
+
+  // Query: Promo exposure for dashboard "Promo Lens" (PRD-LOYALTY-PROMO WS8)
+  const {
+    data: promoExposure,
+    isLoading: promoLoading,
+    error: promoError,
+  } = useDashboardPromoExposure(casinoId, {
+    gamingDay: gamingDay ?? undefined,
+  });
 
   // Query: Modal data (fetched when modal is open and type is rating-slip)
   const { data: ratingSlipModalData } = useRatingSlipModalData(
@@ -478,6 +489,13 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
           />
         </div>
       </div>
+
+      {/* Promo Exposure Panel - SEPARATE from cash KPIs (PRD-LOYALTY-PROMO DoD) */}
+      <PromoExposurePanel
+        exposure={promoExposure}
+        isLoading={promoLoading}
+        error={promoError}
+      />
 
       {/* Main content grid: Selected table + Active slips panel */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">

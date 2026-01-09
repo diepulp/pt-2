@@ -37,6 +37,13 @@ export {
   RealtimeStatusIndicator,
 } from "./use-dashboard-realtime";
 
+// Promo exposure hooks (PRD-LOYALTY-PROMO)
+export {
+  useDashboardPromoExposure,
+  type PromoExposureRollupDTO,
+  type PromoExposureRollupQuery,
+} from "./use-promo-exposure";
+
 // Re-export types for convenience
 export type {
   DashboardTablesFilters,

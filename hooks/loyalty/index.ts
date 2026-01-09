@@ -6,7 +6,9 @@
  *
  * @see services/loyalty - Service layer
  * @see PRD-004 Loyalty Service
+ * @see PRD-LOYALTY-PROMO Promo Instruments
  */
 
-export * from './use-loyalty-queries';
-export * from './use-loyalty-mutations';
+export * from "./use-loyalty-queries";
+export * from "./use-loyalty-mutations";
+export * from "./promo-instruments";

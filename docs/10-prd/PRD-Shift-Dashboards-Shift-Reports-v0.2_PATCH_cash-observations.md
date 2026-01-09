@@ -14,7 +14,8 @@ created: 2026-01-02
 
 ## 0.1 Related artifacts (canonical)
 
-- **SHIFT_METRICS_CATALOG_v0_PATH_B.md** — canonical metric definitions, grains, formulas, required fact model, and SP contracts.
+- (SHIFT_METRICS_CATALOG_v0_PATH_B)[`docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md`] — canonical metric definitions, grains, formulas, required fact model, and SP contracts.
+- (SHIFT DASHBPARDS ALERT THRESHOLDS)[`docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md`] - Operational alerts for PT-2 Shift Dashboards
   - This PRD references the catalog; **when they conflict, the catalog wins**.
 
 
@@ -223,12 +224,12 @@ This feature is **data-driven**: shift dashboards and reports are generated from
 **Job A — Near-real-time shift rollups (every 5–15 minutes)**
 - Purpose: keep dashboard KPIs and alert ranking fresh during an active shift window.
 - Implementation options:
-  1) refresh materialized views that power table/pit/casino rollups (`REFRESH MATERIALIZED VIEW`), orciteturn0search0
+  1) refresh materialized views that power table/pit/casino rollups (`REFRESH MATERIALIZED VIEW`), 
   2) upsert into rollup tables (INSERT…ON CONFLICT) keyed by `(casino_id, window_id, table_id)`.
 
 **Job B — Baselines updater (daily)**
 - Purpose: recompute rolling 7/30-day mean & stddev used for z-score variance flags.
-- Implementation: refresh baseline materialized view(s) or recompute baseline tables via scheduled SQL (`pg_cron`).citeturn0search23turn0search3
+- Implementation: refresh baseline materialized view(s) or recompute baseline tables via scheduled SQL (`pg_cron`).
 
 **Job C — Shift finalization (end-of-shift, on demand or scheduled)**
 - Purpose: produce a stable, reproducible report payload for the closed shift window.
