@@ -29,6 +29,10 @@ import {
   getCurrentDealer,
 } from "./dealer-rotation";
 import type {
+  CashObsCasinoRollupDTO,
+  CashObsPitRollupDTO,
+  CashObsSpikeAlertDTO,
+  CashObsTableRollupDTO,
   ChipsetPayload,
   DealerRotationDTO,
   GameType,
@@ -38,6 +42,9 @@ import type {
   LogInventorySnapshotInput,
   RequestTableCreditInput,
   RequestTableFillInput,
+  ShiftCashObsPitParams,
+  ShiftCashObsTableParams,
+  ShiftCashObsTimeWindow,
   SnapshotType,
   TableCreditDTO,
   TableDropEventDTO,
@@ -48,11 +55,21 @@ import type {
   TableStatus,
   UpdateTableLimitsDTO,
 } from "./dtos";
+import {
+  getShiftCashObsAlerts,
+  getShiftCashObsCasino,
+  getShiftCashObsPit,
+  getShiftCashObsTable,
+} from "./shift-cash-obs";
 import { activateTable, closeTable, deactivateTable } from "./table-lifecycle";
 import { getTableSettings, updateTableLimits } from "./table-settings";
 
 // Re-export DTOs and keys for consumers
 export type {
+  CashObsCasinoRollupDTO,
+  CashObsPitRollupDTO,
+  CashObsSpikeAlertDTO,
+  CashObsTableRollupDTO,
   ChipsetPayload,
   DealerRotationDTO,
   GameType,
@@ -62,6 +79,9 @@ export type {
   LogInventorySnapshotInput,
   RequestTableCreditInput,
   RequestTableFillInput,
+  ShiftCashObsPitParams,
+  ShiftCashObsTableParams,
+  ShiftCashObsTimeWindow,
   SnapshotType,
   TableCreditDTO,
   TableDropEventDTO,
@@ -73,6 +93,14 @@ export type {
   UpdateTableLimitsDTO,
 };
 export { tableContextKeys } from "./keys";
+
+// Re-export shift cash obs functions (standalone, not part of factory)
+export {
+  getShiftCashObsAlerts,
+  getShiftCashObsCasino,
+  getShiftCashObsPit,
+  getShiftCashObsTable,
+};
 
 // === Service Interface ===
 

@@ -45,4 +45,37 @@ export const tableContextKeys = {
 
   // Table settings (betting limits)
   settings: (tableId: string) => [...ROOT, "settings", tableId] as const,
+
+  // Shift cash observation rollups (PRD-SHIFT-DASHBOARDS v0.2 PATCH)
+  shiftCashObs: {
+    table: (
+      casinoId: string,
+      startTs: string,
+      endTs: string,
+      tableId?: string,
+    ) =>
+      [
+        ...ROOT,
+        "shift-cash-obs",
+        "table",
+        casinoId,
+        startTs,
+        endTs,
+        tableId ?? "all",
+      ] as const,
+    pit: (casinoId: string, startTs: string, endTs: string, pit?: string) =>
+      [
+        ...ROOT,
+        "shift-cash-obs",
+        "pit",
+        casinoId,
+        startTs,
+        endTs,
+        pit ?? "all",
+      ] as const,
+    casino: (casinoId: string, startTs: string, endTs: string) =>
+      [...ROOT, "shift-cash-obs", "casino", casinoId, startTs, endTs] as const,
+    alerts: (casinoId: string, startTs: string, endTs: string) =>
+      [...ROOT, "shift-cash-obs", "alerts", casinoId, startTs, endTs] as const,
+  },
 };
