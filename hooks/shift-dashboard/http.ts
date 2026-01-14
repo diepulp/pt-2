@@ -16,11 +16,13 @@ import type {
 } from "@/services/table-context/dtos";
 import type {
   ShiftCasinoMetricsDTO,
+  ShiftDashboardSummaryDTO,
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
 } from "@/services/table-context/shift-metrics/dtos";
 
-const BASE_METRICS = "/api/v1/shift-dashboards/metrics";
+const BASE = "/api/v1/shift-dashboards";
+const BASE_METRICS = `${BASE}/metrics`;
 const BASE_CASH_OBS = "/api/v1/shift-dashboards/cash-observations";
 
 /**
@@ -33,6 +35,21 @@ function buildParams(
     ([, value]) => value != null,
   ) as [string, string][];
   return new URLSearchParams(entries);
+}
+
+// === BFF Summary Fetcher ===
+
+/**
+ * Fetches all shift metrics (casino, pits, tables) in a single call.
+ * PERF: Reduces dashboard initialization from 3 HTTP calls to 1.
+ * @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md
+ */
+export async function fetchShiftDashboardSummary(
+  start: string,
+  end: string,
+): Promise<ShiftDashboardSummaryDTO> {
+  const params = buildParams({ start, end });
+  return fetchJSON<ShiftDashboardSummaryDTO>(`${BASE}/summary?${params}`);
 }
 
 // === Shift Metrics Fetchers ===

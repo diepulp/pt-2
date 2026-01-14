@@ -18,9 +18,7 @@ import {
   useCashObsPits,
   useCashObsTables,
   useShiftAlerts,
-  useShiftCasinoMetrics,
-  useShiftPitMetrics,
-  useShiftTableMetrics,
+  useShiftDashboardSummary,
   type ShiftTimeWindow,
 } from "@/hooks/shift-dashboard";
 import { useShiftDashboardUI } from "@/hooks/ui/use-shift-dashboard-ui";
@@ -73,9 +71,14 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
   // === Authoritative Metrics Queries ===
   // Pass a stable empty window during SSR to avoid conditional hook calls
   const stableWindow = timeWindow ?? { start: "", end: "" };
-  const casinoMetrics = useShiftCasinoMetrics({ window: stableWindow });
-  const pitMetrics = useShiftPitMetrics({ window: stableWindow });
-  const tableMetrics = useShiftTableMetrics({ window: stableWindow });
+
+  // PERF: Single BFF call replaces 3 separate metrics queries
+  // @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md
+  const { data: summary, isLoading: metricsLoading } = useShiftDashboardSummary(
+    {
+      window: stableWindow,
+    },
+  );
 
   // === Telemetry Queries ===
   const cashObsCasino = useCashObsCasino({ window: stableWindow });
@@ -137,10 +140,7 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
       </div>
 
       {/* Casino summary KPIs */}
-      <CasinoSummaryCard
-        data={casinoMetrics.data}
-        isLoading={casinoMetrics.isLoading}
-      />
+      <CasinoSummaryCard data={summary?.casino} isLoading={metricsLoading} />
 
       {/* Main content grid */}
       <div className="grid gap-6 lg:grid-cols-3">
@@ -158,8 +158,8 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
               {/* Casino view shows pit summary and table metrics */}
               <div className="space-y-6">
                 <PitMetricsTable
-                  data={pitMetrics.data}
-                  isLoading={pitMetrics.isLoading}
+                  data={summary?.pits}
+                  isLoading={metricsLoading}
                   onPitSelect={handlePitSelect}
                 />
               </div>
@@ -167,16 +167,16 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
 
             <TabsContent value="pit" className="mt-4">
               <PitMetricsTable
-                data={pitMetrics.data}
-                isLoading={pitMetrics.isLoading}
+                data={summary?.pits}
+                isLoading={metricsLoading}
                 onPitSelect={handlePitSelect}
               />
             </TabsContent>
 
             <TabsContent value="table" className="mt-4">
               <TableMetricsTable
-                data={tableMetrics.data}
-                isLoading={tableMetrics.isLoading}
+                data={summary?.tables}
+                isLoading={metricsLoading}
                 pitFilter={selectedPitId ?? undefined}
               />
             </TabsContent>

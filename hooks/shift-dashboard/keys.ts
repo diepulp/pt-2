@@ -30,6 +30,18 @@ export const shiftDashboardKeys = {
   /** Root key for all shift dashboard queries */
   root: ROOT,
 
+  // === BFF Summary Query ===
+
+  /**
+   * Dashboard summary (casino + pits + tables in single call).
+   * PERF: Replaces 3 separate metrics calls.
+   */
+  summary: Object.assign(
+    (window: ShiftTimeWindow) =>
+      [...ROOT, "summary", serializeFilters(window)] as const,
+    { scope: [...ROOT, "summary"] as const },
+  ),
+
   // === Shift Metrics Queries ===
 
   /**

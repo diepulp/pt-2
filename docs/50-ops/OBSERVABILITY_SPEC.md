@@ -190,6 +190,10 @@ LIMIT 100;
 | **TableContext** | Drop removed → delivered | p95 < 30min | `table_drop_delivery_time_p95` | > 45min for 1 occurrence |
 | **Finance** | Create transaction | p95 < 50ms | `finance_create_txn_latency_p95` | > 75ms for 5min |
 | **FloorLayout** | Activate layout | p95 < 200ms | `floor_layout_activation_latency_p95` | > 300ms for 1 occurrence |
+| **ShiftDashboard** | Summary BFF | p95 < 300ms | `shift_dashboard_summary_latency_p95` | > 500ms for 5min |
+| **ShiftDashboard** | Table metrics | p95 < 200ms | `shift_table_metrics_latency_p95` | > 300ms for 5min |
+| **ShiftDashboard** | Pit metrics | p95 < 200ms | `shift_pit_metrics_latency_p95` | > 300ms for 5min |
+| **ShiftDashboard** | Casino metrics | p95 < 150ms | `shift_casino_metrics_latency_p95` | > 250ms for 5min |
 
 ### 3.2 Tracking via pg_stat_statements
 

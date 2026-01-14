@@ -9,6 +9,12 @@
 // Query Keys
 export { shiftDashboardKeys, type ShiftTimeWindow } from "./keys";
 
+// BFF Summary Hook (PERF: Single call for all metrics)
+export {
+  useShiftDashboardSummary,
+  type UseShiftDashboardSummaryOptions,
+} from "./use-shift-dashboard-summary";
+
 // Shift Metrics Hooks
 export {
   useShiftTableMetrics,
@@ -45,6 +51,7 @@ export {
   fetchCashObsPits,
   fetchCashObsTables,
   fetchShiftCasinoMetrics,
+  fetchShiftDashboardSummary,
   fetchShiftPitMetrics,
   fetchShiftTableMetrics,
 } from "./http";
