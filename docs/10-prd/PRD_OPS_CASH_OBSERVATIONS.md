@@ -32,7 +32,7 @@ This PRD introduces a **dedicated operational telemetry artifact** — **Operati
 - `rpc_create_financial_txn` rejects for pit_boss unless `direction='in'`
 - client `.catch(...)` swallows error → **no persisted record**
 
-## 2.2 Root cause: conflated concepts
+## 2.2 Root cause: conflated concepts v 
 Three distinct concepts are currently collapsed into one:
 
 1) **Operational observation (pit)**  

@@ -15,7 +15,7 @@ created: 2026-01-02
 ## 0.1 Related artifacts (canonical)
 
 - (SHIFT_METRICS_CATALOG_v0_PATH_B)[`docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md`] — canonical metric definitions, grains, formulas, required fact model, and SP contracts.
-- (SHIFT DASHBPARDS ALERT THRESHOLDS)[`docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md`] - Operational alerts for PT-2 Shift Dashboards
+- (SHIFT DASHBOARDS ALERT THRESHOLDS)[`docs/00-vision/loyalty-service-extension/SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md`] - Operational alerts for PT-2 Shift Dashboards
   - This PRD references the catalog; **when they conflict, the catalog wins**.
 
 

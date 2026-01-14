@@ -37,7 +37,7 @@ export default function RootLayout({
       className={`${jetbrainsMono.variable} ${dmSans.variable} antialiased`}
       suppressHydrationWarning
     >
-      <body>
+      <body suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>
