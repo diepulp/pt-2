@@ -231,7 +231,7 @@ export function RatingSlipModal({
     return modalData.tables.map((t) => ({
       gaming_table_id: t.id,
       name: t.label,
-      seats_available: 12, // Not critical for UI, placeholder
+      seats_available: t.seatsAvailable, // Now uses real value from game_settings
     }));
   }, [modalData?.tables, legacyTables]);
 

@@ -65,6 +65,7 @@ interface RpcModalDataResponse {
     type: string;
     status: string;
     occupiedSeats: string[];
+    seatsAvailable: number;
   }>;
 }
 
@@ -259,6 +260,7 @@ export async function getModalDataViaRPC(
       type: t.type as RatingSlipModalDTO["tables"][0]["type"],
       status: t.status as RatingSlipModalDTO["tables"][0]["status"],
       occupiedSeats: t.occupiedSeats,
+      seatsAvailable: t.seatsAvailable,
     })),
   };
 

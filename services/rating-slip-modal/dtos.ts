@@ -168,6 +168,9 @@ export interface TableOptionDTO {
 
   /** List of occupied seat numbers */
   occupiedSeats: string[];
+
+  /** Number of seats available at this table (from game_settings) */
+  seatsAvailable: number;
 }
 
 // === Route Params ===

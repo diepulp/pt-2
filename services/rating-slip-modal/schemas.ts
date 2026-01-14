@@ -88,6 +88,7 @@ export const tableOptionSchema = z.object({
   type: z.string(),
   status: z.string(),
   occupiedSeats: z.array(z.string()),
+  seatsAvailable: z.number().int().positive().default(7),
 });
 
 /**
@@ -106,8 +107,38 @@ export type RatingSlipModalResponse = z.infer<typeof ratingSlipModalSchema>;
 // === Move Player Schemas (WS5) ===
 
 /**
+ * Sanitizes seat number input:
+ * - Trims whitespace
+ * - Strips leading zeros ("02" → "2")
+ * - Returns null for empty/whitespace-only strings
+ *
+ * @param value - Raw seat number input
+ * @returns Normalized seat number or null
+ */
+function sanitizeSeatNumber(value: string | null | undefined): string | null {
+  if (value === null || value === undefined) return null;
+  const trimmed = value.trim();
+  if (trimmed === "") return null;
+
+  // Strip leading zeros and validate it's a positive integer
+  const asNumber = parseInt(trimmed, 10);
+  if (isNaN(asNumber) || asNumber <= 0) {
+    // Return trimmed value to let validation fail with clear error
+    return trimmed;
+  }
+
+  // Return normalized number as string (strips leading zeros)
+  return asNumber.toString();
+}
+
+/**
  * Schema for move player request body.
  * @see app/api/v1/rating-slips/[id]/move/route.ts
+ *
+ * Seat number validation:
+ * - Sanitizes input (strips leading zeros, trims whitespace)
+ * - Validates seat is a positive integer
+ * - Range validation (1 to seats_available) happens in RPC for atomicity
  */
 export const movePlayerSchema = z.object({
   /** Target table UUID */
@@ -117,7 +148,16 @@ export const movePlayerSchema = z.object({
     .string()
     .max(20, "Seat number must be 20 characters or fewer")
     .nullable()
-    .optional(),
+    .optional()
+    .transform(sanitizeSeatNumber)
+    .refine(
+      (val) => {
+        if (val === null) return true; // null is valid (unseated)
+        const num = parseInt(val, 10);
+        return !isNaN(num) && num > 0;
+      },
+      { message: "Seat number must be a positive integer" },
+    ),
   /** Optional: final average bet for the current slip being closed */
   averageBet: z.number().positive("Average bet must be positive").optional(),
 });

@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
-import React from "react";
+import React, { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +31,34 @@ interface FormSectionMovePlayerProps {
 }
 
 /**
+ * Sanitizes and validates seat number input.
+ * Returns null if valid, error message if invalid.
+ */
+function validateSeatNumber(
+  value: string,
+  maxSeats: number | undefined,
+): string | null {
+  if (!value || value.trim() === "") {
+    return null; // Empty is valid (unseated)
+  }
+
+  const trimmed = value.trim();
+  const asNumber = parseInt(trimmed, 10);
+
+  // Check it's a valid positive integer
+  if (isNaN(asNumber) || asNumber <= 0) {
+    return "Seat must be a positive number";
+  }
+
+  // Check it's within range
+  if (maxSeats && asNumber > maxSeats) {
+    return `Seat must be between 1 and ${maxSeats}`;
+  }
+
+  return null;
+}
+
+/**
  * Move Player form section for Rating Slip Modal.
  * Uses Zustand store via useMovePlayerFields hook for optimized re-renders.
  *
@@ -42,7 +70,7 @@ interface FormSectionMovePlayerProps {
 export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
   tables,
   selectedTable,
-  seatError,
+  seatError: externalSeatError,
   onMovePlayer,
   isUpdating,
   disabled,
@@ -59,6 +87,14 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
     ? `1-${selectedTable.seats_available ?? "N/A"}`
     : "Seat number";
 
+  // Client-side seat validation for immediate feedback
+  const localSeatError = useMemo(() => {
+    return validateSeatNumber(seatNumber, selectedTable?.seats_available);
+  }, [seatNumber, selectedTable?.seats_available]);
+
+  // Combine external and local errors (external takes precedence)
+  const seatError = externalSeatError || localSeatError || "";
+
   // Event handlers - wrapped in useCallback for stable references
   const handleTableChange = React.useCallback(
     (value: string) => {
@@ -73,6 +109,9 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
     },
     [updateField],
   );
+
+  // Disable move button if there's a seat validation error
+  const isDisabled = disabled || !!localSeatError;
 
   return (
     <div>
@@ -112,6 +151,8 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
         <div className="space-y-1">
           <Input
             type="number"
+            min={1}
+            max={selectedTable?.seats_available}
             placeholder={seatPlaceholder}
             value={seatNumber}
             onChange={handleSeatChange}
@@ -129,7 +170,7 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
         type="button"
         className="w-full mt-2"
         onClick={onMovePlayer}
-        disabled={disabled}
+        disabled={isDisabled}
       >
         {isUpdating ? "Moving..." : "Move Player"}
       </Button>

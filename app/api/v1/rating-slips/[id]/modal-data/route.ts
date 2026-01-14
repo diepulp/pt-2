@@ -305,6 +305,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           };
 
           // Tables section (using batch query results)
+          // Note: seatsAvailable defaults to 7 in fallback path. RPC path fetches from game_settings.
           const tablesWithSeats = activeTables.map((t) => {
             const occupiedSeats = occupiedSeatsMap.get(t.id) ?? [];
             const tableOption: TableOptionDTO = {
@@ -313,6 +314,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
               type: t.type,
               status: t.status,
               occupiedSeats,
+              seatsAvailable: 7, // Default for fallback path (deprecated)
             };
             return tableOption;
           });
