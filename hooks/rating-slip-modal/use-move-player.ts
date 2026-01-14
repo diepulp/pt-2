@@ -15,6 +15,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/hooks/dashboard/keys";
+import { accrueOnClose } from "@/services/loyalty/http";
+import { loyaltyKeys } from "@/services/loyalty/keys";
 import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import type {
@@ -29,6 +31,7 @@ import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
  * Includes the current slip ID and the destination details.
  *
  * PRD-020: Added sourceTableId and casinoId for targeted cache invalidation
+ * ISSUE-752833A6: Added playerId for loyalty accrual on move
  */
 export interface MovePlayerMutationInput {
   /** Current rating slip UUID being closed */
@@ -41,8 +44,10 @@ export interface MovePlayerMutationInput {
   destinationSeatNumber?: string | null;
   /** Optional: final average bet for the current slip being closed */
   averageBet?: number;
-  /** Casino ID (for stats invalidation) */
+  /** Casino ID (for stats invalidation and loyalty accrual) */
   casinoId?: string;
+  /** Player ID (null for ghost visits - needed for loyalty accrual) */
+  playerId?: string | null;
 }
 
 /**
@@ -242,6 +247,34 @@ export function useMovePlayer() {
       if (variables.casinoId) {
         queryClient.invalidateQueries({
           queryKey: dashboardKeys.stats(variables.casinoId),
+        });
+      }
+
+      // ISSUE-752833A6: Trigger loyalty accrual for the CLOSED slip
+      // The move operation closes one slip and opens another - we must accrue
+      // points for the closed slip's play time to prevent "loyalty wipe" on move.
+      // Fire-and-forget: don't await, non-blocking (best-effort)
+      if (variables.playerId && variables.casinoId) {
+        accrueOnClose({
+          ratingSlipId: data.closedSlipId,
+          casinoId: variables.casinoId,
+          // Use closedSlipId as idempotency key (already a UUID)
+          // RPC dedupes via UNIQUE(casino_id, rating_slip_id) WHERE reason='base_accrual'
+          idempotencyKey: data.closedSlipId,
+        }).catch((accrualError) => {
+          // Log but don't fail - loyalty accrual is best-effort
+          console.warn(
+            `[useMovePlayer] Loyalty accrual failed for closed slip ${data.closedSlipId}:`,
+            accrualError,
+          );
+        });
+
+        // Invalidate loyalty balance and ledger for the player
+        queryClient.invalidateQueries({
+          queryKey: loyaltyKeys.balance(variables.playerId, variables.casinoId),
+        });
+        queryClient.invalidateQueries({
+          queryKey: loyaltyKeys.ledger(variables.playerId, variables.casinoId),
         });
       }
 

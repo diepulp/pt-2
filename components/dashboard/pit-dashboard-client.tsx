@@ -399,12 +399,14 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       // Only include averageBet if it's positive (schema requires positive if provided)
       const averageBet = Number(formState.averageBet);
       // PRD-020: Added sourceTableId and casinoId for targeted cache invalidation
+      // ISSUE-752833A6: Added playerId for loyalty accrual on move
       await movePlayer.mutateAsync({
         currentSlipId: slipIdToMove,
         sourceTableId: selectedTableId!,
         destinationTableId: formState.newTableId,
         destinationSeatNumber: formState.newSeatNumber || null,
         casinoId,
+        playerId: ratingSlipModalData?.player?.id ?? null,
         ...(averageBet > 0 ? { averageBet } : {}),
       });
       // PRD-019 WS2: Do NOT auto-open the new slip modal
