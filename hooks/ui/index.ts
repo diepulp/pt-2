@@ -1,5 +1,6 @@
 "use client";
 
+export { useShiftDashboardUI } from "./use-shift-dashboard-ui";
 export { useModal } from "./use-modal";
 export { usePitDashboardUI } from "./use-pit-dashboard-ui";
 export { usePlayerDashboard } from "./use-player-dashboard";

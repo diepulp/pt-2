@@ -9,3 +9,9 @@ export type {
   RatingSlipModalStore,
   ModalFormState,
 } from "./rating-slip-modal-store";
+export { useShiftDashboardStore } from "./shift-dashboard-store";
+export type {
+  ShiftLens,
+  TimeWindowPreset,
+  ShiftTimeWindow,
+} from "./shift-dashboard-store";

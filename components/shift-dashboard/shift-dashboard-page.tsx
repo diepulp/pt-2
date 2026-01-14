@@ -10,7 +10,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -23,6 +23,7 @@ import {
   useShiftTableMetrics,
   type ShiftTimeWindow,
 } from "@/hooks/shift-dashboard";
+import { useShiftDashboardUI } from "@/hooks/ui/use-shift-dashboard-ui";
 
 import { AlertsPanel } from "./alerts-panel";
 import { CashObservationsPanel } from "./cash-observations-panel";
@@ -51,27 +52,27 @@ function getDefaultWindow(): ShiftTimeWindow {
 }
 
 export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
-  // Time window state - defer Date calculation to avoid hydration mismatch
-  const [window, setWindow] = useState<ShiftTimeWindow | null>(
-    initialWindow ?? null,
-  );
+  // Zustand store for UI state
+  const {
+    timeWindow,
+    setTimeWindow,
+    lens,
+    setLens,
+    selectedPitId,
+    drillDownToPit,
+    resetNavigation,
+  } = useShiftDashboardUI();
 
   // Initialize window on client mount to avoid SSR/client Date mismatch
   useEffect(() => {
-    if (!window) {
-      setWindow(getDefaultWindow());
+    if (!timeWindow) {
+      setTimeWindow(initialWindow ?? getDefaultWindow());
     }
-  }, [window]);
-
-  // Selected pit for drill-down
-  const [selectedPitId, setSelectedPitId] = useState<string | undefined>();
-
-  // Lens view: casino, pit, or table
-  const [lens, setLens] = useState<"casino" | "pit" | "table">("casino");
+  }, [timeWindow, initialWindow, setTimeWindow]);
 
   // === Authoritative Metrics Queries ===
   // Pass a stable empty window during SSR to avoid conditional hook calls
-  const stableWindow = window ?? { start: "", end: "" };
+  const stableWindow = timeWindow ?? { start: "", end: "" };
   const casinoMetrics = useShiftCasinoMetrics({ window: stableWindow });
   const pitMetrics = useShiftPitMetrics({ window: stableWindow });
   const tableMetrics = useShiftTableMetrics({ window: stableWindow });
@@ -82,22 +83,22 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
   const cashObsTables = useCashObsTables({ window: stableWindow });
   const alerts = useShiftAlerts({ window: stableWindow });
 
-  // Handle pit selection for drill-down
+  // Handle pit selection for drill-down (compound action)
   const handlePitSelect = (pitId: string) => {
-    setSelectedPitId(pitId);
-    setLens("table");
+    drillDownToPit(pitId);
   };
 
   // Handle lens change
   const handleLensChange = (value: string) => {
-    setLens(value as "casino" | "pit" | "table");
-    if (value === "casino") {
-      setSelectedPitId(undefined);
+    const newLens = value as "casino" | "pit" | "table";
+    setLens(newLens);
+    if (newLens === "casino") {
+      resetNavigation();
     }
   };
 
   // Show loading skeleton until window is initialized (avoids hydration mismatch)
-  if (!window) {
+  if (!timeWindow) {
     return (
       <div className="space-y-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -132,7 +133,7 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
             Operational metrics and telemetry for the current shift window
           </p>
         </div>
-        <TimeWindowSelector value={window} onChange={setWindow} />
+        <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
       </div>
 
       {/* Casino summary KPIs */}
@@ -176,7 +177,7 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
               <TableMetricsTable
                 data={tableMetrics.data}
                 isLoading={tableMetrics.isLoading}
-                pitFilter={selectedPitId}
+                pitFilter={selectedPitId ?? undefined}
               />
             </TabsContent>
           </Tabs>
