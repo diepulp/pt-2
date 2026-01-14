@@ -122,6 +122,22 @@ export interface ShiftPitMetricsDTO {
   win_loss_estimated_total_cents: number;
 }
 
+// === Dashboard Summary DTO (BFF) ===
+
+/**
+ * Combined dashboard summary for single-call initialization.
+ * Returns all three metric levels in one response to reduce HTTP round-trips.
+ *
+ * PERF: Reduces dashboard load from 7 HTTP calls to 1.
+ * @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md - Medium Severity: Redundant RPC Computation
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: BFF aggregate response
+export interface ShiftDashboardSummaryDTO {
+  casino: ShiftCasinoMetricsDTO;
+  pits: ShiftPitMetricsDTO[];
+  tables: ShiftTableMetricsDTO[];
+}
+
 // === Casino Metrics DTO ===
 
 /**

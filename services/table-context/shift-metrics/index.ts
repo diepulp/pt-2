@@ -10,6 +10,7 @@
 // DTOs
 export type {
   ShiftCasinoMetricsDTO,
+  ShiftDashboardSummaryDTO,
   ShiftMetricsTimeWindow,
   ShiftPitMetricsDTO,
   ShiftPitMetricsParams,
@@ -34,6 +35,7 @@ export type {
 export {
   getShiftAllPitsMetrics,
   getShiftCasinoMetrics,
+  getShiftDashboardSummary,
   getShiftPitMetrics,
   getShiftTableMetrics,
 } from "./service";

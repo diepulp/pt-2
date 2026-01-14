@@ -15,6 +15,7 @@ import type { Database } from "@/types/database.types";
 
 import type {
   ShiftCasinoMetricsDTO,
+  ShiftDashboardSummaryDTO,
   ShiftMetricsTimeWindow,
   ShiftPitMetricsDTO,
   ShiftPitMetricsParams,
@@ -94,34 +95,75 @@ export async function getShiftPitMetrics(
 /**
  * Get all pits' shift metrics for a time window.
  * Returns aggregated metrics for each pit in the casino.
+ *
+ * PERF: Uses client-side aggregation from table metrics to avoid N+1 pattern.
+ * @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md - Critical Finding: N+1 Query Pattern
  */
 export async function getShiftAllPitsMetrics(
   supabase: SupabaseClient<Database>,
   params: ShiftMetricsTimeWindow,
 ): Promise<ShiftPitMetricsDTO[]> {
-  // First get all unique pits from table metrics
+  // Single DB call - avoids N+1 pattern (was: 1 + N calls for N pits)
   const tableMetrics = await getShiftTableMetrics(supabase, params);
 
-  // Extract unique pit IDs (excluding null)
-  const pitIds = [
-    ...new Set(
-      tableMetrics.map((t) => t.pit_id).filter((p): p is string => p !== null),
-    ),
-  ];
+  // Client-side aggregation by pit_id
+  const pitMap = new Map<string, ShiftPitMetricsDTO>();
 
-  // Fetch metrics for each pit
-  const pitMetrics: ShiftPitMetricsDTO[] = [];
-  for (const pitId of pitIds) {
-    const metrics = await getShiftPitMetrics(supabase, {
-      ...params,
-      pitId,
-    });
-    if (metrics) {
-      pitMetrics.push(metrics);
+  for (const table of tableMetrics) {
+    if (!table.pit_id) continue;
+
+    const existing = pitMap.get(table.pit_id);
+    if (existing) {
+      // Aggregate into existing pit metrics
+      existing.tables_count += 1;
+      existing.tables_with_opening_snapshot += table.missing_opening_snapshot
+        ? 0
+        : 1;
+      existing.tables_with_closing_snapshot += table.missing_closing_snapshot
+        ? 0
+        : 1;
+      existing.tables_with_telemetry_count +=
+        table.telemetry_quality !== "NONE" ? 1 : 0;
+      existing.tables_good_coverage_count +=
+        table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0;
+      existing.tables_grade_estimate += 1; // Always ESTIMATE for MVP
+      existing.fills_total_cents += table.fills_total_cents;
+      existing.credits_total_cents += table.credits_total_cents;
+      existing.estimated_drop_rated_total_cents +=
+        table.estimated_drop_rated_cents;
+      existing.estimated_drop_grind_total_cents +=
+        table.estimated_drop_grind_cents;
+      existing.estimated_drop_buyins_total_cents +=
+        table.estimated_drop_buyins_cents;
+      existing.win_loss_inventory_total_cents +=
+        table.win_loss_inventory_cents ?? 0;
+      existing.win_loss_estimated_total_cents +=
+        table.win_loss_estimated_cents ?? 0;
+    } else {
+      // Create new pit entry
+      pitMap.set(table.pit_id, {
+        pit_id: table.pit_id,
+        window_start: table.window_start,
+        window_end: table.window_end,
+        tables_count: 1,
+        tables_with_opening_snapshot: table.missing_opening_snapshot ? 0 : 1,
+        tables_with_closing_snapshot: table.missing_closing_snapshot ? 0 : 1,
+        tables_with_telemetry_count: table.telemetry_quality !== "NONE" ? 1 : 0,
+        tables_good_coverage_count:
+          table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0,
+        tables_grade_estimate: 1, // Always ESTIMATE for MVP
+        fills_total_cents: table.fills_total_cents,
+        credits_total_cents: table.credits_total_cents,
+        estimated_drop_rated_total_cents: table.estimated_drop_rated_cents,
+        estimated_drop_grind_total_cents: table.estimated_drop_grind_cents,
+        estimated_drop_buyins_total_cents: table.estimated_drop_buyins_cents,
+        win_loss_inventory_total_cents: table.win_loss_inventory_cents ?? 0,
+        win_loss_estimated_total_cents: table.win_loss_estimated_cents ?? 0,
+      });
     }
   }
 
-  return pitMetrics;
+  return Array.from(pitMap.values());
 }
 
 /**
@@ -153,6 +195,125 @@ export async function getShiftCasinoMetrics(
   const dataArray = data as unknown[];
   const row = Array.isArray(dataArray) ? dataArray[0] : data;
   return toShiftCasinoMetrics(row);
+}
+
+/**
+ * Get all dashboard metrics in a single call (BFF endpoint).
+ * Returns casino, pits, and tables metrics to reduce HTTP round-trips.
+ *
+ * PERF: Single DB call + client-side aggregation replaces 7+ HTTP calls.
+ * @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md - Medium Severity: Redundant RPC Computation
+ */
+export async function getShiftDashboardSummary(
+  supabase: SupabaseClient<Database>,
+  params: ShiftMetricsTimeWindow,
+): Promise<ShiftDashboardSummaryDTO> {
+  // Single DB call - table metrics are the source of truth
+  const tables = await getShiftTableMetrics(supabase, params);
+
+  // Client-side aggregation for pits (same logic as getShiftAllPitsMetrics)
+  const pitMap = new Map<string, ShiftPitMetricsDTO>();
+  for (const table of tables) {
+    if (!table.pit_id) continue;
+
+    const existing = pitMap.get(table.pit_id);
+    if (existing) {
+      existing.tables_count += 1;
+      existing.tables_with_opening_snapshot += table.missing_opening_snapshot
+        ? 0
+        : 1;
+      existing.tables_with_closing_snapshot += table.missing_closing_snapshot
+        ? 0
+        : 1;
+      existing.tables_with_telemetry_count +=
+        table.telemetry_quality !== "NONE" ? 1 : 0;
+      existing.tables_good_coverage_count +=
+        table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0;
+      existing.tables_grade_estimate += 1;
+      existing.fills_total_cents += table.fills_total_cents;
+      existing.credits_total_cents += table.credits_total_cents;
+      existing.estimated_drop_rated_total_cents +=
+        table.estimated_drop_rated_cents;
+      existing.estimated_drop_grind_total_cents +=
+        table.estimated_drop_grind_cents;
+      existing.estimated_drop_buyins_total_cents +=
+        table.estimated_drop_buyins_cents;
+      existing.win_loss_inventory_total_cents +=
+        table.win_loss_inventory_cents ?? 0;
+      existing.win_loss_estimated_total_cents +=
+        table.win_loss_estimated_cents ?? 0;
+    } else {
+      pitMap.set(table.pit_id, {
+        pit_id: table.pit_id,
+        window_start: table.window_start,
+        window_end: table.window_end,
+        tables_count: 1,
+        tables_with_opening_snapshot: table.missing_opening_snapshot ? 0 : 1,
+        tables_with_closing_snapshot: table.missing_closing_snapshot ? 0 : 1,
+        tables_with_telemetry_count: table.telemetry_quality !== "NONE" ? 1 : 0,
+        tables_good_coverage_count:
+          table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0,
+        tables_grade_estimate: 1,
+        fills_total_cents: table.fills_total_cents,
+        credits_total_cents: table.credits_total_cents,
+        estimated_drop_rated_total_cents: table.estimated_drop_rated_cents,
+        estimated_drop_grind_total_cents: table.estimated_drop_grind_cents,
+        estimated_drop_buyins_total_cents: table.estimated_drop_buyins_cents,
+        win_loss_inventory_total_cents: table.win_loss_inventory_cents ?? 0,
+        win_loss_estimated_total_cents: table.win_loss_estimated_cents ?? 0,
+      });
+    }
+  }
+  const pits = Array.from(pitMap.values());
+
+  // Client-side aggregation for casino
+  const uniquePitIds = new Set(tables.map((t) => t.pit_id).filter(Boolean));
+  const casino: ShiftCasinoMetricsDTO = {
+    window_start: tables[0]?.window_start ?? params.startTs,
+    window_end: tables[0]?.window_end ?? params.endTs,
+    tables_count: tables.length,
+    pits_count: uniquePitIds.size,
+    tables_with_opening_snapshot: tables.filter(
+      (t) => !t.missing_opening_snapshot,
+    ).length,
+    tables_with_closing_snapshot: tables.filter(
+      (t) => !t.missing_closing_snapshot,
+    ).length,
+    tables_with_telemetry_count: tables.filter(
+      (t) => t.telemetry_quality !== "NONE",
+    ).length,
+    tables_good_coverage_count: tables.filter(
+      (t) => t.telemetry_quality === "GOOD_COVERAGE",
+    ).length,
+    tables_grade_estimate: tables.length, // Always ESTIMATE for MVP
+    fills_total_cents: tables.reduce((sum, t) => sum + t.fills_total_cents, 0),
+    credits_total_cents: tables.reduce(
+      (sum, t) => sum + t.credits_total_cents,
+      0,
+    ),
+    estimated_drop_rated_total_cents: tables.reduce(
+      (sum, t) => sum + t.estimated_drop_rated_cents,
+      0,
+    ),
+    estimated_drop_grind_total_cents: tables.reduce(
+      (sum, t) => sum + t.estimated_drop_grind_cents,
+      0,
+    ),
+    estimated_drop_buyins_total_cents: tables.reduce(
+      (sum, t) => sum + t.estimated_drop_buyins_cents,
+      0,
+    ),
+    win_loss_inventory_total_cents: tables.reduce(
+      (sum, t) => sum + (t.win_loss_inventory_cents ?? 0),
+      0,
+    ),
+    win_loss_estimated_total_cents: tables.reduce(
+      (sum, t) => sum + (t.win_loss_estimated_cents ?? 0),
+      0,
+    ),
+  };
+
+  return { casino, pits, tables };
 }
 
 // === Mappers ===
