@@ -1,0 +1,24 @@
+{
+  "prd_id": "ADDENDUM-TBL-RUNDOWN",
+  "prd_title": "Table Inventory Rundown Read Model (Shift Table Metrics)",
+  "service": "TableContext",
+  "status": "complete",
+  "spec_file": "docs/20-architecture/specs/ADDENDUM-TBL-RUNDOWN/EXECUTION-SPEC-ADDENDUM-TBL-RUNDOWN.md",
+  "source_doc": "docs/00-vision/table-context-read-model/ADDENDUM_TABLE_RUNDOWN_READMODEL_v0.3_PATCH.md",
+  "created_at": "2026-01-14T00:30:00Z",
+  "updated_at": "2026-01-14T00:50:00Z",
+  "current_phase": 5,
+  "completed_workstreams": ["WS1", "WS3", "WS2", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation-phase1", "schema-validation-phase2", "schema-validation-phase3", "schema-validation-phase4", "test-pass-phase5"],
+  "artifacts": [
+    "supabase/migrations/20260114003530_table_buyin_telemetry.sql",
+    "supabase/migrations/20260114003537_chipset_total_cents_helper.sql",
+    "supabase/migrations/20260114004141_rpc_log_table_buyin_telemetry.sql",
+    "supabase/migrations/20260114004336_rpc_shift_table_metrics.sql",
+    "supabase/migrations/20260114004455_rpc_shift_rollups.sql",
+    "__tests__/services/table-context/shift-metrics.int.test.ts"
+  ],
+  "notes": "Pipeline complete: All 6 workstreams implemented - table_buyin_telemetry, chipset_total_cents, rpc_log_table_buyin_telemetry, rpc_shift_table_metrics, rpc_shift_pit_metrics, rpc_shift_casino_metrics, and 26 integration test cases"
+}

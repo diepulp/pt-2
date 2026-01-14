@@ -99,31 +99,40 @@ export type Database = {
       }
       casino_settings: {
         Row: {
+          alert_thresholds: Json
           casino_id: string
           created_at: string
           ctr_threshold: number
           gaming_day_start_time: string
           id: string
+          promo_allow_anonymous_issuance: boolean
+          promo_require_exact_match: boolean
           timezone: string
           updated_at: string
           watchlist_floor: number
         }
         Insert: {
+          alert_thresholds?: Json
           casino_id: string
           created_at?: string
           ctr_threshold?: number
           gaming_day_start_time?: string
           id?: string
+          promo_allow_anonymous_issuance?: boolean
+          promo_require_exact_match?: boolean
           timezone?: string
           updated_at?: string
           watchlist_floor?: number
         }
         Update: {
+          alert_thresholds?: Json
           casino_id?: string
           created_at?: string
           ctr_threshold?: number
           gaming_day_start_time?: string
           id?: string
+          promo_allow_anonymous_issuance?: boolean
+          promo_require_exact_match?: boolean
           timezone?: string
           updated_at?: string
           watchlist_floor?: number
@@ -1297,6 +1306,192 @@ export type Database = {
           },
         ]
       }
+      promo_coupon: {
+        Row: {
+          casino_id: string
+          cleared_at: string | null
+          correlation_id: string | null
+          expires_at: string | null
+          face_value_amount: number
+          id: string
+          idempotency_key: string | null
+          issued_at: string
+          issued_by_staff_id: string
+          player_id: string | null
+          promo_program_id: string
+          replaced_at: string | null
+          replaced_by_staff_id: string | null
+          replacement_coupon_id: string | null
+          required_match_wager_amount: number
+          status: Database["public"]["Enums"]["promo_coupon_status"]
+          validation_number: string
+          visit_id: string | null
+          voided_at: string | null
+          voided_by_staff_id: string | null
+        }
+        Insert: {
+          casino_id: string
+          cleared_at?: string | null
+          correlation_id?: string | null
+          expires_at?: string | null
+          face_value_amount: number
+          id?: string
+          idempotency_key?: string | null
+          issued_at?: string
+          issued_by_staff_id: string
+          player_id?: string | null
+          promo_program_id: string
+          replaced_at?: string | null
+          replaced_by_staff_id?: string | null
+          replacement_coupon_id?: string | null
+          required_match_wager_amount: number
+          status?: Database["public"]["Enums"]["promo_coupon_status"]
+          validation_number: string
+          visit_id?: string | null
+          voided_at?: string | null
+          voided_by_staff_id?: string | null
+        }
+        Update: {
+          casino_id?: string
+          cleared_at?: string | null
+          correlation_id?: string | null
+          expires_at?: string | null
+          face_value_amount?: number
+          id?: string
+          idempotency_key?: string | null
+          issued_at?: string
+          issued_by_staff_id?: string
+          player_id?: string | null
+          promo_program_id?: string
+          replaced_at?: string | null
+          replaced_by_staff_id?: string | null
+          replacement_coupon_id?: string | null
+          required_match_wager_amount?: number
+          status?: Database["public"]["Enums"]["promo_coupon_status"]
+          validation_number?: string
+          visit_id?: string | null
+          voided_at?: string | null
+          voided_by_staff_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_coupon_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_issued_by_staff_id_fkey"
+            columns: ["issued_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_promo_program_id_fkey"
+            columns: ["promo_program_id"]
+            isOneToOne: false
+            referencedRelation: "promo_program"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_replaced_by_staff_id_fkey"
+            columns: ["replaced_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_replacement_coupon_id_fkey"
+            columns: ["replacement_coupon_id"]
+            isOneToOne: false
+            referencedRelation: "promo_coupon"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_coupon_voided_by_staff_id_fkey"
+            columns: ["voided_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      promo_program: {
+        Row: {
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string | null
+          end_at: string | null
+          face_value_amount: number
+          id: string
+          name: string
+          promo_type: Database["public"]["Enums"]["promo_type_enum"]
+          required_match_wager_amount: number
+          start_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          created_by_staff_id?: string | null
+          end_at?: string | null
+          face_value_amount: number
+          id?: string
+          name: string
+          promo_type: Database["public"]["Enums"]["promo_type_enum"]
+          required_match_wager_amount: number
+          start_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          created_by_staff_id?: string | null
+          end_at?: string | null
+          face_value_amount?: number
+          id?: string
+          name?: string
+          promo_type?: Database["public"]["Enums"]["promo_type_enum"]
+          required_match_wager_amount?: number
+          start_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promo_program_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promo_program_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rating_slip: {
         Row: {
           accrual_kind: string
@@ -1516,6 +1711,93 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_buyin_telemetry: {
+        Row: {
+          actor_id: string
+          amount_cents: number
+          casino_id: string
+          created_at: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          occurred_at: string
+          rating_slip_id: string | null
+          table_id: string
+          telemetry_kind: string
+          tender_type: string | null
+          visit_id: string | null
+        }
+        Insert: {
+          actor_id: string
+          amount_cents: number
+          casino_id: string
+          created_at?: string
+          gaming_day: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          occurred_at?: string
+          rating_slip_id?: string | null
+          table_id: string
+          telemetry_kind: string
+          tender_type?: string | null
+          visit_id?: string | null
+        }
+        Update: {
+          actor_id?: string
+          amount_cents?: number
+          casino_id?: string
+          created_at?: string
+          gaming_day?: string
+          id?: string
+          idempotency_key?: string | null
+          note?: string | null
+          occurred_at?: string
+          rating_slip_id?: string | null
+          table_id?: string
+          telemetry_kind?: string
+          tender_type?: string | null
+          visit_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_buyin_telemetry_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_buyin_telemetry_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_buyin_telemetry_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "rating_slip"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_buyin_telemetry_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_buyin_telemetry_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
             referencedColumns: ["id"]
           },
         ]
@@ -1965,6 +2247,7 @@ export type Database = {
         }
         Returns: number
       }
+      chipset_total_cents: { Args: { p_chipset: Json }; Returns: number }
       compute_gaming_day:
         | {
             Args: { p_casino_id: string; p_timestamp?: string }
@@ -2279,6 +2562,53 @@ export type Database = {
           ledger_id: string
         }[]
       }
+      rpc_issue_promo_coupon: {
+        Args: {
+          p_correlation_id?: string
+          p_expires_at?: string
+          p_idempotency_key: string
+          p_player_id?: string
+          p_promo_program_id: string
+          p_validation_number: string
+          p_visit_id?: string
+        }
+        Returns: Json
+      }
+      rpc_log_table_buyin_telemetry: {
+        Args: {
+          p_actor_id?: string
+          p_amount_cents: number
+          p_idempotency_key?: string
+          p_note?: string
+          p_rating_slip_id?: string
+          p_table_id: string
+          p_telemetry_kind: string
+          p_tender_type?: string
+          p_visit_id?: string
+        }
+        Returns: {
+          actor_id: string
+          amount_cents: number
+          casino_id: string
+          created_at: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          occurred_at: string
+          rating_slip_id: string | null
+          table_id: string
+          telemetry_kind: string
+          tender_type: string | null
+          visit_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_buyin_telemetry"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_log_table_drop: {
         Args: {
           p_casino_id: string
@@ -2400,6 +2730,27 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_promo_coupon_inventory: {
+        Args: {
+          p_promo_program_id?: string
+          p_status?: Database["public"]["Enums"]["promo_coupon_status"]
+        }
+        Returns: {
+          coupon_count: number
+          status: Database["public"]["Enums"]["promo_coupon_status"]
+          total_face_value: number
+          total_match_wager: number
+        }[]
+      }
+      rpc_promo_exposure_rollup: {
+        Args: {
+          p_from_ts?: string
+          p_gaming_day?: string
+          p_shift_id?: string
+          p_to_ts?: string
+        }
+        Returns: Json
+      }
       rpc_reconcile_loyalty_balance: {
         Args: { p_casino_id: string; p_player_id: string }
         Returns: {
@@ -2428,6 +2779,16 @@ export type Database = {
           overdraw_applied: boolean
           points_delta: number
         }[]
+      }
+      rpc_replace_promo_coupon: {
+        Args: {
+          p_correlation_id?: string
+          p_coupon_id: string
+          p_idempotency_key: string
+          p_new_expires_at?: string
+          p_new_validation_number: string
+        }
+        Returns: Json
       }
       rpc_request_table_credit: {
         Args: {
@@ -2521,6 +2882,135 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_shift_cash_obs_alerts: {
+        Args: { p_end_ts: string; p_start_ts: string }
+        Returns: {
+          alert_type: string
+          entity_id: string
+          entity_label: string
+          entity_type: string
+          is_telemetry: boolean
+          message: string
+          observed_value: number
+          severity: string
+          threshold: number
+        }[]
+      }
+      rpc_shift_cash_obs_casino: {
+        Args: { p_end_ts: string; p_start_ts: string }
+        Returns: {
+          cash_out_last_observed_at: string
+          cash_out_observation_count: number
+          cash_out_observed_confirmed_total: number
+          cash_out_observed_estimate_total: number
+        }[]
+      }
+      rpc_shift_cash_obs_pit: {
+        Args: { p_end_ts: string; p_pit?: string; p_start_ts: string }
+        Returns: {
+          cash_out_last_observed_at: string
+          cash_out_observation_count: number
+          cash_out_observed_confirmed_total: number
+          cash_out_observed_estimate_total: number
+          pit: string
+        }[]
+      }
+      rpc_shift_cash_obs_table: {
+        Args: { p_end_ts: string; p_start_ts: string; p_table_id?: string }
+        Returns: {
+          cash_out_last_observed_at: string
+          cash_out_observation_count: number
+          cash_out_observed_confirmed_total: number
+          cash_out_observed_estimate_total: number
+          pit: string
+          table_id: string
+          table_label: string
+        }[]
+      }
+      rpc_shift_casino_metrics: {
+        Args: {
+          p_actor_id?: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: {
+          credits_total_cents: number
+          estimated_drop_buyins_total_cents: number
+          estimated_drop_grind_total_cents: number
+          estimated_drop_rated_total_cents: number
+          fills_total_cents: number
+          pits_count: number
+          tables_count: number
+          tables_good_coverage_count: number
+          tables_grade_estimate: number
+          tables_with_closing_snapshot: number
+          tables_with_opening_snapshot: number
+          tables_with_telemetry_count: number
+          win_loss_estimated_total_cents: number
+          win_loss_inventory_total_cents: number
+          window_end: string
+          window_start: string
+        }[]
+      }
+      rpc_shift_pit_metrics: {
+        Args: {
+          p_actor_id?: string
+          p_pit_id: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: {
+          credits_total_cents: number
+          estimated_drop_buyins_total_cents: number
+          estimated_drop_grind_total_cents: number
+          estimated_drop_rated_total_cents: number
+          fills_total_cents: number
+          pit_id: string
+          tables_count: number
+          tables_good_coverage_count: number
+          tables_grade_estimate: number
+          tables_with_closing_snapshot: number
+          tables_with_opening_snapshot: number
+          tables_with_telemetry_count: number
+          win_loss_estimated_total_cents: number
+          win_loss_inventory_total_cents: number
+          window_end: string
+          window_start: string
+        }[]
+      }
+      rpc_shift_table_metrics: {
+        Args: {
+          p_actor_id?: string
+          p_window_end: string
+          p_window_start: string
+        }
+        Returns: {
+          closing_bankroll_total_cents: number
+          closing_snapshot_at: string
+          closing_snapshot_id: string
+          credits_total_cents: number
+          drop_custody_present: boolean
+          estimated_drop_buyins_cents: number
+          estimated_drop_grind_cents: number
+          estimated_drop_rated_cents: number
+          fills_total_cents: number
+          metric_grade: string
+          missing_closing_snapshot: boolean
+          missing_opening_snapshot: boolean
+          opening_bankroll_total_cents: number
+          opening_snapshot_at: string
+          opening_snapshot_id: string
+          pit_id: string
+          table_id: string
+          table_label: string
+          telemetry_notes: string
+          telemetry_quality: string
+          win_loss_estimated_cents: number
+          win_loss_inventory_cents: number
+          window_end: string
+          window_start: string
+        }[]
+      }
       rpc_start_rating_slip: {
         Args: {
           p_actor_id: string
@@ -2604,6 +3094,14 @@ export type Database = {
               isSetofReturn: false
             }
           }
+      rpc_void_promo_coupon: {
+        Args: {
+          p_correlation_id?: string
+          p_coupon_id: string
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       set_rls_context: {
         Args: {
           p_actor_id: string
@@ -2659,6 +3157,13 @@ export type Database = {
         | "chip_fill"
       observation_amount_kind: "estimate" | "cage_confirmed"
       observation_source: "walk_with" | "phone_confirmed" | "observed"
+      promo_coupon_status:
+        | "issued"
+        | "voided"
+        | "replaced"
+        | "expired"
+        | "cleared"
+      promo_type_enum: "match_play"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
@@ -2822,6 +3327,14 @@ export const Constants = {
       ],
       observation_amount_kind: ["estimate", "cage_confirmed"],
       observation_source: ["walk_with", "phone_confirmed", "observed"],
+      promo_coupon_status: [
+        "issued",
+        "voided",
+        "replaced",
+        "expired",
+        "cleared",
+      ],
+      promo_type_enum: ["match_play"],
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],
