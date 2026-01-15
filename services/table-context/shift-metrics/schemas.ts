@@ -117,6 +117,14 @@ export const cashObsCasinoQuerySchema = shiftMetricsTimeWindowSchema;
  */
 export const cashObsAlertsQuerySchema = shiftMetricsTimeWindowSchema;
 
+/**
+ * Query params schema for consolidated cash observations summary endpoint.
+ * GET /api/v1/shift-dashboards/cash-observations/summary?start=ISO&end=ISO
+ * PERF: Reduces 4 HTTP calls to 1.
+ * @see SHIFT_DASHBOARD_HTTP_CASCADE.md (PERF-001)
+ */
+export const cashObsSummaryQuerySchema = shiftMetricsTimeWindowSchema;
+
 // === Type Exports ===
 
 export type ShiftTableMetricsQuery = z.infer<
@@ -130,3 +138,4 @@ export type CashObsTablesQuery = z.infer<typeof cashObsTablesQuerySchema>;
 export type CashObsPitsQuery = z.infer<typeof cashObsPitsQuerySchema>;
 export type CashObsCasinoQuery = z.infer<typeof cashObsCasinoQuerySchema>;
 export type CashObsAlertsQuery = z.infer<typeof cashObsAlertsQuerySchema>;
+export type CashObsSummaryQuery = z.infer<typeof cashObsSummaryQuerySchema>;

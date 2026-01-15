@@ -319,3 +319,95 @@ export interface ShiftCashObsTableParams extends ShiftCashObsTimeWindow {
 export interface ShiftCashObsPitParams extends ShiftCashObsTimeWindow {
   pit?: string; // Optional filter to single pit
 }
+
+// === Table Session DTOs (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
+
+/**
+ * Table session status enum.
+ * State machine: OPEN → ACTIVE → RUNDOWN → CLOSED
+ * Note: OPEN → ACTIVE is implicit (we start sessions in ACTIVE state for MVP)
+ */
+export type TableSessionStatus = "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED";
+
+/**
+ * Table session DTO.
+ * Pattern A (Contract-First): Manual interface with domain contracts.
+ *
+ * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
+ * @see ADR-024 (RLS context injection)
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: session with state machine and audit fields
+export interface TableSessionDTO {
+  id: string;
+  casino_id: string;
+  gaming_table_id: string;
+  gaming_day: string; // ISO date (YYYY-MM-DD)
+  shift_id: string | null;
+  status: TableSessionStatus;
+  opened_at: string; // ISO timestamp
+  opened_by_staff_id: string;
+  rundown_started_at: string | null;
+  rundown_started_by_staff_id: string | null;
+  closed_at: string | null;
+  closed_by_staff_id: string | null;
+  opening_inventory_snapshot_id: string | null;
+  closing_inventory_snapshot_id: string | null;
+  drop_event_id: string | null;
+  notes: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Input for opening a new table session.
+ * Casino context derived from RLS (ADR-024 compliant).
+ */
+export interface OpenTableSessionInput {
+  gamingTableId: string;
+}
+
+/**
+ * Input for starting rundown on a session.
+ */
+export interface StartTableRundownInput {
+  sessionId: string;
+}
+
+/**
+ * Input for closing a table session.
+ * At least one of dropEventId or closingInventorySnapshotId is required.
+ */
+export interface CloseTableSessionInput {
+  sessionId: string;
+  dropEventId?: string;
+  closingInventorySnapshotId?: string;
+  notes?: string;
+}
+
+/**
+ * Input for getting current session for a table.
+ */
+export interface GetCurrentTableSessionInput {
+  gamingTableId: string;
+}
+
+// === Consolidated Cash Observation Summary DTO (PERF-001 BFF) ===
+
+/**
+ * Consolidated cash observation summary.
+ * PERF: Reduces 4 HTTP calls to 1 by combining all cash obs data.
+ *
+ * Pattern A: Contract-First - BFF aggregation of RPC responses.
+ * TELEMETRY-ONLY: All data is observational, NOT authoritative.
+ *
+ * @see SHIFT_DASHBOARD_HTTP_CASCADE.md (PERF-001)
+ * @see PRD-SHIFT-DASHBOARDS-v0.2
+ */
+
+export interface CashObsSummaryDTO {
+  casino: CashObsCasinoRollupDTO;
+  pits: CashObsPitRollupDTO[];
+  tables: CashObsTableRollupDTO[];
+  alerts: CashObsSpikeAlertDTO[];
+}

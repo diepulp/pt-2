@@ -14,10 +14,7 @@ import { useEffect } from "react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  useCashObsCasino,
-  useCashObsPits,
-  useCashObsTables,
-  useShiftAlerts,
+  useCashObsSummary,
   useShiftDashboardSummary,
   type ShiftTimeWindow,
 } from "@/hooks/shift-dashboard";
@@ -81,10 +78,11 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
   );
 
   // === Telemetry Queries ===
-  const cashObsCasino = useCashObsCasino({ window: stableWindow });
-  const cashObsPits = useCashObsPits({ window: stableWindow });
-  const cashObsTables = useCashObsTables({ window: stableWindow });
-  const alerts = useShiftAlerts({ window: stableWindow });
+  // PERF-001: Single BFF call replaces 4 separate cash obs queries
+  // @see SHIFT_DASHBOARD_HTTP_CASCADE.md
+  const { data: cashObs, isLoading: cashObsLoading } = useCashObsSummary({
+    window: stableWindow,
+  });
 
   // Handle pit selection for drill-down (compound action)
   const handlePitSelect = (pitId: string) => {
@@ -186,18 +184,15 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
         {/* Right column: Telemetry panels (1 col) */}
         <div className="space-y-6">
           {/* Alerts panel */}
-          <AlertsPanel data={alerts.data} isLoading={alerts.isLoading} />
+          <AlertsPanel data={cashObs?.alerts} isLoading={cashObsLoading} />
 
           {/* Cash observations panel - matches current lens */}
+          {/* PERF-001: Now uses consolidated BFF data */}
           <CashObservationsPanel
-            casinoData={cashObsCasino.data}
-            pitsData={cashObsPits.data}
-            tablesData={cashObsTables.data}
-            isLoading={
-              cashObsCasino.isLoading ||
-              cashObsPits.isLoading ||
-              cashObsTables.isLoading
-            }
+            casinoData={cashObs?.casino}
+            pitsData={cashObs?.pits}
+            tablesData={cashObs?.tables}
+            isLoading={cashObsLoading}
             view={lens}
           />
         </div>

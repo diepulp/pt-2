@@ -17,6 +17,7 @@ import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
   CashObsSpikeAlertDTO,
+  CashObsSummaryDTO,
   CashObsTableRollupDTO,
   ShiftCashObsPitParams,
   ShiftCashObsTableParams,
@@ -211,5 +212,33 @@ function toCashObsSpikeAlert(row: unknown): CashObsSpikeAlertDTO {
     threshold: Number(r.threshold ?? 0),
     message: r.message as string,
     is_telemetry: true,
+  };
+}
+
+// === BFF Consolidated Function (PERF-001) ===
+
+/**
+ * Get consolidated cash observation summary.
+ * PERF: Reduces 4 HTTP calls to 1 by fetching all data in parallel.
+ *
+ * @see SHIFT_DASHBOARD_HTTP_CASCADE.md (PERF-001)
+ */
+export async function getShiftCashObsSummary(
+  supabase: SupabaseClient<Database>,
+  params: ShiftCashObsTimeWindow,
+): Promise<CashObsSummaryDTO> {
+  // Execute all 4 RPC calls in parallel
+  const [casino, pits, tables, alerts] = await Promise.all([
+    getShiftCashObsCasino(supabase, params),
+    getShiftCashObsPit(supabase, params),
+    getShiftCashObsTable(supabase, params),
+    getShiftCashObsAlerts(supabase, params),
+  ]);
+
+  return {
+    casino,
+    pits,
+    tables,
+    alerts,
   };
 }

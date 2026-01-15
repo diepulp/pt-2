@@ -127,6 +127,19 @@ export const shiftDashboardKeys = {
     { scope: [...ROOT, "alerts"] as const },
   ),
 
+  // === BFF Consolidated Query (PERF-001) ===
+
+  /**
+   * Consolidated cash observation summary (casino + pits + tables + alerts).
+   * PERF: Replaces 4 separate cash obs calls.
+   * @see SHIFT_DASHBOARD_HTTP_CASCADE.md (PERF-001)
+   */
+  cashObsSummary: Object.assign(
+    (window: ShiftTimeWindow) =>
+      [...ROOT, "cash-obs", "summary", serializeFilters(window)] as const,
+    { scope: [...ROOT, "cash-obs", "summary"] as const },
+  ),
+
   // === Invalidation Helpers ===
 
   /**

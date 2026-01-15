@@ -41,6 +41,12 @@ export {
   type UseCashObsTablesOptions,
 } from "./use-cash-observations";
 
+// Cash Observations BFF Summary Hook (PERF-001: 4 calls -> 1)
+export {
+  useCashObsSummary,
+  type UseCashObsSummaryOptions,
+} from "./use-cash-obs-summary";
+
 // Alerts Hook
 export { useShiftAlerts, type UseShiftAlertsOptions } from "./use-shift-alerts";
 
@@ -49,6 +55,7 @@ export {
   fetchCashObsAlerts,
   fetchCashObsCasino,
   fetchCashObsPits,
+  fetchCashObsSummary,
   fetchCashObsTables,
   fetchShiftCasinoMetrics,
   fetchShiftDashboardSummary,

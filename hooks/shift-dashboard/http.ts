@@ -12,6 +12,7 @@ import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
   CashObsSpikeAlertDTO,
+  CashObsSummaryDTO,
   CashObsTableRollupDTO,
 } from "@/services/table-context/dtos";
 import type {
@@ -138,4 +139,19 @@ export async function fetchCashObsAlerts(
 ): Promise<CashObsSpikeAlertDTO[]> {
   const params = buildParams({ start, end });
   return fetchJSON<CashObsSpikeAlertDTO[]>(`${BASE_CASH_OBS}/alerts?${params}`);
+}
+
+// === BFF Consolidated Fetcher (PERF-001) ===
+
+/**
+ * Fetches all cash observation data in a single call.
+ * PERF: Reduces 4 HTTP calls to 1.
+ * @see SHIFT_DASHBOARD_HTTP_CASCADE.md (PERF-001)
+ */
+export async function fetchCashObsSummary(
+  start: string,
+  end: string,
+): Promise<CashObsSummaryDTO> {
+  const params = buildParams({ start, end });
+  return fetchJSON<CashObsSummaryDTO>(`${BASE_CASH_OBS}/summary?${params}`);
 }
