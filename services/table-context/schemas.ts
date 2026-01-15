@@ -168,3 +168,81 @@ export const updateTableLimitsSchema = z
 export type UpdateTableLimitsRequestBody = z.infer<
   typeof updateTableLimitsSchema
 >;
+
+// === Table Session Schemas (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
+
+export const tableSessionStatusSchema = z.enum([
+  "OPEN",
+  "ACTIVE",
+  "RUNDOWN",
+  "CLOSED",
+]);
+
+/**
+ * Schema for opening a new table session.
+ * POST /api/v1/table-sessions
+ */
+export const openTableSessionSchema = z.object({
+  gaming_table_id: uuidFormat("gaming table ID"),
+});
+
+/**
+ * Schema for starting rundown on a session.
+ * PATCH /api/v1/table-sessions/[id]/rundown
+ */
+export const startTableRundownSchema = z.object({
+  // No body required - session ID from URL
+});
+
+/**
+ * Schema for closing a table session.
+ * PATCH /api/v1/table-sessions/[id]/close
+ * At least one of drop_event_id or closing_inventory_snapshot_id required.
+ */
+export const closeTableSessionSchema = z
+  .object({
+    drop_event_id: uuidFormat("drop event ID").optional(),
+    closing_inventory_snapshot_id: uuidFormat(
+      "closing inventory snapshot ID"
+    ).optional(),
+    notes: z.string().max(2000).optional(),
+  })
+  .refine(
+    (data) => data.drop_event_id || data.closing_inventory_snapshot_id,
+    {
+      message:
+        "At least one of drop_event_id or closing_inventory_snapshot_id is required",
+      path: ["drop_event_id"],
+    }
+  );
+
+/**
+ * Route params schema for session ID.
+ */
+export const tableSessionRouteParamsSchema = z.object({
+  id: uuidFormat("session ID"),
+});
+
+/**
+ * Route params schema for current session lookup by table ID.
+ */
+export const currentSessionRouteParamsSchema = z.object({
+  tableId: uuidFormat("table ID"),
+});
+
+// Transport type exports
+export type OpenTableSessionRequestBody = z.infer<
+  typeof openTableSessionSchema
+>;
+export type StartTableRundownRequestBody = z.infer<
+  typeof startTableRundownSchema
+>;
+export type CloseTableSessionRequestBody = z.infer<
+  typeof closeTableSessionSchema
+>;
+export type TableSessionRouteParams = z.infer<
+  typeof tableSessionRouteParamsSchema
+>;
+export type CurrentSessionRouteParams = z.infer<
+  typeof currentSessionRouteParamsSchema
+>;

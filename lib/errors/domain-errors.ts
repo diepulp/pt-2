@@ -200,7 +200,12 @@ export type TableContextErrorCode =
   | "TABLE_CREDIT_REJECTED"
   | "FILL_DUPLICATE_REQUEST"
   | "CREDIT_DUPLICATE_REQUEST"
-  | "DEALER_ROTATION_NOT_FOUND";
+  | "DEALER_ROTATION_NOT_FOUND"
+  // Table Session Errors (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  | "SESSION_NOT_FOUND"
+  | "SESSION_ALREADY_EXISTS"
+  | "INVALID_STATE_TRANSITION"
+  | "MISSING_CLOSING_ARTIFACT";
 
 export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   TableContextErrorCode,
@@ -220,6 +225,12 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   FILL_DUPLICATE_REQUEST: "Fill request with this ID already processed",
   CREDIT_DUPLICATE_REQUEST: "Credit request with this ID already processed",
   DEALER_ROTATION_NOT_FOUND: "No active dealer rotation found for this table",
+  // Table Session Errors (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  SESSION_NOT_FOUND: "Table session not found",
+  SESSION_ALREADY_EXISTS: "An active session already exists for this table",
+  INVALID_STATE_TRANSITION: "Cannot perform operation in current session state",
+  MISSING_CLOSING_ARTIFACT:
+    "At least one closing artifact (drop_event_id or closing_inventory_snapshot_id) is required",
 };
 
 // ============================================================================

@@ -21,6 +21,7 @@ import type {
   TableDropEventDTO,
   TableListFilters,
   TableSettingsDTO,
+  TableSessionDTO,
 } from "./dtos";
 import type {
   LogInventorySnapshotRequestBody,
@@ -29,6 +30,8 @@ import type {
   LogDropEventRequestBody,
   AssignDealerRequestBody,
   UpdateTableLimitsRequestBody,
+  CloseTableSessionRequestBody,
+  OpenTableSessionRequestBody,
 } from "./schemas";
 
 const BASE_URL = "/api/v1";
@@ -233,4 +236,83 @@ export async function patchTableLimits(
     },
     body: JSON.stringify(data),
   });
+}
+
+// === Table Session Operations (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
+
+/**
+ * Opens a new table session.
+ * POST /api/v1/table-sessions
+ */
+export async function openTableSession(
+  input: OpenTableSessionRequestBody,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(`${BASE_URL}/table-sessions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+/**
+ * Starts rundown for a table session.
+ * PATCH /api/v1/table-sessions/[id]/rundown
+ */
+export async function startTableRundown(
+  sessionId: string,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(
+    `${BASE_URL}/table-sessions/${sessionId}/rundown`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+    }
+  );
+}
+
+/**
+ * Closes a table session.
+ * PATCH /api/v1/table-sessions/[id]/close
+ */
+export async function closeTableSession(
+  sessionId: string,
+  input: CloseTableSessionRequestBody,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(
+    `${BASE_URL}/table-sessions/${sessionId}/close`,
+    {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    }
+  );
+}
+
+/**
+ * Gets the current session for a gaming table.
+ * GET /api/v1/tables/[tableId]/current-session
+ */
+export async function fetchCurrentTableSession(
+  tableId: string,
+): Promise<TableSessionDTO | null> {
+  try {
+    return await fetchJSON<TableSessionDTO>(
+      `${BASE_URL}/tables/${tableId}/current-session`
+    );
+  } catch {
+    // 404 means no active session
+    return null;
+  }
 }

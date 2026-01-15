@@ -78,4 +78,19 @@ export const tableContextKeys = {
     alerts: (casinoId: string, startTs: string, endTs: string) =>
       [...ROOT, "shift-cash-obs", "alerts", casinoId, startTs, endTs] as const,
   },
+
+  // Table sessions (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  sessions: {
+    /** All sessions scope for invalidation */
+    scope: [...ROOT, "sessions"] as const,
+    /** Current session for a specific table */
+    current: (tableId: string) =>
+      [...ROOT, "sessions", "current", tableId] as const,
+    /** Session by ID */
+    byId: (sessionId: string) =>
+      [...ROOT, "sessions", "by-id", sessionId] as const,
+    /** Sessions by gaming day */
+    byGamingDay: (casinoId: string, gamingDay: string) =>
+      [...ROOT, "sessions", "by-day", casinoId, gamingDay] as const,
+  },
 };

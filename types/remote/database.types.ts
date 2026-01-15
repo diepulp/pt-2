@@ -1727,6 +1727,7 @@ export type Database = {
           note: string | null
           occurred_at: string
           rating_slip_id: string | null
+          source: string | null
           table_id: string
           telemetry_kind: string
           tender_type: string | null
@@ -1743,6 +1744,7 @@ export type Database = {
           note?: string | null
           occurred_at?: string
           rating_slip_id?: string | null
+          source?: string | null
           table_id: string
           telemetry_kind: string
           tender_type?: string | null
@@ -1759,6 +1761,7 @@ export type Database = {
           note?: string | null
           occurred_at?: string
           rating_slip_id?: string | null
+          source?: string | null
           table_id?: string
           telemetry_kind?: string
           tender_type?: string | null
@@ -2103,6 +2106,108 @@ export type Database = {
           },
         ]
       }
+      table_session: {
+        Row: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          drop_event_id: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          closed_at?: string | null
+          closed_by_staff_id?: string | null
+          closing_inventory_snapshot_id?: string | null
+          created_at?: string
+          drop_event_id?: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          opened_at?: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id?: string | null
+          rundown_started_at?: string | null
+          rundown_started_by_staff_id?: string | null
+          shift_id?: string | null
+          status?: Database["public"]["Enums"]["table_session_status"]
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          closed_at?: string | null
+          closed_by_staff_id?: string | null
+          closing_inventory_snapshot_id?: string | null
+          created_at?: string
+          drop_event_id?: string | null
+          gaming_day?: string
+          gaming_table_id?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          opened_at?: string
+          opened_by_staff_id?: string
+          opening_inventory_snapshot_id?: string | null
+          rundown_started_at?: string | null
+          rundown_started_by_staff_id?: string | null
+          shift_id?: string | null
+          status?: Database["public"]["Enums"]["table_session_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_session_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_closed_by_staff_id_fkey"
+            columns: ["closed_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_gaming_table_id_fkey"
+            columns: ["gaming_table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_opened_by_staff_id_fkey"
+            columns: ["opened_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_rundown_started_by_staff_id_fkey"
+            columns: ["rundown_started_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       visit: {
         Row: {
           casino_id: string
@@ -2347,6 +2452,41 @@ export type Database = {
           slip: Database["public"]["Tables"]["rating_slip"]["Row"]
         }[]
       }
+      rpc_close_table_session: {
+        Args: {
+          p_closing_inventory_snapshot_id?: string
+          p_drop_event_id?: string
+          p_notes?: string
+          p_table_session_id: string
+        }
+        Returns: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          drop_event_id: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_financial_txn:
         | {
             Args: {
@@ -2479,6 +2619,36 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_get_current_table_session: {
+        Args: { p_gaming_table_id: string }
+        Returns: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          drop_event_id: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_get_dashboard_tables_with_counts: {
         Args: { p_casino_id: string }
         Returns: Json
@@ -2574,41 +2744,80 @@ export type Database = {
         }
         Returns: Json
       }
-      rpc_log_table_buyin_telemetry: {
-        Args: {
-          p_actor_id?: string
-          p_amount_cents: number
-          p_idempotency_key?: string
-          p_note?: string
-          p_rating_slip_id?: string
-          p_table_id: string
-          p_telemetry_kind: string
-          p_tender_type?: string
-          p_visit_id?: string
-        }
-        Returns: {
-          actor_id: string
-          amount_cents: number
-          casino_id: string
-          created_at: string
-          gaming_day: string
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          occurred_at: string
-          rating_slip_id: string | null
-          table_id: string
-          telemetry_kind: string
-          tender_type: string | null
-          visit_id: string | null
-        }
-        SetofOptions: {
-          from: "*"
-          to: "table_buyin_telemetry"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+      rpc_log_table_buyin_telemetry:
+        | {
+            Args: {
+              p_actor_id?: string
+              p_amount_cents: number
+              p_idempotency_key?: string
+              p_note?: string
+              p_rating_slip_id?: string
+              p_table_id: string
+              p_telemetry_kind: string
+              p_tender_type?: string
+              p_visit_id?: string
+            }
+            Returns: {
+              actor_id: string
+              amount_cents: number
+              casino_id: string
+              created_at: string
+              gaming_day: string
+              id: string
+              idempotency_key: string | null
+              note: string | null
+              occurred_at: string
+              rating_slip_id: string | null
+              source: string | null
+              table_id: string
+              telemetry_kind: string
+              tender_type: string | null
+              visit_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "table_buyin_telemetry"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
+        | {
+            Args: {
+              p_actor_id?: string
+              p_amount_cents: number
+              p_idempotency_key?: string
+              p_note?: string
+              p_rating_slip_id?: string
+              p_source?: string
+              p_table_id: string
+              p_telemetry_kind: string
+              p_tender_type?: string
+              p_visit_id?: string
+            }
+            Returns: {
+              actor_id: string
+              amount_cents: number
+              casino_id: string
+              created_at: string
+              gaming_day: string
+              id: string
+              idempotency_key: string | null
+              note: string | null
+              occurred_at: string
+              rating_slip_id: string | null
+              source: string | null
+              table_id: string
+              telemetry_kind: string
+              tender_type: string | null
+              visit_id: string | null
+            }
+            SetofOptions: {
+              from: "*"
+              to: "table_buyin_telemetry"
+              isOneToOne: true
+              isSetofReturn: false
+            }
+          }
       rpc_log_table_drop: {
         Args: {
           p_casino_id: string
@@ -2699,6 +2908,36 @@ export type Database = {
           p_slip_id: string
         }
         Returns: Json
+      }
+      rpc_open_table_session: {
+        Args: { p_gaming_table_id: string }
+        Returns: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          drop_event_id: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_pause_rating_slip: {
         Args: { p_casino_id: string; p_rating_slip_id: string }
@@ -3048,6 +3287,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_start_table_rundown: {
+        Args: { p_table_session_id: string }
+        Returns: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          drop_event_id: string | null
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_update_table_status:
         | {
             Args: {
@@ -3167,6 +3436,7 @@ export type Database = {
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
+      table_session_status: "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED"
       table_status: "inactive" | "active" | "closed"
       visit_kind:
         | "reward_identified"
@@ -3338,6 +3608,7 @@ export const Constants = {
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],
+      table_session_status: ["OPEN", "ACTIVE", "RUNDOWN", "CLOSED"],
       table_status: ["inactive", "active", "closed"],
       visit_kind: [
         "reward_identified",

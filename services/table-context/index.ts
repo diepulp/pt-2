@@ -54,6 +54,13 @@ import type {
   TableSettingsDTO,
   TableStatus,
   UpdateTableLimitsDTO,
+  // Table Session DTOs (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  TableSessionDTO,
+  TableSessionStatus,
+  OpenTableSessionInput,
+  StartTableRundownInput,
+  CloseTableSessionInput,
+  GetCurrentTableSessionInput,
 } from "./dtos";
 import {
   getShiftCashObsAlerts,
@@ -62,6 +69,13 @@ import {
   getShiftCashObsTable,
 } from "./shift-cash-obs";
 import { activateTable, closeTable, deactivateTable } from "./table-lifecycle";
+import {
+  openTableSession,
+  startTableRundown,
+  closeTableSession,
+  getCurrentTableSession,
+  getTableSessionById,
+} from "./table-session";
 import { getTableSettings, updateTableLimits } from "./table-settings";
 
 // Re-export DTOs and keys for consumers
@@ -91,6 +105,13 @@ export type {
   TableSettingsDTO,
   TableStatus,
   UpdateTableLimitsDTO,
+  // Table Session DTOs (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  TableSessionDTO,
+  TableSessionStatus,
+  OpenTableSessionInput,
+  StartTableRundownInput,
+  CloseTableSessionInput,
+  GetCurrentTableSessionInput,
 };
 export { tableContextKeys } from "./keys";
 
@@ -156,6 +177,13 @@ export interface TableContextServiceInterface {
     casinoId: string,
     data: UpdateTableLimitsDTO,
   ): Promise<TableSettingsDTO>;
+
+  // Table session lifecycle (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+  openSession(gamingTableId: string): Promise<TableSessionDTO>;
+  startRundown(sessionId: string): Promise<TableSessionDTO>;
+  closeSession(input: CloseTableSessionInput): Promise<TableSessionDTO>;
+  getCurrentSession(gamingTableId: string): Promise<TableSessionDTO | null>;
+  getSessionById(sessionId: string): Promise<TableSessionDTO>;
 }
 
 // === Service Factory ===
@@ -201,5 +229,13 @@ export function createTableContextService(
       getTableSettings(supabase, tableId, casinoId),
     updateTableLimits: (tableId, casinoId, data) =>
       updateTableLimits(supabase, tableId, casinoId, data),
+
+    // Table session lifecycle (PRD-TABLE-SESSION-LIFECYCLE-MVP)
+    openSession: (gamingTableId) => openTableSession(supabase, gamingTableId),
+    startRundown: (sessionId) => startTableRundown(supabase, sessionId),
+    closeSession: (input) => closeTableSession(supabase, input),
+    getCurrentSession: (gamingTableId) =>
+      getCurrentTableSession(supabase, gamingTableId),
+    getSessionById: (sessionId) => getTableSessionById(supabase, sessionId),
   };
 }

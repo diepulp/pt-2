@@ -6,6 +6,8 @@
  * @see services/table-context - Service layer
  * @see PRD-007 Table Context Service
  * @see PRD-012 Table Betting Limits Management
+ * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
  */
 
-export * from "./use-table-settings";
+export * from './use-table-settings';
+export * from './use-table-session';
