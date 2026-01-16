@@ -127,6 +127,10 @@ export interface MtlAuditNoteDTO {
 export interface MtlGamingDaySummaryDTO {
   casino_id: string;
   patron_uuid: string;
+  /** Patron first name for display */
+  patron_first_name: string | null;
+  /** Patron last name for display */
+  patron_last_name: string | null;
   gaming_day: string;
   // Cash-in aggregates
   total_in: number;

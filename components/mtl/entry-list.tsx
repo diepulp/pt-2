@@ -38,7 +38,7 @@ import {
 } from "@/components/ui/table";
 import { useMtlEntries } from "@/hooks/mtl/use-mtl-entries";
 import { cn } from "@/lib/utils";
-import type { MtlEntryDTO, MtlEntryFilters } from "@/services/mtl/dtos";
+import type { MtlEntryDTO } from "@/services/mtl/dtos";
 
 import { EntryBadge } from "./entry-badge";
 
@@ -58,14 +58,16 @@ export interface EntryListProps {
 
 /**
  * Format currency for display
+ * @param amountCents - Amount in cents (from database)
+ * @returns Formatted currency string in dollars
  */
-function formatCurrency(amount: number): string {
+function formatCurrency(amountCents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**

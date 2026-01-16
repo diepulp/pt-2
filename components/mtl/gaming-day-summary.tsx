@@ -18,7 +18,6 @@
 
 "use client";
 
-import { format } from "date-fns";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -43,7 +42,7 @@ import { useGamingDaySummary } from "@/hooks/mtl/use-gaming-day-summary";
 import { cn } from "@/lib/utils";
 import type { MtlGamingDaySummaryDTO } from "@/services/mtl/dtos";
 
-import { AggBadge, AggBadgePair } from "./agg-badge";
+import { AggBadgePair } from "./agg-badge";
 
 export interface GamingDaySummaryProps {
   /** Casino ID (required) */
@@ -59,14 +58,16 @@ export interface GamingDaySummaryProps {
 
 /**
  * Format currency for display
+ * @param amountCents - Amount in cents (from database)
+ * @returns Formatted currency string in dollars
  */
-function formatCurrency(amount: number): string {
+function formatCurrency(amountCents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**
@@ -226,9 +227,16 @@ export function GamingDaySummary({
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-mono text-xs truncate max-w-[120px]">
-                        {summary.patron_uuid.slice(0, 8)}...
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-medium truncate max-w-[150px]">
+                          {summary.patron_first_name && summary.patron_last_name
+                            ? `${summary.patron_first_name} ${summary.patron_last_name}`
+                            : "Unknown Player"}
+                        </span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {summary.patron_uuid.slice(0, 8)}
+                        </span>
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell className="text-right">

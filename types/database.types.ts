@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1072,11 +1067,16 @@ export type Database = {
           gaming_day: string | null
           id: string
           idempotency_key: string | null
+          note: string | null
           player_id: string
           rating_slip_id: string | null
+          reason_code:
+            | Database["public"]["Enums"]["adjustment_reason_code"]
+            | null
           related_transaction_id: string | null
           source: Database["public"]["Enums"]["financial_source"] | null
           tender_type: string | null
+          txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
           visit_id: string
         }
         Insert: {
@@ -1088,11 +1088,16 @@ export type Database = {
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
+          note?: string | null
           player_id: string
           rating_slip_id?: string | null
+          reason_code?:
+            | Database["public"]["Enums"]["adjustment_reason_code"]
+            | null
           related_transaction_id?: string | null
           source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
+          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"]
           visit_id: string
         }
         Update: {
@@ -1104,11 +1109,16 @@ export type Database = {
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
+          note?: string | null
           player_id?: string
           rating_slip_id?: string | null
+          reason_code?:
+            | Database["public"]["Enums"]["adjustment_reason_code"]
+            | null
           related_transaction_id?: string | null
           source?: Database["public"]["Enums"]["financial_source"] | null
           tender_type?: string | null
+          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"]
           visit_id?: string
         }
         Relationships: [
@@ -2268,6 +2278,8 @@ export type Database = {
           last_out_at: string | null
           max_single_in: number | null
           max_single_out: number | null
+          patron_first_name: string | null
+          patron_last_name: string | null
           patron_uuid: string | null
           total_in: number | null
           total_out: number | null
@@ -2385,6 +2397,15 @@ export type Database = {
         }[]
       }
       exec_sql: { Args: { sql: string }; Returns: undefined }
+      get_visit_cash_in_with_adjustments: {
+        Args: { p_visit_id: string }
+        Returns: {
+          adjustment_count: number
+          adjustment_total: number
+          net_total: number
+          original_total: number
+        }[]
+      }
       rpc_accrue_on_close: {
         Args: {
           p_casino_id: string
@@ -2487,12 +2508,52 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_create_financial_adjustment: {
+        Args: {
+          p_casino_id: string
+          p_delta_amount: number
+          p_idempotency_key?: string
+          p_note: string
+          p_original_txn_id?: string
+          p_player_id: string
+          p_reason_code: Database["public"]["Enums"]["adjustment_reason_code"]
+          p_visit_id: string
+        }
+        Returns: {
+          amount: number
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string | null
+          direction: Database["public"]["Enums"]["financial_direction"] | null
+          gaming_day: string | null
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          player_id: string
+          rating_slip_id: string | null
+          reason_code:
+            | Database["public"]["Enums"]["adjustment_reason_code"]
+            | null
+          related_transaction_id: string | null
+          source: Database["public"]["Enums"]["financial_source"] | null
+          tender_type: string | null
+          txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_financial_transaction"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_financial_txn:
         | {
             Args: {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2505,7 +2566,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2539,11 +2599,16 @@ export type Database = {
               gaming_day: string | null
               id: string
               idempotency_key: string | null
+              note: string | null
               player_id: string
               rating_slip_id: string | null
+              reason_code:
+                | Database["public"]["Enums"]["adjustment_reason_code"]
+                | null
               related_transaction_id: string | null
               source: Database["public"]["Enums"]["financial_source"] | null
               tender_type: string | null
+              txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
               visit_id: string
             }
             SetofOptions: {
@@ -2576,7 +2641,6 @@ export type Database = {
       }
       rpc_create_pit_cash_observation: {
         Args: {
-          p_actor_id?: string
           p_amount: number
           p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
           p_idempotency_key?: string
@@ -2752,6 +2816,7 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
+              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -2788,7 +2853,6 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
-              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -3320,6 +3384,7 @@ export type Database = {
       rpc_update_table_status:
         | {
             Args: {
+              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string
@@ -3342,7 +3407,6 @@ export type Database = {
           }
         | {
             Args: {
-              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string
@@ -3401,8 +3465,16 @@ export type Database = {
       }
     }
     Enums: {
+      adjustment_reason_code:
+        | "data_entry_error"
+        | "duplicate"
+        | "wrong_player"
+        | "wrong_amount"
+        | "system_bug"
+        | "other"
       financial_direction: "in" | "out"
       financial_source: "pit" | "cage" | "system"
+      financial_txn_kind: "original" | "adjustment" | "reversal"
       floor_layout_status: "draft" | "review" | "approved" | "archived"
       floor_layout_version_status:
         | "draft"
@@ -3569,8 +3641,17 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      adjustment_reason_code: [
+        "data_entry_error",
+        "duplicate",
+        "wrong_player",
+        "wrong_amount",
+        "system_bug",
+        "other",
+      ],
       financial_direction: ["in", "out"],
       financial_source: ["pit", "cage", "system"],
+      financial_txn_kind: ["original", "adjustment", "reversal"],
       floor_layout_status: ["draft", "review", "approved", "archived"],
       floor_layout_version_status: [
         "draft",

@@ -213,6 +213,9 @@ export function mapGamingDaySummaryRow(
   return {
     casino_id: row.casino_id ?? "",
     patron_uuid: row.patron_uuid ?? "",
+    // Patron name fields from JOIN with player table
+    patron_first_name: row.patron_first_name ?? null,
+    patron_last_name: row.patron_last_name ?? null,
     gaming_day: row.gaming_day ?? "",
     // Cash-in aggregates
     total_in: totalIn,

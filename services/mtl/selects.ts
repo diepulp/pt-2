@@ -84,10 +84,13 @@ export const MTL_AUDIT_NOTE_SELECT = `
 /**
  * Columns for Gaming Day Summary view queries
  * This view aggregates entries per patron + gaming_day
+ * Includes patron_first_name and patron_last_name from JOIN with player table
  */
 export const MTL_GAMING_DAY_SUMMARY_SELECT = `
   casino_id,
   patron_uuid,
+  patron_first_name,
+  patron_last_name,
   gaming_day,
   total_in,
   count_in,

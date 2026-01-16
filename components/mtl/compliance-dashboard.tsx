@@ -84,8 +84,11 @@ export function ComplianceDashboard({
     format(new Date(), "yyyy-MM-dd"),
   );
 
-  // Drilldown state
-  const [selectedPatron, setSelectedPatron] = useState<string | null>(null);
+  // Drilldown state - track both UUID and display name
+  const [selectedPatron, setSelectedPatron] = useState<{
+    uuid: string;
+    name: string;
+  } | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
 
   // New Entry dialog state
@@ -139,7 +142,11 @@ export function ComplianceDashboard({
 
   // Drilldown handlers
   const handlePatronClick = (summary: MtlGamingDaySummaryDTO) => {
-    setSelectedPatron(summary.patron_uuid);
+    const patronName =
+      summary.patron_first_name && summary.patron_last_name
+        ? `${summary.patron_first_name} ${summary.patron_last_name}`
+        : "Unknown Player";
+    setSelectedPatron({ uuid: summary.patron_uuid, name: patronName });
     setSelectedEntryId(null);
   };
 
@@ -248,8 +255,8 @@ export function ComplianceDashboard({
         />
         <StatCard
           title="Total Volume"
-          value={`$${(stats.totalVolume / 1000).toFixed(0)}K`}
-          description="Combined in/out"
+          value={`$${(stats.totalVolume / 100 / 1000).toFixed(0)}K`}
+          description="Combined in/out (dollars)"
         />
         <StatCard
           title="Gaming Day"
@@ -296,9 +303,11 @@ export function ComplianceDashboard({
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-lg">Patron Entries</CardTitle>
+                    <CardTitle className="text-lg">
+                      {selectedPatron.name}
+                    </CardTitle>
                     <CardDescription className="font-mono text-xs">
-                      {selectedPatron.slice(0, 8)}...
+                      {selectedPatron.uuid.slice(0, 8)}...
                     </CardDescription>
                   </div>
                   <Button
@@ -313,7 +322,7 @@ export function ComplianceDashboard({
               <CardContent>
                 <EntryList
                   casinoId={casinoId}
-                  patronId={selectedPatron}
+                  patronId={selectedPatron.uuid}
                   gamingDay={gamingDay}
                   onEntryClick={handleEntryClick}
                 />

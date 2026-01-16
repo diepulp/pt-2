@@ -2268,6 +2268,8 @@ export type Database = {
           last_out_at: string | null
           max_single_in: number | null
           max_single_out: number | null
+          patron_first_name: string | null
+          patron_last_name: string | null
           patron_uuid: string | null
           total_in: number | null
           total_out: number | null

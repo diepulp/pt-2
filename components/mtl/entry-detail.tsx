@@ -24,7 +24,6 @@ import {
   Calendar,
   Clock,
   FileText,
-  Loader2,
   MapPin,
   Receipt,
   User,
@@ -40,10 +39,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMtlEntry } from "@/hooks/mtl/use-mtl-entries";
 import { cn } from "@/lib/utils";
-import type {
-  MtlEntryWithNotesDTO,
-  MtlAuditNoteDTO,
-} from "@/services/mtl/dtos";
+import type { MtlAuditNoteDTO } from "@/services/mtl/dtos";
 
 import { AuditNoteForm } from "./audit-note-form";
 import { EntryBadge } from "./entry-badge";
@@ -60,14 +56,16 @@ export interface EntryDetailProps {
 
 /**
  * Format currency for display
+ * @param amountCents - Amount in cents (from database)
+ * @returns Formatted currency string in dollars
  */
-function formatCurrency(amount: number): string {
+function formatCurrency(amountCents: number): string {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(amount);
+  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**
