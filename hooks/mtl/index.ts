@@ -24,6 +24,24 @@ export { useMtlEntries, useMtlEntry } from "./use-mtl-entries";
 // Gaming Day Summary query hook (COMPLIANCE AUTHORITY)
 export { useGamingDaySummary } from "./use-gaming-day-summary";
 
+// Threshold notifications hook
+export {
+  useThresholdNotifications,
+  checkThreshold,
+  checkCumulativeThreshold,
+  notifyThreshold,
+  type ThresholdLevel,
+  type ThresholdCheckResult,
+  type ThresholdConfig,
+} from "./use-threshold-notifications";
+
+// Patron daily total hook
+export {
+  usePatronDailyTotal,
+  patronDailyTotalKey,
+  type PatronDailyTotalDTO,
+} from "./use-patron-daily-total";
+
 // Mutation hooks
 export {
   useCreateMtlEntry,

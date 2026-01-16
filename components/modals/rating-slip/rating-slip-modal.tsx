@@ -9,6 +9,7 @@ import React, {
   useTransition,
 } from "react";
 
+import { CtrBanner } from "@/components/mtl/ctr-banner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { usePatronDailyTotal } from "@/hooks/mtl/use-patron-daily-total";
+import { checkCumulativeThreshold } from "@/hooks/mtl/use-threshold-notifications";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
 import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
 
@@ -109,6 +112,12 @@ interface RatingSlipModalProps {
   /** Error message to display */
   error?: string | null;
 
+  /**
+   * Casino ID for MTL threshold checking.
+   * Required for compliance feature (PRD-MTL-UI-GAPS WS7).
+   */
+  casinoId?: string;
+
   // Legacy props for backward compatibility (ignored if slipId is provided)
   /** @deprecated Use slipId instead */
   ratingSlip?: RatingSlipDto;
@@ -162,6 +171,7 @@ export function RatingSlipModal({
   onMovePlayer,
   isMovePlayerPending = false,
   error = null,
+  casinoId,
   // Legacy props (ignored if slipId is provided)
   ratingSlip: legacyRatingSlip,
   tables: legacyTables,
@@ -181,6 +191,13 @@ export function RatingSlipModal({
 
   // Zustand store for form state management (replaces useModalFormState)
   const { formState, originalState, initializeForm } = useRatingSlipModal();
+
+  // Fetch patron's daily total for MTL threshold checking (WS7)
+  // Only fetch when modal is open and we have player data and casino ID
+  const { data: patronDailyTotal } = usePatronDailyTotal(
+    casinoId,
+    modalData?.player?.id,
+  );
 
   // Track which slipId we've initialized to prevent re-initialization on refetch
   // This preserves form state when user clicks "Refresh points balance"
@@ -268,6 +285,34 @@ export function RatingSlipModal({
     });
   }, [refetch, startTransition]);
 
+  // CTR banner state - must be declared before early returns (Rules of Hooks)
+  const [ctrBannerDismissed, setCtrBannerDismissed] = React.useState(false);
+  const handleDismissCtrBanner = useCallback(() => {
+    setCtrBannerDismissed(true);
+  }, []);
+
+  // Reset banner dismissed state when modal closes or player changes
+  useEffect(() => {
+    if (!isOpen) {
+      setCtrBannerDismissed(false);
+    }
+  }, [isOpen, modalData?.player?.id]);
+
+  // Check if CTR threshold is met for displaying banner (WS7)
+  // Uses the current daily total + pending buy-in to determine if CTR is required
+  // Note: patronDailyTotal values are in cents, threshold functions expect dollars
+  // Must be before early returns (Rules of Hooks)
+  const showCtrBanner = useMemo(() => {
+    const newBuyInAmount = Number(formState.newBuyIn) || 0;
+    const playerDailyTotalDollars = (patronDailyTotal?.totalIn ?? 0) / 100;
+    if (!patronDailyTotal || newBuyInAmount <= 0) return false;
+    const result = checkCumulativeThreshold(
+      playerDailyTotalDollars,
+      newBuyInAmount,
+    );
+    return result.requiresCtr;
+  }, [patronDailyTotal, formState.newBuyIn]);
+
   // === EARLY RETURNS (after all hooks) ===
 
   // Loading skeleton - mirrors actual modal structure
@@ -349,6 +394,10 @@ export function RatingSlipModal({
   // Net Position = Cash In - Chips Out (using computed chips out for reactivity)
   const computedNetPosition = totalCashIn - computedChipsOut;
 
+  // Compute newBuyInAmount and playerDailyTotalDollars for CTR banner display
+  const newBuyInAmount = Number(formState.newBuyIn) || 0;
+  const playerDailyTotalDollars = (patronDailyTotal?.totalIn ?? 0) / 100;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
@@ -384,9 +433,25 @@ export function RatingSlipModal({
             </div>
           )}
 
+          {/* CTR Banner - displays when threshold is met (WS7) */}
+          {showCtrBanner && !ctrBannerDismissed && patronDailyTotal && (
+            <CtrBanner
+              dailyTotal={playerDailyTotalDollars + newBuyInAmount}
+              patronName={
+                modalData?.player
+                  ? `${modalData.player.firstName} ${modalData.player.lastName}`
+                  : undefined
+              }
+              onDismiss={handleDismissCtrBanner}
+            />
+          )}
+
           <FormSectionAverageBet />
 
-          <FormSectionCashIn totalCashIn={totalCashIn} />
+          <FormSectionCashIn
+            totalCashIn={totalCashIn}
+            playerDailyTotal={playerDailyTotalDollars}
+          />
 
           <FormSectionStartTime />
 

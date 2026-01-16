@@ -3,6 +3,7 @@
 import { Plus, Minus } from "lucide-react";
 import React from "react";
 
+import { BuyInThresholdIndicator } from "@/components/rating-slip/buy-in-threshold-indicator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNewBuyInField } from "@/hooks/ui/use-rating-slip-modal";
@@ -19,7 +20,14 @@ const INCREMENT_BUTTONS = [
 ];
 
 interface FormSectionCashInProps {
-  totalCashIn?: number; // Existing total to display (in dollars)
+  /** Existing total to display (in dollars) */
+  totalCashIn?: number;
+  /**
+   * Player's current daily total for MTL threshold checking.
+   * If provided, shows BuyInThresholdIndicator with projected total.
+   * @see PRD-MTL-UI-GAPS WS7
+   */
+  playerDailyTotal?: number;
 }
 
 /**
@@ -33,6 +41,7 @@ interface FormSectionCashInProps {
  */
 export const FormSectionCashIn = React.memo(function FormSectionCashIn({
   totalCashIn,
+  playerDailyTotal,
 }: FormSectionCashInProps) {
   // Hook into Zustand store for newBuyIn field
   const {
@@ -121,6 +130,15 @@ export const FormSectionCashIn = React.memo(function FormSectionCashIn({
         Total Change: {totalChange > 0 ? "+" : ""}
         {totalChange}
       </div>
+
+      {/* Threshold Indicator - shows projected daily total when buy-in entered */}
+      {playerDailyTotal !== undefined && (
+        <BuyInThresholdIndicator
+          currentDailyTotal={playerDailyTotal}
+          newBuyInAmount={Number(value) || 0}
+          className="mt-3"
+        />
+      )}
     </div>
   );
 });

@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   FileText,
+  Plus,
   ShieldCheck,
   X,
 } from "lucide-react";
@@ -35,6 +36,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { useGamingDaySummary } from "@/hooks/mtl/use-gaming-day-summary";
 import { cn } from "@/lib/utils";
 import type { MtlGamingDaySummaryDTO, MtlEntryDTO } from "@/services/mtl/dtos";
@@ -42,6 +51,7 @@ import type { MtlGamingDaySummaryDTO, MtlEntryDTO } from "@/services/mtl/dtos";
 import { EntryDetail } from "./entry-detail";
 import { EntryList } from "./entry-list";
 import { GamingDaySummary } from "./gaming-day-summary";
+import { MtlEntryForm } from "./mtl-entry-form";
 
 export interface ComplianceDashboardProps {
   /** Casino ID */
@@ -77,6 +87,9 @@ export function ComplianceDashboard({
   // Drilldown state
   const [selectedPatron, setSelectedPatron] = useState<string | null>(null);
   const [selectedEntryId, setSelectedEntryId] = useState<string | null>(null);
+
+  // New Entry dialog state
+  const [newEntryDialogOpen, setNewEntryDialogOpen] = useState(false);
 
   // Fetch summary data for stats
   const { data: summaryData } = useGamingDaySummary({
@@ -159,28 +172,64 @@ export function ComplianceDashboard({
           </p>
         </div>
 
-        {/* Date Navigation */}
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={goToPreviousDay}>
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="font-mono text-sm">{gamingDay}</span>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={goToNextDay}
-            disabled={isToday}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-          {!isToday && (
-            <Button variant="outline" size="sm" onClick={goToToday}>
-              Today
-            </Button>
+        {/* Date Navigation + New Entry */}
+        <div className="flex items-center gap-4">
+          {/* New Entry Button (only for authorized users) */}
+          {staffId && canAddNotes && (
+            <Dialog
+              open={newEntryDialogOpen}
+              onOpenChange={setNewEntryDialogOpen}
+            >
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Entry
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create MTL Entry</DialogTitle>
+                  <DialogDescription>
+                    Manually record a Multiple Transaction Log entry for
+                    compliance tracking.
+                  </DialogDescription>
+                </DialogHeader>
+                <MtlEntryForm
+                  casinoId={casinoId}
+                  staffId={staffId}
+                  gamingDay={gamingDay}
+                  onSuccess={() => {
+                    setNewEntryDialogOpen(false);
+                  }}
+                  onCancel={() => setNewEntryDialogOpen(false)}
+                />
+              </DialogContent>
+            </Dialog>
           )}
+
+          {/* Date Navigation */}
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="icon" onClick={goToPreviousDay}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="flex items-center gap-2 px-3 py-2 border rounded-md bg-background">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <span className="font-mono text-sm">{gamingDay}</span>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={goToNextDay}
+              disabled={isToday}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            {!isToday && (
+              <Button variant="outline" size="sm" onClick={goToToday}>
+                Today
+              </Button>
+            )}
+          </div>
         </div>
       </div>
 

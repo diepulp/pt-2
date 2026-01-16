@@ -2,13 +2,15 @@
  * Save With Buy-In Mutation Hook
  *
  * Handles saving average_bet changes and recording new buy-in transactions.
- * Combines two operations:
+ * Combines three operations:
  * 1. Record buy-in transaction (if newBuyIn > 0)
  * 2. Update average_bet via PATCH endpoint
+ * 3. Check compliance thresholds and auto-create MTL entry if needed (≥$3,000)
  *
  * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
  *
  * @see PRD-008a Rating Slip Modal Dashboard Integration
+ * @see PRD-MTL-UI-GAPS WS7 Rating Slip Modal Integration
  */
 
 "use client";
@@ -16,7 +18,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { dashboardKeys } from "@/hooks/dashboard/keys";
+import {
+  checkCumulativeThreshold,
+  notifyThreshold,
+} from "@/hooks/mtl/use-threshold-notifications";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
+import { createMtlEntry } from "@/services/mtl/http";
+import { mtlKeys } from "@/services/mtl/keys";
 import { createFinancialTransaction } from "@/services/player-financial/http";
 import { updateAverageBet } from "@/services/rating-slip/http";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
@@ -39,6 +47,12 @@ export interface SaveWithBuyInInput {
   averageBet: number;
   /** New buy-in amount in dollars (will be converted to cents) */
   newBuyIn: number;
+  /**
+   * Player's current daily total (cash-in) for threshold calculation.
+   * If provided, enables threshold checking and auto-MTL creation.
+   * @see PRD-MTL-UI-GAPS WS7
+   */
+  playerDailyTotal?: number;
 }
 
 /**
@@ -74,11 +88,20 @@ export function useSaveWithBuyIn() {
       staffId,
       averageBet,
       newBuyIn,
+      playerDailyTotal,
     }: SaveWithBuyInInput) => {
+      // Step 1: Check compliance thresholds if daily total is provided
+      let thresholdResult = null;
+      if (playerDailyTotal !== undefined && newBuyIn > 0) {
+        thresholdResult = checkCumulativeThreshold(playerDailyTotal, newBuyIn);
+        // Show toast notification for threshold status
+        notifyThreshold(thresholdResult);
+      }
+
       // PARALLEL: Both operations are independent - run concurrently for 50% faster save
       // Financial transaction can fail independently without blocking average_bet update
       const [_, updateResult] = await Promise.all([
-        // 1. Record buy-in transaction (best-effort, don't block update)
+        // 2. Record buy-in transaction (best-effort, don't block update)
         newBuyIn > 0 && playerId
           ? createFinancialTransaction({
               casino_id: casinoId,
@@ -90,20 +113,38 @@ export function useSaveWithBuyIn() {
               source: "pit",
               tender_type: "cash",
               created_by_staff_id: staffId,
-            }).catch((err) => {
-              console.error(
-                "[useSaveWithBuyIn] Financial transaction failed:",
-                err,
-              );
-              return null; // Don't fail the save operation
+            }).catch(() => {
+              // Don't fail the save operation
+              return null;
             })
           : Promise.resolve(null),
 
-        // 2. Update average_bet (critical path - errors propagate)
+        // 3. Update average_bet (critical path - errors propagate)
         updateAverageBet(slipId, { average_bet: averageBet }),
       ]);
 
-      return updateResult;
+      // Step 4: Auto-create MTL entry if threshold requires it (≥$3,000)
+      // This runs after the financial transaction succeeds
+      if (thresholdResult?.shouldCreateMtl && playerId && newBuyIn > 0) {
+        // Gaming day is computed from occurred_at on the server side
+        await createMtlEntry({
+          casino_id: casinoId,
+          patron_uuid: playerId,
+          amount: newBuyIn * 100, // cents
+          direction: "in",
+          txn_type: "buy_in",
+          source: "table",
+          staff_id: staffId,
+          visit_id: visitId,
+          rating_slip_id: slipId,
+          area: tableId, // Use table ID as area reference
+          idempotency_key: `rsm:${slipId}:${Date.now()}`, // Rating slip modal unique key
+        }).catch(() => {
+          // MTL creation is best-effort, don't fail the save
+        });
+      }
+
+      return { updateResult, thresholdResult };
     },
     onMutate: async ({ slipId, averageBet }) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
@@ -134,7 +175,7 @@ export function useSaveWithBuyIn() {
       // Return context for rollback
       return { previousData };
     },
-    onError: (err, variables, context) => {
+    onError: (_err, variables, context) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(
@@ -143,7 +184,7 @@ export function useSaveWithBuyIn() {
         );
       }
     },
-    onSuccess: (_, { slipId, visitId, tableId }) => {
+    onSuccess: (result, { slipId, visitId, tableId, playerId, casinoId }) => {
       // Invalidate modal data
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(slipId),
@@ -158,6 +199,19 @@ export function useSaveWithBuyIn() {
       queryClient.invalidateQueries({
         queryKey: dashboardKeys.activeSlips(tableId),
       });
+
+      // If MTL was created (threshold met), invalidate MTL caches
+      if (result.thresholdResult?.shouldCreateMtl && playerId) {
+        // Invalidate gaming day summary (aggregates changed)
+        queryClient.invalidateQueries({
+          queryKey: mtlKeys.gamingDaySummary.scope,
+        });
+
+        // Invalidate patron daily total
+        queryClient.invalidateQueries({
+          queryKey: ["mtl", "patron-daily-total", casinoId, playerId],
+        });
+      }
     },
   });
 }
