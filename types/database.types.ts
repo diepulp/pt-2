@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
       audit_log: {
@@ -2222,6 +2227,7 @@ export type Database = {
         Row: {
           casino_id: string
           ended_at: string | null
+          gaming_day: string
           id: string
           player_id: string | null
           started_at: string
@@ -2231,6 +2237,7 @@ export type Database = {
         Insert: {
           casino_id: string
           ended_at?: string | null
+          gaming_day: string
           id?: string
           player_id?: string | null
           started_at?: string
@@ -2240,6 +2247,7 @@ export type Database = {
         Update: {
           casino_id?: string
           ended_at?: string | null
+          gaming_day?: string
           id?: string
           player_id?: string | null
           started_at?: string
@@ -2553,7 +2561,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2566,6 +2573,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2641,6 +2649,7 @@ export type Database = {
       }
       rpc_create_pit_cash_observation: {
         Args: {
+          p_actor_id?: string
           p_amount: number
           p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
           p_idempotency_key?: string
@@ -2816,7 +2825,6 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
-              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -2853,6 +2861,7 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
+              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -3314,6 +3323,15 @@ export type Database = {
           window_start: string
         }[]
       }
+      rpc_start_or_resume_visit: {
+        Args: { p_player_id: string }
+        Returns: {
+          gaming_day: string
+          is_new: boolean
+          resumed: boolean
+          visit: Database["public"]["Tables"]["visit"]["Row"]
+        }[]
+      }
       rpc_start_rating_slip: {
         Args: {
           p_actor_id: string
@@ -3384,7 +3402,6 @@ export type Database = {
       rpc_update_table_status:
         | {
             Args: {
-              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string
@@ -3407,6 +3424,7 @@ export type Database = {
           }
         | {
             Args: {
+              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string

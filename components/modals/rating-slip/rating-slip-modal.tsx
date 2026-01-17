@@ -8,6 +8,7 @@ import React, {
   useRef,
   useTransition,
 } from "react";
+import { toast } from "sonner";
 
 import { CtrBanner } from "@/components/mtl/ctr-banner";
 import { Button } from "@/components/ui/button";
@@ -20,9 +21,13 @@ import {
 } from "@/components/ui/dialog";
 import { usePatronDailyTotal } from "@/hooks/mtl/use-patron-daily-total";
 import { checkCumulativeThreshold } from "@/hooks/mtl/use-threshold-notifications";
+import { useCreateFinancialAdjustment } from "@/hooks/player-financial";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
 import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
+import { useAuth } from "@/hooks/use-auth";
+import type { AdjustmentReasonCode } from "@/services/player-financial/dtos";
 
+import { AdjustmentModal } from "./adjustment-modal";
 import { FormSectionAverageBet } from "./form-section-average-bet";
 import { FormSectionCashIn } from "./form-section-cash-in";
 import { FormSectionChipsTaken } from "./form-section-chips-taken";
@@ -66,6 +71,12 @@ export interface FormState {
   newTableId: string;
   newSeatNumber: string;
   chipsTaken: string;
+  /**
+   * Player's current daily total (cash-in) for MTL threshold checking.
+   * Passed from modal to parent save handler for threshold evaluation.
+   * @see ISSUE-EEC1A683 - MTL threshold notification fix
+   */
+  playerDailyTotal?: number;
 }
 
 // Legacy DTO types for backward compatibility with preview page
@@ -111,12 +122,6 @@ interface RatingSlipModalProps {
 
   /** Error message to display */
   error?: string | null;
-
-  /**
-   * Casino ID for MTL threshold checking.
-   * Required for compliance feature (PRD-MTL-UI-GAPS WS7).
-   */
-  casinoId?: string;
 
   // Legacy props for backward compatibility (ignored if slipId is provided)
   /** @deprecated Use slipId instead */
@@ -171,7 +176,6 @@ export function RatingSlipModal({
   onMovePlayer,
   isMovePlayerPending = false,
   error = null,
-  casinoId,
   // Legacy props (ignored if slipId is provided)
   ratingSlip: legacyRatingSlip,
   tables: legacyTables,
@@ -193,9 +197,10 @@ export function RatingSlipModal({
   const { formState, originalState, initializeForm } = useRatingSlipModal();
 
   // Fetch patron's daily total for MTL threshold checking (WS7)
-  // Only fetch when modal is open and we have player data and casino ID
+  // Only fetch when modal is open and we have player data
+  // ISSUE-EEC1A683: Use casinoId from modalData.slip (derived from visit) instead of prop
   const { data: patronDailyTotal } = usePatronDailyTotal(
-    casinoId,
+    modalData?.slip.casinoId,
     modalData?.player?.id,
   );
 
@@ -241,6 +246,18 @@ export function RatingSlipModal({
     );
   }, [formState, originalState]);
 
+  // Validation: Check if average bet is valid when buy-in is entered
+  // FIX: Prevents double-entry bug where buy-in was recorded before average_bet validation failed
+  const validationError = useMemo(() => {
+    const averageBet = Number(formState.averageBet) || 0;
+    const newBuyIn = Number(formState.newBuyIn) || 0;
+
+    if (newBuyIn > 0 && averageBet <= 0) {
+      return "Average bet must be set before recording a buy-in";
+    }
+    return null;
+  }, [formState.averageBet, formState.newBuyIn]);
+
   // React 19 Performance: Memoize tables array to prevent new reference on every render
   // IMPORTANT: All hooks must be called before any early returns (Rules of Hooks)
   const tables = useMemo(() => {
@@ -263,12 +280,18 @@ export function RatingSlipModal({
 
   const handleSave = useCallback(() => {
     startTransition(() => {
+      // ISSUE-EEC1A683: Include playerDailyTotal for MTL threshold checking
+      // patronDailyTotal.totalIn is in cents, convert to dollars for threshold calculation
+      const playerDailyTotalDollars = patronDailyTotal
+        ? patronDailyTotal.totalIn / 100
+        : undefined;
       onSave({
         ...formState,
         cashIn: formState.newBuyIn,
+        playerDailyTotal: playerDailyTotalDollars,
       } as FormState);
     });
-  }, [formState, onSave, startTransition]);
+  }, [formState, onSave, startTransition, patronDailyTotal]);
 
   const handleCloseSession = useCallback(() => {
     startTransition(() => {
@@ -312,6 +335,78 @@ export function RatingSlipModal({
     );
     return result.requiresCtr;
   }, [patronDailyTotal, formState.newBuyIn]);
+
+  // === ADJUSTMENT MODAL STATE ===
+  // Allows staff to correct cash-in totals without editing/deleting original transactions
+
+  const [isAdjustmentModalOpen, setIsAdjustmentModalOpen] =
+    React.useState(false);
+  const [adjustmentError, setAdjustmentError] = React.useState<string | null>(
+    null,
+  );
+
+  // Auth context for adjustment creation
+  const { casinoId } = useAuth();
+
+  // Adjustment mutation hook
+  const createAdjustment = useCreateFinancialAdjustment();
+
+  // Handler to open adjustment modal
+  const handleOpenAdjustmentModal = useCallback(() => {
+    setAdjustmentError(null);
+    setIsAdjustmentModalOpen(true);
+  }, []);
+
+  // Handler to close adjustment modal
+  const handleCloseAdjustmentModal = useCallback(() => {
+    setIsAdjustmentModalOpen(false);
+    setAdjustmentError(null);
+  }, []);
+
+  // Handler for adjustment submission
+  const handleSubmitAdjustment = useCallback(
+    async (data: {
+      deltaAmount: number;
+      reasonCode: AdjustmentReasonCode;
+      note: string;
+    }) => {
+      if (!modalData || !casinoId || !modalData.player) {
+        setAdjustmentError("Missing required data for adjustment");
+        return;
+      }
+
+      try {
+        await createAdjustment.mutateAsync({
+          casino_id: casinoId,
+          player_id: modalData.player.id,
+          visit_id: modalData.slip.visitId,
+          delta_amount: data.deltaAmount * 100, // Convert to cents
+          reason_code: data.reasonCode,
+          note: data.note,
+        });
+
+        toast.success("Adjustment created", {
+          description: `${data.deltaAmount >= 0 ? "+" : ""}$${data.deltaAmount.toFixed(2)} adjustment recorded`,
+        });
+
+        handleCloseAdjustmentModal();
+        // Modal data will refresh automatically via query invalidation
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Failed to create adjustment";
+        setAdjustmentError(message);
+      }
+    },
+    [modalData, casinoId, createAdjustment, handleCloseAdjustmentModal],
+  );
+
+  // Reset adjustment modal state when main modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsAdjustmentModalOpen(false);
+      setAdjustmentError(null);
+    }
+  }, [isOpen]);
 
   // === EARLY RETURNS (after all hooks) ===
 
@@ -399,194 +494,240 @@ export function RatingSlipModal({
   const playerDailyTotalDollars = (patronDailyTotal?.totalIn ?? 0) / 100;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
-        <DialogHeader className="flex-shrink-0">
-          <DialogTitle>
-            Rating Slip - {playerName}
-            {modalData?.player?.cardNumber && (
-              <span className="text-sm text-muted-foreground ml-2">
-                (Card: {modalData.player.cardNumber})
-              </span>
+    <>
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>
+              Rating Slip - {playerName}
+              {modalData?.player?.cardNumber && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  (Card: {modalData.player.cardNumber})
+                </span>
+              )}
+            </DialogTitle>
+            {/* Gaming Day Display (ADR-026) */}
+            {modalData?.slip.gamingDay && (
+              <DialogDescription>
+                Gaming Day:{" "}
+                {new Date(
+                  modalData.slip.gamingDay + "T00:00:00",
+                ).toLocaleDateString(undefined, {
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
+                })}
+              </DialogDescription>
             )}
-          </DialogTitle>
-          <DialogDescription className="sr-only">
-            Edit rating slip details including average bet, buy-in, and session
-            time. Use form fields to make changes and save when ready.
-          </DialogDescription>
-        </DialogHeader>
+            {!modalData?.slip.gamingDay && (
+              <DialogDescription className="sr-only">
+                Edit rating slip details including average bet, buy-in, and
+                session time. Use form fields to make changes and save when
+                ready.
+              </DialogDescription>
+            )}
+          </DialogHeader>
 
-        {/* Key by slip ID to force form state reset on slip change (React 19 pattern) */}
-        <div
-          key={modalData?.slip.id}
-          className="flex-1 overflow-y-auto space-y-6 pr-2"
-        >
-          {error && (
-            <div className="p-3 bg-red-950/80 text-red-200 border border-red-800 rounded-lg text-sm font-medium">
-              {error}
-            </div>
-          )}
+          {/* Key by slip ID to force form state reset on slip change (React 19 pattern) */}
+          <div
+            key={modalData?.slip.id}
+            className="flex-1 overflow-y-auto space-y-6 pr-2"
+          >
+            {error && (
+              <div className="p-3 bg-red-950/80 text-red-200 border border-red-800 rounded-lg text-sm font-medium">
+                {error}
+              </div>
+            )}
 
-          {isLegacyMode && (
-            <div className="p-3 bg-yellow-500/10 text-yellow-600 rounded-lg text-sm">
-              Legacy Mode: Using prop data instead of service layer
-            </div>
-          )}
+            {/* Client-side validation error (shown separately from server errors) */}
+            {validationError && !error && (
+              <div className="p-3 bg-yellow-950/80 text-yellow-200 border border-yellow-800 rounded-lg text-sm font-medium">
+                {validationError}
+              </div>
+            )}
 
-          {/* CTR Banner - displays when threshold is met (WS7) */}
-          {showCtrBanner && !ctrBannerDismissed && patronDailyTotal && (
-            <CtrBanner
-              dailyTotal={playerDailyTotalDollars + newBuyInAmount}
-              patronName={
-                modalData?.player
-                  ? `${modalData.player.firstName} ${modalData.player.lastName}`
-                  : undefined
+            {isLegacyMode && (
+              <div className="p-3 bg-yellow-500/10 text-yellow-600 rounded-lg text-sm">
+                Legacy Mode: Using prop data instead of service layer
+              </div>
+            )}
+
+            {/* CTR Banner - displays when threshold is met (WS7) */}
+            {showCtrBanner && !ctrBannerDismissed && patronDailyTotal && (
+              <CtrBanner
+                dailyTotal={playerDailyTotalDollars + newBuyInAmount}
+                patronName={
+                  modalData?.player
+                    ? `${modalData.player.firstName} ${modalData.player.lastName}`
+                    : undefined
+                }
+                onDismiss={handleDismissCtrBanner}
+              />
+            )}
+
+            <FormSectionAverageBet />
+
+            <FormSectionCashIn
+              totalCashIn={totalCashIn}
+              playerDailyTotal={playerDailyTotalDollars}
+              onAdjust={
+                modalData?.player ? handleOpenAdjustmentModal : undefined
               }
-              onDismiss={handleDismissCtrBanner}
             />
-          )}
 
-          <FormSectionAverageBet />
+            <FormSectionStartTime />
 
-          <FormSectionCashIn
-            totalCashIn={totalCashIn}
-            playerDailyTotal={playerDailyTotalDollars}
-          />
+            <FormSectionMovePlayer
+              tables={tables}
+              selectedTable={selectedTable}
+              seatError=""
+              onMovePlayer={handleMovePlayer}
+              isUpdating={isMovePlayerPending}
+              disabled={
+                isMovePlayerPending ||
+                !formState.newTableId ||
+                !formState.newSeatNumber
+              }
+            />
 
-          <FormSectionStartTime />
+            <FormSectionChipsTaken />
 
-          <FormSectionMovePlayer
-            tables={tables}
-            selectedTable={selectedTable}
-            seatError=""
-            onMovePlayer={handleMovePlayer}
-            isUpdating={isMovePlayerPending}
-            disabled={
-              isMovePlayerPending ||
-              !formState.newTableId ||
-              !formState.newSeatNumber
-            }
-          />
+            {/* Financial Summary (if available from service layer) */}
+            {/* Uses computed values for reactive binding with Chips Taken input */}
+            {modalData && (
+              <div className="p-4 bg-card border border-border rounded-lg">
+                <h3 className="text-sm font-semibold mb-3">
+                  Financial Summary
+                </h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Cash In:</span>
+                    <span className="font-mono">${totalCashIn.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Chips Out:</span>
+                    <span className="font-mono">
+                      ${computedChipsOut.toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-2 border-t">
+                    <span className="font-semibold">Net Position:</span>
+                    <span
+                      className={`font-mono font-semibold ${
+                        computedNetPosition >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      ${computedNetPosition.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
-          <FormSectionChipsTaken />
-
-          {/* Financial Summary (if available from service layer) */}
-          {/* Uses computed values for reactive binding with Chips Taken input */}
-          {modalData && (
+            {/* Loyalty Points Display */}
             <div className="p-4 bg-card border border-border rounded-lg">
-              <h3 className="text-sm font-semibold mb-3">Financial Summary</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Cash In:</span>
-                  <span className="font-mono">${totalCashIn.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Chips Out:</span>
-                  <span className="font-mono">
-                    ${computedChipsOut.toFixed(2)}
+              <div className="flex justify-between items-center">
+                <span className="text-sm text-muted-foreground">
+                  Current Points Balance
+                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-bold text-primary">
+                    {currentBalance.toLocaleString()}
                   </span>
-                </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="font-semibold">Net Position:</span>
-                  <span
-                    className={`font-mono font-semibold ${
-                      computedNetPosition >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    }`}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7"
+                    disabled={isFetching}
+                    onClick={handleRefresh}
+                    aria-label="Refresh points balance"
                   >
-                    ${computedNetPosition.toFixed(2)}
-                  </span>
+                    <RefreshCw
+                      className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
+                    />
+                  </Button>
                 </div>
               </div>
-            </div>
-          )}
 
-          {/* Loyalty Points Display */}
-          <div className="p-4 bg-card border border-border rounded-lg">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                Current Points Balance
-              </span>
-              <div className="flex items-center gap-2">
-                <span className="text-xl font-bold text-primary">
-                  {currentBalance.toLocaleString()}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7"
-                  disabled={isFetching}
-                  onClick={handleRefresh}
-                  aria-label="Refresh points balance"
-                >
-                  <RefreshCw
-                    className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-                  />
-                </Button>
-              </div>
-            </div>
+              {/* Session Reward Suggestion (for open slips) */}
+              {modalData?.slip.status === "open" && (
+                <div className="mt-3 pt-3 border-t border-border">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Session Reward Estimate
+                    </span>
+                    <span className="text-lg font-semibold text-green-600">
+                      {suggestedPoints != null
+                        ? `+${suggestedPoints.toLocaleString()} pts`
+                        : "--"}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Based on current session activity
+                  </p>
+                </div>
+              )}
 
-            {/* Session Reward Suggestion (for open slips) */}
-            {modalData?.slip.status === "open" && (
-              <div className="mt-3 pt-3 border-t border-border">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-muted-foreground">
-                    Session Reward Estimate
-                  </span>
-                  <span className="text-lg font-semibold text-green-600">
-                    {suggestedPoints != null
-                      ? `+${suggestedPoints.toLocaleString()} pts`
-                      : "--"}
+              {/* Player Tier (if available) */}
+              {modalData?.loyalty?.tier && (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  Tier:{" "}
+                  <span className="uppercase font-semibold">
+                    {modalData.loyalty.tier}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Based on current session activity
-                </p>
-              </div>
-            )}
-
-            {/* Player Tier (if available) */}
-            {modalData?.loyalty?.tier && (
-              <div className="mt-2 text-xs text-muted-foreground">
-                Tier:{" "}
-                <span className="uppercase font-semibold">
-                  {modalData.loyalty.tier}
-                </span>
-              </div>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Action Buttons - Fixed at bottom */}
-        <div className="flex gap-2 flex-shrink-0 pt-4 border-t border-border">
-          <Button
-            type="button"
-            className="flex-1"
-            onClick={handleSave}
-            disabled={isPending || !isDirty}
-          >
-            {isPending ? "Saving..." : isDirty ? "Save Changes" : "No Changes"}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            className="flex-1"
-            onClick={handleCloseSession}
-            disabled={isPending || !!error}
-          >
-            {isPending ? (
-              "Closing..."
-            ) : (
-              <>
-                <X className="h-4 w-4 mr-2" />
-                Close Session
-              </>
-            )}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+          {/* Action Buttons - Fixed at bottom */}
+          <div className="flex gap-2 flex-shrink-0 pt-4 border-t border-border">
+            <Button
+              type="button"
+              className="flex-1"
+              onClick={handleSave}
+              disabled={isPending || !isDirty || !!validationError}
+            >
+              {isPending
+                ? "Saving..."
+                : validationError
+                  ? "Fix Errors"
+                  : isDirty
+                    ? "Save Changes"
+                    : "No Changes"}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              className="flex-1"
+              onClick={handleCloseSession}
+              disabled={isPending || !!error}
+            >
+              {isPending ? (
+                "Closing..."
+              ) : (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Close Session
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjustment Modal - for compliance-friendly cash-in corrections */}
+      <AdjustmentModal
+        isOpen={isAdjustmentModalOpen}
+        onClose={handleCloseAdjustmentModal}
+        onSubmit={handleSubmitAdjustment}
+        currentTotal={totalCashIn}
+        isPending={createAdjustment.isPending}
+        error={adjustmentError}
+      />
+    </>
   );
 }

@@ -131,12 +131,21 @@ export interface ActiveVisitDTO {
 /**
  * RPC response: Start visit result with idempotency metadata.
  * Eliminates redundant active visit check at route layer (P2 fix: ISSUE-983EFA10).
+ *
+ * ADR-026: Extended with `resumed` and `gamingDay` for gaming-day-scoped visits.
+ * - `resumed`: true if resuming same-day visit (vs creating new)
+ * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
  */
+
 export interface StartVisitResultDTO {
   /** The visit (new or existing) */
   visit: VisitDTO;
   /** True if a new visit was created, false if existing was returned */
   isNew: boolean;
+  /** True if resuming same-day visit (ADR-026) */
+  resumed: boolean;
+  /** Gaming day for this visit (YYYY-MM-DD) (ADR-026) */
+  gamingDay: string;
 }
 
 // === Visit with Player Info ===

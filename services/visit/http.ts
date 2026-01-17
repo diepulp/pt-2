@@ -14,6 +14,7 @@ import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
 import type {
   ActiveVisitDTO,
   CloseVisitDTO,
+  StartVisitResultDTO,
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
@@ -81,10 +82,18 @@ export async function getActiveVisit(
 
 /**
  * Starts a visit (check-in) for a player.
- * Idempotent - returns existing active visit if one exists.
+ * Idempotent - returns existing active visit if one exists for the current gaming day.
+ *
+ * ADR-026: Gaming-day-scoped visits.
+ * - `resumed`: true if resuming same-day visit
+ * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
+ *
+ * @returns StartVisitResultDTO with visit, isNew, resumed, and gamingDay
  */
-export async function startVisit(playerId: string): Promise<VisitDTO> {
-  return fetchJSON<VisitDTO>(BASE, {
+export async function startVisit(
+  playerId: string,
+): Promise<StartVisitResultDTO> {
+  return fetchJSON<StartVisitResultDTO>(BASE, {
     method: "POST",
     headers: {
       "content-type": "application/json",

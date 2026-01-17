@@ -13,8 +13,9 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, User, AlertCircle, Loader2 } from "lucide-react";
+import { Search, User, AlertCircle, Loader2, Info } from "lucide-react";
 import * as React from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -193,6 +194,8 @@ export function NewSlipModal({
       }
 
       // 1. Ensure player has an active visit (or start one)
+      // ADR-026: startVisit now returns { visit, isNew, resumed, gamingDay }
+      // and handles gaming-day-scoped visits automatically
       const activeVisitResponse = await getActiveVisit(selectedPlayer.id);
       let visitId: string;
 
@@ -202,11 +205,25 @@ export function NewSlipModal({
           console.log("[NewSlipModal] Using existing visit:", visitId);
         }
       } else {
-        // Start a new visit for the player
-        const newVisit = await startVisit(selectedPlayer.id);
-        visitId = newVisit.id;
+        // Start a new visit for the player (or resume same-day visit)
+        const visitResult = await startVisit(selectedPlayer.id);
+        visitId = visitResult.visit.id;
+
+        // ADR-026: Show notification when resuming a same-day visit
+        if (visitResult.resumed) {
+          toast.info("Resuming session from earlier today", {
+            description: `Gaming day: ${new Date(visitResult.gamingDay + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}`,
+            icon: <Info className="h-4 w-4" />,
+          });
+        }
+
         if (process.env.NODE_ENV === "development") {
-          console.log("[NewSlipModal] Created new visit:", visitId);
+          console.log("[NewSlipModal] Visit result:", {
+            visitId,
+            isNew: visitResult.isNew,
+            resumed: visitResult.resumed,
+            gamingDay: visitResult.gamingDay,
+          });
         }
       }
 

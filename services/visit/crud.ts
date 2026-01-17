@@ -186,62 +186,52 @@ export async function listVisits(
 
 /**
  * Start a visit (check-in) for a player.
- * Idempotent: returns existing active visit if one exists.
+ * Idempotent: returns existing active visit if one exists for the current gaming day.
+ *
+ * ADR-026: Gaming-day-scoped visits. Calls `rpc_start_or_resume_visit` which:
+ * - Returns existing active visit for same gaming day (resumed=true)
+ * - Auto-closes stale visits from prior gaming days
+ * - Creates new visit with inherited visit_group_id for cross-day continuity
  *
  * BACKWARD COMPATIBILITY: Defaults to visit_kind = 'gaming_identified_rated'.
  * For typed visit creation, use createRewardVisit, createGamingVisit, or createGhostGamingVisit.
  *
- * Returns StartVisitResultDTO with isNew flag to eliminate redundant
+ * Returns StartVisitResultDTO with isNew/resumed/gamingDay to eliminate redundant
  * active visit checks at route layer (P2 fix: ISSUE-983EFA10).
  *
  * @param supabase - Supabase client with RLS context
  * @param playerId - Player UUID
- * @param casinoId - Casino UUID (from middleware context)
+ * @param _casinoId - Casino UUID (no longer used - derived from RLS context in RPC)
  */
 export async function startVisit(
   supabase: SupabaseClient<Database>,
   playerId: string,
-  casinoId: string,
+  _casinoId: string,
 ): Promise<StartVisitResultDTO> {
-  // Check for existing active visit (idempotency)
-  const existing = await getActiveVisitForPlayer(supabase, playerId);
-  if (existing.visit) {
-    return { visit: existing.visit, isNew: false };
+  // ADR-026: Call the new RPC which handles:
+  // 1. Gaming day boundary enforcement
+  // 2. Stale visit closure
+  // 3. Rating slip closure on rollover
+  // 4. Race condition handling via unique constraint
+  const { data, error } = await supabase.rpc("rpc_start_or_resume_visit", {
+    p_player_id: playerId,
+  });
+
+  if (error) throw mapDatabaseError(error);
+
+  // RPC returns array (TABLE-returning function), take first row
+  const row = Array.isArray(data) ? data[0] : data;
+
+  if (!row) {
+    throw new DomainError("INTERNAL_ERROR", "RPC returned no data");
   }
 
-  // Create new visit with explicit visit_kind for clarity
-  // Note: The unique partial index uq_visit_single_active_identified
-  // will prevent race conditions at the database level
-  // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
-  const visitId = crypto.randomUUID();
-  const { data, error } = await supabase
-    .from("visit")
-    .insert({
-      id: visitId,
-      player_id: playerId,
-      casino_id: casinoId,
-      visit_kind: "gaming_identified_rated",
-      visit_group_id: visitId, // Self-reference for new visit group
-    })
-    .select(VISIT_SELECT)
-    .single();
-
-  if (error) {
-    // Handle unique constraint violation (race condition)
-    if (error.code === "23505") {
-      // Another visit was created concurrently, fetch it
-      const { visit: existingVisit } = await getActiveVisitForPlayer(
-        supabase,
-        playerId,
-      );
-      if (existingVisit) {
-        return { visit: existingVisit, isNew: false };
-      }
-    }
-    throw mapDatabaseError(error);
-  }
-
-  return { visit: toVisitDTO(data), isNew: true };
+  return {
+    visit: toVisitDTO(row.visit),
+    isNew: row.is_new,
+    resumed: row.resumed,
+    gamingDay: row.gaming_day,
+  };
 }
 
 /**
@@ -312,6 +302,8 @@ export async function createRewardVisit(
 
   // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
   const visitId = crypto.randomUUID();
+  // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
+  // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data, error } = await supabase
     .from("visit")
     .insert({
@@ -320,6 +312,7 @@ export async function createRewardVisit(
       casino_id: casinoId,
       visit_kind: "reward_identified",
       visit_group_id: visitId, // Self-reference for new visit group
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();
@@ -385,6 +378,8 @@ export async function createGhostGamingVisit(
 
   // Generate ID upfront so visit_group_id can self-reference (first visit of a group)
   const visitId = crypto.randomUUID();
+  // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
+  // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data, error } = await supabase
     .from("visit")
     .insert({
@@ -393,6 +388,7 @@ export async function createGhostGamingVisit(
       casino_id: casinoId,
       visit_kind: "gaming_ghost_unrated",
       visit_group_id: visitId, // Self-reference for new visit group
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();
@@ -659,6 +655,8 @@ export async function startFromPrevious(
 
   // 7. Create new visit with visit_group_id from source
   // CRITICAL: Use source.visit_group_id, NOT source.id
+  // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
+  // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data: newVisit, error: visitError } = await supabase
     .from("visit")
     .insert({
@@ -666,6 +664,7 @@ export async function startFromPrevious(
       casino_id: casinoId,
       visit_kind: "gaming_identified_rated",
       visit_group_id: sourceVisit.visit_group_id,
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();

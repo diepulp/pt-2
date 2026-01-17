@@ -264,6 +264,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   }
 
   // Create test visit (active)
+  // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   const visitId = crypto.randomUUID();
   const { data: visit, error: visitError } = await supabase
     .from("visit")
@@ -274,6 +275,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       started_at: new Date().toISOString(),
       visit_kind: "gaming_identified_rated",
       visit_group_id: visitId, // Self-reference for new visit group
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select()
     .single();
