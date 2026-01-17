@@ -45,6 +45,7 @@ import {
   logError,
   isFetchError,
 } from "@/lib/errors/error-utils";
+import { createBrowserComponentClient } from "@/lib/supabase/client";
 import {
   groupTablesByPit,
   findPitIdForTable,
@@ -55,6 +56,7 @@ import {
   resumeRatingSlip,
   closeRatingSlip,
 } from "@/services/rating-slip/http";
+import { resolveCurrentSlipContext } from "@/services/rating-slip-modal/rpc";
 
 import { NewSlipModal } from "../dashboard/new-slip-modal";
 import {
@@ -270,6 +272,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     }
 
     try {
+      // ISSUE-EEC1A683: Pass playerDailyTotal for MTL threshold checking
       await saveWithBuyIn.mutateAsync({
         slipId: selectedSlipId,
         visitId: modalData.slip.visitId,
@@ -279,6 +282,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+        playerDailyTotal: formState.playerDailyTotal,
       });
       toast.success("Changes saved");
     } catch (error) {
@@ -371,18 +375,18 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   };
 
   // Handle seat click - open new slip modal or show context menu
-  const handleSeatClick = (
+  // GAP-ADR-026-UI-SHIPPABLE: Uses entry gate for occupied seats
+  const handleSeatClick = async (
     index: number,
     occupant: { firstName: string; lastName: string } | null,
   ) => {
     const seatNumber = String(index + 1);
 
     if (occupant) {
-      // Seat is occupied - open modal for this slip
+      // Seat is occupied - use entry gate via handleSlipClick
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
-        setSelectedSlip(slipOccupant.slipId);
-        openModal("rating-slip", { slipId: slipOccupant.slipId });
+        await handleSlipClick(slipOccupant.slipId);
       }
     } else {
       // Seat is empty - open new slip modal
@@ -398,9 +402,25 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   };
 
   // Handle slip click from active slips list
-  const handleSlipClick = (slipId: string) => {
-    setSelectedSlip(slipId);
-    openModal("rating-slip", { slipId });
+  // GAP-ADR-026-UI-SHIPPABLE: Entry gate ensures current gaming day context
+  const handleSlipClick = async (slipId: string) => {
+    try {
+      const supabase = createBrowserComponentClient();
+      const ctx = await resolveCurrentSlipContext(supabase, slipId);
+
+      setSelectedSlip(ctx.slipIdCurrent);
+      openModal("rating-slip", { slipId: ctx.slipIdCurrent });
+
+      if (ctx.rolledOver) {
+        toast.info("Session rolled over to today's gaming day.");
+      }
+      if (ctx.readOnly) {
+        toast.info("Read-only: no player bound to this slip.");
+      }
+    } catch (error) {
+      toast.error("Error", { description: getErrorMessage(error) });
+      logError(error, { component: "PitPanels", action: "handleSlipClick" });
+    }
   };
 
   // Handle errors

@@ -18,6 +18,7 @@ import type {
   MovePlayerInput,
   MovePlayerResponse,
   RatingSlipModalDTO,
+  ResolveSlipContextDTO,
 } from "./dtos";
 
 /**
@@ -28,6 +29,7 @@ interface RpcModalDataResponse {
   slip: {
     id: string;
     visitId: string;
+    casinoId: string;
     tableId: string;
     tableLabel: string;
     tableType: string;
@@ -85,6 +87,7 @@ function isValidRpcModalDataResponse(
   const slip = obj.slip as Record<string, unknown>;
   if (typeof slip.id !== "string") return false;
   if (typeof slip.visitId !== "string") return false;
+  if (typeof slip.casinoId !== "string") return false;
   if (typeof slip.tableId !== "string") return false;
   if (typeof slip.tableLabel !== "string") return false;
   if (typeof slip.tableType !== "string") return false;
@@ -217,6 +220,7 @@ export async function getModalDataViaRPC(
     slip: {
       id: data.slip.id,
       visitId: data.slip.visitId,
+      casinoId: data.slip.casinoId,
       tableId: data.slip.tableId,
       tableLabel: data.slip.tableLabel,
       tableType: data.slip.tableType as RatingSlipModalDTO["slip"]["tableType"],
@@ -437,4 +441,108 @@ export async function movePlayerViaRPC(
   };
 
   return response;
+}
+
+// === Resolve Slip Context RPC (GAP-ADR-026-UI-SHIPPABLE) ===
+
+/**
+ * Raw RPC response shape from rpc_resolve_current_slip_context.
+ */
+interface RpcResolveSlipContextResponse {
+  slipIdCurrent: string;
+  visitIdCurrent: string;
+  gamingDay: string;
+  rolledOver: boolean;
+  readOnly: boolean;
+}
+
+/**
+ * Type guard for resolve slip context RPC response.
+ */
+function isValidResolveSlipContextResponse(
+  data: unknown,
+): data is RpcResolveSlipContextResponse {
+  if (!data || typeof data !== "object") return false;
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.slipIdCurrent === "string" &&
+    typeof obj.visitIdCurrent === "string" &&
+    typeof obj.gamingDay === "string" &&
+    typeof obj.rolledOver === "boolean" &&
+    typeof obj.readOnly === "boolean"
+  );
+}
+
+/**
+ * Resolves the current slip context, rolling over to current gaming day if needed.
+ *
+ * GAP-ADR-026-UI-SHIPPABLE Patch A: Entry gate for rating slip modal.
+ * Ensures modal always operates on current gaming day context.
+ *
+ * @param supabase - Authenticated Supabase client with RLS context
+ * @param slipId - Rating slip UUID (may be from stale gaming day)
+ * @returns ResolveSlipContextDTO with current slip/visit context
+ * @throws DomainError on not found or unauthorized
+ *
+ * @example
+ * ```ts
+ * const ctx = await resolveCurrentSlipContext(supabase, slipId);
+ * if (ctx.rolledOver) {
+ *   toast.info("Session rolled over to today's gaming day.");
+ * }
+ * if (ctx.readOnly) {
+ *   // Disable buy-in controls for ghost visits
+ * }
+ * ```
+ */
+export async function resolveCurrentSlipContext(
+  supabase: SupabaseClient<Database>,
+  slipId: string,
+): Promise<ResolveSlipContextDTO> {
+  // Note: rpc_resolve_current_slip_context is not in generated types yet (migration pending)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase.rpc as any)(
+    "rpc_resolve_current_slip_context",
+    {
+      p_slip_id: slipId,
+    },
+  );
+
+  if (error) {
+    const message = error.message ?? "";
+
+    if (message.includes("RATING_SLIP_NOT_FOUND")) {
+      throw new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found", {
+        httpStatus: 404,
+        details: { slipId },
+      });
+    }
+
+    if (message.includes("UNAUTHORIZED")) {
+      throw new DomainError("UNAUTHORIZED", "RLS context not set", {
+        httpStatus: 401,
+      });
+    }
+
+    throw new DomainError(
+      "INTERNAL_ERROR",
+      `Resolve slip context RPC failed: ${error.message}`,
+      { httpStatus: 500, details: { code: error.code } },
+    );
+  }
+
+  if (!data || !isValidResolveSlipContextResponse(data)) {
+    throw new DomainError("INTERNAL_ERROR", "Invalid RPC response structure", {
+      httpStatus: 500,
+      details: { slipId },
+    });
+  }
+
+  return {
+    slipIdCurrent: data.slipIdCurrent,
+    visitIdCurrent: data.visitIdCurrent,
+    gamingDay: data.gamingDay,
+    rolledOver: data.rolledOver,
+    readOnly: data.readOnly,
+  };
 }

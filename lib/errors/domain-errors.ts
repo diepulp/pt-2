@@ -149,7 +149,8 @@ export type FinanceErrorCode =
   | "TRANSACTION_INSUFFICIENT_FUNDS"
   | "TRANSACTION_CANCELLED"
   | "TRANSACTION_VOIDED"
-  | "GAMING_DAY_MISMATCH";
+  | "GAMING_DAY_MISMATCH"
+  | "STALE_GAMING_DAY_CONTEXT";
 
 export const FINANCE_ERROR_MESSAGES: Record<FinanceErrorCode, string> = {
   TRANSACTION_NOT_FOUND: "Financial transaction not found",
@@ -159,6 +160,8 @@ export const FINANCE_ERROR_MESSAGES: Record<FinanceErrorCode, string> = {
   TRANSACTION_CANCELLED: "Transaction has been cancelled",
   TRANSACTION_VOIDED: "Transaction has been voided",
   GAMING_DAY_MISMATCH: "Transaction gaming day does not match expected value",
+  STALE_GAMING_DAY_CONTEXT:
+    "Session context is stale. Please refresh and try again.",
 };
 
 // ============================================================================

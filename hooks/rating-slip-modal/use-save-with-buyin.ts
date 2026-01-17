@@ -23,6 +23,8 @@ import {
   notifyThreshold,
 } from "@/hooks/mtl/use-threshold-notifications";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
+import { DomainError } from "@/lib/errors/domain-errors";
+import { getErrorMessage, logError } from "@/lib/errors/error-utils";
 import { createMtlEntry } from "@/services/mtl/http";
 import { mtlKeys } from "@/services/mtl/keys";
 import { createFinancialTransaction } from "@/services/player-financial/http";
@@ -98,30 +100,52 @@ export function useSaveWithBuyIn() {
         notifyThreshold(thresholdResult);
       }
 
-      // PARALLEL: Both operations are independent - run concurrently for 50% faster save
-      // Financial transaction can fail independently without blocking average_bet update
-      const [_, updateResult] = await Promise.all([
-        // 2. Record buy-in transaction (best-effort, don't block update)
-        newBuyIn > 0 && playerId
-          ? createFinancialTransaction({
-              casino_id: casinoId,
-              player_id: playerId,
-              visit_id: visitId,
-              rating_slip_id: slipId,
-              amount: newBuyIn * 100, // Convert dollars to cents
-              direction: "in",
-              source: "pit",
-              tender_type: "cash",
-              created_by_staff_id: staffId,
-            }).catch(() => {
-              // Don't fail the save operation
-              return null;
-            })
-          : Promise.resolve(null),
+      // SEQUENTIAL: Update average_bet first, then record buy-in if successful
+      // FIX: Previously parallel operations caused double-entry bug when average_bet
+      // validation failed but financial transaction already committed.
+      // Now we only record buy-in AFTER average_bet update succeeds.
 
-        // 3. Update average_bet (critical path - errors propagate)
-        updateAverageBet(slipId, { average_bet: averageBet }),
-      ]);
+      // Step 2: Update average_bet (critical path - errors propagate)
+      const updateResult = await updateAverageBet(slipId, {
+        average_bet: averageBet,
+      });
+
+      // Step 3: Record buy-in transaction (only after average_bet succeeds)
+      // GAP-ADR-026-UI-SHIPPABLE Patch C: If buy-in fails, save must fail
+      if (newBuyIn > 0 && playerId) {
+        try {
+          await createFinancialTransaction({
+            casino_id: casinoId,
+            player_id: playerId,
+            visit_id: visitId,
+            rating_slip_id: slipId,
+            amount: newBuyIn * 100, // Convert dollars to cents
+            direction: "in",
+            source: "pit",
+            tender_type: "cash",
+            created_by_staff_id: staffId,
+          });
+        } catch (txnError) {
+          // Check for STALE_GAMING_DAY_CONTEXT error
+          const errorMessage = getErrorMessage(txnError);
+          if (errorMessage.includes("STALE_GAMING_DAY_CONTEXT")) {
+            // Re-throw with domain error for caller to handle context refresh
+            throw new DomainError(
+              "STALE_GAMING_DAY_CONTEXT",
+              "Session context is stale. Please refresh and try again.",
+              { httpStatus: 409, retryable: true },
+            );
+          }
+          // Log all buy-in errors for visibility (Patch C requirement)
+          logError(txnError, {
+            component: "useSaveWithBuyIn",
+            action: "createFinancialTransaction",
+            metadata: { slipId, visitId, playerId },
+          });
+          // Re-throw to fail the save operation
+          throw txnError;
+        }
+      }
 
       // Step 4: Auto-create MTL entry if threshold requires it (≥$3,000)
       // This runs after the financial transaction succeeds

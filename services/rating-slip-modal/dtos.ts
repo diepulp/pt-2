@@ -55,6 +55,9 @@ export interface SlipSectionDTO {
   /** Associated visit ID */
   visitId: string;
 
+  /** Casino ID (from visit) - used for MTL threshold checking */
+  casinoId: string;
+
   /** Gaming table ID */
   tableId: string;
 
@@ -233,4 +236,25 @@ export interface NewSlipSummaryDTO {
   seatNumber: string | null;
   status: RatingSlipStatus;
   startTime: string;
+}
+
+// === Resolve Slip Context DTOs (GAP-ADR-026-UI-SHIPPABLE) ===
+
+/**
+ * Response from resolving current slip context.
+ * Used to ensure modal always operates on current gaming day.
+ * @see GAP-ADR-026-UI-SHIPPABLE Patch A
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- RPC response
+export interface ResolveSlipContextDTO {
+  /** Current slip ID (may differ from requested if rolled over) */
+  slipIdCurrent: string;
+  /** Current visit ID */
+  visitIdCurrent: string;
+  /** Current gaming day (YYYY-MM-DD) */
+  gamingDay: string;
+  /** True if the slip/visit was rolled over to current gaming day */
+  rolledOver: boolean;
+  /** True if slip is read-only (ghost visit - no buy-ins allowed) */
+  readOnly: boolean;
 }

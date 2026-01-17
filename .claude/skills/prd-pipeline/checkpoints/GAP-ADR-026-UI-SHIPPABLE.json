@@ -1,0 +1,12 @@
+{
+  "prd_id": "GAP-ADR-026-UI-SHIPPABLE",
+  "status": "complete",
+  "created_at": "2026-01-17T00:01:00Z",
+  "updated_at": "2026-01-17T00:25:00Z",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "build"],
+  "execution_spec_path": "docs/20-architecture/specs/GAP-ADR-026-UI-SHIPPABLE/EXECUTION-SPEC-GAP-ADR-026-UI-SHIPPABLE.md"
+}
