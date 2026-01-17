@@ -47,6 +47,12 @@ interface PitMapSelectorProps {
   compact?: boolean;
 }
 
+/**
+ * Status configuration with ADR-028 D6 labels.
+ * - active: "Available" (not "Open" - avoids collision with session status)
+ * - inactive: "Idle" (already correct)
+ * - closed: "Decommissioned" (not "Closed" - permanent state, not session close)
+ */
 const STATUS_CONFIG: Record<
   TableStatus,
   { color: string; bg: string; ring: string; label: string }
@@ -55,7 +61,7 @@ const STATUS_CONFIG: Record<
     color: "text-emerald-600 dark:text-emerald-400",
     bg: "bg-emerald-500/15 dark:bg-emerald-500/20",
     ring: "ring-emerald-500/50 dark:ring-emerald-500/40",
-    label: "Open",
+    label: "Available",
   },
   inactive: {
     color: "text-amber-600 dark:text-amber-400",
@@ -67,7 +73,7 @@ const STATUS_CONFIG: Record<
     color: "text-zinc-500 dark:text-zinc-500",
     bg: "bg-zinc-500/15 dark:bg-zinc-500/20",
     ring: "ring-zinc-500/50 dark:ring-zinc-500/40",
-    label: "Closed",
+    label: "Decommissioned",
   },
 };
 

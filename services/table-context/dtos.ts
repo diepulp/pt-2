@@ -11,7 +11,30 @@
 import type { Database } from "@/types/database.types";
 
 // === Enum Types ===
-export type TableStatus = Database["public"]["Enums"]["table_status"];
+
+/**
+ * Physical table availability state (gaming_table.status).
+ * - 'inactive': Not available (maintenance, offline, new table default)
+ * - 'active': Available for operation, accepting players
+ * - 'closed': Permanently decommissioned (terminal state)
+ *
+ * @see ADR-028 Table Status Standardization (D5)
+ */
+export type TableAvailability = Database["public"]["Enums"]["table_status"];
+
+/**
+ * Session lifecycle phase (table_session.status).
+ * - 'OPEN': Reserved (MVP unused) - session created, awaiting opening snapshot
+ * - 'ACTIVE': Session in operation
+ * - 'RUNDOWN': Closing procedures started
+ * - 'CLOSED': Session finalized (historical)
+ *
+ * @see ADR-028 Table Status Standardization (D5)
+ */
+export type SessionPhase = Database["public"]["Enums"]["table_session_status"];
+
+// Backward compatibility aliases
+export type TableStatus = TableAvailability;
 export type GameType = Database["public"]["Enums"]["game_type"];
 
 // === Chipset Type (JSONB payload) ===
@@ -323,11 +346,11 @@ export interface ShiftCashObsPitParams extends ShiftCashObsTimeWindow {
 // === Table Session DTOs (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
 
 /**
- * Table session status enum.
- * State machine: OPEN → ACTIVE → RUNDOWN → CLOSED
- * Note: OPEN → ACTIVE is implicit (we start sessions in ACTIVE state for MVP)
+ * Table session status enum (backward compatibility alias).
+ * @see SessionPhase for the canonical type with full documentation
+ * @deprecated Use SessionPhase from ADR-028 for new code
  */
-export type TableSessionStatus = "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED";
+export type TableSessionStatus = SessionPhase;
 
 /**
  * Table session DTO.

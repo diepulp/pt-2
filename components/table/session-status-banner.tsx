@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { Activity, Calendar, Clock, User } from 'lucide-react';
+import { Activity, Calendar, Clock, User } from "lucide-react";
 
-import { Badge } from '@/components/ui/badge';
+import { Badge } from "@/components/ui/badge";
 import {
   getSessionStatusColor,
-  getSessionStatusLabel,
   type TableSessionDTO,
-} from '@/hooks/table-context/use-table-session';
-import { cn } from '@/lib/utils';
+} from "@/hooks/table-context/use-table-session";
+import { cn } from "@/lib/utils";
+import { SESSION_PHASE_LABELS } from "@/services/table-context/labels";
 
 interface SessionStatusBannerProps {
   session: TableSessionDTO | null;
@@ -34,10 +34,10 @@ export function SessionStatusBanner({
     return (
       <div
         className={cn(
-          'flex items-center gap-3 px-3 py-2',
-          'rounded-md border border-border/50',
-          'bg-card/50 backdrop-blur-sm',
-          'animate-pulse',
+          "flex items-center gap-3 px-3 py-2",
+          "rounded-md border border-border/50",
+          "bg-card/50 backdrop-blur-sm",
+          "animate-pulse",
           className,
         )}
       >
@@ -52,9 +52,9 @@ export function SessionStatusBanner({
     return (
       <div
         className={cn(
-          'flex items-center gap-3 px-3 py-2',
-          'rounded-md border border-border/50',
-          'bg-card/30 backdrop-blur-sm',
+          "flex items-center gap-3 px-3 py-2",
+          "rounded-md border border-border/50",
+          "bg-card/30 backdrop-blur-sm",
           className,
         )}
         role="status"
@@ -71,16 +71,16 @@ export function SessionStatusBanner({
     );
   }
 
-  const statusLabel = getSessionStatusLabel(session.status);
+  const statusLabel = SESSION_PHASE_LABELS[session.status];
   const statusColor = getSessionStatusColor(session.status);
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 px-3 py-2',
-        'rounded-md border border-border/50',
-        'bg-gradient-to-r from-card/60 to-card/30',
-        'backdrop-blur-sm',
+        "flex items-center gap-3 px-3 py-2",
+        "rounded-md border border-border/50",
+        "bg-gradient-to-r from-card/60 to-card/30",
+        "backdrop-blur-sm",
         className,
       )}
       role="status"
@@ -92,7 +92,7 @@ export function SessionStatusBanner({
           <Activity className="size-3" />
           {statusLabel}
         </Badge>
-        {session.status === 'ACTIVE' && (
+        {session.status === "ACTIVE" && (
           <span className="absolute -right-0.5 -top-0.5 flex size-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
             <span className="relative inline-flex size-2 rounded-full bg-primary" />
@@ -125,7 +125,7 @@ export function SessionStatusBanner({
         )}
 
         {/* Rundown indicator */}
-        {session.status === 'RUNDOWN' && session.rundown_started_at && (
+        {session.status === "RUNDOWN" && session.rundown_started_at && (
           <span className="flex items-center gap-1 text-amber-500">
             <Clock className="size-3" />
             Rundown: {formatTime(session.rundown_started_at)}
@@ -148,9 +148,9 @@ export function SessionStatusBannerCompact({
     return (
       <div
         className={cn(
-          'flex items-center gap-2 px-2 py-1',
-          'rounded border border-border/40',
-          'bg-card/30 animate-pulse',
+          "flex items-center gap-2 px-2 py-1",
+          "rounded border border-border/40",
+          "bg-card/30 animate-pulse",
           className,
         )}
       >
@@ -161,18 +161,18 @@ export function SessionStatusBannerCompact({
 
   if (!session) {
     return (
-      <Badge variant="outline" className={cn('gap-1', className)}>
+      <Badge variant="outline" className={cn("gap-1", className)}>
         <Activity className="size-3" />
         None
       </Badge>
     );
   }
 
-  const statusLabel = getSessionStatusLabel(session.status);
+  const statusLabel = SESSION_PHASE_LABELS[session.status];
   const statusColor = getSessionStatusColor(session.status);
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn("flex items-center gap-2", className)}>
       <Badge variant={statusColor} className="gap-1">
         <Activity className="size-3" />
         {statusLabel}
@@ -189,18 +189,18 @@ export function SessionStatusBannerCompact({
 function formatTime(isoString: string): string {
   try {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
+    return date.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
       hour12: true,
     });
   } catch {
-    return '--:--';
+    return "--:--";
   }
 }
 
 function formatStaffId(staffId: string): string {
   // Show abbreviated staff ID for privacy
   // In production, this would be replaced with staff name lookup
-  return staffId.slice(0, 8) + '...';
+  return staffId.slice(0, 8) + "...";
 }
