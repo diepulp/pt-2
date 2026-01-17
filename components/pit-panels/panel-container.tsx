@@ -273,7 +273,14 @@ export function PanelContainer({
           />
         );
       case "inventory":
-        return <InventoryPanel tableName={tableName} />;
+        return (
+          <InventoryPanel
+            tableName={tableName}
+            tableId={selectedTable?.id ?? ""}
+            casinoId={casinoId}
+            gamingDay={gamingDay?.date}
+          />
+        );
       case "analytics":
         return <AnalyticsPanel tableName={tableName} />;
       default:
