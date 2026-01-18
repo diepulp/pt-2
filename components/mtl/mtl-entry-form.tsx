@@ -98,8 +98,12 @@ export interface MtlEntryFormProps {
   visitId?: string;
   /** Pre-link to rating slip (optional) */
   ratingSlipId?: string;
-  /** Gaming day in YYYY-MM-DD format (defaults to today) */
-  gamingDay?: string;
+  /**
+   * Gaming day in YYYY-MM-DD format (REQUIRED)
+   * Must be fetched from server using useGamingDay() hook to respect casino timezone.
+   * Do not use client-side date defaults.
+   */
+  gamingDay: string;
   /** Callback on successful submission */
   onSuccess?: () => void;
   /** Callback on cancel */
@@ -183,17 +187,15 @@ export function MtlEntryForm({
   onCancel,
   className,
 }: MtlEntryFormProps) {
-  // Effective gaming day (default to today)
-  const effectiveGamingDay = gamingDay ?? format(new Date(), "yyyy-MM-dd");
-
   // Create mutation hook
   const createEntry = useCreateMtlEntry();
 
   // Fetch patron's daily total for threshold checking
+  // ISSUE-CLIENT-GD-003: gamingDay is now required, no client-side default
   const { data: dailyTotal } = usePatronDailyTotal(
     casinoId,
     patron?.id,
-    effectiveGamingDay,
+    gamingDay,
   );
 
   // Local state for amount (needed for live threshold calculation)
@@ -544,7 +546,7 @@ export function MtlEntryForm({
 
           {/* Gaming Day Display */}
           <div className="text-xs text-muted-foreground">
-            Gaming Day: <span className="font-mono">{effectiveGamingDay}</span>
+            Gaming Day: <span className="font-mono">{gamingDay}</span>
           </div>
         </CardContent>
 

@@ -64,21 +64,28 @@ export const patronDailyTotalKey = (
  * Returns the patron's total cash-in, cash-out, and entry count
  * for threshold calculation in buy-in workflows.
  *
+ * IMPORTANT: gamingDay is now required. Use useGamingDay() hook to fetch
+ * the canonical gaming day from server (respects casino timezone and cutoff).
+ * Do not use client-side date defaults - they ignore timezone and gaming day cutoff.
+ *
  * @param casinoId - Casino UUID
  * @param patronUuid - Patron (player) UUID
- * @param gamingDay - Gaming day in YYYY-MM-DD format (defaults to today)
+ * @param gamingDay - Gaming day in YYYY-MM-DD format (REQUIRED)
  * @returns UseQueryResult with PatronDailyTotalDTO
  *
  * @example
  * ```tsx
  * function BuyInForm({ casinoId, playerId }: Props) {
+ *   // Fetch canonical gaming day from server
+ *   const { data: gamingDay } = useGamingDay(casinoId);
+ *
  *   const { data: dailyTotal, isLoading } = usePatronDailyTotal(
  *     casinoId,
  *     playerId,
- *     '2026-01-16'
+ *     gamingDay
  *   );
  *
- *   if (isLoading) return <Skeleton />;
+ *   if (isLoading || !gamingDay) return <Skeleton />;
  *
  *   // Use dailyTotal.totalIn for threshold checking
  *   const projectedTotal = (dailyTotal?.totalIn ?? 0) + newBuyInAmount;
@@ -88,24 +95,20 @@ export const patronDailyTotalKey = (
 export function usePatronDailyTotal(
   casinoId: string | undefined,
   patronUuid: string | undefined,
-  gamingDay?: string,
+  gamingDay: string | undefined,
 ) {
-  // Default to today if no gaming day provided
-  const effectiveGamingDay =
-    gamingDay ?? new Date().toISOString().split("T")[0];
-
-  const hasRequiredParams = !!casinoId && !!patronUuid;
+  const hasRequiredParams = !!casinoId && !!patronUuid && !!gamingDay;
 
   return useQuery({
-    queryKey: patronDailyTotalKey(casinoId, patronUuid, effectiveGamingDay),
+    queryKey: patronDailyTotalKey(casinoId, patronUuid, gamingDay),
     queryFn: async (): Promise<PatronDailyTotalDTO> => {
-      if (!casinoId || !patronUuid) {
+      if (!casinoId || !patronUuid || !gamingDay) {
         return { totalIn: 0, totalOut: 0, entryCount: 0 };
       }
 
       const result = await getGamingDaySummary({
         casino_id: casinoId,
-        gaming_day: effectiveGamingDay,
+        gaming_day: gamingDay,
         patron_uuid: patronUuid,
         limit: 1, // We only need the single patron's summary
       });

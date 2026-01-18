@@ -38,6 +38,7 @@ export type VisitKind = Database["public"]["Enums"]["visit_kind"];
  * Ghost visits (gaming_ghost_unrated) have player_id = NULL.
  *
  * PRD-017: visit_group_id added for session continuity tracking.
+ * ADR-026: gaming_day added for gaming-day-scoped visits.
  */
 export type VisitDTO = Pick<
   VisitRow,
@@ -48,6 +49,7 @@ export type VisitDTO = Pick<
   | "started_at"
   | "ended_at"
   | "visit_group_id"
+  | "gaming_day"
 >;
 
 /** Visit creation input (casino_id comes from RLS context) */

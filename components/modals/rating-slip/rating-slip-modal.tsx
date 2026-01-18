@@ -25,6 +25,7 @@ import { useCreateFinancialAdjustment } from "@/hooks/player-financial";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
 import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
 import { useAuth } from "@/hooks/use-auth";
+import { useGamingDay } from "@/hooks/use-casino";
 import type { AdjustmentReasonCode } from "@/services/player-financial/dtos";
 
 import { AdjustmentModal } from "./adjustment-modal";
@@ -196,12 +197,17 @@ export function RatingSlipModal({
   // Zustand store for form state management (replaces useModalFormState)
   const { formState, originalState, initializeForm } = useRatingSlipModal();
 
+  // Fetch canonical gaming day from server (respects casino timezone and cutoff)
+  // ISSUE-CLIENT-GD-003: Must use server-side gaming day for MTL threshold calculations
+  const { data: gamingDay } = useGamingDay(modalData?.slip.casinoId ?? "");
+
   // Fetch patron's daily total for MTL threshold checking (WS7)
   // Only fetch when modal is open and we have player data
   // ISSUE-EEC1A683: Use casinoId from modalData.slip (derived from visit) instead of prop
   const { data: patronDailyTotal } = usePatronDailyTotal(
     modalData?.slip.casinoId,
     modalData?.player?.id,
+    gamingDay,
   );
 
   // Track which slipId we've initialized to prevent re-initialization on refetch

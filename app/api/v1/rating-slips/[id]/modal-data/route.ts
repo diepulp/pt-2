@@ -190,7 +190,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
             );
           }
 
-          // 2. Get the visit to find player_id (requires visit_id from slip)
+          // 2. Get the visit to find player_id and gaming_day (requires visit_id from slip)
           const visit = await timed("A2_getVisit", () =>
             visitService.getById(slipWithPauses.visit_id),
           );
@@ -264,6 +264,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           const slipSection: SlipSectionDTO = {
             id: slipWithPauses.id,
             visitId: slipWithPauses.visit_id,
+            casinoId: visit.casino_id,
             tableId: slipWithPauses.table_id,
             tableLabel: table.label,
             tableType: table.type,
@@ -272,7 +273,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
             startTime: slipWithPauses.start_time,
             endTime: slipWithPauses.end_time,
             status: slipWithPauses.status,
-            gamingDay: extractGamingDay(slipWithPauses.start_time),
+            gamingDay: visit.gaming_day,
             durationSeconds,
           };
 
@@ -410,15 +411,4 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
   } catch (error) {
     return errorResponse(ctx, error);
   }
-}
-
-/**
- * Extract gaming day from timestamp.
- * Gaming day is the date portion of the start_time in local timezone.
- * TODO: Use casino's gaming day cutoff time when available.
- */
-function extractGamingDay(timestamp: string): string {
-  // For now, just extract the date portion
-  // In a real implementation, this would account for gaming day cutoff (e.g., 6 AM)
-  return timestamp.split("T")[0];
 }
