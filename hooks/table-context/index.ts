@@ -15,3 +15,4 @@ export * from "./use-table-session";
 export * from "./use-inventory-snapshots";
 export * from "./use-drop-events";
 export * from "./use-buyin-telemetry";
+export * from "./use-table-rundown";

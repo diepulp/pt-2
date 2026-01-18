@@ -13,6 +13,15 @@ import type { Database } from "@/types/database.types";
 // === Enum Types ===
 
 /**
+ * Casino bank close model (ADR-027).
+ * - 'INVENTORY_COUNT': Count and record tray as-is at shift close
+ * - 'IMPREST_TO_PAR': Restore tray to par via final fill/credit before close
+ *
+ * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ */
+export type TableBankMode = Database["public"]["Enums"]["table_bank_mode"];
+
+/**
  * Physical table availability state (gaming_table.status).
  * - 'inactive': Not available (maintenance, offline, new table default)
  * - 'active': Available for operation, accepting players
@@ -358,6 +367,7 @@ export type TableSessionStatus = SessionPhase;
  *
  * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
  * @see ADR-024 (RLS context injection)
+ * @see ADR-027 (table bank mode visibility)
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: session with state machine and audit fields
 export interface TableSessionDTO {
@@ -380,6 +390,13 @@ export interface TableSessionDTO {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // ADR-027: Bank mode visibility fields
+  table_bank_mode: TableBankMode | null;
+  need_total_cents: number | null;
+  fills_total_cents: number;
+  credits_total_cents: number;
+  drop_total_cents: number | null;
+  drop_posted_at: string | null;
 }
 
 /**
@@ -433,4 +450,40 @@ export interface CashObsSummaryDTO {
   pits: CashObsPitRollupDTO[];
   tables: CashObsTableRollupDTO[];
   alerts: CashObsSpikeAlertDTO[];
+}
+
+// === Table Rundown DTOs (ADR-027) ===
+
+/**
+ * Table rundown DTO - visibility slice for table win/loss computation.
+ * Pattern A: Contract-First - RPC aggregate response.
+ *
+ * IMPORTANT: table_win_cents is NULL when drop_posted_at is NULL (count pending).
+ * This ensures dashboards never show misleading win/loss figures.
+ *
+ * Formula: win = closing + credits + drop - opening - fills
+ *
+ * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC aggregate response
+export interface TableRundownDTO {
+  session_id: string;
+  opening_total_cents: number;
+  closing_total_cents: number;
+  fills_total_cents: number;
+  credits_total_cents: number;
+  drop_total_cents: number | null;
+  /** NULL when drop is not posted (count pending). PATCHED behavior. */
+  table_win_cents: number | null;
+  drop_posted_at: string | null;
+  table_bank_mode: TableBankMode | null;
+  need_total_cents: number | null;
+}
+
+/**
+ * Input for posting drop total to a session.
+ */
+export interface PostTableDropTotalInput {
+  sessionId: string;
+  dropTotalCents: number;
 }

@@ -107,6 +107,7 @@ export type Database = {
           id: string
           promo_allow_anonymous_issuance: boolean
           promo_require_exact_match: boolean
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
           timezone: string
           updated_at: string
           watchlist_floor: number
@@ -120,6 +121,7 @@ export type Database = {
           id?: string
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
+          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
           updated_at?: string
           watchlist_floor?: number
@@ -133,6 +135,7 @@ export type Database = {
           id?: string
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
+          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
           updated_at?: string
           watchlist_floor?: number
@@ -594,6 +597,9 @@ export type Database = {
           created_at: string
           id: string
           label: string
+          par_total_cents: number | null
+          par_updated_at: string | null
+          par_updated_by: string | null
           pit: string | null
           status: Database["public"]["Enums"]["table_status"]
           type: Database["public"]["Enums"]["game_type"]
@@ -603,6 +609,9 @@ export type Database = {
           created_at?: string
           id?: string
           label: string
+          par_total_cents?: number | null
+          par_updated_at?: string | null
+          par_updated_by?: string | null
           pit?: string | null
           status?: Database["public"]["Enums"]["table_status"]
           type: Database["public"]["Enums"]["game_type"]
@@ -612,6 +621,9 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+          par_total_cents?: number | null
+          par_updated_at?: string | null
+          par_updated_by?: string | null
           pit?: string | null
           status?: Database["public"]["Enums"]["table_status"]
           type?: Database["public"]["Enums"]["game_type"]
@@ -622,6 +634,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gaming_table_par_updated_by_fkey"
+            columns: ["par_updated_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -2062,8 +2081,10 @@ export type Database = {
           discrepancy_cents: number | null
           id: string
           note: string | null
+          session_id: string | null
           snapshot_type: string
           table_id: string
+          total_cents: number | null
           verified_by: string | null
         }
         Insert: {
@@ -2074,8 +2095,10 @@ export type Database = {
           discrepancy_cents?: number | null
           id?: string
           note?: string | null
+          session_id?: string | null
           snapshot_type: string
           table_id: string
+          total_cents?: number | null
           verified_by?: string | null
         }
         Update: {
@@ -2086,8 +2109,10 @@ export type Database = {
           discrepancy_cents?: number | null
           id?: string
           note?: string | null
+          session_id?: string | null
           snapshot_type?: string
           table_id?: string
+          total_cents?: number | null
           verified_by?: string | null
         }
         Relationships: [
@@ -2103,6 +2128,13 @@ export type Database = {
             columns: ["counted_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
           {
@@ -2128,11 +2160,16 @@ export type Database = {
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
+          credits_total_cents: number
           drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
           id: string
           metadata: Json | null
+          need_total_cents: number | null
           notes: string | null
           opened_at: string
           opened_by_staff_id: string
@@ -2141,6 +2178,7 @@ export type Database = {
           rundown_started_by_staff_id: string | null
           shift_id: string | null
           status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
           updated_at: string
         }
         Insert: {
@@ -2149,11 +2187,16 @@ export type Database = {
           closed_by_staff_id?: string | null
           closing_inventory_snapshot_id?: string | null
           created_at?: string
+          credits_total_cents?: number
           drop_event_id?: string | null
+          drop_posted_at?: string | null
+          drop_total_cents?: number | null
+          fills_total_cents?: number
           gaming_day: string
           gaming_table_id: string
           id?: string
           metadata?: Json | null
+          need_total_cents?: number | null
           notes?: string | null
           opened_at?: string
           opened_by_staff_id: string
@@ -2162,6 +2205,9 @@ export type Database = {
           rundown_started_by_staff_id?: string | null
           shift_id?: string | null
           status?: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode?:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null
           updated_at?: string
         }
         Update: {
@@ -2170,11 +2216,16 @@ export type Database = {
           closed_by_staff_id?: string | null
           closing_inventory_snapshot_id?: string | null
           created_at?: string
+          credits_total_cents?: number
           drop_event_id?: string | null
+          drop_posted_at?: string | null
+          drop_total_cents?: number | null
+          fills_total_cents?: number
           gaming_day?: string
           gaming_table_id?: string
           id?: string
           metadata?: Json | null
+          need_total_cents?: number | null
           notes?: string | null
           opened_at?: string
           opened_by_staff_id?: string
@@ -2183,6 +2234,9 @@ export type Database = {
           rundown_started_by_staff_id?: string | null
           shift_id?: string | null
           status?: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode?:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null
           updated_at?: string
         }
         Relationships: [
@@ -2494,11 +2548,16 @@ export type Database = {
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
+          credits_total_cents: number
           drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
           id: string
           metadata: Json | null
+          need_total_cents: number | null
           notes: string | null
           opened_at: string
           opened_by_staff_id: string
@@ -2507,6 +2566,7 @@ export type Database = {
           rundown_started_by_staff_id: string | null
           shift_id: string | null
           status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
           updated_at: string
         }
         SetofOptions: {
@@ -2515,6 +2575,21 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_compute_table_rundown: {
+        Args: { p_session_id: string }
+        Returns: {
+          closing_total_cents: number
+          credits_total_cents: number
+          drop_posted_at: string
+          drop_total_cents: number
+          fills_total_cents: number
+          need_total_cents: number
+          opening_total_cents: number
+          session_id: string
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
+          table_win_cents: number
+        }[]
       }
       rpc_create_financial_adjustment: {
         Args: {
@@ -2700,11 +2775,16 @@ export type Database = {
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
+          credits_total_cents: number
           drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
           id: string
           metadata: Json | null
+          need_total_cents: number | null
           notes: string | null
           opened_at: string
           opened_by_staff_id: string
@@ -2713,6 +2793,7 @@ export type Database = {
           rundown_started_by_staff_id: string | null
           shift_id: string | null
           status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
           updated_at: string
         }
         SetofOptions: {
@@ -2945,8 +3026,10 @@ export type Database = {
           discrepancy_cents: number | null
           id: string
           note: string | null
+          session_id: string | null
           snapshot_type: string
           table_id: string
+          total_cents: number | null
           verified_by: string | null
         }
         SetofOptions: {
@@ -2990,11 +3073,16 @@ export type Database = {
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
+          credits_total_cents: number
           drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
           id: string
           metadata: Json | null
+          need_total_cents: number | null
           notes: string | null
           opened_at: string
           opened_by_staff_id: string
@@ -3003,6 +3091,7 @@ export type Database = {
           rundown_started_by_staff_id: string | null
           shift_id: string | null
           status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
           updated_at: string
         }
         SetofOptions: {
@@ -3038,6 +3127,42 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "rating_slip"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_post_table_drop_total: {
+        Args: { p_drop_total_cents: number; p_session_id: string }
+        Returns: {
+          casino_id: string
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          credits_total_cents: number
+          drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          gaming_day: string
+          gaming_table_id: string
+          id: string
+          metadata: Json | null
+          need_total_cents: number | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -3163,6 +3288,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_resolve_current_slip_context: {
+        Args: { p_slip_id: string }
+        Returns: Json
       }
       rpc_resume_rating_slip: {
         Args: { p_casino_id: string; p_rating_slip_id: string }
@@ -3377,11 +3506,16 @@ export type Database = {
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
+          credits_total_cents: number
           drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
           id: string
           metadata: Json | null
+          need_total_cents: number | null
           notes: string | null
           opened_at: string
           opened_by_staff_id: string
@@ -3390,6 +3524,7 @@ export type Database = {
           rundown_started_by_staff_id: string | null
           shift_id: string | null
           status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
           updated_at: string
         }
         SetofOptions: {
@@ -3411,6 +3546,9 @@ export type Database = {
               created_at: string
               id: string
               label: string
+              par_total_cents: number | null
+              par_updated_at: string | null
+              par_updated_by: string | null
               pit: string | null
               status: Database["public"]["Enums"]["table_status"]
               type: Database["public"]["Enums"]["game_type"]
@@ -3434,6 +3572,9 @@ export type Database = {
               created_at: string
               id: string
               label: string
+              par_total_cents: number | null
+              par_updated_at: string | null
+              par_updated_by: string | null
               pit: string | null
               status: Database["public"]["Enums"]["table_status"]
               type: Database["public"]["Enums"]["game_type"]
@@ -3526,6 +3667,7 @@ export type Database = {
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
+      table_bank_mode: "INVENTORY_COUNT" | "IMPREST_TO_PAR"
       table_session_status: "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED"
       table_status: "inactive" | "active" | "closed"
       visit_kind:
@@ -3707,6 +3849,7 @@ export const Constants = {
       rating_slip_status: ["open", "paused", "closed", "archived"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],
+      table_bank_mode: ["INVENTORY_COUNT", "IMPREST_TO_PAR"],
       table_session_status: ["OPEN", "ACTIVE", "RUNDOWN", "CLOSED"],
       table_status: ["inactive", "active", "closed"],
       visit_kind: [

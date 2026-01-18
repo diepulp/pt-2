@@ -1,17 +1,46 @@
 "use client";
 
-import { TrendingDown, TrendingUp, Minus, Loader2 } from "lucide-react";
-import * as React from "react";
+/**
+ * RundownSummaryPanel (ADR-027)
+ *
+ * Displays computed win/loss summary from RPC-based rundown.
+ * Shows all formula components with correct sign semantics.
+ *
+ * Formula: win = closing + credits + drop - opening - fills
+ *
+ * IMPORTANT: table_win_cents is NULL when drop is not posted.
+ * Dashboard shows "Count Pending" vs "Count Posted" based on drop_posted_at.
+ *
+ * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ * @see services/table-context/rundown.ts
+ */
 
 import {
-  calculateChipsetTotal,
-  useInventorySnapshots,
-} from "@/hooks/table-context/use-inventory-snapshots";
+  TrendingDown,
+  TrendingUp,
+  Minus,
+  Loader2,
+  Clock,
+  CheckCircle2,
+} from "lucide-react";
+import * as React from "react";
+
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTableRundown } from "@/hooks/table-context/use-table-rundown";
 import { cn } from "@/lib/utils";
+import type { TableBankMode } from "@/services/table-context/dtos";
+import { TABLE_BANK_MODE_LABELS } from "@/services/table-context/labels";
+
+// === Types ===
 
 interface RundownSummaryPanelProps {
-  tableId: string;
-  casinoId: string;
+  /** Table session UUID - required to fetch rundown */
+  sessionId: string;
+  /** Optional table bank mode for display badge */
+  tableBankMode?: TableBankMode | null;
+  /** Optional className for container styling */
+  className?: string;
 }
 
 interface MetricRowProps {
@@ -21,15 +50,35 @@ interface MetricRowProps {
   prefix?: string;
   highlight?: boolean;
   variant?: "positive" | "negative" | "neutral";
+  muted?: boolean;
 }
+
+// === Helper Functions ===
+
+/**
+ * Format cents to currency string.
+ */
+function formatCurrency(cents: number | null | undefined): string {
+  if (cents == null) return "—";
+  const dollars = cents / 100;
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(dollars);
+}
+
+// === Sub-Components ===
 
 function MetricRow({
   label,
   value,
   isLoading = false,
-  prefix = "$",
+  prefix = "",
   highlight = false,
   variant = "neutral",
+  muted = false,
 }: MetricRowProps) {
   const Icon =
     variant === "positive"
@@ -47,19 +96,33 @@ function MetricRow({
   return (
     <div
       className={cn(
-        "flex items-center justify-between py-2",
-        highlight && "border-t pt-3 mt-1 font-semibold",
+        "flex items-center justify-between py-1.5",
+        highlight && "border-t pt-3 mt-2 font-semibold",
       )}
     >
-      <span className={cn("text-sm", highlight && "font-medium")}>{label}</span>
+      <span
+        className={cn(
+          "text-sm",
+          highlight && "font-medium",
+          muted && "text-muted-foreground",
+        )}
+      >
+        {label}
+      </span>
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : value !== null ? (
         <div className={cn("flex items-center gap-1", highlight && colorClass)}>
           {highlight && variant !== "neutral" && <Icon className="h-4 w-4" />}
-          <span className={cn("font-mono", highlight && "text-lg")}>
+          <span
+            className={cn(
+              "font-mono",
+              highlight && "text-lg",
+              muted && "text-muted-foreground",
+            )}
+          >
             {prefix}
-            {Math.abs(value).toLocaleString()}
+            {formatCurrency(value)}
           </span>
         </div>
       ) : (
@@ -69,135 +132,171 @@ function MetricRow({
   );
 }
 
+// === Main Component ===
+
 /**
  * RundownSummaryPanel
  *
- * Displays computed win/loss summary from inventory snapshots.
- * Shows opening, closing, fills, credits, and computed result.
- *
- * @see GAP-TABLE-ROLLOVER-UI WS6
+ * Displays computed win/loss summary from RPC-based rundown.
+ * Uses the regulatory identity formula for table win calculation.
  */
 export function RundownSummaryPanel({
-  tableId,
-  casinoId,
+  sessionId,
+  tableBankMode,
+  className,
 }: RundownSummaryPanelProps) {
-  const { data: snapshots = [], isLoading } = useInventorySnapshots(
-    tableId,
-    casinoId,
-    10, // Get last 10 snapshots to find open/close
-  );
+  const { data: rundown, isLoading, error } = useTableRundown(sessionId);
 
-  // Find the most recent opening and closing snapshots
-  const openingSnapshot = React.useMemo(() => {
-    return snapshots.find((s) => s.snapshot_type === "open");
-  }, [snapshots]);
-
-  const closingSnapshot = React.useMemo(() => {
-    return snapshots.find((s) => s.snapshot_type === "close");
-  }, [snapshots]);
-
-  // Calculate values
-  const openingBankroll = openingSnapshot
-    ? calculateChipsetTotal(openingSnapshot.chipset)
-    : null;
-
-  const closingBankroll = closingSnapshot
-    ? calculateChipsetTotal(closingSnapshot.chipset)
-    : null;
-
-  // TODO: Integrate with table_fill and table_credit queries when available
-  const totalFills = 0; // Placeholder - will be computed from table_fill table
-  const totalCredits = 0; // Placeholder - will be computed from table_credit table
-
-  // Compute win/loss: closing - opening + fills - credits
-  // Positive = table win (house won), Negative = table loss (house lost)
-  const computedWinLoss = React.useMemo(() => {
-    if (openingBankroll === null || closingBankroll === null) {
-      return null;
-    }
-    return closingBankroll - openingBankroll + totalFills - totalCredits;
-  }, [openingBankroll, closingBankroll, totalFills, totalCredits]);
-
+  // Determine win/loss variant
   const winLossVariant: "positive" | "negative" | "neutral" =
-    computedWinLoss === null
-      ? "neutral"
-      : computedWinLoss > 0
-        ? "positive"
-        : computedWinLoss < 0
-          ? "negative"
-          : "neutral";
+    React.useMemo(() => {
+      if (!rundown || rundown.table_win_cents === null) return "neutral";
+      if (rundown.table_win_cents > 0) return "positive";
+      if (rundown.table_win_cents < 0) return "negative";
+      return "neutral";
+    }, [rundown]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <Card className={cn("animate-pulse", className)}>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium">Session Rundown</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-48 bg-muted rounded" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Error state - render nothing
+  if (error || !rundown) {
+    return null;
+  }
+
+  // Compute drop posted status
+  const isDropPosted = rundown.drop_posted_at !== null;
 
   return (
-    <div className="rounded-lg border p-4 space-y-1">
-      <h3 className="text-sm font-semibold mb-3">Rundown Summary</h3>
-
-      <MetricRow
-        label="Opening Bankroll"
-        value={openingBankroll}
-        isLoading={isLoading}
-      />
-
-      <MetricRow
-        label="Closing Bankroll"
-        value={closingBankroll}
-        isLoading={isLoading}
-      />
-
-      {(totalFills > 0 || totalCredits > 0) && (
-        <>
-          <MetricRow label="Total Fills" value={totalFills} prefix="+$" />
-          <MetricRow label="Total Credits" value={totalCredits} prefix="-$" />
-        </>
-      )}
-
-      <MetricRow
-        label={
-          winLossVariant === "positive"
-            ? "Table Win"
-            : winLossVariant === "negative"
-              ? "Table Loss"
-              : "Win/Loss"
-        }
-        value={computedWinLoss}
-        isLoading={isLoading}
-        highlight
-        variant={winLossVariant}
-      />
-
-      {/* Status indicator */}
-      {!isLoading && (
-        <div className="pt-2 text-xs text-muted-foreground">
-          {!openingSnapshot && !closingSnapshot && (
-            <span>No inventory snapshots recorded</span>
+    <Card className={className}>
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">Session Rundown</CardTitle>
+        <div className="flex gap-2">
+          {tableBankMode && (
+            <Badge variant="outline" className="text-xs">
+              {TABLE_BANK_MODE_LABELS[tableBankMode]}
+            </Badge>
           )}
-          {openingSnapshot && !closingSnapshot && (
-            <span>Awaiting closing snapshot</span>
-          )}
-          {!openingSnapshot && closingSnapshot && (
-            <span>Missing opening snapshot</span>
-          )}
-          {openingSnapshot && closingSnapshot && (
-            <span>
-              Computed from{" "}
-              {new Date(openingSnapshot.created_at).toLocaleTimeString(
-                "en-US",
-                {
-                  hour: "numeric",
-                  minute: "2-digit",
-                },
-              )}{" "}
-              →{" "}
-              {new Date(closingSnapshot.created_at).toLocaleTimeString(
-                "en-US",
-                {
-                  hour: "numeric",
-                  minute: "2-digit",
-                },
-              )}
-            </span>
-          )}
+          <Badge
+            variant={isDropPosted ? "default" : "secondary"}
+            className={cn("text-xs gap-1", !isDropPosted && "text-amber-600")}
+          >
+            {isDropPosted ? (
+              <>
+                <CheckCircle2 className="h-3 w-3" />
+                Count Posted
+              </>
+            ) : (
+              <>
+                <Clock className="h-3 w-3" />
+                Count Pending
+              </>
+            )}
+          </Badge>
         </div>
-      )}
-    </div>
+      </CardHeader>
+      <CardContent>
+        <dl className="space-y-0">
+          {/* Opening Bankroll */}
+          <MetricRow label="Opening" value={rundown.opening_total_cents} />
+
+          {/* Fills (subtractive - reduces win, shown as negative) */}
+          <MetricRow
+            label="Fills"
+            value={
+              rundown.fills_total_cents > 0 ? -rundown.fills_total_cents : null
+            }
+            prefix=""
+            muted={rundown.fills_total_cents === 0}
+          />
+
+          {/* Closing Bankroll */}
+          <MetricRow label="Closing" value={rundown.closing_total_cents} />
+
+          {/* Credits (additive - increases win, shown as positive) */}
+          <MetricRow
+            label="Credits"
+            value={
+              rundown.credits_total_cents > 0
+                ? rundown.credits_total_cents
+                : null
+            }
+            prefix="+"
+            muted={rundown.credits_total_cents === 0}
+          />
+
+          {/* Drop */}
+          <MetricRow
+            label="Drop"
+            value={rundown.drop_total_cents}
+            muted={!isDropPosted}
+          />
+
+          {/* Table Win/Loss - highlighted */}
+          <MetricRow
+            label={
+              winLossVariant === "positive"
+                ? "Table Win"
+                : winLossVariant === "negative"
+                  ? "Table Loss"
+                  : "Win/Loss"
+            }
+            value={rundown.table_win_cents}
+            highlight
+            variant={winLossVariant}
+          />
+
+          {/* Variance from Par (if configured and par is set) */}
+          {rundown.need_total_cents !== null && (
+            <div className="pt-2 border-t mt-2">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Par Target</span>
+                <span className="font-mono text-muted-foreground">
+                  {formatCurrency(rundown.need_total_cents)}
+                </span>
+              </div>
+              {rundown.closing_total_cents !== null &&
+                rundown.need_total_cents !== null && (
+                  <div className="flex items-center justify-between text-xs mt-1">
+                    <span className="text-muted-foreground">
+                      Variance from Par
+                    </span>
+                    <span
+                      className={cn(
+                        "font-mono",
+                        rundown.closing_total_cents !==
+                          rundown.need_total_cents && "text-amber-600",
+                      )}
+                    >
+                      {rundown.closing_total_cents >= rundown.need_total_cents
+                        ? "+"
+                        : ""}
+                      {formatCurrency(
+                        rundown.closing_total_cents - rundown.need_total_cents,
+                      )}
+                    </span>
+                  </div>
+                )}
+            </div>
+          )}
+        </dl>
+
+        {/* Formula reference */}
+        <p className="mt-4 text-xs text-muted-foreground text-center">
+          Win = Closing + Credits + Drop − Opening − Fills
+        </p>
+      </CardContent>
+    </Card>
   );
 }

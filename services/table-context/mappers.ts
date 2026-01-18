@@ -17,6 +17,7 @@ import type {
   TableFillDTO,
   TableCreditDTO,
   TableDropEventDTO,
+  TableRundownDTO,
   TableStatus,
   GameType,
   ChipsetPayload,
@@ -255,5 +256,32 @@ export function toTableSettingsDTO(
     min_bet: row.min_bet ?? 0,
     max_bet: row.max_bet ?? 0,
     active_from: row.active_from,
+  };
+}
+
+// === Table Rundown Mappers (ADR-027) ===
+
+type RpcRundownRow =
+  Database["public"]["Functions"]["rpc_compute_table_rundown"]["Returns"][0];
+
+/**
+ * Maps RPC rundown result to TableRundownDTO.
+ * Handles nullable fields and preserves PATCHED behavior:
+ * - table_win_cents is NULL when drop is not posted
+ *
+ * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ */
+export function toTableRundownDTO(row: RpcRundownRow): TableRundownDTO {
+  return {
+    session_id: row.session_id,
+    opening_total_cents: row.opening_total_cents,
+    closing_total_cents: row.closing_total_cents,
+    fills_total_cents: row.fills_total_cents,
+    credits_total_cents: row.credits_total_cents,
+    drop_total_cents: row.drop_total_cents,
+    table_win_cents: row.table_win_cents,
+    drop_posted_at: row.drop_posted_at,
+    table_bank_mode: row.table_bank_mode,
+    need_total_cents: row.need_total_cents,
   };
 }

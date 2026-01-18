@@ -61,7 +61,12 @@ import type {
   StartTableRundownInput,
   CloseTableSessionInput,
   GetCurrentTableSessionInput,
+  // ADR-027: Table Rundown DTOs
+  TableBankMode,
+  TableRundownDTO,
+  PostTableDropTotalInput,
 } from "./dtos";
+import { computeTableRundown, postTableDropTotal } from "./rundown";
 import {
   getShiftCashObsAlerts,
   getShiftCashObsCasino,
@@ -112,6 +117,10 @@ export type {
   StartTableRundownInput,
   CloseTableSessionInput,
   GetCurrentTableSessionInput,
+  // ADR-027: Table Rundown DTOs
+  TableBankMode,
+  TableRundownDTO,
+  PostTableDropTotalInput,
 };
 export { tableContextKeys } from "./keys";
 
@@ -122,6 +131,9 @@ export {
   getShiftCashObsPit,
   getShiftCashObsTable,
 };
+
+// Re-export rundown functions (ADR-027, standalone for direct use)
+export { computeTableRundown, postTableDropTotal };
 
 // === Service Interface ===
 
@@ -184,6 +196,13 @@ export interface TableContextServiceInterface {
   closeSession(input: CloseTableSessionInput): Promise<TableSessionDTO>;
   getCurrentSession(gamingTableId: string): Promise<TableSessionDTO | null>;
   getSessionById(sessionId: string): Promise<TableSessionDTO>;
+
+  // Table rundown (ADR-027)
+  computeRundown(sessionId: string): Promise<TableRundownDTO>;
+  postDropTotal(
+    sessionId: string,
+    dropTotalCents: number,
+  ): Promise<TableSessionDTO>;
 }
 
 // === Service Factory ===
@@ -237,5 +256,10 @@ export function createTableContextService(
     getCurrentSession: (gamingTableId) =>
       getCurrentTableSession(supabase, gamingTableId),
     getSessionById: (sessionId) => getTableSessionById(supabase, sessionId),
+
+    // Table rundown (ADR-027)
+    computeRundown: (sessionId) => computeTableRundown(supabase, sessionId),
+    postDropTotal: (sessionId, dropTotalCents) =>
+      postTableDropTotal(supabase, sessionId, dropTotalCents),
   };
 }

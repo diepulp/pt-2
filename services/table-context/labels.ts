@@ -9,7 +9,7 @@
  * @see services/table-context/dtos.ts - Type aliases
  */
 
-import type { TableAvailability, SessionPhase } from "./dtos";
+import type { TableAvailability, SessionPhase, TableBankMode } from "./dtos";
 
 // === Table Availability Labels (gaming_table.status) ===
 
@@ -55,4 +55,25 @@ export const SESSION_PHASE_COLORS: Record<SessionPhase, string> = {
   ACTIVE: "green",
   RUNDOWN: "amber",
   CLOSED: "gray",
+};
+
+// === Table Bank Mode Labels (ADR-027) ===
+
+/**
+ * UI labels for table bank mode.
+ * Maps database enum values to user-friendly display text.
+ *
+ * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
+ */
+export const TABLE_BANK_MODE_LABELS: Record<TableBankMode, string> = {
+  INVENTORY_COUNT: "Inventory Count",
+  IMPREST_TO_PAR: "Imprest to Par",
+};
+
+/**
+ * Descriptions for table bank mode (tooltip/help text).
+ */
+export const TABLE_BANK_MODE_DESCRIPTIONS: Record<TableBankMode, string> = {
+  INVENTORY_COUNT: "Count and record tray as-is at shift close",
+  IMPREST_TO_PAR: "Restore tray to par via final fill/credit before close",
 };
