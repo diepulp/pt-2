@@ -129,6 +129,26 @@ export const ratingSlipRouteParamsSchema = z.object({
 
 export type RatingSlipRouteParams = z.infer<typeof ratingSlipRouteParamsSchema>;
 
+// === Closed Sessions (Start From Previous Panel) ===
+
+/**
+ * Schema for closed-today query params.
+ * ISSUE-SFP-001: Uses keyset pagination with (end_time, id) cursor tuple.
+ *
+ * @see PRD-020 Closed Sessions Panel
+ * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
+ */
+export const closedTodayQuerySchema = z.object({
+  /** Results per page (default 50, max 100) */
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  /** Keyset cursor: end_time timestamp (ISO 8601) */
+  cursor_end_time: z.string().datetime().optional(),
+  /** Keyset cursor: rating slip UUID */
+  cursor_id: z.string().uuid().optional(),
+});
+
+export type ClosedTodayQuery = z.infer<typeof closedTodayQuerySchema>;
+
 // === Re-exports for route handler convenience ===
 
 export { z };

@@ -15,6 +15,7 @@ import type { VisitLiveViewDTO } from "@/services/visit/dtos";
 import type { Json } from "@/types/database.types";
 
 import type {
+  ClosedSlipForGamingDayDTO,
   RatingSlipDTO,
   RatingSlipPauseDTO,
   RatingSlipStatus,
@@ -280,4 +281,68 @@ export function toVisitLiveViewDTOOrNull(
   data: VisitLiveViewRpcResponse | null,
 ): VisitLiveViewDTO | null {
   return data ? toVisitLiveViewDTO(data) : null;
+}
+
+// === Closed Session Mappers (Start From Previous Panel) ===
+
+/**
+ * Type for rows returned by rpc_list_closed_slips_for_gaming_day RPC.
+ * Flat structure with player/table info pre-joined.
+ *
+ * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
+ */
+export type RpcClosedSlipRow = {
+  id: string;
+  visit_id: string;
+  table_id: string;
+  table_name: string;
+  seat_number: string;
+  start_time: string;
+  end_time: string;
+  final_duration_seconds: number;
+  average_bet: number;
+  player_id: string;
+  player_first_name: string;
+  player_last_name: string;
+  player_tier: string;
+};
+
+/**
+ * Maps an RPC closed slip row to ClosedSlipForGamingDayDTO.
+ * RPC returns flat structure with pre-joined player/table data.
+ *
+ * @see PRD-020 Closed Sessions Panel
+ * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
+ */
+export function toClosedSlipForGamingDayDTO(
+  row: RpcClosedSlipRow,
+): ClosedSlipForGamingDayDTO {
+  return {
+    id: row.id,
+    visit_id: row.visit_id,
+    table_id: row.table_id,
+    table_name: row.table_name,
+    seat_number: row.seat_number || null,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    final_duration_seconds: row.final_duration_seconds || null,
+    average_bet: row.average_bet ? Number(row.average_bet) : null,
+    player: row.player_id
+      ? {
+          id: row.player_id,
+          first_name: row.player_first_name,
+          last_name: row.player_last_name,
+          tier: row.player_tier || null,
+        }
+      : null,
+  };
+}
+
+/**
+ * Maps an array of RPC closed slip rows to ClosedSlipForGamingDayDTO[].
+ */
+export function toClosedSlipForGamingDayDTOList(
+  rows: RpcClosedSlipRow[],
+): ClosedSlipForGamingDayDTO[] {
+  return rows.map(toClosedSlipForGamingDayDTO);
 }

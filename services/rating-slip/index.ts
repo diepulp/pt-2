@@ -24,16 +24,15 @@ import type { Database } from "@/types/database.types";
 import * as crud from "./crud";
 import type {
   CloseRatingSlipInput,
+  ClosedSlipCursor,
+  ClosedSlipForGamingDayDTO,
   CreateRatingSlipInput,
   MoveRatingSlipInput,
   MoveRatingSlipResult,
   RatingSlipDTO,
   RatingSlipListFilters,
-  RatingSlipPauseDTO,
-  RatingSlipStatus,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-  UpdateAverageBetInput,
 } from "./dtos";
 import { hasOpenSlipsForTable, countOpenSlipsForTable } from "./queries";
 
@@ -249,6 +248,27 @@ export interface RatingSlipServiceInterface {
    * @returns Map of table_id → occupied seat numbers
    */
   getOccupiedSeatsByTables(tableIds: string[]): Promise<Map<string, string[]>>;
+
+  // === Closed Session Queries (Start From Previous Panel) ===
+
+  /**
+   * List closed terminal rating slips for a gaming day.
+   * Used by the "Start From Previous" panel to show completed sessions.
+   *
+   * ISSUE-SFP-001: Uses keyset pagination with (endTime, id) cursor tuple.
+   * Only returns terminal slips (excludes intermediate move slips).
+   *
+   * @param gamingDay - Gaming day in YYYY-MM-DD format
+   * @param filters - Optional limit and cursor for keyset pagination
+   * @returns Paginated list of ClosedSlipForGamingDayDTO with cursor
+   */
+  listClosedForGamingDay(
+    gamingDay: string,
+    filters?: { limit?: number; cursor?: ClosedSlipCursor | null },
+  ): Promise<{
+    items: ClosedSlipForGamingDayDTO[];
+    cursor: ClosedSlipCursor | null;
+  }>;
 }
 
 // === Service Factory ===
@@ -298,6 +318,10 @@ export function createRatingSlipService(
     // Batch queries
     getOccupiedSeatsByTables: (tableIds) =>
       crud.getOccupiedSeatsByTables(supabase, tableIds),
+
+    // Closed session queries (Start From Previous Panel)
+    listClosedForGamingDay: (gamingDay, filters) =>
+      crud.listClosedForGamingDay(supabase, gamingDay, filters),
   };
 }
 

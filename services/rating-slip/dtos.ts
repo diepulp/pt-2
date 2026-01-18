@@ -267,3 +267,55 @@ export type PitCashObservationDTO = {
   idempotencyKey: PitCashObservationRow["idempotency_key"];
   createdAt: PitCashObservationRow["created_at"];
 };
+
+// === Closed Session DTOs (Start From Previous Panel) ===
+
+/**
+ * Closed slip DTO for gaming day list view.
+ * Used by the "Start From Previous" panel to display closed sessions.
+ * Includes player and table info for quick identification.
+ *
+ * @see PRD-020 Closed Sessions Panel
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First camelCase DTO with nested player/table for panel display
+export interface ClosedSlipForGamingDayDTO {
+  id: string;
+  visit_id: string;
+  table_id: string;
+  table_name: string;
+  seat_number: string | null;
+  start_time: string;
+  end_time: string;
+  final_duration_seconds: number | null;
+  average_bet: number | null;
+  player: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    tier: string | null;
+  } | null; // null for ghost visits
+}
+
+/**
+ * Keyset cursor for closed slips pagination.
+ * Uses (endTime, id) tuple for stable pagination under concurrent writes.
+ *
+ * ISSUE-SFP-001: Replaces single string cursor with tuple.
+ * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
+ */
+
+export interface ClosedSlipCursor {
+  endTime: string;
+  id: string;
+}
+
+/**
+ * Response type for closed-today endpoint.
+ * ISSUE-SFP-001: cursor is now a keyset tuple, not a string.
+ */
+
+export interface ClosedTodayResponse {
+  items: ClosedSlipForGamingDayDTO[];
+  cursor: ClosedSlipCursor | null;
+  gamingDay: string;
+}

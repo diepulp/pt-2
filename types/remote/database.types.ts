@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
-  }
   public: {
     Tables: {
       audit_log: {
@@ -2636,6 +2631,7 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
+              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2648,7 +2644,6 @@ export type Database = {
               p_amount: number
               p_casino_id: string
               p_created_at?: string
-              p_idempotency_key?: string
               p_player_id: string
               p_rating_slip_id?: string
               p_tender_type?: string
@@ -2724,7 +2719,6 @@ export type Database = {
       }
       rpc_create_pit_cash_observation: {
         Args: {
-          p_actor_id?: string
           p_amount: number
           p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
           p_idempotency_key?: string
@@ -2898,6 +2892,29 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_list_closed_slips_for_gaming_day: {
+        Args: {
+          p_cursor_end_time?: string
+          p_cursor_id?: string
+          p_gaming_day: string
+          p_limit?: number
+        }
+        Returns: {
+          average_bet: number
+          end_time: string
+          final_duration_seconds: number
+          id: string
+          player_first_name: string
+          player_id: string
+          player_last_name: string
+          player_tier: string
+          seat_number: string
+          start_time: string
+          table_id: string
+          table_name: string
+          visit_id: string
+        }[]
+      }
       rpc_log_table_buyin_telemetry:
         | {
             Args: {
@@ -2906,6 +2923,7 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
+              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -2942,7 +2960,6 @@ export type Database = {
               p_idempotency_key?: string
               p_note?: string
               p_rating_slip_id?: string
-              p_source?: string
               p_table_id: string
               p_telemetry_kind: string
               p_tender_type?: string
@@ -3537,6 +3554,7 @@ export type Database = {
       rpc_update_table_status:
         | {
             Args: {
+              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string
@@ -3562,7 +3580,6 @@ export type Database = {
           }
         | {
             Args: {
-              p_actor_id: string
               p_casino_id: string
               p_new_status: Database["public"]["Enums"]["table_status"]
               p_table_id: string
@@ -3860,3 +3877,4 @@ export const Constants = {
     },
   },
 } as const
+

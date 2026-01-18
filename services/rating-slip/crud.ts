@@ -22,6 +22,8 @@ import type { Database } from "@/types/database.types";
 
 import type {
   CloseRatingSlipInput,
+  ClosedSlipCursor,
+  ClosedSlipForGamingDayDTO,
   CreateRatingSlipInput,
   MoveRatingSlipInput,
   MoveRatingSlipResult,
@@ -31,6 +33,7 @@ import type {
   RatingSlipWithPausesDTO,
 } from "./dtos";
 import {
+  toClosedSlipForGamingDayDTOList,
   toRatingSlipDTO,
   toRatingSlipDTOList,
   toRatingSlipWithDurationDTO,
@@ -758,4 +761,68 @@ export async function getOccupiedSeatsByTables(
     }
   }
   return result;
+}
+
+// === Closed Session Queries (Start From Previous Panel) ===
+
+/**
+ * List closed terminal rating slips for a gaming day.
+ * Used by the "Start From Previous" panel to show completed sessions.
+ *
+ * ISSUE-SFP-001 Fix: Uses rpc_list_closed_slips_for_gaming_day instead of
+ * in-memory filtering. Key improvements:
+ * - Database-level gaming day filter (not post-pagination JS filter)
+ * - Terminal slip filter (excludes intermediate move slips)
+ * - Keyset pagination with (end_time, id) tuple for stability
+ * - ADR-024 compliant: RPC derives casino from set_rls_context_from_staff()
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param gamingDay - Gaming day in YYYY-MM-DD format
+ * @param filters - Optional limit and cursor for keyset pagination
+ * @returns Paginated list of ClosedSlipForGamingDayDTO with cursor
+ *
+ * @see PRD-020 Closed Sessions Panel
+ * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
+ */
+export async function listClosedForGamingDay(
+  supabase: SupabaseClient<Database>,
+  gamingDay: string,
+  filters: { limit?: number; cursor?: ClosedSlipCursor | null } = {},
+): Promise<{
+  items: ClosedSlipForGamingDayDTO[];
+  cursor: ClosedSlipCursor | null;
+}> {
+  const limit = filters.limit ?? 50;
+
+  // ADR-024: Casino scope derived from RLS context via set_rls_context_from_staff()
+  // No p_casino_id parameter - authoritative context injection
+  const { data, error } = await supabase.rpc(
+    "rpc_list_closed_slips_for_gaming_day",
+    {
+      p_gaming_day: gamingDay,
+      p_limit: limit,
+      p_cursor_end_time: filters.cursor?.endTime,
+      p_cursor_id: filters.cursor?.id,
+    },
+  );
+
+  if (error) throw mapDatabaseError(error);
+
+  const rows = data ?? [];
+
+  // RPC returns limit+1 rows for hasMore detection
+  const hasMore = rows.length > limit;
+  const items = hasMore ? rows.slice(0, limit) : rows;
+
+  // Build keyset cursor from last item
+  const lastItem = items[items.length - 1];
+  const cursor: ClosedSlipCursor | null =
+    hasMore && lastItem
+      ? { endTime: lastItem.end_time, id: lastItem.id }
+      : null;
+
+  return {
+    items: toClosedSlipForGamingDayDTOList(items),
+    cursor,
+  };
 }

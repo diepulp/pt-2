@@ -15,6 +15,9 @@ import { createBrowserComponentClient } from "@/lib/supabase/client";
 
 import type {
   CloseRatingSlipInput,
+  ClosedSlipCursor,
+  ClosedSlipForGamingDayDTO,
+  ClosedTodayResponse,
   CreatePitCashObservationInput,
   CreateRatingSlipInput,
   PitCashObservationDTO,
@@ -25,8 +28,10 @@ import type {
   UpdateAverageBetInput,
 } from "./dtos";
 
-// Re-export pit observation types for consumers
+// Re-export types for consumers
 export type {
+  ClosedSlipCursor,
+  ClosedTodayResponse,
   CreatePitCashObservationInput,
   PitCashObservationDTO,
 } from "./dtos";
@@ -321,4 +326,37 @@ export async function createPitCashObservation(
     idempotencyKey: data.idempotency_key,
     createdAt: data.created_at,
   };
+}
+
+// === Closed Sessions (Start From Previous Panel) ===
+
+/**
+ * Fetches closed terminal rating slips for the current gaming day.
+ * Gaming day is computed on the server based on casino settings.
+ *
+ * ISSUE-SFP-001: Uses keyset pagination with (end_time, id) cursor tuple.
+ * Only returns terminal slips (excludes intermediate move slips).
+ *
+ * GET /api/v1/rating-slips/closed-today
+ */
+export async function fetchClosedSlipsForGamingDay(
+  filters: {
+    limit?: number;
+    cursor?: ClosedSlipCursor | null;
+  } = {},
+): Promise<ClosedTodayResponse> {
+  const params = new URLSearchParams();
+
+  if (filters.limit) {
+    params.set("limit", String(filters.limit));
+  }
+  if (filters.cursor) {
+    params.set("cursor_end_time", filters.cursor.endTime);
+    params.set("cursor_id", filters.cursor.id);
+  }
+
+  const url = params.toString()
+    ? `${BASE}/closed-today?${params}`
+    : `${BASE}/closed-today`;
+  return fetchJSON<ClosedTodayResponse>(url);
 }

@@ -16,7 +16,9 @@ export {
   useRatingSlipDuration,
   useRatingSlipList,
   useRatingSlipsForTable,
-} from './use-rating-slip';
+} from "./use-rating-slip";
+
+export { useClosedSlipsForGamingDay } from "./use-closed-slips-for-gaming-day";
 
 // Mutation hooks
 export {
@@ -25,10 +27,10 @@ export {
   useResumeRatingSlip,
   useStartRatingSlip,
   useUpdateAverageBet,
-} from './use-rating-slip-mutations';
+} from "./use-rating-slip-mutations";
 
 // Re-export keys for manual invalidation
-export { ratingSlipKeys } from '@/services/rating-slip/keys';
+export { ratingSlipKeys } from "@/services/rating-slip/keys";
 
 // Re-export types for convenience
 export type {
@@ -40,4 +42,4 @@ export type {
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
   UpdateAverageBetInput,
-} from '@/services/rating-slip/dtos';
+} from "@/services/rating-slip/dtos";

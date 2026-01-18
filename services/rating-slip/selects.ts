@@ -85,3 +85,35 @@ export const RATING_SLIP_PAUSE_SELECT = `
   ended_at,
   created_by
 ` as const;
+
+// === Closed Session Selects (Start From Previous Panel) ===
+
+/**
+ * Closed slip fields with visit, player, and table joins.
+ * Used by listClosedForGamingDay query.
+ *
+ * @see PRD-020 Closed Sessions Panel
+ */
+export const CLOSED_SLIP_WITH_PLAYER_SELECT = `
+  id,
+  visit_id,
+  table_id,
+  seat_number,
+  start_time,
+  end_time,
+  final_duration_seconds,
+  average_bet,
+  visit!inner (
+    player_id,
+    gaming_day,
+    player (
+      id,
+      first_name,
+      last_name,
+      tier
+    )
+  ),
+  gaming_table!inner (
+    name
+  )
+` as const;
