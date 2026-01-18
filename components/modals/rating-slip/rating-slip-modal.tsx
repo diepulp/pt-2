@@ -1,6 +1,6 @@
 "use client";
 
-import { RefreshCw, X } from "lucide-react";
+import { Pause, Play, RefreshCw, X } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
@@ -11,6 +11,7 @@ import React, {
 import { toast } from "sonner";
 
 import { CtrBanner } from "@/components/mtl/ctr-banner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,10 @@ import {
 import { usePatronDailyTotal } from "@/hooks/mtl/use-patron-daily-total";
 import { checkCumulativeThreshold } from "@/hooks/mtl/use-threshold-notifications";
 import { useCreateFinancialAdjustment } from "@/hooks/player-financial";
+import {
+  usePauseRatingSlip,
+  useResumeRatingSlip,
+} from "@/hooks/rating-slip/use-rating-slip-mutations";
 import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
 import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
 import { useAuth } from "@/hooks/use-auth";
@@ -414,6 +419,55 @@ export function RatingSlipModal({
     }
   }, [isOpen]);
 
+  // === PAUSE/RESUME SESSION STATE ===
+  // Allows pit boss to pause a session when player steps away
+
+  const pauseRatingSlip = usePauseRatingSlip();
+  const resumeRatingSlip = useResumeRatingSlip();
+
+  // Handler to pause the session
+  const handlePauseSession = useCallback(() => {
+    if (!modalData?.slip.id) return;
+
+    pauseRatingSlip.mutate(modalData.slip.id, {
+      onSuccess: () => {
+        toast.success("Session paused", {
+          description: "Loyalty accrual and session timer have been paused",
+        });
+      },
+      onError: (err) => {
+        toast.error("Failed to pause session", {
+          description: err.message,
+        });
+      },
+    });
+  }, [modalData?.slip.id, pauseRatingSlip]);
+
+  // Handler to resume the session
+  const handleResumeSession = useCallback(() => {
+    if (!modalData?.slip.id) return;
+
+    resumeRatingSlip.mutate(modalData.slip.id, {
+      onSuccess: () => {
+        toast.success("Session resumed", {
+          description: "Loyalty accrual and session timer have resumed",
+        });
+      },
+      onError: (err) => {
+        toast.error("Failed to resume session", {
+          description: err.message,
+        });
+      },
+    });
+  }, [modalData?.slip.id, resumeRatingSlip]);
+
+  // Derived state for pause/resume button visibility
+  const isPauseResumeLoading =
+    pauseRatingSlip.isPending || resumeRatingSlip.isPending;
+  const canPause = modalData?.slip.status === "open";
+  const canResume = modalData?.slip.status === "paused";
+  const isPaused = modalData?.slip.status === "paused";
+
   // === EARLY RETURNS (after all hooks) ===
 
   // Loading skeleton - mirrors actual modal structure
@@ -504,12 +558,18 @@ export function RatingSlipModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>
-              Rating Slip - {playerName}
+            <DialogTitle className="flex items-center gap-3">
+              <span>Rating Slip - {playerName}</span>
               {modalData?.player?.cardNumber && (
-                <span className="text-sm text-muted-foreground ml-2">
+                <span className="text-sm text-muted-foreground">
                   (Card: {modalData.player.cardNumber})
                 </span>
+              )}
+              {isPaused && (
+                <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 hover:bg-amber-500/30 animate-pulse">
+                  <Pause className="h-3 w-3 mr-1" />
+                  PAUSED
+                </Badge>
               )}
             </DialogTitle>
             {/* Gaming Day Display (ADR-026) */}
@@ -658,21 +718,31 @@ export function RatingSlipModal({
                 </div>
               </div>
 
-              {/* Session Reward Suggestion (for open slips) */}
-              {modalData?.slip.status === "open" && (
+              {/* Session Reward Suggestion (for open and paused slips) */}
+              {(modalData?.slip.status === "open" ||
+                modalData?.slip.status === "paused") && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
                       Session Reward Estimate
+                      {isPaused && (
+                        <span className="ml-2 text-amber-400 text-xs">
+                          (frozen)
+                        </span>
+                      )}
                     </span>
-                    <span className="text-lg font-semibold text-green-600">
+                    <span
+                      className={`text-lg font-semibold ${isPaused ? "text-amber-400" : "text-green-600"}`}
+                    >
                       {suggestedPoints != null
                         ? `+${suggestedPoints.toLocaleString()} pts`
                         : "--"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Based on current session activity
+                    {isPaused
+                      ? "Accrual paused — resume session to continue earning"
+                      : "Based on current session activity"}
                   </p>
                 </div>
               )}
@@ -695,7 +765,7 @@ export function RatingSlipModal({
               type="button"
               className="flex-1"
               onClick={handleSave}
-              disabled={isPending || !isDirty || !!validationError}
+              disabled={isPending || !isDirty || !!validationError || isPaused}
             >
               {isPending
                 ? "Saving..."
@@ -705,6 +775,47 @@ export function RatingSlipModal({
                     ? "Save Changes"
                     : "No Changes"}
             </Button>
+
+            {/* Pause/Resume Toggle Button */}
+            {canPause && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 hover:border-amber-400"
+                onClick={handlePauseSession}
+                disabled={isPauseResumeLoading || isPending}
+                aria-label="Pause session - stops loyalty accrual and session timer"
+              >
+                {isPauseResumeLoading ? (
+                  "Pausing..."
+                ) : (
+                  <>
+                    <Pause className="h-4 w-4 mr-2" />
+                    Pause
+                  </>
+                )}
+              </Button>
+            )}
+            {canResume && (
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 border-emerald-500/50 text-emerald-400 hover:bg-emerald-500/10 hover:text-emerald-300 hover:border-emerald-400"
+                onClick={handleResumeSession}
+                disabled={isPauseResumeLoading || isPending}
+                aria-label="Resume session - restarts loyalty accrual and session timer"
+              >
+                {isPauseResumeLoading ? (
+                  "Resuming..."
+                ) : (
+                  <>
+                    <Play className="h-4 w-4 mr-2" />
+                    Resume
+                  </>
+                )}
+              </Button>
+            )}
+
             <Button
               type="button"
               variant="destructive"
