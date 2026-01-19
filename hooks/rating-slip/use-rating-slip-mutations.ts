@@ -9,7 +9,7 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type {
   CloseRatingSlipInput,
@@ -17,15 +17,16 @@ import type {
   RatingSlipDTO,
   RatingSlipWithDurationDTO,
   UpdateAverageBetInput,
-} from '@/services/rating-slip/dtos';
+} from "@/services/rating-slip/dtos";
 import {
   closeRatingSlip,
   pauseRatingSlip,
   resumeRatingSlip,
   startRatingSlip,
   updateAverageBet,
-} from '@/services/rating-slip/http';
-import { ratingSlipKeys } from '@/services/rating-slip/keys';
+} from "@/services/rating-slip/http";
+import { ratingSlipKeys } from "@/services/rating-slip/keys";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 /**
  * Starts a new rating slip for a visit at a gaming table.
@@ -63,6 +64,7 @@ export function useStartRatingSlip() {
  *
  * Invalidates:
  * - Slip detail (status changed to 'paused')
+ * - Modal data (for immediate UI update)
  * - All list queries
  * - Active slips for table
  */
@@ -74,6 +76,10 @@ export function usePauseRatingSlip() {
     onSuccess: (data: RatingSlipDTO) => {
       // Update detail cache with new status
       queryClient.setQueryData(ratingSlipKeys.detail(data.id), data);
+      // Invalidate modal data for immediate UI update
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipModalKeys.data(data.id),
+      });
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
       // Invalidate active slips for this table
@@ -91,6 +97,7 @@ export function usePauseRatingSlip() {
  *
  * Invalidates:
  * - Slip detail (status changed to 'open')
+ * - Modal data (for immediate UI update)
  * - All list queries
  * - Active slips for table
  */
@@ -102,6 +109,10 @@ export function useResumeRatingSlip() {
     onSuccess: (data: RatingSlipDTO) => {
       // Update detail cache with new status
       queryClient.setQueryData(ratingSlipKeys.detail(data.id), data);
+      // Invalidate modal data for immediate UI update
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipModalKeys.data(data.id),
+      });
       // Invalidate list queries
       queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
       // Invalidate active slips for this table
