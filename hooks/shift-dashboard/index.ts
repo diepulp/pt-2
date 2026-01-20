@@ -50,6 +50,12 @@ export {
 // Alerts Hook
 export { useShiftAlerts, type UseShiftAlertsOptions } from "./use-shift-alerts";
 
+// Active Visitors Summary Hook (Shift Dashboard V2)
+export {
+  useActiveVisitorsSummary,
+  type UseActiveVisitorsSummaryOptions,
+} from "./use-active-visitors-summary";
+
 // HTTP Fetchers (for direct use if needed)
 export {
   fetchCashObsAlerts,

@@ -9,6 +9,7 @@
 
 import { fetchJSON } from "@/lib/http/fetch-json";
 import type {
+  ActiveVisitorsSummaryDTO,
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
   CashObsSpikeAlertDTO,
@@ -154,4 +155,16 @@ export async function fetchCashObsSummary(
 ): Promise<CashObsSummaryDTO> {
   const params = buildParams({ start, end });
   return fetchJSON<CashObsSummaryDTO>(`${BASE_CASH_OBS}/summary?${params}`);
+}
+
+// === Active Visitors Summary Fetcher (Shift Dashboard V2) ===
+
+/**
+ * Fetches active visitors summary (rated vs unrated counts).
+ * Used for Floor Activity Donut in Shift Dashboard V2.
+ *
+ * @see IMPLEMENTATION_STRATEGY.md §5.2
+ */
+export async function fetchActiveVisitorsSummary(): Promise<ActiveVisitorsSummaryDTO> {
+  return fetchJSON<ActiveVisitorsSummaryDTO>(`${BASE}/visitors-summary`);
 }

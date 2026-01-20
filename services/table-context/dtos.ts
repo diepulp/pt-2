@@ -452,6 +452,29 @@ export interface CashObsSummaryDTO {
   alerts: CashObsSpikeAlertDTO[];
 }
 
+// === Active Visitors Summary DTO (Shift Dashboard V2) ===
+
+/**
+ * Active visitors summary for Floor Activity Donut.
+ * Aggregates rating slips by visit_kind (rated vs unrated).
+ *
+ * Pattern A: Contract-First - RPC aggregate response.
+ *
+ * @see IMPLEMENTATION_STRATEGY.md §5.2 Active Visitors Donut
+ * @see rpc_shift_active_visitors_summary
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC aggregate response
+export interface ActiveVisitorsSummaryDTO {
+  /** Rated players (gaming_identified_rated) with active slips */
+  rated_count: number;
+  /** Unrated players (gaming_ghost_unrated) with active slips */
+  unrated_count: number;
+  /** Total active visitors */
+  total_count: number;
+  /** Percentage of rated visitors (value metric) */
+  rated_percentage: number;
+}
+
 // === Table Rundown DTOs (ADR-027) ===
 
 /**
