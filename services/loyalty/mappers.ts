@@ -19,8 +19,8 @@ import type {
   PlayerLoyaltyDTO,
   RedeemOutput,
   SessionRewardSuggestionOutput,
-} from "./dtos";
-import { encodeLedgerCursor } from "./schemas";
+} from './dtos';
+import { encodeLedgerCursor } from './schemas';
 
 // === RPC Response Types ===
 
@@ -124,37 +124,37 @@ export interface PlayerLoyaltyRow {
 
 function isAccrueOnCloseRpcResponse(v: unknown): v is AccrueOnCloseRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "ledger_id" in v &&
-    "points_delta" in v &&
-    "theo" in v &&
-    "balance_after" in v &&
-    "is_existing" in v
+    'ledger_id' in v &&
+    'points_delta' in v &&
+    'theo' in v &&
+    'balance_after' in v &&
+    'is_existing' in v
   );
 }
 
 function isRedeemRpcResponse(v: unknown): v is RedeemRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "ledger_id" in v &&
-    "points_delta" in v &&
-    "balance_before" in v &&
-    "balance_after" in v &&
-    "overdraw_applied" in v &&
-    "is_existing" in v
+    'ledger_id' in v &&
+    'points_delta' in v &&
+    'balance_before' in v &&
+    'balance_after' in v &&
+    'overdraw_applied' in v &&
+    'is_existing' in v
   );
 }
 
 function isManualCreditRpcResponse(v: unknown): v is ManualCreditRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "ledger_id" in v &&
-    "points_delta" in v &&
-    "balance_after" in v &&
-    "is_existing" in v
+    'ledger_id' in v &&
+    'points_delta' in v &&
+    'balance_after' in v &&
+    'is_existing' in v
   );
 }
 
@@ -162,11 +162,11 @@ function isApplyPromotionRpcResponse(
   v: unknown,
 ): v is ApplyPromotionRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "ledger_id" in v &&
-    "promo_points_delta" in v &&
-    "is_existing" in v
+    'ledger_id' in v &&
+    'promo_points_delta' in v &&
+    'is_existing' in v
   );
 }
 
@@ -174,27 +174,27 @@ function isSessionSuggestionRpcResponse(
   v: unknown,
 ): v is SessionSuggestionRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "suggested_theo" in v &&
-    "suggested_points" in v &&
-    "policy_version" in v &&
-    "max_recommended_points" in v &&
-    "notes" in v
+    'suggested_theo' in v &&
+    'suggested_points' in v &&
+    'policy_version' in v &&
+    'max_recommended_points' in v &&
+    'notes' in v
   );
 }
 
 function isLedgerRpcRow(v: unknown): v is LedgerRpcRow {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "id" in v &&
-    "casino_id" in v &&
-    "player_id" in v &&
-    "points_delta" in v &&
-    "reason" in v &&
-    "created_at" in v &&
-    "has_more" in v
+    'id' in v &&
+    'casino_id' in v &&
+    'player_id' in v &&
+    'points_delta' in v &&
+    'reason' in v &&
+    'created_at' in v &&
+    'has_more' in v
   );
 }
 
@@ -221,7 +221,7 @@ export function toAccrueOnCloseOutput(
  */
 export function parseAccrueOnCloseResponse(row: unknown): AccrueOnCloseOutput {
   if (!isAccrueOnCloseRpcResponse(row)) {
-    throw new Error("Invalid AccrueOnClose RPC response structure");
+    throw new Error('Invalid AccrueOnClose RPC response structure');
   }
   return toAccrueOnCloseOutput(row);
 }
@@ -248,7 +248,7 @@ export function toRedeemOutput(response: RedeemRpcResponse): RedeemOutput {
  */
 export function parseRedeemResponse(row: unknown): RedeemOutput {
   if (!isRedeemRpcResponse(row)) {
-    throw new Error("Invalid Redeem RPC response structure");
+    throw new Error('Invalid Redeem RPC response structure');
   }
   return toRedeemOutput(row);
 }
@@ -275,7 +275,7 @@ export function toManualCreditOutput(
  */
 export function parseManualCreditResponse(row: unknown): ManualCreditOutput {
   if (!isManualCreditRpcResponse(row)) {
-    throw new Error("Invalid ManualCredit RPC response structure");
+    throw new Error('Invalid ManualCredit RPC response structure');
   }
   return toManualCreditOutput(row);
 }
@@ -303,7 +303,7 @@ export function parseApplyPromotionResponse(
   row: unknown,
 ): ApplyPromotionOutput {
   if (!isApplyPromotionRpcResponse(row)) {
-    throw new Error("Invalid ApplyPromotion RPC response structure");
+    throw new Error('Invalid ApplyPromotion RPC response structure');
   }
   return toApplyPromotionOutput(row);
 }
@@ -333,7 +333,7 @@ export function parseSessionSuggestionResponse(
   row: unknown,
 ): SessionRewardSuggestionOutput {
   if (!isSessionSuggestionRpcResponse(row)) {
-    throw new Error("Invalid SessionSuggestion RPC response structure");
+    throw new Error('Invalid SessionSuggestion RPC response structure');
   }
   return toSessionSuggestionOutput(row);
 }
@@ -344,7 +344,7 @@ export function parseSessionSuggestionResponse(
  * Maps a ledger RPC row to LoyaltyLedgerEntryDTO.
  */
 export function toLoyaltyLedgerEntryDTO(
-  row: Omit<LedgerRpcRow, "has_more">,
+  row: Omit<LedgerRpcRow, 'has_more'>,
 ): LoyaltyLedgerEntryDTO {
   return {
     id: row.id,
@@ -413,12 +413,12 @@ export function parseLedgerPageResponse(
   limit: number,
 ): LedgerPageResponse {
   if (!Array.isArray(data)) {
-    throw new Error("Invalid Ledger RPC response: expected array");
+    throw new Error('Invalid Ledger RPC response: expected array');
   }
   const rows: LedgerRpcRow[] = [];
   for (const row of data) {
     if (!isLedgerRpcRow(row)) {
-      throw new Error("Invalid LedgerRpcRow structure");
+      throw new Error('Invalid LedgerRpcRow structure');
     }
     rows.push(row);
   }

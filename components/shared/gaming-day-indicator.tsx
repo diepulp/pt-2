@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Calendar, Loader2 } from "lucide-react";
+import { Calendar, Loader2 } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { useGamingDay } from "@/hooks/casino";
+import { Badge } from '@/components/ui/badge';
+import { useGamingDay } from '@/hooks/casino';
 
 /**
  * Displays the current gaming day for the authenticated user's casino.
@@ -27,10 +27,10 @@ export function GamingDayIndicator() {
 
   // Error state: fallback to client date with warning style
   if (isError || !gamingDayData) {
-    const fallbackDate = new Date().toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
+    const fallbackDate = new Date().toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
     });
     return (
       <Badge
@@ -46,11 +46,11 @@ export function GamingDayIndicator() {
 
   // Success: format gaming day from server response
   const gamingDayFormatted = new Date(
-    gamingDayData.gaming_day + "T00:00:00",
-  ).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+    gamingDayData.gaming_day + 'T00:00:00',
+  ).toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 
   return (

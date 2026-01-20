@@ -7,14 +7,14 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { CashObsSpikeAlertDTO } from "@/services/table-context/dtos";
+import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
-import { fetchCashObsAlerts } from "./http";
-import { shiftDashboardKeys, type ShiftTimeWindow } from "./keys";
+import { fetchCashObsAlerts } from './http';
+import { shiftDashboardKeys, type ShiftTimeWindow } from './keys';
 
 export interface UseShiftAlertsOptions {
   /** Time window for the query */

@@ -1,7 +1,7 @@
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { clsx, type ClassValue } from 'clsx';
+import { twMerge } from 'tailwind-merge';
 
-import { FetchError } from "@/lib/http/fetch-json";
+import { FetchError } from '@/lib/http/fetch-json';
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -22,12 +22,12 @@ export const hasEnvVars =
  * @returns Clean error message suitable for user display
  */
 export function getErrorMessage(error: unknown): string {
-  if (!error) return "An unexpected error occurred";
+  if (!error) return 'An unexpected error occurred';
 
   if (error instanceof FetchError) {
     // FetchError.message already includes the clean domain message
     // Remove "FetchError: " prefix if present
-    const message = error.message.replace(/^FetchError:\s*/i, "");
+    const message = error.message.replace(/^FetchError:\s*/i, '');
     return message;
   }
 
@@ -35,9 +35,9 @@ export function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return error;
   }
 
-  return "An unexpected error occurred";
+  return 'An unexpected error occurred';
 }

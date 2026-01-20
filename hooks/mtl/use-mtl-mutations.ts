@@ -15,9 +15,9 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type {
   CreateMtlEntryInput,
@@ -25,11 +25,11 @@ import type {
   MtlEntryDTO,
   MtlAuditNoteDTO,
   MtlEntryWithNotesDTO,
-} from "@/services/mtl/dtos";
-import { createMtlEntry, createMtlAuditNote } from "@/services/mtl/http";
-import { mtlKeys } from "@/services/mtl/keys";
-import { playerFinancialKeys } from "@/services/player-financial/keys";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/services/mtl/dtos';
+import { createMtlEntry, createMtlAuditNote } from '@/services/mtl/http';
+import { mtlKeys } from '@/services/mtl/keys';
+import { playerFinancialKeys } from '@/services/player-financial/keys';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
  * Creates a new MTL entry (buy-in, cash-out, marker, etc.).
@@ -143,7 +143,7 @@ export function useCreateMtlAuditNote() {
       input,
     }: {
       entryId: string;
-      input: Omit<CreateMtlAuditNoteInput, "mtl_entry_id">;
+      input: Omit<CreateMtlAuditNoteInput, 'mtl_entry_id'>;
     }): Promise<MtlAuditNoteDTO> => createMtlAuditNote(entryId, input),
     onSuccess: (data: MtlAuditNoteDTO, variables) => {
       const { entryId } = variables;

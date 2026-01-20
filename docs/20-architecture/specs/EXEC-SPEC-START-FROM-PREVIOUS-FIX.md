@@ -155,7 +155,7 @@ BEGIN
     rs.id,
     rs.visit_id,
     rs.table_id,
-    gt.name AS table_name,
+    gt.label AS table_name,  -- gaming_table.label is the table name column
     rs.seat_number,                          -- text, matches return type
     rs.start_time,
     rs.end_time,

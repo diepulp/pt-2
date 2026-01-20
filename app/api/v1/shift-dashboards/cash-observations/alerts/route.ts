@@ -11,19 +11,19 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { getShiftCashObsAlerts } from "@/services/table-context/shift-cash-obs";
-import { cashObsAlertsQuerySchema } from "@/services/table-context/shift-metrics/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { getShiftCashObsAlerts } from '@/services/table-context/shift-cash-obs';
+import { cashObsAlertsQuerySchema } from '@/services/table-context/shift-metrics/schemas';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
     // Parse and validate query params
     const { searchParams } = new URL(request.url);
     const params = cashObsAlertsQuerySchema.parse({
-      start: searchParams.get("start"),
-      end: searchParams.get("end"),
+      start: searchParams.get('start'),
+      end: searchParams.get('end'),
     });
 
     const result = await withServerAction(
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: alerts,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -59,8 +59,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "cash-obs.alerts",
+        domain: 'table-context',
+        action: 'cash-obs.alerts',
         correlationId: ctx.requestId,
       },
     );

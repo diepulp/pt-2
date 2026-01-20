@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { X } from "lucide-react";
-import * as React from "react";
+import { X } from 'lucide-react';
+import * as React from 'react';
 
 import {
   Dialog,
@@ -9,15 +9,15 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 
-import { StartFromPreviousPanel } from "./start-from-previous";
+import { StartFromPreviousPanel } from './start-from-previous';
 import type {
   GamingDayInfo,
   PlayerInfo,
   SessionData,
-} from "./start-from-previous";
+} from './start-from-previous';
 
 // ============================================================================
 // Types
@@ -62,12 +62,12 @@ export function StartFromPreviousModal({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn("max-w-lg p-0 gap-0 overflow-hidden", className)}
+        className={cn('max-w-lg p-0 gap-0 overflow-hidden', className)}
       >
         {/* Hidden accessible title for screen readers */}
         <DialogHeader className="sr-only">
           <DialogTitle>
-            {player ? `Session History - ${player.name}` : "Session History"}
+            {player ? `Session History - ${player.name}` : 'Session History'}
           </DialogTitle>
           <DialogDescription>
             View recent sessions and start a new visit from a previous session.
@@ -92,7 +92,7 @@ export function StartFromPreviousModal({
         ) : (
           <div className="p-6">
             <StartFromPreviousPanel
-              player={{ player_id: "", name: "Loading..." }}
+              player={{ player_id: '', name: 'Loading...' }}
               recentSessions={[]}
               isLoading={true}
               embedded

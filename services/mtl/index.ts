@@ -22,11 +22,11 @@
  * @see ADR-024 RLS Context Injection
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CreateMtlAuditNoteInput,
   CreateMtlEntryInput,
@@ -36,12 +36,12 @@ import type {
   MtlEntryWithNotesDTO,
   MtlGamingDaySummaryDTO,
   MtlGamingDaySummaryFilters,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from "./dtos";
-export * from "./keys";
-export * from "./http";
+export * from './dtos';
+export * from './keys';
+export * from './http';
 
 // ============================================================================
 // Service Interface

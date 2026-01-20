@@ -12,7 +12,7 @@
  * @see services/table-context/schemas.ts for validation schemas
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -21,17 +21,17 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
 import {
   tableRouteParamsSchema,
   updateTableLimitsSchema,
-} from "@/services/table-context/schemas";
+} from '@/services/table-context/schemas';
 import {
   getTableSettings,
   updateTableLimits,
-} from "@/services/table-context/table-settings";
+} from '@/services/table-context/table-settings';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ tableId: string }> };
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: settings,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -73,8 +73,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "table-context",
-        action: "get-table-settings",
+        domain: 'table-context',
+        action: 'get-table-settings',
         correlationId: ctx.requestId,
       },
     );
@@ -128,7 +128,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: settings,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -136,8 +136,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "table-context",
-        action: "update-table-limits",
+        domain: 'table-context',
+        action: 'update-table-limits',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

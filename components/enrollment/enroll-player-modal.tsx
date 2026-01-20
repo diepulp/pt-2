@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   AlertCircle,
   IdCard,
@@ -9,10 +9,10 @@ import {
   Sparkles,
   User,
   UserPlus,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -20,30 +20,30 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import {
   getErrorMessage,
   isFetchError,
   logError,
-} from "@/lib/errors/error-utils";
-import { cn } from "@/lib/utils";
-import { enrollPlayer } from "@/services/casino/http";
+} from '@/lib/errors/error-utils';
+import { cn } from '@/lib/utils';
+import { enrollPlayer } from '@/services/casino/http';
 import type {
   CreatePlayerDTO,
   PlayerIdentityInput,
   PlayerSearchResultDTO,
-} from "@/services/player/dtos";
+} from '@/services/player/dtos';
 import {
   createPlayer,
   searchPlayers,
   upsertIdentity,
-} from "@/services/player/http";
+} from '@/services/player/http';
 
-import { IdentityForm } from "./identity-form";
+import { IdentityForm } from './identity-form';
 
 interface EnrollPlayerModalProps {
   /** Whether the modal is open */
@@ -56,7 +56,7 @@ interface EnrollPlayerModalProps {
   tableId?: string;
 }
 
-type EnrollmentStep = "search" | "identity";
+type EnrollmentStep = 'search' | 'identity';
 
 /**
  * Player Enrollment Modal
@@ -79,8 +79,8 @@ export function EnrollPlayerModal({
   const queryClient = useQueryClient();
 
   // Form state
-  const [step, setStep] = React.useState<EnrollmentStep>("search");
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [step, setStep] = React.useState<EnrollmentStep>('search');
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedPlayer, setSelectedPlayer] =
     React.useState<PlayerSearchResultDTO | null>(null);
   const [identityData, setIdentityData] = React.useState<PlayerIdentityInput>(
@@ -90,11 +90,11 @@ export function EnrollPlayerModal({
 
   // New player form state
   const [isCreatingNew, setIsCreatingNew] = React.useState(false);
-  const [newPlayerFirstName, setNewPlayerFirstName] = React.useState("");
-  const [newPlayerLastName, setNewPlayerLastName] = React.useState("");
+  const [newPlayerFirstName, setNewPlayerFirstName] = React.useState('');
+  const [newPlayerLastName, setNewPlayerLastName] = React.useState('');
 
   // Debounced search
-  const [debouncedQuery, setDebouncedQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState('');
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -105,20 +105,20 @@ export function EnrollPlayerModal({
   // Reset form when modal opens/closes
   React.useEffect(() => {
     if (open) {
-      setStep("search");
-      setSearchQuery("");
+      setStep('search');
+      setSearchQuery('');
       setSelectedPlayer(null);
       setIdentityData({});
       setError(null);
       setIsCreatingNew(false);
-      setNewPlayerFirstName("");
-      setNewPlayerLastName("");
+      setNewPlayerFirstName('');
+      setNewPlayerLastName('');
     }
   }, [open]);
 
   // Player search query
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
-    queryKey: ["players", "search", debouncedQuery],
+    queryKey: ['players', 'search', debouncedQuery],
     queryFn: () => searchPlayers(debouncedQuery, 10),
     enabled: debouncedQuery.length >= 2,
   });
@@ -139,17 +139,17 @@ export function EnrollPlayerModal({
       return { enrollment, identity };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["players"] });
+      queryClient.invalidateQueries({ queryKey: ['players'] });
       onOpenChange(false);
     },
     onError: (err: Error) => {
-      logError(err, { component: "EnrollPlayerModal", action: "enroll" });
+      logError(err, { component: 'EnrollPlayerModal', action: 'enroll' });
 
-      if (isFetchError(err) && err.code === "ALREADY_ENROLLED") {
-        setError("This player is already enrolled at this casino.");
-      } else if (isFetchError(err) && err.code === "DUPLICATE_DOCUMENT") {
+      if (isFetchError(err) && err.code === 'ALREADY_ENROLLED') {
+        setError('This player is already enrolled at this casino.');
+      } else if (isFetchError(err) && err.code === 'DUPLICATE_DOCUMENT') {
         setError(
-          "A player with this document number is already enrolled. Please verify the document.",
+          'A player with this document number is already enrolled. Please verify the document.',
         );
       } else {
         setError(getErrorMessage(err));
@@ -173,13 +173,13 @@ export function EnrollPlayerModal({
         first_name: data.first_name,
         last_name: data.last_name,
         full_name: `${data.first_name} ${data.last_name}`,
-        enrollment_status: "not_enrolled",
+        enrollment_status: 'not_enrolled',
       });
       setIsCreatingNew(false);
-      setStep("identity");
+      setStep('identity');
     },
     onError: (err: Error) => {
-      logError(err, { component: "EnrollPlayerModal", action: "createPlayer" });
+      logError(err, { component: 'EnrollPlayerModal', action: 'createPlayer' });
       setError(getErrorMessage(err));
     },
   });
@@ -187,14 +187,14 @@ export function EnrollPlayerModal({
   // Handle player selection
   const handleSelectPlayer = (player: PlayerSearchResultDTO) => {
     setSelectedPlayer(player);
-    setSearchQuery("");
-    setStep("identity");
+    setSearchQuery('');
+    setStep('identity');
   };
 
   // Handle create new player
   const handleCreateNewPlayer = () => {
     if (!newPlayerFirstName.trim() || !newPlayerLastName.trim()) {
-      setError("Please enter first and last name");
+      setError('Please enter first and last name');
       return;
     }
     setError(null);
@@ -210,18 +210,18 @@ export function EnrollPlayerModal({
     setError(null);
 
     if (!selectedPlayer) {
-      setError("No player selected");
+      setError('No player selected');
       return;
     }
 
     // Validate required identity fields
     if (!identityData.documentNumber) {
-      setError("Document number is required for enrollment");
+      setError('Document number is required for enrollment');
       return;
     }
 
     if (!identityData.birthDate) {
-      setError("Date of birth is required for enrollment");
+      setError('Date of birth is required for enrollment');
       return;
     }
 
@@ -233,7 +233,7 @@ export function EnrollPlayerModal({
 
   // Handle back navigation
   const handleBack = () => {
-    setStep("search");
+    setStep('search');
     setSelectedPlayer(null);
     setIdentityData({});
     setError(null);
@@ -251,10 +251,10 @@ export function EnrollPlayerModal({
             <div className="flex items-center gap-2">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors",
-                  step === "search"
-                    ? "border-accent bg-accent text-accent-foreground"
-                    : "border-accent/30 bg-accent/10 text-accent",
+                  'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors',
+                  step === 'search'
+                    ? 'border-accent bg-accent text-accent-foreground'
+                    : 'border-accent/30 bg-accent/10 text-accent',
                 )}
               >
                 1
@@ -262,10 +262,10 @@ export function EnrollPlayerModal({
               <div className="h-px w-6 bg-border" />
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors",
-                  step === "identity"
-                    ? "border-accent bg-accent text-accent-foreground"
-                    : "border-border bg-card text-muted-foreground",
+                  'flex h-8 w-8 items-center justify-center rounded-full border-2 text-sm font-bold transition-colors',
+                  step === 'identity'
+                    ? 'border-accent bg-accent text-accent-foreground'
+                    : 'border-border bg-card text-muted-foreground',
                 )}
               >
                 2
@@ -275,12 +275,12 @@ export function EnrollPlayerModal({
             <Separator orientation="vertical" className="h-6" />
 
             <DialogTitle className="text-lg font-bold uppercase tracking-widest font-mono">
-              {step === "search" ? "Find Player" : "Capture Identity"}
+              {step === 'search' ? 'Find Player' : 'Capture Identity'}
             </DialogTitle>
           </div>
           <DialogDescription>
-            {step === "search"
-              ? "Search for an existing player or create a new one to enroll."
+            {step === 'search'
+              ? 'Search for an existing player or create a new one to enroll.'
               : "Enter identity information from the player's government-issued ID."}
           </DialogDescription>
         </DialogHeader>
@@ -294,7 +294,7 @@ export function EnrollPlayerModal({
         )}
 
         {/* Step content */}
-        {step === "search" ? (
+        {step === 'search' ? (
           <div className="space-y-4 flex-1">
             {/* Player search */}
             <div className="space-y-2">
@@ -338,10 +338,10 @@ export function EnrollPlayerModal({
                           onClick={() => {
                             setIsCreatingNew(true);
                             setNewPlayerFirstName(
-                              searchQuery.split(" ")[0] || "",
+                              searchQuery.split(' ')[0] || '',
                             );
                             setNewPlayerLastName(
-                              searchQuery.split(" ").slice(1).join(" ") || "",
+                              searchQuery.split(' ').slice(1).join(' ') || '',
                             );
                           }}
                           className="mt-1 text-accent"
@@ -358,10 +358,10 @@ export function EnrollPlayerModal({
                             type="button"
                             onClick={() => handleSelectPlayer(player)}
                             className={cn(
-                              "flex w-full items-center gap-3 px-3 py-2 text-left transition-colors",
-                              "hover:bg-accent/10",
-                              player.enrollment_status === "enrolled" &&
-                                "opacity-60",
+                              'flex w-full items-center gap-3 px-3 py-2 text-left transition-colors',
+                              'hover:bg-accent/10',
+                              player.enrollment_status === 'enrolled' &&
+                                'opacity-60',
                             )}
                           >
                             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
@@ -372,7 +372,7 @@ export function EnrollPlayerModal({
                                 {player.full_name}
                               </p>
                             </div>
-                            {player.enrollment_status === "enrolled" ? (
+                            {player.enrollment_status === 'enrolled' ? (
                               <span className="shrink-0 rounded bg-muted px-2 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
                                 Already Enrolled
                               </span>
@@ -533,7 +533,7 @@ export function EnrollPlayerModal({
         )}
 
         {/* Footer for search step */}
-        {step === "search" && (
+        {step === 'search' && (
           <DialogFooter className="flex-shrink-0 pt-4 border-t">
             <Button
               type="button"

@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { Plus, Minus } from "lucide-react";
-import React from "react";
+import { Plus, Minus } from 'lucide-react';
+import React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useChipsTakenField } from "@/hooks/ui/use-rating-slip-modal";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useChipsTakenField } from '@/hooks/ui/use-rating-slip-modal';
 
-import { IncrementButtonGroup } from "./increment-button-group";
+import { IncrementButtonGroup } from './increment-button-group';
 
 // Increment button configuration - extracted to module scope to prevent recreation
 const INCREMENT_BUTTONS = [
-  { amount: 5, label: "+5" },
-  { amount: 25, label: "+25" },
-  { amount: 100, label: "+100" },
-  { amount: 500, label: "+500" },
-  { amount: 1000, label: "+1000" },
+  { amount: 5, label: '+5' },
+  { amount: 25, label: '+25' },
+  { amount: 100, label: '+100' },
+  { amount: 500, label: '+500' },
+  { amount: 1000, label: '+1000' },
 ] as const;
 
 /**
@@ -36,20 +36,20 @@ export const FormSectionChipsTaken = React.memo(
     // Event handlers - wrapped in useCallback for stable references
     const handleChange = React.useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateField("chipsTaken", e.target.value);
+        updateField('chipsTaken', e.target.value);
       },
       [updateField],
     );
 
     const handleIncrement = React.useCallback(
       (amount: number) => {
-        incrementField("chipsTaken", amount);
+        incrementField('chipsTaken', amount);
       },
       [incrementField],
     );
 
     const handleDecrement = React.useCallback(() => {
-      decrementField("chipsTaken");
+      decrementField('chipsTaken');
     }, [decrementField]);
 
     return (

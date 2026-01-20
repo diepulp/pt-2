@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from 'zustand/react/shallow';
 
-import { useUIStore } from "@/store/ui-store";
+import { useUIStore } from '@/store/ui-store';
 
 /**
  * Selector hook for modal state management.

@@ -19,7 +19,7 @@ import type {
   PromoType,
   ReplaceCouponOutput,
   VoidCouponOutput,
-} from "./dtos";
+} from './dtos';
 
 // === RPC Response Types ===
 
@@ -137,73 +137,73 @@ export interface PromoCouponRow {
 /* eslint-disable custom-rules/no-dto-type-assertions */
 function isIssueCouponRpcResponse(v: unknown): v is IssueCouponRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "success" in v &&
-    "is_existing" in v &&
-    "coupon" in v &&
-    typeof (v as IssueCouponRpcResponse).coupon === "object" &&
+    'success' in v &&
+    'is_existing' in v &&
+    'coupon' in v &&
+    typeof (v as IssueCouponRpcResponse).coupon === 'object' &&
     (v as IssueCouponRpcResponse).coupon !== null &&
-    "id" in (v as IssueCouponRpcResponse).coupon &&
-    "validation_number" in (v as IssueCouponRpcResponse).coupon &&
-    "status" in (v as IssueCouponRpcResponse).coupon
+    'id' in (v as IssueCouponRpcResponse).coupon &&
+    'validation_number' in (v as IssueCouponRpcResponse).coupon &&
+    'status' in (v as IssueCouponRpcResponse).coupon
   );
 }
 
 function isVoidCouponRpcResponse(v: unknown): v is VoidCouponRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "success" in v &&
-    "is_existing" in v &&
-    "coupon" in v &&
-    typeof (v as VoidCouponRpcResponse).coupon === "object" &&
+    'success' in v &&
+    'is_existing' in v &&
+    'coupon' in v &&
+    typeof (v as VoidCouponRpcResponse).coupon === 'object' &&
     (v as VoidCouponRpcResponse).coupon !== null &&
-    "id" in (v as VoidCouponRpcResponse).coupon &&
-    "status" in (v as VoidCouponRpcResponse).coupon
+    'id' in (v as VoidCouponRpcResponse).coupon &&
+    'status' in (v as VoidCouponRpcResponse).coupon
   );
 }
 
 function isReplaceCouponRpcResponse(v: unknown): v is ReplaceCouponRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "success" in v &&
-    "is_existing" in v &&
-    "old_coupon" in v &&
-    "new_coupon" in v &&
-    typeof (v as ReplaceCouponRpcResponse).old_coupon === "object" &&
-    typeof (v as ReplaceCouponRpcResponse).new_coupon === "object"
+    'success' in v &&
+    'is_existing' in v &&
+    'old_coupon' in v &&
+    'new_coupon' in v &&
+    typeof (v as ReplaceCouponRpcResponse).old_coupon === 'object' &&
+    typeof (v as ReplaceCouponRpcResponse).new_coupon === 'object'
   );
 }
 
 function isInventoryRpcRow(v: unknown): v is InventoryRpcRow {
   return (
-    typeof v === "object" && v !== null && "status" in v && "coupon_count" in v
+    typeof v === 'object' && v !== null && 'status' in v && 'coupon_count' in v
   );
 }
 
 export function isPromoProgramRow(v: unknown): v is PromoProgramRow {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "id" in v &&
-    "casino_id" in v &&
-    "name" in v &&
-    "promo_type" in v &&
-    "face_value_amount" in v
+    'id' in v &&
+    'casino_id' in v &&
+    'name' in v &&
+    'promo_type' in v &&
+    'face_value_amount' in v
   );
 }
 
 export function isPromoCouponRow(v: unknown): v is PromoCouponRow {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "id" in v &&
-    "casino_id" in v &&
-    "promo_program_id" in v &&
-    "validation_number" in v &&
-    "status" in v
+    'id' in v &&
+    'casino_id' in v &&
+    'promo_program_id' in v &&
+    'validation_number' in v &&
+    'status' in v
   );
 }
 /* eslint-enable custom-rules/no-dto-type-assertions */
@@ -239,7 +239,7 @@ export function toIssueCouponOutput(
  */
 export function parseIssueCouponResponse(row: unknown): IssueCouponOutput {
   if (!isIssueCouponRpcResponse(row)) {
-    throw new Error("Invalid IssueCoupon RPC response structure");
+    throw new Error('Invalid IssueCoupon RPC response structure');
   }
   return toIssueCouponOutput(row);
 }
@@ -258,7 +258,7 @@ export function toVoidCouponOutput(
       validationNumber: response.coupon.validation_number,
       status: response.coupon.status,
       voidedAt: response.coupon.voided_at,
-      voidedByStaffId: response.coupon.voided_by_staff_id ?? "",
+      voidedByStaffId: response.coupon.voided_by_staff_id ?? '',
     },
     isExisting: response.is_existing,
   };
@@ -270,7 +270,7 @@ export function toVoidCouponOutput(
  */
 export function parseVoidCouponResponse(row: unknown): VoidCouponOutput {
   if (!isVoidCouponRpcResponse(row)) {
-    throw new Error("Invalid VoidCoupon RPC response structure");
+    throw new Error('Invalid VoidCoupon RPC response structure');
   }
   return toVoidCouponOutput(row);
 }
@@ -286,16 +286,16 @@ export function toReplaceCouponOutput(
   return {
     oldCoupon: {
       id: response.old_coupon.id,
-      validationNumber: response.old_coupon.validation_number ?? "",
+      validationNumber: response.old_coupon.validation_number ?? '',
       status: response.old_coupon.status,
-      replacedAt: response.old_coupon.replaced_at ?? "",
+      replacedAt: response.old_coupon.replaced_at ?? '',
     },
     newCoupon: {
       id: response.new_coupon.id,
       validationNumber: response.new_coupon.validation_number,
       status: response.new_coupon.status,
       faceValueAmount: response.new_coupon.face_value_amount ?? 0,
-      issuedAt: response.new_coupon.issued_at ?? "",
+      issuedAt: response.new_coupon.issued_at ?? '',
       expiresAt: response.new_coupon.expires_at ?? null,
     },
     isExisting: response.is_existing,
@@ -308,7 +308,7 @@ export function toReplaceCouponOutput(
  */
 export function parseReplaceCouponResponse(row: unknown): ReplaceCouponOutput {
   if (!isReplaceCouponRpcResponse(row)) {
-    throw new Error("Invalid ReplaceCoupon RPC response structure");
+    throw new Error('Invalid ReplaceCoupon RPC response structure');
   }
   return toReplaceCouponOutput(row);
 }
@@ -333,12 +333,12 @@ export function toInventoryRow(row: InventoryRpcRow): CouponInventoryRow {
  */
 export function parseInventoryResponse(data: unknown): CouponInventoryOutput {
   if (!Array.isArray(data)) {
-    throw new Error("Invalid Inventory RPC response: expected array");
+    throw new Error('Invalid Inventory RPC response: expected array');
   }
   const inventory: CouponInventoryRow[] = [];
   for (const row of data) {
     if (!isInventoryRpcRow(row)) {
-      throw new Error("Invalid InventoryRpcRow structure");
+      throw new Error('Invalid InventoryRpcRow structure');
     }
     inventory.push(toInventoryRow(row));
   }
@@ -373,7 +373,7 @@ export function toPromoProgramDTO(row: PromoProgramRow): PromoProgramDTO {
  */
 export function parsePromoProgramRow(data: unknown): PromoProgramDTO {
   if (!isPromoProgramRow(data)) {
-    throw new Error("Invalid PromoProgramRow structure");
+    throw new Error('Invalid PromoProgramRow structure');
   }
   return toPromoProgramDTO(data);
 }
@@ -421,7 +421,7 @@ export function toPromoCouponDTO(row: PromoCouponRow): PromoCouponDTO {
  */
 export function parsePromoCouponRow(data: unknown): PromoCouponDTO {
   if (!isPromoCouponRow(data)) {
-    throw new Error("Invalid PromoCouponRow structure");
+    throw new Error('Invalid PromoCouponRow structure');
   }
   return toPromoCouponDTO(data);
 }
@@ -446,11 +446,11 @@ export function toErrorShape(error: unknown): {
   code?: string;
   message: string;
 } {
-  if (typeof error === "object" && error !== null) {
+  if (typeof error === 'object' && error !== null) {
     const errObj = error as Record<string, unknown>;
     const message =
-      typeof errObj.message === "string" ? errObj.message : String(error);
-    const code = typeof errObj.code === "string" ? errObj.code : undefined;
+      typeof errObj.message === 'string' ? errObj.message : String(error);
+    const code = typeof errObj.code === 'string' ? errObj.code : undefined;
     return { code, message };
   }
   return { message: String(error) };

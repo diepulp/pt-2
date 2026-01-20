@@ -16,8 +16,9 @@
  * @see PRD-005 MTL Service
  */
 
-"use client";
+'use client';
 
+import { format } from 'date-fns';
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -25,11 +26,12 @@ import {
   ChevronRight,
   Loader2,
   User,
-} from "lucide-react";
-import { useCallback } from "react";
+} from 'lucide-react';
+import { useCallback } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -37,12 +39,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useGamingDaySummary } from "@/hooks/mtl/use-gaming-day-summary";
-import { cn } from "@/lib/utils";
-import type { MtlGamingDaySummaryDTO } from "@/services/mtl/dtos";
+} from '@/components/ui/table';
+import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
+import { cn } from '@/lib/utils';
+import type { MtlGamingDaySummaryDTO } from '@/services/mtl/dtos';
 
-import { AggBadgePair } from "./agg-badge";
+import { AggBadgePair } from './agg-badge';
 
 export interface GamingDaySummaryProps {
   /** Casino ID (required) */
@@ -62,9 +64,9 @@ export interface GamingDaySummaryProps {
  * @returns Formatted currency string in dollars
  */
 function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amountCents / 100); // Convert cents to dollars
@@ -113,7 +115,7 @@ export function GamingDaySummary({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("space-y-2", className)}>
+      <div className={cn('space-y-2', className)}>
         <GamingDaySummarySkeleton rows={5} />
       </div>
     );
@@ -124,7 +126,7 @@ export function GamingDaySummary({
     return (
       <div
         className={cn(
-          "rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center",
+          'rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center',
           className,
         )}
       >
@@ -150,7 +152,7 @@ export function GamingDaySummary({
     return (
       <div
         className={cn(
-          "rounded-lg border border-dashed p-8 text-center",
+          'rounded-lg border border-dashed p-8 text-center',
           className,
         )}
       >
@@ -161,27 +163,51 @@ export function GamingDaySummary({
     );
   }
 
-  // Count CTR triggers for summary header
+  // MTL count: Every patron in the list has an MTL-eligible transaction (>= $3k single transaction)
+  // This is the primary metric for this compliance view
+  const mtlPatronCount = summaries.length;
+
+  // CTR count: Patrons with aggregate totals > $10k (federal reporting requirement)
   const ctrInCount = summaries.filter(
-    (s) => s.agg_badge_in === "agg_ctr_met",
+    (s) => s.agg_badge_in === 'agg_ctr_met',
   ).length;
   const ctrOutCount = summaries.filter(
-    (s) => s.agg_badge_out === "agg_ctr_met",
+    (s) => s.agg_badge_out === 'agg_ctr_met',
   ).length;
   const totalCtr = ctrInCount + ctrOutCount;
 
   return (
-    <div className={cn("space-y-2", className)}>
-      {/* CTR Alert Banner */}
+    <div className={cn('space-y-2', className)}>
+      {/* MTL Summary Banner - Always shown when patrons exist */}
+      <div className="rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/50 p-3 flex items-center gap-3">
+        <Badge
+          variant="outline"
+          className="bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-xs px-2 py-0.5 shrink-0"
+        >
+          MTL
+        </Badge>
+        <div className="text-sm">
+          <span className="font-semibold text-amber-700 dark:text-amber-300">
+            {mtlPatronCount} Patron{mtlPatronCount !== 1 ? 's' : ''} with MTL
+            Threshold Met
+          </span>
+          <span className="text-amber-600 dark:text-amber-400 ml-2">
+            (single transaction &ge; $3,000)
+          </span>
+        </div>
+      </div>
+
+      {/* CTR Alert Banner - Only shown when CTR threshold exceeded */}
       {totalCtr > 0 && (
         <div className="rounded-lg border border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/50 p-3 flex items-center gap-3">
           <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 shrink-0" />
           <div className="text-sm">
             <span className="font-semibold text-red-700 dark:text-red-300">
-              {totalCtr} CTR Threshold{totalCtr !== 1 ? "s" : ""} Met
+              {totalCtr} CTR Trigger{totalCtr !== 1 ? 's' : ''}
             </span>
             <span className="text-red-600 dark:text-red-400 ml-2">
-              ({ctrInCount} cash-in, {ctrOutCount} cash-out)
+              ({ctrInCount} cash-in, {ctrOutCount} cash-out exceed $10,000
+              aggregate)
             </span>
           </div>
         </div>
@@ -204,7 +230,7 @@ export function GamingDaySummary({
                   Cash Out
                 </div>
               </TableHead>
-              <TableHead className="text-center">Badges</TableHead>
+              <TableHead className="text-center">Status</TableHead>
               <TableHead className="text-right">Entries</TableHead>
               {onPatronClick && <TableHead className="w-[40px]" />}
             </TableRow>
@@ -212,15 +238,15 @@ export function GamingDaySummary({
           <TableBody>
             {summaries.map((summary) => {
               const hasCtrMet =
-                summary.agg_badge_in === "agg_ctr_met" ||
-                summary.agg_badge_out === "agg_ctr_met";
+                summary.agg_badge_in === 'agg_ctr_met' ||
+                summary.agg_badge_out === 'agg_ctr_met';
 
               return (
                 <TableRow
                   key={`${summary.patron_uuid}-${summary.gaming_day}`}
                   className={cn(
-                    onPatronClick && "cursor-pointer hover:bg-accent/50",
-                    hasCtrMet && "bg-red-50/50 dark:bg-red-950/20",
+                    onPatronClick && 'cursor-pointer hover:bg-accent/50',
+                    hasCtrMet && 'bg-red-50/50 dark:bg-red-950/20',
                   )}
                   onClick={() => handleRowClick(summary)}
                 >
@@ -231,8 +257,17 @@ export function GamingDaySummary({
                         <span className="text-sm font-medium truncate max-w-[150px]">
                           {summary.patron_first_name && summary.patron_last_name
                             ? `${summary.patron_first_name} ${summary.patron_last_name}`
-                            : "Unknown Player"}
+                            : 'Unknown Player'}
                         </span>
+                        {summary.patron_date_of_birth && (
+                          <span className="text-xs text-muted-foreground">
+                            DOB:{' '}
+                            {format(
+                              new Date(summary.patron_date_of_birth),
+                              'MM/dd/yyyy',
+                            )}
+                          </span>
+                        )}
                         <span className="font-mono text-xs text-muted-foreground">
                           {summary.patron_uuid.slice(0, 8)}
                         </span>
@@ -243,15 +278,15 @@ export function GamingDaySummary({
                     <div className="space-y-0.5">
                       <div
                         className={cn(
-                          "font-mono tabular-nums font-medium",
-                          "text-green-600 dark:text-green-400",
+                          'font-mono tabular-nums font-medium',
+                          'text-green-600 dark:text-green-400',
                         )}
                       >
                         {formatCurrency(summary.total_in)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_in} txn
-                        {summary.count_in !== 1 ? "s" : ""}
+                        {summary.count_in !== 1 ? 's' : ''}
                       </div>
                     </div>
                   </TableCell>
@@ -259,20 +294,26 @@ export function GamingDaySummary({
                     <div className="space-y-0.5">
                       <div
                         className={cn(
-                          "font-mono tabular-nums font-medium",
-                          "text-red-600 dark:text-red-400",
+                          'font-mono tabular-nums font-medium',
+                          'text-red-600 dark:text-red-400',
                         )}
                       >
                         {formatCurrency(summary.total_out)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_out} txn
-                        {summary.count_out !== 1 ? "s" : ""}
+                        {summary.count_out !== 1 ? 's' : ''}
                       </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex justify-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <Badge
+                        variant="outline"
+                        className="bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300 text-[10px] px-1.5 py-0"
+                      >
+                        MTL
+                      </Badge>
                       <AggBadgePair
                         badgeIn={summary.agg_badge_in}
                         badgeOut={summary.agg_badge_out}
@@ -305,7 +346,7 @@ export function GamingDaySummary({
                 Loading...
               </>
             ) : (
-              "Load More"
+              'Load More'
             )}
           </Button>
         </div>

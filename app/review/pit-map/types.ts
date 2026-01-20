@@ -3,10 +3,10 @@
  * Local types for the pit map UI components
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-export type GameType = Database["public"]["Enums"]["game_type"];
-export type TableStatus = Database["public"]["Enums"]["table_status"];
+export type GameType = Database['public']['Enums']['game_type'];
+export type TableStatus = Database['public']['Enums']['table_status'];
 
 export interface PitData {
   id: string;
@@ -35,13 +35,13 @@ export interface TableData {
 
 export interface TableAlert {
   id: string;
-  type: "fill" | "drop" | "mtl" | "limit" | "high_action";
+  type: 'fill' | 'drop' | 'mtl' | 'limit' | 'high_action';
   label: string;
-  severity: "info" | "warning" | "critical";
+  severity: 'info' | 'warning' | 'critical';
   timestamp: Date;
 }
 
-export type ViewMode = "grid" | "list";
+export type ViewMode = 'grid' | 'list';
 
 export interface PitMapState {
   selectedPitId: string | null;

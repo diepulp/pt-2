@@ -1,0 +1,15 @@
+{
+  "prd": "PLAYER-PROFILE-EDIT",
+  "prd_title": "Player Profile Edit Feature",
+  "status": "initialized",
+  "created_at": "2026-01-20T00:00:00Z",
+  "updated_at": "2026-01-20T00:00:00Z",
+  "current_phase": 0,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstream": null,
+  "gates_passed": [],
+  "gates_failed": [],
+  "artifacts": [],
+  "error": null
+}

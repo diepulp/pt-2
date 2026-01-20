@@ -7,11 +7,11 @@
  * @see IMPLEMENTATION_STRATEGY.md §3.2 Zone C
  */
 
-"use client";
+'use client';
 
-import type { ShiftCasinoMetricsDTO } from "@/services/table-context/shift-metrics/dtos";
+import type { ShiftCasinoMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
-import { SecondaryKpiCard } from "./secondary-kpi-card";
+import { SecondaryKpiCard } from './secondary-kpi-card';
 
 export interface SecondaryKpisRowProps {
   /** Casino metrics data */

@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 export interface PlayerDashboardStore {
   selectedPlayerId: string | null;
@@ -17,15 +17,15 @@ export const usePlayerDashboardStore = create<PlayerDashboardStore>()(
         set(
           { selectedPlayerId: id },
           undefined,
-          "playerDashboard/setSelectedPlayer",
+          'playerDashboard/setSelectedPlayer',
         ),
       clearSelection: () =>
         set(
           { selectedPlayerId: null },
           undefined,
-          "playerDashboard/clearSelection",
+          'playerDashboard/clearSelection',
         ),
     }),
-    { name: "PlayerDashboardStore" },
+    { name: 'PlayerDashboardStore' },
   ),
 );

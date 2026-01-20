@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   ArrowRight,
@@ -8,15 +8,15 @@ import {
   TrendingDown,
   TrendingUp,
   User,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
@@ -82,9 +82,9 @@ function formatDuration(seconds: number): string {
 
 function formatTime(isoString: string): string {
   const date = new Date(isoString);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
     hour12: true,
   });
 }
@@ -96,33 +96,33 @@ function formatDate(isoString: string): string {
   yesterday.setDate(yesterday.getDate() - 1);
 
   if (date.toDateString() === now.toDateString()) {
-    return "Today";
+    return 'Today';
   }
   if (date.toDateString() === yesterday.toDateString()) {
-    return "Yesterday";
+    return 'Yesterday';
   }
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 function formatGamingDay(gamingDay: string): string {
-  const date = new Date(gamingDay + "T00:00:00");
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+  const date = new Date(gamingDay + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
@@ -183,7 +183,7 @@ function ClosedSessionRow({
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <History className="w-3.5 h-3.5" />
           <span>
-            {formatDate(session.started_at)} {formatTime(session.started_at)} —{" "}
+            {formatDate(session.started_at)} {formatTime(session.started_at)} —{' '}
             {formatTime(session.ended_at)}
           </span>
         </div>
@@ -235,13 +235,13 @@ function ClosedSessionRow({
           )}
           <span
             className={cn(
-              "font-semibold tabular-nums",
+              'font-semibold tabular-nums',
               isPositive
-                ? "text-emerald-600 dark:text-emerald-400"
-                : "text-red-600 dark:text-red-400",
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-red-600 dark:text-red-400',
             )}
           >
-            {isPositive ? "+" : ""}
+            {isPositive ? '+' : ''}
             {formatCurrency(session.net)}
           </span>
         </div>
@@ -282,7 +282,7 @@ function EmptyState({ gamingDay }: { gamingDay?: GamingDayInfo }) {
       <p className="text-xs text-muted-foreground max-w-[220px]">
         {gamingDay
           ? `No closed sessions for this player on ${formatGamingDay(gamingDay.gaming_day)}.`
-          : "This player has no closed sessions for the current gaming day."}
+          : 'This player has no closed sessions for the current gaming day.'}
       </p>
     </div>
   );
@@ -332,7 +332,7 @@ export function StartFromPreviousPanel({
   // Gaming day label for header
   const gamingDayLabel = gamingDay
     ? formatGamingDay(gamingDay.gaming_day)
-    : "Current Gaming Day";
+    : 'Current Gaming Day';
 
   const content = (
     <>
@@ -375,13 +375,13 @@ export function StartFromPreviousPanel({
   if (isLoading) {
     if (embedded) {
       return (
-        <div className={cn("p-6", className)}>
+        <div className={cn('p-6', className)}>
           <LoadingSkeleton />
         </div>
       );
     }
     return (
-      <Card className={cn("w-full max-w-lg", className)}>
+      <Card className={cn('w-full max-w-lg', className)}>
         <CardContent className="p-6">
           <LoadingSkeleton />
         </CardContent>
@@ -391,12 +391,12 @@ export function StartFromPreviousPanel({
 
   // Embedded mode (no card wrapper)
   if (embedded) {
-    return <div className={cn("p-6", className)}>{content}</div>;
+    return <div className={cn('p-6', className)}>{content}</div>;
   }
 
   // Standard card mode
   return (
-    <Card className={cn("w-full max-w-lg", className)}>
+    <Card className={cn('w-full max-w-lg', className)}>
       <CardContent className="p-6">{content}</CardContent>
     </Card>
   );

@@ -13,17 +13,17 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import { ComplianceDashboard } from "@/components/mtl/compliance-dashboard";
+import { ComplianceDashboard } from '@/components/mtl/compliance-dashboard';
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
-} from "@/lib/supabase/dev-context";
-import { getAuthContext } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/supabase/dev-context';
+import { getAuthContext } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function CompliancePage() {
   let casinoId: string;
@@ -44,29 +44,29 @@ export default async function CompliancePage() {
       staffId = context.actorId ?? undefined;
       staffRole = context.staffRole ?? undefined;
     } catch (error) {
-      console.error("Failed to get auth context:", error);
-      redirect("/auth/login");
+      console.error('Failed to get auth context:', error);
+      redirect('/auth/login');
     }
   } else if (isDevAuthBypassEnabled()) {
     // DEV MODE: Use mock context
-    console.warn("[DEV AUTH] Using mock context for compliance dashboard");
+    console.warn('[DEV AUTH] Using mock context for compliance dashboard');
     casinoId = DEV_RLS_CONTEXT.casinoId;
     staffId = DEV_RLS_CONTEXT.actorId;
     staffRole = DEV_RLS_CONTEXT.staffRole;
   } else {
     // PRODUCTION: Redirect to login
-    redirect("/auth/login");
+    redirect('/auth/login');
   }
 
   // Role check: only pit_boss and admin can access compliance dashboard
-  const allowedRoles = ["pit_boss", "admin"];
+  const allowedRoles = ['pit_boss', 'admin'];
   if (staffRole && !allowedRoles.includes(staffRole)) {
     // Redirect unauthorized roles
-    redirect("/pit");
+    redirect('/pit');
   }
 
   // Check if user can add audit notes (pit_boss, admin only per ADR-025)
-  const canAddNotes = staffRole === "pit_boss" || staffRole === "admin";
+  const canAddNotes = staffRole === 'pit_boss' || staffRole === 'admin';
 
   return (
     <div className="space-y-4">

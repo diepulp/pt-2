@@ -78,7 +78,7 @@ These files provide compressed context from 200k+ words of documentation:
 
 ## Critical Guardrails
 
-- Types from `types/database.types.ts` only (run `npm run db:types` after migrations)
+- Types from `types/remote/database.types.ts` only (run `npm run db:types` after migrations)
 - Functional factories for services, not classes
 - No `as any`, no `console.*` in production
 - See `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` before adding abstractions

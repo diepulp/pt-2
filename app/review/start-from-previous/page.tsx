@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { Calendar, Moon, Sun } from "lucide-react";
-import { useTheme } from "next-themes";
-import * as React from "react";
+import { Calendar, Moon, Sun } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import * as React from 'react';
 
 import {
   GamingDayInfo,
@@ -13,10 +13,10 @@ import {
   StartFromPreviousModal,
   StartFromPreviousPanel,
   useStartFromPreviousModal,
-} from "@/components/player-sessions";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/player-sessions';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // ============================================================================
 // Mock Data
@@ -24,28 +24,28 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Gaming day is today's date (simulating casino temporal authority)
 const mockGamingDay: GamingDayInfo = {
-  gaming_day: new Date().toISOString().split("T")[0],
-  timezone: "America/Los_Angeles",
+  gaming_day: new Date().toISOString().split('T')[0],
+  timezone: 'America/Los_Angeles',
 };
 
 const mockPlayer: PlayerInfo = {
-  player_id: "player-001",
-  name: "John Smith",
-  tier: "Platinum",
-  card_number: "•••• 4829",
+  player_id: 'player-001',
+  name: 'John Smith',
+  tier: 'Platinum',
+  card_number: '•••• 4829',
 };
 
 // Gaming day scoped sessions (today only - closed sessions)
 const mockRecentSessions: SessionData[] = [
   {
-    visit_id: "visit-001",
-    visit_group_id: "group-001",
+    visit_id: 'visit-001',
+    visit_group_id: 'group-001',
     started_at: new Date(
       Date.now() - 4 * 60 * 60 * 1000 - 90 * 60 * 1000,
     ).toISOString(),
     ended_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
-    last_table_id: "table-bj-01",
-    last_table_name: "BJ-01",
+    last_table_id: 'table-bj-01',
+    last_table_name: 'BJ-01',
     last_seat_number: 5,
     total_duration_seconds: 5400, // 1h 30m
     total_buy_in: 300,
@@ -55,14 +55,14 @@ const mockRecentSessions: SessionData[] = [
     segment_count: 2,
   },
   {
-    visit_id: "visit-002",
-    visit_group_id: "group-002",
+    visit_id: 'visit-002',
+    visit_group_id: 'group-002',
     started_at: new Date(
       Date.now() - 8 * 60 * 60 * 1000 - 2.75 * 60 * 60 * 1000,
     ).toISOString(),
     ended_at: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
-    last_table_id: "table-rl-02",
-    last_table_name: "Roulette-02",
+    last_table_id: 'table-rl-02',
+    last_table_name: 'Roulette-02',
     last_seat_number: 8,
     total_duration_seconds: 9900, // 2h 45m
     total_buy_in: 1000,
@@ -76,12 +76,12 @@ const mockRecentSessions: SessionData[] = [
 // Player list mock data - all players with closed sessions (gaming day scoped)
 const mockPlayerList: PlayerListItem[] = [
   {
-    player_id: "player-001",
-    name: "John Smith",
-    tier: "Platinum",
-    card_number: "•••• 4829",
+    player_id: 'player-001',
+    name: 'John Smith',
+    tier: 'Platinum',
+    card_number: '•••• 4829',
     last_session: {
-      table_name: "BJ-05",
+      table_name: 'BJ-05',
       seat_number: 3,
       ended_at: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
       net: 450,
@@ -91,11 +91,11 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: 450,
   },
   {
-    player_id: "player-002",
-    name: "Sarah Chen",
-    card_number: "•••• 7712",
+    player_id: 'player-002',
+    name: 'Sarah Chen',
+    card_number: '•••• 7712',
     last_session: {
-      table_name: "BJ-03",
+      table_name: 'BJ-03',
       seat_number: 1,
       ended_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
       net: 250,
@@ -105,12 +105,12 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: 250,
   },
   {
-    player_id: "player-003",
-    name: "Michael Rodriguez",
-    tier: "Gold",
-    card_number: "•••• 3391",
+    player_id: 'player-003',
+    name: 'Michael Rodriguez',
+    tier: 'Gold',
+    card_number: '•••• 3391',
     last_session: {
-      table_name: "Roulette-01",
+      table_name: 'Roulette-01',
       seat_number: 6,
       ended_at: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
       net: -150,
@@ -120,12 +120,12 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: -150,
   },
   {
-    player_id: "player-004",
-    name: "Emily Watson",
-    tier: "Diamond",
-    card_number: "•••• 8847",
+    player_id: 'player-004',
+    name: 'Emily Watson',
+    tier: 'Diamond',
+    card_number: '•••• 8847',
     last_session: {
-      table_name: "Baccarat-01",
+      table_name: 'Baccarat-01',
       seat_number: 2,
       ended_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       net: 1200,
@@ -135,11 +135,11 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: 1200,
   },
   {
-    player_id: "player-005",
-    name: "David Kim",
-    card_number: "•••• 2256",
+    player_id: 'player-005',
+    name: 'David Kim',
+    card_number: '•••• 2256',
     last_session: {
-      table_name: "BJ-02",
+      table_name: 'BJ-02',
       seat_number: 7,
       ended_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
       net: -400,
@@ -149,12 +149,12 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: -400,
   },
   {
-    player_id: "player-006",
-    name: "Lisa Thompson",
-    tier: "Silver",
-    card_number: "•••• 9934",
+    player_id: 'player-006',
+    name: 'Lisa Thompson',
+    tier: 'Silver',
+    card_number: '•••• 9934',
     last_session: {
-      table_name: "BJ-01",
+      table_name: 'BJ-01',
       seat_number: 2,
       ended_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
       net: 125,
@@ -164,12 +164,12 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: 125,
   },
   {
-    player_id: "player-007",
-    name: "James Wilson",
-    tier: "Gold",
-    card_number: "•••• 1128",
+    player_id: 'player-007',
+    name: 'James Wilson',
+    tier: 'Gold',
+    card_number: '•••• 1128',
     last_session: {
-      table_name: "BJ-04",
+      table_name: 'BJ-04',
       seat_number: 4,
       ended_at: new Date(Date.now() - 2.5 * 60 * 60 * 1000).toISOString(),
       net: 300,
@@ -179,11 +179,11 @@ const mockPlayerList: PlayerListItem[] = [
     total_net_today: 300,
   },
   {
-    player_id: "player-008",
-    name: "Maria Garcia",
-    card_number: "•••• 6673",
+    player_id: 'player-008',
+    name: 'Maria Garcia',
+    card_number: '•••• 6673',
     last_session: {
-      table_name: "Roulette-02",
+      table_name: 'Roulette-02',
       seat_number: 3,
       ended_at: new Date(Date.now() - 4.5 * 60 * 60 * 1000).toISOString(),
       net: 75,
@@ -196,15 +196,15 @@ const mockPlayerList: PlayerListItem[] = [
 
 // Session data per player (for modal) - only closed sessions
 const mockPlayerSessions: Record<string, SessionData[]> = {
-  "player-001": mockRecentSessions,
-  "player-002": [
+  'player-001': mockRecentSessions,
+  'player-002': [
     {
-      visit_id: "visit-sarah-001",
-      visit_group_id: "group-sarah-001",
+      visit_id: 'visit-sarah-001',
+      visit_group_id: 'group-sarah-001',
       started_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
       ended_at: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      last_table_id: "table-bj-03",
-      last_table_name: "BJ-03",
+      last_table_id: 'table-bj-03',
+      last_table_name: 'BJ-03',
       last_seat_number: 1,
       total_duration_seconds: 5400,
       total_buy_in: 500,
@@ -214,14 +214,14 @@ const mockPlayerSessions: Record<string, SessionData[]> = {
       segment_count: 1,
     },
   ],
-  "player-003": [
+  'player-003': [
     {
-      visit_id: "visit-michael-001",
-      visit_group_id: "group-michael-001",
+      visit_id: 'visit-michael-001',
+      visit_group_id: 'group-michael-001',
       started_at: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
       ended_at: new Date(Date.now() - 1.5 * 60 * 60 * 1000).toISOString(),
-      last_table_id: "table-rl-01",
-      last_table_name: "Roulette-01",
+      last_table_id: 'table-rl-01',
+      last_table_name: 'Roulette-01',
       last_seat_number: 6,
       total_duration_seconds: 5400,
       total_buy_in: 400,
@@ -231,14 +231,14 @@ const mockPlayerSessions: Record<string, SessionData[]> = {
       segment_count: 1,
     },
   ],
-  "player-004": [
+  'player-004': [
     {
-      visit_id: "visit-emily-001",
-      visit_group_id: "group-emily-001",
+      visit_id: 'visit-emily-001',
+      visit_group_id: 'group-emily-001',
       started_at: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
       ended_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-      last_table_id: "table-bac-01",
-      last_table_name: "Baccarat-01",
+      last_table_id: 'table-bac-01',
+      last_table_name: 'Baccarat-01',
       last_seat_number: 2,
       total_duration_seconds: 10800,
       total_buy_in: 3000,
@@ -274,9 +274,9 @@ function ThemeToggle() {
     <Button
       variant="outline"
       size="icon"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
     >
-      {theme === "dark" ? (
+      {theme === 'dark' ? (
         <Sun className="h-4 w-4" />
       ) : (
         <Moon className="h-4 w-4" />
@@ -292,11 +292,11 @@ function ThemeToggle() {
 export default function StartFromPreviousReviewPage() {
   // Panel demo state
   const [panelState, setPanelState] = React.useState<
-    "with-sessions" | "empty" | "loading"
-  >("with-sessions");
+    'with-sessions' | 'empty' | 'loading'
+  >('with-sessions');
 
   // Player list state
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [currentPage, setCurrentPage] = React.useState(1);
   const [isSearching, setIsSearching] = React.useState(false);
 
@@ -513,14 +513,14 @@ function MyComponent() {
                 </span>
                 {(
                   [
-                    { key: "with-sessions", label: "With Sessions" },
-                    { key: "empty", label: "Empty State" },
-                    { key: "loading", label: "Loading" },
+                    { key: 'with-sessions', label: 'With Sessions' },
+                    { key: 'empty', label: 'Empty State' },
+                    { key: 'loading', label: 'Loading' },
                   ] as const
                 ).map(({ key, label }) => (
                   <Button
                     key={key}
-                    variant={panelState === key ? "default" : "outline"}
+                    variant={panelState === key ? 'default' : 'outline'}
                     size="sm"
                     onClick={() => setPanelState(key)}
                   >
@@ -546,10 +546,10 @@ function MyComponent() {
                     <StartFromPreviousPanel
                       player={mockPlayer}
                       recentSessions={
-                        panelState === "empty" ? [] : mockRecentSessions
+                        panelState === 'empty' ? [] : mockRecentSessions
                       }
                       gamingDay={mockGamingDay}
-                      isLoading={panelState === "loading"}
+                      isLoading={panelState === 'loading'}
                       onStartFromPrevious={handleStartFromPrevious}
                     />
                   </div>
@@ -578,15 +578,15 @@ function MyComponent() {
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-accent mt-0.5">•</span>
-                        Sessions computed via{" "}
+                        Sessions computed via{' '}
                         <code className="text-xs bg-muted px-1 rounded">
                           compute_gaming_day
-                        </code>{" "}
+                        </code>{' '}
                         RPC
                       </li>
                       <li className="flex items-start gap-2">
                         <span className="text-accent mt-0.5">•</span>
-                        Hook:{" "}
+                        Hook:{' '}
                         <code className="text-xs bg-muted px-1 rounded">
                           useGamingDay()
                         </code>

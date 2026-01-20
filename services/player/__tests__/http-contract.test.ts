@@ -52,8 +52,8 @@ describe('http.ts ↔ route.ts contract', () => {
   });
 
   describe('Action endpoints (/api/v1/players/[playerId]/*)', () => {
-    it('enrollPlayer → POST /players/[playerId]/enroll', () => {
-      expect(typeof http.enrollPlayer).toBe('function');
+    // Note: enrollPlayer moved to services/casino/http.ts per ADR-022 D5
+    it('enroll route handler exists', () => {
       expect(typeof enrollRoute.POST).toBe('function');
     });
 
@@ -74,13 +74,13 @@ describe('http.ts ↔ route.ts contract', () => {
   describe('Contract coverage', () => {
     it('all http.ts exported functions have corresponding routes', () => {
       // List of all exported player functions from http.ts
+      // Note: enrollPlayer moved to services/casino/http.ts per ADR-022 D5
       const httpFunctions = [
         'searchPlayers',
         'getPlayers',
         'getPlayer',
         'createPlayer',
         'updatePlayer',
-        'enrollPlayer',
         'getPlayerEnrollment',
       ];
 
@@ -92,7 +92,7 @@ describe('http.ts ↔ route.ts contract', () => {
       });
 
       // Count should match (excluding helpers like buildParams, generateIdempotencyKey)
-      expect(httpFunctions.length).toBe(7);
+      expect(httpFunctions.length).toBe(6);
     });
   });
 });

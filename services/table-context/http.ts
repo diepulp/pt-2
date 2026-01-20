@@ -8,8 +8,8 @@
  * @see EDGE_TRANSPORT_POLICY.md section 2-3
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 
 import type {
   GamingTableDTO,
@@ -22,7 +22,7 @@ import type {
   TableListFilters,
   TableSettingsDTO,
   TableSessionDTO,
-} from "./dtos";
+} from './dtos';
 import type {
   LogInventorySnapshotRequestBody,
   RequestTableFillRequestBody,
@@ -32,9 +32,9 @@ import type {
   UpdateTableLimitsRequestBody,
   CloseTableSessionRequestBody,
   OpenTableSessionRequestBody,
-} from "./schemas";
+} from './schemas';
 
-const BASE_URL = "/api/v1";
+const BASE_URL = '/api/v1';
 
 // === Helper Functions ===
 
@@ -78,7 +78,7 @@ export async function fetchTable(tableId: string): Promise<GamingTableDTO> {
 }
 
 export async function fetchActiveTables(): Promise<GamingTableWithDealerDTO[]> {
-  const params = buildParams({ status: "active", include_dealer: true });
+  const params = buildParams({ status: 'active', include_dealer: true });
   const url = `${BASE_URL}/tables?${params}`;
   // fetchJSON unwraps ServiceHttpResult.data, so we get the array directly
   return fetchJSON<GamingTableWithDealerDTO[]>(url);
@@ -91,9 +91,9 @@ export async function activateTable(
   idempotencyKey?: string,
 ): Promise<GamingTableDTO> {
   return fetchJSON<GamingTableDTO>(`${BASE_URL}/tables/${tableId}/activate`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
   });
@@ -104,9 +104,9 @@ export async function deactivateTable(
   idempotencyKey?: string,
 ): Promise<GamingTableDTO> {
   return fetchJSON<GamingTableDTO>(`${BASE_URL}/tables/${tableId}/deactivate`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
   });
@@ -117,9 +117,9 @@ export async function closeTable(
   idempotencyKey?: string,
 ): Promise<GamingTableDTO> {
   return fetchJSON<GamingTableDTO>(`${BASE_URL}/tables/${tableId}/close`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
   });
@@ -133,9 +133,9 @@ export async function assignDealer(
   idempotencyKey?: string,
 ): Promise<DealerRotationDTO> {
   return fetchJSON<DealerRotationDTO>(`${BASE_URL}/tables/${tableId}/dealer`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -147,7 +147,7 @@ export async function endDealerRotation(
   idempotencyKey?: string,
 ): Promise<DealerRotationDTO> {
   return fetchJSON<DealerRotationDTO>(`${BASE_URL}/tables/${tableId}/dealer`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: {
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
@@ -163,9 +163,9 @@ export async function logInventorySnapshot(
   return fetchJSON<TableInventorySnapshotDTO>(
     `${BASE_URL}/table-context/inventory-snapshots`,
     {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
       },
       body: JSON.stringify(input),
@@ -178,9 +178,9 @@ export async function requestTableFill(
   idempotencyKey?: string,
 ): Promise<TableFillDTO> {
   return fetchJSON<TableFillDTO>(`${BASE_URL}/table-context/fills`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -192,9 +192,9 @@ export async function requestTableCredit(
   idempotencyKey?: string,
 ): Promise<TableCreditDTO> {
   return fetchJSON<TableCreditDTO>(`${BASE_URL}/table-context/credits`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -206,9 +206,9 @@ export async function logDropEvent(
   idempotencyKey?: string,
 ): Promise<TableDropEventDTO> {
   return fetchJSON<TableDropEventDTO>(`${BASE_URL}/table-context/drop-events`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -229,9 +229,9 @@ export async function patchTableLimits(
   idempotencyKey?: string,
 ): Promise<TableSettingsDTO> {
   return fetchJSON<TableSettingsDTO>(`${BASE_URL}/tables/${tableId}/settings`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(data),
@@ -249,9 +249,9 @@ export async function openTableSession(
   idempotencyKey?: string,
 ): Promise<TableSessionDTO> {
   return fetchJSON<TableSessionDTO>(`${BASE_URL}/table-sessions`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -269,12 +269,12 @@ export async function startTableRundown(
   return fetchJSON<TableSessionDTO>(
     `${BASE_URL}/table-sessions/${sessionId}/rundown`,
     {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
       },
-    }
+    },
   );
 }
 
@@ -290,13 +290,13 @@ export async function closeTableSession(
   return fetchJSON<TableSessionDTO>(
     `${BASE_URL}/table-sessions/${sessionId}/close`,
     {
-      method: "PATCH",
+      method: 'PATCH',
       headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
         [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
       },
       body: JSON.stringify(input),
-    }
+    },
   );
 }
 
@@ -309,7 +309,7 @@ export async function fetchCurrentTableSession(
 ): Promise<TableSessionDTO | null> {
   try {
     return await fetchJSON<TableSessionDTO>(
-      `${BASE_URL}/tables/${tableId}/current-session`
+      `${BASE_URL}/tables/${tableId}/current-session`,
     );
   } catch {
     // 404 means no active session

@@ -1,29 +1,29 @@
-"use client";
+'use client';
 
-import { useQueryClient } from "@tanstack/react-query";
-import { Package, RefreshCw, Calculator, Loader2 } from "lucide-react";
-import * as React from "react";
+import { useQueryClient } from '@tanstack/react-query';
+import { Package, RefreshCw, Calculator, Loader2 } from 'lucide-react';
+import * as React from 'react';
 
-import { ChipCountCaptureDialog } from "@/components/table/chip-count-capture-dialog";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChipCountCaptureDialog } from '@/components/table/chip-count-capture-dialog';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useDropEvents,
   type TableDropEventDTO,
-} from "@/hooks/table-context/use-drop-events";
+} from '@/hooks/table-context/use-drop-events';
 import {
   calculateChipsetTotal,
   STANDARD_DENOMINATIONS,
   useInventorySnapshots,
   type TableInventorySnapshotDTO,
-} from "@/hooks/table-context/use-inventory-snapshots";
-import { tableContextKeys } from "@/services/table-context/keys";
+} from '@/hooks/table-context/use-inventory-snapshots';
+import { tableContextKeys } from '@/services/table-context/keys';
 
-import { BankSummary } from "./bank-summary";
-import { ChipCountsDisplay } from "./chip-counts-display";
-import { DropEventsDisplay } from "./drop-events-display";
-import { FillSlipsDisplay } from "./fill-slips-display";
+import { BankSummary } from './bank-summary';
+import { ChipCountsDisplay } from './chip-counts-display';
+import { DropEventsDisplay } from './drop-events-display';
+import { FillSlipsDisplay } from './fill-slips-display';
 
 interface InventoryPanelProps {
   tableName: string;
@@ -65,19 +65,19 @@ function transformDropEvents(events: TableDropEventDTO[]): {
   amount: number;
   scheduledAt: string;
   actualPulledAt?: string;
-  status: "scheduled" | "completed" | "overdue";
+  status: 'scheduled' | 'completed' | 'overdue';
 }[] {
   return events.map((event) => {
-    const time = new Date(event.removed_at).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
+    const time = new Date(event.removed_at).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
     });
     return {
       id: event.id,
       amount: 0, // Drop events don't have amount in current schema
       scheduledAt: time,
       actualPulledAt: time,
-      status: "completed" as const, // All logged drops are completed
+      status: 'completed' as const, // All logged drops are completed
     };
   });
 }
@@ -87,7 +87,7 @@ const EMPTY_FILL_SLIPS: {
   id: string;
   denominations: { denom: number; qty: number }[];
   createdAt: string;
-  status: "pending" | "approved" | "completed";
+  status: 'pending' | 'approved' | 'completed';
   createdBy: string;
   approvedBy?: string;
 }[] = [];
@@ -135,12 +135,12 @@ export function InventoryPanel({
 
   // Format last updated time
   const lastUpdated = snapshotsUpdatedAt
-    ? new Date(snapshotsUpdatedAt).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
+    ? new Date(snapshotsUpdatedAt).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        second: '2-digit',
       })
-    : "Never";
+    : 'Never';
 
   // Handle refresh
   const handleRefresh = () => {

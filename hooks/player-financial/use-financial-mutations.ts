@@ -9,15 +9,20 @@
  * @see PRD-009 Player Financial Service
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type {
+  CreateFinancialAdjustmentInput,
   CreateFinancialTxnInput,
   FinancialTransactionDTO,
-} from "@/services/player-financial/dtos";
-import { createFinancialTransaction } from "@/services/player-financial/http";
+} from '@/services/player-financial/dtos';
+import {
+  createFinancialAdjustment,
+  createFinancialTransaction,
+} from '@/services/player-financial/http';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
-import { playerFinancialKeys } from "./keys";
+import { playerFinancialKeys } from './keys';
 
 /**
  * Creates a new financial transaction (buy-in, cashout, marker, etc.).
@@ -85,5 +90,75 @@ export function useCreateFinancialTransaction() {
   });
 }
 
+/**
+ * Creates a financial adjustment (compliance-friendly correction).
+ *
+ * Adjustments don't modify or delete original transactions.
+ * They add a new record with txn_kind='adjustment' that explains
+ * the correction with a reason code and detailed note.
+ *
+ * Invalidates:
+ * - Visit financial summary (totals changed)
+ * - Rating slip modal data (totalCashIn display)
+ *
+ * @example
+ * ```tsx
+ * const createAdjustment = useCreateFinancialAdjustment();
+ *
+ * // Reduce total by $100 due to data entry error
+ * await createAdjustment.mutateAsync({
+ *   casino_id: casinoId,
+ *   player_id: playerId,
+ *   visit_id: visitId,
+ *   delta_amount: -100,
+ *   reason_code: 'data_entry_error',
+ *   note: 'Original buy-in was $500 but should have been $400. Customer confirmed.',
+ * });
+ * ```
+ */
+export function useCreateFinancialAdjustment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (input: CreateFinancialAdjustmentInput) =>
+      createFinancialAdjustment(input),
+    onSuccess: (data: FinancialTransactionDTO) => {
+      // Set detail cache for the new transaction
+      queryClient.setQueryData(playerFinancialKeys.detail(data.id), data);
+
+      // Invalidate all transaction list queries
+      queryClient.invalidateQueries({
+        queryKey: playerFinancialKeys.list.scope,
+      });
+
+      // Invalidate visit financial summary (totals changed)
+      queryClient.invalidateQueries({
+        queryKey: playerFinancialKeys.visitSummary(data.visit_id),
+      });
+
+      // Invalidate visit summary scope
+      queryClient.invalidateQueries({
+        queryKey: playerFinancialKeys.visitSummaryScope,
+      });
+
+      // Invalidate player-scoped queries
+      queryClient.invalidateQueries({
+        queryKey: playerFinancialKeys.forPlayer(data.player_id),
+      });
+
+      // Invalidate visit-scoped queries
+      queryClient.invalidateQueries({
+        queryKey: playerFinancialKeys.forVisit(data.visit_id),
+      });
+
+      // Invalidate rating slip modal data (shows totalCashIn)
+      // We need to invalidate all modal data since adjustment affects totals
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipModalKeys.scope,
+      });
+    },
+  });
+}
+
 // Re-export types for convenience
-export type { CreateFinancialTxnInput };
+export type { CreateFinancialTxnInput, CreateFinancialAdjustmentInput };

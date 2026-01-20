@@ -7,14 +7,14 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.6
  */
 
-"use client";
+'use client';
 
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -22,8 +22,8 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import type { ShiftPitMetricsDTO } from "@/services/table-context/shift-metrics/dtos";
+} from '@/components/ui/table';
+import type { ShiftPitMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface PitMetricsTableProps {
   data: ShiftPitMetricsDTO[] | undefined;
@@ -35,11 +35,11 @@ export interface PitMetricsTableProps {
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "$0";
+  if (cents == null) return '$0';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);

@@ -10,7 +10,7 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 1580-1719
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
+import { fetchJSON } from '@/lib/http/fetch-json';
 
 import type {
   FloorLayoutActivationDTO,
@@ -19,9 +19,9 @@ import type {
   FloorLayoutVersionDTO,
   FloorLayoutVersionFilters,
   FloorLayoutVersionWithSlotsDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/floor-layouts";
+const BASE = '/api/v1/floor-layouts';
 
 // === Helper Functions ===
 
@@ -82,7 +82,7 @@ export async function getFloorLayout(
  */
 export async function listFloorLayoutVersions(
   layoutId: string,
-  filters: Omit<FloorLayoutVersionFilters, "layout_id"> = {},
+  filters: Omit<FloorLayoutVersionFilters, 'layout_id'> = {},
 ): Promise<{
   items: FloorLayoutVersionDTO[] | FloorLayoutVersionWithSlotsDTO[];
 }> {

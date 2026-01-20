@@ -4,3667 +4,3679 @@ export type Json =
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[]
+  | Json[];
 
 export type Database = {
   graphql_public: {
     Tables: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Views: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     Functions: {
       graphql: {
         Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
     Enums: {
-      [_ in never]: never
-    }
+      [_ in never]: never;
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
+      [_ in never]: never;
+    };
+  };
   public: {
     Tables: {
       audit_log: {
         Row: {
-          action: string
-          actor_id: string | null
-          casino_id: string | null
-          created_at: string
-          details: Json | null
-          domain: string
-          id: string
-        }
+          action: string;
+          actor_id: string | null;
+          casino_id: string | null;
+          created_at: string;
+          details: Json | null;
+          domain: string;
+          id: string;
+        };
         Insert: {
-          action: string
-          actor_id?: string | null
-          casino_id?: string | null
-          created_at?: string
-          details?: Json | null
-          domain: string
-          id?: string
-        }
+          action: string;
+          actor_id?: string | null;
+          casino_id?: string | null;
+          created_at?: string;
+          details?: Json | null;
+          domain: string;
+          id?: string;
+        };
         Update: {
-          action?: string
-          actor_id?: string | null
-          casino_id?: string | null
-          created_at?: string
-          details?: Json | null
-          domain?: string
-          id?: string
-        }
+          action?: string;
+          actor_id?: string | null;
+          casino_id?: string | null;
+          created_at?: string;
+          details?: Json | null;
+          domain?: string;
+          id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "audit_log_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "audit_log_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "audit_log_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "audit_log_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       casino: {
         Row: {
-          address: Json | null
-          company_id: string | null
-          created_at: string
-          id: string
-          location: string | null
-          name: string
-          status: string
-        }
+          address: Json | null;
+          company_id: string | null;
+          created_at: string;
+          id: string;
+          location: string | null;
+          name: string;
+          status: string;
+        };
         Insert: {
-          address?: Json | null
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          location?: string | null
-          name: string
-          status?: string
-        }
+          address?: Json | null;
+          company_id?: string | null;
+          created_at?: string;
+          id?: string;
+          location?: string | null;
+          name: string;
+          status?: string;
+        };
         Update: {
-          address?: Json | null
-          company_id?: string | null
-          created_at?: string
-          id?: string
-          location?: string | null
-          name?: string
-          status?: string
-        }
+          address?: Json | null;
+          company_id?: string | null;
+          created_at?: string;
+          id?: string;
+          location?: string | null;
+          name?: string;
+          status?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "casino_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "company"
-            referencedColumns: ["id"]
+            foreignKeyName: "casino_company_id_fkey";
+            columns: ["company_id"];
+            isOneToOne: false;
+            referencedRelation: "company";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       casino_settings: {
         Row: {
-          alert_thresholds: Json
-          casino_id: string
-          created_at: string
-          ctr_threshold: number
-          gaming_day_start_time: string
-          id: string
-          promo_allow_anonymous_issuance: boolean
-          promo_require_exact_match: boolean
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
-          timezone: string
-          updated_at: string
-          watchlist_floor: number
-        }
+          alert_thresholds: Json;
+          casino_id: string;
+          created_at: string;
+          ctr_threshold: number;
+          gaming_day_start_time: string;
+          id: string;
+          promo_allow_anonymous_issuance: boolean;
+          promo_require_exact_match: boolean;
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"];
+          timezone: string;
+          updated_at: string;
+          watchlist_floor: number;
+        };
         Insert: {
-          alert_thresholds?: Json
-          casino_id: string
-          created_at?: string
-          ctr_threshold?: number
-          gaming_day_start_time?: string
-          id?: string
-          promo_allow_anonymous_issuance?: boolean
-          promo_require_exact_match?: boolean
-          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
-          timezone?: string
-          updated_at?: string
-          watchlist_floor?: number
-        }
+          alert_thresholds?: Json;
+          casino_id: string;
+          created_at?: string;
+          ctr_threshold?: number;
+          gaming_day_start_time?: string;
+          id?: string;
+          promo_allow_anonymous_issuance?: boolean;
+          promo_require_exact_match?: boolean;
+          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"];
+          timezone?: string;
+          updated_at?: string;
+          watchlist_floor?: number;
+        };
         Update: {
-          alert_thresholds?: Json
-          casino_id?: string
-          created_at?: string
-          ctr_threshold?: number
-          gaming_day_start_time?: string
-          id?: string
-          promo_allow_anonymous_issuance?: boolean
-          promo_require_exact_match?: boolean
-          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
-          timezone?: string
-          updated_at?: string
-          watchlist_floor?: number
-        }
+          alert_thresholds?: Json;
+          casino_id?: string;
+          created_at?: string;
+          ctr_threshold?: number;
+          gaming_day_start_time?: string;
+          id?: string;
+          promo_allow_anonymous_issuance?: boolean;
+          promo_require_exact_match?: boolean;
+          table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"];
+          timezone?: string;
+          updated_at?: string;
+          watchlist_floor?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "casino_settings_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: true
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "casino_settings_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: true;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       company: {
         Row: {
-          created_at: string
-          id: string
-          legal_name: string | null
-          name: string
-        }
+          created_at: string;
+          id: string;
+          legal_name: string | null;
+          name: string;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          legal_name?: string | null
-          name: string
-        }
+          created_at?: string;
+          id?: string;
+          legal_name?: string | null;
+          name: string;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          legal_name?: string | null
-          name?: string
-        }
-        Relationships: []
-      }
+          created_at?: string;
+          id?: string;
+          legal_name?: string | null;
+          name?: string;
+        };
+        Relationships: [];
+      };
       dealer_rotation: {
         Row: {
-          casino_id: string
-          ended_at: string | null
-          id: string
-          staff_id: string | null
-          started_at: string
-          table_id: string
-        }
+          casino_id: string;
+          ended_at: string | null;
+          id: string;
+          staff_id: string | null;
+          started_at: string;
+          table_id: string;
+        };
         Insert: {
-          casino_id: string
-          ended_at?: string | null
-          id?: string
-          staff_id?: string | null
-          started_at?: string
-          table_id: string
-        }
+          casino_id: string;
+          ended_at?: string | null;
+          id?: string;
+          staff_id?: string | null;
+          started_at?: string;
+          table_id: string;
+        };
         Update: {
-          casino_id?: string
-          ended_at?: string | null
-          id?: string
-          staff_id?: string | null
-          started_at?: string
-          table_id?: string
-        }
+          casino_id?: string;
+          ended_at?: string | null;
+          id?: string;
+          staff_id?: string | null;
+          started_at?: string;
+          table_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "dealer_rotation_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "dealer_rotation_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "dealer_rotation_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "dealer_rotation_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "dealer_rotation_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "dealer_rotation_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       finance_outbox: {
         Row: {
-          attempt_count: number
-          casino_id: string
-          created_at: string
-          event_type: string
-          id: string
-          ledger_id: string
-          payload: Json
-          processed_at: string | null
-        }
+          attempt_count: number;
+          casino_id: string;
+          created_at: string;
+          event_type: string;
+          id: string;
+          ledger_id: string;
+          payload: Json;
+          processed_at: string | null;
+        };
         Insert: {
-          attempt_count?: number
-          casino_id: string
-          created_at?: string
-          event_type: string
-          id?: string
-          ledger_id: string
-          payload: Json
-          processed_at?: string | null
-        }
+          attempt_count?: number;
+          casino_id: string;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          ledger_id: string;
+          payload: Json;
+          processed_at?: string | null;
+        };
         Update: {
-          attempt_count?: number
-          casino_id?: string
-          created_at?: string
-          event_type?: string
-          id?: string
-          ledger_id?: string
-          payload?: Json
-          processed_at?: string | null
-        }
+          attempt_count?: number;
+          casino_id?: string;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          ledger_id?: string;
+          payload?: Json;
+          processed_at?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "finance_outbox_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "finance_outbox_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "finance_outbox_ledger_id_fkey"
-            columns: ["ledger_id"]
-            isOneToOne: false
-            referencedRelation: "player_financial_transaction"
-            referencedColumns: ["id"]
+            foreignKeyName: "finance_outbox_ledger_id_fkey";
+            columns: ["ledger_id"];
+            isOneToOne: false;
+            referencedRelation: "player_financial_transaction";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       floor_layout: {
         Row: {
-          approved_by: string | null
-          casino_id: string
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          name: string
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["floor_layout_status"]
-          updated_at: string
-        }
+          approved_by: string | null;
+          casino_id: string;
+          created_at: string;
+          created_by: string;
+          description: string | null;
+          id: string;
+          name: string;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["floor_layout_status"];
+          updated_at: string;
+        };
         Insert: {
-          approved_by?: string | null
-          casino_id: string
-          created_at?: string
-          created_by: string
-          description?: string | null
-          id?: string
-          name: string
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["floor_layout_status"]
-          updated_at?: string
-        }
+          approved_by?: string | null;
+          casino_id: string;
+          created_at?: string;
+          created_by: string;
+          description?: string | null;
+          id?: string;
+          name: string;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["floor_layout_status"];
+          updated_at?: string;
+        };
         Update: {
-          approved_by?: string | null
-          casino_id?: string
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          id?: string
-          name?: string
-          reviewed_by?: string | null
-          status?: Database["public"]["Enums"]["floor_layout_status"]
-          updated_at?: string
-        }
+          approved_by?: string | null;
+          casino_id?: string;
+          created_at?: string;
+          created_by?: string;
+          description?: string | null;
+          id?: string;
+          name?: string;
+          reviewed_by?: string | null;
+          status?: Database["public"]["Enums"]["floor_layout_status"];
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "floor_layout_approved_by_fkey"
-            columns: ["approved_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_approved_by_fkey";
+            columns: ["approved_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_reviewed_by_fkey"
-            columns: ["reviewed_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_reviewed_by_fkey";
+            columns: ["reviewed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       floor_layout_activation: {
         Row: {
-          activated_at: string
-          activated_by: string
-          activation_request_id: string
-          casino_id: string
-          deactivated_at: string | null
-          id: string
-          layout_version_id: string
-        }
+          activated_at: string;
+          activated_by: string;
+          activation_request_id: string;
+          casino_id: string;
+          deactivated_at: string | null;
+          id: string;
+          layout_version_id: string;
+        };
         Insert: {
-          activated_at?: string
-          activated_by: string
-          activation_request_id: string
-          casino_id: string
-          deactivated_at?: string | null
-          id?: string
-          layout_version_id: string
-        }
+          activated_at?: string;
+          activated_by: string;
+          activation_request_id: string;
+          casino_id: string;
+          deactivated_at?: string | null;
+          id?: string;
+          layout_version_id: string;
+        };
         Update: {
-          activated_at?: string
-          activated_by?: string
-          activation_request_id?: string
-          casino_id?: string
-          deactivated_at?: string | null
-          id?: string
-          layout_version_id?: string
-        }
+          activated_at?: string;
+          activated_by?: string;
+          activation_request_id?: string;
+          casino_id?: string;
+          deactivated_at?: string | null;
+          id?: string;
+          layout_version_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "floor_layout_activation_activated_by_fkey"
-            columns: ["activated_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_activation_activated_by_fkey";
+            columns: ["activated_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_activation_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_activation_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_activation_layout_version_id_fkey"
-            columns: ["layout_version_id"]
-            isOneToOne: false
-            referencedRelation: "floor_layout_version"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_activation_layout_version_id_fkey";
+            columns: ["layout_version_id"];
+            isOneToOne: false;
+            referencedRelation: "floor_layout_version";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       floor_layout_version: {
         Row: {
-          created_at: string
-          created_by: string
-          id: string
-          layout_id: string
-          layout_payload: Json
-          notes: string | null
-          status: Database["public"]["Enums"]["floor_layout_version_status"]
-          version_no: number
-        }
+          created_at: string;
+          created_by: string;
+          id: string;
+          layout_id: string;
+          layout_payload: Json;
+          notes: string | null;
+          status: Database["public"]["Enums"]["floor_layout_version_status"];
+          version_no: number;
+        };
         Insert: {
-          created_at?: string
-          created_by: string
-          id?: string
-          layout_id: string
-          layout_payload?: Json
-          notes?: string | null
-          status?: Database["public"]["Enums"]["floor_layout_version_status"]
-          version_no: number
-        }
+          created_at?: string;
+          created_by: string;
+          id?: string;
+          layout_id: string;
+          layout_payload?: Json;
+          notes?: string | null;
+          status?: Database["public"]["Enums"]["floor_layout_version_status"];
+          version_no: number;
+        };
         Update: {
-          created_at?: string
-          created_by?: string
-          id?: string
-          layout_id?: string
-          layout_payload?: Json
-          notes?: string | null
-          status?: Database["public"]["Enums"]["floor_layout_version_status"]
-          version_no?: number
-        }
+          created_at?: string;
+          created_by?: string;
+          id?: string;
+          layout_id?: string;
+          layout_payload?: Json;
+          notes?: string | null;
+          status?: Database["public"]["Enums"]["floor_layout_version_status"];
+          version_no?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "floor_layout_version_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_version_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_layout_version_layout_id_fkey"
-            columns: ["layout_id"]
-            isOneToOne: false
-            referencedRelation: "floor_layout"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_layout_version_layout_id_fkey";
+            columns: ["layout_id"];
+            isOneToOne: false;
+            referencedRelation: "floor_layout";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       floor_pit: {
         Row: {
-          capacity: number | null
-          geometry: Json | null
-          id: string
-          label: string
-          layout_version_id: string
-          metadata: Json | null
-          sequence: number
-        }
+          capacity: number | null;
+          geometry: Json | null;
+          id: string;
+          label: string;
+          layout_version_id: string;
+          metadata: Json | null;
+          sequence: number;
+        };
         Insert: {
-          capacity?: number | null
-          geometry?: Json | null
-          id?: string
-          label: string
-          layout_version_id: string
-          metadata?: Json | null
-          sequence?: number
-        }
+          capacity?: number | null;
+          geometry?: Json | null;
+          id?: string;
+          label: string;
+          layout_version_id: string;
+          metadata?: Json | null;
+          sequence?: number;
+        };
         Update: {
-          capacity?: number | null
-          geometry?: Json | null
-          id?: string
-          label?: string
-          layout_version_id?: string
-          metadata?: Json | null
-          sequence?: number
-        }
+          capacity?: number | null;
+          geometry?: Json | null;
+          id?: string;
+          label?: string;
+          layout_version_id?: string;
+          metadata?: Json | null;
+          sequence?: number;
+        };
         Relationships: [
           {
-            foreignKeyName: "floor_pit_layout_version_id_fkey"
-            columns: ["layout_version_id"]
-            isOneToOne: false
-            referencedRelation: "floor_layout_version"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_pit_layout_version_id_fkey";
+            columns: ["layout_version_id"];
+            isOneToOne: false;
+            referencedRelation: "floor_layout_version";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       floor_table_slot: {
         Row: {
-          coordinates: Json | null
-          game_type: Database["public"]["Enums"]["game_type"]
-          id: string
-          layout_version_id: string
-          metadata: Json | null
-          orientation: string | null
-          pit_id: string | null
-          preferred_table_id: string | null
-          slot_label: string
-        }
+          coordinates: Json | null;
+          game_type: Database["public"]["Enums"]["game_type"];
+          id: string;
+          layout_version_id: string;
+          metadata: Json | null;
+          orientation: string | null;
+          pit_id: string | null;
+          preferred_table_id: string | null;
+          slot_label: string;
+        };
         Insert: {
-          coordinates?: Json | null
-          game_type: Database["public"]["Enums"]["game_type"]
-          id?: string
-          layout_version_id: string
-          metadata?: Json | null
-          orientation?: string | null
-          pit_id?: string | null
-          preferred_table_id?: string | null
-          slot_label: string
-        }
+          coordinates?: Json | null;
+          game_type: Database["public"]["Enums"]["game_type"];
+          id?: string;
+          layout_version_id: string;
+          metadata?: Json | null;
+          orientation?: string | null;
+          pit_id?: string | null;
+          preferred_table_id?: string | null;
+          slot_label: string;
+        };
         Update: {
-          coordinates?: Json | null
-          game_type?: Database["public"]["Enums"]["game_type"]
-          id?: string
-          layout_version_id?: string
-          metadata?: Json | null
-          orientation?: string | null
-          pit_id?: string | null
-          preferred_table_id?: string | null
-          slot_label?: string
-        }
+          coordinates?: Json | null;
+          game_type?: Database["public"]["Enums"]["game_type"];
+          id?: string;
+          layout_version_id?: string;
+          metadata?: Json | null;
+          orientation?: string | null;
+          pit_id?: string | null;
+          preferred_table_id?: string | null;
+          slot_label?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "floor_table_slot_layout_version_id_fkey"
-            columns: ["layout_version_id"]
-            isOneToOne: false
-            referencedRelation: "floor_layout_version"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_table_slot_layout_version_id_fkey";
+            columns: ["layout_version_id"];
+            isOneToOne: false;
+            referencedRelation: "floor_layout_version";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_table_slot_pit_id_fkey"
-            columns: ["pit_id"]
-            isOneToOne: false
-            referencedRelation: "floor_pit"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_table_slot_pit_id_fkey";
+            columns: ["pit_id"];
+            isOneToOne: false;
+            referencedRelation: "floor_pit";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "floor_table_slot_preferred_table_id_fkey"
-            columns: ["preferred_table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "floor_table_slot_preferred_table_id_fkey";
+            columns: ["preferred_table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       game_settings: {
         Row: {
-          casino_id: string
-          created_at: string
-          decisions_per_hour: number
-          game_type: Database["public"]["Enums"]["game_type"]
-          house_edge: number
-          id: string
-          max_bet: number | null
-          min_bet: number | null
-          name: string
-          point_multiplier: number | null
-          points_conversion_rate: number | null
-          rotation_interval_minutes: number | null
-          seats_available: number
-          updated_at: string
-        }
+          casino_id: string;
+          created_at: string;
+          decisions_per_hour: number;
+          game_type: Database["public"]["Enums"]["game_type"];
+          house_edge: number;
+          id: string;
+          max_bet: number | null;
+          min_bet: number | null;
+          name: string;
+          point_multiplier: number | null;
+          points_conversion_rate: number | null;
+          rotation_interval_minutes: number | null;
+          seats_available: number;
+          updated_at: string;
+        };
         Insert: {
-          casino_id: string
-          created_at?: string
-          decisions_per_hour?: number
-          game_type: Database["public"]["Enums"]["game_type"]
-          house_edge?: number
-          id?: string
-          max_bet?: number | null
-          min_bet?: number | null
-          name: string
-          point_multiplier?: number | null
-          points_conversion_rate?: number | null
-          rotation_interval_minutes?: number | null
-          seats_available?: number
-          updated_at?: string
-        }
+          casino_id: string;
+          created_at?: string;
+          decisions_per_hour?: number;
+          game_type: Database["public"]["Enums"]["game_type"];
+          house_edge?: number;
+          id?: string;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          name: string;
+          point_multiplier?: number | null;
+          points_conversion_rate?: number | null;
+          rotation_interval_minutes?: number | null;
+          seats_available?: number;
+          updated_at?: string;
+        };
         Update: {
-          casino_id?: string
-          created_at?: string
-          decisions_per_hour?: number
-          game_type?: Database["public"]["Enums"]["game_type"]
-          house_edge?: number
-          id?: string
-          max_bet?: number | null
-          min_bet?: number | null
-          name?: string
-          point_multiplier?: number | null
-          points_conversion_rate?: number | null
-          rotation_interval_minutes?: number | null
-          seats_available?: number
-          updated_at?: string
-        }
+          casino_id?: string;
+          created_at?: string;
+          decisions_per_hour?: number;
+          game_type?: Database["public"]["Enums"]["game_type"];
+          house_edge?: number;
+          id?: string;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          name?: string;
+          point_multiplier?: number | null;
+          points_conversion_rate?: number | null;
+          rotation_interval_minutes?: number | null;
+          seats_available?: number;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "game_settings_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "game_settings_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       gaming_table: {
         Row: {
-          casino_id: string
-          created_at: string
-          id: string
-          label: string
-          par_total_cents: number | null
-          par_updated_at: string | null
-          par_updated_by: string | null
-          pit: string | null
-          status: Database["public"]["Enums"]["table_status"]
-          type: Database["public"]["Enums"]["game_type"]
-        }
+          casino_id: string;
+          created_at: string;
+          id: string;
+          label: string;
+          par_total_cents: number | null;
+          par_updated_at: string | null;
+          par_updated_by: string | null;
+          pit: string | null;
+          status: Database["public"]["Enums"]["table_status"];
+          type: Database["public"]["Enums"]["game_type"];
+        };
         Insert: {
-          casino_id: string
-          created_at?: string
-          id?: string
-          label: string
-          par_total_cents?: number | null
-          par_updated_at?: string | null
-          par_updated_by?: string | null
-          pit?: string | null
-          status?: Database["public"]["Enums"]["table_status"]
-          type: Database["public"]["Enums"]["game_type"]
-        }
+          casino_id: string;
+          created_at?: string;
+          id?: string;
+          label: string;
+          par_total_cents?: number | null;
+          par_updated_at?: string | null;
+          par_updated_by?: string | null;
+          pit?: string | null;
+          status?: Database["public"]["Enums"]["table_status"];
+          type: Database["public"]["Enums"]["game_type"];
+        };
         Update: {
-          casino_id?: string
-          created_at?: string
-          id?: string
-          label?: string
-          par_total_cents?: number | null
-          par_updated_at?: string | null
-          par_updated_by?: string | null
-          pit?: string | null
-          status?: Database["public"]["Enums"]["table_status"]
-          type?: Database["public"]["Enums"]["game_type"]
-        }
+          casino_id?: string;
+          created_at?: string;
+          id?: string;
+          label?: string;
+          par_total_cents?: number | null;
+          par_updated_at?: string | null;
+          par_updated_by?: string | null;
+          pit?: string | null;
+          status?: Database["public"]["Enums"]["table_status"];
+          type?: Database["public"]["Enums"]["game_type"];
+        };
         Relationships: [
           {
-            foreignKeyName: "gaming_table_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "gaming_table_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "gaming_table_par_updated_by_fkey"
-            columns: ["par_updated_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "gaming_table_par_updated_by_fkey";
+            columns: ["par_updated_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       gaming_table_settings: {
         Row: {
-          active_from: string
-          active_to: string | null
-          casino_id: string
-          id: string
-          max_bet: number | null
-          min_bet: number | null
-          rotation_interval_minutes: number | null
-          table_id: string
-        }
+          active_from: string;
+          active_to: string | null;
+          casino_id: string;
+          id: string;
+          max_bet: number | null;
+          min_bet: number | null;
+          rotation_interval_minutes: number | null;
+          table_id: string;
+        };
         Insert: {
-          active_from?: string
-          active_to?: string | null
-          casino_id: string
-          id?: string
-          max_bet?: number | null
-          min_bet?: number | null
-          rotation_interval_minutes?: number | null
-          table_id: string
-        }
+          active_from?: string;
+          active_to?: string | null;
+          casino_id: string;
+          id?: string;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
+          table_id: string;
+        };
         Update: {
-          active_from?: string
-          active_to?: string | null
-          casino_id?: string
-          id?: string
-          max_bet?: number | null
-          min_bet?: number | null
-          rotation_interval_minutes?: number | null
-          table_id?: string
-        }
+          active_from?: string;
+          active_to?: string | null;
+          casino_id?: string;
+          id?: string;
+          max_bet?: number | null;
+          min_bet?: number | null;
+          rotation_interval_minutes?: number | null;
+          table_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "gaming_table_settings_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "gaming_table_settings_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "gaming_table_settings_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "gaming_table_settings_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       loyalty_ledger: {
         Row: {
-          campaign_id: string | null
-          casino_id: string
-          created_at: string
-          id: string
-          idempotency_key: string | null
-          metadata: Json
-          note: string | null
-          player_id: string
-          points_delta: number
-          rating_slip_id: string | null
-          reason: Database["public"]["Enums"]["loyalty_reason"]
-          source_id: string | null
-          source_kind: string | null
-          staff_id: string | null
-          visit_id: string | null
-        }
+          campaign_id: string | null;
+          casino_id: string;
+          created_at: string;
+          id: string;
+          idempotency_key: string | null;
+          metadata: Json;
+          note: string | null;
+          player_id: string;
+          points_delta: number;
+          rating_slip_id: string | null;
+          reason: Database["public"]["Enums"]["loyalty_reason"];
+          source_id: string | null;
+          source_kind: string | null;
+          staff_id: string | null;
+          visit_id: string | null;
+        };
         Insert: {
-          campaign_id?: string | null
-          casino_id: string
-          created_at?: string
-          id?: string
-          idempotency_key?: string | null
-          metadata?: Json
-          note?: string | null
-          player_id: string
-          points_delta: number
-          rating_slip_id?: string | null
-          reason: Database["public"]["Enums"]["loyalty_reason"]
-          source_id?: string | null
-          source_kind?: string | null
-          staff_id?: string | null
-          visit_id?: string | null
-        }
+          campaign_id?: string | null;
+          casino_id: string;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          metadata?: Json;
+          note?: string | null;
+          player_id: string;
+          points_delta: number;
+          rating_slip_id?: string | null;
+          reason: Database["public"]["Enums"]["loyalty_reason"];
+          source_id?: string | null;
+          source_kind?: string | null;
+          staff_id?: string | null;
+          visit_id?: string | null;
+        };
         Update: {
-          campaign_id?: string | null
-          casino_id?: string
-          created_at?: string
-          id?: string
-          idempotency_key?: string | null
-          metadata?: Json
-          note?: string | null
-          player_id?: string
-          points_delta?: number
-          rating_slip_id?: string | null
-          reason?: Database["public"]["Enums"]["loyalty_reason"]
-          source_id?: string | null
-          source_kind?: string | null
-          staff_id?: string | null
-          visit_id?: string | null
-        }
+          campaign_id?: string | null;
+          casino_id?: string;
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          metadata?: Json;
+          note?: string | null;
+          player_id?: string;
+          points_delta?: number;
+          rating_slip_id?: string | null;
+          reason?: Database["public"]["Enums"]["loyalty_reason"];
+          source_id?: string | null;
+          source_kind?: string | null;
+          staff_id?: string | null;
+          visit_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "loyalty_ledger_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       mtl_audit_note: {
         Row: {
-          created_at: string
-          id: string
-          mtl_entry_id: string
-          note: string
-          staff_id: string | null
-        }
+          created_at: string;
+          id: string;
+          mtl_entry_id: string;
+          note: string;
+          staff_id: string | null;
+        };
         Insert: {
-          created_at?: string
-          id?: string
-          mtl_entry_id: string
-          note: string
-          staff_id?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          mtl_entry_id: string;
+          note: string;
+          staff_id?: string | null;
+        };
         Update: {
-          created_at?: string
-          id?: string
-          mtl_entry_id?: string
-          note?: string
-          staff_id?: string | null
-        }
+          created_at?: string;
+          id?: string;
+          mtl_entry_id?: string;
+          note?: string;
+          staff_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey"
-            columns: ["mtl_entry_id"]
-            isOneToOne: false
-            referencedRelation: "mtl_entry"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey";
+            columns: ["mtl_entry_id"];
+            isOneToOne: false;
+            referencedRelation: "mtl_entry";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_audit_note_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_audit_note_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       mtl_entry: {
         Row: {
-          amount: number
-          area: string | null
-          casino_id: string
-          created_at: string
-          direction: string
-          gaming_day: string | null
-          id: string
-          idempotency_key: string | null
-          occurred_at: string
-          patron_uuid: string
-          rating_slip_id: string | null
-          source: Database["public"]["Enums"]["mtl_source"]
-          staff_id: string | null
-          txn_type: Database["public"]["Enums"]["mtl_txn_type"]
-          visit_id: string | null
-        }
+          amount: number;
+          area: string | null;
+          casino_id: string;
+          created_at: string;
+          direction: string;
+          gaming_day: string | null;
+          id: string;
+          idempotency_key: string | null;
+          occurred_at: string;
+          patron_uuid: string;
+          rating_slip_id: string | null;
+          source: Database["public"]["Enums"]["mtl_source"];
+          staff_id: string | null;
+          txn_type: Database["public"]["Enums"]["mtl_txn_type"];
+          visit_id: string | null;
+        };
         Insert: {
-          amount: number
-          area?: string | null
-          casino_id: string
-          created_at?: string
-          direction: string
-          gaming_day?: string | null
-          id?: string
-          idempotency_key?: string | null
-          occurred_at?: string
-          patron_uuid: string
-          rating_slip_id?: string | null
-          source?: Database["public"]["Enums"]["mtl_source"]
-          staff_id?: string | null
-          txn_type?: Database["public"]["Enums"]["mtl_txn_type"]
-          visit_id?: string | null
-        }
+          amount: number;
+          area?: string | null;
+          casino_id: string;
+          created_at?: string;
+          direction: string;
+          gaming_day?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          occurred_at?: string;
+          patron_uuid: string;
+          rating_slip_id?: string | null;
+          source?: Database["public"]["Enums"]["mtl_source"];
+          staff_id?: string | null;
+          txn_type?: Database["public"]["Enums"]["mtl_txn_type"];
+          visit_id?: string | null;
+        };
         Update: {
-          amount?: number
-          area?: string | null
-          casino_id?: string
-          created_at?: string
-          direction?: string
-          gaming_day?: string | null
-          id?: string
-          idempotency_key?: string | null
-          occurred_at?: string
-          patron_uuid?: string
-          rating_slip_id?: string | null
-          source?: Database["public"]["Enums"]["mtl_source"]
-          staff_id?: string | null
-          txn_type?: Database["public"]["Enums"]["mtl_txn_type"]
-          visit_id?: string | null
-        }
+          amount?: number;
+          area?: string | null;
+          casino_id?: string;
+          created_at?: string;
+          direction?: string;
+          gaming_day?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          occurred_at?: string;
+          patron_uuid?: string;
+          rating_slip_id?: string | null;
+          source?: Database["public"]["Enums"]["mtl_source"];
+          staff_id?: string | null;
+          txn_type?: Database["public"]["Enums"]["mtl_txn_type"];
+          visit_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "mtl_entry_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_patron_uuid_fkey"
-            columns: ["patron_uuid"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_patron_uuid_fkey";
+            columns: ["patron_uuid"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_staff_id_fkey"
-            columns: ["staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_staff_id_fkey";
+            columns: ["staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       pit_cash_observation: {
         Row: {
-          amount: number
-          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
-          casino_id: string
-          created_at: string
-          created_by_staff_id: string
-          direction: string
-          gaming_day: string
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          observed_at: string
-          player_id: string
-          rating_slip_id: string | null
-          source: Database["public"]["Enums"]["observation_source"]
-          visit_id: string
-        }
+          amount: number;
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"];
+          casino_id: string;
+          created_at: string;
+          created_by_staff_id: string;
+          direction: string;
+          gaming_day: string;
+          id: string;
+          idempotency_key: string | null;
+          note: string | null;
+          observed_at: string;
+          player_id: string;
+          rating_slip_id: string | null;
+          source: Database["public"]["Enums"]["observation_source"];
+          visit_id: string;
+        };
         Insert: {
-          amount: number
-          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
-          casino_id: string
-          created_at?: string
-          created_by_staff_id: string
-          direction?: string
-          gaming_day: string
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          observed_at?: string
-          player_id: string
-          rating_slip_id?: string | null
-          source?: Database["public"]["Enums"]["observation_source"]
-          visit_id: string
-        }
+          amount: number;
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"];
+          casino_id: string;
+          created_at?: string;
+          created_by_staff_id: string;
+          direction?: string;
+          gaming_day: string;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          observed_at?: string;
+          player_id: string;
+          rating_slip_id?: string | null;
+          source?: Database["public"]["Enums"]["observation_source"];
+          visit_id: string;
+        };
         Update: {
-          amount?: number
-          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
-          casino_id?: string
-          created_at?: string
-          created_by_staff_id?: string
-          direction?: string
-          gaming_day?: string
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          observed_at?: string
-          player_id?: string
-          rating_slip_id?: string | null
-          source?: Database["public"]["Enums"]["observation_source"]
-          visit_id?: string
-        }
+          amount?: number;
+          amount_kind?: Database["public"]["Enums"]["observation_amount_kind"];
+          casino_id?: string;
+          created_at?: string;
+          created_by_staff_id?: string;
+          direction?: string;
+          gaming_day?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          observed_at?: string;
+          player_id?: string;
+          rating_slip_id?: string | null;
+          source?: Database["public"]["Enums"]["observation_source"];
+          visit_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "pit_cash_observation_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "pit_cash_observation_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "pit_cash_observation_created_by_staff_id_fkey"
-            columns: ["created_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "pit_cash_observation_created_by_staff_id_fkey";
+            columns: ["created_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "pit_cash_observation_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "pit_cash_observation_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "pit_cash_observation_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "pit_cash_observation_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "pit_cash_observation_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "pit_cash_observation_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       player: {
         Row: {
-          birth_date: string | null
-          created_at: string
-          email: string | null
-          first_name: string
-          id: string
-          last_name: string
-          middle_name: string | null
-          phone_number: string | null
-        }
+          birth_date: string | null;
+          created_at: string;
+          email: string | null;
+          first_name: string;
+          id: string;
+          last_name: string;
+          middle_name: string | null;
+          phone_number: string | null;
+        };
         Insert: {
-          birth_date?: string | null
-          created_at?: string
-          email?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          middle_name?: string | null
-          phone_number?: string | null
-        }
+          birth_date?: string | null;
+          created_at?: string;
+          email?: string | null;
+          first_name: string;
+          id?: string;
+          last_name: string;
+          middle_name?: string | null;
+          phone_number?: string | null;
+        };
         Update: {
-          birth_date?: string | null
-          created_at?: string
-          email?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          middle_name?: string | null
-          phone_number?: string | null
-        }
-        Relationships: []
-      }
+          birth_date?: string | null;
+          created_at?: string;
+          email?: string | null;
+          first_name?: string;
+          id?: string;
+          last_name?: string;
+          middle_name?: string | null;
+          phone_number?: string | null;
+        };
+        Relationships: [];
+      };
       player_casino: {
         Row: {
-          casino_id: string
-          enrolled_at: string
-          enrolled_by: string | null
-          player_id: string
-          status: string
-        }
+          casino_id: string;
+          enrolled_at: string;
+          enrolled_by: string | null;
+          player_id: string;
+          status: string;
+        };
         Insert: {
-          casino_id: string
-          enrolled_at?: string
-          enrolled_by?: string | null
-          player_id: string
-          status?: string
-        }
+          casino_id: string;
+          enrolled_at?: string;
+          enrolled_by?: string | null;
+          player_id: string;
+          status?: string;
+        };
         Update: {
-          casino_id?: string
-          enrolled_at?: string
-          enrolled_by?: string | null
-          player_id?: string
-          status?: string
-        }
+          casino_id?: string;
+          enrolled_at?: string;
+          enrolled_by?: string | null;
+          player_id?: string;
+          status?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_casino_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_casino_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_casino_enrolled_by_fkey"
-            columns: ["enrolled_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_casino_enrolled_by_fkey";
+            columns: ["enrolled_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_casino_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_casino_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       player_financial_transaction: {
         Row: {
-          amount: number
-          casino_id: string
-          created_at: string
-          created_by_staff_id: string | null
-          direction: Database["public"]["Enums"]["financial_direction"] | null
-          gaming_day: string | null
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          player_id: string
-          rating_slip_id: string | null
+          amount: number;
+          casino_id: string;
+          created_at: string;
+          created_by_staff_id: string | null;
+          direction: Database["public"]["Enums"]["financial_direction"] | null;
+          gaming_day: string | null;
+          id: string;
+          idempotency_key: string | null;
+          note: string | null;
+          player_id: string;
+          rating_slip_id: string | null;
           reason_code:
             | Database["public"]["Enums"]["adjustment_reason_code"]
-            | null
-          related_transaction_id: string | null
-          source: Database["public"]["Enums"]["financial_source"] | null
-          tender_type: string | null
-          txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
-          visit_id: string
-        }
+            | null;
+          related_transaction_id: string | null;
+          source: Database["public"]["Enums"]["financial_source"] | null;
+          tender_type: string | null;
+          txn_kind: Database["public"]["Enums"]["financial_txn_kind"];
+          visit_id: string;
+        };
         Insert: {
-          amount: number
-          casino_id: string
-          created_at?: string
-          created_by_staff_id?: string | null
-          direction?: Database["public"]["Enums"]["financial_direction"] | null
-          gaming_day?: string | null
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          player_id: string
-          rating_slip_id?: string | null
+          amount: number;
+          casino_id: string;
+          created_at?: string;
+          created_by_staff_id?: string | null;
+          direction?: Database["public"]["Enums"]["financial_direction"] | null;
+          gaming_day?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          player_id: string;
+          rating_slip_id?: string | null;
           reason_code?:
             | Database["public"]["Enums"]["adjustment_reason_code"]
-            | null
-          related_transaction_id?: string | null
-          source?: Database["public"]["Enums"]["financial_source"] | null
-          tender_type?: string | null
-          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"]
-          visit_id: string
-        }
+            | null;
+          related_transaction_id?: string | null;
+          source?: Database["public"]["Enums"]["financial_source"] | null;
+          tender_type?: string | null;
+          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"];
+          visit_id: string;
+        };
         Update: {
-          amount?: number
-          casino_id?: string
-          created_at?: string
-          created_by_staff_id?: string | null
-          direction?: Database["public"]["Enums"]["financial_direction"] | null
-          gaming_day?: string | null
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          player_id?: string
-          rating_slip_id?: string | null
+          amount?: number;
+          casino_id?: string;
+          created_at?: string;
+          created_by_staff_id?: string | null;
+          direction?: Database["public"]["Enums"]["financial_direction"] | null;
+          gaming_day?: string | null;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          player_id?: string;
+          rating_slip_id?: string | null;
           reason_code?:
             | Database["public"]["Enums"]["adjustment_reason_code"]
-            | null
-          related_transaction_id?: string | null
-          source?: Database["public"]["Enums"]["financial_source"] | null
-          tender_type?: string | null
-          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"]
-          visit_id?: string
-        }
+            | null;
+          related_transaction_id?: string | null;
+          source?: Database["public"]["Enums"]["financial_source"] | null;
+          tender_type?: string | null;
+          txn_kind?: Database["public"]["Enums"]["financial_txn_kind"];
+          visit_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_financial_transaction_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_financial_transaction_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       player_identity: {
         Row: {
-          address: Json | null
-          birth_date: string | null
-          casino_id: string
-          created_at: string
-          created_by: string
-          document_number_hash: string | null
-          document_number_last4: string | null
-          document_type: string | null
-          expiration_date: string | null
-          eye_color: string | null
-          gender: string | null
-          height: string | null
-          id: string
-          issue_date: string | null
-          issuing_state: string | null
-          player_id: string
-          updated_at: string
-          updated_by: string | null
-          verified_at: string | null
-          verified_by: string | null
-          weight: string | null
-        }
+          address: Json | null;
+          birth_date: string | null;
+          casino_id: string;
+          created_at: string;
+          created_by: string;
+          document_number_hash: string | null;
+          document_number_last4: string | null;
+          document_type: string | null;
+          expiration_date: string | null;
+          eye_color: string | null;
+          gender: string | null;
+          height: string | null;
+          id: string;
+          issue_date: string | null;
+          issuing_state: string | null;
+          player_id: string;
+          updated_at: string;
+          updated_by: string | null;
+          verified_at: string | null;
+          verified_by: string | null;
+          weight: string | null;
+        };
         Insert: {
-          address?: Json | null
-          birth_date?: string | null
-          casino_id: string
-          created_at?: string
-          created_by: string
-          document_number_hash?: string | null
-          document_number_last4?: string | null
-          document_type?: string | null
-          expiration_date?: string | null
-          eye_color?: string | null
-          gender?: string | null
-          height?: string | null
-          id?: string
-          issue_date?: string | null
-          issuing_state?: string | null
-          player_id: string
-          updated_at?: string
-          updated_by?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-          weight?: string | null
-        }
+          address?: Json | null;
+          birth_date?: string | null;
+          casino_id: string;
+          created_at?: string;
+          created_by: string;
+          document_number_hash?: string | null;
+          document_number_last4?: string | null;
+          document_type?: string | null;
+          expiration_date?: string | null;
+          eye_color?: string | null;
+          gender?: string | null;
+          height?: string | null;
+          id?: string;
+          issue_date?: string | null;
+          issuing_state?: string | null;
+          player_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          weight?: string | null;
+        };
         Update: {
-          address?: Json | null
-          birth_date?: string | null
-          casino_id?: string
-          created_at?: string
-          created_by?: string
-          document_number_hash?: string | null
-          document_number_last4?: string | null
-          document_type?: string | null
-          expiration_date?: string | null
-          eye_color?: string | null
-          gender?: string | null
-          height?: string | null
-          id?: string
-          issue_date?: string | null
-          issuing_state?: string | null
-          player_id?: string
-          updated_at?: string
-          updated_by?: string | null
-          verified_at?: string | null
-          verified_by?: string | null
-          weight?: string | null
-        }
+          address?: Json | null;
+          birth_date?: string | null;
+          casino_id?: string;
+          created_at?: string;
+          created_by?: string;
+          document_number_hash?: string | null;
+          document_number_last4?: string | null;
+          document_type?: string | null;
+          expiration_date?: string | null;
+          eye_color?: string | null;
+          gender?: string | null;
+          height?: string | null;
+          id?: string;
+          issue_date?: string | null;
+          issuing_state?: string | null;
+          player_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          verified_at?: string | null;
+          verified_by?: string | null;
+          weight?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "fk_player_identity_enrollment"
-            columns: ["casino_id", "player_id"]
-            isOneToOne: true
-            referencedRelation: "player_casino"
-            referencedColumns: ["casino_id", "player_id"]
+            foreignKeyName: "fk_player_identity_enrollment";
+            columns: ["casino_id", "player_id"];
+            isOneToOne: true;
+            referencedRelation: "player_casino";
+            referencedColumns: ["casino_id", "player_id"];
           },
           {
-            foreignKeyName: "player_identity_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_identity_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_identity_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_identity_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_identity_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_identity_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_identity_updated_by_fkey"
-            columns: ["updated_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_identity_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_identity_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_identity_verified_by_fkey";
+            columns: ["verified_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       player_loyalty: {
         Row: {
-          casino_id: string
-          current_balance: number
-          player_id: string
-          preferences: Json
-          tier: string | null
-          updated_at: string
-        }
+          casino_id: string;
+          current_balance: number;
+          player_id: string;
+          preferences: Json;
+          tier: string | null;
+          updated_at: string;
+        };
         Insert: {
-          casino_id: string
-          current_balance?: number
-          player_id: string
-          preferences?: Json
-          tier?: string | null
-          updated_at?: string
-        }
+          casino_id: string;
+          current_balance?: number;
+          player_id: string;
+          preferences?: Json;
+          tier?: string | null;
+          updated_at?: string;
+        };
         Update: {
-          casino_id?: string
-          current_balance?: number
-          player_id?: string
-          preferences?: Json
-          tier?: string | null
-          updated_at?: string
-        }
+          casino_id?: string;
+          current_balance?: number;
+          player_id?: string;
+          preferences?: Json;
+          tier?: string | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_loyalty_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_loyalty_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_loyalty_player_casino_fk"
-            columns: ["player_id", "casino_id"]
-            isOneToOne: true
-            referencedRelation: "player_casino"
-            referencedColumns: ["player_id", "casino_id"]
+            foreignKeyName: "player_loyalty_player_casino_fk";
+            columns: ["player_id", "casino_id"];
+            isOneToOne: true;
+            referencedRelation: "player_casino";
+            referencedColumns: ["player_id", "casino_id"];
           },
           {
-            foreignKeyName: "player_loyalty_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_loyalty_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       promo_coupon: {
         Row: {
-          casino_id: string
-          cleared_at: string | null
-          correlation_id: string | null
-          expires_at: string | null
-          face_value_amount: number
-          id: string
-          idempotency_key: string | null
-          issued_at: string
-          issued_by_staff_id: string
-          player_id: string | null
-          promo_program_id: string
-          replaced_at: string | null
-          replaced_by_staff_id: string | null
-          replacement_coupon_id: string | null
-          required_match_wager_amount: number
-          status: Database["public"]["Enums"]["promo_coupon_status"]
-          validation_number: string
-          visit_id: string | null
-          voided_at: string | null
-          voided_by_staff_id: string | null
-        }
+          casino_id: string;
+          cleared_at: string | null;
+          correlation_id: string | null;
+          expires_at: string | null;
+          face_value_amount: number;
+          id: string;
+          idempotency_key: string | null;
+          issued_at: string;
+          issued_by_staff_id: string;
+          player_id: string | null;
+          promo_program_id: string;
+          replaced_at: string | null;
+          replaced_by_staff_id: string | null;
+          replacement_coupon_id: string | null;
+          required_match_wager_amount: number;
+          status: Database["public"]["Enums"]["promo_coupon_status"];
+          validation_number: string;
+          visit_id: string | null;
+          voided_at: string | null;
+          voided_by_staff_id: string | null;
+        };
         Insert: {
-          casino_id: string
-          cleared_at?: string | null
-          correlation_id?: string | null
-          expires_at?: string | null
-          face_value_amount: number
-          id?: string
-          idempotency_key?: string | null
-          issued_at?: string
-          issued_by_staff_id: string
-          player_id?: string | null
-          promo_program_id: string
-          replaced_at?: string | null
-          replaced_by_staff_id?: string | null
-          replacement_coupon_id?: string | null
-          required_match_wager_amount: number
-          status?: Database["public"]["Enums"]["promo_coupon_status"]
-          validation_number: string
-          visit_id?: string | null
-          voided_at?: string | null
-          voided_by_staff_id?: string | null
-        }
+          casino_id: string;
+          cleared_at?: string | null;
+          correlation_id?: string | null;
+          expires_at?: string | null;
+          face_value_amount: number;
+          id?: string;
+          idempotency_key?: string | null;
+          issued_at?: string;
+          issued_by_staff_id: string;
+          player_id?: string | null;
+          promo_program_id: string;
+          replaced_at?: string | null;
+          replaced_by_staff_id?: string | null;
+          replacement_coupon_id?: string | null;
+          required_match_wager_amount: number;
+          status?: Database["public"]["Enums"]["promo_coupon_status"];
+          validation_number: string;
+          visit_id?: string | null;
+          voided_at?: string | null;
+          voided_by_staff_id?: string | null;
+        };
         Update: {
-          casino_id?: string
-          cleared_at?: string | null
-          correlation_id?: string | null
-          expires_at?: string | null
-          face_value_amount?: number
-          id?: string
-          idempotency_key?: string | null
-          issued_at?: string
-          issued_by_staff_id?: string
-          player_id?: string | null
-          promo_program_id?: string
-          replaced_at?: string | null
-          replaced_by_staff_id?: string | null
-          replacement_coupon_id?: string | null
-          required_match_wager_amount?: number
-          status?: Database["public"]["Enums"]["promo_coupon_status"]
-          validation_number?: string
-          visit_id?: string | null
-          voided_at?: string | null
-          voided_by_staff_id?: string | null
-        }
+          casino_id?: string;
+          cleared_at?: string | null;
+          correlation_id?: string | null;
+          expires_at?: string | null;
+          face_value_amount?: number;
+          id?: string;
+          idempotency_key?: string | null;
+          issued_at?: string;
+          issued_by_staff_id?: string;
+          player_id?: string | null;
+          promo_program_id?: string;
+          replaced_at?: string | null;
+          replaced_by_staff_id?: string | null;
+          replacement_coupon_id?: string | null;
+          required_match_wager_amount?: number;
+          status?: Database["public"]["Enums"]["promo_coupon_status"];
+          validation_number?: string;
+          visit_id?: string | null;
+          voided_at?: string | null;
+          voided_by_staff_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "promo_coupon_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_issued_by_staff_id_fkey"
-            columns: ["issued_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_issued_by_staff_id_fkey";
+            columns: ["issued_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_promo_program_id_fkey"
-            columns: ["promo_program_id"]
-            isOneToOne: false
-            referencedRelation: "promo_program"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_promo_program_id_fkey";
+            columns: ["promo_program_id"];
+            isOneToOne: false;
+            referencedRelation: "promo_program";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_replaced_by_staff_id_fkey"
-            columns: ["replaced_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_replaced_by_staff_id_fkey";
+            columns: ["replaced_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_replacement_coupon_id_fkey"
-            columns: ["replacement_coupon_id"]
-            isOneToOne: false
-            referencedRelation: "promo_coupon"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_replacement_coupon_id_fkey";
+            columns: ["replacement_coupon_id"];
+            isOneToOne: false;
+            referencedRelation: "promo_coupon";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_coupon_voided_by_staff_id_fkey"
-            columns: ["voided_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_coupon_voided_by_staff_id_fkey";
+            columns: ["voided_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       promo_program: {
         Row: {
-          casino_id: string
-          created_at: string
-          created_by_staff_id: string | null
-          end_at: string | null
-          face_value_amount: number
-          id: string
-          name: string
-          promo_type: Database["public"]["Enums"]["promo_type_enum"]
-          required_match_wager_amount: number
-          start_at: string | null
-          status: string
-          updated_at: string
-        }
+          casino_id: string;
+          created_at: string;
+          created_by_staff_id: string | null;
+          end_at: string | null;
+          face_value_amount: number;
+          id: string;
+          name: string;
+          promo_type: Database["public"]["Enums"]["promo_type_enum"];
+          required_match_wager_amount: number;
+          start_at: string | null;
+          status: string;
+          updated_at: string;
+        };
         Insert: {
-          casino_id: string
-          created_at?: string
-          created_by_staff_id?: string | null
-          end_at?: string | null
-          face_value_amount: number
-          id?: string
-          name: string
-          promo_type: Database["public"]["Enums"]["promo_type_enum"]
-          required_match_wager_amount: number
-          start_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          casino_id: string;
+          created_at?: string;
+          created_by_staff_id?: string | null;
+          end_at?: string | null;
+          face_value_amount: number;
+          id?: string;
+          name: string;
+          promo_type: Database["public"]["Enums"]["promo_type_enum"];
+          required_match_wager_amount: number;
+          start_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Update: {
-          casino_id?: string
-          created_at?: string
-          created_by_staff_id?: string | null
-          end_at?: string | null
-          face_value_amount?: number
-          id?: string
-          name?: string
-          promo_type?: Database["public"]["Enums"]["promo_type_enum"]
-          required_match_wager_amount?: number
-          start_at?: string | null
-          status?: string
-          updated_at?: string
-        }
+          casino_id?: string;
+          created_at?: string;
+          created_by_staff_id?: string | null;
+          end_at?: string | null;
+          face_value_amount?: number;
+          id?: string;
+          name?: string;
+          promo_type?: Database["public"]["Enums"]["promo_type_enum"];
+          required_match_wager_amount?: number;
+          start_at?: string | null;
+          status?: string;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "promo_program_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_program_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "promo_program_created_by_staff_id_fkey"
-            columns: ["created_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "promo_program_created_by_staff_id_fkey";
+            columns: ["created_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       rating_slip: {
         Row: {
-          accrual_kind: string
-          accumulated_seconds: number
-          average_bet: number | null
-          casino_id: string
-          duration_seconds: number | null
-          end_time: string | null
-          final_average_bet: number | null
-          final_duration_seconds: number | null
-          game_settings: Json | null
-          id: string
-          move_group_id: string | null
-          pause_intervals: unknown[] | null
-          policy_snapshot: Json | null
-          previous_slip_id: string | null
-          seat_number: string | null
-          start_time: string
-          status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string
-          visit_id: string
-        }
+          accrual_kind: string;
+          accumulated_seconds: number;
+          average_bet: number | null;
+          casino_id: string;
+          duration_seconds: number | null;
+          end_time: string | null;
+          final_average_bet: number | null;
+          final_duration_seconds: number | null;
+          game_settings: Json | null;
+          id: string;
+          move_group_id: string | null;
+          pause_intervals: unknown[] | null;
+          policy_snapshot: Json | null;
+          previous_slip_id: string | null;
+          seat_number: string | null;
+          start_time: string;
+          status: Database["public"]["Enums"]["rating_slip_status"];
+          table_id: string;
+          visit_id: string;
+        };
         Insert: {
-          accrual_kind?: string
-          accumulated_seconds?: number
-          average_bet?: number | null
-          casino_id: string
-          duration_seconds?: number | null
-          end_time?: string | null
-          final_average_bet?: number | null
-          final_duration_seconds?: number | null
-          game_settings?: Json | null
-          id?: string
-          move_group_id?: string | null
-          pause_intervals?: unknown[] | null
-          policy_snapshot?: Json | null
-          previous_slip_id?: string | null
-          seat_number?: string | null
-          start_time?: string
-          status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string
-          visit_id: string
-        }
+          accrual_kind?: string;
+          accumulated_seconds?: number;
+          average_bet?: number | null;
+          casino_id: string;
+          duration_seconds?: number | null;
+          end_time?: string | null;
+          final_average_bet?: number | null;
+          final_duration_seconds?: number | null;
+          game_settings?: Json | null;
+          id?: string;
+          move_group_id?: string | null;
+          pause_intervals?: unknown[] | null;
+          policy_snapshot?: Json | null;
+          previous_slip_id?: string | null;
+          seat_number?: string | null;
+          start_time?: string;
+          status?: Database["public"]["Enums"]["rating_slip_status"];
+          table_id: string;
+          visit_id: string;
+        };
         Update: {
-          accrual_kind?: string
-          accumulated_seconds?: number
-          average_bet?: number | null
-          casino_id?: string
-          duration_seconds?: number | null
-          end_time?: string | null
-          final_average_bet?: number | null
-          final_duration_seconds?: number | null
-          game_settings?: Json | null
-          id?: string
-          move_group_id?: string | null
-          pause_intervals?: unknown[] | null
-          policy_snapshot?: Json | null
-          previous_slip_id?: string | null
-          seat_number?: string | null
-          start_time?: string
-          status?: Database["public"]["Enums"]["rating_slip_status"]
-          table_id?: string
-          visit_id?: string
-        }
+          accrual_kind?: string;
+          accumulated_seconds?: number;
+          average_bet?: number | null;
+          casino_id?: string;
+          duration_seconds?: number | null;
+          end_time?: string | null;
+          final_average_bet?: number | null;
+          final_duration_seconds?: number | null;
+          game_settings?: Json | null;
+          id?: string;
+          move_group_id?: string | null;
+          pause_intervals?: unknown[] | null;
+          policy_snapshot?: Json | null;
+          previous_slip_id?: string | null;
+          seat_number?: string | null;
+          start_time?: string;
+          status?: Database["public"]["Enums"]["rating_slip_status"];
+          table_id?: string;
+          visit_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_slip_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rating_slip_previous_slip_id_fkey"
-            columns: ["previous_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_previous_slip_id_fkey";
+            columns: ["previous_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rating_slip_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rating_slip_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       rating_slip_pause: {
         Row: {
-          casino_id: string
-          created_by: string | null
-          ended_at: string | null
-          id: string
-          rating_slip_id: string
-          started_at: string
-        }
+          casino_id: string;
+          created_by: string | null;
+          ended_at: string | null;
+          id: string;
+          rating_slip_id: string;
+          started_at: string;
+        };
         Insert: {
-          casino_id: string
-          created_by?: string | null
-          ended_at?: string | null
-          id?: string
-          rating_slip_id: string
-          started_at?: string
-        }
+          casino_id: string;
+          created_by?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          rating_slip_id: string;
+          started_at?: string;
+        };
         Update: {
-          casino_id?: string
-          created_by?: string | null
-          ended_at?: string | null
-          id?: string
-          rating_slip_id?: string
-          started_at?: string
-        }
+          casino_id?: string;
+          created_by?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          rating_slip_id?: string;
+          started_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "rating_slip_pause_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_pause_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rating_slip_pause_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_pause_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "rating_slip_pause_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "rating_slip_pause_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       report: {
         Row: {
-          casino_id: string | null
-          generated_at: string
-          id: string
-          name: string
-          payload: Json
-        }
+          casino_id: string | null;
+          generated_at: string;
+          id: string;
+          name: string;
+          payload: Json;
+        };
         Insert: {
-          casino_id?: string | null
-          generated_at?: string
-          id?: string
-          name: string
-          payload: Json
-        }
+          casino_id?: string | null;
+          generated_at?: string;
+          id?: string;
+          name: string;
+          payload: Json;
+        };
         Update: {
-          casino_id?: string | null
-          generated_at?: string
-          id?: string
-          name?: string
-          payload?: Json
-        }
+          casino_id?: string | null;
+          generated_at?: string;
+          id?: string;
+          name?: string;
+          payload?: Json;
+        };
         Relationships: [
           {
-            foreignKeyName: "report_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "report_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       staff: {
         Row: {
-          casino_id: string
-          created_at: string
-          email: string | null
-          employee_id: string | null
-          first_name: string
-          id: string
-          last_name: string
-          role: Database["public"]["Enums"]["staff_role"]
-          status: Database["public"]["Enums"]["staff_status"]
-          user_id: string | null
-        }
+          casino_id: string;
+          created_at: string;
+          email: string | null;
+          employee_id: string | null;
+          first_name: string;
+          id: string;
+          last_name: string;
+          role: Database["public"]["Enums"]["staff_role"];
+          status: Database["public"]["Enums"]["staff_status"];
+          user_id: string | null;
+        };
         Insert: {
-          casino_id: string
-          created_at?: string
-          email?: string | null
-          employee_id?: string | null
-          first_name: string
-          id?: string
-          last_name: string
-          role: Database["public"]["Enums"]["staff_role"]
-          status?: Database["public"]["Enums"]["staff_status"]
-          user_id?: string | null
-        }
+          casino_id: string;
+          created_at?: string;
+          email?: string | null;
+          employee_id?: string | null;
+          first_name: string;
+          id?: string;
+          last_name: string;
+          role: Database["public"]["Enums"]["staff_role"];
+          status?: Database["public"]["Enums"]["staff_status"];
+          user_id?: string | null;
+        };
         Update: {
-          casino_id?: string
-          created_at?: string
-          email?: string | null
-          employee_id?: string | null
-          first_name?: string
-          id?: string
-          last_name?: string
-          role?: Database["public"]["Enums"]["staff_role"]
-          status?: Database["public"]["Enums"]["staff_status"]
-          user_id?: string | null
-        }
+          casino_id?: string;
+          created_at?: string;
+          email?: string | null;
+          employee_id?: string | null;
+          first_name?: string;
+          id?: string;
+          last_name?: string;
+          role?: Database["public"]["Enums"]["staff_role"];
+          status?: Database["public"]["Enums"]["staff_status"];
+          user_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "staff_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "staff_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_buyin_telemetry: {
         Row: {
-          actor_id: string
-          amount_cents: number
-          casino_id: string
-          created_at: string
-          gaming_day: string
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          occurred_at: string
-          rating_slip_id: string | null
-          source: string | null
-          table_id: string
-          telemetry_kind: string
-          tender_type: string | null
-          visit_id: string | null
-        }
+          actor_id: string;
+          amount_cents: number;
+          casino_id: string;
+          created_at: string;
+          gaming_day: string;
+          id: string;
+          idempotency_key: string | null;
+          note: string | null;
+          occurred_at: string;
+          rating_slip_id: string | null;
+          source: string | null;
+          table_id: string;
+          telemetry_kind: string;
+          tender_type: string | null;
+          visit_id: string | null;
+        };
         Insert: {
-          actor_id: string
-          amount_cents: number
-          casino_id: string
-          created_at?: string
-          gaming_day: string
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          occurred_at?: string
-          rating_slip_id?: string | null
-          source?: string | null
-          table_id: string
-          telemetry_kind: string
-          tender_type?: string | null
-          visit_id?: string | null
-        }
+          actor_id: string;
+          amount_cents: number;
+          casino_id: string;
+          created_at?: string;
+          gaming_day: string;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          occurred_at?: string;
+          rating_slip_id?: string | null;
+          source?: string | null;
+          table_id: string;
+          telemetry_kind: string;
+          tender_type?: string | null;
+          visit_id?: string | null;
+        };
         Update: {
-          actor_id?: string
-          amount_cents?: number
-          casino_id?: string
-          created_at?: string
-          gaming_day?: string
-          id?: string
-          idempotency_key?: string | null
-          note?: string | null
-          occurred_at?: string
-          rating_slip_id?: string | null
-          source?: string | null
-          table_id?: string
-          telemetry_kind?: string
-          tender_type?: string | null
-          visit_id?: string | null
-        }
+          actor_id?: string;
+          amount_cents?: number;
+          casino_id?: string;
+          created_at?: string;
+          gaming_day?: string;
+          id?: string;
+          idempotency_key?: string | null;
+          note?: string | null;
+          occurred_at?: string;
+          rating_slip_id?: string | null;
+          source?: string | null;
+          table_id?: string;
+          telemetry_kind?: string;
+          tender_type?: string | null;
+          visit_id?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_buyin_telemetry_actor_id_fkey"
-            columns: ["actor_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_buyin_telemetry_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_buyin_telemetry_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_buyin_telemetry_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_buyin_telemetry_rating_slip_id_fkey"
-            columns: ["rating_slip_id"]
-            isOneToOne: false
-            referencedRelation: "rating_slip"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_buyin_telemetry_rating_slip_id_fkey";
+            columns: ["rating_slip_id"];
+            isOneToOne: false;
+            referencedRelation: "rating_slip";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_buyin_telemetry_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_buyin_telemetry_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_buyin_telemetry_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_buyin_telemetry_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_credit: {
         Row: {
-          amount_cents: number
-          authorized_by: string | null
-          casino_id: string
-          chipset: Json
-          created_at: string
-          id: string
-          received_by: string | null
-          request_id: string
-          sent_by: string | null
-          slip_no: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          authorized_by: string | null;
+          casino_id: string;
+          chipset: Json;
+          created_at: string;
+          id: string;
+          received_by: string | null;
+          request_id: string;
+          sent_by: string | null;
+          slip_no: string | null;
+          table_id: string;
+        };
         Insert: {
-          amount_cents: number
-          authorized_by?: string | null
-          casino_id: string
-          chipset: Json
-          created_at?: string
-          id?: string
-          received_by?: string | null
-          request_id: string
-          sent_by?: string | null
-          slip_no?: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          authorized_by?: string | null;
+          casino_id: string;
+          chipset: Json;
+          created_at?: string;
+          id?: string;
+          received_by?: string | null;
+          request_id: string;
+          sent_by?: string | null;
+          slip_no?: string | null;
+          table_id: string;
+        };
         Update: {
-          amount_cents?: number
-          authorized_by?: string | null
-          casino_id?: string
-          chipset?: Json
-          created_at?: string
-          id?: string
-          received_by?: string | null
-          request_id?: string
-          sent_by?: string | null
-          slip_no?: string | null
-          table_id?: string
-        }
+          amount_cents?: number;
+          authorized_by?: string | null;
+          casino_id?: string;
+          chipset?: Json;
+          created_at?: string;
+          id?: string;
+          received_by?: string | null;
+          request_id?: string;
+          sent_by?: string | null;
+          slip_no?: string | null;
+          table_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_credit_authorized_by_fkey"
-            columns: ["authorized_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_credit_authorized_by_fkey";
+            columns: ["authorized_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_credit_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_credit_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_credit_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_credit_received_by_fkey";
+            columns: ["received_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_credit_sent_by_fkey"
-            columns: ["sent_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_credit_sent_by_fkey";
+            columns: ["sent_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_credit_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_credit_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_drop_event: {
         Row: {
-          casino_id: string
-          delivered_at: string | null
-          delivered_scan_at: string | null
-          drop_box_id: string
-          gaming_day: string | null
-          id: string
-          note: string | null
-          removed_at: string
-          removed_by: string | null
-          seal_no: string | null
-          seq_no: number | null
-          table_id: string
-          witnessed_by: string | null
-        }
+          casino_id: string;
+          delivered_at: string | null;
+          delivered_scan_at: string | null;
+          drop_box_id: string;
+          gaming_day: string | null;
+          id: string;
+          note: string | null;
+          removed_at: string;
+          removed_by: string | null;
+          seal_no: string | null;
+          seq_no: number | null;
+          table_id: string;
+          witnessed_by: string | null;
+        };
         Insert: {
-          casino_id: string
-          delivered_at?: string | null
-          delivered_scan_at?: string | null
-          drop_box_id: string
-          gaming_day?: string | null
-          id?: string
-          note?: string | null
-          removed_at?: string
-          removed_by?: string | null
-          seal_no?: string | null
-          seq_no?: number | null
-          table_id: string
-          witnessed_by?: string | null
-        }
+          casino_id: string;
+          delivered_at?: string | null;
+          delivered_scan_at?: string | null;
+          drop_box_id: string;
+          gaming_day?: string | null;
+          id?: string;
+          note?: string | null;
+          removed_at?: string;
+          removed_by?: string | null;
+          seal_no?: string | null;
+          seq_no?: number | null;
+          table_id: string;
+          witnessed_by?: string | null;
+        };
         Update: {
-          casino_id?: string
-          delivered_at?: string | null
-          delivered_scan_at?: string | null
-          drop_box_id?: string
-          gaming_day?: string | null
-          id?: string
-          note?: string | null
-          removed_at?: string
-          removed_by?: string | null
-          seal_no?: string | null
-          seq_no?: number | null
-          table_id?: string
-          witnessed_by?: string | null
-        }
+          casino_id?: string;
+          delivered_at?: string | null;
+          delivered_scan_at?: string | null;
+          drop_box_id?: string;
+          gaming_day?: string | null;
+          id?: string;
+          note?: string | null;
+          removed_at?: string;
+          removed_by?: string | null;
+          seal_no?: string | null;
+          seq_no?: number | null;
+          table_id?: string;
+          witnessed_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_drop_event_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_drop_event_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_drop_event_removed_by_fkey"
-            columns: ["removed_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_drop_event_removed_by_fkey";
+            columns: ["removed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_drop_event_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_drop_event_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_drop_event_witnessed_by_fkey"
-            columns: ["witnessed_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_drop_event_witnessed_by_fkey";
+            columns: ["witnessed_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_fill: {
         Row: {
-          amount_cents: number
-          casino_id: string
-          chipset: Json
-          created_at: string
-          delivered_by: string | null
-          id: string
-          received_by: string | null
-          request_id: string
-          requested_by: string | null
-          slip_no: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          casino_id: string;
+          chipset: Json;
+          created_at: string;
+          delivered_by: string | null;
+          id: string;
+          received_by: string | null;
+          request_id: string;
+          requested_by: string | null;
+          slip_no: string | null;
+          table_id: string;
+        };
         Insert: {
-          amount_cents: number
-          casino_id: string
-          chipset: Json
-          created_at?: string
-          delivered_by?: string | null
-          id?: string
-          received_by?: string | null
-          request_id: string
-          requested_by?: string | null
-          slip_no?: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          casino_id: string;
+          chipset: Json;
+          created_at?: string;
+          delivered_by?: string | null;
+          id?: string;
+          received_by?: string | null;
+          request_id: string;
+          requested_by?: string | null;
+          slip_no?: string | null;
+          table_id: string;
+        };
         Update: {
-          amount_cents?: number
-          casino_id?: string
-          chipset?: Json
-          created_at?: string
-          delivered_by?: string | null
-          id?: string
-          received_by?: string | null
-          request_id?: string
-          requested_by?: string | null
-          slip_no?: string | null
-          table_id?: string
-        }
+          amount_cents?: number;
+          casino_id?: string;
+          chipset?: Json;
+          created_at?: string;
+          delivered_by?: string | null;
+          id?: string;
+          received_by?: string | null;
+          request_id?: string;
+          requested_by?: string | null;
+          slip_no?: string | null;
+          table_id?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_fill_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_fill_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_fill_delivered_by_fkey"
-            columns: ["delivered_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_fill_delivered_by_fkey";
+            columns: ["delivered_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_fill_received_by_fkey"
-            columns: ["received_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_fill_received_by_fkey";
+            columns: ["received_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_fill_requested_by_fkey"
-            columns: ["requested_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_fill_requested_by_fkey";
+            columns: ["requested_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_fill_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_fill_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_inventory_snapshot: {
         Row: {
-          casino_id: string
-          chipset: Json
-          counted_by: string | null
-          created_at: string
-          discrepancy_cents: number | null
-          id: string
-          note: string | null
-          session_id: string | null
-          snapshot_type: string
-          table_id: string
-          total_cents: number | null
-          verified_by: string | null
-        }
+          casino_id: string;
+          chipset: Json;
+          counted_by: string | null;
+          created_at: string;
+          discrepancy_cents: number | null;
+          id: string;
+          note: string | null;
+          session_id: string | null;
+          snapshot_type: string;
+          table_id: string;
+          total_cents: number | null;
+          verified_by: string | null;
+        };
         Insert: {
-          casino_id: string
-          chipset: Json
-          counted_by?: string | null
-          created_at?: string
-          discrepancy_cents?: number | null
-          id?: string
-          note?: string | null
-          session_id?: string | null
-          snapshot_type: string
-          table_id: string
-          total_cents?: number | null
-          verified_by?: string | null
-        }
+          casino_id: string;
+          chipset: Json;
+          counted_by?: string | null;
+          created_at?: string;
+          discrepancy_cents?: number | null;
+          id?: string;
+          note?: string | null;
+          session_id?: string | null;
+          snapshot_type: string;
+          table_id: string;
+          total_cents?: number | null;
+          verified_by?: string | null;
+        };
         Update: {
-          casino_id?: string
-          chipset?: Json
-          counted_by?: string | null
-          created_at?: string
-          discrepancy_cents?: number | null
-          id?: string
-          note?: string | null
-          session_id?: string | null
-          snapshot_type?: string
-          table_id?: string
-          total_cents?: number | null
-          verified_by?: string | null
-        }
+          casino_id?: string;
+          chipset?: Json;
+          counted_by?: string | null;
+          created_at?: string;
+          discrepancy_cents?: number | null;
+          id?: string;
+          note?: string | null;
+          session_id?: string | null;
+          snapshot_type?: string;
+          table_id?: string;
+          total_cents?: number | null;
+          verified_by?: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_inventory_snapshot_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_inventory_snapshot_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_inventory_snapshot_counted_by_fkey"
-            columns: ["counted_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_inventory_snapshot_counted_by_fkey";
+            columns: ["counted_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_inventory_snapshot_session_id_fkey"
-            columns: ["session_id"]
-            isOneToOne: false
-            referencedRelation: "table_session"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_inventory_snapshot_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "table_session";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_inventory_snapshot_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_inventory_snapshot_table_id_fkey";
+            columns: ["table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_inventory_snapshot_verified_by_fkey"
-            columns: ["verified_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_inventory_snapshot_verified_by_fkey";
+            columns: ["verified_by"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       table_session: {
         Row: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         Insert: {
-          casino_id: string
-          closed_at?: string | null
-          closed_by_staff_id?: string | null
-          closing_inventory_snapshot_id?: string | null
-          created_at?: string
-          credits_total_cents?: number
-          drop_event_id?: string | null
-          drop_posted_at?: string | null
-          drop_total_cents?: number | null
-          fills_total_cents?: number
-          gaming_day: string
-          gaming_table_id: string
-          id?: string
-          metadata?: Json | null
-          need_total_cents?: number | null
-          notes?: string | null
-          opened_at?: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id?: string | null
-          rundown_started_at?: string | null
-          rundown_started_by_staff_id?: string | null
-          shift_id?: string | null
-          status?: Database["public"]["Enums"]["table_session_status"]
+          casino_id: string;
+          closed_at?: string | null;
+          closed_by_staff_id?: string | null;
+          closing_inventory_snapshot_id?: string | null;
+          created_at?: string;
+          credits_total_cents?: number;
+          drop_event_id?: string | null;
+          drop_posted_at?: string | null;
+          drop_total_cents?: number | null;
+          fills_total_cents?: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id?: string;
+          metadata?: Json | null;
+          need_total_cents?: number | null;
+          notes?: string | null;
+          opened_at?: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id?: string | null;
+          rundown_started_at?: string | null;
+          rundown_started_by_staff_id?: string | null;
+          shift_id?: string | null;
+          status?: Database["public"]["Enums"]["table_session_status"];
           table_bank_mode?:
             | Database["public"]["Enums"]["table_bank_mode"]
-            | null
-          updated_at?: string
-        }
+            | null;
+          updated_at?: string;
+        };
         Update: {
-          casino_id?: string
-          closed_at?: string | null
-          closed_by_staff_id?: string | null
-          closing_inventory_snapshot_id?: string | null
-          created_at?: string
-          credits_total_cents?: number
-          drop_event_id?: string | null
-          drop_posted_at?: string | null
-          drop_total_cents?: number | null
-          fills_total_cents?: number
-          gaming_day?: string
-          gaming_table_id?: string
-          id?: string
-          metadata?: Json | null
-          need_total_cents?: number | null
-          notes?: string | null
-          opened_at?: string
-          opened_by_staff_id?: string
-          opening_inventory_snapshot_id?: string | null
-          rundown_started_at?: string | null
-          rundown_started_by_staff_id?: string | null
-          shift_id?: string | null
-          status?: Database["public"]["Enums"]["table_session_status"]
+          casino_id?: string;
+          closed_at?: string | null;
+          closed_by_staff_id?: string | null;
+          closing_inventory_snapshot_id?: string | null;
+          created_at?: string;
+          credits_total_cents?: number;
+          drop_event_id?: string | null;
+          drop_posted_at?: string | null;
+          drop_total_cents?: number | null;
+          fills_total_cents?: number;
+          gaming_day?: string;
+          gaming_table_id?: string;
+          id?: string;
+          metadata?: Json | null;
+          need_total_cents?: number | null;
+          notes?: string | null;
+          opened_at?: string;
+          opened_by_staff_id?: string;
+          opening_inventory_snapshot_id?: string | null;
+          rundown_started_at?: string | null;
+          rundown_started_by_staff_id?: string | null;
+          shift_id?: string | null;
+          status?: Database["public"]["Enums"]["table_session_status"];
           table_bank_mode?:
             | Database["public"]["Enums"]["table_bank_mode"]
-            | null
-          updated_at?: string
-        }
+            | null;
+          updated_at?: string;
+        };
         Relationships: [
           {
-            foreignKeyName: "table_session_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_session_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_session_closed_by_staff_id_fkey"
-            columns: ["closed_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_session_closed_by_staff_id_fkey";
+            columns: ["closed_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_session_gaming_table_id_fkey"
-            columns: ["gaming_table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_session_gaming_table_id_fkey";
+            columns: ["gaming_table_id"];
+            isOneToOne: false;
+            referencedRelation: "gaming_table";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_session_opened_by_staff_id_fkey"
-            columns: ["opened_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_session_opened_by_staff_id_fkey";
+            columns: ["opened_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "table_session_rundown_started_by_staff_id_fkey"
-            columns: ["rundown_started_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
+            foreignKeyName: "table_session_rundown_started_by_staff_id_fkey";
+            columns: ["rundown_started_by_staff_id"];
+            isOneToOne: false;
+            referencedRelation: "staff";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       visit: {
         Row: {
-          casino_id: string
-          ended_at: string | null
-          gaming_day: string
-          id: string
-          player_id: string | null
-          started_at: string
-          visit_group_id: string
-          visit_kind: Database["public"]["Enums"]["visit_kind"]
-        }
+          casino_id: string;
+          ended_at: string | null;
+          gaming_day: string;
+          id: string;
+          player_id: string | null;
+          started_at: string;
+          visit_group_id: string;
+          visit_kind: Database["public"]["Enums"]["visit_kind"];
+        };
         Insert: {
-          casino_id: string
-          ended_at?: string | null
-          gaming_day: string
-          id?: string
-          player_id?: string | null
-          started_at?: string
-          visit_group_id: string
-          visit_kind?: Database["public"]["Enums"]["visit_kind"]
-        }
+          casino_id: string;
+          ended_at?: string | null;
+          gaming_day: string;
+          id?: string;
+          player_id?: string | null;
+          started_at?: string;
+          visit_group_id: string;
+          visit_kind?: Database["public"]["Enums"]["visit_kind"];
+        };
         Update: {
-          casino_id?: string
-          ended_at?: string | null
-          gaming_day?: string
-          id?: string
-          player_id?: string | null
-          started_at?: string
-          visit_group_id?: string
-          visit_kind?: Database["public"]["Enums"]["visit_kind"]
-        }
+          casino_id?: string;
+          ended_at?: string | null;
+          gaming_day?: string;
+          id?: string;
+          player_id?: string | null;
+          started_at?: string;
+          visit_group_id?: string;
+          visit_kind?: Database["public"]["Enums"]["visit_kind"];
+        };
         Relationships: [
           {
-            foreignKeyName: "visit_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "visit_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "visit_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "visit_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-    }
+        ];
+      };
+    };
     Views: {
       mtl_gaming_day_summary: {
         Row: {
-          casino_id: string | null
-          count_in: number | null
-          count_out: number | null
-          entry_count: number | null
-          first_in_at: string | null
-          first_out_at: string | null
-          gaming_day: string | null
-          last_in_at: string | null
-          last_out_at: string | null
-          max_single_in: number | null
-          max_single_out: number | null
-          patron_first_name: string | null
-          patron_last_name: string | null
-          patron_uuid: string | null
-          total_in: number | null
-          total_out: number | null
-          total_volume: number | null
-        }
+          casino_id: string | null;
+          count_in: number | null;
+          count_out: number | null;
+          entry_count: number | null;
+          first_in_at: string | null;
+          first_out_at: string | null;
+          gaming_day: string | null;
+          last_in_at: string | null;
+          last_out_at: string | null;
+          max_single_in: number | null;
+          max_single_out: number | null;
+          patron_first_name: string | null;
+          patron_last_name: string | null;
+          patron_uuid: string | null;
+          total_in: number | null;
+          total_out: number | null;
+          total_volume: number | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "mtl_entry_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "mtl_entry_patron_uuid_fkey"
-            columns: ["patron_uuid"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "mtl_entry_patron_uuid_fkey";
+            columns: ["patron_uuid"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       mv_loyalty_balance_reconciliation: {
         Row: {
-          casino_id: string | null
-          entry_count: number | null
-          last_entry_at: string | null
-          ledger_balance: number | null
-          player_id: string | null
-        }
+          casino_id: string | null;
+          entry_count: number | null;
+          last_entry_at: string | null;
+          ledger_balance: number | null;
+          player_id: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "loyalty_ledger_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "loyalty_ledger_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
-            referencedColumns: ["id"]
+            foreignKeyName: "loyalty_ledger_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "player";
+            referencedColumns: ["id"];
           },
-        ]
-      }
+        ];
+      };
       visit_financial_summary: {
         Row: {
-          casino_id: string | null
-          first_transaction_at: string | null
-          last_transaction_at: string | null
-          net_amount: number | null
-          total_in: number | null
-          total_out: number | null
-          transaction_count: number | null
-          visit_id: string | null
-        }
+          casino_id: string | null;
+          first_transaction_at: string | null;
+          last_transaction_at: string | null;
+          net_amount: number | null;
+          total_in: number | null;
+          total_out: number | null;
+          transaction_count: number | null;
+          visit_id: string | null;
+        };
         Relationships: [
           {
-            foreignKeyName: "player_financial_transaction_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_casino_id_fkey";
+            columns: ["casino_id"];
+            isOneToOne: false;
+            referencedRelation: "casino";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
+            foreignKeyName: "player_financial_transaction_visit_id_fkey";
+            columns: ["visit_id"];
+            isOneToOne: false;
+            referencedRelation: "visit";
+            referencedColumns: ["id"];
           },
-        ]
-      }
-    }
+        ];
+      };
+    };
     Functions: {
       calculate_theo_from_snapshot: {
         Args: {
-          p_loyalty_snapshot: Json
-          p_slip_record: Record<string, unknown>
-        }
-        Returns: number
-      }
-      chipset_total_cents: { Args: { p_chipset: Json }; Returns: number }
+          p_loyalty_snapshot: Json;
+          p_slip_record: Record<string, unknown>;
+        };
+        Returns: number;
+      };
+      chipset_total_cents: { Args: { p_chipset: Json }; Returns: number };
       compute_gaming_day:
         | {
-            Args: { p_casino_id: string; p_timestamp?: string }
-            Returns: string
+            Args: { p_casino_id: string; p_timestamp?: string };
+            Returns: string;
           }
-        | { Args: { gstart: string; ts: string }; Returns: string }
+        | { Args: { gstart: string; ts: string }; Returns: string };
       compute_slip_final_seconds: {
-        Args: { p_slip_id: string }
-        Returns: number
-      }
+        Args: { p_slip_id: string };
+        Returns: number;
+      };
       evaluate_mid_session_reward_policy: {
         Args: {
-          p_average_bet: number
-          p_minutes_played: number
-          p_policy: Json
-        }
+          p_average_bet: number;
+          p_minutes_played: number;
+          p_policy: Json;
+        };
         Returns: {
-          eligible: boolean
-          recommended_points: number
-        }[]
-      }
+          eligible: boolean;
+          recommended_points: number;
+        }[];
+      };
       evaluate_session_reward_suggestion: {
-        Args: { p_as_of_ts?: string; p_rating_slip_id: string }
+        Args: { p_as_of_ts?: string; p_rating_slip_id: string };
         Returns: {
-          max_recommended_points: number
-          notes: string
-          policy_version: string
-          suggested_points: number
-          suggested_theo: number
-        }[]
-      }
-      exec_sql: { Args: { sql: string }; Returns: undefined }
+          max_recommended_points: number;
+          notes: string;
+          policy_version: string;
+          suggested_points: number;
+          suggested_theo: number;
+        }[];
+      };
+      exec_sql: { Args: { sql: string }; Returns: undefined };
       get_visit_cash_in_with_adjustments: {
-        Args: { p_visit_id: string }
+        Args: { p_visit_id: string };
         Returns: {
-          adjustment_count: number
-          adjustment_total: number
-          net_total: number
-          original_total: number
-        }[]
-      }
+          adjustment_count: number;
+          adjustment_total: number;
+          net_total: number;
+          original_total: number;
+        }[];
+      };
       rpc_accrue_on_close: {
         Args: {
-          p_casino_id: string
-          p_idempotency_key: string
-          p_rating_slip_id: string
-        }
+          p_casino_id: string;
+          p_idempotency_key: string;
+          p_rating_slip_id: string;
+        };
         Returns: {
-          balance_after: number
-          is_existing: boolean
-          ledger_id: string
-          points_delta: number
-          theo: number
-        }[]
-      }
+          balance_after: number;
+          is_existing: boolean;
+          ledger_id: string;
+          points_delta: number;
+          theo: number;
+        }[];
+      };
       rpc_activate_floor_layout: {
         Args: {
-          p_casino_id: string
-          p_layout_version_id: string
-          p_request_id: string
-        }
+          p_casino_id: string;
+          p_layout_version_id: string;
+          p_request_id: string;
+        };
         Returns: {
-          activated_at: string
-          activated_by: string
-          activation_request_id: string
-          casino_id: string
-          deactivated_at: string | null
-          id: string
-          layout_version_id: string
-        }
+          activated_at: string;
+          activated_by: string;
+          activation_request_id: string;
+          casino_id: string;
+          deactivated_at: string | null;
+          id: string;
+          layout_version_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "floor_layout_activation"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "floor_layout_activation";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_apply_promotion: {
         Args: {
-          p_bonus_points?: number
-          p_campaign_id: string
-          p_casino_id: string
-          p_idempotency_key?: string
-          p_promo_multiplier?: number
-          p_rating_slip_id: string
-        }
+          p_bonus_points?: number;
+          p_campaign_id: string;
+          p_casino_id: string;
+          p_idempotency_key?: string;
+          p_promo_multiplier?: number;
+          p_rating_slip_id: string;
+        };
         Returns: {
-          balance_after: number
-          is_existing: boolean
-          ledger_id: string
-          points_delta: number
-        }[]
-      }
+          balance_after: number;
+          is_existing: boolean;
+          ledger_id: string;
+          points_delta: number;
+        }[];
+      };
       rpc_check_table_seat_availability: {
-        Args: { p_seat_number: number; p_table_id: string }
-        Returns: Json
-      }
+        Args: { p_seat_number: number; p_table_id: string };
+        Returns: Json;
+      };
       rpc_close_rating_slip: {
         Args: {
-          p_average_bet?: number
-          p_casino_id: string
-          p_rating_slip_id: string
-        }
+          p_average_bet?: number;
+          p_casino_id: string;
+          p_rating_slip_id: string;
+        };
         Returns: {
-          duration_seconds: number
-          slip: Database["public"]["Tables"]["rating_slip"]["Row"]
-        }[]
-      }
+          duration_seconds: number;
+          slip: Database["public"]["Tables"]["rating_slip"]["Row"];
+        }[];
+      };
       rpc_close_table_session: {
         Args: {
-          p_closing_inventory_snapshot_id?: string
-          p_drop_event_id?: string
-          p_notes?: string
-          p_table_session_id: string
-        }
+          p_closing_inventory_snapshot_id?: string;
+          p_drop_event_id?: string;
+          p_notes?: string;
+          p_table_session_id: string;
+        };
         Returns: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_session"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_session";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_compute_table_rundown: {
-        Args: { p_session_id: string }
+        Args: { p_session_id: string };
         Returns: {
-          closing_total_cents: number
-          credits_total_cents: number
-          drop_posted_at: string
-          drop_total_cents: number
-          fills_total_cents: number
-          need_total_cents: number
-          opening_total_cents: number
-          session_id: string
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
-          table_win_cents: number
-        }[]
-      }
+          closing_total_cents: number;
+          credits_total_cents: number;
+          drop_posted_at: string;
+          drop_total_cents: number;
+          fills_total_cents: number;
+          need_total_cents: number;
+          opening_total_cents: number;
+          session_id: string;
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"];
+          table_win_cents: number;
+        }[];
+      };
       rpc_create_financial_adjustment: {
         Args: {
-          p_casino_id: string
-          p_delta_amount: number
-          p_idempotency_key?: string
-          p_note: string
-          p_original_txn_id?: string
-          p_player_id: string
-          p_reason_code: Database["public"]["Enums"]["adjustment_reason_code"]
-          p_visit_id: string
-        }
+          p_casino_id: string;
+          p_delta_amount: number;
+          p_idempotency_key?: string;
+          p_note: string;
+          p_original_txn_id?: string;
+          p_player_id: string;
+          p_reason_code: Database["public"]["Enums"]["adjustment_reason_code"];
+          p_visit_id: string;
+        };
         Returns: {
-          amount: number
-          casino_id: string
-          created_at: string
-          created_by_staff_id: string | null
-          direction: Database["public"]["Enums"]["financial_direction"] | null
-          gaming_day: string | null
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          player_id: string
-          rating_slip_id: string | null
+          amount: number;
+          casino_id: string;
+          created_at: string;
+          created_by_staff_id: string | null;
+          direction: Database["public"]["Enums"]["financial_direction"] | null;
+          gaming_day: string | null;
+          id: string;
+          idempotency_key: string | null;
+          note: string | null;
+          player_id: string;
+          rating_slip_id: string | null;
           reason_code:
             | Database["public"]["Enums"]["adjustment_reason_code"]
-            | null
-          related_transaction_id: string | null
-          source: Database["public"]["Enums"]["financial_source"] | null
-          tender_type: string | null
-          txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
-          visit_id: string
-        }
+            | null;
+          related_transaction_id: string | null;
+          source: Database["public"]["Enums"]["financial_source"] | null;
+          tender_type: string | null;
+          txn_kind: Database["public"]["Enums"]["financial_txn_kind"];
+          visit_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "player_financial_transaction"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "player_financial_transaction";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_create_financial_txn:
         | {
             Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_idempotency_key?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: string
+              p_amount: number;
+              p_casino_id: string;
+              p_created_at?: string;
+              p_idempotency_key?: string;
+              p_player_id: string;
+              p_rating_slip_id?: string;
+              p_tender_type?: string;
+              p_visit_id?: string;
+            };
+            Returns: string;
           }
         | {
             Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: string
+              p_amount: number;
+              p_casino_id: string;
+              p_created_at?: string;
+              p_player_id: string;
+              p_rating_slip_id?: string;
+              p_tender_type?: string;
+              p_visit_id?: string;
+            };
+            Returns: string;
           }
         | {
             Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_created_by_staff_id: string
-              p_direction: Database["public"]["Enums"]["financial_direction"]
-              p_idempotency_key?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_related_transaction_id?: string
-              p_source: Database["public"]["Enums"]["financial_source"]
-              p_tender_type?: string
-              p_visit_id: string
-            }
+              p_amount: number;
+              p_casino_id: string;
+              p_created_at?: string;
+              p_created_by_staff_id: string;
+              p_direction: Database["public"]["Enums"]["financial_direction"];
+              p_idempotency_key?: string;
+              p_player_id: string;
+              p_rating_slip_id?: string;
+              p_related_transaction_id?: string;
+              p_source: Database["public"]["Enums"]["financial_source"];
+              p_tender_type?: string;
+              p_visit_id: string;
+            };
             Returns: {
-              amount: number
-              casino_id: string
-              created_at: string
-              created_by_staff_id: string | null
+              amount: number;
+              casino_id: string;
+              created_at: string;
+              created_by_staff_id: string | null;
               direction:
                 | Database["public"]["Enums"]["financial_direction"]
-                | null
-              gaming_day: string | null
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              player_id: string
-              rating_slip_id: string | null
+                | null;
+              gaming_day: string | null;
+              id: string;
+              idempotency_key: string | null;
+              note: string | null;
+              player_id: string;
+              rating_slip_id: string | null;
               reason_code:
                 | Database["public"]["Enums"]["adjustment_reason_code"]
-                | null
-              related_transaction_id: string | null
-              source: Database["public"]["Enums"]["financial_source"] | null
-              tender_type: string | null
-              txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
-              visit_id: string
-            }
+                | null;
+              related_transaction_id: string | null;
+              source: Database["public"]["Enums"]["financial_source"] | null;
+              tender_type: string | null;
+              txn_kind: Database["public"]["Enums"]["financial_txn_kind"];
+              visit_id: string;
+            };
             SetofOptions: {
-              from: "*"
-              to: "player_financial_transaction"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+              from: "*";
+              to: "player_financial_transaction";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
+          };
       rpc_create_floor_layout: {
-        Args: { p_casino_id: string; p_description: string; p_name: string }
+        Args: { p_casino_id: string; p_description: string; p_name: string };
         Returns: {
-          approved_by: string | null
-          casino_id: string
-          created_at: string
-          created_by: string
-          description: string | null
-          id: string
-          name: string
-          reviewed_by: string | null
-          status: Database["public"]["Enums"]["floor_layout_status"]
-          updated_at: string
-        }
+          approved_by: string | null;
+          casino_id: string;
+          created_at: string;
+          created_by: string;
+          description: string | null;
+          id: string;
+          name: string;
+          reviewed_by: string | null;
+          status: Database["public"]["Enums"]["floor_layout_status"];
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "floor_layout"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "floor_layout";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_create_pit_cash_observation: {
         Args: {
-          p_amount: number
-          p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
-          p_idempotency_key?: string
-          p_note?: string
-          p_observed_at?: string
-          p_rating_slip_id?: string
-          p_source?: Database["public"]["Enums"]["observation_source"]
-          p_visit_id: string
-        }
+          p_amount: number;
+          p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"];
+          p_idempotency_key?: string;
+          p_note?: string;
+          p_observed_at?: string;
+          p_rating_slip_id?: string;
+          p_source?: Database["public"]["Enums"]["observation_source"];
+          p_visit_id: string;
+        };
         Returns: {
-          amount: number
-          amount_kind: Database["public"]["Enums"]["observation_amount_kind"]
-          casino_id: string
-          created_at: string
-          created_by_staff_id: string
-          direction: string
-          gaming_day: string
-          id: string
-          idempotency_key: string | null
-          note: string | null
-          observed_at: string
-          player_id: string
-          rating_slip_id: string | null
-          source: Database["public"]["Enums"]["observation_source"]
-          visit_id: string
-        }
+          amount: number;
+          amount_kind: Database["public"]["Enums"]["observation_amount_kind"];
+          casino_id: string;
+          created_at: string;
+          created_by_staff_id: string;
+          direction: string;
+          gaming_day: string;
+          id: string;
+          idempotency_key: string | null;
+          note: string | null;
+          observed_at: string;
+          player_id: string;
+          rating_slip_id: string | null;
+          source: Database["public"]["Enums"]["observation_source"];
+          visit_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "pit_cash_observation"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "pit_cash_observation";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_create_player: {
         Args: {
-          p_birth_date?: string
-          p_casino_id: string
-          p_first_name: string
-          p_last_name: string
-        }
-        Returns: Json
-      }
+          p_birth_date?: string;
+          p_casino_id: string;
+          p_first_name: string;
+          p_last_name: string;
+        };
+        Returns: Json;
+      };
       rpc_get_current_table_session: {
-        Args: { p_gaming_table_id: string }
+        Args: { p_gaming_table_id: string };
         Returns: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_session"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_session";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_get_dashboard_tables_with_counts: {
-        Args: { p_casino_id: string }
-        Returns: Json
-      }
+        Args: { p_casino_id: string };
+        Returns: Json;
+      };
       rpc_get_player_last_session_context: {
-        Args: { p_casino_id: string; p_player_id: string }
-        Returns: Json
-      }
+        Args: { p_casino_id: string; p_player_id: string };
+        Returns: Json;
+      };
       rpc_get_player_ledger: {
         Args: {
-          p_casino_id: string
-          p_cursor_created_at?: string
-          p_cursor_id?: string
-          p_limit?: number
-          p_player_id: string
-        }
+          p_casino_id: string;
+          p_cursor_created_at?: string;
+          p_cursor_id?: string;
+          p_limit?: number;
+          p_player_id: string;
+        };
         Returns: {
-          campaign_id: string
-          casino_id: string
-          created_at: string
-          has_more: boolean
-          id: string
-          idempotency_key: string
-          metadata: Json
-          note: string
-          player_id: string
-          points_delta: number
-          rating_slip_id: string
-          reason: Database["public"]["Enums"]["loyalty_reason"]
-          source_id: string
-          source_kind: string
-          staff_id: string
-          visit_id: string
-        }[]
-      }
+          campaign_id: string;
+          casino_id: string;
+          created_at: string;
+          has_more: boolean;
+          id: string;
+          idempotency_key: string;
+          metadata: Json;
+          note: string;
+          player_id: string;
+          points_delta: number;
+          rating_slip_id: string;
+          reason: Database["public"]["Enums"]["loyalty_reason"];
+          source_id: string;
+          source_kind: string;
+          staff_id: string;
+          visit_id: string;
+        }[];
+      };
       rpc_get_player_recent_sessions: {
         Args: {
-          p_casino_id: string
-          p_cursor?: string
-          p_limit?: number
-          p_player_id: string
-        }
-        Returns: Json
-      }
+          p_casino_id: string;
+          p_cursor?: string;
+          p_limit?: number;
+          p_player_id: string;
+        };
+        Returns: Json;
+      };
       rpc_get_rating_slip_duration: {
-        Args: { p_as_of?: string; p_rating_slip_id: string }
-        Returns: number
-      }
+        Args: { p_as_of?: string; p_rating_slip_id: string };
+        Returns: number;
+      };
       rpc_get_rating_slip_modal_data: {
-        Args: { p_casino_id: string; p_slip_id: string }
-        Returns: Json
-      }
+        Args: { p_casino_id: string; p_slip_id: string };
+        Returns: Json;
+      };
       rpc_get_visit_last_segment: {
-        Args: { p_visit_id: string }
-        Returns: Json
-      }
+        Args: { p_visit_id: string };
+        Returns: Json;
+      };
       rpc_get_visit_live_view: {
         Args: {
-          p_include_segments?: boolean
-          p_segments_limit?: number
-          p_visit_id: string
-        }
-        Returns: Json
-      }
+          p_include_segments?: boolean;
+          p_segments_limit?: number;
+          p_visit_id: string;
+        };
+        Returns: Json;
+      };
       rpc_get_visit_loyalty_summary: {
-        Args: { p_visit_id: string }
-        Returns: Json
-      }
+        Args: { p_visit_id: string };
+        Returns: Json;
+      };
       rpc_issue_mid_session_reward: {
         Args: {
-          p_casino_id: string
-          p_idempotency_key?: string
-          p_player_id: string
-          p_points: number
-          p_rating_slip_id: string
-          p_reason?: Database["public"]["Enums"]["loyalty_reason"]
-          p_staff_id: string
-        }
+          p_casino_id: string;
+          p_idempotency_key?: string;
+          p_player_id: string;
+          p_points: number;
+          p_rating_slip_id: string;
+          p_reason?: Database["public"]["Enums"]["loyalty_reason"];
+          p_staff_id: string;
+        };
         Returns: {
-          balance_after: number
-          ledger_id: string
-        }[]
-      }
+          balance_after: number;
+          ledger_id: string;
+        }[];
+      };
       rpc_issue_promo_coupon: {
         Args: {
-          p_correlation_id?: string
-          p_expires_at?: string
-          p_idempotency_key: string
-          p_player_id?: string
-          p_promo_program_id: string
-          p_validation_number: string
-          p_visit_id?: string
-        }
-        Returns: Json
-      }
+          p_correlation_id?: string;
+          p_expires_at?: string;
+          p_idempotency_key: string;
+          p_player_id?: string;
+          p_promo_program_id: string;
+          p_validation_number: string;
+          p_visit_id?: string;
+        };
+        Returns: Json;
+      };
       rpc_list_closed_slips_for_gaming_day: {
         Args: {
-          p_cursor_end_time?: string
-          p_cursor_id?: string
-          p_gaming_day: string
-          p_limit?: number
-        }
+          p_cursor_end_time?: string;
+          p_cursor_id?: string;
+          p_gaming_day: string;
+          p_limit?: number;
+        };
         Returns: {
-          average_bet: number
-          end_time: string
-          final_duration_seconds: number
-          id: string
-          player_first_name: string
-          player_id: string
-          player_last_name: string
-          player_tier: string
-          seat_number: string
-          start_time: string
-          table_id: string
-          table_name: string
-          visit_id: string
-        }[]
-      }
+          average_bet: number;
+          end_time: string;
+          final_duration_seconds: number;
+          id: string;
+          player_first_name: string;
+          player_id: string;
+          player_last_name: string;
+          player_tier: string;
+          seat_number: string;
+          start_time: string;
+          table_id: string;
+          table_name: string;
+          visit_id: string;
+        }[];
+      };
       rpc_log_table_buyin_telemetry:
         | {
             Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_source?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
+              p_actor_id?: string;
+              p_amount_cents: number;
+              p_idempotency_key?: string;
+              p_note?: string;
+              p_rating_slip_id?: string;
+              p_source?: string;
+              p_table_id: string;
+              p_telemetry_kind: string;
+              p_tender_type?: string;
+              p_visit_id?: string;
+            };
             Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
+              actor_id: string;
+              amount_cents: number;
+              casino_id: string;
+              created_at: string;
+              gaming_day: string;
+              id: string;
+              idempotency_key: string | null;
+              note: string | null;
+              occurred_at: string;
+              rating_slip_id: string | null;
+              source: string | null;
+              table_id: string;
+              telemetry_kind: string;
+              tender_type: string | null;
+              visit_id: string | null;
+            };
             SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
+              from: "*";
+              to: "table_buyin_telemetry";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
           }
         | {
             Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
+              p_actor_id?: string;
+              p_amount_cents: number;
+              p_idempotency_key?: string;
+              p_note?: string;
+              p_rating_slip_id?: string;
+              p_table_id: string;
+              p_telemetry_kind: string;
+              p_tender_type?: string;
+              p_visit_id?: string;
+            };
             Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
+              actor_id: string;
+              amount_cents: number;
+              casino_id: string;
+              created_at: string;
+              gaming_day: string;
+              id: string;
+              idempotency_key: string | null;
+              note: string | null;
+              occurred_at: string;
+              rating_slip_id: string | null;
+              source: string | null;
+              table_id: string;
+              telemetry_kind: string;
+              tender_type: string | null;
+              visit_id: string | null;
+            };
             SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+              from: "*";
+              to: "table_buyin_telemetry";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
+          };
       rpc_log_table_drop: {
         Args: {
-          p_casino_id: string
-          p_delivered_at?: string
-          p_delivered_scan_at?: string
-          p_drop_box_id: string
-          p_gaming_day?: string
-          p_note?: string
-          p_removed_at?: string
-          p_seal_no: string
-          p_seq_no?: number
-          p_table_id: string
-          p_witnessed_by: string
-        }
+          p_casino_id: string;
+          p_delivered_at?: string;
+          p_delivered_scan_at?: string;
+          p_drop_box_id: string;
+          p_gaming_day?: string;
+          p_note?: string;
+          p_removed_at?: string;
+          p_seal_no: string;
+          p_seq_no?: number;
+          p_table_id: string;
+          p_witnessed_by: string;
+        };
         Returns: {
-          casino_id: string
-          delivered_at: string | null
-          delivered_scan_at: string | null
-          drop_box_id: string
-          gaming_day: string | null
-          id: string
-          note: string | null
-          removed_at: string
-          removed_by: string | null
-          seal_no: string | null
-          seq_no: number | null
-          table_id: string
-          witnessed_by: string | null
-        }
+          casino_id: string;
+          delivered_at: string | null;
+          delivered_scan_at: string | null;
+          drop_box_id: string;
+          gaming_day: string | null;
+          id: string;
+          note: string | null;
+          removed_at: string;
+          removed_by: string | null;
+          seal_no: string | null;
+          seq_no: number | null;
+          table_id: string;
+          witnessed_by: string | null;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_drop_event"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_drop_event";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_log_table_inventory_snapshot: {
         Args: {
-          p_casino_id: string
-          p_chipset: Json
-          p_discrepancy_cents?: number
-          p_note?: string
-          p_snapshot_type: string
-          p_table_id: string
-          p_verified_by?: string
-        }
+          p_casino_id: string;
+          p_chipset: Json;
+          p_discrepancy_cents?: number;
+          p_note?: string;
+          p_snapshot_type: string;
+          p_table_id: string;
+          p_verified_by?: string;
+        };
         Returns: {
-          casino_id: string
-          chipset: Json
-          counted_by: string | null
-          created_at: string
-          discrepancy_cents: number | null
-          id: string
-          note: string | null
-          session_id: string | null
-          snapshot_type: string
-          table_id: string
-          total_cents: number | null
-          verified_by: string | null
-        }
+          casino_id: string;
+          chipset: Json;
+          counted_by: string | null;
+          created_at: string;
+          discrepancy_cents: number | null;
+          id: string;
+          note: string | null;
+          session_id: string | null;
+          snapshot_type: string;
+          table_id: string;
+          total_cents: number | null;
+          verified_by: string | null;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_inventory_snapshot"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_inventory_snapshot";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_manual_credit: {
         Args: {
-          p_awarded_by_staff_id: string
-          p_casino_id: string
-          p_idempotency_key: string
-          p_note: string
-          p_player_id: string
-          p_points: number
-        }
+          p_awarded_by_staff_id: string;
+          p_casino_id: string;
+          p_idempotency_key: string;
+          p_note: string;
+          p_player_id: string;
+          p_points: number;
+        };
         Returns: {
-          balance_after: number
-          is_existing: boolean
-          ledger_id: string
-          points_delta: number
-        }[]
-      }
+          balance_after: number;
+          is_existing: boolean;
+          ledger_id: string;
+          points_delta: number;
+        }[];
+      };
       rpc_move_player: {
         Args: {
-          p_average_bet?: number
-          p_casino_id: string
-          p_new_seat_number?: string
-          p_new_table_id: string
-          p_slip_id: string
-        }
-        Returns: Json
-      }
+          p_average_bet?: number;
+          p_casino_id: string;
+          p_new_seat_number?: string;
+          p_new_table_id: string;
+          p_slip_id: string;
+        };
+        Returns: Json;
+      };
       rpc_open_table_session: {
-        Args: { p_gaming_table_id: string }
+        Args: { p_gaming_table_id: string };
         Returns: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_session"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_session";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_pause_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_casino_id: string; p_rating_slip_id: string };
         Returns: {
-          accrual_kind: string
-          accumulated_seconds: number
-          average_bet: number | null
-          casino_id: string
-          duration_seconds: number | null
-          end_time: string | null
-          final_average_bet: number | null
-          final_duration_seconds: number | null
-          game_settings: Json | null
-          id: string
-          move_group_id: string | null
-          pause_intervals: unknown[] | null
-          policy_snapshot: Json | null
-          previous_slip_id: string | null
-          seat_number: string | null
-          start_time: string
-          status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string
-          visit_id: string
-        }
+          accrual_kind: string;
+          accumulated_seconds: number;
+          average_bet: number | null;
+          casino_id: string;
+          duration_seconds: number | null;
+          end_time: string | null;
+          final_average_bet: number | null;
+          final_duration_seconds: number | null;
+          game_settings: Json | null;
+          id: string;
+          move_group_id: string | null;
+          pause_intervals: unknown[] | null;
+          policy_snapshot: Json | null;
+          previous_slip_id: string | null;
+          seat_number: string | null;
+          start_time: string;
+          status: Database["public"]["Enums"]["rating_slip_status"];
+          table_id: string;
+          visit_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "rating_slip"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "rating_slip";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_post_table_drop_total: {
-        Args: { p_drop_total_cents: number; p_session_id: string }
+        Args: { p_drop_total_cents: number; p_session_id: string };
         Returns: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_session"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_session";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_promo_coupon_inventory: {
         Args: {
-          p_promo_program_id?: string
-          p_status?: Database["public"]["Enums"]["promo_coupon_status"]
-        }
+          p_promo_program_id?: string;
+          p_status?: Database["public"]["Enums"]["promo_coupon_status"];
+        };
         Returns: {
-          coupon_count: number
-          status: Database["public"]["Enums"]["promo_coupon_status"]
-          total_face_value: number
-          total_match_wager: number
-        }[]
-      }
+          coupon_count: number;
+          status: Database["public"]["Enums"]["promo_coupon_status"];
+          total_face_value: number;
+          total_match_wager: number;
+        }[];
+      };
       rpc_promo_exposure_rollup: {
         Args: {
-          p_from_ts?: string
-          p_gaming_day?: string
-          p_shift_id?: string
-          p_to_ts?: string
-        }
-        Returns: Json
-      }
+          p_from_ts?: string;
+          p_gaming_day?: string;
+          p_shift_id?: string;
+          p_to_ts?: string;
+        };
+        Returns: Json;
+      };
       rpc_reconcile_loyalty_balance: {
-        Args: { p_casino_id: string; p_player_id: string }
+        Args: { p_casino_id: string; p_player_id: string };
         Returns: {
-          drift_detected: boolean
-          new_balance: number
-          old_balance: number
-        }[]
-      }
+          drift_detected: boolean;
+          new_balance: number;
+          old_balance: number;
+        }[];
+      };
       rpc_redeem: {
         Args: {
-          p_allow_overdraw?: boolean
-          p_casino_id: string
-          p_idempotency_key: string
-          p_issued_by_staff_id: string
-          p_note: string
-          p_player_id: string
-          p_points: number
-          p_reference?: string
-          p_reward_id?: string
-        }
+          p_allow_overdraw?: boolean;
+          p_casino_id: string;
+          p_idempotency_key: string;
+          p_issued_by_staff_id: string;
+          p_note: string;
+          p_player_id: string;
+          p_points: number;
+          p_reference?: string;
+          p_reward_id?: string;
+        };
         Returns: {
-          balance_after: number
-          balance_before: number
-          is_existing: boolean
-          ledger_id: string
-          overdraw_applied: boolean
-          points_delta: number
-        }[]
-      }
+          balance_after: number;
+          balance_before: number;
+          is_existing: boolean;
+          ledger_id: string;
+          overdraw_applied: boolean;
+          points_delta: number;
+        }[];
+      };
       rpc_replace_promo_coupon: {
         Args: {
-          p_correlation_id?: string
-          p_coupon_id: string
-          p_idempotency_key: string
-          p_new_expires_at?: string
-          p_new_validation_number: string
-        }
-        Returns: Json
-      }
+          p_correlation_id?: string;
+          p_coupon_id: string;
+          p_idempotency_key: string;
+          p_new_expires_at?: string;
+          p_new_validation_number: string;
+        };
+        Returns: Json;
+      };
       rpc_request_table_credit: {
         Args: {
-          p_amount_cents: number
-          p_casino_id: string
-          p_chipset: Json
-          p_received_by: string
-          p_request_id: string
-          p_sent_by: string
-          p_slip_no: string
-          p_table_id: string
-        }
+          p_amount_cents: number;
+          p_casino_id: string;
+          p_chipset: Json;
+          p_received_by: string;
+          p_request_id: string;
+          p_sent_by: string;
+          p_slip_no: string;
+          p_table_id: string;
+        };
         Returns: {
-          amount_cents: number
-          authorized_by: string | null
-          casino_id: string
-          chipset: Json
-          created_at: string
-          id: string
-          received_by: string | null
-          request_id: string
-          sent_by: string | null
-          slip_no: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          authorized_by: string | null;
+          casino_id: string;
+          chipset: Json;
+          created_at: string;
+          id: string;
+          received_by: string | null;
+          request_id: string;
+          sent_by: string | null;
+          slip_no: string | null;
+          table_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_credit"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_credit";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_request_table_fill: {
         Args: {
-          p_amount_cents: number
-          p_casino_id: string
-          p_chipset: Json
-          p_delivered_by: string
-          p_received_by: string
-          p_request_id: string
-          p_slip_no: string
-          p_table_id: string
-        }
+          p_amount_cents: number;
+          p_casino_id: string;
+          p_chipset: Json;
+          p_delivered_by: string;
+          p_received_by: string;
+          p_request_id: string;
+          p_slip_no: string;
+          p_table_id: string;
+        };
         Returns: {
-          amount_cents: number
-          casino_id: string
-          chipset: Json
-          created_at: string
-          delivered_by: string | null
-          id: string
-          received_by: string | null
-          request_id: string
-          requested_by: string | null
-          slip_no: string | null
-          table_id: string
-        }
+          amount_cents: number;
+          casino_id: string;
+          chipset: Json;
+          created_at: string;
+          delivered_by: string | null;
+          id: string;
+          received_by: string | null;
+          request_id: string;
+          requested_by: string | null;
+          slip_no: string | null;
+          table_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_fill"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_fill";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_resolve_current_slip_context: {
-        Args: { p_slip_id: string }
-        Returns: Json
-      }
+        Args: { p_slip_id: string };
+        Returns: Json;
+      };
       rpc_resume_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_casino_id: string; p_rating_slip_id: string };
         Returns: {
-          accrual_kind: string
-          accumulated_seconds: number
-          average_bet: number | null
-          casino_id: string
-          duration_seconds: number | null
-          end_time: string | null
-          final_average_bet: number | null
-          final_duration_seconds: number | null
-          game_settings: Json | null
-          id: string
-          move_group_id: string | null
-          pause_intervals: unknown[] | null
-          policy_snapshot: Json | null
-          previous_slip_id: string | null
-          seat_number: string | null
-          start_time: string
-          status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string
-          visit_id: string
-        }
+          accrual_kind: string;
+          accumulated_seconds: number;
+          average_bet: number | null;
+          casino_id: string;
+          duration_seconds: number | null;
+          end_time: string | null;
+          final_average_bet: number | null;
+          final_duration_seconds: number | null;
+          game_settings: Json | null;
+          id: string;
+          move_group_id: string | null;
+          pause_intervals: unknown[] | null;
+          policy_snapshot: Json | null;
+          previous_slip_id: string | null;
+          seat_number: string | null;
+          start_time: string;
+          status: Database["public"]["Enums"]["rating_slip_status"];
+          table_id: string;
+          visit_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "rating_slip"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "rating_slip";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_shift_cash_obs_alerts: {
-        Args: { p_end_ts: string; p_start_ts: string }
+        Args: { p_end_ts: string; p_start_ts: string };
         Returns: {
-          alert_type: string
-          entity_id: string
-          entity_label: string
-          entity_type: string
-          is_telemetry: boolean
-          message: string
-          observed_value: number
-          severity: string
-          threshold: number
-        }[]
-      }
+          alert_type: string;
+          entity_id: string;
+          entity_label: string;
+          entity_type: string;
+          is_telemetry: boolean;
+          message: string;
+          observed_value: number;
+          severity: string;
+          threshold: number;
+        }[];
+      };
       rpc_shift_cash_obs_casino: {
-        Args: { p_end_ts: string; p_start_ts: string }
+        Args: { p_end_ts: string; p_start_ts: string };
         Returns: {
-          cash_out_last_observed_at: string
-          cash_out_observation_count: number
-          cash_out_observed_confirmed_total: number
-          cash_out_observed_estimate_total: number
-        }[]
-      }
+          cash_out_last_observed_at: string;
+          cash_out_observation_count: number;
+          cash_out_observed_confirmed_total: number;
+          cash_out_observed_estimate_total: number;
+        }[];
+      };
       rpc_shift_cash_obs_pit: {
-        Args: { p_end_ts: string; p_pit?: string; p_start_ts: string }
+        Args: { p_end_ts: string; p_pit?: string; p_start_ts: string };
         Returns: {
-          cash_out_last_observed_at: string
-          cash_out_observation_count: number
-          cash_out_observed_confirmed_total: number
-          cash_out_observed_estimate_total: number
-          pit: string
-        }[]
-      }
+          cash_out_last_observed_at: string;
+          cash_out_observation_count: number;
+          cash_out_observed_confirmed_total: number;
+          cash_out_observed_estimate_total: number;
+          pit: string;
+        }[];
+      };
       rpc_shift_cash_obs_table: {
-        Args: { p_end_ts: string; p_start_ts: string; p_table_id?: string }
+        Args: { p_end_ts: string; p_start_ts: string; p_table_id?: string };
         Returns: {
-          cash_out_last_observed_at: string
-          cash_out_observation_count: number
-          cash_out_observed_confirmed_total: number
-          cash_out_observed_estimate_total: number
-          pit: string
-          table_id: string
-          table_label: string
-        }[]
-      }
+          cash_out_last_observed_at: string;
+          cash_out_observation_count: number;
+          cash_out_observed_confirmed_total: number;
+          cash_out_observed_estimate_total: number;
+          pit: string;
+          table_id: string;
+          table_label: string;
+        }[];
+      };
       rpc_shift_casino_metrics: {
         Args: {
-          p_actor_id?: string
-          p_window_end: string
-          p_window_start: string
-        }
+          p_actor_id?: string;
+          p_window_end: string;
+          p_window_start: string;
+        };
         Returns: {
-          credits_total_cents: number
-          estimated_drop_buyins_total_cents: number
-          estimated_drop_grind_total_cents: number
-          estimated_drop_rated_total_cents: number
-          fills_total_cents: number
-          pits_count: number
-          tables_count: number
-          tables_good_coverage_count: number
-          tables_grade_estimate: number
-          tables_with_closing_snapshot: number
-          tables_with_opening_snapshot: number
-          tables_with_telemetry_count: number
-          win_loss_estimated_total_cents: number
-          win_loss_inventory_total_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
+          credits_total_cents: number;
+          estimated_drop_buyins_total_cents: number;
+          estimated_drop_grind_total_cents: number;
+          estimated_drop_rated_total_cents: number;
+          fills_total_cents: number;
+          pits_count: number;
+          tables_count: number;
+          tables_good_coverage_count: number;
+          tables_grade_estimate: number;
+          tables_with_closing_snapshot: number;
+          tables_with_opening_snapshot: number;
+          tables_with_telemetry_count: number;
+          win_loss_estimated_total_cents: number;
+          win_loss_inventory_total_cents: number;
+          window_end: string;
+          window_start: string;
+        }[];
+      };
       rpc_shift_pit_metrics: {
         Args: {
-          p_actor_id?: string
-          p_pit_id: string
-          p_window_end: string
-          p_window_start: string
-        }
+          p_actor_id?: string;
+          p_pit_id: string;
+          p_window_end: string;
+          p_window_start: string;
+        };
         Returns: {
-          credits_total_cents: number
-          estimated_drop_buyins_total_cents: number
-          estimated_drop_grind_total_cents: number
-          estimated_drop_rated_total_cents: number
-          fills_total_cents: number
-          pit_id: string
-          tables_count: number
-          tables_good_coverage_count: number
-          tables_grade_estimate: number
-          tables_with_closing_snapshot: number
-          tables_with_opening_snapshot: number
-          tables_with_telemetry_count: number
-          win_loss_estimated_total_cents: number
-          win_loss_inventory_total_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
+          credits_total_cents: number;
+          estimated_drop_buyins_total_cents: number;
+          estimated_drop_grind_total_cents: number;
+          estimated_drop_rated_total_cents: number;
+          fills_total_cents: number;
+          pit_id: string;
+          tables_count: number;
+          tables_good_coverage_count: number;
+          tables_grade_estimate: number;
+          tables_with_closing_snapshot: number;
+          tables_with_opening_snapshot: number;
+          tables_with_telemetry_count: number;
+          win_loss_estimated_total_cents: number;
+          win_loss_inventory_total_cents: number;
+          window_end: string;
+          window_start: string;
+        }[];
+      };
       rpc_shift_table_metrics: {
         Args: {
-          p_actor_id?: string
-          p_window_end: string
-          p_window_start: string
-        }
+          p_actor_id?: string;
+          p_window_end: string;
+          p_window_start: string;
+        };
         Returns: {
-          closing_bankroll_total_cents: number
-          closing_snapshot_at: string
-          closing_snapshot_id: string
-          credits_total_cents: number
-          drop_custody_present: boolean
-          estimated_drop_buyins_cents: number
-          estimated_drop_grind_cents: number
-          estimated_drop_rated_cents: number
-          fills_total_cents: number
-          metric_grade: string
-          missing_closing_snapshot: boolean
-          missing_opening_snapshot: boolean
-          opening_bankroll_total_cents: number
-          opening_snapshot_at: string
-          opening_snapshot_id: string
-          pit_id: string
-          table_id: string
-          table_label: string
-          telemetry_notes: string
-          telemetry_quality: string
-          win_loss_estimated_cents: number
-          win_loss_inventory_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
+          closing_bankroll_total_cents: number;
+          closing_snapshot_at: string;
+          closing_snapshot_id: string;
+          credits_total_cents: number;
+          drop_custody_present: boolean;
+          estimated_drop_buyins_cents: number;
+          estimated_drop_grind_cents: number;
+          estimated_drop_rated_cents: number;
+          fills_total_cents: number;
+          metric_grade: string;
+          missing_closing_snapshot: boolean;
+          missing_opening_snapshot: boolean;
+          opening_bankroll_total_cents: number;
+          opening_snapshot_at: string;
+          opening_snapshot_id: string;
+          pit_id: string;
+          table_id: string;
+          table_label: string;
+          telemetry_notes: string;
+          telemetry_quality: string;
+          win_loss_estimated_cents: number;
+          win_loss_inventory_cents: number;
+          window_end: string;
+          window_start: string;
+        }[];
+      };
       rpc_start_or_resume_visit: {
-        Args: { p_player_id: string }
+        Args: { p_player_id: string };
         Returns: {
-          gaming_day: string
-          is_new: boolean
-          resumed: boolean
-          visit: Database["public"]["Tables"]["visit"]["Row"]
-        }[]
-      }
+          gaming_day: string;
+          is_new: boolean;
+          resumed: boolean;
+          visit: Database["public"]["Tables"]["visit"]["Row"];
+        }[];
+      };
       rpc_start_rating_slip: {
         Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_game_settings: Json
-          p_seat_number: string
-          p_table_id: string
-          p_visit_id: string
-        }
+          p_actor_id: string;
+          p_casino_id: string;
+          p_game_settings: Json;
+          p_seat_number: string;
+          p_table_id: string;
+          p_visit_id: string;
+        };
         Returns: {
-          accrual_kind: string
-          accumulated_seconds: number
-          average_bet: number | null
-          casino_id: string
-          duration_seconds: number | null
-          end_time: string | null
-          final_average_bet: number | null
-          final_duration_seconds: number | null
-          game_settings: Json | null
-          id: string
-          move_group_id: string | null
-          pause_intervals: unknown[] | null
-          policy_snapshot: Json | null
-          previous_slip_id: string | null
-          seat_number: string | null
-          start_time: string
-          status: Database["public"]["Enums"]["rating_slip_status"]
-          table_id: string
-          visit_id: string
-        }
+          accrual_kind: string;
+          accumulated_seconds: number;
+          average_bet: number | null;
+          casino_id: string;
+          duration_seconds: number | null;
+          end_time: string | null;
+          final_average_bet: number | null;
+          final_duration_seconds: number | null;
+          game_settings: Json | null;
+          id: string;
+          move_group_id: string | null;
+          pause_intervals: unknown[] | null;
+          policy_snapshot: Json | null;
+          previous_slip_id: string | null;
+          seat_number: string | null;
+          start_time: string;
+          status: Database["public"]["Enums"]["rating_slip_status"];
+          table_id: string;
+          visit_id: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "rating_slip"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "rating_slip";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_start_table_rundown: {
-        Args: { p_table_session_id: string }
+        Args: { p_table_session_id: string };
         Returns: {
-          casino_id: string
-          closed_at: string | null
-          closed_by_staff_id: string | null
-          closing_inventory_snapshot_id: string | null
-          created_at: string
-          credits_total_cents: number
-          drop_event_id: string | null
-          drop_posted_at: string | null
-          drop_total_cents: number | null
-          fills_total_cents: number
-          gaming_day: string
-          gaming_table_id: string
-          id: string
-          metadata: Json | null
-          need_total_cents: number | null
-          notes: string | null
-          opened_at: string
-          opened_by_staff_id: string
-          opening_inventory_snapshot_id: string | null
-          rundown_started_at: string | null
-          rundown_started_by_staff_id: string | null
-          shift_id: string | null
-          status: Database["public"]["Enums"]["table_session_status"]
-          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
-          updated_at: string
-        }
+          casino_id: string;
+          closed_at: string | null;
+          closed_by_staff_id: string | null;
+          closing_inventory_snapshot_id: string | null;
+          created_at: string;
+          credits_total_cents: number;
+          drop_event_id: string | null;
+          drop_posted_at: string | null;
+          drop_total_cents: number | null;
+          fills_total_cents: number;
+          gaming_day: string;
+          gaming_table_id: string;
+          id: string;
+          metadata: Json | null;
+          need_total_cents: number | null;
+          notes: string | null;
+          opened_at: string;
+          opened_by_staff_id: string;
+          opening_inventory_snapshot_id: string | null;
+          rundown_started_at: string | null;
+          rundown_started_by_staff_id: string | null;
+          shift_id: string | null;
+          status: Database["public"]["Enums"]["table_session_status"];
+          table_bank_mode:
+            | Database["public"]["Enums"]["table_bank_mode"]
+            | null;
+          updated_at: string;
+        };
         SetofOptions: {
-          from: "*"
-          to: "table_session"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
+          from: "*";
+          to: "table_session";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       rpc_update_table_status:
         | {
             Args: {
-              p_actor_id: string
-              p_casino_id: string
-              p_new_status: Database["public"]["Enums"]["table_status"]
-              p_table_id: string
-            }
+              p_actor_id: string;
+              p_casino_id: string;
+              p_new_status: Database["public"]["Enums"]["table_status"];
+              p_table_id: string;
+            };
             Returns: {
-              casino_id: string
-              created_at: string
-              id: string
-              label: string
-              par_total_cents: number | null
-              par_updated_at: string | null
-              par_updated_by: string | null
-              pit: string | null
-              status: Database["public"]["Enums"]["table_status"]
-              type: Database["public"]["Enums"]["game_type"]
-            }
+              casino_id: string;
+              created_at: string;
+              id: string;
+              label: string;
+              par_total_cents: number | null;
+              par_updated_at: string | null;
+              par_updated_by: string | null;
+              pit: string | null;
+              status: Database["public"]["Enums"]["table_status"];
+              type: Database["public"]["Enums"]["game_type"];
+            };
             SetofOptions: {
-              from: "*"
-              to: "gaming_table"
-              isOneToOne: true
-              isSetofReturn: false
-            }
+              from: "*";
+              to: "gaming_table";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
           }
         | {
             Args: {
-              p_casino_id: string
-              p_new_status: Database["public"]["Enums"]["table_status"]
-              p_table_id: string
-            }
+              p_casino_id: string;
+              p_new_status: Database["public"]["Enums"]["table_status"];
+              p_table_id: string;
+            };
             Returns: {
-              casino_id: string
-              created_at: string
-              id: string
-              label: string
-              par_total_cents: number | null
-              par_updated_at: string | null
-              par_updated_by: string | null
-              pit: string | null
-              status: Database["public"]["Enums"]["table_status"]
-              type: Database["public"]["Enums"]["game_type"]
-            }
+              casino_id: string;
+              created_at: string;
+              id: string;
+              label: string;
+              par_total_cents: number | null;
+              par_updated_at: string | null;
+              par_updated_by: string | null;
+              pit: string | null;
+              status: Database["public"]["Enums"]["table_status"];
+              type: Database["public"]["Enums"]["game_type"];
+            };
             SetofOptions: {
-              from: "*"
-              to: "gaming_table"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+              from: "*";
+              to: "gaming_table";
+              isOneToOne: true;
+              isSetofReturn: false;
+            };
+          };
       rpc_void_promo_coupon: {
         Args: {
-          p_correlation_id?: string
-          p_coupon_id: string
-          p_idempotency_key: string
-        }
-        Returns: Json
-      }
+          p_correlation_id?: string;
+          p_coupon_id: string;
+          p_idempotency_key: string;
+        };
+        Returns: Json;
+      };
       set_rls_context: {
         Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_correlation_id?: string
-          p_staff_role: string
-        }
-        Returns: undefined
-      }
+          p_actor_id: string;
+          p_casino_id: string;
+          p_correlation_id?: string;
+          p_staff_role: string;
+        };
+        Returns: undefined;
+      };
       set_rls_context_from_staff: {
-        Args: { p_correlation_id?: string }
-        Returns: undefined
-      }
+        Args: { p_correlation_id?: string };
+        Returns: undefined;
+      };
       set_rls_context_internal: {
         Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_correlation_id?: string
-          p_staff_role: string
-        }
-        Returns: undefined
-      }
-      show_limit: { Args: never; Returns: number }
-      show_trgm: { Args: { "": string }; Returns: string[] }
+          p_actor_id: string;
+          p_casino_id: string;
+          p_correlation_id?: string;
+          p_staff_role: string;
+        };
+        Returns: undefined;
+      };
+      show_limit: { Args: never; Returns: number };
+      show_trgm: { Args: { "": string }; Returns: string[] };
       sync_staff_jwt_claims: {
-        Args: { p_staff_id: string }
-        Returns: undefined
-      }
-    }
+        Args: { p_staff_id: string };
+        Returns: undefined;
+      };
+    };
     Enums: {
       adjustment_reason_code:
         | "data_entry_error"
@@ -3672,77 +3684,80 @@ export type Database = {
         | "wrong_player"
         | "wrong_amount"
         | "system_bug"
-        | "other"
-      financial_direction: "in" | "out"
-      financial_source: "pit" | "cage" | "system"
-      financial_txn_kind: "original" | "adjustment" | "reversal"
-      floor_layout_status: "draft" | "review" | "approved" | "archived"
+        | "other";
+      financial_direction: "in" | "out";
+      financial_source: "pit" | "cage" | "system";
+      financial_txn_kind: "original" | "adjustment" | "reversal";
+      floor_layout_status: "draft" | "review" | "approved" | "archived";
       floor_layout_version_status:
         | "draft"
         | "pending_activation"
         | "active"
-        | "retired"
-      game_type: "blackjack" | "poker" | "roulette" | "baccarat"
+        | "retired";
+      game_type: "blackjack" | "poker" | "roulette" | "baccarat";
       loyalty_reason:
         | "base_accrual"
         | "promotion"
         | "redeem"
         | "manual_reward"
         | "adjustment"
-        | "reversal"
-      mtl_source: "table" | "cage" | "kiosk" | "other"
+        | "reversal";
+      mtl_source: "table" | "cage" | "kiosk" | "other";
       mtl_txn_type:
         | "buy_in"
         | "cash_out"
         | "marker"
         | "front_money"
-        | "chip_fill"
-      observation_amount_kind: "estimate" | "cage_confirmed"
-      observation_source: "walk_with" | "phone_confirmed" | "observed"
+        | "chip_fill";
+      observation_amount_kind: "estimate" | "cage_confirmed";
+      observation_source: "walk_with" | "phone_confirmed" | "observed";
       promo_coupon_status:
         | "issued"
         | "voided"
         | "replaced"
         | "expired"
-        | "cleared"
-      promo_type_enum: "match_play"
-      rating_slip_status: "open" | "paused" | "closed" | "archived"
-      staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
-      staff_status: "active" | "inactive"
-      table_bank_mode: "INVENTORY_COUNT" | "IMPREST_TO_PAR"
-      table_session_status: "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED"
-      table_status: "inactive" | "active" | "closed"
+        | "cleared";
+      promo_type_enum: "match_play";
+      rating_slip_status: "open" | "paused" | "closed" | "archived";
+      staff_role: "dealer" | "pit_boss" | "cashier" | "admin";
+      staff_status: "active" | "inactive";
+      table_bank_mode: "INVENTORY_COUNT" | "IMPREST_TO_PAR";
+      table_session_status: "OPEN" | "ACTIVE" | "RUNDOWN" | "CLOSED";
+      table_status: "inactive" | "active" | "closed";
       visit_kind:
         | "reward_identified"
         | "gaming_identified_rated"
-        | "gaming_ghost_unrated"
-    }
+        | "gaming_ghost_unrated";
+    };
     CompositeTypes: {
-      [_ in never]: never
-    }
-  }
-}
+      [_ in never]: never;
+    };
+  };
+};
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">;
 
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = DatabaseWithoutInternals[Extract<
+  keyof Database,
+  "public"
+>];
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
       DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R
+      Row: infer R;
     }
     ? R
     : never
@@ -3750,95 +3765,95 @@ export type Tables<
         DefaultSchema["Views"])
     ? (DefaultSchema["Tables"] &
         DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
+        Row: infer R;
       }
       ? R
       : never
-    : never
+    : never;
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
+      Insert: infer I;
     }
     ? I
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
+        Insert: infer I;
       }
       ? I
       : never
-    : never
+    : never;
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
+      Update: infer U;
     }
     ? U
     : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
     ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
+        Update: infer U;
       }
       ? U
       : never
-    : never
+    : never;
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+    : never;
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof DatabaseWithoutInternals;
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof DatabaseWithoutInternals;
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
     ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+    : never;
 
 export const Constants = {
   graphql_public: {
@@ -3904,5 +3919,4 @@ export const Constants = {
       ],
     },
   },
-} as const
-
+} as const;

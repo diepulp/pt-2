@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import * as SheetPrimitive from "@radix-ui/react-dialog";
+import * as SheetPrimitive from '@radix-ui/react-dialog';
 import {
   Activity,
   ChevronLeft,
@@ -9,12 +9,12 @@ import {
   TrendingUp,
   Users,
   Zap,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 /**
  * Option C: Sheet-based Hover Drawer
@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils";
  */
 export function SheetPanelDemo() {
   const [isOpen, setIsOpen] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState("tables");
+  const [activeTab, setActiveTab] = React.useState('tables');
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
   const handleMouseEnter = React.useCallback(() => {
@@ -51,10 +51,10 @@ export function SheetPanelDemo() {
   }, []);
 
   const tabs = [
-    { id: "tables", label: "Tables", icon: LayoutGrid, notifications: 3 },
-    { id: "activity", label: "Activity", icon: Activity, notifications: 2 },
-    { id: "inventory", label: "Inventory", icon: Package, notifications: 0 },
-    { id: "analytics", label: "Analytics", icon: TrendingUp, notifications: 0 },
+    { id: 'tables', label: 'Tables', icon: LayoutGrid, notifications: 3 },
+    { id: 'activity', label: 'Activity', icon: Activity, notifications: 2 },
+    { id: 'inventory', label: 'Inventory', icon: Package, notifications: 0 },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp, notifications: 0 },
   ];
 
   return (
@@ -103,10 +103,10 @@ export function SheetPanelDemo() {
       {/* Collapsed Tab Strip - visible when closed */}
       <div
         className={cn(
-          "absolute right-0 top-0 bottom-0 w-14 bg-zinc-900/95 border-l border-zinc-800/60",
-          "flex flex-col items-center py-4 gap-1 z-20",
-          "transition-opacity duration-200",
-          isOpen ? "opacity-0 pointer-events-none" : "opacity-100",
+          'absolute right-0 top-0 bottom-0 w-14 bg-zinc-900/95 border-l border-zinc-800/60',
+          'flex flex-col items-center py-4 gap-1 z-20',
+          'transition-opacity duration-200',
+          isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100',
         )}
         onMouseEnter={handleMouseEnter}
       >
@@ -120,11 +120,11 @@ export function SheetPanelDemo() {
             <button
               key={tab.id}
               className={cn(
-                "w-10 h-10 rounded-lg flex items-center justify-center relative",
-                "transition-colors duration-75",
+                'w-10 h-10 rounded-lg flex items-center justify-center relative',
+                'transition-colors duration-75',
                 activeTab === tab.id
-                  ? "bg-amber-500/10 text-amber-400"
-                  : "text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50",
+                  ? 'bg-amber-500/10 text-amber-400'
+                  : 'text-zinc-600 hover:text-zinc-400 hover:bg-zinc-800/50',
               )}
               onClick={() => setActiveTab(tab.id)}
             >
@@ -142,10 +142,10 @@ export function SheetPanelDemo() {
       {/* Expanded Panel - slides in from right */}
       <div
         className={cn(
-          "absolute right-0 top-0 bottom-0 w-80 bg-zinc-900/98 border-l border-zinc-800/60",
-          "flex flex-col z-40 shadow-2xl shadow-black/50",
-          "transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "translate-x-full",
+          'absolute right-0 top-0 bottom-0 w-80 bg-zinc-900/98 border-l border-zinc-800/60',
+          'flex flex-col z-40 shadow-2xl shadow-black/50',
+          'transition-transform duration-300 ease-out',
+          isOpen ? 'translate-x-0' : 'translate-x-full',
         )}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
@@ -180,9 +180,9 @@ export function SheetPanelDemo() {
                   key={tab.id}
                   value={tab.id}
                   className={cn(
-                    "flex-1 gap-1 py-1.5 text-[10px] rounded transition-colors duration-75",
-                    "data-[state=active]:bg-amber-500/10",
-                    "data-[state=active]:text-amber-400",
+                    'flex-1 gap-1 py-1.5 text-[10px] rounded transition-colors duration-75',
+                    'data-[state=active]:bg-amber-500/10',
+                    'data-[state=active]:text-amber-400',
                   )}
                 >
                   <Icon className="h-3 w-3" />
@@ -196,7 +196,7 @@ export function SheetPanelDemo() {
           <div className="flex-1 overflow-auto px-3 pb-3 min-h-0">
             <TabsContent value="tables" className="mt-0 space-y-2 h-full">
               <SectionHeader>Active Players</SectionHeader>
-              {["John D.", "Sarah M.", "Mike R."].map((name, i) => (
+              {['John D.', 'Sarah M.', 'Mike R.'].map((name, i) => (
                 <PlayerCard key={i} name={name} seat={i + 2} />
               ))}
             </TabsContent>
@@ -204,9 +204,9 @@ export function SheetPanelDemo() {
             <TabsContent value="activity" className="mt-0 space-y-1.5 h-full">
               <SectionHeader>Recent</SectionHeader>
               {[
-                { action: "Slip opened", time: "2m", type: "create" },
-                { action: "Bet increased", time: "5m", type: "update" },
-                { action: "Player seated", time: "12m", type: "info" },
+                { action: 'Slip opened', time: '2m', type: 'create' },
+                { action: 'Bet increased', time: '5m', type: 'update' },
+                { action: 'Player seated', time: '12m', type: 'info' },
               ].map((item, i) => (
                 <ActivityCard key={i} {...item} />
               ))}
@@ -216,10 +216,10 @@ export function SheetPanelDemo() {
               <SectionHeader>Chips</SectionHeader>
               <div className="grid grid-cols-4 gap-1.5">
                 {[
-                  { d: "$5", c: 48, color: "bg-red-500" },
-                  { d: "$25", c: 32, color: "bg-emerald-500" },
-                  { d: "$100", c: 16, color: "bg-zinc-700" },
-                  { d: "$500", c: 8, color: "bg-violet-500" },
+                  { d: '$5', c: 48, color: 'bg-red-500' },
+                  { d: '$25', c: 32, color: 'bg-emerald-500' },
+                  { d: '$100', c: 16, color: 'bg-zinc-700' },
+                  { d: '$500', c: 8, color: 'bg-violet-500' },
                 ].map((chip) => (
                   <div
                     key={chip.d}
@@ -227,7 +227,7 @@ export function SheetPanelDemo() {
                   >
                     <div
                       className={cn(
-                        "w-5 h-5 rounded-full mx-auto mb-1",
+                        'w-5 h-5 rounded-full mx-auto mb-1',
                         chip.color,
                       )}
                     />
@@ -247,9 +247,9 @@ export function SheetPanelDemo() {
             <TabsContent value="analytics" className="mt-0 space-y-1.5 h-full">
               <SectionHeader>Stats</SectionHeader>
               {[
-                { label: "Win Rate", value: "52%", trend: "+2%" },
-                { label: "Avg Bet", value: "$125", trend: "+$15" },
-                { label: "Hands/Hr", value: "42", trend: "-3" },
+                { label: 'Win Rate', value: '52%', trend: '+2%' },
+                { label: 'Avg Bet', value: '$125', trend: '+$15' },
+                { label: 'Hands/Hr', value: '42', trend: '-3' },
               ].map((stat) => (
                 <div
                   key={stat.label}
@@ -304,10 +304,10 @@ function TableVisualization() {
             >
               <div
                 className={cn(
-                  "w-8 h-8 rounded-full border-2 flex items-center justify-center",
+                  'w-8 h-8 rounded-full border-2 flex items-center justify-center',
                   isOccupied
-                    ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                    : "bg-zinc-800/50 border-zinc-700/50 text-zinc-600",
+                    ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                    : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-600',
                 )}
               >
                 {isOccupied ? (
@@ -368,13 +368,13 @@ function ActivityCard({
   type: string;
 }) {
   const colors: Record<string, string> = {
-    create: "bg-emerald-500",
-    update: "bg-amber-500",
-    info: "bg-blue-500",
+    create: 'bg-emerald-500',
+    update: 'bg-amber-500',
+    info: 'bg-blue-500',
   };
   return (
     <div className="flex items-center gap-2 p-2 rounded bg-zinc-800/20">
-      <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", colors[type])} />
+      <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', colors[type])} />
       <span className="text-[10px] text-zinc-400 flex-1 truncate">
         {action}
       </span>
@@ -398,13 +398,13 @@ function StatBadge({
     <div className="flex items-center gap-2">
       <Icon
         className={cn(
-          "w-3.5 h-3.5",
-          accent ? "text-amber-500" : "text-zinc-600",
+          'w-3.5 h-3.5',
+          accent ? 'text-amber-500' : 'text-zinc-600',
         )}
       />
       <span className="text-zinc-500">{label}:</span>
       <span
-        className={cn("font-mono", accent ? "text-amber-400" : "text-zinc-300")}
+        className={cn('font-mono', accent ? 'text-amber-400' : 'text-zinc-300')}
       >
         {value}
       </span>

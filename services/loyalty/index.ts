@@ -16,11 +16,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section LoyaltyService
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   AccrueOnCloseInput,
   AccrueOnCloseOutput,
@@ -34,21 +34,21 @@ import type {
   RedeemInput,
   RedeemOutput,
   SessionRewardSuggestionOutput,
-} from "./dtos";
-import type { ReconcileBalanceRpcResponse } from "./mappers";
+} from './dtos';
+import type { ReconcileBalanceRpcResponse } from './mappers';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from "./dtos";
-export * from "./keys";
-export * from "./http";
+export * from './dtos';
+export * from './keys';
+export * from './http';
 
 // Re-export promo instruments sub-module (PRD-LOYALTY-PROMO)
 // Note: PromoExposureRollupDTO and PromoExposureRollupQuery are exported via promo/dtos.ts
-export * from "./promo";
+export * from './promo';
 
 // Re-export promo rollups function (PRD-LOYALTY-PROMO WS7)
 // DTOs already exported via ./promo
-export { getPromoExposureRollup } from "./rollups";
+export { getPromoExposureRollup } from './rollups';
 
 // Re-export schemas selectively (avoid type conflicts with dtos)
 export {
@@ -62,7 +62,7 @@ export {
   ledgerListQuerySchema,
   encodeLedgerCursor,
   decodeLedgerCursor,
-} from "./schemas";
+} from './schemas';
 
 // === Service Interface ===
 

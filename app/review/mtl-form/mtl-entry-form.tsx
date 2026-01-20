@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   ChevronDown,
@@ -9,31 +9,31 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Lock,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 import {
   useId,
   useState,
   useCallback,
   useOptimistic,
   useTransition,
-} from "react";
+} from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/collapsible';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from '@/components/ui/select';
 import {
   Table,
   TableBody,
@@ -42,21 +42,21 @@ import {
   TableHeader,
   TableRow,
   TableFooter,
-} from "@/components/ui/table";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/table';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Types
 // ============================================================================
 
-type TransactionDirection = "cash_in" | "cash_out";
-type TransactionType = "chip_purchase" | "chip_redemption";
-type ThresholdState = "none" | "approaching" | "crossed";
+type TransactionDirection = 'cash_in' | 'cash_out';
+type TransactionType = 'chip_purchase' | 'chip_redemption';
+type ThresholdState = 'none' | 'approaching' | 'crossed';
 
 interface MtlEntry {
   id: string;
   time: string;
-  period: "AM" | "PM";
+  period: 'AM' | 'PM';
   location: string;
   transType: TransactionType;
   amount: number;
@@ -96,14 +96,14 @@ const TRANSACTION_TYPES: {
   direction: TransactionDirection;
 }[] = [
   {
-    value: "chip_purchase",
-    label: "Chip Purchase (Buy-In)",
-    direction: "cash_in",
+    value: 'chip_purchase',
+    label: 'Chip Purchase (Buy-In)',
+    direction: 'cash_in',
   },
   {
-    value: "chip_redemption",
-    label: "Chip Redemption (Cash-Out)",
-    direction: "cash_out",
+    value: 'chip_redemption',
+    label: 'Chip Redemption (Cash-Out)',
+    direction: 'cash_out',
   },
 ];
 
@@ -112,30 +112,30 @@ const TRANSACTION_TYPES: {
 // ============================================================================
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 function formatTime(date: Date): string {
-  return date.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   });
 }
 
-function getPeriod(date: Date): "AM" | "PM" {
-  return date.getHours() < 12 ? "AM" : "PM";
+function getPeriod(date: Date): 'AM' | 'PM' {
+  return date.getHours() < 12 ? 'AM' : 'PM';
 }
 
 function getThresholdState(total: number): ThresholdState {
-  if (total > THRESHOLD_AMOUNT) return "crossed";
-  if (total >= APPROACHING_AMOUNT) return "approaching";
-  return "none";
+  if (total > THRESHOLD_AMOUNT) return 'crossed';
+  if (total >= APPROACHING_AMOUNT) return 'approaching';
+  return 'none';
 }
 
 function generateId(): string {
@@ -147,18 +147,18 @@ function generateId(): string {
 // ============================================================================
 
 function ThresholdBadge({ state }: { state: ThresholdState }) {
-  if (state === "none") return null;
+  if (state === 'none') return null;
 
-  const isCrossed = state === "crossed";
+  const isCrossed = state === 'crossed';
 
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium",
-        "animate-in fade-in-0 slide-in-from-right-2 duration-300",
+        'inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium',
+        'animate-in fade-in-0 slide-in-from-right-2 duration-300',
         isCrossed
-          ? "bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400 ring-1 ring-red-500/20"
-          : "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 ring-1 ring-amber-500/20",
+          ? 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400 ring-1 ring-red-500/20'
+          : 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 ring-1 ring-amber-500/20',
       )}
     >
       {isCrossed ? (
@@ -166,7 +166,7 @@ function ThresholdBadge({ state }: { state: ThresholdState }) {
       ) : (
         <AlertTriangle className="w-3 h-3" />
       )}
-      {isCrossed ? "CROSSED" : "APPROACHING"}
+      {isCrossed ? 'CROSSED' : 'APPROACHING'}
     </div>
   );
 }
@@ -192,14 +192,14 @@ function RunningTotalDisplay({
       {/* Progress bar background */}
       <div
         className={cn(
-          "absolute inset-0 opacity-10 transition-all duration-500",
-          state === "crossed"
-            ? "bg-red-500"
-            : state === "approaching"
-              ? "bg-amber-500"
-              : direction === "cash_in"
-                ? "bg-emerald-500"
-                : "bg-blue-500",
+          'absolute inset-0 opacity-10 transition-all duration-500',
+          state === 'crossed'
+            ? 'bg-red-500'
+            : state === 'approaching'
+              ? 'bg-amber-500'
+              : direction === 'cash_in'
+                ? 'bg-emerald-500'
+                : 'bg-blue-500',
         )}
         style={{ width: `${percentage}%` }}
       />
@@ -207,7 +207,7 @@ function RunningTotalDisplay({
       <div className="relative">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
-            {direction === "cash_in" ? (
+            {direction === 'cash_in' ? (
               <ArrowDownLeft className="w-4 h-4 text-emerald-500" />
             ) : (
               <ArrowUpRight className="w-4 h-4 text-blue-500" />
@@ -221,12 +221,12 @@ function RunningTotalDisplay({
 
         <div
           className={cn(
-            "font-mono text-2xl font-bold tabular-nums",
-            state === "crossed"
-              ? "text-red-600 dark:text-red-400"
-              : state === "approaching"
-                ? "text-amber-600 dark:text-amber-400"
-                : "text-foreground",
+            'font-mono text-2xl font-bold tabular-nums',
+            state === 'crossed'
+              ? 'text-red-600 dark:text-red-400'
+              : state === 'approaching'
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-foreground',
           )}
         >
           {formatCurrency(total)}
@@ -235,14 +235,14 @@ function RunningTotalDisplay({
         <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
           <div
             className={cn(
-              "h-full transition-all duration-500 rounded-full",
-              state === "crossed"
-                ? "bg-red-500"
-                : state === "approaching"
-                  ? "bg-amber-500"
-                  : direction === "cash_in"
-                    ? "bg-emerald-500"
-                    : "bg-blue-500",
+              'h-full transition-all duration-500 rounded-full',
+              state === 'crossed'
+                ? 'bg-red-500'
+                : state === 'approaching'
+                  ? 'bg-amber-500'
+                  : direction === 'cash_in'
+                    ? 'bg-emerald-500'
+                    : 'bg-blue-500',
             )}
             style={{ width: `${percentage}%` }}
           />
@@ -250,10 +250,10 @@ function RunningTotalDisplay({
 
         <div className="mt-1 flex justify-between text-xs text-muted-foreground font-mono">
           <span>$0</span>
-          <span className={cn(state === "approaching" && "text-amber-500")}>
+          <span className={cn(state === 'approaching' && 'text-amber-500')}>
             ${APPROACHING_AMOUNT.toLocaleString()}
           </span>
-          <span className={cn(state === "crossed" && "text-red-500")}>
+          <span className={cn(state === 'crossed' && 'text-red-500')}>
             ${THRESHOLD_AMOUNT.toLocaleString()}
           </span>
         </div>
@@ -276,12 +276,12 @@ function PhysicalCharacteristicsSection({
   const [isOpen, setIsOpen] = useState(false);
 
   const fields = [
-    { key: "sex", label: "Sex", placeholder: "M/F" },
-    { key: "race", label: "Race", placeholder: "e.g., Caucasian" },
-    { key: "build", label: "Build", placeholder: "e.g., Medium" },
-    { key: "age", label: "Age", placeholder: "e.g., 40-50" },
-    { key: "hair", label: "Hair", placeholder: "e.g., Brown" },
-    { key: "height", label: "Height", placeholder: "e.g., 5'10\"" },
+    { key: 'sex', label: 'Sex', placeholder: 'M/F' },
+    { key: 'race', label: 'Race', placeholder: 'e.g., Caucasian' },
+    { key: 'build', label: 'Build', placeholder: 'e.g., Medium' },
+    { key: 'age', label: 'Age', placeholder: 'e.g., 40-50' },
+    { key: 'hair', label: 'Hair', placeholder: 'e.g., Brown' },
+    { key: 'height', label: 'Height', placeholder: 'e.g., 5\'10"' },
   ] as const;
 
   return (
@@ -290,10 +290,10 @@ function PhysicalCharacteristicsSection({
         <button
           type="button"
           className={cn(
-            "w-full flex items-center justify-between px-4 py-3 rounded-lg",
-            "border border-border bg-card/50 hover:bg-card transition-colors",
-            "text-sm font-medium text-muted-foreground hover:text-foreground",
-            "shadow-sm dark:shadow-md dark:shadow-black/10 dark:border-border/50 dark:bg-secondary/30",
+            'w-full flex items-center justify-between px-4 py-3 rounded-lg',
+            'border border-border bg-card/50 hover:bg-card transition-colors',
+            'text-sm font-medium text-muted-foreground hover:text-foreground',
+            'shadow-sm dark:shadow-md dark:shadow-black/10 dark:border-border/50 dark:bg-secondary/30',
           )}
         >
           <span className="flex items-center gap-2">
@@ -304,8 +304,8 @@ function PhysicalCharacteristicsSection({
           </span>
           <ChevronDown
             className={cn(
-              "w-4 h-4 transition-transform duration-200",
-              isOpen && "rotate-180",
+              'w-4 h-4 transition-transform duration-200',
+              isOpen && 'rotate-180',
             )}
           />
         </button>
@@ -363,14 +363,14 @@ function TransactionEntryForm({
   onSubmit,
   isPending,
 }: {
-  onSubmit: (entry: Omit<MtlEntry, "id" | "createdAt">) => void;
+  onSubmit: (entry: Omit<MtlEntry, 'id' | 'createdAt'>) => void;
   isPending: boolean;
 }) {
   const formId = useId();
-  const [transType, setTransType] = useState<TransactionType>("chip_purchase");
-  const [amount, setAmount] = useState("");
-  const [location, setLocation] = useState("");
-  const [comments, setComments] = useState("");
+  const [transType, setTransType] = useState<TransactionType>('chip_purchase');
+  const [amount, setAmount] = useState('');
+  const [location, setLocation] = useState('');
+  const [comments, setComments] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -385,15 +385,15 @@ function TransactionEntryForm({
       transType,
       amount: parseFloat(amount) || 0,
       direction: typeConfig.direction,
-      employeeId: "EMP-001", // Would come from auth context
-      employeeName: "J. Smith", // Would come from auth context
+      employeeId: 'EMP-001', // Would come from auth context
+      employeeName: 'J. Smith', // Would come from auth context
       comments,
     });
 
     // Reset form
-    setAmount("");
-    setLocation("");
-    setComments("");
+    setAmount('');
+    setLocation('');
+    setComments('');
   };
 
   return (
@@ -483,10 +483,10 @@ function TransactionEntryForm({
             type="submit"
             disabled={isPending || !amount}
             className={cn(
-              "h-9 w-full",
-              "bg-accent hover:bg-accent/90 text-accent-foreground",
-              "transition-all duration-200",
-              "disabled:opacity-50",
+              'h-9 w-full',
+              'bg-accent hover:bg-accent/90 text-accent-foreground',
+              'transition-all duration-200',
+              'disabled:opacity-50',
             )}
           >
             {isPending ? (
@@ -511,7 +511,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
   let runningCashOut = 0;
 
   const entriesWithTotals = entries.map((entry) => {
-    if (entry.direction === "cash_in") {
+    if (entry.direction === 'cash_in') {
       runningCashIn += entry.amount;
     } else {
       runningCashOut += entry.amount;
@@ -574,9 +574,9 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
               <TableRow
                 key={entry.id}
                 className={cn(
-                  "group transition-colors",
+                  'group transition-colors',
                   isLatest &&
-                    "bg-accent/5 animate-in fade-in-0 slide-in-from-top-2 duration-300",
+                    'bg-accent/5 animate-in fade-in-0 slide-in-from-top-2 duration-300',
                 )}
               >
                 <TableCell className="font-mono text-sm">
@@ -586,25 +586,25 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                   </span>
                 </TableCell>
                 <TableCell className="font-mono text-sm">
-                  {entry.location || "—"}
+                  {entry.location || '—'}
                 </TableCell>
                 <TableCell>
                   <span
                     className={cn(
-                      "inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded",
-                      entry.direction === "cash_in"
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                        : "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+                      'inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded',
+                      entry.direction === 'cash_in'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
                     )}
                   >
-                    {entry.direction === "cash_in" ? (
+                    {entry.direction === 'cash_in' ? (
                       <ArrowDownLeft className="w-3 h-3" />
                     ) : (
                       <ArrowUpRight className="w-3 h-3" />
                     )}
-                    {entry.transType === "chip_purchase"
-                      ? "Buy-In"
-                      : "Cash-Out"}
+                    {entry.transType === 'chip_purchase'
+                      ? 'Buy-In'
+                      : 'Cash-Out'}
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
@@ -612,17 +612,17 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                 </TableCell>
                 <TableCell
                   className={cn(
-                    "text-right font-mono font-medium tabular-nums",
-                    cashInState === "crossed" &&
-                      "text-red-600 dark:text-red-400",
-                    cashInState === "approaching" &&
-                      "text-amber-600 dark:text-amber-400",
+                    'text-right font-mono font-medium tabular-nums',
+                    cashInState === 'crossed' &&
+                      'text-red-600 dark:text-red-400',
+                    cashInState === 'approaching' &&
+                      'text-amber-600 dark:text-amber-400',
                   )}
                 >
-                  {entry.direction === "cash_in" ? (
+                  {entry.direction === 'cash_in' ? (
                     <span className="relative">
                       {formatCurrency(entry.runningCashIn)}
-                      {cashInState !== "none" && isLatest && (
+                      {cashInState !== 'none' && isLatest && (
                         <span className="absolute -right-1 -top-1 w-2 h-2 bg-current rounded-full animate-ping" />
                       )}
                     </span>
@@ -634,17 +634,17 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                 </TableCell>
                 <TableCell
                   className={cn(
-                    "text-right font-mono font-medium tabular-nums",
-                    cashOutState === "crossed" &&
-                      "text-red-600 dark:text-red-400",
-                    cashOutState === "approaching" &&
-                      "text-amber-600 dark:text-amber-400",
+                    'text-right font-mono font-medium tabular-nums',
+                    cashOutState === 'crossed' &&
+                      'text-red-600 dark:text-red-400',
+                    cashOutState === 'approaching' &&
+                      'text-amber-600 dark:text-amber-400',
                   )}
                 >
-                  {entry.direction === "cash_out" ? (
+                  {entry.direction === 'cash_out' ? (
                     <span className="relative">
                       {formatCurrency(entry.runningCashOut)}
-                      {cashOutState !== "none" && isLatest && (
+                      {cashOutState !== 'none' && isLatest && (
                         <span className="absolute -right-1 -top-1 w-2 h-2 bg-current rounded-full animate-ping" />
                       )}
                     </span>
@@ -662,7 +662,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground max-w-[200px]">
                   <span className="block truncate" title={entry.comments}>
-                    {entry.comments || "—"}
+                    {entry.comments || '—'}
                   </span>
                 </TableCell>
                 <TableCell className="text-center">
@@ -684,22 +684,22 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
             </TableCell>
             <TableCell
               className={cn(
-                "text-right font-mono font-bold tabular-nums",
-                getThresholdState(runningCashIn) === "crossed" &&
-                  "text-red-600 dark:text-red-400",
-                getThresholdState(runningCashIn) === "approaching" &&
-                  "text-amber-600 dark:text-amber-400",
+                'text-right font-mono font-bold tabular-nums',
+                getThresholdState(runningCashIn) === 'crossed' &&
+                  'text-red-600 dark:text-red-400',
+                getThresholdState(runningCashIn) === 'approaching' &&
+                  'text-amber-600 dark:text-amber-400',
               )}
             >
               {formatCurrency(runningCashIn)}
             </TableCell>
             <TableCell
               className={cn(
-                "text-right font-mono font-bold tabular-nums",
-                getThresholdState(runningCashOut) === "crossed" &&
-                  "text-red-600 dark:text-red-400",
-                getThresholdState(runningCashOut) === "approaching" &&
-                  "text-amber-600 dark:text-amber-400",
+                'text-right font-mono font-bold tabular-nums',
+                getThresholdState(runningCashOut) === 'crossed' &&
+                  'text-red-600 dark:text-red-400',
+                getThresholdState(runningCashOut) === 'approaching' &&
+                  'text-amber-600 dark:text-amber-400',
               )}
             >
               {formatCurrency(runningCashOut)}
@@ -726,20 +726,20 @@ export function MtlEntryForm() {
 
   // Player info state
   const [playerInfo, setPlayerInfo] = useState<PlayerInfo>({
-    name: "",
-    accountNumber: "",
+    name: '',
+    accountNumber: '',
   });
 
   // Physical characteristics state
   const [characteristics, setCharacteristics] =
     useState<PhysicalCharacteristics>({
-      sex: "",
-      race: "",
-      build: "",
-      age: "",
-      hair: "",
-      height: "",
-      other: "",
+      sex: '',
+      race: '',
+      build: '',
+      age: '',
+      hair: '',
+      height: '',
+      other: '',
     });
 
   // Transaction entries with optimistic updates
@@ -752,7 +752,7 @@ export function MtlEntryForm() {
   // Calculate totals
   const totals = optimisticEntries.reduce(
     (acc, entry) => {
-      if (entry.direction === "cash_in") {
+      if (entry.direction === 'cash_in') {
         acc.cashIn += entry.amount;
       } else {
         acc.cashOut += entry.amount;
@@ -764,7 +764,7 @@ export function MtlEntryForm() {
 
   // Handle adding a new entry
   const handleAddEntry = useCallback(
-    (entryData: Omit<MtlEntry, "id" | "createdAt">) => {
+    (entryData: Omit<MtlEntry, 'id' | 'createdAt'>) => {
       const newEntry: MtlEntry = {
         ...entryData,
         id: generateId(),
@@ -859,8 +859,8 @@ export function MtlEntryForm() {
             Transaction Log
           </h2>
           <span className="text-xs text-muted-foreground">
-            {optimisticEntries.length}{" "}
-            {optimisticEntries.length === 1 ? "entry" : "entries"}
+            {optimisticEntries.length}{' '}
+            {optimisticEntries.length === 1 ? 'entry' : 'entries'}
           </span>
         </div>
         <TransactionLogTable entries={optimisticEntries} />

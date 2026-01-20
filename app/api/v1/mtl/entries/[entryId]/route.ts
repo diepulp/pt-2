@@ -11,19 +11,19 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { assertRole } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
-import { createMtlService } from "@/services/mtl";
-import { mtlEntryRouteParamsSchema } from "@/services/mtl/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { assertRole } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
+import { createMtlService } from '@/services/mtl';
+import { mtlEntryRouteParamsSchema } from '@/services/mtl/schemas';
 
 /**
  * GET /api/v1/mtl/entries/[entryId]
@@ -47,14 +47,14 @@ export async function GET(
       supabase,
       async (mwCtx) => {
         // ADR-025: Entry READ allowed for pit_boss, cashier, admin
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "cashier", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'cashier', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
         const entry = await service.getEntryById(params.entryId);
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: entry,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -62,8 +62,8 @@ export async function GET(
         };
       },
       {
-        domain: "mtl",
-        action: "get-entry",
+        domain: 'mtl',
+        action: 'get-entry',
         correlationId: ctx.requestId,
       },
     );

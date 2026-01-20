@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Search,
@@ -9,14 +9,14 @@ import {
   Circle,
   Pause,
   XCircle,
-} from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-import type { PitData, TableData, TableStatus } from "../types";
+import type { PitData, TableData, TableStatus } from '../types';
 
 interface CommandPaletteProps {
   open: boolean;
@@ -27,7 +27,7 @@ interface CommandPaletteProps {
 }
 
 interface SearchResult {
-  type: "pit" | "table";
+  type: 'pit' | 'table';
   id: string;
   label: string;
   sublabel?: string;
@@ -42,9 +42,9 @@ const statusIcons = {
 };
 
 const statusColors = {
-  active: "text-emerald-400",
-  inactive: "text-amber-400",
-  closed: "text-zinc-500",
+  active: 'text-emerald-400',
+  inactive: 'text-amber-400',
+  closed: 'text-zinc-500',
 };
 
 export function CommandPalette({
@@ -54,7 +54,7 @@ export function CommandPalette({
   onSelectPit,
   onSelectTable,
 }: CommandPaletteProps) {
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -68,7 +68,7 @@ export function CommandPalette({
     pits.forEach((pit) => {
       if (!q || pit.label.toLowerCase().includes(q)) {
         items.push({
-          type: "pit",
+          type: 'pit',
           id: pit.id,
           label: pit.label,
           sublabel: `${pit.tables.length} tables`,
@@ -83,7 +83,7 @@ export function CommandPalette({
           table.dealerName?.toLowerCase().includes(q)
         ) {
           items.push({
-            type: "table",
+            type: 'table',
             id: table.id,
             label: table.label,
             sublabel: `${pit.label}`,
@@ -97,8 +97,8 @@ export function CommandPalette({
     // Sort: pits first (if query is empty), then by relevance
     if (!q) {
       return items.sort((a, b) => {
-        if (a.type === "pit" && b.type !== "pit") return -1;
-        if (a.type !== "pit" && b.type === "pit") return 1;
+        if (a.type === 'pit' && b.type !== 'pit') return -1;
+        if (a.type !== 'pit' && b.type === 'pit') return 1;
         return a.label.localeCompare(b.label);
       });
     }
@@ -117,19 +117,19 @@ export function CommandPalette({
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       switch (e.key) {
-        case "ArrowDown":
+        case 'ArrowDown':
           e.preventDefault();
           setSelectedIndex((i) => Math.min(i + 1, results.length - 1));
           break;
-        case "ArrowUp":
+        case 'ArrowUp':
           e.preventDefault();
           setSelectedIndex((i) => Math.max(i - 1, 0));
           break;
-        case "Enter":
+        case 'Enter':
           e.preventDefault();
           const selected = results[selectedIndex];
           if (selected) {
-            if (selected.type === "pit") {
+            if (selected.type === 'pit') {
               onSelectPit(selected.id);
             } else {
               onSelectTable(selected.id, selected.pitId!);
@@ -137,19 +137,19 @@ export function CommandPalette({
             onOpenChange(false);
           }
           break;
-        case "Escape":
+        case 'Escape':
           e.preventDefault();
           onOpenChange(false);
           break;
       }
     },
-    [results, selectedIndex, onSelectPit, onSelectTable, onOpenChange]
+    [results, selectedIndex, onSelectPit, onSelectTable, onOpenChange],
   );
 
   // Reset on open
   useEffect(() => {
     if (open) {
-      setQuery("");
+      setQuery('');
       setSelectedIndex(0);
       // Focus input after render
       setTimeout(() => inputRef.current?.focus(), 50);
@@ -161,7 +161,7 @@ export function CommandPalette({
     const list = listRef.current;
     const selected = list?.querySelector(`[data-index="${selectedIndex}"]`);
     if (selected) {
-      selected.scrollIntoView({ block: "nearest" });
+      selected.scrollIntoView({ block: 'nearest' });
     }
   }, [selectedIndex]);
 
@@ -173,14 +173,14 @@ export function CommandPalette({
   // Global keyboard shortcut
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         onOpenChange(!open);
       }
     };
 
-    window.addEventListener("keydown", handleGlobalKeyDown);
-    return () => window.removeEventListener("keydown", handleGlobalKeyDown);
+    window.addEventListener('keydown', handleGlobalKeyDown);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
   }, [open, onOpenChange]);
 
   if (!open) return null;
@@ -226,7 +226,7 @@ export function CommandPalette({
                       key={`${result.type}-${result.id}`}
                       data-index={index}
                       onClick={() => {
-                        if (result.type === "pit") {
+                        if (result.type === 'pit') {
                           onSelectPit(result.id);
                         } else {
                           onSelectTable(result.id, result.pitId!);
@@ -234,21 +234,21 @@ export function CommandPalette({
                         onOpenChange(false);
                       }}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                        "hover:bg-accent/50",
-                        index === selectedIndex && "bg-accent"
+                        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors',
+                        'hover:bg-accent/50',
+                        index === selectedIndex && 'bg-accent',
                       )}
                     >
                       {/* Icon */}
                       <div
                         className={cn(
-                          "w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0",
-                          result.type === "pit"
-                            ? "bg-violet-500/10 text-violet-400"
-                            : "bg-blue-500/10 text-blue-400"
+                          'w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0',
+                          result.type === 'pit'
+                            ? 'bg-violet-500/10 text-violet-400'
+                            : 'bg-blue-500/10 text-blue-400',
                         )}
                       >
-                        {result.type === "pit" ? (
+                        {result.type === 'pit' ? (
                           <Layers className="w-4 h-4" />
                         ) : (
                           <Table2 className="w-4 h-4" />
@@ -264,10 +264,10 @@ export function CommandPalette({
                           {result.status && StatusIcon && (
                             <StatusIcon
                               className={cn(
-                                "w-3.5 h-3.5 flex-shrink-0",
+                                'w-3.5 h-3.5 flex-shrink-0',
                                 statusColors[result.status],
-                                result.status === "active" &&
-                                  "fill-emerald-400"
+                                result.status === 'active' &&
+                                  'fill-emerald-400',
                               )}
                             />
                           )}
@@ -282,8 +282,8 @@ export function CommandPalette({
                       {/* Arrow */}
                       <ArrowRight
                         className={cn(
-                          "w-4 h-4 text-muted-foreground/40 flex-shrink-0 transition-transform",
-                          index === selectedIndex && "translate-x-0.5"
+                          'w-4 h-4 text-muted-foreground/40 flex-shrink-0 transition-transform',
+                          index === selectedIndex && 'translate-x-0.5',
                         )}
                       />
                     </button>

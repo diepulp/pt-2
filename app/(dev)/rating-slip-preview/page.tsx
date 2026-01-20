@@ -1,31 +1,31 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
 import {
   RatingSlipModal,
   type FormState,
-} from "@/components/modals/rating-slip";
-import { Button } from "@/components/ui/button";
+} from '@/components/modals/rating-slip';
+import { Button } from '@/components/ui/button';
 
 // Mock data for presentation
 const mockRatingSlip = {
-  id: "rs-001",
-  playerName: "John Smith",
+  id: 'rs-001',
+  playerName: 'John Smith',
   averageBet: 150,
   cashIn: 500,
   startTime: new Date().toISOString().slice(0, 16),
-  gameTableId: "table-1",
+  gameTableId: 'table-1',
   seatNumber: 3,
   points: 1250,
 };
 
 const mockTables = [
-  { gaming_table_id: "table-1", name: "Blackjack 1", seats_available: 7 },
-  { gaming_table_id: "table-2", name: "Blackjack 2", seats_available: 5 },
-  { gaming_table_id: "table-3", name: "Roulette 1", seats_available: 12 },
-  { gaming_table_id: "table-4", name: "Poker 1", seats_available: 9 },
-  { gaming_table_id: "table-5", name: "Baccarat 1", seats_available: 8 },
+  { gaming_table_id: 'table-1', name: 'Blackjack 1', seats_available: 7 },
+  { gaming_table_id: 'table-2', name: 'Blackjack 2', seats_available: 5 },
+  { gaming_table_id: 'table-3', name: 'Roulette 1', seats_available: 12 },
+  { gaming_table_id: 'table-4', name: 'Poker 1', seats_available: 9 },
+  { gaming_table_id: 'table-5', name: 'Baccarat 1', seats_available: 8 },
 ];
 
 export default function RatingSlipPreviewPage() {
@@ -35,7 +35,7 @@ export default function RatingSlipPreviewPage() {
   const [isClosing, setIsClosing] = useState(false);
   const [isMoving, setIsMoving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [lastAction, setLastAction] = useState<string>("");
+  const [lastAction, setLastAction] = useState<string>('');
 
   const handleSave = (formState: FormState) => {
     setLastAction(`Save: ${JSON.stringify(formState, null, 2)}`);
@@ -88,7 +88,7 @@ export default function RatingSlipPreviewPage() {
           <Button
             variant="outline"
             onClick={() => {
-              setError("Sample error: Failed to load rating slip data");
+              setError('Sample error: Failed to load rating slip data');
               setIsOpen(true);
             }}
           >

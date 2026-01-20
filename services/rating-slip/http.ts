@@ -9,9 +9,9 @@
  * @see EXECUTION-SPEC-PRD-002.md
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 
 import type {
   CloseRatingSlipInput,
@@ -26,7 +26,7 @@ import type {
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
   UpdateAverageBetInput,
-} from "./dtos";
+} from './dtos';
 
 // Re-export types for consumers
 export type {
@@ -34,9 +34,9 @@ export type {
   ClosedTodayResponse,
   CreatePitCashObservationInput,
   PitCashObservationDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/rating-slips";
+const BASE = '/api/v1/rating-slips';
 
 // === Helper Functions ===
 
@@ -74,9 +74,9 @@ export async function startRatingSlip(
   input: CreateRatingSlipInput,
 ): Promise<RatingSlipDTO> {
   return fetchJSON<RatingSlipDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -119,9 +119,9 @@ export async function getRatingSlip(
  */
 export async function pauseRatingSlip(slipId: string): Promise<RatingSlipDTO> {
   return fetchJSON<RatingSlipDTO>(`${BASE}/${slipId}/pause`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({}),
@@ -137,9 +137,9 @@ export async function pauseRatingSlip(slipId: string): Promise<RatingSlipDTO> {
  */
 export async function resumeRatingSlip(slipId: string): Promise<RatingSlipDTO> {
   return fetchJSON<RatingSlipDTO>(`${BASE}/${slipId}/resume`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({}),
@@ -159,9 +159,9 @@ export async function closeRatingSlip(
   input?: CloseRatingSlipInput,
 ): Promise<RatingSlipWithDurationDTO> {
   return fetchJSON<RatingSlipWithDurationDTO>(`${BASE}/${slipId}/close`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input ?? {}),
@@ -198,9 +198,9 @@ export async function updateAverageBet(
   input: UpdateAverageBetInput,
 ): Promise<RatingSlipDTO> {
   return fetchJSON<RatingSlipDTO>(`${BASE}/${slipId}/average-bet`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -219,7 +219,7 @@ export class PitObservationError extends Error {
     message: string,
   ) {
     super(message);
-    this.name = "PitObservationError";
+    this.name = 'PitObservationError';
   }
 }
 
@@ -252,7 +252,7 @@ export async function createPitCashObservation(
   const supabase = createBrowserComponentClient();
 
   const { data, error } = await supabase.rpc(
-    "rpc_create_pit_cash_observation",
+    'rpc_create_pit_cash_observation',
     {
       p_visit_id: input.visitId,
       p_amount: input.amount,
@@ -267,44 +267,44 @@ export async function createPitCashObservation(
 
   if (error) {
     // Map RPC error messages to user-friendly errors
-    const message = error.message || "";
+    const message = error.message || '';
 
-    if (message.includes("UNAUTHORIZED")) {
+    if (message.includes('UNAUTHORIZED')) {
       throw new PitObservationError(
-        "UNAUTHORIZED",
-        "You are not authorized to record observations. Please log in.",
+        'UNAUTHORIZED',
+        'You are not authorized to record observations. Please log in.',
       );
     }
-    if (message.includes("FORBIDDEN")) {
+    if (message.includes('FORBIDDEN')) {
       throw new PitObservationError(
-        "FORBIDDEN",
-        "Your role is not authorized to record cash observations.",
+        'FORBIDDEN',
+        'Your role is not authorized to record cash observations.',
       );
     }
-    if (message.includes("NOT_FOUND")) {
+    if (message.includes('NOT_FOUND')) {
       throw new PitObservationError(
-        "NOT_FOUND",
-        "The visit or rating slip was not found.",
+        'NOT_FOUND',
+        'The visit or rating slip was not found.',
       );
     }
-    if (message.includes("INVALID_INPUT")) {
+    if (message.includes('INVALID_INPUT')) {
       throw new PitObservationError(
-        "INVALID_INPUT",
-        message.replace(/^INVALID_INPUT:\s*/, ""),
+        'INVALID_INPUT',
+        message.replace(/^INVALID_INPUT:\s*/, ''),
       );
     }
 
     // Default error
     throw new PitObservationError(
-      "INTERNAL_ERROR",
-      message || "Failed to record observation",
+      'INTERNAL_ERROR',
+      message || 'Failed to record observation',
     );
   }
 
   if (!data) {
     throw new PitObservationError(
-      "INTERNAL_ERROR",
-      "No data returned from observation creation",
+      'INTERNAL_ERROR',
+      'No data returned from observation creation',
     );
   }
 
@@ -348,11 +348,11 @@ export async function fetchClosedSlipsForGamingDay(
   const params = new URLSearchParams();
 
   if (filters.limit) {
-    params.set("limit", String(filters.limit));
+    params.set('limit', String(filters.limit));
   }
   if (filters.cursor) {
-    params.set("cursor_end_time", filters.cursor.endTime);
-    params.set("cursor_id", filters.cursor.id);
+    params.set('cursor_end_time', filters.cursor.endTime);
+    params.set('cursor_id', filters.cursor.id);
   }
 
   const url = params.toString()

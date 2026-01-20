@@ -1,4 +1,4 @@
-import { PlayerDashboard } from "@/components/player-dashboard";
+import { PlayerDashboard } from '@/components/player-dashboard';
 
 export default function PlayersPage() {
   return (

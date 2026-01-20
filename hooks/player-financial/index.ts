@@ -11,27 +11,32 @@
  */
 
 // Query key factory
-export { playerFinancialKeys } from "./keys";
+export { playerFinancialKeys } from './keys';
 
 // Transaction query hooks
 export {
   useFinancialTransaction,
   useFinancialTransactions,
   useVisitFinancialSummary,
-} from "./use-financial-transactions";
+} from './use-financial-transactions';
 
 // Mutation hooks
 export {
   useCreateFinancialTransaction,
+  useCreateFinancialAdjustment,
   type CreateFinancialTxnInput,
-} from "./use-financial-mutations";
+  type CreateFinancialAdjustmentInput,
+} from './use-financial-mutations';
 
 // Re-export DTOs for convenience
 export type {
   FinancialTransactionDTO,
   FinancialTxnListQuery,
   VisitFinancialSummaryDTO,
+  VisitCashInWithAdjustmentsDTO,
   FinancialDirection,
   FinancialSource,
   TenderType,
-} from "@/services/player-financial/dtos";
+  FinancialTxnKind,
+  AdjustmentReasonCode,
+} from '@/services/player-financial/dtos';

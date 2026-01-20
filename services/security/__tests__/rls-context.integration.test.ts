@@ -28,8 +28,10 @@ import type { Database } from '@/types/database.types';
 
 // === Test Environment Setup ===
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ??
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'http://127.0.0.1:54321';
+const supabaseServiceKey =
+  process.env.SUPABASE_SERVICE_ROLE_KEY ??
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
 
 // === Test Data ===
@@ -59,11 +61,14 @@ describe('ADR-024 Security Grant Verification', () => {
 
   describe('INV-1: Deprecated set_rls_context is NOT callable by authenticated/PUBLIC', () => {
     it('set_rls_context is revoked from authenticated role', async () => {
-      const { data, error } = await supabase.rpc('has_function_privilege' as never, {
-        user_name: 'authenticated',
-        function_signature: 'public.set_rls_context(uuid,uuid,text,text)',
-        privilege: 'execute',
-      } as never);
+      const { data, error } = await supabase.rpc(
+        'has_function_privilege' as never,
+        {
+          user_name: 'authenticated',
+          function_signature: 'public.set_rls_context(uuid,uuid,text,text)',
+          privilege: 'execute',
+        } as never,
+      );
 
       // If the RPC doesn't exist, use raw SQL
       if (error) {
@@ -73,19 +78,24 @@ describe('ADR-024 Security Grant Verification', () => {
           .limit(0);
 
         // Execute via SQL
-        const result = await supabase.rpc('exec_sql' as never, {
-          query: "SELECT has_function_privilege('authenticated', 'public.set_rls_context(uuid,uuid,text,text)', 'execute') as can_execute",
-        } as never);
+        const result = await supabase.rpc(
+          'exec_sql' as never,
+          {
+            query:
+              "SELECT has_function_privilege('authenticated', 'public.set_rls_context(uuid,uuid,text,text)', 'execute') as can_execute",
+          } as never,
+        );
 
         // Fallback: check via direct SQL query
-        const { data: grantCheck } = await supabase
-          .schema('public')
-          .rpc('set_rls_context' as never, {
+        const { data: grantCheck } = await supabase.schema('public').rpc(
+          'set_rls_context' as never,
+          {
             p_actor_id: '00000000-0000-0000-0000-000000000000',
             p_casino_id: '00000000-0000-0000-0000-000000000000',
             p_role: 'test',
             p_correlation_id: null,
-          } as never);
+          } as never,
+        );
 
         // The call should fail due to revoked permissions
         // This is an indirect test since we can't directly query has_function_privilege
@@ -98,18 +108,22 @@ describe('ADR-024 Security Grant Verification', () => {
 
     it('set_rls_context is revoked from anon role', async () => {
       // Create anon client to test
-      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+      const anonKey =
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
 
       const anonClient = createClient<Database>(supabaseUrl, anonKey);
 
       // Attempt to call deprecated function - should fail with permission denied
-      const { error } = await anonClient.rpc('set_rls_context' as never, {
-        p_actor_id: '00000000-0000-0000-0000-000000000000',
-        p_casino_id: '00000000-0000-0000-0000-000000000000',
-        p_role: 'test',
-        p_correlation_id: null,
-      } as never);
+      const { error } = await anonClient.rpc(
+        'set_rls_context' as never,
+        {
+          p_actor_id: '00000000-0000-0000-0000-000000000000',
+          p_casino_id: '00000000-0000-0000-0000-000000000000',
+          p_role: 'test',
+          p_correlation_id: null,
+        } as never,
+      );
 
       // Should fail - either permission denied or function doesn't exist for this role
       expect(error).not.toBeNull();
@@ -117,9 +131,13 @@ describe('ADR-024 Security Grant Verification', () => {
 
     it('set_rls_context is revoked from PUBLIC role', async () => {
       // Use SQL to verify PUBLIC role grant
-      const { data, error } = await supabase.rpc('exec_sql' as never, {
-        query: "SELECT has_function_privilege('public', 'public.set_rls_context(uuid,uuid,text,text)', 'execute')",
-      } as never);
+      const { data, error } = await supabase.rpc(
+        'exec_sql' as never,
+        {
+          query:
+            "SELECT has_function_privilege('public', 'public.set_rls_context(uuid,uuid,text,text)', 'execute')",
+        } as never,
+      );
 
       // If exec_sql doesn't exist, the grant verification is done via migration assertions
       // The migration itself has DO $$ block that asserts grants are correct
@@ -179,21 +197,27 @@ describe('ADR-024 RLS Context Integration Tests', () => {
       // app.casino_id, the function overwrites it with authoritative value
 
       // First, try to poison the session context
-      const { error: poisonError } = await supabase.rpc('exec_sql' as never, {
-        query: `
+      const { error: poisonError } = await supabase.rpc(
+        'exec_sql' as never,
+        {
+          query: `
           SELECT set_config('app.casino_id', 'evil-casino-id', true);
           SELECT set_config('app.actor_id', 'evil-actor-id', true);
         `,
-      } as never);
+        } as never,
+      );
 
       // Now call set_rls_context_from_staff (via service role calling as if authenticated)
       // The function should overwrite any pre-existing values
-      const { error: contextError } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: scenario.staffAId,
-        p_casino_id: scenario.casinoAId,
-        p_staff_role: 'pit_boss',
-        p_correlation_id: 'test-spoofed-context',
-      });
+      const { error: contextError } = await supabase.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: scenario.staffAId,
+          p_casino_id: scenario.casinoAId,
+          p_staff_role: 'pit_boss',
+          p_correlation_id: 'test-spoofed-context',
+        },
+      );
 
       // Should succeed - context is set from authoritative source
       expect(contextError).toBeNull();
@@ -411,16 +435,14 @@ describe('ADR-024 RLS Context Integration Tests', () => {
 
     it('duplicate user_id is prevented', async () => {
       // Try to insert staff with duplicate user_id
-      const { error } = await supabase
-        .from('staff')
-        .insert({
-          first_name: 'Duplicate',
-          last_name: 'User',
-          role: 'pit_boss',
-          casino_id: scenario.casinoAId,
-          user_id: scenario.userAId, // Already used by staffA
-          status: 'active',
-        });
+      const { error } = await supabase.from('staff').insert({
+        first_name: 'Duplicate',
+        last_name: 'User',
+        role: 'pit_boss',
+        casino_id: scenario.casinoAId,
+        user_id: scenario.userAId, // Already used by staffA
+        status: 'active',
+      });
 
       // Should fail due to unique constraint
       expect(error).not.toBeNull();
@@ -478,21 +500,23 @@ async function createTestScenario(
   const timestamp = Date.now();
 
   // Create test users
-  const { data: userA, error: userAError } = await supabase.auth.admin.createUser({
-    email: `test-rls-a-${timestamp}@example.com`,
-    password: 'test-password-12345',
-    email_confirm: true,
-  });
+  const { data: userA, error: userAError } =
+    await supabase.auth.admin.createUser({
+      email: `test-rls-a-${timestamp}@example.com`,
+      password: 'test-password-12345',
+      email_confirm: true,
+    });
 
   if (userAError && !userAError.message.includes('already')) {
     throw userAError;
   }
 
-  const { data: userB, error: userBError } = await supabase.auth.admin.createUser({
-    email: `test-rls-b-${timestamp}@example.com`,
-    password: 'test-password-12345',
-    email_confirm: true,
-  });
+  const { data: userB, error: userBError } =
+    await supabase.auth.admin.createUser({
+      email: `test-rls-b-${timestamp}@example.com`,
+      password: 'test-password-12345',
+      email_confirm: true,
+    });
 
   if (userBError && !userBError.message.includes('already')) {
     throw userBError;
@@ -618,8 +642,14 @@ async function createTestScenario(
       // Clean up in reverse dependency order
       await supabase.from('staff').delete().eq('casino_id', casinoA.id);
       await supabase.from('staff').delete().eq('casino_id', casinoB.id);
-      await supabase.from('casino_settings').delete().eq('casino_id', casinoA.id);
-      await supabase.from('casino_settings').delete().eq('casino_id', casinoB.id);
+      await supabase
+        .from('casino_settings')
+        .delete()
+        .eq('casino_id', casinoA.id);
+      await supabase
+        .from('casino_settings')
+        .delete()
+        .eq('casino_id', casinoB.id);
       await supabase.from('casino').delete().eq('id', casinoA.id);
       await supabase.from('casino').delete().eq('id', casinoB.id);
 

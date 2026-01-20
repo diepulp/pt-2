@@ -9,20 +9,20 @@
  * @see GAP-TABLE-ROLLOVER-UI WS1
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
   getInventoryHistory,
   logInventorySnapshot,
-} from "@/services/table-context/chip-custody";
+} from '@/services/table-context/chip-custody';
 import type {
   LogInventorySnapshotInput,
   SnapshotType,
   TableInventorySnapshotDTO,
   ChipsetPayload,
-} from "@/services/table-context/dtos";
-import { tableContextKeys } from "@/services/table-context/keys";
+} from '@/services/table-context/dtos';
+import { tableContextKeys } from '@/services/table-context/keys';
 
 // === Query Hooks ===
 
@@ -74,7 +74,7 @@ export function useLogInventorySnapshot(tableId: string, casinoId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["log-inventory-snapshot", tableId],
+    mutationKey: ['log-inventory-snapshot', tableId],
     mutationFn: async (input: CreateSnapshotInput) => {
       const supabase = createBrowserComponentClient();
       const fullInput: LogInventorySnapshotInput = {
@@ -130,9 +130,9 @@ export function createEmptyChipset(): ChipsetPayload {
  */
 export function getSnapshotTypeLabel(type: SnapshotType): string {
   const labels: Record<SnapshotType, string> = {
-    open: "Opening",
-    close: "Closing",
-    rundown: "Rundown",
+    open: 'Opening',
+    close: 'Closing',
+    rundown: 'Rundown',
   };
   return labels[type];
 }

@@ -12,14 +12,14 @@
  * @see ISSUE-DD2C45CA Dashboard HTTP Request Cascade Remediation
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 
-import { dashboardKeys } from "./keys";
-import type { DashboardTableDTO, DashboardTablesFilters } from "./types";
+import { dashboardKeys } from './keys';
+import type { DashboardTableDTO, DashboardTablesFilters } from './types';
 
 /**
  * Fetches all tables for a casino with active slips count.
@@ -56,7 +56,7 @@ export function useDashboardTables(
       // Single RPC call replaces N×2 HTTP pattern
       // casinoId is guaranteed to be defined here due to enabled: !!casinoId
       const { data, error } = await supabase.rpc(
-        "rpc_get_dashboard_tables_with_counts",
+        'rpc_get_dashboard_tables_with_counts',
         { p_casino_id: casinoId! },
       );
 
@@ -93,5 +93,5 @@ export function useDashboardTables(
  * @param casinoId - Casino UUID (required)
  */
 export function useDashboardActiveTables(casinoId: string | undefined) {
-  return useDashboardTables(casinoId, { status: "active" });
+  return useDashboardTables(casinoId, { status: 'active' });
 }

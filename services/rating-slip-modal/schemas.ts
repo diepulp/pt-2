@@ -7,9 +7,9 @@
  * @see EXECUTION-SPEC-PRD-008.md WS3
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { uuidSchema } from "@/lib/validation";
+import { uuidSchema } from '@/lib/validation';
 
 // === Route Params Schema ===
 
@@ -17,7 +17,7 @@ import { uuidSchema } from "@/lib/validation";
  * Schema for modal-data route params.
  */
 export const modalDataRouteParamsSchema = z.object({
-  id: uuidSchema("Rating slip ID"),
+  id: uuidSchema('Rating slip ID'),
 });
 
 export type ModalDataRouteParams = z.infer<typeof modalDataRouteParamsSchema>;
@@ -28,16 +28,16 @@ export type ModalDataRouteParams = z.infer<typeof modalDataRouteParamsSchema>;
  * Slip section schema.
  */
 export const slipSectionSchema = z.object({
-  id: uuidSchema("slip ID"),
-  visitId: uuidSchema("visit ID"),
-  tableId: uuidSchema("table ID"),
+  id: uuidSchema('slip ID'),
+  visitId: uuidSchema('visit ID'),
+  tableId: uuidSchema('table ID'),
   tableLabel: z.string(),
   tableType: z.string(),
   seatNumber: z.string().nullable(),
   averageBet: z.number(),
   startTime: z.string(),
   endTime: z.string().nullable(),
-  status: z.enum(["open", "paused", "closed"]),
+  status: z.enum(['open', 'paused', 'closed']),
   gamingDay: z.string(),
   durationSeconds: z.number(),
 });
@@ -46,7 +46,7 @@ export const slipSectionSchema = z.object({
  * Player section schema.
  */
 export const playerSectionSchema = z.object({
-  id: uuidSchema("player ID"),
+  id: uuidSchema('player ID'),
   firstName: z.string(),
   lastName: z.string(),
   cardNumber: z.string().nullable(),
@@ -83,7 +83,7 @@ export const financialSectionSchema = z.object({
  * Table option schema.
  */
 export const tableOptionSchema = z.object({
-  id: uuidSchema("table ID"),
+  id: uuidSchema('table ID'),
   label: z.string(),
   type: z.string(),
   status: z.string(),
@@ -118,7 +118,7 @@ export type RatingSlipModalResponse = z.infer<typeof ratingSlipModalSchema>;
 function sanitizeSeatNumber(value: string | null | undefined): string | null {
   if (value === null || value === undefined) return null;
   const trimmed = value.trim();
-  if (trimmed === "") return null;
+  if (trimmed === '') return null;
 
   // Strip leading zeros and validate it's a positive integer
   const asNumber = parseInt(trimmed, 10);
@@ -142,11 +142,11 @@ function sanitizeSeatNumber(value: string | null | undefined): string | null {
  */
 export const movePlayerSchema = z.object({
   /** Target table UUID */
-  destinationTableId: uuidSchema("destination table ID"),
+  destinationTableId: uuidSchema('destination table ID'),
   /** Target seat number (optional, null for unseated) */
   destinationSeatNumber: z
     .string()
-    .max(20, "Seat number must be 20 characters or fewer")
+    .max(20, 'Seat number must be 20 characters or fewer')
     .nullable()
     .optional()
     .transform(sanitizeSeatNumber)
@@ -156,10 +156,10 @@ export const movePlayerSchema = z.object({
         const num = parseInt(val, 10);
         return !isNaN(num) && num > 0;
       },
-      { message: "Seat number must be a positive integer" },
+      { message: 'Seat number must be a positive integer' },
     ),
   /** Optional: final average bet for the current slip being closed */
-  averageBet: z.number().positive("Average bet must be positive").optional(),
+  averageBet: z.number().positive('Average bet must be positive').optional(),
 });
 
 export type MovePlayerInput = z.infer<typeof movePlayerSchema>;

@@ -13,24 +13,23 @@
  * @see PRD-MTL-UI-GAPS WS7 Rating Slip Modal Integration
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { dashboardKeys } from "@/hooks/dashboard/keys";
+import { dashboardKeys } from '@/hooks/dashboard/keys';
 import {
   checkCumulativeThreshold,
   notifyThreshold,
-} from "@/hooks/mtl/use-threshold-notifications";
-import { playerFinancialKeys } from "@/hooks/player-financial/keys";
-import { DomainError } from "@/lib/errors/domain-errors";
-import { getErrorMessage, logError } from "@/lib/errors/error-utils";
-import { createMtlEntry } from "@/services/mtl/http";
-import { mtlKeys } from "@/services/mtl/keys";
-import { createFinancialTransaction } from "@/services/player-financial/http";
-import { updateAverageBet } from "@/services/rating-slip/http";
-import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/hooks/mtl/use-threshold-notifications';
+import { playerFinancialKeys } from '@/hooks/player-financial/keys';
+import { DomainError } from '@/lib/errors/domain-errors';
+import { getErrorMessage, logError } from '@/lib/errors/error-utils';
+import { mtlKeys } from '@/services/mtl/keys';
+import { createFinancialTransaction } from '@/services/player-financial/http';
+import { updateAverageBet } from '@/services/rating-slip/http';
+import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 export interface SaveWithBuyInInput {
   /** Rating slip ID */
@@ -120,26 +119,26 @@ export function useSaveWithBuyIn() {
             visit_id: visitId,
             rating_slip_id: slipId,
             amount: newBuyIn * 100, // Convert dollars to cents
-            direction: "in",
-            source: "pit",
-            tender_type: "cash",
+            direction: 'in',
+            source: 'pit',
+            tender_type: 'cash',
             created_by_staff_id: staffId,
           });
         } catch (txnError) {
           // Check for STALE_GAMING_DAY_CONTEXT error
           const errorMessage = getErrorMessage(txnError);
-          if (errorMessage.includes("STALE_GAMING_DAY_CONTEXT")) {
+          if (errorMessage.includes('STALE_GAMING_DAY_CONTEXT')) {
             // Re-throw with domain error for caller to handle context refresh
             throw new DomainError(
-              "STALE_GAMING_DAY_CONTEXT",
-              "Session context is stale. Please refresh and try again.",
+              'STALE_GAMING_DAY_CONTEXT',
+              'Session context is stale. Please refresh and try again.',
               { httpStatus: 409, retryable: true },
             );
           }
           // Log all buy-in errors for visibility (Patch C requirement)
           logError(txnError, {
-            component: "useSaveWithBuyIn",
-            action: "createFinancialTransaction",
+            component: 'useSaveWithBuyIn',
+            action: 'createFinancialTransaction',
             metadata: { slipId, visitId, playerId },
           });
           // Re-throw to fail the save operation
@@ -147,26 +146,12 @@ export function useSaveWithBuyIn() {
         }
       }
 
-      // Step 4: Auto-create MTL entry if threshold requires it (≥$3,000)
-      // This runs after the financial transaction succeeds
-      if (thresholdResult?.shouldCreateMtl && playerId && newBuyIn > 0) {
-        // Gaming day is computed from occurred_at on the server side
-        await createMtlEntry({
-          casino_id: casinoId,
-          patron_uuid: playerId,
-          amount: newBuyIn * 100, // cents
-          direction: "in",
-          txn_type: "buy_in",
-          source: "table",
-          staff_id: staffId,
-          visit_id: visitId,
-          rating_slip_id: slipId,
-          area: tableId, // Use table ID as area reference
-          idempotency_key: `rsm:${slipId}:${Date.now()}`, // Rating slip modal unique key
-        }).catch(() => {
-          // MTL creation is best-effort, don't fail the save
-        });
-      }
+      // Step 4: MTL entry creation
+      // NOTE: The forward bridge trigger (fn_derive_mtl_from_finance) automatically
+      // creates an MTL entry when a financial transaction is inserted. This makes
+      // explicit MTL creation here REDUNDANT and would cause duplicate entries.
+      // The threshold notification (Step 1) still fires for UX feedback.
+      // See ISSUE-FB8EB717 for cents standardization details.
 
       return { updateResult, thresholdResult };
     },
@@ -224,7 +209,8 @@ export function useSaveWithBuyIn() {
         queryKey: dashboardKeys.activeSlips(tableId),
       });
 
-      // If MTL was created (threshold met), invalidate MTL caches
+      // Forward bridge trigger creates MTL entries from financial transactions.
+      // Invalidate MTL caches when threshold was met (for UI badge updates).
       if (result.thresholdResult?.shouldCreateMtl && playerId) {
         // Invalidate gaming day summary (aggregates changed)
         queryClient.invalidateQueries({
@@ -233,7 +219,7 @@ export function useSaveWithBuyIn() {
 
         // Invalidate patron daily total
         queryClient.invalidateQueries({
-          queryKey: ["mtl", "patron-daily-total", casinoId, playerId],
+          queryKey: ['mtl', 'patron-daily-total', casinoId, playerId],
         });
       }
     },

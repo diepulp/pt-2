@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.9.0
+nsversion: 4.10.0
 status: CANONICAL
-effective: 2025-12-25
+effective: 2026-01-17
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -24,8 +24,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.9.0 (ADR-023 Multi-Tenancy: Pool Primary; Silo Optional)
-> **Date**: 2025-12-25
+> **Version**: 4.10.0 (ADR-028 Table Status Standardization)
+> **Date**: 2026-01-17
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -49,6 +49,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.10.0 (2026-01-17)** – **ADR-028 Table Status Standardization**: Added `labels.ts` pattern to TableContextService for centralized UI label/color constants. Documented `TableAvailability` and `SessionPhase` type aliases. Added `drop_posted_at` column to `table_session` for count posting status. RPC availability gate added to `rpc_open_table_session`. See `docs/80-adrs/ADR-028-table-status-standardization.md`.
 - **4.9.0 (2025-12-25)** – **ADR-023 Multi-Tenancy Formalization**: Official tenancy stance declared: Pool Primary; Silo Optional. Added SEC-002 and ADR-023 to source_of_truth. SEC-001/SEC-002 updated with tenancy cross-references. See `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`.
 - **4.8.0 (2025-12-23)** – **ADR-022 v7.1 MVP Scope (Security Audited)**: Adopted production-ready MVP scope with 7-agent security audit. `player_identity` table planned with scanner-shaped schema. Key security fixes: auth.uid() guard (INV-7), actor binding (INV-9), key immutability (INV-10), document hash storage. Tax identity deferred post-MVP. See `docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md`.
 - **4.4.0 (2025-12-12)** – **SEC-006 RLS Hardening**: FloorLayoutService full RLS coverage (5 tables). All 7 SECURITY DEFINER RPCs hardened with Template 5 context validation (ADR-018). Append-only denial policies added to ledger tables. See `docs/80-adrs/ADR-018-security-definer-governance.md` and migration `20251212080915_sec006_rls_hardening.sql`.
@@ -376,9 +377,41 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ## TableContextService (Operational Telemetry Context)
 
-**Owns**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`
+**Owns**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `table_session`
 
 **Bounded Context**: "What is the operational state and chip custody posture of this gaming table?"
+
+### Service Layer Modules
+
+| Module | Purpose | ADR Reference |
+|--------|---------|---------------|
+| `dtos.ts` | Type aliases: `TableAvailability`, `SessionPhase`, `TableSessionDTO` | ADR-028 D5 |
+| `labels.ts` | UI label/color constants for status enums | ADR-028 D6 |
+| `table-session.ts` | Session lifecycle operations (OPEN→ACTIVE→RUNDOWN→CLOSED) | PRD-TABLE-SESSION-LIFECYCLE-MVP |
+
+### Type Aliases (ADR-028 D5)
+
+```typescript
+/** Physical table availability (gaming_table.status) */
+export type TableAvailability = Database["public"]["Enums"]["table_status"];
+// Values: 'inactive' | 'active' | 'closed'
+
+/** Session lifecycle phase (table_session.status) */
+export type SessionPhase = Database["public"]["Enums"]["table_session_status"];
+// Values: 'OPEN' | 'ACTIVE' | 'RUNDOWN' | 'CLOSED'
+```
+
+### UI Labels (ADR-028 D6)
+
+| Enum | DB Value | UI Label | Color |
+|------|----------|----------|-------|
+| `table_status` | `inactive` | "Idle" | Gray |
+| `table_status` | `active` | "Available" | Green |
+| `table_status` | `closed` | "Decommissioned" | Red |
+| `table_session_status` | `OPEN` | "Opening" | Blue |
+| `table_session_status` | `ACTIVE` | "In Play" | Green |
+| `table_session_status` | `RUNDOWN` | "Rundown" | Amber |
+| `table_session_status` | `CLOSED` | "Closed" | Gray |
 
 ### Schema Invariants
 
@@ -392,8 +425,14 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 | `table_fill` | — | UNIQUE | (`casino_id`, `request_id`) |
 | `table_credit` | `request_id` | NOT NULL | Idempotency key |
 | `table_credit` | — | UNIQUE | (`casino_id`, `request_id`) |
+| `table_session` | `casino_id` | NOT NULL | Casino scoping |
+| `table_session` | `gaming_table_id` | NOT NULL | Table reference |
+| `table_session` | `status` | NOT NULL, enum | `table_session_status` |
+| `table_session` | `drop_posted_at` | NULLABLE | Timestamp when soft count posted (ADR-028 D7) |
 
 ### Contracts
+
+- **Availability Gate (ADR-028 D3)**: `rpc_open_table_session` requires `gaming_table.status = 'active'`
 
 - **Chip custody**: Non-monetary tracking (Finance owns monetary ledgers)
 - **Layout sync**: Listens for `floor_layout.activated` events

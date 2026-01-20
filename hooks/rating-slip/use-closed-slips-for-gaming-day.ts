@@ -11,13 +11,13 @@
  * @see EXEC-SPEC-START-FROM-PREVIOUS-FIX.md
  */
 
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from '@tanstack/react-query';
 
 import {
   fetchClosedSlipsForGamingDay,
   type ClosedSlipCursor,
-} from "@/services/rating-slip/http";
-import { ratingSlipKeys } from "@/services/rating-slip/keys";
+} from '@/services/rating-slip/http';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
 
 /**
  * Hook for fetching closed terminal rating slips for the current gaming day.
@@ -63,7 +63,7 @@ export function useClosedSlipsForGamingDay(
   const limit = options.limit ?? 50;
 
   return useInfiniteQuery({
-    queryKey: ratingSlipKeys.closedToday(casinoId, gamingDay ?? ""),
+    queryKey: ratingSlipKeys.closedToday(casinoId, gamingDay ?? ''),
     queryFn: ({ pageParam }) =>
       fetchClosedSlipsForGamingDay({
         limit,

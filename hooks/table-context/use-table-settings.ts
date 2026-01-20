@@ -9,17 +9,17 @@
  * @see PRD-012 Table Betting Limits Management
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
   TableSettingsDTO,
   UpdateTableLimitsDTO,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 import {
   fetchTableSettings,
   patchTableLimits,
-} from "@/services/table-context/http";
-import { tableContextKeys } from "@/services/table-context/keys";
+} from '@/services/table-context/http';
+import { tableContextKeys } from '@/services/table-context/keys';
 
 /**
  * Fetches table betting limits settings.
@@ -48,7 +48,7 @@ export function useUpdateTableLimits(tableId: string) {
 
   return useMutation({
     // Mutation key ensures hook recreates when tableId changes
-    mutationKey: ["update-table-limits", tableId],
+    mutationKey: ['update-table-limits', tableId],
     mutationFn: async (data: UpdateTableLimitsDTO) => {
       const idempotencyKey = crypto.randomUUID();
       return patchTableLimits(tableId, data, idempotencyKey);

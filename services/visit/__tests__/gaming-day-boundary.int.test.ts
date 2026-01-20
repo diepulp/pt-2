@@ -14,13 +14,7 @@
  * @see EXECUTION-SPEC-ADR-026-PATCH.md WS6
  */
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-} from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
@@ -280,10 +274,13 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day for this casino
-      const { data: gamingDayResult } = await supabase.rpc('compute_gaming_day', {
-        p_casino_id: testCasinoId,
-        p_timestamp: new Date().toISOString(),
-      });
+      const { data: gamingDayResult } = await supabase.rpc(
+        'compute_gaming_day',
+        {
+          p_casino_id: testCasinoId,
+          p_timestamp: new Date().toISOString(),
+        },
+      );
       const currentGamingDay = gamingDayResult as string;
 
       const { data: visit1, error: error1 } = await createVisit({
@@ -301,10 +298,13 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc('compute_gaming_day', {
-        p_casino_id: testCasinoId,
-        p_timestamp: new Date().toISOString(),
-      });
+      const { data: gamingDayResult } = await supabase.rpc(
+        'compute_gaming_day',
+        {
+          p_casino_id: testCasinoId,
+          p_timestamp: new Date().toISOString(),
+        },
+      );
       const currentGamingDay = gamingDayResult as string;
 
       // Create first open visit
@@ -362,10 +362,13 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc('compute_gaming_day', {
-        p_casino_id: testCasinoId,
-        p_timestamp: new Date().toISOString(),
-      });
+      const { data: gamingDayResult } = await supabase.rpc(
+        'compute_gaming_day',
+        {
+          p_casino_id: testCasinoId,
+          p_timestamp: new Date().toISOString(),
+        },
+      );
       const currentGamingDay = gamingDayResult as string;
 
       // Create and close first visit
@@ -408,8 +411,9 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     it('RPC function exists and has correct signature', async () => {
       // Verify the RPC exists by attempting to call it
       // Service role bypasses auth but still needs RLS context set
-      const { error } = await supabase
-        .rpc('rpc_start_or_resume_visit', { p_player_id: '00000000-0000-0000-0000-000000000000' });
+      const { error } = await supabase.rpc('rpc_start_or_resume_visit', {
+        p_player_id: '00000000-0000-0000-0000-000000000000',
+      });
 
       // We expect an error (UNAUTHORIZED) because we don't have proper context,
       // but the RPC should exist and be callable
@@ -534,10 +538,13 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       const fixture = await createTestFixture();
 
       // Get current gaming day
-      const { data: gamingDayResult } = await supabase.rpc('compute_gaming_day', {
-        p_casino_id: testCasinoId,
-        p_timestamp: new Date().toISOString(),
-      });
+      const { data: gamingDayResult } = await supabase.rpc(
+        'compute_gaming_day',
+        {
+          p_casino_id: testCasinoId,
+          p_timestamp: new Date().toISOString(),
+        },
+      );
       const currentGamingDay = gamingDayResult as string;
 
       // Create visit

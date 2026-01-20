@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Box, Loader2, ShieldCheck } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { Box, Loader2, ShieldCheck } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,15 +12,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   getNextSeqNo,
   useDropEvents,
   useLogDropEvent,
-} from "@/hooks/table-context/use-drop-events";
+} from '@/hooks/table-context/use-drop-events';
 
 interface DropEventDialogProps {
   open: boolean;
@@ -53,10 +53,10 @@ export function DropEventDialog({
   onSuccess,
 }: DropEventDialogProps) {
   // Form state
-  const [dropBoxId, setDropBoxId] = React.useState("");
-  const [sealNo, setSealNo] = React.useState("");
-  const [witnessedBy, setWitnessedBy] = React.useState("");
-  const [notes, setNotes] = React.useState("");
+  const [dropBoxId, setDropBoxId] = React.useState('');
+  const [sealNo, setSealNo] = React.useState('');
+  const [witnessedBy, setWitnessedBy] = React.useState('');
+  const [notes, setNotes] = React.useState('');
 
   // Queries and mutations
   const { data: existingDrops = [] } = useDropEvents(
@@ -75,10 +75,10 @@ export function DropEventDialog({
   // Reset form when dialog opens
   React.useEffect(() => {
     if (open) {
-      setDropBoxId("");
-      setSealNo("");
-      setWitnessedBy("");
-      setNotes("");
+      setDropBoxId('');
+      setSealNo('');
+      setWitnessedBy('');
+      setNotes('');
     }
   }, [open]);
 
@@ -95,16 +95,16 @@ export function DropEventDialog({
         note: notes.trim() || undefined,
       });
 
-      toast.success("Drop event recorded", {
+      toast.success('Drop event recorded', {
         description: `Drop #${nextSeqNo} logged with seal #${sealNo.trim()}`,
       });
 
       onSuccess?.(result.id);
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to record drop event", {
+      toast.error('Failed to record drop event', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -133,7 +133,7 @@ export function DropEventDialog({
               <p className="text-xs text-muted-foreground">
                 {gamingDay
                   ? `Gaming Day: ${new Date(gamingDay).toLocaleDateString()}`
-                  : "Current gaming day"}
+                  : 'Current gaming day'}
               </p>
             </div>
           </div>
@@ -185,10 +185,10 @@ export function DropEventDialog({
           <div className="flex items-center gap-2 rounded-lg border border-dashed p-3 text-sm text-muted-foreground">
             <ShieldCheck className="size-4" />
             <span>
-              Removed by current user at{" "}
-              {new Date().toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
+              Removed by current user at{' '}
+              {new Date().toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
               })}
             </span>
           </div>
@@ -226,7 +226,7 @@ export function DropEventDialog({
                 Saving...
               </>
             ) : (
-              "Log Drop Event"
+              'Log Drop Event'
             )}
           </Button>
         </DialogFooter>

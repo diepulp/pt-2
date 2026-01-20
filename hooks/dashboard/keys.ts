@@ -11,11 +11,11 @@
 import {
   serializeKeyFilters,
   type KeyFilter,
-} from "@/services/shared/key-utils";
+} from '@/services/shared/key-utils';
 
-import type { DashboardTablesFilters, DashboardSlipsFilters } from "./types";
+import type { DashboardTablesFilters, DashboardSlipsFilters } from './types';
 
-const ROOT = ["dashboard"] as const;
+const ROOT = ['dashboard'] as const;
 
 // Helper to serialize filters - cast to KeyFilter for type compatibility
 const serializeFilters = (filters: Record<string, unknown> = {}): string =>
@@ -33,8 +33,8 @@ export const dashboardKeys = {
    */
   tables: Object.assign(
     (casinoId: string, filters: DashboardTablesFilters = {}) =>
-      [...ROOT, "tables", casinoId, serializeFilters(filters)] as const,
-    { scope: [...ROOT, "tables"] as const },
+      [...ROOT, 'tables', casinoId, serializeFilters(filters)] as const,
+    { scope: [...ROOT, 'tables'] as const },
   ),
 
   // === Slips Queries ===
@@ -45,12 +45,12 @@ export const dashboardKeys = {
    */
   slips: Object.assign(
     (tableId: string, filters: DashboardSlipsFilters = {}) =>
-      [...ROOT, "slips", tableId, serializeFilters(filters)] as const,
-    { scope: [...ROOT, "slips"] as const },
+      [...ROOT, 'slips', tableId, serializeFilters(filters)] as const,
+    { scope: [...ROOT, 'slips'] as const },
   ),
 
   /** Active slips for a specific table (shorthand without filters) */
-  activeSlips: (tableId: string) => [...ROOT, "active-slips", tableId] as const,
+  activeSlips: (tableId: string) => [...ROOT, 'active-slips', tableId] as const,
 
   // === Stats Queries ===
 
@@ -58,7 +58,7 @@ export const dashboardKeys = {
    * Aggregate dashboard stats for a casino.
    * Includes active tables count, open slips count, checked-in players.
    */
-  stats: (casinoId: string) => [...ROOT, "stats", casinoId] as const,
+  stats: (casinoId: string) => [...ROOT, 'stats', casinoId] as const,
 
   // === Promo Exposure Queries (PRD-LOYALTY-PROMO) ===
 
@@ -70,7 +70,18 @@ export const dashboardKeys = {
     casinoId: string,
     filters: { gamingDay?: string; shiftId?: string } = {},
   ) =>
-    [...ROOT, "promo-exposure", casinoId, serializeFilters(filters)] as const,
+    [...ROOT, 'promo-exposure', casinoId, serializeFilters(filters)] as const,
+
+  // === Casino-Wide Active Players (GAP-ACTIVITY-PANEL-CASINO-WIDE) ===
+
+  /**
+   * Active players across all tables in the casino.
+   * Used by the Activity Panel for casino-wide player lookup.
+   *
+   * @see GAP-ACTIVITY-PANEL-CASINO-WIDE
+   */
+  casinoActivePlayers: (options?: { search?: string; limit?: number }) =>
+    [...ROOT, 'casino-active-players', options ?? {}] as const,
 
   // === Invalidation Helpers ===
 

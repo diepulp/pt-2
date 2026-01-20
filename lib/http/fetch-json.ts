@@ -1,5 +1,5 @@
-import { IDEMPOTENCY_HEADER } from "./headers";
-import type { ServiceHttpResult } from "./service-response";
+import { IDEMPOTENCY_HEADER } from './headers';
+import type { ServiceHttpResult } from './service-response';
 
 /**
  * Validation error details from Zod flatten().
@@ -17,18 +17,18 @@ function formatValidationDetails(details: ValidationDetails): string {
 
   if (details.fieldErrors) {
     const fieldParts = Object.entries(details.fieldErrors)
-      .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+      .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
       .filter(Boolean);
     if (fieldParts.length > 0) {
-      parts.push(fieldParts.join("; "));
+      parts.push(fieldParts.join('; '));
     }
   }
 
   if (details.formErrors && details.formErrors.length > 0) {
-    parts.push(details.formErrors.join("; "));
+    parts.push(details.formErrors.join('; '));
   }
 
-  return parts.join(" | ");
+  return parts.join(' | ');
 }
 
 /**
@@ -50,7 +50,7 @@ export class FetchError extends Error {
   ) {
     // Enhance message with validation details for VALIDATION_ERROR
     let enhancedMessage = message;
-    if (code === "VALIDATION_ERROR" && details) {
+    if (code === 'VALIDATION_ERROR' && details) {
       const validationDetails = details as ValidationDetails;
       const formatted = formatValidationDetails(validationDetails);
       if (formatted) {
@@ -59,7 +59,7 @@ export class FetchError extends Error {
     }
 
     super(enhancedMessage);
-    this.name = "FetchError";
+    this.name = 'FetchError';
     this.status = status;
     this.code = code;
     this.details = details;
@@ -87,7 +87,7 @@ export async function fetchJSON<T>(
   const response = await fetch(url, {
     ...options,
     headers: {
-      Accept: "application/json",
+      Accept: 'application/json',
       ...options?.headers,
     },
   });
@@ -96,7 +96,7 @@ export async function fetchJSON<T>(
 
   if (!result.ok) {
     throw new FetchError(
-      result.error ?? "Request failed",
+      result.error ?? 'Request failed',
       result.status,
       result.code,
       result.details,
@@ -119,12 +119,12 @@ export async function mutateJSON<T, D = unknown>(
   url: string,
   data: D,
   idempotencyKey: string,
-  options?: Omit<RequestInit, "method" | "body">,
+  options?: Omit<RequestInit, 'method' | 'body'>,
 ): Promise<T> {
   return fetchJSON<T>(url, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey,
       ...options?.headers,
     },

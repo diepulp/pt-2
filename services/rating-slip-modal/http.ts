@@ -8,14 +8,14 @@
  * @see EXECUTION-SPEC-PRD-008.md WS3
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 
 import type {
   MovePlayerInput,
   MovePlayerResponse,
   RatingSlipModalDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export types for convenience
 export type { MovePlayerInput, MovePlayerResponse };
@@ -49,7 +49,7 @@ export async function fetchRatingSlipModalData(
   return fetchJSON<RatingSlipModalDTO>(
     `/api/v1/rating-slips/${slipId}/modal-data`,
     {
-      method: "GET",
+      method: 'GET',
     },
   );
 }
@@ -82,12 +82,12 @@ export async function movePlayer(
   slipId: string,
   input: MovePlayerInput,
 ): Promise<MovePlayerResponse> {
-  const idempotencyKey = `move-player-${slipId}-${input.destinationTableId}-${input.destinationSeatNumber ?? "unseated"}-${Date.now()}`;
+  const idempotencyKey = `move-player-${slipId}-${input.destinationTableId}-${input.destinationSeatNumber ?? 'unseated'}-${Date.now()}`;
 
   return fetchJSON<MovePlayerResponse>(`/api/v1/rating-slips/${slipId}/move`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "Content-Type": "application/json",
+      'Content-Type': 'application/json',
       [IDEMPOTENCY_HEADER]: idempotencyKey,
     },
     body: JSON.stringify(input),

@@ -26,22 +26,22 @@
  * @see docs/20-architecture/specs/PERF-001/BFF-RPC-DESIGN.md
  */
 
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createLoyaltyService } from "@/services/loyalty";
-import { createPlayerService } from "@/services/player";
-import { createPlayerFinancialService } from "@/services/player-financial";
-import { createRatingSlipService } from "@/services/rating-slip";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createLoyaltyService } from '@/services/loyalty';
+import { createPlayerService } from '@/services/player';
+import { createPlayerFinancialService } from '@/services/player-financial';
+import { createRatingSlipService } from '@/services/rating-slip';
 import type {
   FinancialSectionDTO,
   LoyaltySectionDTO,
@@ -49,11 +49,11 @@ import type {
   RatingSlipModalDTO,
   SlipSectionDTO,
   TableOptionDTO,
-} from "@/services/rating-slip-modal/dtos";
-import { getModalDataViaRPC } from "@/services/rating-slip-modal/rpc";
-import { modalDataRouteParamsSchema } from "@/services/rating-slip-modal/schemas";
-import { createTableContextService } from "@/services/table-context";
-import { createVisitService } from "@/services/visit";
+} from '@/services/rating-slip-modal/dtos';
+import { getModalDataViaRPC } from '@/services/rating-slip-modal/rpc';
+import { modalDataRouteParamsSchema } from '@/services/rating-slip-modal/schemas';
+import { createTableContextService } from '@/services/table-context';
+import { createVisitService } from '@/services/visit';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -78,7 +78,7 @@ async function getLoyaltyData(
 }> {
   const [balance, suggestionResult] = await Promise.all([
     loyaltyService.getBalance(playerId, casinoId),
-    slip.status === "open"
+    slip.status === 'open'
       ? loyaltyService.evaluateSuggestion(slipId).catch(() => null)
       : Promise.resolve(null),
   ]);
@@ -100,7 +100,7 @@ async function getLoyaltyData(
  * Uses NEXT_PUBLIC_USE_MODAL_BFF_RPC environment variable.
  */
 function isRpcEnabled(): boolean {
-  return process.env.NEXT_PUBLIC_USE_MODAL_BFF_RPC === "true";
+  return process.env.NEXT_PUBLIC_USE_MODAL_BFF_RPC === 'true';
 }
 
 /**
@@ -126,7 +126,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
       async (mwCtx) => {
         // Ensure we have RLS context with casino_id
         if (!mwCtx.rlsContext?.casinoId) {
-          throw new DomainError("FORBIDDEN", "Casino context required", {
+          throw new DomainError('FORBIDDEN', 'Casino context required', {
             httpStatus: 403,
           });
         }
@@ -137,11 +137,11 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const totalStart = performance.now();
 
         let modalData: RatingSlipModalDTO;
-        let queryPath: "rpc" | "legacy";
+        let queryPath: 'rpc' | 'legacy';
 
         if (useRpc) {
           // === RPC PATH: Single database round trip ===
-          queryPath = "rpc";
+          queryPath = 'rpc';
           const rpcStart = performance.now();
 
           modalData = await getModalDataViaRPC(
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           timings.rpc = Math.round(performance.now() - rpcStart);
         } else {
           // === LEGACY PATH: Multi-query aggregation ===
-          queryPath = "legacy";
+          queryPath = 'legacy';
 
           // Helper to time individual queries
           async function timed<T>(
@@ -178,27 +178,27 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           const phaseAStart = performance.now();
 
           // 1. Get the rating slip with pause history (required first)
-          const slipWithPauses = await timed("A1_getSlip", () =>
+          const slipWithPauses = await timed('A1_getSlip', () =>
             ratingSlipService.getById(params.id),
           );
 
           if (!slipWithPauses) {
             throw new DomainError(
-              "RATING_SLIP_NOT_FOUND",
-              "Rating slip not found",
+              'RATING_SLIP_NOT_FOUND',
+              'Rating slip not found',
               { httpStatus: 404, details: { slipId: params.id } },
             );
           }
 
           // 2. Get the visit to find player_id and gaming_day (requires visit_id from slip)
-          const visit = await timed("A2_getVisit", () =>
+          const visit = await timed('A2_getVisit', () =>
             visitService.getById(slipWithPauses.visit_id),
           );
 
           if (!visit) {
             throw new DomainError(
-              "VISIT_NOT_FOUND",
-              "Associated visit not found",
+              'VISIT_NOT_FOUND',
+              'Associated visit not found',
             );
           }
 
@@ -214,21 +214,21 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
             financialSummary,
             activeTables,
           ] = await Promise.all([
-            timed("B1_getTable", () =>
+            timed('B1_getTable', () =>
               tableContextService.getTable(slipWithPauses.table_id, casinoId),
             ),
-            timed("B2_getDuration", () =>
+            timed('B2_getDuration', () =>
               ratingSlipService.getDuration(params.id),
             ),
             visit.player_id
-              ? timed("B3_getPlayer", () =>
+              ? timed('B3_getPlayer', () =>
                   playerService.getById(visit.player_id!),
                 )
               : Promise.resolve(null),
-            timed("B4_getFinancial", () =>
+            timed('B4_getFinancial', () =>
               financialService.getVisitSummary(visit.id),
             ),
-            timed("B5_getActiveTables", () =>
+            timed('B5_getActiveTables', () =>
               tableContextService.getActiveTables(casinoId),
             ),
           ]);
@@ -241,7 +241,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           const tableIds = activeTables.map((t) => t.id);
           const [loyaltyData, occupiedSeatsMap] = await Promise.all([
             player
-              ? timed("C1_getLoyalty", () =>
+              ? timed('C1_getLoyalty', () =>
                   getLoyaltyData(
                     loyaltyService,
                     visit.player_id!,
@@ -251,7 +251,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
                   ),
                 )
               : Promise.resolve(null),
-            timed("C2_getOccupiedSeats", () =>
+            timed('C2_getOccupiedSeats', () =>
               ratingSlipService.getOccupiedSeatsByTables(tableIds),
             ),
           ]);
@@ -293,7 +293,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
           if (loyaltyData) {
             loyaltySection = {
               currentBalance: loyaltyData.balance?.currentBalance ?? 0,
-              tier: loyaltyData.balance?.tier ?? "bronze",
+              tier: loyaltyData.balance?.tier ?? 'bronze',
               suggestion: loyaltyData.suggestion,
             };
           }
@@ -335,7 +335,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: modalData,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -345,31 +345,34 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "rating-slip-modal",
-        action: "getModalData",
+        domain: 'rating-slip-modal',
+        action: 'getModalData',
         correlationId: ctx.requestId,
       },
     );
 
     if (!result.ok) {
       // result is a ServiceResult, convert to HTTP response directly
+      // Use httpStatus from result if available (set by tracing middleware),
+      // otherwise fall back to deriving from code
       const status =
-        result.code === "NOT_FOUND"
+        result.httpStatus ??
+        (result.code === 'NOT_FOUND'
           ? 404
-          : result.code === "FORBIDDEN"
+          : result.code === 'FORBIDDEN'
             ? 403
-            : result.code === "UNAUTHORIZED"
+            : result.code === 'UNAUTHORIZED'
               ? 401
-              : result.code === "VALIDATION_ERROR"
+              : result.code === 'VALIDATION_ERROR'
                 ? 400
-                : 500;
+                : 500);
 
       return NextResponse.json(
         {
           ok: false,
           code: result.code,
           status,
-          error: result.error ?? "Unknown error",
+          error: result.error ?? 'Unknown error',
           details: result.details,
           requestId: ctx.requestId,
           durationMs: Date.now() - ctx.startedAt,
@@ -382,7 +385,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     // Extract timings and path if present (from extended result)
     const extendedResult = result as typeof result & {
       timings?: Record<string, number>;
-      queryPath?: "rpc" | "legacy";
+      queryPath?: 'rpc' | 'legacy';
     };
     const timings = extendedResult.timings;
     const queryPath = extendedResult.queryPath;
@@ -390,7 +393,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     // Build success response body
     const responseBody = {
       ok: true as const,
-      code: "OK" as const,
+      code: 'OK' as const,
       status: 200,
       data: result.data,
       requestId: ctx.requestId,
@@ -401,10 +404,10 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     // Build response with diagnostic headers
     const headers: HeadersInit = {};
     if (timings) {
-      headers["X-Query-Timings"] = JSON.stringify(timings);
+      headers['X-Query-Timings'] = JSON.stringify(timings);
     }
     if (queryPath) {
-      headers["X-Query-Path"] = queryPath;
+      headers['X-Query-Path'] = queryPath;
     }
 
     return NextResponse.json(responseBody, { status: 200, headers });

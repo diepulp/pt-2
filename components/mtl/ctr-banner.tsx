@@ -10,14 +10,14 @@
  * @see EXECUTION-SPEC-PRD-MTL-UI-GAPS.md WS5
  */
 
-"use client";
+'use client';
 
-import { AlertTriangle, ExternalLink, X } from "lucide-react";
-import { useCallback, useState } from "react";
+import { AlertTriangle, ExternalLink, X } from 'lucide-react';
+import { useCallback, useState } from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // ============================================================================
 // Constants
@@ -26,13 +26,13 @@ import { cn } from "@/lib/utils";
 /**
  * FinCEN CTR filing information link
  */
-const FINCEN_CTR_URL = "https://www.fincen.gov/resources/filing-information";
+const FINCEN_CTR_URL = 'https://www.fincen.gov/resources/filing-information';
 
 /**
  * Session storage key for CTR banner dismissal
  * Scoped by gaming_day to reset daily
  */
-const DISMISS_STORAGE_KEY_PREFIX = "ctr-banner-dismissed-";
+const DISMISS_STORAGE_KEY_PREFIX = 'ctr-banner-dismissed-';
 
 // ============================================================================
 // Types
@@ -91,13 +91,13 @@ export function CtrBanner({
     : DISMISS_STORAGE_KEY_PREFIX;
 
   const [isDismissed, setIsDismissed] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return sessionStorage.getItem(storageKey) === "true";
+    if (typeof window === 'undefined') return false;
+    return sessionStorage.getItem(storageKey) === 'true';
   });
 
   const handleDismiss = useCallback(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(storageKey, "true");
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem(storageKey, 'true');
     }
     setIsDismissed(true);
     onDismiss?.();
@@ -109,9 +109,9 @@ export function CtrBanner({
   }
 
   // Format the amount
-  const formattedAmount = new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  const formattedAmount = new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(dailyTotal);
@@ -119,7 +119,7 @@ export function CtrBanner({
   return (
     <Alert
       variant="destructive"
-      className={cn("border-red-500 bg-red-50 dark:bg-red-950/30", className)}
+      className={cn('border-red-500 bg-red-50 dark:bg-red-950/30', className)}
       role="alert"
       aria-live="assertive"
     >
@@ -133,14 +133,14 @@ export function CtrBanner({
             {patronName ? (
               <>
                 <span className="font-medium">{patronName}</span>&apos;s daily
-                total of{" "}
-                <span className="font-mono font-bold">{formattedAmount}</span>{" "}
+                total of{' '}
+                <span className="font-mono font-bold">{formattedAmount}</span>{' '}
                 exceeds the $10,000 threshold.
               </>
             ) : (
               <>
-                Daily total of{" "}
-                <span className="font-mono font-bold">{formattedAmount}</span>{" "}
+                Daily total of{' '}
+                <span className="font-mono font-bold">{formattedAmount}</span>{' '}
                 exceeds the $10,000 threshold.
               </>
             )}

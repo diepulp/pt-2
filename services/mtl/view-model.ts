@@ -3,7 +3,7 @@ export interface CasinoThresholds {
   ctrThreshold: number;
 }
 
-export type ThresholdBadge = "none" | "watchlist_near" | "ctr_near" | "ctr_met";
+export type ThresholdBadge = 'none' | 'watchlist_near' | 'ctr_near' | 'ctr_met';
 
 export interface LoyaltyContextSummary {
   lastRewardAt: string;
@@ -18,7 +18,7 @@ export interface MtlEntryRecord {
   rating_slip_id?: string | null;
   visit_id?: string | null;
   amount: number;
-  direction: "in" | "out";
+  direction: 'in' | 'out';
   area?: string | null;
   created_at: string;
   [key: string]: unknown;
@@ -32,7 +32,7 @@ export interface ReadonlyMtlEntryView {
   rating_slip_id: string | null;
   visit_id: string | null;
   amount: number;
-  direction: "in" | "out";
+  direction: 'in' | 'out';
   area: string | null;
   created_at: string;
   threshold_badge: ThresholdBadge;
@@ -58,20 +58,20 @@ export function deriveThresholdBadge(
 ): ThresholdBadge {
   // CTR: strictly > ("more than $10,000") per 31 CFR § 1021.311
   if (amount > thresholds.ctrThreshold) {
-    return "ctr_met";
+    return 'ctr_met';
   }
 
   // Near CTR: > 90% of threshold
   if (amount > thresholds.ctrThreshold * 0.9) {
-    return "ctr_near";
+    return 'ctr_near';
   }
 
   // Watchlist: >= (internal threshold, not regulatory)
   if (amount >= thresholds.watchlistFloor) {
-    return "watchlist_near";
+    return 'watchlist_near';
   }
 
-  return "none";
+  return 'none';
 }
 
 export function toReadonlyMtlEntryView(

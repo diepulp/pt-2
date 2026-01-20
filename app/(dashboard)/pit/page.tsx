@@ -14,17 +14,17 @@
  * @see EXECUTION-SPEC-PRD-006.md WS2
  */
 
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import { PitPanelsDashboardLayout } from "@/components/pit-panels";
+import { PitPanelsDashboardLayout } from '@/components/pit-panels';
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
-} from "@/lib/supabase/dev-context";
-import { getAuthContext } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
+} from '@/lib/supabase/dev-context';
+import { getAuthContext } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export default async function PitPage() {
   let casinoId: string;
@@ -41,17 +41,17 @@ export default async function PitPage() {
       const context = await getAuthContext(supabase);
       casinoId = context.casinoId;
     } catch (error) {
-      console.error("Failed to get auth context:", error);
-      redirect("/auth/login");
+      console.error('Failed to get auth context:', error);
+      redirect('/auth/login');
     }
   } else if (isDevAuthBypassEnabled()) {
     // DEV MODE: Use mock context
 
-    console.warn("[DEV AUTH] Using mock casinoId for dashboard");
+    console.warn('[DEV AUTH] Using mock casinoId for dashboard');
     casinoId = DEV_RLS_CONTEXT.casinoId;
   } else {
     // PRODUCTION: Redirect to login
-    redirect("/auth/login");
+    redirect('/auth/login');
   }
 
   // Height: viewport - header (4rem) - main padding (3rem = p-6 top + bottom)

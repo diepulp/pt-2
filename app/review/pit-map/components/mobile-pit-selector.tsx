@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { ChevronDown, Check, Star, Layers } from "lucide-react";
-import { useState, useMemo } from "react";
+import { ChevronDown, Check, Star, Layers } from 'lucide-react';
+import { useState, useMemo } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Drawer,
   DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
-} from "@/components/ui/drawer";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/drawer';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-import type { PitData } from "../types";
-import { getPitStats } from "../mock-data";
+import { getPitStats } from '../mock-data';
+import type { PitData } from '../types';
 
 interface MobilePitSelectorProps {
   pits: PitData[];
@@ -36,7 +36,7 @@ export function MobilePitSelector({
 
   const selectedPit = useMemo(
     () => pits.find((p) => p.id === selectedPitId),
-    [pits, selectedPitId]
+    [pits, selectedPitId],
   );
 
   const { pinnedPits, otherPits } = useMemo(() => {
@@ -56,15 +56,15 @@ export function MobilePitSelector({
         <Button
           variant="outline"
           className={cn(
-            "justify-between gap-2 h-11 px-4 w-full",
-            "bg-card/60 border-border/50 hover:bg-card/80",
-            className
+            'justify-between gap-2 h-11 px-4 w-full',
+            'bg-card/60 border-border/50 hover:bg-card/80',
+            className,
           )}
         >
           <div className="flex items-center gap-2 min-w-0">
             <Layers className="w-4 h-4 text-muted-foreground flex-shrink-0" />
             <span className="font-medium truncate">
-              {selectedPit?.label ?? "Select a pit"}
+              {selectedPit?.label ?? 'Select a pit'}
             </span>
           </div>
           <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
@@ -147,20 +147,20 @@ function PitOption({
     <button
       onClick={() => onSelect(pit.id)}
       className={cn(
-        "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all",
-        "hover:bg-muted/50 active:scale-[0.98]",
-        isSelected && "bg-muted border border-border/50"
+        'w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all',
+        'hover:bg-muted/50 active:scale-[0.98]',
+        isSelected && 'bg-muted border border-border/50',
       )}
     >
       {/* Status indicator */}
       <div
         className={cn(
-          "w-2 h-10 rounded-full flex-shrink-0",
+          'w-2 h-10 rounded-full flex-shrink-0',
           stats.active > 0
-            ? "bg-emerald-500"
+            ? 'bg-emerald-500'
             : stats.inactive > 0
-            ? "bg-amber-500"
-            : "bg-zinc-600"
+              ? 'bg-amber-500'
+              : 'bg-zinc-600',
         )}
       />
 
@@ -175,14 +175,18 @@ function PitOption({
           )}
         </div>
         <div className="flex items-center gap-2 mt-0.5 text-sm">
-          <span className="text-emerald-400 font-mono">{stats.active} open</span>
+          <span className="text-emerald-400 font-mono">
+            {stats.active} open
+          </span>
           {stats.inactive > 0 && (
             <span className="text-amber-400 font-mono">
               {stats.inactive} paused
             </span>
           )}
           {stats.closed > 0 && (
-            <span className="text-zinc-500 font-mono">{stats.closed} closed</span>
+            <span className="text-zinc-500 font-mono">
+              {stats.closed} closed
+            </span>
           )}
         </div>
       </div>

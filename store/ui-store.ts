@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
-type ModalType = "rating-slip" | "new-slip" | "player-search" | null;
+type ModalType = 'rating-slip' | 'new-slip' | 'player-search' | null;
 
 interface ModalState {
   type: ModalType;
@@ -37,7 +37,7 @@ export const useUIStore = create<UIStore>()(
             },
           },
           undefined,
-          "ui/openModal",
+          'ui/openModal',
         ),
       closeModal: () =>
         set(
@@ -49,16 +49,16 @@ export const useUIStore = create<UIStore>()(
             },
           },
           undefined,
-          "ui/closeModal",
+          'ui/closeModal',
         ),
       sidebarCollapsed: false,
       toggleSidebar: () =>
         set(
           (state) => ({ sidebarCollapsed: !state.sidebarCollapsed }),
           undefined,
-          "ui/toggleSidebar",
+          'ui/toggleSidebar',
         ),
     }),
-    { name: "ui-store" },
+    { name: 'ui-store' },
   ),
 );

@@ -11,9 +11,9 @@
  * @see SLAD §308-348
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import {
   getInventoryHistory,
@@ -21,13 +21,13 @@ import {
   logInventorySnapshot,
   requestTableCredit,
   requestTableFill,
-} from "./chip-custody";
-import { getActiveTables, getTableById, listTables } from "./crud";
+} from './chip-custody';
+import { getActiveTables, getTableById, listTables } from './crud';
 import {
   assignDealer,
   endDealerRotation,
   getCurrentDealer,
-} from "./dealer-rotation";
+} from './dealer-rotation';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
@@ -65,23 +65,23 @@ import type {
   TableBankMode,
   TableRundownDTO,
   PostTableDropTotalInput,
-} from "./dtos";
-import { computeTableRundown, postTableDropTotal } from "./rundown";
+} from './dtos';
+import { computeTableRundown, postTableDropTotal } from './rundown';
 import {
   getShiftCashObsAlerts,
   getShiftCashObsCasino,
   getShiftCashObsPit,
   getShiftCashObsTable,
-} from "./shift-cash-obs";
-import { activateTable, closeTable, deactivateTable } from "./table-lifecycle";
+} from './shift-cash-obs';
+import { activateTable, closeTable, deactivateTable } from './table-lifecycle';
 import {
   openTableSession,
   startTableRundown,
   closeTableSession,
   getCurrentTableSession,
   getTableSessionById,
-} from "./table-session";
-import { getTableSettings, updateTableLimits } from "./table-settings";
+} from './table-session';
+import { getTableSettings, updateTableLimits } from './table-settings';
 
 // Re-export DTOs and keys for consumers
 export type {
@@ -122,7 +122,7 @@ export type {
   TableRundownDTO,
   PostTableDropTotalInput,
 };
-export { tableContextKeys } from "./keys";
+export { tableContextKeys } from './keys';
 
 // Re-export shift cash obs functions (standalone, not part of factory)
 export {
@@ -162,7 +162,7 @@ export interface TableContextServiceInterface {
   getTable(tableId: string, casinoId: string): Promise<GamingTableDTO>;
   listTables(
     casinoId: string,
-    filters?: Omit<TableListFilters, "casinoId">,
+    filters?: Omit<TableListFilters, 'casinoId'>,
   ): Promise<GamingTableDTO[]>;
   getActiveTables(casinoId: string): Promise<GamingTableWithDealerDTO[]>;
 

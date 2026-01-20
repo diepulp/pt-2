@@ -9,19 +9,19 @@
  * @see PRD-LOYALTY-PROMO
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { loyaltyKeys } from "@/services/loyalty/keys";
+import { loyaltyKeys } from '@/services/loyalty/keys';
 import type {
   PromoProgramDTO,
   PromoProgramListQuery,
-} from "@/services/loyalty/promo/dtos";
+} from '@/services/loyalty/promo/dtos';
 import {
   getPromoProgram,
   listPromoPrograms,
-} from "@/services/loyalty/promo/http";
+} from '@/services/loyalty/promo/http';
 
 /**
  * Fetches list of promo programs with optional filters.

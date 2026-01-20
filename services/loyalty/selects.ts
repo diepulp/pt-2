@@ -13,17 +13,17 @@
 
 /** Full ledger entry record for detail views */
 export const LOYALTY_LEDGER_SELECT =
-  "id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_delta, reason, idempotency_key, campaign_id, source_kind, source_id, metadata, note, created_at" as const;
+  'id, casino_id, player_id, rating_slip_id, visit_id, staff_id, points_delta, reason, idempotency_key, campaign_id, source_kind, source_id, metadata, note, created_at' as const;
 
 /** Ledger list fields (same as LOYALTY_LEDGER_SELECT for mapper compatibility) */
 export const LOYALTY_LEDGER_SELECT_LIST = LOYALTY_LEDGER_SELECT;
 
 /** Minimal projection for aggregations (id, points_delta, timestamp) */
 export const LOYALTY_LEDGER_SELECT_MIN =
-  "id, points_delta, reason, created_at" as const;
+  'id, points_delta, reason, created_at' as const;
 
 // === Player Loyalty Selects ===
 
 /** Player loyalty balance and tier info */
 export const PLAYER_LOYALTY_SELECT =
-  "player_id, casino_id, current_balance, tier, preferences, updated_at" as const;
+  'player_id, casino_id, current_balance, tier, preferences, updated_at' as const;

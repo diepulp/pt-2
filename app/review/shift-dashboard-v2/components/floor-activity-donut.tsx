@@ -7,20 +7,20 @@
  * @see IMPLEMENTATION_STRATEGY.md §7.2 Active Visitors Donut
  */
 
-"use client";
+'use client';
 
-import { InfoIcon, UsersIcon } from "lucide-react";
+import { InfoIcon, UsersIcon } from 'lucide-react';
 
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
-import { formatPercentage } from "../lib/format";
+import { formatPercentage } from '../lib/format';
 
 export interface FloorActivityDonutProps {
   /** Count of rated visitors (gaming_identified_rated) */
@@ -185,7 +185,7 @@ export function FloorActivityDonut({
             <span className="text-sm">Rated Visitors</span>
           </div>
           <span className="font-mono text-sm tabular-nums">
-            {ratedCount}{" "}
+            {ratedCount}{' '}
             <span className="text-muted-foreground">
               ({formatPercentage(computedPercentage)})
             </span>
@@ -198,7 +198,7 @@ export function FloorActivityDonut({
             <span className="text-sm">Unrated Visitors</span>
           </div>
           <span className="font-mono text-sm tabular-nums">
-            {unratedCount}{" "}
+            {unratedCount}{' '}
             <span className="text-muted-foreground">
               ({formatPercentage(100 - computedPercentage)})
             </span>

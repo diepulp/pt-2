@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { Search, Star, Clock, ChevronRight, Layers } from "lucide-react";
-import { useState, useMemo, useRef, useCallback, useTransition } from "react";
+import { Search, Star, Clock, ChevronRight, Layers } from 'lucide-react';
+import { useState, useMemo, useRef, useCallback, useTransition } from 'react';
 
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { cn } from "@/lib/utils";
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
-import type { PitData } from "../types";
-import { getPitStats } from "../mock-data";
+import { getPitStats } from '../mock-data';
+import type { PitData } from '../types';
 
 interface PitSwitcherProps {
   pits: PitData[];
@@ -27,7 +27,7 @@ export function PitSwitcher({
   recentPitIds,
   className,
 }: PitSwitcherProps) {
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isPending, startTransition] = useTransition();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -37,7 +37,7 @@ export function PitSwitcher({
         onSelectPit(pitId);
       });
     },
-    [onSelectPit]
+    [onSelectPit],
   );
 
   // Filter and organize pits
@@ -46,15 +46,15 @@ export function PitSwitcher({
     const filtered = pits.filter(
       (pit) =>
         pit.label.toLowerCase().includes(query) ||
-        pit.tables.some((t) => t.label.toLowerCase().includes(query))
+        pit.tables.some((t) => t.label.toLowerCase().includes(query)),
     );
 
     const pinned = filtered.filter((p) => pinnedPitIds.includes(p.id));
     const recent = filtered.filter(
-      (p) => recentPitIds.includes(p.id) && !pinnedPitIds.includes(p.id)
+      (p) => recentPitIds.includes(p.id) && !pinnedPitIds.includes(p.id),
     );
     const others = filtered.filter(
-      (p) => !pinnedPitIds.includes(p.id) && !recentPitIds.includes(p.id)
+      (p) => !pinnedPitIds.includes(p.id) && !recentPitIds.includes(p.id),
     );
 
     return {
@@ -69,8 +69,8 @@ export function PitSwitcher({
   return (
     <div
       className={cn(
-        "flex flex-col h-full bg-sidebar-background border-r border-sidebar-border",
-        className
+        'flex flex-col h-full bg-sidebar-background border-r border-sidebar-border',
+        className,
       )}
     >
       {/* Header */}
@@ -109,7 +109,11 @@ export function PitSwitcher({
         <div className="p-2 space-y-4">
           {/* Pinned Section */}
           {pinnedPits.length > 0 && (
-            <PitSection icon={Star} label="Pinned" iconClassName="text-amber-500">
+            <PitSection
+              icon={Star}
+              label="Pinned"
+              iconClassName="text-amber-500"
+            >
               {pinnedPits.map((pit) => (
                 <PitRow
                   key={pit.id}
@@ -124,7 +128,11 @@ export function PitSwitcher({
 
           {/* Recent Section */}
           {recentPits.length > 0 && (
-            <PitSection icon={Clock} label="Recent" iconClassName="text-blue-400">
+            <PitSection
+              icon={Clock}
+              label="Recent"
+              iconClassName="text-blue-400"
+            >
               {recentPits.map((pit) => (
                 <PitRow
                   key={pit.id}
@@ -139,7 +147,11 @@ export function PitSwitcher({
 
           {/* All Pits Section */}
           {otherPits.length > 0 && (
-            <PitSection icon={Layers} label="All Pits" iconClassName="text-muted-foreground">
+            <PitSection
+              icon={Layers}
+              label="All Pits"
+              iconClassName="text-muted-foreground"
+            >
               {otherPits.map((pit) => (
                 <PitRow
                   key={pit.id}
@@ -188,11 +200,16 @@ interface PitSectionProps {
   children: React.ReactNode;
 }
 
-function PitSection({ icon: Icon, label, iconClassName, children }: PitSectionProps) {
+function PitSection({
+  icon: Icon,
+  label,
+  iconClassName,
+  children,
+}: PitSectionProps) {
   return (
     <div className="space-y-1">
       <div className="flex items-center gap-2 px-2 py-1">
-        <Icon className={cn("w-3.5 h-3.5", iconClassName)} />
+        <Icon className={cn('w-3.5 h-3.5', iconClassName)} />
         <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
           {label}
         </span>
@@ -218,22 +235,26 @@ function PitRow({ pit, isSelected, isPending, onSelect }: PitRowProps) {
       onClick={() => onSelect(pit.id)}
       disabled={isPending}
       className={cn(
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150",
-        "hover:bg-sidebar-accent/80 active:scale-[0.98]",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1",
+        'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-all duration-150',
+        'hover:bg-sidebar-accent/80 active:scale-[0.98]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring focus-visible:ring-offset-1',
         isSelected && [
-          "bg-sidebar-accent",
-          "border border-sidebar-primary/20",
-          "shadow-sm shadow-sidebar-primary/10",
+          'bg-sidebar-accent',
+          'border border-sidebar-primary/20',
+          'shadow-sm shadow-sidebar-primary/10',
         ],
-        isPending && "opacity-70 cursor-wait"
+        isPending && 'opacity-70 cursor-wait',
       )}
     >
       {/* Pit indicator */}
       <div
         className={cn(
-          "w-2 h-8 rounded-full flex-shrink-0 transition-colors",
-          stats.active > 0 ? "bg-emerald-500" : stats.inactive > 0 ? "bg-amber-500" : "bg-zinc-600"
+          'w-2 h-8 rounded-full flex-shrink-0 transition-colors',
+          stats.active > 0
+            ? 'bg-emerald-500'
+            : stats.inactive > 0
+              ? 'bg-amber-500'
+              : 'bg-zinc-600',
         )}
       />
 
@@ -242,8 +263,10 @@ function PitRow({ pit, isSelected, isPending, onSelect }: PitRowProps) {
         <div className="flex items-center gap-2">
           <span
             className={cn(
-              "text-sm font-medium truncate",
-              isSelected ? "text-sidebar-foreground" : "text-sidebar-foreground/80"
+              'text-sm font-medium truncate',
+              isSelected
+                ? 'text-sidebar-foreground'
+                : 'text-sidebar-foreground/80',
             )}
           >
             {pit.label}
@@ -254,17 +277,21 @@ function PitRow({ pit, isSelected, isPending, onSelect }: PitRowProps) {
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           <StatusBadge count={stats.active} status="active" />
-          {stats.inactive > 0 && <StatusBadge count={stats.inactive} status="inactive" />}
-          {stats.closed > 0 && <StatusBadge count={stats.closed} status="closed" />}
+          {stats.inactive > 0 && (
+            <StatusBadge count={stats.inactive} status="inactive" />
+          )}
+          {stats.closed > 0 && (
+            <StatusBadge count={stats.closed} status="closed" />
+          )}
         </div>
       </div>
 
       {/* Chevron */}
       <ChevronRight
         className={cn(
-          "w-4 h-4 flex-shrink-0 transition-transform",
-          isSelected ? "text-sidebar-primary" : "text-muted-foreground/40",
-          isSelected && "translate-x-0.5"
+          'w-4 h-4 flex-shrink-0 transition-transform',
+          isSelected ? 'text-sidebar-primary' : 'text-muted-foreground/40',
+          isSelected && 'translate-x-0.5',
         )}
       />
     </button>
@@ -277,22 +304,22 @@ function StatusBadge({
   status,
 }: {
   count: number;
-  status: "active" | "inactive" | "closed";
+  status: 'active' | 'inactive' | 'closed';
 }) {
   const colors = {
-    active: "text-emerald-400",
-    inactive: "text-amber-400",
-    closed: "text-zinc-500",
+    active: 'text-emerald-400',
+    inactive: 'text-amber-400',
+    closed: 'text-zinc-500',
   };
 
   const labels = {
-    active: "open",
-    inactive: "idle",
-    closed: "closed",
+    active: 'open',
+    inactive: 'idle',
+    closed: 'closed',
   };
 
   return (
-    <span className={cn("text-xs font-mono", colors[status])}>
+    <span className={cn('text-xs font-mono', colors[status])}>
       {count} {labels[status]}
     </span>
   );

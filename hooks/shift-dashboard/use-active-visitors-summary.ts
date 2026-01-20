@@ -7,12 +7,12 @@
  * @see IMPLEMENTATION_STRATEGY.md §5.2 Active Visitors Donut
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { ActiveVisitorsSummaryDTO } from "@/services/table-context/dtos";
+import type { ActiveVisitorsSummaryDTO } from '@/services/table-context/dtos';
 
-import { fetchActiveVisitorsSummary } from "./http";
-import { shiftDashboardKeys } from "./keys";
+import { fetchActiveVisitorsSummary } from './http';
+import { shiftDashboardKeys } from './keys';
 
 export interface UseActiveVisitorsSummaryOptions {
   /** Enable/disable the query */
@@ -31,7 +31,7 @@ export function useActiveVisitorsSummary(
 
   return useQuery<ActiveVisitorsSummaryDTO>({
     // Use a new query key scope for visitors
-    queryKey: [...shiftDashboardKeys.root, "visitors-summary"],
+    queryKey: [...shiftDashboardKeys.root, 'visitors-summary'],
     queryFn: fetchActiveVisitorsSummary,
     enabled,
     // Refresh every 30 seconds (more frequent than metrics since this is real-time activity)

@@ -34,6 +34,7 @@ export function withTracing<T>(): Middleware<T> {
         code: mapped.code,
         error: mapped.message,
         details: mapped.details,
+        httpStatus: mapped.httpStatus,
         requestId: ctx.correlationId,
         durationMs: Date.now() - ctx.startedAt,
         timestamp: new Date().toISOString(),

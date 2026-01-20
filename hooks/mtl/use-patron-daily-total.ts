@@ -10,12 +10,12 @@
  * @see hooks/mtl/use-gaming-day-summary.ts - Similar pattern
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { getGamingDaySummary } from "@/services/mtl/http";
-import { mtlKeys } from "@/services/mtl/keys";
+import { getGamingDaySummary } from '@/services/mtl/http';
+import { mtlKeys } from '@/services/mtl/keys';
 
 // ============================================================================
 // Types
@@ -48,7 +48,7 @@ export const patronDailyTotalKey = (
 ) =>
   [
     ...mtlKeys.root,
-    "patron-daily-total",
+    'patron-daily-total',
     casinoId,
     patronUuid,
     gamingDay,

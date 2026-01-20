@@ -118,7 +118,7 @@ describe('Promo Instruments Mappers', () => {
 
       for (const invalid of invalidResponses) {
         expect(() => parseIssueCouponResponse(invalid)).toThrow(
-          'Invalid IssueCoupon RPC response structure'
+          'Invalid IssueCoupon RPC response structure',
         );
       }
     });
@@ -181,7 +181,7 @@ describe('Promo Instruments Mappers', () => {
 
       for (const invalid of invalidResponses) {
         expect(() => parseVoidCouponResponse(invalid)).toThrow(
-          'Invalid VoidCoupon RPC response structure'
+          'Invalid VoidCoupon RPC response structure',
         );
       }
     });
@@ -266,7 +266,7 @@ describe('Promo Instruments Mappers', () => {
 
       for (const invalid of typeGuardFailures) {
         expect(() => parseReplaceCouponResponse(invalid)).toThrow(
-          'Invalid ReplaceCoupon RPC response structure'
+          'Invalid ReplaceCoupon RPC response structure',
         );
       }
 
@@ -322,9 +322,24 @@ describe('Promo Instruments Mappers', () => {
 
     it('parseInventoryResponse parses multiple status rows', () => {
       const data = [
-        { status: 'issued', coupon_count: 10, total_face_value: 250.0, total_match_wager: 250.0 },
-        { status: 'voided', coupon_count: 2, total_face_value: 50.0, total_match_wager: 50.0 },
-        { status: 'replaced', coupon_count: 1, total_face_value: 25.0, total_match_wager: 25.0 },
+        {
+          status: 'issued',
+          coupon_count: 10,
+          total_face_value: 250.0,
+          total_match_wager: 250.0,
+        },
+        {
+          status: 'voided',
+          coupon_count: 2,
+          total_face_value: 50.0,
+          total_match_wager: 50.0,
+        },
+        {
+          status: 'replaced',
+          coupon_count: 1,
+          total_face_value: 25.0,
+          total_match_wager: 25.0,
+        },
       ];
 
       const result = parseInventoryResponse(data);
@@ -337,10 +352,10 @@ describe('Promo Instruments Mappers', () => {
 
     it('parseInventoryResponse throws on non-array input', () => {
       expect(() => parseInventoryResponse(null)).toThrow(
-        'Invalid Inventory RPC response: expected array'
+        'Invalid Inventory RPC response: expected array',
       );
       expect(() => parseInventoryResponse({})).toThrow(
-        'Invalid Inventory RPC response: expected array'
+        'Invalid Inventory RPC response: expected array',
       );
     });
 
@@ -348,7 +363,7 @@ describe('Promo Instruments Mappers', () => {
       const invalidData = [{ status: 'issued' }]; // missing coupon_count
 
       expect(() => parseInventoryResponse(invalidData)).toThrow(
-        'Invalid InventoryRpcRow structure'
+        'Invalid InventoryRpcRow structure',
       );
     });
   });
@@ -443,7 +458,7 @@ describe('Promo Instruments Mappers', () => {
 
       for (const invalid of invalidRows) {
         expect(() => parsePromoProgramRow(invalid)).toThrow(
-          'Invalid PromoProgramRow structure'
+          'Invalid PromoProgramRow structure',
         );
       }
     });
@@ -565,12 +580,17 @@ describe('Promo Instruments Mappers', () => {
         { id: '123' },
         { id: '123', casino_id: '456' },
         { id: '123', casino_id: '456', promo_program_id: '789' },
-        { id: '123', casino_id: '456', promo_program_id: '789', validation_number: 'VAL' },
+        {
+          id: '123',
+          casino_id: '456',
+          promo_program_id: '789',
+          validation_number: 'VAL',
+        },
       ];
 
       for (const invalid of invalidRows) {
         expect(() => parsePromoCouponRow(invalid)).toThrow(
-          'Invalid PromoCouponRow structure'
+          'Invalid PromoCouponRow structure',
         );
       }
     });

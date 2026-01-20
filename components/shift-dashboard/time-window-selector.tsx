@@ -7,22 +7,22 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.5
  */
 
-"use client";
+'use client';
 
-import { CalendarIcon, ClockIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { CalendarIcon, ClockIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import type { ShiftTimeWindow } from "@/hooks/shift-dashboard";
+} from '@/components/ui/select';
+import type { ShiftTimeWindow } from '@/hooks/shift-dashboard';
 
-export type TimeWindowPreset = "8h" | "12h" | "24h" | "current" | "custom";
+export type TimeWindowPreset = '8h' | '12h' | '24h' | 'current' | 'custom';
 
 export interface TimeWindowSelectorProps {
   value: ShiftTimeWindow;
@@ -38,19 +38,19 @@ function getWindowFromPreset(preset: TimeWindowPreset): ShiftTimeWindow {
   const end = now.toISOString();
 
   switch (preset) {
-    case "8h": {
+    case '8h': {
       const start = new Date(now.getTime() - 8 * 60 * 60 * 1000);
       return { start: start.toISOString(), end };
     }
-    case "12h": {
+    case '12h': {
       const start = new Date(now.getTime() - 12 * 60 * 60 * 1000);
       return { start: start.toISOString(), end };
     }
-    case "24h": {
+    case '24h': {
       const start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
       return { start: start.toISOString(), end };
     }
-    case "current": {
+    case 'current': {
       // Default to 8 hours for current shift
       const start = new Date(now.getTime() - 8 * 60 * 60 * 1000);
       return { start: start.toISOString(), end };
@@ -68,10 +68,10 @@ function formatTimeWindow(window: ShiftTimeWindow): string {
   const end = new Date(window.end);
 
   const formatTime = (d: Date) =>
-    d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+    d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
   const formatDate = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
   // Same day
   if (start.toDateString() === end.toDateString()) {
@@ -86,10 +86,10 @@ export function TimeWindowSelector({
   onChange,
   className,
 }: TimeWindowSelectorProps) {
-  const [preset, setPreset] = useState<TimeWindowPreset>("8h");
+  const [preset, setPreset] = useState<TimeWindowPreset>('8h');
 
   // Defer locale-dependent formatting to client to avoid hydration mismatch
-  const [formattedWindow, setFormattedWindow] = useState<string>("");
+  const [formattedWindow, setFormattedWindow] = useState<string>('');
 
   useEffect(() => {
     setFormattedWindow(formatTimeWindow(value));
@@ -97,7 +97,7 @@ export function TimeWindowSelector({
 
   const handlePresetChange = (newPreset: TimeWindowPreset) => {
     setPreset(newPreset);
-    if (newPreset !== "custom") {
+    if (newPreset !== 'custom') {
       onChange(getWindowFromPreset(newPreset));
     }
   };
@@ -107,7 +107,7 @@ export function TimeWindowSelector({
   };
 
   return (
-    <div className={`flex items-center gap-3 ${className ?? ""}`}>
+    <div className={`flex items-center gap-3 ${className ?? ''}`}>
       <Select value={preset} onValueChange={handlePresetChange}>
         <SelectTrigger className="w-[160px]">
           <ClockIcon className="mr-2 h-4 w-4 text-muted-foreground" />
@@ -124,7 +124,7 @@ export function TimeWindowSelector({
       <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
         <CalendarIcon className="h-4 w-4" />
         <span className="font-mono text-xs min-w-[180px]">
-          {formattedWindow || "Loading..."}
+          {formattedWindow || 'Loading...'}
         </span>
       </div>
 

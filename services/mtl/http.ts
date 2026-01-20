@@ -9,8 +9,8 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 
 import type {
   CreateMtlAuditNoteInput,
@@ -21,9 +21,9 @@ import type {
   MtlEntryWithNotesDTO,
   MtlGamingDaySummaryDTO,
   MtlGamingDaySummaryFilters,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/mtl";
+const BASE = '/api/v1/mtl';
 
 // ============================================================================
 // Helper Functions
@@ -65,9 +65,9 @@ export async function createMtlEntry(
   input: CreateMtlEntryInput,
 ): Promise<MtlEntryDTO> {
   return fetchJSON<MtlEntryDTO>(`${BASE}/entries`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -133,12 +133,12 @@ export async function getMtlEntry(
  */
 export async function createMtlAuditNote(
   entryId: string,
-  input: Omit<CreateMtlAuditNoteInput, "mtl_entry_id">,
+  input: Omit<CreateMtlAuditNoteInput, 'mtl_entry_id'>,
 ): Promise<MtlAuditNoteDTO> {
   return fetchJSON<MtlAuditNoteDTO>(`${BASE}/entries/${entryId}/audit-notes`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({ ...input, mtl_entry_id: entryId }),

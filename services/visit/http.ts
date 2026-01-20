@@ -8,8 +8,8 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 
 import type {
   ActiveVisitDTO,
@@ -18,9 +18,9 @@ import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/visits";
+const BASE = '/api/v1/visits';
 
 // === Helper Functions ===
 
@@ -94,9 +94,9 @@ export async function startVisit(
   playerId: string,
 ): Promise<StartVisitResultDTO> {
   return fetchJSON<StartVisitResultDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({ player_id: playerId }),
@@ -112,9 +112,9 @@ export async function closeVisit(
   input?: CloseVisitDTO,
 ): Promise<VisitDTO> {
   return fetchJSON<VisitDTO>(`${BASE}/${visitId}/close`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input ?? {}),

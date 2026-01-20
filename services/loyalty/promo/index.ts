@@ -8,11 +8,11 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS2
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CouponInventoryOutput,
   CouponInventoryQuery,
@@ -28,10 +28,10 @@ import type {
   UpdatePromoProgramInput,
   VoidCouponInput,
   VoidCouponOutput,
-} from "./dtos";
+} from './dtos';
 
 // Re-export all DTOs for consumers
-export * from "./dtos";
+export * from './dtos';
 
 // === Promo Service Interface ===
 

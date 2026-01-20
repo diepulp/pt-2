@@ -5,16 +5,16 @@
  * Uses service role client to bypass RLS for test setup/teardown.
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error(
-    "Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY",
+    'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
   );
 }
 
@@ -55,10 +55,10 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Create test casino
   const { data: casino, error: casinoError } = await supabase
-    .from("casino")
+    .from('casino')
     .insert({
       name: `${testPrefix}_casino`,
-      status: "active",
+      status: 'active',
     })
     .select()
     .single();
@@ -69,7 +69,7 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Create test auth user
   const testEmail = `${testPrefix}_staff@test.com`;
-  const testPassword = "TestPassword123!";
+  const testPassword = 'TestPassword123!';
 
   const { data: authData, error: authCreateError } =
     await supabase.auth.admin.createUser({
@@ -86,15 +86,15 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Create test staff user (linked to auth user)
   const { data: staff, error: staffError } = await supabase
-    .from("staff")
+    .from('staff')
     .insert({
       casino_id: casino.id,
       user_id: authData.user.id,
       first_name: `${testPrefix}`,
-      last_name: "Staff",
+      last_name: 'Staff',
       email: testEmail,
-      role: "admin",
-      status: "active",
+      role: 'admin',
+      status: 'active',
     })
     .select()
     .single();
@@ -116,7 +116,7 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Create test player (global entity, no casino_id)
   const { data: player, error: playerError } = await supabase
-    .from("player")
+    .from('player')
     .insert({
       first_name: `${testPrefix}_player_first`,
       last_name: `${testPrefix}_player_last`,
@@ -130,11 +130,11 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Link player to casino via player_casino junction table
   const { error: playerCasinoError } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .insert({
       player_id: player.id,
       casino_id: casino.id,
-      status: "active",
+      status: 'active',
     });
 
   if (playerCasinoError) {
@@ -145,12 +145,12 @@ export async function createTestScenario(): Promise<TestScenario> {
 
   // Create test table
   const { data: table, error: tableError } = await supabase
-    .from("gaming_table")
+    .from('gaming_table')
     .insert({
       casino_id: casino.id,
       label: `${testPrefix}_table`,
-      type: "blackjack",
-      status: "inactive",
+      type: 'blackjack',
+      status: 'inactive',
     })
     .select()
     .single();
@@ -163,15 +163,15 @@ export async function createTestScenario(): Promise<TestScenario> {
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   const visitId = crypto.randomUUID();
   const { data: visit, error: visitError } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       id: visitId,
       casino_id: casino.id,
       player_id: player.id,
       started_at: new Date().toISOString(),
-      visit_kind: "gaming_identified_rated",
+      visit_kind: 'gaming_identified_rated',
       visit_group_id: visitId, // Self-reference for new visit group
-      gaming_day: "1970-01-01", // Overwritten by trigger
+      gaming_day: '1970-01-01', // Overwritten by trigger
     })
     .select()
     .single();
@@ -183,13 +183,13 @@ export async function createTestScenario(): Promise<TestScenario> {
   // Cleanup function to remove all test data
   const cleanup = async () => {
     // Delete in reverse dependency order
-    await supabase.from("rating_slip").delete().eq("casino_id", casino.id);
-    await supabase.from("visit").delete().eq("id", visit.id);
-    await supabase.from("gaming_table").delete().eq("id", table.id);
-    await supabase.from("player_casino").delete().eq("player_id", player.id);
-    await supabase.from("player").delete().eq("id", player.id);
-    await supabase.from("staff").delete().eq("id", staff.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('rating_slip').delete().eq('casino_id', casino.id);
+    await supabase.from('visit').delete().eq('id', visit.id);
+    await supabase.from('gaming_table').delete().eq('id', table.id);
+    await supabase.from('player_casino').delete().eq('player_id', player.id);
+    await supabase.from('player').delete().eq('id', player.id);
+    await supabase.from('staff').delete().eq('id', staff.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     // Delete auth user
     await supabase.auth.admin.deleteUser(authData.user.id);
   };

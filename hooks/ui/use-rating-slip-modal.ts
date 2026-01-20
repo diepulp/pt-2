@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from 'zustand/react/shallow';
 
-import { useRatingSlipModalStore } from "@/store/rating-slip-modal-store";
+import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 /**
  * Full selector hook for RatingSlipModalStore with all state and actions.

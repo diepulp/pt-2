@@ -8,16 +8,16 @@
  * @see EXECUTION-SPEC-PRD-004.md WS3
  */
 
-import { serializeKeyFilters } from "@/services/shared/key-utils";
+import { serializeKeyFilters } from '@/services/shared/key-utils';
 
-import type { LedgerListQuery } from "./dtos";
+import type { LedgerListQuery } from './dtos';
 
-const ROOT = ["loyalty"] as const;
+const ROOT = ['loyalty'] as const;
 
 // Helper to serialize filters
 type LedgerFilters = Omit<
   LedgerListQuery,
-  "casinoId" | "playerId" | "cursor" | "limit"
+  'casinoId' | 'playerId' | 'cursor' | 'limit'
 >;
 
 const serializeLedgerFilters = (filters: LedgerFilters = {}): string =>
@@ -31,7 +31,7 @@ export const loyaltyKeys = {
 
   /** Player loyalty balance and tier info */
   balance: (playerId: string, casinoId: string) =>
-    [...ROOT, "balance", casinoId, playerId] as const,
+    [...ROOT, 'balance', casinoId, playerId] as const,
 
   // === Ledger Queries ===
 
@@ -43,12 +43,12 @@ export const loyaltyKeys = {
     (playerId: string, casinoId: string, filters: LedgerFilters = {}) =>
       [
         ...ROOT,
-        "ledger",
+        'ledger',
         casinoId,
         playerId,
         serializeLedgerFilters(filters),
       ] as const,
-    { scope: [...ROOT, "ledger"] as const },
+    { scope: [...ROOT, 'ledger'] as const },
   ),
 
   /**
@@ -61,7 +61,7 @@ export const loyaltyKeys = {
   ) =>
     [
       ...ROOT,
-      "ledger-infinite",
+      'ledger-infinite',
       casinoId,
       playerId,
       serializeLedgerFilters(filters),
@@ -74,34 +74,34 @@ export const loyaltyKeys = {
    * Used for live preview during rating slip session.
    */
   suggestion: (ratingSlipId: string) =>
-    [...ROOT, "suggestion", ratingSlipId] as const,
+    [...ROOT, 'suggestion', ratingSlipId] as const,
 
   // === Mutation Keys ===
 
   /** Key for base accrual mutation */
-  accrue: () => [...ROOT, "accrue"] as const,
+  accrue: () => [...ROOT, 'accrue'] as const,
 
   /** Key for redemption mutation */
-  redeem: () => [...ROOT, "redeem"] as const,
+  redeem: () => [...ROOT, 'redeem'] as const,
 
   /** Key for manual credit mutation */
-  manualCredit: () => [...ROOT, "manual-credit"] as const,
+  manualCredit: () => [...ROOT, 'manual-credit'] as const,
 
   /** Key for promotion mutation */
-  promotion: () => [...ROOT, "promotion"] as const,
+  promotion: () => [...ROOT, 'promotion'] as const,
 
   // === Promo Instrument Keys (PRD-LOYALTY-PROMO) ===
 
   /** List promo programs with optional filters */
   promoPrograms: Object.assign(
     (filters: { status?: string; activeOnly?: boolean } = {}) =>
-      [...ROOT, "promo-programs", serializeKeyFilters(filters)] as const,
-    { scope: [...ROOT, "promo-programs"] as const },
+      [...ROOT, 'promo-programs', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'promo-programs'] as const },
   ),
 
   /** Single promo program by ID */
   promoProgram: (programId: string) =>
-    [...ROOT, "promo-program", programId] as const,
+    [...ROOT, 'promo-program', programId] as const,
 
   /** List promo coupons with optional filters */
   promoCoupons: Object.assign(
@@ -112,22 +112,22 @@ export const loyaltyKeys = {
         playerId?: string;
         visitId?: string;
       } = {},
-    ) => [...ROOT, "promo-coupons", serializeKeyFilters(filters)] as const,
-    { scope: [...ROOT, "promo-coupons"] as const },
+    ) => [...ROOT, 'promo-coupons', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'promo-coupons'] as const },
   ),
 
   /** Single promo coupon by ID */
   promoCoupon: (couponId: string) =>
-    [...ROOT, "promo-coupon", couponId] as const,
+    [...ROOT, 'promo-coupon', couponId] as const,
 
   /** Promo coupon by validation number */
   promoCouponByValidation: (validationNumber: string) =>
-    [...ROOT, "promo-coupon-validation", validationNumber] as const,
+    [...ROOT, 'promo-coupon-validation', validationNumber] as const,
 
   /** Promo coupon inventory summary */
   promoCouponInventory: (
     filters: { promoProgramId?: string; status?: string } = {},
-  ) => [...ROOT, "promo-inventory", serializeKeyFilters(filters)] as const,
+  ) => [...ROOT, 'promo-inventory', serializeKeyFilters(filters)] as const,
 
   /** Promo exposure rollup (shift dashboard) */
   promoExposureRollup: (
@@ -137,16 +137,16 @@ export const loyaltyKeys = {
       fromTs?: string;
       toTs?: string;
     } = {},
-  ) => [...ROOT, "promo-exposure", serializeKeyFilters(filters)] as const,
+  ) => [...ROOT, 'promo-exposure', serializeKeyFilters(filters)] as const,
 
   // === Promo Mutation Keys ===
 
   /** Key for issue coupon mutation */
-  issueCoupon: () => [...ROOT, "issue-coupon"] as const,
+  issueCoupon: () => [...ROOT, 'issue-coupon'] as const,
 
   /** Key for void coupon mutation */
-  voidCoupon: () => [...ROOT, "void-coupon"] as const,
+  voidCoupon: () => [...ROOT, 'void-coupon'] as const,
 
   /** Key for replace coupon mutation */
-  replaceCoupon: () => [...ROOT, "replace-coupon"] as const,
+  replaceCoupon: () => [...ROOT, 'replace-coupon'] as const,
 };

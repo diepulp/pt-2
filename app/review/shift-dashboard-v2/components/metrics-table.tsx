@@ -7,23 +7,23 @@
  * @see IMPLEMENTATION_STRATEGY.md §3.2 Zone E
  */
 
-"use client";
+'use client';
 
-import { ChevronRightIcon } from "lucide-react";
-import { useState } from "react";
+import { ChevronRightIcon } from 'lucide-react';
+import { useState } from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type {
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
-} from "@/services/table-context/shift-metrics/dtos";
+} from '@/services/table-context/shift-metrics/dtos';
 
-import { getTelemetryQualityColor } from "../lib/colors";
-import { formatCurrency } from "../lib/format";
+import { getTelemetryQualityColor } from '../lib/colors';
+import { formatCurrency } from '../lib/format';
 
 export interface MetricsTableProps {
   /** Casino summary (optional) for tab display */
@@ -49,11 +49,11 @@ export interface MetricsTableProps {
 function QualityDots({
   quality,
 }: {
-  quality: "GOOD_COVERAGE" | "LOW_COVERAGE" | "NONE";
+  quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
 }) {
   const config = getTelemetryQualityColor(quality);
   const filled =
-    quality === "GOOD_COVERAGE" ? 4 : quality === "LOW_COVERAGE" ? 2 : 0;
+    quality === 'GOOD_COVERAGE' ? 4 : quality === 'LOW_COVERAGE' ? 2 : 0;
 
   return (
     <div className="flex gap-0.5">
@@ -61,7 +61,7 @@ function QualityDots({
         <div
           key={i}
           className={`h-2 w-2 rounded-full ${
-            i < filled ? config.bg : "bg-slate-700"
+            i < filled ? config.bg : 'bg-slate-700'
           }`}
         />
       ))}
@@ -78,11 +78,11 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
       variant="outline"
       className={
         isActive
-          ? "border-emerald-500/50 text-emerald-500 text-[10px]"
-          : "border-slate-500/50 text-slate-500 text-[10px]"
+          ? 'border-emerald-500/50 text-emerald-500 text-[10px]'
+          : 'border-slate-500/50 text-slate-500 text-[10px]'
       }
     >
-      {isActive ? "Active" : "Inactive"}
+      {isActive ? 'Active' : 'Inactive'}
     </Badge>
   );
 }
@@ -204,20 +204,20 @@ export function MetricsTable({
   onPitSelect,
   onTableSelect,
 }: MetricsTableProps) {
-  const [activeTab, setActiveTab] = useState<"casino" | "pit" | "table">(
-    "casino",
+  const [activeTab, setActiveTab] = useState<'casino' | 'pit' | 'table'>(
+    'casino',
   );
   const [selectedPitId, setSelectedPitId] = useState<string | null>(null);
 
   const handlePitSelect = (pitId: string) => {
     setSelectedPitId(pitId);
-    setActiveTab("table");
+    setActiveTab('table');
     onPitSelect?.(pitId);
   };
 
   const handleBackToCasino = () => {
     setSelectedPitId(null);
-    setActiveTab("casino");
+    setActiveTab('casino');
   };
 
   // Filter tables by selected pit
@@ -229,7 +229,7 @@ export function MetricsTable({
     <Card className="overflow-hidden">
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "casino" | "pit" | "table")}
+        onValueChange={(v) => setActiveTab(v as 'casino' | 'pit' | 'table')}
       >
         {/* Tab header */}
         <div className="flex items-center justify-between border-b border-border px-4 py-2">

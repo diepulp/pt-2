@@ -9,22 +9,22 @@
  * @see PRD-009 Player Financial Service
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   FinancialTransactionDTO,
   FinancialTxnListQuery,
   VisitFinancialSummaryDTO,
-} from "@/services/player-financial/dtos";
+} from '@/services/player-financial/dtos';
 import {
   getFinancialTransaction,
   listFinancialTransactions,
   getVisitFinancialSummary,
-} from "@/services/player-financial/http";
+} from '@/services/player-financial/http';
 
-import { playerFinancialKeys } from "./keys";
+import { playerFinancialKeys } from './keys';
 
 /**
  * Fetches a single financial transaction by ID.

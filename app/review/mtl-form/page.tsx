@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { MtlEntryForm } from "./mtl-entry-form";
+import { MtlEntryForm } from './mtl-entry-form';
 
 export default function MtlFormReviewPage() {
   return (
@@ -13,7 +13,7 @@ export default function MtlFormReviewPage() {
             linear-gradient(to right, hsl(var(--foreground)) 1px, transparent 1px),
             linear-gradient(to bottom, hsl(var(--foreground)) 1px, transparent 1px)
           `,
-          backgroundSize: "40px 40px",
+          backgroundSize: '40px 40px',
         }}
       />
 
@@ -40,11 +40,11 @@ export default function MtlFormReviewPage() {
                     Gaming Day
                   </div>
                   <div className="font-mono text-sm font-medium">
-                    {new Date().toLocaleDateString("en-US", {
-                      weekday: "short",
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
+                    {new Date().toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
                     })}
                   </div>
                 </div>

@@ -8,7 +8,7 @@
  * Transport: Route Handler ONLY (hardware integration, no Server Action)
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -16,11 +16,11 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { logInventorySnapshot } from "@/services/table-context/chip-custody";
-import { logInventorySnapshotSchema } from "@/services/table-context/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { logInventorySnapshot } from '@/services/table-context/chip-custody';
+import { logInventorySnapshotSchema } from '@/services/table-context/schemas';
 
 /**
  * POST /api/v1/table-context/inventory-snapshots
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: snapshot,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "log-inventory-snapshot",
+        domain: 'table-context',
+        action: 'log-inventory-snapshot',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

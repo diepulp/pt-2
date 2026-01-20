@@ -18,7 +18,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      'fixed inset-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0',
+      'fixed inset-0 z-50 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 print:hidden',
       className,
     )}
     {...props}
@@ -36,12 +36,13 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         'fixed left-1/2 top-1/2 z-50 grid w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 gap-6 border border-border bg-card p-8 shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:zoom-in-95 data-[state=closed]:zoom-out-95 data-[state=open]:fade-in-0 data-[state=closed]:fade-out-0 sm:rounded-lg',
+        'print:static print:transform-none print:max-w-none print:w-full print:h-auto print:shadow-none print:border-none print:p-0 print:bg-white',
         className,
       )}
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute right-6 top-6 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none">
+      <DialogPrimitive.Close className="absolute right-6 top-6 inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-opacity hover:text-foreground focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none print:hidden">
         <X className="size-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>

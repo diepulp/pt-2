@@ -1,13 +1,13 @@
-"use client";
+'use client';
 
-import { Clock, Loader2, Users } from "lucide-react";
+import { Clock, Loader2, Users } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useClosedSlipsForGamingDay } from "@/hooks/rating-slip";
-import { cn } from "@/lib/utils";
-import type { ClosedSlipForGamingDayDTO } from "@/services/rating-slip/dtos";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useClosedSlipsForGamingDay } from '@/hooks/rating-slip';
+import { cn } from '@/lib/utils';
+import type { ClosedSlipForGamingDayDTO } from '@/services/rating-slip/dtos';
 
 interface ClosedSessionsPanelProps {
   casinoId: string;
@@ -45,7 +45,7 @@ export function ClosedSessionsPanel({
 
   // Format duration as HH:MM:SS
   const formatDuration = (seconds: number | null) => {
-    if (seconds === null) return "--:--";
+    if (seconds === null) return '--:--';
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
@@ -57,16 +57,16 @@ export function ClosedSessionsPanel({
 
   // Format time as HH:MM AM/PM
   const formatTime = (timestamp: string) => {
-    return new Date(timestamp).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+    return new Date(timestamp).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: true,
     });
   };
 
   // Format currency
   const formatCurrency = (amount: number | null) => {
-    if (amount === null) return "--";
+    if (amount === null) return '--';
     return `$${amount.toLocaleString()}`;
   };
 
@@ -107,7 +107,7 @@ export function ClosedSessionsPanel({
           Failed to load closed sessions
         </div>
         <p className="text-xs text-muted-foreground mt-1">
-          {error instanceof Error ? error.message : "Unknown error"}
+          {error instanceof Error ? error.message : 'Unknown error'}
         </p>
       </div>
     );
@@ -126,14 +126,14 @@ export function ClosedSessionsPanel({
               Closed Sessions
             </h2>
             <p className="text-sm text-muted-foreground">
-              Gaming Day: {gamingDay ?? "Loading..."}
+              Gaming Day: {gamingDay ?? 'Loading...'}
             </p>
           </div>
         </div>
 
         {/* Session count badge */}
         <Badge variant="secondary" className="text-xs font-mono">
-          {closedSlips.length} session{closedSlips.length !== 1 ? "s" : ""}
+          {closedSlips.length} session{closedSlips.length !== 1 ? 's' : ''}
         </Badge>
       </div>
 
@@ -169,7 +169,7 @@ export function ClosedSessionsPanel({
                         Loading...
                       </>
                     ) : (
-                      "Load More"
+                      'Load More'
                     )}
                   </Button>
                 </div>
@@ -238,25 +238,25 @@ function ClosedSlipRow({
 }) {
   const playerName = slip.player
     ? `${slip.player.first_name} ${slip.player.last_name}`
-    : "Unrated Player";
+    : 'Unrated Player';
 
   return (
     <button
       onClick={onStartFromPrevious}
       className={cn(
-        "w-full relative flex items-start gap-4 p-3 rounded-lg",
-        "border border-border/40 bg-card/30",
-        "hover:bg-muted/30 hover:border-accent/30 transition-all group text-left",
-        "focus:outline-none focus:ring-2 focus:ring-accent/50",
+        'w-full relative flex items-start gap-4 p-3 rounded-lg',
+        'border border-border/40 bg-card/30',
+        'hover:bg-muted/30 hover:border-accent/30 transition-all group text-left',
+        'focus:outline-none focus:ring-2 focus:ring-accent/50',
       )}
     >
       {/* Player indicator */}
       <div
         className={cn(
-          "flex items-center justify-center w-10 h-10 rounded-lg border",
+          'flex items-center justify-center w-10 h-10 rounded-lg border',
           slip.player
-            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-            : "bg-amber-500/20 text-amber-400 border-amber-500/30",
+            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+            : 'bg-amber-500/20 text-amber-400 border-amber-500/30',
         )}
       >
         <Users className="h-4 w-4" />

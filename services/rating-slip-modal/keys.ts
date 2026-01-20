@@ -32,11 +32,11 @@
  */
 export const ratingSlipModalKeys = {
   /** Root scope for all rating slip modal queries */
-  scope: ["rating-slip-modal"] as const,
+  scope: ['rating-slip-modal'] as const,
 
   /**
    * Query key for modal data fetch.
    * @param slipId - Rating slip UUID
    */
-  data: (slipId: string) => ["rating-slip-modal", "data", slipId] as const,
+  data: (slipId: string) => ['rating-slip-modal', 'data', slipId] as const,
 } as const;

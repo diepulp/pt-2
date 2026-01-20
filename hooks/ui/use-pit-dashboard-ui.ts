@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from 'zustand/react/shallow';
 
-import { usePitDashboardStore } from "@/store/pit-dashboard-store";
+import { usePitDashboardStore } from '@/store/pit-dashboard-store';
 
 /**
  * Selector hook for pit dashboard UI state.

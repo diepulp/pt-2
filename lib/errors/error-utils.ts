@@ -8,9 +8,9 @@
  * @see docs/20-architecture/specs/ERROR_TAXONOMY_AND_RESILIENCE.md
  */
 
-import { FetchError } from "@/lib/http/fetch-json";
+import { FetchError } from '@/lib/http/fetch-json';
 
-import { DomainError } from "./domain-errors";
+import { DomainError } from './domain-errors';
 
 // ============================================================================
 // TYPES
@@ -60,7 +60,7 @@ export function serializeError(error: unknown): SerializableError {
       code: error.code,
       status: error.status,
       details: error.details,
-      stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
     };
   }
 
@@ -72,7 +72,7 @@ export function serializeError(error: unknown): SerializableError {
       status: error.httpStatus,
       details: error.details,
       retryable: error.retryable,
-      stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
     };
   }
 
@@ -80,16 +80,16 @@ export function serializeError(error: unknown): SerializableError {
     return {
       name: error.name,
       message: error.message,
-      stack: process.env.NODE_ENV !== "production" ? error.stack : undefined,
+      stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
     };
   }
 
   // Handle non-Error objects
-  if (typeof error === "string") {
-    return { name: "Error", message: error };
+  if (typeof error === 'string') {
+    return { name: 'Error', message: error };
   }
 
-  return { name: "UnknownError", message: String(error) };
+  return { name: 'UnknownError', message: String(error) };
 }
 
 // ============================================================================
@@ -106,12 +106,12 @@ export function serializeError(error: unknown): SerializableError {
  * @returns Clean error message suitable for user display
  */
 export function getErrorMessage(error: unknown): string {
-  if (!error) return "An unexpected error occurred";
+  if (!error) return 'An unexpected error occurred';
 
   if (error instanceof FetchError) {
     // FetchError.message already includes the clean domain message
     // Remove "FetchError: " prefix if present
-    return error.message.replace(/^FetchError:\s*/i, "");
+    return error.message.replace(/^FetchError:\s*/i, '');
   }
 
   if (error instanceof DomainError) {
@@ -122,11 +122,11 @@ export function getErrorMessage(error: unknown): string {
     return error.message;
   }
 
-  if (typeof error === "string") {
+  if (typeof error === 'string') {
     return error;
   }
 
-  return "An unexpected error occurred";
+  return 'An unexpected error occurred';
 }
 
 /**
@@ -151,7 +151,7 @@ export function isRetryableError(error: unknown): boolean {
   }
 
   // Network errors are typically retryable
-  if (error instanceof TypeError && error.message.includes("fetch")) {
+  if (error instanceof TypeError && error.message.includes('fetch')) {
     return true;
   }
 
@@ -183,7 +183,7 @@ export function isRetryableError(error: unknown): boolean {
  */
 export function logError(error: unknown, context: ErrorContext): void {
   // Only log in development
-  if (process.env.NODE_ENV === "production") {
+  if (process.env.NODE_ENV === 'production') {
     return;
   }
 
@@ -237,10 +237,10 @@ export function isDomainError(error: unknown): error is DomainError {
  */
 export function isValidationError(error: unknown): boolean {
   if (error instanceof FetchError) {
-    return error.code === "VALIDATION_ERROR";
+    return error.code === 'VALIDATION_ERROR';
   }
   if (error instanceof DomainError) {
-    return error.code === "VALIDATION_ERROR";
+    return error.code === 'VALIDATION_ERROR';
   }
   return false;
 }
@@ -250,10 +250,10 @@ export function isValidationError(error: unknown): boolean {
  */
 export function isNotFoundError(error: unknown): boolean {
   if (error instanceof FetchError) {
-    return error.status === 404 || error.code.includes("NOT_FOUND");
+    return error.status === 404 || error.code.includes('NOT_FOUND');
   }
   if (error instanceof DomainError) {
-    return error.httpStatus === 404 || error.code.includes("NOT_FOUND");
+    return error.httpStatus === 404 || error.code.includes('NOT_FOUND');
   }
   return false;
 }
@@ -265,17 +265,17 @@ export function isConflictError(error: unknown): boolean {
   if (error instanceof FetchError) {
     return (
       error.status === 409 ||
-      error.code === "UNIQUE_VIOLATION" ||
-      error.code.includes("DUPLICATE") ||
-      error.code.includes("ALREADY")
+      error.code === 'UNIQUE_VIOLATION' ||
+      error.code.includes('DUPLICATE') ||
+      error.code.includes('ALREADY')
     );
   }
   if (error instanceof DomainError) {
     return (
       error.httpStatus === 409 ||
-      error.code === "UNIQUE_VIOLATION" ||
-      error.code.includes("DUPLICATE") ||
-      error.code.includes("ALREADY")
+      error.code === 'UNIQUE_VIOLATION' ||
+      error.code.includes('DUPLICATE') ||
+      error.code.includes('ALREADY')
     );
   }
   return false;
@@ -294,7 +294,7 @@ interface ValidationDetails {
  * Format validation error details into a user-friendly message.
  */
 export function formatValidationError(error: unknown): string {
-  if (!isFetchError(error) || error.code !== "VALIDATION_ERROR") {
+  if (!isFetchError(error) || error.code !== 'VALIDATION_ERROR') {
     return getErrorMessage(error);
   }
 
@@ -307,16 +307,16 @@ export function formatValidationError(error: unknown): string {
 
   if (details.fieldErrors) {
     const fieldParts = Object.entries(details.fieldErrors)
-      .map(([field, errors]) => `${field}: ${errors.join(", ")}`)
+      .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
       .filter(Boolean);
     if (fieldParts.length > 0) {
-      parts.push(fieldParts.join("; "));
+      parts.push(fieldParts.join('; '));
     }
   }
 
   if (details.formErrors && details.formErrors.length > 0) {
-    parts.push(details.formErrors.join("; "));
+    parts.push(details.formErrors.join('; '));
   }
 
-  return parts.length > 0 ? parts.join(" | ") : error.message;
+  return parts.length > 0 ? parts.join(' | ') : error.message;
 }

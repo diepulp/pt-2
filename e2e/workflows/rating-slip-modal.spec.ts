@@ -11,7 +11,7 @@
  * @see PRD-008a Dashboard Integration
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from '@playwright/test';
 
 import {
   createRatingSlipTestScenario,
@@ -20,12 +20,12 @@ import {
   getRatingSlipsForVisit,
   getTransactionsForVisit,
   type RatingSlipTestScenario,
-} from "../fixtures/rating-slip-fixtures";
+} from '../fixtures/rating-slip-fixtures';
 
 // Test scenario shared across tests in this file
 let scenario: RatingSlipTestScenario;
 
-test.describe("Rating Slip Modal Integration (PRD-008)", () => {
+test.describe('Rating Slip Modal Integration (PRD-008)', () => {
   // Setup: Create test data before all tests
   test.beforeAll(async () => {
     scenario = await createRatingSlipTestScenario();
@@ -43,7 +43,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
    */
   async function authenticateUser(page: Page) {
     // Navigate to login page
-    await page.goto("/auth/login");
+    await page.goto('/auth/login');
 
     // Fill in credentials
     await page.fill('input[name="email"]', scenario.testEmail);
@@ -62,14 +62,14 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
    * Scenario: Click an occupied seat on the pit dashboard table view
    * Expected: Modal opens with correct slip data from BFF endpoint
    */
-  test("clicking occupied seat opens modal with slip data", async ({
+  test('clicking occupied seat opens modal with slip data', async ({
     page,
   }) => {
     // Authenticate
     await authenticateUser(page);
 
     // Navigate to pit dashboard
-    await page.goto("/pit");
+    await page.goto('/pit');
 
     // Wait for tables to load
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -92,7 +92,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
 
     // Verify modal title shows player name
     const modalTitle = modal.locator('[data-testid="modal-title"]');
-    await expect(modalTitle).toContainText("John TestPlayer");
+    await expect(modalTitle).toContainText('John TestPlayer');
 
     // Verify financial summary section is present
     const financialSection = modal.locator('[data-testid="financial-summary"]');
@@ -101,11 +101,11 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
     // Verify loyalty points are displayed
     const loyaltySection = modal.locator('[data-testid="loyalty-points"]');
     await expect(loyaltySection).toBeVisible();
-    await expect(loyaltySection).toContainText("500"); // Initial balance
+    await expect(loyaltySection).toContainText('500'); // Initial balance
 
     // Verify average bet field shows current value
     const averageBetInput = modal.locator('[data-testid="average-bet-input"]');
-    await expect(averageBetInput).toHaveValue("25"); // $25.00 (2500 cents / 100)
+    await expect(averageBetInput).toHaveValue('25'); // $25.00 (2500 cents / 100)
   });
 
   /**
@@ -114,14 +114,14 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
    * Scenario: Modify average bet, enter new buy-in, save changes
    * Expected: Average bet updated, transaction recorded, modal shows updated data
    */
-  test("save changes updates average bet and records buy-in transaction", async ({
+  test('save changes updates average bet and records buy-in transaction', async ({
     page,
   }) => {
     // Authenticate
     await authenticateUser(page);
 
     // Navigate to pit dashboard
-    await page.goto("/pit");
+    await page.goto('/pit');
 
     // Wait for and click on occupied seat
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -142,7 +142,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
 
     // Enter new buy-in amount ($100)
     const buyInInput = modal.locator('[data-testid="new-buyin-input"]');
-    await buyInInput.fill("100");
+    await buyInInput.fill('100');
 
     // Click Save Changes button
     const saveButton = modal.locator('button:has-text("Save Changes")');
@@ -150,8 +150,8 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
     await saveButton.click();
 
     // Wait for save to complete (button should show saving state then return)
-    await expect(saveButton).toHaveText("Saving...", { timeout: 2000 });
-    await expect(saveButton).not.toHaveText("Saving...", { timeout: 5000 });
+    await expect(saveButton).toHaveText('Saving...', { timeout: 2000 });
+    await expect(saveButton).not.toHaveText('Saving...', { timeout: 5000 });
 
     // Verify average bet was updated in database
     const updatedSlip = await getRatingSlipStatus(scenario.ratingSlipId);
@@ -160,15 +160,15 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
     // Verify buy-in transaction was recorded
     const transactions = await getTransactionsForVisit(scenario.visitId);
     const buyInTxn = transactions.find(
-      (t) => t.direction === "in" && t.amount === 10000, // $100.00 in cents
+      (t) => t.direction === 'in' && t.amount === 10000, // $100.00 in cents
     );
     expect(buyInTxn).toBeDefined();
-    expect(buyInTxn?.tender_type).toBe("cash");
-    expect(buyInTxn?.source).toBe("pit");
+    expect(buyInTxn?.tender_type).toBe('cash');
+    expect(buyInTxn?.source).toBe('pit');
 
     // Verify modal shows updated financial summary
     const financialSection = modal.locator('[data-testid="financial-summary"]');
-    await expect(financialSection).toContainText("$100.00"); // Cash In total
+    await expect(financialSection).toContainText('$100.00'); // Cash In total
   });
 
   /**
@@ -177,7 +177,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
    * Scenario: Enter chips-taken amount, close session
    * Expected: Transaction recorded, slip closed, modal closes, slip removed from panel
    */
-  test("close session records chips-taken and closes slip", async ({
+  test('close session records chips-taken and closes slip', async ({
     page,
   }) => {
     // Create a fresh slip for this test (so we don't close the shared one)
@@ -194,7 +194,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
     await authenticateUser(page);
 
     // Navigate to pit dashboard
-    await page.goto("/pit");
+    await page.goto('/pit');
 
     // Wait for and click on occupied seat
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -209,7 +209,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
 
     // Enter chips-taken amount ($75)
     const chipsTakenInput = modal.locator('[data-testid="chips-taken-input"]');
-    await chipsTakenInput.fill("75");
+    await chipsTakenInput.fill('75');
 
     // Click Close Session button
     const closeButton = modal.locator('button:has-text("Close Session")');
@@ -221,14 +221,14 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
     // Verify chips-taken transaction was recorded
     const transactions = await getTransactionsForVisit(scenario.visitId);
     const chipsOutTxn = transactions.find(
-      (t) => t.direction === "out" && t.amount === 7500, // $75.00 in cents
+      (t) => t.direction === 'out' && t.amount === 7500, // $75.00 in cents
     );
     expect(chipsOutTxn).toBeDefined();
-    expect(chipsOutTxn?.tender_type).toBe("chips");
+    expect(chipsOutTxn?.tender_type).toBe('chips');
 
     // Verify slip status is closed
     const closedSlip = await getRatingSlipStatus(scenario.ratingSlipId);
-    expect(closedSlip.status).toBe("closed");
+    expect(closedSlip.status).toBe('closed');
 
     // Verify slip is removed from active slips panel
     const activeSlipsPanel = page.locator('[data-testid="active-slips-panel"]');
@@ -244,7 +244,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
    * Scenario: Select destination table, enter seat, move player
    * Expected: Current slip closed, new slip at destination with same visit_id
    */
-  test("move player creates new slip at destination with same visit", async ({
+  test('move player creates new slip at destination with same visit', async ({
     page,
   }) => {
     // For this test, we need an open slip
@@ -253,14 +253,14 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
 
     try {
       // Authenticate with the new scenario's credentials
-      await page.goto("/auth/login");
+      await page.goto('/auth/login');
       await page.fill('input[name="email"]', moveScenario.testEmail);
       await page.fill('input[name="password"]', moveScenario.testPassword);
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
 
       // Navigate to pit dashboard
-      await page.goto("/pit");
+      await page.goto('/pit');
 
       // Wait for and click on occupied seat
       await page.waitForSelector('[data-testid="table-grid"]', {
@@ -287,7 +287,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
 
       // Enter destination seat number
       const seatInput = modal.locator('[data-testid="move-seat-input"]');
-      await seatInput.fill("3");
+      await seatInput.fill('3');
 
       // Click Move Player button
       const moveButton = modal.locator('button:has-text("Move Player")');
@@ -297,23 +297,23 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
       // Wait for move to complete (modal should refresh with new slip)
       await page.waitForResponse(
         (resp) =>
-          resp.url().includes("/api/v1/rating-slips/") &&
-          resp.url().includes("/move") &&
+          resp.url().includes('/api/v1/rating-slips/') &&
+          resp.url().includes('/move') &&
           resp.status() === 200,
         { timeout: 5000 },
       );
 
       // Verify in database: original slip closed
       const originalSlip = await getRatingSlipStatus(moveScenario.ratingSlipId);
-      expect(originalSlip.status).toBe("closed");
+      expect(originalSlip.status).toBe('closed');
 
       // Verify new slip created at destination
       const slips = await getRatingSlipsForVisit(moveScenario.visitId);
       const newSlip = slips.find(
         (s) =>
-          s.status === "open" &&
+          s.status === 'open' &&
           s.table_id === moveScenario.secondaryTableId &&
-          s.seat_number === "3",
+          s.seat_number === '3',
       );
       expect(newSlip).toBeDefined();
       expect(newSlip?.visit_id).toBe(moveScenario.visitId); // Same visit for session continuity
@@ -337,7 +337,7 @@ test.describe("Rating Slip Modal Integration (PRD-008)", () => {
  * These tests verify the /api/v1/rating-slips/[id]/modal-data endpoint
  * directly, without browser interaction.
  */
-test.describe("Rating Slip Modal BFF Endpoint", () => {
+test.describe('Rating Slip Modal BFF Endpoint', () => {
   let apiScenario: RatingSlipTestScenario;
 
   test.beforeAll(async () => {
@@ -349,9 +349,9 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
       apiScenario.visitId,
       apiScenario.playerId,
       apiScenario.staffId,
-      "in",
+      'in',
       5000, // $50.00
-      "cash",
+      'cash',
     );
   });
 
@@ -361,7 +361,7 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     }
   });
 
-  test("GET /modal-data returns aggregated data from 5 services", async ({
+  test('GET /modal-data returns aggregated data from 5 services', async ({
     request,
   }) => {
     const response = await request.get(
@@ -388,14 +388,14 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     expect(data.slip.visitId).toBe(apiScenario.visitId);
     expect(data.slip.tableId).toBe(apiScenario.tableId);
     expect(data.slip.seatNumber).toBe(apiScenario.seatNumber);
-    expect(data.slip.status).toBe("open");
+    expect(data.slip.status).toBe('open');
     expect(data.slip.averageBet).toBe(2500); // $25.00 in cents
 
     // Player section
     expect(data.player).toBeDefined();
     expect(data.player.id).toBe(apiScenario.playerId);
-    expect(data.player.firstName).toBe("John");
-    expect(data.player.lastName).toBe("TestPlayer");
+    expect(data.player.firstName).toBe('John');
+    expect(data.player.lastName).toBe('TestPlayer');
 
     // Financial section
     expect(data.financial).toBeDefined();
@@ -406,10 +406,10 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     expect(Array.isArray(data.tables)).toBe(true);
   });
 
-  test("GET /modal-data returns 404 for non-existent slip", async ({
+  test('GET /modal-data returns 404 for non-existent slip', async ({
     request,
   }) => {
-    const fakeSlipId = "00000000-0000-0000-0000-000000000000";
+    const fakeSlipId = '00000000-0000-0000-0000-000000000000';
 
     const response = await request.get(
       `/api/v1/rating-slips/${fakeSlipId}/modal-data`,
@@ -423,10 +423,10 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     expect(response.status()).toBe(404);
     const body = await response.json();
     expect(body.ok).toBe(false);
-    expect(body.code).toBe("RATING_SLIP_NOT_FOUND");
+    expect(body.code).toBe('RATING_SLIP_NOT_FOUND');
   });
 
-  test("POST /move validates destination seat availability", async ({
+  test('POST /move validates destination seat availability', async ({
     request,
   }) => {
     // Try to move to an occupied seat (same seat we're already at)
@@ -435,8 +435,8 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
       {
         headers: {
           Authorization: `Bearer ${apiScenario.authToken}`,
-          "Idempotency-Key": `e2e_move_test_${Date.now()}`,
-          "Content-Type": "application/json",
+          'Idempotency-Key': `e2e_move_test_${Date.now()}`,
+          'Content-Type': 'application/json',
         },
         data: {
           destinationTableId: apiScenario.tableId,
@@ -448,10 +448,10 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
     // Should fail because seat is occupied by current slip
     expect(response.status()).toBe(400);
     const body = await response.json();
-    expect(body.code).toBe("SEAT_ALREADY_OCCUPIED");
+    expect(body.code).toBe('SEAT_ALREADY_OCCUPIED');
   });
 
-  test("POST /move succeeds with valid destination", async ({ request }) => {
+  test('POST /move succeeds with valid destination', async ({ request }) => {
     // Create a fresh scenario for this test
     const moveApiScenario = await createRatingSlipTestScenario();
 
@@ -461,12 +461,12 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
         {
           headers: {
             Authorization: `Bearer ${moveApiScenario.authToken}`,
-            "Idempotency-Key": `e2e_move_success_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_move_success_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: moveApiScenario.secondaryTableId,
-            destinationSeatNumber: "5",
+            destinationSeatNumber: '5',
           },
         },
       );
@@ -482,7 +482,7 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
       const newSlip = slips.find((s) => s.id === body.data.newSlipId);
       expect(newSlip).toBeDefined();
       expect(newSlip?.table_id).toBe(moveApiScenario.secondaryTableId);
-      expect(newSlip?.seat_number).toBe("5");
+      expect(newSlip?.seat_number).toBe('5');
       expect(newSlip?.visit_id).toBe(moveApiScenario.visitId);
     } finally {
       await moveApiScenario.cleanup();
@@ -503,7 +503,7 @@ test.describe("Rating Slip Modal BFF Endpoint", () => {
  * @see PRD-019 Rating Slip Modal UX Refinements
  * @see EXECUTION-SPEC-PRD-019.md
  */
-test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
+test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
   let scenario: RatingSlipTestScenario;
 
   test.beforeAll(async () => {
@@ -520,7 +520,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * Helper: Authenticate via browser
    */
   async function authenticateUser(page: Page) {
-    await page.goto("/auth/login");
+    await page.goto('/auth/login');
     await page.fill('input[name="email"]', scenario.testEmail);
     await page.fill('input[name="password"]', scenario.testPassword);
     await page.click('button[type="submit"]');
@@ -535,7 +535,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * - New slip modal does NOT auto-open
    * - Success toast displayed
    */
-  test("move player updates seat optimistically without auto-opening new slip modal", async ({
+  test('move player updates seat optimistically without auto-opening new slip modal', async ({
     page,
   }) => {
     // Create a fresh scenario for this test
@@ -543,14 +543,14 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
 
     try {
       // Authenticate
-      await page.goto("/auth/login");
+      await page.goto('/auth/login');
       await page.fill('input[name="email"]', moveScenario.testEmail);
       await page.fill('input[name="password"]', moveScenario.testPassword);
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
 
       // Navigate to pit dashboard
-      await page.goto("/pit");
+      await page.goto('/pit');
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -575,7 +575,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
 
       // Enter destination seat
       const seatInput = modal.locator('[data-testid="move-seat-input"]');
-      await seatInput.fill("3");
+      await seatInput.fill('3');
 
       // Click Move Player
       const moveButton = modal.locator('button:has-text("Move Player")');
@@ -592,7 +592,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
       const originalSeat = page.locator(
         `[data-seat-number="${moveScenario.seatNumber}"]`,
       );
-      await expect(originalSeat).not.toHaveAttribute("data-occupied", "true");
+      await expect(originalSeat).not.toHaveAttribute('data-occupied', 'true');
 
       // User can manually click destination seat to open new slip
       // (Not verifying this as it would require navigating to different table)
@@ -609,7 +609,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * - Success toast displayed
    * - Modal stays open on error
    */
-  test("save changes closes modal and shows success toast", async ({
+  test('save changes closes modal and shows success toast', async ({
     page,
   }) => {
     // Create fresh scenario
@@ -617,14 +617,14 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
 
     try {
       // Authenticate
-      await page.goto("/auth/login");
+      await page.goto('/auth/login');
       await page.fill('input[name="email"]', saveScenario.testEmail);
       await page.fill('input[name="password"]', saveScenario.testPassword);
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
 
       // Navigate to pit and open modal
-      await page.goto("/pit");
+      await page.goto('/pit');
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -668,12 +668,12 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * - Loading spinner appears during fetch
    * - Balance updates after refresh
    */
-  test("points refresh button triggers data refetch", async ({ page }) => {
+  test('points refresh button triggers data refetch', async ({ page }) => {
     // Authenticate
     await authenticateUser(page);
 
     // Navigate to pit and open modal
-    await page.goto("/pit");
+    await page.goto('/pit');
     await page.waitForSelector('[data-testid="table-grid"]', {
       timeout: 10000,
     });
@@ -694,14 +694,14 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
     await refreshButton.click();
 
     // Verify loading state (RefreshCw icon should have animate-spin class)
-    const spinningIcon = refreshButton.locator("svg.animate-spin");
+    const spinningIcon = refreshButton.locator('svg.animate-spin');
     await expect(spinningIcon).toBeVisible({ timeout: 1000 });
 
     // Wait for loading to complete
     await expect(spinningIcon).not.toBeVisible({ timeout: 5000 });
 
     // Points balance should still be displayed (value may vary)
-    const pointsDisplay = modal.locator("text=/\\d+/").first();
+    const pointsDisplay = modal.locator('text=/\\d+/').first();
     await expect(pointsDisplay).toBeVisible();
   });
 
@@ -713,7 +713,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * - Net Position recalculates
    * - No save required for display update
    */
-  test("chips taken input reactively updates financial summary", async ({
+  test('chips taken input reactively updates financial summary', async ({
     page,
   }) => {
     // Create scenario with known financial state
@@ -726,20 +726,20 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
         financialScenario.visitId,
         financialScenario.playerId,
         financialScenario.staffId,
-        "in",
+        'in',
         10000, // $100.00
-        "cash",
+        'cash',
       );
 
       // Authenticate
-      await page.goto("/auth/login");
+      await page.goto('/auth/login');
       await page.fill('input[name="email"]', financialScenario.testEmail);
       await page.fill('input[name="password"]', financialScenario.testPassword);
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
 
       // Navigate to pit and open modal
-      await page.goto("/pit");
+      await page.goto('/pit');
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -756,26 +756,26 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
       const chipsOutDisplay = modal.locator(
         '[data-testid="financial-summary"] >> text=/Chips Out.*\\$[\\d.]+/',
       );
-      await expect(chipsOutDisplay).toContainText("$0.00");
+      await expect(chipsOutDisplay).toContainText('$0.00');
 
       // Enter chips taken value ($50)
       const chipsTakenInput = modal.locator(
         '[data-testid="chips-taken-input"]',
       );
-      await chipsTakenInput.fill("50");
+      await chipsTakenInput.fill('50');
 
       // Wait a moment for reactive update
       await page.waitForTimeout(100);
 
       // Verify Chips Out updated immediately (should now show $50.00)
-      await expect(chipsOutDisplay).toContainText("$50.00");
+      await expect(chipsOutDisplay).toContainText('$50.00');
 
       // Verify Net Position recalculated
       // Net = Cash In ($100) - Chips Out ($50) = $50.00
       const netPositionDisplay = modal.locator(
         '[data-testid="financial-summary"] >> text=/Net Position.*\\$[\\d.]+/',
       );
-      await expect(netPositionDisplay).toContainText("$50.00");
+      await expect(netPositionDisplay).toContainText('$50.00');
     } finally {
       await financialScenario.cleanup();
     }
@@ -790,14 +790,14 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
    * - Total Change displays minutes difference
    * - Future time shows validation error
    */
-  test("start time uses datetime picker without broken increment buttons", async ({
+  test('start time uses datetime picker without broken increment buttons', async ({
     page,
   }) => {
     // Authenticate
     await authenticateUser(page);
 
     // Navigate to pit and open modal
-    await page.goto("/pit");
+    await page.goto('/pit');
     await page.waitForSelector('[data-testid="table-grid"]', {
       timeout: 10000,
     });
@@ -825,7 +825,7 @@ test.describe("PRD-019: Rating Slip Modal UX Refinements", () => {
     expect(currentValue).toBeTruthy();
 
     // Verify "Total Change" display exists
-    const totalChangeDisplay = modal.locator("text=/Total Change.*minutes/");
+    const totalChangeDisplay = modal.locator('text=/Total Change.*minutes/');
     await expect(totalChangeDisplay).toBeVisible();
 
     // Try setting a future time - should show validation error

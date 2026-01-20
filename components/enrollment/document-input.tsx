@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 export interface DocumentNumberInputProps {
   /** Current document number value (full number when editing, empty when blank) */
@@ -41,13 +41,13 @@ export interface DocumentNumberInputProps {
 export function DocumentNumberInput({
   value,
   onChange,
-  label = "Document Number",
-  placeholder = "Enter document number",
+  label = 'Document Number',
+  placeholder = 'Enter document number',
   required = false,
   className,
   disabled = false,
   error,
-  id = "document-number",
+  id = 'document-number',
 }: DocumentNumberInputProps) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [internalValue, setInternalValue] = React.useState(value);
@@ -67,7 +67,7 @@ export function DocumentNumberInput({
     }
 
     if (!internalValue || internalValue.length === 0) {
-      return "";
+      return '';
     }
 
     // Extract last 4 characters
@@ -91,7 +91,7 @@ export function DocumentNumberInput({
   };
 
   return (
-    <div className={cn("grid gap-2", className)}>
+    <div className={cn('grid gap-2', className)}>
       <Label htmlFor={id}>
         {label}
         {required && <span className="ml-1 text-destructive">*</span>}

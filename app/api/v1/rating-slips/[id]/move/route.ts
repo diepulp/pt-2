@@ -18,8 +18,8 @@
  * Enhanced response includes seat state arrays for cache optimization.
  */
 
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 import {
   createRequestContext,
@@ -28,16 +28,16 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { ratingSlipRouteParamsSchema } from "@/services/rating-slip/schemas";
-import type { MovePlayerResponse } from "@/services/rating-slip-modal/dtos";
-import { movePlayerViaRPC } from "@/services/rating-slip-modal/rpc";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { ratingSlipRouteParamsSchema } from '@/services/rating-slip/schemas';
+import type { MovePlayerResponse } from '@/services/rating-slip-modal/dtos';
+import { movePlayerViaRPC } from '@/services/rating-slip-modal/rpc';
 import {
   movePlayerSchema,
   type MovePlayerInput,
-} from "@/services/rating-slip-modal/schemas";
+} from '@/services/rating-slip-modal/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: responseData,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -94,8 +94,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "movePlayer",
+        domain: 'rating-slip',
+        action: 'movePlayer',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -104,28 +104,31 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
     if (!result.ok) {
       // result is a ServiceResult, convert to HTTP response directly
+      // Use httpStatus from result if available (set by tracing middleware),
+      // otherwise fall back to deriving from code
       const status =
-        result.code === "NOT_FOUND" || result.code === "RATING_SLIP_NOT_FOUND"
+        result.httpStatus ??
+        (result.code === 'NOT_FOUND' || result.code === 'RATING_SLIP_NOT_FOUND'
           ? 404
-          : result.code === "FORBIDDEN"
+          : result.code === 'FORBIDDEN'
             ? 403
-            : result.code === "UNAUTHORIZED"
+            : result.code === 'UNAUTHORIZED'
               ? 401
-              : result.code === "VALIDATION_ERROR" ||
-                  result.code === "SEAT_OCCUPIED"
+              : result.code === 'VALIDATION_ERROR' ||
+                  result.code === 'SEAT_OCCUPIED'
                 ? 400
-                : result.code === "RATING_SLIP_ALREADY_CLOSED" ||
-                    result.code === "RATING_SLIP_DUPLICATE" ||
-                    result.code === "CONCURRENT_MOVE_DETECTED"
+                : result.code === 'RATING_SLIP_ALREADY_CLOSED' ||
+                    result.code === 'RATING_SLIP_DUPLICATE' ||
+                    result.code === 'CONCURRENT_MOVE_DETECTED'
                   ? 409
-                  : 500;
+                  : 500);
 
       return NextResponse.json(
         {
           ok: false,
           code: result.code,
           status,
-          error: result.error ?? "Unknown error",
+          error: result.error ?? 'Unknown error',
           details: result.details,
           requestId: ctx.requestId,
           durationMs: Date.now() - ctx.startedAt,

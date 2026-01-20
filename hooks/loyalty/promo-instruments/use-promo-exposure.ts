@@ -9,17 +9,17 @@
  * @see PRD-LOYALTY-PROMO
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { loyaltyKeys } from "@/services/loyalty/keys";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { loyaltyKeys } from '@/services/loyalty/keys';
 import type {
   PromoExposureRollupDTO,
   PromoExposureRollupQuery,
-} from "@/services/loyalty/rollups";
-import { getPromoExposureRollup } from "@/services/loyalty/rollups";
+} from '@/services/loyalty/rollups';
+import { getPromoExposureRollup } from '@/services/loyalty/rollups';
 
 /**
  * Fetches promo exposure rollup metrics for shift dashboards.

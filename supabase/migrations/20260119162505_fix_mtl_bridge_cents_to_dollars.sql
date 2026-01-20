@@ -1,19 +1,22 @@
 -- =====================================================
--- Migration: forward_bridge_reverse_guard
+-- Migration: fix_mtl_bridge_cents_to_dollars
 -- Created: 2026-01-19
--- Purpose: Add guard to forward bridge (finance->mtl) to prevent circular
---          triggering when financial transactions originate from MTL entries.
--- Reference: Bidirectional MTL-Financial Bridge Plan
+-- Purpose: Finance-to-MTL bridge trigger - amounts stored in CENTS
+-- Reference: ISSUE-FB8EB717, GAP-MTL-UI-TERMINOLOGY
 -- =====================================================
--- This patch adds G0 (reverse guard) to fn_derive_mtl_from_finance:
---   - Skip if idempotency_key starts with 'mtl:' (from reverse bridge)
---   - Prevents circular: mtl->fin->mtl loop
+-- STANDARDIZATION: All financial amounts stored in CENTS
+--   - player_financial_transaction.amount: CENTS
+--   - mtl_entry.amount: CENTS (standardized)
+--   - table_buyin_telemetry.amount_cents: CENTS
+--
+-- The bridge passes amounts directly without conversion since both
+-- tables now use the same unit (cents).
 -- =====================================================
 
 BEGIN;
 
 -- =====================================================
--- Recreate forward bridge function with reverse guard
+-- Recreate bridge function with cents-to-dollars conversion
 -- =====================================================
 
 CREATE OR REPLACE FUNCTION fn_derive_mtl_from_finance()
@@ -31,18 +34,7 @@ DECLARE
   v_mtl_direction text;
   v_mtl_txn_type mtl_txn_type;
   v_idempotency_key text;
-  v_amount_dollars numeric;
 BEGIN
-  -- =======================================================================
-  -- G0: Skip if this financial transaction was bridged FROM MTL entry
-  -- Prevents circular triggering: mtl->fin->mtl loop
-  -- =======================================================================
-  IF NEW.idempotency_key IS NOT NULL AND NEW.idempotency_key LIKE 'mtl:%' THEN
-    -- This financial transaction was created by fn_derive_finance_from_mtl
-    -- Do not create an MTL entry (would be duplicate)
-    RETURN NEW;
-  END IF;
-
   -- =======================================================================
   -- G1: Context validation (FAIL-CLOSED)
   -- Context MUST be set via set_rls_context_from_staff() prior to this trigger.
@@ -120,14 +112,8 @@ BEGIN
   v_idempotency_key := 'fin:' || NEW.id::text;
 
   -- =======================================================================
-  -- CRITICAL FIX: Convert cents to dollars
-  -- player_financial_transaction stores amounts in CENTS (300000 = $3,000)
-  -- mtl_entry stores amounts in DOLLARS (3000 = $3,000)
-  -- =======================================================================
-  v_amount_dollars := NEW.amount / 100.0;
-
-  -- =======================================================================
-  -- Insert MTL entry row (idempotent) with DOLLARS
+  -- Insert MTL entry row (idempotent)
+  -- Both tables use CENTS - no conversion needed (ISSUE-FB8EB717 fix)
   -- =======================================================================
   INSERT INTO public.mtl_entry (
     patron_uuid,
@@ -150,7 +136,7 @@ BEGIN
     v_actor_id,
     NEW.rating_slip_id,
     NEW.visit_id,
-    v_amount_dollars,  -- FIXED: Now in dollars, not cents
+    NEW.amount,  -- CENTS: Both tables standardized (ISSUE-FB8EB717)
     v_mtl_direction,
     v_mtl_txn_type,
     'table',  -- pit transactions map to 'table' source in MTL
@@ -172,13 +158,11 @@ $$;
 
 COMMENT ON FUNCTION fn_derive_mtl_from_finance() IS
   'PRD-MTL-UI-GAPS WS1: Automatic derivation of mtl_entry from player_financial_transaction. '
-  'SECURITY DEFINER trigger function implementing Guardrails G0-G5 per ADR-015. '
-  'G0: Skip if idempotency_key starts with mtl: (from reverse bridge, prevents circular loop). '
+  'SECURITY DEFINER trigger function implementing Guardrails G1-G5 per ADR-015. '
   'G1: Fail-closed context validation (app.casino_id/app.actor_id must be set). '
   'G2: Tenant invariant check. G3: Actor invariant check. G4: No spoofable params. '
   'G5: Idempotency via fin:{id} key. '
-  'FIX 2026-01-19: Converts cents to dollars (NEW.amount / 100) since financial '
-  'transactions store cents but MTL stores dollars.';
+  'FIX 2026-01-19 (ISSUE-FB8EB717): Both tables now store CENTS - no conversion needed.';
 
 -- =====================================================
 -- Notify PostgREST to reload schema

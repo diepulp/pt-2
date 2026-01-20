@@ -7,19 +7,19 @@
  * Pattern: PRD-LOYALTY-PROMO
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPromoService } from "@/services/loyalty/promo";
-import { promoCouponRouteParamsSchema } from "@/services/loyalty/promo/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPromoService } from '@/services/loyalty/promo';
+import { promoCouponRouteParamsSchema } from '@/services/loyalty/promo/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         const coupon = await service.getCoupon(params.id);
 
         if (!coupon) {
-          throw new DomainError("COUPON_NOT_FOUND", "Promo coupon not found", {
+          throw new DomainError('COUPON_NOT_FOUND', 'Promo coupon not found', {
             httpStatus: 404,
             details: { couponId: params.id },
           });
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: coupon,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -64,8 +64,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-coupons.detail",
+        domain: 'loyalty',
+        action: 'promo-coupons.detail',
         correlationId: ctx.requestId,
       },
     );

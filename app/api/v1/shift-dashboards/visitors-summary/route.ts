@@ -10,18 +10,18 @@
  * @see IMPLEMENTATION_STRATEGY.md §5.2 Active Visitors Donut
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import type { ActiveVisitorsSummaryDTO } from "@/services/table-context/dtos";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import type { ActiveVisitorsSummaryDTO } from '@/services/table-context/dtos';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
         // Run `npm run db:types` after migration to fix
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const { data, error } = await (mwCtx.supabase.rpc as any)(
-          "rpc_shift_active_visitors_summary",
+          'rpc_shift_active_visitors_summary',
         );
 
         if (error) {
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
           return {
             ok: true as const,
-            code: "OK" as const,
+            code: 'OK' as const,
             data: emptyResult,
             requestId: mwCtx.correlationId,
             durationMs: 0,
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: summary,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -84,8 +84,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "table-context",
-        action: "shift-metrics.visitors-summary",
+        domain: 'table-context',
+        action: 'shift-metrics.visitors-summary',
         correlationId: ctx.requestId,
       },
     );

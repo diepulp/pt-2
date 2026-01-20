@@ -8,11 +8,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md §1580-1719
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CreateFloorLayoutDTO,
   FloorLayoutActivationDTO,
@@ -21,12 +21,12 @@ import type {
   FloorLayoutVersionDTO,
   FloorLayoutVersionFilters,
   FloorLayoutVersionWithSlotsDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs for consumers
-export * from "./dtos";
-export { floorLayoutKeys } from "./keys";
-export * as http from "./http";
+export * from './dtos';
+export { floorLayoutKeys } from './keys';
+export * as http from './http';
 
 // === Service Interface ===
 
@@ -101,4 +101,4 @@ export {
   getVersionById,
   listLayouts,
   listVersions,
-} from "./crud";
+} from './crud';

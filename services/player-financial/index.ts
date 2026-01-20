@@ -15,22 +15,22 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section PlayerFinancialService
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CreateFinancialTxnInput,
   FinancialTransactionDTO,
   FinancialTxnListQuery,
   VisitFinancialSummaryDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from "./dtos";
-export * from "./keys";
-export * from "./http";
+export * from './dtos';
+export * from './keys';
+export * from './http';
 
 // === Service Interface ===
 

@@ -7,30 +7,30 @@
  * @see PRD-004 Floor Layout Service
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { uuidSchema, uuidSchemaOptional } from "@/lib/validation";
+import { uuidSchema, uuidSchemaOptional } from '@/lib/validation';
 
 // === Floor Layout Schemas ===
 
 /** Schema for creating a new floor layout */
 export const createFloorLayoutSchema = z.object({
-  casino_id: uuidSchema("casino ID"),
+  casino_id: uuidSchema('casino ID'),
   name: z
     .string()
-    .min(1, "Layout name is required")
-    .max(100, "Layout name too long"),
+    .min(1, 'Layout name is required')
+    .max(100, 'Layout name too long'),
   description: z
     .string()
-    .max(500, "Description too long")
+    .max(500, 'Description too long')
     .optional()
-    .default(""),
+    .default(''),
 });
 
 /** Schema for floor layout list query params */
 export const floorLayoutListQuerySchema = z.object({
-  casino_id: uuidSchema("casino ID"),
-  status: z.enum(["draft", "review", "approved", "archived"]).optional(),
+  casino_id: uuidSchema('casino ID'),
+  status: z.enum(['draft', 'review', 'approved', 'archived']).optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
@@ -40,13 +40,13 @@ export const floorLayoutListQuerySchema = z.object({
 /** Schema for floor layout version list query params */
 export const floorLayoutVersionQuerySchema = z.object({
   status: z
-    .enum(["draft", "pending_activation", "active", "retired"])
+    .enum(['draft', 'pending_activation', 'active', 'retired'])
     .optional(),
   include_slots: z
     .preprocess((value) => {
       if (value === undefined) return undefined;
-      if (typeof value === "string") {
-        return value === "true" || value === "1";
+      if (typeof value === 'string') {
+        return value === 'true' || value === '1';
       }
       return value;
     }, z.boolean())
@@ -57,16 +57,16 @@ export const floorLayoutVersionQuerySchema = z.object({
 
 /** Schema for activating a floor layout */
 export const activateFloorLayoutSchema = z.object({
-  casino_id: uuidSchema("casino ID"),
-  layout_version_id: uuidSchema("layout version ID"),
-  activation_request_id: uuidSchemaOptional("request ID"),
+  casino_id: uuidSchema('casino ID'),
+  layout_version_id: uuidSchema('layout version ID'),
+  activation_request_id: uuidSchemaOptional('request ID'),
 });
 
 // === Route Param Schemas ===
 
 /** Schema for layout ID route params */
 export const layoutIdParamSchema = z.object({
-  layoutId: uuidSchema("layout ID"),
+  layoutId: uuidSchema('layout ID'),
 });
 
 // === Type Exports ===

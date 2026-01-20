@@ -8,13 +8,13 @@
  * @see EXECUTION-SPEC-PRD-008.md WS3
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
-import { fetchRatingSlipModalData } from "@/services/rating-slip-modal/http";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
+import { fetchRatingSlipModalData } from '@/services/rating-slip-modal/http';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
  * Fetches aggregated modal data for a rating slip.
@@ -54,10 +54,10 @@ import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
  */
 export function useRatingSlipModalData(slipId: string | null | undefined) {
   return useQuery<RatingSlipModalDTO, Error>({
-    queryKey: ratingSlipModalKeys.data(slipId ?? ""),
+    queryKey: ratingSlipModalKeys.data(slipId ?? ''),
     queryFn: () => {
       if (!slipId) {
-        throw new Error("Slip ID is required");
+        throw new Error('Slip ID is required');
       }
       return fetchRatingSlipModalData(slipId);
     },
@@ -70,4 +70,4 @@ export function useRatingSlipModalData(slipId: string | null | undefined) {
 }
 
 // Re-export types for convenience
-export type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
+export type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';

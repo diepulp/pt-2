@@ -7,7 +7,7 @@
  * @see SLAD section 327-365
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import type {
   GamingTableDTO,
@@ -21,7 +21,7 @@ import type {
   TableStatus,
   GameType,
   ChipsetPayload,
-} from "./dtos";
+} from './dtos';
 
 // === Row Types (match query projections) ===
 
@@ -55,13 +55,13 @@ type DealerRotationSelectedRow = {
 
 // RPC Return Types
 type RpcTableInventorySnapshotReturn =
-  Database["public"]["Functions"]["rpc_log_table_inventory_snapshot"]["Returns"];
+  Database['public']['Functions']['rpc_log_table_inventory_snapshot']['Returns'];
 type RpcTableFillReturn =
-  Database["public"]["Functions"]["rpc_request_table_fill"]["Returns"];
+  Database['public']['Functions']['rpc_request_table_fill']['Returns'];
 type RpcTableCreditReturn =
-  Database["public"]["Functions"]["rpc_request_table_credit"]["Returns"];
+  Database['public']['Functions']['rpc_request_table_credit']['Returns'];
 type RpcTableDropReturn =
-  Database["public"]["Functions"]["rpc_log_table_drop"]["Returns"];
+  Database['public']['Functions']['rpc_log_table_drop']['Returns'];
 
 // === Gaming Table Mappers ===
 
@@ -93,7 +93,7 @@ export function toGamingTableWithDealerDTO(
   row: GamingTableWithDealerSelectedRow,
 ): GamingTableWithDealerDTO {
   const activeRotation = row.dealer_rotation?.find(
-    (r) => r.started_at && !("ended_at" in r),
+    (r) => r.started_at && !('ended_at' in r),
   );
 
   return {
@@ -144,7 +144,7 @@ export function toTableInventorySnapshotDTO(
     casino_id: rpcResult.casino_id,
     table_id: rpcResult.table_id,
     snapshot_type:
-      rpcResult.snapshot_type as TableInventorySnapshotDTO["snapshot_type"],
+      rpcResult.snapshot_type as TableInventorySnapshotDTO['snapshot_type'],
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: rpcResult.chipset as ChipsetPayload,
     counted_by: rpcResult.counted_by,
@@ -214,7 +214,7 @@ export function toTableDropEventDTO(
 // === Row-based mappers for direct queries ===
 
 type TableInventorySnapshotRow =
-  Database["public"]["Tables"]["table_inventory_snapshot"]["Row"];
+  Database['public']['Tables']['table_inventory_snapshot']['Row'];
 
 export function toTableInventorySnapshotDTOFromRow(
   row: TableInventorySnapshotRow,
@@ -224,7 +224,7 @@ export function toTableInventorySnapshotDTOFromRow(
     casino_id: row.casino_id,
     table_id: row.table_id,
     snapshot_type:
-      row.snapshot_type as TableInventorySnapshotDTO["snapshot_type"],
+      row.snapshot_type as TableInventorySnapshotDTO['snapshot_type'],
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: row.chipset as ChipsetPayload,
     counted_by: row.counted_by,
@@ -244,11 +244,11 @@ export function toTableInventorySnapshotDTOListFromRows(
 // === Table Settings Mappers ===
 
 type GamingTableSettingsRow =
-  Database["public"]["Tables"]["gaming_table_settings"]["Row"];
+  Database['public']['Tables']['gaming_table_settings']['Row'];
 
 export function toTableSettingsDTO(
   row: GamingTableSettingsRow,
-): import("./dtos").TableSettingsDTO {
+): import('./dtos').TableSettingsDTO {
   return {
     id: row.id,
     casino_id: row.casino_id,
@@ -262,7 +262,7 @@ export function toTableSettingsDTO(
 // === Table Rundown Mappers (ADR-027) ===
 
 type RpcRundownRow =
-  Database["public"]["Functions"]["rpc_compute_table_rundown"]["Returns"][0];
+  Database['public']['Functions']['rpc_compute_table_rundown']['Returns'][0];
 
 /**
  * Maps RPC rundown result to TableRundownDTO.

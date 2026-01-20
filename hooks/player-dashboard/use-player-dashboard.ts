@@ -16,12 +16,12 @@
  * @see components/player-dashboard/player-dashboard.tsx
  */
 
-"use client";
+'use client';
 
-import { usePlayerLoyalty } from "@/hooks/loyalty/use-loyalty-queries";
-import { usePlayer } from "@/hooks/player/use-player";
-import { useRatingSlipList } from "@/hooks/rating-slip/use-rating-slip";
-import { useActiveVisit } from "@/hooks/visit/use-active-visit";
+import { usePlayerLoyalty } from '@/hooks/loyalty/use-loyalty-queries';
+import { usePlayer } from '@/hooks/player/use-player';
+import { useRatingSlipList } from '@/hooks/rating-slip/use-rating-slip';
+import { useActiveVisit } from '@/hooks/visit/use-active-visit';
 
 export interface UsePlayerDashboardOptions {
   /** Player ID to fetch dashboard data for */
@@ -86,10 +86,10 @@ export function usePlayerDashboard(
   const { playerId, casinoId, enableRealtime = false } = options;
 
   // Core player identity
-  const player = usePlayer(playerId ?? "");
+  const player = usePlayer(playerId ?? '');
 
   // Active visit status (for session controls)
-  const activeVisit = useActiveVisit(playerId ?? "", {
+  const activeVisit = useActiveVisit(playerId ?? '', {
     enabled: !!playerId,
     refetchInterval: enableRealtime ? 10_000 : undefined, // Poll every 10s if realtime enabled
   });

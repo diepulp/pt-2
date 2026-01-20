@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   TrendingUp,
@@ -7,9 +7,9 @@ import {
   Users,
   DollarSign,
   Activity,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface AnalyticsPanelProps {
   tableName: string;
@@ -23,30 +23,30 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
   // Mock metrics data
   const metrics = [
     {
-      label: "Win/Loss",
-      value: "+$12,450",
-      change: "+8.2%",
+      label: 'Win/Loss',
+      value: '+$12,450',
+      change: '+8.2%',
       positive: true,
       icon: DollarSign,
     },
     {
-      label: "Handle",
-      value: "$145,200",
-      change: "+12.5%",
+      label: 'Handle',
+      value: '$145,200',
+      change: '+12.5%',
       positive: true,
       icon: BarChart3,
     },
     {
-      label: "Avg Session",
-      value: "47 min",
-      change: "-5.1%",
+      label: 'Avg Session',
+      value: '47 min',
+      change: '-5.1%',
       positive: false,
       icon: Clock,
     },
     {
-      label: "Active Players",
-      value: "6",
-      change: "0%",
+      label: 'Active Players',
+      value: '6',
+      change: '0%',
       positive: true,
       icon: Users,
     },
@@ -79,18 +79,18 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
               <div
                 key={metric.label}
                 className={cn(
-                  "relative overflow-hidden p-4 rounded-lg",
-                  "border border-border/40 bg-card/50",
-                  "backdrop-blur-sm",
+                  'relative overflow-hidden p-4 rounded-lg',
+                  'border border-border/40 bg-card/50',
+                  'backdrop-blur-sm',
                 )}
               >
                 {/* Accent strip */}
                 <div
                   className={cn(
-                    "absolute top-0 left-0 right-0 h-0.5",
+                    'absolute top-0 left-0 right-0 h-0.5',
                     metric.positive
-                      ? "bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent"
-                      : "bg-gradient-to-r from-transparent via-amber-500/50 to-transparent",
+                      ? 'bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent'
+                      : 'bg-gradient-to-r from-transparent via-amber-500/50 to-transparent',
                   )}
                 />
 
@@ -108,10 +108,10 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
                   </div>
                   <div
                     className={cn(
-                      "px-2 py-0.5 rounded text-xs font-mono",
+                      'px-2 py-0.5 rounded text-xs font-mono',
                       metric.positive
-                        ? "bg-emerald-500/10 text-emerald-400"
-                        : "bg-amber-500/10 text-amber-400",
+                        ? 'bg-emerald-500/10 text-emerald-400'
+                        : 'bg-amber-500/10 text-amber-400',
                     )}
                   >
                     {metric.change}
@@ -157,8 +157,8 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
             className="absolute inset-0 pointer-events-none opacity-[0.02]"
             style={{
               backgroundImage:
-                "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-              backgroundSize: "20px 20px",
+                'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
+              backgroundSize: '20px 20px',
             }}
           />
         </div>
@@ -171,26 +171,26 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
           <div className="space-y-3">
             {[
               {
-                label: "High Rollers",
+                label: 'High Rollers',
                 count: 2,
-                value: "$8,200",
-                color: "bg-violet-500",
+                value: '$8,200',
+                color: 'bg-violet-500',
               },
               {
-                label: "Regular Players",
+                label: 'Regular Players',
                 count: 3,
-                value: "$3,150",
-                color: "bg-cyan-500",
+                value: '$3,150',
+                color: 'bg-cyan-500',
               },
               {
-                label: "Casual Players",
+                label: 'Casual Players',
                 count: 1,
-                value: "$1,100",
-                color: "bg-emerald-500",
+                value: '$1,100',
+                color: 'bg-emerald-500',
               },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-3">
-                <div className={cn("w-2 h-2 rounded-full", item.color)} />
+                <div className={cn('w-2 h-2 rounded-full', item.color)} />
                 <span className="text-sm text-muted-foreground flex-1">
                   {item.label}
                 </span>

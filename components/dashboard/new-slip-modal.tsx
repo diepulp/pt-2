@@ -10,14 +10,14 @@
  * @see EXECUTION-SPEC-PRD-006.md WS4
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Search, User, AlertCircle, Loader2, Info } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Search, User, AlertCircle, Loader2, Info } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -25,10 +25,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { dashboardKeys } from "@/hooks/dashboard";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { dashboardKeys } from '@/hooks/dashboard';
 import {
   logError,
   getErrorMessage,
@@ -36,14 +36,14 @@ import {
   isFetchError,
   isConflictError,
   isValidationError,
-} from "@/lib/errors/error-utils";
-import { cn } from "@/lib/utils";
-import { validateUUIDs, debugLogUUIDs } from "@/lib/validation";
-import type { PlayerSearchResultDTO } from "@/services/player/dtos";
-import { searchPlayers } from "@/services/player/http";
-import type { CreateRatingSlipInput } from "@/services/rating-slip/dtos";
-import { startRatingSlip } from "@/services/rating-slip/http";
-import { startVisit, getActiveVisit } from "@/services/visit/http";
+} from '@/lib/errors/error-utils';
+import { cn } from '@/lib/utils';
+import { validateUUIDs, debugLogUUIDs } from '@/lib/validation';
+import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import { searchPlayers } from '@/services/player/http';
+import type { CreateRatingSlipInput } from '@/services/rating-slip/dtos';
+import { startRatingSlip } from '@/services/rating-slip/http';
+import { startVisit, getActiveVisit } from '@/services/visit/http';
 
 interface NewSlipModalProps {
   /** Whether the modal is open */
@@ -73,7 +73,7 @@ export function NewSlipModal({
   const queryClient = useQueryClient();
 
   // Form state
-  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedPlayer, setSelectedPlayer] =
     React.useState<PlayerSearchResultDTO | null>(null);
   const [selectedSeat, setSelectedSeat] = React.useState<string | null>(
@@ -82,7 +82,7 @@ export function NewSlipModal({
   const [error, setError] = React.useState<string | null>(null);
 
   // Debounced search query
-  const [debouncedQuery, setDebouncedQuery] = React.useState("");
+  const [debouncedQuery, setDebouncedQuery] = React.useState('');
   React.useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -93,7 +93,7 @@ export function NewSlipModal({
   // Reset form when modal opens/closes
   React.useEffect(() => {
     if (open) {
-      setSearchQuery("");
+      setSearchQuery('');
       setSelectedPlayer(null);
       setSelectedSeat(initialSeatNumber ?? null);
       setError(null);
@@ -102,7 +102,7 @@ export function NewSlipModal({
 
   // Player search query
   const { data: searchResults = [], isLoading: isSearching } = useQuery({
-    queryKey: ["players", "search", debouncedQuery],
+    queryKey: ['players', 'search', debouncedQuery],
     queryFn: () => searchPlayers(debouncedQuery, 10),
     enabled: debouncedQuery.length >= 2,
   });
@@ -129,12 +129,12 @@ export function NewSlipModal({
     },
     onError: (err: Error) => {
       // Structured logging (development only, properly serialized)
-      logError(err, { component: "NewSlipModal", action: "createSlip" });
+      logError(err, { component: 'NewSlipModal', action: 'createSlip' });
 
       // Handle specific error cases with user-friendly messages
-      if (isFetchError(err) && err.code === "SEAT_ALREADY_OCCUPIED") {
+      if (isFetchError(err) && err.code === 'SEAT_ALREADY_OCCUPIED') {
         setError(
-          "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
+          'This seat already has an active rating slip. Please choose a different seat or close the existing slip.',
         );
       } else if (isValidationError(err)) {
         setError(formatValidationError(err));
@@ -150,19 +150,19 @@ export function NewSlipModal({
     setError(null);
 
     if (!selectedPlayer) {
-      setError("Please select a player");
+      setError('Please select a player');
       return;
     }
 
     if (!selectedSeat) {
-      setError("Please select a seat");
+      setError('Please select a seat');
       return;
     }
 
     // Check if seat is occupied
     if (occupiedSeats.includes(selectedSeat)) {
       setError(
-        "This seat already has an active rating slip. Please choose a different seat.",
+        'This seat already has an active rating slip. Please choose a different seat.',
       );
       return;
     }
@@ -175,21 +175,21 @@ export function NewSlipModal({
 
     if (!uuidValidation.isValid) {
       // Debug log UUID validation failures
-      debugLogUUIDs("NewSlipModal Pre-validation", {
+      debugLogUUIDs('NewSlipModal Pre-validation', {
         player_id: selectedPlayer.id,
         table_id: tableId,
       });
-      setError(`Invalid data: ${uuidValidation.errors.join("; ")}`);
+      setError(`Invalid data: ${uuidValidation.errors.join('; ')}`);
       return;
     }
 
     try {
       // Debug logging for API call inputs
-      if (process.env.NODE_ENV === "development") {
-        console.group("[NewSlipModal] Creating Slip");
-        console.log("Player ID:", selectedPlayer.id);
-        console.log("Table ID:", tableId);
-        console.log("Seat Number:", selectedSeat);
+      if (process.env.NODE_ENV === 'development') {
+        console.group('[NewSlipModal] Creating Slip');
+        console.log('Player ID:', selectedPlayer.id);
+        console.log('Table ID:', tableId);
+        console.log('Seat Number:', selectedSeat);
         console.groupEnd();
       }
 
@@ -201,8 +201,8 @@ export function NewSlipModal({
 
       if (activeVisitResponse.has_active_visit && activeVisitResponse.visit) {
         visitId = activeVisitResponse.visit.id;
-        if (process.env.NODE_ENV === "development") {
-          console.log("[NewSlipModal] Using existing visit:", visitId);
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[NewSlipModal] Using existing visit:', visitId);
         }
       } else {
         // Start a new visit for the player (or resume same-day visit)
@@ -211,14 +211,14 @@ export function NewSlipModal({
 
         // ADR-026: Show notification when resuming a same-day visit
         if (visitResult.resumed) {
-          toast.info("Resuming session from earlier today", {
-            description: `Gaming day: ${new Date(visitResult.gamingDay + "T00:00:00").toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}`,
+          toast.info('Resuming session from earlier today', {
+            description: `Gaming day: ${new Date(visitResult.gamingDay + 'T00:00:00').toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`,
             icon: <Info className="h-4 w-4" />,
           });
         }
 
-        if (process.env.NODE_ENV === "development") {
-          console.log("[NewSlipModal] Visit result:", {
+        if (process.env.NODE_ENV === 'development') {
+          console.log('[NewSlipModal] Visit result:', {
             visitId,
             isNew: visitResult.isNew,
             resumed: visitResult.resumed,
@@ -230,10 +230,10 @@ export function NewSlipModal({
       // Pre-validation: Check visit ID format before creating slip
       const visitValidation = validateUUIDs({ visit_id: visitId });
       if (!visitValidation.isValid) {
-        debugLogUUIDs("NewSlipModal Visit ID Validation", {
+        debugLogUUIDs('NewSlipModal Visit ID Validation', {
           visit_id: visitId,
         });
-        setError(`Invalid visit ID: ${visitValidation.errors.join("; ")}`);
+        setError(`Invalid visit ID: ${visitValidation.errors.join('; ')}`);
         return;
       }
 
@@ -245,7 +245,7 @@ export function NewSlipModal({
       });
     } catch (err) {
       // Structured logging (development only, properly serialized)
-      logError(err, { component: "NewSlipModal", action: "visitSetup" });
+      logError(err, { component: 'NewSlipModal', action: 'visitSetup' });
 
       // Handle validation errors with detailed messages
       if (isValidationError(err)) {
@@ -259,7 +259,7 @@ export function NewSlipModal({
   // Handle player selection
   const handleSelectPlayer = (player: PlayerSearchResultDTO) => {
     setSelectedPlayer(player);
-    setSearchQuery("");
+    setSearchQuery('');
   };
 
   return (
@@ -268,7 +268,7 @@ export function NewSlipModal({
         <DialogHeader>
           <DialogTitle
             className="text-lg font-bold uppercase tracking-widest"
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             New Rating Slip
           </DialogTitle>
@@ -291,7 +291,7 @@ export function NewSlipModal({
             <Label
               htmlFor="player-search"
               className="text-xs font-bold uppercase tracking-widest"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               Player
             </Label>
@@ -349,7 +349,7 @@ export function NewSlipModal({
                           >
                             <User className="h-4 w-4 text-muted-foreground" />
                             <span>{player.full_name}</span>
-                            {player.enrollment_status === "enrolled" && (
+                            {player.enrollment_status === 'enrolled' && (
                               <span className="ml-auto rounded bg-accent/20 px-1.5 py-0.5 text-[10px] font-bold uppercase text-accent">
                                 Enrolled
                               </span>
@@ -368,7 +368,7 @@ export function NewSlipModal({
           <div className="space-y-2">
             <Label
               className="text-xs font-bold uppercase tracking-widest"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               Seat
             </Label>
@@ -385,14 +385,14 @@ export function NewSlipModal({
                     onClick={() => !isOccupied && setSelectedSeat(seatNumber)}
                     disabled={isOccupied}
                     className={cn(
-                      "flex h-10 w-10 items-center justify-center rounded-lg border-2 font-bold transition-all",
+                      'flex h-10 w-10 items-center justify-center rounded-lg border-2 font-bold transition-all',
                       isOccupied
-                        ? "cursor-not-allowed border-muted bg-muted/50 text-muted-foreground opacity-50"
+                        ? 'cursor-not-allowed border-muted bg-muted/50 text-muted-foreground opacity-50'
                         : isSelected
-                          ? "border-accent bg-accent text-accent-foreground"
-                          : "border-border bg-card hover:border-accent/50",
+                          ? 'border-accent bg-accent text-accent-foreground'
+                          : 'border-border bg-card hover:border-accent/50',
                     )}
-                    style={{ fontFamily: "monospace" }}
+                    style={{ fontFamily: 'monospace' }}
                   >
                     {seatNumber}
                   </button>
@@ -426,7 +426,7 @@ export function NewSlipModal({
                   Creating...
                 </>
               ) : (
-                "Start Slip"
+                'Start Slip'
               )}
             </Button>
           </DialogFooter>

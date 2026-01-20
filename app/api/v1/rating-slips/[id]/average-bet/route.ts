@@ -9,7 +9,7 @@
  * Note: Requires slip to be in "open" or "paused" state.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   parseParams,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createRatingSlipService } from '@/services/rating-slip';
 import {
   ratingSlipRouteParamsSchema,
   updateAverageBetSchema,
-} from "@/services/rating-slip/schemas";
+} from '@/services/rating-slip/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -63,7 +63,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: slip,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -71,8 +71,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "update-average-bet",
+        domain: 'rating-slip',
+        action: 'update-average-bet',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

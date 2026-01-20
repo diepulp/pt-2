@@ -7,16 +7,16 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.1
  */
 
-"use client";
+'use client';
 
-import { ArrowRightIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
-import Link from "next/link";
+import { ArrowRightIcon, TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
+import Link from 'next/link';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { ShiftCasinoMetricsDTO } from "@/services/table-context/shift-metrics/dtos";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { ShiftCasinoMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface CasinoSummaryCardProps {
   data: ShiftCasinoMetricsDTO | undefined;
@@ -27,11 +27,11 @@ export interface CasinoSummaryCardProps {
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "$0";
+  if (cents == null) return '$0';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);

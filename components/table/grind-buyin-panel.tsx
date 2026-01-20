@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { DollarSign, Loader2, Undo2 } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { DollarSign, Loader2, Undo2 } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   formatCentsToDollars,
   useGrindBuyinTotal,
   useLogGrindBuyin,
   useUndoGrindBuyin,
-} from "@/hooks/table-context/use-buyin-telemetry";
-import { cn } from "@/lib/utils";
+} from '@/hooks/table-context/use-buyin-telemetry';
+import { cn } from '@/lib/utils';
 
 interface GrindBuyinPanelProps {
   tableId: string;
@@ -23,11 +23,11 @@ interface GrindBuyinPanelProps {
 
 // Quick-tap amounts matching US cash denominations (in cents)
 const QUICK_TAP_AMOUNTS = [
-  { label: "+$5", cents: 500 },
-  { label: "+$10", cents: 1000 },
-  { label: "+$20", cents: 2000 },
-  { label: "+$50", cents: 5000 },
-  { label: "+$100", cents: 10000 },
+  { label: '+$5', cents: 500 },
+  { label: '+$10', cents: 1000 },
+  { label: '+$20', cents: 2000 },
+  { label: '+$50', cents: 5000 },
+  { label: '+$100', cents: 10000 },
 ] as const;
 
 /**
@@ -44,7 +44,7 @@ export function GrindBuyinPanel({
   shiftWindow,
 }: GrindBuyinPanelProps) {
   // Custom amount state
-  const [customAmount, setCustomAmount] = React.useState("");
+  const [customAmount, setCustomAmount] = React.useState('');
   const [lastLoggedAmount, setLastLoggedAmount] = React.useState<number | null>(
     null,
   );
@@ -63,13 +63,13 @@ export function GrindBuyinPanel({
     try {
       await logMutation.mutateAsync({ amountCents: cents });
       setLastLoggedAmount(cents);
-      toast.success("Buy-in logged", {
+      toast.success('Buy-in logged', {
         description: formatCentsToDollars(cents),
       });
     } catch (error) {
-      toast.error("Failed to log buy-in", {
+      toast.error('Failed to log buy-in', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -77,8 +77,8 @@ export function GrindBuyinPanel({
   const handleCustomSubmit = async () => {
     const dollars = parseFloat(customAmount);
     if (isNaN(dollars) || dollars <= 0) {
-      toast.error("Invalid amount", {
-        description: "Please enter a valid dollar amount",
+      toast.error('Invalid amount', {
+        description: 'Please enter a valid dollar amount',
       });
       return;
     }
@@ -87,14 +87,14 @@ export function GrindBuyinPanel({
     try {
       await logMutation.mutateAsync({ amountCents: cents });
       setLastLoggedAmount(cents);
-      setCustomAmount("");
-      toast.success("Buy-in logged", {
+      setCustomAmount('');
+      toast.success('Buy-in logged', {
         description: formatCentsToDollars(cents),
       });
     } catch (error) {
-      toast.error("Failed to log buy-in", {
+      toast.error('Failed to log buy-in', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -104,14 +104,14 @@ export function GrindBuyinPanel({
 
     try {
       await undoMutation.mutateAsync(lastLoggedAmount);
-      toast.success("Undo successful", {
+      toast.success('Undo successful', {
         description: `Reversed ${formatCentsToDollars(lastLoggedAmount)}`,
       });
       setLastLoggedAmount(null);
     } catch (error) {
-      toast.error("Failed to undo", {
+      toast.error('Failed to undo', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -141,7 +141,7 @@ export function GrindBuyinPanel({
           )}
           {grindTotal && grindTotal.count > 0 && (
             <div className="text-xs text-muted-foreground">
-              {grindTotal.count} buy-in{grindTotal.count !== 1 ? "s" : ""}
+              {grindTotal.count} buy-in{grindTotal.count !== 1 ? 's' : ''}
             </div>
           )}
         </div>
@@ -155,8 +155,8 @@ export function GrindBuyinPanel({
             variant="outline"
             size="sm"
             className={cn(
-              "font-mono font-semibold",
-              "hover:bg-accent hover:text-accent-foreground",
+              'font-mono font-semibold',
+              'hover:bg-accent hover:text-accent-foreground',
             )}
             onClick={() => handleQuickTap(cents)}
             disabled={isPending}
@@ -182,7 +182,7 @@ export function GrindBuyinPanel({
             className="pl-7"
             disabled={isPending}
             onKeyDown={(e) => {
-              if (e.key === "Enter") {
+              if (e.key === 'Enter') {
                 handleCustomSubmit();
               }
             }}

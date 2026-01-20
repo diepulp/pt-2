@@ -11,11 +11,13 @@
  * @see ADR-019 Loyalty Points Policy (D2 immutability)
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
 import type { Database } from '@/types/database.types';
+
 import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 
 // Test environment setup
@@ -85,7 +87,10 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
 
       // Verify loyalty snapshot exists with expected fields
       const policySnapshot = slip.policy_snapshot as Record<string, unknown>;
-      const loyaltySnapshot = policySnapshot?.loyalty as Record<string, unknown>;
+      const loyaltySnapshot = policySnapshot?.loyalty as Record<
+        string,
+        unknown
+      >;
       expect(loyaltySnapshot).toBeDefined();
       expect(loyaltySnapshot.house_edge).toBeDefined();
       expect(loyaltySnapshot.decisions_per_hour).toBeDefined();
@@ -116,7 +121,9 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       expect(source).toBeDefined();
       expect(['game_settings', 'default']).toContain(source.house_edge);
       expect(['game_settings', 'default']).toContain(source.decisions_per_hour);
-      expect(['game_settings', 'default']).toContain(source.points_conversion_rate);
+      expect(['game_settings', 'default']).toContain(
+        source.points_conversion_rate,
+      );
       expect(['game_settings', 'default']).toContain(source.point_multiplier);
 
       // Cleanup
@@ -147,9 +154,14 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Close slip via service
-      const closed = await service.close(fixture.casinoId, fixture.actorId, slip.id, {
-        average_bet: 50,
-      });
+      const closed = await service.close(
+        fixture.casinoId,
+        fixture.actorId,
+        slip.id,
+        {
+          average_bet: 50,
+        },
+      );
 
       expect(closed).toBeDefined();
       expect(closed.status).toBe('closed');
@@ -162,7 +174,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
           p_rating_slip_id: slip.id,
           p_casino_id: fixture.casinoId,
           p_idempotency_key: idempotencyKey,
-        }
+        },
       );
 
       // This is the key assertion - no LOYALTY_SNAPSHOT_MISSING error
@@ -205,7 +217,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
           p_rating_slip_id: slip.id,
           p_casino_id: fixture.casinoId,
           p_idempotency_key: randomUUID(),
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -216,7 +228,10 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
 
       // Cleanup
       if (result.ledger_id) {
-        await supabase.from('loyalty_ledger').delete().eq('id', result.ledger_id);
+        await supabase
+          .from('loyalty_ledger')
+          .delete()
+          .eq('id', result.ledger_id);
       }
       await supabase.from('rating_slip').delete().eq('id', slip.id);
       await cleanupIsolatedVisit(supabase, testVisit.id, testVisit.playerId);
@@ -242,7 +257,11 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       // Create a visit in casino 2
       const { data: player2 } = await supabase
         .from('player')
-        .insert({ first_name: 'Mismatch', last_name: 'Player', birth_date: '1980-01-01' })
+        .insert({
+          first_name: 'Mismatch',
+          last_name: 'Player',
+          birth_date: '1980-01-01',
+        })
         .select()
         .single();
 
@@ -264,7 +283,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
             visit_id: visit2!.id,
             table_id: fixture.tableId,
             seat_number: '5',
-          })
+          }),
         ).rejects.toThrow();
       } finally {
         // Cleanup
@@ -318,9 +337,14 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         expect(fullSlip?.accrual_kind).toBe('compliance_only');
 
         // Close slip
-        const closed = await service.close(fixture.casinoId, fixture.actorId, slip.id, {
-          average_bet: 25,
-        });
+        const closed = await service.close(
+          fixture.casinoId,
+          fixture.actorId,
+          slip.id,
+          {
+            average_bet: 25,
+          },
+        );
 
         expect(closed.status).toBe('closed');
 
@@ -331,7 +355,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
             p_rating_slip_id: slip.id,
             p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
-          }
+          },
         );
 
         expect(accrualError).toBeNull();
@@ -415,7 +439,10 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       expect(first[0].ledger_id).toBe(second[0].ledger_id);
 
       // Cleanup
-      await supabase.from('loyalty_ledger').delete().eq('id', first[0].ledger_id);
+      await supabase
+        .from('loyalty_ledger')
+        .delete()
+        .eq('id', first[0].ledger_id);
       await supabase.from('rating_slip').delete().eq('id', slip.id);
       await cleanupIsolatedVisit(supabase, testVisit.id, testVisit.playerId);
     });
@@ -439,7 +466,7 @@ let visitCounter = 0;
  */
 async function createIsolatedVisit(
   supabase: SupabaseClient<Database>,
-  fixture: TestFixture
+  fixture: TestFixture,
 ): Promise<IsolatedVisit> {
   visitCounter++;
 
@@ -454,7 +481,8 @@ async function createIsolatedVisit(
     .select()
     .single();
 
-  if (playerError || !player) throw new Error(`Failed to create player: ${playerError?.message}`);
+  if (playerError || !player)
+    throw new Error(`Failed to create player: ${playerError?.message}`);
 
   // Enroll player at casino
   await supabase.from('player_casino').insert({
@@ -475,7 +503,8 @@ async function createIsolatedVisit(
     .select()
     .single();
 
-  if (visitError || !visit) throw new Error(`Failed to create visit: ${visitError?.message}`);
+  if (visitError || !visit)
+    throw new Error(`Failed to create visit: ${visitError?.message}`);
 
   return {
     id: visit.id,
@@ -489,7 +518,7 @@ async function createIsolatedVisit(
 async function cleanupIsolatedVisit(
   supabase: SupabaseClient<Database>,
   visitId: string,
-  playerId: string
+  playerId: string,
 ): Promise<void> {
   await supabase.from('rating_slip').delete().eq('visit_id', visitId);
   await supabase.from('visit').delete().eq('id', visitId);
@@ -499,7 +528,7 @@ async function cleanupIsolatedVisit(
 }
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create casino
   const { data: casino, error: casinoError } = await supabase
@@ -508,7 +537,8 @@ async function createTestFixture(
     .select()
     .single();
 
-  if (casinoError || !casino) throw new Error(`Failed to create casino: ${casinoError?.message}`);
+  if (casinoError || !casino)
+    throw new Error(`Failed to create casino: ${casinoError?.message}`);
 
   // 2. Create casino settings
   await supabase.from('casino_settings').insert({
@@ -532,7 +562,8 @@ async function createTestFixture(
     .select()
     .single();
 
-  if (tableError || !table) throw new Error(`Failed to create table: ${tableError?.message}`);
+  if (tableError || !table)
+    throw new Error(`Failed to create table: ${tableError?.message}`);
 
   // 4. Create game_settings for blackjack
   await supabase.from('game_settings').upsert({
@@ -559,7 +590,8 @@ async function createTestFixture(
     .select()
     .single();
 
-  if (actorError || !actor) throw new Error(`Failed to create actor: ${actorError?.message}`);
+  if (actorError || !actor)
+    throw new Error(`Failed to create actor: ${actorError?.message}`);
 
   // 6. Create base player (not used directly, but placeholder for fixture)
   const { data: player, error: playerError } = await supabase
@@ -572,7 +604,8 @@ async function createTestFixture(
     .select()
     .single();
 
-  if (playerError || !player) throw new Error(`Failed to create player: ${playerError?.message}`);
+  if (playerError || !player)
+    throw new Error(`Failed to create player: ${playerError?.message}`);
 
   // 7. Enroll player at casino
   await supabase.from('player_casino').insert({
@@ -593,7 +626,8 @@ async function createTestFixture(
     .select()
     .single();
 
-  if (visitError || !visit) throw new Error(`Failed to create visit: ${visitError?.message}`);
+  if (visitError || !visit)
+    throw new Error(`Failed to create visit: ${visitError?.message}`);
 
   // Cleanup function
   const cleanup = async () => {

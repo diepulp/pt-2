@@ -22,10 +22,10 @@
  * @see ADR-019 Loyalty Points Policy
  */
 
-import { test, expect, type Page } from "@playwright/test";
-import { createClient } from "@supabase/supabase-js";
+import { test, expect, type Page } from '@playwright/test';
+import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 import {
   createRatingSlipTestScenario,
@@ -36,11 +36,11 @@ import {
   getPlayerLoyaltyBalance,
   getRatingSlipStatus,
   type RatingSlipTestScenario,
-} from "../fixtures/rating-slip-fixtures";
+} from '../fixtures/rating-slip-fixtures';
 
 // Dev auth credentials from lib/supabase/dev-context.ts
-const DEV_USER_EMAIL = "pitboss@dev.local";
-const DEV_USER_PASSWORD = "devpass123";
+const DEV_USER_EMAIL = 'pitboss@dev.local';
+const DEV_USER_PASSWORD = 'devpass123';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -77,7 +77,7 @@ async function createLoyaltyTestScenario(): Promise<RatingSlipTestScenario> {
   const scenario = await createRatingSlipTestScenario();
 
   // Ensure game_settings exist for policy_snapshot population
-  await ensureGameSettings(scenario.casinoId, "blackjack");
+  await ensureGameSettings(scenario.casinoId, 'blackjack');
 
   // Ensure player_loyalty record exists (required for accrual)
   await ensurePlayerLoyaltyRecord(scenario.playerId, scenario.casinoId, 0);
@@ -88,12 +88,12 @@ async function createLoyaltyTestScenario(): Promise<RatingSlipTestScenario> {
   const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
 
   await supabase
-    .from("rating_slip")
+    .from('rating_slip')
     .update({
       start_time: thirtyMinutesAgo,
       average_bet: 5000, // $50 average bet for meaningful points
     })
-    .eq("id", scenario.ratingSlipId);
+    .eq('id', scenario.ratingSlipId);
 
   // Get dev auth token to override the scenario's token
   // The dev user (pitboss@dev.local) has access to Casino 1 from seed data
@@ -103,14 +103,14 @@ async function createLoyaltyTestScenario(): Promise<RatingSlipTestScenario> {
   return scenario;
 }
 
-test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
+test.describe('Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)', () => {
   /**
    * Test 1: API-Level Accrual Verification
    *
    * Verifies that closing a rating slip via API triggers loyalty accrual.
    * This is the most direct test of the accrual pipeline.
    */
-  test.describe("API-Level Accrual", () => {
+  test.describe('API-Level Accrual', () => {
     let scenario: RatingSlipTestScenario;
 
     test.beforeEach(async () => {
@@ -123,7 +123,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       }
     });
 
-    test("closing rating slip via API creates loyalty_ledger entry", async ({
+    test('closing rating slip via API creates loyalty_ledger entry', async ({
       request,
     }) => {
       // Get initial loyalty balance
@@ -146,8 +146,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `e2e_close_${Date.now()}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `e2e_close_${Date.now()}`,
           },
           data: {
             average_bet: 5000, // $50 in cents
@@ -167,7 +167,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // Verify slip is closed
       const closedSlip = await getRatingSlipStatus(scenario.ratingSlipId);
-      expect(closedSlip.status).toBe("closed");
+      expect(closedSlip.status).toBe('closed');
 
       // Wait for accrual to complete (async operation)
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -184,7 +184,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       const accrualEntry = finalLedger.find(
         (entry) =>
           entry.rating_slip_id === scenario.ratingSlipId &&
-          entry.reason === "base_accrual",
+          entry.reason === 'base_accrual',
       );
 
       expect(accrualEntry).toBeDefined();
@@ -204,7 +204,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       );
     });
 
-    test("accrual is idempotent - duplicate close does not double-award points", async ({
+    test('accrual is idempotent - duplicate close does not double-award points', async ({
       request,
     }) => {
       const idempotencyKey = `e2e_idempotent_${Date.now()}`;
@@ -215,8 +215,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyKey,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey,
           },
           data: { average_bet: 5000 },
         },
@@ -240,8 +240,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": idempotencyKey,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': idempotencyKey,
           },
           data: { average_bet: 5000 },
         },
@@ -267,12 +267,12 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         scenario.ratingSlipId,
       );
       const accrualEntries = ledgerEntries.filter(
-        (e) => e.reason === "base_accrual",
+        (e) => e.reason === 'base_accrual',
       );
       expect(accrualEntries.length).toBe(1);
     });
 
-    test("accrual entry includes correct metadata (theo, policy values)", async ({
+    test('accrual entry includes correct metadata (theo, policy values)', async ({
       request,
     }) => {
       // Close the slip
@@ -281,8 +281,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `e2e_metadata_${Date.now()}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `e2e_metadata_${Date.now()}`,
           },
           data: { average_bet: 5000 },
         },
@@ -295,7 +295,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         scenario.ratingSlipId,
       );
       const accrualEntry = ledgerEntries.find(
-        (e) => e.reason === "base_accrual",
+        (e) => e.reason === 'base_accrual',
       );
 
       expect(accrualEntry).toBeDefined();
@@ -321,7 +321,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
    * Verifies that closing a rating slip via the modal triggers loyalty accrual.
    * This tests the fix in use-close-with-financial.ts.
    */
-  test.describe("UI Modal Close Accrual", () => {
+  test.describe('UI Modal Close Accrual', () => {
     let scenario: RatingSlipTestScenario;
 
     test.beforeEach(async () => {
@@ -338,14 +338,14 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
      * Helper: Authenticate via browser
      */
     async function authenticateUser(page: Page) {
-      await page.goto("/auth/login");
+      await page.goto('/auth/login');
       await page.fill('input[name="email"]', scenario.testEmail);
       await page.fill('input[name="password"]', scenario.testPassword);
       await page.click('button[type="submit"]');
       await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
     }
 
-    test("closing rating slip via modal creates loyalty_ledger entry", async ({
+    test('closing rating slip via modal creates loyalty_ledger entry', async ({
       page,
     }) => {
       // Get initial balance
@@ -357,10 +357,10 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // Authenticate and navigate to pit dashboard
       await authenticateUser(page);
-      await page.goto("/pit");
+      await page.goto('/pit');
 
       // Wait for dashboard to load
-      await page.waitForSelector("[data-panel-group]", { timeout: 15000 });
+      await page.waitForSelector('[data-panel-group]', { timeout: 15000 });
 
       // Switch to Activity panel to see active slips
       await page.click('button:has-text("Activity")');
@@ -387,7 +387,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         '[data-testid="chips-taken-input"], input[type="number"]',
       );
       if (await chipsTakenInput.isVisible()) {
-        await chipsTakenInput.fill("50");
+        await chipsTakenInput.fill('50');
       }
 
       // Click Close Session button
@@ -409,7 +409,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       const accrualEntry = finalLedger.find(
         (entry) =>
           entry.rating_slip_id === scenario.ratingSlipId &&
-          entry.reason === "base_accrual",
+          entry.reason === 'base_accrual',
       );
 
       expect(accrualEntry).toBeDefined();
@@ -431,8 +431,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
    * End-to-end test of the complete loyalty lifecycle:
    * Enroll player → Start visit → Start rating slip → Close → Verify points
    */
-  test.describe("Complete Loyalty Workflow", () => {
-    test("complete workflow: new player earns points on first session close", async ({
+  test.describe('Complete Loyalty Workflow', () => {
+    test('complete workflow: new player earns points on first session close', async ({
       request,
     }) => {
       const supabase = createServiceClient();
@@ -441,40 +441,40 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // === STEP 1: Create test casino with game_settings ===
       const { data: casino } = await supabase
-        .from("casino")
-        .insert({ name: `${testPrefix}_casino`, status: "active" })
+        .from('casino')
+        .insert({ name: `${testPrefix}_casino`, status: 'active' })
         .select()
         .single();
 
-      await supabase.from("casino_settings").insert({
+      await supabase.from('casino_settings').insert({
         casino_id: casino!.id,
-        gaming_day_start_time: "06:00:00",
-        timezone: "America/Los_Angeles",
+        gaming_day_start_time: '06:00:00',
+        timezone: 'America/Los_Angeles',
       });
 
-      await ensureGameSettings(casino!.id, "blackjack");
+      await ensureGameSettings(casino!.id, 'blackjack');
 
       // === STEP 2: Create staff user ===
       const testEmail = `${testPrefix}_staff@test.com`;
-      const testPassword = "TestPassword123!";
+      const testPassword = 'TestPassword123!';
 
       const { data: authData } = await supabase.auth.admin.createUser({
         email: testEmail,
         password: testPassword,
         email_confirm: true,
-        app_metadata: { casino_id: casino!.id, staff_role: "admin" },
+        app_metadata: { casino_id: casino!.id, staff_role: 'admin' },
       });
 
       const { data: staff } = await supabase
-        .from("staff")
+        .from('staff')
         .insert({
           casino_id: casino!.id,
           user_id: authData!.user!.id,
-          first_name: "Test",
-          last_name: "Staff",
+          first_name: 'Test',
+          last_name: 'Staff',
           email: testEmail,
-          role: "admin",
-          status: "active",
+          role: 'admin',
+          status: 'active',
         })
         .select()
         .single();
@@ -483,7 +483,7 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         app_metadata: {
           casino_id: casino!.id,
           staff_id: staff!.id,
-          staff_role: "admin",
+          staff_role: 'admin',
         },
       });
 
@@ -494,30 +494,30 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // === STEP 3: Create table ===
       const { data: table } = await supabase
-        .from("gaming_table")
+        .from('gaming_table')
         .insert({
           casino_id: casino!.id,
-          label: "BJ-01",
-          type: "blackjack",
-          status: "active",
+          label: 'BJ-01',
+          type: 'blackjack',
+          status: 'active',
         })
         .select()
         .single();
 
       // === STEP 4: Create NEW player (simulating enrollment) ===
       const { data: player } = await supabase
-        .from("player")
+        .from('player')
         .insert({
-          first_name: "New",
-          last_name: "Player",
+          first_name: 'New',
+          last_name: 'Player',
         })
         .select()
         .single();
 
-      await supabase.from("player_casino").insert({
+      await supabase.from('player_casino').insert({
         player_id: player!.id,
         casino_id: casino!.id,
-        status: "active",
+        status: 'active',
       });
 
       // Ensure player_loyalty record (this would happen during enrollment)
@@ -526,13 +526,13 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       // === STEP 5: Create visit ===
       const visitId = crypto.randomUUID();
       const { data: visit } = await supabase
-        .from("visit")
+        .from('visit')
         .insert({
           id: visitId,
           casino_id: casino!.id,
           player_id: player!.id,
           started_at: new Date().toISOString(),
-          visit_kind: "gaming_identified_rated",
+          visit_kind: 'gaming_identified_rated',
           visit_group_id: visitId,
         })
         .select()
@@ -549,21 +549,21 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
           points_conversion_rate: 10.0,
           point_multiplier: 1.0,
         },
-        game_type: "blackjack",
+        game_type: 'blackjack',
         captured_at: new Date().toISOString(),
       };
       const { data: ratingSlip } = await supabase
-        .from("rating_slip")
+        .from('rating_slip')
         .insert({
           casino_id: casino!.id,
           visit_id: visit!.id,
           table_id: table!.id,
-          seat_number: "1",
+          seat_number: '1',
           average_bet: 5000, // $50
-          status: "open",
+          status: 'open',
           start_time: thirtyMinutesAgo,
           policy_snapshot: policySnapshot,
-          accrual_kind: "loyalty",
+          accrual_kind: 'loyalty',
         })
         .select()
         .single();
@@ -581,8 +581,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${signInData!.session!.access_token}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `e2e_workflow_close_${timestamp}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `e2e_workflow_close_${timestamp}`,
           },
           data: { average_bet: 5000 },
         },
@@ -605,32 +605,32 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       expect(finalBalance!.current_balance).toBeGreaterThan(0);
 
       const accrualEntry = ledgerEntries.find(
-        (e) => e.reason === "base_accrual",
+        (e) => e.reason === 'base_accrual',
       );
       expect(accrualEntry).toBeDefined();
       expect(accrualEntry!.points_delta).toBe(finalBalance!.current_balance);
 
       // === CLEANUP ===
       await supabase
-        .from("loyalty_ledger")
+        .from('loyalty_ledger')
         .delete()
-        .eq("casino_id", casino!.id);
-      await supabase.from("rating_slip").delete().eq("casino_id", casino!.id);
-      await supabase.from("visit").delete().eq("id", visit!.id);
-      await supabase.from("gaming_table").delete().eq("id", table!.id);
+        .eq('casino_id', casino!.id);
+      await supabase.from('rating_slip').delete().eq('casino_id', casino!.id);
+      await supabase.from('visit').delete().eq('id', visit!.id);
+      await supabase.from('gaming_table').delete().eq('id', table!.id);
       await supabase
-        .from("player_loyalty")
+        .from('player_loyalty')
         .delete()
-        .eq("casino_id", casino!.id);
-      await supabase.from("player_casino").delete().eq("player_id", player!.id);
-      await supabase.from("player").delete().eq("id", player!.id);
-      await supabase.from("game_settings").delete().eq("casino_id", casino!.id);
-      await supabase.from("staff").delete().eq("id", staff!.id);
+        .eq('casino_id', casino!.id);
+      await supabase.from('player_casino').delete().eq('player_id', player!.id);
+      await supabase.from('player').delete().eq('id', player!.id);
+      await supabase.from('game_settings').delete().eq('casino_id', casino!.id);
+      await supabase.from('staff').delete().eq('id', staff!.id);
       await supabase
-        .from("casino_settings")
+        .from('casino_settings')
         .delete()
-        .eq("casino_id", casino!.id);
-      await supabase.from("casino").delete().eq("id", casino!.id);
+        .eq('casino_id', casino!.id);
+      await supabase.from('casino').delete().eq('id', casino!.id);
       await supabase.auth.admin.deleteUser(authData!.user!.id);
     });
   });
@@ -641,8 +641,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
    * Verifies that ghost visits (unidentified players) do NOT trigger accrual.
    * Per ADR-014, ghost visits have playerId = null.
    */
-  test.describe("Ghost Visit Handling", () => {
-    test("ghost visit close does not trigger loyalty accrual", async ({
+  test.describe('Ghost Visit Handling', () => {
+    test('ghost visit close does not trigger loyalty accrual', async ({
       request,
     }) => {
       const supabase = createServiceClient();
@@ -651,37 +651,37 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // Create minimal test data for ghost visit
       const { data: casino } = await supabase
-        .from("casino")
-        .insert({ name: `${testPrefix}_casino`, status: "active" })
+        .from('casino')
+        .insert({ name: `${testPrefix}_casino`, status: 'active' })
         .select()
         .single();
 
-      await supabase.from("casino_settings").insert({
+      await supabase.from('casino_settings').insert({
         casino_id: casino!.id,
-        gaming_day_start_time: "06:00:00",
-        timezone: "America/Los_Angeles",
+        gaming_day_start_time: '06:00:00',
+        timezone: 'America/Los_Angeles',
       });
 
-      await ensureGameSettings(casino!.id, "blackjack");
+      await ensureGameSettings(casino!.id, 'blackjack');
 
       const testEmail = `${testPrefix}_staff@test.com`;
       const { data: authData } = await supabase.auth.admin.createUser({
         email: testEmail,
-        password: "TestPassword123!",
+        password: 'TestPassword123!',
         email_confirm: true,
-        app_metadata: { casino_id: casino!.id, staff_role: "admin" },
+        app_metadata: { casino_id: casino!.id, staff_role: 'admin' },
       });
 
       const { data: staff } = await supabase
-        .from("staff")
+        .from('staff')
         .insert({
           casino_id: casino!.id,
           user_id: authData!.user!.id,
-          first_name: "Test",
-          last_name: "Staff",
+          first_name: 'Test',
+          last_name: 'Staff',
           email: testEmail,
-          role: "admin",
-          status: "active",
+          role: 'admin',
+          status: 'active',
         })
         .select()
         .single();
@@ -690,22 +690,22 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         app_metadata: {
           casino_id: casino!.id,
           staff_id: staff!.id,
-          staff_role: "admin",
+          staff_role: 'admin',
         },
       });
 
       const { data: signInData } = await supabase.auth.signInWithPassword({
         email: testEmail,
-        password: "TestPassword123!",
+        password: 'TestPassword123!',
       });
 
       const { data: table } = await supabase
-        .from("gaming_table")
+        .from('gaming_table')
         .insert({
           casino_id: casino!.id,
-          label: "BJ-01",
-          type: "blackjack",
-          status: "active",
+          label: 'BJ-01',
+          type: 'blackjack',
+          status: 'active',
         })
         .select()
         .single();
@@ -713,13 +713,13 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
       // Create GHOST visit (player_id = null)
       const visitId = crypto.randomUUID();
       const { data: visit } = await supabase
-        .from("visit")
+        .from('visit')
         .insert({
           id: visitId,
           casino_id: casino!.id,
           player_id: null, // GHOST VISIT - no player
           started_at: new Date().toISOString(),
-          visit_kind: "gaming_unidentified",
+          visit_kind: 'gaming_unidentified',
           visit_group_id: visitId,
         })
         .select()
@@ -730,25 +730,25 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         Date.now() - 30 * 60 * 1000,
       ).toISOString();
       const { data: ratingSlip } = await supabase
-        .from("rating_slip")
+        .from('rating_slip')
         .insert({
           casino_id: casino!.id,
           visit_id: visit!.id,
           table_id: table!.id,
-          seat_number: "1",
+          seat_number: '1',
           average_bet: 5000,
-          status: "open",
+          status: 'open',
           start_time: thirtyMinutesAgo,
-          accrual_kind: "compliance_only", // Ghost visit - no loyalty accrual
+          accrual_kind: 'compliance_only', // Ghost visit - no loyalty accrual
         })
         .select()
         .single();
 
       // Get initial ledger count for casino (should be 0)
       const initialLedger = await supabase
-        .from("loyalty_ledger")
-        .select("id")
-        .eq("casino_id", casino!.id);
+        .from('loyalty_ledger')
+        .select('id')
+        .eq('casino_id', casino!.id);
 
       const initialCount = initialLedger.data?.length ?? 0;
 
@@ -758,8 +758,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
         {
           headers: {
             Authorization: `Bearer ${signInData!.session!.access_token}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `e2e_ghost_close_${timestamp}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `e2e_ghost_close_${timestamp}`,
           },
           data: { average_bet: 5000 },
         },
@@ -773,23 +773,23 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
 
       // CRITICAL: No loyalty_ledger entry should be created for ghost visit
       const finalLedger = await supabase
-        .from("loyalty_ledger")
-        .select("id")
-        .eq("casino_id", casino!.id);
+        .from('loyalty_ledger')
+        .select('id')
+        .eq('casino_id', casino!.id);
 
       expect(finalLedger.data?.length ?? 0).toBe(initialCount);
 
       // Cleanup
-      await supabase.from("rating_slip").delete().eq("casino_id", casino!.id);
-      await supabase.from("visit").delete().eq("id", visit!.id);
-      await supabase.from("gaming_table").delete().eq("id", table!.id);
-      await supabase.from("game_settings").delete().eq("casino_id", casino!.id);
-      await supabase.from("staff").delete().eq("id", staff!.id);
+      await supabase.from('rating_slip').delete().eq('casino_id', casino!.id);
+      await supabase.from('visit').delete().eq('id', visit!.id);
+      await supabase.from('gaming_table').delete().eq('id', table!.id);
+      await supabase.from('game_settings').delete().eq('casino_id', casino!.id);
+      await supabase.from('staff').delete().eq('id', staff!.id);
       await supabase
-        .from("casino_settings")
+        .from('casino_settings')
         .delete()
-        .eq("casino_id", casino!.id);
-      await supabase.from("casino").delete().eq("id", casino!.id);
+        .eq('casino_id', casino!.id);
+      await supabase.from('casino').delete().eq('id', casino!.id);
       await supabase.auth.admin.deleteUser(authData!.user!.id);
     });
   });
@@ -801,8 +801,8 @@ test.describe("Loyalty Accrual Lifecycle (ISSUE-47B1DFF1)", () => {
  * These tests are specifically designed to prevent regression of ISSUE-47B1DFF1.
  * They should run in CI to ensure the loyalty accrual integration is never broken.
  */
-test.describe("ISSUE-47B1DFF1 Regression Prevention", () => {
-  test("useCloseWithFinancial hook calls accrueOnClose", async ({
+test.describe('ISSUE-47B1DFF1 Regression Prevention', () => {
+  test('useCloseWithFinancial hook calls accrueOnClose', async ({
     request,
   }) => {
     // This test verifies the integration point that was missing.
@@ -824,8 +824,8 @@ test.describe("ISSUE-47B1DFF1 Regression Prevention", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Content-Type": "application/json",
-            "Idempotency-Key": `e2e_regression_${Date.now()}`,
+            'Content-Type': 'application/json',
+            'Idempotency-Key': `e2e_regression_${Date.now()}`,
           },
           data: {
             average_bet: 5000,
@@ -852,7 +852,7 @@ test.describe("ISSUE-47B1DFF1 Regression Prevention", () => {
       const accrualEntry = finalLedger.find(
         (e) =>
           e.rating_slip_id === scenario.ratingSlipId &&
-          e.reason === "base_accrual",
+          e.reason === 'base_accrual',
       );
 
       expect(accrualEntry).toBeDefined();

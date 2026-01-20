@@ -13,18 +13,18 @@
  * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import type {
   TableRundownDTO,
   TableSessionDTO,
-} from "@/services/table-context/dtos";
-import { tableContextKeys } from "@/services/table-context/keys";
+} from '@/services/table-context/dtos';
+import { tableContextKeys } from '@/services/table-context/keys';
 import {
   computeTableRundown,
   postTableDropTotal,
-} from "@/services/table-context/rundown";
+} from '@/services/table-context/rundown';
 
 // === Query Key Factory Extension ===
 
@@ -34,7 +34,7 @@ import {
  */
 export const tableRundownKeys = {
   /** All rundown queries scope */
-  all: [...tableContextKeys.root, "rundown"] as const,
+  all: [...tableContextKeys.root, 'rundown'] as const,
   /** Rundown for a specific session */
   detail: (sessionId: string) => [...tableRundownKeys.all, sessionId] as const,
 };
@@ -54,7 +54,7 @@ export const tableRundownKeys = {
  */
 export function useTableRundown(sessionId: string | null) {
   return useQuery<TableRundownDTO>({
-    queryKey: tableRundownKeys.detail(sessionId ?? ""),
+    queryKey: tableRundownKeys.detail(sessionId ?? ''),
     queryFn: async () => {
       const supabase = createBrowserComponentClient();
       return computeTableRundown(supabase, sessionId!);
@@ -86,7 +86,7 @@ export function usePostDropTotal() {
     Error,
     { sessionId: string; dropTotalCents: number; tableId?: string }
   >({
-    mutationKey: ["post-drop-total"],
+    mutationKey: ['post-drop-total'],
     mutationFn: async ({ sessionId, dropTotalCents }) => {
       const supabase = createBrowserComponentClient();
       return postTableDropTotal(supabase, sessionId, dropTotalCents);

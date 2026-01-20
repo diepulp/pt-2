@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from 'zustand/react/shallow';
 
 import {
   usePlayerDashboardStore,
   PlayerDashboardStore,
-} from "@/store/player-dashboard-store";
+} from '@/store/player-dashboard-store';
 
 /**
  * Selector hook for PlayerDashboardStore using useShallow

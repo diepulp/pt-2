@@ -7,19 +7,19 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.4
  */
 
-"use client";
+'use client';
 
 import {
   AlertTriangleIcon,
   BellIcon,
   InfoIcon,
   XCircleIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { CashObsSpikeAlertDTO } from "@/services/table-context/dtos";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
 export interface AlertsPanelProps {
   data: CashObsSpikeAlertDTO[] | undefined;
@@ -30,11 +30,11 @@ export interface AlertsPanelProps {
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "$0";
+  if (cents == null) return '$0';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);
@@ -43,29 +43,29 @@ function formatCurrency(cents: number | null | undefined): string {
 /**
  * Get severity colors and icon.
  */
-function getSeverityConfig(severity: "info" | "warn" | "critical") {
+function getSeverityConfig(severity: 'info' | 'warn' | 'critical') {
   switch (severity) {
-    case "critical":
+    case 'critical':
       return {
-        borderClass: "border-l-4 border-red-500",
-        bgClass: "bg-red-50/10",
+        borderClass: 'border-l-4 border-red-500',
+        bgClass: 'bg-red-50/10',
         icon: <XCircleIcon className="h-4 w-4 text-red-500" />,
-        badgeClass: "bg-red-500/10 text-red-500",
+        badgeClass: 'bg-red-500/10 text-red-500',
       };
-    case "warn":
+    case 'warn':
       return {
-        borderClass: "border-l-4 border-amber-500",
-        bgClass: "bg-amber-50/10",
+        borderClass: 'border-l-4 border-amber-500',
+        bgClass: 'bg-amber-50/10',
         icon: <AlertTriangleIcon className="h-4 w-4 text-amber-500" />,
-        badgeClass: "bg-amber-500/10 text-amber-500",
+        badgeClass: 'bg-amber-500/10 text-amber-500',
       };
-    case "info":
+    case 'info':
     default:
       return {
-        borderClass: "border-l-4 border-blue-500",
-        bgClass: "bg-blue-50/10",
+        borderClass: 'border-l-4 border-blue-500',
+        bgClass: 'bg-blue-50/10',
         icon: <InfoIcon className="h-4 w-4 text-blue-500" />,
-        badgeClass: "bg-blue-500/10 text-blue-500",
+        badgeClass: 'bg-blue-500/10 text-blue-500',
       };
   }
 }
@@ -117,7 +117,7 @@ function AlertCard({ alert }: { alert: CashObsSpikeAlertDTO }) {
 
       <div className="flex items-center gap-1 mt-2 text-[10px] text-muted-foreground">
         <span className="uppercase tracking-wider">
-          {alert.entity_type === "table" ? "Table" : "Pit"} Alert
+          {alert.entity_type === 'table' ? 'Table' : 'Pit'} Alert
         </span>
         <span>·</span>
         <span>Observational Only</span>
@@ -148,8 +148,8 @@ function AlertSkeleton() {
 
 export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
   const criticalCount =
-    data?.filter((a) => a.severity === "critical").length ?? 0;
-  const warnCount = data?.filter((a) => a.severity === "warn").length ?? 0;
+    data?.filter((a) => a.severity === 'critical').length ?? 0;
+  const warnCount = data?.filter((a) => a.severity === 'warn').length ?? 0;
   const totalCount = data?.length ?? 0;
 
   return (

@@ -7,46 +7,46 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 1580-1719
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type FloorLayoutRow = Database["public"]["Tables"]["floor_layout"]["Row"];
-type FloorLayoutInsert = Database["public"]["Tables"]["floor_layout"]["Insert"];
+type FloorLayoutRow = Database['public']['Tables']['floor_layout']['Row'];
+type FloorLayoutInsert = Database['public']['Tables']['floor_layout']['Insert'];
 type FloorLayoutVersionRow =
-  Database["public"]["Tables"]["floor_layout_version"]["Row"];
-type FloorPitRow = Database["public"]["Tables"]["floor_pit"]["Row"];
+  Database['public']['Tables']['floor_layout_version']['Row'];
+type FloorPitRow = Database['public']['Tables']['floor_pit']['Row'];
 type FloorTableSlotRow =
-  Database["public"]["Tables"]["floor_table_slot"]["Row"];
+  Database['public']['Tables']['floor_table_slot']['Row'];
 type FloorLayoutActivationRow =
-  Database["public"]["Tables"]["floor_layout_activation"]["Row"];
+  Database['public']['Tables']['floor_layout_activation']['Row'];
 
 // === Layout Status Enum (derived from database) ===
 
 export type FloorLayoutStatus =
-  Database["public"]["Enums"]["floor_layout_status"];
+  Database['public']['Enums']['floor_layout_status'];
 export type FloorLayoutVersionStatus =
-  Database["public"]["Enums"]["floor_layout_version_status"];
+  Database['public']['Enums']['floor_layout_version_status'];
 
 // === Layout DTOs ===
 
 /** Public floor layout record */
 export type FloorLayoutDTO = Pick<
   FloorLayoutRow,
-  | "id"
-  | "casino_id"
-  | "name"
-  | "description"
-  | "status"
-  | "created_by"
-  | "created_at"
-  | "updated_at"
+  | 'id'
+  | 'casino_id'
+  | 'name'
+  | 'description'
+  | 'status'
+  | 'created_by'
+  | 'created_at'
+  | 'updated_at'
 >;
 
 /** Layout creation input */
 export type CreateFloorLayoutDTO = Pick<
   FloorLayoutInsert,
-  "casino_id" | "name" | "description"
+  'casino_id' | 'name' | 'description'
 >;
 
 // === Version DTOs ===
@@ -54,14 +54,14 @@ export type CreateFloorLayoutDTO = Pick<
 /** Floor layout version record */
 export type FloorLayoutVersionDTO = Pick<
   FloorLayoutVersionRow,
-  | "id"
-  | "layout_id"
-  | "version_no"
-  | "status"
-  | "layout_payload"
-  | "notes"
-  | "created_by"
-  | "created_at"
+  | 'id'
+  | 'layout_id'
+  | 'version_no'
+  | 'status'
+  | 'layout_payload'
+  | 'notes'
+  | 'created_by'
+  | 'created_at'
 >;
 
 // === Pit DTOs ===
@@ -69,13 +69,13 @@ export type FloorLayoutVersionDTO = Pick<
 /** Floor pit record */
 export type FloorPitDTO = Pick<
   FloorPitRow,
-  | "id"
-  | "layout_version_id"
-  | "label"
-  | "sequence"
-  | "capacity"
-  | "geometry"
-  | "metadata"
+  | 'id'
+  | 'layout_version_id'
+  | 'label'
+  | 'sequence'
+  | 'capacity'
+  | 'geometry'
+  | 'metadata'
 >;
 
 // === Table Slot DTOs ===
@@ -83,14 +83,14 @@ export type FloorPitDTO = Pick<
 /** Floor table slot record */
 export type FloorTableSlotDTO = Pick<
   FloorTableSlotRow,
-  | "id"
-  | "layout_version_id"
-  | "pit_id"
-  | "slot_label"
-  | "game_type"
-  | "coordinates"
-  | "orientation"
-  | "metadata"
+  | 'id'
+  | 'layout_version_id'
+  | 'pit_id'
+  | 'slot_label'
+  | 'game_type'
+  | 'coordinates'
+  | 'orientation'
+  | 'metadata'
 >;
 
 // === Activation DTOs ===
@@ -98,13 +98,13 @@ export type FloorTableSlotDTO = Pick<
 /** Floor layout activation record */
 export type FloorLayoutActivationDTO = Pick<
   FloorLayoutActivationRow,
-  | "id"
-  | "casino_id"
-  | "layout_version_id"
-  | "activated_by"
-  | "activated_at"
-  | "deactivated_at"
-  | "activation_request_id"
+  | 'id'
+  | 'casino_id'
+  | 'layout_version_id'
+  | 'activated_by'
+  | 'activated_at'
+  | 'deactivated_at'
+  | 'activation_request_id'
 >;
 
 // === Enriched Version DTO ===

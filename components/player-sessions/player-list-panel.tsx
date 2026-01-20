@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Calendar,
@@ -11,18 +11,18 @@ import {
   TrendingUp,
   User,
   Users,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
-import type { GamingDayInfo, PlayerInfo } from "./start-from-previous";
+import type { GamingDayInfo, PlayerInfo } from './start-from-previous';
 
 // ============================================================================
 // Types
@@ -71,28 +71,28 @@ export interface PlayerListPanelProps {
 
 function formatTime(isoString: string): string {
   const date = new Date(isoString);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
     hour12: true,
   });
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
 }
 
 function formatGamingDay(gamingDay: string): string {
-  const date = new Date(gamingDay + "T00:00:00");
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
+  const date = new Date(gamingDay + 'T00:00:00');
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
   });
 }
 
@@ -204,7 +204,7 @@ function PlayerRow({
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <History className="w-3 h-3" />
             <span>
-              {player.last_session.table_name} Seat{" "}
+              {player.last_session.table_name} Seat{' '}
               {player.last_session.seat_number}
             </span>
             <span className="text-xs">
@@ -228,10 +228,10 @@ function PlayerRow({
             <div className="text-xs text-muted-foreground">Net</div>
             <div
               className={cn(
-                "font-semibold tabular-nums flex items-center justify-end gap-1",
+                'font-semibold tabular-nums flex items-center justify-end gap-1',
                 isPositive
-                  ? "text-emerald-600 dark:text-emerald-400"
-                  : "text-red-600 dark:text-red-400",
+                  ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-red-600 dark:text-red-400',
               )}
             >
               {isPositive ? (
@@ -321,12 +321,12 @@ function EmptyState({ searchQuery }: { searchQuery: string }) {
         )}
       </div>
       <h3 className="text-sm font-medium text-foreground mb-1">
-        {isSearching ? "No Players Found" : "No Closed Sessions"}
+        {isSearching ? 'No Players Found' : 'No Closed Sessions'}
       </h3>
       <p className="text-xs text-muted-foreground max-w-[220px]">
         {isSearching
           ? `No players match "${searchQuery}". Try a different search term.`
-          : "No players have closed sessions during the current gaming day."}
+          : 'No players have closed sessions during the current gaming day.'}
       </p>
     </div>
   );
@@ -391,7 +391,7 @@ export function PlayerListPanel({
 }: PlayerListPanelProps) {
   if (isLoading) {
     return (
-      <Card className={cn("w-full", className)}>
+      <Card className={cn('w-full', className)}>
         <CardContent className="p-6">
           <LoadingSkeleton />
         </CardContent>
@@ -402,7 +402,7 @@ export function PlayerListPanel({
   const hasPlayers = players.length > 0;
 
   return (
-    <Card className={cn("w-full", className)}>
+    <Card className={cn('w-full', className)}>
       <CardContent className="p-6">
         {/* Search Header */}
         <SearchHeader

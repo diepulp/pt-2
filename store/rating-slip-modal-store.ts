@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
 /**
  * Modal form state shape for rating slip editing.
@@ -41,20 +41,20 @@ export interface RatingSlipModalStore {
   resetField: (field: keyof ModalFormState) => void;
   resetForm: () => void;
   incrementField: (
-    field: "averageBet" | "newBuyIn" | "chipsTaken",
+    field: 'averageBet' | 'newBuyIn' | 'chipsTaken',
     amount: number,
   ) => void;
-  decrementField: (field: "averageBet" | "newBuyIn" | "chipsTaken") => void;
-  adjustStartTime: (action: "add" | "subtract", minutes: number) => void;
+  decrementField: (field: 'averageBet' | 'newBuyIn' | 'chipsTaken') => void;
+  adjustStartTime: (action: 'add' | 'subtract', minutes: number) => void;
 }
 
 const emptyFormState: ModalFormState = {
-  averageBet: "0",
-  startTime: "",
-  newBuyIn: "0",
-  newTableId: "",
-  newSeatNumber: "",
-  chipsTaken: "0",
+  averageBet: '0',
+  startTime: '',
+  newBuyIn: '0',
+  newTableId: '',
+  newSeatNumber: '',
+  chipsTaken: '0',
 };
 
 export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
@@ -65,13 +65,13 @@ export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
       originalState: emptyFormState,
 
       setSlipId: (id) =>
-        set({ slipId: id }, undefined, "ratingSlipModal/setSlipId"),
+        set({ slipId: id }, undefined, 'ratingSlipModal/setSlipId'),
 
       initializeForm: (data) =>
         set(
           { formState: data, originalState: data },
           undefined,
-          "ratingSlipModal/initializeForm",
+          'ratingSlipModal/initializeForm',
         ),
 
       updateField: (field, value) =>
@@ -97,7 +97,7 @@ export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
         set(
           (state) => ({ formState: state.originalState }),
           undefined,
-          "ratingSlipModal/resetForm",
+          'ratingSlipModal/resetForm',
         ),
 
       incrementField: (field, amount) =>
@@ -137,7 +137,7 @@ export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
             if (isNaN(currentTime.getTime())) return state;
 
             const newTime = new Date(currentTime);
-            if (action === "add") {
+            if (action === 'add') {
               newTime.setMinutes(newTime.getMinutes() + minutes);
             } else {
               newTime.setMinutes(newTime.getMinutes() - minutes);
@@ -154,6 +154,6 @@ export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
           `ratingSlipModal/adjustStartTime:${action}:${minutes}`,
         ),
     }),
-    { name: "RatingSlipModalStore" },
+    { name: 'RatingSlipModalStore' },
   ),
 );

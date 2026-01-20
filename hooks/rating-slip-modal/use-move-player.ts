@@ -10,21 +10,21 @@
  * @see EXECUTION-SPEC-PRD-008.md WS5
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { dashboardKeys } from "@/hooks/dashboard/keys";
-import { accrueOnClose } from "@/services/loyalty/http";
-import { loyaltyKeys } from "@/services/loyalty/keys";
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
-import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
+import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { accrueOnClose } from '@/services/loyalty/http';
+import { loyaltyKeys } from '@/services/loyalty/keys';
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
+import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
 import type {
   MovePlayerInput,
   MovePlayerResponse,
-} from "@/services/rating-slip-modal/http";
-import { movePlayer } from "@/services/rating-slip-modal/http";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/services/rating-slip-modal/http';
+import { movePlayer } from '@/services/rating-slip-modal/http';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
  * Mutation input for moving a player.
@@ -175,22 +175,15 @@ export function useMovePlayer() {
       );
 
       // Optimistically update source table's activeSlips
+      // BUG FIX: Move operation ALWAYS closes the old slip and creates a new one,
+      // even for same-table seat changes. We must remove the old slip from cache
+      // to prevent user from clicking on a closed slip before refetch completes.
       queryClient.setQueryData(
         dashboardKeys.activeSlips(sourceTableId),
         (old: RatingSlipDTO[] | undefined) => {
           if (!old) return old;
-
-          if (sourceTableId === destinationTableId) {
-            // Same table move (seat change): update the slip's seat_number
-            return old.map((slip) =>
-              slip.id === currentSlipId
-                ? { ...slip, seat_number: destinationSeatNumber ?? null }
-                : slip,
-            );
-          } else {
-            // Cross-table move: remove slip from source table
-            return old.filter((slip) => slip.id !== currentSlipId);
-          }
+          // Remove the old slip - it will be replaced by newSlip after refetch
+          return old.filter((slip) => slip.id !== currentSlipId);
         },
       );
 
@@ -220,7 +213,45 @@ export function useMovePlayer() {
         );
       }
     },
-    onSuccess: (data: MovePlayerResponse, variables) => {
+    onSuccess: (data: MovePlayerResponse, variables, context) => {
+      // OPTIMISTIC UX: Immediately add new slip to destination table cache
+      // This provides instant feedback before the background refetch completes.
+      // Construct a minimal RatingSlipDTO from response + previous slip data.
+      const previousSlip = context?.previousSourceSlips?.find(
+        (s) => s.id === variables.currentSlipId,
+      );
+
+      if (previousSlip) {
+        const newSlipDTO: RatingSlipDTO = {
+          id: data.newSlipId,
+          casino_id: previousSlip.casino_id,
+          visit_id: previousSlip.visit_id,
+          table_id: data.newSlip.tableId,
+          seat_number: data.newSlip.seatNumber,
+          start_time: data.newSlip.startTime,
+          end_time: null,
+          status: data.newSlip.status as RatingSlipDTO['status'],
+          average_bet: variables.averageBet ?? previousSlip.average_bet,
+          game_settings: previousSlip.game_settings,
+          policy_snapshot: previousSlip.policy_snapshot,
+          previous_slip_id: data.closedSlipId,
+          move_group_id: data.moveGroupId,
+          accumulated_seconds: data.accumulatedSeconds,
+          final_duration_seconds: null,
+        };
+
+        // Add new slip to destination table cache immediately
+        queryClient.setQueryData(
+          dashboardKeys.activeSlips(variables.destinationTableId),
+          (old: RatingSlipDTO[] | undefined) => {
+            if (!old) return [newSlipDTO];
+            // Add new slip if not already present
+            if (old.some((s) => s.id === newSlipDTO.id)) return old;
+            return [...old, newSlipDTO];
+          },
+        );
+      }
+
       // PRD-020: Targeted cache invalidation (reduces 12+ requests to ~4)
       // Only invalidate the specific tables affected by the move
 

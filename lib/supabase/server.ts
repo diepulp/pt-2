@@ -1,9 +1,9 @@
-"use server";
-import { createServerClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { cookies } from "next/headers";
+'use server';
+import { createServerClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
-import { Database } from "@/types/database.types";
+import { Database } from '@/types/database.types';
 
 /**
  * Create a Supabase client for Server Components, Server Actions, and Route Handlers

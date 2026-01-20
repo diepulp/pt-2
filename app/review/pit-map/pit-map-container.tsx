@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Command,
@@ -7,45 +7,45 @@ import {
   List,
   Search,
   Settings2,
-} from "lucide-react";
-import { useCallback, useMemo, useState, useTransition } from "react";
+} from 'lucide-react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
 
 import {
   PitSwitcher,
   TableGrid,
   CommandPalette,
   MobilePitSelector,
-} from "./components";
-import { mockPits } from "./mock-data";
-import type { ViewMode, PitData } from "./types";
+} from './components';
+import { mockPits } from './mock-data';
+import type { ViewMode, PitData } from './types';
 
 export function PitMapContainer() {
   // State
   const [selectedPitId, setSelectedPitId] = useState<string | null>(
-    mockPits[0]?.id ?? null
+    mockPits[0]?.id ?? null,
   );
-  const [viewMode, setViewMode] = useState<ViewMode>("grid");
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   // Derived state
   const pinnedPitIds = useMemo(
     () => mockPits.filter((p) => p.isPinned).map((p) => p.id),
-    []
+    [],
   );
 
   const recentPitIds = useMemo(
     () => mockPits.filter((p) => p.isRecent).map((p) => p.id),
-    []
+    [],
   );
 
   const selectedPit = useMemo(
     () => mockPits.find((p) => p.id === selectedPitId) ?? null,
-    [selectedPitId]
+    [selectedPitId],
   );
 
   // Handlers
@@ -55,24 +55,21 @@ export function PitMapContainer() {
     });
   }, []);
 
-  const handleSelectTable = useCallback(
-    (tableId: string, pitId?: string) => {
-      if (pitId) {
-        setSelectedPitId(pitId);
-      }
-      // In a real app, this would navigate to the table detail view
-      console.log("Selected table:", tableId);
-    },
-    []
-  );
+  const handleSelectTable = useCallback((tableId: string, pitId?: string) => {
+    if (pitId) {
+      setSelectedPitId(pitId);
+    }
+    // In a real app, this would navigate to the table detail view
+    console.log('Selected table:', tableId);
+  }, []);
 
   const handleTableFromPalette = useCallback(
     (tableId: string, pitId: string) => {
       setSelectedPitId(pitId);
       // Navigate to table
-      console.log("Jump to table:", tableId);
+      console.log('Jump to table:', tableId);
     },
-    []
+    [],
   );
 
   return (
@@ -89,9 +86,7 @@ export function PitMapContainer() {
               <h1 className="text-sm font-semibold tracking-tight">
                 Pit Operations
               </h1>
-              <p className="text-xs text-muted-foreground">
-                Floor Navigation
-              </p>
+              <p className="text-xs text-muted-foreground">Floor Navigation</p>
             </div>
           </div>
 
@@ -129,10 +124,10 @@ export function PitMapContainer() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setViewMode("grid")}
+                onClick={() => setViewMode('grid')}
                 className={cn(
-                  "rounded-md h-7 w-7",
-                  viewMode === "grid" && "bg-background shadow-sm"
+                  'rounded-md h-7 w-7',
+                  viewMode === 'grid' && 'bg-background shadow-sm',
                 )}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -140,10 +135,10 @@ export function PitMapContainer() {
               <Button
                 variant="ghost"
                 size="icon-sm"
-                onClick={() => setViewMode("list")}
+                onClick={() => setViewMode('list')}
                 className={cn(
-                  "rounded-md h-7 w-7",
-                  viewMode === "list" && "bg-background shadow-sm"
+                  'rounded-md h-7 w-7',
+                  viewMode === 'list' && 'bg-background shadow-sm',
                 )}
               >
                 <List className="w-3.5 h-3.5" />
@@ -217,11 +212,15 @@ export function PitMapContainer() {
           <span className="font-mono">UI Review Mode</span>
           <div className="flex items-center gap-4">
             <span>
-              {mockPits.length} pits •{" "}
+              {mockPits.length} pits •{' '}
               {mockPits.reduce((acc, p) => acc + p.tables.length, 0)} tables
             </span>
             <span className="font-mono">
-              Theme: {typeof window !== "undefined" && document.documentElement.classList.contains("dark") ? "Dark" : "Light"}
+              Theme:{' '}
+              {typeof window !== 'undefined' &&
+              document.documentElement.classList.contains('dark')
+                ? 'Dark'
+                : 'Light'}
             </span>
           </div>
         </div>

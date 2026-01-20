@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Check, ChevronDown, Layers, LayoutGrid, MapPin } from "lucide-react";
-import * as React from "react";
+import { Check, ChevronDown, Layers, LayoutGrid, MapPin } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -12,17 +12,17 @@ import {
   CommandItem,
   CommandList,
   CommandSeparator,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
-import type { Database } from "@/types/database.types";
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import type { Database } from '@/types/database.types';
 
-type TableStatus = Database["public"]["Enums"]["table_status"];
-type GameType = Database["public"]["Enums"]["game_type"];
+type TableStatus = Database['public']['Enums']['table_status'];
+type GameType = Database['public']['Enums']['game_type'];
 
 export interface PitMapTable {
   id: string;
@@ -58,30 +58,30 @@ const STATUS_CONFIG: Record<
   { color: string; bg: string; ring: string; label: string }
 > = {
   active: {
-    color: "text-emerald-600 dark:text-emerald-400",
-    bg: "bg-emerald-500/15 dark:bg-emerald-500/20",
-    ring: "ring-emerald-500/50 dark:ring-emerald-500/40",
-    label: "Available",
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+    ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
+    label: 'Available',
   },
   inactive: {
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-500/15 dark:bg-amber-500/20",
-    ring: "ring-amber-500/50 dark:ring-amber-500/40",
-    label: "Idle",
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-500/15 dark:bg-amber-500/20',
+    ring: 'ring-amber-500/50 dark:ring-amber-500/40',
+    label: 'Idle',
   },
   closed: {
-    color: "text-zinc-500 dark:text-zinc-500",
-    bg: "bg-zinc-500/15 dark:bg-zinc-500/20",
-    ring: "ring-zinc-500/50 dark:ring-zinc-500/40",
-    label: "Decommissioned",
+    color: 'text-zinc-500 dark:text-zinc-500',
+    bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
+    ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
+    label: 'Decommissioned',
   },
 };
 
 const GAME_TYPE_LABELS: Record<GameType, string> = {
-  blackjack: "BJ",
-  poker: "PK",
-  roulette: "RL",
-  baccarat: "BA",
+  blackjack: 'BJ',
+  poker: 'PK',
+  roulette: 'RL',
+  baccarat: 'BA',
 };
 
 /**
@@ -156,7 +156,7 @@ export function PitMapSelector({
     const stats = { tables: 0, active: 0 };
     for (const pit of pits) {
       stats.tables += pit.tables.length;
-      stats.active += pit.tables.filter((t) => t.status === "active").length;
+      stats.active += pit.tables.filter((t) => t.status === 'active').length;
     }
     return stats;
   }, [pits]);
@@ -170,25 +170,25 @@ export function PitMapSelector({
           aria-expanded={open}
           aria-label="Select pit and table"
           className={cn(
-            "justify-between gap-2 px-2.5",
-            "h-9 min-w-[140px] max-w-[200px]",
-            "border border-border/50 bg-card/50",
-            "hover:bg-accent/10 hover:border-accent/30",
-            "transition-all duration-150",
-            compact && "h-8 min-w-[120px] text-xs",
+            'justify-between gap-2 px-2.5',
+            'h-9 min-w-[140px] max-w-[200px]',
+            'border border-border/50 bg-card/50',
+            'hover:bg-accent/10 hover:border-accent/30',
+            'transition-all duration-150',
+            compact && 'h-8 min-w-[120px] text-xs',
             className,
           )}
         >
           <div className="flex items-center gap-2 truncate">
             <MapPin
               className={cn(
-                "shrink-0",
-                compact ? "size-3.5" : "size-4",
+                'shrink-0',
+                compact ? 'size-3.5' : 'size-4',
                 currentTable
                   ? STATUS_CONFIG[currentTable.status].color
                   : currentPit
-                    ? "text-accent"
-                    : "text-muted-foreground",
+                    ? 'text-accent'
+                    : 'text-muted-foreground',
               )}
             />
             <span className="truncate font-medium">
@@ -196,14 +196,14 @@ export function PitMapSelector({
                 ? `${currentTable.pitLabel} / ${currentTable.label}`
                 : currentPit
                   ? currentPit.label
-                  : "Select location"}
+                  : 'Select location'}
             </span>
           </div>
           <ChevronDown
             className={cn(
-              "shrink-0 opacity-50 transition-transform",
-              compact ? "size-3" : "size-4",
-              open && "rotate-180",
+              'shrink-0 opacity-50 transition-transform',
+              compact ? 'size-3' : 'size-4',
+              open && 'rotate-180',
             )}
           />
         </Button>
@@ -211,9 +211,9 @@ export function PitMapSelector({
 
       <PopoverContent
         className={cn(
-          "w-[280px] p-0",
-          "border-border/60 bg-popover/95 backdrop-blur-md",
-          "shadow-xl shadow-black/20",
+          'w-[280px] p-0',
+          'border-border/60 bg-popover/95 backdrop-blur-md',
+          'shadow-xl shadow-black/20',
         )}
         align="start"
         sideOffset={8}
@@ -248,18 +248,18 @@ export function PitMapSelector({
                         type="button"
                         onClick={() => handlePitSelect(pit.id)}
                         className={cn(
-                          "flex w-full items-center justify-between",
-                          "rounded px-1 py-0.5 -mx-1",
-                          "hover:bg-accent/10 transition-colors",
-                          "cursor-pointer",
+                          'flex w-full items-center justify-between',
+                          'rounded px-1 py-0.5 -mx-1',
+                          'hover:bg-accent/10 transition-colors',
+                          'cursor-pointer',
                         )}
                       >
                         <span
                           className={cn(
-                            "flex items-center gap-2 font-semibold tracking-wide",
+                            'flex items-center gap-2 font-semibold tracking-wide',
                             isSelectedPit
-                              ? "text-accent"
-                              : "text-muted-foreground",
+                              ? 'text-accent'
+                              : 'text-muted-foreground',
                           )}
                         >
                           <Layers className="size-3.5" />
@@ -295,17 +295,17 @@ export function PitMapSelector({
                           value={`${pit.label} ${table.label}`}
                           onSelect={() => handleTableSelect(table.id, pit.id)}
                           className={cn(
-                            "flex items-center gap-2 py-2 pl-6",
-                            "cursor-pointer",
-                            isSelected && "bg-accent/15",
+                            'flex items-center gap-2 py-2 pl-6',
+                            'cursor-pointer',
+                            isSelected && 'bg-accent/15',
                           )}
                         >
                           {/* Status indicator */}
                           <div
                             className={cn(
-                              "size-2 rounded-full shrink-0",
+                              'size-2 rounded-full shrink-0',
                               statusConfig.bg,
-                              "ring-1 ring-inset",
+                              'ring-1 ring-inset',
                               statusConfig.ring,
                             )}
                           />
@@ -315,8 +315,8 @@ export function PitMapSelector({
                             <LayoutGrid className="size-3.5 shrink-0 text-muted-foreground/60" />
                             <span
                               className={cn(
-                                "font-medium truncate",
-                                isSelected && "text-accent",
+                                'font-medium truncate',
+                                isSelected && 'text-accent',
                               )}
                             >
                               {table.label}
@@ -329,7 +329,7 @@ export function PitMapSelector({
                           {/* Status badge */}
                           <span
                             className={cn(
-                              "text-[10px] font-medium shrink-0",
+                              'text-[10px] font-medium shrink-0',
                               statusConfig.color,
                             )}
                           >
@@ -373,7 +373,7 @@ export function PitMapSelector({
  * Compact variant for mobile/small viewports
  */
 export function PitMapSelectorCompact(
-  props: Omit<PitMapSelectorProps, "compact">,
+  props: Omit<PitMapSelectorProps, 'compact'>,
 ) {
   return <PitMapSelector {...props} compact />;
 }

@@ -9,22 +9,22 @@
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createRatingSlipService } from "@/services/rating-slip";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createRatingSlipService } from '@/services/rating-slip';
 import {
   visitLiveViewQuerySchema,
   visitRouteParamsSchema,
-} from "@/services/visit/schemas";
+} from '@/services/visit/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ visitId: string }> };
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
     // Parse query params
     const url = new URL(request.url);
     const queryParams = visitLiveViewQuerySchema.parse({
-      include_segments: url.searchParams.get("include_segments") ?? undefined,
-      segments_limit: url.searchParams.get("segments_limit") ?? undefined,
+      include_segments: url.searchParams.get('include_segments') ?? undefined,
+      segments_limit: url.searchParams.get('segments_limit') ?? undefined,
     });
 
     const supabase = await createClient();
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         );
 
         if (!liveView) {
-          throw new DomainError("VISIT_NOT_FOUND", "Visit not found", {
+          throw new DomainError('VISIT_NOT_FOUND', 'Visit not found', {
             httpStatus: 404,
             details: { visitId: params.visitId },
           });
@@ -87,7 +87,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: liveView,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -95,8 +95,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "visit",
-        action: "liveView",
+        domain: 'visit',
+        action: 'liveView',
         correlationId: ctx.requestId,
       },
     );

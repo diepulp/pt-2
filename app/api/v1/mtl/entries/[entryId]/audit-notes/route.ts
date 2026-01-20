@@ -13,7 +13,7 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -22,15 +22,15 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { assertRole } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
-import { createMtlService } from "@/services/mtl";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { assertRole } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
+import { createMtlService } from '@/services/mtl';
 import {
   createMtlAuditNoteSchema,
   mtlAuditNoteRouteParamsSchema,
-} from "@/services/mtl/schemas";
+} from '@/services/mtl/schemas';
 
 /**
  * GET /api/v1/mtl/entries/[entryId]/audit-notes
@@ -55,14 +55,14 @@ export async function GET(
       supabase,
       async (mwCtx) => {
         // ADR-025: Audit Note READ allowed for pit_boss, admin only
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
         const notes = await service.getAuditNotes(params.entryId);
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: notes,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -70,8 +70,8 @@ export async function GET(
         };
       },
       {
-        domain: "mtl",
-        action: "list-audit-notes",
+        domain: 'mtl',
+        action: 'list-audit-notes',
         correlationId: ctx.requestId,
       },
     );
@@ -120,8 +120,8 @@ export async function POST(
     if (!inputValidation.success) {
       return errorResponse(ctx, {
         ok: false,
-        code: "VALIDATION_ERROR",
-        error: "Invalid request body",
+        code: 'VALIDATION_ERROR',
+        error: 'Invalid request body',
         details: inputValidation.error.flatten(),
         status: 400,
       });
@@ -133,7 +133,7 @@ export async function POST(
       supabase,
       async (mwCtx) => {
         // ADR-025: Audit Note WRITE allowed for pit_boss, admin only
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
 
@@ -146,7 +146,7 @@ export async function POST(
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: note,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -154,8 +154,8 @@ export async function POST(
         };
       },
       {
-        domain: "mtl",
-        action: "create-audit-note",
+        domain: 'mtl',
+        action: 'create-audit-note',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -167,7 +167,7 @@ export async function POST(
     }
 
     // Return 201 Created for new audit note
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

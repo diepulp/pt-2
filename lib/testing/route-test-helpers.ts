@@ -5,7 +5,7 @@
  * Created for QA-ROUTE-TESTING (ISSUE-607F9CCB).
  */
 
-import { NextRequest } from "next/server";
+import { NextRequest } from 'next/server';
 
 export interface MockRequestOptions {
   headers?: Record<string, string>;
@@ -23,7 +23,7 @@ export function createMockRequest(
 ): NextRequest {
   const { headers = {}, body, searchParams } = options;
 
-  const fullUrl = new URL(url, "http://localhost:3000");
+  const fullUrl = new URL(url, 'http://localhost:3000');
   if (searchParams) {
     Object.entries(searchParams).forEach(([k, v]) =>
       fullUrl.searchParams.set(k, v),

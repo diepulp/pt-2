@@ -14,57 +14,57 @@
  * @see components/pit-panels - Panel components
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import * as React from "react";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as React from 'react';
 
 import {
   RatingSlipModal,
   type FormState,
-} from "@/components/modals/rating-slip/rating-slip-modal";
+} from '@/components/modals/rating-slip/rating-slip-modal';
 import {
   useDashboardTables,
   useDashboardStats,
   useActiveSlipsForDashboard,
   useDashboardRealtime,
   dashboardKeys,
-} from "@/hooks/dashboard";
+} from '@/hooks/dashboard';
 import {
   useSaveWithBuyIn,
   useCloseWithFinancial,
   useMovePlayer,
   useRatingSlipModalData,
-} from "@/hooks/rating-slip-modal";
-import { toast, useModal, usePitDashboardUI } from "@/hooks/ui";
-import { useAuth } from "@/hooks/use-auth";
-import { useGamingDay } from "@/hooks/use-casino";
-import { useIsMobile } from "@/hooks/use-mobile";
+} from '@/hooks/rating-slip-modal';
+import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
+import { useAuth } from '@/hooks/use-auth';
+import { useGamingDay } from '@/hooks/use-casino';
+import { useIsMobile } from '@/hooks/use-mobile';
 import {
   getErrorMessage,
   logError,
   isFetchError,
-} from "@/lib/errors/error-utils";
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+} from '@/lib/errors/error-utils';
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
   groupTablesByPit,
   findPitIdForTable,
   findPitLabelForTable,
-} from "@/lib/utils/group-tables-by-pit";
+} from '@/lib/utils/group-tables-by-pit';
 import {
   pauseRatingSlip,
   resumeRatingSlip,
   closeRatingSlip,
-} from "@/services/rating-slip/http";
-import { resolveCurrentSlipContext } from "@/services/rating-slip-modal/rpc";
+} from '@/services/rating-slip/http';
+import { resolveCurrentSlipContext } from '@/services/rating-slip-modal/rpc';
 
-import { NewSlipModal } from "../dashboard/new-slip-modal";
+import { NewSlipModal } from '../dashboard/new-slip-modal';
 import {
   getOccupiedSeats,
   mapSlipsToOccupants,
-} from "../dashboard/seat-context-menu";
+} from '../dashboard/seat-context-menu';
 
-import { PanelContainer } from "./panel-container";
+import { PanelContainer } from './panel-container';
 
 interface PitPanelsClientProps {
   /** Casino ID from server context */
@@ -113,8 +113,15 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     error: statsError,
   } = useDashboardStats(casinoId);
 
-  // Query: Gaming day (returns string)
-  const { data: gamingDayString } = useGamingDay(casinoId);
+  // Query: Gaming day
+  // Note: Due to shared cache keys, value may be string OR GamingDayDTO object at runtime
+  const { data: gamingDayRaw } = useGamingDay(casinoId);
+  // Defensive extraction: handle both string (deprecated) and object (new hook cache) formats
+  const gamingDayString =
+    typeof gamingDayRaw === 'string'
+      ? gamingDayRaw
+      : (gamingDayRaw as unknown as { gaming_day?: string } | undefined)
+          ?.gaming_day;
 
   // Query: Active slips for selected table
   const { data: activeSlips = [] } = useActiveSlipsForDashboard(
@@ -190,7 +197,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // Auto-select first active table if none selected
   React.useEffect(() => {
     if (!selectedTableId && tables.length > 0) {
-      const firstActive = tables.find((t) => t.status === "active");
+      const firstActive = tables.find((t) => t.status === 'active');
       if (firstActive) {
         setSelectedTable(firstActive.id);
       } else {
@@ -284,13 +291,13 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,
       });
-      toast.success("Changes saved");
+      toast.success('Changes saved');
     } catch (error) {
       // Show user-friendly error toast (same pattern as movePlayer)
-      toast.error("Error", { description: getErrorMessage(error) });
+      toast.error('Error', { description: getErrorMessage(error) });
       // Only log unexpected errors (not business validation errors)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: "PitPanels", action: "saveWithBuyIn" });
+        logError(error, { component: 'PitPanels', action: 'saveWithBuyIn' });
       }
     }
   };
@@ -319,13 +326,13 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       // Close modal after successful close
       closeModal();
       setSelectedSlip(null);
-      toast.success("Session closed");
+      toast.success('Session closed');
     } catch (error) {
       // Show user-friendly error toast (same pattern as movePlayer)
-      toast.error("Error", { description: getErrorMessage(error) });
+      toast.error('Error', { description: getErrorMessage(error) });
       // Only log unexpected errors (not business validation errors)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: "PitPanels", action: "closeSession" });
+        logError(error, { component: 'PitPanels', action: 'closeSession' });
       }
     }
   };
@@ -334,9 +341,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // Optimistic updates handled via TanStack Query cache in useMovePlayer
   const handleMovePlayer = async (formState: FormState) => {
     if (!selectedSlipId) {
-      logError(new Error("Move failed: No slip selected"), {
-        component: "PitPanels",
-        action: "movePlayer",
+      logError(new Error('Move failed: No slip selected'), {
+        component: 'PitPanels',
+        action: 'movePlayer',
       });
       return;
     }
@@ -362,14 +369,14 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         ...(averageBet > 0 ? { averageBet } : {}),
       });
       // Show success toast after successful move
-      toast.success("Player moved");
+      toast.success('Player moved');
     } catch (error) {
       // Show error toast with specific message since modal is already closed
       // TanStack Query rollback in use-move-player.ts handles cache rollback
-      toast.error("Error", { description: getErrorMessage(error) });
+      toast.error('Error', { description: getErrorMessage(error) });
       // Only log unexpected errors (not business errors like SEAT_OCCUPIED)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: "PitPanels", action: "movePlayer" });
+        logError(error, { component: 'PitPanels', action: 'movePlayer' });
       }
     }
   };
@@ -391,14 +398,14 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     } else {
       // Seat is empty - open new slip modal
       setNewSlipSeatNumber(seatNumber);
-      openModal("new-slip", { seatNumber });
+      openModal('new-slip', { seatNumber });
     }
   };
 
   // Handle opening new slip modal (from panel button)
   const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
-    openModal("new-slip", {});
+    openModal('new-slip', {});
   };
 
   // Handle slip click from active slips list
@@ -409,17 +416,17 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       const ctx = await resolveCurrentSlipContext(supabase, slipId);
 
       setSelectedSlip(ctx.slipIdCurrent);
-      openModal("rating-slip", { slipId: ctx.slipIdCurrent });
+      openModal('rating-slip', { slipId: ctx.slipIdCurrent });
 
       if (ctx.rolledOver) {
         toast.info("Session rolled over to today's gaming day.");
       }
       if (ctx.readOnly) {
-        toast.info("Read-only: no player bound to this slip.");
+        toast.info('Read-only: no player bound to this slip.');
       }
     } catch (error) {
-      toast.error("Error", { description: getErrorMessage(error) });
-      logError(error, { component: "PitPanels", action: "handleSlipClick" });
+      toast.error('Error', { description: getErrorMessage(error) });
+      logError(error, { component: 'PitPanels', action: 'handleSlipClick' });
     }
   };
 
@@ -429,12 +436,12 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-destructive/50 bg-destructive/10 p-12">
         <div
           className="text-sm font-bold uppercase tracking-widest text-destructive"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           Error Loading Dashboard
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          {tablesError?.message || statsError?.message || "Unknown error"}
+          {tablesError?.message || statsError?.message || 'Unknown error'}
         </p>
       </div>
     );
@@ -444,7 +451,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   // PRD-013: Removed selectedTableId and onTableSelect (now in store)
   const panelProps = {
     casinoId,
-    tableName: selectedTable?.label ?? "No Table",
+    tableName: selectedTable?.label ?? 'No Table',
     tables,
     selectedTable: selectedTable ?? null,
     seats,
@@ -480,7 +487,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       {/* New Slip Modal */}
       {selectedTableId && (
         <NewSlipModal
-          open={isModalOpen && modalType === "new-slip"}
+          open={isModalOpen && modalType === 'new-slip'}
           onOpenChange={(open) => {
             if (!open) closeModal();
           }}
@@ -494,7 +501,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       {/* Rating Slip Modal - uses useTransition internally for pending states */}
       <RatingSlipModal
         slipId={selectedSlipId}
-        isOpen={isModalOpen && modalType === "rating-slip"}
+        isOpen={isModalOpen && modalType === 'rating-slip'}
         onClose={() => {
           closeModal();
           setSelectedSlip(null);

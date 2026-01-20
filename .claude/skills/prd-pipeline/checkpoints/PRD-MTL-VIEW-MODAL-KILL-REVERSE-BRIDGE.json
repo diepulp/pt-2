@@ -1,0 +1,57 @@
+{
+  "prd_id": "PRD-MTL-VIEW-MODAL-KILL-REVERSE-BRIDGE",
+  "status": "complete",
+  "created_at": "2026-01-20T18:00:00Z",
+  "updated_at": "2026-01-20T19:00:00Z",
+  "current_phase": 2,
+  "total_phases": 2,
+  "execution_spec_path": "docs/20-architecture/specs/PRD-MTL-VIEW-MODAL-KILL-REVERSE-BRIDGE/EXECUTION-SPEC-PRD-MTL-VIEW-MODAL-KILL-REVERSE-BRIDGE.md",
+  "workstreams": {
+    "WS1": {
+      "name": "Database Constraint for Derived-Only Financial Types",
+      "executor": "backend-service-builder",
+      "status": "completed",
+      "outputs": [
+        "supabase/migrations/20260120015448_mtl_derived_only_constraint.sql"
+      ],
+      "gate": "schema-validation"
+    },
+    "WS2": {
+      "name": "MtlEntryViewModal Component",
+      "executor": "frontend-design-pt-2",
+      "status": "completed",
+      "outputs": [
+        "components/mtl/mtl-entry-view-modal.tsx"
+      ],
+      "gate": "type-check"
+    },
+    "WS3": {
+      "name": "Compliance Dashboard Integration",
+      "executor": "frontend-design-pt-2",
+      "status": "completed",
+      "outputs": [
+        "components/mtl/compliance-dashboard.tsx"
+      ],
+      "gate": "type-check"
+    }
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "phases": [
+    {
+      "name": "Phase 1 - Foundation (Parallel)",
+      "workstreams": ["WS1", "WS2"],
+      "status": "completed"
+    },
+    {
+      "name": "Phase 2 - Integration",
+      "workstreams": ["WS3"],
+      "status": "completed"
+    }
+  ],
+  "gates_passed": [
+    "schema-validation",
+    "type-check",
+    "build"
+  ],
+  "error": null
+}

@@ -9,7 +9,7 @@
  * @see services/table-context/dtos.ts - Type aliases
  */
 
-import type { TableAvailability, SessionPhase, TableBankMode } from "./dtos";
+import type { TableAvailability, SessionPhase, TableBankMode } from './dtos';
 
 // === Table Availability Labels (gaming_table.status) ===
 
@@ -18,9 +18,9 @@ import type { TableAvailability, SessionPhase, TableBankMode } from "./dtos";
  * Maps database enum values to user-friendly display text.
  */
 export const TABLE_AVAILABILITY_LABELS: Record<TableAvailability, string> = {
-  inactive: "Idle",
-  active: "Available",
-  closed: "Decommissioned",
+  inactive: 'Idle',
+  active: 'Available',
+  closed: 'Decommissioned',
 };
 
 /**
@@ -28,9 +28,9 @@ export const TABLE_AVAILABILITY_LABELS: Record<TableAvailability, string> = {
  * Uses Tailwind color names for consistency.
  */
 export const TABLE_AVAILABILITY_COLORS: Record<TableAvailability, string> = {
-  inactive: "gray",
-  active: "green",
-  closed: "red",
+  inactive: 'gray',
+  active: 'green',
+  closed: 'red',
 };
 
 // === Session Phase Labels (table_session.status) ===
@@ -40,10 +40,10 @@ export const TABLE_AVAILABILITY_COLORS: Record<TableAvailability, string> = {
  * Maps database enum values to user-friendly display text.
  */
 export const SESSION_PHASE_LABELS: Record<SessionPhase, string> = {
-  OPEN: "Opening",
-  ACTIVE: "In Play",
-  RUNDOWN: "Rundown",
-  CLOSED: "Closed",
+  OPEN: 'Opening',
+  ACTIVE: 'In Play',
+  RUNDOWN: 'Rundown',
+  CLOSED: 'Closed',
 };
 
 /**
@@ -51,10 +51,10 @@ export const SESSION_PHASE_LABELS: Record<SessionPhase, string> = {
  * Uses Tailwind color names for consistency.
  */
 export const SESSION_PHASE_COLORS: Record<SessionPhase, string> = {
-  OPEN: "blue",
-  ACTIVE: "green",
-  RUNDOWN: "amber",
-  CLOSED: "gray",
+  OPEN: 'blue',
+  ACTIVE: 'green',
+  RUNDOWN: 'amber',
+  CLOSED: 'gray',
 };
 
 // === Table Bank Mode Labels (ADR-027) ===
@@ -66,14 +66,14 @@ export const SESSION_PHASE_COLORS: Record<SessionPhase, string> = {
  * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
  */
 export const TABLE_BANK_MODE_LABELS: Record<TableBankMode, string> = {
-  INVENTORY_COUNT: "Inventory Count",
-  IMPREST_TO_PAR: "Imprest to Par",
+  INVENTORY_COUNT: 'Inventory Count',
+  IMPREST_TO_PAR: 'Imprest to Par',
 };
 
 /**
  * Descriptions for table bank mode (tooltip/help text).
  */
 export const TABLE_BANK_MODE_DESCRIPTIONS: Record<TableBankMode, string> = {
-  INVENTORY_COUNT: "Count and record tray as-is at shift close",
-  IMPREST_TO_PAR: "Restore tray to par via final fill/credit before close",
+  INVENTORY_COUNT: 'Count and record tray as-is at shift close',
+  IMPREST_TO_PAR: 'Restore tray to par via final fill/credit before close',
 };

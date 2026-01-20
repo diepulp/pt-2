@@ -20,9 +20,18 @@
  * @see ADR-019 Loyalty Points Policy
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach } from '@jest/globals';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
+
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 
@@ -55,7 +64,7 @@ function calculateTheo(
   avgBet: number,
   durationSeconds: number,
   houseEdge: number = POLICY.houseEdge,
-  decisionsPerHour: number = POLICY.decisionsPerHour
+  decisionsPerHour: number = POLICY.decisionsPerHour,
 ): number {
   const durationHours = durationSeconds / 3600;
   return avgBet * (houseEdge / 100) * durationHours * decisionsPerHour;
@@ -68,7 +77,7 @@ function calculateTheo(
 function calculatePoints(
   theo: number,
   pointsConversionRate: number = POLICY.pointsConversionRate,
-  pointMultiplier: number = POLICY.pointMultiplier
+  pointMultiplier: number = POLICY.pointMultiplier,
 ): number {
   return Math.round(theo * pointsConversionRate * pointMultiplier);
 }
@@ -112,7 +121,9 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
   beforeAll(async () => {
     if (!supabaseUrl || !supabaseServiceKey) {
-      throw new Error('Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY');
+      throw new Error(
+        'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
+      );
     }
 
     supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
@@ -203,7 +214,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   async function createClosedRatingSlip(
     player: TestPlayer,
     avgBet: number,
-    durationSeconds: number
+    durationSeconds: number,
   ): Promise<RatingSlipData> {
     const slipId = randomUUID();
     const startTime = new Date(Date.now() - durationSeconds * 1000);
@@ -221,22 +232,20 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       captured_at: startTime.toISOString(),
     };
 
-    const { error: slipError } = await supabase
-      .from('rating_slip')
-      .insert({
-        id: slipId,
-        casino_id: fixture.casinoId,
-        visit_id: player.visitId,
-        table_id: fixture.tableId,
-        seat_number: String(playerCounter),
-        average_bet: avgBet,
-        status: 'closed',
-        start_time: startTime.toISOString(),
-        end_time: endTime.toISOString(),
-        duration_seconds: durationSeconds,
-        policy_snapshot: policySnapshot,
-        accrual_kind: 'loyalty',
-      });
+    const { error: slipError } = await supabase.from('rating_slip').insert({
+      id: slipId,
+      casino_id: fixture.casinoId,
+      visit_id: player.visitId,
+      table_id: fixture.tableId,
+      seat_number: String(playerCounter),
+      average_bet: avgBet,
+      status: 'closed',
+      start_time: startTime.toISOString(),
+      end_time: endTime.toISOString(),
+      duration_seconds: durationSeconds,
+      policy_snapshot: policySnapshot,
+      accrual_kind: 'loyalty',
+    });
 
     if (slipError) {
       throw new Error(`Failed to create rating slip: ${slipError.message}`);
@@ -259,8 +268,13 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   // ==========================================================================
   async function createLoyaltyLedgerEntry(
     slip: RatingSlipData,
-    idempotencyKey: string
-  ): Promise<{ ledgerId: string; pointsDelta: number; theo: number; balanceAfter: number }> {
+    idempotencyKey: string,
+  ): Promise<{
+    ledgerId: string;
+    pointsDelta: number;
+    theo: number;
+    balanceAfter: number;
+  }> {
     // Calculate theo and points using the formula
     const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
     const pointsDelta = calculatePoints(theo);
@@ -295,14 +309,15 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
     // Update player balance
     const { data: balance, error: balanceError } = await supabase
       .from('player_loyalty')
-      .update({ current_balance: supabase.rpc as any }) // Will use raw SQL below
+      .update({ current_balance: supabase.rpc as unknown }) // Will use raw SQL below
       .eq('player_id', slip.playerId)
       .eq('casino_id', slip.casinoId)
       .select()
       .single();
 
     // Use raw SQL to increment balance atomically
-    const { error: updateError } = await supabase.rpc('execute_sql' as any, {
+
+    const { error: updateError } = await supabase.rpc('execute_sql' as string, {
       query: `
         UPDATE player_loyalty
         SET current_balance = current_balance + ${pointsDelta}
@@ -331,8 +346,14 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   // ==========================================================================
   async function simulateAccrual(
     slip: RatingSlipData,
-    idempotencyKey: string
-  ): Promise<{ ledgerId: string; pointsDelta: number; theo: number; balanceAfter: number; isExisting: boolean }> {
+    idempotencyKey: string,
+  ): Promise<{
+    ledgerId: string;
+    pointsDelta: number;
+    theo: number;
+    balanceAfter: number;
+    isExisting: boolean;
+  }> {
     // Check for existing entry with same idempotency key
     const { data: existingEntry } = await supabase
       .from('loyalty_ledger')
@@ -352,7 +373,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       return {
         ledgerId: existingEntry.id,
         pointsDelta: existingEntry.points_delta,
-        theo: (existingEntry.metadata as any)?.theo ?? 0,
+        theo: (existingEntry.metadata as Record<string, number>)?.theo ?? 0,
         balanceAfter: balance?.current_balance ?? 0,
         isExisting: true,
       };
@@ -435,7 +456,11 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       const avgBet = 100; // $1.00
       const durationSeconds = 3600; // 1 hour
 
-      const slip = await createClosedRatingSlip(testPlayer, avgBet, durationSeconds);
+      const slip = await createClosedRatingSlip(
+        testPlayer,
+        avgBet,
+        durationSeconds,
+      );
 
       // === ACT ===
       const idempotencyKey = randomUUID();
@@ -488,7 +513,11 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       expect(expectedTheo).toBeCloseTo(105, 1);
       expect(expectedPoints).toBe(1050);
 
-      const slip = await createClosedRatingSlip(testPlayer, avgBet, durationSeconds);
+      const slip = await createClosedRatingSlip(
+        testPlayer,
+        avgBet,
+        durationSeconds,
+      );
       const result = await simulateAccrual(slip, randomUUID());
 
       // Verify calculations match
@@ -668,7 +697,11 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       const avgBet = 150;
       const durationSeconds = 5400; // 1.5 hours
 
-      const slip = await createClosedRatingSlip(testPlayer, avgBet, durationSeconds);
+      const slip = await createClosedRatingSlip(
+        testPlayer,
+        avgBet,
+        durationSeconds,
+      );
       const result = await simulateAccrual(slip, randomUUID());
 
       // Verify metadata contains calculation details
@@ -693,7 +726,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 // ============================================================================
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create casino
   const { data: casino, error: casinoError } = await supabase

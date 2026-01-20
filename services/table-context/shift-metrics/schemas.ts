@@ -8,7 +8,7 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 /**
  * ISO timestamp string validation.
@@ -16,14 +16,14 @@ import { z } from "zod";
  */
 const isoTimestamp = z
   .string()
-  .datetime({ message: "Must be a valid ISO 8601 timestamp" });
+  .datetime({ message: 'Must be a valid ISO 8601 timestamp' });
 
 /**
  * Base time window object schema (without refinement for extension).
  */
 const baseTimeWindowSchema = z.object({
-  start: isoTimestamp.describe("Window start timestamp (ISO 8601)"),
-  end: isoTimestamp.describe("Window end timestamp (ISO 8601)"),
+  start: isoTimestamp.describe('Window start timestamp (ISO 8601)'),
+  end: isoTimestamp.describe('Window end timestamp (ISO 8601)'),
 });
 
 /**
@@ -38,8 +38,8 @@ const timeWindowRefinement = (data: { start: string; end: string }) =>
 export const shiftMetricsTimeWindowSchema = baseTimeWindowSchema.refine(
   timeWindowRefinement,
   {
-    message: "end must be after start",
-    path: ["end"],
+    message: 'end must be after start',
+    path: ['end'],
   },
 );
 
@@ -56,11 +56,11 @@ export const shiftTableMetricsQuerySchema = shiftMetricsTimeWindowSchema;
  */
 export const shiftPitMetricsQuerySchema = baseTimeWindowSchema
   .extend({
-    pit_id: z.string().min(1).optional().describe("Optional pit identifier"),
+    pit_id: z.string().min(1).optional().describe('Optional pit identifier'),
   })
   .refine(timeWindowRefinement, {
-    message: "end must be after start",
-    path: ["end"],
+    message: 'end must be after start',
+    path: ['end'],
   });
 
 /**
@@ -81,11 +81,11 @@ export const cashObsTablesQuerySchema = baseTimeWindowSchema
       .string()
       .uuid()
       .optional()
-      .describe("Optional table UUID filter"),
+      .describe('Optional table UUID filter'),
   })
   .refine(timeWindowRefinement, {
-    message: "end must be after start",
-    path: ["end"],
+    message: 'end must be after start',
+    path: ['end'],
   });
 
 /**
@@ -98,11 +98,11 @@ export const cashObsPitsQuerySchema = baseTimeWindowSchema
       .string()
       .min(1)
       .optional()
-      .describe("Optional pit identifier filter"),
+      .describe('Optional pit identifier filter'),
   })
   .refine(timeWindowRefinement, {
-    message: "end must be after start",
-    path: ["end"],
+    message: 'end must be after start',
+    path: ['end'],
   });
 
 /**

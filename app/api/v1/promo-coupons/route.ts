@@ -9,7 +9,7 @@
  * Idempotency: Required for POST - dedupes via idempotency_key + validation_number
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -18,14 +18,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPromoService } from "@/services/loyalty/promo";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPromoService } from '@/services/loyalty/promo';
 import {
   issueCouponSchema,
   promoCouponListQuerySchema,
-} from "@/services/loyalty/promo/schemas";
+} from '@/services/loyalty/promo/schemas';
 
 /**
  * GET /api/v1/promo-coupons
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: coupons,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -57,8 +57,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-coupons.list",
+        domain: 'loyalty',
+        action: 'promo-coupons.list',
         correlationId: ctx.requestId,
       },
     );
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -112,8 +112,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-coupons.issue",
+        domain: 'loyalty',
+        action: 'promo-coupons.issue',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     // Return 200 for duplicate (isExisting), 201 for new
     const status = result.data?.isExisting ? 200 : 201;
-    return successResponse(ctx, result.data, "OK", status);
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }

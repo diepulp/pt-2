@@ -10,10 +10,10 @@
  * @see RPC-RLS-ROLE-ENFORCEMENT-PRD-004.md
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   AccrueOnCloseInput,
@@ -28,8 +28,8 @@ import type {
   RedeemInput,
   RedeemOutput,
   SessionRewardSuggestionOutput,
-} from "./dtos";
-import type { PlayerLoyaltyRow, ReconcileBalanceRpcResponse } from "./mappers";
+} from './dtos';
+import type { PlayerLoyaltyRow, ReconcileBalanceRpcResponse } from './mappers';
 import {
   parseAccrueOnCloseResponse,
   parseApplyPromotionResponse,
@@ -38,9 +38,9 @@ import {
   parseRedeemResponse,
   parseSessionSuggestionResponse,
   toPlayerLoyaltyDTOOrNull,
-} from "./mappers";
-import { decodeLedgerCursor } from "./schemas";
-import { PLAYER_LOYALTY_SELECT } from "./selects";
+} from './mappers';
+import { decodeLedgerCursor } from './schemas';
+import { PLAYER_LOYALTY_SELECT } from './selects';
 
 // === Error Mapping ===
 
@@ -52,140 +52,140 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  const message = error.message || "";
+  const message = error.message || '';
 
   // Handle RPC-raised exceptions
-  if (message.includes("UNAUTHORIZED")) {
+  if (message.includes('UNAUTHORIZED')) {
     return new DomainError(
-      "UNAUTHORIZED",
-      "RLS context not set (authentication required)",
+      'UNAUTHORIZED',
+      'RLS context not set (authentication required)',
     );
   }
 
-  if (message.includes("CASINO_MISMATCH")) {
+  if (message.includes('CASINO_MISMATCH')) {
     return new DomainError(
-      "FORBIDDEN",
-      "Casino context mismatch - cross-casino access denied",
+      'FORBIDDEN',
+      'Casino context mismatch - cross-casino access denied',
     );
   }
 
-  if (message.includes("FORBIDDEN")) {
+  if (message.includes('FORBIDDEN')) {
     // Extract role info if present
     const roleMatch = message.match(/Role (\w+) cannot/);
-    const roleInfo = roleMatch ? ` (current role: ${roleMatch[1]})` : "";
-    return new DomainError("FORBIDDEN", `Insufficient permissions${roleInfo}`);
+    const roleInfo = roleMatch ? ` (current role: ${roleMatch[1]})` : '';
+    return new DomainError('FORBIDDEN', `Insufficient permissions${roleInfo}`);
   }
 
-  if (message.includes("LOYALTY_SLIP_NOT_FOUND")) {
+  if (message.includes('LOYALTY_SLIP_NOT_FOUND')) {
     return new DomainError(
-      "RATING_SLIP_NOT_FOUND",
-      "Rating slip not found for loyalty operation",
+      'RATING_SLIP_NOT_FOUND',
+      'Rating slip not found for loyalty operation',
     );
   }
 
-  if (message.includes("LOYALTY_SLIP_NOT_CLOSED")) {
+  if (message.includes('LOYALTY_SLIP_NOT_CLOSED')) {
     return new DomainError(
-      "RATING_SLIP_NOT_OPEN",
-      "Rating slip must be closed for base accrual",
+      'RATING_SLIP_NOT_OPEN',
+      'Rating slip must be closed for base accrual',
     );
   }
 
-  if (message.includes("LOYALTY_SNAPSHOT_MISSING")) {
+  if (message.includes('LOYALTY_SNAPSHOT_MISSING')) {
     return new DomainError(
-      "RATING_SLIP_MISSING_REQUIRED_DATA",
-      "Rating slip is missing loyalty policy snapshot",
+      'RATING_SLIP_MISSING_REQUIRED_DATA',
+      'Rating slip is missing loyalty policy snapshot',
     );
   }
 
-  if (message.includes("LOYALTY_PLAYER_NOT_FOUND")) {
+  if (message.includes('LOYALTY_PLAYER_NOT_FOUND')) {
     return new DomainError(
-      "LOYALTY_ACCOUNT_NOT_FOUND",
-      "Player has no loyalty account",
+      'LOYALTY_ACCOUNT_NOT_FOUND',
+      'Player has no loyalty account',
     );
   }
 
   // ADR-014: Ghost visits excluded from loyalty accrual
-  if (message.includes("LOYALTY_GHOST_VISIT_EXCLUDED")) {
+  if (message.includes('LOYALTY_GHOST_VISIT_EXCLUDED')) {
     return new DomainError(
-      "LOYALTY_GHOST_VISIT_EXCLUDED",
-      "Ghost gaming visits are excluded from automated loyalty accrual. Rating slips for ghost visits contain compliance-only telemetry.",
+      'LOYALTY_GHOST_VISIT_EXCLUDED',
+      'Ghost gaming visits are excluded from automated loyalty accrual. Rating slips for ghost visits contain compliance-only telemetry.',
     );
   }
 
-  if (message.includes("LOYALTY_INSUFFICIENT_BALANCE")) {
+  if (message.includes('LOYALTY_INSUFFICIENT_BALANCE')) {
     return new DomainError(
-      "INSUFFICIENT_BALANCE",
-      "Insufficient loyalty points balance for redemption",
+      'INSUFFICIENT_BALANCE',
+      'Insufficient loyalty points balance for redemption',
     );
   }
 
-  if (message.includes("LOYALTY_OVERDRAW_NOT_AUTHORIZED")) {
+  if (message.includes('LOYALTY_OVERDRAW_NOT_AUTHORIZED')) {
     return new DomainError(
-      "FORBIDDEN",
-      "Overdraw requires pit_boss or admin role",
+      'FORBIDDEN',
+      'Overdraw requires pit_boss or admin role',
     );
   }
 
-  if (message.includes("LOYALTY_OVERDRAW_EXCEEDS_CAP")) {
+  if (message.includes('LOYALTY_OVERDRAW_EXCEEDS_CAP')) {
     return new DomainError(
-      "LOYALTY_POLICY_VIOLATION",
-      "Overdraw would exceed maximum allowed limit",
+      'LOYALTY_POLICY_VIOLATION',
+      'Overdraw would exceed maximum allowed limit',
     );
   }
 
-  if (message.includes("LOYALTY_POINTS_INVALID")) {
+  if (message.includes('LOYALTY_POINTS_INVALID')) {
     return new DomainError(
-      "LOYALTY_POINTS_NEGATIVE",
-      "Points value must be positive",
+      'LOYALTY_POINTS_NEGATIVE',
+      'Points value must be positive',
     );
   }
 
-  if (message.includes("LOYALTY_NOTE_REQUIRED")) {
+  if (message.includes('LOYALTY_NOTE_REQUIRED')) {
     return new DomainError(
-      "VALIDATION_ERROR",
-      "Note is required for this operation",
+      'VALIDATION_ERROR',
+      'Note is required for this operation',
     );
   }
 
   // Handle Postgres error codes
   // 23505 = Unique constraint violation (idempotency key)
-  if (error.code === "23505") {
-    if (message.includes("idempotency_key")) {
+  if (error.code === '23505') {
+    if (message.includes('idempotency_key')) {
       return new DomainError(
-        "IDEMPOTENCY_CONFLICT",
-        "A transaction with this idempotency key already exists",
+        'IDEMPOTENCY_CONFLICT',
+        'A transaction with this idempotency key already exists',
       );
     }
     return new DomainError(
-      "REWARD_ALREADY_ISSUED",
-      "Duplicate loyalty ledger entry detected",
+      'REWARD_ALREADY_ISSUED',
+      'Duplicate loyalty ledger entry detected',
     );
   }
 
   // 23503 = Foreign key violation
-  if (error.code === "23503") {
-    if (message.includes("player_id")) {
-      return new DomainError("PLAYER_NOT_FOUND", "Player not found");
+  if (error.code === '23503') {
+    if (message.includes('player_id')) {
+      return new DomainError('PLAYER_NOT_FOUND', 'Player not found');
     }
-    if (message.includes("rating_slip_id")) {
-      return new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found");
+    if (message.includes('rating_slip_id')) {
+      return new DomainError('RATING_SLIP_NOT_FOUND', 'Rating slip not found');
     }
-    if (message.includes("visit_id")) {
-      return new DomainError("VISIT_NOT_FOUND", "Visit not found");
+    if (message.includes('visit_id')) {
+      return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
     }
     return new DomainError(
-      "FOREIGN_KEY_VIOLATION",
-      "Referenced record not found",
+      'FOREIGN_KEY_VIOLATION',
+      'Referenced record not found',
     );
   }
 
   // PGRST116 = Not found (no rows returned)
-  if (error.code === "PGRST116" || message.includes("No rows found")) {
-    return new DomainError("NOT_FOUND", "Requested loyalty record not found");
+  if (error.code === 'PGRST116' || message.includes('No rows found')) {
+    return new DomainError('NOT_FOUND', 'Requested loyalty record not found');
   }
 
   // Default to internal error
-  return new DomainError("INTERNAL_ERROR", message, { details: error });
+  return new DomainError('INTERNAL_ERROR', message, { details: error });
 }
 
 // === Accrual Operations ===
@@ -208,7 +208,7 @@ export async function accrueOnClose(
 ): Promise<AccrueOnCloseOutput> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)("rpc_accrue_on_close", {
+    const { data, error } = await (supabase.rpc as any)('rpc_accrue_on_close', {
       p_rating_slip_id: input.ratingSlipId,
       p_casino_id: input.casinoId,
       p_idempotency_key: input.idempotencyKey,
@@ -220,8 +220,8 @@ export async function accrueOnClose(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for accrual operation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for accrual operation',
       );
     }
 
@@ -257,7 +257,7 @@ export async function redeem(
 ): Promise<RedeemOutput> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)("rpc_redeem", {
+    const { data, error } = await (supabase.rpc as any)('rpc_redeem', {
       p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
@@ -275,8 +275,8 @@ export async function redeem(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for redemption operation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for redemption operation',
       );
     }
 
@@ -310,7 +310,7 @@ export async function manualCredit(
 ): Promise<ManualCreditOutput> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)("rpc_manual_credit", {
+    const { data, error } = await (supabase.rpc as any)('rpc_manual_credit', {
       p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
@@ -325,8 +325,8 @@ export async function manualCredit(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for manual credit operation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for manual credit operation',
       );
     }
 
@@ -360,7 +360,7 @@ export async function applyPromotion(
 ): Promise<ApplyPromotionOutput> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)("rpc_apply_promotion", {
+    const { data, error } = await (supabase.rpc as any)('rpc_apply_promotion', {
       p_casino_id: input.casinoId,
       p_rating_slip_id: input.ratingSlipId,
       p_campaign_id: input.campaignId,
@@ -375,8 +375,8 @@ export async function applyPromotion(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for promotion operation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for promotion operation',
       );
     }
 
@@ -412,7 +412,7 @@ export async function evaluateSuggestion(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "evaluate_session_reward_suggestion",
+      'evaluate_session_reward_suggestion',
       {
         p_rating_slip_id: slipId,
         p_as_of_ts: asOfTs ?? null,
@@ -425,8 +425,8 @@ export async function evaluateSuggestion(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for suggestion evaluation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for suggestion evaluation',
       );
     }
 
@@ -462,10 +462,10 @@ export async function getBalance(
     // Use wildcard select to avoid type errors with schema differences
     // Current schema uses 'balance', new schema will use 'current_balance'
     const { data, error } = await supabase
-      .from("player_loyalty")
-      .select("*")
-      .eq("player_id", playerId)
-      .eq("casino_id", casinoId)
+      .from('player_loyalty')
+      .select('*')
+      .eq('player_id', playerId)
+      .eq('casino_id', casinoId)
       .maybeSingle();
 
     if (error) {
@@ -480,8 +480,8 @@ export async function getBalance(
     // Validate and normalize the response to PlayerLoyaltyRow type
     if (!data.player_id || !data.casino_id || !data.updated_at) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "Invalid player_loyalty row structure",
+        'INTERNAL_ERROR',
+        'Invalid player_loyalty row structure',
       );
     }
 
@@ -494,7 +494,7 @@ export async function getBalance(
       current_balance: rawData.current_balance ?? rawData.balance ?? 0,
       tier: rawData.tier ?? null,
       preferences:
-        typeof rawData.preferences === "object" && rawData.preferences !== null
+        typeof rawData.preferences === 'object' && rawData.preferences !== null
           ? rawData.preferences
           : {},
       updated_at: rawData.updated_at,
@@ -539,7 +539,7 @@ export async function getLedger(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_get_player_ledger",
+      'rpc_get_player_ledger',
       {
         p_casino_id: query.casinoId,
         p_player_id: query.playerId,
@@ -592,7 +592,7 @@ export async function reconcileBalance(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_reconcile_loyalty_balance",
+      'rpc_reconcile_loyalty_balance',
       {
         p_player_id: playerId,
         p_casino_id: casinoId,
@@ -605,8 +605,8 @@ export async function reconcileBalance(
 
     if (!data || (Array.isArray(data) && data.length === 0)) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for reconciliation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for reconciliation',
       );
     }
 
@@ -614,15 +614,15 @@ export async function reconcileBalance(
 
     // Validate RPC response structure
     if (
-      typeof row !== "object" ||
+      typeof row !== 'object' ||
       row === null ||
-      typeof row.old_balance !== "number" ||
-      typeof row.new_balance !== "number" ||
-      typeof row.drift_detected !== "boolean"
+      typeof row.old_balance !== 'number' ||
+      typeof row.new_balance !== 'number' ||
+      typeof row.drift_detected !== 'boolean'
     ) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "Invalid reconcile_loyalty_balance RPC response structure",
+        'INTERNAL_ERROR',
+        'Invalid reconcile_loyalty_balance RPC response structure',
       );
     }
 

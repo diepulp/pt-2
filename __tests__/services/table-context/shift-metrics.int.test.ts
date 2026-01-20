@@ -182,7 +182,10 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       .eq('casino_id', casinoId);
     await serviceClient.from('rating_slip').delete().eq('id', ratingSlipId);
     await serviceClient.from('visit').delete().eq('id', visitId);
-    await serviceClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casinoId);
     await serviceClient.from('player').delete().eq('id', playerId);
     await serviceClient.from('gaming_table').delete().eq('casino_id', casinoId);
     await serviceClient.from('staff').delete().eq('casino_id', casinoId);
@@ -206,7 +209,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_rating_slip_id: ratingSlipId,
           p_tender_type: 'cash',
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -230,7 +233,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_tender_type: 'cash',
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -252,7 +255,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_idempotency_key: idempotencyKey,
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       // Second call with same key
@@ -264,7 +267,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_idempotency_key: idempotencyKey,
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(first!.id).toBe(second!.id);
@@ -278,7 +281,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 10000,
           p_telemetry_kind: 'RATED_BUYIN',
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).not.toBeNull();
@@ -294,7 +297,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_visit_id: visitId,
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).not.toBeNull();
@@ -309,7 +312,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 0,
           p_telemetry_kind: 'GRIND_BUYIN',
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).not.toBeNull();
@@ -377,7 +380,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -394,7 +397,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       });
 
       const table1Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId1
+        (m: { table_id: string }) => m.table_id === tableId1,
       );
 
       expect(table1Metrics).toBeDefined();
@@ -412,7 +415,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       });
 
       const table1Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId1
+        (m: { table_id: string }) => m.table_id === tableId1,
       );
 
       expect(table1Metrics.fills_total_cents).toBeGreaterThanOrEqual(0);
@@ -427,17 +430,17 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       });
 
       const table1Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId1
+        (m: { table_id: string }) => m.table_id === tableId1,
       );
 
       expect(table1Metrics.estimated_drop_rated_cents).toBeGreaterThanOrEqual(
-        0
+        0,
       );
       expect(table1Metrics.estimated_drop_grind_cents).toBeGreaterThanOrEqual(
-        0
+        0,
       );
       expect(table1Metrics.estimated_drop_buyins_cents).toBeGreaterThanOrEqual(
-        0
+        0,
       );
     });
 
@@ -449,7 +452,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       });
 
       const table1Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId1
+        (m: { table_id: string }) => m.table_id === tableId1,
       );
 
       // We logged grind buy-ins, so should be GOOD_COVERAGE
@@ -465,7 +468,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       });
 
       const table1Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId1
+        (m: { table_id: string }) => m.table_id === tableId1,
       );
 
       expect(table1Metrics.metric_grade).toBe('ESTIMATE');
@@ -480,7 +483,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
 
       // Table2 has no snapshots
       const table2Metrics = data?.find(
-        (m: { table_id: string }) => m.table_id === tableId2
+        (m: { table_id: string }) => m.table_id === tableId2,
       );
 
       expect(table2Metrics).toBeDefined();
@@ -558,7 +561,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -594,7 +597,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       expect(rollup.estimated_drop_rated_total_cents).toBeGreaterThanOrEqual(0);
       expect(rollup.estimated_drop_grind_total_cents).toBeGreaterThanOrEqual(0);
       expect(rollup.estimated_drop_buyins_total_cents).toBeGreaterThanOrEqual(
-        0
+        0,
       );
     });
 
@@ -639,7 +642,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(tableMetrics).toBeDefined();
@@ -653,7 +656,8 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         if (existing) {
           existing.tables_count = (existing.tables_count as number) + 1;
           existing.fills_total_cents =
-            (existing.fills_total_cents as number) + Number(table.fills_total_cents ?? 0);
+            (existing.fills_total_cents as number) +
+            Number(table.fills_total_cents ?? 0);
         } else {
           pitMap.set(table.pit_id, {
             pit_id: table.pit_id,
@@ -664,12 +668,15 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       }
 
       // Compare with RPC-based result
-      const { data: rpcResult } = await serviceClient.rpc('rpc_shift_pit_metrics', {
-        p_window_start: windowStart.toISOString(),
-        p_window_end: windowEnd.toISOString(),
-        p_pit_id: 'PIT-A',
-        p_actor_id: pitBossId,
-      });
+      const { data: rpcResult } = await serviceClient.rpc(
+        'rpc_shift_pit_metrics',
+        {
+          p_window_start: windowStart.toISOString(),
+          p_window_end: windowEnd.toISOString(),
+          p_pit_id: 'PIT-A',
+          p_actor_id: pitBossId,
+        },
+      );
 
       const clientAggregated = pitMap.get('PIT-A');
       const rpcRollup = rpcResult?.[0];
@@ -678,7 +685,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       expect(rpcRollup).toBeDefined();
       expect(clientAggregated?.tables_count).toBe(rpcRollup?.tables_count);
       expect(clientAggregated?.fills_total_cents).toBe(
-        Number(rpcRollup?.fills_total_cents ?? 0)
+        Number(rpcRollup?.fills_total_cents ?? 0),
       );
     });
 
@@ -694,7 +701,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       // Client-side aggregation
@@ -726,7 +733,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_actor_id: pitBossId,
-        }
+        },
       );
 
       expect(tableError).toBeNull();
@@ -734,7 +741,9 @@ describeIntegration('Shift Metrics Integration Tests', () => {
 
       // Client-side aggregation produces all three levels
       const tables = tableMetrics ?? [];
-      const uniquePits = new Set(tables.map((t: { pit_id: string | null }) => t.pit_id).filter(Boolean));
+      const uniquePits = new Set(
+        tables.map((t: { pit_id: string | null }) => t.pit_id).filter(Boolean),
+      );
 
       // Validate structure matches BFF response shape
       expect(tables.length).toBeGreaterThanOrEqual(2);
@@ -747,7 +756,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         fills_total_cents: tables.reduce(
           (sum: number, t: { fills_total_cents?: number }) =>
             sum + Number(t.fills_total_cents ?? 0),
-          0
+          0,
         ),
       };
 

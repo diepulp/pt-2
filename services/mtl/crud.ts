@@ -17,10 +17,10 @@
  * @see ADR-024 RLS Context Injection
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CreateMtlAuditNoteInput,
@@ -32,7 +32,7 @@ import type {
   MtlGamingDaySummaryDTO,
   MtlGamingDaySummaryFilters,
   CasinoThresholds,
-} from "./dtos";
+} from './dtos';
 import {
   mapMtlEntryRow,
   mapMtlEntryRowList,
@@ -42,13 +42,13 @@ import {
   mapGamingDaySummaryRowList,
   DEFAULT_THRESHOLDS,
   type MtlEntryWithNotesRow,
-} from "./mappers";
+} from './mappers';
 import {
   MTL_ENTRY_SELECT,
   MTL_ENTRY_DETAIL_SELECT,
   MTL_AUDIT_NOTE_SELECT,
   MTL_GAMING_DAY_SUMMARY_SELECT,
-} from "./selects";
+} from './selects';
 
 // ============================================================================
 // Error Mapping
@@ -62,55 +62,55 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  const message = error.message || "";
+  const message = error.message || '';
 
   // Handle RPC-raised exceptions
-  if (message.includes("MTL_ENTRY_NOT_FOUND")) {
-    return new DomainError("MTL_ENTRY_NOT_FOUND", "MTL entry not found");
+  if (message.includes('MTL_ENTRY_NOT_FOUND')) {
+    return new DomainError('MTL_ENTRY_NOT_FOUND', 'MTL entry not found');
   }
 
-  if (message.includes("MTL_IMMUTABLE_ENTRY")) {
+  if (message.includes('MTL_IMMUTABLE_ENTRY')) {
     return new DomainError(
-      "MTL_IMMUTABLE_ENTRY",
-      "MTL entry cannot be modified after creation",
+      'MTL_IMMUTABLE_ENTRY',
+      'MTL entry cannot be modified after creation',
     );
   }
 
   // 23505 = Unique constraint violation (idempotency key)
-  if (error.code === "23505") {
+  if (error.code === '23505') {
     // This is expected for idempotent writes - handled specially in createEntry
     return new DomainError(
-      "UNIQUE_VIOLATION",
-      "Entry with this idempotency key already exists",
+      'UNIQUE_VIOLATION',
+      'Entry with this idempotency key already exists',
     );
   }
 
   // 23503 = Foreign key violation
-  if (error.code === "23503") {
-    if (message.includes("patron_uuid")) {
-      return new DomainError("NOT_FOUND", "Referenced patron not found");
+  if (error.code === '23503') {
+    if (message.includes('patron_uuid')) {
+      return new DomainError('NOT_FOUND', 'Referenced patron not found');
     }
-    if (message.includes("casino_id")) {
-      return new DomainError("NOT_FOUND", "Referenced casino not found");
+    if (message.includes('casino_id')) {
+      return new DomainError('NOT_FOUND', 'Referenced casino not found');
     }
-    if (message.includes("mtl_entry_id")) {
+    if (message.includes('mtl_entry_id')) {
       return new DomainError(
-        "MTL_ENTRY_NOT_FOUND",
-        "Referenced MTL entry not found",
+        'MTL_ENTRY_NOT_FOUND',
+        'Referenced MTL entry not found',
       );
     }
     return new DomainError(
-      "FOREIGN_KEY_VIOLATION",
-      "Referenced resource not found",
+      'FOREIGN_KEY_VIOLATION',
+      'Referenced resource not found',
     );
   }
 
   // PGRST116 = No rows returned (not found)
-  if (error.code === "PGRST116") {
-    return new DomainError("MTL_ENTRY_NOT_FOUND", "MTL entry not found");
+  if (error.code === 'PGRST116') {
+    return new DomainError('MTL_ENTRY_NOT_FOUND', 'MTL entry not found');
   }
 
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // ============================================================================
@@ -120,24 +120,35 @@ function mapDatabaseError(error: {
 /**
  * Fetch casino thresholds from casino_settings.
  * Falls back to defaults if not found.
+ *
+ * IMPORTANT: casino_settings stores thresholds in DOLLARS,
+ * but all amounts in the system use CENTS (per ISSUE-FB8EB717).
+ * This function converts dollars to cents for consistent comparison.
  */
 async function getCasinoThresholds(
   supabase: SupabaseClient<Database>,
   casinoId: string,
 ): Promise<CasinoThresholds> {
   const { data, error } = await supabase
-    .from("casino_settings")
-    .select("watchlist_floor, ctr_threshold")
-    .eq("casino_id", casinoId)
+    .from('casino_settings')
+    .select('watchlist_floor, ctr_threshold')
+    .eq('casino_id', casinoId)
     .maybeSingle();
 
   if (error || !data) {
     return DEFAULT_THRESHOLDS;
   }
 
+  // Convert dollars to cents (casino_settings stores in dollars, amounts are in cents)
+  const DOLLARS_TO_CENTS = 100;
+
   return {
-    watchlistFloor: data.watchlist_floor ?? DEFAULT_THRESHOLDS.watchlistFloor,
-    ctrThreshold: data.ctr_threshold ?? DEFAULT_THRESHOLDS.ctrThreshold,
+    watchlistFloor: data.watchlist_floor
+      ? data.watchlist_floor * DOLLARS_TO_CENTS
+      : DEFAULT_THRESHOLDS.watchlistFloor,
+    ctrThreshold: data.ctr_threshold
+      ? data.ctr_threshold * DOLLARS_TO_CENTS
+      : DEFAULT_THRESHOLDS.ctrThreshold,
   };
 }
 
@@ -168,7 +179,7 @@ export async function createEntry(
     amount: input.amount,
     direction: input.direction,
     txn_type: input.txn_type,
-    source: input.source ?? "table",
+    source: input.source ?? 'table',
     area: input.area ?? null,
     occurred_at: input.occurred_at ?? new Date().toISOString(),
     idempotency_key: input.idempotency_key,
@@ -176,25 +187,25 @@ export async function createEntry(
 
   // Attempt insert
   const { data, error } = await supabase
-    .from("mtl_entry")
+    .from('mtl_entry')
     .insert(insertData)
     .select(MTL_ENTRY_SELECT)
     .single();
 
   // Handle idempotency - if duplicate key, fetch existing entry
-  if (error?.code === "23505") {
+  if (error?.code === '23505') {
     const { data: existing, error: fetchError } = await supabase
-      .from("mtl_entry")
+      .from('mtl_entry')
       .select(MTL_ENTRY_SELECT)
-      .eq("casino_id", input.casino_id)
-      .eq("idempotency_key", input.idempotency_key)
+      .eq('casino_id', input.casino_id)
+      .eq('idempotency_key', input.idempotency_key)
       .single();
 
     if (fetchError) throw mapDatabaseError(fetchError);
     if (!existing) {
       throw new DomainError(
-        "MTL_ENTRY_NOT_FOUND",
-        "Idempotent entry not found",
+        'MTL_ENTRY_NOT_FOUND',
+        'Idempotent entry not found',
       );
     }
 
@@ -204,7 +215,7 @@ export async function createEntry(
 
   if (error) throw mapDatabaseError(error);
   if (!data) {
-    throw new DomainError("INTERNAL_ERROR", "Insert returned no data");
+    throw new DomainError('INTERNAL_ERROR', 'Insert returned no data');
   }
 
   const thresholds = await getCasinoThresholds(supabase, input.casino_id);
@@ -225,7 +236,7 @@ export async function createAuditNote(
   input: CreateMtlAuditNoteInput,
 ): Promise<MtlAuditNoteDTO> {
   const { data, error } = await supabase
-    .from("mtl_audit_note")
+    .from('mtl_audit_note')
     .insert({
       mtl_entry_id: input.mtl_entry_id,
       staff_id: input.staff_id,
@@ -236,7 +247,7 @@ export async function createAuditNote(
 
   if (error) throw mapDatabaseError(error);
   if (!data) {
-    throw new DomainError("INTERNAL_ERROR", "Insert returned no data");
+    throw new DomainError('INTERNAL_ERROR', 'Insert returned no data');
   }
 
   return mapMtlAuditNoteRow(data);
@@ -259,15 +270,15 @@ export async function getEntryById(
   entryId: string,
 ): Promise<MtlEntryWithNotesDTO> {
   const { data, error } = await supabase
-    .from("mtl_entry")
+    .from('mtl_entry')
     .select(MTL_ENTRY_DETAIL_SELECT)
-    .eq("id", entryId)
+    .eq('id', entryId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
   if (!data) {
     throw new DomainError(
-      "MTL_ENTRY_NOT_FOUND",
+      'MTL_ENTRY_NOT_FOUND',
       `MTL entry not found: ${entryId}`,
     );
   }
@@ -311,38 +322,38 @@ export async function listEntries(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("mtl_entry")
+    .from('mtl_entry')
     .select(MTL_ENTRY_SELECT)
-    .eq("casino_id", filters.casino_id)
-    .order("created_at", { ascending: false })
-    .order("id", { ascending: false })
+    .eq('casino_id', filters.casino_id)
+    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit + 1);
 
   // Apply optional filters
   if (filters.patron_uuid) {
-    query = query.eq("patron_uuid", filters.patron_uuid);
+    query = query.eq('patron_uuid', filters.patron_uuid);
   }
 
   if (filters.gaming_day) {
-    query = query.eq("gaming_day", filters.gaming_day);
+    query = query.eq('gaming_day', filters.gaming_day);
   }
 
   if (filters.min_amount !== undefined) {
-    query = query.gte("amount", filters.min_amount);
+    query = query.gte('amount', filters.min_amount);
   }
 
   if (filters.txn_type) {
-    query = query.eq("txn_type", filters.txn_type);
+    query = query.eq('txn_type', filters.txn_type);
   }
 
   if (filters.source) {
-    query = query.eq("source", filters.source);
+    query = query.eq('source', filters.source);
   }
 
   // Handle cursor pagination using (created_at, id) keyset
   if (filters.cursor) {
     // Cursor format: "created_at|id"
-    const [cursorCreatedAt, cursorId] = filters.cursor.split("|");
+    const [cursorCreatedAt, cursorId] = filters.cursor.split('|');
     if (cursorCreatedAt && cursorId) {
       // Keyset pagination: (created_at, id) < (cursor_created_at, cursor_id)
       query = query.or(
@@ -390,10 +401,10 @@ export async function getAuditNotes(
   entryId: string,
 ): Promise<MtlAuditNoteDTO[]> {
   const { data, error } = await supabase
-    .from("mtl_audit_note")
+    .from('mtl_audit_note')
     .select(MTL_AUDIT_NOTE_SELECT)
-    .eq("mtl_entry_id", entryId)
-    .order("created_at", { ascending: true });
+    .eq('mtl_entry_id', entryId)
+    .order('created_at', { ascending: true });
 
   if (error) throw mapDatabaseError(error);
 
@@ -415,29 +426,29 @@ export async function getGamingDaySummary(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("mtl_gaming_day_summary")
+    .from('mtl_gaming_day_summary')
     .select(MTL_GAMING_DAY_SUMMARY_SELECT)
-    .eq("casino_id", filters.casino_id)
-    .eq("gaming_day", filters.gaming_day)
-    .order("total_volume", { ascending: false })
+    .eq('casino_id', filters.casino_id)
+    .eq('gaming_day', filters.gaming_day)
+    .order('total_volume', { ascending: false })
     .limit(limit + 1);
 
   // Apply optional filters
   if (filters.patron_uuid) {
-    query = query.eq("patron_uuid", filters.patron_uuid);
+    query = query.eq('patron_uuid', filters.patron_uuid);
   }
 
   if (filters.min_total_in !== undefined) {
-    query = query.gte("total_in", filters.min_total_in);
+    query = query.gte('total_in', filters.min_total_in);
   }
 
   if (filters.min_total_out !== undefined) {
-    query = query.gte("total_out", filters.min_total_out);
+    query = query.gte('total_out', filters.min_total_out);
   }
 
   // Handle cursor pagination
   if (filters.cursor) {
-    const [cursorVolume, cursorPatron] = filters.cursor.split("|");
+    const [cursorVolume, cursorPatron] = filters.cursor.split('|');
     if (cursorVolume && cursorPatron) {
       query = query.or(
         `total_volume.lt.${cursorVolume},and(total_volume.eq.${cursorVolume},patron_uuid.lt.${cursorPatron})`,

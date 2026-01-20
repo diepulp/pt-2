@@ -1,6 +1,6 @@
-import { redirect } from "next/navigation";
+import { redirect } from 'next/navigation';
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from '@/lib/supabase/server';
 
 export default async function LandingPage() {
   const supabase = await createClient();
@@ -9,7 +9,7 @@ export default async function LandingPage() {
   } = await supabase.auth.getUser();
 
   if (user) {
-    redirect("/pit");
+    redirect('/pit');
   }
 
   // Show landing page for unauthenticated users

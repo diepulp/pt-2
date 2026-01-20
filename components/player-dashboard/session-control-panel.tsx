@@ -1,14 +1,14 @@
-"use client";
+'use client';
 
-import { Loader2, Settings } from "lucide-react";
-import * as React from "react";
+import { Loader2, Settings } from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { useActiveVisit } from "@/hooks/visit/use-active-visit";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { useActiveVisit } from '@/hooks/visit/use-active-visit';
+import { cn } from '@/lib/utils';
 
-import { UnderDevelopmentIndicator } from "./under-development-indicator";
+import { UnderDevelopmentIndicator } from './under-development-indicator';
 
 interface SessionControlPanelProps {
   className?: string;
@@ -20,14 +20,14 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
     data: activeVisit,
     isLoading,
     error,
-  } = useActiveVisit(selectedPlayerId || "");
+  } = useActiveVisit(selectedPlayerId || '');
 
   // Loading state
   if (isLoading) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -47,7 +47,7 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -58,7 +58,7 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
             Error loading session
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            {error.message || "Unknown error"}
+            {error.message || 'Unknown error'}
           </p>
         </div>
       </div>
@@ -69,7 +69,7 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -93,15 +93,15 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col",
+        'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col',
         className,
       )}
     >
       {/* LED accent strip */}
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent to-transparent",
-          hasActiveVisit ? "via-emerald-500/70" : "via-muted-foreground/30",
+          'absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent to-transparent',
+          hasActiveVisit ? 'via-emerald-500/70' : 'via-muted-foreground/30',
         )}
       />
 
@@ -143,7 +143,7 @@ export function SessionControlPanel({ className }: SessionControlPanelProps) {
                 </span>
               </div>
               <p className="text-xs text-muted-foreground">
-                Visit ID:{" "}
+                Visit ID:{' '}
                 <span className="font-mono">{visit.id.slice(0, 8)}</span>
               </p>
             </div>

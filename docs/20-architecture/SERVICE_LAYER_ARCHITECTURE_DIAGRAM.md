@@ -1,17 +1,17 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v3.1.0)
+title: Service Layer Architecture Diagram (v3.2.0)
 owner: Architecture
 status: Accepted
-last_review: 2025-12-11
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014, ADR-015]
+last_review: 2026-01-17
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014, ADR-015, ADR-028]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 3.1.0
-**Date**: 2025-12-11
-**Status**: Accepted (Aligned with SRM v4.3.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015)
+**Version**: 3.2.0
+**Date**: 2026-01-17
+**Status**: Accepted (Aligned with SRM v4.10.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -334,6 +334,11 @@ services/{domain}/
 ├── selects.ts                # ✅ Named column sets
 │   └── export const X_SELECT_MIN = "id, name, created_at"
 │
+├── labels.ts                 # ✅ UI label constants (optional, for enum-heavy services)
+│   └── Centralized display labels and colors for enums
+│   └── Example: TABLE_AVAILABILITY_LABELS, SESSION_PHASE_COLORS
+│   └── Reference: ADR-028 D6 (TableContextService)
+│
 ├── keys.ts                   # ✅ React Query key factories (with .scope)
 │   └── export const xKeys = { root: ['x'], list: assign(..., { scope }), ... }
 │   └── Reference: ADR-003:87-96
@@ -363,6 +368,10 @@ services/{domain}/
   - Services without `crud.ts` (logic in Server Actions/hooks) do NOT require mappers.ts
   - **Rationale**: `selects.ts` projections create shapes different from Row types; without mappers, `as` type assertions are needed which are V1 violations. Reference implementation: `services/casino/mappers.ts`
 - `schemas.ts` is **REQUIRED** for services with HTTP Route Handlers. Internal-only services (no HTTP boundary) omit it. Schemas MAY express cheap synchronous business preconditions but domain invariants MUST still be enforced in the service layer.
+- `labels.ts` is **OPTIONAL** for services with enum-heavy DTOs that need consistent UI presentation. Use when:
+  - Multiple UI components display the same enum values
+  - ADR specifies standardized label/color mappings (e.g., ADR-028)
+  - Reference implementation: `services/table-context/labels.ts` (TableContextService)
 
 ---
 
@@ -1519,12 +1528,19 @@ This pattern ensures:
 
 ## Document History
 
-**Version**: 3.1.0
-**Date**: 2025-12-11
-**Status**: Accepted (Aligned with SRM v4.3.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015)
+**Version**: 3.2.0
+**Date**: 2026-01-17
+**Status**: Accepted (Aligned with SRM v4.10.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.2.0 (2026-01-17)** - ADR-028 Table Status Standardization:
+- ✅ Added `labels.ts` to service directory structure (§337-340)
+- ✅ Documented `labels.ts` usage notes and rationale (§371-374)
+- ✅ Added ADR-028 to affects list
+- ✅ Updated SRM reference from v4.3.0 to v4.10.0
+- ✅ Reference implementation: `services/table-context/labels.ts`
 
 **v3.1.0 (2025-12-11)** - ADR-015 Phase 2 Alignment + PlayerFinancialService:
 - ✅ Updated Key Principles section for ADR-015 JWT claims strategy (Phase 2)
@@ -1616,10 +1632,11 @@ This pattern ensures:
 
 | SDLC Peer | Status | Notes |
 |-----------|--------|-------|
-| SRM v4.3.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, PlayerFinancialService |
+| SRM v4.10.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, ADR-028 labels.ts |
 | DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Quick reference table, detailed patterns externalized |
 | SEC-001 | ✅ ALIGNED | RLS patterns externalized, key principles retained |
 | ADR-015 | ✅ ALIGNED | JWT claims Phase 2, hybrid Pattern C, connection pooling |
+| ADR-028 | ✅ ALIGNED | Table Status Standardization, labels.ts pattern |
 | EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
 | ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized |
 | REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |

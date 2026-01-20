@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Activity,
@@ -9,11 +9,11 @@ import {
   TrendingUp,
   Users,
   Zap,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Sidebar,
   SidebarContent,
@@ -27,8 +27,8 @@ import {
   SidebarProvider,
   SidebarInset,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 /**
  * Option A: Sidebar-based Right Panel
@@ -42,8 +42,8 @@ export function SidebarPanelDemo() {
       defaultOpen={false}
       style={
         {
-          "--sidebar-width": "280px",
-          "--sidebar-width-icon": "56px",
+          '--sidebar-width': '280px',
+          '--sidebar-width-icon': '56px',
         } as React.CSSProperties
       }
     >
@@ -109,10 +109,10 @@ function MainContent() {
                 >
                   <div
                     className={cn(
-                      "w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all",
+                      'w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all',
                       isOccupied
-                        ? "bg-amber-500/20 border-amber-500/40 text-amber-400"
-                        : "bg-zinc-800/50 border-zinc-700/50 text-zinc-600",
+                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
+                        : 'bg-zinc-800/50 border-zinc-700/50 text-zinc-600',
                     )}
                   >
                     {isOccupied ? (
@@ -169,13 +169,13 @@ function StatBadge({
     <div className="flex items-center gap-2">
       <Icon
         className={cn(
-          "w-3.5 h-3.5",
-          accent ? "text-amber-500" : "text-zinc-600",
+          'w-3.5 h-3.5',
+          accent ? 'text-amber-500' : 'text-zinc-600',
         )}
       />
       <span className="text-zinc-500">{label}:</span>
       <span
-        className={cn("font-mono", accent ? "text-amber-400" : "text-zinc-300")}
+        className={cn('font-mono', accent ? 'text-amber-400' : 'text-zinc-300')}
       >
         {value}
       </span>
@@ -185,14 +185,14 @@ function StatBadge({
 
 function LeftSidebarPanel() {
   const { state, toggleSidebar } = useSidebar();
-  const isCollapsed = state === "collapsed";
-  const [activeTab, setActiveTab] = React.useState("tables");
+  const isCollapsed = state === 'collapsed';
+  const [activeTab, setActiveTab] = React.useState('tables');
 
   const tabs = [
-    { id: "tables", label: "Tables", icon: LayoutGrid, notifications: 3 },
-    { id: "activity", label: "Activity", icon: Activity, notifications: 2 },
-    { id: "inventory", label: "Inventory", icon: Package, notifications: 0 },
-    { id: "analytics", label: "Analytics", icon: TrendingUp, notifications: 0 },
+    { id: 'tables', label: 'Tables', icon: LayoutGrid, notifications: 3 },
+    { id: 'activity', label: 'Activity', icon: Activity, notifications: 2 },
+    { id: 'inventory', label: 'Inventory', icon: Package, notifications: 0 },
+    { id: 'analytics', label: 'Analytics', icon: TrendingUp, notifications: 0 },
   ];
 
   return (
@@ -216,8 +216,8 @@ function LeftSidebarPanel() {
             size="icon"
             onClick={toggleSidebar}
             className={cn(
-              "h-7 w-7 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50",
-              isCollapsed && "mx-auto",
+              'h-7 w-7 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
+              isCollapsed && 'mx-auto',
             )}
           >
             {isCollapsed ? (
@@ -245,23 +245,23 @@ function LeftSidebarPanel() {
                       onClick={() => setActiveTab(tab.id)}
                       tooltip={tab.label}
                       className={cn(
-                        "transition-all duration-200",
-                        isActive && "bg-amber-500/10 text-amber-400",
+                        'transition-all duration-200',
+                        isActive && 'bg-amber-500/10 text-amber-400',
                       )}
                     >
                       <div className="relative">
                         <Icon
                           className={cn(
-                            "h-4 w-4",
-                            isActive ? "text-amber-400" : "text-zinc-500",
+                            'h-4 w-4',
+                            isActive ? 'text-amber-400' : 'text-zinc-500',
                           )}
                         />
                         {tab.notifications > 0 && (
                           <Badge
                             className={cn(
-                              "absolute -top-1.5 -right-1.5 h-3.5 w-3.5 p-0 text-[9px]",
-                              "bg-amber-500 text-zinc-900 border-0",
-                              "flex items-center justify-center",
+                              'absolute -top-1.5 -right-1.5 h-3.5 w-3.5 p-0 text-[9px]',
+                              'bg-amber-500 text-zinc-900 border-0',
+                              'flex items-center justify-center',
                             )}
                           >
                             {tab.notifications}
@@ -291,8 +291,8 @@ function LeftSidebarPanel() {
       <SidebarFooter className="border-t border-zinc-800/40">
         <div
           className={cn(
-            "flex items-center",
-            isCollapsed ? "justify-center p-2" : "gap-2 px-3 py-2",
+            'flex items-center',
+            isCollapsed ? 'justify-center p-2' : 'gap-2 px-3 py-2',
           )}
         >
           <div className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -314,7 +314,7 @@ function TabContent({ activeTab }: { activeTab: string }) {
         <div className="text-[10px] text-zinc-600 uppercase tracking-wider">
           Active Players
         </div>
-        {["John D.", "Sarah M.", "Mike R."].map((name, i) => (
+        {['John D.', 'Sarah M.', 'Mike R.'].map((name, i) => (
           <div
             key={i}
             className="flex items-center gap-3 p-2 rounded-lg bg-zinc-800/30 border border-zinc-800/40"
@@ -341,9 +341,9 @@ function TabContent({ activeTab }: { activeTab: string }) {
           Recent Activity
         </div>
         {[
-          { action: "Slip opened", time: "2m ago", player: "John D." },
-          { action: "Bet increased", time: "5m ago", player: "Sarah M." },
-          { action: "Player seated", time: "12m ago", player: "Mike R." },
+          { action: 'Slip opened', time: '2m ago', player: 'John D.' },
+          { action: 'Bet increased', time: '5m ago', player: 'Sarah M.' },
+          { action: 'Player seated', time: '12m ago', player: 'Mike R.' },
         ].map((item, i) => (
           <div
             key={i}
@@ -367,17 +367,17 @@ function TabContent({ activeTab }: { activeTab: string }) {
         </div>
         <div className="grid grid-cols-2 gap-2">
           {[
-            { denom: "$5", count: 48, color: "bg-red-500" },
-            { denom: "$25", count: 32, color: "bg-emerald-500" },
-            { denom: "$100", count: 16, color: "bg-zinc-900" },
-            { denom: "$500", count: 8, color: "bg-violet-500" },
+            { denom: '$5', count: 48, color: 'bg-red-500' },
+            { denom: '$25', count: 32, color: 'bg-emerald-500' },
+            { denom: '$100', count: 16, color: 'bg-zinc-900' },
+            { denom: '$500', count: 8, color: 'bg-violet-500' },
           ].map((chip) => (
             <div
               key={chip.denom}
               className="p-2 rounded-lg bg-zinc-800/30 border border-zinc-800/40 text-center"
             >
               <div
-                className={cn("w-6 h-6 rounded-full mx-auto mb-1", chip.color)}
+                className={cn('w-6 h-6 rounded-full mx-auto mb-1', chip.color)}
               />
               <div className="text-xs font-mono text-zinc-300">
                 {chip.denom}
@@ -394,9 +394,9 @@ function TabContent({ activeTab }: { activeTab: string }) {
           Performance
         </div>
         {[
-          { label: "Win Rate", value: "52%", trend: "+2%" },
-          { label: "Avg Bet", value: "$125", trend: "+$15" },
-          { label: "Hands/Hr", value: "42", trend: "-3" },
+          { label: 'Win Rate', value: '52%', trend: '+2%' },
+          { label: 'Avg Bet', value: '$125', trend: '+$15' },
+          { label: 'Hands/Hr', value: '42', trend: '-3' },
         ].map((stat) => (
           <div
             key={stat.label}

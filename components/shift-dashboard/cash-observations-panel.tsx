@@ -7,13 +7,13 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.2
  */
 
-"use client";
+'use client';
 
-import { EyeIcon } from "lucide-react";
+import { EyeIcon } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -21,30 +21,30 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
   CashObsTableRollupDTO,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 
 export interface CashObservationsPanelProps {
   casinoData?: CashObsCasinoRollupDTO;
   pitsData?: CashObsPitRollupDTO[];
   tablesData?: CashObsTableRollupDTO[];
   isLoading?: boolean;
-  view?: "casino" | "pit" | "table";
+  view?: 'casino' | 'pit' | 'table';
 }
 
 /**
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "$0";
+  if (cents == null) return '$0';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);
@@ -54,17 +54,17 @@ function formatCurrency(cents: number | null | undefined): string {
  * Format timestamp to relative time.
  */
 function formatRelativeTime(timestamp: string | null): string {
-  if (!timestamp) return "—";
+  if (!timestamp) return '—';
   const date = new Date(timestamp);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.round(diffMs / 60000);
 
-  if (diffMins < 1) return "just now";
+  if (diffMins < 1) return 'just now';
   if (diffMins < 60) return `${diffMins} min ago`;
   const diffHours = Math.round(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 /**
@@ -282,7 +282,7 @@ function TablesTable({
           <TableRow key={table.table_id}>
             <TableCell className="font-medium">{table.table_label}</TableCell>
             <TableCell className="text-muted-foreground text-xs">
-              {table.pit ?? "—"}
+              {table.pit ?? '—'}
             </TableCell>
             <TableCell className="text-right font-mono text-sm tabular-nums text-amber-600">
               {formatCurrency(table.cash_out_observed_estimate_total)}
@@ -308,7 +308,7 @@ export function CashObservationsPanel({
   pitsData,
   tablesData,
   isLoading,
-  view = "casino",
+  view = 'casino',
 }: CashObservationsPanelProps) {
   return (
     <Card className="border-dashed border-amber-500/30 bg-amber-50/5">
@@ -332,11 +332,11 @@ export function CashObservationsPanel({
         </div>
       </CardHeader>
       <CardContent>
-        {view === "casino" && (
+        {view === 'casino' && (
           <CasinoSummary data={casinoData} isLoading={isLoading} />
         )}
-        {view === "pit" && <PitsTable data={pitsData} isLoading={isLoading} />}
-        {view === "table" && (
+        {view === 'pit' && <PitsTable data={pitsData} isLoading={isLoading} />}
+        {view === 'table' && (
           <TablesTable data={tablesData} isLoading={isLoading} />
         )}
       </CardContent>

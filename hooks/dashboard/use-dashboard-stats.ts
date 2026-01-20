@@ -11,16 +11,16 @@
  * @see EXECUTION-SPEC-PRD-006.md WS3
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { listRatingSlips } from "@/services/rating-slip/http";
-import { fetchTables } from "@/services/table-context/http";
-import { getVisits } from "@/services/visit/http";
+import { listRatingSlips } from '@/services/rating-slip/http';
+import { fetchTables } from '@/services/table-context/http';
+import { getVisits } from '@/services/visit/http';
 
-import { dashboardKeys } from "./keys";
-import type { DashboardStats } from "./types";
+import { dashboardKeys } from './keys';
+import type { DashboardStats } from './types';
 
 /**
  * Fetches aggregate dashboard statistics for a casino.
@@ -56,20 +56,20 @@ export function useDashboardStats(casinoId: string | undefined) {
         fetchTables({}),
 
         // Get open rating slips count (max 100 per schema limit)
-        listRatingSlips({ status: "open", limit: 100 }),
+        listRatingSlips({ status: 'open', limit: 100 }),
 
         // Get paused rating slips count (max 100 per schema limit)
-        listRatingSlips({ status: "paused", limit: 100 }),
+        listRatingSlips({ status: 'paused', limit: 100 }),
 
         // Get active visits (active = ended_at is null)
         // Note: The API filters for active visits (not closed)
         // and returns visits for the current casino via RLS (max 100 per schema limit)
-        getVisits({ status: "active", limit: 100 }),
+        getVisits({ status: 'active', limit: 100 }),
       ]);
 
       // Count active tables
       const activeTablesCount = tables.filter(
-        (table) => table.status === "active",
+        (table) => table.status === 'active',
       ).length;
 
       // Count open + paused slips

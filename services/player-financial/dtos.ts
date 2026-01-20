@@ -20,7 +20,7 @@
  * - `in`: Money coming in (buy-in, marker issuance)
  * - `out`: Money going out (cashout, marker repayment)
  */
-export type FinancialDirection = "in" | "out";
+export type FinancialDirection = 'in' | 'out';
 
 /**
  * Transaction source/origin.
@@ -29,7 +29,7 @@ export type FinancialDirection = "in" | "out";
  * - `cage`: Originated at cashier cage (cashier action)
  * - `system`: System-generated (automated processes)
  */
-export type FinancialSource = "pit" | "cage" | "system";
+export type FinancialSource = 'pit' | 'cage' | 'system';
 
 /**
  * Tender type for transaction.
@@ -63,13 +63,13 @@ export interface FinancialTransactionDTO {
   visit_id: string;
   /** Optional: Associated rating slip */
   rating_slip_id: string | null;
-  /** Transaction amount (always positive, direction indicates flow) */
+  /** Transaction amount (can be negative for adjustments) */
   amount: number;
   /** Transaction direction ('in' or 'out') */
   direction: FinancialDirection;
   /** Transaction source ('pit', 'cage', 'system') */
   source: FinancialSource;
-  /** Tender type (cash, chips, marker, etc.) */
+  /** Tender type (cash, chips, marker, adjustment, etc.) */
   tender_type: TenderType;
   /** Staff member who created this transaction */
   created_by_staff_id: string | null;
@@ -81,6 +81,19 @@ export interface FinancialTransactionDTO {
   gaming_day: string | null;
   /** Idempotency key for duplicate prevention */
   idempotency_key: string | null;
+  /** Transaction kind: 'original', 'adjustment', or 'reversal' */
+  txn_kind: 'original' | 'adjustment' | 'reversal';
+  /** Reason code for adjustments (null for original transactions) */
+  reason_code:
+    | 'data_entry_error'
+    | 'duplicate'
+    | 'wrong_player'
+    | 'wrong_amount'
+    | 'system_bug'
+    | 'other'
+    | null;
+  /** Note explaining the transaction (required for adjustments) */
+  note: string | null;
 }
 
 /**
@@ -180,3 +193,75 @@ export interface VisitTotalQuery {
   /** Visit ID (required) */
   visit_id: string;
 }
+
+// === Adjustment Types (Issue 1: Compliance-friendly corrections) ===
+
+/**
+ * Transaction kind: distinguishes original entries from corrections.
+ *
+ * - `original`: Standard transaction (buy-in, cashout)
+ * - `adjustment`: Correction to a previous transaction
+ * - `reversal`: Complete undo of an adjustment
+ */
+export type FinancialTxnKind = 'original' | 'adjustment' | 'reversal';
+
+/**
+ * Reason codes for financial adjustments.
+ * Required for audit trail compliance.
+ */
+export type AdjustmentReasonCode =
+  | 'data_entry_error' // Staff entered wrong amount
+  | 'duplicate' // Transaction was recorded twice
+  | 'wrong_player' // Applied to wrong player
+  | 'wrong_amount' // Amount was incorrect
+  | 'system_bug' // System created erroneous record
+  | 'other'; // Requires detailed note
+
+/**
+ * Input for creating a financial adjustment.
+ *
+ * Adjustments are compliance-friendly corrections that don't modify
+ * or delete original transactions. Instead, they add a new record
+ * that explains the correction.
+ *
+ * @see rpc_create_financial_adjustment in database
+ */
+export interface CreateFinancialAdjustmentInput {
+  /** Casino ID (must match RLS context) */
+  casino_id: string;
+  /** Player ID */
+  player_id: string;
+  /** Visit ID */
+  visit_id: string;
+  /**
+   * Delta amount (signed).
+   * - Positive: increases total (e.g., +$50 if buy-in was under-reported)
+   * - Negative: decreases total (e.g., -$100 if buy-in was over-reported)
+   */
+  delta_amount: number;
+  /** Reason for the adjustment (required) */
+  reason_code: AdjustmentReasonCode;
+  /** Detailed explanation (required, min 10 chars) */
+  note: string;
+  /** Optional: Link to the original transaction being corrected */
+  original_txn_id?: string;
+  /** Optional: Idempotency key for duplicate prevention */
+  idempotency_key?: string;
+}
+
+/**
+ * Visit cash-in summary with adjustments breakdown.
+ *
+ * Provides the UX of "editable total" while preserving audit trail.
+ * Shows: Original entries, adjustment total, and net total.
+ */
+export type VisitCashInWithAdjustmentsDTO = {
+  /** Sum of original 'in' transactions (before adjustments) */
+  original_total: number;
+  /** Sum of all adjustment transactions (can be negative) */
+  adjustment_total: number;
+  /** Net total (original_total + adjustment_total) */
+  net_total: number;
+  /** Number of adjustment transactions */
+  adjustment_count: number;
+};

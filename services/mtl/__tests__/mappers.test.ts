@@ -9,6 +9,9 @@
  * @see EXECUTION-SPEC-PRD-005.md WS6
  */
 
+import type { Database } from '@/types/database.types';
+
+import type { CasinoThresholds } from '../dtos';
 import {
   mapMtlEntryRow,
   mapMtlEntryRowList,
@@ -22,8 +25,6 @@ import {
   deriveAggBadge,
   DEFAULT_THRESHOLDS,
 } from '../mappers';
-import type { Database } from '@/types/database.types';
-import type { CasinoThresholds } from '../dtos';
 
 // Type aliases for test readability
 type MtlEntryRow = Database['public']['Tables']['mtl_entry']['Row'];
@@ -421,7 +422,7 @@ describe('MTLService Mappers', () => {
       expect(result.audit_notes).toHaveLength(2);
       expect(result.audit_notes[0].note).toBe('Verified player ID');
       expect(result.audit_notes[1].note).toBe(
-        'Transaction approved by supervisor'
+        'Transaction approved by supervisor',
       );
     });
   });
@@ -503,7 +504,10 @@ describe('MTLService Mappers', () => {
 
   describe('mapGamingDaySummaryRow', () => {
     it('maps all fields correctly with aggregate badges', () => {
-      const result = mapGamingDaySummaryRow(mockGamingDaySummaryRow, thresholds);
+      const result = mapGamingDaySummaryRow(
+        mockGamingDaySummaryRow,
+        thresholds,
+      );
 
       expect(result).toEqual({
         casino_id: 'casino-uuid-1',
@@ -659,7 +663,10 @@ describe('MTLService Mappers', () => {
     });
 
     it('returns a new object (immutability)', () => {
-      const result = mapGamingDaySummaryRow(mockGamingDaySummaryRow, thresholds);
+      const result = mapGamingDaySummaryRow(
+        mockGamingDaySummaryRow,
+        thresholds,
+      );
 
       expect(result).not.toBe(mockGamingDaySummaryRow);
     });
@@ -675,7 +682,7 @@ describe('MTLService Mappers', () => {
     it('maps single item array', () => {
       const result = mapGamingDaySummaryRowList(
         [mockGamingDaySummaryRow],
-        thresholds
+        thresholds,
       );
 
       expect(result).toHaveLength(1);

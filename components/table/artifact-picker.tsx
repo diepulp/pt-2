@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { Plus, Check, Loader2 } from "lucide-react";
-import * as React from "react";
+import { Plus, Check, Loader2 } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 
 interface ArtifactPickerProps<T extends { id: string }> {
   /** Label for the picker */
@@ -61,7 +61,7 @@ export function ArtifactPicker<T extends { id: string }>({
   createLabel,
   renderItem,
   icon,
-  emptyMessage = "No items available",
+  emptyMessage = 'No items available',
 }: ArtifactPickerProps<T>) {
   const selectedItem = items.find((item) => item.id === selectedId);
   const hasItems = items.length > 0;
@@ -69,8 +69,8 @@ export function ArtifactPicker<T extends { id: string }>({
   return (
     <div
       className={cn(
-        "rounded-lg border p-4 transition-colors",
-        enabled ? "border-primary bg-primary/5" : "border-border",
+        'rounded-lg border p-4 transition-colors',
+        enabled ? 'border-primary bg-primary/5' : 'border-border',
       )}
     >
       <div className="flex items-start gap-3">
@@ -86,11 +86,11 @@ export function ArtifactPicker<T extends { id: string }>({
             }
           }}
           className={cn(
-            "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border",
-            "transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border',
+            'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             enabled
-              ? "border-primary bg-primary text-primary-foreground"
-              : "border-muted-foreground/30",
+              ? 'border-primary bg-primary text-primary-foreground'
+              : 'border-muted-foreground/30',
           )}
         >
           {enabled && <Check className="size-3" />}
@@ -100,8 +100,8 @@ export function ArtifactPicker<T extends { id: string }>({
           {/* Label with icon */}
           <Label
             className={cn(
-              "flex cursor-pointer items-center gap-2",
-              !enabled && "text-muted-foreground",
+              'flex cursor-pointer items-center gap-2',
+              !enabled && 'text-muted-foreground',
             )}
             onClick={() => onEnabledChange(!enabled)}
           >
@@ -119,7 +119,7 @@ export function ArtifactPicker<T extends { id: string }>({
                 </div>
               ) : hasItems ? (
                 <Select
-                  value={selectedId ?? ""}
+                  value={selectedId ?? ''}
                   onValueChange={(v) => onSelect(v || null)}
                 >
                   <SelectTrigger className="w-full">

@@ -1,69 +1,82 @@
 ---
 model: claude-sonnet-4-5-20250929
 description: Create a git worktree with isolated configuration for parallel PT-2 development
-argument-hint: [branch-name] [port-offset]
-allowed-tools: Bash, Read, Write, Edit, Glob, Grep
+argument-hint: <new-branch> [--from <base-branch>] [--port <offset>]
+allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion
 ---
 
 # Purpose
 
-Create a new git worktree in the `trees/` directory for parallel PT-2 development. This enables running multiple instances of the Next.js application simultaneously on different ports.
+Create a new git worktree in the `trees/` directory for parallel PT-2 development. This creates a NEW branch for isolated work and enables running multiple instances of the Next.js application simultaneously.
 
 ## Variables
 
 ```
 PROJECT_CWD: . (current working directory - the main project root)
-BRANCH_NAME: $1 (required)
-PORT_OFFSET: $2 (optional, defaults to auto-calculated based on existing worktrees)
+NEW_BRANCH: $1 (required) - name for the NEW branch to create
+BASE_BRANCH: value after --from flag (optional, defaults to current HEAD)
+PORT_OFFSET: value after --port flag (optional, auto-calculated if not provided)
 WORKTREE_BASE_DIR: trees/
-WORKTREE_DIR: trees/<BRANCH_NAME>
+WORKTREE_DIR: trees/<NEW_BRANCH>
 BASE_PORT: 3000
-DEV_PORT: 3000 + PORT_OFFSET  # First worktree: 3001, Second: 3002, etc.
-
-NOTE: Main repo uses port 3000 (no offset)
-      Worktrees start at offset 1 to avoid conflicts
+DEV_PORT: 3000 + PORT_OFFSET
 ```
+
+## Key Behavior
+
+**This command ALWAYS creates a NEW branch.** It does NOT check out existing branches.
+
+- `/create-worktree feat/new-work` → Creates `feat/new-work` from current HEAD
+- `/create-worktree feat/new-work --from main` → Creates `feat/new-work` from `main`
+- `/create-worktree feat/new-work --from feat/existing` → Creates `feat/new-work` from `feat/existing`
+
+If the branch name already exists, the command will ERROR and ask the user to choose a different name.
 
 ## Instructions
 
-- Creates a fully functional, isolated worktree of the PT-2 codebase
-- Each worktree can run on a unique port to prevent conflicts
+- Creates a NEW branch and worktree for isolated PT-2 development
+- Each worktree runs on a unique port to prevent conflicts
 - Environment configuration is copied from main repo
 - Dependencies are installed automatically
-- If branch is currently checked out in main repo, switch main repo to `main` branch first
-- If branch doesn't exist locally, create it from current HEAD
+- NEVER checks out an existing branch - always creates new
 - Provide clear instructions for starting the dev server
 
 ## Workflow
 
 ### 1. Parse and Validate Arguments
 
-- Read BRANCH_NAME from $1, error if missing
-- Read PORT_OFFSET from $2 if provided
-- If PORT_OFFSET not provided, calculate next available offset:
-  - List existing worktrees in trees/ directory
-  - Count existing worktrees and use (count + 1) as offset
-  - First worktree gets offset 1 → port 3001
-  - Second worktree gets offset 2 → port 3002
+- Read NEW_BRANCH from $1, error if missing
+- Parse optional flags:
+  - `--from <base>`: Base branch to create from (default: current HEAD)
+  - `--port <offset>`: Port offset (default: auto-calculated)
+- If PORT_OFFSET not provided, calculate next available:
+  - Count existing worktrees in trees/ directory
+  - Use (count + 1) as offset (1, 2, 3...)
 - Calculate DEV_PORT = 3000 + PORT_OFFSET
 - Validate branch name format (no spaces, valid git branch name)
 
 ### 2. Pre-Creation Validation
 
 - Check if PROJECT_CWD/trees/ directory exists, create if not: `mkdir -p trees`
-- Check if worktree already exists at WORKTREE_DIR
-- Check if branch exists: `git branch --list <BRANCH_NAME>`
-- Check if branch is currently checked out in main repo
-  - If yes, switch main repo to `main` branch first: `git checkout main`
-  - This allows the worktree to use the branch
+- **CRITICAL**: Check if NEW_BRANCH already exists: `git branch --list <NEW_BRANCH>`
+  - If branch EXISTS: **ERROR** - "Branch '<NEW_BRANCH>' already exists. Choose a different name or use `git worktree add` directly to check out the existing branch."
+  - Do NOT proceed if branch exists
+- If BASE_BRANCH specified, verify it exists: `git branch --list <BASE_BRANCH>` or `git rev-parse <BASE_BRANCH>`
+  - If BASE_BRANCH doesn't exist: ERROR with helpful message
+- Check if worktree directory already exists at WORKTREE_DIR
 - Check if calculated port is available: `lsof -i :<DEV_PORT>`
 
-### 3. Create Git Worktree
+### 3. Create Git Worktree with New Branch
 
-- From PROJECT_CWD, create worktree: `git worktree add trees/<BRANCH_NAME> <BRANCH_NAME>`
-  - If branch doesn't exist, add `-b` flag to create it from HEAD
-  - This creates WORKTREE_DIR at PROJECT_CWD/trees/<BRANCH_NAME>
-- Verify worktree was created: `git worktree list | grep trees/<BRANCH_NAME>`
+- From PROJECT_CWD, create worktree with NEW branch:
+  ```bash
+  git worktree add -b <NEW_BRANCH> trees/<NEW_BRANCH> <BASE_BRANCH>
+  ```
+  - `-b <NEW_BRANCH>`: Creates the new branch
+  - `trees/<NEW_BRANCH>`: Worktree location
+  - `<BASE_BRANCH>`: Starting point (or HEAD if not specified)
+- Verify worktree was created: `git worktree list | grep trees/<NEW_BRANCH>`
+- Verify branch was created: `git branch --list <NEW_BRANCH>`
 
 ### 4. Setup Environment File
 
@@ -90,6 +103,7 @@ NOTE: Main repo uses port 3000 (no offset)
   - Confirm WORKTREE_DIR/.env exists
   - Confirm WORKTREE_DIR/node_modules exists
 - List worktrees to confirm: `git worktree list`
+- Confirm new branch exists: `git branch --list <NEW_BRANCH>`
 
 ### 7. Report
 
@@ -103,8 +117,9 @@ After successful worktree creation, provide a detailed report:
 ✅ Git Worktree Created Successfully!
 
 📁 Worktree Details:
-   Location: trees/<BRANCH_NAME>
-   Branch: <BRANCH_NAME>
+   Location: trees/<NEW_BRANCH>
+   Branch: <NEW_BRANCH> (NEW)
+   Based on: <BASE_BRANCH or "HEAD">
    Commit: <commit hash and message>
 
 🔌 Port Configuration:
@@ -112,7 +127,7 @@ After successful worktree creation, provide a detailed report:
    Port Offset: <PORT_OFFSET>
 
 📦 Dependencies:
-   ✓ npm dependencies installed (trees/<BRANCH_NAME>/node_modules)
+   ✓ npm dependencies installed (trees/<NEW_BRANCH>/node_modules)
 
 ⚙️  Environment:
    ✓ .env copied from main repo (Supabase keys, API keys preserved)
@@ -122,7 +137,7 @@ After successful worktree creation, provide a detailed report:
 
 📝 Quick Start:
 
-   cd trees/<BRANCH_NAME>
+   cd trees/<NEW_BRANCH>
    npm run dev -- --port <DEV_PORT>
 
    # Or with turbopack:
@@ -142,24 +157,17 @@ After successful worktree creation, provide a detailed report:
 
 🗑️  To Remove This Worktree:
 
-   git worktree remove trees/<BRANCH_NAME>
+   git worktree remove trees/<NEW_BRANCH>
 
    # Or force remove if needed:
-   git worktree remove trees/<BRANCH_NAME> --force
+   git worktree remove trees/<NEW_BRANCH> --force
 
 💡 Tips:
+   • This is a NEW branch - commit and push when ready
    • Each worktree shares the same Supabase database (cloud)
    • Run multiple worktrees on different ports for parallel development
    • Changes in one worktree don't affect others until merged
    • Use 'git worktree list' to see all active worktrees
-```
-
-If main repo branch was switched, include:
-
-```
-⚠️  Note:
-   Main repo was switched from '<BRANCH_NAME>' to 'main' branch
-   to allow worktree creation. Your uncommitted changes remain intact.
 ```
 
 If any validation steps failed, include:
@@ -167,6 +175,22 @@ If any validation steps failed, include:
 ```
 ⚠️  Warnings / Action Required:
 - <List any warnings or actions the user needs to take>
+```
+
+## Examples
+
+```bash
+# Create new branch from current HEAD
+/create-worktree feat/new-feature
+
+# Create new branch based on main
+/create-worktree feat/new-feature --from main
+
+# Create new branch based on another feature branch
+/create-worktree feat/iteration-2 --from feat/iteration-1
+
+# Create with specific port
+/create-worktree feat/new-feature --from main --port 5
 ```
 
 ARGUMENTS: $ARGUMENTS

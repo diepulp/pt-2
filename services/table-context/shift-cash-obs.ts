@@ -8,10 +8,10 @@
  * @see SHIFT_METRICS_CATALOG §3.7
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CashObsCasinoRollupDTO,
@@ -22,10 +22,10 @@ import type {
   ShiftCashObsPitParams,
   ShiftCashObsTableParams,
   ShiftCashObsTimeWindow,
-} from "./dtos";
+} from './dtos';
 
 // Type helper for RPC calls until remote types are regenerated
-type SupabaseRpc = SupabaseClient<Database>["rpc"];
+type SupabaseRpc = SupabaseClient<Database>['rpc'];
 type RpcFn = ReturnType<SupabaseRpc>;
 
 /**
@@ -38,7 +38,7 @@ export async function getShiftCashObsTable(
 ): Promise<CashObsTableRollupDTO[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_cash_obs_table",
+    'rpc_shift_cash_obs_table',
     {
       p_start_ts: params.startTs,
       p_end_ts: params.endTs,
@@ -48,7 +48,7 @@ export async function getShiftCashObsTable(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch table cash observation rollups: ${error.message}`,
       { details: error },
     );
@@ -66,7 +66,7 @@ export async function getShiftCashObsPit(
 ): Promise<CashObsPitRollupDTO[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_cash_obs_pit",
+    'rpc_shift_cash_obs_pit',
     {
       p_start_ts: params.startTs,
       p_end_ts: params.endTs,
@@ -76,7 +76,7 @@ export async function getShiftCashObsPit(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch pit cash observation rollups: ${error.message}`,
       { details: error },
     );
@@ -95,7 +95,7 @@ export async function getShiftCashObsCasino(
 ): Promise<CashObsCasinoRollupDTO> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_cash_obs_casino",
+    'rpc_shift_cash_obs_casino',
     {
       p_start_ts: params.startTs,
       p_end_ts: params.endTs,
@@ -104,7 +104,7 @@ export async function getShiftCashObsCasino(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch casino cash observation rollups: ${error.message}`,
       { details: error },
     );
@@ -126,7 +126,7 @@ export async function getShiftCashObsAlerts(
 ): Promise<CashObsSpikeAlertDTO[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_cash_obs_alerts",
+    'rpc_shift_cash_obs_alerts',
     {
       p_start_ts: params.startTs,
       p_end_ts: params.endTs,
@@ -135,7 +135,7 @@ export async function getShiftCashObsAlerts(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch cash observation alerts: ${error.message}`,
       { details: error },
     );
@@ -203,9 +203,9 @@ function toCashObsCasinoRollup(row: unknown): CashObsCasinoRollupDTO {
 function toCashObsSpikeAlert(row: unknown): CashObsSpikeAlertDTO {
   const r = row as Record<string, unknown>;
   return {
-    alert_type: "cash_out_observed_spike_telemetry",
-    severity: r.severity as "info" | "warn" | "critical",
-    entity_type: r.entity_type as "table" | "pit",
+    alert_type: 'cash_out_observed_spike_telemetry',
+    severity: r.severity as 'info' | 'warn' | 'critical',
+    entity_type: r.entity_type as 'table' | 'pit',
     entity_id: r.entity_id as string,
     entity_label: r.entity_label as string,
     observed_value: Number(r.observed_value ?? 0),

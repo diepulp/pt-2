@@ -7,22 +7,22 @@
  * @see IMPLEMENTATION_STRATEGY.md §3.2 Zone F
  */
 
-"use client";
+'use client';
 
-import { ChevronDownIcon, ChevronUpIcon, EyeIcon } from "lucide-react";
-import { useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon, EyeIcon } from 'lucide-react';
+import { useState } from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
   CashObsTableRollupDTO,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 
-import { formatCurrency } from "../lib/format";
+import { formatCurrency } from '../lib/format';
 
 export interface TelemetryDrawerProps {
   /** Casino-level cash observations */
@@ -86,7 +86,7 @@ export function TelemetryDrawer({
         <div className="flex items-center gap-2">
           {!isExpanded && casinoData && (
             <span className="text-xs text-muted-foreground font-mono">
-              {formatCurrency(casinoData.cash_out_observed_estimate_total)}{" "}
+              {formatCurrency(casinoData.cash_out_observed_estimate_total)}{' '}
               observed
             </span>
           )}
@@ -161,7 +161,7 @@ export function TelemetryDrawer({
                         <span className="font-mono text-sm">{pit.pit}</span>
                         <div className="flex items-center gap-4 text-xs">
                           <span className="text-muted-foreground">
-                            Est:{" "}
+                            Est:{' '}
                             <span className="font-mono text-amber-500">
                               {formatCurrency(
                                 pit.cash_out_observed_estimate_total,

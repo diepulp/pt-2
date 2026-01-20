@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Construction, Wrench } from "lucide-react";
-import * as React from "react";
+import { Construction, Wrench } from 'lucide-react';
+import * as React from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface UnderDevelopmentIndicatorProps {
   /** What's being developed (e.g., "Analytics", "Compliance Tracking") */
@@ -11,7 +11,7 @@ interface UnderDevelopmentIndicatorProps {
   /** Optional additional context */
   description?: string;
   /** Visual variant */
-  variant?: "overlay" | "inline";
+  variant?: 'overlay' | 'inline';
   className?: string;
 }
 
@@ -24,14 +24,14 @@ interface UnderDevelopmentIndicatorProps {
 export function UnderDevelopmentIndicator({
   feature,
   description,
-  variant = "overlay",
+  variant = 'overlay',
   className,
 }: UnderDevelopmentIndicatorProps) {
-  if (variant === "inline") {
+  if (variant === 'inline') {
     return (
       <div
         className={cn(
-          "flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 border-border/50",
+          'flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 border-border/50',
           className,
         )}
       >
@@ -54,7 +54,7 @@ export function UnderDevelopmentIndicator({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3 p-8",
+        'flex flex-col items-center justify-center gap-3 p-8',
         className,
       )}
     >

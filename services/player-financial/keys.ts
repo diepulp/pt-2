@@ -8,9 +8,9 @@
  * @see EXECUTION-SPEC-PRD-009.md WS2
  */
 
-import type { FinancialTxnListQuery, VisitTotalQuery } from "./dtos";
+import type { FinancialTxnListQuery, VisitTotalQuery } from './dtos';
 
-const ROOT = ["player-financial"] as const;
+const ROOT = ['player-financial'] as const;
 
 export const playerFinancialKeys = {
   /** Root key for all player financial queries */
@@ -22,8 +22,8 @@ export const playerFinancialKeys = {
    * All financial transactions scope.
    * Use for invalidating all transaction lists.
    */
-  transactions: Object.assign(() => [...ROOT, "transactions"] as const, {
-    scope: [...ROOT, "transactions"] as const,
+  transactions: Object.assign(() => [...ROOT, 'transactions'] as const, {
+    scope: [...ROOT, 'transactions'] as const,
   }),
 
   /**
@@ -31,13 +31,13 @@ export const playerFinancialKeys = {
    * Includes filters for player_id, visit_id, direction, source, etc.
    */
   transactionList: (filters: FinancialTxnListQuery = {}) =>
-    [...ROOT, "transactions", "list", filters] as const,
+    [...ROOT, 'transactions', 'list', filters] as const,
 
   /**
    * Single transaction detail.
    */
   transactionDetail: (id: string) =>
-    [...ROOT, "transactions", "detail", id] as const,
+    [...ROOT, 'transactions', 'detail', id] as const,
 
   // === Visit Summary Queries ===
 
@@ -45,15 +45,15 @@ export const playerFinancialKeys = {
    * All visit summaries scope.
    * Use for invalidating all visit summary queries.
    */
-  visitSummaries: Object.assign(() => [...ROOT, "visit-summaries"] as const, {
-    scope: [...ROOT, "visit-summaries"] as const,
+  visitSummaries: Object.assign(() => [...ROOT, 'visit-summaries'] as const, {
+    scope: [...ROOT, 'visit-summaries'] as const,
   }),
 
   /**
    * Visit financial summary (aggregated totals).
    */
   visitSummary: (query: VisitTotalQuery) =>
-    [...ROOT, "visit-summaries", query.visit_id] as const,
+    [...ROOT, 'visit-summaries', query.visit_id] as const,
 
   // === Invalidation Helpers ===
 
@@ -61,11 +61,11 @@ export const playerFinancialKeys = {
    * Invalidate all data for a specific player.
    * Use after player-level state changes.
    */
-  forPlayer: (playerId: string) => [...ROOT, "player", playerId] as const,
+  forPlayer: (playerId: string) => [...ROOT, 'player', playerId] as const,
 
   /**
    * Invalidate all data for a specific visit.
    * Use after visit financial activity.
    */
-  forVisit: (visitId: string) => [...ROOT, "visit", visitId] as const,
+  forVisit: (visitId: string) => [...ROOT, 'visit', visitId] as const,
 };

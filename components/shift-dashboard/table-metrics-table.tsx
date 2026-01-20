@@ -7,13 +7,13 @@
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.6
  */
 
-"use client";
+'use client';
 
-import { AlertTriangleIcon, CheckCircleIcon, InfoIcon } from "lucide-react";
+import { AlertTriangleIcon, CheckCircleIcon, InfoIcon } from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -21,14 +21,14 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from '@/components/ui/table';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import type { ShiftTableMetricsDTO } from "@/services/table-context/shift-metrics/dtos";
+} from '@/components/ui/tooltip';
+import type { ShiftTableMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface TableMetricsTableProps {
   data: ShiftTableMetricsDTO[] | undefined;
@@ -40,11 +40,11 @@ export interface TableMetricsTableProps {
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "—";
+  if (cents == null) return '—';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);
@@ -94,22 +94,22 @@ function TableSkeleton() {
 function TelemetryBadge({
   quality,
 }: {
-  quality: "GOOD_COVERAGE" | "LOW_COVERAGE" | "NONE";
+  quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
 }) {
   switch (quality) {
-    case "GOOD_COVERAGE":
+    case 'GOOD_COVERAGE':
       return (
         <Badge className="bg-emerald-500/10 text-emerald-500 text-[10px]">
           Good
         </Badge>
       );
-    case "LOW_COVERAGE":
+    case 'LOW_COVERAGE':
       return (
         <Badge className="bg-amber-500/10 text-amber-500 text-[10px]">
           Low
         </Badge>
       );
-    case "NONE":
+    case 'NONE':
       return (
         <Badge className="bg-muted text-muted-foreground text-[10px]">
           None
@@ -121,8 +121,8 @@ function TelemetryBadge({
 /**
  * Metric grade badge.
  */
-function GradeBadge({ grade }: { grade: "ESTIMATE" | "AUTHORITATIVE" }) {
-  if (grade === "AUTHORITATIVE") {
+function GradeBadge({ grade }: { grade: 'ESTIMATE' | 'AUTHORITATIVE' }) {
+  if (grade === 'AUTHORITATIVE') {
     return (
       <Badge className="bg-emerald-500/10 text-emerald-500 text-[10px]">
         <CheckCircleIcon className="mr-1 h-3 w-3" />
@@ -150,8 +150,8 @@ function ExceptionIndicator({
   }
 
   const messages = [];
-  if (missingOpening) messages.push("Missing opening snapshot");
-  if (missingClosing) messages.push("Missing closing snapshot");
+  if (missingOpening) messages.push('Missing opening snapshot');
+  if (missingClosing) messages.push('Missing closing snapshot');
 
   return (
     <TooltipProvider>
@@ -235,7 +235,7 @@ export function TableMetricsTable({
                     <p className="text-sm text-muted-foreground">
                       {pitFilter
                         ? `No tables in pit ${pitFilter}`
-                        : "No table data"}
+                        : 'No table data'}
                     </p>
                   </TableCell>
                 </TableRow>
@@ -252,7 +252,7 @@ export function TableMetricsTable({
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {table.pit_id ?? "—"}
+                      {table.pit_id ?? '—'}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
                       {formatCurrency(table.opening_bankroll_total_cents)}
@@ -267,7 +267,7 @@ export function TableMetricsTable({
                       {formatCurrency(table.credits_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {table.metric_grade === "AUTHORITATIVE"
+                      {table.metric_grade === 'AUTHORITATIVE'
                         ? formatCurrency(table.win_loss_inventory_cents)
                         : formatCurrency(table.win_loss_estimated_cents)}
                     </TableCell>

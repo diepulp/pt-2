@@ -8,7 +8,7 @@
  * @see ADR-013 Zod Validation Schemas
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === UUID Format Schema ===
 
@@ -24,7 +24,7 @@ import { z } from "zod";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const uuidFormat = (fieldName = "ID") =>
+const uuidFormat = (fieldName = 'ID') =>
   z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
 
 // ============================================================================
@@ -32,29 +32,29 @@ const uuidFormat = (fieldName = "ID") =>
 // ============================================================================
 
 export const mtlTxnTypeSchema = z.enum([
-  "buy_in",
-  "cash_out",
-  "marker",
-  "front_money",
-  "chip_fill",
+  'buy_in',
+  'cash_out',
+  'marker',
+  'front_money',
+  'chip_fill',
 ]);
 
-export const mtlSourceSchema = z.enum(["table", "cage", "kiosk", "other"]);
+export const mtlSourceSchema = z.enum(['table', 'cage', 'kiosk', 'other']);
 
-export const mtlDirectionSchema = z.enum(["in", "out"]);
+export const mtlDirectionSchema = z.enum(['in', 'out']);
 
 export const entryBadgeSchema = z.enum([
-  "none",
-  "watchlist_near",
-  "ctr_near",
-  "ctr_met",
+  'none',
+  'watchlist_near',
+  'ctr_near',
+  'ctr_met',
 ]);
 
 export const aggBadgeSchema = z.enum([
-  "none",
-  "agg_watchlist",
-  "agg_ctr_near",
-  "agg_ctr_met",
+  'none',
+  'agg_watchlist',
+  'agg_ctr_near',
+  'agg_ctr_met',
 ]);
 
 // ============================================================================
@@ -66,32 +66,32 @@ export const aggBadgeSchema = z.enum([
  */
 export const createMtlEntrySchema = z
   .object({
-    patron_uuid: uuidFormat("patron UUID"),
-    casino_id: uuidFormat("casino UUID"),
-    staff_id: uuidFormat("staff UUID").optional(),
-    rating_slip_id: uuidFormat("rating slip UUID").optional(),
-    visit_id: uuidFormat("visit UUID").optional(),
+    patron_uuid: uuidFormat('patron UUID'),
+    casino_id: uuidFormat('casino UUID'),
+    staff_id: uuidFormat('staff UUID').optional(),
+    rating_slip_id: uuidFormat('rating slip UUID').optional(),
+    visit_id: uuidFormat('visit UUID').optional(),
     amount: z
       .number()
-      .positive("Amount must be positive")
-      .finite("Amount must be finite"),
+      .positive('Amount must be positive')
+      .finite('Amount must be finite'),
     direction: mtlDirectionSchema,
     txn_type: mtlTxnTypeSchema,
-    source: mtlSourceSchema.default("table"),
+    source: mtlSourceSchema.default('table'),
     area: z.string().max(255).optional(),
     occurred_at: z.string().datetime().optional(),
     idempotency_key: z
       .string()
-      .min(1, "Idempotency key is required")
-      .max(255, "Idempotency key too long"),
+      .min(1, 'Idempotency key is required')
+      .max(255, 'Idempotency key too long'),
   })
   .refine(
     (data) => {
       // Enforce direction/txn_type alignment per CHECK constraint
-      if (data.txn_type === "buy_in" && data.direction !== "in") {
+      if (data.txn_type === 'buy_in' && data.direction !== 'in') {
         return false;
       }
-      if (data.txn_type === "cash_out" && data.direction !== "out") {
+      if (data.txn_type === 'cash_out' && data.direction !== 'out') {
         return false;
       }
       return true;
@@ -99,7 +99,7 @@ export const createMtlEntrySchema = z
     {
       message:
         "Direction must match transaction type: buy_in requires 'in', cash_out requires 'out'",
-      path: ["direction"],
+      path: ['direction'],
     },
   );
 
@@ -109,12 +109,12 @@ export type CreateMtlEntryInput = z.infer<typeof createMtlEntrySchema>;
  * Schema for creating MTL audit note
  */
 export const createMtlAuditNoteSchema = z.object({
-  mtl_entry_id: uuidFormat("entry UUID"),
-  staff_id: uuidFormat("staff UUID"),
+  mtl_entry_id: uuidFormat('entry UUID'),
+  staff_id: uuidFormat('staff UUID'),
   note: z
     .string()
-    .min(1, "Note is required")
-    .max(2000, "Note too long (max 2000 characters)"),
+    .min(1, 'Note is required')
+    .max(2000, 'Note too long (max 2000 characters)'),
 });
 
 export type CreateMtlAuditNoteInput = z.infer<typeof createMtlAuditNoteSchema>;
@@ -127,11 +127,11 @@ export type CreateMtlAuditNoteInput = z.infer<typeof createMtlAuditNoteSchema>;
  * Schema for MTL entry list query parameters
  */
 export const mtlEntryListQuerySchema = z.object({
-  casino_id: uuidFormat("casino UUID"),
-  patron_uuid: uuidFormat("patron UUID").optional(),
+  casino_id: uuidFormat('casino UUID'),
+  patron_uuid: uuidFormat('patron UUID').optional(),
   gaming_day: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
     .optional(),
   min_amount: z.coerce.number().positive().optional(),
   txn_type: mtlTxnTypeSchema.optional(),
@@ -147,11 +147,11 @@ export type MtlEntryListQuery = z.infer<typeof mtlEntryListQuerySchema>;
  * Schema for Gaming Day Summary query parameters
  */
 export const mtlGamingDaySummaryQuerySchema = z.object({
-  casino_id: uuidFormat("casino UUID"),
+  casino_id: uuidFormat('casino UUID'),
   gaming_day: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)"),
-  patron_uuid: uuidFormat("patron UUID").optional(),
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  patron_uuid: uuidFormat('patron UUID').optional(),
   agg_badge_in: aggBadgeSchema.optional(),
   agg_badge_out: aggBadgeSchema.optional(),
   min_total_in: z.coerce.number().nonnegative().optional(),
@@ -172,7 +172,7 @@ export type MtlGamingDaySummaryQuery = z.infer<
  * Schema for entry detail route parameters
  */
 export const mtlEntryRouteParamsSchema = z.object({
-  entryId: uuidFormat("entry ID"),
+  entryId: uuidFormat('entry ID'),
 });
 
 export type MtlEntryRouteParams = z.infer<typeof mtlEntryRouteParamsSchema>;
@@ -181,7 +181,7 @@ export type MtlEntryRouteParams = z.infer<typeof mtlEntryRouteParamsSchema>;
  * Schema for audit note route parameters
  */
 export const mtlAuditNoteRouteParamsSchema = z.object({
-  entryId: uuidFormat("entry ID"),
+  entryId: uuidFormat('entry ID'),
 });
 
 export type MtlAuditNoteRouteParams = z.infer<

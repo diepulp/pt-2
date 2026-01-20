@@ -9,14 +9,14 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { CashObsSummaryDTO } from "@/services/table-context/dtos";
+import type { CashObsSummaryDTO } from '@/services/table-context/dtos';
 
-import { fetchCashObsSummary } from "./http";
-import { shiftDashboardKeys, type ShiftTimeWindow } from "./keys";
+import { fetchCashObsSummary } from './http';
+import { shiftDashboardKeys, type ShiftTimeWindow } from './keys';
 
 export interface UseCashObsSummaryOptions {
   /** Time window for the query */

@@ -1,15 +1,15 @@
-"use client";
+'use client';
 
-import { ChevronRight, type LucideIcon } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { ChevronRight, type LucideIcon } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 export interface NavChild {
   title: string;
@@ -88,7 +88,7 @@ function NavItemComponent({
       pathname === child.url ||
       pathname.startsWith(`${child.url}/`) ||
       // Handle query param URLs
-      (child.url.includes("?") && pathname === child.url.split("?")[0]),
+      (child.url.includes('?') && pathname === child.url.split('?')[0]),
   );
   const isExpanded = isActive || isChildActive;
 
@@ -98,10 +98,10 @@ function NavItemComponent({
       <Link
         href={item.url}
         className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75",
+          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75',
           isActive
-            ? "bg-sidebar-primary/10 text-sidebar-primary font-medium"
-            : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+            ? 'bg-sidebar-primary/10 text-sidebar-primary font-medium'
+            : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
         )}
       >
         <Icon className="h-4 w-4 shrink-0" />
@@ -121,10 +121,10 @@ function NavItemComponent({
       <CollapsibleTrigger asChild>
         <button
           className={cn(
-            "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75",
+            'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75',
             isActive || isChildActive
-              ? "bg-sidebar-primary/10 text-sidebar-primary font-medium"
-              : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+              ? 'bg-sidebar-primary/10 text-sidebar-primary font-medium'
+              : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
           )}
         >
           <Icon className="h-4 w-4 shrink-0" />
@@ -137,23 +137,23 @@ function NavItemComponent({
         <div className="ml-4 mt-0.5 flex flex-col gap-0.5 border-l border-sidebar-border pl-3">
           {item.children!.map((child) => {
             // Handle query param URLs for active state
-            const childPath = child.url.split("?")[0];
+            const childPath = child.url.split('?')[0];
             const isChildItemActive =
               pathname === child.url ||
               pathname === childPath ||
-              (child.url.includes("?") &&
+              (child.url.includes('?') &&
                 pathname === childPath &&
-                child.url === `${pathname}${window?.location?.search || ""}`);
+                child.url === `${pathname}${window?.location?.search || ''}`);
 
             return (
               <Link
                 key={child.title}
                 href={child.url}
                 className={cn(
-                  "flex items-center rounded-md px-3 py-1.5 text-sm transition-colors duration-75",
+                  'flex items-center rounded-md px-3 py-1.5 text-sm transition-colors duration-75',
                   isChildItemActive
-                    ? "text-sidebar-primary font-medium"
-                    : "text-muted-foreground hover:text-sidebar-foreground",
+                    ? 'text-sidebar-primary font-medium'
+                    : 'text-muted-foreground hover:text-sidebar-foreground',
                 )}
               >
                 <span className="truncate">{child.title}</span>
@@ -168,7 +168,7 @@ function NavItemComponent({
 
 // Legacy support: flat items without groups
 interface NavMainLegacyProps {
-  items: Omit<NavItem, "children" | "badge">[];
+  items: Omit<NavItem, 'children' | 'badge'>[];
 }
 
 export function NavMainLegacy({ items }: NavMainLegacyProps) {
@@ -190,10 +190,10 @@ export function NavMainLegacy({ items }: NavMainLegacyProps) {
               key={item.title}
               href={item.url}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75",
+                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors duration-75',
                 isActive
-                  ? "bg-sidebar-primary/10 text-sidebar-primary font-medium"
-                  : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50",
+                  ? 'bg-sidebar-primary/10 text-sidebar-primary font-medium'
+                  : 'text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50',
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />

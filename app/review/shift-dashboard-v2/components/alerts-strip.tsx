@@ -7,7 +7,7 @@
  * @see IMPLEMENTATION_STRATEGY.md §7.4
  */
 
-"use client";
+'use client';
 
 import {
   AlertTriangleIcon,
@@ -15,16 +15,16 @@ import {
   ChevronRightIcon,
   InfoIcon,
   XCircleIcon,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import type { CashObsSpikeAlertDTO } from "@/services/table-context/dtos";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
-import { getAlertSeverityColor } from "../lib/colors";
-import { formatCurrency } from "../lib/format";
+import { getAlertSeverityColor } from '../lib/colors';
+import { formatCurrency } from '../lib/format';
 
 export interface AlertsStripProps {
   /** List of alerts */
@@ -44,10 +44,10 @@ export interface AlertsStripProps {
  */
 function getRecommendedAction(alert: CashObsSpikeAlertDTO): string {
   switch (alert.alert_type) {
-    case "cash_out_observed_spike_telemetry":
-      return "Review player activity, verify with cage";
+    case 'cash_out_observed_spike_telemetry':
+      return 'Review player activity, verify with cage';
     default:
-      return "Investigate unusual activity";
+      return 'Investigate unusual activity';
   }
 }
 
@@ -57,16 +57,16 @@ function getRecommendedAction(alert: CashObsSpikeAlertDTO): string {
 function SeverityIcon({
   severity,
 }: {
-  severity: "info" | "warn" | "critical";
+  severity: 'info' | 'warn' | 'critical';
 }) {
   const colorConfig = getAlertSeverityColor(severity);
 
   switch (severity) {
-    case "critical":
+    case 'critical':
       return <XCircleIcon className={`h-4 w-4 ${colorConfig.text}`} />;
-    case "warn":
+    case 'warn':
       return <AlertTriangleIcon className={`h-4 w-4 ${colorConfig.text}`} />;
-    case "info":
+    case 'info':
     default:
       return <InfoIcon className={`h-4 w-4 ${colorConfig.text}`} />;
   }
@@ -110,9 +110,9 @@ function AlertItem({
 
           {/* Alert message */}
           <p className="mt-1 text-sm text-muted-foreground">
-            {alert.alert_type === "cash_out_observed_spike_telemetry" ? (
+            {alert.alert_type === 'cash_out_observed_spike_telemetry' ? (
               <>
-                Cash-out {formatCurrency(alert.observed_value)} exceeds{" "}
+                Cash-out {formatCurrency(alert.observed_value)} exceeds{' '}
                 {formatCurrency(alert.threshold)} threshold
               </>
             ) : (
@@ -167,8 +167,8 @@ export function AlertsStrip({
     .slice(0, maxDisplay);
 
   const criticalCount =
-    alerts?.filter((a) => a.severity === "critical").length ?? 0;
-  const warnCount = alerts?.filter((a) => a.severity === "warn").length ?? 0;
+    alerts?.filter((a) => a.severity === 'critical').length ?? 0;
+  const warnCount = alerts?.filter((a) => a.severity === 'warn').length ?? 0;
 
   if (totalCount === 0) {
     return (

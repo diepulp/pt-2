@@ -8,16 +8,16 @@
  * @see ADR-015 for RLS context strategy
  */
 
-"use client";
+'use client';
 
-import type { User } from "@supabase/supabase-js";
-import { useEffect, useState } from "react";
+import type { User } from '@supabase/supabase-js';
+import { useEffect, useState } from 'react';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
-} from "@/lib/supabase/dev-context";
+} from '@/lib/supabase/dev-context';
 
 interface StaffClaims {
   staff_id: string;

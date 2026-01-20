@@ -9,18 +9,18 @@
  * Returns 404 if transaction not found or not accessible by current casino context.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPlayerFinancialService } from "@/services/player-financial";
-import { financialTxnRouteParamsSchema } from "@/services/player-financial/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPlayerFinancialService } from '@/services/player-financial';
+import { financialTxnRouteParamsSchema } from '@/services/player-financial/schemas';
 
 /**
  * GET /api/v1/financial-transactions/[id]
@@ -52,7 +52,7 @@ export async function GET(
         if (!transaction) {
           return {
             ok: false as const,
-            code: "NOT_FOUND" as const,
+            code: 'NOT_FOUND' as const,
             error: `Financial transaction with ID '${id}' not found`,
             requestId: mwCtx.correlationId,
             durationMs: 0,
@@ -62,7 +62,7 @@ export async function GET(
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: transaction,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -70,8 +70,8 @@ export async function GET(
         };
       },
       {
-        domain: "player-financial",
-        action: "get",
+        domain: 'player-financial',
+        action: 'get',
         correlationId: ctx.requestId,
       },
     );

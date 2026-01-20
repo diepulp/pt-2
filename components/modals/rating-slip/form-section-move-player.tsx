@@ -1,18 +1,18 @@
-"use client";
+'use client';
 
-import { AlertCircle } from "lucide-react";
-import React, { useMemo } from "react";
+import { AlertCircle } from 'lucide-react';
+import React, { useMemo } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { useMovePlayerFields } from "@/hooks/ui";
+} from '@/components/ui/select';
+import { useMovePlayerFields } from '@/hooks/ui';
 
 // Placeholder types - will be replaced with actual service types
 interface RatingSlipTableDto {
@@ -38,7 +38,7 @@ function validateSeatNumber(
   value: string,
   maxSeats: number | undefined,
 ): string | null {
-  if (!value || value.trim() === "") {
+  if (!value || value.trim() === '') {
     return null; // Empty is valid (unseated)
   }
 
@@ -47,7 +47,7 @@ function validateSeatNumber(
 
   // Check it's a valid positive integer
   if (isNaN(asNumber) || asNumber <= 0) {
-    return "Seat must be a positive number";
+    return 'Seat must be a positive number';
   }
 
   // Check it's within range
@@ -80,12 +80,12 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
   // Find current table (simple computation, no need for useMemo)
   const currentTable =
     tables.find((t) => t.gaming_table_id === tableId) || null;
-  const currentTableName = currentTable?.name || "Unknown Table";
+  const currentTableName = currentTable?.name || 'Unknown Table';
 
   // Simple string computation, no need for useMemo
   const seatPlaceholder = selectedTable
-    ? `1-${selectedTable.seats_available ?? "N/A"}`
-    : "Seat number";
+    ? `1-${selectedTable.seats_available ?? 'N/A'}`
+    : 'Seat number';
 
   // Client-side seat validation for immediate feedback
   const localSeatError = useMemo(() => {
@@ -93,19 +93,19 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
   }, [seatNumber, selectedTable?.seats_available]);
 
   // Combine external and local errors (external takes precedence)
-  const seatError = externalSeatError || localSeatError || "";
+  const seatError = externalSeatError || localSeatError || '';
 
   // Event handlers - wrapped in useCallback for stable references
   const handleTableChange = React.useCallback(
     (value: string) => {
-      updateField("newTableId", value);
+      updateField('newTableId', value);
     },
     [updateField],
   );
 
   const handleSeatChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateField("newSeatNumber", e.target.value);
+      updateField('newSeatNumber', e.target.value);
     },
     [updateField],
   );
@@ -126,14 +126,14 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
         )}
       </div>
       <div className="grid grid-cols-2 gap-2 mt-1">
-        <Select value={tableId || ""} onValueChange={handleTableChange}>
+        <Select value={tableId || ''} onValueChange={handleTableChange}>
           <SelectTrigger id="movePlayerTable">
             <SelectValue placeholder="Select table">
               {currentTable
-                ? `${currentTable.name || "Unnamed Table"} (${currentTable.seats_available} seats)`
+                ? `${currentTable.name || 'Unnamed Table'} (${currentTable.seats_available} seats)`
                 : tableId
                   ? `Table ID: ${tableId} (Not Found)`
-                  : "Select table"}
+                  : 'Select table'}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -142,8 +142,8 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
                 key={table.gaming_table_id}
                 value={table.gaming_table_id}
               >
-                {table.name || "Unnamed Table"} ({table.seats_available} seats)
-                {table.gaming_table_id === tableId && " ✓"}
+                {table.name || 'Unnamed Table'} ({table.seats_available} seats)
+                {table.gaming_table_id === tableId && ' ✓'}
               </SelectItem>
             ))}
           </SelectContent>
@@ -156,7 +156,7 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
             placeholder={seatPlaceholder}
             value={seatNumber}
             onChange={handleSeatChange}
-            className={seatError ? "border-red-500" : ""}
+            className={seatError ? 'border-red-500' : ''}
           />
           {seatError && (
             <div className="flex items-center gap-1 text-red-500 text-xs">
@@ -172,7 +172,7 @@ export const FormSectionMovePlayer = React.memo(function FormSectionMovePlayer({
         onClick={onMovePlayer}
         disabled={isDisabled}
       >
-        {isUpdating ? "Moving..." : "Move Player"}
+        {isUpdating ? 'Moving...' : 'Move Player'}
       </Button>
     </div>
   );

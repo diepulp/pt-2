@@ -13,4 +13,4 @@ export {
   uuidSchemaOptional,
   uuidSchemaNullable,
   debugLogUUIDs,
-} from "./uuid";
+} from './uuid';

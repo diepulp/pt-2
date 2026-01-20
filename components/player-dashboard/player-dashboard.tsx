@@ -1,19 +1,19 @@
-"use client";
+'use client';
 
-import { User } from "lucide-react";
-import * as React from "react";
+import { User } from 'lucide-react';
+import * as React from 'react';
 
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { cn } from "@/lib/utils";
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { cn } from '@/lib/utils';
 
-import { ActivityVisualizationPanel } from "./activity-visualization-panel";
-import { CompliancePanel } from "./compliance-panel";
-import { LoyaltyPanel } from "./loyalty-panel";
-import { MetricsPanel } from "./metrics-panel";
-import { NotesPanel } from "./notes-panel";
-import { PlayerProfilePanel } from "./player-profile-panel";
-import { PlayerSearchCommand } from "./player-search-command";
-import { SessionControlPanel } from "./session-control-panel";
+import { ActivityVisualizationPanel } from './activity-visualization-panel';
+import { CompliancePanel } from './compliance-panel';
+import { LoyaltyPanel } from './loyalty-panel';
+import { MetricsPanel } from './metrics-panel';
+import { NotesPanel } from './notes-panel';
+import { PlayerProfilePanel } from './player-profile-panel';
+import { PlayerSearchCommand } from './player-search-command';
+import { SessionControlPanel } from './session-control-panel';
 
 interface PlayerDashboardProps {
   className?: string;
@@ -38,7 +38,7 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
   };
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Player Search/Selector */}
       <div className="flex items-center gap-3">
         <div className="flex-1">
@@ -92,7 +92,7 @@ function EmptyState() {
           className="absolute inset-0"
           style={{
             backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-            backgroundSize: "24px 24px",
+            backgroundSize: '24px 24px',
           }}
         />
       </div>

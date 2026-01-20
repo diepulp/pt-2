@@ -67,7 +67,7 @@ BEGIN
     COALESCE(v_gaming_day, NEW.gaming_day),
     COALESCE(NEW.created_at, now())
   )
-  ON CONFLICT (idempotency_key) DO NOTHING;
+  ON CONFLICT (casino_id, idempotency_key) WHERE idempotency_key IS NOT NULL DO NOTHING;
 
   RETURN NEW;
 END;

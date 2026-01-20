@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { Calculator, Loader2, Package } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { Calculator, Loader2, Package } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,17 +12,17 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import {
   calculateChipsetTotal,
   createEmptyChipset,
@@ -30,8 +30,8 @@ import {
   useLogInventorySnapshot,
   type ChipsetPayload,
   type SnapshotType,
-} from "@/hooks/table-context/use-inventory-snapshots";
-import { cn } from "@/lib/utils";
+} from '@/hooks/table-context/use-inventory-snapshots';
+import { cn } from '@/lib/utils';
 
 interface ChipCountCaptureDialogProps {
   open: boolean;
@@ -46,11 +46,11 @@ interface ChipCountCaptureDialogProps {
 
 // Chip colors for visual distinction
 const CHIP_COLORS: Record<number, string> = {
-  1: "bg-slate-200 text-slate-800 border-slate-300",
-  5: "bg-red-500 text-white border-red-600",
-  25: "bg-green-500 text-white border-green-600",
-  100: "bg-gray-900 text-white border-gray-950",
-  500: "bg-purple-600 text-white border-purple-700",
+  1: 'bg-slate-200 text-slate-800 border-slate-300',
+  5: 'bg-red-500 text-white border-red-600',
+  25: 'bg-green-500 text-white border-green-600',
+  100: 'bg-gray-900 text-white border-gray-950',
+  500: 'bg-purple-600 text-white border-purple-700',
 };
 
 /**
@@ -66,7 +66,7 @@ export function ChipCountCaptureDialog({
   onOpenChange,
   tableId,
   casinoId,
-  defaultSnapshotType = "close",
+  defaultSnapshotType = 'close',
   onSuccess,
 }: ChipCountCaptureDialogProps) {
   // Form state
@@ -74,8 +74,8 @@ export function ChipCountCaptureDialog({
     React.useState<SnapshotType>(defaultSnapshotType);
   const [chipset, setChipset] =
     React.useState<ChipsetPayload>(createEmptyChipset);
-  const [verifiedBy, setVerifiedBy] = React.useState("");
-  const [notes, setNotes] = React.useState("");
+  const [verifiedBy, setVerifiedBy] = React.useState('');
+  const [notes, setNotes] = React.useState('');
 
   // Mutation
   const logMutation = useLogInventorySnapshot(tableId, casinoId);
@@ -88,13 +88,13 @@ export function ChipCountCaptureDialog({
     if (open) {
       setSnapshotType(defaultSnapshotType);
       setChipset(createEmptyChipset());
-      setVerifiedBy("");
-      setNotes("");
+      setVerifiedBy('');
+      setNotes('');
     }
   }, [open, defaultSnapshotType]);
 
   const handleQuantityChange = (denom: number, value: string) => {
-    const qty = value === "" ? 0 : parseInt(value, 10);
+    const qty = value === '' ? 0 : parseInt(value, 10);
     if (!isNaN(qty) && qty >= 0) {
       setChipset((prev) => ({
         ...prev,
@@ -119,16 +119,16 @@ export function ChipCountCaptureDialog({
         note: notes.trim() || undefined,
       });
 
-      toast.success("Chip count recorded", {
+      toast.success('Chip count recorded', {
         description: `${snapshotType.charAt(0).toUpperCase() + snapshotType.slice(1)} snapshot saved: $${total.toLocaleString()}`,
       });
 
       onSuccess?.(result.id);
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to record chip count", {
+      toast.error('Failed to record chip count', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   };
@@ -178,7 +178,7 @@ export function ChipCountCaptureDialog({
                   {/* Chip Badge */}
                   <div
                     className={cn(
-                      "flex h-10 w-16 items-center justify-center rounded-full border-2 font-bold",
+                      'flex h-10 w-16 items-center justify-center rounded-full border-2 font-bold',
                       CHIP_COLORS[denom],
                     )}
                   >
@@ -200,7 +200,7 @@ export function ChipCountCaptureDialog({
                     <Input
                       type="number"
                       min="0"
-                      value={chipset[String(denom)] || ""}
+                      value={chipset[String(denom)] || ''}
                       onChange={(e) =>
                         handleQuantityChange(denom, e.target.value)
                       }
@@ -285,7 +285,7 @@ export function ChipCountCaptureDialog({
                 Saving...
               </>
             ) : (
-              "Save Chip Count"
+              'Save Chip Count'
             )}
           </Button>
         </DialogFooter>

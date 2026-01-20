@@ -42,6 +42,13 @@ type TableSessionRow = {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  // ADR-027: Bank mode visibility fields
+  table_bank_mode: string | null;
+  need_total_cents: number | null;
+  fills_total_cents: number;
+  credits_total_cents: number;
+  drop_total_cents: number | null;
+  drop_posted_at: string | null;
 };
 
 /**
@@ -106,6 +113,13 @@ function toTableSessionDTO(row: TableSessionRow): TableSessionDTO {
     metadata: row.metadata,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    // ADR-027: Bank mode visibility fields
+    table_bank_mode: row.table_bank_mode as TableSessionDTO['table_bank_mode'],
+    need_total_cents: row.need_total_cents,
+    fills_total_cents: row.fills_total_cents,
+    credits_total_cents: row.credits_total_cents,
+    drop_total_cents: row.drop_total_cents,
+    drop_posted_at: row.drop_posted_at,
   };
 }
 

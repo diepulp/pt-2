@@ -9,10 +9,10 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS2
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CouponInventoryOutput,
@@ -29,7 +29,7 @@ import type {
   UpdatePromoProgramInput,
   VoidCouponInput,
   VoidCouponOutput,
-} from "./dtos";
+} from './dtos';
 import {
   parseInventoryResponse,
   parseIssueCouponResponse,
@@ -38,7 +38,7 @@ import {
   parseReplaceCouponResponse,
   parseVoidCouponResponse,
   toErrorShape,
-} from "./mappers";
+} from './mappers';
 
 // === Error Mapping ===
 
@@ -47,120 +47,120 @@ import {
  * Extends base loyalty error mapping with promo-specific errors.
  */
 function mapPromoError(error: { code?: string; message: string }): DomainError {
-  const message = error.message || "";
+  const message = error.message || '';
 
   // Handle RPC-raised exceptions
-  if (message.includes("UNAUTHORIZED")) {
+  if (message.includes('UNAUTHORIZED')) {
     return new DomainError(
-      "UNAUTHORIZED",
-      "RLS context not set (authentication required)",
+      'UNAUTHORIZED',
+      'RLS context not set (authentication required)',
     );
   }
 
-  if (message.includes("PROMO_PROGRAM_NOT_FOUND")) {
+  if (message.includes('PROMO_PROGRAM_NOT_FOUND')) {
     return new DomainError(
-      "PROMO_PROGRAM_NOT_FOUND",
-      "Promo program does not exist or belongs to different casino",
+      'PROMO_PROGRAM_NOT_FOUND',
+      'Promo program does not exist or belongs to different casino',
     );
   }
 
-  if (message.includes("PROMO_PROGRAM_INACTIVE")) {
+  if (message.includes('PROMO_PROGRAM_INACTIVE')) {
     return new DomainError(
-      "PROMO_PROGRAM_INACTIVE",
-      "Promo program is not active",
+      'PROMO_PROGRAM_INACTIVE',
+      'Promo program is not active',
     );
   }
 
-  if (message.includes("PROMO_PROGRAM_NOT_STARTED")) {
+  if (message.includes('PROMO_PROGRAM_NOT_STARTED')) {
     return new DomainError(
-      "PROMO_PROGRAM_NOT_STARTED",
-      "Promo program has not started yet",
+      'PROMO_PROGRAM_NOT_STARTED',
+      'Promo program has not started yet',
     );
   }
 
-  if (message.includes("PROMO_PROGRAM_ENDED")) {
-    return new DomainError("PROMO_PROGRAM_ENDED", "Promo program has ended");
+  if (message.includes('PROMO_PROGRAM_ENDED')) {
+    return new DomainError('PROMO_PROGRAM_ENDED', 'Promo program has ended');
   }
 
-  if (message.includes("COUPON_NOT_FOUND")) {
+  if (message.includes('COUPON_NOT_FOUND')) {
     return new DomainError(
-      "COUPON_NOT_FOUND",
-      "Coupon does not exist or belongs to different casino",
+      'COUPON_NOT_FOUND',
+      'Coupon does not exist or belongs to different casino',
     );
   }
 
-  if (message.includes("INVALID_COUPON_STATUS")) {
+  if (message.includes('INVALID_COUPON_STATUS')) {
     return new DomainError(
-      "INVALID_COUPON_STATUS",
-      "Coupon cannot be modified in its current status",
+      'INVALID_COUPON_STATUS',
+      'Coupon cannot be modified in its current status',
     );
   }
 
-  if (message.includes("ANONYMOUS_ISSUANCE_DISABLED")) {
+  if (message.includes('ANONYMOUS_ISSUANCE_DISABLED')) {
     return new DomainError(
-      "ANONYMOUS_ISSUANCE_DISABLED",
-      "Casino requires player for promo issuance",
+      'ANONYMOUS_ISSUANCE_DISABLED',
+      'Casino requires player for promo issuance',
     );
   }
 
-  if (message.includes("PLAYER_NOT_ENROLLED")) {
+  if (message.includes('PLAYER_NOT_ENROLLED')) {
     return new DomainError(
-      "PLAYER_NOT_ENROLLED",
-      "Player is not enrolled at this casino",
+      'PLAYER_NOT_ENROLLED',
+      'Player is not enrolled at this casino',
     );
   }
 
-  if (message.includes("VISIT_NOT_FOUND")) {
+  if (message.includes('VISIT_NOT_FOUND')) {
     return new DomainError(
-      "VISIT_NOT_FOUND",
-      "Visit does not exist at this casino",
+      'VISIT_NOT_FOUND',
+      'Visit does not exist at this casino',
     );
   }
 
-  if (message.includes("FORBIDDEN")) {
+  if (message.includes('FORBIDDEN')) {
     const roleMatch = message.match(/Role (\w+) cannot/);
-    const roleInfo = roleMatch ? ` (current role: ${roleMatch[1]})` : "";
-    return new DomainError("FORBIDDEN", `Insufficient permissions${roleInfo}`);
+    const roleInfo = roleMatch ? ` (current role: ${roleMatch[1]})` : '';
+    return new DomainError('FORBIDDEN', `Insufficient permissions${roleInfo}`);
   }
 
   // Handle Postgres error codes
-  if (error.code === "23505") {
+  if (error.code === '23505') {
     if (
-      message.includes("validation_number") ||
-      message.includes("idempotency_key")
+      message.includes('validation_number') ||
+      message.includes('idempotency_key')
     ) {
       return new DomainError(
-        "DUPLICATE_VALIDATION_NUMBER",
-        "A coupon with this validation number or idempotency key already exists",
+        'DUPLICATE_VALIDATION_NUMBER',
+        'A coupon with this validation number or idempotency key already exists',
       );
     }
-    return new DomainError("DUPLICATE_ENTRY", "Duplicate entry detected");
+    return new DomainError('DUPLICATE_ENTRY', 'Duplicate entry detected');
   }
 
-  if (error.code === "23503") {
-    if (message.includes("promo_program_id")) {
+  if (error.code === '23503') {
+    if (message.includes('promo_program_id')) {
       return new DomainError(
-        "PROMO_PROGRAM_NOT_FOUND",
-        "Promo program not found",
+        'PROMO_PROGRAM_NOT_FOUND',
+        'Promo program not found',
       );
     }
-    if (message.includes("player_id")) {
-      return new DomainError("PLAYER_NOT_FOUND", "Player not found");
+    if (message.includes('player_id')) {
+      return new DomainError('PLAYER_NOT_FOUND', 'Player not found');
     }
-    if (message.includes("visit_id")) {
-      return new DomainError("VISIT_NOT_FOUND", "Visit not found");
+    if (message.includes('visit_id')) {
+      return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
     }
     return new DomainError(
-      "FOREIGN_KEY_VIOLATION",
-      "Referenced record not found",
+      'FOREIGN_KEY_VIOLATION',
+      'Referenced record not found',
     );
   }
 
-  if (error.code === "PGRST116" || message.includes("No rows found")) {
-    return new DomainError("NOT_FOUND", "Requested record not found");
+  if (error.code === 'PGRST116' || message.includes('No rows found')) {
+    return new DomainError('NOT_FOUND', 'Requested record not found');
   }
 
-  return new DomainError("INTERNAL_ERROR", message, { details: error });
+  return new DomainError('INTERNAL_ERROR', message, { details: error });
 }
 
 // === Promo Program Operations ===
@@ -179,18 +179,18 @@ export async function listPrograms(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     let builder = (supabase as any)
-      .from("promo_program")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('promo_program')
+      .select('*')
+      .order('created_at', { ascending: false });
 
     if (query.status) {
-      builder = builder.eq("status", query.status);
+      builder = builder.eq('status', query.status);
     }
 
     if (query.activeOnly) {
       const now = new Date().toISOString();
       builder = builder
-        .eq("status", "active")
+        .eq('status', 'active')
         .or(`start_at.is.null,start_at.lte.${now}`)
         .or(`end_at.is.null,end_at.gte.${now}`);
     }
@@ -231,9 +231,9 @@ export async function getProgram(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     const { data, error } = await (supabase as any)
-      .from("promo_program")
-      .select("*")
-      .eq("id", programId)
+      .from('promo_program')
+      .select('*')
+      .eq('id', programId)
       .maybeSingle();
 
     if (error) {
@@ -268,17 +268,17 @@ export async function createProgram(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     const { data, error } = await (supabase as any)
-      .from("promo_program")
+      .from('promo_program')
       .insert({
         name: input.name,
-        promo_type: input.promoType ?? "match_play",
+        promo_type: input.promoType ?? 'match_play',
         face_value_amount: input.faceValueAmount,
         required_match_wager_amount: input.requiredMatchWagerAmount,
         start_at: input.startAt ?? null,
         end_at: input.endAt ?? null,
-        status: "active",
+        status: 'active',
       })
-      .select("*")
+      .select('*')
       .single();
 
     if (error) {
@@ -317,10 +317,10 @@ export async function updateProgram(
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     const { data, error } = await (supabase as any)
-      .from("promo_program")
+      .from('promo_program')
       .update(updates)
-      .eq("id", input.id)
-      .select("*")
+      .eq('id', input.id)
+      .select('*')
       .single();
 
     if (error) {
@@ -357,7 +357,7 @@ export async function issueCoupon(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_issue_promo_coupon",
+      'rpc_issue_promo_coupon',
       {
         p_promo_program_id: input.promoProgramId,
         p_validation_number: input.validationNumber,
@@ -375,8 +375,8 @@ export async function issueCoupon(
 
     if (!data) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for coupon issuance",
+        'INTERNAL_ERROR',
+        'RPC returned no data for coupon issuance',
       );
     }
 
@@ -406,7 +406,7 @@ export async function voidCoupon(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_void_promo_coupon",
+      'rpc_void_promo_coupon',
       {
         p_coupon_id: input.couponId,
         p_idempotency_key: input.idempotencyKey,
@@ -420,8 +420,8 @@ export async function voidCoupon(
 
     if (!data) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for coupon void",
+        'INTERNAL_ERROR',
+        'RPC returned no data for coupon void',
       );
     }
 
@@ -451,7 +451,7 @@ export async function replaceCoupon(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_replace_promo_coupon",
+      'rpc_replace_promo_coupon',
       {
         p_coupon_id: input.couponId,
         p_new_validation_number: input.newValidationNumber,
@@ -467,8 +467,8 @@ export async function replaceCoupon(
 
     if (!data) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for coupon replacement",
+        'INTERNAL_ERROR',
+        'RPC returned no data for coupon replacement',
       );
     }
 
@@ -496,7 +496,7 @@ export async function getCouponInventory(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_promo_coupon_inventory",
+      'rpc_promo_coupon_inventory',
       {
         p_promo_program_id: query.promoProgramId ?? null,
         p_status: query.status ?? null,
@@ -530,30 +530,30 @@ export async function listCoupons(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     let builder = (supabase as any)
-      .from("promo_coupon")
-      .select("*")
-      .order("issued_at", { ascending: false });
+      .from('promo_coupon')
+      .select('*')
+      .order('issued_at', { ascending: false });
 
     if (query.promoProgramId) {
-      builder = builder.eq("promo_program_id", query.promoProgramId);
+      builder = builder.eq('promo_program_id', query.promoProgramId);
     }
 
     if (query.status) {
-      builder = builder.eq("status", query.status);
+      builder = builder.eq('status', query.status);
     }
 
     if (query.playerId) {
-      builder = builder.eq("player_id", query.playerId);
+      builder = builder.eq('player_id', query.playerId);
     }
 
     if (query.visitId) {
-      builder = builder.eq("visit_id", query.visitId);
+      builder = builder.eq('visit_id', query.visitId);
     }
 
     if (query.expiringBefore) {
       builder = builder
-        .eq("status", "issued")
-        .lt("expires_at", query.expiringBefore);
+        .eq('status', 'issued')
+        .lt('expires_at', query.expiringBefore);
     }
 
     const limit = Math.min(query.limit ?? 50, 100);
@@ -592,9 +592,9 @@ export async function getCoupon(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     const { data, error } = await (supabase as any)
-      .from("promo_coupon")
-      .select("*")
-      .eq("id", couponId)
+      .from('promo_coupon')
+      .select('*')
+      .eq('id', couponId)
       .maybeSingle();
 
     if (error) {
@@ -628,9 +628,9 @@ export async function getCouponByValidationNumber(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
     const { data, error } = await (supabase as any)
-      .from("promo_coupon")
-      .select("*")
-      .eq("validation_number", validationNumber)
+      .from('promo_coupon')
+      .select('*')
+      .eq('validation_number', validationNumber)
       .maybeSingle();
 
     if (error) {

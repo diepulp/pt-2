@@ -10,17 +10,17 @@
  * @see ADR-024 (RLS context injection)
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
-import type { TableRundownDTO, TableSessionDTO } from "./dtos";
-import { toTableRundownDTO } from "./mappers";
+import type { TableRundownDTO, TableSessionDTO } from './dtos';
+import { toTableRundownDTO } from './mappers';
 
 // RPC return type
 type RpcPostDropTotalReturn =
-  Database["public"]["Functions"]["rpc_post_table_drop_total"]["Returns"];
+  Database['public']['Functions']['rpc_post_table_drop_total']['Returns'];
 
 /**
  * Type guard for post drop total RPC response.
@@ -29,15 +29,15 @@ type RpcPostDropTotalReturn =
 function isValidPostDropTotalResponse(
   data: unknown,
 ): data is RpcPostDropTotalReturn {
-  if (!data || typeof data !== "object") return false;
+  if (!data || typeof data !== 'object') return false;
   const obj = data as Record<string, unknown>;
   return (
-    typeof obj.id === "string" &&
-    typeof obj.casino_id === "string" &&
-    typeof obj.gaming_table_id === "string" &&
-    typeof obj.gaming_day === "string" &&
-    typeof obj.status === "string" &&
-    typeof obj.opened_at === "string"
+    typeof obj.id === 'string' &&
+    typeof obj.casino_id === 'string' &&
+    typeof obj.gaming_table_id === 'string' &&
+    typeof obj.gaming_day === 'string' &&
+    typeof obj.status === 'string' &&
+    typeof obj.opened_at === 'string'
   );
 }
 
@@ -45,13 +45,13 @@ function isValidPostDropTotalResponse(
  * Map Supabase error to DomainError.
  */
 function mapRpcError(error: { code?: string; message: string }): DomainError {
-  if (error.message?.includes("Session not found")) {
-    return new DomainError("SESSION_NOT_FOUND");
+  if (error.message?.includes('Session not found')) {
+    return new DomainError('SESSION_NOT_FOUND');
   }
-  if (error.message?.includes("Missing casino context")) {
-    return new DomainError("UNAUTHORIZED");
+  if (error.message?.includes('Missing casino context')) {
+    return new DomainError('UNAUTHORIZED');
   }
-  return new DomainError("INTERNAL_ERROR", error.message);
+  return new DomainError('INTERNAL_ERROR', error.message);
 }
 
 /**
@@ -75,11 +75,11 @@ export async function computeTableRundown(
   sessionId: string,
 ): Promise<TableRundownDTO> {
   const { data, error } = await supabase
-    .rpc("rpc_compute_table_rundown", { p_session_id: sessionId })
+    .rpc('rpc_compute_table_rundown', { p_session_id: sessionId })
     .single();
 
   if (error) throw mapRpcError(error);
-  if (!data) throw new DomainError("SESSION_NOT_FOUND");
+  if (!data) throw new DomainError('SESSION_NOT_FOUND');
 
   return toTableRundownDTO(data);
 }
@@ -102,18 +102,18 @@ export async function postTableDropTotal(
   dropTotalCents: number,
 ): Promise<TableSessionDTO> {
   const { data, error } = await supabase
-    .rpc("rpc_post_table_drop_total", {
+    .rpc('rpc_post_table_drop_total', {
       p_session_id: sessionId,
       p_drop_total_cents: dropTotalCents,
     })
     .single();
 
   if (error) throw mapRpcError(error);
-  if (!data) throw new DomainError("SESSION_NOT_FOUND");
+  if (!data) throw new DomainError('SESSION_NOT_FOUND');
 
   // Validate RPC response shape using type guard
   if (!isValidPostDropTotalResponse(data)) {
-    throw new DomainError("INTERNAL_ERROR", "Invalid RPC response structure", {
+    throw new DomainError('INTERNAL_ERROR', 'Invalid RPC response structure', {
       httpStatus: 500,
       details: { sessionId, received: typeof data },
     });

@@ -9,7 +9,7 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // ============================================================================
 // Enum Types (derived from database enums for type safety)
@@ -18,26 +18,26 @@ import type { Database } from "@/types/database.types";
 /**
  * Transaction type classification per PRD-005
  */
-export type MtlTxnType = Database["public"]["Enums"]["mtl_txn_type"];
+export type MtlTxnType = Database['public']['Enums']['mtl_txn_type'];
 // Values: 'buy_in' | 'cash_out' | 'marker' | 'front_money' | 'chip_fill'
 
 /**
  * Transaction source channel per PRD-005
  */
-export type MtlSource = Database["public"]["Enums"]["mtl_source"];
+export type MtlSource = Database['public']['Enums']['mtl_source'];
 // Values: 'table' | 'cage' | 'kiosk' | 'other'
 
 /**
  * Transaction direction
  */
-export type MtlDirection = "in" | "out";
+export type MtlDirection = 'in' | 'out';
 
 /**
  * Tier 1: Entry Badge (UX convenience)
  * Per-transaction threshold indication for UI display.
  * NOT the compliance trigger - see AggBadge for that.
  */
-export type EntryBadge = "none" | "watchlist_near" | "ctr_near" | "ctr_met";
+export type EntryBadge = 'none' | 'watchlist_near' | 'ctr_near' | 'ctr_met';
 
 /**
  * Tier 2: Aggregate Badge (COMPLIANCE AUTHORITY)
@@ -46,10 +46,10 @@ export type EntryBadge = "none" | "watchlist_near" | "ctr_near" | "ctr_met";
  * Cash-in and cash-out tracked separately per IRS guidance.
  */
 export type AggBadge =
-  | "none"
-  | "agg_watchlist"
-  | "agg_ctr_near"
-  | "agg_ctr_met";
+  | 'none'
+  | 'agg_watchlist'
+  | 'agg_ctr_near'
+  | 'agg_ctr_met';
 
 // ============================================================================
 // Casino Thresholds (shared with view-model)
@@ -57,11 +57,12 @@ export type AggBadge =
 
 /**
  * Casino-specific threshold configuration from casino_settings
+ * IMPORTANT: All values in CENTS per ISSUE-FB8EB717 standardization
  */
 export interface CasinoThresholds {
-  /** Internal watchlist threshold (default $3,000), comparison: >= */
+  /** Internal watchlist threshold (default $3,000 = 300000 cents), comparison: >= */
   watchlistFloor: number;
-  /** CTR reporting threshold (default $10,000), comparison: > (strictly greater) */
+  /** CTR reporting threshold (default $10,000 = 1000000 cents), comparison: > (strictly greater) */
   ctrThreshold: number;
 }
 
@@ -80,6 +81,7 @@ export interface MtlEntryDTO {
   staff_id: string | null;
   rating_slip_id: string | null;
   visit_id: string | null;
+  /** Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000) */
   amount: number;
   direction: MtlDirection;
   txn_type: MtlTxnType;
@@ -131,8 +133,10 @@ export interface MtlGamingDaySummaryDTO {
   patron_first_name: string | null;
   /** Patron last name for display */
   patron_last_name: string | null;
+  /** Patron date of birth for compliance disambiguation */
+  patron_date_of_birth: string | null;
   gaming_day: string;
-  // Cash-in aggregates
+  // Cash-in aggregates (all amounts in CENTS per ISSUE-FB8EB717)
   total_in: number;
   count_in: number;
   max_single_in: number | null;
@@ -140,7 +144,7 @@ export interface MtlGamingDaySummaryDTO {
   last_in_at: string | null;
   /** Tier 2 aggregate badge for cash-in (COMPLIANCE) */
   agg_badge_in: AggBadge;
-  // Cash-out aggregates
+  // Cash-out aggregates (all amounts in CENTS per ISSUE-FB8EB717)
   total_out: number;
   count_out: number;
   max_single_out: number | null;
@@ -166,6 +170,7 @@ export interface CreateMtlEntryInput {
   staff_id?: string;
   rating_slip_id?: string;
   visit_id?: string;
+  /** Amount in CENTS per ISSUE-FB8EB717 standardization (e.g., 300000 = $3,000) */
   amount: number;
   direction: MtlDirection;
   txn_type: MtlTxnType;
@@ -198,7 +203,7 @@ export interface MtlEntryFilters {
   casino_id: string;
   patron_uuid?: string;
   gaming_day?: string;
-  /** Filter entries with amount >= this value */
+  /** Filter entries with amount >= this value (in CENTS per ISSUE-FB8EB717) */
   min_amount?: number;
   txn_type?: MtlTxnType;
   source?: MtlSource;
@@ -221,9 +226,9 @@ export interface MtlGamingDaySummaryFilters {
   agg_badge_in?: AggBadge;
   /** Filter by aggregate badge level for cash-out */
   agg_badge_out?: AggBadge;
-  /** Filter summaries with total_in >= this value */
+  /** Filter summaries with total_in >= this value (in CENTS per ISSUE-FB8EB717) */
   min_total_in?: number;
-  /** Filter summaries with total_out >= this value */
+  /** Filter summaries with total_out >= this value (in CENTS per ISSUE-FB8EB717) */
   min_total_out?: number;
   /** Cursor for pagination */
   cursor?: string;

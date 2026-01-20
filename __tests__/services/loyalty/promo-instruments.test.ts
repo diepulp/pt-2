@@ -11,14 +11,6 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 
 import { DomainError } from '@/lib/errors/domain-errors';
-import type {
-  CreatePromoProgramInput,
-  IssueCouponInput,
-  PromoProgramListQuery,
-  PromoCouponListQuery,
-  ReplaceCouponInput,
-  VoidCouponInput,
-} from '@/services/loyalty/promo/dtos';
 import {
   createProgram,
   getProgram,
@@ -32,6 +24,14 @@ import {
   getCoupon,
   getCouponByValidationNumber,
 } from '@/services/loyalty/promo/crud';
+import type {
+  CreatePromoProgramInput,
+  IssueCouponInput,
+  PromoProgramListQuery,
+  PromoCouponListQuery,
+  ReplaceCouponInput,
+  VoidCouponInput,
+} from '@/services/loyalty/promo/dtos';
 
 // Mock Supabase client factory
 function createMockSupabase() {
@@ -186,7 +186,7 @@ describe('Promo Instruments Service Layer', () => {
         supabase._mockFrom.mockReturnValue(chainMock);
 
         await expect(listPrograms(supabase as never, {})).rejects.toThrow(
-          DomainError
+          DomainError,
         );
       });
     });
@@ -256,7 +256,7 @@ describe('Promo Instruments Service Layer', () => {
             required_match_wager_amount: 25.0,
             promo_type: 'match_play',
             status: 'active',
-          })
+          }),
         );
       });
 
@@ -285,7 +285,7 @@ describe('Promo Instruments Service Layer', () => {
           expect.objectContaining({
             start_at: '2026-01-01T00:00:00Z',
             end_at: '2026-01-31T23:59:59Z',
-          })
+          }),
         );
       });
     });
@@ -329,7 +329,7 @@ describe('Promo Instruments Service Layer', () => {
           updateProgram(supabase as never, {
             id: 'nonexistent-id',
             status: 'inactive',
-          })
+          }),
         ).rejects.toMatchObject({
           code: 'NOT_FOUND',
         });
@@ -371,15 +371,18 @@ describe('Promo Instruments Service Layer', () => {
         expect(result.coupon.validationNumber).toBe('VAL-001');
         expect(result.coupon.status).toBe('issued');
         expect(result.isExisting).toBe(false);
-        expect(supabase._mockRpc).toHaveBeenCalledWith('rpc_issue_promo_coupon', {
-          p_promo_program_id: 'program-uuid-123',
-          p_validation_number: 'VAL-001',
-          p_idempotency_key: 'issue:VAL-001',
-          p_player_id: 'player-uuid-abc',
-          p_visit_id: 'visit-uuid-def',
-          p_expires_at: null,
-          p_correlation_id: null,
-        });
+        expect(supabase._mockRpc).toHaveBeenCalledWith(
+          'rpc_issue_promo_coupon',
+          {
+            p_promo_program_id: 'program-uuid-123',
+            p_validation_number: 'VAL-001',
+            p_idempotency_key: 'issue:VAL-001',
+            p_player_id: 'player-uuid-abc',
+            p_visit_id: 'visit-uuid-def',
+            p_expires_at: null,
+            p_correlation_id: null,
+          },
+        );
       });
 
       it('returns isExisting=true for idempotent duplicate', async () => {
@@ -408,7 +411,9 @@ describe('Promo Instruments Service Layer', () => {
           error: { message: 'PROMO_PROGRAM_NOT_FOUND' },
         });
 
-        await expect(issueCoupon(supabase as never, validInput)).rejects.toMatchObject({
+        await expect(
+          issueCoupon(supabase as never, validInput),
+        ).rejects.toMatchObject({
           code: 'PROMO_PROGRAM_NOT_FOUND',
         });
       });
@@ -419,7 +424,9 @@ describe('Promo Instruments Service Layer', () => {
           error: { message: 'PROMO_PROGRAM_INACTIVE' },
         });
 
-        await expect(issueCoupon(supabase as never, validInput)).rejects.toMatchObject({
+        await expect(
+          issueCoupon(supabase as never, validInput),
+        ).rejects.toMatchObject({
           code: 'PROMO_PROGRAM_INACTIVE',
         });
       });
@@ -432,7 +439,7 @@ describe('Promo Instruments Service Layer', () => {
         });
 
         await expect(
-          issueCoupon(supabase as never, anonymousInput)
+          issueCoupon(supabase as never, anonymousInput),
         ).rejects.toMatchObject({
           code: 'ANONYMOUS_ISSUANCE_DISABLED',
         });
@@ -444,7 +451,9 @@ describe('Promo Instruments Service Layer', () => {
           error: { code: '23505', message: 'validation_number unique' },
         });
 
-        await expect(issueCoupon(supabase as never, validInput)).rejects.toMatchObject({
+        await expect(
+          issueCoupon(supabase as never, validInput),
+        ).rejects.toMatchObject({
           code: 'DUPLICATE_VALIDATION_NUMBER',
         });
       });
@@ -484,7 +493,9 @@ describe('Promo Instruments Service Layer', () => {
           error: { message: 'COUPON_NOT_FOUND' },
         });
 
-        await expect(voidCoupon(supabase as never, validInput)).rejects.toMatchObject({
+        await expect(
+          voidCoupon(supabase as never, validInput),
+        ).rejects.toMatchObject({
           code: 'COUPON_NOT_FOUND',
         });
       });
@@ -495,7 +506,9 @@ describe('Promo Instruments Service Layer', () => {
           error: { message: 'INVALID_COUPON_STATUS' },
         });
 
-        await expect(voidCoupon(supabase as never, validInput)).rejects.toMatchObject({
+        await expect(
+          voidCoupon(supabase as never, validInput),
+        ).rejects.toMatchObject({
           code: 'INVALID_COUPON_STATUS',
         });
       });
@@ -546,7 +559,7 @@ describe('Promo Instruments Service Layer', () => {
         });
 
         await expect(
-          replaceCoupon(supabase as never, validInput)
+          replaceCoupon(supabase as never, validInput),
         ).rejects.toMatchObject({
           code: 'INVALID_COUPON_STATUS',
         });
@@ -556,8 +569,18 @@ describe('Promo Instruments Service Layer', () => {
     describe('getCouponInventory', () => {
       it('returns inventory breakdown by status', async () => {
         const rpcResponse = [
-          { status: 'issued', coupon_count: 10, total_face_value: 250.0, total_match_wager: 250.0 },
-          { status: 'voided', coupon_count: 2, total_face_value: 50.0, total_match_wager: 50.0 },
+          {
+            status: 'issued',
+            coupon_count: 10,
+            total_face_value: 250.0,
+            total_match_wager: 250.0,
+          },
+          {
+            status: 'voided',
+            coupon_count: 2,
+            total_face_value: 50.0,
+            total_match_wager: 50.0,
+          },
         ];
         supabase._mockRpc.mockResolvedValue({ data: rpcResponse, error: null });
 
@@ -580,7 +603,7 @@ describe('Promo Instruments Service Layer', () => {
           'rpc_promo_coupon_inventory',
           expect.objectContaining({
             p_promo_program_id: 'program-uuid-123',
-          })
+          }),
         );
       });
     });
@@ -632,7 +655,10 @@ describe('Promo Instruments Service Layer', () => {
 
         await listCoupons(supabase as never, { playerId: 'player-uuid-abc' });
 
-        expect(chainMock.eq).toHaveBeenCalledWith('player_id', 'player-uuid-abc');
+        expect(chainMock.eq).toHaveBeenCalledWith(
+          'player_id',
+          'player-uuid-abc',
+        );
       });
 
       it('filters by expiringBefore', async () => {
@@ -652,7 +678,7 @@ describe('Promo Instruments Service Layer', () => {
         expect(chainMock.eq).toHaveBeenCalledWith('status', 'issued');
         expect(chainMock.lt).toHaveBeenCalledWith(
           'expires_at',
-          '2026-01-08T00:00:00Z'
+          '2026-01-08T00:00:00Z',
         );
       });
     });
@@ -706,7 +732,7 @@ describe('Promo Instruments Service Layer', () => {
 
         const result = await getCouponByValidationNumber(
           supabase as never,
-          'VAL-001'
+          'VAL-001',
         );
 
         expect(result).not.toBeNull();
@@ -726,7 +752,7 @@ describe('Promo Instruments Service Layer', () => {
 
         const result = await getCouponByValidationNumber(
           supabase as never,
-          'NONEXISTENT'
+          'NONEXISTENT',
         );
 
         expect(result).toBeNull();
@@ -746,7 +772,7 @@ describe('Promo Instruments Service Layer', () => {
           promoProgramId: 'test',
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'UNAUTHORIZED',
       });
@@ -763,7 +789,7 @@ describe('Promo Instruments Service Layer', () => {
           promoProgramId: 'test',
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'FORBIDDEN',
       });
@@ -781,7 +807,7 @@ describe('Promo Instruments Service Layer', () => {
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
           playerId: 'player-123',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'PLAYER_NOT_ENROLLED',
       });
@@ -799,7 +825,7 @@ describe('Promo Instruments Service Layer', () => {
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
           visitId: 'visit-123',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'VISIT_NOT_FOUND',
       });
@@ -816,7 +842,7 @@ describe('Promo Instruments Service Layer', () => {
           promoProgramId: 'nonexistent',
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'PROMO_PROGRAM_NOT_FOUND',
       });
@@ -833,7 +859,7 @@ describe('Promo Instruments Service Layer', () => {
           promoProgramId: 'test',
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'INTERNAL_ERROR',
       });
@@ -850,7 +876,7 @@ describe('Promo Instruments Service Layer', () => {
           promoProgramId: 'test',
           validationNumber: 'VAL-001',
           idempotencyKey: 'test',
-        })
+        }),
       ).rejects.toMatchObject({
         code: 'INTERNAL_ERROR',
       });

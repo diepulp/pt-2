@@ -5,41 +5,41 @@
  * Checks against SRM ownership matrix to ensure bounded context integrity.
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 // SRM Ownership Matrix
 const SRM_OWNERSHIP: Record<string, string[]> = {
   casino: [
-    'casino',
-    'casino_settings',
-    'company',
-    'staff',
-    'game_settings',
-    'audit_log',
-    'report',
+    "casino",
+    "casino_settings",
+    "company",
+    "staff",
+    "game_settings",
+    "audit_log",
+    "report",
   ],
-  player: ['player', 'player_casino'],
-  visit: ['visit'],
-  loyalty: ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox'],
-  'rating-slip': ['rating_slip'],
-  finance: ['player_financial_transaction', 'finance_outbox'],
-  mtl: ['mtl_entry', 'mtl_audit_note'],
-  'table-context': [
-    'gaming_table',
-    'gaming_table_settings',
-    'dealer_rotation',
-    'table_inventory_snapshot',
-    'table_fill',
-    'table_credit',
-    'table_drop_event',
+  player: ["player", "player_casino"],
+  visit: ["visit"],
+  loyalty: ["player_loyalty", "loyalty_ledger", "loyalty_outbox"],
+  "rating-slip": ["rating_slip"],
+  finance: ["player_financial_transaction", "finance_outbox"],
+  mtl: ["mtl_entry", "mtl_audit_note"],
+  "table-context": [
+    "gaming_table",
+    "gaming_table_settings",
+    "dealer_rotation",
+    "table_inventory_snapshot",
+    "table_fill",
+    "table_credit",
+    "table_drop_event",
   ],
-  'floor-layout': [
-    'floor_layout',
-    'floor_layout_version',
-    'floor_pit',
-    'floor_table_slot',
-    'floor_layout_activation',
+  "floor-layout": [
+    "floor_layout",
+    "floor_layout_version",
+    "floor_pit",
+    "floor_table_slot",
+    "floor_layout_activation",
   ],
 };
 
@@ -58,10 +58,10 @@ class CrossContextDetector {
     const serviceName = path.basename(servicePath);
     const ownedTables = SRM_OWNERSHIP[serviceName] || [];
 
-    console.log(`\n${'='.repeat(60)}`);
+    console.log(`\n${"=".repeat(60)}`);
     console.log(`Checking service: ${serviceName}`);
-    console.log(`Owned tables: ${ownedTables.join(', ')}`);
-    console.log(`${'='.repeat(60)}\n`);
+    console.log(`Owned tables: ${ownedTables.join(", ")}`);
+    console.log(`${"=".repeat(60)}\n`);
 
     // Find all .ts files (except .test.ts)
     const files = this.findTypeScriptFiles(servicePath);
@@ -81,7 +81,7 @@ class CrossContextDetector {
 
       if (stat.isDirectory()) {
         files.push(...this.findTypeScriptFiles(fullPath));
-      } else if (item.endsWith('.ts') && !item.endsWith('.test.ts')) {
+      } else if (item.endsWith(".ts") && !item.endsWith(".test.ts")) {
         files.push(fullPath);
       }
     }
@@ -94,8 +94,8 @@ class CrossContextDetector {
     serviceName: string,
     ownedTables: string[],
   ): Promise<void> {
-    const content = fs.readFileSync(filePath, 'utf-8');
-    const lines = content.split('\n');
+    const content = fs.readFileSync(filePath, "utf-8");
+    const lines = content.split("\n");
 
     // Pattern: Database['public']['Tables']['table_name']
     const pattern = /Database\['public'\]\['Tables'\]\['([^']+)'\]/g;
@@ -115,7 +115,7 @@ class CrossContextDetector {
             line: index + 1,
             service: serviceName,
             accessedTable: tableName,
-            owningService: owningService || 'unknown',
+            owningService: owningService || "unknown",
           });
         }
       }
@@ -132,12 +132,12 @@ class CrossContextDetector {
   }
 
   printResults(): void {
-    console.log(`\n${'-'.repeat(60)}`);
-    console.log('CROSS-CONTEXT VIOLATION DETECTION RESULTS');
-    console.log(`${'-'.repeat(60)}\n`);
+    console.log(`\n${"-".repeat(60)}`);
+    console.log("CROSS-CONTEXT VIOLATION DETECTION RESULTS");
+    console.log(`${"-".repeat(60)}\n`);
 
     if (this.violations.length === 0) {
-      console.log('\x1b[32m✅ NO VIOLATIONS DETECTED\x1b[0m\n');
+      console.log("\x1b[32m✅ NO VIOLATIONS DETECTED\x1b[0m\n");
       return;
     }
 
@@ -171,10 +171,10 @@ async function main() {
 
   if (args.length === 0) {
     console.log(
-      'Usage: ts-node detect_cross_context_violations.ts <service-path>',
+      "Usage: ts-node detect_cross_context_violations.ts <service-path>",
     );
     console.log(
-      'Example: ts-node detect_cross_context_violations.ts services/loyalty',
+      "Example: ts-node detect_cross_context_violations.ts services/loyalty",
     );
     process.exit(1);
   }
@@ -196,6 +196,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  console.error("Fatal error:", err);
   process.exit(1);
 });

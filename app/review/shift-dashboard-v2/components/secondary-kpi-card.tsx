@@ -7,14 +7,14 @@
  * @see IMPLEMENTATION_STRATEGY.md §7.3
  */
 
-"use client";
+'use client';
 
-import { TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
 
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
-import { formatCurrency, formatCurrencyDelta } from "../lib/format";
+import { formatCurrency, formatCurrencyDelta } from '../lib/format';
 
 export interface SecondaryKpiCardProps {
   /** KPI title */
@@ -26,7 +26,7 @@ export interface SecondaryKpiCardProps {
   /** Trend delta in cents */
   trend?: {
     value: number;
-    direction: "up" | "down";
+    direction: 'up' | 'down';
   };
   /** Left border accent color class */
   accentColor: string;
@@ -79,7 +79,7 @@ export function SecondaryKpiCard({
         {/* Trend indicator */}
         {trend && (
           <div className="mt-2 flex items-center gap-1 text-xs">
-            {trend.direction === "up" ? (
+            {trend.direction === 'up' ? (
               <>
                 <TrendingUpIcon className="h-3 w-3 text-emerald-500" />
                 <span className="text-emerald-500">

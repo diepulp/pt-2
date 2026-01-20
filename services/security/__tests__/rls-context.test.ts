@@ -32,7 +32,9 @@ interface RpcResponse<T> {
 function createMockSupabase<T>(
   rpcResponse: RpcResponse<T>,
 ): SupabaseClient<Database> {
-  const mockRpc = jest.fn<() => Promise<RpcResponse<T>>>().mockResolvedValue(rpcResponse);
+  const mockRpc = jest
+    .fn<() => Promise<RpcResponse<T>>>()
+    .mockResolvedValue(rpcResponse);
 
   return {
     rpc: mockRpc,
@@ -58,7 +60,10 @@ async function callSetRlsContextFromStaff(
   });
 
   if (error) {
-    return { success: false, error: { code: error.code, message: error.message } };
+    return {
+      success: false,
+      error: { code: error.code, message: error.message },
+    };
   }
   return { success: true };
 }
@@ -285,7 +290,10 @@ describe('set_rls_context_internal - Ops Lane', () => {
     });
 
     if (error) {
-      return { success: false, error: { code: error.code, message: error.message } };
+      return {
+        success: false,
+        error: { code: error.code, message: error.message },
+      };
     }
     return { success: true };
   }

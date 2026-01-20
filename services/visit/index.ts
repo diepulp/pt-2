@@ -21,11 +21,11 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 308-350
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   ActiveVisitDTO,
   CloseVisitDTO,
@@ -34,12 +34,12 @@ import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs, keys, and HTTP fetchers for consumers
-export * from "./dtos";
-export * from "./http";
-export * from "./keys";
+export * from './dtos';
+export * from './http';
+export * from './keys';
 
 // === Service Interface ===
 
@@ -147,8 +147,8 @@ export interface VisitServiceInterface {
   getPlayerRecentSessions(
     casinoId: string,
     playerId: string,
-    options?: import("./dtos").RecentSessionsOptions,
-  ): Promise<import("./dtos").RecentSessionsDTO>;
+    options?: import('./dtos').RecentSessionsOptions,
+  ): Promise<import('./dtos').RecentSessionsDTO>;
 
   /**
    * Get player's last closed session context for prefilling continuation form.
@@ -160,7 +160,7 @@ export interface VisitServiceInterface {
   getPlayerLastSessionContext(
     casinoId: string,
     playerId: string,
-  ): Promise<import("./dtos").LastSessionContextDTO | null>;
+  ): Promise<import('./dtos').LastSessionContextDTO | null>;
 
   /**
    * Start a new visit from a previous session.
@@ -176,8 +176,8 @@ export interface VisitServiceInterface {
   startFromPrevious(
     casinoId: string,
     actorId: string,
-    request: import("./dtos").StartFromPreviousRequest,
-  ): Promise<import("./dtos").StartFromPreviousResponse>;
+    request: import('./dtos').StartFromPreviousRequest,
+  ): Promise<import('./dtos').StartFromPreviousResponse>;
 }
 
 // === Service Factory ===

@@ -1009,7 +1009,8 @@ describe('RatingSlipService Integration Tests', () => {
 
       // Clean up the successful one
       if (successes.length > 0) {
-        const slip = (successes[0] as PromiseFulfilledResult<any>).value;
+        const slip = (successes[0] as PromiseFulfilledResult<{ id: string }>)
+          .value;
         fixture.slipIds.push(slip.id);
         await service.close(testCasinoId, testActorId, slip.id);
       }

@@ -8,15 +8,15 @@
  * @see EXECUTION-SPEC-PRD-006.md WS3
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
-import { listRatingSlips } from "@/services/rating-slip/http";
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
+import { listRatingSlips } from '@/services/rating-slip/http';
 
-import { dashboardKeys } from "./keys";
-import type { DashboardSlipsFilters } from "./types";
+import { dashboardKeys } from './keys';
+import type { DashboardSlipsFilters } from './types';
 
 /**
  * Fetches rating slips for a specific table.
@@ -55,8 +55,8 @@ export function useDashboardSlips(
 
       // Default: fetch both open and paused slips (active slips)
       const [openResult, pausedResult] = await Promise.all([
-        listRatingSlips({ table_id: tableId, status: "open", limit: 100 }),
-        listRatingSlips({ table_id: tableId, status: "paused", limit: 100 }),
+        listRatingSlips({ table_id: tableId, status: 'open', limit: 100 }),
+        listRatingSlips({ table_id: tableId, status: 'paused', limit: 100 }),
       ]);
 
       // Combine and sort by start_time (most recent first)
@@ -86,8 +86,8 @@ export function useActiveSlipsForDashboard(tableId: string | undefined) {
     queryFn: async (): Promise<RatingSlipDTO[]> => {
       // Fetch both open and paused slips in parallel
       const [openResult, pausedResult] = await Promise.all([
-        listRatingSlips({ table_id: tableId, status: "open", limit: 100 }),
-        listRatingSlips({ table_id: tableId, status: "paused", limit: 100 }),
+        listRatingSlips({ table_id: tableId, status: 'open', limit: 100 }),
+        listRatingSlips({ table_id: tableId, status: 'paused', limit: 100 }),
       ]);
 
       // Combine results

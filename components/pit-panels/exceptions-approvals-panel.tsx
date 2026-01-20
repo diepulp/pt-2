@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   AlertTriangle,
@@ -10,13 +10,13 @@ import {
   ShieldAlert,
   TableProperties,
   Users,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 /**
  * Exceptions & Approvals Panel
@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
  * urgent visual cues and data-dense information display.
  */
 export function ExceptionsApprovalsPanel() {
-  const [activeTab, setActiveTab] = React.useState("alerts");
+  const [activeTab, setActiveTab] = React.useState('alerts');
 
   // Mock notification counts - will be wired to real data
   const notifications = {
@@ -37,31 +37,31 @@ export function ExceptionsApprovalsPanel() {
 
   const tabs = [
     {
-      id: "alerts",
-      label: "Alerts",
+      id: 'alerts',
+      label: 'Alerts',
       icon: Bell,
       count: notifications.alerts,
-      color: "text-amber-400",
-      bgColor: "bg-amber-500/10",
-      borderColor: "border-amber-500/30",
+      color: 'text-amber-400',
+      bgColor: 'bg-amber-500/10',
+      borderColor: 'border-amber-500/30',
     },
     {
-      id: "approvals",
-      label: "Approvals",
+      id: 'approvals',
+      label: 'Approvals',
       icon: CheckCircle2,
       count: notifications.approvals,
-      color: "text-accent",
-      bgColor: "bg-accent/10",
-      borderColor: "border-accent/30",
+      color: 'text-accent',
+      bgColor: 'bg-accent/10',
+      borderColor: 'border-accent/30',
     },
     {
-      id: "flags",
-      label: "Flags",
+      id: 'flags',
+      label: 'Flags',
       icon: Flag,
       count: notifications.flags,
-      color: "text-rose-400",
-      bgColor: "bg-rose-500/10",
-      borderColor: "border-rose-500/30",
+      color: 'text-rose-400',
+      bgColor: 'bg-rose-500/10',
+      borderColor: 'border-rose-500/30',
     },
   ];
 
@@ -77,7 +77,7 @@ export function ExceptionsApprovalsPanel() {
           <p className="text-[10px] font-mono text-muted-foreground/70">
             {notifications.alerts +
               notifications.approvals +
-              notifications.flags}{" "}
+              notifications.flags}{' '}
             items pending
           </p>
         </div>
@@ -99,8 +99,8 @@ export function ExceptionsApprovalsPanel() {
                 key={tab.id}
                 value={tab.id}
                 className={cn(
-                  "flex-1 gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all duration-150",
-                  "data-[state=active]:shadow-sm",
+                  'flex-1 gap-1.5 rounded-md px-3 py-1.5 text-[11px] font-medium transition-all duration-150',
+                  'data-[state=active]:shadow-sm',
                   isActive && tab.bgColor,
                   isActive && tab.color,
                 )}
@@ -111,10 +111,10 @@ export function ExceptionsApprovalsPanel() {
                   <Badge
                     variant="secondary"
                     className={cn(
-                      "ml-1 h-4 min-w-4 px-1 text-[9px] font-bold",
+                      'ml-1 h-4 min-w-4 px-1 text-[9px] font-bold',
                       isActive
-                        ? cn(tab.bgColor, tab.color, tab.borderColor, "border")
-                        : "bg-muted-foreground/20 text-muted-foreground",
+                        ? cn(tab.bgColor, tab.color, tab.borderColor, 'border')
+                        : 'bg-muted-foreground/20 text-muted-foreground',
                     )}
                   >
                     {tab.count}
@@ -173,28 +173,28 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function AlertsTab() {
   const mockAlerts = [
     {
-      id: "1",
-      type: "drop" as const,
-      title: "Overdue Drop Pull",
-      description: "BJ-03 drop scheduled 2 hours ago",
-      time: "14:30",
-      severity: "high" as const,
+      id: '1',
+      type: 'drop' as const,
+      title: 'Overdue Drop Pull',
+      description: 'BJ-03 drop scheduled 2 hours ago',
+      time: '14:30',
+      severity: 'high' as const,
     },
     {
-      id: "2",
-      type: "transaction" as const,
-      title: "High-Value Transaction",
-      description: "BJ-01 • $5,000 buy-in flagged",
-      time: "15:45",
-      severity: "medium" as const,
+      id: '2',
+      type: 'transaction' as const,
+      title: 'High-Value Transaction',
+      description: 'BJ-01 • $5,000 buy-in flagged',
+      time: '15:45',
+      severity: 'medium' as const,
     },
     {
-      id: "3",
-      type: "compliance" as const,
-      title: "Compliance Warning",
-      description: "CTR threshold approaching on Table 7",
-      time: "16:02",
-      severity: "low" as const,
+      id: '3',
+      type: 'compliance' as const,
+      title: 'Compliance Warning',
+      description: 'CTR threshold approaching on Table 7',
+      time: '16:02',
+      severity: 'low' as const,
     },
   ];
 
@@ -217,11 +217,11 @@ function AlertCard({
   time,
   severity,
 }: {
-  type: "drop" | "transaction" | "compliance";
+  type: 'drop' | 'transaction' | 'compliance';
   title: string;
   description: string;
   time: string;
-  severity: "high" | "medium" | "low";
+  severity: 'high' | 'medium' | 'low';
 }) {
   const icons = {
     drop: Clock,
@@ -231,22 +231,22 @@ function AlertCard({
 
   const severityStyles = {
     high: {
-      bg: "bg-rose-500/10",
-      border: "border-rose-500/30",
-      text: "text-rose-400",
-      indicator: "bg-rose-500",
+      bg: 'bg-rose-500/10',
+      border: 'border-rose-500/30',
+      text: 'text-rose-400',
+      indicator: 'bg-rose-500',
     },
     medium: {
-      bg: "bg-amber-500/10",
-      border: "border-amber-500/30",
-      text: "text-amber-400",
-      indicator: "bg-amber-500",
+      bg: 'bg-amber-500/10',
+      border: 'border-amber-500/30',
+      text: 'text-amber-400',
+      indicator: 'bg-amber-500',
     },
     low: {
-      bg: "bg-muted",
-      border: "border-border",
-      text: "text-muted-foreground",
-      indicator: "bg-muted-foreground",
+      bg: 'bg-muted',
+      border: 'border-border',
+      text: 'text-muted-foreground',
+      indicator: 'bg-muted-foreground',
     },
   };
 
@@ -256,16 +256,16 @@ function AlertCard({
   return (
     <button
       className={cn(
-        "group relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-all duration-150",
+        'group relative flex w-full items-start gap-3 rounded-lg border p-3 text-left transition-all duration-150',
         styles.border,
         styles.bg,
-        "hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        'hover:brightness-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
       )}
     >
       {/* Severity indicator */}
       <div
         className={cn(
-          "mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full",
+          'mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full',
           styles.indicator,
         )}
       />
@@ -273,7 +273,7 @@ function AlertCard({
       {/* Icon */}
       <div
         className={cn(
-          "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border",
+          'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border',
           styles.border,
           styles.bg,
           styles.text,
@@ -285,7 +285,7 @@ function AlertCard({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className={cn("text-xs font-medium", styles.text)}>
+          <span className={cn('text-xs font-medium', styles.text)}>
             {title}
           </span>
           <span className="font-mono text-[10px] tabular-nums text-muted-foreground/60">
@@ -300,7 +300,7 @@ function AlertCard({
       {/* Hover accent */}
       <div
         className={cn(
-          "absolute bottom-0 left-0 top-0 w-0.5 rounded-full opacity-0 transition-opacity group-hover:opacity-100",
+          'absolute bottom-0 left-0 top-0 w-0.5 rounded-full opacity-0 transition-opacity group-hover:opacity-100',
           styles.indicator,
         )}
       />
@@ -315,20 +315,20 @@ function AlertCard({
 function ApprovalsTab() {
   const mockApprovals = [
     {
-      id: "1",
-      type: "fill" as const,
-      title: "Fill Slip Approval",
-      description: "BJ-05 • $2,500 chip fill requested",
-      requester: "J. Martinez",
-      time: "15:22",
+      id: '1',
+      type: 'fill' as const,
+      title: 'Fill Slip Approval',
+      description: 'BJ-05 • $2,500 chip fill requested',
+      requester: 'J. Martinez',
+      time: '15:22',
     },
     {
-      id: "2",
-      type: "buyin" as const,
-      title: "High-Value Buy-In",
-      description: "Roulette 2 • $10,000 cash transaction",
-      requester: "S. Chen",
-      time: "16:08",
+      id: '2',
+      type: 'buyin' as const,
+      title: 'High-Value Buy-In',
+      description: 'Roulette 2 • $10,000 cash transaction',
+      requester: 'S. Chen',
+      time: '16:08',
     },
   ];
 
@@ -351,7 +351,7 @@ function ApprovalCard({
   requester,
   time,
 }: {
-  type: "fill" | "buyin";
+  type: 'fill' | 'buyin';
   title: string;
   description: string;
   requester: string;
@@ -367,8 +367,8 @@ function ApprovalCard({
   return (
     <button
       className={cn(
-        "group relative flex w-full items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 p-3 text-left transition-all duration-150",
-        "hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50",
+        'group relative flex w-full items-start gap-3 rounded-lg border border-accent/30 bg-accent/5 p-3 text-left transition-all duration-150',
+        'hover:bg-accent/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50',
       )}
     >
       {/* Icon */}
@@ -418,12 +418,12 @@ function ApprovalCard({
 function FlagsTab() {
   const mockFlags = [
     {
-      id: "1",
-      type: "open_slips" as const,
-      title: "Open Slips on Closed Table",
-      description: "BJ-02 has 2 unresolved rating slips",
+      id: '1',
+      type: 'open_slips' as const,
+      title: 'Open Slips on Closed Table',
+      description: 'BJ-02 has 2 unresolved rating slips',
       count: 2,
-      time: "14:00",
+      time: '14:00',
     },
   ];
 
@@ -455,7 +455,7 @@ function FlagCard({
   count,
   time,
 }: {
-  type: "open_slips" | "attention";
+  type: 'open_slips' | 'attention';
   title: string;
   description: string;
   count: number;
@@ -464,8 +464,8 @@ function FlagCard({
   return (
     <button
       className={cn(
-        "group relative flex w-full items-start gap-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-left transition-all duration-150",
-        "hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50",
+        'group relative flex w-full items-start gap-3 rounded-lg border border-rose-500/30 bg-rose-500/5 p-3 text-left transition-all duration-150',
+        'hover:bg-rose-500/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400/50',
       )}
     >
       {/* Icon */}

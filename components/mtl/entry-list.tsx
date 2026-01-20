@@ -15,19 +15,19 @@
  * @see PRD-005 MTL Service
  */
 
-"use client";
+'use client';
 
-import { format } from "date-fns";
+import { format } from 'date-fns';
 import {
   ArrowDownLeft,
   ArrowUpRight,
   ChevronRight,
   Loader2,
-} from "lucide-react";
-import { useCallback } from "react";
+} from 'lucide-react';
+import { useCallback } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -35,12 +35,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { useMtlEntries } from "@/hooks/mtl/use-mtl-entries";
-import { cn } from "@/lib/utils";
-import type { MtlEntryDTO } from "@/services/mtl/dtos";
+} from '@/components/ui/table';
+import { useMtlEntries } from '@/hooks/mtl/use-mtl-entries';
+import { cn } from '@/lib/utils';
+import type { MtlEntryDTO } from '@/services/mtl/dtos';
 
-import { EntryBadge } from "./entry-badge";
+import { EntryBadge } from './entry-badge';
 
 export interface EntryListProps {
   /** Casino ID (required) */
@@ -62,9 +62,9 @@ export interface EntryListProps {
  * @returns Formatted currency string in dollars
  */
 function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amountCents / 100); // Convert cents to dollars
@@ -74,28 +74,28 @@ function formatCurrency(amountCents: number): string {
  * Format datetime for display
  */
 function formatDateTime(isoString: string): string {
-  return format(new Date(isoString), "MMM d, h:mm a");
+  return format(new Date(isoString), 'MMM d, h:mm a');
 }
 
 /**
  * Transaction type display labels
  */
 const TXN_TYPE_LABELS: Record<string, string> = {
-  buy_in: "Buy-in",
-  cash_out: "Cash Out",
-  marker: "Marker",
-  front_money: "Front Money",
-  chip_fill: "Chip Fill",
+  buy_in: 'Buy-in',
+  cash_out: 'Cash Out',
+  marker: 'Marker',
+  front_money: 'Front Money',
+  chip_fill: 'Chip Fill',
 };
 
 /**
  * Source display labels
  */
 const SOURCE_LABELS: Record<string, string> = {
-  table: "Table",
-  cage: "Cage",
-  kiosk: "Kiosk",
-  other: "Other",
+  table: 'Table',
+  cage: 'Cage',
+  kiosk: 'Kiosk',
+  other: 'Other',
 };
 
 /**
@@ -139,7 +139,7 @@ export function EntryList({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("space-y-2", className)}>
+      <div className={cn('space-y-2', className)}>
         <EntryListSkeleton rows={5} />
       </div>
     );
@@ -150,7 +150,7 @@ export function EntryList({
     return (
       <div
         className={cn(
-          "rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center",
+          'rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-center',
           className,
         )}
       >
@@ -176,7 +176,7 @@ export function EntryList({
     return (
       <div
         className={cn(
-          "rounded-lg border border-dashed p-8 text-center",
+          'rounded-lg border border-dashed p-8 text-center',
           className,
         )}
       >
@@ -190,7 +190,7 @@ export function EntryList({
   }
 
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn('space-y-2', className)}>
       <div className="rounded-lg border">
         <Table>
           <TableHeader>
@@ -208,7 +208,7 @@ export function EntryList({
               <TableRow
                 key={entry.id}
                 className={cn(
-                  onEntryClick && "cursor-pointer hover:bg-accent/50",
+                  onEntryClick && 'cursor-pointer hover:bg-accent/50',
                 )}
                 onClick={() => handleRowClick(entry)}
               >
@@ -217,7 +217,7 @@ export function EntryList({
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-1.5">
-                    {entry.direction === "in" ? (
+                    {entry.direction === 'in' ? (
                       <ArrowDownLeft className="h-4 w-4 text-green-600 dark:text-green-400" />
                     ) : (
                       <ArrowUpRight className="h-4 w-4 text-red-600 dark:text-red-400" />
@@ -232,13 +232,13 @@ export function EntryList({
                 </TableCell>
                 <TableCell
                   className={cn(
-                    "text-right font-mono tabular-nums",
-                    entry.direction === "in"
-                      ? "text-green-600 dark:text-green-400"
-                      : "text-red-600 dark:text-red-400",
+                    'text-right font-mono tabular-nums',
+                    entry.direction === 'in'
+                      ? 'text-green-600 dark:text-green-400'
+                      : 'text-red-600 dark:text-red-400',
                   )}
                 >
-                  {entry.direction === "in" ? "+" : "-"}
+                  {entry.direction === 'in' ? '+' : '-'}
                   {formatCurrency(entry.amount)}
                 </TableCell>
                 <TableCell>
@@ -265,7 +265,7 @@ export function EntryList({
                 Loading...
               </>
             ) : (
-              "Load More"
+              'Load More'
             )}
           </Button>
         </div>

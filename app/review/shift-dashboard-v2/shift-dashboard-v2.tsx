@@ -7,26 +7,26 @@
  * @see IMPLEMENTATION_STRATEGY.md
  */
 
-"use client";
+'use client';
 
-import { RefreshCwIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { RefreshCwIcon } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
-import { TimeWindowSelector } from "@/components/shift-dashboard/time-window-selector";
+import { TimeWindowSelector } from '@/components/shift-dashboard/time-window-selector';
 import {
   useActiveVisitorsSummary,
   useCashObsSummary,
   useShiftDashboardSummary,
   type ShiftTimeWindow,
-} from "@/hooks/shift-dashboard";
-import { cn } from "@/lib/utils";
+} from '@/hooks/shift-dashboard';
+import { cn } from '@/lib/utils';
 
-import { AlertsStrip } from "./components/alerts-strip";
-import { FloorActivityDonut } from "./components/floor-activity-donut";
-import { HeroWinLossCard } from "./components/hero-win-loss-card";
-import { MetricsTable } from "./components/metrics-table";
-import { SecondaryKpisRow } from "./components/secondary-kpis-row";
-import { TelemetryDrawer } from "./components/telemetry-drawer";
+import { AlertsStrip } from './components/alerts-strip';
+import { FloorActivityDonut } from './components/floor-activity-donut';
+import { HeroWinLossCard } from './components/hero-win-loss-card';
+import { MetricsTable } from './components/metrics-table';
+import { SecondaryKpisRow } from './components/secondary-kpis-row';
+import { TelemetryDrawer } from './components/telemetry-drawer';
 
 export interface ShiftDashboardV2Props {
   /** Initial time window (defaults to last 8 hours) */
@@ -49,7 +49,7 @@ function getDefaultWindow(): ShiftTimeWindow {
  * Calculate time since last update.
  */
 function getTimeSinceUpdate(lastUpdate: Date | null): string {
-  if (!lastUpdate) return "";
+  if (!lastUpdate) return '';
   const seconds = Math.floor((Date.now() - lastUpdate.getTime()) / 1000);
   if (seconds < 60) return `${seconds}s ago`;
   const minutes = Math.floor(seconds / 60);
@@ -69,7 +69,7 @@ export function ShiftDashboardV2({ initialWindow }: ShiftDashboardV2Props) {
   }, [timeWindow, initialWindow]);
 
   // Stable window for queries (avoid conditional hooks)
-  const stableWindow = timeWindow ?? { start: "", end: "" };
+  const stableWindow = timeWindow ?? { start: '', end: '' };
 
   // === Data Queries ===
   // BFF hooks for optimized data fetching
@@ -137,8 +137,8 @@ export function ShiftDashboardV2({ initialWindow }: ShiftDashboardV2Props) {
                 <span>•</span>
                 <span
                   className={cn(
-                    "flex items-center gap-1",
-                    isLoading && "animate-pulse",
+                    'flex items-center gap-1',
+                    isLoading && 'animate-pulse',
                   )}
                 >
                   {isLoading && (

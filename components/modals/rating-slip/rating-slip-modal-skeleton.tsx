@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import React from "react";
+import React from 'react';
 
 import {
   Dialog,
@@ -8,9 +8,9 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 interface RatingSlipModalSkeletonProps {
   isOpen: boolean;
@@ -24,7 +24,7 @@ function AnimatedSkeleton({
   className,
   delay = 0,
   ...props
-}: React.ComponentProps<"div"> & { delay?: number }) {
+}: React.ComponentProps<'div'> & { delay?: number }) {
   return (
     <Skeleton
       className={cn(className)}

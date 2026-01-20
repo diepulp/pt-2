@@ -8,7 +8,7 @@
  * Pattern: PRD-004 Floor Layout Service
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createFloorLayoutService } from "@/services/floor-layout";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createFloorLayoutService } from '@/services/floor-layout';
 import {
   createFloorLayoutSchema,
   floorLayoutListQuerySchema,
-} from "@/services/floor-layout/schemas";
+} from '@/services/floor-layout/schemas';
 
 /**
  * GET /api/v1/floor-layouts
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items,
             cursor,
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "floor-layout",
-        action: "list",
+        domain: 'floor-layout',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
       async (mwCtx) => {
         // Call RPC with validated payload
         const { data, error } = await mwCtx.supabase.rpc(
-          "rpc_create_floor_layout",
+          'rpc_create_floor_layout',
           {
             p_casino_id: payload.casino_id,
             p_name: payload.name,
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -126,8 +126,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "floor-layout",
-        action: "create",
+        domain: 'floor-layout',
+        action: 'create',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return 201 Created for new layout
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

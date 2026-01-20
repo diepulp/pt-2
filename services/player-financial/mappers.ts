@@ -8,9 +8,9 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import type { FinancialTransactionDTO, VisitFinancialSummaryDTO } from "./dtos";
+import type { FinancialTransactionDTO, VisitFinancialSummaryDTO } from './dtos';
 
 // === Selected Row Types ===
 
@@ -19,7 +19,7 @@ import type { FinancialTransactionDTO, VisitFinancialSummaryDTO } from "./dtos";
  * Uses generated Database types for type safety.
  */
 type FinancialTransactionRow =
-  Database["public"]["Tables"]["player_financial_transaction"]["Row"];
+  Database['public']['Tables']['player_financial_transaction']['Row'];
 
 /**
  * Type for RPC response from rpc_create_financial_txn.
@@ -31,7 +31,7 @@ type CreateFinancialTxnRpcResponse = FinancialTransactionRow;
  * Type for rows returned by visit_financial_summary view.
  */
 type VisitFinancialSummaryRow =
-  Database["public"]["Views"]["visit_financial_summary"]["Row"];
+  Database['public']['Views']['visit_financial_summary']['Row'];
 
 // === Financial Transaction Mappers ===
 
@@ -46,17 +46,20 @@ export function toFinancialTransactionDTO(
     id: row.id,
     casino_id: row.casino_id,
     player_id: row.player_id,
-    visit_id: row.visit_id ?? "",
+    visit_id: row.visit_id ?? '',
     rating_slip_id: row.rating_slip_id,
     amount: row.amount,
-    direction: row.direction ?? "in",
-    source: row.source ?? "pit",
-    tender_type: row.tender_type ?? "",
+    direction: row.direction ?? 'in',
+    source: row.source ?? 'pit',
+    tender_type: row.tender_type ?? '',
     created_by_staff_id: row.created_by_staff_id,
     related_transaction_id: row.related_transaction_id,
     created_at: row.created_at,
     gaming_day: row.gaming_day,
     idempotency_key: row.idempotency_key,
+    txn_kind: row.txn_kind,
+    reason_code: row.reason_code,
+    note: row.note,
   };
 }
 
@@ -97,8 +100,8 @@ export function toVisitFinancialSummaryDTO(
 ): VisitFinancialSummaryDTO {
   // View columns are nullable due to GROUP BY; provide safe defaults
   return {
-    visit_id: row.visit_id ?? "",
-    casino_id: row.casino_id ?? "",
+    visit_id: row.visit_id ?? '',
+    casino_id: row.casino_id ?? '',
     total_in: row.total_in ?? 0,
     total_out: row.total_out ?? 0,
     net_amount: row.net_amount ?? 0,

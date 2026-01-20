@@ -13,17 +13,17 @@
  * 7. onTableAction - Quick actions callback
  */
 
-import { TableLayoutTerminal } from "./table-layout-terminal";
+import { TableLayoutTerminal } from './table-layout-terminal';
 
 // Example 1: Compact variant for dashboard grid
 function CompactTableExample() {
   const mockSeats = [
-    { firstName: "John", lastName: "Doe" },
+    { firstName: 'John', lastName: 'Doe' },
     null,
-    { firstName: "Jane", lastName: "Smith" },
+    { firstName: 'Jane', lastName: 'Smith' },
     null,
     null,
-    { firstName: "Bob", lastName: "Wilson" },
+    { firstName: 'Bob', lastName: 'Wilson' },
   ];
 
   return (
@@ -42,16 +42,16 @@ function CompactTableExample() {
 // Example 2: Full variant with metadata and actions
 function FullTableExample() {
   const mockSeats = [
-    { firstName: "John", lastName: "Doe" },
+    { firstName: 'John', lastName: 'Doe' },
     null,
-    { firstName: "Jane", lastName: "Smith" },
+    { firstName: 'Jane', lastName: 'Smith' },
     null,
     null,
-    { firstName: "Bob", lastName: "Wilson" },
-    { firstName: "Alice", lastName: "Johnson" },
+    { firstName: 'Bob', lastName: 'Wilson' },
+    { firstName: 'Alice', lastName: 'Johnson' },
   ];
 
-  const handleTableAction = (action: "open" | "close" | "details") => {
+  const handleTableAction = (action: 'open' | 'close' | 'details') => {
     console.log(`Table action: ${action}`);
   };
 
@@ -81,9 +81,9 @@ function FullTableExample() {
 // Example 3: Backward compatibility (existing usage)
 function BackwardCompatibleExample() {
   const mockSeats = [
-    { firstName: "John", lastName: "Doe" },
+    { firstName: 'John', lastName: 'Doe' },
     null,
-    { firstName: "Jane", lastName: "Smith" },
+    { firstName: 'Jane', lastName: 'Smith' },
   ];
 
   return (
@@ -91,7 +91,7 @@ function BackwardCompatibleExample() {
       seats={mockSeats}
       dealerName="Sarah Miller"
       onSeatClick={(index, occupant) => {
-        console.log("Seat clicked", index, occupant);
+        console.log('Seat clicked', index, occupant);
       }}
     />
   );
@@ -101,28 +101,28 @@ function BackwardCompatibleExample() {
 function TableGridExample() {
   const tables = [
     {
-      id: "T1",
-      seats: [{ firstName: "John", lastName: "Doe" }, null, null],
-      gameType: "blackjack",
-      status: "active" as const,
+      id: 'T1',
+      seats: [{ firstName: 'John', lastName: 'Doe' }, null, null],
+      gameType: 'blackjack',
+      status: 'active' as const,
       activeSlips: 1,
     },
     {
-      id: "T2",
+      id: 'T2',
       seats: [null, null, null, null],
-      gameType: "poker",
-      status: "inactive" as const,
+      gameType: 'poker',
+      status: 'inactive' as const,
       activeSlips: 0,
     },
     {
-      id: "T3",
+      id: 'T3',
       seats: [
-        { firstName: "Jane", lastName: "Smith" },
-        { firstName: "Bob", lastName: "Wilson" },
+        { firstName: 'Jane', lastName: 'Smith' },
+        { firstName: 'Bob', lastName: 'Wilson' },
         null,
       ],
-      gameType: "roulette",
-      status: "active" as const,
+      gameType: 'roulette',
+      status: 'active' as const,
       activeSlips: 2,
     },
   ];

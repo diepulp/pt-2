@@ -10,21 +10,21 @@
  * plus any current open visit. Used for "Start From Previous" UI.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
   parseParams,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { playerRouteParamsSchema } from "@/services/player/schemas";
-import { createVisitService } from "@/services/visit/index";
-import { recentSessionsQuerySchema } from "@/services/visit/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { playerRouteParamsSchema } from '@/services/player/schemas';
+import { createVisitService } from '@/services/visit/index';
+import { recentSessionsQuerySchema } from '@/services/visit/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ playerId: string }> };
@@ -61,8 +61,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         // Extract casinoId from RLS context (injected by auth middleware)
         if (!mwCtx.rlsContext?.casinoId) {
           throw new DomainError(
-            "UNAUTHORIZED",
-            "Unable to determine casino context",
+            'UNAUTHORIZED',
+            'Unable to determine casino context',
             {
               httpStatus: 401,
             },
@@ -83,7 +83,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -91,8 +91,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "visit",
-        action: "recent-sessions",
+        domain: 'visit',
+        action: 'recent-sessions',
         correlationId: ctx.requestId,
       },
     );

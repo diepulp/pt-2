@@ -15,8 +15,8 @@
  * @see EXECUTION-SPEC-PRD-008.md WS3
  */
 
-import type { RatingSlipStatus } from "@/services/rating-slip/dtos";
-import type { GameType, TableStatus } from "@/services/table-context/dtos";
+import type { RatingSlipStatus } from '@/services/rating-slip/dtos';
+import type { GameType, TableStatus } from '@/services/table-context/dtos';
 
 // === Main BFF Response DTO ===
 

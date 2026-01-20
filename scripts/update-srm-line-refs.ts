@@ -34,8 +34,14 @@
  * @since 2025-11-17
  */
 
-import { readFileSync, writeFileSync, existsSync, readdirSync, statSync } from 'fs';
-import { join, resolve, relative } from 'path';
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  readdirSync,
+  statSync,
+} from "fs";
+import { join, resolve, relative } from "path";
 
 /** Configuration for the line reference updater */
 interface UpdaterConfig {
@@ -114,11 +120,15 @@ function findFiles(dir: string, extensions: string[]): string[] {
 
     if (stat.isDirectory()) {
       // Skip node_modules, .git, etc.
-      if (!entry.startsWith('.') && entry !== 'node_modules' && entry !== 'dist') {
+      if (
+        !entry.startsWith(".") &&
+        entry !== "node_modules" &&
+        entry !== "dist"
+      ) {
         files.push(...findFiles(fullPath, extensions));
       }
     } else if (stat.isFile()) {
-      const hasMatchingExt = extensions.some(ext => fullPath.endsWith(ext));
+      const hasMatchingExt = extensions.some((ext) => fullPath.endsWith(ext));
       if (hasMatchingExt) {
         files.push(fullPath);
       }
@@ -140,9 +150,12 @@ function findFiles(dir: string, extensions: string[]): string[] {
  * @param filePath - Path to the file (for reference)
  * @returns Array of line references
  */
-function extractLineReferences(content: string, filePath: string): LineReference[] {
+function extractLineReferences(
+  content: string,
+  filePath: string,
+): LineReference[] {
   const references: LineReference[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   // Pattern: SRM:(\d+)(?:-(\d+))?
   // Captures: SRM:405 or SRM:405-589
@@ -169,7 +182,7 @@ function extractLineReferences(content: string, filePath: string): LineReference
       // Get context (3 lines before and after)
       const contextStart = Math.max(0, i - 3);
       const contextEnd = Math.min(lines.length - 1, i + 3);
-      const context = lines.slice(contextStart, contextEnd + 1).join('\n');
+      const context = lines.slice(contextStart, contextEnd + 1).join("\n");
 
       references.push({
         filePath,
@@ -195,7 +208,7 @@ function extractLineReferences(content: string, filePath: string): LineReference
  */
 function validateReference(
   reference: LineReference,
-  srmLineCount: number
+  srmLineCount: number,
 ): boolean {
   if (reference.startLine < 1 || reference.startLine > srmLineCount) {
     return false;
@@ -222,7 +235,7 @@ function validateReference(
  */
 function applyMapping(
   reference: LineReference,
-  mapping: Record<string, number | null>
+  mapping: Record<string, number | null>,
 ): ReferenceResult {
   const { startLine, endLine, matchText } = reference;
 
@@ -234,7 +247,7 @@ function applyMapping(
       return {
         reference,
         valid: false,
-        issue: 'Reference targets removed section (mapped to null)',
+        issue: "Reference targets removed section (mapped to null)",
       };
     }
 
@@ -269,7 +282,10 @@ function applyMapping(
   }
 
   // If no mapping found, reference stays the same
-  if (newStart === undefined && (endLine === undefined || newEnd === undefined)) {
+  if (
+    newStart === undefined &&
+    (endLine === undefined || newEnd === undefined)
+  ) {
     return {
       reference,
       valid: true,
@@ -306,37 +322,40 @@ function applyMapping(
 function updateFile(
   filePath: string,
   results: ReferenceResult[],
-  dryRun: boolean
+  dryRun: boolean,
 ): number {
-  const content = readFileSync(filePath, 'utf-8');
+  const content = readFileSync(filePath, "utf-8");
   let updatedContent = content;
   let updateCount = 0;
 
   // Sort results by line number (descending) to avoid offset issues
   const sortedResults = [...results].sort(
-    (a, b) => b.reference.lineNumber - a.reference.lineNumber
+    (a, b) => b.reference.lineNumber - a.reference.lineNumber,
   );
 
   for (const result of sortedResults) {
-    if (result.newMatchText && result.newMatchText !== result.reference.matchText) {
+    if (
+      result.newMatchText &&
+      result.newMatchText !== result.reference.matchText
+    ) {
       // Replace the old reference with new one
       // Use line-based replacement for precision
-      const lines = updatedContent.split('\n');
+      const lines = updatedContent.split("\n");
       const lineIdx = result.reference.lineNumber - 1;
 
       if (lineIdx >= 0 && lineIdx < lines.length) {
         lines[lineIdx] = lines[lineIdx].replace(
           result.reference.matchText,
-          result.newMatchText
+          result.newMatchText,
         );
-        updatedContent = lines.join('\n');
+        updatedContent = lines.join("\n");
         updateCount++;
       }
     }
   }
 
   if (updateCount > 0 && !dryRun) {
-    writeFileSync(filePath, updatedContent, 'utf-8');
+    writeFileSync(filePath, updatedContent, "utf-8");
   }
 
   return updateCount;
@@ -349,7 +368,14 @@ function updateFile(
  * @returns Update summary
  */
 function runUpdater(config: UpdaterConfig): UpdateSummary {
-  const { projectRoot, srmPath, searchDirs, searchExtensions, verbose, lineMapping } = config;
+  const {
+    projectRoot,
+    srmPath,
+    searchDirs,
+    searchExtensions,
+    verbose,
+    lineMapping,
+  } = config;
 
   // Read SRM to get line count
   const absoluteSrmPath = resolve(projectRoot, srmPath);
@@ -358,8 +384,8 @@ function runUpdater(config: UpdaterConfig): UpdateSummary {
     process.exit(1);
   }
 
-  const srmContent = readFileSync(absoluteSrmPath, 'utf-8');
-  const srmLineCount = srmContent.split('\n').length;
+  const srmContent = readFileSync(absoluteSrmPath, "utf-8");
+  const srmLineCount = srmContent.split("\n").length;
 
   if (verbose) {
     console.log(`SRM has ${srmLineCount} lines`);
@@ -380,7 +406,7 @@ function runUpdater(config: UpdaterConfig): UpdateSummary {
   // Extract references from all files
   const allReferences: LineReference[] = [];
   for (const file of allFiles) {
-    const content = readFileSync(file, 'utf-8');
+    const content = readFileSync(file, "utf-8");
     const refs = extractLineReferences(content, file);
     allReferences.push(...refs);
   }
@@ -405,17 +431,17 @@ function runUpdater(config: UpdaterConfig): UpdateSummary {
       results.push({
         reference: ref,
         valid,
-        issue: valid ? undefined : 'Line reference out of range',
+        issue: valid ? undefined : "Line reference out of range",
       });
     }
   }
 
   // Calculate summary
-  const validReferences = results.filter(r => r.valid).length;
+  const validReferences = results.filter((r) => r.valid).length;
   const updatedReferences = results.filter(
-    r => r.newMatchText && r.newMatchText !== r.reference.matchText
+    (r) => r.newMatchText && r.newMatchText !== r.reference.matchText,
   ).length;
-  const removedReferences = results.filter(r => !r.valid).length;
+  const removedReferences = results.filter((r) => !r.valid).length;
 
   // Apply updates if in update mode
   let filesModified = 0;
@@ -461,12 +487,20 @@ function runUpdater(config: UpdaterConfig): UpdateSummary {
  * @param config - Updater configuration
  */
 function printReport(summary: UpdateSummary, config: UpdaterConfig): void {
-  const { totalReferences, validReferences, updatedReferences, removedReferences, filesScanned, filesModified, results } = summary;
+  const {
+    totalReferences,
+    validReferences,
+    updatedReferences,
+    removedReferences,
+    filesScanned,
+    filesModified,
+    results,
+  } = summary;
   const { lineMapping, verbose, dryRun, projectRoot } = config;
 
-  console.log('='.repeat(80));
-  console.log('SRM Line Reference Report');
-  console.log('='.repeat(80));
+  console.log("=".repeat(80));
+  console.log("SRM Line Reference Report");
+  console.log("=".repeat(80));
   console.log();
 
   console.log(`Files scanned: ${filesScanned}`);
@@ -478,22 +512,22 @@ function printReport(summary: UpdateSummary, config: UpdaterConfig): void {
     console.log(`References removed: ${removedReferences}`);
     console.log(`Files modified: ${filesModified}`);
     if (dryRun) {
-      console.log('\n⚠️  DRY RUN MODE - No files were actually modified\n');
+      console.log("\n⚠️  DRY RUN MODE - No files were actually modified\n");
     }
   }
 
   console.log();
 
   // Show invalid/removed references
-  const issues = results.filter(r => !r.valid || r.issue);
+  const issues = results.filter((r) => !r.valid || r.issue);
   if (issues.length > 0) {
-    console.log('Issues Found:');
-    console.log('-'.repeat(80));
+    console.log("Issues Found:");
+    console.log("-".repeat(80));
     for (const issue of issues) {
       const relPath = relative(projectRoot, issue.reference.filePath);
       console.log(`\x1b[31m✗\x1b[0m ${relPath}:${issue.reference.lineNumber}`);
       console.log(`  Reference: ${issue.reference.matchText}`);
-      console.log(`  Issue: ${issue.issue || 'Invalid reference'}`);
+      console.log(`  Issue: ${issue.issue || "Invalid reference"}`);
       if (verbose) {
         console.log(`  Context:\n${issue.reference.context}`);
       }
@@ -503,11 +537,11 @@ function printReport(summary: UpdateSummary, config: UpdaterConfig): void {
 
   // Show references that will be updated
   if (lineMapping && updatedReferences > 0) {
-    console.log('References to Update:');
-    console.log('-'.repeat(80));
+    console.log("References to Update:");
+    console.log("-".repeat(80));
 
     const updates = results.filter(
-      r => r.newMatchText && r.newMatchText !== r.reference.matchText
+      (r) => r.newMatchText && r.newMatchText !== r.reference.matchText,
     );
 
     if (!verbose && updates.length > 10) {
@@ -527,27 +561,37 @@ function printReport(summary: UpdateSummary, config: UpdaterConfig): void {
     }
 
     if (!verbose && updates.length > 10) {
-      console.log(`... and ${updates.length - 10} more. Use --verbose to see all.\n`);
+      console.log(
+        `... and ${updates.length - 10} more. Use --verbose to see all.\n`,
+      );
     }
   }
 
-  console.log('='.repeat(80));
+  console.log("=".repeat(80));
 
   if (removedReferences > 0) {
-    console.log(`\x1b[31m⚠️  WARNING: ${removedReferences} reference(s) target removed sections\x1b[0m`);
+    console.log(
+      `\x1b[31m⚠️  WARNING: ${removedReferences} reference(s) target removed sections\x1b[0m`,
+    );
   } else if (lineMapping && updatedReferences > 0) {
     if (dryRun) {
-      console.log(`\x1b[33m✓ Dry run complete - ${updatedReferences} reference(s) would be updated\x1b[0m`);
+      console.log(
+        `\x1b[33m✓ Dry run complete - ${updatedReferences} reference(s) would be updated\x1b[0m`,
+      );
     } else {
-      console.log(`\x1b[32m✓ Successfully updated ${updatedReferences} reference(s) in ${filesModified} file(s)\x1b[0m`);
+      console.log(
+        `\x1b[32m✓ Successfully updated ${updatedReferences} reference(s) in ${filesModified} file(s)\x1b[0m`,
+      );
     }
   } else if (lineMapping) {
-    console.log('\x1b[32m✓ No updates needed - all references are current\x1b[0m');
+    console.log(
+      "\x1b[32m✓ No updates needed - all references are current\x1b[0m",
+    );
   } else {
-    console.log('\x1b[32m✓ All references are valid\x1b[0m');
+    console.log("\x1b[32m✓ All references are valid\x1b[0m");
   }
 
-  console.log('='.repeat(80));
+  console.log("=".repeat(80));
 }
 
 /**
@@ -555,10 +599,10 @@ function printReport(summary: UpdateSummary, config: UpdaterConfig): void {
  */
 function main(): void {
   const args = process.argv.slice(2);
-  const verbose = args.includes('--verbose') || args.includes('-v');
-  const dryRun = args.includes('--dry-run');
-  const help = args.includes('--help') || args.includes('-h');
-  const report = args.includes('--report') || args.includes('-r');
+  const verbose = args.includes("--verbose") || args.includes("-v");
+  const dryRun = args.includes("--dry-run");
+  const help = args.includes("--help") || args.includes("-h");
+  const report = args.includes("--report") || args.includes("-r");
 
   if (help) {
     console.log(`
@@ -602,7 +646,7 @@ Exit codes:
 
   // Parse mapping file if provided
   let lineMapping: Record<string, number | null> | undefined;
-  const mappingIdx = args.findIndex(arg => arg === '--mapping');
+  const mappingIdx = args.findIndex((arg) => arg === "--mapping");
   if (mappingIdx !== -1 && args[mappingIdx + 1]) {
     const mappingFile = args[mappingIdx + 1];
     const absoluteMappingPath = resolve(process.cwd(), mappingFile);
@@ -613,7 +657,7 @@ Exit codes:
     }
 
     try {
-      const mappingContent = readFileSync(absoluteMappingPath, 'utf-8');
+      const mappingContent = readFileSync(absoluteMappingPath, "utf-8");
       lineMapping = JSON.parse(mappingContent);
       console.log(`Loaded line mapping from ${mappingFile}\n`);
     } catch (error) {
@@ -621,19 +665,19 @@ Exit codes:
       process.exit(1);
     }
   } else if (!report) {
-    console.error('Error: Must provide --report or --mapping option');
-    console.error('Use --help for usage information');
+    console.error("Error: Must provide --report or --mapping option");
+    console.error("Use --help for usage information");
     process.exit(1);
   }
 
   // Determine project root
-  const projectRoot = resolve(__dirname, '..');
+  const projectRoot = resolve(__dirname, "..");
 
   const config: UpdaterConfig = {
     projectRoot,
-    srmPath: 'docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md',
-    searchDirs: ['docs', 'services', 'src'],
-    searchExtensions: ['.md', '.ts', '.tsx', '.js', '.jsx'],
+    srmPath: "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
+    searchDirs: ["docs", "services", "src"],
+    searchExtensions: [".md", ".ts", ".tsx", ".js", ".jsx"],
     verbose,
     dryRun,
     lineMapping,
@@ -648,7 +692,7 @@ Exit codes:
       process.exit(1);
     }
   } catch (error) {
-    console.error('Error running updater:', error);
+    console.error("Error running updater:", error);
     process.exit(1);
   }
 }

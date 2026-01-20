@@ -7,7 +7,7 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
+import { fetchJSON } from '@/lib/http/fetch-json';
 import type {
   ActiveVisitorsSummaryDTO,
   CashObsCasinoRollupDTO,
@@ -15,17 +15,17 @@ import type {
   CashObsSpikeAlertDTO,
   CashObsSummaryDTO,
   CashObsTableRollupDTO,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 import type {
   ShiftCasinoMetricsDTO,
   ShiftDashboardSummaryDTO,
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
-} from "@/services/table-context/shift-metrics/dtos";
+} from '@/services/table-context/shift-metrics/dtos';
 
-const BASE = "/api/v1/shift-dashboards";
+const BASE = '/api/v1/shift-dashboards';
 const BASE_METRICS = `${BASE}/metrics`;
-const BASE_CASH_OBS = "/api/v1/shift-dashboards/cash-observations";
+const BASE_CASH_OBS = '/api/v1/shift-dashboards/cash-observations';
 
 /**
  * Builds URLSearchParams from filter object.

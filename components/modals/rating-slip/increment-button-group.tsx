@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import React from "react";
+import React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 
 interface IncrementButton {
   amount: number;
@@ -20,7 +20,7 @@ export const IncrementButtonGroup: React.FC<IncrementButtonGroupProps> = ({
   type,
   incrementButtons,
   onIncrement,
-  className = "",
+  className = '',
 }) => (
   <div className={`grid grid-cols-5 gap-2 mt-2 ${className}`}>
     {incrementButtons.map(({ amount, label }) => (

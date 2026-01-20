@@ -8,15 +8,15 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS7
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   PromoExposureRollupDTO,
   PromoExposureRollupQuery,
-} from "./promo/dtos";
+} from './promo/dtos';
 
 // Re-export for consumers
 export type { PromoExposureRollupDTO, PromoExposureRollupQuery };
@@ -42,13 +42,13 @@ interface PromoExposureRpcResponse {
 
 function isPromoExposureRpcResponse(v: unknown): v is PromoExposureRpcResponse {
   return (
-    typeof v === "object" &&
+    typeof v === 'object' &&
     v !== null &&
-    "casino_id" in v &&
-    "from_ts" in v &&
-    "to_ts" in v &&
-    "issued_count" in v &&
-    "outstanding_count" in v
+    'casino_id' in v &&
+    'from_ts' in v &&
+    'to_ts' in v &&
+    'issued_count' in v &&
+    'outstanding_count' in v
   );
 }
 
@@ -82,7 +82,7 @@ function toPromoExposureRollupDTO(
  */
 function parsePromoExposureResponse(data: unknown): PromoExposureRollupDTO {
   if (!isPromoExposureRpcResponse(data)) {
-    throw new Error("Invalid PromoExposureRollup RPC response structure");
+    throw new Error('Invalid PromoExposureRollup RPC response structure');
   }
   return toPromoExposureRollupDTO(data);
 }
@@ -94,11 +94,11 @@ function parsePromoExposureResponse(data: unknown): PromoExposureRollupDTO {
  */
 
 function toErrorShape(error: unknown): { code?: string; message: string } {
-  if (typeof error === "object" && error !== null) {
+  if (typeof error === 'object' && error !== null) {
     const errObj = error as Record<string, unknown>;
     const message =
-      typeof errObj.message === "string" ? errObj.message : String(error);
-    const code = typeof errObj.code === "string" ? errObj.code : undefined;
+      typeof errObj.message === 'string' ? errObj.message : String(error);
+    const code = typeof errObj.code === 'string' ? errObj.code : undefined;
     return { code, message };
   }
   return { message: String(error) };
@@ -108,16 +108,16 @@ function mapRollupError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  const message = error.message || "";
+  const message = error.message || '';
 
-  if (message.includes("UNAUTHORIZED")) {
+  if (message.includes('UNAUTHORIZED')) {
     return new DomainError(
-      "UNAUTHORIZED",
-      "Casino context not available (authentication required)",
+      'UNAUTHORIZED',
+      'Casino context not available (authentication required)',
     );
   }
 
-  return new DomainError("INTERNAL_ERROR", message, { details: error });
+  return new DomainError('INTERNAL_ERROR', message, { details: error });
 }
 
 // === Rollup Query ===
@@ -138,7 +138,7 @@ export async function getPromoExposureRollup(
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
     const { data, error } = await (supabase.rpc as any)(
-      "rpc_promo_exposure_rollup",
+      'rpc_promo_exposure_rollup',
       {
         p_gaming_day: query.gamingDay ?? null,
         p_shift_id: query.shiftId ?? null,
@@ -153,8 +153,8 @@ export async function getPromoExposureRollup(
 
     if (!data) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for promo exposure rollup",
+        'INTERNAL_ERROR',
+        'RPC returned no data for promo exposure rollup',
       );
     }
 

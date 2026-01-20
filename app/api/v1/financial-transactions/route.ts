@@ -15,7 +15,7 @@
  * - Dealer: No access
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -24,16 +24,16 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPlayerFinancialService } from "@/services/player-financial";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPlayerFinancialService } from '@/services/player-financial';
 import {
   createFinancialTxnAdminSchema,
   createFinancialTxnCashierSchema,
   createFinancialTxnPitBossSchema,
   financialTxnListQuerySchema,
-} from "@/services/player-financial/schemas";
+} from '@/services/player-financial/schemas';
 
 /**
  * GET /api/v1/financial-transactions
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items,
             cursor,
@@ -70,8 +70,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "player-financial",
-        action: "list",
+        domain: 'player-financial',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -117,17 +117,17 @@ export async function POST(request: NextRequest) {
 
         // Select appropriate schema based on role
         let input;
-        if (staffRole === "pit_boss") {
+        if (staffRole === 'pit_boss') {
           input = createFinancialTxnPitBossSchema.parse(body);
-        } else if (staffRole === "cashier") {
+        } else if (staffRole === 'cashier') {
           input = createFinancialTxnCashierSchema.parse(body);
-        } else if (staffRole === "admin") {
+        } else if (staffRole === 'admin') {
           input = createFinancialTxnAdminSchema.parse(body);
         } else {
           // Compliance, dealer, or unknown role
           return {
             ok: false as const,
-            code: "FORBIDDEN" as const,
+            code: 'FORBIDDEN' as const,
             error: `Role '${staffRole}' is not authorized to create financial transactions`,
             requestId: mwCtx.correlationId,
             durationMs: 0,
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: transaction,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -155,8 +155,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "player-financial",
-        action: "create",
+        domain: 'player-financial',
+        action: 'create',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return 201 Created for new transaction
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

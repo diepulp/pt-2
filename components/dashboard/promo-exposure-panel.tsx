@@ -14,15 +14,15 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS8
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import type { PromoExposureRollupDTO } from "@/services/loyalty/rollups";
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
+import type { PromoExposureRollupDTO } from '@/services/loyalty/rollups';
 
 interface PromoExposurePanelProps {
   /** Promo exposure data from rollup query */
@@ -42,7 +42,7 @@ interface MetricCardProps {
   label: string;
   value: string | number;
   subValue?: string;
-  variant?: "default" | "warning" | "alert";
+  variant?: 'default' | 'warning' | 'alert';
   isLoading?: boolean;
 }
 
@@ -50,7 +50,7 @@ function MetricCard({
   label,
   value,
   subValue,
-  variant = "default",
+  variant = 'default',
   isLoading,
 }: MetricCardProps) {
   if (isLoading) {
@@ -66,30 +66,30 @@ function MetricCard({
     <div className="space-y-1">
       <div
         className={cn(
-          "text-[10px] font-bold uppercase tracking-widest",
-          variant === "warning" && "text-yellow-500",
-          variant === "alert" && "text-destructive",
-          variant === "default" && "text-muted-foreground",
+          'text-[10px] font-bold uppercase tracking-widest',
+          variant === 'warning' && 'text-yellow-500',
+          variant === 'alert' && 'text-destructive',
+          variant === 'default' && 'text-muted-foreground',
         )}
-        style={{ fontFamily: "monospace" }}
+        style={{ fontFamily: 'monospace' }}
       >
         {label}
       </div>
       <div
         className={cn(
-          "text-xl font-bold tabular-nums",
-          variant === "warning" && "text-yellow-500",
-          variant === "alert" && "text-destructive",
-          variant === "default" && "text-foreground",
+          'text-xl font-bold tabular-nums',
+          variant === 'warning' && 'text-yellow-500',
+          variant === 'alert' && 'text-destructive',
+          variant === 'default' && 'text-foreground',
         )}
-        style={{ fontFamily: "monospace", fontVariantNumeric: "tabular-nums" }}
+        style={{ fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}
       >
         {value}
       </div>
       {subValue && (
         <div
           className="text-[10px] text-muted-foreground"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           {subValue}
         </div>
@@ -102,9 +102,9 @@ function MetricCard({
  * Format currency for display.
  */
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
@@ -139,7 +139,7 @@ export function PromoExposurePanel({
       <Card className="border-2 border-destructive/50 bg-destructive/5 p-4">
         <div
           className="text-xs font-bold uppercase tracking-widest text-destructive"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           Promo Data Unavailable
         </div>
@@ -157,7 +157,7 @@ export function PromoExposurePanel({
         <div className="flex items-center gap-2">
           <div
             className="text-xs font-bold uppercase tracking-widest text-purple-400"
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             Promo Exposure
           </div>
@@ -170,7 +170,7 @@ export function PromoExposurePanel({
         {exposure?.gamingDay && (
           <div
             className="mt-1 text-[10px] text-muted-foreground"
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             Gaming Day: {exposure.gamingDay}
           </div>
@@ -197,7 +197,7 @@ export function PromoExposurePanel({
             exposure ? formatCurrency(exposure.outstandingFaceValue) : undefined
           }
           variant={
-            exposure && exposure.outstandingCount > 0 ? "warning" : "default"
+            exposure && exposure.outstandingCount > 0 ? 'warning' : 'default'
           }
           isLoading={isLoading}
         />
@@ -206,7 +206,7 @@ export function PromoExposurePanel({
         <MetricCard
           label="Patron Risk"
           value={
-            exposure ? formatCurrency(exposure.totalIssuedPatronRisk) : "$0"
+            exposure ? formatCurrency(exposure.totalIssuedPatronRisk) : '$0'
           }
           isLoading={isLoading}
         />
@@ -215,7 +215,7 @@ export function PromoExposurePanel({
         <MetricCard
           label="Expiring Soon"
           value={exposure?.expiringSoonCount ?? 0}
-          variant={hasExpiringSoonAlert ? "alert" : "default"}
+          variant={hasExpiringSoonAlert ? 'alert' : 'default'}
           isLoading={isLoading}
         />
 
@@ -224,7 +224,7 @@ export function PromoExposurePanel({
           label="Voided"
           value={exposure?.voidedCount ?? 0}
           subValue={`${voidRate.toFixed(1)}% rate`}
-          variant={hasHighVoidRate ? "warning" : "default"}
+          variant={hasHighVoidRate ? 'warning' : 'default'}
           isLoading={isLoading}
         />
 

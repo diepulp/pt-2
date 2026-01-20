@@ -8,19 +8,19 @@
  * @see e2e/workflows/rating-slip-modal.spec.ts
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 /** Game type enum from database */
-type GameType = Database["public"]["Enums"]["game_type"];
+type GameType = Database['public']['Enums']['game_type'];
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error(
-    "Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY",
+    'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
   );
 }
 
@@ -84,10 +84,10 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create test casino
   const { data: casino, error: casinoError } = await supabase
-    .from("casino")
+    .from('casino')
     .insert({
       name: `${testPrefix}_casino`,
-      status: "active",
+      status: 'active',
     })
     .select()
     .single();
@@ -98,11 +98,11 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create casino settings for gaming day
   const { error: settingsError } = await supabase
-    .from("casino_settings")
+    .from('casino_settings')
     .insert({
       casino_id: casino.id,
-      gaming_day_start_time: "06:00:00",
-      timezone: "America/Los_Angeles",
+      gaming_day_start_time: '06:00:00',
+      timezone: 'America/Los_Angeles',
     });
 
   if (settingsError) {
@@ -113,7 +113,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create test auth user with app_metadata for RLS (ADR-015 Pattern C)
   const testEmail = `${testPrefix}_staff@test.com`;
-  const testPassword = "TestPassword123!";
+  const testPassword = 'TestPassword123!';
 
   const { data: authData, error: authCreateError } =
     await supabase.auth.admin.createUser({
@@ -122,7 +122,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       email_confirm: true,
       app_metadata: {
         casino_id: casino.id,
-        staff_role: "admin",
+        staff_role: 'admin',
       },
     });
 
@@ -134,15 +134,15 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create test staff user (admin role for full access)
   const { data: staff, error: staffError } = await supabase
-    .from("staff")
+    .from('staff')
     .insert({
       casino_id: casino.id,
       user_id: authData.user.id,
-      first_name: "Test",
-      last_name: "PitBoss",
+      first_name: 'Test',
+      last_name: 'PitBoss',
       email: testEmail,
-      role: "admin",
-      status: "active",
+      role: 'admin',
+      status: 'active',
     })
     .select()
     .single();
@@ -157,7 +157,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       app_metadata: {
         casino_id: casino.id,
         staff_id: staff.id,
-        staff_role: "admin",
+        staff_role: 'admin',
       },
     });
 
@@ -188,10 +188,10 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   // Create test player (global entity, no casino_id)
   // Continue using service role client for data setup
   const { data: player, error: playerError } = await supabase
-    .from("player")
+    .from('player')
     .insert({
-      first_name: "John",
-      last_name: "TestPlayer",
+      first_name: 'John',
+      last_name: 'TestPlayer',
     })
     .select()
     .single();
@@ -202,11 +202,11 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Link player to casino via player_casino junction table
   const { error: playerCasinoError } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .insert({
       player_id: player.id,
       casino_id: casino.id,
-      status: "active",
+      status: 'active',
     });
 
   if (playerCasinoError) {
@@ -216,11 +216,11 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   }
 
   // Create player loyalty account
-  const { error: loyaltyError } = await supabase.from("player_loyalty").insert({
+  const { error: loyaltyError } = await supabase.from('player_loyalty').insert({
     player_id: player.id,
     casino_id: casino.id,
     current_balance: 500, // Start with some points
-    tier: "gold",
+    tier: 'gold',
   });
 
   if (loyaltyError) {
@@ -231,12 +231,12 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   // Create primary test table (active)
   // Note: min_bet/max_bet are in table_settings, not gaming_table
   const { data: table, error: tableError } = await supabase
-    .from("gaming_table")
+    .from('gaming_table')
     .insert({
       casino_id: casino.id,
-      label: "BJ-01",
-      type: "blackjack",
-      status: "active",
+      label: 'BJ-01',
+      type: 'blackjack',
+      status: 'active',
     })
     .select()
     .single();
@@ -247,12 +247,12 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create secondary table (active, for move tests)
   const { data: secondaryTable, error: secondaryTableError } = await supabase
-    .from("gaming_table")
+    .from('gaming_table')
     .insert({
       casino_id: casino.id,
-      label: "BJ-02",
-      type: "blackjack",
-      status: "active",
+      label: 'BJ-02',
+      type: 'blackjack',
+      status: 'active',
     })
     .select()
     .single();
@@ -267,15 +267,15 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   const visitId = crypto.randomUUID();
   const { data: visit, error: visitError } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       id: visitId,
       casino_id: casino.id,
       player_id: player.id,
       started_at: new Date().toISOString(),
-      visit_kind: "gaming_identified_rated",
+      visit_kind: 'gaming_identified_rated',
       visit_group_id: visitId, // Self-reference for new visit group
-      gaming_day: "1970-01-01", // Overwritten by trigger
+      gaming_day: '1970-01-01', // Overwritten by trigger
     })
     .select()
     .single();
@@ -286,7 +286,7 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
   // Create rating slip (open status, at seat 1)
   // Include policy_snapshot with loyalty for accrual_kind='loyalty' constraint
-  const seatNumber = "1";
+  const seatNumber = '1';
   const policySnapshot = {
     loyalty: {
       house_edge: 1.5,
@@ -294,22 +294,22 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
       points_conversion_rate: 10.0,
       point_multiplier: 1.0,
     },
-    game_type: "blackjack",
+    game_type: 'blackjack',
     captured_at: new Date().toISOString(),
   };
 
   const { data: ratingSlip, error: slipError } = await supabase
-    .from("rating_slip")
+    .from('rating_slip')
     .insert({
       casino_id: casino.id,
       visit_id: visit.id,
       table_id: table.id,
       seat_number: seatNumber,
       average_bet: 2500, // $25.00 in cents
-      status: "open",
+      status: 'open',
       start_time: new Date().toISOString(),
       policy_snapshot: policySnapshot,
-      accrual_kind: "loyalty", // Enable loyalty accrual
+      accrual_kind: 'loyalty', // Enable loyalty accrual
     })
     .select()
     .single();
@@ -324,38 +324,38 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
 
     // Delete in reverse dependency order
     await cleanupClient
-      .from("rating_slip_pause")
+      .from('rating_slip_pause')
       .delete()
-      .eq("slip_id", ratingSlip.id);
-    await cleanupClient.from("rating_slip").delete().eq("casino_id", casino.id);
+      .eq('slip_id', ratingSlip.id);
+    await cleanupClient.from('rating_slip').delete().eq('casino_id', casino.id);
     await cleanupClient
-      .from("player_financial_transaction")
+      .from('player_financial_transaction')
       .delete()
-      .eq("casino_id", casino.id);
+      .eq('casino_id', casino.id);
     await cleanupClient
-      .from("loyalty_ledger")
+      .from('loyalty_ledger')
       .delete()
-      .eq("casino_id", casino.id);
+      .eq('casino_id', casino.id);
     await cleanupClient
-      .from("player_loyalty")
+      .from('player_loyalty')
       .delete()
-      .eq("casino_id", casino.id);
-    await cleanupClient.from("visit").delete().eq("id", visit.id);
+      .eq('casino_id', casino.id);
+    await cleanupClient.from('visit').delete().eq('id', visit.id);
     await cleanupClient
-      .from("gaming_table")
+      .from('gaming_table')
       .delete()
-      .eq("casino_id", casino.id);
+      .eq('casino_id', casino.id);
     await cleanupClient
-      .from("player_casino")
+      .from('player_casino')
       .delete()
-      .eq("player_id", player.id);
-    await cleanupClient.from("player").delete().eq("id", player.id);
-    await cleanupClient.from("staff").delete().eq("id", staff.id);
+      .eq('player_id', player.id);
+    await cleanupClient.from('player').delete().eq('id', player.id);
+    await cleanupClient.from('staff').delete().eq('id', staff.id);
     await cleanupClient
-      .from("casino_settings")
+      .from('casino_settings')
       .delete()
-      .eq("casino_id", casino.id);
-    await cleanupClient.from("casino").delete().eq("id", casino.id);
+      .eq('casino_id', casino.id);
+    await cleanupClient.from('casino').delete().eq('id', casino.id);
 
     // Delete auth user
     await cleanupClient.auth.admin.deleteUser(authData.user.id);
@@ -386,15 +386,15 @@ export async function createTestTransaction(
   visitId: string,
   playerId: string,
   staffId: string,
-  direction: "in" | "out",
+  direction: 'in' | 'out',
   amount: number, // in cents
-  tenderType: "cash" | "chips" | "marker" = "cash",
+  tenderType: 'cash' | 'chips' | 'marker' = 'cash',
 ) {
   const supabase = createServiceClient();
   const timestamp = Date.now();
 
   const { data, error } = await supabase
-    .from("player_financial_transaction")
+    .from('player_financial_transaction')
     .insert({
       casino_id: casinoId,
       visit_id: visitId,
@@ -403,7 +403,7 @@ export async function createTestTransaction(
       direction,
       amount,
       tender_type: tenderType,
-      source: "pit",
+      source: 'pit',
       idempotency_key: `e2e_txn_${timestamp}`,
     })
     .select()
@@ -423,9 +423,9 @@ export async function getRatingSlipStatus(slipId: string) {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("rating_slip")
-    .select("id, status, average_bet, seat_number, table_id, visit_id")
-    .eq("id", slipId)
+    .from('rating_slip')
+    .select('id, status, average_bet, seat_number, table_id, visit_id')
+    .eq('id', slipId)
     .single();
 
   if (error) {
@@ -442,10 +442,10 @@ export async function getRatingSlipsForVisit(visitId: string) {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("rating_slip")
-    .select("id, status, average_bet, seat_number, table_id, visit_id")
-    .eq("visit_id", visitId)
-    .order("created_at", { ascending: false });
+    .from('rating_slip')
+    .select('id, status, average_bet, seat_number, table_id, visit_id')
+    .eq('visit_id', visitId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to get rating slips: ${error.message}`);
@@ -461,10 +461,10 @@ export async function getTransactionsForVisit(visitId: string) {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("player_financial_transaction")
-    .select("id, direction, amount, tender_type, source")
-    .eq("visit_id", visitId)
-    .order("created_at", { ascending: false });
+    .from('player_financial_transaction')
+    .select('id, direction, amount, tender_type, source')
+    .eq('visit_id', visitId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to get transactions: ${error.message}`);
@@ -488,13 +488,13 @@ export async function getLoyaltyLedgerForPlayer(
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("loyalty_ledger")
+    .from('loyalty_ledger')
     .select(
-      "id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at",
+      'id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at',
     )
-    .eq("player_id", playerId)
-    .eq("casino_id", casinoId)
-    .order("created_at", { ascending: false });
+    .eq('player_id', playerId)
+    .eq('casino_id', casinoId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to get loyalty ledger: ${error.message}`);
@@ -517,12 +517,12 @@ export async function getLoyaltyLedgerForSlip(ratingSlipId: string) {
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("loyalty_ledger")
+    .from('loyalty_ledger')
     .select(
-      "id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at",
+      'id, player_id, casino_id, rating_slip_id, visit_id, points_delta, reason, metadata, created_at',
     )
-    .eq("rating_slip_id", ratingSlipId)
-    .order("created_at", { ascending: false });
+    .eq('rating_slip_id', ratingSlipId)
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to get loyalty ledger for slip: ${error.message}`);
@@ -548,13 +548,13 @@ export async function getPlayerLoyaltyBalance(
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("player_loyalty")
-    .select("player_id, casino_id, current_balance, tier, updated_at")
-    .eq("player_id", playerId)
-    .eq("casino_id", casinoId)
+    .from('player_loyalty')
+    .select('player_id, casino_id, current_balance, tier, updated_at')
+    .eq('player_id', playerId)
+    .eq('casino_id', casinoId)
     .single();
 
-  if (error && error.code !== "PGRST116") {
+  if (error && error.code !== 'PGRST116') {
     // PGRST116 = no rows (player may not have loyalty record yet)
     throw new Error(`Failed to get player loyalty: ${error.message}`);
   }
@@ -574,15 +574,15 @@ export async function ensurePlayerLoyaltyRecord(
   const supabase = createServiceClient();
 
   // Try to insert, ignore if already exists (upsert pattern)
-  const { error } = await supabase.from("player_loyalty").upsert(
+  const { error } = await supabase.from('player_loyalty').upsert(
     {
       player_id: playerId,
       casino_id: casinoId,
       current_balance: initialBalance,
-      tier: "bronze",
+      tier: 'bronze',
     },
     {
-      onConflict: "player_id,casino_id",
+      onConflict: 'player_id,casino_id',
       ignoreDuplicates: true,
     },
   );
@@ -598,11 +598,11 @@ export async function ensurePlayerLoyaltyRecord(
  */
 export async function ensureGameSettings(
   casinoId: string,
-  gameType: GameType = "blackjack",
+  gameType: GameType = 'blackjack',
 ) {
   const supabase = createServiceClient();
 
-  const { error } = await supabase.from("game_settings").upsert(
+  const { error } = await supabase.from('game_settings').upsert(
     {
       casino_id: casinoId,
       game_type: gameType,
@@ -614,7 +614,7 @@ export async function ensureGameSettings(
       seats_available: 7,
     },
     {
-      onConflict: "casino_id,game_type",
+      onConflict: 'casino_id,game_type',
       ignoreDuplicates: false, // Always update if exists
     },
   );
@@ -628,7 +628,7 @@ export async function ensureGameSettings(
  * Creates a policy_snapshot object for rating slip creation.
  * Required when accrual_kind = 'loyalty' per chk_policy_snapshot_if_loyalty constraint.
  */
-export function createPolicySnapshot(gameType: GameType = "blackjack") {
+export function createPolicySnapshot(gameType: GameType = 'blackjack') {
   return {
     loyalty: {
       house_edge: 1.5,

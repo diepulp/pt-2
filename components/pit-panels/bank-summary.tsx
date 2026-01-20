@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { TrendingUp, TrendingDown, Banknote, Layers } from "lucide-react";
+import { TrendingUp, TrendingDown, Banknote, Layers } from 'lucide-react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface BankSummaryProps {
   totalValue: number;
@@ -26,10 +26,10 @@ export function BankSummary({
       {/* Top LED accent strip */}
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 h-0.5",
+          'absolute top-0 left-0 right-0 h-0.5',
           isPositive
-            ? "bg-gradient-to-r from-transparent via-cyan-500 to-transparent"
-            : "bg-gradient-to-r from-transparent via-red-500 to-transparent",
+            ? 'bg-gradient-to-r from-transparent via-cyan-500 to-transparent'
+            : 'bg-gradient-to-r from-transparent via-red-500 to-transparent',
         )}
       />
 
@@ -41,10 +41,10 @@ export function BankSummary({
           </h3>
           <div
             className={cn(
-              "flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono",
+              'flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono',
               isPositive
-                ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/30"
-                : "bg-red-500/10 text-red-400 border border-red-500/30",
+                ? 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/30'
+                : 'bg-red-500/10 text-red-400 border border-red-500/30',
             )}
           >
             {isPositive ? (
@@ -53,7 +53,7 @@ export function BankSummary({
               <TrendingDown className="h-3 w-3" />
             )}
             <span>
-              {isPositive ? "+" : ""}
+              {isPositive ? '+' : ''}
               {variance.toFixed(1)}%
             </span>
           </div>
@@ -94,8 +94,8 @@ export function BankSummary({
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
           backgroundImage:
-            "linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)",
-          backgroundSize: "20px 20px",
+            'linear-gradient(to right, currentColor 1px, transparent 1px), linear-gradient(to bottom, currentColor 1px, transparent 1px)',
+          backgroundSize: '20px 20px',
         }}
       />
     </div>

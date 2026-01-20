@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Banknote,
@@ -10,26 +10,25 @@ import {
   StickyNote,
   UserCog,
   UserPlus,
-  Users,
-} from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+} from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 import {
   PitMapSelector,
   PitMapSelectorCompact,
   type PitMapPit,
-} from "./pit-map-selector";
+} from './pit-map-selector';
 
 interface ToolbarAction {
   id: string;
@@ -38,7 +37,7 @@ interface ToolbarAction {
   shortcut?: string;
   onClick?: () => void;
   disabled?: boolean;
-  variant?: "default" | "accent" | "muted";
+  variant?: 'default' | 'accent' | 'muted';
 }
 
 interface ActionGroup {
@@ -49,7 +48,7 @@ interface ActionGroup {
 
 interface TableToolbarProps {
   tableId: string;
-  tableStatus: "active" | "inactive" | "closed";
+  tableStatus: 'active' | 'inactive' | 'closed';
   onNewSlip: () => void;
   onEditLimits: () => void;
   onEnrollPlayer?: () => void;
@@ -86,7 +85,7 @@ export function TableToolbar({
   // Placeholder handlers for pending functionality
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
-      description: "This feature is being developed",
+      description: 'This feature is being developed',
       duration: 2000,
     });
   }, []);
@@ -95,92 +94,85 @@ export function TableToolbar({
   const actionGroups: ActionGroup[] = React.useMemo(
     () => [
       {
-        id: "table",
-        label: "TABLE",
+        id: 'table',
+        label: 'TABLE',
         actions: [
           {
-            id: "toggle-status",
+            id: 'toggle-status',
             icon: Power,
-            label: tableStatus === "active" ? "Close Table" : "Open Table",
-            shortcut: "⌘T",
-            onClick: () => handlePlaceholder("Toggle table status"),
-            variant: tableStatus === "active" ? "accent" : "muted",
+            label: tableStatus === 'active' ? 'Close Table' : 'Open Table',
+            shortcut: '⌘T',
+            onClick: () => handlePlaceholder('Toggle table status'),
+            variant: tableStatus === 'active' ? 'accent' : 'muted',
           },
           {
-            id: "assign-dealer",
+            id: 'assign-dealer',
             icon: UserCog,
-            label: "Assign Dealer",
-            shortcut: "⌘D",
-            onClick: () => handlePlaceholder("Assign dealer"),
+            label: 'Assign Dealer',
+            shortcut: '⌘D',
+            onClick: () => handlePlaceholder('Assign dealer'),
           },
           {
-            id: "table-settings",
+            id: 'table-settings',
             icon: Settings2,
-            label: "Table Settings",
+            label: 'Table Settings',
             onClick: onEditLimits,
           },
         ],
       },
       {
-        id: "session",
-        label: "SESSION",
+        id: 'session',
+        label: 'SESSION',
         actions: [
           {
-            id: "new-slip",
+            id: 'new-slip',
             icon: ClipboardList,
-            label: "New Rating Slip",
-            shortcut: "⌘N",
+            label: 'New Rating Slip',
+            shortcut: '⌘N',
             onClick: onNewSlip,
-            variant: "accent",
+            variant: 'accent',
           },
           {
-            id: "enroll-player",
+            id: 'enroll-player',
             icon: UserPlus,
-            label: "Enroll Player",
-            shortcut: "⌘E",
+            label: 'Enroll Player',
+            shortcut: '⌘E',
             onClick:
-              onEnrollPlayer ?? (() => handlePlaceholder("Enroll player")),
+              onEnrollPlayer ?? (() => handlePlaceholder('Enroll player')),
           },
           {
-            id: "view-players",
-            icon: Users,
-            label: "View Players",
-            shortcut: "⌘P",
-            onClick: () => handlePlaceholder("View active players"),
-          },
-          {
-            id: "add-note",
+            id: 'add-note',
             icon: StickyNote,
-            label: "Add Note",
-            shortcut: "N",
-            onClick: () => handlePlaceholder("Add table note"),
+            label: 'Add Note',
+            shortcut: 'N',
+            onClick: () => handlePlaceholder('Add table note'),
           },
         ],
       },
       {
-        id: "finance",
-        label: "FINANCE",
+        id: 'finance',
+        label: 'FINANCE',
         actions: [
           {
-            id: "log-fill",
+            id: 'log-fill',
             icon: Coins,
-            label: "Log Fill",
-            shortcut: "F",
-            onClick: () => handlePlaceholder("Log chip fill"),
+            label: 'Log Fill',
+            shortcut: 'F',
+            onClick: () => handlePlaceholder('Log chip fill'),
           },
           {
-            id: "log-drop",
+            id: 'log-drop',
             icon: Banknote,
-            label: "Log Drop",
-            shortcut: "D",
-            onClick: () => handlePlaceholder("Log cash drop"),
+            label: 'Log Drop',
+            shortcut: 'D',
+            onClick: () => handlePlaceholder('Log cash drop'),
           },
           {
-            id: "quick-action",
+            id: 'quick-action',
             icon: MessageSquarePlus,
-            label: "Quick Action",
-            shortcut: "⌘K",
-            onClick: () => handlePlaceholder("Command palette"),
+            label: 'Quick Action',
+            shortcut: '⌘K',
+            onClick: () => handlePlaceholder('Command palette'),
           },
         ],
       },
@@ -192,10 +184,10 @@ export function TableToolbar({
     <TooltipProvider delayDuration={150}>
       <div
         className={cn(
-          "relative flex items-center gap-1 px-2 py-1.5",
-          "rounded-lg border border-border/50",
-          "bg-gradient-to-b from-card/80 to-card/40",
-          "backdrop-blur-sm",
+          'relative flex items-center gap-1 px-2 py-1.5',
+          'rounded-lg border border-border/50',
+          'bg-gradient-to-b from-card/80 to-card/40',
+          'backdrop-blur-sm',
           className,
         )}
         role="toolbar"
@@ -275,18 +267,18 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
           onClick={action.onClick}
           disabled={action.disabled}
           className={cn(
-            "relative h-10 w-10 rounded-md",
-            "transition-all duration-150",
-            "hover:bg-accent/10 hover:text-accent",
-            "focus-visible:ring-1 focus-visible:ring-accent/50",
-            action.variant === "accent" && [
-              "text-accent",
-              "hover:bg-accent/20",
-              "after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2",
-              "after:w-1 after:h-1 after:rounded-full after:bg-accent/60",
+            'relative h-10 w-10 rounded-md',
+            'transition-all duration-150',
+            'hover:bg-accent/10 hover:text-accent',
+            'focus-visible:ring-1 focus-visible:ring-accent/50',
+            action.variant === 'accent' && [
+              'text-accent',
+              'hover:bg-accent/20',
+              'after:absolute after:bottom-0.5 after:left-1/2 after:-translate-x-1/2',
+              'after:w-1 after:h-1 after:rounded-full after:bg-accent/60',
             ],
-            action.variant === "muted" && "text-muted-foreground/60",
-            action.disabled && "opacity-40 cursor-not-allowed",
+            action.variant === 'muted' && 'text-muted-foreground/60',
+            action.disabled && 'opacity-40 cursor-not-allowed',
           )}
           aria-label={action.label}
         >
@@ -323,7 +315,7 @@ export function TableToolbarCompact({
 }: TableToolbarProps) {
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
-      description: "This feature is being developed",
+      description: 'This feature is being developed',
       duration: 2000,
     });
   }, []);
@@ -331,41 +323,41 @@ export function TableToolbarCompact({
   // Priority actions only for compact view
   const priorityActions: ToolbarAction[] = [
     {
-      id: "new-slip",
+      id: 'new-slip',
       icon: ClipboardList,
-      label: "New Slip",
+      label: 'New Slip',
       onClick: onNewSlip,
-      variant: "accent",
+      variant: 'accent',
     },
     {
-      id: "enroll-player",
+      id: 'enroll-player',
       icon: UserPlus,
-      label: "Enroll",
-      onClick: onEnrollPlayer ?? (() => handlePlaceholder("Enroll player")),
+      label: 'Enroll',
+      onClick: onEnrollPlayer ?? (() => handlePlaceholder('Enroll player')),
     },
     {
-      id: "toggle-status",
+      id: 'toggle-status',
       icon: Power,
-      label: tableStatus === "active" ? "Close" : "Open",
-      onClick: () => handlePlaceholder("Toggle status"),
-      variant: tableStatus === "active" ? "accent" : "muted",
+      label: tableStatus === 'active' ? 'Close' : 'Open',
+      onClick: () => handlePlaceholder('Toggle status'),
+      variant: tableStatus === 'active' ? 'accent' : 'muted',
     },
     {
-      id: "log-fill",
+      id: 'log-fill',
       icon: Coins,
-      label: "Fill",
-      onClick: () => handlePlaceholder("Log fill"),
+      label: 'Fill',
+      onClick: () => handlePlaceholder('Log fill'),
     },
     {
-      id: "log-drop",
+      id: 'log-drop',
       icon: Banknote,
-      label: "Drop",
-      onClick: () => handlePlaceholder("Log drop"),
+      label: 'Drop',
+      onClick: () => handlePlaceholder('Log drop'),
     },
     {
-      id: "settings",
+      id: 'settings',
       icon: Settings2,
-      label: "Settings",
+      label: 'Settings',
       onClick: onEditLimits,
     },
   ];
@@ -374,9 +366,9 @@ export function TableToolbarCompact({
     <TooltipProvider delayDuration={150}>
       <div
         className={cn(
-          "flex items-center justify-center gap-0.5 px-1.5 py-1",
-          "rounded-md border border-border/40",
-          "bg-card/30 backdrop-blur-sm",
+          'flex items-center justify-center gap-0.5 px-1.5 py-1',
+          'rounded-md border border-border/40',
+          'bg-card/30 backdrop-blur-sm',
           className,
         )}
         role="toolbar"

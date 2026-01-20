@@ -18,22 +18,22 @@
  * @see ISSUE-47B1DFF1 Loyalty accrual integration
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { dashboardKeys } from "@/hooks/dashboard/keys";
-import { playerFinancialKeys } from "@/hooks/player-financial/keys";
-import { toast } from "@/hooks/ui";
-import { accrueOnClose } from "@/services/loyalty/http";
-import { loyaltyKeys } from "@/services/loyalty/keys";
+import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { playerFinancialKeys } from '@/hooks/player-financial/keys';
+import { toast } from '@/hooks/ui';
+import { accrueOnClose } from '@/services/loyalty/http';
+import { loyaltyKeys } from '@/services/loyalty/keys';
 import {
   closeRatingSlip,
   createPitCashObservation,
   PitObservationError,
-} from "@/services/rating-slip/http";
-import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/services/rating-slip/http';
+import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 export interface CloseWithFinancialInput {
   /** Rating slip ID to close */
@@ -102,8 +102,8 @@ export function useCloseWithFinancial() {
               visitId,
               amount: chipsTaken, // Amount in dollars (RPC expects dollars)
               ratingSlipId: slipId,
-              amountKind: "estimate",
-              source: "walk_with",
+              amountKind: 'estimate',
+              source: 'walk_with',
               // Use slipId as idempotency key to prevent duplicate observations
               idempotencyKey: `chips-taken-${slipId}`,
             }).catch((err: unknown) => {
@@ -111,8 +111,8 @@ export function useCloseWithFinancial() {
               const message =
                 err instanceof PitObservationError
                   ? err.message
-                  : "Failed to record chips taken observation";
-              toast.error("Chips Taken Error", {
+                  : 'Failed to record chips taken observation';
+              toast.error('Chips Taken Error', {
                 description: message,
               });
               // Don't fail the close operation - observation is best-effort
@@ -168,7 +168,7 @@ export function useCloseWithFinancial() {
             ...old,
             slip: {
               ...old.slip,
-              status: "closed",
+              status: 'closed',
             },
           };
         },

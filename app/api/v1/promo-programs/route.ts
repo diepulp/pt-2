@@ -8,7 +8,7 @@
  * Pattern: PRD-LOYALTY-PROMO
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPromoService } from "@/services/loyalty/promo";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPromoService } from '@/services/loyalty/promo';
 import {
   createPromoProgramSchema,
   promoProgramListQuerySchema,
-} from "@/services/loyalty/promo/schemas";
+} from '@/services/loyalty/promo/schemas';
 
 /**
  * GET /api/v1/promo-programs
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: programs,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -56,8 +56,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-programs.list",
+        domain: 'loyalty',
+        action: 'promo-programs.list',
         correlationId: ctx.requestId,
       },
     );
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: program,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -105,8 +105,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-programs.create",
+        domain: 'loyalty',
+        action: 'promo-programs.create',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
     if (!result.ok) {
       return errorResponse(ctx, result);
     }
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

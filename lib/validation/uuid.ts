@@ -8,7 +8,7 @@
  * @see ADR-013 Zod Validation Schemas
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === UUID Format Constants ===
 
@@ -45,7 +45,7 @@ export const UUID_REGEX =
  * isValidUUID(null) // false
  */
 export function isValidUUID(value: unknown): value is string {
-  return typeof value === "string" && UUID_REGEX.test(value);
+  return typeof value === 'string' && UUID_REGEX.test(value);
 }
 
 /**
@@ -61,9 +61,9 @@ export function isValidUUID(value: unknown): value is string {
  */
 export function validateUUID(
   value: unknown,
-  fieldName = "ID",
+  fieldName = 'ID',
 ): { isValid: boolean; error?: string } {
-  if (typeof value !== "string") {
+  if (typeof value !== 'string') {
     return {
       isValid: false,
       error: `${fieldName}: Expected string, got ${typeof value}`,
@@ -132,7 +132,7 @@ export function validateUUIDs(fields: Record<string, unknown>): {
  *   table_id: uuidSchema("table ID"),
  * });
  */
-export function uuidSchema(fieldName = "ID") {
+export function uuidSchema(fieldName = 'ID') {
   return z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
 }
 
@@ -142,7 +142,7 @@ export function uuidSchema(fieldName = "ID") {
  * @param fieldName - Name of the field for error messages
  * @returns Zod schema that accepts string UUID or undefined
  */
-export function uuidSchemaOptional(fieldName = "ID") {
+export function uuidSchemaOptional(fieldName = 'ID') {
   return uuidSchema(fieldName).optional();
 }
 
@@ -152,7 +152,7 @@ export function uuidSchemaOptional(fieldName = "ID") {
  * @param fieldName - Name of the field for error messages
  * @returns Zod schema that accepts string UUID or null
  */
-export function uuidSchemaNullable(fieldName = "ID") {
+export function uuidSchemaNullable(fieldName = 'ID') {
   return uuidSchema(fieldName).nullable();
 }
 
@@ -169,13 +169,13 @@ export function debugLogUUIDs(
   context: string,
   fields: Record<string, unknown>,
 ): void {
-  if (process.env.NODE_ENV !== "development") return;
+  if (process.env.NODE_ENV !== 'development') return;
 
   const results = Object.entries(fields).map(([name, value]) => {
     const validation = validateUUID(value, name);
     return {
       field: name,
-      value: typeof value === "string" ? value : String(value),
+      value: typeof value === 'string' ? value : String(value),
       valid: validation.isValid,
       error: validation.error,
     };

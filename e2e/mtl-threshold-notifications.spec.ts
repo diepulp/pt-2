@@ -8,7 +8,7 @@
  * @see PRD-MTL-UI-GAPS - MTL UI Implementation Gap Closure
  */
 
-import { test, expect, type Page } from "@playwright/test";
+import { test, expect, type Page } from '@playwright/test';
 
 import {
   createMtlTestScenario,
@@ -16,7 +16,7 @@ import {
   getPatronDailyTotal,
   getMtlEntriesForPatron,
   type MtlTestScenario,
-} from "./fixtures/mtl-fixtures";
+} from './fixtures/mtl-fixtures';
 
 // ============================================================================
 // Test Helpers
@@ -26,7 +26,7 @@ import {
  * Authenticate user via browser
  */
 async function authenticateUser(page: Page, scenario: MtlTestScenario) {
-  await page.goto("/auth/login");
+  await page.goto('/auth/login');
   await page.fill('input[name="email"]', scenario.testEmail);
   await page.fill('input[name="password"]', scenario.testPassword);
   await page.click('button[type="submit"]');
@@ -37,7 +37,7 @@ async function authenticateUser(page: Page, scenario: MtlTestScenario) {
  * Open rating slip modal for test scenario
  */
 async function openRatingSlipModal(page: Page, scenario: MtlTestScenario) {
-  await page.goto("/pit");
+  await page.goto('/pit');
   await page.waitForSelector('[data-testid="table-grid"]', { timeout: 10000 });
 
   // Find and click the occupied seat
@@ -64,7 +64,7 @@ async function enterBuyInAmount(page: Page, amount: number) {
 // Threshold Notification Tests
 // ============================================================================
 
-test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
+test.describe('MTL Threshold Notifications (PRD-MTL-UI-GAPS)', () => {
   let scenario: MtlTestScenario;
 
   test.beforeAll(async () => {
@@ -83,7 +83,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Enter buy-in that brings daily total to $2,500+
    * Expected: Warning toast "Approaching watchlist threshold" appears
    */
-  test("warning toast appears when buy-in brings total to $2,500+", async ({
+  test('warning toast appears when buy-in brings total to $2,500+', async ({
     page,
   }) => {
     // Create fresh scenario for this test
@@ -91,7 +91,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
 
     try {
       // Pre-populate some transactions to bring close to threshold
-      await createTestMtlEntry(testScenario, 2000, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 2000, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -120,14 +120,14 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Enter buy-in that brings total to $3,000+
    * Expected: Info toast "Watchlist threshold met" appears, MTL auto-created
    */
-  test("watchlist toast and MTL created when buy-in brings total to $3,000+", async ({
+  test('watchlist toast and MTL created when buy-in brings total to $3,000+', async ({
     page,
   }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Pre-populate to bring close to watchlist threshold
-      await createTestMtlEntry(testScenario, 2500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 2500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -160,14 +160,14 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Enter buy-in that brings total to >$9,000
    * Expected: Warning toast "CTR threshold approaching" appears
    */
-  test("CTR approaching toast when buy-in brings total to >$9,000", async ({
+  test('CTR approaching toast when buy-in brings total to >$9,000', async ({
     page,
   }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Pre-populate to bring close to CTR threshold
-      await createTestMtlEntry(testScenario, 8500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 8500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -196,14 +196,14 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Enter buy-in that brings total to >$10,000
    * Expected: CTR banner appears with regulatory reference
    */
-  test("CTR banner and error toast when buy-in brings total to >$10,000", async ({
+  test('CTR banner and error toast when buy-in brings total to >$10,000', async ({
     page,
   }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Pre-populate to bring close to CTR threshold
-      await createTestMtlEntry(testScenario, 9500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 9500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -227,12 +227,12 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
       await expect(ctrBanner).toBeVisible({ timeout: 5000 });
 
       // Verify regulatory reference
-      await expect(ctrBanner).toContainText("31 CFR § 1021.311");
+      await expect(ctrBanner).toContainText('31 CFR § 1021.311');
 
       // Verify FinCEN link
       const fincenLink = ctrBanner.locator('a[href*="fincen.gov"]');
       await expect(fincenLink).toBeVisible();
-      await expect(fincenLink).toHaveAttribute("rel", "noopener noreferrer");
+      await expect(fincenLink).toHaveAttribute('rel', 'noopener noreferrer');
     } finally {
       await testScenario.cleanup();
     }
@@ -244,18 +244,18 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: After threshold-triggered MTL creation, navigate to dashboard
    * Expected: New MTL entry appears in compliance dashboard list
    */
-  test("auto-created MTL visible in compliance dashboard", async ({ page }) => {
+  test('auto-created MTL visible in compliance dashboard', async ({ page }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Create MTL entry at watchlist threshold
-      await createTestMtlEntry(testScenario, 3500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 3500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
 
       // Navigate to compliance dashboard
-      await page.goto("/compliance");
+      await page.goto('/compliance');
 
       // Wait for dashboard to load
       await page.waitForSelector('[data-testid="compliance-dashboard"]', {
@@ -267,7 +267,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
       await expect(mtlEntry).toBeVisible({ timeout: 5000 });
 
       // Verify amount is displayed
-      await expect(mtlEntry).toContainText("$3,500");
+      await expect(mtlEntry).toContainText('$3,500');
     } finally {
       await testScenario.cleanup();
     }
@@ -279,7 +279,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Click "New Entry" button, fill form, submit
    * Expected: Entry created, success toast, entry appears in list
    */
-  test("manual MTL entry via compliance dashboard form", async ({ page }) => {
+  test('manual MTL entry via compliance dashboard form', async ({ page }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
@@ -287,7 +287,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
       await authenticateUser(page, testScenario);
 
       // Navigate to compliance dashboard
-      await page.goto("/compliance");
+      await page.goto('/compliance');
       await page.waitForSelector('[data-testid="compliance-dashboard"]', {
         timeout: 10000,
       });
@@ -311,11 +311,11 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
 
       // Enter amount
       const amountInput = formDialog.locator('input[name="amount"]');
-      await amountInput.fill("5000");
+      await amountInput.fill('5000');
 
       // Enter note (required)
       const noteInput = formDialog.locator('textarea[name="note"]');
-      await noteInput.fill("Manual MTL entry for E2E test");
+      await noteInput.fill('Manual MTL entry for E2E test');
 
       // Submit form
       const submitButton = formDialog.locator('button[type="submit"]');
@@ -340,14 +340,14 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
    * Scenario: Open modal, enter buy-in amount
    * Expected: BuyInThresholdIndicator shows current, new, and projected total
    */
-  test("threshold indicator shows correct projected total", async ({
+  test('threshold indicator shows correct projected total', async ({
     page,
   }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Pre-populate some transactions
-      await createTestMtlEntry(testScenario, 2000, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 2000, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -363,12 +363,12 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
       await expect(indicator).toBeVisible({ timeout: 5000 });
 
       // Verify amounts displayed
-      await expect(indicator).toContainText("$2,000"); // Current daily total
-      await expect(indicator).toContainText("$500"); // New buy-in
-      await expect(indicator).toContainText("$2,500"); // Projected total
+      await expect(indicator).toContainText('$2,000'); // Current daily total
+      await expect(indicator).toContainText('$500'); // New buy-in
+      await expect(indicator).toContainText('$2,500'); // Projected total
 
       // At $2,500, should show "Approaching" label
-      await expect(indicator).toContainText("Approaching");
+      await expect(indicator).toContainText('Approaching');
     } finally {
       await testScenario.cleanup();
     }
@@ -379,7 +379,7 @@ test.describe("MTL Threshold Notifications (PRD-MTL-UI-GAPS)", () => {
 // API-Level Tests for MTL BFF Endpoint
 // ============================================================================
 
-test.describe("MTL Threshold API Tests", () => {
+test.describe('MTL Threshold API Tests', () => {
   let scenario: MtlTestScenario;
 
   test.beforeAll(async () => {
@@ -392,11 +392,11 @@ test.describe("MTL Threshold API Tests", () => {
     }
   });
 
-  test("GET gaming-day-summary returns correct threshold badges", async ({
+  test('GET gaming-day-summary returns correct threshold badges', async ({
     request,
   }) => {
     // Create entry to trigger watchlist badge
-    await createTestMtlEntry(scenario, 3500, "in", "buy_in");
+    await createTestMtlEntry(scenario, 3500, 'in', 'buy_in');
 
     const response = await request.get(
       `/api/v1/mtl/gaming-day-summary?casino_id=${scenario.casinoId}&gaming_day=${scenario.gamingDay}`,
@@ -417,10 +417,10 @@ test.describe("MTL Threshold API Tests", () => {
 
     expect(patronSummary).toBeDefined();
     expect(patronSummary.total_in).toBe(3500);
-    expect(patronSummary.agg_badge_in).toBe("agg_watchlist");
+    expect(patronSummary.agg_badge_in).toBe('agg_watchlist');
   });
 
-  test("POST mtl/entries creates entry with idempotency", async ({
+  test('POST mtl/entries creates entry with idempotency', async ({
     request,
   }) => {
     const idempotencyKey = `e2e_test_${Date.now()}`;
@@ -429,17 +429,17 @@ test.describe("MTL Threshold API Tests", () => {
     const response1 = await request.post(`/api/v1/mtl/entries`, {
       headers: {
         Authorization: `Bearer ${scenario.authToken}`,
-        "Idempotency-Key": idempotencyKey,
-        "Content-Type": "application/json",
+        'Idempotency-Key': idempotencyKey,
+        'Content-Type': 'application/json',
       },
       data: {
         casino_id: scenario.casinoId,
         patron_uuid: scenario.playerId,
         staff_id: scenario.staffId,
         amount: 1000,
-        direction: "in",
-        txn_type: "buy_in",
-        source: "table",
+        direction: 'in',
+        txn_type: 'buy_in',
+        source: 'table',
       },
     });
 
@@ -452,17 +452,17 @@ test.describe("MTL Threshold API Tests", () => {
     const response2 = await request.post(`/api/v1/mtl/entries`, {
       headers: {
         Authorization: `Bearer ${scenario.authToken}`,
-        "Idempotency-Key": idempotencyKey,
-        "Content-Type": "application/json",
+        'Idempotency-Key': idempotencyKey,
+        'Content-Type': 'application/json',
       },
       data: {
         casino_id: scenario.casinoId,
         patron_uuid: scenario.playerId,
         staff_id: scenario.staffId,
         amount: 1000,
-        direction: "in",
-        txn_type: "buy_in",
-        source: "table",
+        direction: 'in',
+        txn_type: 'buy_in',
+        source: 'table',
       },
     });
 
@@ -479,13 +479,13 @@ test.describe("MTL Threshold API Tests", () => {
 // CTR Banner Component Tests
 // ============================================================================
 
-test.describe("CTR Banner Display", () => {
-  test("CTR banner can be dismissed", async ({ page }) => {
+test.describe('CTR Banner Display', () => {
+  test('CTR banner can be dismissed', async ({ page }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Create entry above CTR threshold
-      await createTestMtlEntry(testScenario, 10500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 10500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -510,12 +510,12 @@ test.describe("CTR Banner Display", () => {
     }
   });
 
-  test("CTR banner dismissal persists in session", async ({ page }) => {
+  test('CTR banner dismissal persists in session', async ({ page }) => {
     const testScenario = await createMtlTestScenario();
 
     try {
       // Create entry above CTR threshold
-      await createTestMtlEntry(testScenario, 10500, "in", "buy_in");
+      await createTestMtlEntry(testScenario, 10500, 'in', 'buy_in');
 
       // Authenticate
       await authenticateUser(page, testScenario);
@@ -538,7 +538,7 @@ test.describe("CTR Banner Display", () => {
       if (await closeButton.isVisible()) {
         await closeButton.click();
       } else {
-        await page.keyboard.press("Escape");
+        await page.keyboard.press('Escape');
       }
 
       // Re-open modal

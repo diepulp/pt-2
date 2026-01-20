@@ -8,7 +8,7 @@
  * @see ADR-013 Zod Validation Schemas
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === UUID Format Schema ===
 
@@ -22,7 +22,7 @@ import { z } from "zod";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const uuidFormat = (fieldName = "ID") =>
+const uuidFormat = (fieldName = 'ID') =>
   z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
 
 // === Enum Schemas ===
@@ -31,7 +31,7 @@ const uuidFormat = (fieldName = "ID") =>
  * Schema for financial_direction enum values.
  * Matches Database["public"]["Enums"]["financial_direction"].
  */
-export const financialDirectionSchema = z.enum(["in", "out"]);
+export const financialDirectionSchema = z.enum(['in', 'out']);
 
 export type FinancialDirectionInput = z.infer<typeof financialDirectionSchema>;
 
@@ -39,7 +39,7 @@ export type FinancialDirectionInput = z.infer<typeof financialDirectionSchema>;
  * Schema for financial_source enum values.
  * Matches Database["public"]["Enums"]["financial_source"].
  */
-export const financialSourceSchema = z.enum(["pit", "cage", "system"]);
+export const financialSourceSchema = z.enum(['pit', 'cage', 'system']);
 
 export type FinancialSourceInput = z.infer<typeof financialSourceSchema>;
 
@@ -49,8 +49,8 @@ export type FinancialSourceInput = z.infer<typeof financialSourceSchema>;
  */
 export const tenderTypeSchema = z
   .string()
-  .min(1, "Tender type cannot be empty")
-  .max(50, "Tender type must be 50 characters or fewer");
+  .min(1, 'Tender type cannot be empty')
+  .max(50, 'Tender type must be 50 characters or fewer');
 
 export type TenderTypeInput = z.infer<typeof tenderTypeSchema>;
 
@@ -62,13 +62,13 @@ export type TenderTypeInput = z.infer<typeof tenderTypeSchema>;
  */
 const createFinancialTxnBaseSchema = z.object({
   /** Required: casino ID */
-  casino_id: uuidFormat("casino ID"),
+  casino_id: uuidFormat('casino ID'),
   /** Required: player ID */
-  player_id: uuidFormat("player ID"),
+  player_id: uuidFormat('player ID'),
   /** Required: visit ID */
-  visit_id: uuidFormat("visit ID"),
+  visit_id: uuidFormat('visit ID'),
   /** Required: transaction amount (must be positive) */
-  amount: z.number().positive("Amount must be positive"),
+  amount: z.number().positive('Amount must be positive'),
   /** Required: transaction direction */
   direction: financialDirectionSchema,
   /** Required: transaction source */
@@ -76,15 +76,15 @@ const createFinancialTxnBaseSchema = z.object({
   /** Required: tender type */
   tender_type: tenderTypeSchema,
   /** Required: staff member creating transaction */
-  created_by_staff_id: uuidFormat("created_by_staff_id"),
+  created_by_staff_id: uuidFormat('created_by_staff_id'),
   /** Optional: associated rating slip */
-  rating_slip_id: uuidFormat("rating slip ID").optional(),
+  rating_slip_id: uuidFormat('rating slip ID').optional(),
   /** Optional: related transaction (for reversals) */
-  related_transaction_id: uuidFormat("related transaction ID").optional(),
+  related_transaction_id: uuidFormat('related transaction ID').optional(),
   /** Optional: idempotency key */
   idempotency_key: z
     .string()
-    .max(255, "Idempotency key must be 255 characters or fewer")
+    .max(255, 'Idempotency key must be 255 characters or fewer')
     .optional(),
   /** Optional: custom timestamp (ISO 8601 format) */
   created_at: z.string().datetime().optional(),
@@ -97,13 +97,13 @@ const createFinancialTxnBaseSchema = z.object({
 export const createFinancialTxnPitBossSchema =
   createFinancialTxnBaseSchema.refine(
     (data) =>
-      data.direction === "in" &&
-      data.source === "pit" &&
-      ["cash", "chips"].includes(data.tender_type),
+      data.direction === 'in' &&
+      data.source === 'pit' &&
+      ['cash', 'chips'].includes(data.tender_type),
     {
       message:
         "Pit boss transactions must have direction='in', source='pit', and tender_type in ('cash', 'chips')",
-      path: ["direction"],
+      path: ['direction'],
     },
   );
 
@@ -114,12 +114,12 @@ export const createFinancialTxnPitBossSchema =
 export const createFinancialTxnCashierSchema =
   createFinancialTxnBaseSchema.refine(
     (data) =>
-      data.source === "cage" &&
-      (data.direction === "out" || data.tender_type === "marker"),
+      data.source === 'cage' &&
+      (data.direction === 'out' || data.tender_type === 'marker'),
     {
       message:
         "Cashier transactions must have source='cage' and either direction='out' or tender_type='marker'",
-      path: ["source"],
+      path: ['source'],
     },
   );
 
@@ -144,11 +144,11 @@ export type CreateFinancialTxnInput = z.infer<typeof createFinancialTxnSchema>;
  */
 export const financialTxnListQuerySchema = z.object({
   /** Filter by player */
-  player_id: uuidFormat("player ID").optional(),
+  player_id: uuidFormat('player ID').optional(),
   /** Filter by visit */
-  visit_id: uuidFormat("visit ID").optional(),
+  visit_id: uuidFormat('visit ID').optional(),
   /** Filter by gaming table (requires join with rating_slip) */
-  table_id: uuidFormat("table ID").optional(),
+  table_id: uuidFormat('table ID').optional(),
   /** Filter by direction */
   direction: financialDirectionSchema.optional(),
   /** Filter by source */
@@ -158,12 +158,12 @@ export const financialTxnListQuerySchema = z.object({
   /** Filter by gaming day (ISO date format YYYY-MM-DD) */
   gaming_day: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
     .optional(),
   /** Results per page (default 20, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** Cursor for pagination (transaction ID) */
-  cursor: uuidFormat("cursor").optional(),
+  cursor: uuidFormat('cursor').optional(),
 });
 
 export type FinancialTxnListQuery = z.infer<typeof financialTxnListQuerySchema>;
@@ -173,7 +173,7 @@ export type FinancialTxnListQuery = z.infer<typeof financialTxnListQuerySchema>;
  */
 export const visitTotalQuerySchema = z.object({
   /** Required: visit ID */
-  visit_id: uuidFormat("visit ID"),
+  visit_id: uuidFormat('visit ID'),
 });
 
 export type VisitTotalQuery = z.infer<typeof visitTotalQuerySchema>;
@@ -184,7 +184,7 @@ export type VisitTotalQuery = z.infer<typeof visitTotalQuerySchema>;
  * Schema for financial transaction detail route params.
  */
 export const financialTxnRouteParamsSchema = z.object({
-  id: uuidFormat("financial transaction ID"),
+  id: uuidFormat('financial transaction ID'),
 });
 
 export type FinancialTxnRouteParams = z.infer<
@@ -195,7 +195,7 @@ export type FinancialTxnRouteParams = z.infer<
  * Schema for visit financial summary route params.
  */
 export const visitFinancialSummaryRouteParamsSchema = z.object({
-  visitId: uuidFormat("visit ID"),
+  visitId: uuidFormat('visit ID'),
 });
 
 export type VisitFinancialSummaryRouteParams = z.infer<

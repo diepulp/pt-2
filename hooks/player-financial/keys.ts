@@ -8,13 +8,13 @@
  * @see EXECUTION-SPEC-PRD-009.md WS4
  */
 
-import type { FinancialTxnListQuery } from "@/services/player-financial/dtos";
+import type { FinancialTxnListQuery } from '@/services/player-financial/dtos';
 import {
   serializeKeyFilters,
   type KeyFilter,
-} from "@/services/shared/key-utils";
+} from '@/services/shared/key-utils';
 
-const ROOT = ["player-financial"] as const;
+const ROOT = ['player-financial'] as const;
 
 // Helper to serialize filters - cast to KeyFilter for type compatibility
 const serialize = (filters: FinancialTxnListQuery = {}): string =>
@@ -32,14 +32,14 @@ export const playerFinancialKeys = {
    */
   list: Object.assign(
     (filters: FinancialTxnListQuery = {}) =>
-      [...ROOT, "list", serialize(filters)] as const,
-    { scope: [...ROOT, "list"] as const },
+      [...ROOT, 'list', serialize(filters)] as const,
+    { scope: [...ROOT, 'list'] as const },
   ),
 
   // === Detail Queries ===
 
   /** Single financial transaction by ID */
-  detail: (txnId: string) => [...ROOT, "detail", txnId] as const,
+  detail: (txnId: string) => [...ROOT, 'detail', txnId] as const,
 
   // === Visit Summary Queries ===
 
@@ -48,24 +48,24 @@ export const playerFinancialKeys = {
    * Aggregated totals: total_in, total_out, net_amount.
    */
   visitSummary: (visitId: string) =>
-    [...ROOT, "visit-summary", visitId] as const,
+    [...ROOT, 'visit-summary', visitId] as const,
 
   /**
    * Scope for all visit summary queries.
    * Used for invalidation when transactions change.
    */
-  visitSummaryScope: [...ROOT, "visit-summary"] as const,
+  visitSummaryScope: [...ROOT, 'visit-summary'] as const,
 
   // === Scoped Queries ===
 
   /** Financial transactions for a specific player */
-  forPlayer: (playerId: string) => [...ROOT, "for-player", playerId] as const,
+  forPlayer: (playerId: string) => [...ROOT, 'for-player', playerId] as const,
 
   /** Financial transactions for a specific visit */
-  forVisit: (visitId: string) => [...ROOT, "for-visit", visitId] as const,
+  forVisit: (visitId: string) => [...ROOT, 'for-visit', visitId] as const,
 
   // === Mutation Keys ===
 
   /** Key for create transaction mutation */
-  create: () => [...ROOT, "create"] as const,
+  create: () => [...ROOT, 'create'] as const,
 };

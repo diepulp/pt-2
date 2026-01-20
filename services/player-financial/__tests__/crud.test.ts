@@ -1,3 +1,5 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
@@ -55,7 +57,10 @@ describe('player-financial crud.createTransaction', () => {
       // optional fields omitted to ensure undefined is sent
     };
 
-    await createTransaction(supabase as unknown as any, input);
+    await createTransaction(
+      supabase as unknown as SupabaseClient<Database>,
+      input,
+    );
 
     expect(supabase.rpc).toHaveBeenCalledWith('rpc_create_financial_txn', {
       p_casino_id: input.casino_id,
@@ -89,7 +94,7 @@ describe('player-financial crud.createTransaction', () => {
     };
 
     await expect(
-      createTransaction(supabase as unknown as any, input),
+      createTransaction(supabase as unknown as SupabaseClient<Database>, input),
     ).rejects.toBeInstanceOf(DomainError);
   });
 });

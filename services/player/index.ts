@@ -9,11 +9,11 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md §814-888
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CreatePlayerDTO,
   CreatePlayerWithContextDTO,
@@ -22,11 +22,11 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export DTOs for consumers
-export * from "./dtos";
-export * from "./keys";
+export * from './dtos';
+export * from './keys';
 // Note: HTTP fetchers are NOT re-exported per GOV-PAT-001 - import directly from "./http"
 
 // === Service Interface ===

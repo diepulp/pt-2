@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { AlertTriangle, Loader2, Package, Receipt } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { AlertTriangle, Loader2, Package, Receipt } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -13,27 +13,27 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import {
   formatDropEventLabel,
   useDropEvents,
   type TableDropEventDTO,
-} from "@/hooks/table-context/use-drop-events";
+} from '@/hooks/table-context/use-drop-events';
 import {
   calculateChipsetTotal,
   useInventorySnapshots,
   type TableInventorySnapshotDTO,
-} from "@/hooks/table-context/use-inventory-snapshots";
+} from '@/hooks/table-context/use-inventory-snapshots';
 import {
   type TableSessionDTO,
   useCloseTableSession,
-} from "@/hooks/table-context/use-table-session";
+} from '@/hooks/table-context/use-table-session';
 
-import { ArtifactPicker } from "./artifact-picker";
-import { ChipCountCaptureDialog } from "./chip-count-capture-dialog";
-import { DropEventDialog } from "./drop-event-dialog";
+import { ArtifactPicker } from './artifact-picker';
+import { ChipCountCaptureDialog } from './chip-count-capture-dialog';
+import { DropEventDialog } from './drop-event-dialog';
 
 interface CloseSessionDialogProps {
   open: boolean;
@@ -85,7 +85,7 @@ export function CloseSessionDialog({
   );
   const [closingInventorySnapshotId, setClosingInventorySnapshotId] =
     React.useState<string | null>(preselectedSnapshotId ?? null);
-  const [notes, setNotes] = React.useState("");
+  const [notes, setNotes] = React.useState('');
 
   // Child dialog states
   const [showChipCountDialog, setShowChipCountDialog] = React.useState(false);
@@ -101,7 +101,7 @@ export function CloseSessionDialog({
   );
 
   // Mutation
-  const closeMutation = useCloseTableSession(session?.id ?? "", tableId);
+  const closeMutation = useCloseTableSession(session?.id ?? '', tableId);
 
   // Validation
   const hasAtLeastOneArtifact =
@@ -116,7 +116,7 @@ export function CloseSessionDialog({
       setUseInventorySnapshot(!!preselectedSnapshotId);
       setDropEventId(preselectedDropEventId ?? null);
       setClosingInventorySnapshotId(preselectedSnapshotId ?? null);
-      setNotes("");
+      setNotes('');
     }
   }, [open, preselectedDropEventId, preselectedSnapshotId]);
 
@@ -147,15 +147,15 @@ export function CloseSessionDialog({
         notes: notes.trim() || undefined,
       });
 
-      toast.success("Session closed", {
-        description: "Table session has been closed successfully",
+      toast.success('Session closed', {
+        description: 'Table session has been closed successfully',
       });
 
       onOpenChange(false);
     } catch (error) {
-      toast.error("Failed to close session", {
+      toast.error('Failed to close session', {
         description:
-          error instanceof Error ? error.message : "An error occurred",
+          error instanceof Error ? error.message : 'An error occurred',
       });
     }
   }, [
@@ -173,13 +173,13 @@ export function CloseSessionDialog({
   const renderSnapshotItem = React.useCallback(
     (snapshot: TableInventorySnapshotDTO) => {
       const total = calculateChipsetTotal(snapshot.chipset);
-      const time = new Date(snapshot.created_at).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
+      const time = new Date(snapshot.created_at).toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
       });
       return {
         label: `${snapshot.snapshot_type.charAt(0).toUpperCase() + snapshot.snapshot_type.slice(1)} - $${total.toLocaleString()}`,
-        description: `${time}${snapshot.counted_by ? ` • ${snapshot.counted_by}` : ""}`,
+        description: `${time}${snapshot.counted_by ? ` • ${snapshot.counted_by}` : ''}`,
       };
     },
     [],
@@ -211,7 +211,7 @@ export function CloseSessionDialog({
 
           <div className="grid gap-6 py-4">
             {/* Warning if in ACTIVE state (shortcut close) */}
-            {session.status === "ACTIVE" && (
+            {session.status === 'ACTIVE' && (
               <Alert>
                 <AlertTriangle className="size-4 text-amber-500" />
                 <AlertDescription>
@@ -224,7 +224,7 @@ export function CloseSessionDialog({
             {/* Closing Artifacts Section */}
             <div className="space-y-4">
               <h4 className="text-sm font-medium">
-                Closing Artifacts{" "}
+                Closing Artifacts{' '}
                 <span className="text-muted-foreground">
                   (at least one required)
                 </span>
@@ -305,7 +305,7 @@ export function CloseSessionDialog({
                   Closing...
                 </>
               ) : (
-                "Close Session"
+                'Close Session'
               )}
             </Button>
           </DialogFooter>

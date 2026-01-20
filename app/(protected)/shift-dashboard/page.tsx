@@ -7,13 +7,13 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
 
-import { ShiftDashboardPage } from "@/components/shift-dashboard";
+import { ShiftDashboardPage } from '@/components/shift-dashboard';
 
 export const metadata: Metadata = {
-  title: "Shift Dashboard | PT-2",
-  description: "Operational metrics and telemetry for the current shift",
+  title: 'Shift Dashboard | PT-2',
+  description: 'Operational metrics and telemetry for the current shift',
 };
 
 export default function ShiftDashboardRoute() {

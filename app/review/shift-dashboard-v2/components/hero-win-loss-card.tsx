@@ -7,21 +7,21 @@
  * @see IMPLEMENTATION_STRATEGY.md §7.1
  */
 
-"use client";
+'use client';
 
-import { InfoIcon, TrendingDownIcon, TrendingUpIcon } from "lucide-react";
+import { InfoIcon, TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
 
-import { Card } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
-import { getWinLossColor } from "../lib/colors";
-import { formatCurrency, formatCurrencyDelta } from "../lib/format";
+import { getWinLossColor } from '../lib/colors';
+import { formatCurrency, formatCurrencyDelta } from '../lib/format';
 
 export interface HeroWinLossCardProps {
   /** Primary win/loss value in cents (estimated with telemetry) */

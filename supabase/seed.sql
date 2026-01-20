@@ -1,8 +1,15 @@
   -- PT-2 Seed Data
 -- Purpose: Populate database with realistic test data for all rating slip workflows
--- Coverage: 2 casinos, 6 players, 3 tables, all rating slip states
+-- Coverage: 2 casinos, 6 players, 6 tables, all rating slip states
 -- Created: 2025-12-02
+-- Updated: 2026-01-18 (ADR-024, ADR-026, ADR-027, ADR-028 compliance)
 -- NOTE: All UUIDs use valid hex characters (0-9, a-f) only
+--
+-- ADR Compliance:
+--   ADR-024: RLS context derived from staff table (no changes to seed needed)
+--   ADR-026: Visits scoped to gaming day (visit.gaming_day + visit_group_id)
+--   ADR-027: Table bank mode visibility (casino_settings.table_bank_mode, gaming_table.par_total_cents)
+--   ADR-028: Table status standardization (table_session data, inventory snapshots)
 
 -- ============================================================================
 -- SEED SETUP: Temporarily relax constraints for development data
@@ -10,6 +17,21 @@
 -- Drop the staff role constraint (requires user_id for pit_boss/admin)
 -- This is re-added at the end of the seed file
 ALTER TABLE staff DROP CONSTRAINT IF EXISTS chk_staff_role_user_id;
+
+-- Disable gaming day guard trigger for historical seed data
+-- This trigger prevents writes against stale gaming days, which blocks historical inserts
+ALTER TABLE player_financial_transaction DISABLE TRIGGER trg_guard_stale_gaming_day;
+
+-- Disable bidirectional MTL-Finance bridge triggers for seed data
+-- These triggers require RLS context (set_rls_context_from_staff) which isn't available during seeding
+DO $$ BEGIN
+  ALTER TABLE mtl_entry DISABLE TRIGGER trg_derive_finance_from_mtl;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE player_financial_transaction DISABLE TRIGGER trg_derive_mtl_from_finance;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
 
 -- ============================================================================
 -- CLEANUP (for re-seeding)
@@ -48,17 +70,18 @@ INSERT INTO casino (id, company_id, name, location, address, status) VALUES
   );
 
 -- ============================================================================
--- 3. CASINO SETTINGS
+-- 3. CASINO SETTINGS (ADR-027: table_bank_mode added)
 -- ============================================================================
 
-INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold) VALUES
+INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, table_bank_mode) VALUES
   (
     'c5000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
     '06:00:00',
     'America/Los_Angeles',
     3000.00,
-    10000.00
+    10000.00,
+    'INVENTORY_COUNT'  -- ADR-027: Casino 1 uses inventory count model
   ),
   (
     'c5000000-0000-0000-0000-000000000002',
@@ -66,7 +89,8 @@ INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, wat
     '06:00:00',
     'America/Los_Angeles',
     5000.00,
-    10000.00
+    10000.00,
+    'IMPREST_TO_PAR'  -- ADR-027: Casino 2 uses imprest-to-par model
   );
 
 -- ============================================================================
@@ -96,19 +120,23 @@ INSERT INTO staff (id, casino_id, employee_id, first_name, last_name, email, rol
   ('5a000000-0000-0000-0000-000000000010', 'ca000000-0000-0000-0000-000000000002', 'AD002', 'Linda', 'Brown', 'linda.brown@luckystar.com', 'admin', 'active');
 
 -- ============================================================================
--- 5. GAMING TABLES (3 tables - one per game type at Casino 1)
+-- 5. GAMING TABLES (ADR-027: par_total_cents added, ADR-028: status semantics)
 -- ============================================================================
+-- Status values per ADR-028:
+--   'active' = Available for operation (sessions can open)
+--   'inactive' = Not available (maintenance, offline)
+--   'closed' = Permanently decommissioned
 
-INSERT INTO gaming_table (id, casino_id, label, pit, type, status) VALUES
-  -- Casino 1: Active tables
-  ('6a000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'BJ-01', 'Pit A', 'blackjack', 'active'),
-  ('6a000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'PK-01', 'Pit B', 'poker', 'active'),
-  ('6a000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'RL-01', 'Pit A', 'roulette', 'active'),
-  -- Casino 1: Inactive table (for testing state transitions)
-  ('6a000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'BJ-02', 'Pit A', 'blackjack', 'inactive'),
-  -- Casino 2: Tables
-  ('6a000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'BJ-01', 'Main Pit', 'blackjack', 'active'),
-  ('6a000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'BA-01', 'Main Pit', 'baccarat', 'active');
+INSERT INTO gaming_table (id, casino_id, label, pit, type, status, par_total_cents, par_updated_at, par_updated_by) VALUES
+  -- Casino 1: Active tables with par values (ADR-027)
+  ('6a000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'BJ-01', 'Pit A', 'blackjack', 'active', 500000, NOW() - INTERVAL '7 days', '5a000000-0000-0000-0000-000000000001'),  -- $5,000 par
+  ('6a000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'PK-01', 'Pit B', 'poker', 'active', 1000000, NOW() - INTERVAL '7 days', '5a000000-0000-0000-0000-000000000001'),  -- $10,000 par
+  ('6a000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'RL-01', 'Pit A', 'roulette', 'active', 300000, NOW() - INTERVAL '7 days', '5a000000-0000-0000-0000-000000000001'),  -- $3,000 par
+  -- Casino 1: Inactive table (for testing state transitions) - no par set
+  ('6a000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'BJ-02', 'Pit A', 'blackjack', 'inactive', NULL, NULL, NULL),
+  -- Casino 2: Tables with imprest-to-par model (higher par values)
+  ('6a000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'BJ-01', 'Main Pit', 'blackjack', 'active', 2500000, NOW() - INTERVAL '7 days', '5a000000-0000-0000-0000-000000000007'),  -- $25,000 par
+  ('6a000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'BA-01', 'Main Pit', 'baccarat', 'active', 10000000, NOW() - INTERVAL '7 days', '5a000000-0000-0000-0000-000000000007');  -- $100,000 par (VIP)
 
 -- ============================================================================
 -- 6. GAME SETTINGS (Per casino, per game type)
@@ -212,29 +240,35 @@ UPDATE player_loyalty SET current_balance = 75000, tier = 'Diamond', preferences
 WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
 
 -- ============================================================================
--- 10. VISITS
+-- 10. VISITS (ADR-026: gaming_day-scoped with visit_group_id)
 -- ============================================================================
+-- ADR-026 changes:
+--   - gaming_day: Auto-computed by trg_visit_gaming_day trigger
+--   - visit_group_id: Links visits across gaming days for same player session continuity
+-- Per ADR-026 INV-2: At most one active visit per (casino_id, player_id, gaming_day) tuple
 
--- Active visits at Casino 1 (players currently on floor)
-INSERT INTO visit (id, player_id, casino_id, started_at, ended_at) VALUES
-  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 hours', NULL),
-  ('b1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '4 hours', NULL),
-  ('b1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 hour', NULL),
-  ('b1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '30 minutes', NULL);
+-- Active visits at Casino 1 (players currently on floor, today's gaming day)
+-- visit_group_id format: vg<player_suffix>-<casino_suffix> for readability
+INSERT INTO visit (id, player_id, casino_id, started_at, ended_at, visit_group_id) VALUES
+  ('b1000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '2 hours', NULL, 'b9000000-0000-0000-0000-000000000001'),
+  ('b1000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '4 hours', NULL, 'b9000000-0000-0000-0000-000000000002'),
+  ('b1000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 hour', NULL, 'b9000000-0000-0000-0000-000000000003'),
+  ('b1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '30 minutes', NULL, 'b9000000-0000-0000-0000-000000000004');
 
 -- Closed visits (historical data)
-INSERT INTO visit (id, player_id, casino_id, started_at, ended_at) VALUES
-  -- Yesterday's visits
-  ('b1000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '5 hours', NOW() - INTERVAL '1 day' - INTERVAL '1 hour'),
-  ('b1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '8 hours', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
-  ('b1000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '3 hours', NOW() - INTERVAL '1 day'),
+-- Note: Each gaming day gets its own visit, but visit_group_id links them for continuity
+INSERT INTO visit (id, player_id, casino_id, started_at, ended_at, visit_group_id) VALUES
+  -- Yesterday's visits (different gaming day, but same visit_group_id shows return players)
+  ('b1000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '5 hours', NOW() - INTERVAL '1 day' - INTERVAL '1 hour', 'b9000000-0000-0000-0000-000000000001'),
+  ('b1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '8 hours', NOW() - INTERVAL '1 day' - INTERVAL '2 hours', 'b9000000-0000-0000-0000-000000000005'),
+  ('b1000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '3 hours', NOW() - INTERVAL '1 day', 'b9000000-0000-0000-0000-000000000006'),
   -- Last week visits
-  ('b1000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '3 days' - INTERVAL '6 hours', NOW() - INTERVAL '3 days'),
-  ('b1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '5 days' - INTERVAL '10 hours', NOW() - INTERVAL '5 days' - INTERVAL '2 hours');
+  ('b1000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '3 days' - INTERVAL '6 hours', NOW() - INTERVAL '3 days', 'b9000000-0000-0000-0000-000000000002'),
+  ('b1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', NOW() - INTERVAL '5 days' - INTERVAL '10 hours', NOW() - INTERVAL '5 days' - INTERVAL '2 hours', 'b9000000-0000-0000-0000-000000000005');
 
 -- Active visit at Casino 2
-INSERT INTO visit (id, player_id, casino_id, started_at, ended_at) VALUES
-  ('b1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', NOW() - INTERVAL '3 hours', NULL);
+INSERT INTO visit (id, player_id, casino_id, started_at, ended_at, visit_group_id) VALUES
+  ('b1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', NOW() - INTERVAL '3 hours', NULL, 'b9000000-0000-0000-0000-000000000010');
 
 -- ============================================================================
 -- 11. RATING SLIPS (All workflow states)
@@ -552,17 +586,25 @@ INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, ra
   ('f1000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000004', 'd1000000-0000-0000-0000-000000000003', 500.00, 'cash');
 
 -- Yesterday's transactions (closed slips)
+-- Buy-ins use default txn_kind='original', cash-outs (negative) use txn_kind='adjustment'
 INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, created_at) VALUES
-  -- Player 1 buy-in and cash-out
+  -- Player 1 buy-in
   ('f1000000-0000-0000-0000-000000000005', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', 1000.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '4 hours'),
-  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
-  -- Player 5 high-roller session
+  -- Player 5 high-roller session buy-ins
   ('f1000000-0000-0000-0000-000000000007', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', 10000.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '7 hours'),
   ('f1000000-0000-0000-0000-000000000008', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', 5000.00, 'marker', NOW() - INTERVAL '1 day' - INTERVAL '5 hours'),
-  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
-  -- Player 6 small session
-  ('f1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', 200.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
-  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
+  -- Player 6 small session buy-in
+  ('f1000000-0000-0000-0000-000000000010', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', 200.00, 'cash', NOW() - INTERVAL '1 day' - INTERVAL '2 hours');
+
+-- Cash-outs (negative amounts) require txn_kind='adjustment' with reason_code and note
+-- Per chk_adjustment_requires_justification constraint from ADR migration
+INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, txn_kind, reason_code, note, created_at) VALUES
+  -- Player 1 cash-out
+  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', 'adjustment', 'other', 'Player cashed out at session end - chips to cash exchange at cage', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
+  -- Player 5 cash-out
+  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', 'adjustment', 'other', 'VIP player session close - full chip redemption at cage window', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
+  -- Player 6 cash-out
+  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', 'adjustment', 'other', 'Session end cash-out - player redeemed remaining chips', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
 
 -- Casino 2 transactions
 INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type) VALUES
@@ -589,6 +631,327 @@ INSERT INTO dealer_rotation (id, casino_id, table_id, staff_id, started_at, ende
   ('d2000000-0000-0000-0000-000000000007', 'ca000000-0000-0000-0000-000000000002', '6a000000-0000-0000-0000-000000000006', '5a000000-0000-0000-0000-000000000009', NOW() - INTERVAL '2 hours', NULL);
 
 -- ============================================================================
+-- 14a. TABLE SESSIONS (ADR-027/028: Table session lifecycle)
+-- ============================================================================
+-- Session status values per ADR-028:
+--   'OPEN': Reserved (MVP unused) - awaiting opening snapshot
+--   'ACTIVE': Session in operation
+--   'RUNDOWN': Closing procedures started
+--   'CLOSED': Session finalized (historical)
+-- Additional fields per ADR-027:
+--   table_bank_mode: Snapshot of casino mode at open
+--   need_total_cents: Snapshot of table par at open
+--   fills_total_cents, credits_total_cents: Running totals
+--   drop_total_cents, drop_posted_at: Drop posting status
+
+-- Active sessions at Casino 1 (today's gaming day)
+INSERT INTO table_session (
+  id, casino_id, gaming_table_id, gaming_day, status,
+  opened_at, opened_by_staff_id,
+  table_bank_mode, need_total_cents,
+  fills_total_cents, credits_total_cents, drop_total_cents, drop_posted_at
+) VALUES
+  -- BJ-01: Active session with opening snapshot
+  (
+    'e1000000-0000-0000-0000-000000000001',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    CURRENT_DATE,  -- Today's gaming day
+    'ACTIVE',
+    NOW() - INTERVAL '4 hours',
+    '5a000000-0000-0000-0000-000000000001',  -- Marcus Thompson
+    'INVENTORY_COUNT',  -- Snapshot from casino_settings
+    500000,  -- $5,000 par (snapshot from gaming_table)
+    150000,  -- $1,500 fills
+    50000,   -- $500 credits
+    NULL,    -- Drop not posted yet
+    NULL
+  ),
+  -- PK-01: Active session
+  (
+    'e1000000-0000-0000-0000-000000000002',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000002',
+    CURRENT_DATE,
+    'ACTIVE',
+    NOW() - INTERVAL '3 hours',
+    '5a000000-0000-0000-0000-000000000002',  -- Sarah Chen
+    'INVENTORY_COUNT',
+    1000000,  -- $10,000 par
+    0,
+    0,
+    NULL,
+    NULL
+  ),
+  -- RL-01: Active session
+  (
+    'e1000000-0000-0000-0000-000000000003',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000003',
+    CURRENT_DATE,
+    'ACTIVE',
+    NOW() - INTERVAL '2 hours',
+    '5a000000-0000-0000-0000-000000000001',
+    'INVENTORY_COUNT',
+    300000,  -- $3,000 par
+    75000,   -- $750 fills
+    25000,   -- $250 credits
+    NULL,
+    NULL
+  );
+
+-- Closed sessions (yesterday's gaming day)
+INSERT INTO table_session (
+  id, casino_id, gaming_table_id, gaming_day, status,
+  opened_at, opened_by_staff_id,
+  closed_at, closed_by_staff_id,
+  table_bank_mode, need_total_cents,
+  fills_total_cents, credits_total_cents, drop_total_cents, drop_posted_at
+) VALUES
+  -- BJ-01: Closed session from yesterday
+  (
+    'e1000000-0000-0000-0000-000000000004',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    CURRENT_DATE - INTERVAL '1 day',
+    'CLOSED',
+    NOW() - INTERVAL '1 day' - INTERVAL '10 hours',
+    '5a000000-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
+    '5a000000-0000-0000-0000-000000000002',
+    'INVENTORY_COUNT',
+    500000,
+    200000,  -- $2,000 fills
+    100000,  -- $1,000 credits
+    350000,  -- $3,500 drop (posted)
+    NOW() - INTERVAL '1 day'
+  );
+
+-- Active sessions at Casino 2 (imprest-to-par model)
+INSERT INTO table_session (
+  id, casino_id, gaming_table_id, gaming_day, status,
+  opened_at, opened_by_staff_id,
+  table_bank_mode, need_total_cents,
+  fills_total_cents, credits_total_cents, drop_total_cents, drop_posted_at
+) VALUES
+  -- Casino 2 BJ-01: Active session
+  (
+    'e1000000-0000-0000-0000-000000000005',
+    'ca000000-0000-0000-0000-000000000002',
+    '6a000000-0000-0000-0000-000000000005',
+    CURRENT_DATE,
+    'ACTIVE',
+    NOW() - INTERVAL '5 hours',
+    '5a000000-0000-0000-0000-000000000007',  -- David Kim
+    'IMPREST_TO_PAR',  -- Casino 2 uses imprest model
+    2500000,  -- $25,000 par
+    500000,   -- $5,000 fills
+    0,
+    NULL,
+    NULL
+  ),
+  -- Casino 2 BA-01: Active VIP baccarat session
+  (
+    'e1000000-0000-0000-0000-000000000006',
+    'ca000000-0000-0000-0000-000000000002',
+    '6a000000-0000-0000-0000-000000000006',
+    CURRENT_DATE,
+    'ACTIVE',
+    NOW() - INTERVAL '4 hours',
+    '5a000000-0000-0000-0000-000000000007',
+    'IMPREST_TO_PAR',
+    10000000,  -- $100,000 par (VIP table)
+    2000000,   -- $20,000 fills
+    1500000,   -- $15,000 credits
+    NULL,
+    NULL
+  );
+
+-- ============================================================================
+-- 14b. TABLE INVENTORY SNAPSHOTS (ADR-027: Opening/closing counts)
+-- ============================================================================
+-- snapshot_type: 'open', 'close', or 'rundown' (per CHECK constraint)
+-- Linked to table_session via session_id for rundown computation
+
+INSERT INTO table_inventory_snapshot (
+  id, casino_id, table_id, session_id, snapshot_type,
+  chipset, total_cents, counted_by, created_at
+) VALUES
+  -- Opening snapshot for BJ-01 today
+  (
+    'e2000000-0000-0000-0000-000000000001',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000001',
+    'open',
+    '{"100": 20, "500": 10, "1000": 15, "5000": 5}',  -- $2,500 + $5,000 + $15,000 + $25,000 = $47,500
+    4750000,  -- $47,500 total
+    '5a000000-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '4 hours'
+  ),
+  -- Opening snapshot for PK-01 today
+  (
+    'e2000000-0000-0000-0000-000000000002',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000002',
+    'e1000000-0000-0000-0000-000000000002',
+    'open',
+    '{"100": 50, "500": 20, "1000": 30, "5000": 10}',
+    9500000,  -- $95,000 total
+    '5a000000-0000-0000-0000-000000000002',
+    NOW() - INTERVAL '3 hours'
+  ),
+  -- Opening snapshot for RL-01 today
+  (
+    'e2000000-0000-0000-0000-000000000003',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000003',
+    'e1000000-0000-0000-0000-000000000003',
+    'open',
+    '{"25": 40, "100": 15, "500": 5}',
+    400000,  -- $4,000 total
+    '5a000000-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '2 hours'
+  ),
+  -- Opening/closing for yesterday's BJ-01 session
+  (
+    'e2000000-0000-0000-0000-000000000004',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000004',
+    'open',
+    '{"100": 25, "500": 10, "1000": 10, "5000": 5}',
+    4250000,
+    '5a000000-0000-0000-0000-000000000001',
+    NOW() - INTERVAL '1 day' - INTERVAL '10 hours'
+  ),
+  (
+    'e2000000-0000-0000-0000-000000000005',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    'e1000000-0000-0000-0000-000000000004',
+    'close',
+    '{"100": 30, "500": 12, "1000": 12, "5000": 6}',
+    5100000,  -- $51,000 closing (variance from opening)
+    '5a000000-0000-0000-0000-000000000002',
+    NOW() - INTERVAL '1 day' - INTERVAL '2 hours'
+  ),
+  -- Opening snapshot for Casino 2 VIP baccarat
+  (
+    'e2000000-0000-0000-0000-000000000006',
+    'ca000000-0000-0000-0000-000000000002',
+    '6a000000-0000-0000-0000-000000000006',
+    'e1000000-0000-0000-0000-000000000006',
+    'open',
+    '{"1000": 50, "5000": 30, "25000": 10}',
+    45000000,  -- $450,000 total (VIP)
+    '5a000000-0000-0000-0000-000000000007',
+    NOW() - INTERVAL '4 hours'
+  );
+
+-- Update table_session with opening inventory snapshot IDs
+UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000001' WHERE id = 'e1000000-0000-0000-0000-000000000001';
+UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000002' WHERE id = 'e1000000-0000-0000-0000-000000000002';
+UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000003' WHERE id = 'e1000000-0000-0000-0000-000000000003';
+UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000004', closing_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000005' WHERE id = 'e1000000-0000-0000-0000-000000000004';
+UPDATE table_session SET opening_inventory_snapshot_id = 'e2000000-0000-0000-0000-000000000006' WHERE id = 'e1000000-0000-0000-0000-000000000006';
+
+-- ============================================================================
+-- 14c. TABLE BUY-IN TELEMETRY (GAP-TBL-RUNDOWN: Finance-to-telemetry bridge)
+-- ============================================================================
+-- This table is populated by the fn_bridge_finance_to_telemetry trigger
+-- For seed data, we manually create entries that match existing financial transactions
+-- telemetry_kind: 'RATED_BUYIN' for buy-ins linked to rating slips
+-- source: 'finance_bridge' indicates automatic derivation from player_financial_transaction
+
+INSERT INTO table_buyin_telemetry (
+  id, casino_id, table_id, gaming_day, telemetry_kind,
+  amount_cents, tender_type, actor_id, rating_slip_id, visit_id,
+  source, occurred_at, created_at
+) VALUES
+  -- Today's buy-ins (from section 13 financial transactions)
+  -- Player 1 buy-in at BJ-01
+  (
+    'e3000000-0000-0000-0000-000000000001',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    CURRENT_DATE,
+    'RATED_BUYIN',
+    100000,  -- $1,000
+    'cash',
+    '5a000000-0000-0000-0000-000000000001',
+    'd1000000-0000-0000-0000-000000000001',
+    'b1000000-0000-0000-0000-000000000001',
+    'finance_bridge',
+    NOW() - INTERVAL '90 minutes',
+    NOW() - INTERVAL '90 minutes'
+  ),
+  -- Player 2 buy-in at BJ-01 (paused session)
+  (
+    'e3000000-0000-0000-0000-000000000002',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000001',
+    CURRENT_DATE,
+    'RATED_BUYIN',
+    500000,  -- $5,000
+    'cash',
+    '5a000000-0000-0000-0000-000000000001',
+    'd1000000-0000-0000-0000-000000000004',
+    'b1000000-0000-0000-0000-000000000002',
+    'finance_bridge',
+    NOW() - INTERVAL '3 hours',
+    NOW() - INTERVAL '3 hours'
+  ),
+  -- Player 3 buy-in at PK-01
+  (
+    'e3000000-0000-0000-0000-000000000003',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000002',
+    CURRENT_DATE,
+    'RATED_BUYIN',
+    200000,  -- $2,000 marker
+    'marker',
+    '5a000000-0000-0000-0000-000000000002',
+    'd1000000-0000-0000-0000-000000000002',
+    'b1000000-0000-0000-0000-000000000003',
+    'finance_bridge',
+    NOW() - INTERVAL '45 minutes',
+    NOW() - INTERVAL '45 minutes'
+  ),
+  -- Player 4 buy-in at RL-01
+  (
+    'e3000000-0000-0000-0000-000000000004',
+    'ca000000-0000-0000-0000-000000000001',
+    '6a000000-0000-0000-0000-000000000003',
+    CURRENT_DATE,
+    'RATED_BUYIN',
+    50000,  -- $500
+    'cash',
+    '5a000000-0000-0000-0000-000000000001',
+    'd1000000-0000-0000-0000-000000000003',
+    'b1000000-0000-0000-0000-000000000004',
+    'finance_bridge',
+    NOW() - INTERVAL '15 minutes',
+    NOW() - INTERVAL '15 minutes'
+  ),
+  -- Casino 2: VIP baccarat buy-in
+  (
+    'e3000000-0000-0000-0000-000000000005',
+    'ca000000-0000-0000-0000-000000000002',
+    '6a000000-0000-0000-0000-000000000006',
+    CURRENT_DATE,
+    'RATED_BUYIN',
+    5000000,  -- $50,000
+    'cash',
+    '5a000000-0000-0000-0000-000000000007',
+    'd1000000-0000-0000-0000-000000000010',
+    'b1000000-0000-0000-0000-000000000010',
+    'finance_bridge',
+    NOW() - INTERVAL '2 hours',
+    NOW() - INTERVAL '2 hours'
+  );
+
+-- ============================================================================
 -- 15. AUDIT LOG ENTRIES (Sample compliance records)
 -- ============================================================================
 
@@ -605,15 +968,17 @@ INSERT INTO audit_log (id, casino_id, domain, actor_id, action, details) VALUES
 -- 16. MTL ENTRIES (Compliance tracking)
 -- ============================================================================
 
-INSERT INTO mtl_entry (id, patron_uuid, casino_id, staff_id, rating_slip_id, visit_id, amount, direction, area, txn_type) VALUES
+-- NOTE: buy_in and cash_out entries MUST have idempotency_key LIKE 'fin:%' per
+-- constraint mtl_financial_types_must_be_derived (PRD-MTL-VIEW-MODAL-KILL-REVERSE-BRIDGE)
+INSERT INTO mtl_entry (id, patron_uuid, casino_id, staff_id, rating_slip_id, visit_id, amount, direction, area, txn_type, idempotency_key) VALUES
   -- Player 5's large buy-in yesterday (over CTR threshold)
-  ('a5000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 10000.00, 'in', 'table', 'buy_in'),
-  -- Player 5's additional marker (credit taken at cage)
-  ('a5000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000002', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 5000.00, 'in', 'cage', 'marker'),
+  ('a5000000-0000-0000-0000-000000000001', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 10000.00, 'in', 'table', 'buy_in', 'fin:seed-mtl-001'),
+  -- Player 5's additional marker (credit taken at cage) - marker type doesn't require fin: prefix
+  ('a5000000-0000-0000-0000-000000000002', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000002', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 5000.00, 'in', 'cage', 'marker', NULL),
   -- Player 5's cash-out (chips to cash at cage)
-  ('a5000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 18000.00, 'out', 'cage', 'cash_out'),
+  ('a5000000-0000-0000-0000-000000000003', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', '5a000000-0000-0000-0000-000000000001', 'd1000000-0000-0000-0000-000000000006', 'b1000000-0000-0000-0000-000000000006', 18000.00, 'out', 'cage', 'cash_out', 'fin:seed-mtl-003'),
   -- Casino 2 high-roller current session
-  ('a5000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', '5a000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000010', 'b1000000-0000-0000-0000-000000000010', 50000.00, 'in', 'table', 'buy_in');
+  ('a5000000-0000-0000-0000-000000000004', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', '5a000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000010', 'b1000000-0000-0000-0000-000000000010', 50000.00, 'in', 'table', 'buy_in', 'fin:seed-mtl-004');
 
 -- MTL audit notes
 INSERT INTO mtl_audit_note (id, mtl_entry_id, staff_id, note) VALUES
@@ -708,6 +1073,22 @@ INSERT INTO auth.identities (
 ) ON CONFLICT (provider, provider_id) DO NOTHING;
 
 -- ============================================================================
+-- SEED TEARDOWN: Re-enable constraints
+-- ============================================================================
+-- Re-enable gaming day guard trigger
+ALTER TABLE player_financial_transaction ENABLE TRIGGER trg_guard_stale_gaming_day;
+
+-- Re-enable bidirectional MTL-Finance bridge triggers
+DO $$ BEGIN
+  ALTER TABLE mtl_entry ENABLE TRIGGER trg_derive_finance_from_mtl;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE player_financial_transaction ENABLE TRIGGER trg_derive_mtl_from_finance;
+EXCEPTION WHEN undefined_object THEN NULL;
+END $$;
+
+-- ============================================================================
 -- SEED COMPLETE
 -- ============================================================================
 --
@@ -720,22 +1101,45 @@ INSERT INTO auth.identities (
 --   Password: devpass123
 --   Staff: Marcus Thompson (Pit Boss, Casino 1)
 --
+-- ADR Compliance Summary:
+--   ADR-024: RLS context derived from staff table (no seed changes needed)
+--   ADR-026: Visits include gaming_day (auto-computed) + visit_group_id
+--   ADR-027: casino_settings.table_bank_mode, gaming_table.par_total_cents
+--   ADR-028: Table sessions with status lifecycle (ACTIVE/RUNDOWN/CLOSED)
+--
 -- Summary:
 -- - 1 Company
 -- - 2 Casinos with settings
+--     - Casino 1: INVENTORY_COUNT bank mode (ADR-027)
+--     - Casino 2: IMPREST_TO_PAR bank mode (ADR-027)
 -- - 10 Staff members (pit bosses, dealers, admins)
 -- - 6 Gaming tables (3 active at Casino 1, 1 inactive, 2 at Casino 2)
+--     - All active tables have par_total_cents set (ADR-027)
 -- - 6 Game settings (per casino, per game type)
 --     - Includes points_conversion_rate and point_multiplier (ISSUE-752833A6)
 -- - 6 Players with casino enrollments
 -- - 9 Player loyalty records (with tiers)
 -- - 10 Visits (4 active, 6 closed)
+--     - All visits include visit_group_id (ADR-026)
+--     - gaming_day auto-computed by trigger (ADR-026)
 -- - 10 Rating slips:
 --     - 4 Open (active gameplay)
 --     - 1 Paused (player on break, with pause_intervals)
 --     - 5 Closed (completed sessions, 1 with pause_intervals history)
 --     - All slips include policy_snapshot.loyalty (ADR-019 D2)
 --     - All slips include accrual_kind='loyalty' (ADR-014)
+-- - 6 Table sessions (ADR-027/028):
+--     - 3 Active at Casino 1 (today's gaming day)
+--     - 1 Closed at Casino 1 (yesterday, with drop posted)
+--     - 2 Active at Casino 2 (VIP tables)
+--     - All include table_bank_mode snapshot, need_total_cents
+-- - 6 Table inventory snapshots (ADR-027):
+--     - Opening snapshots for all active sessions
+--     - Opening + closing for yesterday's closed session
+--     - Includes total_cents + session_id linkage
+-- - 5 Table buy-in telemetry entries (GAP-TBL-RUNDOWN):
+--     - RATED_BUYIN entries for today's financial transactions
+--     - source='finance_bridge' indicates trigger derivation
 -- - pause_intervals stored inline on rating_slip (NEW ARCHITECTURE)
 -- - policy_snapshot JSONB with loyalty accrual parameters (ISSUE-752833A6)
 -- - accrual_kind discriminator for loyalty vs compliance_only (ADR-014)

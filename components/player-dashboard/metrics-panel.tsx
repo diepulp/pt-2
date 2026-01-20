@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { BarChart3, TrendingUp } from "lucide-react";
-import * as React from "react";
+import { BarChart3, TrendingUp } from 'lucide-react';
+import * as React from 'react';
 
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { cn } from "@/lib/utils";
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { cn } from '@/lib/utils';
 
-import { UnderDevelopmentIndicator } from "./under-development-indicator";
+import { UnderDevelopmentIndicator } from './under-development-indicator';
 
 interface MetricsPanelProps {
   className?: string;
@@ -19,7 +19,7 @@ export function MetricsPanel({ className }: MetricsPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -42,7 +42,7 @@ export function MetricsPanel({ className }: MetricsPanelProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col",
+        'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col',
         className,
       )}
     >

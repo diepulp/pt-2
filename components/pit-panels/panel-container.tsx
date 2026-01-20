@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Activity,
@@ -7,39 +7,44 @@ import {
   LayoutGrid,
   Package,
   TrendingUp,
-} from "lucide-react";
-import * as React from "react";
+  Users,
+} from 'lucide-react';
+import * as React from 'react';
 
-import type { PitMapPit } from "@/components/table/pit-map-selector";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import type { PitMapPit } from '@/components/table/pit-map-selector';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/resizable';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { RealtimeStatusIndicator } from "@/hooks/dashboard";
+} from '@/components/ui/tooltip';
+import {
+  RealtimeStatusIndicator,
+  useCasinoActivePlayers,
+} from '@/hooks/dashboard';
 import type {
   DashboardTableDTO,
   DashboardStats,
-} from "@/hooks/dashboard/types";
-import { usePitDashboardUI } from "@/hooks/ui";
-import { useSwipe } from "@/hooks/utilities";
-import { cn } from "@/lib/utils";
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
-import type { PanelType } from "@/store/pit-dashboard-store";
+} from '@/hooks/dashboard/types';
+import { usePitDashboardUI } from '@/hooks/ui';
+import { useSwipe } from '@/hooks/utilities';
+import { cn } from '@/lib/utils';
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
+import type { PanelType } from '@/store/pit-dashboard-store';
 
-import { ActivityPanel } from "./activity-panel";
-import { AnalyticsPanel } from "./analytics-panel";
-import { InventoryPanel } from "./inventory-panel";
-import { TablesPanel } from "./tables-panel";
+import { ActivityPanel } from './activity-panel';
+import { AnalyticsPanel } from './analytics-panel';
+import { ClosedSessionsPanel } from './closed-sessions-panel';
+import { InventoryPanel } from './inventory-panel';
+import { TablesPanel } from './tables-panel';
 
 interface SeatOccupant {
   firstName: string;
@@ -117,17 +122,20 @@ export function PanelContainer({
   // PRD-013: Consume UI state from Zustand store
   const { activePanel, setActivePanel } = usePitDashboardUI();
 
+  // Casino-wide active players for notification count
+  const { data: casinoActivePlayers } = useCasinoActivePlayers();
+
   const [isCollapsed, setIsCollapsed] = React.useState(true);
   const drawerRef = React.useRef<HTMLDivElement>(null);
 
   // Detect platform for keyboard shortcuts
   const [isMac, setIsMac] = React.useState(false);
   React.useEffect(() => {
-    setIsMac(navigator.platform.toUpperCase().indexOf("MAC") >= 0);
+    setIsMac(navigator.platform.toUpperCase().indexOf('MAC') >= 0);
   }, []);
 
   // Cross-platform modifier key display
-  const modKey = isMac ? "⌘" : "Ctrl+";
+  const modKey = isMac ? '⌘' : 'Ctrl+';
 
   // Close drawer when clicking outside
   React.useEffect(() => {
@@ -141,54 +149,62 @@ export function PanelContainer({
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isCollapsed]);
 
   // Notification counts from real data
   const notifications = React.useMemo(
     () => ({
       tables: activeSlips.length,
-      activity: activeSlips.length,
+      activity: casinoActivePlayers?.count ?? 0, // Casino-wide active player count
       inventory: 0, // TODO: Wire to inventory data when available
       analytics: 0,
     }),
-    [activeSlips.length],
+    [activeSlips.length, casinoActivePlayers?.count],
   );
 
   const panels = React.useMemo(
     () => [
       {
-        id: "tables",
-        label: "Tables",
-        description: "",
+        id: 'tables',
+        label: 'Tables',
+        description: '',
         icon: LayoutGrid,
         shortcut: `${modKey}1`,
         notifications: notifications.tables,
       },
       {
-        id: "activity",
-        label: "Activity",
-        description: "",
+        id: 'activity',
+        label: 'Active Sessions',
+        description: '',
         icon: Activity,
         shortcut: `${modKey}2`,
         notifications: notifications.activity,
       },
       {
-        id: "inventory",
-        label: "Inventory",
-        description: "",
+        id: 'inventory',
+        label: 'Inventory',
+        description: '',
         icon: Package,
         shortcut: `${modKey}3`,
         notifications: notifications.inventory,
       },
       {
-        id: "analytics",
-        label: "Analytics",
-        description: "",
+        id: 'analytics',
+        label: 'Analytics',
+        description: '',
         icon: TrendingUp,
         shortcut: `${modKey}4`,
         notifications: notifications.analytics,
+      },
+      {
+        id: 'closed-sessions',
+        label: 'Sessions',
+        description: '',
+        icon: Users,
+        shortcut: `${modKey}5`,
+        notifications: 0,
       },
     ],
     [modKey, notifications],
@@ -219,33 +235,37 @@ export function PanelContainer({
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.metaKey || e.ctrlKey) {
         switch (e.key) {
-          case "1":
+          case '1':
             e.preventDefault();
-            setActivePanel("tables");
+            setActivePanel('tables');
             break;
-          case "2":
+          case '2':
             e.preventDefault();
-            setActivePanel("activity");
+            setActivePanel('activity');
             break;
-          case "3":
+          case '3':
             e.preventDefault();
-            setActivePanel("inventory");
+            setActivePanel('inventory');
             break;
-          case "4":
+          case '4':
             e.preventDefault();
-            setActivePanel("analytics");
+            setActivePanel('analytics');
+            break;
+          case '5':
+            e.preventDefault();
+            setActivePanel('closed-sessions');
             break;
         }
       }
     };
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const renderActivePanel = () => {
     switch (activePanel) {
-      case "tables":
+      case 'tables':
         return (
           <TablesPanel
             tableName={tableName}
@@ -262,27 +282,27 @@ export function PanelContainer({
             onSelectPit={onSelectPit}
           />
         );
-      case "activity":
-        return (
-          <ActivityPanel
-            tableName={tableName}
-            activeSlips={activeSlips}
-            seats={seats}
-            isLoading={isLoading}
-            onSlipClick={onSlipClick}
-          />
-        );
-      case "inventory":
+      case 'activity':
+        return <ActivityPanel onSlipClick={onSlipClick} />;
+      case 'inventory':
         return (
           <InventoryPanel
             tableName={tableName}
-            tableId={selectedTable?.id ?? ""}
+            tableId={selectedTable?.id ?? ''}
             casinoId={casinoId}
             gamingDay={gamingDay?.date}
           />
         );
-      case "analytics":
+      case 'analytics':
         return <AnalyticsPanel tableName={tableName} />;
+      case 'closed-sessions':
+        return (
+          <ClosedSessionsPanel
+            casinoId={casinoId}
+            gamingDay={gamingDay?.date ?? null}
+            onStartFromPrevious={onSlipClick}
+          />
+        );
       default:
         return (
           <TablesPanel
@@ -306,9 +326,9 @@ export function PanelContainer({
   const mainPanel = (
     <div
       className={cn(
-        "h-full flex flex-col",
-        !mobileMode && "pl-14", // Only add padding for sidebar on desktop
-        mobileMode && "pb-16", // Add padding for bottom navigation tabs on mobile
+        'h-full flex flex-col',
+        !mobileMode && 'pl-14', // Only add padding for sidebar on desktop
+        mobileMode && 'pb-16', // Add padding for bottom navigation tabs on mobile
       )}
     >
       {/* Panel content with swipe handlers for mobile */}
@@ -319,8 +339,8 @@ export function PanelContainer({
             <div
               key={id}
               className={cn(
-                "w-1.5 h-1.5 rounded-full transition-all duration-200",
-                activePanel === id ? "w-4 bg-accent" : "bg-muted-foreground/30",
+                'w-1.5 h-1.5 rounded-full transition-all duration-200',
+                activePanel === id ? 'w-4 bg-accent' : 'bg-muted-foreground/30',
               )}
             />
           ))}
@@ -346,41 +366,41 @@ export function PanelContainer({
                     key={panel.id}
                     value={panel.id}
                     className={cn(
-                      "flex flex-col items-center gap-0.5 h-full py-1.5",
-                      "data-[state=active]:bg-accent/10 data-[state=active]:text-accent",
-                      "hover:bg-muted/50 transition-colors",
+                      'flex flex-col items-center gap-0.5 h-full py-1.5',
+                      'data-[state=active]:bg-accent/10 data-[state=active]:text-accent',
+                      'hover:bg-muted/50 transition-colors',
                     )}
                   >
                     <div className="relative">
                       <Icon
                         className={cn(
-                          "h-5 w-5",
-                          isActive ? "text-accent" : "text-muted-foreground",
+                          'h-5 w-5',
+                          isActive ? 'text-accent' : 'text-muted-foreground',
                         )}
                       />
                       {panel.notifications > 0 && (
                         <div
                           className={cn(
-                            "absolute -top-2 -right-2 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground",
-                            "flex items-center justify-center font-bold",
+                            'absolute -top-2 -right-2 h-4 w-4 rounded-full bg-accent text-[10px] text-accent-foreground',
+                            'flex items-center justify-center font-bold',
                           )}
                         >
-                          {panel.notifications > 9 ? "9+" : panel.notifications}
+                          {panel.notifications > 9 ? '9+' : panel.notifications}
                         </div>
                       )}
                     </div>
                     <span
                       className={cn(
-                        "text-[10px] font-medium",
-                        isActive ? "text-accent" : "text-muted-foreground",
+                        'text-[10px] font-medium',
+                        isActive ? 'text-accent' : 'text-muted-foreground',
                       )}
                     >
                       {panel.label}
                     </span>
                     <kbd
                       className={cn(
-                        "absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/60",
-                        isActive && "text-accent/60",
+                        'absolute top-1 right-2 text-[8px] font-mono text-muted-foreground/60',
+                        isActive && 'text-accent/60',
                       )}
                     >
                       {panel.shortcut}
@@ -397,7 +417,7 @@ export function PanelContainer({
 
   return (
     <div
-      className={cn("relative h-full bg-background overflow-hidden", className)}
+      className={cn('relative h-full bg-background overflow-hidden', className)}
     >
       {/* Panel Content - Full width, with left padding for collapsed drawer on desktop and bottom padding for mobile tabs */}
       {reviewMode && !mobileMode ? (
@@ -461,8 +481,8 @@ export function PanelContainer({
         <div
           ref={drawerRef}
           className={cn(
-            "absolute inset-y-0 left-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 z-20 shadow-lg",
-            isCollapsed ? "w-14" : "w-52",
+            'absolute inset-y-0 left-0 flex flex-col border-r border-border/40 bg-background transition-all duration-300 z-20 shadow-lg',
+            isCollapsed ? 'w-14' : 'w-52',
           )}
         >
           {/* Collapse Toggle Header */}
@@ -480,8 +500,8 @@ export function PanelContainer({
                     size="icon"
                     onClick={() => setIsCollapsed(!isCollapsed)}
                     className={cn(
-                      "h-7 w-7 text-muted-foreground hover:text-foreground",
-                      isCollapsed && "mx-auto",
+                      'h-7 w-7 text-muted-foreground hover:text-foreground',
+                      isCollapsed && 'mx-auto',
                     )}
                   >
                     {isCollapsed ? (
@@ -492,7 +512,7 @@ export function PanelContainer({
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="right" sideOffset={8}>
-                  {isCollapsed ? "Expand panel" : "Collapse panel"}
+                  {isCollapsed ? 'Expand panel' : 'Collapse panel'}
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -516,29 +536,29 @@ export function PanelContainer({
                       key={panel.id}
                       value={panel.id}
                       className={cn(
-                        "w-full justify-start gap-3 px-3 py-2.5 rounded-lg",
-                        "transition-all duration-200",
-                        "data-[state=active]:bg-accent/10",
-                        "data-[state=active]:text-accent",
-                        "data-[state=active]:border-accent/30",
-                        "data-[state=active]:shadow-sm",
-                        "hover:bg-muted/50",
-                        isCollapsed && "justify-center px-2",
+                        'w-full justify-start gap-3 px-3 py-2.5 rounded-lg',
+                        'transition-all duration-200',
+                        'data-[state=active]:bg-accent/10',
+                        'data-[state=active]:text-accent',
+                        'data-[state=active]:border-accent/30',
+                        'data-[state=active]:shadow-sm',
+                        'hover:bg-muted/50',
+                        isCollapsed && 'justify-center px-2',
                       )}
                     >
                       <div className="relative">
                         <Icon
                           className={cn(
-                            "h-5 w-5",
-                            isActive ? "text-accent" : "text-muted-foreground",
+                            'h-5 w-5',
+                            isActive ? 'text-accent' : 'text-muted-foreground',
                           )}
                         />
                         {panel.notifications > 0 && (
                           <Badge
                             className={cn(
-                              "absolute -top-2 -right-2 h-4 w-4 p-0 text-[10px]",
-                              "bg-accent text-accent-foreground border-0",
-                              "flex items-center justify-center",
+                              'absolute -top-2 -right-2 h-4 w-4 p-0 text-[10px]',
+                              'bg-accent text-accent-foreground border-0',
+                              'flex items-center justify-center',
                             )}
                           >
                             {panel.notifications}
@@ -579,8 +599,8 @@ export function PanelContainer({
           {/* Bottom info - collapsed shows only status indicator */}
           <div
             className={cn(
-              "border-t border-border/40",
-              isCollapsed ? "p-2 flex justify-center" : "p-3 space-y-2",
+              'border-t border-border/40',
+              isCollapsed ? 'p-2 flex justify-center' : 'p-3 space-y-2',
             )}
           >
             {isCollapsed ? (

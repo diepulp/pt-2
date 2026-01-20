@@ -10,7 +10,7 @@
  * Security: Uses withServerAction middleware for auth, RLS, audit.
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -18,11 +18,11 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createVisitService } from "@/services/visit";
-import { startFromPreviousSchema } from "@/services/visit/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createVisitService } from '@/services/visit';
+import { startFromPreviousSchema } from '@/services/visit/schemas';
 
 /**
  * POST /api/v1/visits/start-from-previous
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: response,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -84,8 +84,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "start-from-previous",
+        domain: 'visit',
+        action: 'start-from-previous',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return 201 Created for new visit
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

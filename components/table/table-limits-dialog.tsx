@@ -1,9 +1,9 @@
-"use client";
+'use client';
 
-import { Pencil } from "lucide-react";
-import * as React from "react";
+import { Pencil } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -11,10 +11,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface TableLimitsDialogProps {
   open: boolean;
@@ -46,31 +46,31 @@ export function TableLimitsDialog({
 }: TableLimitsDialogProps) {
   const [minBet, setMinBet] = React.useState(currentMinBet);
   const [maxBet, setMaxBet] = React.useState(currentMaxBet);
-  const [error, setError] = React.useState<string>("");
+  const [error, setError] = React.useState<string>('');
 
   // Reset form when dialog opens with new values
   React.useEffect(() => {
     if (open) {
       setMinBet(currentMinBet);
       setMaxBet(currentMaxBet);
-      setError("");
+      setError('');
     }
   }, [open, currentMinBet, currentMaxBet]);
 
   const validateInputs = (): boolean => {
     if (minBet < 0) {
-      setError("Minimum bet cannot be negative");
+      setError('Minimum bet cannot be negative');
       return false;
     }
     if (maxBet < 0) {
-      setError("Maximum bet cannot be negative");
+      setError('Maximum bet cannot be negative');
       return false;
     }
     if (minBet > maxBet) {
-      setError("Minimum bet cannot exceed maximum bet");
+      setError('Minimum bet cannot exceed maximum bet');
       return false;
     }
-    setError("");
+    setError('');
     return true;
   };
 
@@ -82,28 +82,28 @@ export function TableLimitsDialog({
       onOpenChange(false);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to update table limits",
+        err instanceof Error ? err.message : 'Failed to update table limits',
       );
     }
   };
 
-  const handleQuickIncrement = (field: "min" | "max", amount: number): void => {
-    if (field === "min") {
+  const handleQuickIncrement = (field: 'min' | 'max', amount: number): void => {
+    if (field === 'min') {
       setMinBet((prev) => Math.max(0, prev + amount));
     } else {
       setMaxBet((prev) => Math.max(0, prev + amount));
     }
   };
 
-  const handleInputChange = (field: "min" | "max", value: string): void => {
-    const numValue = value === "" ? 0 : parseInt(value, 10);
+  const handleInputChange = (field: 'min' | 'max', value: string): void => {
+    const numValue = value === '' ? 0 : parseInt(value, 10);
     if (!isNaN(numValue)) {
-      if (field === "min") {
+      if (field === 'min') {
         setMinBet(numValue);
       } else {
         setMaxBet(numValue);
       }
-      setError("");
+      setError('');
     }
   };
 
@@ -137,9 +137,9 @@ export function TableLimitsDialog({
                   type="number"
                   min="0"
                   value={minBet}
-                  onChange={(e) => handleInputChange("min", e.target.value)}
+                  onChange={(e) => handleInputChange('min', e.target.value)}
                   className="pl-7"
-                  aria-invalid={!!error && error.includes("Minimum")}
+                  aria-invalid={!!error && error.includes('Minimum')}
                   disabled={isLoading}
                 />
               </div>
@@ -149,7 +149,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("min", 25)}
+                onClick={() => handleQuickIncrement('min', 25)}
                 disabled={isLoading}
               >
                 +$25
@@ -158,7 +158,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("min", 100)}
+                onClick={() => handleQuickIncrement('min', 100)}
                 disabled={isLoading}
               >
                 +$100
@@ -167,7 +167,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("min", 500)}
+                onClick={() => handleQuickIncrement('min', 500)}
                 disabled={isLoading}
               >
                 +$500
@@ -190,9 +190,9 @@ export function TableLimitsDialog({
                   type="number"
                   min="0"
                   value={maxBet}
-                  onChange={(e) => handleInputChange("max", e.target.value)}
+                  onChange={(e) => handleInputChange('max', e.target.value)}
                   className="pl-7"
-                  aria-invalid={!!error && error.includes("Maximum")}
+                  aria-invalid={!!error && error.includes('Maximum')}
                   disabled={isLoading}
                 />
               </div>
@@ -202,7 +202,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("max", 25)}
+                onClick={() => handleQuickIncrement('max', 25)}
                 disabled={isLoading}
               >
                 +$25
@@ -211,7 +211,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("max", 100)}
+                onClick={() => handleQuickIncrement('max', 100)}
                 disabled={isLoading}
               >
                 +$100
@@ -220,7 +220,7 @@ export function TableLimitsDialog({
                 type="button"
                 variant="outline"
                 size="sm"
-                onClick={() => handleQuickIncrement("max", 500)}
+                onClick={() => handleQuickIncrement('max', 500)}
                 disabled={isLoading}
               >
                 +$500
@@ -248,7 +248,7 @@ export function TableLimitsDialog({
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? "Saving..." : "Save Changes"}
+            {isLoading ? 'Saving...' : 'Save Changes'}
           </Button>
         </DialogFooter>
       </DialogContent>

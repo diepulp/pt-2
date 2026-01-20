@@ -7,13 +7,13 @@
  * @see EXECUTION-SPEC-PRD-006.md WS3
  */
 
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
 import type {
   GamingTableDTO,
   GamingTableWithDealerDTO,
   TableStatus,
   GameType,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 
 // === Filter Types ===
 
@@ -34,7 +34,7 @@ export type DashboardTablesFilters = {
  */
 export type DashboardSlipsFilters = {
   /** Filter by slip status (open, paused, closed) */
-  status?: "open" | "paused" | "closed";
+  status?: 'open' | 'paused' | 'closed';
 };
 
 // === Response Types ===
@@ -67,5 +67,5 @@ export type {
   GamingTableWithDealerDTO,
   TableStatus,
   GameType,
-} from "@/services/table-context/dtos";
-export type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+} from '@/services/table-context/dtos';
+export type { RatingSlipDTO } from '@/services/rating-slip/dtos';

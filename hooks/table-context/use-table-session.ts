@@ -9,20 +9,20 @@
  * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
   TableSessionDTO,
   TableSessionStatus,
-} from "@/services/table-context/dtos";
+} from '@/services/table-context/dtos';
 import {
   closeTableSession,
   fetchCurrentTableSession,
   openTableSession,
   startTableRundown,
-} from "@/services/table-context/http";
-import { tableContextKeys } from "@/services/table-context/keys";
-import type { CloseTableSessionRequestBody } from "@/services/table-context/schemas";
+} from '@/services/table-context/http';
+import { tableContextKeys } from '@/services/table-context/keys';
+import type { CloseTableSessionRequestBody } from '@/services/table-context/schemas';
 
 // === Query Hooks ===
 
@@ -54,7 +54,7 @@ export function useOpenTableSession(tableId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["open-table-session", tableId],
+    mutationKey: ['open-table-session', tableId],
     mutationFn: async () => {
       const idempotencyKey = crypto.randomUUID();
       return openTableSession({ gaming_table_id: tableId }, idempotencyKey);
@@ -82,7 +82,7 @@ export function useStartTableRundown(sessionId: string, tableId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["start-table-rundown", sessionId],
+    mutationKey: ['start-table-rundown', sessionId],
     mutationFn: async () => {
       const idempotencyKey = crypto.randomUUID();
       return startTableRundown(sessionId, idempotencyKey);
@@ -110,7 +110,7 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["close-table-session", sessionId],
+    mutationKey: ['close-table-session', sessionId],
     mutationFn: async (input: CloseTableSessionRequestBody) => {
       const idempotencyKey = crypto.randomUUID();
       return closeTableSession(sessionId, input, idempotencyKey);
@@ -136,7 +136,7 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
  * Can open if no session exists or current session is closed.
  */
 export function canOpenSession(session: TableSessionDTO | null): boolean {
-  return !session || session.status === "CLOSED";
+  return !session || session.status === 'CLOSED';
 }
 
 /**
@@ -145,7 +145,7 @@ export function canOpenSession(session: TableSessionDTO | null): boolean {
  */
 export function canStartRundown(session: TableSessionDTO | null): boolean {
   if (!session) return false;
-  return session.status === "OPEN" || session.status === "ACTIVE";
+  return session.status === 'OPEN' || session.status === 'ACTIVE';
 }
 
 /**
@@ -154,7 +154,7 @@ export function canStartRundown(session: TableSessionDTO | null): boolean {
  */
 export function canCloseSession(session: TableSessionDTO | null): boolean {
   if (!session) return false;
-  return session.status === "RUNDOWN" || session.status === "ACTIVE";
+  return session.status === 'RUNDOWN' || session.status === 'ACTIVE';
 }
 
 /**
@@ -165,10 +165,10 @@ export function canCloseSession(session: TableSessionDTO | null): boolean {
  */
 export function getSessionStatusLabel(status: TableSessionStatus): string {
   const labels: Record<TableSessionStatus, string> = {
-    OPEN: "Opening",
-    ACTIVE: "In Play",
-    RUNDOWN: "Rundown",
-    CLOSED: "Closed",
+    OPEN: 'Opening',
+    ACTIVE: 'In Play',
+    RUNDOWN: 'Rundown',
+    CLOSED: 'Closed',
   };
   return labels[status];
 }
@@ -178,15 +178,15 @@ export function getSessionStatusLabel(status: TableSessionStatus): string {
  */
 export function getSessionStatusColor(
   status: TableSessionStatus,
-): "default" | "secondary" | "destructive" | "outline" {
+): 'default' | 'secondary' | 'destructive' | 'outline' {
   const colors: Record<
     TableSessionStatus,
-    "default" | "secondary" | "destructive" | "outline"
+    'default' | 'secondary' | 'destructive' | 'outline'
   > = {
-    OPEN: "outline",
-    ACTIVE: "default",
-    RUNDOWN: "secondary",
-    CLOSED: "destructive",
+    OPEN: 'outline',
+    ACTIVE: 'default',
+    RUNDOWN: 'secondary',
+    CLOSED: 'destructive',
   };
   return colors[status];
 }

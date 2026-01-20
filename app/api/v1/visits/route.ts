@@ -8,8 +8,8 @@
  * Pattern: PRD-003 reference implementation
  */
 
-import type { NextRequest } from "next/server";
-import { NextResponse } from "next/server";
+import type { NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 import {
   createRequestContext,
@@ -20,14 +20,14 @@ import {
   type ResultCode,
   successResponse,
   toHttpStatus,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createVisitService } from "@/services/visit/index";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createVisitService } from '@/services/visit/index';
 import {
   startVisitSchema,
   visitListQuerySchema,
-} from "@/services/visit/schemas";
+} from '@/services/visit/schemas';
 
 /**
  * GET /api/v1/visits
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items,
             cursor,
@@ -68,8 +68,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "list",
+        domain: 'visit',
+        action: 'list',
         correlationId: ctx.requestId,
       },
     );
@@ -111,16 +111,16 @@ export async function POST(request: NextRequest) {
         const service = createVisitService(mwCtx.supabase);
 
         // P2 fix (ISSUE-983EFA10): startVisit now returns { visit, isNew }
-        // eliminating redundant getActiveForPlayer check
-        const { visit, isNew } = await service.startVisit(
+        // ADR-026: Also returns { resumed, gamingDay } for gaming-day-scoped visits
+        const { visit, isNew, resumed, gamingDay } = await service.startVisit(
           input.player_id,
           mwCtx.rlsContext!.casinoId,
         );
 
         return {
           ok: true as const,
-          code: "OK" as const,
-          data: visit,
+          code: 'OK' as const,
+          data: { visit, isNew, resumed, gamingDay },
           isNew,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -128,8 +128,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "visit",
-        action: "start",
+        domain: 'visit',
+        action: 'start',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
 
     // Return 201 for new visit, 200 for existing
     const status = (result as { isNew?: boolean }).isNew ? 201 : 200;
-    return successResponse(ctx, result.data, "OK", status);
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }

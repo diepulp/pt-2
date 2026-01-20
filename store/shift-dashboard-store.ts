@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
-export type ShiftLens = "casino" | "pit" | "table";
-export type TimeWindowPreset = "8h" | "12h" | "24h" | "current" | "custom";
+export type ShiftLens = 'casino' | 'pit' | 'table';
+export type TimeWindowPreset = '8h' | '12h' | '24h' | 'current' | 'custom';
 
 export interface ShiftTimeWindow {
   start: string; // ISO timestamp
@@ -39,65 +39,65 @@ export const useShiftDashboardStore = create<ShiftDashboardStore>()(
     (set) => ({
       // Initial state
       timeWindow: null,
-      timeWindowPreset: "8h",
-      lens: "casino",
+      timeWindowPreset: '8h',
+      lens: 'casino',
       selectedPitId: null,
       selectedTableId: null,
 
       // Time window actions
       setTimeWindow: (window) =>
-        set({ timeWindow: window }, undefined, "shift-dashboard/setTimeWindow"),
+        set({ timeWindow: window }, undefined, 'shift-dashboard/setTimeWindow'),
 
       setTimeWindowPreset: (preset) =>
         set(
           { timeWindowPreset: preset },
           undefined,
-          "shift-dashboard/setTimeWindowPreset",
+          'shift-dashboard/setTimeWindowPreset',
         ),
 
       // Navigation actions
-      setLens: (lens) => set({ lens }, undefined, "shift-dashboard/setLens"),
+      setLens: (lens) => set({ lens }, undefined, 'shift-dashboard/setLens'),
 
       setSelectedPitId: (pitId) =>
         set(
           { selectedPitId: pitId },
           undefined,
-          "shift-dashboard/setSelectedPitId",
+          'shift-dashboard/setSelectedPitId',
         ),
 
       setSelectedTableId: (tableId) =>
         set(
           { selectedTableId: tableId },
           undefined,
-          "shift-dashboard/setSelectedTableId",
+          'shift-dashboard/setSelectedTableId',
         ),
 
       // Compound actions for common workflows
       drillDownToPit: (pitId) =>
         set(
-          { lens: "table", selectedPitId: pitId },
+          { lens: 'table', selectedPitId: pitId },
           undefined,
-          "shift-dashboard/drillDownToPit",
+          'shift-dashboard/drillDownToPit',
         ),
 
       drillDownToTable: (tableId, pitId) =>
         set(
           {
-            lens: "table",
+            lens: 'table',
             selectedTableId: tableId,
             selectedPitId: pitId ?? null,
           },
           undefined,
-          "shift-dashboard/drillDownToTable",
+          'shift-dashboard/drillDownToTable',
         ),
 
       resetNavigation: () =>
         set(
-          { lens: "casino", selectedPitId: null, selectedTableId: null },
+          { lens: 'casino', selectedPitId: null, selectedTableId: null },
           undefined,
-          "shift-dashboard/resetNavigation",
+          'shift-dashboard/resetNavigation',
         ),
     }),
-    { name: "shift-dashboard-store" },
+    { name: 'shift-dashboard-store' },
   ),
 );

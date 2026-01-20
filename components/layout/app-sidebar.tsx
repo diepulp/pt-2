@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Bell,
@@ -9,19 +9,19 @@ import {
   Shield,
   Table2,
   Users,
-} from "lucide-react";
-import Link from "next/link";
-import * as React from "react";
+} from 'lucide-react';
+import Link from 'next/link';
+import * as React from 'react';
 
-import { NavMain, type NavGroup } from "@/components/layout/nav-main";
-import { NavUser } from "@/components/layout/nav-user";
+import { NavMain, type NavGroup } from '@/components/layout/nav-main';
+import { NavUser } from '@/components/layout/nav-user';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 /**
  * Navigation structure organized by semantic groups:
@@ -31,87 +31,87 @@ import { cn } from "@/lib/utils";
  */
 const navGroups: NavGroup[] = [
   {
-    label: "Operational",
+    label: 'Operational',
     items: [
       {
-        title: "Pit",
-        url: "/pit",
+        title: 'Pit',
+        url: '/pit',
         icon: Table2,
         children: [
-          { title: "Floor View", url: "/pit" },
-          { title: "Table Status", url: "/pit/tables" },
-          { title: "Active Sessions", url: "/pit/sessions" },
+          { title: 'Floor View', url: '/pit' },
+          { title: 'Table Status', url: '/pit/tables' },
+          { title: 'Active Sessions', url: '/pit/sessions' },
         ],
       },
       {
-        title: "Players",
-        url: "/players",
+        title: 'Players',
+        url: '/players',
         icon: Users,
         children: [
-          { title: "Player Lookup", url: "/players" },
-          { title: "Session History", url: "/players/history" },
+          { title: 'Player Lookup', url: '/players' },
+          { title: 'Session History', url: '/players/history' },
         ],
       },
       {
-        title: "Loyalty",
-        url: "/loyalty",
+        title: 'Loyalty',
+        url: '/loyalty',
         icon: Gift,
         children: [
-          { title: "Promo Programs", url: "/loyalty/promo" },
-          { title: "Rewards Catalog", url: "/loyalty/rewards" },
-          { title: "Player Tiers", url: "/loyalty/tiers" },
+          { title: 'Promo Programs', url: '/loyalty/promo' },
+          { title: 'Rewards Catalog', url: '/loyalty/rewards' },
+          { title: 'Player Tiers', url: '/loyalty/tiers' },
         ],
       },
       {
-        title: "Compliance",
-        url: "/compliance",
+        title: 'Compliance',
+        url: '/compliance',
         icon: Shield,
         children: [
-          { title: "MTL Tracking", url: "/compliance" },
-          { title: "Reports", url: "/compliance/reports" },
+          { title: 'MTL Tracking', url: '/compliance' },
+          { title: 'Reports', url: '/compliance/reports' },
         ],
       },
     ],
   },
   {
-    label: "Administrative",
+    label: 'Administrative',
     items: [
       {
-        title: "Shift Dashboard",
-        url: "/admin/shift",
+        title: 'Shift Dashboard',
+        url: '/shift-dashboard',
         icon: LayoutDashboard,
         children: [
-          { title: "Overview", url: "/admin/shift" },
-          { title: "Cash Observations", url: "/admin/shift?view=cash" },
-          { title: "Staff Performance", url: "/admin/shift?view=staff" },
+          { title: 'Overview', url: '/shift-dashboard' },
+          { title: 'Cash Observations', url: '/shift-dashboard?view=cash' },
+          { title: 'Staff Performance', url: '/shift-dashboard?view=staff' },
         ],
       },
       {
-        title: "Alerts",
-        url: "/admin/alerts",
+        title: 'Alerts',
+        url: '/admin/alerts',
         icon: Bell,
         badge: 0, // TODO: Connect to real alert count
       },
       {
-        title: "Reports",
-        url: "/admin/reports",
+        title: 'Reports',
+        url: '/admin/reports',
         icon: FileText,
       },
     ],
   },
   {
-    label: "Other",
+    label: 'Other',
     items: [
       {
-        title: "Settings",
-        url: "/settings",
+        title: 'Settings',
+        url: '/settings',
         icon: Settings,
         children: [
-          { title: "General", url: "/settings" },
-          { title: "Casino", url: "/settings/casino" },
-          { title: "Staff", url: "/settings/staff" },
-          { title: "Thresholds", url: "/admin/settings/thresholds" },
-          { title: "Shifts", url: "/admin/settings/shifts" },
+          { title: 'General', url: '/settings' },
+          { title: 'Casino', url: '/settings/casino' },
+          { title: 'Staff', url: '/settings/staff' },
+          { title: 'Thresholds', url: '/admin/settings/thresholds' },
+          { title: 'Shifts', url: '/admin/settings/shifts' },
         ],
       },
     ],
@@ -121,9 +121,9 @@ const navGroups: NavGroup[] = [
 // Flatten nav items for collapsed icon view
 const flatNavItems = navGroups.flatMap((group) => group.items);
 
-const SIDEBAR_WIDTH_EXPANDED = "16rem"; // 256px
-const SIDEBAR_WIDTH_COLLAPSED = "3.5rem"; // 56px (w-14)
-const NAVBAR_HEIGHT = "4rem"; // 64px (h-16)
+const SIDEBAR_WIDTH_EXPANDED = '16rem'; // 256px
+const SIDEBAR_WIDTH_COLLAPSED = '3.5rem'; // 56px (w-14)
+const NAVBAR_HEIGHT = '4rem'; // 64px (h-16)
 
 /**
  * AppSidebar using Option C: Sheet-based Hover Drawer pattern
@@ -177,10 +177,10 @@ export function AppSidebar() {
       <TooltipProvider delayDuration={0}>
         <div
           className={cn(
-            "fixed left-0 bottom-0 bg-background border-r border-sidebar-border",
-            "flex flex-col z-30",
-            "transition-opacity duration-200",
-            isOpen ? "opacity-0 pointer-events-none" : "opacity-100",
+            'fixed left-0 bottom-0 bg-background border-r border-sidebar-border',
+            'flex flex-col z-30',
+            'transition-opacity duration-200',
+            isOpen ? 'opacity-0 pointer-events-none' : 'opacity-100',
           )}
           style={{
             width: SIDEBAR_WIDTH_COLLAPSED,
@@ -217,7 +217,7 @@ export function AppSidebar() {
                         {/* Badge indicator for collapsed view */}
                         {item.badge !== undefined && item.badge > 0 && (
                           <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-[9px] font-medium text-sidebar-primary-foreground">
-                            {item.badge > 9 ? "9+" : item.badge}
+                            {item.badge > 9 ? '9+' : item.badge}
                           </span>
                         )}
                       </Link>
@@ -251,10 +251,10 @@ export function AppSidebar() {
       {/* Expanded Panel - slides in from left, under navbar */}
       <div
         className={cn(
-          "fixed left-0 bottom-0 bg-background border-r border-sidebar-border",
-          "flex flex-col z-50 shadow-2xl shadow-black/50",
-          "transition-transform duration-300 ease-out",
-          isOpen ? "translate-x-0" : "-translate-x-full",
+          'fixed left-0 bottom-0 bg-background border-r border-sidebar-border',
+          'flex flex-col z-50 shadow-2xl shadow-black/50',
+          'transition-transform duration-300 ease-out',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
         )}
         style={{
           width: SIDEBAR_WIDTH_EXPANDED,

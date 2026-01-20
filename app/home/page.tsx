@@ -1,6 +1,6 @@
-import dynamic from "next/dynamic";
+import dynamic from 'next/dynamic';
 
-const LandingPage = dynamic(() => import("@/components/landing-page"), {
+const LandingPage = dynamic(() => import('@/components/landing-page'), {
   ssr: true,
 });
 

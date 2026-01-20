@@ -8,7 +8,7 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md section 298-333
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Enum Types ===
 
@@ -19,7 +19,7 @@ import type { Database } from "@/types/database.types";
  *
  * @see ADR-027 Table Bank Mode (Visibility Slice, MVP)
  */
-export type TableBankMode = Database["public"]["Enums"]["table_bank_mode"];
+export type TableBankMode = Database['public']['Enums']['table_bank_mode'];
 
 /**
  * Physical table availability state (gaming_table.status).
@@ -29,7 +29,7 @@ export type TableBankMode = Database["public"]["Enums"]["table_bank_mode"];
  *
  * @see ADR-028 Table Status Standardization (D5)
  */
-export type TableAvailability = Database["public"]["Enums"]["table_status"];
+export type TableAvailability = Database['public']['Enums']['table_status'];
 
 /**
  * Session lifecycle phase (table_session.status).
@@ -40,11 +40,11 @@ export type TableAvailability = Database["public"]["Enums"]["table_status"];
  *
  * @see ADR-028 Table Status Standardization (D5)
  */
-export type SessionPhase = Database["public"]["Enums"]["table_session_status"];
+export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 // Backward compatibility aliases
 export type TableStatus = TableAvailability;
-export type GameType = Database["public"]["Enums"]["game_type"];
+export type GameType = Database['public']['Enums']['game_type'];
 
 // === Chipset Type (JSONB payload) ===
 /** Denomination to quantity mapping for chip counts */
@@ -117,7 +117,7 @@ export interface EndDealerRotationInput {
 
 // === Inventory Snapshot DTOs ===
 
-export type SnapshotType = "open" | "close" | "rundown";
+export type SnapshotType = 'open' | 'close' | 'rundown';
 
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC return type with JSONB chipset
 export interface TableInventorySnapshotDTO {
@@ -325,9 +325,9 @@ export interface CashObsCasinoRollupDTO {
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: RPC alert response
 export interface CashObsSpikeAlertDTO {
-  alert_type: "cash_out_observed_spike_telemetry";
-  severity: "info" | "warn" | "critical";
-  entity_type: "table" | "pit";
+  alert_type: 'cash_out_observed_spike_telemetry';
+  severity: 'info' | 'warn' | 'critical';
+  entity_type: 'table' | 'pit';
   entity_id: string;
   entity_label: string;
   observed_value: number;

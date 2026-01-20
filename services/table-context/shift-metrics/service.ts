@@ -8,10 +8,10 @@
  * @see SHIFT_METRICS_CATALOG §2-3
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   ShiftCasinoMetricsDTO,
@@ -20,10 +20,10 @@ import type {
   ShiftPitMetricsDTO,
   ShiftPitMetricsParams,
   ShiftTableMetricsDTO,
-} from "./dtos";
+} from './dtos';
 
 // Type helper for RPC calls until remote types are regenerated
-type SupabaseRpc = SupabaseClient<Database>["rpc"];
+type SupabaseRpc = SupabaseClient<Database>['rpc'];
 type RpcFn = ReturnType<SupabaseRpc>;
 
 /**
@@ -36,7 +36,7 @@ export async function getShiftTableMetrics(
 ): Promise<ShiftTableMetricsDTO[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_table_metrics",
+    'rpc_shift_table_metrics',
     {
       p_window_start: params.startTs,
       p_window_end: params.endTs,
@@ -45,7 +45,7 @@ export async function getShiftTableMetrics(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch table shift metrics: ${error.message}`,
       { details: error },
     );
@@ -64,7 +64,7 @@ export async function getShiftPitMetrics(
 ): Promise<ShiftPitMetricsDTO | null> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_pit_metrics",
+    'rpc_shift_pit_metrics',
     {
       p_window_start: params.startTs,
       p_window_end: params.endTs,
@@ -74,7 +74,7 @@ export async function getShiftPitMetrics(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch pit shift metrics: ${error.message}`,
       { details: error },
     );
@@ -123,9 +123,9 @@ export async function getShiftAllPitsMetrics(
         ? 0
         : 1;
       existing.tables_with_telemetry_count +=
-        table.telemetry_quality !== "NONE" ? 1 : 0;
+        table.telemetry_quality !== 'NONE' ? 1 : 0;
       existing.tables_good_coverage_count +=
-        table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0;
+        table.telemetry_quality === 'GOOD_COVERAGE' ? 1 : 0;
       existing.tables_grade_estimate += 1; // Always ESTIMATE for MVP
       existing.fills_total_cents += table.fills_total_cents;
       existing.credits_total_cents += table.credits_total_cents;
@@ -148,9 +148,9 @@ export async function getShiftAllPitsMetrics(
         tables_count: 1,
         tables_with_opening_snapshot: table.missing_opening_snapshot ? 0 : 1,
         tables_with_closing_snapshot: table.missing_closing_snapshot ? 0 : 1,
-        tables_with_telemetry_count: table.telemetry_quality !== "NONE" ? 1 : 0,
+        tables_with_telemetry_count: table.telemetry_quality !== 'NONE' ? 1 : 0,
         tables_good_coverage_count:
-          table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0,
+          table.telemetry_quality === 'GOOD_COVERAGE' ? 1 : 0,
         tables_grade_estimate: 1, // Always ESTIMATE for MVP
         fills_total_cents: table.fills_total_cents,
         credits_total_cents: table.credits_total_cents,
@@ -176,7 +176,7 @@ export async function getShiftCasinoMetrics(
 ): Promise<ShiftCasinoMetricsDTO> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
   const { data, error } = (await (supabase.rpc as any)(
-    "rpc_shift_casino_metrics",
+    'rpc_shift_casino_metrics',
     {
       p_window_start: params.startTs,
       p_window_end: params.endTs,
@@ -185,7 +185,7 @@ export async function getShiftCasinoMetrics(
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch casino shift metrics: ${error.message}`,
       { details: error },
     );
@@ -226,9 +226,9 @@ export async function getShiftDashboardSummary(
         ? 0
         : 1;
       existing.tables_with_telemetry_count +=
-        table.telemetry_quality !== "NONE" ? 1 : 0;
+        table.telemetry_quality !== 'NONE' ? 1 : 0;
       existing.tables_good_coverage_count +=
-        table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0;
+        table.telemetry_quality === 'GOOD_COVERAGE' ? 1 : 0;
       existing.tables_grade_estimate += 1;
       existing.fills_total_cents += table.fills_total_cents;
       existing.credits_total_cents += table.credits_total_cents;
@@ -250,9 +250,9 @@ export async function getShiftDashboardSummary(
         tables_count: 1,
         tables_with_opening_snapshot: table.missing_opening_snapshot ? 0 : 1,
         tables_with_closing_snapshot: table.missing_closing_snapshot ? 0 : 1,
-        tables_with_telemetry_count: table.telemetry_quality !== "NONE" ? 1 : 0,
+        tables_with_telemetry_count: table.telemetry_quality !== 'NONE' ? 1 : 0,
         tables_good_coverage_count:
-          table.telemetry_quality === "GOOD_COVERAGE" ? 1 : 0,
+          table.telemetry_quality === 'GOOD_COVERAGE' ? 1 : 0,
         tables_grade_estimate: 1,
         fills_total_cents: table.fills_total_cents,
         credits_total_cents: table.credits_total_cents,
@@ -280,10 +280,10 @@ export async function getShiftDashboardSummary(
       (t) => !t.missing_closing_snapshot,
     ).length,
     tables_with_telemetry_count: tables.filter(
-      (t) => t.telemetry_quality !== "NONE",
+      (t) => t.telemetry_quality !== 'NONE',
     ).length,
     tables_good_coverage_count: tables.filter(
-      (t) => t.telemetry_quality === "GOOD_COVERAGE",
+      (t) => t.telemetry_quality === 'GOOD_COVERAGE',
     ).length,
     tables_grade_estimate: tables.length, // Always ESTIMATE for MVP
     fills_total_cents: tables.reduce((sum, t) => sum + t.fills_total_cents, 0),
@@ -339,9 +339,9 @@ function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
     estimated_drop_grind_cents: Number(r.estimated_drop_grind_cents ?? 0),
     estimated_drop_buyins_cents: Number(r.estimated_drop_buyins_cents ?? 0),
     telemetry_quality:
-      (r.telemetry_quality as "GOOD_COVERAGE" | "LOW_COVERAGE" | "NONE") ??
-      "NONE",
-    telemetry_notes: (r.telemetry_notes as string) ?? "",
+      (r.telemetry_quality as 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE') ??
+      'NONE',
+    telemetry_notes: (r.telemetry_notes as string) ?? '',
     win_loss_inventory_cents:
       r.win_loss_inventory_cents != null
         ? Number(r.win_loss_inventory_cents)
@@ -351,7 +351,7 @@ function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
         ? Number(r.win_loss_estimated_cents)
         : null,
     metric_grade:
-      (r.metric_grade as "ESTIMATE" | "AUTHORITATIVE") ?? "ESTIMATE",
+      (r.metric_grade as 'ESTIMATE' | 'AUTHORITATIVE') ?? 'ESTIMATE',
     missing_opening_snapshot: Boolean(r.missing_opening_snapshot),
     missing_closing_snapshot: Boolean(r.missing_closing_snapshot),
   };
@@ -392,8 +392,8 @@ function toShiftPitMetrics(row: unknown): ShiftPitMetricsDTO {
 function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
   if (!row) {
     return {
-      window_start: "",
-      window_end: "",
+      window_start: '',
+      window_end: '',
       tables_count: 0,
       pits_count: 0,
       tables_with_opening_snapshot: 0,

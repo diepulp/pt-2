@@ -12,7 +12,7 @@
 
 /** Visit basic fields (matches VisitDTO) */
 export const VISIT_SELECT =
-  "id, player_id, casino_id, visit_kind, started_at, ended_at, visit_group_id, gaming_day" as const;
+  'id, player_id, casino_id, visit_kind, started_at, ended_at, visit_group_id, gaming_day' as const;
 
 /** Visit list fields (same as VISIT_SELECT for cursor pagination) */
 export const VISIT_SELECT_LIST = VISIT_SELECT;

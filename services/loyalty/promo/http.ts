@@ -9,7 +9,7 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS4
  */
 
-import { fetchJSON, mutateJSON } from "@/lib/http/fetch-json";
+import { fetchJSON, mutateJSON } from '@/lib/http/fetch-json';
 
 import type {
   CouponInventoryOutput,
@@ -24,10 +24,10 @@ import type {
   ReplaceCouponOutput,
   UpdatePromoProgramInput,
   VoidCouponOutput,
-} from "./dtos";
+} from './dtos';
 
-const BASE_PROMO_PROGRAMS = "/api/v1/promo-programs";
-const BASE_PROMO_COUPONS = "/api/v1/promo-coupons";
+const BASE_PROMO_PROGRAMS = '/api/v1/promo-programs';
+const BASE_PROMO_COUPONS = '/api/v1/promo-coupons';
 
 // === Helper Functions ===
 
@@ -111,10 +111,10 @@ export async function updatePromoProgram(
 ): Promise<PromoProgramDTO> {
   const url = `${BASE_PROMO_PROGRAMS}/${input.id}`;
   return fetchJSON<PromoProgramDTO>(url, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "Content-Type": "application/json",
-      "Idempotency-Key": idempotencyKey,
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey,
     },
     body: JSON.stringify(input),
   });
@@ -202,12 +202,12 @@ export async function getCouponInventory(
  * POST /api/v1/promo-coupons
  */
 export async function issueCoupon(
-  input: Omit<IssueCouponInput, "idempotencyKey">,
+  input: Omit<IssueCouponInput, 'idempotencyKey'>,
   idempotencyKey: string,
 ): Promise<IssueCouponOutput> {
   return mutateJSON<
     IssueCouponOutput,
-    Omit<IssueCouponInput, "idempotencyKey">
+    Omit<IssueCouponInput, 'idempotencyKey'>
   >(BASE_PROMO_COUPONS, input, idempotencyKey);
 }
 

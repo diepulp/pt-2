@@ -21,8 +21,8 @@
  * @since 2025-11-17
  */
 
-import { readFileSync, existsSync } from 'fs';
-import { join, resolve } from 'path';
+import { readFileSync, existsSync } from "fs";
+import { join, resolve } from "path";
 
 /** Configuration for the link checker */
 interface CheckerConfig {
@@ -41,7 +41,7 @@ interface DocumentReference {
   /** Line number where the reference was found */
   lineNumber: number;
   /** The type of reference (backtick, markdown link, yaml) */
-  type: 'backtick' | 'markdown' | 'yaml';
+  type: "backtick" | "markdown" | "yaml";
   /** The original text containing the reference */
   context: string;
 }
@@ -74,7 +74,7 @@ interface CheckSummary {
  */
 function extractReferences(content: string): DocumentReference[] {
   const references: DocumentReference[] = [];
-  const lines = content.split('\n');
+  const lines = content.split("\n");
 
   // Pattern 1: Backtick-wrapped paths (most common in SRM)
   // Matches: `docs/path/to/file.md`
@@ -94,7 +94,7 @@ function extractReferences(content: string): DocumentReference[] {
     const lineNumber = i + 1;
 
     // Track YAML front matter
-    if (line.trim() === '---') {
+    if (line.trim() === "---") {
       inYamlFrontMatter = !inYamlFrontMatter;
       continue;
     }
@@ -106,7 +106,7 @@ function extractReferences(content: string): DocumentReference[] {
         references.push({
           path: yamlMatch[1],
           lineNumber,
-          type: 'yaml',
+          type: "yaml",
           context: line.trim(),
         });
       }
@@ -122,11 +122,11 @@ function extractReferences(content: string): DocumentReference[] {
 
     for (const m of backtickMatches) {
       // Remove anchor fragments and query strings
-      const cleanPath = m[1].split('#')[0].split('?')[0];
+      const cleanPath = m[1].split("#")[0].split("?")[0];
       references.push({
         path: cleanPath,
         lineNumber,
-        type: 'backtick',
+        type: "backtick",
         context: line.trim().substring(0, 100), // Limit context length
       });
     }
@@ -139,11 +139,11 @@ function extractReferences(content: string): DocumentReference[] {
 
     for (const m of markdownMatches) {
       // Remove anchor fragments and query strings
-      const cleanPath = m[2].split('#')[0].split('?')[0];
+      const cleanPath = m[2].split("#")[0].split("?")[0];
       references.push({
         path: cleanPath,
         lineNumber,
-        type: 'markdown',
+        type: "markdown",
         context: line.trim().substring(0, 100),
       });
     }
@@ -161,7 +161,7 @@ function extractReferences(content: string): DocumentReference[] {
  */
 function checkReference(
   reference: DocumentReference,
-  projectRoot: string
+  projectRoot: string,
 ): CheckResult {
   const absolutePath = resolve(projectRoot, reference.path);
   const exists = existsSync(absolutePath);
@@ -185,11 +185,11 @@ function formatResult(result: CheckResult, useColor = true): string {
 
   const status = exists
     ? useColor
-      ? '\x1b[32m✓\x1b[0m'
-      : '✓'
+      ? "\x1b[32m✓\x1b[0m"
+      : "✓"
     : useColor
-      ? '\x1b[31m✗\x1b[0m'
-      : '✗';
+      ? "\x1b[31m✗\x1b[0m"
+      : "✗";
 
   const line = `Line ${reference.lineNumber}`.padEnd(12);
   const type = `[${reference.type}]`.padEnd(12);
@@ -217,7 +217,7 @@ function runChecker(config: CheckerConfig): CheckSummary {
     console.log(`Reading SRM from: ${absoluteSrmPath}`);
   }
 
-  const content = readFileSync(absoluteSrmPath, 'utf-8');
+  const content = readFileSync(absoluteSrmPath, "utf-8");
   const references = extractReferences(content);
 
   if (verbose) {
@@ -247,14 +247,14 @@ function printReport(summary: CheckSummary, verbose: boolean): void {
   const { totalReferences, validReferences, brokenReferences, results } =
     summary;
 
-  console.log('='.repeat(80));
-  console.log('SRM Link Check Report');
-  console.log('='.repeat(80));
+  console.log("=".repeat(80));
+  console.log("SRM Link Check Report");
+  console.log("=".repeat(80));
   console.log();
 
   if (verbose) {
-    console.log('All References:');
-    console.log('-'.repeat(80));
+    console.log("All References:");
+    console.log("-".repeat(80));
     results.forEach((result) => {
       console.log(formatResult(result));
     });
@@ -262,8 +262,8 @@ function printReport(summary: CheckSummary, verbose: boolean): void {
   }
 
   if (brokenReferences > 0) {
-    console.log('Broken Links:');
-    console.log('-'.repeat(80));
+    console.log("Broken Links:");
+    console.log("-".repeat(80));
     results
       .filter((r) => !r.exists)
       .forEach((result) => {
@@ -277,21 +277,19 @@ function printReport(summary: CheckSummary, verbose: boolean): void {
     console.log();
   }
 
-  console.log('Summary:');
-  console.log('-'.repeat(80));
+  console.log("Summary:");
+  console.log("-".repeat(80));
   console.log(`Total references: ${totalReferences}`);
   console.log(`Valid references: ${validReferences}`);
   console.log(`Broken references: ${brokenReferences}`);
   console.log();
 
   if (brokenReferences > 0) {
-    console.log(
-      '\x1b[31m✗ Link check FAILED\x1b[0m - Found broken references'
-    );
+    console.log("\x1b[31m✗ Link check FAILED\x1b[0m - Found broken references");
   } else {
-    console.log('\x1b[32m✓ Link check PASSED\x1b[0m - All references valid');
+    console.log("\x1b[32m✓ Link check PASSED\x1b[0m - All references valid");
   }
-  console.log('='.repeat(80));
+  console.log("=".repeat(80));
 }
 
 /**
@@ -299,8 +297,8 @@ function printReport(summary: CheckSummary, verbose: boolean): void {
  */
 function main(): void {
   const args = process.argv.slice(2);
-  const verbose = args.includes('--verbose') || args.includes('-v');
-  const help = args.includes('--help') || args.includes('-h');
+  const verbose = args.includes("--verbose") || args.includes("-v");
+  const help = args.includes("--help") || args.includes("-h");
 
   if (help) {
     console.log(`
@@ -321,10 +319,10 @@ Exit codes:
   }
 
   // Determine project root (assumes script is in scripts/ directory)
-  const projectRoot = resolve(__dirname, '..');
+  const projectRoot = resolve(__dirname, "..");
 
   const config: CheckerConfig = {
-    srmPath: 'docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md',
+    srmPath: "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
     projectRoot,
     verbose,
   };
@@ -338,7 +336,7 @@ Exit codes:
       process.exit(1);
     }
   } catch (error) {
-    console.error('Error running link checker:', error);
+    console.error("Error running link checker:", error);
     process.exit(1);
   }
 }

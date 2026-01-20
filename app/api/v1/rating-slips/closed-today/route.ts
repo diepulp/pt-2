@@ -10,19 +10,19 @@
  * Only returns terminal slips (excludes intermediate move slips).
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createCasinoService } from "@/services/casino";
-import { createRatingSlipService } from "@/services/rating-slip";
-import { closedTodayQuerySchema } from "@/services/rating-slip/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createCasinoService } from '@/services/casino';
+import { createRatingSlipService } from '@/services/rating-slip';
+import { closedTodayQuerySchema } from '@/services/rating-slip/schemas';
 
 /**
  * GET /api/v1/rating-slips/closed-today
@@ -75,7 +75,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: {
             items: result.items,
             cursor: result.cursor, // Now { endTime, id } | null
@@ -87,8 +87,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "rating-slip",
-        action: "list-closed-today",
+        domain: 'rating-slip',
+        action: 'list-closed-today',
         correlationId: ctx.requestId,
       },
     );

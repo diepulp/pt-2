@@ -8,7 +8,7 @@
  * Idempotency: Required - dedupes via idempotency_key
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -17,14 +17,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPromoService } from "@/services/loyalty/promo";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPromoService } from '@/services/loyalty/promo';
 import {
   promoCouponRouteParamsSchema,
   replaceCouponSchema,
-} from "@/services/loyalty/promo/schemas";
+} from '@/services/loyalty/promo/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-coupons.replace",
+        domain: 'loyalty',
+        action: 'promo-coupons.replace',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -92,7 +92,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
 
     // Return 200 for duplicate (isExisting), 201 for new
     const status = result.data?.isExisting ? 200 : 201;
-    return successResponse(ctx, result.data, "OK", status);
+    return successResponse(ctx, result.data, 'OK', status);
   } catch (error) {
     return errorResponse(ctx, error);
   }

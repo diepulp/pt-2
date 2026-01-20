@@ -13,7 +13,7 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
@@ -22,15 +22,15 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { assertRole } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
-import { createMtlService } from "@/services/mtl";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { assertRole } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
+import { createMtlService } from '@/services/mtl';
 import {
   createMtlEntrySchema,
   mtlEntryListQuerySchema,
-} from "@/services/mtl/schemas";
+} from '@/services/mtl/schemas';
 
 /**
  * GET /api/v1/mtl/entries
@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       supabase,
       async (mwCtx) => {
         // ADR-025: Entry READ allowed for pit_boss, cashier, admin
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "cashier", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'cashier', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
 
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: response,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -78,8 +78,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "mtl",
-        action: "list-entries",
+        domain: 'mtl',
+        action: 'list-entries',
         correlationId: ctx.requestId,
       },
     );
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       supabase,
       async (mwCtx) => {
         // ADR-025: Entry WRITE allowed for pit_boss, cashier, admin
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "cashier", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'cashier', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
 
@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: entry,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -137,8 +137,8 @@ export async function POST(request: NextRequest) {
         };
       },
       {
-        domain: "mtl",
-        action: "create-entry",
+        domain: 'mtl',
+        action: 'create-entry',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Return 201 Created for new MTL entry
-    return successResponse(ctx, result.data, "OK", 201);
+    return successResponse(ctx, result.data, 'OK', 201);
   } catch (error) {
     return errorResponse(ctx, error);
   }

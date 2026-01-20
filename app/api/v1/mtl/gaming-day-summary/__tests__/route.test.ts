@@ -56,7 +56,9 @@ jest.mock('@/lib/server-actions/middleware', () => ({
             or: jest.fn().mockReturnThis(),
             order: jest.fn().mockReturnThis(),
             limit: jest.fn().mockReturnThis(),
-            maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
+            maybeSingle: jest
+              .fn()
+              .mockResolvedValue({ data: null, error: null }),
           };
           builder.then = function (resolve: (value: any) => void) {
             resolve({ data: [], error: null });

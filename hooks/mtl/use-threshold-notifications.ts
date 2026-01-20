@@ -1,26 +1,35 @@
 /**
  * Threshold Notifications Hook
  *
- * Pure logic hook for threshold checking (warning, watchlist, CTR) with toast notifications.
+ * Pure logic hook for threshold checking (warning, MTL, CTR) with toast notifications.
  * Evaluates both single-transaction amounts and cumulative daily totals against compliance thresholds.
  *
  * Threshold Tiers per PRD-MTL-UI-GAPS:
  * - none: < $2,500 (no notification)
- * - warning: ≥ $2,500, < $3,000 (approaching watchlist)
- * - watchlist_met: ≥ $3,000, ≤ $9,000 (auto-create MTL)
+ * - warning: ≥ $2,500, < $3,000 (approaching MTL threshold)
+ * - watchlist_met: ≥ $3,000, ≤ $9,000 (MTL entry auto-created)
  * - ctr_near: > $9,000, ≤ $10,000 (approaching CTR)
  * - ctr_met: > $10,000 (CTR required - strictly > per 31 CFR § 1021.311)
  *
  * @see EXECUTION-SPEC-PRD-MTL-UI-GAPS.md WS2
- * @see services/mtl/mappers.ts - DEFAULT_THRESHOLDS
  */
 
-"use client";
+'use client';
 
-import { useCallback, useMemo, useRef } from "react";
-import { toast } from "sonner";
+import { useCallback, useMemo, useRef } from 'react';
+import { toast } from 'sonner';
 
-import { DEFAULT_THRESHOLDS } from "@/services/mtl/mappers";
+import { DEFAULT_THRESHOLDS } from '@/services/mtl/mappers';
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+/** Conversion factor from cents to dollars */
+const CENTS_TO_DOLLARS = 100;
+
+/** Warning threshold as percentage of MTL threshold (83.33% ≈ $2,500 of $3,000) */
+const WARNING_THRESHOLD_RATIO = 5 / 6;
 
 // ============================================================================
 // Types
@@ -30,11 +39,11 @@ import { DEFAULT_THRESHOLDS } from "@/services/mtl/mappers";
  * Threshold level classification
  */
 export type ThresholdLevel =
-  | "none"
-  | "warning"
-  | "watchlist_met"
-  | "ctr_near"
-  | "ctr_met";
+  | 'none'
+  | 'warning'
+  | 'watchlist_met'
+  | 'ctr_near'
+  | 'ctr_met';
 
 /**
  * Result of threshold evaluation
@@ -54,11 +63,11 @@ export interface ThresholdCheckResult {
  * Threshold configuration (can be customized per casino)
  */
 export interface ThresholdConfig {
-  /** Warning threshold - "approaching watchlist" (default $2,500) */
+  /** Warning threshold - approaching MTL (default $2,500) */
   warningThreshold: number;
-  /** Watchlist floor - internal tracking threshold (default $3,000) */
+  /** MTL threshold - house policy for transaction logging (default $3,000) */
   watchlistFloor: number;
-  /** CTR threshold - strictly > triggers CTR (default $10,000) */
+  /** CTR threshold - strictly > triggers CTR filing (default $10,000) */
   ctrThreshold: number;
 }
 
@@ -66,10 +75,21 @@ export interface ThresholdConfig {
 // Default Configuration
 // ============================================================================
 
+/**
+ * Convert thresholds from cents (database) to dollars (UI display).
+ * Derived from DEFAULT_THRESHOLDS in mappers.ts to maintain single source of truth.
+ */
+const mtlThresholdDollars =
+  DEFAULT_THRESHOLDS.watchlistFloor / CENTS_TO_DOLLARS;
+const ctrThresholdDollars = DEFAULT_THRESHOLDS.ctrThreshold / CENTS_TO_DOLLARS;
+
 const DEFAULT_CONFIG: ThresholdConfig = {
-  warningThreshold: 2500,
-  watchlistFloor: DEFAULT_THRESHOLDS.watchlistFloor, // $3,000
-  ctrThreshold: DEFAULT_THRESHOLDS.ctrThreshold, // $10,000
+  /** Warning at ~83% of MTL threshold */
+  warningThreshold: Math.floor(mtlThresholdDollars * WARNING_THRESHOLD_RATIO),
+  /** MTL threshold from system defaults (converted from cents) */
+  watchlistFloor: mtlThresholdDollars,
+  /** CTR threshold from system defaults (converted from cents) */
+  ctrThreshold: ctrThresholdDollars,
 };
 
 // ============================================================================
@@ -92,7 +112,7 @@ export function checkThreshold(
   // CTR: strictly > ("more than $10,000") per 31 CFR § 1021.311
   if (amount > config.ctrThreshold) {
     return {
-      level: "ctr_met",
+      level: 'ctr_met',
       shouldCreateMtl: true,
       requiresCtr: true,
       message: `CTR REQUIRED: Daily total of $${amount.toLocaleString()} exceeds $${config.ctrThreshold.toLocaleString()} threshold. A Currency Transaction Report must be filed per 31 CFR § 1021.311.`,
@@ -102,36 +122,36 @@ export function checkThreshold(
   // CTR Near: > 90% of CTR threshold
   if (amount > config.ctrThreshold * 0.9) {
     return {
-      level: "ctr_near",
+      level: 'ctr_near',
       shouldCreateMtl: true,
       requiresCtr: false,
       message: `CTR threshold approaching: $${amount.toLocaleString()} of $${config.ctrThreshold.toLocaleString()} limit. Customer ID verification may be required soon.`,
     };
   }
 
-  // Watchlist: >= internal threshold ($3,000)
+  // MTL threshold met: >= $3,000 (house policy)
   if (amount >= config.watchlistFloor) {
     return {
-      level: "watchlist_met",
+      level: 'watchlist_met',
       shouldCreateMtl: true,
       requiresCtr: false,
-      message: `Watchlist threshold met: $${amount.toLocaleString()}. MTL entry created automatically.`,
+      message: `MTL entry created: $${amount.toLocaleString()} transaction recorded for compliance tracking.`,
     };
   }
 
-  // Warning: >= warning threshold but < watchlist ($2,500 - $3,000)
+  // Warning: approaching MTL threshold ($2,500 - $3,000)
   if (amount >= config.warningThreshold) {
     return {
-      level: "warning",
+      level: 'warning',
       shouldCreateMtl: false,
       requiresCtr: false,
-      message: `Approaching watchlist threshold: $${amount.toLocaleString()} of $${config.watchlistFloor.toLocaleString()} watchlist floor.`,
+      message: `Approaching $${config.watchlistFloor.toLocaleString()} MTL threshold. Current total: $${amount.toLocaleString()}.`,
     };
   }
 
   // No threshold concerns
   return {
-    level: "none",
+    level: 'none',
     shouldCreateMtl: false,
     requiresCtr: false,
     message: null,
@@ -183,35 +203,35 @@ export function notifyThreshold(
   }
 
   switch (result.level) {
-    case "ctr_met":
+    case 'ctr_met':
       toast.error(result.message, {
         duration: TOAST_DURATION.error,
-        id: "ctr-met-notification",
+        id: 'ctr-met-notification',
       });
       break;
 
-    case "ctr_near":
+    case 'ctr_near':
       toast.warning(result.message, {
         duration: TOAST_DURATION.warning,
-        id: "ctr-near-notification",
+        id: 'ctr-near-notification',
       });
       break;
 
-    case "watchlist_met":
+    case 'watchlist_met':
       toast.info(result.message, {
         duration: TOAST_DURATION.info,
-        id: "watchlist-notification",
+        id: 'watchlist-notification',
       });
       break;
 
-    case "warning":
+    case 'warning':
       toast.warning(result.message, {
         duration: TOAST_DURATION.warning,
-        id: "warning-notification",
+        id: 'warning-notification',
       });
       break;
 
-    case "none":
+    case 'none':
     default:
       // No notification for 'none' level
       break;
@@ -259,7 +279,7 @@ export function useThresholdNotifications(config?: Partial<ThresholdConfig>) {
   );
 
   // Track last notified level to prevent duplicate toasts
-  const lastNotifiedLevel = useRef<ThresholdLevel>("none");
+  const lastNotifiedLevel = useRef<ThresholdLevel>('none');
 
   /**
    * Check threshold and notify user if level changed.
@@ -275,11 +295,11 @@ export function useThresholdNotifications(config?: Partial<ThresholdConfig>) {
 
       // Only notify if level escalated (higher severity than last notification)
       const levelOrder: ThresholdLevel[] = [
-        "none",
-        "warning",
-        "watchlist_met",
-        "ctr_near",
-        "ctr_met",
+        'none',
+        'warning',
+        'watchlist_met',
+        'ctr_near',
+        'ctr_met',
       ];
       const currentLevelIndex = levelOrder.indexOf(result.level);
       const lastLevelIndex = levelOrder.indexOf(lastNotifiedLevel.current);
@@ -312,7 +332,7 @@ export function useThresholdNotifications(config?: Partial<ThresholdConfig>) {
    * Reset notification tracking (e.g., when patron changes).
    */
   const resetNotificationState = useCallback(() => {
-    lastNotifiedLevel.current = "none";
+    lastNotifiedLevel.current = 'none';
   }, []);
 
   return {

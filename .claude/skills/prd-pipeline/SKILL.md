@@ -86,9 +86,9 @@ These files contain deterministic rules that MUST be validated against during sp
    | `database`, `service-layer` | `backend-service-builder` |
    | `rls` | `rls-expert` |
    | `route-handlers` | `api-builder` |
-   | `react-components`, `zustand-stores`, `react-query-hooks`, `modal-integration` | `frontend-design:frontend-design-pt-2` |
+   | `react-components`, `zustand-stores`, `react-query-hooks`, `modal-integration` | `frontend-design-pt-2` |
    | `unit-tests` (service) | `backend-service-builder` |
-   | `unit-tests` (component) | `frontend-design:frontend-design-pt-2` |
+   | `unit-tests` (component) | `frontend-design-pt-2` |
    | `e2e-tests` | `e2e-testing` |
 
    **CRITICAL**: Each expert consultation MUST include:
@@ -199,7 +199,7 @@ Consult `references/executor-registry.md` for the complete mapping.
 | Database/Service Layer | `backend-service-builder` |
 | Route Handlers | `api-builder` |
 | RLS Policies | `rls-expert` |
-| Frontend (components, stores, hooks) | `frontend-design:frontend-design-pt-2` |
+| Frontend (components, stores, hooks) | `frontend-design-pt-2` |
 | E2E Tests | `e2e-testing` |
 | Quality Gates | `qa-specialist` |
 

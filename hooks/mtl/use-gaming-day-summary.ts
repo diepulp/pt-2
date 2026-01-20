@@ -10,17 +10,17 @@
  * @see PRD-005 MTL Service
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   MtlGamingDaySummaryDTO,
   MtlGamingDaySummaryFilters,
-} from "@/services/mtl/dtos";
-import { getGamingDaySummary } from "@/services/mtl/http";
-import { mtlKeys } from "@/services/mtl/keys";
-import type { MtlGamingDaySummaryQueryFilters } from "@/services/mtl/keys";
+} from '@/services/mtl/dtos';
+import { getGamingDaySummary } from '@/services/mtl/http';
+import { mtlKeys } from '@/services/mtl/keys';
+import type { MtlGamingDaySummaryQueryFilters } from '@/services/mtl/keys';
 
 /**
  * Converts camelCase query filters to snake_case HTTP filters.

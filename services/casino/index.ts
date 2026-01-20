@@ -14,12 +14,12 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md §882-1006
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   CasinoDTO,
   CasinoListFilters,
@@ -32,7 +32,7 @@ import type {
   UpdateCasinoDTO,
   UpdateCasinoSettingsDTO,
   UpdateStaffDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Service Interface ===
 
@@ -178,7 +178,7 @@ export function createCasinoService(
       // Get casino settings for timezone
       const settings = await crud.getCasinoSettings(supabase, casinoId);
       if (!settings) {
-        throw new DomainError("CASINO_SETTINGS_NOT_FOUND");
+        throw new DomainError('CASINO_SETTINGS_NOT_FOUND');
       }
 
       const rpcArgs: { p_casino_id: string; p_timestamp?: string } = {
@@ -188,10 +188,10 @@ export function createCasinoService(
         rpcArgs.p_timestamp = timestamp;
       }
 
-      const { data, error } = await supabase.rpc("compute_gaming_day", rpcArgs);
+      const { data, error } = await supabase.rpc('compute_gaming_day', rpcArgs);
 
       if (error) {
-        throw new DomainError("INTERNAL_ERROR", error.message, {
+        throw new DomainError('INTERNAL_ERROR', error.message, {
           details: error,
         });
       }
@@ -221,4 +221,4 @@ export {
   updateCasino,
   updateCasinoSettings,
   updateStaff,
-} from "./crud";
+} from './crud';

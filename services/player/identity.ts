@@ -8,14 +8,14 @@
  * @see EXEC-SPEC-022 Section 8 - Service Layer Changes
  */
 
-import { createHash } from "crypto";
+import { createHash } from 'crypto';
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
-import type { PlayerIdentityDTO, PlayerIdentityInput } from "./dtos";
+import type { PlayerIdentityDTO, PlayerIdentityInput } from './dtos';
 
 // === Document Hash Computation ===
 
@@ -35,9 +35,9 @@ import type { PlayerIdentityDTO, PlayerIdentityInput } from "./dtos";
  * computeDocumentHash('D1234567') // => 'a1b2c3d4...'
  */
 export function computeDocumentHash(documentNumber: string): string {
-  return createHash("sha256")
+  return createHash('sha256')
     .update(documentNumber.toUpperCase().trim())
-    .digest("hex");
+    .digest('hex');
 }
 
 /**
@@ -53,7 +53,7 @@ export function computeDocumentHash(documentNumber: string): string {
  * extractLast4('D-1234-567') // => '4567'
  */
 export function extractLast4(documentNumber: string): string {
-  const cleaned = documentNumber.replace(/[^A-Z0-9]/gi, "");
+  const cleaned = documentNumber.replace(/[^A-Z0-9]/gi, '');
   return cleaned.slice(-4);
 }
 
@@ -95,7 +95,7 @@ export async function upsertIdentity(
     : null;
 
   const { data, error } = await supabase
-    .from("player_identity")
+    .from('player_identity')
     .upsert(
       {
         casino_id: casinoId,
@@ -106,7 +106,7 @@ export async function upsertIdentity(
         height: input.height ?? null,
         weight: input.weight ?? null,
         address: (input.address ??
-          null) as unknown as Database["public"]["Tables"]["player_identity"]["Insert"]["address"],
+          null) as unknown as Database['public']['Tables']['player_identity']['Insert']['address'],
         document_number_hash: documentHash,
         document_number_last4: documentLast4,
         issue_date: input.issueDate ?? null,
@@ -116,7 +116,7 @@ export async function upsertIdentity(
         created_by: actorId,
       },
       {
-        onConflict: "casino_id,player_id",
+        onConflict: 'casino_id,player_id',
       },
     )
     .select()
@@ -124,24 +124,24 @@ export async function upsertIdentity(
 
   if (error) {
     // Map Postgres errors to domain errors
-    if (error.code === "23503") {
+    if (error.code === '23503') {
       throw new DomainError(
-        "PLAYER_NOT_FOUND",
-        "Player must be enrolled before adding identity",
+        'PLAYER_NOT_FOUND',
+        'Player must be enrolled before adding identity',
         { details: error },
       );
     }
     if (
-      error.code === "23505" &&
-      error.message.includes("ux_player_identity_doc_hash")
+      error.code === '23505' &&
+      error.message.includes('ux_player_identity_doc_hash')
     ) {
       throw new DomainError(
-        "UNIQUE_VIOLATION",
-        "Document number already registered in this casino",
+        'UNIQUE_VIOLATION',
+        'Document number already registered in this casino',
         { details: error },
       );
     }
-    throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
   }
 
   return toPlayerIdentityDTO(data);
@@ -162,13 +162,13 @@ export async function getIdentityByPlayerId(
   playerId: string,
 ): Promise<PlayerIdentityDTO | null> {
   const { data, error } = await supabase
-    .from("player_identity")
+    .from('player_identity')
     .select()
-    .eq("player_id", playerId)
+    .eq('player_id', playerId)
     .maybeSingle();
 
   if (error) {
-    throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
   }
 
   return data ? toPlayerIdentityDTO(data) : null;
@@ -194,20 +194,20 @@ export async function verifyIdentity(
   verifiedBy: string,
 ): Promise<PlayerIdentityDTO> {
   const { data, error } = await supabase
-    .from("player_identity")
+    .from('player_identity')
     .update({
       verified_at: new Date().toISOString(),
       verified_by: verifiedBy,
     })
-    .eq("id", identityId)
+    .eq('id', identityId)
     .select()
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") {
-      throw new DomainError("PLAYER_NOT_FOUND");
+    if (error.code === 'PGRST116') {
+      throw new DomainError('PLAYER_NOT_FOUND');
     }
-    throw new DomainError("INTERNAL_ERROR", error.message, { details: error });
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
   }
 
   return toPlayerIdentityDTO(data);
@@ -218,7 +218,7 @@ export async function verifyIdentity(
 /**
  * Type for player_identity database row.
  */
-type PlayerIdentityRow = Database["public"]["Tables"]["player_identity"]["Row"];
+type PlayerIdentityRow = Database['public']['Tables']['player_identity']['Row'];
 
 /**
  * Map database row to PlayerIdentityDTO.
@@ -261,9 +261,9 @@ function toPlayerIdentityDTO(row: PlayerIdentityRow): PlayerIdentityDTO {
     expirationDate: row.expiration_date,
     issuingState: row.issuing_state,
     documentType: row.document_type as
-      | "drivers_license"
-      | "passport"
-      | "state_id"
+      | 'drivers_license'
+      | 'passport'
+      | 'state_id'
       | null,
     verifiedAt: row.verified_at,
     verifiedBy: row.verified_by,
@@ -271,6 +271,6 @@ function toPlayerIdentityDTO(row: PlayerIdentityRow): PlayerIdentityDTO {
     updatedAt: row.updated_at,
     createdBy: row.created_by,
     updatedBy: row.updated_by,
-    address: row.address as PlayerIdentityDTO["address"],
+    address: row.address as PlayerIdentityDTO['address'],
   };
 }

@@ -11,12 +11,12 @@
  */
 
 // eslint-disable-next-line no-restricted-imports -- Service client needs raw createClient
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import { isDevMode } from "./dev-context";
+import { isDevMode } from './dev-context';
 
 /**
  * Create a Supabase client with service role privileges
@@ -32,7 +32,7 @@ export function createServiceClient(): SupabaseClient<Database> {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
     );
   }
 
@@ -51,6 +51,6 @@ export function createServiceClient(): SupabaseClient<Database> {
  */
 export function shouldUseDevServiceClient(): boolean {
   if (!isDevMode()) return false;
-  if (process.env.DEV_AUTH_BYPASS === "false") return false;
+  if (process.env.DEV_AUTH_BYPASS === 'false') return false;
   return true;
 }

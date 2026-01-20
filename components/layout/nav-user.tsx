@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { BadgeCheck, LogOut } from "lucide-react";
+import { BadgeCheck, LogOut } from 'lucide-react';
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,14 +11,14 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from '@/components/ui/dropdown-menu';
 
 export function NavUser() {
   // TODO: Get user from auth context
   const user = {
-    name: "Pit Boss",
-    email: "pitboss@casino.com",
-    role: "pit_boss",
+    name: 'Pit Boss',
+    email: 'pitboss@casino.com',
+    role: 'pit_boss',
   };
 
   return (

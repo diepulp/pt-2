@@ -11,14 +11,14 @@
  * @see EXECUTION-SPEC-PRD-006.md WS2
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { TableLayoutTerminal } from "@/components/table/table-layout-terminal";
-import { Badge } from "@/components/ui/badge";
-import type { DashboardTableDTO } from "@/hooks/dashboard/types";
-import { cn } from "@/lib/utils";
+import { TableLayoutTerminal } from '@/components/table/table-layout-terminal';
+import { Badge } from '@/components/ui/badge';
+import type { DashboardTableDTO } from '@/hooks/dashboard/types';
+import { cn } from '@/lib/utils';
 
 interface TableGridProps {
   tables: DashboardTableDTO[];
@@ -39,7 +39,7 @@ export function TableGrid({
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/20 p-12">
         <div
           className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           No Tables Available
         </div>
@@ -56,7 +56,7 @@ export function TableGrid({
       <div className="space-y-4">
         <div
           className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           Loading Tables...
         </div>
@@ -78,17 +78,17 @@ export function TableGrid({
       <div className="flex items-center justify-between">
         <div
           className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           All Tables ({tables.length})
         </div>
         {/* Optional: Filter badges for quick access */}
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="font-mono text-xs">
-            {tables.filter((t) => t.status === "active").length} Active
+            {tables.filter((t) => t.status === 'active').length} Active
           </Badge>
           <Badge variant="outline" className="font-mono text-xs">
-            {tables.filter((t) => t.status === "inactive").length} Inactive
+            {tables.filter((t) => t.status === 'inactive').length} Inactive
           </Badge>
         </div>
       </div>
@@ -100,10 +100,10 @@ export function TableGrid({
             key={table.id}
             onClick={() => onTableSelect(table.id)}
             className={cn(
-              "group relative transition-transform duration-200 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2",
+              'group relative transition-transform duration-200 focus:outline-hidden focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2',
               selectedTableId === table.id
-                ? "scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background"
-                : "hover:scale-105",
+                ? 'scale-105 ring-2 ring-accent ring-offset-2 ring-offset-background'
+                : 'hover:scale-105',
             )}
             aria-label={`Select table ${table.label}`}
           >

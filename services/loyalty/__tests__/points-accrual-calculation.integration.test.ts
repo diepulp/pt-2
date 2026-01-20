@@ -20,12 +20,16 @@
  * @see ADR-019 Loyalty Points Policy
  */
 
-import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'crypto';
 
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
 import type { Database } from '/home/diepulp/projects/pt-2/types/database.types.ts';
-import { createRatingSlipService, RatingSlipServiceInterface } from '../../rating-slip';
+import {
+  createRatingSlipService,
+  RatingSlipServiceInterface,
+} from '../../rating-slip';
 
 // ============================================================================
 // Test Configuration
@@ -131,8 +135,12 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       console.log(`     avg_bet: $${result.inputs.avgBet}`);
       console.log(`     house_edge: ${result.inputs.houseEdge}%`);
       console.log(`     decisions/hr: ${result.inputs.decisionsPerHour}`);
-      console.log(`     conversion_rate: ${result.inputs.pointsConversionRate}`);
-      console.log(`     duration: ${result.inputs.durationSeconds}s (${(result.inputs.durationSeconds / 3600).toFixed(2)}h)`);
+      console.log(
+        `     conversion_rate: ${result.inputs.pointsConversionRate}`,
+      );
+      console.log(
+        `     duration: ${result.inputs.durationSeconds}s (${(result.inputs.durationSeconds / 3600).toFixed(2)}h)`,
+      );
       console.log(`   Expected:`);
       console.log(`     theo: $${result.expected.theo.toFixed(4)}`);
       console.log(`     points: ${result.expected.points}`);
@@ -198,11 +206,20 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
   // Helper: Cleanup isolated visit
   // ==========================================================================
   async function cleanupIsolatedVisit(visit: IsolatedVisit): Promise<void> {
-    await supabase.from('loyalty_ledger').delete().eq('player_id', visit.playerId);
+    await supabase
+      .from('loyalty_ledger')
+      .delete()
+      .eq('player_id', visit.playerId);
     await supabase.from('rating_slip').delete().eq('visit_id', visit.id);
     await supabase.from('visit').delete().eq('id', visit.id);
-    await supabase.from('player_loyalty').delete().eq('player_id', visit.playerId);
-    await supabase.from('player_casino').delete().eq('player_id', visit.playerId);
+    await supabase
+      .from('player_loyalty')
+      .delete()
+      .eq('player_id', visit.playerId);
+    await supabase
+      .from('player_casino')
+      .delete()
+      .eq('player_id', visit.playerId);
     await supabase.from('player').delete().eq('id', visit.playerId);
   }
 
@@ -214,7 +231,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
     houseEdge: number,
     durationSeconds: number,
     decisionsPerHour: number,
-    pointsConversionRate: number
+    pointsConversionRate: number,
   ): { theo: number; points: number } {
     const durationHours = durationSeconds / 3600;
     const theo = avgBet * (houseEdge / 100) * durationHours * decisionsPerHour;
@@ -232,7 +249,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
     durationSeconds: number,
     houseEdge: number = 1.5,
     decisionsPerHour: number = 70,
-    pointsConversionRate: number = 10.0
+    pointsConversionRate: number = 10.0,
   ): Promise<void> {
     const startTime = Date.now();
     const testVisit = await createIsolatedVisit();
@@ -254,9 +271,14 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         .eq('id', slip.id);
 
       // Close slip (this calculates duration_seconds based on start_time → now())
-      const closed = await service.close(fixture.casinoId, fixture.actorId, slip.id, {
-        average_bet: avgBet,
-      });
+      const closed = await service.close(
+        fixture.casinoId,
+        fixture.actorId,
+        slip.id,
+        {
+          average_bet: avgBet,
+        },
+      );
 
       expect(closed.status).toBe('closed');
 
@@ -267,7 +289,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           p_rating_slip_id: slip.id,
           p_casino_id: fixture.casinoId,
           p_idempotency_key: randomUUID(),
-        }
+        },
       );
 
       expect(accrualError).toBeNull();
@@ -280,7 +302,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         houseEdge,
         durationSeconds,
         decisionsPerHour,
-        pointsConversionRate
+        pointsConversionRate,
       );
 
       // Calculate variance
@@ -288,7 +310,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       const pointsDelta = Math.abs(result.points_delta - expected.points);
 
       // Record telemetry
-      const passed = theoDelta <= THEO_TOLERANCE && pointsDelta <= POINTS_TOLERANCE;
+      const passed =
+        theoDelta <= THEO_TOLERANCE && pointsDelta <= POINTS_TOLERANCE;
 
       telemetryResults.push({
         testName,
@@ -320,7 +343,10 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 
       // Cleanup ledger entry
       if (result.ledger_id) {
-        await supabase.from('loyalty_ledger').delete().eq('id', result.ledger_id);
+        await supabase
+          .from('loyalty_ledger')
+          .delete()
+          .eq('id', result.ledger_id);
       }
       await supabase.from('rating_slip').delete().eq('id', slip.id);
     } finally {
@@ -341,7 +367,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         'should calculate correct theo and points for 2hr session at $50 avg bet',
         '2-hour Standard Session ($50 avg bet)',
         50, // avgBet
-        7200 // durationSeconds (2 hours)
+        7200, // durationSeconds (2 hours)
       );
     });
   });
@@ -359,7 +385,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         'should calculate correct theo and points for 30min session',
         '30-minute Short Session ($50 avg bet)',
         50, // avgBet
-        1800 // durationSeconds (30 minutes)
+        1800, // durationSeconds (30 minutes)
       );
     });
   });
@@ -377,7 +403,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         'should calculate correct theo and points for 4hr high-roller session at $500 avg bet',
         '4-hour High-Roller Session ($500 avg bet)',
         500, // avgBet
-        14400 // durationSeconds (4 hours)
+        14400, // durationSeconds (4 hours)
       );
     });
   });
@@ -400,7 +426,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         'should calculate correct points with VIP-level conversion rate',
         'VIP Tier Session ($100 avg bet, 2hr)',
         100, // avgBet
-        7200 // durationSeconds (2 hours)
+        7200, // durationSeconds (2 hours)
       );
     });
   });
@@ -430,9 +456,14 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           .eq('id', slip.id);
 
         // Immediately close
-        const closed = await service.close(fixture.casinoId, fixture.actorId, slip.id, {
-          average_bet: 100,
-        });
+        const closed = await service.close(
+          fixture.casinoId,
+          fixture.actorId,
+          slip.id,
+          {
+            average_bet: 100,
+          },
+        );
 
         expect(closed.status).toBe('closed');
 
@@ -443,7 +474,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
             p_rating_slip_id: slip.id,
             p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
-          }
+          },
         );
 
         expect(accrualError).toBeNull();
@@ -456,7 +487,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         const passed = result.theo <= 0.1 && result.points_delta <= 1;
 
         telemetryResults.push({
-          testName: 'should return zero theo and points for zero-duration session',
+          testName:
+            'should return zero theo and points for zero-duration session',
           scenario: 'Zero Duration Edge Case',
           inputs: {
             avgBet: 100,
@@ -485,7 +517,10 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 
         // Cleanup
         if (result.ledger_id) {
-          await supabase.from('loyalty_ledger').delete().eq('id', result.ledger_id);
+          await supabase
+            .from('loyalty_ledger')
+            .delete()
+            .eq('id', result.ledger_id);
         }
         await supabase.from('rating_slip').delete().eq('id', slip.id);
       } finally {
@@ -514,7 +549,10 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         // Verify policy_snapshot was captured
         expect(slip.policy_snapshot).toBeDefined();
         const policySnapshot = slip.policy_snapshot as Record<string, unknown>;
-        const loyaltySnapshot = policySnapshot?.loyalty as Record<string, unknown>;
+        const loyaltySnapshot = policySnapshot?.loyalty as Record<
+          string,
+          unknown
+        >;
         expect(loyaltySnapshot).toBeDefined();
 
         // Capture original snapshot values
@@ -549,7 +587,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
             p_rating_slip_id: slip.id,
             p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
-          }
+          },
         );
 
         expect(accrualError).toBeNull();
@@ -566,7 +604,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         const passed = theoDelta <= THEO_TOLERANCE;
 
         telemetryResults.push({
-          testName: 'should use frozen policy_snapshot values, not live game_settings',
+          testName:
+            'should use frozen policy_snapshot values, not live game_settings',
           scenario: 'Policy Snapshot Immutability',
           inputs: {
             avgBet: 100,
@@ -605,7 +644,10 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           .eq('game_type', 'blackjack');
 
         if (result.ledger_id) {
-          await supabase.from('loyalty_ledger').delete().eq('id', result.ledger_id);
+          await supabase
+            .from('loyalty_ledger')
+            .delete()
+            .eq('id', result.ledger_id);
         }
         await supabase.from('rating_slip').delete().eq('id', slip.id);
       } finally {
@@ -620,7 +662,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 // ============================================================================
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>
+  supabase: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create casino
   const { data: casino, error: casinoError } = await supabase

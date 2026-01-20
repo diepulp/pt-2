@@ -1,10 +1,10 @@
-import { Metadata } from "next";
+import { Metadata } from 'next';
 
-import { PitMapContainer } from "./pit-map-container";
+import { PitMapContainer } from './pit-map-container';
 
 export const metadata: Metadata = {
-  title: "Pit Map Navigation | PT-2",
-  description: "Casino pit and table navigation interface",
+  title: 'Pit Map Navigation | PT-2',
+  description: 'Casino pit and table navigation interface',
 };
 
 /**

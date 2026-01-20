@@ -9,12 +9,12 @@
  * @see EXEC-VSE-001 Visit Service Evolution
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type VisitRow = Database["public"]["Tables"]["visit"]["Row"];
-type VisitInsert = Database["public"]["Tables"]["visit"]["Insert"];
+type VisitRow = Database['public']['Tables']['visit']['Row'];
+type VisitInsert = Database['public']['Tables']['visit']['Insert'];
 
 // === Visit Kind Enum (derived from database) ===
 
@@ -27,7 +27,7 @@ type VisitInsert = Database["public"]["Tables"]["visit"]["Insert"];
  *
  * @see EXEC-VSE-001 section 1 (Executive Summary)
  */
-export type VisitKind = Database["public"]["Enums"]["visit_kind"];
+export type VisitKind = Database['public']['Enums']['visit_kind'];
 
 // === Visit DTOs ===
 
@@ -42,18 +42,18 @@ export type VisitKind = Database["public"]["Enums"]["visit_kind"];
  */
 export type VisitDTO = Pick<
   VisitRow,
-  | "id"
-  | "player_id"
-  | "casino_id"
-  | "visit_kind"
-  | "started_at"
-  | "ended_at"
-  | "visit_group_id"
-  | "gaming_day"
+  | 'id'
+  | 'player_id'
+  | 'casino_id'
+  | 'visit_kind'
+  | 'started_at'
+  | 'ended_at'
+  | 'visit_group_id'
+  | 'gaming_day'
 >;
 
 /** Visit creation input (casino_id comes from RLS context) */
-export type CreateVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * Visit close input.
@@ -74,7 +74,7 @@ export type CloseVisitDTO = {
  *
  * Use case: Comps, vouchers, customer care without gaming session.
  */
-export type CreateRewardVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateRewardVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * Input for creating an identified gaming visit.
@@ -83,7 +83,7 @@ export type CreateRewardVisitDTO = Pick<VisitInsert, "player_id">;
  *
  * Use case: Standard rated play with loyalty accrual.
  */
-export type CreateGamingVisitDTO = Pick<VisitInsert, "player_id">;
+export type CreateGamingVisitDTO = Pick<VisitInsert, 'player_id'>;
 
 /**
  * RPC input for creating a ghost gaming visit.
@@ -138,7 +138,6 @@ export interface ActiveVisitDTO {
  * - `resumed`: true if resuming same-day visit (vs creating new)
  * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
  */
-
 export interface StartVisitResultDTO {
   /** The visit (new or existing) */
   visit: VisitDTO;
@@ -174,7 +173,7 @@ export type VisitListFilters = {
   /** Filter by player */
   player_id?: string;
   /** Filter by visit status */
-  status?: "active" | "closed";
+  status?: 'active' | 'closed';
   /** Filter by visit kind */
   visit_kind?: VisitKind;
   /** Filter by date range start */
@@ -215,7 +214,7 @@ export interface VisitLiveViewDTO {
   /** Player last name */
   player_last_name: string;
   /** Visit status: 'open' or 'closed' */
-  visit_status: "open" | "closed";
+  visit_status: 'open' | 'closed';
   /** Visit start timestamp */
   started_at: string;
 
@@ -229,7 +228,7 @@ export interface VisitLiveViewDTO {
   /** Current seat number (null if no active slip) */
   current_segment_seat_number: string | null;
   /** Current slip status: 'open' or 'paused' (null if no active slip) */
-  current_segment_status: "open" | "paused" | null;
+  current_segment_status: 'open' | 'paused' | null;
   /** Current segment start timestamp (null if no active slip) */
   current_segment_started_at: string | null;
   /** Current average bet (null if no active slip) */

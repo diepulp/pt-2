@@ -15,19 +15,19 @@
  * @see 31 CFR § 1021.311
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
 import {
   createRequestContext,
   errorResponse,
   parseQuery,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { assertRole } from "@/lib/supabase/rls-context";
-import { createClient } from "@/lib/supabase/server";
-import { createMtlService } from "@/services/mtl";
-import { mtlGamingDaySummaryQuerySchema } from "@/services/mtl/schemas";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { assertRole } from '@/lib/supabase/rls-context';
+import { createClient } from '@/lib/supabase/server';
+import { createMtlService } from '@/services/mtl';
+import { mtlGamingDaySummaryQuerySchema } from '@/services/mtl/schemas';
 
 /**
  * GET /api/v1/mtl/gaming-day-summary
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       async (mwCtx) => {
         // ADR-025: Gaming Day Summary is UI-gated to pit_boss, admin ONLY
         // Cashiers are explicitly excluded from compliance dashboard view
-        assertRole(mwCtx.rlsContext!, ["pit_boss", "admin"]);
+        assertRole(mwCtx.rlsContext!, ['pit_boss', 'admin']);
 
         const service = createMtlService(mwCtx.supabase);
 
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: response,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -88,8 +88,8 @@ export async function GET(request: NextRequest) {
         };
       },
       {
-        domain: "mtl",
-        action: "get-gaming-day-summary",
+        domain: 'mtl',
+        action: 'get-gaming-day-summary',
         correlationId: ctx.requestId,
       },
     );

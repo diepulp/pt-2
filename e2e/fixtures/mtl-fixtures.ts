@@ -7,16 +7,16 @@
  * @see EXECUTION-SPEC-PRD-MTL-UI-GAPS.md WS10
  */
 
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 if (!supabaseUrl || !supabaseServiceRoleKey) {
   throw new Error(
-    "Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY",
+    'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
   );
 }
 
@@ -97,14 +97,14 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
   const supabase = createServiceClient();
   const timestamp = Date.now();
   const testPrefix = `e2e_mtl_${timestamp}`;
-  const gamingDay = new Date().toISOString().split("T")[0];
+  const gamingDay = new Date().toISOString().split('T')[0];
 
   // Create casino
   const { data: casino, error: casinoError } = await supabase
-    .from("casino")
+    .from('casino')
     .insert({
       name: `${testPrefix}_casino`,
-      status: "active",
+      status: 'active',
     })
     .select()
     .single();
@@ -115,11 +115,11 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
 
   // Create casino settings for gaming day and MTL thresholds
   const { error: settingsError } = await supabase
-    .from("casino_settings")
+    .from('casino_settings')
     .insert({
       casino_id: casino.id,
-      gaming_day_start_time: "06:00:00",
-      timezone: "America/Los_Angeles",
+      gaming_day_start_time: '06:00:00',
+      timezone: 'America/Los_Angeles',
       watchlist_floor: 3000, // $3,000 watchlist threshold
       ctr_threshold: 10000, // $10,000 CTR threshold
     });
@@ -141,28 +141,28 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
       email_confirm: true,
       app_metadata: {
         casino_id: casino.id,
-        staff_role: "admin",
+        staff_role: 'admin',
       },
     });
 
   if (authError || !authUser.user) {
     // Cleanup casino
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create auth user: ${authError?.message}`);
   }
 
   // Create staff member
   const { data: staff, error: staffError } = await supabase
-    .from("staff")
+    .from('staff')
     .insert({
       user_id: authUser.user.id,
       casino_id: casino.id,
-      first_name: "MTL",
+      first_name: 'MTL',
       last_name: `Test ${timestamp}`,
       email: testEmail,
-      role: "admin",
-      status: "active",
+      role: 'admin',
+      status: 'active',
     })
     .select()
     .single();
@@ -170,8 +170,8 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
   if (staffError || !staff) {
     // Cleanup
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create staff: ${staffError?.message}`);
   }
 
@@ -181,7 +181,7 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
       app_metadata: {
         casino_id: casino.id,
         staff_id: staff.id,
-        staff_role: "admin",
+        staff_role: 'admin',
       },
     });
 
@@ -193,9 +193,9 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
 
   // Create player (global entity, no casino_id)
   const { data: player, error: playerError } = await supabase
-    .from("player")
+    .from('player')
     .insert({
-      first_name: "MTL",
+      first_name: 'MTL',
       last_name: `Player ${timestamp}`,
     })
     .select()
@@ -203,20 +203,20 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
 
   if (playerError || !player) {
     // Cleanup
-    await supabase.from("staff").delete().eq("id", staff.id);
+    await supabase.from('staff').delete().eq('id', staff.id);
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create player: ${playerError?.message}`);
   }
 
   // Link player to casino via player_casino junction table
   const { error: playerCasinoError } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .insert({
       player_id: player.id,
       casino_id: casino.id,
-      status: "active",
+      status: 'active',
     });
 
   if (playerCasinoError) {
@@ -227,24 +227,24 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
 
   // Create gaming table
   const { data: table, error: tableError } = await supabase
-    .from("gaming_table")
+    .from('gaming_table')
     .insert({
       casino_id: casino.id,
       label: `MTL-TEST-${timestamp}`,
-      type: "blackjack",
-      status: "active",
+      type: 'blackjack',
+      status: 'active',
     })
     .select()
     .single();
 
   if (tableError || !table) {
     // Cleanup
-    await supabase.from("player_casino").delete().eq("player_id", player.id);
-    await supabase.from("player").delete().eq("id", player.id);
-    await supabase.from("staff").delete().eq("id", staff.id);
+    await supabase.from('player_casino').delete().eq('player_id', player.id);
+    await supabase.from('player').delete().eq('id', player.id);
+    await supabase.from('staff').delete().eq('id', staff.id);
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create table: ${tableError?.message}`);
   }
 
@@ -252,33 +252,33 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   const visitId = crypto.randomUUID();
   const { data: visit, error: visitError } = await supabase
-    .from("visit")
+    .from('visit')
     .insert({
       id: visitId,
       casino_id: casino.id,
       player_id: player.id,
       started_at: new Date().toISOString(),
-      visit_kind: "gaming_identified_rated",
+      visit_kind: 'gaming_identified_rated',
       visit_group_id: visitId, // Self-reference for new visit group
-      gaming_day: "1970-01-01", // Overwritten by trigger
+      gaming_day: '1970-01-01', // Overwritten by trigger
     })
     .select()
     .single();
 
   if (visitError || !visit) {
     // Cleanup
-    await supabase.from("gaming_table").delete().eq("id", table.id);
-    await supabase.from("player_casino").delete().eq("player_id", player.id);
-    await supabase.from("player").delete().eq("id", player.id);
-    await supabase.from("staff").delete().eq("id", staff.id);
+    await supabase.from('gaming_table').delete().eq('id', table.id);
+    await supabase.from('player_casino').delete().eq('player_id', player.id);
+    await supabase.from('player').delete().eq('id', player.id);
+    await supabase.from('staff').delete().eq('id', staff.id);
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create visit: ${visitError?.message}`);
   }
 
   // Create rating slip with policy_snapshot for loyalty accrual
-  const seatNumber = "1";
+  const seatNumber = '1';
   const policySnapshot = {
     loyalty: {
       house_edge: 1.5,
@@ -286,36 +286,36 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
       points_conversion_rate: 10.0,
       point_multiplier: 1.0,
     },
-    game_type: "blackjack",
+    game_type: 'blackjack',
     captured_at: new Date().toISOString(),
   };
 
   const { data: ratingSlip, error: slipError } = await supabase
-    .from("rating_slip")
+    .from('rating_slip')
     .insert({
       casino_id: casino.id,
       visit_id: visit.id,
       table_id: table.id,
       seat_number: seatNumber,
       start_time: new Date().toISOString(),
-      status: "open",
+      status: 'open',
       average_bet: 2500, // $25.00 in cents
       policy_snapshot: policySnapshot,
-      accrual_kind: "loyalty",
+      accrual_kind: 'loyalty',
     })
     .select()
     .single();
 
   if (slipError || !ratingSlip) {
     // Cleanup
-    await supabase.from("visit").delete().eq("id", visit.id);
-    await supabase.from("gaming_table").delete().eq("id", table.id);
-    await supabase.from("player_casino").delete().eq("player_id", player.id);
-    await supabase.from("player").delete().eq("id", player.id);
-    await supabase.from("staff").delete().eq("id", staff.id);
+    await supabase.from('visit').delete().eq('id', visit.id);
+    await supabase.from('gaming_table').delete().eq('id', table.id);
+    await supabase.from('player_casino').delete().eq('player_id', player.id);
+    await supabase.from('player').delete().eq('id', player.id);
+    await supabase.from('staff').delete().eq('id', staff.id);
     await supabase.auth.admin.deleteUser(authUser.user.id);
-    await supabase.from("casino_settings").delete().eq("casino_id", casino.id);
-    await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
+    await supabase.from('casino').delete().eq('id', casino.id);
     throw new Error(`Failed to create rating slip: ${slipError?.message}`);
   }
 
@@ -344,24 +344,24 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
     const cleanupClient = createServiceClient();
 
     // Delete in reverse dependency order
-    await cleanupClient.from("mtl_entry").delete().eq("casino_id", casino.id);
-    await cleanupClient.from("rating_slip").delete().eq("casino_id", casino.id);
-    await cleanupClient.from("visit").delete().eq("id", visit.id);
+    await cleanupClient.from('mtl_entry').delete().eq('casino_id', casino.id);
+    await cleanupClient.from('rating_slip').delete().eq('casino_id', casino.id);
+    await cleanupClient.from('visit').delete().eq('id', visit.id);
     await cleanupClient
-      .from("gaming_table")
+      .from('gaming_table')
       .delete()
-      .eq("casino_id", casino.id);
+      .eq('casino_id', casino.id);
     await cleanupClient
-      .from("player_casino")
+      .from('player_casino')
       .delete()
-      .eq("player_id", player.id);
-    await cleanupClient.from("player").delete().eq("id", player.id);
-    await cleanupClient.from("staff").delete().eq("casino_id", casino.id);
+      .eq('player_id', player.id);
+    await cleanupClient.from('player').delete().eq('id', player.id);
+    await cleanupClient.from('staff').delete().eq('casino_id', casino.id);
     await cleanupClient
-      .from("casino_settings")
+      .from('casino_settings')
       .delete()
-      .eq("casino_id", casino.id);
-    await cleanupClient.from("casino").delete().eq("id", casino.id);
+      .eq('casino_id', casino.id);
+    await cleanupClient.from('casino').delete().eq('id', casino.id);
     await cleanupClient.auth.admin.deleteUser(authUser.user.id);
   };
 
@@ -398,18 +398,18 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
 export async function createTestMtlEntry(
   scenario: MtlTestScenario,
   amount: number,
-  direction: "in" | "out" = "in",
+  direction: 'in' | 'out' = 'in',
   txnType:
-    | "buy_in"
-    | "cash_out"
-    | "front_money"
-    | "marker"
-    | "chip_fill" = "buy_in",
+    | 'buy_in'
+    | 'cash_out'
+    | 'front_money'
+    | 'marker'
+    | 'chip_fill' = 'buy_in',
 ): Promise<TestMtlEntry> {
   const supabase = createServiceClient();
 
   const { data: entry, error } = await supabase
-    .from("mtl_entry")
+    .from('mtl_entry')
     .insert({
       casino_id: scenario.casinoId,
       patron_uuid: scenario.playerId,
@@ -419,7 +419,7 @@ export async function createTestMtlEntry(
       amount,
       direction,
       txn_type: txnType,
-      source: "table",
+      source: 'table',
       gaming_day: scenario.gamingDay,
       idempotency_key: `test-${Date.now()}-${Math.random()}`,
     })
@@ -452,11 +452,11 @@ export async function getPatronDailyTotal(
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("mtl_gaming_day_summary")
-    .select("total_in, total_out")
-    .eq("casino_id", scenario.casinoId)
-    .eq("patron_uuid", scenario.playerId)
-    .eq("gaming_day", scenario.gamingDay)
+    .from('mtl_gaming_day_summary')
+    .select('total_in, total_out')
+    .eq('casino_id', scenario.casinoId)
+    .eq('patron_uuid', scenario.playerId)
+    .eq('gaming_day', scenario.gamingDay)
     .single();
 
   if (error) {
@@ -482,12 +482,12 @@ export async function getMtlEntriesForPatron(
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
-    .from("mtl_entry")
-    .select("id, patron_uuid, casino_id, amount, direction, txn_type")
-    .eq("casino_id", scenario.casinoId)
-    .eq("patron_uuid", scenario.playerId)
-    .eq("gaming_day", scenario.gamingDay)
-    .order("created_at", { ascending: false });
+    .from('mtl_entry')
+    .select('id, patron_uuid, casino_id, amount, direction, txn_type')
+    .eq('casino_id', scenario.casinoId)
+    .eq('patron_uuid', scenario.playerId)
+    .eq('gaming_day', scenario.gamingDay)
+    .order('created_at', { ascending: false });
 
   if (error) {
     throw new Error(`Failed to get MTL entries: ${error?.message}`);

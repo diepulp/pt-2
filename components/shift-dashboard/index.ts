@@ -6,29 +6,29 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-export { AlertsPanel, type AlertsPanelProps } from "./alerts-panel";
+export { AlertsPanel, type AlertsPanelProps } from './alerts-panel';
 export {
   CashObservationsPanel,
   type CashObservationsPanelProps,
-} from "./cash-observations-panel";
+} from './cash-observations-panel';
 export {
   CasinoSummaryCard,
   type CasinoSummaryCardProps,
-} from "./casino-summary-card";
+} from './casino-summary-card';
 export {
   PitMetricsTable,
   type PitMetricsTableProps,
-} from "./pit-metrics-table";
+} from './pit-metrics-table';
 export {
   ShiftDashboardPage,
   type ShiftDashboardPageProps,
-} from "./shift-dashboard-page";
+} from './shift-dashboard-page';
 export {
   TableMetricsTable,
   type TableMetricsTableProps,
-} from "./table-metrics-table";
+} from './table-metrics-table';
 export {
   TimeWindowSelector,
   type TimeWindowPreset,
   type TimeWindowSelectorProps,
-} from "./time-window-selector";
+} from './time-window-selector';

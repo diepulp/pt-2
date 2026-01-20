@@ -10,7 +10,7 @@
  * @see SPEC-PRD-000-casino-foundation.md section 4.2
  */
 
-import type { CasinoDTO, CasinoSettingsDTO, StaffDTO } from "./dtos";
+import type { CasinoDTO, CasinoSettingsDTO, StaffDTO } from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -49,8 +49,8 @@ type StaffSelectedRow = {
   id: string;
   first_name: string;
   last_name: string;
-  role: "dealer" | "pit_boss" | "admin" | "cashier";
-  status: "active" | "inactive";
+  role: 'dealer' | 'pit_boss' | 'admin' | 'cashier';
+  status: 'active' | 'inactive';
   employee_id: string | null;
   casino_id: string;
 };
@@ -74,7 +74,7 @@ export function toCasinoDTO(row: CasinoSelectedRow): CasinoDTO {
     id: row.id,
     name: row.name,
     location: row.location,
-    status: row.status as "active" | "inactive",
+    status: row.status as 'active' | 'inactive',
     created_at: row.created_at,
   };
 }

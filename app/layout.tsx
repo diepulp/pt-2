@@ -1,29 +1,29 @@
-import type { Metadata } from "next";
-import { DM_Sans, JetBrains_Mono } from "next/font/google";
+import type { Metadata } from 'next';
+import { DM_Sans, JetBrains_Mono } from 'next/font/google';
 
-import "./globals.css";
-import { Providers } from "./providers";
+import './globals.css';
+import { Providers } from './providers';
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
-  : "http://localhost:3000";
+  : 'http://localhost:3000';
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Advance Player Tracker",
-  description: "The fastest way to build apps with Next.js and Supabase",
+  title: 'Advance Player Tracker',
+  description: 'The fastest way to build apps with Next.js and Supabase',
 };
 
 const jetbrainsMono = JetBrains_Mono({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-mono",
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-mono',
 });
 
 const dmSans = DM_Sans({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-sans",
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-sans',
 });
 
 export default function RootLayout({

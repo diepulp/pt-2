@@ -10,9 +10,9 @@
 import {
   serializeKeyFilters,
   type KeyFilter,
-} from "@/services/shared/key-utils";
+} from '@/services/shared/key-utils';
 
-const ROOT = ["shift-dashboard"] as const;
+const ROOT = ['shift-dashboard'] as const;
 
 // Helper to serialize filters - cast to satisfy KeyFilter signature
 const serializeFilters = (filters: object = {}): string =>
@@ -38,8 +38,8 @@ export const shiftDashboardKeys = {
    */
   summary: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "summary", serializeFilters(window)] as const,
-    { scope: [...ROOT, "summary"] as const },
+      [...ROOT, 'summary', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'summary'] as const },
   ),
 
   // === Shift Metrics Queries ===
@@ -50,8 +50,8 @@ export const shiftDashboardKeys = {
    */
   tableMetrics: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "metrics", "tables", serializeFilters(window)] as const,
-    { scope: [...ROOT, "metrics", "tables"] as const },
+      [...ROOT, 'metrics', 'tables', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'metrics', 'tables'] as const },
   ),
 
   /**
@@ -62,11 +62,11 @@ export const shiftDashboardKeys = {
     (window: ShiftTimeWindow, pitId?: string) =>
       [
         ...ROOT,
-        "metrics",
-        "pits",
+        'metrics',
+        'pits',
         serializeFilters({ ...window, pitId }),
       ] as const,
-    { scope: [...ROOT, "metrics", "pits"] as const },
+    { scope: [...ROOT, 'metrics', 'pits'] as const },
   ),
 
   /**
@@ -74,8 +74,8 @@ export const shiftDashboardKeys = {
    */
   casinoMetrics: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "metrics", "casino", serializeFilters(window)] as const,
-    { scope: [...ROOT, "metrics", "casino"] as const },
+      [...ROOT, 'metrics', 'casino', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'metrics', 'casino'] as const },
   ),
 
   // === Cash Observation Queries (Telemetry) ===
@@ -88,11 +88,11 @@ export const shiftDashboardKeys = {
     (window: ShiftTimeWindow, tableId?: string) =>
       [
         ...ROOT,
-        "cash-obs",
-        "tables",
+        'cash-obs',
+        'tables',
         serializeFilters({ ...window, tableId }),
       ] as const,
-    { scope: [...ROOT, "cash-obs", "tables"] as const },
+    { scope: [...ROOT, 'cash-obs', 'tables'] as const },
   ),
 
   /**
@@ -102,11 +102,11 @@ export const shiftDashboardKeys = {
     (window: ShiftTimeWindow, pit?: string) =>
       [
         ...ROOT,
-        "cash-obs",
-        "pits",
+        'cash-obs',
+        'pits',
         serializeFilters({ ...window, pit }),
       ] as const,
-    { scope: [...ROOT, "cash-obs", "pits"] as const },
+    { scope: [...ROOT, 'cash-obs', 'pits'] as const },
   ),
 
   /**
@@ -114,8 +114,8 @@ export const shiftDashboardKeys = {
    */
   cashObsCasino: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "cash-obs", "casino", serializeFilters(window)] as const,
-    { scope: [...ROOT, "cash-obs", "casino"] as const },
+      [...ROOT, 'cash-obs', 'casino', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'cash-obs', 'casino'] as const },
   ),
 
   /**
@@ -123,8 +123,8 @@ export const shiftDashboardKeys = {
    */
   alerts: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "alerts", serializeFilters(window)] as const,
-    { scope: [...ROOT, "alerts"] as const },
+      [...ROOT, 'alerts', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'alerts'] as const },
   ),
 
   // === BFF Consolidated Query (PERF-001) ===
@@ -136,8 +136,8 @@ export const shiftDashboardKeys = {
    */
   cashObsSummary: Object.assign(
     (window: ShiftTimeWindow) =>
-      [...ROOT, "cash-obs", "summary", serializeFilters(window)] as const,
-    { scope: [...ROOT, "cash-obs", "summary"] as const },
+      [...ROOT, 'cash-obs', 'summary', serializeFilters(window)] as const,
+    { scope: [...ROOT, 'cash-obs', 'summary'] as const },
   ),
 
   // === Invalidation Helpers ===
@@ -151,10 +151,10 @@ export const shiftDashboardKeys = {
   /**
    * Invalidate all metrics queries.
    */
-  allMetrics: () => [...ROOT, "metrics"] as const,
+  allMetrics: () => [...ROOT, 'metrics'] as const,
 
   /**
    * Invalidate all cash observation queries.
    */
-  allCashObs: () => [...ROOT, "cash-obs"] as const,
+  allCashObs: () => [...ROOT, 'cash-obs'] as const,
 };

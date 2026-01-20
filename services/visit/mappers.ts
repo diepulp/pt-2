@@ -13,7 +13,7 @@ import type {
   VisitDTO,
   VisitKind,
   VisitWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 

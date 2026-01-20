@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Award,
@@ -9,53 +9,53 @@ import {
   Star,
   Trophy,
   Zap,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { usePlayerLoyalty } from "@/hooks/loyalty/use-loyalty-queries";
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { useAuth } from "@/hooks/use-auth";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { usePlayerLoyalty } from '@/hooks/loyalty/use-loyalty-queries';
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 
-type LoyaltyTier = "bronze" | "silver" | "gold" | "platinum" | "diamond";
+type LoyaltyTier = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
 
 const TIER_CONFIG = {
   bronze: {
     icon: Award,
-    color: "text-amber-600",
-    bg: "bg-gradient-to-br from-amber-600/20 to-amber-800/20",
-    border: "border-amber-600/30",
-    glow: "",
+    color: 'text-amber-600',
+    bg: 'bg-gradient-to-br from-amber-600/20 to-amber-800/20',
+    border: 'border-amber-600/30',
+    glow: '',
   },
   silver: {
     icon: Star,
-    color: "text-slate-400",
-    bg: "bg-gradient-to-br from-slate-400/20 to-slate-600/20",
-    border: "border-slate-400/30",
-    glow: "",
+    color: 'text-slate-400',
+    bg: 'bg-gradient-to-br from-slate-400/20 to-slate-600/20',
+    border: 'border-slate-400/30',
+    glow: '',
   },
   gold: {
     icon: Trophy,
-    color: "text-amber-400",
-    bg: "bg-gradient-to-br from-amber-400/20 to-amber-600/20",
-    border: "border-amber-400/30",
-    glow: "shadow-[0_0_12px_rgba(245,158,11,0.2)]",
+    color: 'text-amber-400',
+    bg: 'bg-gradient-to-br from-amber-400/20 to-amber-600/20',
+    border: 'border-amber-400/30',
+    glow: 'shadow-[0_0_12px_rgba(245,158,11,0.2)]',
   },
   platinum: {
     icon: Crown,
-    color: "text-purple-400",
-    bg: "bg-gradient-to-br from-purple-400/20 to-purple-600/20",
-    border: "border-purple-400/30",
-    glow: "shadow-[0_0_12px_rgba(168,85,247,0.2)]",
+    color: 'text-purple-400',
+    bg: 'bg-gradient-to-br from-purple-400/20 to-purple-600/20',
+    border: 'border-purple-400/30',
+    glow: 'shadow-[0_0_12px_rgba(168,85,247,0.2)]',
   },
   diamond: {
     icon: Sparkles,
-    color: "text-cyan-400",
-    bg: "bg-gradient-to-br from-cyan-400/20 to-blue-500/20",
-    border: "border-cyan-400/30",
-    glow: "shadow-[0_0_16px_rgba(6,182,212,0.3)]",
+    color: 'text-cyan-400',
+    bg: 'bg-gradient-to-br from-cyan-400/20 to-blue-500/20',
+    border: 'border-cyan-400/30',
+    glow: 'shadow-[0_0_16px_rgba(6,182,212,0.3)]',
   },
 };
 
@@ -77,7 +77,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -97,7 +97,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -108,7 +108,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
             Error loading loyalty
           </p>
           <p className="text-[10px] text-muted-foreground/60 mt-1">
-            {error.message || "Unknown error"}
+            {error.message || 'Unknown error'}
           </p>
         </div>
       </div>
@@ -119,7 +119,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -137,7 +137,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
   }
 
   // Parse tier from loyalty data
-  const tier = (loyalty.tier?.toLowerCase() || "bronze") as LoyaltyTier;
+  const tier = (loyalty.tier?.toLowerCase() || 'bronze') as LoyaltyTier;
   const tierConfig = TIER_CONFIG[tier];
   const TierIcon = tierConfig.icon;
 
@@ -151,21 +151,21 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col",
+        'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm flex flex-col',
         className,
       )}
     >
       {/* LED accent strip - tier colored */}
       <div
         className={cn(
-          "absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent to-transparent",
-          tier === "diamond"
-            ? "via-cyan-500/70"
-            : tier === "platinum"
-              ? "via-purple-500/70"
-              : tier === "gold"
-                ? "via-amber-500/70"
-                : "via-accent/50",
+          'absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent to-transparent',
+          tier === 'diamond'
+            ? 'via-cyan-500/70'
+            : tier === 'platinum'
+              ? 'via-purple-500/70'
+              : tier === 'gold'
+                ? 'via-amber-500/70'
+                : 'via-accent/50',
         )}
       />
 
@@ -183,7 +183,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
         <Badge
           variant="outline"
           className={cn(
-            "text-[10px] h-5 capitalize font-bold",
+            'text-[10px] h-5 capitalize font-bold',
             tierConfig.color,
             tierConfig.border,
           )}
@@ -198,7 +198,7 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
         {/* Tier Progress */}
         <div
           className={cn(
-            "p-3 rounded-lg border",
+            'p-3 rounded-lg border',
             tierConfig.bg,
             tierConfig.border,
             tierConfig.glow,
@@ -206,9 +206,9 @@ export function LoyaltyPanel({ className }: LoyaltyPanelProps) {
         >
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
-              <TierIcon className={cn("h-5 w-5", tierConfig.color)} />
+              <TierIcon className={cn('h-5 w-5', tierConfig.color)} />
               <span
-                className={cn("text-sm font-bold capitalize", tierConfig.color)}
+                className={cn('text-sm font-bold capitalize', tierConfig.color)}
               >
                 {tier} Member
               </span>

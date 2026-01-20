@@ -10,17 +10,17 @@
  * @see EXECUTION-SPEC-PRD-009.md WS2
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CreateFinancialTxnInput,
   FinancialTransactionDTO,
   FinancialTxnListQuery,
   VisitFinancialSummaryDTO,
-} from "./dtos";
+} from './dtos';
 import {
   toFinancialTransactionDTO,
   toFinancialTransactionDTOFromRpc,
@@ -28,12 +28,12 @@ import {
   toFinancialTransactionDTOOrNull,
   toVisitFinancialSummaryDTO,
   toVisitFinancialSummaryDTOOrNull,
-} from "./mappers";
+} from './mappers';
 import {
   FINANCIAL_TXN_SELECT,
   FINANCIAL_TXN_SELECT_LIST,
   VISIT_SUMMARY_SELECT,
-} from "./selects";
+} from './selects';
 
 // === Error Mapping ===
 
@@ -45,80 +45,80 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  const message = error.message || "";
+  const message = error.message || '';
 
   // Handle RPC-raised exceptions (from migration validation)
-  if (message.includes("TRANSACTION_NOT_FOUND")) {
+  if (message.includes('TRANSACTION_NOT_FOUND')) {
     return new DomainError(
-      "TRANSACTION_NOT_FOUND",
-      "Financial transaction not found",
+      'TRANSACTION_NOT_FOUND',
+      'Financial transaction not found',
     );
   }
 
-  if (message.includes("PLAYER_NOT_FOUND")) {
-    return new DomainError("PLAYER_NOT_FOUND", "Player not found");
+  if (message.includes('PLAYER_NOT_FOUND')) {
+    return new DomainError('PLAYER_NOT_FOUND', 'Player not found');
   }
 
-  if (message.includes("VISIT_NOT_FOUND")) {
-    return new DomainError("VISIT_NOT_FOUND", "Visit not found");
+  if (message.includes('VISIT_NOT_FOUND')) {
+    return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
   }
 
-  if (message.includes("VISIT_NOT_OPEN")) {
+  if (message.includes('VISIT_NOT_OPEN')) {
     return new DomainError(
-      "VISIT_NOT_OPEN",
-      "Visit is not active. Cannot create transaction.",
+      'VISIT_NOT_OPEN',
+      'Visit is not active. Cannot create transaction.',
     );
   }
 
-  if (message.includes("TRANSACTION_AMOUNT_INVALID")) {
+  if (message.includes('TRANSACTION_AMOUNT_INVALID')) {
     return new DomainError(
-      "TRANSACTION_AMOUNT_INVALID",
-      "Transaction amount must be positive",
+      'TRANSACTION_AMOUNT_INVALID',
+      'Transaction amount must be positive',
     );
   }
 
   // Handle Postgres error codes
   // 23505 = Unique constraint violation (idempotency key)
-  if (error.code === "23505") {
-    if (message.includes("idempotency_key")) {
+  if (error.code === '23505') {
+    if (message.includes('idempotency_key')) {
       return new DomainError(
-        "IDEMPOTENCY_CONFLICT",
-        "A transaction with this idempotency key already exists",
+        'IDEMPOTENCY_CONFLICT',
+        'A transaction with this idempotency key already exists',
       );
     }
     return new DomainError(
-      "UNIQUE_VIOLATION",
-      "Duplicate financial transaction detected",
+      'UNIQUE_VIOLATION',
+      'Duplicate financial transaction detected',
     );
   }
 
   // 23503 = Foreign key violation
-  if (error.code === "23503") {
-    if (message.includes("player_id")) {
-      return new DomainError("PLAYER_NOT_FOUND", "Player not found");
+  if (error.code === '23503') {
+    if (message.includes('player_id')) {
+      return new DomainError('PLAYER_NOT_FOUND', 'Player not found');
     }
-    if (message.includes("visit_id")) {
-      return new DomainError("VISIT_NOT_FOUND", "Visit not found");
+    if (message.includes('visit_id')) {
+      return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
     }
-    if (message.includes("rating_slip_id")) {
-      return new DomainError("RATING_SLIP_NOT_FOUND", "Rating slip not found");
+    if (message.includes('rating_slip_id')) {
+      return new DomainError('RATING_SLIP_NOT_FOUND', 'Rating slip not found');
     }
     return new DomainError(
-      "FOREIGN_KEY_VIOLATION",
-      "Referenced record not found",
+      'FOREIGN_KEY_VIOLATION',
+      'Referenced record not found',
     );
   }
 
   // PGRST116 = Not found (no rows returned)
-  if (error.code === "PGRST116" || message.includes("No rows found")) {
+  if (error.code === 'PGRST116' || message.includes('No rows found')) {
     return new DomainError(
-      "TRANSACTION_NOT_FOUND",
-      "Financial transaction not found",
+      'TRANSACTION_NOT_FOUND',
+      'Financial transaction not found',
     );
   }
 
   // Default to internal error
-  return new DomainError("INTERNAL_ERROR", message, { details: error });
+  return new DomainError('INTERNAL_ERROR', message, { details: error });
 }
 
 // === Create Operation (RPC-backed) ===
@@ -143,10 +143,10 @@ export async function createTransaction(
     // Type assertion needed due to RPC overloads - we're using the full signature
     // that returns the complete transaction object (not just string ID)
     type RpcReturnType =
-      Database["public"]["Tables"]["player_financial_transaction"]["Row"];
+      Database['public']['Tables']['player_financial_transaction']['Row'];
 
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC overload resolution requires explicit return type
-    const { data, error } = (await supabase.rpc("rpc_create_financial_txn", {
+    const { data, error } = (await supabase.rpc('rpc_create_financial_txn', {
       p_casino_id: input.casino_id,
       p_player_id: input.player_id,
       p_visit_id: input.visit_id,
@@ -170,8 +170,8 @@ export async function createTransaction(
 
     if (!data) {
       throw new DomainError(
-        "INTERNAL_ERROR",
-        "RPC returned no data for financial transaction creation",
+        'INTERNAL_ERROR',
+        'RPC returned no data for financial transaction creation',
       );
     }
 
@@ -200,14 +200,14 @@ export async function getById(
 ): Promise<FinancialTransactionDTO | null> {
   try {
     const { data, error } = await supabase
-      .from("player_financial_transaction")
+      .from('player_financial_transaction')
       .select(FINANCIAL_TXN_SELECT)
-      .eq("id", id)
+      .eq('id', id)
       .single();
 
     if (error) {
       // PGRST116 means "no rows found" - return null instead of throwing
-      if (error.code === "PGRST116") {
+      if (error.code === 'PGRST116') {
         return null;
       }
       throw mapDatabaseError(error);
@@ -239,10 +239,10 @@ export async function getByIdempotencyKey(
 ): Promise<FinancialTransactionDTO | null> {
   try {
     const { data, error } = await supabase
-      .from("player_financial_transaction")
+      .from('player_financial_transaction')
       .select(FINANCIAL_TXN_SELECT)
-      .eq("casino_id", casinoId)
-      .eq("idempotency_key", idempotencyKey)
+      .eq('casino_id', casinoId)
+      .eq('idempotency_key', idempotencyKey)
       .maybeSingle();
 
     if (error) {
@@ -286,37 +286,37 @@ export async function list(
 
     // Start query builder
     let queryBuilder = supabase
-      .from("player_financial_transaction")
+      .from('player_financial_transaction')
       .select(FINANCIAL_TXN_SELECT_LIST)
-      .order("created_at", { ascending: false });
+      .order('created_at', { ascending: false });
 
     // Apply filters
     if (player_id) {
-      queryBuilder = queryBuilder.eq("player_id", player_id);
+      queryBuilder = queryBuilder.eq('player_id', player_id);
     }
     if (visit_id) {
-      queryBuilder = queryBuilder.eq("visit_id", visit_id);
+      queryBuilder = queryBuilder.eq('visit_id', visit_id);
     }
     if (direction) {
-      queryBuilder = queryBuilder.eq("direction", direction);
+      queryBuilder = queryBuilder.eq('direction', direction);
     }
     if (source) {
-      queryBuilder = queryBuilder.eq("source", source);
+      queryBuilder = queryBuilder.eq('source', source);
     }
     if (tender_type) {
-      queryBuilder = queryBuilder.eq("tender_type", tender_type);
+      queryBuilder = queryBuilder.eq('tender_type', tender_type);
     }
     if (gaming_day) {
-      queryBuilder = queryBuilder.eq("gaming_day", gaming_day);
+      queryBuilder = queryBuilder.eq('gaming_day', gaming_day);
     }
 
     // Handle table_id filter (requires join with rating_slip)
     if (table_id) {
       // Get rating slip IDs for this table
       const { data: slipData, error: slipError } = await supabase
-        .from("rating_slip")
-        .select("id")
-        .eq("table_id", table_id);
+        .from('rating_slip')
+        .select('id')
+        .eq('table_id', table_id);
 
       if (slipError) {
         throw mapDatabaseError(slipError);
@@ -324,7 +324,7 @@ export async function list(
 
       const slipIds = slipData?.map((slip) => slip.id) || [];
       if (slipIds.length > 0) {
-        queryBuilder = queryBuilder.in("rating_slip_id", slipIds);
+        queryBuilder = queryBuilder.in('rating_slip_id', slipIds);
       } else {
         // No slips for this table, return empty result
         return { items: [], cursor: null };
@@ -333,7 +333,7 @@ export async function list(
 
     // Apply cursor pagination
     if (cursor) {
-      queryBuilder = queryBuilder.lt("id", cursor);
+      queryBuilder = queryBuilder.lt('id', cursor);
     }
 
     // Fetch one extra to determine if there are more results
@@ -378,18 +378,18 @@ export async function getVisitSummary(
 ): Promise<VisitFinancialSummaryDTO> {
   try {
     const { data, error } = await supabase
-      .from("visit_financial_summary")
+      .from('visit_financial_summary')
       .select(VISIT_SUMMARY_SELECT)
-      .eq("visit_id", visitId)
+      .eq('visit_id', visitId)
       .single();
 
     if (error) {
       // PGRST116 means no transactions for this visit yet
-      if (error.code === "PGRST116") {
+      if (error.code === 'PGRST116') {
         // Return zero summary instead of throwing
         return {
           visit_id: visitId,
-          casino_id: "", // Will be populated by RLS context
+          casino_id: '', // Will be populated by RLS context
           total_in: 0,
           total_out: 0,
           net_amount: 0,
@@ -404,8 +404,8 @@ export async function getVisitSummary(
     const summary = toVisitFinancialSummaryDTOOrNull(data);
     if (!summary) {
       throw new DomainError(
-        "VISIT_NOT_FOUND",
-        "Visit financial summary not found",
+        'VISIT_NOT_FOUND',
+        'Visit financial summary not found',
       );
     }
 

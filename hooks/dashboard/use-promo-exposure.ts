@@ -10,18 +10,18 @@
  * @see EXECUTION-SPEC-LOYALTY-PROMO.md WS8
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import type {
   PromoExposureRollupDTO,
   PromoExposureRollupQuery,
-} from "@/services/loyalty/rollups";
-import { getPromoExposureRollup } from "@/services/loyalty/rollups";
+} from '@/services/loyalty/rollups';
+import { getPromoExposureRollup } from '@/services/loyalty/rollups';
 
-import { dashboardKeys } from "./keys";
+import { dashboardKeys } from './keys';
 
 interface UseDashboardPromoExposureOptions {
   /** Enable/disable the query */
@@ -49,7 +49,7 @@ interface UseDashboardPromoExposureOptions {
  */
 export function useDashboardPromoExposure(
   casinoId: string | undefined,
-  query: Omit<PromoExposureRollupQuery, "casinoId"> = {},
+  query: Omit<PromoExposureRollupQuery, 'casinoId'> = {},
   options: UseDashboardPromoExposureOptions = {},
 ) {
   const { enabled = true, refetchInterval = 30_000 } = options;

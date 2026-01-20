@@ -1,16 +1,16 @@
-"use client";
+'use client';
 
-import { Badge } from "@/components/ui/badge";
+import { Badge } from '@/components/ui/badge';
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { useIsMobile } from "@/hooks/use-mobile";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/resizable';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
-import { ExceptionsApprovalsPanel } from "./exceptions-approvals-panel";
-import { PitPanelsClient } from "./pit-panels-client";
+import { ExceptionsApprovalsPanel } from './exceptions-approvals-panel';
+import { PitPanelsClient } from './pit-panels-client';
 
 interface PitPanelsDashboardLayoutProps {
   casinoId: string;
@@ -35,9 +35,9 @@ export function PitPanelsDashboardLayout({
             title="Shift Ops"
             description="Under construction. Dealer coverage, handoffs, and shift notes."
             items={[
-              "Dealer assignments",
-              "Break/relief schedule",
-              "Shift handoff checklist",
+              'Dealer assignments',
+              'Break/relief schedule',
+              'Shift handoff checklist',
             ]}
           />
         </div>
@@ -64,9 +64,9 @@ export function PitPanelsDashboardLayout({
               title="Shift Ops"
               description="Under construction. Dealer coverage, handoffs, and shift notes."
               items={[
-                "Dealer assignments",
-                "Break/relief schedule",
-                "Shift handoff checklist",
+                'Dealer assignments',
+                'Break/relief schedule',
+                'Shift handoff checklist',
               ]}
             />
           </ResizablePanel>
@@ -88,7 +88,7 @@ function PendingSection({
   className?: string;
 }) {
   return (
-    <section className={cn("h-full bg-card/30 px-6 py-5 text-left", className)}>
+    <section className={cn('h-full bg-card/30 px-6 py-5 text-left', className)}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs font-mono text-muted-foreground">{title}</p>

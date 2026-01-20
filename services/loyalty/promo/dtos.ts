@@ -13,17 +13,17 @@
 /**
  * Promo program types (extensible for future promo types).
  */
-export type PromoType = "match_play";
+export type PromoType = 'match_play';
 
 /**
  * Promo coupon lifecycle states.
  */
 export type PromoCouponStatus =
-  | "issued" // Active, can be used
-  | "voided" // Cancelled before use
-  | "replaced" // Exchanged for new coupon
-  | "expired" // Past expiration date
-  | "cleared"; // Successfully redeemed (post-v0)
+  | 'issued' // Active, can be used
+  | 'voided' // Cancelled before use
+  | 'replaced' // Exchanged for new coupon
+  | 'expired' // Past expiration date
+  | 'cleared'; // Successfully redeemed (post-v0)
 
 // === Promo Program DTOs ===
 
@@ -104,7 +104,7 @@ export interface UpdatePromoProgramInput {
   name?: string;
 
   /** Updated status (optional) */
-  status?: "active" | "inactive" | "archived";
+  status?: 'active' | 'inactive' | 'archived';
 
   /** Updated start date (optional) */
   startAt?: string | null;

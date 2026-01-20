@@ -11,20 +11,20 @@
  * @see EXECUTION-SPEC-PRD-020.md WS6
  */
 
-import { test, expect, type Page, type Request } from "@playwright/test";
+import { test, expect, type Page, type Request } from '@playwright/test';
 
 import {
   createRatingSlipTestScenario,
   getRatingSlipStatus,
   getRatingSlipsForVisit,
   type RatingSlipTestScenario,
-} from "../fixtures/rating-slip-fixtures";
+} from '../fixtures/rating-slip-fixtures';
 
 /**
  * Helper: Authenticate user via browser login
  */
 async function authenticateUser(page: Page, scenario: RatingSlipTestScenario) {
-  await page.goto("/auth/login");
+  await page.goto('/auth/login');
   await page.fill('input[name="email"]', scenario.testEmail);
   await page.fill('input[name="password"]', scenario.testPassword);
   await page.click('button[type="submit"]');
@@ -38,7 +38,7 @@ async function openMovePlayerModal(
   page: Page,
   scenario: RatingSlipTestScenario,
 ) {
-  await page.goto("/pit");
+  await page.goto('/pit');
   await page.waitForSelector('[data-testid="table-grid"]', { timeout: 10000 });
 
   // Click on occupied seat to open modal
@@ -52,7 +52,7 @@ async function openMovePlayerModal(
   return modal;
 }
 
-test.describe("PRD-020: Move Player Performance & UX", () => {
+test.describe('PRD-020: Move Player Performance & UX', () => {
   /**
    * Test 1: Move player closes modal immediately on success (P0)
    *
@@ -61,7 +61,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
    * - selectedSlipId is null after move
    * - No "No Data Available" dialog on manual close
    */
-  test("successful move closes modal immediately", async ({ page }) => {
+  test('successful move closes modal immediately', async ({ page }) => {
     const scenario = await createRatingSlipTestScenario();
 
     try {
@@ -84,7 +84,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
 
       // Enter destination seat
       const seatInput = modal.locator('[data-testid="move-seat-input"]');
-      await seatInput.fill("3");
+      await seatInput.fill('3');
 
       // Click Move Player button and wait for API response
       const moveButton = modal.locator('button:has-text("Move Player")');
@@ -93,8 +93,8 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       // Capture the move response
       const moveResponsePromise = page.waitForResponse(
         (resp) =>
-          resp.url().includes("/api/v1/rating-slips/") &&
-          resp.url().includes("/move") &&
+          resp.url().includes('/api/v1/rating-slips/') &&
+          resp.url().includes('/move') &&
           resp.status() === 200,
         { timeout: 10000 },
       );
@@ -112,15 +112,15 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
 
       // Verify original slip is closed in database
       const originalSlip = await getRatingSlipStatus(scenario.ratingSlipId);
-      expect(originalSlip.status).toBe("closed");
+      expect(originalSlip.status).toBe('closed');
 
       // Verify new slip created at destination
       const slips = await getRatingSlipsForVisit(scenario.visitId);
       const newSlip = slips.find(
         (s) =>
-          s.status === "open" &&
+          s.status === 'open' &&
           s.table_id === scenario.secondaryTableId &&
-          s.seat_number === "3",
+          s.seat_number === '3',
       );
       expect(newSlip).toBeDefined();
       expect(newSlip?.visit_id).toBe(scenario.visitId); // Session continuity
@@ -135,7 +135,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
    * Verifies both source and destination tables reflect the move quickly.
    * Source table should show seat as empty, destination should show as occupied.
    */
-  test("table layouts update correctly after move", async ({ page }) => {
+  test('table layouts update correctly after move', async ({ page }) => {
     const scenario = await createRatingSlipTestScenario();
 
     try {
@@ -149,7 +149,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       const originalSeat = page.locator(
         `[data-seat-number="${scenario.seatNumber}"]`,
       );
-      await expect(originalSeat).toHaveAttribute("data-occupied", "true", {
+      await expect(originalSeat).toHaveAttribute('data-occupied', 'true', {
         timeout: 2000,
       });
 
@@ -162,7 +162,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       await tableOption.click();
 
       const seatInput = modal.locator('[data-testid="move-seat-input"]');
-      await seatInput.fill("5");
+      await seatInput.fill('5');
 
       const moveButton = modal.locator('button:has-text("Move Player")');
       await moveButton.click();
@@ -171,13 +171,13 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       await expect(modal).not.toBeVisible({ timeout: 5000 });
 
       // Verify original seat updates to empty (should happen within 300ms after move)
-      await expect(originalSeat).not.toHaveAttribute("data-occupied", "true", {
+      await expect(originalSeat).not.toHaveAttribute('data-occupied', 'true', {
         timeout: 500,
       });
 
       // Verify database state matches UI
       const originalSlip = await getRatingSlipStatus(scenario.ratingSlipId);
-      expect(originalSlip.status).toBe("closed");
+      expect(originalSlip.status).toBe('closed');
     } finally {
       await scenario.cleanup();
     }
@@ -193,7 +193,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
    * - Destination table slips
    * - Stats (optional)
    */
-  test("move triggers ≤5 cache invalidation requests", async ({ page }) => {
+  test('move triggers ≤5 cache invalidation requests', async ({ page }) => {
     const scenario = await createRatingSlipTestScenario();
     const apiRequests: Request[] = [];
 
@@ -202,7 +202,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       await authenticateUser(page, scenario);
 
       // Navigate to pit and wait for initial load
-      await page.goto("/pit");
+      await page.goto('/pit');
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -211,10 +211,10 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       await page.waitForTimeout(1000);
 
       // Now start tracking API requests AFTER initial load
-      page.on("request", (request) => {
+      page.on('request', (request) => {
         const url = request.url();
         // Only track API requests that happen AFTER move
-        if (url.includes("/api/v1/")) {
+        if (url.includes('/api/v1/')) {
           apiRequests.push(request);
         }
       });
@@ -238,7 +238,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       await tableOption.click();
 
       const seatInput = modal.locator('[data-testid="move-seat-input"]');
-      await seatInput.fill("4");
+      await seatInput.fill('4');
 
       const moveButton = modal.locator('button:has-text("Move Player")');
       await moveButton.click();
@@ -251,13 +251,13 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
 
       // Analyze requests made after the move
       const postMoveRequests = apiRequests.filter(
-        (req) => req.method() === "GET" && req.url().includes("/api/v1/"),
+        (req) => req.method() === 'GET' && req.url().includes('/api/v1/'),
       );
 
       // PRD-020 target: ≤5 requests (was 12+ before)
       console.log(`Post-move GET requests: ${postMoveRequests.length}`);
       postMoveRequests.forEach((req) =>
-        console.log(`  - ${req.url().split("/api/v1/")[1]}`),
+        console.log(`  - ${req.url().split('/api/v1/')[1]}`),
       );
 
       // Allow some tolerance for stats/other queries, but should be much less than 12
@@ -273,7 +273,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
    * When move fails (e.g., seat occupied), modal should remain open
    * and display error message so user can correct and retry.
    */
-  test("move failure keeps modal open with error message", async ({
+  test('move failure keeps modal open with error message', async ({
     request,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -286,8 +286,8 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_move_error_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_move_error_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.tableId, // Same table
@@ -302,11 +302,11 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
       expect(body.ok).toBe(false);
 
       // Error code should indicate seat is occupied
-      expect(["SEAT_OCCUPIED", "SEAT_ALREADY_OCCUPIED"]).toContain(body.code);
+      expect(['SEAT_OCCUPIED', 'SEAT_ALREADY_OCCUPIED']).toContain(body.code);
 
       // Verify slip was NOT closed
       const slip = await getRatingSlipStatus(scenario.ratingSlipId);
-      expect(slip.status).toBe("open");
+      expect(slip.status).toBe('open');
     } finally {
       await scenario.cleanup();
     }
@@ -317,7 +317,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
    *
    * UI-level test that validates error handling keeps modal visible.
    */
-  test("browser move failure shows error and keeps modal open", async ({
+  test('browser move failure shows error and keeps modal open', async ({
     page,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -352,8 +352,8 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
         // Wait for error response
         await page.waitForResponse(
           (resp) =>
-            resp.url().includes("/api/v1/rating-slips/") &&
-            resp.url().includes("/move") &&
+            resp.url().includes('/api/v1/rating-slips/') &&
+            resp.url().includes('/move') &&
             !resp.ok(),
           { timeout: 5000 },
         );
@@ -364,7 +364,7 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
         // An error message or toast should be shown
         // (exact implementation may vary - check for common error indicators)
         const errorIndicator = page.locator(
-          "text=/occupied|error|failed|invalid/i",
+          'text=/occupied|error|failed|invalid/i',
         );
         const hasError = await errorIndicator.isVisible().catch(() => false);
 
@@ -387,14 +387,14 @@ test.describe("PRD-020: Move Player Performance & UX", () => {
  * These tests verify the /api/v1/rating-slips/[id]/move endpoint
  * directly, focusing on PRD-020 enhanced response format.
  */
-test.describe("PRD-020: Move Player API", () => {
+test.describe('PRD-020: Move Player API', () => {
   /**
    * Test: Enhanced response includes seat state arrays
    *
    * PRD-020 WS5: Response should include sourceTableSeats and
    * destinationTableSeats for cache optimization.
    */
-  test("POST /move returns enhanced response with seat arrays", async ({
+  test('POST /move returns enhanced response with seat arrays', async ({
     request,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -405,12 +405,12 @@ test.describe("PRD-020: Move Player API", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_enhanced_response_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_enhanced_response_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.secondaryTableId,
-            destinationSeatNumber: "7",
+            destinationSeatNumber: '7',
           },
         },
       );
@@ -436,8 +436,8 @@ test.describe("PRD-020: Move Player API", () => {
       // Verify new slip is created correctly
       expect(body.data.newSlip).toBeDefined();
       expect(body.data.newSlip.tableId).toBe(scenario.secondaryTableId);
-      expect(body.data.newSlip.seatNumber).toBe("7");
-      expect(body.data.newSlip.status).toBe("open");
+      expect(body.data.newSlip.seatNumber).toBe('7');
+      expect(body.data.newSlip.status).toBe('open');
     } finally {
       await scenario.cleanup();
     }
@@ -448,7 +448,7 @@ test.describe("PRD-020: Move Player API", () => {
    *
    * PRD-020 WS3: Consolidated RPC reduces latency from 1695ms to <400ms.
    */
-  test("POST /move completes within performance target", async ({
+  test('POST /move completes within performance target', async ({
     request,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -461,12 +461,12 @@ test.describe("PRD-020: Move Player API", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_perf_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_perf_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.secondaryTableId,
-            destinationSeatNumber: "8",
+            destinationSeatNumber: '8',
           },
         },
       );
@@ -488,7 +488,7 @@ test.describe("PRD-020: Move Player API", () => {
    *
    * Move should preserve visit_id for financial/loyalty continuity.
    */
-  test("POST /move preserves session continuity via visit_id", async ({
+  test('POST /move preserves session continuity via visit_id', async ({
     request,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -499,12 +499,12 @@ test.describe("PRD-020: Move Player API", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_continuity_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_continuity_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.secondaryTableId,
-            destinationSeatNumber: "6",
+            destinationSeatNumber: '6',
           },
         },
       );
@@ -521,7 +521,7 @@ test.describe("PRD-020: Move Player API", () => {
 
       // Verify old slip is closed
       const oldSlip = slips.find((s) => s.id === scenario.ratingSlipId);
-      expect(oldSlip?.status).toBe("closed");
+      expect(oldSlip?.status).toBe('closed');
     } finally {
       await scenario.cleanup();
     }
@@ -532,7 +532,7 @@ test.describe("PRD-020: Move Player API", () => {
    *
    * If a slip is already being moved, should return 409 Conflict.
    */
-  test("POST /move returns 409 for already-closed slip", async ({
+  test('POST /move returns 409 for already-closed slip', async ({
     request,
   }) => {
     const scenario = await createRatingSlipTestScenario();
@@ -544,12 +544,12 @@ test.describe("PRD-020: Move Player API", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_first_move_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_first_move_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.secondaryTableId,
-            destinationSeatNumber: "9",
+            destinationSeatNumber: '9',
           },
         },
       );
@@ -562,12 +562,12 @@ test.describe("PRD-020: Move Player API", () => {
         {
           headers: {
             Authorization: `Bearer ${scenario.authToken}`,
-            "Idempotency-Key": `e2e_second_move_${Date.now()}`,
-            "Content-Type": "application/json",
+            'Idempotency-Key': `e2e_second_move_${Date.now()}`,
+            'Content-Type': 'application/json',
           },
           data: {
             destinationTableId: scenario.secondaryTableId,
-            destinationSeatNumber: "2",
+            destinationSeatNumber: '2',
           },
         },
       );
@@ -576,7 +576,7 @@ test.describe("PRD-020: Move Player API", () => {
       expect(secondResponse.status()).toBe(409);
       const body = await secondResponse.json();
       expect(body.ok).toBe(false);
-      expect(["RATING_SLIP_ALREADY_CLOSED", "CONFLICT"]).toContain(body.code);
+      expect(['RATING_SLIP_ALREADY_CLOSED', 'CONFLICT']).toContain(body.code);
     } finally {
       await scenario.cleanup();
     }

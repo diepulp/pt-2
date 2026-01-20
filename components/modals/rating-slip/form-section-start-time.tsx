@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import React, { useMemo } from "react";
+import React, { useMemo } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useStartTimeField } from "@/hooks/ui";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useStartTimeField } from '@/hooks/ui';
+import { cn } from '@/lib/utils';
 
 /**
  * Calculates the time difference in minutes between two datetime strings.
@@ -49,7 +49,7 @@ function validateStartTime(value: string): string | null {
   const now = new Date();
 
   if (selectedTime > now) {
-    return "Start time cannot be in the future";
+    return 'Start time cannot be in the future';
   }
 
   return null;
@@ -80,13 +80,13 @@ export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
   // Event handlers - wrapped in useCallback for stable references
   const handleChange = React.useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      updateField("startTime", e.target.value);
+      updateField('startTime', e.target.value);
     },
     [updateField],
   );
 
   const handleReset = React.useCallback(() => {
-    resetField("startTime");
+    resetField('startTime');
   }, [resetField]);
 
   return (
@@ -107,12 +107,12 @@ export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
           onChange={handleChange}
           max={maxDateTime}
           className={cn(
-            "h-12 text-lg text-center w-full",
+            'h-12 text-lg text-center w-full',
             validationError &&
-              "border-destructive focus-visible:ring-destructive",
+              'border-destructive focus-visible:ring-destructive',
           )}
           aria-invalid={!!validationError}
-          aria-describedby={validationError ? "startTime-error" : undefined}
+          aria-describedby={validationError ? 'startTime-error' : undefined}
         />
       </div>
       {validationError && (
@@ -121,7 +121,7 @@ export const FormSectionStartTime = React.memo(function FormSectionStartTime() {
         </p>
       )}
       <div className="text-sm mt-1 text-muted-foreground">
-        Total Change: {totalChange > 0 ? "+" : ""}
+        Total Change: {totalChange > 0 ? '+' : ''}
         {totalChange} minutes
       </div>
     </div>

@@ -8,9 +8,9 @@
  * @see SPEC-PRD-000-casino-foundation.md section 6.2
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
-import type { PlayerEnrollmentDTO } from "@/services/player/dtos";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
+import type { PlayerEnrollmentDTO } from '@/services/player/dtos';
 
 import type {
   CasinoDTO,
@@ -23,12 +23,12 @@ import type {
   StaffDTO,
   UpdateCasinoDTO,
   UpdateCasinoSettingsDTO,
-} from "./dtos";
+} from './dtos';
 
 // Re-export PlayerEnrollmentDTO for consumers (ADR-022 D5: CasinoService owns player_casino)
-export type { PlayerEnrollmentDTO } from "@/services/player/dtos";
+export type { PlayerEnrollmentDTO } from '@/services/player/dtos';
 
-const BASE = "/api/v1/casino";
+const BASE = '/api/v1/casino';
 
 // === Helper Functions ===
 
@@ -80,9 +80,9 @@ export async function getCasino(id: string): Promise<CasinoDTO> {
  */
 export async function createCasino(input: CreateCasinoDTO): Promise<CasinoDTO> {
   return fetchJSON<CasinoDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -98,9 +98,9 @@ export async function updateCasino(
   input: UpdateCasinoDTO,
 ): Promise<CasinoDTO> {
   return fetchJSON<CasinoDTO>(`${BASE}/${id}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -113,7 +113,7 @@ export async function updateCasino(
  */
 export async function deleteCasino(id: string): Promise<void> {
   return fetchJSON<void>(`${BASE}/${id}`, {
-    method: "DELETE",
+    method: 'DELETE',
     headers: {
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
@@ -141,9 +141,9 @@ export async function updateCasinoSettings(
   input: UpdateCasinoSettingsDTO,
 ): Promise<CasinoSettingsDTO> {
   return fetchJSON<CasinoSettingsDTO>(`${BASE}/settings`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -174,9 +174,9 @@ export async function getCasinoStaff(
  */
 export async function createStaff(input: CreateStaffDTO): Promise<StaffDTO> {
   return fetchJSON<StaffDTO>(`${BASE}/staff`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -192,7 +192,7 @@ export async function createStaff(input: CreateStaffDTO): Promise<StaffDTO> {
  * @param timestamp - Optional ISO 8601 timestamp (defaults to now)
  */
 export async function getGamingDay(timestamp?: string): Promise<GamingDayDTO> {
-  const params = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : "";
+  const params = timestamp ? `?timestamp=${encodeURIComponent(timestamp)}` : '';
   return fetchJSON<GamingDayDTO>(`${BASE}/gaming-day${params}`);
 }
 
@@ -208,9 +208,9 @@ export async function enrollPlayer(
   playerId: string,
 ): Promise<PlayerEnrollmentDTO> {
   return fetchJSON<PlayerEnrollmentDTO>(`/api/v1/players/${playerId}/enroll`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({}),

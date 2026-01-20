@@ -11,7 +11,7 @@
  * Idempotency-Key header per IETF standard.
  * HTTP headers are case-insensitive - use canonical title case.
  */
-export const IDEMPOTENCY_HEADER = "Idempotency-Key" as const;
+export const IDEMPOTENCY_HEADER = 'Idempotency-Key' as const;
 
 /** Request correlation ID header */
-export const REQUEST_ID_HEADER = "x-request-id" as const;
+export const REQUEST_ID_HEADER = 'x-request-id' as const;

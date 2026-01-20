@@ -7,17 +7,17 @@
  * @see app/review/pit-panels/page.tsx - Review page usage
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
 import type {
   DashboardTableDTO,
   DashboardStats,
-} from "@/hooks/dashboard/types";
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+} from '@/hooks/dashboard/types';
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
 
-import { PanelContainer } from "./panel-container";
+import { PanelContainer } from './panel-container';
 
 interface PitPanelsStaticProps {
   tableName?: string;
@@ -28,15 +28,15 @@ interface PitPanelsStaticProps {
 // Mock data for static UI preview
 const MOCK_TABLES: DashboardTableDTO[] = [
   {
-    id: "table-1",
-    casino_id: "casino-1",
-    label: "BJ-01",
-    pit: "Main Floor",
-    type: "blackjack",
-    status: "active",
+    id: 'table-1',
+    casino_id: 'casino-1',
+    label: 'BJ-01',
+    pit: 'Main Floor',
+    type: 'blackjack',
+    status: 'active',
     created_at: new Date().toISOString(),
     current_dealer: {
-      staff_id: "dealer-1",
+      staff_id: 'dealer-1',
       started_at: new Date().toISOString(),
     },
     activeSlipsCount: 3,
@@ -44,23 +44,23 @@ const MOCK_TABLES: DashboardTableDTO[] = [
 ];
 
 const MOCK_SEATS = [
-  { firstName: "John", lastName: "Smith", slipId: "slip-1" },
+  { firstName: 'John', lastName: 'Smith', slipId: 'slip-1' },
   null,
-  { firstName: "Maria", lastName: "Garcia", slipId: "slip-2" },
-  { firstName: "James", lastName: "Wilson", slipId: "slip-3" },
+  { firstName: 'Maria', lastName: 'Garcia', slipId: 'slip-2' },
+  { firstName: 'James', lastName: 'Wilson', slipId: 'slip-3' },
   null,
   null,
-  { firstName: "Sarah", lastName: "Chen", slipId: "slip-4" },
+  { firstName: 'Sarah', lastName: 'Chen', slipId: 'slip-4' },
 ];
 
 const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
   {
-    id: "slip-1",
-    casino_id: "casino-1",
-    visit_id: "visit-1",
-    table_id: "table-1",
-    seat_number: "1",
-    status: "open",
+    id: 'slip-1',
+    casino_id: 'casino-1',
+    visit_id: 'visit-1',
+    table_id: 'table-1',
+    seat_number: '1',
+    status: 'open',
     start_time: new Date(Date.now() - 3600000).toISOString(),
     end_time: null,
     average_bet: 25,
@@ -72,12 +72,12 @@ const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
     final_duration_seconds: null,
   },
   {
-    id: "slip-2",
-    casino_id: "casino-1",
-    visit_id: "visit-2",
-    table_id: "table-1",
-    seat_number: "3",
-    status: "open",
+    id: 'slip-2',
+    casino_id: 'casino-1',
+    visit_id: 'visit-2',
+    table_id: 'table-1',
+    seat_number: '3',
+    status: 'open',
     start_time: new Date(Date.now() - 7200000).toISOString(),
     end_time: null,
     average_bet: 50,
@@ -89,12 +89,12 @@ const MOCK_ACTIVE_SLIPS: RatingSlipDTO[] = [
     final_duration_seconds: null,
   },
   {
-    id: "slip-3",
-    casino_id: "casino-1",
-    visit_id: "visit-3",
-    table_id: "table-1",
-    seat_number: "4",
-    status: "paused",
+    id: 'slip-3',
+    casino_id: 'casino-1',
+    visit_id: 'visit-3',
+    table_id: 'table-1',
+    seat_number: '4',
+    status: 'paused',
     start_time: new Date(Date.now() - 1800000).toISOString(),
     end_time: null,
     average_bet: 100,
@@ -111,7 +111,7 @@ const MOCK_STATS: DashboardStats = {
   activeTablesCount: 8,
   openSlipsCount: 24,
   checkedInPlayersCount: 42,
-  gamingDay: new Date().toISOString().split("T")[0],
+  gamingDay: new Date().toISOString().split('T')[0],
 };
 
 /**
@@ -121,7 +121,7 @@ const MOCK_STATS: DashboardStats = {
  * PRD-013: Updated to remove selectedTableId and onTableSelect props
  */
 export function PitPanelsStatic({
-  tableName = "BJ-01",
+  tableName = 'BJ-01',
   className,
   reviewMode = false,
 }: PitPanelsStaticProps) {

@@ -18,7 +18,7 @@
  * @see PRD-005 Two-tier badge system
  */
 
-"use client";
+'use client';
 
 import {
   AlertTriangle,
@@ -26,20 +26,20 @@ import {
   FileWarning,
   Minus,
   ShieldAlert,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
-import type { AggBadge as AggBadgeType } from "@/services/mtl/dtos";
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import type { AggBadge as AggBadgeType } from '@/services/mtl/dtos';
 
 export interface AggBadgeProps {
   badge: AggBadgeType;
   /** Direction context for label */
-  direction?: "in" | "out";
+  direction?: 'in' | 'out';
   /** Show text label alongside icon */
   showLabel?: boolean;
   /** Compact size for table cells */
-  size?: "default" | "sm";
+  size?: 'default' | 'sm';
   className?: string;
 }
 
@@ -57,37 +57,37 @@ const BADGE_CONFIG: Record<
   }
 > = {
   none: {
-    label: "Normal",
-    shortLabel: "-",
+    label: 'Normal',
+    shortLabel: '-',
     icon: Minus,
     className:
-      "bg-muted/50 text-muted-foreground border-muted hover:bg-muted/70",
-    description: "Daily aggregate below watchlist threshold",
+      'bg-muted/50 text-muted-foreground border-muted hover:bg-muted/70',
+    description: 'Daily aggregate below watchlist threshold',
   },
   agg_watchlist: {
-    label: "Watchlist",
-    shortLabel: "Watch",
+    label: 'Watchlist',
+    shortLabel: 'Watch',
     icon: Eye,
     className:
-      "bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/50",
-    description: "Daily aggregate at or above watchlist floor",
+      'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800 hover:bg-amber-200 dark:hover:bg-amber-900/50',
+    description: 'Daily aggregate at or above watchlist floor',
   },
   agg_ctr_near: {
-    label: "CTR Near",
-    shortLabel: "Near",
+    label: 'CTR Near',
+    shortLabel: 'Near',
     icon: FileWarning,
     className:
-      "bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800 hover:bg-orange-200 dark:hover:bg-orange-900/50",
-    description: "Daily aggregate approaching CTR threshold",
+      'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:border-orange-800 hover:bg-orange-200 dark:hover:bg-orange-900/50',
+    description: 'Daily aggregate approaching CTR threshold',
   },
   agg_ctr_met: {
-    label: "CTR REQUIRED",
-    shortLabel: "CTR!",
+    label: 'CTR REQUIRED',
+    shortLabel: 'CTR!',
     icon: ShieldAlert,
     className:
-      "bg-red-600 text-white border-red-700 dark:bg-red-700 dark:text-white dark:border-red-600 hover:bg-red-700 dark:hover:bg-red-600 font-bold animate-pulse",
+      'bg-red-600 text-white border-red-700 dark:bg-red-700 dark:text-white dark:border-red-600 hover:bg-red-700 dark:hover:bg-red-600 font-bold animate-pulse',
     description:
-      "COMPLIANCE: Daily aggregate exceeds $10,000 - CTR filing required",
+      'COMPLIANCE: Daily aggregate exceeds $10,000 - CTR filing required',
   },
 };
 
@@ -113,41 +113,41 @@ export function AggBadge({
   badge,
   direction,
   showLabel = false,
-  size = "default",
+  size = 'default',
   className,
 }: AggBadgeProps) {
   const config = BADGE_CONFIG[badge];
   const Icon = config.icon;
 
   // For "none" badge without label, just render empty for cleaner tables
-  if (badge === "none" && !showLabel) {
+  if (badge === 'none' && !showLabel) {
     return null;
   }
 
   const directionSuffix = direction
-    ? direction === "in"
-      ? " (In)"
-      : " (Out)"
-    : "";
+    ? direction === 'in'
+      ? ' (In)'
+      : ' (Out)'
+    : '';
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        "gap-1 transition-colors",
-        size === "sm" && "px-1.5 py-0 text-[10px]",
+        'gap-1 transition-colors',
+        size === 'sm' && 'px-1.5 py-0 text-[10px]',
         config.className,
         className,
       )}
       title={config.description}
     >
       <Icon
-        className={cn("shrink-0", size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5")}
+        className={cn('shrink-0', size === 'sm' ? 'h-3 w-3' : 'h-3.5 w-3.5')}
       />
       {showLabel && (
         <span>
-          {size === "sm" ? config.shortLabel : config.label}
-          {showLabel && direction && size !== "sm" && directionSuffix}
+          {size === 'sm' ? config.shortLabel : config.label}
+          {showLabel && direction && size !== 'sm' && directionSuffix}
         </span>
       )}
     </Badge>
@@ -161,18 +161,18 @@ export function AggBadge({
 export interface AggBadgePairProps {
   badgeIn: AggBadgeType;
   badgeOut: AggBadgeType;
-  size?: "default" | "sm";
+  size?: 'default' | 'sm';
   className?: string;
 }
 
 export function AggBadgePair({
   badgeIn,
   badgeOut,
-  size = "default",
+  size = 'default',
   className,
 }: AggBadgePairProps) {
-  const showIn = badgeIn !== "none";
-  const showOut = badgeOut !== "none";
+  const showIn = badgeIn !== 'none';
+  const showOut = badgeOut !== 'none';
 
   // If both are "none", show nothing
   if (!showIn && !showOut) {
@@ -180,7 +180,7 @@ export function AggBadgePair({
   }
 
   return (
-    <div className={cn("flex gap-1", className)}>
+    <div className={cn('flex gap-1', className)}>
       {showIn && (
         <AggBadge badge={badgeIn} direction="in" size={size} showLabel />
       )}

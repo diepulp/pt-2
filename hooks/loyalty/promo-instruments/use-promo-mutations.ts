@@ -9,11 +9,11 @@
  * @see PRD-LOYALTY-PROMO
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { loyaltyKeys } from "@/services/loyalty/keys";
+import { loyaltyKeys } from '@/services/loyalty/keys';
 import type {
   CreatePromoProgramInput,
   IssueCouponInput,
@@ -22,14 +22,14 @@ import type {
   ReplaceCouponOutput,
   UpdatePromoProgramInput,
   VoidCouponOutput,
-} from "@/services/loyalty/promo/dtos";
+} from '@/services/loyalty/promo/dtos';
 import {
   createPromoProgram,
   issueCoupon,
   replaceCoupon,
   updatePromoProgram,
   voidCoupon,
-} from "@/services/loyalty/promo/http";
+} from '@/services/loyalty/promo/http';
 
 // === Program Mutations ===
 
@@ -64,7 +64,7 @@ export function useCreatePromoProgram() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["loyalty", "create-program"],
+    mutationKey: ['loyalty', 'create-program'],
     mutationFn: ({
       idempotencyKey,
       ...input
@@ -110,7 +110,7 @@ export function useUpdatePromoProgram() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["loyalty", "update-program"],
+    mutationKey: ['loyalty', 'update-program'],
     mutationFn: ({
       idempotencyKey,
       ...input
@@ -198,14 +198,14 @@ export function useIssueCoupon() {
       // Invalidate inventory
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-inventory",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-inventory',
       });
       // Invalidate promo exposure rollup for dashboard
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-exposure",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-exposure',
       });
     },
   });
@@ -266,14 +266,14 @@ export function useVoidCoupon() {
       // Invalidate inventory
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-inventory",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-inventory',
       });
       // Invalidate promo exposure rollup for dashboard
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-exposure",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-exposure',
       });
     },
   });
@@ -353,14 +353,14 @@ export function useReplaceCoupon() {
       // Invalidate inventory
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-inventory",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-inventory',
       });
       // Invalidate promo exposure rollup for dashboard
       queryClient.invalidateQueries({
         predicate: (query) =>
-          query.queryKey[0] === "loyalty" &&
-          query.queryKey[1] === "promo-exposure",
+          query.queryKey[0] === 'loyalty' &&
+          query.queryKey[1] === 'promo-exposure',
       });
     },
   });

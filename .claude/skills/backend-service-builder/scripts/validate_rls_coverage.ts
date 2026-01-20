@@ -8,8 +8,8 @@
  * 3. Policies follow naming conventions
  */
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "fs";
+import * as path from "path";
 
 interface RLSCheck {
   table: string;
@@ -24,9 +24,9 @@ class RLSValidator {
   private warnings: string[] = [];
 
   async validateMigrations(migrationsDir: string): Promise<void> {
-    console.log(`\n${'='.repeat(60)}`);
+    console.log(`\n${"=".repeat(60)}`);
     console.log(`Validating RLS coverage in: ${migrationsDir}`);
-    console.log(`${'='.repeat(60)}\n`);
+    console.log(`${"=".repeat(60)}\n`);
 
     const migrationFiles = this.findMigrationFiles(migrationsDir);
 
@@ -45,13 +45,13 @@ class RLSValidator {
 
     return fs
       .readdirSync(dirPath)
-      .filter((f) => f.endsWith('.sql'))
+      .filter((f) => f.endsWith(".sql"))
       .map((f) => path.join(dirPath, f))
       .sort();
   }
 
   private async analyzeMigration(filePath: string): Promise<void> {
-    const content = fs.readFileSync(filePath, 'utf-8');
+    const content = fs.readFileSync(filePath, "utf-8");
     const fileName = path.basename(filePath);
 
     // Find CREATE TABLE statements
@@ -135,18 +135,18 @@ class RLSValidator {
   }
 
   printResults(): void {
-    console.log(`\n${'-'.repeat(60)}`);
-    console.log('RLS COVERAGE VALIDATION RESULTS');
-    console.log(`${'-'.repeat(60)}\n`);
+    console.log(`\n${"-".repeat(60)}`);
+    console.log("RLS COVERAGE VALIDATION RESULTS");
+    console.log(`${"-".repeat(60)}\n`);
 
     console.log(`\x1b[36mTables analyzed: ${this.checks.size}\x1b[0m\n`);
 
     // Print table summary
     for (const [tableName, check] of this.checks.entries()) {
-      const rlsStatus = check.hasRLS ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
+      const rlsStatus = check.hasRLS ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m";
       const policyCount = check.policies.length;
       const policyStatus =
-        policyCount > 0 ? '\x1b[32m✓\x1b[0m' : '\x1b[31m✗\x1b[0m';
+        policyCount > 0 ? "\x1b[32m✓\x1b[0m" : "\x1b[31m✗\x1b[0m";
 
       console.log(`Table: ${tableName}`);
       console.log(`  RLS Enabled: ${rlsStatus}`);
@@ -194,7 +194,7 @@ class RLSValidator {
 
 async function main() {
   const args = process.argv.slice(2);
-  const migrationsDir = args[0] || 'supabase/migrations';
+  const migrationsDir = args[0] || "supabase/migrations";
 
   const validator = new RLSValidator();
   await validator.validateMigrations(migrationsDir);
@@ -205,6 +205,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('Fatal error:', err);
+  console.error("Fatal error:", err);
   process.exit(1);
 });

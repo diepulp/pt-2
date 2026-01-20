@@ -86,6 +86,10 @@ export const MTL_AUDIT_NOTE_SELECT = `
  * This view aggregates entries per patron + gaming_day
  * Includes patron_first_name and patron_last_name from JOIN with player table
  */
+/**
+ * NOTE: patron_date_of_birth will be added after migration 20260119160045 is applied
+ * and `npm run db:types` is run. Until then, the field is set to null in the mapper.
+ */
 export const MTL_GAMING_DAY_SUMMARY_SELECT = `
   casino_id,
   patron_uuid,

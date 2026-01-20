@@ -9,23 +9,23 @@
  * @see PRD-LOYALTY-PROMO
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { loyaltyKeys } from "@/services/loyalty/keys";
+import { loyaltyKeys } from '@/services/loyalty/keys';
 import type {
   CouponInventoryOutput,
   CouponInventoryQuery,
   PromoCouponDTO,
   PromoCouponListQuery,
-} from "@/services/loyalty/promo/dtos";
+} from '@/services/loyalty/promo/dtos';
 import {
   getCouponInventory,
   getPromoCoupon,
   getPromoCouponByValidation,
   listPromoCoupons,
-} from "@/services/loyalty/promo/http";
+} from '@/services/loyalty/promo/http';
 
 /**
  * Fetches list of promo coupons with optional filters.

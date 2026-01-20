@@ -7,8 +7,8 @@
 import type {
   PitMapPit,
   PitMapTable,
-} from "@/components/table/pit-map-selector";
-import type { DashboardTableDTO } from "@/hooks/dashboard/types";
+} from '@/components/table/pit-map-selector';
+import type { DashboardTableDTO } from '@/hooks/dashboard/types';
 
 /**
  * Groups dashboard tables by their pit field.
@@ -21,7 +21,7 @@ export function groupTablesByPit(tables: DashboardTableDTO[]): PitMapPit[] {
   const pitMap = new Map<string, PitMapTable[]>();
 
   for (const table of tables) {
-    const pitLabel = table.pit ?? "Unassigned";
+    const pitLabel = table.pit ?? 'Unassigned';
 
     if (!pitMap.has(pitLabel)) {
       pitMap.set(pitLabel, []);
@@ -40,8 +40,8 @@ export function groupTablesByPit(tables: DashboardTableDTO[]): PitMapPit[] {
   const pits: PitMapPit[] = [];
 
   const sortedPitLabels = Array.from(pitMap.keys()).sort((a, b) => {
-    if (a === "Unassigned") return 1;
-    if (b === "Unassigned") return -1;
+    if (a === 'Unassigned') return 1;
+    if (b === 'Unassigned') return -1;
     return a.localeCompare(b);
   });
 
@@ -52,7 +52,7 @@ export function groupTablesByPit(tables: DashboardTableDTO[]): PitMapPit[] {
     tables.sort((a, b) => a.label.localeCompare(b.label));
 
     pits.push({
-      id: pitLabel.toLowerCase().replace(/\s+/g, "-"),
+      id: pitLabel.toLowerCase().replace(/\s+/g, '-'),
       label: pitLabel,
       tables,
     });

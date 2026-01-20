@@ -1,25 +1,25 @@
-"use client";
+'use client';
 
-import { Table2, Users, Settings } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Table2, Users, Settings } from 'lucide-react';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 const navItems = [
   {
-    title: "Pit",
-    url: "/pit",
+    title: 'Pit',
+    url: '/pit',
     icon: Table2,
   },
   {
-    title: "Players",
-    url: "/players",
+    title: 'Players',
+    url: '/players',
     icon: Users,
   },
   {
-    title: "Settings",
-    url: "/settings",
+    title: 'Settings',
+    url: '/settings',
     icon: Settings,
   },
 ];
@@ -39,10 +39,10 @@ export function BottomNav() {
               key={item.title}
               href={item.url}
               className={cn(
-                "flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 px-3 py-2 text-xs transition-colors",
+                'flex min-h-[44px] min-w-[44px] flex-col items-center justify-center gap-1 px-3 py-2 text-xs transition-colors',
                 isActive
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground",
+                  ? 'text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               <item.icon className="h-5 w-5" />

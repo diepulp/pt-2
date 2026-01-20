@@ -9,8 +9,8 @@
  * @see ADR-021 Idempotency Header Standardization
  */
 
-import { fetchJSON } from "@/lib/http/fetch-json";
-import { IDEMPOTENCY_HEADER } from "@/lib/http/headers";
+import { fetchJSON } from '@/lib/http/fetch-json';
+import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 
 import type {
   CreatePlayerDTO,
@@ -21,9 +21,9 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from "./dtos";
+} from './dtos';
 
-const BASE = "/api/v1/players";
+const BASE = '/api/v1/players';
 
 // === Helper Functions ===
 
@@ -91,9 +91,9 @@ export async function getPlayer(playerId: string): Promise<PlayerDTO> {
  */
 export async function createPlayer(input: CreatePlayerDTO): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(BASE, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -109,9 +109,9 @@ export async function updatePlayer(
   input: UpdatePlayerDTO,
 ): Promise<PlayerDTO> {
   return fetchJSON<PlayerDTO>(`${BASE}/${playerId}`, {
-    method: "PATCH",
+    method: 'PATCH',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -134,9 +134,9 @@ export async function upsertIdentity(
   input: PlayerIdentityInput,
 ): Promise<PlayerIdentityDTO> {
   return fetchJSON<PlayerIdentityDTO>(`${BASE}/${playerId}/identity`, {
-    method: "POST",
+    method: 'POST',
     headers: {
-      "content-type": "application/json",
+      'content-type': 'application/json',
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify(input),
@@ -156,7 +156,7 @@ export async function getIdentity(
     return await fetchJSON<PlayerIdentityDTO>(`${BASE}/${playerId}/identity`);
   } catch (error) {
     // 404 means identity not found
-    if (error instanceof Error && error.message.includes("404")) {
+    if (error instanceof Error && error.message.includes('404')) {
       return null;
     }
     throw error;
@@ -175,7 +175,7 @@ export async function getPlayerEnrollment(
     );
   } catch (error) {
     // 404 means not enrolled
-    if (error instanceof Error && error.message.includes("404")) {
+    if (error instanceof Error && error.message.includes('404')) {
       return null;
     }
     throw error;

@@ -70,13 +70,13 @@ export interface ShiftTableMetricsDTO {
   estimated_drop_rated_cents: number;
   estimated_drop_grind_cents: number;
   estimated_drop_buyins_cents: number;
-  telemetry_quality: "GOOD_COVERAGE" | "LOW_COVERAGE" | "NONE";
+  telemetry_quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
   telemetry_notes: string;
 
   // Win/Loss
   win_loss_inventory_cents: number | null;
   win_loss_estimated_cents: number | null;
-  metric_grade: "ESTIMATE" | "AUTHORITATIVE";
+  metric_grade: 'ESTIMATE' | 'AUTHORITATIVE';
 
   // Exception flags
   missing_opening_snapshot: boolean;

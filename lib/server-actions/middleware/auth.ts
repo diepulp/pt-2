@@ -1,12 +1,12 @@
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
-} from "@/lib/supabase/dev-context";
-import { getAuthContext } from "@/lib/supabase/rls-context";
-import { createServiceClient } from "@/lib/supabase/service";
+} from '@/lib/supabase/dev-context';
+import { getAuthContext } from '@/lib/supabase/rls-context';
+import { createServiceClient } from '@/lib/supabase/service';
 
-import type { Middleware, MiddlewareContext } from "./types";
+import type { Middleware, MiddlewareContext } from './types';
 
 /**
  * Authentication Middleware
@@ -31,9 +31,9 @@ export function withAuth<T>(): Middleware<T> {
     // DEV MODE: Use mock context and service client for local development
     if (isDevAuthBypassEnabled()) {
       console.warn(
-        "[DEV AUTH] Using mock RLS context + service client:",
+        '[DEV AUTH] Using mock RLS context + service client:',
         DEV_RLS_CONTEXT.staffRole,
-        "@",
+        '@',
         DEV_RLS_CONTEXT.casinoId.slice(0, 8),
       );
       ctx.rlsContext = DEV_RLS_CONTEXT;
@@ -49,17 +49,17 @@ export function withAuth<T>(): Middleware<T> {
       return next();
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Authentication failed";
+        error instanceof Error ? error.message : 'Authentication failed';
 
-      if (message.includes("UNAUTHORIZED")) {
-        throw new DomainError("UNAUTHORIZED", "Authentication required");
+      if (message.includes('UNAUTHORIZED')) {
+        throw new DomainError('UNAUTHORIZED', 'Authentication required');
       }
 
-      if (message.includes("FORBIDDEN")) {
-        throw new DomainError("FORBIDDEN", message);
+      if (message.includes('FORBIDDEN')) {
+        throw new DomainError('FORBIDDEN', message);
       }
 
-      throw new DomainError("INTERNAL_ERROR", message, { details: error });
+      throw new DomainError('INTERNAL_ERROR', message, { details: error });
     }
   };
 }

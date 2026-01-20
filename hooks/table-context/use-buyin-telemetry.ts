@@ -8,10 +8,10 @@
  * @see GAP-TABLE-ROLLOVER-UI WS5
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { tableContextKeys } from "@/services/table-context/keys";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { tableContextKeys } from '@/services/table-context/keys';
 
 // === Query Hooks ===
 
@@ -30,7 +30,7 @@ export function useGrindBuyinTotal(
   return useQuery({
     queryKey: [
       ...tableContextKeys.root,
-      "grind-total",
+      'grind-total',
       tableId,
       shiftWindow.startTs,
       shiftWindow.endTs,
@@ -39,13 +39,13 @@ export function useGrindBuyinTotal(
       const supabase = createBrowserComponentClient();
 
       const { data, error } = await supabase
-        .from("table_buyin_telemetry")
-        .select("amount_cents")
-        .eq("table_id", tableId)
-        .eq("casino_id", casinoId)
-        .eq("kind", "GRIND_BUYIN")
-        .gte("created_at", shiftWindow.startTs)
-        .lte("created_at", shiftWindow.endTs);
+        .from('table_buyin_telemetry')
+        .select('amount_cents')
+        .eq('table_id', tableId)
+        .eq('casino_id', casinoId)
+        .eq('kind', 'GRIND_BUYIN')
+        .gte('created_at', shiftWindow.startTs)
+        .lte('created_at', shiftWindow.endTs);
 
       if (error) {
         throw new Error(error.message);
@@ -84,19 +84,19 @@ export function useLogGrindBuyin(tableId: string, _casinoId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["log-grind-buyin", tableId],
+    mutationKey: ['log-grind-buyin', tableId],
     mutationFn: async (input: LogGrindBuyinInput) => {
       const supabase = createBrowserComponentClient();
 
       const idempotencyKey = `grind:${tableId}:${Date.now()}:${crypto.randomUUID()}`;
 
       const { data, error } = await supabase.rpc(
-        "rpc_log_table_buyin_telemetry",
+        'rpc_log_table_buyin_telemetry',
         {
           p_table_id: tableId,
           p_amount_cents: input.amountCents,
-          p_telemetry_kind: "GRIND_BUYIN",
-          p_source: "pit_manual",
+          p_telemetry_kind: 'GRIND_BUYIN',
+          p_source: 'pit_manual',
           p_idempotency_key: idempotencyKey,
         },
       );
@@ -110,7 +110,7 @@ export function useLogGrindBuyin(tableId: string, _casinoId: string) {
     onSuccess: () => {
       // Invalidate grind total queries
       queryClient.invalidateQueries({
-        queryKey: [...tableContextKeys.root, "grind-total", tableId],
+        queryKey: [...tableContextKeys.root, 'grind-total', tableId],
         exact: false,
       });
     },
@@ -125,7 +125,7 @@ export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["undo-grind-buyin", tableId],
+    mutationKey: ['undo-grind-buyin', tableId],
     mutationFn: async (amountCents: number) => {
       const supabase = createBrowserComponentClient();
 
@@ -133,12 +133,12 @@ export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
 
       // Log a negative amount to reverse the previous entry
       const { data, error } = await supabase.rpc(
-        "rpc_log_table_buyin_telemetry",
+        'rpc_log_table_buyin_telemetry',
         {
           p_table_id: tableId,
           p_amount_cents: -amountCents, // Negative to undo
-          p_telemetry_kind: "GRIND_BUYIN",
-          p_source: "pit_manual_undo",
+          p_telemetry_kind: 'GRIND_BUYIN',
+          p_source: 'pit_manual_undo',
           p_idempotency_key: idempotencyKey,
         },
       );
@@ -151,7 +151,7 @@ export function useUndoGrindBuyin(tableId: string, _casinoId: string) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [...tableContextKeys.root, "grind-total", tableId],
+        queryKey: [...tableContextKeys.root, 'grind-total', tableId],
         exact: false,
       });
     },

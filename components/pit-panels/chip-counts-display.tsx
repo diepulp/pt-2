@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { Calculator, TrendingUp, TrendingDown } from "lucide-react";
+import { Calculator, TrendingUp, TrendingDown } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-import { ChipDenomination } from "./chip-denomination";
+import { ChipDenomination } from './chip-denomination';
 
 interface ChipCount {
   denomination: number;
@@ -29,13 +29,13 @@ export function ChipCountsDisplay({ chips }: ChipCountsDisplayProps) {
         <div
           key={chip.denomination}
           className={cn(
-            "group relative overflow-hidden",
-            "flex items-center gap-4 p-4",
-            "rounded-lg border border-border/40",
-            "bg-gradient-to-r from-card/80 to-card/40",
-            "backdrop-blur-sm",
-            "transition-all duration-300",
-            "hover:border-accent/30 hover:bg-card/60",
+            'group relative overflow-hidden',
+            'flex items-center gap-4 p-4',
+            'rounded-lg border border-border/40',
+            'bg-gradient-to-r from-card/80 to-card/40',
+            'backdrop-blur-sm',
+            'transition-all duration-300',
+            'hover:border-accent/30 hover:bg-card/60',
           )}
         >
           {/* Left accent line */}
@@ -61,11 +61,11 @@ export function ChipCountsDisplay({ chips }: ChipCountsDisplayProps) {
           {chip.variance !== undefined && chip.variance !== 0 && (
             <div
               className={cn(
-                "flex items-center gap-1 px-2 py-1 rounded",
-                "font-mono text-sm font-medium",
+                'flex items-center gap-1 px-2 py-1 rounded',
+                'font-mono text-sm font-medium',
                 chip.variance > 0
-                  ? "text-emerald-400 bg-emerald-500/10"
-                  : "text-red-400 bg-red-500/10",
+                  ? 'text-emerald-400 bg-emerald-500/10'
+                  : 'text-red-400 bg-red-500/10',
               )}
             >
               {chip.variance > 0 ? (

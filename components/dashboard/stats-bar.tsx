@@ -14,12 +14,12 @@
  * @see EXECUTION-SPEC-PRD-006.md WS2
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface StatsBarProps {
   activeTablesCount: number;
@@ -33,47 +33,47 @@ interface StatCardProps {
   label: string;
   value: number | string;
   isLoading?: boolean;
-  variant?: "default" | "accent";
+  variant?: 'default' | 'accent';
 }
 
 function StatCard({
   label,
   value,
   isLoading,
-  variant = "default",
+  variant = 'default',
 }: StatCardProps) {
   return (
     <Card
       className={cn(
-        "flex-1 border-2 transition-all duration-200",
-        variant === "accent"
-          ? "border-accent/50 bg-accent/5 hover:border-accent/70"
-          : "border-border hover:border-accent/30",
-        isLoading && "animate-pulse",
+        'flex-1 border-2 transition-all duration-200',
+        variant === 'accent'
+          ? 'border-accent/50 bg-accent/5 hover:border-accent/70'
+          : 'border-border hover:border-accent/30',
+        isLoading && 'animate-pulse',
       )}
     >
       <div className="p-4 sm:p-6">
         <div className="flex flex-col gap-2">
           <div
             className={cn(
-              "text-xs font-bold uppercase tracking-widest",
-              variant === "accent" ? "text-accent" : "text-muted-foreground",
+              'text-xs font-bold uppercase tracking-widest',
+              variant === 'accent' ? 'text-accent' : 'text-muted-foreground',
             )}
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             {label}
           </div>
           <div
             className={cn(
-              "text-3xl sm:text-4xl font-bold tabular-nums",
-              variant === "accent" ? "text-accent" : "text-foreground",
+              'text-3xl sm:text-4xl font-bold tabular-nums',
+              variant === 'accent' ? 'text-accent' : 'text-foreground',
             )}
             style={{
-              fontFamily: "monospace",
-              fontVariantNumeric: "tabular-nums",
+              fontFamily: 'monospace',
+              fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {isLoading ? "—" : value}
+            {isLoading ? '—' : value}
           </div>
         </div>
       </div>
@@ -96,13 +96,13 @@ export function StatsBar({
           <div className="flex items-center gap-3">
             <div
               className="text-sm font-bold uppercase tracking-widest text-muted-foreground"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               Gaming Day
             </div>
             <div
               className="rounded-md border-2 border-accent/50 bg-accent/10 px-3 py-1 text-base font-bold text-accent"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               {gamingDay}
             </div>

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import {
   Clock,
@@ -6,11 +6,11 @@ import {
   Plus,
   AlertCircle,
   CheckCircle2,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 interface DropEvent {
   id: string;
@@ -18,7 +18,7 @@ interface DropEvent {
   scheduledAt: string;
   actualPulledAt?: string;
   variance?: number;
-  status: "scheduled" | "completed" | "overdue";
+  status: 'scheduled' | 'completed' | 'overdue';
 }
 
 interface DropEventsDisplayProps {
@@ -30,31 +30,31 @@ interface DropEventsDisplayProps {
  * Shows scheduled drops with status indicators and variance tracking
  */
 export function DropEventsDisplay({ events }: DropEventsDisplayProps) {
-  const getStatusConfig = (status: DropEvent["status"]) => {
+  const getStatusConfig = (status: DropEvent['status']) => {
     switch (status) {
-      case "completed":
+      case 'completed':
         return {
           icon: CheckCircle2,
-          bg: "bg-emerald-500/10",
-          border: "border-emerald-500/30",
-          text: "text-emerald-400",
-          label: "Completed",
+          bg: 'bg-emerald-500/10',
+          border: 'border-emerald-500/30',
+          text: 'text-emerald-400',
+          label: 'Completed',
         };
-      case "overdue":
+      case 'overdue':
         return {
           icon: AlertCircle,
-          bg: "bg-red-500/10",
-          border: "border-red-500/30",
-          text: "text-red-400",
-          label: "Overdue",
+          bg: 'bg-red-500/10',
+          border: 'border-red-500/30',
+          text: 'text-red-400',
+          label: 'Overdue',
         };
       default:
         return {
           icon: Clock,
-          bg: "bg-cyan-500/10",
-          border: "border-cyan-500/30",
-          text: "text-cyan-400",
-          label: "Scheduled",
+          bg: 'bg-cyan-500/10',
+          border: 'border-cyan-500/30',
+          text: 'text-cyan-400',
+          label: 'Scheduled',
         };
     }
   };
@@ -86,21 +86,21 @@ export function DropEventsDisplay({ events }: DropEventsDisplayProps) {
             <div
               key={event.id}
               className={cn(
-                "relative overflow-hidden",
-                "p-4 rounded-lg",
-                "border border-border/40",
-                "bg-card/50 backdrop-blur-sm",
-                "transition-all duration-300",
-                "hover:border-border/60",
+                'relative overflow-hidden',
+                'p-4 rounded-lg',
+                'border border-border/40',
+                'bg-card/50 backdrop-blur-sm',
+                'transition-all duration-300',
+                'hover:border-border/60',
               )}
             >
               {/* Status indicator bar */}
               <div
                 className={cn(
-                  "absolute left-0 top-0 bottom-0 w-1",
-                  event.status === "completed" && "bg-emerald-500",
-                  event.status === "overdue" && "bg-red-500",
-                  event.status === "scheduled" && "bg-cyan-500",
+                  'absolute left-0 top-0 bottom-0 w-1',
+                  event.status === 'completed' && 'bg-emerald-500',
+                  event.status === 'overdue' && 'bg-red-500',
+                  event.status === 'scheduled' && 'bg-cyan-500',
                 )}
               />
 
@@ -117,7 +117,7 @@ export function DropEventsDisplay({ events }: DropEventsDisplayProps) {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "font-mono text-xs",
+                        'font-mono text-xs',
                         statusConfig.bg,
                         statusConfig.border,
                         statusConfig.text,
@@ -142,10 +142,10 @@ export function DropEventsDisplay({ events }: DropEventsDisplayProps) {
                     {event.variance !== undefined && (
                       <div
                         className={cn(
-                          "pl-5 font-mono",
+                          'pl-5 font-mono',
                           event.variance > 0
-                            ? "text-red-400"
-                            : "text-emerald-400",
+                            ? 'text-red-400'
+                            : 'text-emerald-400',
                         )}
                       >
                         Variance: ${Math.abs(event.variance)}
@@ -155,7 +155,7 @@ export function DropEventsDisplay({ events }: DropEventsDisplayProps) {
                 </div>
 
                 {/* Action button for scheduled */}
-                {event.status === "scheduled" && (
+                {event.status === 'scheduled' && (
                   <Button
                     variant="outline"
                     size="sm"

@@ -17,14 +17,14 @@
  * @see ADR-025 MTL Authorization Model
  */
 
-"use client";
+'use client';
 
-import { Loader2, MessageSquarePlus, Send } from "lucide-react";
-import { useState, useTransition } from "react";
+import { Loader2, MessageSquarePlus, Send } from 'lucide-react';
+import { useState, useTransition } from 'react';
 
-import { Button } from "@/components/ui/button";
-import { useCreateMtlAuditNote } from "@/hooks/mtl/use-mtl-mutations";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { useCreateMtlAuditNote } from '@/hooks/mtl/use-mtl-mutations';
+import { cn } from '@/lib/utils';
 
 export interface AuditNoteFormProps {
   /** Entry ID to attach note to */
@@ -52,7 +52,7 @@ export function AuditNoteForm({
   onSuccess,
   className,
 }: AuditNoteFormProps) {
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const createNote = useCreateMtlAuditNote();
@@ -63,7 +63,7 @@ export function AuditNoteForm({
 
     const trimmedNote = note.trim();
     if (!trimmedNote) {
-      setError("Note content is required");
+      setError('Note content is required');
       return;
     }
 
@@ -76,10 +76,10 @@ export function AuditNoteForm({
             note: trimmedNote,
           },
         });
-        setNote("");
+        setNote('');
         onSuccess?.();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to add note");
+        setError(err instanceof Error ? err.message : 'Failed to add note');
       }
     });
   };
@@ -87,7 +87,7 @@ export function AuditNoteForm({
   const isDisabled = isPending || !note.trim();
 
   return (
-    <form onSubmit={handleSubmit} className={cn("space-y-3", className)}>
+    <form onSubmit={handleSubmit} className={cn('space-y-3', className)}>
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
         <MessageSquarePlus className="h-4 w-4" />
         <span>Add Audit Note</span>
@@ -101,12 +101,12 @@ export function AuditNoteForm({
           disabled={isPending}
           rows={3}
           className={cn(
-            "w-full rounded-md border bg-background px-3 py-2 text-sm",
-            "placeholder:text-muted-foreground",
-            "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
-            "disabled:cursor-not-allowed disabled:opacity-50",
-            "resize-none",
-            error && "border-destructive focus:ring-destructive",
+            'w-full rounded-md border bg-background px-3 py-2 text-sm',
+            'placeholder:text-muted-foreground',
+            'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            'resize-none',
+            error && 'border-destructive focus:ring-destructive',
           )}
         />
 
@@ -145,7 +145,7 @@ export function AuditNoteFormInline({
   onSuccess,
   className,
 }: AuditNoteFormProps) {
-  const [note, setNote] = useState("");
+  const [note, setNote] = useState('');
   const [isPending, startTransition] = useTransition();
   const createNote = useCreateMtlAuditNote();
 
@@ -163,7 +163,7 @@ export function AuditNoteFormInline({
             note: trimmedNote,
           },
         });
-        setNote("");
+        setNote('');
         onSuccess?.();
       } catch {
         // Error handled by mutation
@@ -174,7 +174,7 @@ export function AuditNoteFormInline({
   return (
     <form
       onSubmit={handleSubmit}
-      className={cn("flex gap-2 items-end", className)}
+      className={cn('flex gap-2 items-end', className)}
     >
       <input
         type="text"
@@ -183,10 +183,10 @@ export function AuditNoteFormInline({
         placeholder="Quick note..."
         disabled={isPending}
         className={cn(
-          "flex-1 rounded-md border bg-background px-3 py-1.5 text-sm",
-          "placeholder:text-muted-foreground",
-          "focus:outline-none focus:ring-2 focus:ring-ring",
-          "disabled:cursor-not-allowed disabled:opacity-50",
+          'flex-1 rounded-md border bg-background px-3 py-1.5 text-sm',
+          'placeholder:text-muted-foreground',
+          'focus:outline-none focus:ring-2 focus:ring-ring',
+          'disabled:cursor-not-allowed disabled:opacity-50',
         )}
       />
       <Button

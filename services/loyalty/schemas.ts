@@ -9,31 +9,31 @@
  * @see LEDGER-PAGINATION-CONTRACT.md §7
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { UUID_REGEX, uuidSchema, uuidSchemaOptional } from "@/lib/validation";
+import { UUID_REGEX, uuidSchema, uuidSchemaOptional } from '@/lib/validation';
 
-import type { LedgerCursor } from "./dtos";
+import type { LedgerCursor } from './dtos';
 
 // === Enum Schemas ===
 
 /** Canonical loyalty reason codes (ADR-019 v2) */
 export const loyaltyReasonSchema = z.enum([
-  "base_accrual",
-  "promotion",
-  "redeem",
-  "manual_reward",
-  "adjustment",
-  "reversal",
+  'base_accrual',
+  'promotion',
+  'redeem',
+  'manual_reward',
+  'adjustment',
+  'reversal',
 ]);
 
 // === Base Accrual Schemas ===
 
 /** Schema for base accrual on rating slip close */
 export const accrueOnCloseInputSchema = z.object({
-  ratingSlipId: uuidSchema("rating slip ID"),
-  casinoId: uuidSchema("casino ID"),
-  idempotencyKey: uuidSchema("idempotency key"),
+  ratingSlipId: uuidSchema('rating slip ID'),
+  casinoId: uuidSchema('casino ID'),
+  idempotencyKey: uuidSchema('idempotency key'),
 });
 
 export type AccrueOnCloseInput = z.infer<typeof accrueOnCloseInputSchema>;
@@ -42,17 +42,17 @@ export type AccrueOnCloseInput = z.infer<typeof accrueOnCloseInputSchema>;
 
 /** Schema for comp redemption (debit) */
 export const redeemInputSchema = z.object({
-  casinoId: uuidSchema("casino ID"),
-  playerId: uuidSchema("player ID"),
+  casinoId: uuidSchema('casino ID'),
+  playerId: uuidSchema('player ID'),
   points: z
     .number()
-    .int("Points must be an integer")
-    .positive("Points must be positive"),
-  issuedByStaffId: uuidSchema("staff ID"),
-  note: z.string().min(1, "Note is required for redemptions"),
-  idempotencyKey: uuidSchema("idempotency key"),
+    .int('Points must be an integer')
+    .positive('Points must be positive'),
+  issuedByStaffId: uuidSchema('staff ID'),
+  note: z.string().min(1, 'Note is required for redemptions'),
+  idempotencyKey: uuidSchema('idempotency key'),
   allowOverdraw: z.boolean().default(false).optional(),
-  rewardId: uuidSchemaOptional("reward ID"),
+  rewardId: uuidSchemaOptional('reward ID'),
   reference: z.string().optional(),
 });
 
@@ -62,15 +62,15 @@ export type RedeemInput = z.infer<typeof redeemInputSchema>;
 
 /** Schema for manual credit (service recovery) */
 export const manualCreditInputSchema = z.object({
-  casinoId: uuidSchema("casino ID"),
-  playerId: uuidSchema("player ID"),
+  casinoId: uuidSchema('casino ID'),
+  playerId: uuidSchema('player ID'),
   points: z
     .number()
-    .int("Points must be an integer")
-    .positive("Points must be positive"),
-  awardedByStaffId: uuidSchema("staff ID"),
-  note: z.string().min(1, "Note is required for manual credits"),
-  idempotencyKey: uuidSchema("idempotency key"),
+    .int('Points must be an integer')
+    .positive('Points must be positive'),
+  awardedByStaffId: uuidSchema('staff ID'),
+  note: z.string().min(1, 'Note is required for manual credits'),
+  idempotencyKey: uuidSchema('idempotency key'),
 });
 
 export type ManualCreditInput = z.infer<typeof manualCreditInputSchema>;
@@ -79,18 +79,18 @@ export type ManualCreditInput = z.infer<typeof manualCreditInputSchema>;
 
 /** Schema for promotional overlay credit */
 export const applyPromotionInputSchema = z.object({
-  casinoId: uuidSchema("casino ID"),
-  ratingSlipId: uuidSchema("rating slip ID"),
-  campaignId: z.string().min(1, "Campaign ID is required"),
+  casinoId: uuidSchema('casino ID'),
+  ratingSlipId: uuidSchema('rating slip ID'),
+  campaignId: z.string().min(1, 'Campaign ID is required'),
   promoMultiplier: z
     .number()
-    .positive("Multiplier must be positive")
+    .positive('Multiplier must be positive')
     .optional(),
   bonusPoints: z
     .number()
-    .int("Bonus points must be an integer")
-    .nonnegative("Bonus points must be non-negative"),
-  idempotencyKey: uuidSchema("idempotency key"),
+    .int('Bonus points must be an integer')
+    .nonnegative('Bonus points must be non-negative'),
+  idempotencyKey: uuidSchema('idempotency key'),
 });
 
 export type ApplyPromotionInput = z.infer<typeof applyPromotionInputSchema>;
@@ -99,7 +99,7 @@ export type ApplyPromotionInput = z.infer<typeof applyPromotionInputSchema>;
 
 /** Schema for suggestion query params (GET /api/v1/loyalty/suggestion) */
 export const suggestionQuerySchema = z.object({
-  ratingSlipId: uuidSchema("rating slip ID"),
+  ratingSlipId: uuidSchema('rating slip ID'),
   asOfTs: z.string().optional(),
 });
 
@@ -107,7 +107,7 @@ export type SuggestionQuery = z.infer<typeof suggestionQuerySchema>;
 
 /** Schema for player balance query params (GET /api/v1/players/{playerId}/loyalty) */
 export const balanceQuerySchema = z.object({
-  casinoId: uuidSchema("casino ID"),
+  casinoId: uuidSchema('casino ID'),
 });
 
 export type BalanceQuery = z.infer<typeof balanceQuerySchema>;
@@ -120,8 +120,8 @@ export type BalanceQuery = z.infer<typeof balanceQuerySchema>;
  * @see LEDGER-PAGINATION-CONTRACT.md §7.1
  */
 export const ledgerListQuerySchema = z.object({
-  casinoId: uuidSchema("casino ID"),
-  playerId: uuidSchema("player ID"),
+  casinoId: uuidSchema('casino ID'),
+  playerId: uuidSchema('player ID'),
 
   /**
    * Opaque pagination cursor (base64-encoded JSON).
@@ -138,12 +138,12 @@ export const ledgerListQuerySchema = z.object({
   /**
    * Filter by rating slip (optional).
    */
-  ratingSlipId: uuidSchemaOptional("rating slip ID"),
+  ratingSlipId: uuidSchemaOptional('rating slip ID'),
 
   /**
    * Filter by visit (optional).
    */
-  visitId: uuidSchemaOptional("visit ID"),
+  visitId: uuidSchemaOptional('visit ID'),
 
   /**
    * Filter by reason (optional).
@@ -155,7 +155,7 @@ export const ledgerListQuerySchema = z.object({
    */
   fromDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "fromDate must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'fromDate must be YYYY-MM-DD format')
     .optional(),
 
   /**
@@ -163,7 +163,7 @@ export const ledgerListQuerySchema = z.object({
    */
   toDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "toDate must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'toDate must be YYYY-MM-DD format')
     .optional(),
 });
 
@@ -182,7 +182,7 @@ export function encodeLedgerCursor(createdAt: string, id: string): string {
     id,
   };
 
-  return Buffer.from(JSON.stringify(cursor)).toString("base64url");
+  return Buffer.from(JSON.stringify(cursor)).toString('base64url');
 }
 
 /**
@@ -195,28 +195,28 @@ export function encodeLedgerCursor(createdAt: string, id: string): string {
 export function decodeLedgerCursor(cursor: string): LedgerCursor {
   try {
     const decoded = JSON.parse(
-      Buffer.from(cursor, "base64url").toString("utf-8"),
+      Buffer.from(cursor, 'base64url').toString('utf-8'),
     );
 
     // Validate structure
     if (!decoded.created_at || !decoded.id) {
-      throw new Error("Cursor missing required fields (created_at, id)");
+      throw new Error('Cursor missing required fields (created_at, id)');
     }
 
     // Validate created_at is valid ISO timestamp
     if (isNaN(Date.parse(decoded.created_at))) {
-      throw new Error("Invalid created_at timestamp in cursor");
+      throw new Error('Invalid created_at timestamp in cursor');
     }
 
     // Validate id is valid UUID
     if (!UUID_REGEX.test(decoded.id)) {
-      throw new Error("Invalid id UUID format in cursor");
+      throw new Error('Invalid id UUID format in cursor');
     }
 
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Runtime validated above
     return decoded as LedgerCursor;
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
+    const message = err instanceof Error ? err.message : 'Unknown error';
     throw new Error(`Invalid cursor format: ${message}`);
   }
 }

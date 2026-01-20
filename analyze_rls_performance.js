@@ -1,9 +1,9 @@
-const fs = require("fs");
-const path = require("path");
+const fs = require('fs');
+const path = require('path');
 
 // Read the query-perf.json file
-const queryPerfPath = "/home/diepulp/projects/pt-2/docs/issues/query-perf.json";
-const data = JSON.parse(fs.readFileSync(queryPerfPath, "utf8"));
+const queryPerfPath = '/home/diepulp/projects/pt-2/docs/issues/query-perf.json';
+const data = JSON.parse(fs.readFileSync(queryPerfPath, 'utf8'));
 
 // Group issues by table and policy type
 const issuesByTable = {};
@@ -12,13 +12,13 @@ const multiplePolicyIssues = [];
 
 // Parse each issue
 data.forEach((issue) => {
-  if (issue.name === "auth_rls_initplan") {
+  if (issue.name === 'auth_rls_initplan') {
     // Extract table name and policy name from cache_key
-    const parts = issue.cache_key.split("_");
+    const parts = issue.cache_key.split('_');
     const tableName = parts[5]; // After "auth_rls_init_plan_public_"
     const policyName = issue.cache_key.replace(
       `auth_rls_init_plan_public_${tableName}_`,
-      "",
+      '',
     );
 
     if (!issuesByTable[tableName]) {
@@ -34,7 +34,7 @@ data.forEach((issue) => {
       policyName,
       issue,
     });
-  } else if (issue.name === "multiple_permissive_policies") {
+  } else if (issue.name === 'multiple_permissive_policies') {
     multiplePolicyIssues.push(issue);
   }
 });
@@ -48,7 +48,7 @@ const stats = {
   issuesByTable,
 };
 
-console.log("=== RLS Performance Analysis Report ===\n");
+console.log('=== RLS Performance Analysis Report ===\n');
 console.log(`Total Issues: ${stats.totalIssues}`);
 console.log(`Auth RLS Initplan Issues: ${stats.authRlsInitplanIssues}`);
 console.log(
@@ -57,7 +57,7 @@ console.log(
 console.log(`Affected Tables: ${stats.affectedTables}\n`);
 
 // Group by table with counts
-console.log("=== Issues by Table ===");
+console.log('=== Issues by Table ===');
 Object.entries(issuesByTable)
   .sort(([, a], [, b]) => b.length - a.length)
   .forEach(([table, issues]) => {
@@ -65,7 +65,7 @@ Object.entries(issuesByTable)
   });
 
 // Generate SQL fixes for auth_rls_initplan issues
-console.log("\n=== Generating SQL Migration Script ===");
+console.log('\n=== Generating SQL Migration Script ===');
 
 let migrationSQL = `-- RLS Performance Optimization Migration
 -- Generated on: ${new Date().toISOString()}
@@ -116,12 +116,12 @@ COMMIT;
 
 // Save the migration script
 const migrationPath =
-  "/home/diepulp/projects/pt-2/supabase/migrations/rls_performance_auth_subqueries.sql";
+  '/home/diepulp/projects/pt-2/supabase/migrations/rls_performance_auth_subqueries.sql';
 fs.writeFileSync(migrationPath, migrationSQL);
 console.log(`Migration script saved to: ${migrationPath}`);
 
 // Generate performance impact analysis
-console.log("\n=== Performance Impact Analysis ===");
+console.log('\n=== Performance Impact Analysis ===');
 console.log(`
 Based on the analysis of ${authIssues.length} RLS performance issues:
 
@@ -133,15 +133,15 @@ Affected Critical Tables:
 ${Object.entries(issuesByTable)
   .filter(([table]) =>
     [
-      "visit",
-      "player",
-      "rating_slip",
-      "gaming_table",
-      "player_financial_transaction",
+      'visit',
+      'player',
+      'rating_slip',
+      'gaming_table',
+      'player_financial_transaction',
     ].includes(table),
   )
   .map(([table, issues]) => `  - ${table}: ${issues.length} policies`)
-  .join("\n")}
+  .join('\n')}
 
 Recommended Actions:
 1. Prioritize fixing policies on high-traffic tables (visit, player, rating_slip)
@@ -152,10 +152,10 @@ Recommended Actions:
 
 // Check for existing recommendations file
 const recommendationsPath =
-  "/home/diepulp/projects/pt-2/docs/issues/query-perf-recommendations.json";
+  '/home/diepulp/projects/pt-2/docs/issues/query-perf-recommendations.json';
 if (fs.existsSync(recommendationsPath)) {
   console.log(`\n=== Existing Recommendations Found ===`);
-  const existingRecs = JSON.parse(fs.readFileSync(recommendationsPath, "utf8"));
+  const existingRecs = JSON.parse(fs.readFileSync(recommendationsPath, 'utf8'));
   console.log(`Found ${existingRecs.length} existing recommendations`);
 } else {
   console.log(`\n=== No Existing Recommendations File Found ===`);
@@ -179,16 +179,16 @@ const analysisReport = {
   multiplePolicyIssues,
   migrationScript: migrationPath,
   recommendations: [
-    "Fix auth function calls by wrapping them in subqueries: auth.uid() → (select auth.uid())",
+    'Fix auth function calls by wrapping them in subqueries: auth.uid() → (select auth.uid())',
     "Fix current_setting calls: current_setting('key') → (select current_setting('key'))",
-    "Test all policy changes in staging before production deployment",
-    "Use EXPLAIN ANALYZE to measure performance improvements",
-    "Consider batching policy updates to minimize downtime",
+    'Test all policy changes in staging before production deployment',
+    'Use EXPLAIN ANALYZE to measure performance improvements',
+    'Consider batching policy updates to minimize downtime',
   ],
 };
 
 const reportPath =
-  "/home/diepulp/projects/pt-2/docs/issues/rls-performance-analysis.json";
+  '/home/diepulp/projects/pt-2/docs/issues/rls-performance-analysis.json';
 fs.writeFileSync(reportPath, JSON.stringify(analysisReport, null, 2));
 console.log(`\nDetailed analysis report saved to: ${reportPath}`);
 
@@ -208,7 +208,7 @@ Wrap all auth function calls in subqueries:
 ${Object.entries(issuesByTable)
   .filter(([, issues]) => issues.length >= 5)
   .map(([table, issues]) => `- ${table}: ${issues.length} policies`)
-  .join("\n")}
+  .join('\n')}
 
 ## Commands
 1. Check current policies: \\d ${Object.keys(issuesByTable)[0]}
@@ -223,6 +223,6 @@ After applying fixes, queries should show improved performance in:
 `;
 
 const quickGuidePath =
-  "/home/diepulp/projects/pt-2/docs/issues/rls-performance-quick-guide.md";
+  '/home/diepulp/projects/pt-2/docs/issues/rls-performance-quick-guide.md';
 fs.writeFileSync(quickGuidePath, quickGuide);
 console.log(`\nQuick reference guide saved to: ${quickGuidePath}`);

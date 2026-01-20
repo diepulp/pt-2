@@ -8,9 +8,9 @@
  * Pattern: PRD-LOYALTY-PROMO
  */
 
-import type { NextRequest } from "next/server";
+import type { NextRequest } from 'next/server';
 
-import { DomainError } from "@/lib/errors/domain-errors";
+import { DomainError } from '@/lib/errors/domain-errors';
 import {
   createRequestContext,
   errorResponse,
@@ -18,14 +18,14 @@ import {
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
-} from "@/lib/http/service-response";
-import { withServerAction } from "@/lib/server-actions/middleware";
-import { createClient } from "@/lib/supabase/server";
-import { createPromoService } from "@/services/loyalty/promo";
+} from '@/lib/http/service-response';
+import { withServerAction } from '@/lib/server-actions/middleware';
+import { createClient } from '@/lib/supabase/server';
+import { createPromoService } from '@/services/loyalty/promo';
 import {
   promoProgramRouteParamsSchema,
   updatePromoProgramSchema,
-} from "@/services/loyalty/promo/schemas";
+} from '@/services/loyalty/promo/schemas';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
@@ -55,8 +55,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         if (!program) {
           throw new DomainError(
-            "PROMO_PROGRAM_NOT_FOUND",
-            "Promo program not found",
+            'PROMO_PROGRAM_NOT_FOUND',
+            'Promo program not found',
             {
               httpStatus: 404,
               details: { programId: params.id },
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: program,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -74,8 +74,8 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-programs.detail",
+        domain: 'loyalty',
+        action: 'promo-programs.detail',
         correlationId: ctx.requestId,
       },
     );
@@ -119,8 +119,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         const existing = await service.getProgram(params.id);
         if (!existing) {
           throw new DomainError(
-            "PROMO_PROGRAM_NOT_FOUND",
-            "Promo program not found",
+            'PROMO_PROGRAM_NOT_FOUND',
+            'Promo program not found',
             {
               httpStatus: 404,
               details: { programId: params.id },
@@ -135,7 +135,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
         return {
           ok: true as const,
-          code: "OK" as const,
+          code: 'OK' as const,
           data: program,
           requestId: mwCtx.correlationId,
           durationMs: 0,
@@ -143,8 +143,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
         };
       },
       {
-        domain: "loyalty",
-        action: "promo-programs.update",
+        domain: 'loyalty',
+        action: 'promo-programs.update',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

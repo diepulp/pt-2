@@ -8,12 +8,12 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import type { ShiftDashboardSummaryDTO } from "@/services/table-context/shift-metrics/dtos";
+import type { ShiftDashboardSummaryDTO } from '@/services/table-context/shift-metrics/dtos';
 
-import { fetchShiftDashboardSummary } from "./http";
-import { shiftDashboardKeys, type ShiftTimeWindow } from "./keys";
+import { fetchShiftDashboardSummary } from './http';
+import { shiftDashboardKeys, type ShiftTimeWindow } from './keys';
 
 export interface UseShiftDashboardSummaryOptions {
   /** Time window for metrics query */

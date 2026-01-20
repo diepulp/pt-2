@@ -10,10 +10,10 @@
  * @see EXECUTION-SPEC-PRD-006.md WS4
  */
 
-"use client";
+'use client';
 
-import { User, UserPlus, Pause, Play, X, ArrowRightLeft } from "lucide-react";
-import * as React from "react";
+import { User, UserPlus, Pause, Play, X, ArrowRightLeft } from 'lucide-react';
+import * as React from 'react';
 
 import {
   DropdownMenu,
@@ -22,15 +22,15 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
 
 export interface SeatOccupant {
   firstName: string;
   lastName: string;
   slipId?: string;
-  slipStatus?: "open" | "paused";
+  slipStatus?: 'open' | 'paused';
 }
 
 interface SeatContextMenuProps {
@@ -66,8 +66,8 @@ export function SeatContextMenu({
   disabled,
 }: SeatContextMenuProps) {
   const isOccupied = occupant !== null;
-  const isPaused = occupant?.slipStatus === "paused";
-  const isOpen = occupant?.slipStatus === "open";
+  const isPaused = occupant?.slipStatus === 'paused';
+  const isOpen = occupant?.slipStatus === 'open';
 
   return (
     <DropdownMenu>
@@ -78,7 +78,7 @@ export function SeatContextMenu({
         {/* Seat header */}
         <DropdownMenuLabel
           className="text-xs font-bold uppercase tracking-widest"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           Seat {seatNumber}
         </DropdownMenuLabel>
@@ -185,12 +185,12 @@ export function mapSlipsToOccupants(
   for (const slip of slips) {
     if (
       slip.seat_number &&
-      (slip.status === "open" || slip.status === "paused")
+      (slip.status === 'open' || slip.status === 'paused')
     ) {
       // Note: Player name would need to be fetched separately via visit → player join
       // For MVP, we show seat as occupied without full player details
       occupants.set(slip.seat_number, {
-        firstName: "Player", // Placeholder - need visit/player join
+        firstName: 'Player', // Placeholder - need visit/player join
         lastName: `#${slip.seat_number}`,
         slipId: slip.id,
         slipStatus: slip.status,
@@ -207,7 +207,7 @@ export function mapSlipsToOccupants(
 export function getOccupiedSeats(slips: RatingSlipDTO[]): string[] {
   return slips
     .filter(
-      (s) => s.seat_number && (s.status === "open" || s.status === "paused"),
+      (s) => s.seat_number && (s.status === 'open' || s.status === 'paused'),
     )
     .map((s) => s.seat_number!)
     .filter((seat): seat is string => seat !== null);

@@ -350,34 +350,51 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
       await serviceClient.rpc('exec_sql', {
         sql: 'ALTER TABLE mtl_audit_note DISABLE TRIGGER trg_mtl_audit_note_no_delete',
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       await serviceClient.rpc('exec_sql', {
         sql: 'ALTER TABLE mtl_entry DISABLE TRIGGER trg_mtl_entry_no_delete',
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     try {
-      await serviceClient.from('mtl_audit_note').delete().eq('id', testAuditNote1Id);
-    } catch { /* ignore */ }
+      await serviceClient
+        .from('mtl_audit_note')
+        .delete()
+        .eq('id', testAuditNote1Id);
+    } catch {
+      /* ignore */
+    }
     try {
       await serviceClient.from('mtl_entry').delete().eq('id', testEntry1Id);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       await serviceClient.from('mtl_entry').delete().eq('id', testEntry2Id);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Re-enable triggers
     try {
       await serviceClient.rpc('exec_sql', {
         sql: 'ALTER TABLE mtl_audit_note ENABLE TRIGGER trg_mtl_audit_note_no_delete',
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
     try {
       await serviceClient.rpc('exec_sql', {
         sql: 'ALTER TABLE mtl_entry ENABLE TRIGGER trg_mtl_entry_no_delete',
       });
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     // Clean up other test data
     await serviceClient
@@ -417,7 +434,9 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
       if (userId) {
         try {
           await serviceClient.auth.admin.deleteUser(userId);
-        } catch { /* ignore */ }
+        } catch {
+          /* ignore */
+        }
       }
     }
   });

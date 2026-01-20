@@ -1,12 +1,12 @@
-"use client";
+'use client';
 
-import { Award, Calendar, Loader2, User, UserCircle } from "lucide-react";
-import * as React from "react";
+import { Award, Calendar, Loader2, User, UserCircle } from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { usePlayer } from "@/hooks/player/use-player";
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { usePlayer } from '@/hooks/player/use-player';
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { cn } from '@/lib/utils';
 
 interface PlayerProfilePanelProps {
   className?: string;
@@ -14,14 +14,14 @@ interface PlayerProfilePanelProps {
 
 export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
   const { selectedPlayerId } = usePlayerDashboard();
-  const { data: player, isLoading, error } = usePlayer(selectedPlayerId || "");
+  const { data: player, isLoading, error } = usePlayer(selectedPlayerId || '');
 
   // Loading state
   if (isLoading) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -41,7 +41,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -54,7 +54,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
             Error loading profile
           </p>
           <p className="text-xs text-muted-foreground/60 mt-1">
-            {error.message || "Unknown error"}
+            {error.message || 'Unknown error'}
           </p>
         </div>
       </div>
@@ -65,7 +65,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
     return (
       <div
         className={cn(
-          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
+          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
           className,
         )}
       >
@@ -95,16 +95,16 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
 
   // Format member since date
   const memberSince = player.created_at
-    ? new Date(player.created_at).toLocaleDateString("en-US", {
-        month: "short",
-        year: "numeric",
+    ? new Date(player.created_at).toLocaleDateString('en-US', {
+        month: 'short',
+        year: 'numeric',
       })
-    : "N/A";
+    : 'N/A';
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm",
+        'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm',
         className,
       )}
     >
@@ -169,11 +169,11 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
               label="Age"
               value={`${age} years`}
               subtext={`Born ${new Date(player.birth_date).toLocaleDateString(
-                "en-US",
+                'en-US',
                 {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
                 },
               )}`}
             />
@@ -211,8 +211,8 @@ function DetailItem({
       </div>
       <p
         className={cn(
-          "text-sm font-medium text-foreground",
-          truncate && "truncate",
+          'text-sm font-medium text-foreground',
+          truncate && 'truncate',
         )}
         title={truncate ? value : undefined}
       >

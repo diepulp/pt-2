@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select';
+import { cn } from '@/lib/utils';
 import type {
   PlayerIdentityInput,
   IdentityAddress,
-} from "@/services/player/dtos";
+} from '@/services/player/dtos';
 
-import { DocumentNumberInput } from "./document-input";
+import { DocumentNumberInput } from './document-input';
 
 export interface IdentityFormProps {
   /** Current form values */
@@ -89,7 +89,7 @@ export function IdentityForm({
     };
 
   return (
-    <div className={cn("grid gap-6", className)}>
+    <div className={cn('grid gap-6', className)}>
       {/* Personal Information Section */}
       <div className="grid gap-4">
         <h3 className="text-lg font-medium">Personal Information</h3>
@@ -106,12 +106,12 @@ export function IdentityForm({
             <Input
               id="birth-date"
               type="date"
-              value={value.birthDate || ""}
-              onChange={(e) => handleFieldChange("birthDate")(e.target.value)}
+              value={value.birthDate || ''}
+              onChange={(e) => handleFieldChange('birthDate')(e.target.value)}
               disabled={disabled}
               aria-invalid={!!errors.birthDate}
               aria-describedby={
-                errors.birthDate ? "birth-date-error" : undefined
+                errors.birthDate ? 'birth-date-error' : undefined
               }
             />
             {errors.birthDate && (
@@ -129,14 +129,14 @@ export function IdentityForm({
           <div className="grid gap-2">
             <Label htmlFor="gender">Gender</Label>
             <Select
-              value={value.gender || ""}
-              onValueChange={handleFieldChange("gender")}
+              value={value.gender || ''}
+              onValueChange={handleFieldChange('gender')}
               disabled={disabled}
             >
               <SelectTrigger
                 id="gender"
                 aria-invalid={!!errors.gender}
-                aria-describedby={errors.gender ? "gender-error" : undefined}
+                aria-describedby={errors.gender ? 'gender-error' : undefined}
               >
                 <SelectValue placeholder="Select gender" />
               </SelectTrigger>
@@ -165,13 +165,13 @@ export function IdentityForm({
             <Input
               id="eye-color"
               type="text"
-              value={value.eyeColor || ""}
-              onChange={(e) => handleFieldChange("eyeColor")(e.target.value)}
+              value={value.eyeColor || ''}
+              onChange={(e) => handleFieldChange('eyeColor')(e.target.value)}
               placeholder="e.g., Brown"
               disabled={disabled}
               maxLength={50}
               aria-invalid={!!errors.eyeColor}
-              aria-describedby={errors.eyeColor ? "eye-color-error" : undefined}
+              aria-describedby={errors.eyeColor ? 'eye-color-error' : undefined}
             />
             {errors.eyeColor && (
               <p
@@ -195,13 +195,13 @@ export function IdentityForm({
             <Input
               id="height"
               type="text"
-              value={value.height || ""}
-              onChange={(e) => handleFieldChange("height")(e.target.value)}
+              value={value.height || ''}
+              onChange={(e) => handleFieldChange('height')(e.target.value)}
               placeholder="6-01"
               disabled={disabled}
               pattern="\d{1,2}-\d{2}"
               aria-invalid={!!errors.height}
-              aria-describedby={errors.height ? "height-error" : undefined}
+              aria-describedby={errors.height ? 'height-error' : undefined}
             />
             {errors.height && (
               <p
@@ -220,13 +220,13 @@ export function IdentityForm({
             <Input
               id="weight"
               type="text"
-              value={value.weight || ""}
-              onChange={(e) => handleFieldChange("weight")(e.target.value)}
+              value={value.weight || ''}
+              onChange={(e) => handleFieldChange('weight')(e.target.value)}
               placeholder="e.g., 180"
               disabled={disabled}
               maxLength={10}
               aria-invalid={!!errors.weight}
-              aria-describedby={errors.weight ? "weight-error" : undefined}
+              aria-describedby={errors.weight ? 'weight-error' : undefined}
             />
             {errors.weight && (
               <p
@@ -252,8 +252,8 @@ export function IdentityForm({
             <Input
               id="street"
               type="text"
-              value={value.address?.street || ""}
-              onChange={handleAddressChange("street")}
+              value={value.address?.street || ''}
+              onChange={handleAddressChange('street')}
               placeholder="123 Main St"
               disabled={disabled}
             />
@@ -266,8 +266,8 @@ export function IdentityForm({
               <Input
                 id="city"
                 type="text"
-                value={value.address?.city || ""}
-                onChange={handleAddressChange("city")}
+                value={value.address?.city || ''}
+                onChange={handleAddressChange('city')}
                 placeholder="Las Vegas"
                 disabled={disabled}
               />
@@ -279,8 +279,8 @@ export function IdentityForm({
               <Input
                 id="state"
                 type="text"
-                value={value.address?.state || ""}
-                onChange={handleAddressChange("state")}
+                value={value.address?.state || ''}
+                onChange={handleAddressChange('state')}
                 placeholder="NV"
                 disabled={disabled}
                 maxLength={2}
@@ -293,8 +293,8 @@ export function IdentityForm({
               <Input
                 id="postal-code"
                 type="text"
-                value={value.address?.postalCode || ""}
-                onChange={handleAddressChange("postalCode")}
+                value={value.address?.postalCode || ''}
+                onChange={handleAddressChange('postalCode')}
                 placeholder="89101"
                 disabled={disabled}
               />
@@ -309,8 +309,8 @@ export function IdentityForm({
 
         {/* Document Number (Secure Input) */}
         <DocumentNumberInput
-          value={value.documentNumber || ""}
-          onChange={handleFieldChange("documentNumber")}
+          value={value.documentNumber || ''}
+          onChange={handleFieldChange('documentNumber')}
           disabled={disabled}
           error={errors.documentNumber}
         />
@@ -320,15 +320,15 @@ export function IdentityForm({
           <div className="grid gap-2">
             <Label htmlFor="document-type">Document Type</Label>
             <Select
-              value={value.documentType || ""}
-              onValueChange={handleFieldChange("documentType")}
+              value={value.documentType || ''}
+              onValueChange={handleFieldChange('documentType')}
               disabled={disabled}
             >
               <SelectTrigger
                 id="document-type"
                 aria-invalid={!!errors.documentType}
                 aria-describedby={
-                  errors.documentType ? "document-type-error" : undefined
+                  errors.documentType ? 'document-type-error' : undefined
                 }
               >
                 <SelectValue placeholder="Select document type" />
@@ -358,16 +358,16 @@ export function IdentityForm({
             <Input
               id="issuing-state"
               type="text"
-              value={value.issuingState || ""}
+              value={value.issuingState || ''}
               onChange={(e) =>
-                handleFieldChange("issuingState")(e.target.value)
+                handleFieldChange('issuingState')(e.target.value)
               }
               placeholder="e.g., NV"
               disabled={disabled}
               maxLength={50}
               aria-invalid={!!errors.issuingState}
               aria-describedby={
-                errors.issuingState ? "issuing-state-error" : undefined
+                errors.issuingState ? 'issuing-state-error' : undefined
               }
             />
             {errors.issuingState && (
@@ -389,12 +389,12 @@ export function IdentityForm({
             <Input
               id="issue-date"
               type="date"
-              value={value.issueDate || ""}
-              onChange={(e) => handleFieldChange("issueDate")(e.target.value)}
+              value={value.issueDate || ''}
+              onChange={(e) => handleFieldChange('issueDate')(e.target.value)}
               disabled={disabled}
               aria-invalid={!!errors.issueDate}
               aria-describedby={
-                errors.issueDate ? "issue-date-error" : undefined
+                errors.issueDate ? 'issue-date-error' : undefined
               }
             />
             {errors.issueDate && (
@@ -414,14 +414,14 @@ export function IdentityForm({
             <Input
               id="expiration-date"
               type="date"
-              value={value.expirationDate || ""}
+              value={value.expirationDate || ''}
               onChange={(e) =>
-                handleFieldChange("expirationDate")(e.target.value)
+                handleFieldChange('expirationDate')(e.target.value)
               }
               disabled={disabled}
               aria-invalid={!!errors.expirationDate}
               aria-describedby={
-                errors.expirationDate ? "expiration-date-error" : undefined
+                errors.expirationDate ? 'expiration-date-error' : undefined
               }
             />
             {errors.expirationDate && (

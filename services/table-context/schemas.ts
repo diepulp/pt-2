@@ -10,7 +10,7 @@
  * @see PRD-007 Table Context Service
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
 // === UUID Format Schema ===
 
@@ -24,19 +24,19 @@ import { z } from "zod";
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-const uuidFormat = (fieldName = "ID") =>
+const uuidFormat = (fieldName = 'ID') =>
   z.string().regex(UUID_REGEX, `Invalid ${fieldName} format`);
 
 // === Enum Schemas ===
 
-export const tableStatusSchema = z.enum(["inactive", "active", "closed"]);
+export const tableStatusSchema = z.enum(['inactive', 'active', 'closed']);
 export const gameTypeSchema = z.enum([
-  "blackjack",
-  "poker",
-  "roulette",
-  "baccarat",
+  'blackjack',
+  'poker',
+  'roulette',
+  'baccarat',
 ]);
-export const snapshotTypeSchema = z.enum(["open", "close", "rundown"]);
+export const snapshotTypeSchema = z.enum(['open', 'close', 'rundown']);
 
 // === Chipset Schema ===
 
@@ -46,36 +46,36 @@ export const snapshotTypeSchema = z.enum(["open", "close", "rundown"]);
  */
 export const chipsetSchema = z.record(
   z.string(),
-  z.number().int().min(0, "Chip quantity must be non-negative"),
+  z.number().int().min(0, 'Chip quantity must be non-negative'),
 );
 
 // === Table Lifecycle Schemas ===
 
 export const activateTableSchema = z.object({
-  table_id: uuidFormat("table ID"),
+  table_id: uuidFormat('table ID'),
 });
 
 export const deactivateTableSchema = z.object({
-  table_id: uuidFormat("table ID"),
+  table_id: uuidFormat('table ID'),
 });
 
 export const closeTableSchema = z.object({
-  table_id: uuidFormat("table ID"),
+  table_id: uuidFormat('table ID'),
 });
 
 // === Dealer Schemas ===
 
 export const assignDealerSchema = z.object({
-  staff_id: uuidFormat("staff ID"),
+  staff_id: uuidFormat('staff ID'),
 });
 
 // === Inventory Snapshot Schema ===
 
 export const logInventorySnapshotSchema = z.object({
-  table_id: uuidFormat("table ID"),
+  table_id: uuidFormat('table ID'),
   snapshot_type: snapshotTypeSchema,
   chipset: chipsetSchema,
-  verified_by: uuidFormat("staff ID").optional(),
+  verified_by: uuidFormat('staff ID').optional(),
   discrepancy_cents: z.number().int().optional(),
   note: z.string().max(500).optional(),
 });
@@ -83,32 +83,32 @@ export const logInventorySnapshotSchema = z.object({
 // === Fill/Credit Schemas ===
 
 export const requestTableFillSchema = z.object({
-  table_id: uuidFormat("table ID"),
-  request_id: z.string().min(1, "Request ID is required"), // Idempotency key
+  table_id: uuidFormat('table ID'),
+  request_id: z.string().min(1, 'Request ID is required'), // Idempotency key
   chipset: chipsetSchema,
-  amount_cents: z.number().int().positive("Amount must be positive"),
-  delivered_by: uuidFormat("staff ID"),
-  received_by: uuidFormat("staff ID"),
-  slip_no: z.string().min(1, "Slip number is required"),
+  amount_cents: z.number().int().positive('Amount must be positive'),
+  delivered_by: uuidFormat('staff ID'),
+  received_by: uuidFormat('staff ID'),
+  slip_no: z.string().min(1, 'Slip number is required'),
 });
 
 export const requestTableCreditSchema = z.object({
-  table_id: uuidFormat("table ID"),
-  request_id: z.string().min(1, "Request ID is required"), // Idempotency key
+  table_id: uuidFormat('table ID'),
+  request_id: z.string().min(1, 'Request ID is required'), // Idempotency key
   chipset: chipsetSchema,
-  amount_cents: z.number().int().positive("Amount must be positive"),
-  sent_by: uuidFormat("staff ID"),
-  received_by: uuidFormat("staff ID"),
-  slip_no: z.string().min(1, "Slip number is required"),
+  amount_cents: z.number().int().positive('Amount must be positive'),
+  sent_by: uuidFormat('staff ID'),
+  received_by: uuidFormat('staff ID'),
+  slip_no: z.string().min(1, 'Slip number is required'),
 });
 
 // === Drop Event Schema ===
 
 export const logDropEventSchema = z.object({
-  table_id: uuidFormat("table ID"),
-  drop_box_id: z.string().min(1, "Drop box ID is required"),
-  seal_no: z.string().min(1, "Seal number is required"),
-  witnessed_by: uuidFormat("staff ID"),
+  table_id: uuidFormat('table ID'),
+  drop_box_id: z.string().min(1, 'Drop box ID is required'),
+  seal_no: z.string().min(1, 'Seal number is required'),
+  witnessed_by: uuidFormat('staff ID'),
   removed_at: z.string().datetime().optional(),
   delivered_at: z.string().datetime().optional(),
   delivered_scan_at: z.string().datetime().optional(),
@@ -131,7 +131,7 @@ export const tableListQuerySchema = z.object({
 });
 
 export const tableRouteParamsSchema = z.object({
-  tableId: uuidFormat("table ID"),
+  tableId: uuidFormat('table ID'),
 });
 
 // === Transport Type Exports (HTTP-only; map to camelCase DTOs in services) ===
@@ -157,12 +157,12 @@ export type TableRouteParams = z.infer<typeof tableRouteParamsSchema>;
 
 export const updateTableLimitsSchema = z
   .object({
-    min_bet: z.number().nonnegative("Min bet must be non-negative"),
-    max_bet: z.number().nonnegative("Max bet must be non-negative"),
+    min_bet: z.number().nonnegative('Min bet must be non-negative'),
+    max_bet: z.number().nonnegative('Max bet must be non-negative'),
   })
   .refine((data) => data.min_bet <= data.max_bet, {
-    message: "min_bet must be less than or equal to max_bet",
-    path: ["min_bet"],
+    message: 'min_bet must be less than or equal to max_bet',
+    path: ['min_bet'],
   });
 
 export type UpdateTableLimitsRequestBody = z.infer<
@@ -172,10 +172,10 @@ export type UpdateTableLimitsRequestBody = z.infer<
 // === Table Session Schemas (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
 
 export const tableSessionStatusSchema = z.enum([
-  "OPEN",
-  "ACTIVE",
-  "RUNDOWN",
-  "CLOSED",
+  'OPEN',
+  'ACTIVE',
+  'RUNDOWN',
+  'CLOSED',
 ]);
 
 /**
@@ -183,7 +183,7 @@ export const tableSessionStatusSchema = z.enum([
  * POST /api/v1/table-sessions
  */
 export const openTableSessionSchema = z.object({
-  gaming_table_id: uuidFormat("gaming table ID"),
+  gaming_table_id: uuidFormat('gaming table ID'),
 });
 
 /**
@@ -201,33 +201,30 @@ export const startTableRundownSchema = z.object({
  */
 export const closeTableSessionSchema = z
   .object({
-    drop_event_id: uuidFormat("drop event ID").optional(),
+    drop_event_id: uuidFormat('drop event ID').optional(),
     closing_inventory_snapshot_id: uuidFormat(
-      "closing inventory snapshot ID"
+      'closing inventory snapshot ID',
     ).optional(),
     notes: z.string().max(2000).optional(),
   })
-  .refine(
-    (data) => data.drop_event_id || data.closing_inventory_snapshot_id,
-    {
-      message:
-        "At least one of drop_event_id or closing_inventory_snapshot_id is required",
-      path: ["drop_event_id"],
-    }
-  );
+  .refine((data) => data.drop_event_id || data.closing_inventory_snapshot_id, {
+    message:
+      'At least one of drop_event_id or closing_inventory_snapshot_id is required',
+    path: ['drop_event_id'],
+  });
 
 /**
  * Route params schema for session ID.
  */
 export const tableSessionRouteParamsSchema = z.object({
-  id: uuidFormat("session ID"),
+  id: uuidFormat('session ID'),
 });
 
 /**
  * Route params schema for current session lookup by table ID.
  */
 export const currentSessionRouteParamsSchema = z.object({
-  tableId: uuidFormat("table ID"),
+  tableId: uuidFormat('table ID'),
 });
 
 // Transport type exports

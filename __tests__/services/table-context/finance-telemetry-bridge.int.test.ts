@@ -190,7 +190,10 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       .eq('casino_id', casinoId);
     await serviceClient.from('rating_slip').delete().eq('id', ratingSlipId);
     await serviceClient.from('visit').delete().eq('id', visitId);
-    await serviceClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casinoId);
     await serviceClient.from('player').delete().eq('id', playerId);
     await serviceClient.from('gaming_table').delete().eq('casino_id', casinoId);
     await serviceClient.from('staff').delete().eq('casino_id', casinoId);
@@ -219,7 +222,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-test-1-${Date.now()}`,
-        }
+        },
       );
 
       expect(financeError).toBeNull();
@@ -263,7 +266,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           // No rating_slip_id
           p_idempotency_key: `bridge-test-unrated-${Date.now()}`,
-        }
+        },
       );
 
       expect(financeError).toBeNull();
@@ -297,7 +300,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-test-cashout-${Date.now()}`,
-        }
+        },
       );
 
       expect(financeError).toBeNull();
@@ -335,7 +338,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: idempotencyKey,
-        }
+        },
       );
 
       // Wait for trigger
@@ -355,7 +358,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: idempotencyKey,
-        }
+        },
       );
 
       // Finance RPC should return same row (idempotent)
@@ -384,7 +387,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_actor_id: pitBossId,
           // No p_source specified - should default to 'manual_ops'
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -401,7 +404,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_actor_id: pitBossId,
           p_source: 'manual_ops',
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -418,12 +421,12 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_telemetry_kind: 'GRIND_BUYIN',
           p_actor_id: pitBossId,
           p_source: 'invalid_source',
-        }
+        },
       );
 
       expect(error).not.toBeNull();
       expect(error!.message).toContain(
-        'source must be finance_bridge or manual_ops'
+        'source must be finance_bridge or manual_ops',
       );
     });
 
@@ -441,7 +444,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_actor_id: pitBossId,
           p_source: 'manual_ops',
-        }
+        },
       );
 
       expect(error).toBeNull();
@@ -511,7 +514,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-amount-${Date.now()}`,
-        }
+        },
       );
 
       await new Promise((resolve) => setTimeout(resolve, 100));

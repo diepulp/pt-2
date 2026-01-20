@@ -8,24 +8,24 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   useCashObsSummary,
   useShiftDashboardSummary,
   type ShiftTimeWindow,
-} from "@/hooks/shift-dashboard";
-import { useShiftDashboardUI } from "@/hooks/ui/use-shift-dashboard-ui";
+} from '@/hooks/shift-dashboard';
+import { useShiftDashboardUI } from '@/hooks/ui/use-shift-dashboard-ui';
 
-import { AlertsPanel } from "./alerts-panel";
-import { CashObservationsPanel } from "./cash-observations-panel";
-import { CasinoSummaryCard } from "./casino-summary-card";
-import { PitMetricsTable } from "./pit-metrics-table";
-import { TableMetricsTable } from "./table-metrics-table";
-import { TimeWindowSelector } from "./time-window-selector";
+import { AlertsPanel } from './alerts-panel';
+import { CashObservationsPanel } from './cash-observations-panel';
+import { CasinoSummaryCard } from './casino-summary-card';
+import { PitMetricsTable } from './pit-metrics-table';
+import { TableMetricsTable } from './table-metrics-table';
+import { TimeWindowSelector } from './time-window-selector';
 
 export interface ShiftDashboardPageProps {
   /**
@@ -67,7 +67,7 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
 
   // === Authoritative Metrics Queries ===
   // Pass a stable empty window during SSR to avoid conditional hook calls
-  const stableWindow = timeWindow ?? { start: "", end: "" };
+  const stableWindow = timeWindow ?? { start: '', end: '' };
 
   // PERF: Single BFF call replaces 3 separate metrics queries
   // @see SHIFT_DASHBOARD_PERFORMANCE_AUDIT.md
@@ -91,9 +91,9 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
 
   // Handle lens change
   const handleLensChange = (value: string) => {
-    const newLens = value as "casino" | "pit" | "table";
+    const newLens = value as 'casino' | 'pit' | 'table';
     setLens(newLens);
-    if (newLens === "casino") {
+    if (newLens === 'casino') {
       resetNavigation();
     }
   };

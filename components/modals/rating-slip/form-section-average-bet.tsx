@@ -1,21 +1,21 @@
-"use client";
+'use client';
 
-import { Plus, Minus } from "lucide-react";
-import React from "react";
+import { Plus, Minus } from 'lucide-react';
+import React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useAverageBetField } from "@/hooks/ui/use-rating-slip-modal";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { useAverageBetField } from '@/hooks/ui/use-rating-slip-modal';
 
-import { IncrementButtonGroup } from "./increment-button-group";
+import { IncrementButtonGroup } from './increment-button-group';
 
 // Increment button configuration - extracted to module scope to prevent recreation
 const INCREMENT_BUTTONS = [
-  { amount: 5, label: "+5" },
-  { amount: 10, label: "+10" },
-  { amount: 25, label: "+25" },
-  { amount: 50, label: "+50" },
-  { amount: 100, label: "+100" },
+  { amount: 5, label: '+5' },
+  { amount: 10, label: '+10' },
+  { amount: 25, label: '+25' },
+  { amount: 50, label: '+50' },
+  { amount: 100, label: '+100' },
 ] as const;
 
 /**
@@ -47,24 +47,24 @@ export const FormSectionAverageBet = React.memo(
     // Event handlers - wrapped in useCallback for stable references
     const handleChange = React.useCallback(
       (e: React.ChangeEvent<HTMLInputElement>) => {
-        updateField("averageBet", e.target.value);
+        updateField('averageBet', e.target.value);
       },
       [updateField],
     );
 
     const handleReset = React.useCallback(() => {
-      resetField("averageBet");
+      resetField('averageBet');
     }, [resetField]);
 
     const handleIncrement = React.useCallback(
       (amount: number) => {
-        incrementField("averageBet", amount);
+        incrementField('averageBet', amount);
       },
       [incrementField],
     );
 
     const handleDecrement = React.useCallback(() => {
-      decrementField("averageBet");
+      decrementField('averageBet');
     }, [decrementField]);
 
     return (
@@ -102,7 +102,7 @@ export const FormSectionAverageBet = React.memo(
           onIncrement={(_, amount) => handleIncrement(amount)}
         />
         <div className="text-sm mt-1 text-muted-foreground">
-          Total Change: {totalChange > 0 ? "+" : ""}
+          Total Change: {totalChange > 0 ? '+' : ''}
           {totalChange}
         </div>
       </div>

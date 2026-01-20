@@ -1,8 +1,8 @@
-"use client";
+'use client';
 
-import { useShallow } from "zustand/react/shallow";
+import { useShallow } from 'zustand/react/shallow';
 
-import { useShiftDashboardStore } from "@/store/shift-dashboard-store";
+import { useShiftDashboardStore } from '@/store/shift-dashboard-store';
 
 /**
  * Selector hook for shift dashboard UI state.

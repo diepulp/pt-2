@@ -1,11 +1,11 @@
-import { Metadata } from "next";
+import { Metadata } from 'next';
 
-import { PitPanelsStatic } from "@/components/pit-panels";
-import AnimatedBadge from "@/components/ui/animated-badge";
+import { PitPanelsStatic } from '@/components/pit-panels';
+import AnimatedBadge from '@/components/ui/animated-badge';
 
 export const metadata: Metadata = {
-  title: "Pit Panels UI Review | PT-2",
-  description: "Review interface for pit panel components",
+  title: 'Pit Panels UI Review | PT-2',
+  description: 'Review interface for pit panel components',
 };
 
 /**

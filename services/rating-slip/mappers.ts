@@ -11,17 +11,18 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { VisitLiveViewDTO } from "@/services/visit/dtos";
-import type { Json } from "@/types/database.types";
+import type { VisitLiveViewDTO } from '@/services/visit/dtos';
+import type { Json } from '@/types/database.types';
 
 import type {
+  ActivePlayerForDashboardDTO,
   ClosedSlipForGamingDayDTO,
   RatingSlipDTO,
   RatingSlipPauseDTO,
   RatingSlipStatus,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -214,13 +215,13 @@ type VisitLiveViewRpcResponse = {
   player_id: string;
   player_first_name: string;
   player_last_name: string;
-  visit_status: "open" | "closed";
+  visit_status: 'open' | 'closed';
   started_at: string;
   current_segment_slip_id: string | null;
   current_segment_table_id: string | null;
   current_segment_table_name: string | null;
   current_segment_seat_number: string | null;
-  current_segment_status: "open" | "paused" | null;
+  current_segment_status: 'open' | 'paused' | null;
   current_segment_started_at: string | null;
   current_segment_average_bet: number | null;
   session_total_duration_seconds: number;
@@ -345,4 +346,69 @@ export function toClosedSlipForGamingDayDTOList(
   rows: RpcClosedSlipRow[],
 ): ClosedSlipForGamingDayDTO[] {
   return rows.map(toClosedSlipForGamingDayDTO);
+}
+
+// === Active Player Dashboard Mappers (Casino-Wide Activity Panel) ===
+
+/**
+ * Type for rows returned by rpc_list_active_players_casino_wide RPC.
+ * Flat structure with player/table info pre-joined.
+ *
+ * @see GAP-ACTIVITY-PANEL-CASINO-WIDE
+ */
+export type RpcActivePlayerRow = {
+  slip_id: string;
+  visit_id: string;
+  table_id: string;
+  table_name: string;
+  pit_name: string | null;
+  seat_number: string | null;
+  start_time: string;
+  status: string;
+  average_bet: number | null;
+  player_id: string | null;
+  player_first_name: string | null;
+  player_last_name: string | null;
+  player_birth_date: string | null;
+  player_tier: string | null;
+};
+
+/**
+ * Maps an RPC active player row to ActivePlayerForDashboardDTO.
+ * Handles null player (ghost visits where visit.player_id is null).
+ *
+ * @see GAP-ACTIVITY-PANEL-CASINO-WIDE
+ */
+export function toActivePlayerForDashboardDTO(
+  row: RpcActivePlayerRow,
+): ActivePlayerForDashboardDTO {
+  return {
+    slipId: row.slip_id,
+    visitId: row.visit_id,
+    tableId: row.table_id,
+    tableName: row.table_name,
+    pitName: row.pit_name,
+    seatNumber: row.seat_number,
+    startTime: row.start_time,
+    status: row.status as 'open' | 'paused',
+    averageBet: row.average_bet ? Number(row.average_bet) : null,
+    player: row.player_id
+      ? {
+          id: row.player_id,
+          firstName: row.player_first_name ?? '',
+          lastName: row.player_last_name ?? '',
+          birthDate: row.player_birth_date,
+          tier: row.player_tier,
+        }
+      : null,
+  };
+}
+
+/**
+ * Maps an array of RPC active player rows to ActivePlayerForDashboardDTO[].
+ */
+export function toActivePlayerForDashboardDTOList(
+  rows: RpcActivePlayerRow[],
+): ActivePlayerForDashboardDTO[] {
+  return rows.map(toActivePlayerForDashboardDTO);
 }

@@ -9,7 +9,7 @@
  * @see docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md
  */
 
-import { createServiceClient } from "./service";
+import { createServiceClient } from './service';
 
 /**
  * RLS claims structure for JWT app_metadata

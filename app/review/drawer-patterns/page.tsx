@@ -1,11 +1,11 @@
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-import { SheetPanelDemo } from "./sheet-panel";
-import { SidebarPanelDemo } from "./sidebar-panel";
+import { SheetPanelDemo } from './sheet-panel';
+import { SidebarPanelDemo } from './sidebar-panel';
 
 /**
  * Drawer Patterns Comparison
@@ -14,8 +14,8 @@ import { SidebarPanelDemo } from "./sidebar-panel";
  * Option C: Sheet-based overlay drawer (using shadcn Sheet)
  */
 export default function DrawerPatternsPage() {
-  const [activePattern, setActivePattern] = useState<"sidebar" | "sheet">(
-    "sidebar",
+  const [activePattern, setActivePattern] = useState<'sidebar' | 'sheet'>(
+    'sidebar',
   );
 
   return (
@@ -28,7 +28,7 @@ export default function DrawerPatternsPage() {
             linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px)
           `,
-          backgroundSize: "32px 32px",
+          backgroundSize: '32px 32px',
         }}
       />
 
@@ -51,23 +51,23 @@ export default function DrawerPatternsPage() {
             {/* Pattern Switcher */}
             <div className="flex items-center gap-1 p-1 bg-zinc-900/80 border border-zinc-800/60 rounded-lg">
               <button
-                onClick={() => setActivePattern("sidebar")}
+                onClick={() => setActivePattern('sidebar')}
                 className={cn(
-                  "px-4 py-2 text-sm font-mono rounded-md transition-all duration-200",
-                  activePattern === "sidebar"
-                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50",
+                  'px-4 py-2 text-sm font-mono rounded-md transition-all duration-200',
+                  activePattern === 'sidebar'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
                 )}
               >
                 Option A: Sidebar
               </button>
               <button
-                onClick={() => setActivePattern("sheet")}
+                onClick={() => setActivePattern('sheet')}
                 className={cn(
-                  "px-4 py-2 text-sm font-mono rounded-md transition-all duration-200",
-                  activePattern === "sheet"
-                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
-                    : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50",
+                  'px-4 py-2 text-sm font-mono rounded-md transition-all duration-200',
+                  activePattern === 'sheet'
+                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/50',
                 )}
               >
                 Option C: Sheet
@@ -85,39 +85,39 @@ export default function DrawerPatternsPage() {
               <PatternBadge
                 label="Pattern"
                 value={
-                  activePattern === "sidebar"
-                    ? "Sidebar Component"
-                    : "Sheet Component"
+                  activePattern === 'sidebar'
+                    ? 'Sidebar Component'
+                    : 'Sheet Component'
                 }
               />
               <PatternBadge
                 label="Behavior"
                 value={
-                  activePattern === "sidebar"
-                    ? "Collapsible • Hover Expand"
-                    : "Modal Overlay • Toggle"
+                  activePattern === 'sidebar'
+                    ? 'Collapsible • Hover Expand'
+                    : 'Modal Overlay • Toggle'
                 }
               />
               <PatternBadge
                 label="Z-Index"
                 value={
-                  activePattern === "sidebar"
-                    ? "z-20 (layered)"
-                    : "z-50 (modal)"
+                  activePattern === 'sidebar'
+                    ? 'z-20 (layered)'
+                    : 'z-50 (modal)'
                 }
               />
             </div>
             <div className="flex items-center gap-2">
               <div
                 className={cn(
-                  "w-2 h-2 rounded-full",
-                  activePattern === "sidebar"
-                    ? "bg-emerald-500"
-                    : "bg-blue-500",
+                  'w-2 h-2 rounded-full',
+                  activePattern === 'sidebar'
+                    ? 'bg-emerald-500'
+                    : 'bg-blue-500',
                 )}
               />
               <span className="text-xs text-zinc-500 font-mono uppercase tracking-wider">
-                {activePattern === "sidebar" ? "Integrated" : "Overlay"}
+                {activePattern === 'sidebar' ? 'Integrated' : 'Overlay'}
               </span>
             </div>
           </div>
@@ -139,9 +139,9 @@ export default function DrawerPatternsPage() {
                 </div>
                 <div className="h-4 w-px bg-zinc-800" />
                 <span className="text-xs font-mono text-zinc-600">
-                  {activePattern === "sidebar"
-                    ? "components/pit-panels/sidebar-panel.tsx"
-                    : "components/pit-panels/sheet-panel.tsx"}
+                  {activePattern === 'sidebar'
+                    ? 'components/pit-panels/sidebar-panel.tsx'
+                    : 'components/pit-panels/sheet-panel.tsx'}
                 </span>
               </div>
               <div className="flex items-center gap-4 text-xs text-zinc-600">
@@ -153,7 +153,7 @@ export default function DrawerPatternsPage() {
 
             {/* Demo Content */}
             <div className="h-[600px] relative">
-              {activePattern === "sidebar" ? (
+              {activePattern === 'sidebar' ? (
                 <SidebarPanelDemo />
               ) : (
                 <SheetPanelDemo />
@@ -165,35 +165,35 @@ export default function DrawerPatternsPage() {
           <div className="mt-8 grid grid-cols-2 gap-6">
             <ComparisonCard
               title="Option A: Sidebar"
-              isActive={activePattern === "sidebar"}
+              isActive={activePattern === 'sidebar'}
               pros={[
-                "Unified with main AppSidebar component",
-                "Consistent hover-expand behavior",
-                "Shared underlay strip prevents bleed-through",
-                "Native keyboard shortcuts (⌘B)",
-                "Flexible collapsible modes (icon, offcanvas, none)",
+                'Unified with main AppSidebar component',
+                'Consistent hover-expand behavior',
+                'Shared underlay strip prevents bleed-through',
+                'Native keyboard shortcuts (⌘B)',
+                'Flexible collapsible modes (icon, offcanvas, none)',
               ]}
               cons={[
-                "Requires custom z-index management",
-                "Stacking context complexity with multiple sidebars",
-                "More integration work with existing SidebarProvider",
+                'Requires custom z-index management',
+                'Stacking context complexity with multiple sidebars',
+                'More integration work with existing SidebarProvider',
               ]}
             />
             <ComparisonCard
               title="Option C: Sheet"
-              isActive={activePattern === "sheet"}
+              isActive={activePattern === 'sheet'}
               pros={[
-                "Battle-tested Radix Dialog primitive",
-                "Built-in overlay scrim with animations",
-                "Focus trapping and accessibility baked in",
-                "Simple open/close state management",
-                "No stacking context issues (modal layer)",
+                'Battle-tested Radix Dialog primitive',
+                'Built-in overlay scrim with animations',
+                'Focus trapping and accessibility baked in',
+                'Simple open/close state management',
+                'No stacking context issues (modal layer)',
               ]}
               cons={[
-                "Modal behavior blocks content interaction",
-                "Different pattern than main sidebar",
-                "Less integrated hover-to-expand behavior",
-                "Full-page scrim may be too heavy for frequent use",
+                'Modal behavior blocks content interaction',
+                'Different pattern than main sidebar',
+                'Less integrated hover-to-expand behavior',
+                'Full-page scrim may be too heavy for frequent use',
               ]}
             />
           </div>
@@ -240,23 +240,23 @@ function ComparisonCard({
   return (
     <div
       className={cn(
-        "p-6 rounded-lg border transition-all duration-300",
+        'p-6 rounded-lg border transition-all duration-300',
         isActive
-          ? "border-amber-500/30 bg-amber-500/5"
-          : "border-zinc-800/40 bg-zinc-900/20",
+          ? 'border-amber-500/30 bg-amber-500/5'
+          : 'border-zinc-800/40 bg-zinc-900/20',
       )}
     >
       <div className="flex items-center gap-2 mb-4">
         <div
           className={cn(
-            "w-2 h-2 rounded-full",
-            isActive ? "bg-amber-500" : "bg-zinc-700",
+            'w-2 h-2 rounded-full',
+            isActive ? 'bg-amber-500' : 'bg-zinc-700',
           )}
         />
         <h3
           className={cn(
-            "font-mono text-sm",
-            isActive ? "text-amber-400" : "text-zinc-500",
+            'font-mono text-sm',
+            isActive ? 'text-amber-400' : 'text-zinc-500',
           )}
         >
           {title}

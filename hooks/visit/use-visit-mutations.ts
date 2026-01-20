@@ -11,13 +11,25 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import type { CloseVisitDTO, VisitDTO } from '@/services/visit/dtos';
+import type {
+  CloseVisitDTO,
+  StartVisitResultDTO,
+  VisitDTO,
+} from '@/services/visit/dtos';
 import { closeVisit, startVisit } from '@/services/visit/http';
 import { visitKeys } from '@/services/visit/keys';
 
 /**
  * Starts a visit (check-in) for a player.
- * Idempotent - returns existing active visit if one exists.
+ * Idempotent - returns existing active visit if one exists for the current gaming day.
+ *
+ * ADR-026: Gaming-day-scoped visits.
+ * Returns StartVisitResultDTO with:
+ * - `visit`: The visit record
+ * - `isNew`: true if a new visit was created
+ * - `resumed`: true if resuming same-day visit
+ * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
+ *
  * Invalidates visit list and active visit queries on success.
  */
 export function useStartVisit() {
@@ -25,15 +37,15 @@ export function useStartVisit() {
 
   return useMutation({
     mutationFn: (playerId: string) => startVisit(playerId),
-    onSuccess: (data: VisitDTO, playerId: string) => {
+    onSuccess: (data: StartVisitResultDTO, playerId: string) => {
       // Invalidate all visit lists
       queryClient.invalidateQueries({ queryKey: visitKeys.list.scope });
       // Invalidate active visit for this player
       queryClient.invalidateQueries({
         queryKey: visitKeys.activeByPlayer(playerId),
       });
-      // Set the detail cache for the new visit
-      queryClient.setQueryData(visitKeys.detail(data.id), data);
+      // Set the detail cache for the visit
+      queryClient.setQueryData(visitKeys.detail(data.visit.id), data.visit);
     },
   });
 }

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 /**
  * RundownSummaryPanel (ADR-027)
@@ -22,15 +22,15 @@ import {
   Loader2,
   Clock,
   CheckCircle2,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTableRundown } from "@/hooks/table-context/use-table-rundown";
-import { cn } from "@/lib/utils";
-import type { TableBankMode } from "@/services/table-context/dtos";
-import { TABLE_BANK_MODE_LABELS } from "@/services/table-context/labels";
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTableRundown } from '@/hooks/table-context/use-table-rundown';
+import { cn } from '@/lib/utils';
+import type { TableBankMode } from '@/services/table-context/dtos';
+import { TABLE_BANK_MODE_LABELS } from '@/services/table-context/labels';
 
 // === Types ===
 
@@ -49,7 +49,7 @@ interface MetricRowProps {
   isLoading?: boolean;
   prefix?: string;
   highlight?: boolean;
-  variant?: "positive" | "negative" | "neutral";
+  variant?: 'positive' | 'negative' | 'neutral';
   muted?: boolean;
 }
 
@@ -59,11 +59,11 @@ interface MetricRowProps {
  * Format cents to currency string.
  */
 function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return "—";
+  if (cents == null) return '—';
   const dollars = cents / 100;
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(dollars);
@@ -75,36 +75,36 @@ function MetricRow({
   label,
   value,
   isLoading = false,
-  prefix = "",
+  prefix = '',
   highlight = false,
-  variant = "neutral",
+  variant = 'neutral',
   muted = false,
 }: MetricRowProps) {
   const Icon =
-    variant === "positive"
+    variant === 'positive'
       ? TrendingUp
-      : variant === "negative"
+      : variant === 'negative'
         ? TrendingDown
         : Minus;
   const colorClass =
-    variant === "positive"
-      ? "text-emerald-500"
-      : variant === "negative"
-        ? "text-red-500"
-        : "text-muted-foreground";
+    variant === 'positive'
+      ? 'text-emerald-500'
+      : variant === 'negative'
+        ? 'text-red-500'
+        : 'text-muted-foreground';
 
   return (
     <div
       className={cn(
-        "flex items-center justify-between py-1.5",
-        highlight && "border-t pt-3 mt-2 font-semibold",
+        'flex items-center justify-between py-1.5',
+        highlight && 'border-t pt-3 mt-2 font-semibold',
       )}
     >
       <span
         className={cn(
-          "text-sm",
-          highlight && "font-medium",
-          muted && "text-muted-foreground",
+          'text-sm',
+          highlight && 'font-medium',
+          muted && 'text-muted-foreground',
         )}
       >
         {label}
@@ -112,13 +112,13 @@ function MetricRow({
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : value !== null ? (
-        <div className={cn("flex items-center gap-1", highlight && colorClass)}>
-          {highlight && variant !== "neutral" && <Icon className="h-4 w-4" />}
+        <div className={cn('flex items-center gap-1', highlight && colorClass)}>
+          {highlight && variant !== 'neutral' && <Icon className="h-4 w-4" />}
           <span
             className={cn(
-              "font-mono",
-              highlight && "text-lg",
-              muted && "text-muted-foreground",
+              'font-mono',
+              highlight && 'text-lg',
+              muted && 'text-muted-foreground',
             )}
           >
             {prefix}
@@ -148,18 +148,18 @@ export function RundownSummaryPanel({
   const { data: rundown, isLoading, error } = useTableRundown(sessionId);
 
   // Determine win/loss variant
-  const winLossVariant: "positive" | "negative" | "neutral" =
+  const winLossVariant: 'positive' | 'negative' | 'neutral' =
     React.useMemo(() => {
-      if (!rundown || rundown.table_win_cents === null) return "neutral";
-      if (rundown.table_win_cents > 0) return "positive";
-      if (rundown.table_win_cents < 0) return "negative";
-      return "neutral";
+      if (!rundown || rundown.table_win_cents === null) return 'neutral';
+      if (rundown.table_win_cents > 0) return 'positive';
+      if (rundown.table_win_cents < 0) return 'negative';
+      return 'neutral';
     }, [rundown]);
 
   // Loading state
   if (isLoading) {
     return (
-      <Card className={cn("animate-pulse", className)}>
+      <Card className={cn('animate-pulse', className)}>
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium">Session Rundown</CardTitle>
         </CardHeader>
@@ -189,8 +189,8 @@ export function RundownSummaryPanel({
             </Badge>
           )}
           <Badge
-            variant={isDropPosted ? "default" : "secondary"}
-            className={cn("text-xs gap-1", !isDropPosted && "text-amber-600")}
+            variant={isDropPosted ? 'default' : 'secondary'}
+            className={cn('text-xs gap-1', !isDropPosted && 'text-amber-600')}
           >
             {isDropPosted ? (
               <>
@@ -246,11 +246,11 @@ export function RundownSummaryPanel({
           {/* Table Win/Loss - highlighted */}
           <MetricRow
             label={
-              winLossVariant === "positive"
-                ? "Table Win"
-                : winLossVariant === "negative"
-                  ? "Table Loss"
-                  : "Win/Loss"
+              winLossVariant === 'positive'
+                ? 'Table Win'
+                : winLossVariant === 'negative'
+                  ? 'Table Loss'
+                  : 'Win/Loss'
             }
             value={rundown.table_win_cents}
             highlight
@@ -274,14 +274,14 @@ export function RundownSummaryPanel({
                     </span>
                     <span
                       className={cn(
-                        "font-mono",
+                        'font-mono',
                         rundown.closing_total_cents !==
-                          rundown.need_total_cents && "text-amber-600",
+                          rundown.need_total_cents && 'text-amber-600',
                       )}
                     >
                       {rundown.closing_total_cents >= rundown.need_total_cents
-                        ? "+"
-                        : ""}
+                        ? '+'
+                        : ''}
                       {formatCurrency(
                         rundown.closing_total_cents - rundown.need_total_cents,
                       )}

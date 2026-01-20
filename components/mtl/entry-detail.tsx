@@ -15,9 +15,9 @@
  * @see PRD-005 MTL Service
  */
 
-"use client";
+'use client';
 
-import { format } from "date-fns";
+import { format } from 'date-fns';
 import {
   ArrowDownLeft,
   ArrowUpRight,
@@ -27,7 +27,7 @@ import {
   MapPin,
   Receipt,
   User,
-} from "lucide-react";
+} from 'lucide-react';
 
 import {
   Card,
@@ -35,14 +35,14 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useMtlEntry } from "@/hooks/mtl/use-mtl-entries";
-import { cn } from "@/lib/utils";
-import type { MtlAuditNoteDTO } from "@/services/mtl/dtos";
+} from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useMtlEntry } from '@/hooks/mtl/use-mtl-entries';
+import { cn } from '@/lib/utils';
+import type { MtlAuditNoteDTO } from '@/services/mtl/dtos';
 
-import { AuditNoteForm } from "./audit-note-form";
-import { EntryBadge } from "./entry-badge";
+import { AuditNoteForm } from './audit-note-form';
+import { EntryBadge } from './entry-badge';
 
 export interface EntryDetailProps {
   /** Entry ID to display */
@@ -60,9 +60,9 @@ export interface EntryDetailProps {
  * @returns Formatted currency string in dollars
  */
 function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(amountCents / 100); // Convert cents to dollars
@@ -79,21 +79,21 @@ function formatDateTime(isoString: string): string {
  * Transaction type display labels
  */
 const TXN_TYPE_LABELS: Record<string, string> = {
-  buy_in: "Buy-in",
-  cash_out: "Cash Out",
-  marker: "Marker",
-  front_money: "Front Money",
-  chip_fill: "Chip Fill",
+  buy_in: 'Buy-in',
+  cash_out: 'Cash Out',
+  marker: 'Marker',
+  front_money: 'Front Money',
+  chip_fill: 'Chip Fill',
 };
 
 /**
  * Source display labels
  */
 const SOURCE_LABELS: Record<string, string> = {
-  table: "Table",
-  cage: "Cage",
-  kiosk: "Kiosk",
-  other: "Other",
+  table: 'Table',
+  cage: 'Cage',
+  kiosk: 'Kiosk',
+  other: 'Other',
 };
 
 /**
@@ -122,7 +122,7 @@ export function EntryDetail({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("space-y-4", className)}>
+      <div className={cn('space-y-4', className)}>
         <EntryDetailSkeleton />
       </div>
     );
@@ -131,21 +131,21 @@ export function EntryDetail({
   // Error state
   if (error || !entry) {
     return (
-      <Card className={cn("border-destructive/50", className)}>
+      <Card className={cn('border-destructive/50', className)}>
         <CardHeader>
           <CardTitle className="text-destructive">Error</CardTitle>
           <CardDescription>
-            {error?.message ?? "Entry not found"}
+            {error?.message ?? 'Entry not found'}
           </CardDescription>
         </CardHeader>
       </Card>
     );
   }
 
-  const isInflow = entry.direction === "in";
+  const isInflow = entry.direction === 'in';
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Transaction Summary Card */}
       <Card>
         <CardHeader className="pb-3">
@@ -171,13 +171,13 @@ export function EntryDetail({
           {/* Amount */}
           <div
             className={cn(
-              "text-3xl font-bold tabular-nums",
+              'text-3xl font-bold tabular-nums',
               isInflow
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400",
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400',
             )}
           >
-            {isInflow ? "+" : "-"}
+            {isInflow ? '+' : '-'}
             {formatCurrency(entry.amount)}
           </div>
 
@@ -186,7 +186,7 @@ export function EntryDetail({
             <DetailRow
               icon={Calendar}
               label="Gaming Day"
-              value={entry.gaming_day ?? "Not set"}
+              value={entry.gaming_day ?? 'Not set'}
             />
             <DetailRow
               icon={Clock}
@@ -223,8 +223,8 @@ export function EntryDetail({
           </CardTitle>
           <CardDescription>
             {entry.audit_notes.length === 0
-              ? "No audit notes recorded"
-              : "Notes are append-only and cannot be edited"}
+              ? 'No audit notes recorded'
+              : 'Notes are append-only and cannot be edited'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -279,9 +279,9 @@ function AuditNoteCard({ note }: { note: MtlAuditNoteDTO }) {
       <p className="whitespace-pre-wrap">{note.note}</p>
       <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
         <User className="h-3 w-3" />
-        <span>{note.staff_id ?? "Unknown"}</span>
+        <span>{note.staff_id ?? 'Unknown'}</span>
         <span>·</span>
-        <span>{format(new Date(note.created_at), "MMM d, h:mm a")}</span>
+        <span>{format(new Date(note.created_at), 'MMM d, h:mm a')}</span>
       </div>
     </div>
   );

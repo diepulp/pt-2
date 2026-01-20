@@ -9,15 +9,15 @@
  * @see GAP-TABLE-ROLLOVER-UI WS3
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { logDropEvent } from "@/services/table-context/chip-custody";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { logDropEvent } from '@/services/table-context/chip-custody';
 import type {
   LogDropEventInput,
   TableDropEventDTO,
-} from "@/services/table-context/dtos";
-import { tableContextKeys } from "@/services/table-context/keys";
+} from '@/services/table-context/dtos';
+import { tableContextKeys } from '@/services/table-context/keys';
 
 // === Query Hooks ===
 
@@ -37,19 +37,19 @@ export function useDropEvents(
   limit: number = 20,
 ) {
   return useQuery({
-    queryKey: [...tableContextKeys.drops(tableId), gamingDay ?? "all"],
+    queryKey: [...tableContextKeys.drops(tableId), gamingDay ?? 'all'],
     queryFn: async () => {
       const supabase = createBrowserComponentClient();
       let query = supabase
-        .from("table_drop_event")
-        .select("*")
-        .eq("table_id", tableId)
-        .eq("casino_id", casinoId)
-        .order("created_at", { ascending: false })
+        .from('table_drop_event')
+        .select('*')
+        .eq('table_id', tableId)
+        .eq('casino_id', casinoId)
+        .order('created_at', { ascending: false })
         .limit(limit);
 
       if (gamingDay) {
-        query = query.eq("gaming_day", gamingDay);
+        query = query.eq('gaming_day', gamingDay);
       }
 
       const { data, error } = await query;
@@ -92,7 +92,7 @@ export function useLogDropEvent(tableId: string, casinoId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["log-drop-event", tableId],
+    mutationKey: ['log-drop-event', tableId],
     mutationFn: async (input: CreateDropEventInput) => {
       const supabase = createBrowserComponentClient();
       const fullInput: LogDropEventInput = {
@@ -123,11 +123,11 @@ export function useLogDropEvent(tableId: string, casinoId: string) {
  * Formats drop event for display in picker.
  */
 export function formatDropEventLabel(event: TableDropEventDTO): string {
-  const time = new Date(event.removed_at).toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
+  const time = new Date(event.removed_at).toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
   });
-  const seal = event.seal_no ? ` • Seal #${event.seal_no}` : "";
+  const seal = event.seal_no ? ` • Seal #${event.seal_no}` : '';
   return `${time}${seal}`;
 }
 

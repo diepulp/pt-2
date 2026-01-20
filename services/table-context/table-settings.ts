@@ -7,14 +7,14 @@
  * @see PRD-012 Table Betting Limits Management
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
-import type { TableSettingsDTO, UpdateTableLimitsDTO, GameType } from "./dtos";
-import { toTableSettingsDTO } from "./mappers";
-import { GAMING_TABLE_SETTINGS_SELECT } from "./selects";
+import type { TableSettingsDTO, UpdateTableLimitsDTO, GameType } from './dtos';
+import { toTableSettingsDTO } from './mappers';
+import { GAMING_TABLE_SETTINGS_SELECT } from './selects';
 
 // System fallback defaults when game_settings not configured
 const SYSTEM_FALLBACK_MIN_BET = 10;
@@ -34,15 +34,15 @@ async function getGameSettingsDefaults(
   gameType: GameType,
 ): Promise<{ min_bet: number; max_bet: number }> {
   const { data, error } = await supabase
-    .from("game_settings")
-    .select("min_bet, max_bet")
-    .eq("casino_id", casinoId)
-    .eq("game_type", gameType)
+    .from('game_settings')
+    .select('min_bet, max_bet')
+    .eq('casino_id', casinoId)
+    .eq('game_type', gameType)
     .maybeSingle();
 
   if (error) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch game settings defaults: ${error.message}`,
       { details: error },
     );
@@ -79,16 +79,16 @@ export async function getTableSettings(
 ): Promise<TableSettingsDTO> {
   // First, check if settings already exist
   const { data: existingSettings, error: settingsError } = await supabase
-    .from("gaming_table_settings")
+    .from('gaming_table_settings')
     .select(GAMING_TABLE_SETTINGS_SELECT)
-    .eq("table_id", tableId)
-    .eq("casino_id", casinoId)
-    .is("active_to", null) // Only active settings
+    .eq('table_id', tableId)
+    .eq('casino_id', casinoId)
+    .is('active_to', null) // Only active settings
     .maybeSingle();
 
   if (settingsError) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to fetch table settings: ${settingsError.message}`,
       { details: settingsError },
     );
@@ -102,14 +102,14 @@ export async function getTableSettings(
 
   // First, get the gaming_table to determine game type
   const { data: table, error: tableError } = await supabase
-    .from("gaming_table")
-    .select("type")
-    .eq("id", tableId)
-    .eq("casino_id", casinoId)
+    .from('gaming_table')
+    .select('type')
+    .eq('id', tableId)
+    .eq('casino_id', casinoId)
     .maybeSingle();
 
   if (tableError || !table) {
-    throw new DomainError("TABLE_NOT_FOUND", `Table ${tableId} not found`, {
+    throw new DomainError('TABLE_NOT_FOUND', `Table ${tableId} not found`, {
       details: tableError,
     });
   }
@@ -123,7 +123,7 @@ export async function getTableSettings(
 
   // Create new table_settings row with defaults
   const { data: newSettings, error: insertError } = await supabase
-    .from("gaming_table_settings")
+    .from('gaming_table_settings')
     .insert({
       casino_id: casinoId,
       table_id: tableId,
@@ -138,7 +138,7 @@ export async function getTableSettings(
 
   if (insertError || !newSettings) {
     throw new DomainError(
-      "INTERNAL_ERROR",
+      'INTERNAL_ERROR',
       `Failed to create table settings: ${insertError?.message}`,
       { details: insertError },
     );
@@ -167,21 +167,21 @@ export async function updateTableLimits(
   // Validate min_bet <= max_bet
   if (data.min_bet > data.max_bet) {
     throw new DomainError(
-      "VALIDATION_ERROR",
-      "min_bet must be less than or equal to max_bet",
+      'VALIDATION_ERROR',
+      'min_bet must be less than or equal to max_bet',
     );
   }
 
   // Check if table exists
   const { data: table, error: tableError } = await supabase
-    .from("gaming_table")
-    .select("id")
-    .eq("id", tableId)
-    .eq("casino_id", casinoId)
+    .from('gaming_table')
+    .select('id')
+    .eq('id', tableId)
+    .eq('casino_id', casinoId)
     .maybeSingle();
 
   if (tableError || !table) {
-    throw new DomainError("TABLE_NOT_FOUND", `Table ${tableId} not found`, {
+    throw new DomainError('TABLE_NOT_FOUND', `Table ${tableId} not found`, {
       details: tableError,
     });
   }
@@ -190,28 +190,28 @@ export async function updateTableLimits(
   // If a row exists with active_to = null, update it
   // Otherwise, insert a new row
   const { data: existingSettings } = await supabase
-    .from("gaming_table_settings")
-    .select("id")
-    .eq("table_id", tableId)
-    .eq("casino_id", casinoId)
-    .is("active_to", null)
+    .from('gaming_table_settings')
+    .select('id')
+    .eq('table_id', tableId)
+    .eq('casino_id', casinoId)
+    .is('active_to', null)
     .maybeSingle();
 
   if (existingSettings) {
     // Update existing active settings
     const { data: updated, error: updateError } = await supabase
-      .from("gaming_table_settings")
+      .from('gaming_table_settings')
       .update({
         min_bet: data.min_bet,
         max_bet: data.max_bet,
       })
-      .eq("id", existingSettings.id)
+      .eq('id', existingSettings.id)
       .select(GAMING_TABLE_SETTINGS_SELECT)
       .single();
 
     if (updateError || !updated) {
       throw new DomainError(
-        "INTERNAL_ERROR",
+        'INTERNAL_ERROR',
         `Failed to update table limits: ${updateError?.message}`,
         { details: updateError },
       );
@@ -221,7 +221,7 @@ export async function updateTableLimits(
   } else {
     // Insert new settings row
     const { data: inserted, error: insertError } = await supabase
-      .from("gaming_table_settings")
+      .from('gaming_table_settings')
       .insert({
         casino_id: casinoId,
         table_id: tableId,
@@ -236,7 +236,7 @@ export async function updateTableLimits(
 
     if (insertError || !inserted) {
       throw new DomainError(
-        "INTERNAL_ERROR",
+        'INTERNAL_ERROR',
         `Failed to insert table limits: ${insertError?.message}`,
         { details: insertError },
       );

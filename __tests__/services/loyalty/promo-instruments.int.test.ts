@@ -18,10 +18,6 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { injectRLSContext } from '@/lib/supabase/rls-context';
-import type {
-  CreatePromoProgramInput,
-  IssueCouponInput,
-} from '@/services/loyalty/promo/dtos';
 import {
   createProgram,
   getProgram,
@@ -35,6 +31,10 @@ import {
   getCoupon,
   getCouponByValidationNumber,
 } from '@/services/loyalty/promo/crud';
+import type {
+  CreatePromoProgramInput,
+  IssueCouponInput,
+} from '@/services/loyalty/promo/dtos';
 import { getPromoExposureRollup } from '@/services/loyalty/rollups';
 import type { Database } from '@/types/database.types';
 
@@ -186,7 +186,10 @@ describeIntegration('Promo Instruments Integration Tests', () => {
       .delete()
       .or(`casino_id.eq.${casinoId},casino_id.eq.${otherCasinoId}`);
     await serviceClient.from('visit').delete().eq('id', visitId);
-    await serviceClient.from('player_casino').delete().eq('casino_id', casinoId);
+    await serviceClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casinoId);
     await serviceClient.from('player').delete().eq('id', playerId);
     await serviceClient
       .from('staff')
@@ -265,7 +268,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     it('returns null for non-existent program', async () => {
       const program = await getProgram(
         pitBossClient,
-        '00000000-0000-0000-0000-000000000000'
+        '00000000-0000-0000-0000-000000000000',
       );
 
       expect(program).toBeNull();
@@ -399,7 +402,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
     it('gets coupon by validation number', async () => {
       const coupon = await getCouponByValidationNumber(
         pitBossClient,
-        'VAL-TEST-001'
+        'VAL-TEST-001',
       );
 
       expect(coupon).not.toBeNull();
@@ -479,7 +482,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
         voidCoupon(pitBossClient, {
           couponId,
           idempotencyKey: 'void:VAL-VOID-001-retry',
-        })
+        }),
       ).rejects.toThrow('INVALID_COUPON_STATUS');
     });
   });
@@ -537,7 +540,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
           couponId: originalCouponId,
           newValidationNumber: 'VAL-REPLACE-003',
           idempotencyKey: 'replace:VAL-REPLACE-001-retry',
-        })
+        }),
       ).rejects.toThrow('INVALID_COUPON_STATUS');
     });
   });
@@ -632,7 +635,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
       const programs = await listPrograms(otherCasinoClient, {});
 
       const crossCasinoProgram = programs.find(
-        (p) => p.id === programIdCasino1
+        (p) => p.id === programIdCasino1,
       );
       expect(crossCasinoProgram).toBeUndefined();
     });
@@ -661,7 +664,7 @@ describeIntegration('Promo Instruments Integration Tests', () => {
         voidCoupon(otherCasinoClient, {
           couponId: couponIdCasino1,
           idempotencyKey: 'void:cross-casino-attempt',
-        })
+        }),
       ).rejects.toThrow();
     });
   });
