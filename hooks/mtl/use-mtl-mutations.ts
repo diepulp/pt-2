@@ -5,6 +5,10 @@
  * All mutations automatically invalidate relevant queries.
  * Entries and notes are append-only per PRD-005.
  *
+ * Bidirectional Bridge: When MTL entries are created with a visit_id,
+ * a database trigger creates a corresponding player_financial_transaction.
+ * We invalidate financial queries to ensure rating slip totals refresh.
+ *
  * @see services/mtl/http.ts - HTTP fetchers
  * @see services/mtl/keys.ts - Query key factory
  * @see PRD-005 MTL Service
@@ -24,6 +28,8 @@ import type {
 } from "@/services/mtl/dtos";
 import { createMtlEntry, createMtlAuditNote } from "@/services/mtl/http";
 import { mtlKeys } from "@/services/mtl/keys";
+import { playerFinancialKeys } from "@/services/player-financial/keys";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 /**
  * Creates a new MTL entry (buy-in, cash-out, marker, etc.).
@@ -57,7 +63,7 @@ export function useCreateMtlEntry() {
   return useMutation({
     mutationFn: (input: CreateMtlEntryInput): Promise<MtlEntryDTO> =>
       createMtlEntry(input),
-    onSuccess: (data: MtlEntryDTO) => {
+    onSuccess: (data: MtlEntryDTO, variables: CreateMtlEntryInput) => {
       // Set detail cache for the new entry (without notes initially)
       const entryWithNotes: MtlEntryWithNotesDTO = {
         ...data,
@@ -74,6 +80,33 @@ export function useCreateMtlEntry() {
       queryClient.invalidateQueries({
         queryKey: mtlKeys.gamingDaySummary.scope,
       });
+
+      // =========================================================================
+      // Bidirectional Bridge: MTL -> Financial Transaction
+      // A database trigger creates a player_financial_transaction when
+      // MTL entries have a visit_id. Invalidate financial queries so
+      // rating slip totals (session_total_buy_in) refresh.
+      // =========================================================================
+      if (variables.visit_id) {
+        // Invalidate visit financial summary to refresh total_buy_in
+        queryClient.invalidateQueries({
+          queryKey: playerFinancialKeys.visitSummary({
+            visit_id: variables.visit_id,
+          }),
+        });
+
+        // Invalidate all transaction lists (new txn was created by trigger)
+        queryClient.invalidateQueries({
+          queryKey: playerFinancialKeys.transactions.scope,
+        });
+      }
+
+      // Invalidate rating slip modal if we know which slip this affects
+      if (variables.rating_slip_id) {
+        queryClient.invalidateQueries({
+          queryKey: ratingSlipModalKeys.data(variables.rating_slip_id),
+        });
+      }
     },
   });
 }
