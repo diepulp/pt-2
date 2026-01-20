@@ -26,8 +26,8 @@
 echo "🔒 Checking migration safety (RLS policy protection)..."
 echo ""
 
-# Get all staged SQL migration files
-MIGRATION_FILES=$(git diff --cached --name-only | grep 'supabase/migrations/.*\.sql$' || true)
+# Get all staged SQL migration files (exclude deleted files - they show as 'D' in status)
+MIGRATION_FILES=$(git diff --cached --name-only --diff-filter=d | grep 'supabase/migrations/.*\.sql$' || true)
 
 if [ -z "$MIGRATION_FILES" ]; then
   echo "✅ No migrations staged"
