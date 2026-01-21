@@ -1,12 +1,22 @@
-'use client';
+"use client";
 
-import { Award, Calendar, Loader2, User, UserCircle } from 'lucide-react';
-import * as React from 'react';
+import {
+  Award,
+  Calendar,
+  Loader2,
+  Pencil,
+  User,
+  UserCircle,
+} from "lucide-react";
+import * as React from "react";
 
-import { Badge } from '@/components/ui/badge';
-import { usePlayer } from '@/hooks/player/use-player';
-import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
-import { cn } from '@/lib/utils';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { usePlayer } from "@/hooks/player/use-player";
+import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
+import { cn } from "@/lib/utils";
+
+import { PlayerEditModal } from "./player-edit-modal";
 
 interface PlayerProfilePanelProps {
   className?: string;
@@ -14,14 +24,15 @@ interface PlayerProfilePanelProps {
 
 export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
   const { selectedPlayerId } = usePlayerDashboard();
-  const { data: player, isLoading, error } = usePlayer(selectedPlayerId || '');
+  const { data: player, isLoading, error } = usePlayer(selectedPlayerId || "");
+  const [editModalOpen, setEditModalOpen] = React.useState(false);
 
   // Loading state
   if (isLoading) {
     return (
       <div
         className={cn(
-          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
           className,
         )}
       >
@@ -41,7 +52,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
     return (
       <div
         className={cn(
-          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
           className,
         )}
       >
@@ -54,7 +65,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
             Error loading profile
           </p>
           <p className="text-xs text-muted-foreground/60 mt-1">
-            {error.message || 'Unknown error'}
+            {error.message || "Unknown error"}
           </p>
         </div>
       </div>
@@ -65,7 +76,7 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
     return (
       <div
         className={cn(
-          'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full',
+          "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm h-full",
           className,
         )}
       >
@@ -95,16 +106,16 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
 
   // Format member since date
   const memberSince = player.created_at
-    ? new Date(player.created_at).toLocaleDateString('en-US', {
-        month: 'short',
-        year: 'numeric',
+    ? new Date(player.created_at).toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
       })
-    : 'N/A';
+    : "N/A";
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm',
+        "relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm",
         className,
       )}
     >
@@ -121,13 +132,24 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
             Player Profile
           </h3>
         </div>
-        <Badge
-          variant="outline"
-          className="capitalize text-[10px] h-5 bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-        >
-          <div className="w-1.5 h-1.5 rounded-full mr-1.5 bg-emerald-500 animate-pulse" />
-          Active
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setEditModalOpen(true)}
+            className="h-7 w-7"
+            title="Edit profile"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </Button>
+          <Badge
+            variant="outline"
+            className="capitalize text-[10px] h-5 bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+          >
+            <div className="w-1.5 h-1.5 rounded-full mr-1.5 bg-emerald-500 animate-pulse" />
+            Active
+          </Badge>
+        </div>
       </div>
 
       {/* Profile Content */}
@@ -169,11 +191,11 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
               label="Age"
               value={`${age} years`}
               subtext={`Born ${new Date(player.birth_date).toLocaleDateString(
-                'en-US',
+                "en-US",
                 {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
                 },
               )}`}
             />
@@ -186,6 +208,13 @@ export function PlayerProfilePanel({ className }: PlayerProfilePanelProps) {
           />
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <PlayerEditModal
+        playerId={selectedPlayerId}
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+      />
     </div>
   );
 }
@@ -211,8 +240,8 @@ function DetailItem({
       </div>
       <p
         className={cn(
-          'text-sm font-medium text-foreground',
-          truncate && 'truncate',
+          "text-sm font-medium text-foreground",
+          truncate && "truncate",
         )}
         title={truncate ? value : undefined}
       >

@@ -9,14 +9,18 @@
  * @see PRD-003 Player & Visit Management
  */
 
-export { usePlayer, usePlayers } from './use-player';
-export { usePlayerSearch } from './use-player-search';
+export { usePlayer, usePlayers } from "./use-player";
+export { usePlayerSearch } from "./use-player-search";
 export {
   useCreatePlayer,
   useEnrollPlayer,
   usePlayerEnrollment,
   useUpdatePlayer,
-} from './use-player-mutations';
+} from "./use-player-mutations";
+export {
+  usePlayerIdentity,
+  useUpdatePlayerIdentity,
+} from "./use-player-identity-mutation";
 
 // Re-export types for convenience
 export type {
@@ -26,4 +30,4 @@ export type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from '@/services/player/dtos';
+} from "@/services/player/dtos";
