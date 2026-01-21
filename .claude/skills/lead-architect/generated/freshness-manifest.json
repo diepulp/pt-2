@@ -1,36 +1,38 @@
 {
   "$schema": "./freshness-manifest.schema.json",
   "version": "1.0.0",
-  "generated_at": "2025-11-28T00:00:00Z",
+  "generated_at": "2026-01-21T00:00:00Z",
   "description": "Tracks source document hashes to detect when primitives become stale",
 
   "source_documents": {
     "SLAD": {
       "path": "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md",
-      "version": "2.1.2",
-      "sha256": "39c5d8d519961e89ce8900ecf5d951537420af397045ba748ecbe81dae155ea6",
-      "last_verified": "2025-11-28",
+      "version": "3.2.0",
+      "sha256": "415bbac8fedfcbaf7a1b56fea85026e8bc424f4cb10b053d10f2459977c794cb",
+      "last_verified": "2026-01-21",
       "derived_primitives": [
         "references/QUICK_START.md",
-        "references/architecture-rules.md"
+        "references/architecture-rules.md",
+        "references/dto-compliance.md"
       ]
     },
     "SRM": {
       "path": "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
-      "version": "3.1.0",
-      "sha256": "b18cdcb35f8c7ce2a83f9355d42957044f0d95532eda3eaaea9746e51ffb9ebc",
-      "last_verified": "2025-11-28",
+      "version": "4.10.0",
+      "sha256": "17f16b0fa5ba1793daf93268a50260f802a91aa687b316a71f6738d91f1b1290",
+      "last_verified": "2026-01-21",
       "derived_primitives": [
         "references/QUICK_START.md",
         "references/architecture-rules.md",
-        "references/validation-checklist.md"
+        "references/validation-checklist.md",
+        "references/dto-compliance.md"
       ]
     },
     "SDLC_TAXONOMY": {
       "path": "docs/patterns/SDLC_DOCS_TAXONOMY.md",
       "version": "1.0.0",
       "sha256": "e89d391e2811dbd355ae66d996843195e174133ff2b585016ca9ae92f175637c",
-      "last_verified": "2025-11-28",
+      "last_verified": "2026-01-21",
       "derived_primitives": [
         "references/QUICK_START.md",
         "references/validation-checklist.md"
@@ -42,26 +44,26 @@
     "references/QUICK_START.md": {
       "sources": ["SLAD", "SRM", "SDLC_TAXONOMY"],
       "purpose": "Single entry point for sub-agent",
-      "updated": "2025-12-03",
-      "change_note": "Fixed pattern classifications, service status, removed SERVICE_TEMPLATE refs"
+      "updated": "2026-01-21",
+      "change_note": "Updated SRM v4.10.0, SLAD v3.2.0 refs; added ADR-028 labels.ts; PlayerFinancialService IMPLEMENTED; player_casino moved to CasinoService"
     },
     "references/architecture-rules.md": {
       "sources": ["SLAD", "SRM"],
       "purpose": "Condensed patterns and anti-patterns",
-      "updated": "2025-12-03",
-      "change_note": "Added crud.ts/selects.ts to Pattern B, fixed Pattern A mappers.ts requirement, updated service status"
+      "updated": "2026-01-21",
+      "change_note": "Updated to SLAD v3.2.0, SRM v4.10.0; added labels.ts to Pattern C structure; finance IMPLEMENTED; ADR-028 reference"
     },
     "references/validation-checklist.md": {
       "sources": ["SRM", "SDLC_TAXONOMY"],
       "purpose": "Pre/post architecture validation checklist",
-      "updated": "2025-12-03",
-      "change_note": "Added required files to Pattern B, separated Pattern A/C, noted removed services"
+      "updated": "2026-01-21",
+      "change_note": "Added ADR-028 labels.ts check for TableContextService; updated SRM contract quick reference; added Doc Locations"
     },
     "references/dto-compliance.md": {
       "sources": ["SLAD", "SRM"],
       "purpose": "DTO pattern enforcement guide",
-      "updated": "2025-12-03",
-      "change_note": "Fixed Pattern C section (removed stale RatingSlipService content), added required files"
+      "updated": "2026-01-21",
+      "change_note": "Added ADR-028 labels.ts to Pattern C requirements; finance IMPLEMENTED v4.3.0; updated source references"
     },
     "references/output-templates.md": {
       "sources": [],

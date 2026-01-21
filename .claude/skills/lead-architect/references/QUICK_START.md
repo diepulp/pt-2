@@ -107,18 +107,18 @@ Start with existing documentation:
 
 ## Step 4: Key Lookups
 
-### Service Ownership (from SRM)
+### Service Ownership (from SRM v4.10.0)
 
 | Domain | Key Tables | Pattern | Status |
 |--------|-----------|---------|--------|
-| casino | `casino`, `company`, `staff`, `game_settings` | B (Canonical) | ✅ Deployed |
-| player | `player`, `player_casino` | B (Canonical) | ✅ Deployed |
+| casino | `casino`, `company`, `staff`, `game_settings`, `player_casino` | B (Canonical) | ✅ Deployed |
+| player | `player`, *`player_identity`* (MVP) | B (Canonical) | ✅ Deployed |
 | visit | `visit` (3 archetypes via `visit_kind`) | B (Canonical) | ✅ Deployed + EXEC-VSE-001 |
 | loyalty | `player_loyalty`, `loyalty_ledger` | A (Contract-First) | Planned |
 | rating-slip | `rating_slip` (`visit_id`/`table_id` NOT NULL) | C (Hybrid) | REMOVED (rebuild per PRD-002) |
-| finance | `player_financial_transaction` | A (Contract-First) | Planned |
+| finance | `player_financial_transaction` | A (Contract-First) | ✅ IMPLEMENTED (v4.3.0) |
 | mtl | `mtl_entry`, `mtl_audit_note` | A (Contract-First) | Planned |
-| table-context | `gaming_table`, `dealer_rotation` | C (Hybrid) | REMOVED (rebuild per PRD-006) |
+| table-context | `gaming_table`, `table_session` (+`labels.ts` ADR-028) | C (Hybrid) | REMOVED (rebuild per PRD-006) |
 | floor-layout | `floor_layout`, `floor_pit` | B (Canonical) | ✅ Deployed |
 
 > **EXEC-VSE-001 Note**: VisitService supports 3 archetypes via `visit_kind` enum:
@@ -217,6 +217,7 @@ Before completing, run validation checklist:
 
 ### Pattern C Services (table-context, rating-slip) - REMOVED
 > When rebuilt per PRD-002/PRD-006, follow `dto-compliance.md` Pattern C section
+> **ADR-028 Note**: TableContextService MUST include `labels.ts` for UI label/color constants (`TableAvailability`, `SessionPhase`)
 
 ### All Services
 - [ ] NO `as` casting on RPC responses
@@ -359,11 +360,13 @@ ctx.record_service_completion(
 | Output templates | `references/output-templates.md` |
 | Example architectures | `references/example-architectures.md` |
 | Full validation checklist | `references/validation-checklist.md` |
-| Service patterns (full) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
-| Service boundaries (full) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
+| Service patterns (full) | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (v3.2.0) |
+| Service boundaries (full) | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v4.10.0) |
 | Anti-patterns | `docs/70-governance/anti-patterns/INDEX.md` (modular) |
 | Testing strategy | `docs/40-quality/QA-001-service-testing-strategy.md` |
 | TDD standard | `docs/40-quality/QA-004-tdd-standard.md` |
+| **ADR-028 (labels.ts)** | `docs/80-adrs/ADR-028-table-status-standardization.md` |
+| **ADR-023 (Multi-Tenancy)** | `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` |
 | MVP Progress Tracker | `lib/memori/mvp_progress_context.py` |
 | Memory protocol | `references/memory-protocol.md` |
 | Session continuity | `references/context-management.md` |

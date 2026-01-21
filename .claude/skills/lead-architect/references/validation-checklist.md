@@ -76,7 +76,7 @@ Before proposing any column ADD/DROP/MODIFY:
 - [ ] No `as any` casting
 
 ### 5. DTO Compliance Check (CRITICAL)
-**Reference**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` v2.1.0
+**Reference**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` v2.1.0, SRM v4.10.0
 
 #### Pattern B Services (casino, player, visit, floor-layout)
 - [ ] Has dedicated `dtos.ts` file
@@ -91,12 +91,14 @@ Before proposing any column ADD/DROP/MODIFY:
 - [ ] If consumed by 2+ services, DTOs extracted to `dtos.ts`
 - [ ] Cross-context DTOs published for consumers
 - [ ] Manual interfaces allowed but MUST have `mappers.ts` with typed input
+- [ ] PlayerFinancialService: 78 tests required (mappers: 44, service: 17, RLS: 17) per SRM v4.3.0
 
 #### Pattern C Services (table-context, rating-slip - when rebuilt)
 > Note: These services were REMOVED during cleanup. When rebuilt per PRD-002/PRD-006:
 - [ ] DTOs extracted to `dtos.ts` with cross-context contracts
 - [ ] Has `mappers.ts` if cross-context consumption needed
 - [ ] Follows pattern from `dto-compliance.md` Pattern C section
+- [ ] **ADR-028 (TableContextService)**: Has `labels.ts` with `TableAvailability`, `SessionPhase` type aliases and label/color constants
 
 #### RPC Type Safety
 - [ ] NO `as` casting on RPC responses
@@ -211,13 +213,13 @@ When updating PRD for a service with SRM contract sections:
 - [ ] `policy_snapshot` or similar audit columns included in migration plans
 - [ ] Event contracts noted (if service publishes domain events)
 
-**SRM Contract Quick Reference**:
+**SRM Contract Quick Reference** (SRM v4.10.0):
 | Service | Key Contracts |
 |---------|---------------|
 | LoyaltyService | `rpc_issue_mid_session_reward`, `loyalty_outbox`, Visit Kind Filter |
 | FinanceService | `rpc_create_financial_txn`, `trg_fin_gaming_day`, `finance_outbox` |
 | FloorLayoutService | `floor_layout.activated` events |
-| TableContextService | `assert_table_context_casino()` trigger |
+| TableContextService | `assert_table_context_casino()` trigger, `labels.ts` (ADR-028), `rpc_open_table_session` availability gate |
 
 ---
 
@@ -293,12 +295,12 @@ When patterns are insufficient:
 | **Database types (SOT)** | `types/database.types.ts` |
 | **DTO Standard (MANDATORY)** | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` |
 | **Zod Schemas Standard (ADR-013)** | `docs/80-adrs/ADR-013-zod-validation-schemas.md` |
-| **Frontend Standard (Next.js 16)** | `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` |
-| Service boundaries | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| Patterns | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
+| **ADR-028 labels.ts (TableContext)** | `docs/80-adrs/ADR-028-table-status-standardization.md` |
+| **Frontend Standard** | `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` |
+| Service boundaries | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v4.10.0) |
+| Patterns | `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (v3.2.0) |
 | ADRs | `docs/80-adrs/` |
 | RLS/RBAC | `docs/30-security/` |
 | API contracts | `docs/25-api-data/` |
 | Anti-patterns | `docs/70-governance/anti-patterns/INDEX.md` (modular) |
-| Taxonomy (master index) | `docs/SDLC_DOCS_TAXONOMY.md` |
-| Next.js 16 Docs | Context7 `/vercel/next.js/v16.0.3` |
+| Taxonomy (master index) | `docs/patterns/SDLC_DOCS_TAXONOMY.md` |

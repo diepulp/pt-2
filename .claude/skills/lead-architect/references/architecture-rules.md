@@ -1,7 +1,7 @@
 # Architecture Rules
 
-**Source**: SLAD v2.1.2, SRM v3.1.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013, ADR-023
-**Stack**: **Next.js 16** + React 19 + Supabase + TypeScript
+**Source**: SLAD v3.2.0, SRM v4.10.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013, ADR-023, ADR-028
+**Stack**: **Next.js 15** (App Router) + React 19 + Supabase + TypeScript
 
 This document provides condensed patterns and anti-patterns. For the full workflow, see `QUICK_START.md`.
 
@@ -99,7 +99,7 @@ services/{domain}/
 ```
 
 ### Pattern A Services (Contract-First)
-**Services**: loyalty, finance, mtl
+**Services**: loyalty, finance (✅ IMPLEMENTED v4.3.0), mtl
 
 ```
 services/{domain}/
@@ -122,9 +122,25 @@ services/{domain}/
 
 > Pattern C services were removed during cleanup. When rebuilt per PRD-002/PRD-006, use the Pattern C structure from `dto-compliance.md`.
 
-**Current Reality (2025-12-03)**:
-- CasinoService: Full structure with all 6 required files ✅
+```
+services/{domain}/
+├── dtos.ts              # ✅ REQUIRED - Type aliases + Pick/Omit types
+├── labels.ts            # ✅ REQUIRED (ADR-028) - UI label/color constants
+├── schemas.ts           # ✅ REQUIRED (HTTP boundary) - Zod validation
+├── mappers.ts           # ✅ REQUIRED if cross-context consumption
+├── keys.ts              # ✅ REQUIRED - React Query key factories
+└── ...
+```
+
+**ADR-028 Note (TableContextService)**: Must include `labels.ts` with:
+- `TableAvailability` type alias for `gaming_table.status`
+- `SessionPhase` type alias for `table_session.status`
+- `TABLE_AVAILABILITY_LABELS`, `SESSION_PHASE_COLORS` constant maps
+
+**Current Reality (2026-01-17)**:
+- CasinoService: Full structure with all required files ✅
 - PlayerService, VisitService: dtos.ts ✅, missing selects.ts/crud.ts (gap)
+- PlayerFinancialService: Full Pattern A implementation ✅ (v4.3.0)
 - RatingSlipService, TableContextService: REMOVED (rebuild when needed per PRD-002/PRD-006)
 - LoyaltyService, MTLService: Pattern A - need mappers.ts when implementing
 
@@ -338,16 +354,16 @@ done
 ## Full References
 
 - **Database Types (SOT)**: `types/database.types.ts`
-- **SLAD (patterns)**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md`
-- **SRM (boundaries)**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
-- **SDLC Taxonomy**: `docs/SDLC_DOCS_TAXONOMY.md`
+- **SLAD (patterns)**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (v3.2.0)
+- **SRM (boundaries)**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v4.10.0)
+- **SDLC Taxonomy**: `docs/patterns/SDLC_DOCS_TAXONOMY.md`
 - **DTO_CANONICAL_STANDARD**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (v2.1.0 - MANDATORY)
 - **ADR-013 Zod Schemas**: `docs/80-adrs/ADR-013-zod-validation-schemas.md` (MANDATORY for HTTP services)
+- **ADR-028 Table Status**: `docs/80-adrs/ADR-028-table-status-standardization.md` (labels.ts pattern)
 - **DTO_CATALOG**: `docs/25-api-data/DTO_CATALOG.md`
 - **Anti-Pattern Catalog**: `docs/70-governance/anti-patterns/INDEX.md` (modular: 01-service-layer, 02-security, 06-architecture)
 - **Over-Engineering Guardrail**: `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`
-- **Frontend Standard**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md` (Next.js 16 patterns)
-- **Next.js 16 Docs**: Context7 `/vercel/next.js/v16.0.3`
+- **Frontend Standard**: `docs/70-governance/FRONT_END_CANONICAL_STANDARD.md`
 - **RLS External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` (AWS, Supabase, Crunchy Data patterns)
 - **ADR-020 RLS Strategy**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (Track A for MVP)
 - **ADR-023 Multi-Tenancy**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` (Pool primary, Silo escape hatch)

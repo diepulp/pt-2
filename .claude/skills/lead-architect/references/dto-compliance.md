@@ -1,6 +1,6 @@
 # DTO Compliance Guide for Architecture
 
-**Source**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` v2.1.0
+**Source**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` v2.1.0, SRM v4.10.0, ADR-028
 **Purpose**: Ensure architectural decisions enforce DTO standards during design phase.
 **Status**: MANDATORY - All new service designs MUST comply.
 
@@ -15,14 +15,14 @@
 │  Files: dtos.ts REQUIRED, schemas.ts REQUIRED
 │
 ├─ Pattern A (Contract-First)
-│  Services: loyalty, finance, mtl
+│  Services: loyalty, finance (✅ IMPLEMENTED v4.3.0), mtl
 │  DTOs: Manual interfaces allowed (with mappers)
-│  Files: dtos.ts when consumed by 2+ services
+│  Files: dtos.ts when consumed by 2+ services, mappers.ts REQUIRED
 │
 └─ Pattern C (Hybrid)
-   Services: table-context, rating-slip
+   Services: table-context, rating-slip (REMOVED - rebuild per PRD-002/PRD-006)
    DTOs: Mix of Pick/Omit and manual interfaces
-   Files: dtos.ts recommended for cross-context publishing
+   Files: dtos.ts REQUIRED, labels.ts REQUIRED (ADR-028 for TableContextService)
 ```
 
 ---
@@ -206,6 +206,7 @@ When rebuilding Pattern C (Hybrid) services, follow these rules:
 ```
 services/{domain}/
 ├── dtos.ts              # ✅ REQUIRED - Pick/Omit types + cross-context DTOs
+├── labels.ts            # ✅ REQUIRED (ADR-028, TableContextService) - UI label/color constants
 ├── mappers.ts           # ✅ REQUIRED if cross-context consumption
 ├── keys.ts              # ✅ REQUIRED - React Query key factories
 ├── http.ts              # HTTP fetchers
@@ -213,6 +214,11 @@ services/{domain}/
 ├── crud.ts              # CRUD operations
 └── selects.ts           # Named column sets
 ```
+
+**ADR-028 Note (TableContextService)**:
+- `labels.ts` MUST define `TableAvailability` and `SessionPhase` type aliases
+- MUST include `TABLE_AVAILABILITY_LABELS` and `SESSION_PHASE_COLORS` constant maps
+- Reference implementation: `services/table-context/labels.ts` (when rebuilt)
 
 **Example DTO Structure** (for RatingSlipService when rebuilt per PRD-002 + EXEC-VSE-001):
 
