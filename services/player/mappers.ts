@@ -14,13 +14,13 @@ import type {
   PlayerDTO,
   PlayerEnrollmentDTO,
   PlayerSearchResultDTO,
-} from './dtos';
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
 /**
  * Type for player rows returned by PLAYER_SELECT query.
- * Must match: "id, first_name, last_name, birth_date, created_at"
+ * Must match: "id, first_name, last_name, birth_date, created_at, middle_name, email, phone_number"
  */
 type PlayerSelectedRow = {
   id: string;
@@ -28,6 +28,9 @@ type PlayerSelectedRow = {
   last_name: string;
   birth_date: string | null;
   created_at: string;
+  middle_name: string | null;
+  email: string | null;
+  phone_number: string | null;
 };
 
 /**
@@ -45,12 +48,15 @@ type EnrollmentSelectedRow = {
  * Type for rows returned by PLAYER_SEARCH_SELECT query.
  * Player table with nested player_casino enrollment status.
  * Uses !inner join so player_casino is always present (at least one).
+ * LEFT joins player_identity for DOB (ADR-022: identity stores scanned DOB).
  */
 type PlayerSearchSelectedRow = {
   id: string;
   first_name: string;
   last_name: string;
+  birth_date: string | null;
   player_casino: { status: string }[];
+  player_identity: { birth_date: string | null }[] | null;
 };
 
 // === Player Mappers ===
@@ -66,6 +72,9 @@ export function toPlayerDTO(row: PlayerSelectedRow): PlayerDTO {
     last_name: row.last_name,
     birth_date: row.birth_date,
     created_at: row.created_at,
+    middle_name: row.middle_name,
+    email: row.email,
+    phone_number: row.phone_number,
   };
 }
 
@@ -116,6 +125,7 @@ export function toEnrollmentDTOOrNull(
 /**
  * Maps a search result row to PlayerSearchResultDTO.
  * Takes first enrollment status from player_casino array.
+ * COALESCE: Prefers player_identity.birth_date (from ID scan) over player.birth_date.
  */
 export function toPlayerSearchResultDTO(
   row: PlayerSearchSelectedRow,
@@ -123,13 +133,18 @@ export function toPlayerSearchResultDTO(
   // Get first enrollment status (should always have at least one due to !inner join)
   const enrollmentStatus = row.player_casino[0]?.status;
 
+  // ADR-022: Prefer identity DOB (from ID scan) over player DOB (seed/manual entry)
+  const identityDob = row.player_identity?.[0]?.birth_date;
+  const birthDate = identityDob ?? row.birth_date;
+
   return {
     id: row.id,
     first_name: row.first_name,
     last_name: row.last_name,
     full_name: `${row.first_name} ${row.last_name}`,
+    birth_date: birthDate,
     enrollment_status:
-      enrollmentStatus === 'active' ? 'enrolled' : 'not_enrolled',
+      enrollmentStatus === "active" ? "enrolled" : "not_enrolled",
   };
 }
 

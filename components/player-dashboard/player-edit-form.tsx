@@ -31,7 +31,13 @@ const playerEditSchema = z.object({
     .nullable()
     .optional()
     .or(z.literal("")),
-  phone_number: z.string().max(20).nullable().optional(),
+  phone_number: z
+    .string()
+    .min(7, "Phone number must be at least 7 characters")
+    .max(20)
+    .nullable()
+    .optional()
+    .or(z.literal("")),
   address_street: z.string().max(200).nullable().optional(),
   address_city: z.string().max(100).nullable().optional(),
   address_state: z.string().max(50).nullable().optional(),
@@ -64,21 +70,36 @@ export function PlayerEditForm({
     resolver: zodResolver(playerEditSchema),
     defaultValues: {
       first_name: player.first_name,
-      middle_name:
-        (player as PlayerDTO & { middle_name?: string | null }).middle_name ??
-        "",
+      middle_name: player.middle_name ?? "",
       last_name: player.last_name,
-      birth_date: player.birth_date ?? "",
-      email: (player as PlayerDTO & { email?: string | null }).email ?? "",
-      phone_number:
-        (player as PlayerDTO & { phone_number?: string | null }).phone_number ??
-        "",
+      birth_date: player.birth_date ?? identity?.birthDate ?? "",
+      email: player.email ?? "",
+      phone_number: player.phone_number ?? "",
       address_street: address?.street ?? "",
       address_city: address?.city ?? "",
       address_state: address?.state ?? "",
       address_postal_code: address?.postalCode ?? "",
     },
   });
+
+  // Reset form when identity data loads/changes to populate fallback values
+  React.useEffect(() => {
+    if (identity) {
+      const addr = identity.address as IdentityAddress | null;
+      form.reset({
+        first_name: player.first_name,
+        middle_name: player.middle_name ?? "",
+        last_name: player.last_name,
+        birth_date: player.birth_date ?? identity.birthDate ?? "",
+        email: player.email ?? "",
+        phone_number: player.phone_number ?? "",
+        address_street: addr?.street ?? "",
+        address_city: addr?.city ?? "",
+        address_state: addr?.state ?? "",
+        address_postal_code: addr?.postalCode ?? "",
+      });
+    }
+  }, [identity, player, form]);
 
   const handleSubmit = form.handleSubmit(async (values) => {
     await onSubmit(values, form.formState.dirtyFields);

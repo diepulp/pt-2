@@ -21,7 +21,14 @@ type PlayerCasinoRow = Database["public"]["Tables"]["player_casino"]["Row"];
 /** Public player profile */
 export type PlayerDTO = Pick<
   PlayerRow,
-  "id" | "first_name" | "last_name" | "birth_date" | "created_at"
+  | "id"
+  | "first_name"
+  | "last_name"
+  | "birth_date"
+  | "created_at"
+  | "middle_name"
+  | "email"
+  | "phone_number"
 >;
 
 /** Player creation input */
@@ -82,6 +89,8 @@ export interface PlayerSearchResultDTO {
   last_name: string;
   /** Computed full name for display */
   full_name: string;
+  /** Date of birth for name collision prevention */
+  birth_date: string | null;
   /** Enrollment status in the querying casino */
   enrollment_status: "enrolled" | "not_enrolled";
 }

@@ -41,7 +41,12 @@ export const updatePlayerSchema = z
       .optional(),
     middle_name: z.string().max(100).nullable().optional(),
     email: z.string().email("Invalid email format").nullable().optional(),
-    phone_number: z.string().max(20).nullable().optional(),
+    phone_number: z
+      .string()
+      .min(7, "Phone number must be at least 7 characters")
+      .max(20)
+      .nullable()
+      .optional(),
   })
   .refine(
     (data) => Object.values(data).some((v) => v !== undefined),
