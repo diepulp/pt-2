@@ -1,0 +1,115 @@
+{
+  "prd": "ADR-029",
+  "prd_title": "Player 360 Dashboard - Interaction Event Taxonomy",
+  "exec_spec_path": "docs/20-architecture/specs/ADR-029/EXEC-SPEC-029.md",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": [
+    "WS1-A: Enum & Extension Setup",
+    "WS1-B: player_note Table",
+    "WS1-C: player_tag Table",
+    "WS1-D: Timeline Indexes (Phase 1)",
+    "WS1-E: rpc_get_player_timeline RPC",
+    "WS2-A: DTOs & Types",
+    "WS2-B: Mappers & Validation",
+    "WS2-C: CRUD Service",
+    "WS2-D: React Query Hooks",
+    "WS-UX-A: Timeline Card Contract",
+    "WS-UX-B: Filter Contract",
+    "WS-UX-C: Pagination Contract",
+    "WS-UX-D: Panel Layout + States",
+    "WS-UX-E: Collaboration Panel",
+    "WS-UX-F: Compliance & Snapshot Panels",
+    "WS3-A: TypeScript Types Regeneration",
+    "WS3-B: Integration Tests",
+    "WS3-C: Baseline Page Rendering"
+  ],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "skill_delegation": {
+    "Phase1_Database": "/rls-expert",
+    "Phase2_Service": "/backend-service-builder",
+    "UX_Contracts": "/frontend-design-pt-2",
+    "Page_Rendering": "/frontend-design-pt-2",
+    "Integration_Tests": "/qa-specialist"
+  },
+  "artifacts": {
+    "Phase1_Database": [
+      "supabase/migrations/20260121145500_adr029_event_taxonomy_enum.sql",
+      "supabase/migrations/20260121145501_adr029_player_note_table.sql",
+      "supabase/migrations/20260121145502_adr029_player_tag_table.sql",
+      "supabase/migrations/20260121145503_adr029_timeline_indexes_phase1.sql",
+      "supabase/migrations/20260121145504_adr029_rpc_player_timeline.sql"
+    ],
+    "Phase2_Service": [
+      "services/player-timeline/dtos.ts",
+      "services/player-timeline/mappers.ts",
+      "services/player-timeline/crud.ts",
+      "services/player-timeline/keys.ts",
+      "services/player-timeline/index.ts",
+      "hooks/player-timeline/use-player-timeline.ts",
+      "hooks/player-timeline/index.ts"
+    ],
+    "UX_Contracts": [
+      "components/player-360/timeline/types.ts",
+      "components/player-360/timeline/filters.ts",
+      "components/player-360/timeline/pagination.ts",
+      "components/player-360/timeline/index.ts"
+    ],
+    "UX_Components": [
+      "components/player-360/layout.tsx",
+      "components/player-360/skeletons.tsx",
+      "components/player-360/empty-states.tsx",
+      "components/player-360/collaboration/panel.tsx",
+      "components/player-360/collaboration/note-composer.tsx",
+      "components/player-360/collaboration/tag-chips.tsx",
+      "components/player-360/collaboration/index.ts",
+      "components/player-360/compliance/panel.tsx",
+      "components/player-360/compliance/index.ts",
+      "components/player-360/snapshot/card.tsx",
+      "components/player-360/snapshot/index.ts",
+      "components/player-360/index.ts"
+    ],
+    "Phase3_Integration": [
+      "app/(dashboard)/players/[playerId]/timeline/page.tsx",
+      "app/(dashboard)/players/[playerId]/timeline/_components/timeline-content.tsx",
+      "services/player-timeline/__tests__/mappers.test.ts",
+      "services/player-timeline/__tests__/timeline.integration.test.ts"
+    ]
+  },
+  "gates_passed": [
+    "Gate 1: Database Layer Validation",
+    "Gate 2: Service Layer + UX Contracts Validation",
+    "Gate 3: Integration Validation (type-check, 29 tests pass, build)"
+  ],
+  "gates_pending": [],
+  "exec_spec_compliance": {
+    "yaml_frontmatter": true,
+    "workstream_definitions": true,
+    "execution_phases": true,
+    "gates_defined": true,
+    "risks_documented": true
+  },
+  "resume_context": {
+    "last_action": "Gate 3 passed - type-check, 29 tests, build all successful",
+    "next_steps": [],
+    "files_created_this_session": [
+      "app/(dashboard)/players/[playerId]/timeline/page.tsx",
+      "app/(dashboard)/players/[playerId]/timeline/_components/timeline-content.tsx",
+      "services/player-timeline/__tests__/mappers.test.ts",
+      "services/player-timeline/__tests__/timeline.integration.test.ts"
+    ],
+    "key_decisions": [
+      "Player 360 REPLACES existing player-dashboard (not extends)",
+      "3-panel layout: left rail (metrics), center (timeline), right rail (collaboration)",
+      "Timeline as center of gravity per UX baseline",
+      "CTR as aggregate metric (not timeline event)",
+      "Note visibility enum: private, team, all",
+      "useTransition for all async operations",
+      "Integration tests focus on RPC contract + ADR-024 security compliance",
+      "Simplified test setup avoids fragile data dependencies"
+    ]
+  },
+  "timestamp": "2026-01-21T21:45:00Z",
+  "notes": "ADR-029 complete. All 3 phases executed. Gate 3 passed: type-check OK, 29 tests pass (25 mapper unit + 4 integration), build OK. Timeline page available at /players/[playerId]/timeline."
+}
