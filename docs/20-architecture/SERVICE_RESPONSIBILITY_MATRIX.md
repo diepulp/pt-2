@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.10.0
+nsversion: 4.11.0
 status: CANONICAL
-effective: 2026-01-17
+effective: 2026-01-21
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -24,8 +24,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.10.0 (ADR-028 Table Status Standardization)
-> **Date**: 2026-01-17
+> **Version**: 4.11.0 (ADR-029 Player 360° Dashboard Event Taxonomy)
+> **Date**: 2026-01-21
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -49,6 +49,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.11.0 (2026-01-21)** – **ADR-029 Player 360° Dashboard Event Taxonomy**: Added PlayerTimelineService (planned) for unified player interaction timeline. New tables planned: `player_note`, `player_tag`. New enum: `interaction_event_type`. New RPC: `rpc_get_player_timeline`. Cross-context timeline reads all service tables via UNION ALL view. See `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` and `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`.
 - **4.10.0 (2026-01-17)** – **ADR-028 Table Status Standardization**: Added `labels.ts` pattern to TableContextService for centralized UI label/color constants. Documented `TableAvailability` and `SessionPhase` type aliases. Added `drop_posted_at` column to `table_session` for count posting status. RPC availability gate added to `rpc_open_table_session`. See `docs/80-adrs/ADR-028-table-status-standardization.md`.
 - **4.9.0 (2025-12-25)** – **ADR-023 Multi-Tenancy Formalization**: Official tenancy stance declared: Pool Primary; Silo Optional. Added SEC-002 and ADR-023 to source_of_truth. SEC-001/SEC-002 updated with tenancy cross-references. See `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`.
 - **4.8.0 (2025-12-23)** – **ADR-022 v7.1 MVP Scope (Security Audited)**: Adopted production-ready MVP scope with 7-agent security audit. `player_identity` table planned with scanner-shaped schema. Key security fixes: auth.uid() guard (INV-7), actor binding (INV-9), key immutability (INV-10), document hash storage. Tax identity deferred post-MVP. See `docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md`.
@@ -95,7 +96,8 @@ Approved JSON blobs (all others require first-class columns):
 | Domain | Service | Owns Tables | Bounded Context |
 |--------|---------|-------------|-----------------|
 | **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino** | Root temporal authority, global policy, & player enrollment |
-| **Identity** | PlayerService | player, *player_identity* ² | Identity management |
+| **Identity** | PlayerService | player, *player_identity* ², *player_note* ³, *player_tag* ³ | Identity management & collaboration artifacts |
+| **Analytics** | PlayerTimelineService ³ | (read-only view across all services) | Unified player interaction timeline |
 | **Operational** | TableContextService | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry |
 | **Operational** | FloorLayoutService | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation | Floor design & activation |
 | **Operational** | VisitService | visit | Session lifecycle (3 archetypes) |
@@ -106,6 +108,7 @@ Approved JSON blobs (all others require first-class columns):
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
+> ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
 
 ---
 
@@ -225,6 +228,59 @@ Approved JSON blobs (all others require first-class columns):
 **ADR**: `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md`
 **Exec Spec**: `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md`
 **DoD Gates**: `docs/20-architecture/specs/ADR-022/DOD-022.md`
+
+---
+
+## PlayerTimelineService (Analytics Context) — PLANNED
+
+**Owns**: `player_note`, `player_tag` (tables), `rpc_get_player_timeline` (RPC)
+
+**Reads From**: All services (via UNION ALL view)
+
+**Bounded Context**: "What is the complete history of interactions for this player?"
+
+**Implementation Status**: Planned (ADR-029, Player 360° Dashboard MVP)
+
+### New Tables (Planned)
+
+| Table | Column | Constraint | Notes |
+|-------|--------|------------|-------|
+| `player_note` | `casino_id` | NOT NULL | Casino scoping |
+| `player_note` | `player_id` | NOT NULL, FK | Player reference |
+| `player_note` | `created_by` | NOT NULL, FK | Staff author |
+| `player_note` | `content` | NOT NULL | Note text |
+| `player_note` | `visibility` | NOT NULL, CHECK | 'private', 'team', 'all' |
+| `player_tag` | `casino_id` | NOT NULL | Casino scoping |
+| `player_tag` | `player_id` | NOT NULL, FK | Player reference |
+| `player_tag` | `tag_name` | NOT NULL | Tag identifier |
+| `player_tag` | `tag_category` | NOT NULL, CHECK | 'vip', 'attention', 'service', 'custom' |
+| `player_tag` | `applied_by` | NOT NULL, FK | Staff who applied |
+| `player_tag` | `removed_at` | NULLABLE | Soft-delete timestamp |
+
+### Event Types (interaction_event_type enum)
+
+Session: `visit_start`, `visit_end`, `visit_resume`
+Gaming: `rating_start`, `rating_pause`, `rating_resume`, `rating_close`, `rating_move`
+Financial: `cash_in`, `cash_out`, `cash_observation`, `financial_adjustment`
+Loyalty: `points_earned`, `points_redeemed`, `points_adjusted`, `promo_issued`, `promo_redeemed`
+Collaboration: `note_added`, `tag_applied`, `tag_removed`
+Compliance: `mtl_recorded`, `ctr_threshold`
+Identity: `player_enrolled`, `identity_verified`
+
+### Contracts
+
+- **RPC**: `rpc_get_player_timeline` — Unified timeline with keyset pagination
+- **Read-only**: This service reads from all other services; no cross-service writes
+- **Event Taxonomy**: See `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`
+
+### Cross-Context Consumption
+
+| Consumer | Consumes Via |
+|----------|--------------|
+| PlayerTimelineService | Reads from: visit, rating_slip, loyalty_ledger, player_financial_transaction, mtl_entry, pit_cash_observation, promo_coupon, player_casino, player_identity |
+
+**ADR**: `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md`
+**Event Taxonomy**: `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`
 
 ---
 
@@ -646,6 +702,8 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md` | Player identity decisions (frozen) |
 | `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md` | Player identity implementation |
 | `docs/20-architecture/specs/ADR-022/DOD-022.md` | Player identity DoD gates |
+| `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` | Player 360° event taxonomy |
+| `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md` | Event taxonomy quick reference |
 
 ---
 
@@ -663,8 +721,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.8.0
+**Document Version**: 4.11.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2025-12-23 (ADR-022 v7.1 — MVP Scope, player_identity Planned)
+**Updated**: 2026-01-21 (ADR-029 — Player 360° Dashboard Event Taxonomy)
 **Status**: CANONICAL - Registry + Invariants Only
