@@ -1,0 +1,54 @@
+{
+  "prd_id": "PRD-022",
+  "prd_title": "Player 360 Navigation Consolidation",
+  "status": "complete",
+  "current_phase": 6,
+  "total_phases": 6,
+  "completed_workstreams": [
+    "WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS11", "WS12"
+  ],
+  "pending_workstreams": [],
+  "artifacts_created": [
+    "app/(dashboard)/players/[playerId]/page.tsx",
+    "app/(dashboard)/players/[playerId]/_components/player-360-content.tsx",
+    "app/(dashboard)/players/[playerId]/timeline/route.ts",
+    "lib/navigation/return-to.ts",
+    "lib/navigation/index.ts",
+    "lib/navigation/__tests__/return-to.test.ts",
+    "hooks/player-360/keys.ts",
+    "hooks/player-360/index.ts",
+    "components/player-360/breadcrumb.tsx",
+    "components/player-360/__tests__/breadcrumb.test.tsx",
+    "components/player-dashboard/player-list-row.tsx",
+    "__tests__/player-360-navigation.int.test.ts",
+    "e2e/workflows/player-360-navigation.spec.ts"
+  ],
+  "artifacts_modified": [
+    "components/player-dashboard/player-dashboard.tsx",
+    "components/player-dashboard/index.ts",
+    "components/player-360/index.ts",
+    "store/player-dashboard-store.ts",
+    "hooks/ui/__tests__/use-player-dashboard.test.ts",
+    "eslint.config.mjs",
+    ".github/CODEOWNERS",
+    "app/(dashboard)/players/page.tsx",
+    "services/mtl/selects.ts",
+    "services/mtl/mappers.ts"
+  ],
+  "artifacts_deleted": [
+    "app/(dashboard)/players/[playerId]/timeline/page.tsx"
+  ],
+  "gates_passed": {
+    "type-check": true,
+    "lint": true,
+    "test-pass": true,
+    "build": true
+  },
+  "test_results": {
+    "unit_tests": 50,
+    "e2e_tests": 13,
+    "all_passing": true
+  },
+  "completed_at": "2026-01-22T01:30:00Z",
+  "notes": "Fixed pre-existing mtl/crud.ts type error (missing patron_date_of_birth in select). Fixed Suspense boundary for useSearchParams in /players page. All gates now pass."
+}
