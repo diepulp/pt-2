@@ -47,10 +47,60 @@ export {
   MetricsEmpty,
   NoPermission,
   NotesEmpty,
+  Player360EmptyState,
   TagsEmpty,
   TimelineEmpty,
   TimelineError,
+  useRecentPlayers,
 } from "./empty-states";
+
+// Sidebar Components - DEPRECATED
+// Sidebar has been removed in favor of embedded search in header/empty state.
+// These exports are retained for backwards compatibility but should not be used.
+export {
+  MobileDrawer,
+  Player360Sidebar,
+  SidebarToggle,
+  useMobileDrawer,
+  useSidebarContext,
+  useSidebarState,
+} from "./sidebar";
+
+// Header Components (PRD-022-PATCH-OPTION-B)
+export {
+  AddNoteButton,
+  IssueRewardButton,
+  Player360HeaderContent,
+  PlayerEditButton,
+} from "./header";
+export type { AddNoteButtonProps, IssueRewardButtonProps } from "./header";
+
+// Summary Band Components (PRD-023 WS3)
+export { SummaryBand, SummaryTile, TimeLensControl } from "./summary";
+export type { SummaryTileProps } from "./summary";
+
+// Left Rail Components (PRD-023 WS4)
+export { FilterTile, FilterTileStack, JumpToNav } from "./left-rail";
+export type { FilterTileProps, JumpToTarget } from "./left-rail";
+
+// Rewards Components (PRD-023 WS4)
+export {
+  RewardsEligibilityCard,
+  RewardsHistoryItem,
+  RewardsHistoryList,
+} from "./rewards";
+export type {
+  RewardsEligibilityCardProps,
+  RewardsHistoryItemProps,
+} from "./rewards";
+
+// Chart Components (PRD-023 WS5)
+export { ActivityChart } from "./charts";
+export type { ActivityChartProps } from "./charts";
+
+// Recent Events Strip (PRD-023 WS6)
+export { RecentEventsStrip } from "./recent-events-strip";
+export type { RecentEventsStripProps } from "./recent-events-strip";
 
 // Collaboration Components (WS-UX-E)
 export {
@@ -90,6 +140,9 @@ export {
   snapshotToText,
 } from "./snapshot";
 export type { EngagementBand, PlayerSnapshotData } from "./snapshot";
+
+// Breadcrumb Component (PRD-022)
+export { Player360Breadcrumb } from "./breadcrumb";
 
 // Re-export timeline contracts
 export * from "./timeline";

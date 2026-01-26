@@ -2,58 +2,81 @@
  * Timeline Page Content Component
  *
  * Main content component for the Player 360 timeline page.
- * Implements the 3-panel layout with timeline, metrics, and collaboration.
+ * Implements the 3-panel layout with:
+ * - Left Rail: Filter tiles, rewards eligibility, jump-to navigation
+ * - Center Panel: Summary band, activity chart, recent events, timeline
+ * - Right Rail: Collaboration (notes/tags), compliance
+ *
+ * NOTE: This component is rendered inside Player360ContentWrapper which provides
+ * the header (Player360HeaderContent) and body wrapper (Player360Body).
  *
  * @see ADR-029-player-360-interaction-event-taxonomy.md
- * @see EXEC-SPEC-029.md WS3-C
+ * @see PRD-023 Player 360 Panels v0
  */
 
 "use client";
 
 import {
   ChevronDown,
-  Clock,
   FileText,
   Filter,
   Loader2,
   MessageSquare,
   Shield,
   Tag,
-  User,
 } from "lucide-react";
 import * as LucideIcons from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import * as React from "react";
 
 import {
-  MetricsGrid,
+  ActivityChart,
+  FilterTileStack,
+  JumpToNav,
   PanelContent,
   PanelHeader,
-  Player360Body,
   Player360Center,
-  Player360Header,
   Player360LeftRail,
   Player360RightRail,
+  RecentEventsStrip,
+  RewardsEligibilityCard,
+  RewardsHistoryList,
+  SummaryBand,
   TimelineCardSkeleton,
   TimelineEmpty,
   TimelineError,
+  TimeLensControl,
   usePlayer360Layout,
 } from "@/components/player-360";
 import {
   EVENT_TYPE_LABELS,
   EVENT_TYPES_BY_CATEGORY,
-  getSourceCategory,
   getSourceCategoryStyle,
   SOURCE_CATEGORY_STYLES,
   toCollapsedCard,
-  type SourceCategory,
+  type SourceCategory as TimelineSourceCategory,
   type TimelineCardCollapsed,
 } from "@/components/player-360/timeline";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  usePlayerSummary,
+  usePlayerWeeklySeries,
+  useTimelineFilter,
+  type SourceCategory,
+} from "@/hooks/player-360";
 import { useInfinitePlayerTimeline } from "@/hooks/player-timeline";
 import type { InteractionEventType } from "@/services/player-timeline/dtos";
+import type {
+  RecentEventsDTO,
+  RewardHistoryItemDTO,
+} from "@/services/player360-dashboard/dtos";
 
 // === Lucide Icon Components (dynamic icons) ===
 
@@ -97,6 +120,29 @@ interface FilterState {
   fromDate: string | undefined;
   toDate: string | undefined;
 }
+
+// === Category to Event Types Mapping ===
+
+const CATEGORY_EVENT_TYPE_MAP: Record<SourceCategory, InteractionEventType[]> =
+  {
+    session: ["visit_start", "visit_end", "visit_resume"],
+    gaming: ["rating_start", "rating_pause", "rating_resume", "rating_close"],
+    financial: [
+      "cash_in",
+      "cash_out",
+      "cash_observation",
+      "financial_adjustment",
+    ],
+    loyalty: [
+      "points_earned",
+      "points_redeemed",
+      "points_adjusted",
+      "promo_issued",
+      "promo_redeemed",
+    ],
+    compliance: ["mtl_recorded", "identity_verified"],
+    note: ["note_added", "tag_applied", "tag_removed"],
+  };
 
 // === Timeline Card Component ===
 
@@ -218,69 +264,41 @@ function FilterBar({
       {/* Filter Chips */}
       {isExpanded && (
         <div className="px-4 pb-3 space-y-3">
-          {(Object.keys(EVENT_TYPES_BY_CATEGORY) as SourceCategory[]).map(
-            (category) => {
-              const categoryStyle = SOURCE_CATEGORY_STYLES[category];
-              const eventTypes = EVENT_TYPES_BY_CATEGORY[category];
+          {(
+            Object.keys(EVENT_TYPES_BY_CATEGORY) as TimelineSourceCategory[]
+          ).map((category) => {
+            const categoryStyle = SOURCE_CATEGORY_STYLES[category];
+            const eventTypes = EVENT_TYPES_BY_CATEGORY[category];
 
-              return (
-                <div key={category}>
-                  <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
-                    {categoryStyle.label}
-                  </span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {eventTypes.map((eventType) => {
-                      const isSelected = filters.eventTypes.includes(eventType);
-                      return (
-                        <button
-                          key={eventType}
-                          onClick={() => toggleEventType(eventType)}
-                          className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
-                            isSelected
-                              ? `${categoryStyle.bg} ${categoryStyle.text} ${categoryStyle.border}`
-                              : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
-                          }`}
-                        >
-                          {EVENT_TYPE_LABELS[eventType]}
-                        </button>
-                      );
-                    })}
-                  </div>
+            return (
+              <div key={category}>
+                <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
+                  {categoryStyle.label}
+                </span>
+                <div className="flex flex-wrap gap-1.5">
+                  {eventTypes.map((eventType) => {
+                    const isSelected = filters.eventTypes.includes(eventType);
+                    return (
+                      <button
+                        key={eventType}
+                        onClick={() => toggleEventType(eventType)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium border transition-colors ${
+                          isSelected
+                            ? `${categoryStyle.bg} ${categoryStyle.text} ${categoryStyle.border}`
+                            : "bg-muted/50 text-muted-foreground border-transparent hover:bg-muted"
+                        }`}
+                      >
+                        {EVENT_TYPE_LABELS[eventType]}
+                      </button>
+                    );
+                  })}
                 </div>
-              );
-            },
-          )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
-  );
-}
-
-// === Metrics Tile Component ===
-
-function MetricTile({
-  label,
-  value,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  icon: LucideIcon;
-}) {
-  return (
-    <Card className="bg-card/50">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-accent/10 border border-accent/20">
-            <Icon className="w-5 h-5 text-accent" />
-          </div>
-          <div>
-            <p className="text-xs text-muted-foreground">{label}</p>
-            <p className="text-lg font-semibold">{value}</p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 
@@ -288,11 +306,50 @@ function MetricTile({
 
 export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
   const { activeRightTab, setActiveRightTab } = usePlayer360Layout();
+
+  // Shared filter state via Zustand store
+  const { activeCategory, setCategory, timeLens, setTimeLens, clearFilter } =
+    useTimelineFilter();
+
+  // Local filter state for timeline (synced with shared state)
   const [filters, setFilters] = React.useState<FilterState>({
     eventTypes: [],
     fromDate: undefined,
     toDate: undefined,
   });
+
+  // Sync local filters with shared category filter
+  React.useEffect(() => {
+    if (activeCategory) {
+      const categoryEventTypes = CATEGORY_EVENT_TYPE_MAP[activeCategory] ?? [];
+      setFilters((prev) => ({
+        ...prev,
+        eventTypes: categoryEventTypes,
+      }));
+    } else {
+      setFilters((prev) => ({
+        ...prev,
+        eventTypes: [],
+      }));
+    }
+  }, [activeCategory]);
+
+  // Chart collapsed state
+  const [isChartCollapsed, setIsChartCollapsed] = React.useState(false);
+
+  // Section ref for timeline scrolling (used by category changes)
+  const timelineRef = React.useRef<HTMLDivElement>(null);
+
+  // Fetch player summary for tiles
+  const {
+    data: summaryData,
+    isLoading: isSummaryLoading,
+    error: summaryError,
+  } = usePlayerSummary(playerId);
+
+  // Fetch weekly series for chart
+  const { data: weeklyData, isLoading: isWeeklyLoading } =
+    usePlayerWeeklySeries(playerId, { timeLens });
 
   // Fetch timeline data with infinite scroll
   const {
@@ -342,181 +399,333 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
     }
   }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
+  // Handle local filter change (also update shared state)
+  const handleFilterChange = React.useCallback(
+    (newFilters: FilterState) => {
+      setFilters(newFilters);
+      // Clear shared category filter if custom event types are selected
+      if (newFilters.eventTypes.length > 0) {
+        // Don't clear if it matches a category
+        const matchesCategory = Object.entries(CATEGORY_EVENT_TYPE_MAP).some(
+          ([, eventTypes]) =>
+            eventTypes.length === newFilters.eventTypes.length &&
+            eventTypes.every((et) => newFilters.eventTypes.includes(et)),
+        );
+        if (!matchesCategory) {
+          clearFilter();
+        }
+      }
+    },
+    [clearFilter],
+  );
+
+  // Handle category change from tiles
+  const handleCategoryChange = React.useCallback(
+    (category: SourceCategory | null) => {
+      setCategory(category);
+    },
+    [setCategory],
+  );
+
+  // Handle rewards card "show related events"
+  const handleShowLoyaltyEvents = React.useCallback(() => {
+    setCategory("loyalty");
+    timelineRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [setCategory]);
+
+  // Mock recent events data (would come from hook in production)
+  const mockRecentEvents: RecentEventsDTO = React.useMemo(
+    () => ({
+      lastBuyIn: summaryData?.cashVelocity.lastBuyInAt
+        ? {
+            at: summaryData.cashVelocity.lastBuyInAt,
+            amount: summaryData.cashVelocity.sessionTotal,
+          }
+        : null,
+      lastReward:
+        summaryData?.rewardsEligibility.status === "available"
+          ? null
+          : { at: new Date().toISOString(), type: "Matchplay" },
+      lastNote: null,
+    }),
+    [summaryData],
+  );
+
+  // Mock rewards history (would come from hook in production)
+  const mockRewardsHistory: RewardHistoryItemDTO[] = [];
+
   return (
     <>
-      {/* Header */}
-      <Player360Header>
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-accent/10 border border-accent/20">
-              <User className="w-5 h-5 text-accent" />
-            </div>
-            <div>
-              <h1 className="text-lg font-semibold">Player Timeline</h1>
-              <p className="text-xs text-muted-foreground">
-                ID: {playerId.slice(0, 8)}...
-              </p>
-            </div>
+      {/* Left Rail - Filter Tiles & Rewards */}
+      <Player360LeftRail>
+        <div className="flex flex-col h-full p-4 space-y-4">
+          {/* Filter Tiles */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Quick Filters
+            </h3>
+            {isSummaryLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-12 bg-muted/30 rounded-lg animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : summaryData ? (
+              <FilterTileStack
+                data={summaryData}
+                activeCategory={activeCategory}
+                onCategoryChange={handleCategoryChange}
+              />
+            ) : null}
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="gap-1">
-              <Clock className="w-3 h-3" />
-              Live
-            </Badge>
+
+          {/* Rewards Eligibility */}
+          <div>
+            <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Rewards
+            </h3>
+            {isSummaryLoading ? (
+              <div className="h-24 bg-muted/30 rounded-lg animate-pulse" />
+            ) : summaryData ? (
+              <RewardsEligibilityCard
+                data={summaryData.rewardsEligibility}
+                onShowRelatedEvents={handleShowLoyaltyEvents}
+              />
+            ) : null}
+          </div>
+
+          {/* Rewards History */}
+          {mockRewardsHistory.length > 0 && (
+            <div>
+              <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                Recent Rewards
+              </h3>
+              <RewardsHistoryList
+                items={mockRewardsHistory}
+                onItemClick={() => {}}
+              />
+            </div>
+          )}
+
+          {/* Jump To Navigation */}
+          <div className="mt-auto">
+            <JumpToNav
+              targets={[
+                { id: "summary", label: "Summary" },
+                { id: "chart", label: "Activity Chart" },
+                { id: "timeline", label: "Timeline" },
+              ]}
+            />
           </div>
         </div>
-      </Player360Header>
+      </Player360LeftRail>
 
-      {/* Body - Three Panel Layout */}
-      <Player360Body>
-        {/* Left Rail - Metrics */}
-        <Player360LeftRail>
-          <div className="p-4">
-            <h2 className="text-sm font-semibold mb-4">Key Metrics</h2>
-            <MetricsGrid>
-              <MetricTile
-                label="Total Events"
-                value={allEvents.length.toString()}
-                icon={Clock}
+      {/* Center - Summary, Chart, Timeline */}
+      <Player360Center>
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto"
+        >
+          {/* Summary Section */}
+          <div id="summary" className="p-4 space-y-4">
+            {/* Time Lens Control */}
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold">Session Summary</h2>
+              <TimeLensControl value={timeLens} onChange={setTimeLens} />
+            </div>
+
+            {/* Summary Band */}
+            {isSummaryLoading ? (
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="h-24 bg-muted/30 rounded-lg animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : summaryError ? (
+              <Card className="bg-destructive/10 border-destructive/20">
+                <CardContent className="p-4 text-sm text-destructive">
+                  Failed to load summary: {summaryError.message}
+                </CardContent>
+              </Card>
+            ) : summaryData ? (
+              <SummaryBand
+                data={summaryData}
+                activeCategory={activeCategory}
+                onCategoryChange={handleCategoryChange}
               />
-              <MetricTile
-                label="Session Events"
-                value={allEvents
-                  .filter((e) => getSourceCategory(e.eventType) === "session")
-                  .length.toString()}
-                icon={User}
-              />
-              <MetricTile
-                label="Financial Events"
-                value={allEvents
-                  .filter((e) => getSourceCategory(e.eventType) === "financial")
-                  .length.toString()}
-                icon={LucideIcons.DollarSign}
-              />
-              <MetricTile
-                label="Compliance Events"
-                value={allEvents
-                  .filter(
-                    (e) => getSourceCategory(e.eventType) === "compliance",
-                  )
-                  .length.toString()}
-                icon={Shield}
-              />
-            </MetricsGrid>
+            ) : null}
           </div>
-        </Player360LeftRail>
 
-        {/* Center - Timeline */}
-        <Player360Center>
-          {/* Filter Bar */}
-          <FilterBar
-            filters={filters}
-            onFilterChange={setFilters}
-            totalEvents={allEvents.length}
+          {/* Activity Chart Section */}
+          <div id="chart" className="px-4 pb-4">
+            <Collapsible
+              open={!isChartCollapsed}
+              onOpenChange={(open) => setIsChartCollapsed(!open)}
+            >
+              <Card>
+                <CardHeader className="py-3 px-4">
+                  <CollapsibleTrigger className="flex items-center justify-between w-full">
+                    <CardTitle className="text-sm font-semibold">
+                      Activity
+                    </CardTitle>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${isChartCollapsed ? "" : "rotate-180"}`}
+                    />
+                  </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                  <CardContent className="pt-0 pb-4">
+                    {isWeeklyLoading ? (
+                      <div className="h-48 bg-muted/30 rounded-lg animate-pulse" />
+                    ) : weeklyData ? (
+                      <ActivityChart
+                        data={weeklyData}
+                        height={180}
+                        onBucketClick={(weekStart) => {
+                          // Apply date filter to timeline
+                          const weekEnd = new Date(weekStart);
+                          weekEnd.setDate(weekEnd.getDate() + 7);
+                          setFilters((prev) => ({
+                            ...prev,
+                            fromDate: weekStart,
+                            toDate: weekEnd.toISOString().split("T")[0],
+                          }));
+                        }}
+                      />
+                    ) : null}
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          </div>
+
+          {/* Recent Events Strip */}
+          <RecentEventsStrip
+            data={mockRecentEvents}
+            onEventClick={(type) => {
+              // Scroll to timeline and filter by type
+              if (type === "buyIn") setCategory("financial");
+              if (type === "reward") setCategory("loyalty");
+              if (type === "note") setCategory("note");
+              timelineRef.current?.scrollIntoView({ behavior: "smooth" });
+            }}
           />
 
-          {/* Timeline Content */}
-          <div
-            ref={scrollContainerRef}
-            onScroll={handleScroll}
-            className="flex-1 overflow-y-auto"
+          {/* Timeline Section */}
+          <div ref={timelineRef} id="timeline">
+            {/* Filter Bar */}
+            <FilterBar
+              filters={filters}
+              onFilterChange={handleFilterChange}
+              totalEvents={allEvents.length}
+            />
+
+            {/* Timeline Content */}
+            <div>
+              {isLoading && (
+                <div className="p-4 space-y-2">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <TimelineCardSkeleton key={i} />
+                  ))}
+                </div>
+              )}
+
+              {isError && (
+                <div className="p-4">
+                  <TimelineError
+                    message={error?.message ?? "Failed to load timeline"}
+                    onRetry={() => window.location.reload()}
+                  />
+                </div>
+              )}
+
+              {!isLoading && !isError && cards.length === 0 && (
+                <div className="p-4">
+                  <TimelineEmpty type="no-events" />
+                </div>
+              )}
+
+              {!isLoading && !isError && cards.length > 0 && (
+                <>
+                  {cards.map((card) => (
+                    <TimelineCard key={card.eventId} card={card} />
+                  ))}
+
+                  {/* Load More Indicator */}
+                  {isFetchingNextPage && (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                      <span className="ml-2 text-sm text-muted-foreground">
+                        Loading more...
+                      </span>
+                    </div>
+                  )}
+
+                  {hasNextPage && !isFetchingNextPage && (
+                    <div className="flex justify-center py-4">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fetchNextPage()}
+                      >
+                        Load More
+                      </Button>
+                    </div>
+                  )}
+
+                  {!hasNextPage && cards.length > 0 && (
+                    <div className="text-center py-4 text-sm text-muted-foreground">
+                      End of timeline
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </Player360Center>
+
+      {/* Right Rail - Collaboration/Compliance */}
+      <Player360RightRail>
+        {/* Tab Switcher */}
+        <div className="flex border-b border-border/40">
+          <button
+            onClick={() => setActiveRightTab("collaboration")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              activeRightTab === "collaboration"
+                ? "text-foreground border-b-2 border-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            {isLoading && (
-              <div className="p-4 space-y-2">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <TimelineCardSkeleton key={i} />
-                ))}
-              </div>
-            )}
+            <MessageSquare className="w-4 h-4 inline-block mr-1.5" />
+            Notes
+          </button>
+          <button
+            onClick={() => setActiveRightTab("compliance")}
+            className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
+              activeRightTab === "compliance"
+                ? "text-foreground border-b-2 border-accent"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Shield className="w-4 h-4 inline-block mr-1.5" />
+            Compliance
+          </button>
+        </div>
 
-            {isError && (
-              <div className="p-4">
-                <TimelineError
-                  message={error?.message ?? "Failed to load timeline"}
-                  onRetry={() => window.location.reload()}
-                />
-              </div>
-            )}
-
-            {!isLoading && !isError && cards.length === 0 && (
-              <div className="p-4">
-                <TimelineEmpty type="no-events" />
-              </div>
-            )}
-
-            {!isLoading && !isError && cards.length > 0 && (
-              <>
-                {cards.map((card) => (
-                  <TimelineCard key={card.eventId} card={card} />
-                ))}
-
-                {/* Load More Indicator */}
-                {isFetchingNextPage && (
-                  <div className="flex items-center justify-center py-4">
-                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
-                    <span className="ml-2 text-sm text-muted-foreground">
-                      Loading more...
-                    </span>
-                  </div>
-                )}
-
-                {hasNextPage && !isFetchingNextPage && (
-                  <div className="flex justify-center py-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => fetchNextPage()}
-                    >
-                      Load More
-                    </Button>
-                  </div>
-                )}
-
-                {!hasNextPage && cards.length > 0 && (
-                  <div className="text-center py-4 text-sm text-muted-foreground">
-                    End of timeline
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </Player360Center>
-
-        {/* Right Rail - Collaboration/Compliance */}
-        <Player360RightRail>
-          {/* Tab Switcher */}
-          <div className="flex border-b border-border/40">
-            <button
-              onClick={() => setActiveRightTab("collaboration")}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeRightTab === "collaboration"
-                  ? "text-foreground border-b-2 border-accent"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <MessageSquare className="w-4 h-4 inline-block mr-1.5" />
-              Notes
-            </button>
-            <button
-              onClick={() => setActiveRightTab("compliance")}
-              className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-                activeRightTab === "compliance"
-                  ? "text-foreground border-b-2 border-accent"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <Shield className="w-4 h-4 inline-block mr-1.5" />
-              Compliance
-            </button>
-          </div>
-
-          {/* Panel Content */}
-          <div className="flex-1 overflow-y-auto p-4">
-            {activeRightTab === "collaboration" && <CollaborationPlaceholder />}
-            {activeRightTab === "compliance" && <CompliancePlaceholder />}
-          </div>
-        </Player360RightRail>
-      </Player360Body>
+        {/* Panel Content */}
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeRightTab === "collaboration" && <CollaborationPlaceholder />}
+          {activeRightTab === "compliance" && <CompliancePlaceholder />}
+        </div>
+      </Player360RightRail>
     </>
   );
 }
