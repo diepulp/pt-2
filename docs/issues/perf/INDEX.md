@@ -10,7 +10,9 @@ Tracked performance issues and optimization opportunities.
 
 ## Resolved Issues
 
-_None yet_
+| ID | Title | Resolution | Commit |
+|----|-------|------------|--------|
+| [PERF-002](./PIT_DASHBOARD_DATA_FLOW_INVESTIGATION.md) | Pit Dashboard Data Flow Inefficiency | [Verification Report](./PERF-002-VERIFICATION-REPORT.md) | `6b4552d` |
 
 ---
 
