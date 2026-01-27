@@ -1,141 +1,73 @@
-'use client';
+/**
+ * Player Dashboard - DEPRECATED
+ *
+ * This component is deprecated. With PRD-022-PATCH-OPTION-B (embedded search),
+ * player search is now integrated directly into the Player 360 view at /players.
+ *
+ * If you're importing this component, you should migrate to using the
+ * catch-all route at /players/[[...playerId]] which includes embedded search.
+ *
+ * @deprecated Use /players route with embedded search instead.
+ * @see PRD-022-PATCH-OPTION-B Embedded Search
+ */
 
-import { User } from 'lucide-react';
-import * as React from 'react';
+"use client";
 
-import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
-import { cn } from '@/lib/utils';
+import { AlertTriangle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 
-import { ActivityVisualizationPanel } from './activity-visualization-panel';
-import { CompliancePanel } from './compliance-panel';
-import { LoyaltyPanel } from './loyalty-panel';
-import { MetricsPanel } from './metrics-panel';
-import { NotesPanel } from './notes-panel';
-import { PlayerProfilePanel } from './player-profile-panel';
-import { PlayerSearchCommand } from './player-search-command';
-import { SessionControlPanel } from './session-control-panel';
+import { cn } from "@/lib/utils";
 
 interface PlayerDashboardProps {
   className?: string;
 }
 
 /**
- * Player Dashboard - Main dashboard for viewing player analytics
- *
- * Layout structure (matching PT-1 reference):
- * - Top: Player search/selector
- * - Row 1: Profile (2/3) + Session Controls (1/3)
- * - Row 2: Performance Metrics (1/2) + Compliance & Risk (1/2)
- * - Row 3: Real-time Activity (2/3) + Notes & Loyalty (1/3)
- *
- * Design: PT-2 dark industrial aesthetic with cyan accent
+ * @deprecated This component is deprecated. The player search is now
+ * embedded directly in the Player 360 view. This component will redirect
+ * to /players automatically.
  */
 export function PlayerDashboard({ className }: PlayerDashboardProps) {
-  const { selectedPlayerId, setSelectedPlayer } = usePlayerDashboard();
+  const router = useRouter();
 
-  const handleSelectPlayer = (playerId: string) => {
-    setSelectedPlayer(playerId || null);
-  };
+  // Redirect to the new /players route after component mount
+  useEffect(() => {
+    // Small delay to allow the deprecation notice to be seen (dev only)
+    const timer = setTimeout(() => {
+      router.replace("/players");
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [router]);
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {/* Player Search/Selector */}
-      <div className="flex items-center gap-3">
-        <div className="flex-1">
-          <PlayerSearchCommand onSelectPlayer={handleSelectPlayer} />
-        </div>
-      </div>
-
-      {selectedPlayerId ? (
-        <div className="space-y-4">
-          {/* Row 1: Profile + Session Controls */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <PlayerProfilePanel />
-            </div>
-            <div className="lg:col-span-1">
-              <SessionControlPanel className="h-full" />
-            </div>
-          </div>
-
-          {/* Row 2: Metrics + Compliance */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <MetricsPanel className="min-h-[400px]" />
-            <CompliancePanel className="min-h-[400px]" />
-          </div>
-
-          {/* Row 3: Activity + Notes/Loyalty */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            <div className="lg:col-span-2">
-              <ActivityVisualizationPanel className="min-h-[420px]" />
-            </div>
-            <div className="lg:col-span-1 space-y-4">
-              <NotesPanel className="min-h-[200px]" />
-              <LoyaltyPanel className="min-h-[200px]" />
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* Empty State */
-        <EmptyState />
-      )}
+    <div className={cn("space-y-4", className)} data-testid="player-dashboard">
+      <DeprecationNotice />
     </div>
   );
 }
 
-function EmptyState() {
+/**
+ * Notice shown briefly before redirect.
+ */
+function DeprecationNotice() {
   return (
-    <div className="relative overflow-hidden rounded-xl border border-border/40 bg-card/30 backdrop-blur-sm">
-      {/* Background pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)`,
-            backgroundSize: '24px 24px',
-          }}
-        />
-      </div>
-
-      {/* LED accent glow */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-accent/5 rounded-full blur-3xl" />
-
-      {/* Content */}
-      <div className="relative flex flex-col items-center justify-center py-24 px-8">
-        {/* Icon container */}
-        <div className="relative mb-6">
-          <div className="absolute inset-0 bg-accent/20 rounded-full blur-xl animate-pulse" />
-          <div className="relative w-20 h-20 rounded-full bg-gradient-to-br from-accent/20 to-accent/5 border border-accent/30 flex items-center justify-center">
-            <User className="h-10 w-10 text-accent/70" />
-          </div>
-        </div>
-
-        {/* Text */}
-        <h3 className="text-lg font-semibold tracking-tight mb-2">
-          Select a Player
-        </h3>
-        <p className="text-sm text-muted-foreground text-center max-w-md mb-6">
-          Use the search above to find and select a player. You'll be able to
-          view their profile, session activity, performance metrics, and loyalty
-          status.
-        </p>
-
-        {/* Quick tips */}
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <QuickTip icon="🔍" text="Search by name" />
-          <QuickTip icon="📊" text="View real-time metrics" />
-          <QuickTip icon="🎯" text="Track session activity" />
+    <div className="relative overflow-hidden rounded-xl border border-amber-500/40 bg-amber-500/10 backdrop-blur-sm p-6">
+      <div className="flex items-start gap-4">
+        <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0 mt-0.5" />
+        <div>
+          <h3 className="text-lg font-semibold text-amber-200 mb-2">
+            Component Deprecated
+          </h3>
+          <p className="text-sm text-amber-100/80 mb-2">
+            The PlayerDashboard component has been replaced with embedded search
+            in Player 360. Redirecting to /players...
+          </p>
+          <p className="text-xs text-amber-100/60">
+            See PRD-022-PATCH-OPTION-B for migration details.
+          </p>
         </div>
       </div>
-    </div>
-  );
-}
-
-function QuickTip({ icon, text }: { icon: string; text: string }) {
-  return (
-    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted/30 border border-border/30 text-xs text-muted-foreground">
-      <span>{icon}</span>
-      <span>{text}</span>
     </div>
   );
 }

@@ -8,7 +8,7 @@
  * @see DTO_CANONICAL_STANDARD.md Pattern A
  */
 
-import type { Database } from '@/types/database.types';
+import type { Database } from "@/types/database.types";
 
 import type {
   MtlEntryDTO,
@@ -19,16 +19,16 @@ import type {
   EntryBadge,
   AggBadge,
   MtlDirection,
-} from './dtos';
+} from "./dtos";
 
 // ============================================================================
 // Row Types (from database)
 // ============================================================================
 
-type MtlEntryRow = Database['public']['Tables']['mtl_entry']['Row'];
-type MtlAuditNoteRow = Database['public']['Tables']['mtl_audit_note']['Row'];
+type MtlEntryRow = Database["public"]["Tables"]["mtl_entry"]["Row"];
+type MtlAuditNoteRow = Database["public"]["Tables"]["mtl_audit_note"]["Row"];
 type MtlGamingDaySummaryRow =
-  Database['public']['Views']['mtl_gaming_day_summary']['Row'];
+  Database["public"]["Views"]["mtl_gaming_day_summary"]["Row"];
 
 /**
  * Entry row with nested audit notes from detail query
@@ -53,20 +53,20 @@ export function deriveEntryBadge(
 ): EntryBadge {
   // CTR: strictly > ("more than $10,000") per 31 CFR § 1021.311
   if (amount > thresholds.ctrThreshold) {
-    return 'ctr_met';
+    return "ctr_met";
   }
 
   // Near CTR: > 90% of threshold
   if (amount > thresholds.ctrThreshold * 0.9) {
-    return 'ctr_near';
+    return "ctr_near";
   }
 
   // Watchlist: >= (internal threshold, not regulatory)
   if (amount >= thresholds.watchlistFloor) {
-    return 'watchlist_near';
+    return "watchlist_near";
   }
 
-  return 'none';
+  return "none";
 }
 
 /**
@@ -84,20 +84,20 @@ export function deriveAggBadge(
 ): AggBadge {
   // CTR: strictly > ("more than $10,000") per 31 CFR § 1021.311
   if (dailyTotal > thresholds.ctrThreshold) {
-    return 'agg_ctr_met';
+    return "agg_ctr_met";
   }
 
   // Near CTR: > 90% of threshold
   if (dailyTotal > thresholds.ctrThreshold * 0.9) {
-    return 'agg_ctr_near';
+    return "agg_ctr_near";
   }
 
   // Watchlist: >= (internal threshold, not regulatory)
   if (dailyTotal >= thresholds.watchlistFloor) {
-    return 'agg_watchlist';
+    return "agg_watchlist";
   }
 
-  return 'none';
+  return "none";
 }
 
 // ============================================================================
@@ -211,15 +211,13 @@ export function mapGamingDaySummaryRow(
   const totalOut = row.total_out ?? 0;
 
   return {
-    casino_id: row.casino_id ?? '',
-    patron_uuid: row.patron_uuid ?? '',
+    casino_id: row.casino_id ?? "",
+    patron_uuid: row.patron_uuid ?? "",
     // Patron name fields from JOIN with player table
     patron_first_name: row.patron_first_name ?? null,
     patron_last_name: row.patron_last_name ?? null,
-    // DOB will be available after migration 20260119160045 is applied
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- temporary until migration applied
-    patron_date_of_birth: (row as any).patron_date_of_birth ?? null,
-    gaming_day: row.gaming_day ?? '',
+    patron_date_of_birth: row.patron_date_of_birth ?? null,
+    gaming_day: row.gaming_day ?? "",
     // Cash-in aggregates
     total_in: totalIn,
     count_in: row.count_in ?? 0,

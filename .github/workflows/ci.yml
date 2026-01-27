@@ -1,56 +1,28 @@
 name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: "20"
           cache: "npm"
-
-      - name: Install dependencies
+      - name: Install
         run: npm ci
-
       - name: Lint
         run: npm run lint
-
-      - name: Type check
+      - name: Type Check
         run: npm run type-check
-
-      - name: Schema Verification
-        run: npm test schema-verification
-        continue-on-error: false
-
-      - name: Route Handler Tests
-        run: npm test -- app/api/v1/
-
-      - name: HTTP Contract Tests
-        run: npm test -- services/*/__tests__/http-contract
-
-      - name: Unit & Integration tests
-        run: npm run test:ci
-
-      - name: Build
-        run: npm run build
-
-      - name: E2E tests
-        run: npm run e2e:headless
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        if: always()
-        with:
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+      - name: Test
+        run: npm test

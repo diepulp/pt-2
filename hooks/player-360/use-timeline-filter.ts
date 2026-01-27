@@ -18,14 +18,16 @@ import type { TimeLensRange } from "./use-player-weekly-series";
 /**
  * Source categories for timeline event filtering.
  * Maps to the event taxonomy from ADR-029.
+ * Aligned with timeline/types.ts SourceCategory.
  */
 export type SourceCategory =
-  | "session" // Session-related: visit_start, visit_end, table_change
-  | "gaming" // Gaming-related: rating_start, rating_end
-  | "financial" // Financial: cash_in, cash_out
-  | "loyalty" // Loyalty: points_earned, points_redeemed, promo_issued
-  | "compliance" // Compliance: self_exclusion, id_verified
-  | "note"; // Staff notes: note_added
+  | "session" // Session & Presence: visit_start, visit_end, visit_resume
+  | "gaming" // Gaming Activity: rating_start, rating_pause, rating_resume, rating_close
+  | "financial" // Financial: cash_in, cash_out, cash_observation, financial_adjustment
+  | "loyalty" // Loyalty & Rewards: points_earned, points_redeemed, promo_*
+  | "staff" // Staff Interactions: note_added, tag_applied, tag_removed
+  | "compliance" // Compliance: mtl_recorded
+  | "identity"; // Identity: player_enrolled, identity_verified
 
 // === Filter State Interface ===
 

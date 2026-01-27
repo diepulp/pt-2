@@ -52,6 +52,13 @@ These modes are LLM-neutral; any assistant that reads YAML/Markdown can apply th
 
 Each workflow mandates human approval before edits, fulfilling governance requirements from §5 of the implementation aid.
 
+## Branch Protection & Review Flow
+
+- `main` is protected: no direct pushes; all changes go through PRs.
+- PRs are opened from `agent/*` or `feature/*` branches and require Code Owner review.
+- Required checks: `npm run lint`, `npm run type-check`, `npm test` (GitHub Actions).
+- Merge is allowed only after Code Owner approval and passing checks.
+
 ## Context & Memory
 
 - `context/api-security.context.md`: Collates JWT, rate limits, RLS, and audit expectations.
@@ -67,6 +74,9 @@ Each workflow mandates human approval before edits, fulfilling governance requir
 - [x] Directories scaffolded under `.github/`, `context/`, `memory/`, `specs/`.
 - [x] Instruction, chat mode, and prompt templates committed with SDLC references.
 - [x] Root `AGENTS.md` enumerates canonical resources for CLI and IDE agents.
+- [ ] Define CODEOWNERS for domain surfaces (e.g., `components/player-360/**`).
+- [ ] Protect `main` branch; require PRs, Code Owner review, and CI checks.
+- [ ] Add CI workflow running lint, type-check, and tests on PRs.
 - [ ] Implement automation to compile AGENTS hierarchy and validate presence.
 - [ ] Restore `.claude/memory` parity and map to the new `memory/` directory.
 - [ ] Define CLI presets (Claude/Codex) that point to these artifacts.

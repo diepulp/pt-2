@@ -10,21 +10,30 @@
 
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import {
   AlertCircle,
   Calendar,
+  Check,
+  Clock,
   FileText,
   Filter,
   History,
+  Loader2,
   RefreshCw,
   Search,
   Tag,
+  User,
   UserX,
+  X,
 } from "lucide-react";
 import * as React from "react";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { PlayerSearchResultDTO } from "@/services/player/dtos";
+import { searchPlayers } from "@/services/player/http";
 
 // === Base Empty State ===
 
@@ -395,5 +404,424 @@ export function NoPermission({ resource, className }: NoPermissionProps) {
       description={`You don't have permission to view ${resource}. Contact your supervisor if you need access.`}
       className={className}
     />
+  );
+}
+
+// === Recent Players Hook (for empty state and header) ===
+
+const STORAGE_KEY = "player-360-recent-players";
+const MAX_RECENT = 10;
+
+interface RecentPlayer {
+  id: string;
+  name: string;
+  viewedAt: string;
+}
+
+/**
+ * Hook to manage recent players in localStorage.
+ */
+export function useRecentPlayers() {
+  const [recentPlayers, setRecentPlayers] = React.useState<RecentPlayer[]>([]);
+  const [isLoaded, setIsLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      if (stored) {
+        setRecentPlayers(JSON.parse(stored));
+      }
+    } catch {
+      // Ignore parse errors
+    }
+    setIsLoaded(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(recentPlayers));
+    }
+  }, [recentPlayers, isLoaded]);
+
+  const addRecent = React.useCallback((id: string, name: string) => {
+    setRecentPlayers((prev) => {
+      const filtered = prev.filter((p) => p.id !== id);
+      const updated = [
+        { id, name, viewedAt: new Date().toISOString() },
+        ...filtered,
+      ].slice(0, MAX_RECENT);
+      return updated;
+    });
+  }, []);
+
+  const removeRecent = React.useCallback((id: string) => {
+    setRecentPlayers((prev) => prev.filter((p) => p.id !== id));
+  }, []);
+
+  const clearAll = React.useCallback(() => {
+    setRecentPlayers([]);
+  }, []);
+
+  return { recentPlayers, isLoaded, addRecent, removeRecent, clearAll };
+}
+
+function formatTimeAgo(isoDate: string): string {
+  const date = new Date(isoDate);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+// === Status Color Utility ===
+
+const getStatusColor = (status: "enrolled" | "not_enrolled") =>
+  status === "enrolled"
+    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+    : "bg-slate-400/20 text-slate-400 border-slate-400/30";
+
+// === Player 360 Empty State with Search (PRD-022-PATCH-OPTION-B) ===
+
+interface Player360EmptyStateProps {
+  /** Callback when a player is selected */
+  onSelectPlayer?: (playerId: string) => void;
+  className?: string;
+}
+
+/**
+ * Empty state for Player 360 when no player is selected.
+ * Includes search input and recent players list.
+ *
+ * @see PRD-022-PATCH-OPTION-B - Refactored to include search in empty state
+ */
+export function Player360EmptyState({
+  onSelectPlayer,
+  className,
+}: Player360EmptyStateProps) {
+  const inputRef = React.useRef<HTMLInputElement>(null);
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const { recentPlayers, isLoaded, removeRecent, clearAll } =
+    useRecentPlayers();
+
+  // Detect OS for keyboard shortcut display
+  const isMac =
+    typeof window !== "undefined" &&
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- userAgentData not in all TS type defs yet
+    ((navigator as any).userAgentData?.platform
+      ?.toLowerCase()
+      .includes("mac") ??
+      navigator.userAgent.toLowerCase().includes("mac"));
+  const modKey = isMac ? "⌘" : "Ctrl";
+
+  // Keyboard shortcut handler
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Debounce search term (300ms)
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchTerm.length >= 2) {
+        setDebouncedSearch(searchTerm);
+      } else {
+        setDebouncedSearch("");
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  // Fetch players from API
+  const {
+    data: searchResults = [],
+    isLoading: isSearching,
+    error,
+  } = useQuery({
+    queryKey: ["players", "search", debouncedSearch],
+    queryFn: () => searchPlayers(debouncedSearch, 20),
+    enabled: debouncedSearch.length >= 2,
+    staleTime: 30_000,
+  });
+
+  const handleSelect = (player: PlayerSearchResultDTO) => {
+    onSelectPlayer?.(player.id);
+    setSearchTerm("");
+    setDebouncedSearch("");
+  };
+
+  const handleSelectRecent = (playerId: string) => {
+    onSelectPlayer?.(playerId);
+  };
+
+  const handleClear = () => {
+    setSearchTerm("");
+    setDebouncedSearch("");
+    inputRef.current?.focus();
+  };
+
+  const showSearchResults = searchTerm.length >= 2;
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-start h-full pt-16 px-4",
+        "bg-gradient-to-b from-transparent via-accent/5 to-transparent",
+        className,
+      )}
+      data-testid="player-360-empty-state"
+    >
+      {/* Header Section */}
+      <div className="text-center mb-8">
+        <div className="relative mb-4 inline-block">
+          <div className="absolute inset-0 w-20 h-20 bg-accent/20 rounded-full blur-xl" />
+          <div
+            className={cn(
+              "relative w-16 h-16 rounded-full",
+              "bg-gradient-to-br from-accent/20 to-accent/5",
+              "border border-accent/30",
+              "flex items-center justify-center",
+            )}
+          >
+            <Search className="h-8 w-8 text-accent/70" />
+          </div>
+        </div>
+        <h2 className="text-xl font-semibold mb-1 tracking-tight">
+          Player 360
+        </h2>
+        <p className="text-muted-foreground text-sm">
+          Search for a player to view their profile
+        </p>
+      </div>
+
+      {/* Search Section */}
+      <div className="w-full max-w-md">
+        {/* Search Input */}
+        <div className="relative mb-4">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            type="text"
+            placeholder="Search by name, ID, or phone..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={cn(
+              "w-full pl-12 pr-24 py-3 text-base rounded-xl",
+              "bg-background/80 border border-border/60",
+              "focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60",
+              "placeholder:text-muted-foreground/50",
+              "transition-all duration-200",
+              "shadow-sm",
+            )}
+            data-testid="search-input"
+          />
+          {/* Keyboard shortcut hint or clear button */}
+          {searchTerm ? (
+            <button
+              onClick={handleClear}
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted/50 rounded"
+            >
+              <X className="h-4 w-4 text-muted-foreground" />
+            </button>
+          ) : (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs text-muted-foreground/60">
+              <kbd className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/50 font-mono">
+                {modKey}
+              </kbd>
+              <span>+</span>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted/50 border border-border/50 font-mono">
+                K
+              </kbd>
+            </div>
+          )}
+        </div>
+
+        {/* Search Results */}
+        {showSearchResults && (
+          <div className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-lg overflow-hidden mb-4">
+            {isSearching ? (
+              <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Searching...</span>
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-sm text-destructive/70">
+                Search failed. Please try again.
+              </div>
+            ) : searchResults.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground/70">
+                No players found for &quot;{searchTerm}&quot;
+              </div>
+            ) : (
+              <div className="max-h-72 overflow-y-auto">
+                {searchResults.map((player) => (
+                  <button
+                    key={player.id}
+                    onClick={() => handleSelect(player)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3",
+                      "hover:bg-muted/50 transition-colors text-left",
+                      "border-b border-border/30 last:border-b-0",
+                    )}
+                    data-testid={`player-result-${player.id.slice(0, 8)}`}
+                  >
+                    {/* Avatar */}
+                    <div
+                      className={cn(
+                        "w-10 h-10 rounded-full shrink-0",
+                        "bg-gradient-to-br from-accent/20 to-accent/5",
+                        "border border-accent/30",
+                        "flex items-center justify-center",
+                        "text-sm font-medium text-accent",
+                      )}
+                    >
+                      {player.full_name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")
+                        .slice(0, 2)}
+                    </div>
+
+                    {/* Player info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium truncate">
+                          {player.full_name}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={cn(
+                            "text-[10px] h-4 px-1.5 capitalize shrink-0",
+                            getStatusColor(player.enrollment_status),
+                          )}
+                        >
+                          {player.enrollment_status === "enrolled"
+                            ? "Enrolled"
+                            : "Not Enrolled"}
+                        </Badge>
+                      </div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {player.birth_date
+                          ? `DOB: ${player.birth_date}`
+                          : `ID: ${player.id.slice(0, 8)}...`}
+                      </div>
+                    </div>
+
+                    {/* Selection indicator */}
+                    <div
+                      className={cn(
+                        "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0",
+                        "border-accent/30 group-hover:border-accent",
+                      )}
+                    >
+                      <Check className="h-3 w-3 text-accent opacity-0 group-hover:opacity-100" />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Recent Players Section */}
+        {!showSearchResults && isLoaded && (
+          <div className="mt-6">
+            {recentPlayers.length > 0 ? (
+              <>
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm font-medium text-muted-foreground">
+                    Recent Players
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAll}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all
+                  </Button>
+                </div>
+                <div className="bg-card/50 backdrop-blur-sm rounded-xl border border-border/40 overflow-hidden">
+                  {recentPlayers.map((player) => (
+                    <div
+                      key={player.id}
+                      className={cn(
+                        "group flex items-center gap-3 px-4 py-3",
+                        "hover:bg-muted/30 transition-colors",
+                        "border-b border-border/30 last:border-b-0",
+                      )}
+                    >
+                      <button
+                        onClick={() => handleSelectRecent(player.id)}
+                        className="flex-1 flex items-center gap-3 text-left min-w-0"
+                      >
+                        <div
+                          className={cn(
+                            "w-9 h-9 rounded-full shrink-0",
+                            "bg-muted/50 border border-border/50",
+                            "flex items-center justify-center",
+                          )}
+                        >
+                          <User className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">
+                            {player.name}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground/60">
+                            {formatTimeAgo(player.viewedAt)}
+                          </div>
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeRecent(player.id);
+                        }}
+                        className={cn(
+                          "p-1.5 rounded-md hover:bg-muted/50",
+                          "opacity-0 group-hover:opacity-100 transition-opacity",
+                        )}
+                        aria-label={`Remove ${player.name} from recent`}
+                      >
+                        <X className="h-3.5 w-3.5 text-muted-foreground" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <Clock className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
+                <p className="text-sm text-muted-foreground/60">
+                  Recently viewed players will appear here
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Search hint when empty */}
+        {!showSearchResults && searchTerm.length === 0 && (
+          <p className="text-center text-xs text-muted-foreground/60 mt-2">
+            Type at least 2 characters to search
+          </p>
+        )}
+      </div>
+    </div>
   );
 }

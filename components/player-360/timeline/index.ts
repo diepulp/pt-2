@@ -27,6 +27,15 @@ export {
   type TimelineCardExpanded,
 } from "./types";
 
+// Grouped Timeline Components
+export { CategoryIndicatorBar } from "./category-indicator-bar";
+export {
+  groupEventsIntoBlocks,
+  TimeBlockGroup,
+  type TimeBlock,
+} from "./time-block-group";
+export { GroupedTimeline } from "./grouped-timeline";
+
 // Filter Contract (WS-UX-B)
 export {
   countActiveEventTypeFilters,

@@ -3,10 +3,14 @@ name: prd-pipeline
 description: >
   This skill should be used when the user asks to "execute a PRD",
   "run /prd-execute", "implement PRD-XXX", "resume pipeline execution",
-  "generate an EXECUTION-SPEC", or mentions "prd-pipeline". Orchestrates
+  "generate an EXECUTION-SPEC", "execute investigation findings",
+  "implement investigation doc", or provides a file path to any
+  specification document (PRD, investigation, EXEC-SPEC, or issue doc).
+  Also triggers when user mentions "prd-pipeline" or asks to implement
+  findings from docs/issues/ or similar specification paths. Orchestrates
   PRD-to-Production implementation with phased workstream execution,
   validation gates, and checkpoint-based resume capability.
-version: 1.1.0
+version: 1.2.0
 ---
 
 # PRD Pipeline Orchestrator
@@ -14,9 +18,24 @@ version: 1.1.0
 ## Entry Point
 
 ```
-/prd-execute PRD-XXX          # Fresh execution
-/prd-execute PRD-XXX --resume # Resume from checkpoint
+/prd-execute PRD-XXX                                    # Execute PRD by ID
+/prd-execute PRD-XXX --resume                           # Resume from checkpoint
+/prd-execute docs/issues/perf/INVESTIGATION.md          # Execute investigation doc
+/prd-execute docs/10-prd/PRD-022-feature-name.md        # Execute PRD by path
 ```
+
+## Supported Input Types
+
+| Input Format | Example | Resolution |
+|--------------|---------|------------|
+| PRD identifier | `PRD-003` | `docs/10-prd/PRD-003*.md` |
+| PRD file path | `docs/10-prd/PRD-022-feature.md` | Direct path |
+| Investigation doc | `docs/issues/perf/INVESTIGATION.md` | Direct path |
+| Issue spec | `docs/issues/ISSUE-XXX.md` | Direct path |
+| EXEC-SPEC ID | `EXEC-SPEC-022` | `docs/20-architecture/specs/*/EXEC-SPEC-022.md` |
+| Any spec path | `docs/20-architecture/specs/ADR-029/EXEC-SPEC.md` | Direct path |
+
+**IMPORTANT**: This skill accepts ANY specification document that contains implementation requirements, not just PRDs. Investigation docs, issue specs, and findings documents are all valid inputs.
 
 ## Resources
 
@@ -67,7 +86,12 @@ These files contain deterministic rules that MUST be validated against during sp
 
 ### Stage 1: Architectural Scaffolding
 
-1. Read PRD document from `docs/10-prd/`
+1. **Locate specification document** using input resolution:
+   - If input is a file path (contains `/` or ends with `.md`): use directly
+   - If input matches `PRD-XXX` pattern: resolve to `docs/10-prd/PRD-XXX*.md`
+   - If input matches `EXEC-SPEC-XXX` pattern: resolve to `docs/20-architecture/specs/*/EXEC-SPEC-XXX.md`
+   - If input matches `ISSUE-XXX` pattern: resolve to `docs/issues/ISSUE-XXX*.md`
+   - Extract spec ID from filename for checkpoint naming (e.g., `PIT_DASHBOARD_DATA_FLOW_INVESTIGATION` → checkpoint ID)
 2. **Load context files** (architecture, governance, quality)
 3. Invoke `lead-architect` skill for **scaffolding only**:
    - Vertical slice boundaries

@@ -2921,6 +2921,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: {
         Args: { p_casino_id: string }
         Returns: Json

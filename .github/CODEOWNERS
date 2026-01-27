@@ -1,0 +1,18 @@
+# Code Owners - PRD-022 Player 360 Navigation Consolidation
+#
+# Player 360 canonical detail surface ownership.
+# Navigation utilities shared across player flows.
+#
+# Note: Replace @pt2-frontend-team with actual GitHub team/user.
+
+# Player 360 components - canonical detail surface
+/components/player-360/** @pt2-frontend-team
+
+# Navigation utilities (returnTo param handling, breadcrumb)
+/lib/navigation/** @pt2-frontend-team
+
+# Player 360 query key registry
+/hooks/player-360/** @pt2-frontend-team
+
+# Player dashboard (lookup-only surface)
+/components/player-dashboard/** @pt2-frontend-team

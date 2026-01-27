@@ -76,12 +76,21 @@ export function FilterTile({
     onClear();
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      handleClick();
+    }
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={handleClick}
+      onKeyDown={handleKeyDown}
       className={cn(
-        "relative flex items-center justify-between w-full px-3 py-2 rounded-md",
+        "relative flex items-center justify-between w-full px-3 py-2 rounded-md cursor-pointer",
         "border border-border/40 bg-card/30 transition-all",
         "hover:bg-card/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
         isActive && "ring-2 ring-primary bg-primary/5",
@@ -117,6 +126,6 @@ export function FilterTile({
           <X className="h-3 w-3" />
         </button>
       )}
-    </button>
+    </div>
   );
 }

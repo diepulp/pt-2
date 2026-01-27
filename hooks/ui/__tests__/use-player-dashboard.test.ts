@@ -104,6 +104,41 @@ describe('usePlayerDashboard', () => {
     });
   });
 
+  /**
+   * PRD-022: Row Highlight Only
+   *
+   * selectedPlayerId is for visual row highlighting in the lookup surface.
+   * Detail panel rendering is handled by route-based navigation to Player 360.
+   * These tests document that the store does NOT drive detail panel rendering.
+   */
+  describe('row highlight only (PRD-022)', () => {
+    it('selectedPlayerId is for row highlight, not detail panel rendering', () => {
+      const { result } = renderHook(() => usePlayerDashboard());
+
+      act(() => {
+        result.current.setSelectedPlayer('player-abc');
+      });
+
+      // Store maintains selected state for row highlight
+      expect(result.current.selectedPlayerId).toBe('player-abc');
+
+      // Note: Detail panels are NOT rendered based on this state.
+      // Navigation to /players/[playerId] handles detail rendering.
+      // This is enforced by PlayerDashboard component behavior.
+    });
+
+    it('clearSelection removes row highlight', () => {
+      const { result } = renderHook(() => usePlayerDashboard());
+
+      act(() => {
+        result.current.setSelectedPlayer('player-xyz');
+        result.current.clearSelection();
+      });
+
+      expect(result.current.selectedPlayerId).toBe(null);
+    });
+  });
+
   describe('type inference', () => {
     it('properly types selectedPlayerId as string | null', () => {
       const { result } = renderHook(() => usePlayerDashboard());

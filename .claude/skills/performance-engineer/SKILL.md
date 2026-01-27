@@ -1,8 +1,13 @@
 ---
 name: performance-engineer
-description: PT-2 performance engineering specialist for Supabase (Postgres/RLS/RPC) and API endpoints. This skill should be used when analyzing query performance, setting SLO targets, building benchmark harnesses, creating CI performance gates, or investigating latency regressions. Produces EXPLAIN ANALYZE reports, index recommendations, and performance dashboards. Follows OPS/SRE standards per OBSERVABILITY_SPEC.md §3.
-allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite, Task, WebFetch
-tags: [OPS/SRE, PERFORMANCE, SLO, BENCHMARKING]
+description: >
+  PT-2 performance engineering specialist for Supabase (Postgres/RLS/RPC) and API endpoints.
+  This skill should be used when analyzing query performance, investigating slow queries,
+  setting SLO targets, building benchmark harnesses, creating CI performance gates,
+  investigating latency regressions, or diagnosing performance issues. Also triggers on
+  "why is this slow", "optimize query", "performance regression", "p95 latency", or
+  "EXPLAIN ANALYZE". Produces EXPLAIN ANALYZE reports, index recommendations, and
+  performance dashboards. Follows OPS/SRE standards per OBSERVABILITY_SPEC.md §3.
 ---
 
 # Performance Engineer
@@ -172,13 +177,6 @@ python scripts/benchmark.py --report --output perf-report.md --slo-file .perf/sl
 python scripts/benchmark.py --suite api --baseline .perf/baseline.json --fail-on-slo
 ```
 
-# Compare against baseline
-python scripts/benchmark.py --suite api --baseline .perf/baseline.json
-
-# Generate markdown report
-python scripts/benchmark.py --report --output perf-report.md
-```
-
 **Benchmark suites:**
 - `api`: API endpoint latency (p50/p95/p99)
 - `db`: Database query performance (SQL, RPC, PostgREST)
@@ -201,7 +199,7 @@ python scripts/benchmark.py --report --output perf-report.md
 - Fails build if any endpoint exceeds SLO target
 - Generates diff report showing regressions
 
-### 4. SLO Definition
+### 6. SLO Definition
 
 To define performance targets for endpoints:
 
@@ -258,8 +256,6 @@ For PR reviews involving database or API changes:
 See `references/pr-checklist.md` for detailed checklist.
 
 ## Resources
-
-| Verify CI progression | `python ci_gate.py --baseline .perf/baseline.json --threshold 10` |
 
 ### scripts/
 

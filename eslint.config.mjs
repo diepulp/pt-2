@@ -336,6 +336,44 @@ const eslintConfig = [
     },
   }),
   // ==========================================================================
+  // PRD-022: Prevent detail panel imports from player-dashboard
+  // Detail panels must be imported from components/player-360/
+  // ==========================================================================
+  {
+    files: ['**/*.ts', '**/*.tsx'],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      'components/player-dashboard/**', // Allow internal references
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '@/components/player-dashboard/*Panel*',
+                '@/components/player-dashboard/*Notes*',
+                '@/components/player-dashboard/*Metrics*',
+                '@/components/player-dashboard/*Compliance*',
+                '@/components/player-dashboard/*Activity*',
+                '@/components/player-dashboard/*Timeline*',
+                '@/components/player-dashboard/*Profile*',
+                '@/components/player-dashboard/*Loyalty*',
+                '@/components/player-dashboard/*Session*',
+              ],
+              message:
+                'Detail panels must be imported from components/player-360/. See PRD-022.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // ==========================================================================
   // TEST FILE OVERRIDES - Must come LAST for highest precedence
   // ADR-002: Co-located test pattern standardized (services/**/*.test.ts)
   // ==========================================================================
