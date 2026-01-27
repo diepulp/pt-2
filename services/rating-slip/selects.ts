@@ -86,6 +86,37 @@ export const RATING_SLIP_PAUSE_SELECT = `
   created_by
 ` as const;
 
+// === Active Slip with Player Select (Dashboard Optimization) ===
+
+/**
+ * Rating slip with player info via visit→player join.
+ * Used by dashboard to show player names without separate fetch.
+ *
+ * PERF-002: Eliminates N+1 pattern where slips are fetched
+ * then players are fetched separately in useCasinoActivePlayers().
+ *
+ * @see PERF-002 Pit Dashboard Data Flow Optimization
+ */
+export const RATING_SLIP_WITH_PLAYER_SELECT = `
+  id,
+  casino_id,
+  visit_id,
+  table_id,
+  seat_number,
+  start_time,
+  end_time,
+  status,
+  average_bet,
+  visit!inner (
+    player_id,
+    player (
+      id,
+      first_name,
+      last_name
+    )
+  )
+` as const;
+
 // === Closed Session Selects (Start From Previous Panel) ===
 
 /**

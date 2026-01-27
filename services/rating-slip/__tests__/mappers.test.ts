@@ -19,6 +19,8 @@ import {
   toRatingSlipWithDurationDTOFromRpc,
   toRatingSlipWithPausesDTO,
   toRatingSlipWithPausesDTOOrNull,
+  toRatingSlipWithPlayerDTO,
+  toRatingSlipWithPlayerDTOList,
 } from '../mappers';
 
 // === Test Data ===
@@ -440,6 +442,211 @@ describe('Rating Slip Mappers', () => {
 
       expect(result[0].id).toBe('pause-2');
       expect(result[1].id).toBe('pause-1');
+    });
+  });
+
+  // ===========================================================================
+  // toRatingSlipWithPlayerDTO (PERF-002)
+  // ===========================================================================
+
+  describe('toRatingSlipWithPlayerDTO', () => {
+    const mockSlipWithPlayerRow = {
+      id: 'slip-123',
+      casino_id: 'casino-456',
+      visit_id: 'visit-789',
+      table_id: 'table-abc',
+      seat_number: '3',
+      start_time: '2025-01-15T10:00:00Z',
+      end_time: null,
+      status: 'open' as const,
+      average_bet: 100,
+      visit: {
+        player_id: 'player-001',
+        player: {
+          id: 'player-001',
+          first_name: 'John',
+          last_name: 'Doe',
+        },
+      },
+    };
+
+    const mockSlipWithGhostVisitRow = {
+      id: 'slip-ghost',
+      casino_id: 'casino-456',
+      visit_id: 'visit-ghost',
+      table_id: 'table-abc',
+      seat_number: '5',
+      start_time: '2025-01-15T11:00:00Z',
+      end_time: null,
+      status: 'open' as const,
+      average_bet: 50,
+      visit: {
+        player_id: null,
+        player: null,
+      },
+    };
+
+    it('should map slip with player correctly', () => {
+      const result = toRatingSlipWithPlayerDTO(mockSlipWithPlayerRow);
+
+      expect(result).toEqual({
+        id: 'slip-123',
+        casino_id: 'casino-456',
+        visit_id: 'visit-789',
+        table_id: 'table-abc',
+        seat_number: '3',
+        start_time: '2025-01-15T10:00:00Z',
+        end_time: null,
+        status: 'open',
+        average_bet: 100,
+        player: {
+          id: 'player-001',
+          firstName: 'John',
+          lastName: 'Doe',
+        },
+      });
+    });
+
+    it('should transform snake_case to camelCase for player fields', () => {
+      const result = toRatingSlipWithPlayerDTO(mockSlipWithPlayerRow);
+
+      expect(result.player?.firstName).toBe('John');
+      expect(result.player?.lastName).toBe('Doe');
+    });
+
+    it('should handle ghost visit (null player)', () => {
+      const result = toRatingSlipWithPlayerDTO(mockSlipWithGhostVisitRow);
+
+      expect(result.player).toBeNull();
+      expect(result.id).toBe('slip-ghost');
+      expect(result.seat_number).toBe('5');
+    });
+
+    it('should return a new object (immutability)', () => {
+      const result = toRatingSlipWithPlayerDTO(mockSlipWithPlayerRow);
+
+      expect(result).not.toBe(mockSlipWithPlayerRow);
+    });
+
+    it('should handle paused status', () => {
+      const pausedRow = {
+        ...mockSlipWithPlayerRow,
+        status: 'paused' as const,
+      };
+
+      const result = toRatingSlipWithPlayerDTO(pausedRow);
+
+      expect(result.status).toBe('paused');
+    });
+
+    it('should handle null seat_number', () => {
+      const noSeatRow = {
+        ...mockSlipWithPlayerRow,
+        seat_number: null,
+      };
+
+      const result = toRatingSlipWithPlayerDTO(noSeatRow);
+
+      expect(result.seat_number).toBeNull();
+    });
+  });
+
+  // ===========================================================================
+  // toRatingSlipWithPlayerDTOList (PERF-002)
+  // ===========================================================================
+
+  describe('toRatingSlipWithPlayerDTOList', () => {
+    const mockSlipWithPlayer1 = {
+      id: 'slip-1',
+      casino_id: 'casino-456',
+      visit_id: 'visit-1',
+      table_id: 'table-abc',
+      seat_number: '1',
+      start_time: '2025-01-15T10:00:00Z',
+      end_time: null,
+      status: 'open' as const,
+      average_bet: 100,
+      visit: {
+        player_id: 'player-1',
+        player: { id: 'player-1', first_name: 'Alice', last_name: 'Smith' },
+      },
+    };
+
+    const mockSlipWithPlayer2 = {
+      id: 'slip-2',
+      casino_id: 'casino-456',
+      visit_id: 'visit-2',
+      table_id: 'table-abc',
+      seat_number: '2',
+      start_time: '2025-01-15T10:30:00Z',
+      end_time: null,
+      status: 'paused' as const,
+      average_bet: 200,
+      visit: {
+        player_id: 'player-2',
+        player: { id: 'player-2', first_name: 'Bob', last_name: 'Jones' },
+      },
+    };
+
+    it('should map empty array', () => {
+      const result = toRatingSlipWithPlayerDTOList([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should map single item array', () => {
+      const result = toRatingSlipWithPlayerDTOList([mockSlipWithPlayer1]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('slip-1');
+      expect(result[0].player?.firstName).toBe('Alice');
+    });
+
+    it('should map multiple items', () => {
+      const result = toRatingSlipWithPlayerDTOList([
+        mockSlipWithPlayer1,
+        mockSlipWithPlayer2,
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].player?.firstName).toBe('Alice');
+      expect(result[1].player?.firstName).toBe('Bob');
+    });
+
+    it('should preserve order', () => {
+      const result = toRatingSlipWithPlayerDTOList([
+        mockSlipWithPlayer2,
+        mockSlipWithPlayer1,
+      ]);
+
+      expect(result[0].id).toBe('slip-2');
+      expect(result[1].id).toBe('slip-1');
+    });
+
+    it('should handle mixed player/ghost visits', () => {
+      const ghostSlip = {
+        id: 'slip-ghost',
+        casino_id: 'casino-456',
+        visit_id: 'visit-ghost',
+        table_id: 'table-abc',
+        seat_number: '3',
+        start_time: '2025-01-15T11:00:00Z',
+        end_time: null,
+        status: 'open' as const,
+        average_bet: 50,
+        visit: { player_id: null, player: null },
+      };
+
+      const result = toRatingSlipWithPlayerDTOList([
+        mockSlipWithPlayer1,
+        ghostSlip,
+        mockSlipWithPlayer2,
+      ]);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].player).not.toBeNull();
+      expect(result[1].player).toBeNull();
+      expect(result[2].player).not.toBeNull();
     });
   });
 

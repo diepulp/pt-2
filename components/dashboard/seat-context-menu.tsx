@@ -10,10 +10,10 @@
  * @see EXECUTION-SPEC-PRD-006.md WS4
  */
 
-'use client';
+"use client";
 
-import { User, UserPlus, Pause, Play, X, ArrowRightLeft } from 'lucide-react';
-import * as React from 'react';
+import { User, UserPlus, Pause, Play, X, ArrowRightLeft } from "lucide-react";
+import * as React from "react";
 
 import {
   DropdownMenu,
@@ -22,15 +22,19 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
-import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
+import type {
+  ActivePlayerForDashboardDTO,
+  RatingSlipDTO,
+  RatingSlipWithPlayerDTO,
+} from "@/services/rating-slip/dtos";
 
 export interface SeatOccupant {
   firstName: string;
   lastName: string;
   slipId?: string;
-  slipStatus?: 'open' | 'paused';
+  slipStatus?: "open" | "paused";
 }
 
 interface SeatContextMenuProps {
@@ -66,8 +70,8 @@ export function SeatContextMenu({
   disabled,
 }: SeatContextMenuProps) {
   const isOccupied = occupant !== null;
-  const isPaused = occupant?.slipStatus === 'paused';
-  const isOpen = occupant?.slipStatus === 'open';
+  const isPaused = occupant?.slipStatus === "paused";
+  const isOpen = occupant?.slipStatus === "open";
 
   return (
     <DropdownMenu>
@@ -78,7 +82,7 @@ export function SeatContextMenu({
         {/* Seat header */}
         <DropdownMenuLabel
           className="text-xs font-bold uppercase tracking-widest"
-          style={{ fontFamily: 'monospace' }}
+          style={{ fontFamily: "monospace" }}
         >
           Seat {seatNumber}
         </DropdownMenuLabel>
@@ -176,6 +180,7 @@ export function SeatContextMenu({
 
 /**
  * Maps rating slips to seat occupants for the context menu.
+ * @deprecated Use mapActivePlayersToOccupants for real player names.
  */
 export function mapSlipsToOccupants(
   slips: RatingSlipDTO[],
@@ -185,12 +190,12 @@ export function mapSlipsToOccupants(
   for (const slip of slips) {
     if (
       slip.seat_number &&
-      (slip.status === 'open' || slip.status === 'paused')
+      (slip.status === "open" || slip.status === "paused")
     ) {
       // Note: Player name would need to be fetched separately via visit → player join
       // For MVP, we show seat as occupied without full player details
       occupants.set(slip.seat_number, {
-        firstName: 'Player', // Placeholder - need visit/player join
+        firstName: "Player", // Placeholder - need visit/player join
         lastName: `#${slip.seat_number}`,
         slipId: slip.id,
         slipStatus: slip.status,
@@ -202,13 +207,89 @@ export function mapSlipsToOccupants(
 }
 
 /**
+ * Maps active player DTOs to seat occupants for the table layout.
+ * Uses real player names from the joined visit → player data.
+ *
+ * @param players - Active players from casino-wide or table-filtered query
+ * @param tableId - Optional table ID to filter players (if not already filtered)
+ * @returns Map of seat number to occupant with real player names
+ */
+export function mapActivePlayersToOccupants(
+  players: ActivePlayerForDashboardDTO[],
+  tableId?: string,
+): Map<string, SeatOccupant> {
+  const occupants = new Map<string, SeatOccupant>();
+
+  for (const player of players) {
+    // Skip if filtering by table and doesn't match
+    if (tableId && player.tableId !== tableId) continue;
+
+    // Skip if no seat number
+    if (!player.seatNumber) continue;
+
+    // Use real player name, fallback to "Guest" for ghost visits
+    const firstName = player.player?.firstName ?? "Guest";
+    const lastName = player.player?.lastName ?? "";
+
+    occupants.set(player.seatNumber, {
+      firstName,
+      lastName,
+      slipId: player.slipId,
+      slipStatus: player.status,
+    });
+  }
+
+  return occupants;
+}
+
+/**
  * Gets list of occupied seat numbers from slips.
  */
 export function getOccupiedSeats(slips: RatingSlipDTO[]): string[] {
   return slips
     .filter(
-      (s) => s.seat_number && (s.status === 'open' || s.status === 'paused'),
+      (s) => s.seat_number && (s.status === "open" || s.status === "paused"),
     )
     .map((s) => s.seat_number!)
     .filter((seat): seat is string => seat !== null);
+}
+
+/**
+ * Maps rating slips with embedded player data to seat occupants.
+ * Uses real player names from the joined visit → player data.
+ *
+ * PERF-002: This is the optimized version that eliminates the need
+ * for a separate useCasinoActivePlayers() call by using slips
+ * that already have player names embedded.
+ *
+ * @param slips - Rating slips with player data from listActiveForTableWithPlayer()
+ * @returns Map of seat number to occupant with real player names
+ *
+ * @see PERF-002 Pit Dashboard Data Flow Optimization
+ */
+export function mapSlipsWithPlayerToOccupants(
+  slips: RatingSlipWithPlayerDTO[],
+): Map<string, SeatOccupant> {
+  const occupants = new Map<string, SeatOccupant>();
+
+  for (const slip of slips) {
+    // Skip if no seat number
+    if (!slip.seat_number) continue;
+
+    // Skip if not active (open or paused)
+    if (slip.status !== "open" && slip.status !== "paused") continue;
+
+    // Use real player name, fallback to "Guest" for ghost visits
+    const firstName = slip.player?.firstName ?? "Guest";
+    const lastName = slip.player?.lastName ?? "";
+
+    occupants.set(slip.seat_number, {
+      firstName,
+      lastName,
+      slipId: slip.id,
+      slipStatus: slip.status,
+    });
+  }
+
+  return occupants;
 }

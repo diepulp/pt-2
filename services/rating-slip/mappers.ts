@@ -11,8 +11,8 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { VisitLiveViewDTO } from '@/services/visit/dtos';
-import type { Json } from '@/types/database.types';
+import type { VisitLiveViewDTO } from "@/services/visit/dtos";
+import type { Json } from "@/types/database.types";
 
 import type {
   ActivePlayerForDashboardDTO,
@@ -22,7 +22,8 @@ import type {
   RatingSlipStatus,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-} from './dtos';
+  RatingSlipWithPlayerDTO,
+} from "./dtos";
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -203,6 +204,72 @@ export function toRatingSlipWithPausesDTOOrNull(
   return row ? toRatingSlipWithPausesDTO(row) : null;
 }
 
+// === Rating Slip With Player Mappers (PERF-002) ===
+
+/**
+ * Type for rows returned by RATING_SLIP_WITH_PLAYER_SELECT query.
+ * Includes nested visit→player join data.
+ *
+ * @see PERF-002 Pit Dashboard Data Flow Optimization
+ */
+type RatingSlipWithPlayerSelectedRow = {
+  id: string;
+  casino_id: string;
+  visit_id: string;
+  table_id: string;
+  seat_number: string | null;
+  start_time: string;
+  end_time: string | null;
+  status: RatingSlipStatus;
+  average_bet: number | null;
+  visit: {
+    player_id: string | null;
+    player: {
+      id: string;
+      first_name: string;
+      last_name: string;
+    } | null;
+  };
+};
+
+/**
+ * Maps a rating slip row with player join to RatingSlipWithPlayerDTO.
+ * Handles null player for ghost visits (visit.player_id = null).
+ *
+ * @see PERF-002 WS2
+ */
+export function toRatingSlipWithPlayerDTO(
+  row: RatingSlipWithPlayerSelectedRow,
+): RatingSlipWithPlayerDTO {
+  return {
+    id: row.id,
+    casino_id: row.casino_id,
+    visit_id: row.visit_id,
+    table_id: row.table_id,
+    seat_number: row.seat_number,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    status: row.status,
+    average_bet: row.average_bet,
+    player: row.visit.player
+      ? {
+          id: row.visit.player.id,
+          firstName: row.visit.player.first_name,
+          lastName: row.visit.player.last_name,
+        }
+      : null,
+  };
+}
+
+/**
+ * Maps an array of rating slip rows with player join to RatingSlipWithPlayerDTO[].
+ */
+export function toRatingSlipWithPlayerDTOList(
+  rows: RatingSlipWithPlayerSelectedRow[],
+): RatingSlipWithPlayerDTO[] {
+  return rows.map(toRatingSlipWithPlayerDTO);
+}
+
 // === Visit Live View Mappers (PRD-016) ===
 
 /**
@@ -215,13 +282,13 @@ type VisitLiveViewRpcResponse = {
   player_id: string;
   player_first_name: string;
   player_last_name: string;
-  visit_status: 'open' | 'closed';
+  visit_status: "open" | "closed";
   started_at: string;
   current_segment_slip_id: string | null;
   current_segment_table_id: string | null;
   current_segment_table_name: string | null;
   current_segment_seat_number: string | null;
-  current_segment_status: 'open' | 'paused' | null;
+  current_segment_status: "open" | "paused" | null;
   current_segment_started_at: string | null;
   current_segment_average_bet: number | null;
   session_total_duration_seconds: number;
@@ -390,13 +457,13 @@ export function toActivePlayerForDashboardDTO(
     pitName: row.pit_name,
     seatNumber: row.seat_number,
     startTime: row.start_time,
-    status: row.status as 'open' | 'paused',
+    status: row.status as "open" | "paused",
     averageBet: row.average_bet ? Number(row.average_bet) : null,
     player: row.player_id
       ? {
           id: row.player_id,
-          firstName: row.player_first_name ?? '',
-          lastName: row.player_last_name ?? '',
+          firstName: row.player_first_name ?? "",
+          lastName: row.player_last_name ?? "",
           birthDate: row.player_birth_date,
           tier: row.player_tier,
         }

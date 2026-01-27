@@ -14,18 +14,18 @@
  * @see EXECUTION-SPEC-PRD-006.md WS2, WS4, WS5
  */
 
-'use client';
+"use client";
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import * as React from 'react';
-import { useOptimistic } from 'react';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
+import { useOptimistic } from "react";
 
 import {
   RatingSlipModal,
   type FormState,
-} from '@/components/modals/rating-slip/rating-slip-modal';
-import { TableLayoutTerminal } from '@/components/table/table-layout-terminal';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+} from "@/components/modals/rating-slip/rating-slip-modal";
+import { TableLayoutTerminal } from "@/components/table/table-layout-terminal";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   useDashboardTables,
   useDashboardStats,
@@ -34,44 +34,43 @@ import {
   useDashboardPromoExposure,
   RealtimeStatusIndicator,
   dashboardKeys,
-} from '@/hooks/dashboard';
+} from "@/hooks/dashboard";
 import {
   useSaveWithBuyIn,
   useCloseWithFinancial,
   useMovePlayer,
   useRatingSlipModalData,
-} from '@/hooks/rating-slip-modal';
-import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
-import { useAuth } from '@/hooks/use-auth';
-import { useGamingDay } from '@/hooks/use-casino';
+} from "@/hooks/rating-slip-modal";
+import { toast, useModal, usePitDashboardUI } from "@/hooks/ui";
+import { useAuth } from "@/hooks/use-auth";
+import { useGamingDay } from "@/hooks/use-casino";
 import {
   getErrorMessage,
   logError,
   isFetchError,
-} from '@/lib/errors/error-utils';
+} from "@/lib/errors/error-utils";
 import {
   pauseRatingSlip,
   resumeRatingSlip,
   closeRatingSlip,
-} from '@/services/rating-slip/http';
+} from "@/services/rating-slip/http";
 
-import { ActiveSlipsPanel } from './active-slips-panel';
-import { NewSlipModal } from './new-slip-modal';
-import { PromoExposurePanel } from './promo-exposure-panel';
+import { ActiveSlipsPanel } from "./active-slips-panel";
+import { NewSlipModal } from "./new-slip-modal";
+import { PromoExposurePanel } from "./promo-exposure-panel";
 import {
-  getOccupiedSeats,
-  mapSlipsToOccupants,
+  mapSlipsWithPlayerToOccupants,
   type SeatOccupant,
-} from './seat-context-menu';
-import { StatsBar } from './stats-bar';
-import { TableGrid } from './table-grid';
+} from "./seat-context-menu";
+import { StatsBar } from "./stats-bar";
+import { TableGrid } from "./table-grid";
 
 /**
  * Optimistic move action for seat updates.
  * Applied immediately before mutation completes.
  */
 interface OptimisticMoveAction {
-  type: 'move';
+  type: "move";
   fromSeatNumber: string;
   toSeatNumber: string | null;
   toTableId: string;
@@ -132,6 +131,9 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     selectedTableId ?? undefined,
   );
 
+  // PERF-002: Removed useCasinoActivePlayers() call
+  // Player names are now embedded in activeSlips via RatingSlipWithPlayerDTO
+
   // Realtime subscriptions (WS5)
   const { isConnected: realtimeConnected, error: realtimeError } =
     useDashboardRealtime({
@@ -151,7 +153,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
 
   // Query: Modal data (fetched when modal is open and type is rating-slip)
   const { data: ratingSlipModalData } = useRatingSlipModalData(
-    isModalOpen && modalType === 'rating-slip' ? selectedSlipId : null,
+    isModalOpen && modalType === "rating-slip" ? selectedSlipId : null,
   );
 
   // Mutations: Modal operations
@@ -213,7 +215,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Auto-select first active table if none selected
   React.useEffect(() => {
     if (!selectedTableId && tables.length > 0) {
-      const firstActive = tables.find((t) => t.status === 'active');
+      const firstActive = tables.find((t) => t.status === "active");
       if (firstActive) {
         setSelectedTable(firstActive.id);
       } else {
@@ -229,11 +231,11 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     [tables, selectedTableId],
   );
 
-  // Map slips to seat occupants
-  const seatOccupants = React.useMemo(
-    () => mapSlipsToOccupants(activeSlips),
-    [activeSlips],
-  );
+  // PERF-002: Map slips with embedded player data to seat occupants
+  // Player names come from the RatingSlipWithPlayerDTO (no separate fetch needed)
+  const seatOccupants = React.useMemo(() => {
+    return mapSlipsWithPlayerToOccupants(activeSlips);
+  }, [activeSlips]);
 
   // Optimistic seat updates using React 19 useOptimistic
   // Applies pending move actions immediately for instant UI feedback
@@ -256,7 +258,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
           updated.set(action.toSeatNumber, {
             ...action.occupant,
             slipId: undefined, // Will get new slip ID after mutation
-            slipStatus: 'open',
+            slipStatus: "open",
           });
         }
       } else {
@@ -285,13 +287,13 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Modal callback: Save with optional buy-in
   const handleSave = async (formState: FormState) => {
     if (!selectedSlipId || !ratingSlipModalData) {
-      console.error('Save failed: No slip or modal data');
+      console.error("Save failed: No slip or modal data");
       return;
     }
 
     if (!staffId) {
       console.error(
-        'Save failed: No staff ID available - authentication required',
+        "Save failed: No staff ID available - authentication required",
       );
       return;
     }
@@ -310,14 +312,14 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         playerDailyTotal: formState.playerDailyTotal,
       });
       // PRD-019 WS3: Show success toast and close modal after successful save
-      toast.success('Rating slip saved');
+      toast.success("Rating slip saved");
       closeModal();
     } catch (error) {
       // Show user-friendly error toast (same pattern as movePlayer)
-      toast.error('Error', { description: getErrorMessage(error) });
+      toast.error("Error", { description: getErrorMessage(error) });
       // Only log unexpected errors (not business validation errors)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: 'PitDashboard', action: 'saveWithBuyIn' });
+        logError(error, { component: "PitDashboard", action: "saveWithBuyIn" });
       }
     }
   };
@@ -325,13 +327,13 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Modal callback: Close session with chips-taken
   const handleCloseSession = async (formState: FormState) => {
     if (!selectedSlipId || !ratingSlipModalData || !selectedTableId) {
-      console.error('Close failed: No slip, modal data, or table ID');
+      console.error("Close failed: No slip, modal data, or table ID");
       return;
     }
 
     if (!staffId) {
       console.error(
-        'Close failed: No staff ID available - authentication required',
+        "Close failed: No staff ID available - authentication required",
       );
       return;
     }
@@ -348,14 +350,14 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         averageBet: Number(formState.averageBet),
       });
       // PRD-019 WS3: Show success toast and close modal after successful close
-      toast.success('Session closed');
+      toast.success("Session closed");
       closeModal();
     } catch (error) {
       // Show user-friendly error toast (same pattern as movePlayer)
-      toast.error('Error', { description: getErrorMessage(error) });
+      toast.error("Error", { description: getErrorMessage(error) });
       // Only log unexpected errors (not business validation errors)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: 'PitDashboard', action: 'closeSession' });
+        logError(error, { component: "PitDashboard", action: "closeSession" });
       }
     }
   };
@@ -364,9 +366,9 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   // Uses React 19 useOptimistic for instant seat updates
   const handleMovePlayer = async (formState: FormState) => {
     if (!selectedSlipId) {
-      logError(new Error('Move failed: No slip selected'), {
-        component: 'PitDashboard',
-        action: 'movePlayer',
+      logError(new Error("Move failed: No slip selected"), {
+        component: "PitDashboard",
+        action: "movePlayer",
       });
       return;
     }
@@ -383,7 +385,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       const currentOccupant = seatOccupants.get(currentSeatNumber);
       if (currentOccupant) {
         applyOptimisticMove({
-          type: 'move',
+          type: "move",
           fromSeatNumber: currentSeatNumber,
           toSeatNumber: formState.newSeatNumber || null,
           toTableId: formState.newTableId,
@@ -414,15 +416,15 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       // PRD-019 WS2: Do NOT auto-open the new slip modal
       // User can manually click the destination seat to open the new slip
       // PRD-019 WS3: Show success toast after successful move
-      toast.success('Player moved');
+      toast.success("Player moved");
     } catch (error) {
       // Show error toast with specific message since modal is already closed
       // Optimistic update auto-reverts when mutation fails (useOptimistic behavior)
       // TanStack Query rollback in use-move-player.ts handles cache rollback
-      toast.error('Error', { description: getErrorMessage(error) });
+      toast.error("Error", { description: getErrorMessage(error) });
       // Only log unexpected errors (not business errors like SEAT_OCCUPIED)
       if (!isFetchError(error) || error.status >= 500) {
-        logError(error, { component: 'PitDashboard', action: 'movePlayer' });
+        logError(error, { component: "PitDashboard", action: "movePlayer" });
       }
     }
   };
@@ -439,19 +441,19 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       const slipOccupant = seatOccupants.get(seatNumber);
       if (slipOccupant?.slipId) {
         setSelectedSlip(slipOccupant.slipId);
-        openModal('rating-slip', { slipId: slipOccupant.slipId });
+        openModal("rating-slip", { slipId: slipOccupant.slipId });
       }
     } else {
       // Seat is empty - open new slip modal
       setNewSlipSeatNumber(seatNumber);
-      openModal('new-slip', { seatNumber });
+      openModal("new-slip", { seatNumber });
     }
   };
 
   // Handle opening new slip modal (from panel button)
   const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
-    openModal('new-slip', {});
+    openModal("new-slip", {});
   };
 
   // Handle errors
@@ -460,12 +462,12 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       <div className="flex flex-col items-center justify-center rounded-lg border-2 border-destructive/50 bg-destructive/10 p-12">
         <div
           className="text-sm font-bold uppercase tracking-widest text-destructive"
-          style={{ fontFamily: 'monospace' }}
+          style={{ fontFamily: "monospace" }}
         >
           Error Loading Dashboard
         </div>
         <p className="mt-2 text-xs text-muted-foreground">
-          {tablesError?.message || statsError?.message || 'Unknown error'}
+          {tablesError?.message || statsError?.message || "Unknown error"}
         </p>
       </div>
     );
@@ -510,7 +512,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
               <CardHeader>
                 <CardTitle
                   className="text-base font-bold uppercase tracking-widest"
-                  style={{ fontFamily: 'monospace' }}
+                  style={{ fontFamily: "monospace" }}
                 >
                   Table {selectedTable.label} — {selectedTable.type}
                 </CardTitle>
@@ -537,7 +539,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
               <CardContent className="flex flex-col items-center justify-center py-16">
                 <div
                   className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-                  style={{ fontFamily: 'monospace' }}
+                  style={{ fontFamily: "monospace" }}
                 >
                   No Table Selected
                 </div>
@@ -557,7 +559,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
             onNewSlip={handleNewSlip}
             onSlipClick={(slipId) => {
               setSelectedSlip(slipId);
-              openModal('rating-slip', { slipId });
+              openModal("rating-slip", { slipId });
             }}
           />
         </div>
@@ -574,7 +576,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       {/* New Slip Modal */}
       {selectedTableId && (
         <NewSlipModal
-          open={isModalOpen && modalType === 'new-slip'}
+          open={isModalOpen && modalType === "new-slip"}
           onOpenChange={(open) => {
             if (!open) {
               closeModal();
@@ -590,7 +592,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
       {/* Rating Slip Modal - uses useTransition internally for pending states */}
       <RatingSlipModal
         slipId={selectedSlipId}
-        isOpen={isModalOpen && modalType === 'rating-slip'}
+        isOpen={isModalOpen && modalType === "rating-slip"}
         onClose={() => {
           closeModal();
           // Reset mutation states to prevent stale errors affecting other slips

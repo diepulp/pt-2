@@ -7,29 +7,43 @@
  * - Checked-in players count
  * - Current gaming day
  *
+ * PERF-002: Refactored to use single rpc_get_dashboard_stats RPC
+ * instead of 4 separate HTTP calls (fetchTables, listRatingSlips×2, getVisits).
+ *
  * @see PRD-006 Pit Dashboard UI
- * @see EXECUTION-SPEC-PRD-006.md WS3
+ * @see PERF-002 Pit Dashboard Data Flow Optimization
  */
 
-'use client';
+"use client";
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
-import { listRatingSlips } from '@/services/rating-slip/http';
-import { fetchTables } from '@/services/table-context/http';
-import { getVisits } from '@/services/visit/http';
+import { createBrowserComponentClient } from "@/lib/supabase/client";
 
-import { dashboardKeys } from './keys';
-import type { DashboardStats } from './types';
+import { dashboardKeys } from "./keys";
+import type { DashboardStats } from "./types";
+
+/**
+ * Response shape from rpc_get_dashboard_stats RPC.
+ * @internal
+ */
+interface DashboardStatsRpcResponse {
+  activeTablesCount: number;
+  openSlipsCount: number;
+  checkedInPlayersCount: number;
+}
 
 /**
  * Fetches aggregate dashboard statistics for a casino.
  *
+ * PERF-002: Uses single RPC call instead of 4 HTTP requests.
+ * The RPC derives casino_id from set_rls_context_from_staff() per ADR-024.
+ *
  * Aggregates:
  * - activeTablesCount: Tables with status = 'active'
  * - openSlipsCount: Rating slips with status = 'open' or 'paused'
- * - checkedInPlayersCount: Visits that are currently open (ended_at = null)
- * - gamingDay: Current gaming day from casino settings (null if not available)
+ * - checkedInPlayersCount: Unique players with active visits (ended_at = null)
+ * - gamingDay: Current gaming day (fetched separately via useGamingDay)
  *
  * @param casinoId - Casino UUID (required, undefined disables query)
  *
@@ -50,50 +64,33 @@ export function useDashboardStats(casinoId: string | undefined) {
   return useQuery({
     queryKey: dashboardKeys.stats(casinoId!),
     queryFn: async (): Promise<DashboardStats> => {
-      // Fetch all data in parallel for efficiency
-      const [tables, openSlips, pausedSlips, visits] = await Promise.all([
-        // Get all tables (we'll filter for active count)
-        fetchTables({}),
+      const supabase = createBrowserComponentClient();
 
-        // Get open rating slips count (max 100 per schema limit)
-        listRatingSlips({ status: 'open', limit: 100 }),
-
-        // Get paused rating slips count (max 100 per schema limit)
-        listRatingSlips({ status: 'paused', limit: 100 }),
-
-        // Get active visits (active = ended_at is null)
-        // Note: The API filters for active visits (not closed)
-        // and returns visits for the current casino via RLS (max 100 per schema limit)
-        getVisits({ status: 'active', limit: 100 }),
-      ]);
-
-      // Count active tables
-      const activeTablesCount = tables.filter(
-        (table) => table.status === 'active',
-      ).length;
-
-      // Count open + paused slips
-      const openSlipsCount = openSlips.items.length + pausedSlips.items.length;
-
-      // Count unique players with active visits
-      // Use Set to dedupe player_id (in case of duplicate visit records)
-      const activeVisitPlayerIds = new Set(
-        visits.items
-          .filter((visit) => visit.ended_at === null)
-          .map((visit) => visit.player_id)
-          .filter((id): id is string => id !== null),
+      // PERF-002: Single RPC call replaces 4 HTTP requests
+      // ADR-024 compliant: RPC derives casino_id from set_rls_context_from_staff()
+      // Note: RPC not yet in database.types.ts until migration runs on remote
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase.rpc as any)(
+        "rpc_get_dashboard_stats",
       );
-      const checkedInPlayersCount = activeVisitPlayerIds.size;
 
-      // Gaming day - would come from CasinoService, but for now return null
-      // The UI can fetch this separately via useGamingDay hook
-      const gamingDay: string | null = null;
+      if (error) {
+        throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
+      }
+
+      if (!data) {
+        throw new Error("No stats data returned from RPC");
+      }
+
+      // Type assertion for JSONB response (RPC returns unknown when not in types)
+      const stats = data as DashboardStatsRpcResponse;
 
       return {
-        activeTablesCount,
-        openSlipsCount,
-        checkedInPlayersCount,
-        gamingDay,
+        activeTablesCount: stats.activeTablesCount,
+        openSlipsCount: stats.openSlipsCount,
+        checkedInPlayersCount: stats.checkedInPlayersCount,
+        // Gaming day fetched separately via useGamingDay hook
+        gamingDay: null,
       };
     },
     enabled: !!casinoId,
