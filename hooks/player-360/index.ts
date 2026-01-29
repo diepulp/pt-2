@@ -26,6 +26,8 @@ export {
   type TimeLensRange,
 } from "./use-player-weekly-series";
 
+export { useRecentEvents } from "./use-recent-events";
+
 // === State Hooks ===
 
 export {

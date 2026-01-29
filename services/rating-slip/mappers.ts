@@ -332,9 +332,11 @@ export function toVisitLiveViewDTO(
     current_segment_started_at: data.current_segment_started_at,
     current_segment_average_bet: data.current_segment_average_bet,
     session_total_duration_seconds: data.session_total_duration_seconds,
-    session_total_buy_in: data.session_total_buy_in,
-    session_total_cash_out: data.session_total_cash_out,
-    session_net: data.session_net,
+    // Convert financial amounts from cents (DB storage) to dollars (UI consumption)
+    // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
+    session_total_buy_in: data.session_total_buy_in / 100,
+    session_total_cash_out: data.session_total_cash_out / 100,
+    session_net: data.session_net / 100,
     session_points_earned: data.session_points_earned,
     session_segment_count: data.session_segment_count,
     segments: data.segments,

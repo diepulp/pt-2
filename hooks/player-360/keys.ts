@@ -36,4 +36,8 @@ export const player360Keys = {
 
   /** Loyalty rewards */
   loyalty: (playerId: string) => [...ROOT, playerId, "loyalty"] as const,
+
+  /** Recent events for timeline strip */
+  recentEvents: (playerId: string) =>
+    [...ROOT, playerId, "recentEvents"] as const,
 } as const;

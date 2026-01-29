@@ -1,0 +1,35 @@
+{
+  "specId": "GAP-P360-PANELS",
+  "sourceDocument": "docs/issues/gaps/GAP-PLAYER-360-PANELS-BACKEND-DATA.md",
+  "execSpec": "docs/20-architecture/specs/GAP-PLAYER-360-PANELS/EXECUTION-SPEC-GAP-P360-PANELS.md",
+  "status": "COMPLETED",
+  "phase": 4,
+  "currentWorkstream": null,
+  "completedWorkstreams": ["WS1", "WS3", "WS5", "WS2", "WS4", "WS6", "WS7"],
+  "workstreams": {
+    "WS1": { "status": "completed", "executor": "backend-service-builder" },
+    "WS2": { "status": "completed", "executor": "frontend-design-pt-2" },
+    "WS3": { "status": "completed", "executor": "backend-service-builder" },
+    "WS4": { "status": "completed", "executor": "frontend-design-pt-2" },
+    "WS5": { "status": "completed", "executor": "backend-service-builder", "complexity": "high", "note": "No theo_win column - calculated using lib/theo.ts" },
+    "WS6": { "status": "completed", "executor": "qa-specialist", "note": "33 unit tests: engagement, cooldown, recentEvents, metadata, loyalty" },
+    "WS7": { "status": "completed", "executor": "qa-specialist", "note": "All 4 gates passed: type-check, lint, test, build" }
+  },
+  "executionPhases": [
+    { "name": "Phase 1 - Backend Fixes", "workstreams": ["WS1", "WS3", "WS5"], "parallel": true },
+    { "name": "Phase 2 - Frontend Wiring", "workstreams": ["WS2", "WS4"], "parallel": true },
+    { "name": "Phase 3 - Test Coverage", "workstreams": ["WS6"], "parallel": false },
+    { "name": "Phase 4 - Quality Validation", "workstreams": ["WS7"], "parallel": false }
+  ],
+  "gates": {
+    "gate1": { "passed": true, "timestamp": "2026-01-28T00:00:00Z", "name": "type-check" },
+    "gate2": { "passed": true, "timestamp": "2026-01-28T00:00:00Z", "name": "type-check" },
+    "gate3": { "passed": true, "timestamp": "2026-01-29T00:00:00Z", "name": "test-pass" },
+    "gate4": { "passed": true, "timestamp": "2026-01-29T00:00:00Z", "name": "build" }
+  },
+  "artifacts": [
+    "services/player360-dashboard/__tests__/mappers.test.ts"
+  ],
+  "createdAt": "2026-01-28T00:00:00Z",
+  "updatedAt": "2026-01-29T00:00:00Z"
+}

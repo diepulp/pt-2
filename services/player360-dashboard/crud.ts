@@ -16,7 +16,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { calculateTheoFromDuration } from "@/lib/theo";
+import type { Database, Json } from "@/types/database.types";
 
 import type {
   PlayerSummaryDTO,
@@ -26,6 +27,7 @@ import type {
 } from "./dtos";
 import {
   composePlayerSummary,
+  extractTheoSettings,
   getCurrentGamingDay,
   getWeeksAgoDate,
   mapToCashVelocity,
@@ -86,31 +88,52 @@ export async function getPlayerSummary(
 
   try {
     // Fetch data in parallel for efficiency
-    const [activeVisitResult, financialSummaryResult, loyaltyResult] =
-      await Promise.all([
-        // 1. Get active visit for the player
-        supabase
-          .from("visit")
-          .select("id, player_id, casino_id, started_at, ended_at, visit_kind")
-          .eq("player_id", playerId)
-          .is("ended_at", null)
-          .maybeSingle(),
+    const [
+      activeVisitResult,
+      financialSummaryResult,
+      loyaltyResult,
+      timelineResult,
+      lastRedemptionResult,
+    ] = await Promise.all([
+      // 1. Get active visit for the player
+      supabase
+        .from("visit")
+        .select("id, player_id, casino_id, started_at, ended_at, visit_kind")
+        .eq("player_id", playerId)
+        .is("ended_at", null)
+        .maybeSingle(),
 
-        // 2. Get financial summary for current gaming day
-        // This aggregates total_in, total_out for the player
-        supabase
-          .from("player_financial_transaction")
-          .select("amount, direction, created_at")
-          .eq("player_id", playerId)
-          .eq("gaming_day", currentGamingDay),
+      // 2. Get financial summary for current gaming day
+      // This aggregates total_in, total_out for the player
+      supabase
+        .from("player_financial_transaction")
+        .select("amount, direction, created_at")
+        .eq("player_id", playerId)
+        .eq("gaming_day", currentGamingDay),
 
-        // 3. Get loyalty balance
-        supabase
-          .from("player_loyalty")
-          .select("*")
-          .eq("player_id", playerId)
-          .maybeSingle(),
-      ]);
+      // 3. Get loyalty balance
+      supabase
+        .from("player_loyalty")
+        .select("*")
+        .eq("player_id", playerId)
+        .maybeSingle(),
+
+      // 4. WS1: Get last activity timestamp from timeline for engagement status
+      supabase.rpc("rpc_get_player_timeline", {
+        p_player_id: playerId,
+        p_limit: 1,
+      }),
+
+      // 5. WS3: Get most recent reward redemption for cooldown check
+      supabase
+        .from("loyalty_ledger")
+        .select("created_at")
+        .eq("player_id", playerId)
+        .eq("reason", "redeem")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
     // Handle errors
     if (
@@ -125,18 +148,61 @@ export async function getPlayerSummary(
     if (loyaltyResult.error && loyaltyResult.error.code !== "PGRST116") {
       throw mapDatabaseError(loyaltyResult.error);
     }
+    // Timeline RPC may return empty array (no error for no rows)
+    if (timelineResult.error) {
+      throw mapDatabaseError(timelineResult.error);
+    }
+    // Last redemption may not exist (PGRST116 is OK)
+    if (
+      lastRedemptionResult.error &&
+      lastRedemptionResult.error.code !== "PGRST116"
+    ) {
+      throw mapDatabaseError(lastRedemptionResult.error);
+    }
 
     const activeVisit = activeVisitResult.data;
     const transactions = financialSummaryResult.data ?? [];
     const loyaltyData = loyaltyResult.data;
+    const timelineEvents = timelineResult.data ?? [];
+    const lastRedemption = lastRedemptionResult.data;
+
+    // WS5: Fetch rating slips for theo calculation (only if active visit exists)
+    // house_edge + decisions_per_hour live in policy_snapshot.loyalty (NOT game_settings)
+    let ratingSlipsResult: {
+      data: Array<{
+        average_bet: number | null;
+        accumulated_seconds: number;
+        policy_snapshot: Json;
+        status: string;
+      }> | null;
+      error: { code?: string; message: string } | null;
+    } = { data: null, error: null };
+
+    if (activeVisit) {
+      ratingSlipsResult = await supabase
+        .from("rating_slip")
+        .select("average_bet, accumulated_seconds, policy_snapshot, status")
+        .eq("visit_id", activeVisit.id)
+        .in("status", ["open", "paused"]);
+
+      if (ratingSlipsResult.error) {
+        throw mapDatabaseError(ratingSlipsResult.error);
+      }
+    }
+
+    const ratingSlips = ratingSlipsResult.data ?? [];
 
     // Calculate financial summary from transactions
-    const totalIn = transactions
+    // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
+    // Convert to dollars for DTO consumption by UI components
+    const totalInCents = transactions
       .filter((t) => t.direction === "in")
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
-    const totalOut = transactions
+    const totalOutCents = transactions
       .filter((t) => t.direction === "out")
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
+    const totalIn = totalInCents / 100;
+    const totalOut = totalOutCents / 100;
     const lastTxn = transactions.sort(
       (a, b) =>
         new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
@@ -157,12 +223,36 @@ export async function getPlayerSummary(
           }
         : null;
 
+    // WS1: Extract last activity timestamp from timeline (instead of last financial txn)
+    // Timeline includes all activity types: ratings, transactions, notes, rewards
+    const lastActivityAt =
+      timelineEvents.length > 0
+        ? (timelineEvents[0]?.occurred_at ?? null)
+        : null;
+
+    // WS5: Calculate theo estimate from active/paused rating slips
+    // Theo = (avg_bet × house_edge%) × (decisions_per_hour × duration_hrs)
+    // house_edge + decisions_per_hour sourced from policy_snapshot.loyalty
+    const theoEstimate = ratingSlips.reduce((sum, slip) => {
+      const settings = extractTheoSettings(slip.policy_snapshot);
+      if (!settings || !slip.average_bet || !slip.accumulated_seconds) {
+        return sum;
+      }
+      const durationMinutes = slip.accumulated_seconds / 60;
+      return (
+        sum +
+        calculateTheoFromDuration(settings, slip.average_bet, durationMinutes)
+      );
+    }, 0);
+
     // Map to DTOs
     const sessionValue = mapToSessionValue(financialSummary, null);
     const cashVelocity = mapToCashVelocity(
       financialSummary,
       activeVisit?.started_at ?? null,
     );
+
+    // WS1: Use timeline lastActivityAt for engagement status (not financial txn)
     const engagement = mapToEngagement(
       activeVisit
         ? {
@@ -180,20 +270,27 @@ export async function getPlayerSummary(
             gaming_day: currentGamingDay,
           }
         : null,
-      lastTxn?.created_at ?? null,
+      lastActivityAt,
     );
 
     // Parse loyalty balance safely using type-safe mapper
     const loyaltyBalance = parseLoyaltyData(loyaltyData);
 
+    // WS3: Pass last redemption timestamp for cooldown check
     const rewardsEligibility = mapToRewardsEligibility(
       loyaltyBalance,
-      null, // TODO: fetch most recent reward timestamp
+      lastRedemption?.created_at ?? null,
     );
+
+    // WS5: Override theoEstimate in sessionValue with calculated value
+    const sessionValueWithTheo = {
+      ...sessionValue,
+      theoEstimate,
+    };
 
     return composePlayerSummary(
       playerId,
-      sessionValue,
+      sessionValueWithTheo,
       cashVelocity,
       engagement,
       rewardsEligibility,
@@ -365,10 +462,11 @@ export async function getRecentEvents(
 
     // Map RPC result to recent events
     // RPC returns typed rows with specific fields
+    // Timeline RPC now returns amounts in dollars (converted from cents in SQL)
     const events = (data ?? []).map((row) => ({
       event_type: row.event_type,
       occurred_at: row.occurred_at,
-      amount: row.amount ?? null,
+      amount: row.amount,
       metadata: toMetadataRecord(row.metadata),
       summary: row.summary ?? "",
     }));

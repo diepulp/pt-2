@@ -10,10 +10,10 @@
  * @see PRD-003B-visit-service-refactor.md section 4.3
  */
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { DomainError } from '@/lib/errors/domain-errors';
-import type { Database } from '@/types/database.types';
+import { DomainError } from "@/lib/errors/domain-errors";
+import type { Database } from "@/types/database.types";
 
 import type {
   ActiveVisitDTO,
@@ -23,23 +23,23 @@ import type {
   VisitDTO,
   VisitListFilters,
   VisitWithPlayerDTO,
-} from './dtos';
+} from "./dtos";
 import {
   toActiveVisitDTO,
   toVisitDTO,
   toVisitDTOOrNull,
   toVisitWithPlayerDTOList,
-} from './mappers';
+} from "./mappers";
 import {
   lastSessionContextRpcResponseSchema,
   recentSessionsRpcResponseSchema,
   tableSeatAvailabilityRpcResponseSchema,
-} from './schemas';
+} from "./schemas";
 import {
   ACTIVE_VISIT_SELECT,
   VISIT_SELECT,
   VISIT_WITH_PLAYER_SELECT,
-} from './selects';
+} from "./selects";
 
 // === Error Mapping ===
 
@@ -52,32 +52,32 @@ function mapDatabaseError(error: {
   message: string;
 }): DomainError {
   // 23505 = Unique constraint violation (active visit exists)
-  if (error.code === '23505') {
+  if (error.code === "23505") {
     return new DomainError(
-      'UNIQUE_VIOLATION',
-      'Player already has an active visit at this casino',
+      "UNIQUE_VIOLATION",
+      "Player already has an active visit at this casino",
     );
   }
 
   // 23503 = Foreign key violation (player not found)
-  if (error.code === '23503') {
-    return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
+  if (error.code === "23503") {
+    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
   }
 
   // 23514 = Check constraint violation (visit_kind/player_id invariant)
-  if (error.code === '23514') {
+  if (error.code === "23514") {
     return new DomainError(
-      'VISIT_INVALID_KIND_PLAYER',
-      'Ghost visits require NULL player_id; identified visits require player_id',
+      "VISIT_INVALID_KIND_PLAYER",
+      "Ghost visits require NULL player_id; identified visits require player_id",
     );
   }
 
   // PGRST116 = No rows returned (used in update/delete operations)
-  if (error.code === 'PGRST116') {
-    return new DomainError('VISIT_NOT_FOUND', 'Visit not found');
+  if (error.code === "PGRST116") {
+    return new DomainError("VISIT_NOT_FOUND", "Visit not found");
   }
 
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
 }
 
 // === Read Operations ===
@@ -91,9 +91,9 @@ export async function getVisitById(
   visitId: string,
 ): Promise<VisitDTO | null> {
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .select(VISIT_SELECT)
-    .eq('id', visitId)
+    .eq("id", visitId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -109,10 +109,10 @@ export async function getActiveVisitForPlayer(
   playerId: string,
 ): Promise<ActiveVisitDTO> {
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .select(ACTIVE_VISIT_SELECT)
-    .eq('player_id', playerId)
-    .is('ended_at', null)
+    .eq("player_id", playerId)
+    .is("ended_at", null)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -130,39 +130,39 @@ export async function listVisits(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from('visit')
+    .from("visit")
     .select(VISIT_WITH_PLAYER_SELECT)
-    .order('started_at', { ascending: false })
+    .order("started_at", { ascending: false })
     .limit(limit + 1);
 
   // Apply status filter
-  if (filters.status === 'active') {
-    query = query.is('ended_at', null);
-  } else if (filters.status === 'closed') {
-    query = query.not('ended_at', 'is', null);
+  if (filters.status === "active") {
+    query = query.is("ended_at", null);
+  } else if (filters.status === "closed") {
+    query = query.not("ended_at", "is", null);
   }
 
   // Apply player filter
   if (filters.player_id) {
-    query = query.eq('player_id', filters.player_id);
+    query = query.eq("player_id", filters.player_id);
   }
 
   // Apply visit_kind filter
   if (filters.visit_kind) {
-    query = query.eq('visit_kind', filters.visit_kind);
+    query = query.eq("visit_kind", filters.visit_kind);
   }
 
   // Apply date range filters
   if (filters.from_date) {
-    query = query.gte('started_at', `${filters.from_date}T00:00:00Z`);
+    query = query.gte("started_at", `${filters.from_date}T00:00:00Z`);
   }
   if (filters.to_date) {
-    query = query.lte('started_at', `${filters.to_date}T23:59:59Z`);
+    query = query.lte("started_at", `${filters.to_date}T23:59:59Z`);
   }
 
   // Apply cursor for pagination
   if (filters.cursor) {
-    query = query.lt('started_at', filters.cursor);
+    query = query.lt("started_at", filters.cursor);
   }
 
   const { data, error } = await query;
@@ -213,7 +213,7 @@ export async function startVisit(
   // 2. Stale visit closure
   // 3. Rating slip closure on rollover
   // 4. Race condition handling via unique constraint
-  const { data, error } = await supabase.rpc('rpc_start_or_resume_visit', {
+  const { data, error } = await supabase.rpc("rpc_start_or_resume_visit", {
     p_player_id: playerId,
   });
 
@@ -223,7 +223,7 @@ export async function startVisit(
   const row = Array.isArray(data) ? data[0] : data;
 
   if (!row) {
-    throw new DomainError('INTERNAL_ERROR', 'RPC returned no data');
+    throw new DomainError("INTERNAL_ERROR", "RPC returned no data");
   }
 
   return {
@@ -251,16 +251,16 @@ export async function closeVisit(
 
   // Attempt to close visit (only if not already closed)
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .update({ ended_at: endedAt })
-    .eq('id', visitId)
-    .is('ended_at', null) // Only close if not already closed
+    .eq("id", visitId)
+    .is("ended_at", null) // Only close if not already closed
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // PGRST116 = No rows returned (already closed or not found)
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       // Check if visit exists but is already closed (idempotent success)
       const existing = await getVisitById(supabase, visitId);
       if (existing && existing.ended_at) {
@@ -268,7 +268,7 @@ export async function closeVisit(
         return existing;
       }
       // Visit not found
-      throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
+      throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
     }
     throw mapDatabaseError(error);
   }
@@ -305,21 +305,21 @@ export async function createRewardVisit(
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .insert({
       id: visitId,
       player_id: playerId,
       casino_id: casinoId,
-      visit_kind: 'reward_identified',
+      visit_kind: "reward_identified",
       visit_group_id: visitId, // Self-reference for new visit group
-      gaming_day: '1970-01-01', // Overwritten by trigger
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // Handle unique constraint violation (race condition)
-    if (error.code === '23505') {
+    if (error.code === "23505") {
       const { visit: existingVisit } = await getActiveVisitForPlayer(
         supabase,
         playerId,
@@ -381,14 +381,14 @@ export async function createGhostGamingVisit(
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .insert({
       id: visitId,
       player_id: null, // Ghost visit - no player identity
       casino_id: casinoId,
-      visit_kind: 'gaming_ghost_unrated',
+      visit_kind: "gaming_ghost_unrated",
       visit_group_id: visitId, // Self-reference for new visit group
-      gaming_day: '1970-01-01', // Overwritten by trigger
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();
@@ -417,46 +417,46 @@ export async function convertRewardToGaming(
   const currentVisit = await getVisitById(supabase, visitId);
 
   if (!currentVisit) {
-    throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
+    throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
   }
 
   if (currentVisit.ended_at !== null) {
     throw new DomainError(
-      'VISIT_NOT_OPEN',
-      'Cannot convert a closed visit. Only active visits can be converted.',
+      "VISIT_NOT_OPEN",
+      "Cannot convert a closed visit. Only active visits can be converted.",
     );
   }
 
-  if (currentVisit.visit_kind !== 'reward_identified') {
+  if (currentVisit.visit_kind !== "reward_identified") {
     throw new DomainError(
-      'VISIT_INVALID_CONVERSION',
+      "VISIT_INVALID_CONVERSION",
       `Cannot convert visit of kind '${currentVisit.visit_kind}' to gaming. Only 'reward_identified' visits can be converted.`,
     );
   }
 
   // Perform the conversion
   const { data, error } = await supabase
-    .from('visit')
+    .from("visit")
     .update({
-      visit_kind: 'gaming_identified_rated',
+      visit_kind: "gaming_identified_rated",
     })
-    .eq('id', visitId)
-    .is('ended_at', null) // Extra safety: only update if still active
+    .eq("id", visitId)
+    .is("ended_at", null) // Extra safety: only update if still active
     .select(VISIT_SELECT)
     .single();
 
   if (error) {
     // PGRST116 = No rows returned (concurrent close or not found)
-    if (error.code === 'PGRST116') {
+    if (error.code === "PGRST116") {
       // Re-fetch to provide better error message
       const refetched = await getVisitById(supabase, visitId);
       if (refetched && refetched.ended_at) {
         throw new DomainError(
-          'VISIT_NOT_OPEN',
-          'Visit was closed concurrently. Cannot convert a closed visit.',
+          "VISIT_NOT_OPEN",
+          "Visit was closed concurrently. Cannot convert a closed visit.",
         );
       }
-      throw new DomainError('VISIT_NOT_FOUND', `Visit not found: ${visitId}`);
+      throw new DomainError("VISIT_NOT_FOUND", `Visit not found: ${visitId}`);
     }
     throw mapDatabaseError(error);
   }
@@ -481,12 +481,12 @@ export async function getPlayerRecentSessions(
   supabase: SupabaseClient<Database>,
   casinoId: string,
   playerId: string,
-  options: import('./dtos').RecentSessionsOptions = {},
-): Promise<import('./dtos').RecentSessionsDTO> {
+  options: import("./dtos").RecentSessionsOptions = {},
+): Promise<import("./dtos").RecentSessionsDTO> {
   const limit = options.limit ?? 5;
   const cursor = options.cursor;
 
-  const { data, error } = await supabase.rpc('rpc_get_player_recent_sessions', {
+  const { data, error } = await supabase.rpc("rpc_get_player_recent_sessions", {
     p_casino_id: casinoId,
     p_player_id: playerId,
     p_limit: limit,
@@ -495,22 +495,37 @@ export async function getPlayerRecentSessions(
 
   if (error) throw mapDatabaseError(error);
   if (!data) {
-    throw new DomainError('INTERNAL_ERROR', 'RPC returned null unexpectedly');
+    throw new DomainError("INTERNAL_ERROR", "RPC returned null unexpectedly");
   }
 
   // Parse and validate JSONB response
   const parsed = recentSessionsRpcResponseSchema.safeParse(data);
   if (!parsed.success) {
     throw new DomainError(
-      'INTERNAL_ERROR',
+      "INTERNAL_ERROR",
       `Invalid RPC response: ${parsed.error.message}`,
     );
   }
 
+  // Convert financial amounts from cents (DB storage) to dollars (UI consumption)
+  // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
+  const centsToDollars = <
+    T extends { total_buy_in: number; total_cash_out: number; net: number },
+  >(
+    s: T,
+  ): T => ({
+    ...s,
+    total_buy_in: s.total_buy_in / 100,
+    total_cash_out: s.total_cash_out / 100,
+    net: s.net / 100,
+  });
+
   return {
-    sessions: parsed.data.sessions,
+    sessions: parsed.data.sessions.map(centsToDollars),
     next_cursor: parsed.data.next_cursor,
-    open_visit: parsed.data.open_visit,
+    open_visit: parsed.data.open_visit
+      ? centsToDollars(parsed.data.open_visit)
+      : null,
   };
 }
 
@@ -528,9 +543,9 @@ export async function getPlayerLastSessionContext(
   supabase: SupabaseClient<Database>,
   casinoId: string,
   playerId: string,
-): Promise<import('./dtos').LastSessionContextDTO | null> {
+): Promise<import("./dtos").LastSessionContextDTO | null> {
   const { data, error } = await supabase.rpc(
-    'rpc_get_player_last_session_context',
+    "rpc_get_player_last_session_context",
     {
       p_casino_id: casinoId,
       p_player_id: playerId,
@@ -546,7 +561,7 @@ export async function getPlayerLastSessionContext(
   const parsed = lastSessionContextRpcResponseSchema.safeParse(data);
   if (!parsed.success) {
     throw new DomainError(
-      'INTERNAL_ERROR',
+      "INTERNAL_ERROR",
       `Invalid RPC response: ${parsed.error.message}`,
     );
   }
@@ -579,13 +594,13 @@ export async function startFromPrevious(
   supabase: SupabaseClient<Database>,
   casinoId: string,
   actorId: string,
-  request: import('./dtos').StartFromPreviousRequest,
-): Promise<import('./dtos').StartFromPreviousResponse> {
+  request: import("./dtos").StartFromPreviousRequest,
+): Promise<import("./dtos").StartFromPreviousResponse> {
   // 1. Fetch source visit
   const sourceVisit = await getVisitById(supabase, request.source_visit_id);
   if (!sourceVisit) {
     throw new DomainError(
-      'VISIT_NOT_FOUND',
+      "VISIT_NOT_FOUND",
       `Source visit not found: ${request.source_visit_id}`,
     );
   }
@@ -593,15 +608,15 @@ export async function startFromPrevious(
   // 2. Validate source visit is closed
   if (sourceVisit.ended_at === null) {
     throw new DomainError(
-      'SOURCE_VISIT_NOT_CLOSED',
-      'Cannot continue from an open visit. Close the visit first.',
+      "SOURCE_VISIT_NOT_CLOSED",
+      "Cannot continue from an open visit. Close the visit first.",
     );
   }
 
   // 3. Validate player_id matches
   if (sourceVisit.player_id !== request.player_id) {
     throw new DomainError(
-      'PLAYER_MISMATCH',
+      "PLAYER_MISMATCH",
       `Source visit player_id (${sourceVisit.player_id}) does not match request player_id (${request.player_id})`,
     );
   }
@@ -609,8 +624,8 @@ export async function startFromPrevious(
   // 4. Validate casino matches (RLS + explicit check)
   if (sourceVisit.casino_id !== casinoId) {
     throw new DomainError(
-      'FORBIDDEN',
-      'Source visit belongs to a different casino',
+      "FORBIDDEN",
+      "Source visit belongs to a different casino",
     );
   }
 
@@ -621,14 +636,14 @@ export async function startFromPrevious(
   );
   if (activeVisit.has_active_visit) {
     throw new DomainError(
-      'VISIT_ALREADY_OPEN',
+      "VISIT_ALREADY_OPEN",
       `Player ${request.player_id} already has an active visit`,
     );
   }
 
   // 6. Validate destination table/seat availability
   const { data: availabilityData, error: availabilityError } =
-    await supabase.rpc('rpc_check_table_seat_availability', {
+    await supabase.rpc("rpc_check_table_seat_availability", {
       p_table_id: request.destination_table_id,
       p_seat_number: request.destination_seat_number,
     });
@@ -640,15 +655,15 @@ export async function startFromPrevious(
     tableSeatAvailabilityRpcResponseSchema.safeParse(availabilityData);
   if (!availabilityParsed.success) {
     throw new DomainError(
-      'INTERNAL_ERROR',
+      "INTERNAL_ERROR",
       `Invalid RPC response: ${availabilityParsed.error.message}`,
     );
   }
 
   if (!availabilityParsed.data.is_available) {
-    const reason = availabilityParsed.data.reason ?? 'TABLE_NOT_AVAILABLE';
+    const reason = availabilityParsed.data.reason ?? "TABLE_NOT_AVAILABLE";
     throw new DomainError(
-      reason as 'TABLE_NOT_AVAILABLE' | 'SEAT_OCCUPIED',
+      reason as "TABLE_NOT_AVAILABLE" | "SEAT_OCCUPIED",
       `Destination table/seat not available: ${availabilityParsed.data.reason}`,
     );
   }
@@ -658,13 +673,13 @@ export async function startFromPrevious(
   // gaming_day placeholder: trigger trg_visit_gaming_day overwrites this on INSERT
   // using compute_gaming_day(casino_id, started_at) - see ADR-026
   const { data: newVisit, error: visitError } = await supabase
-    .from('visit')
+    .from("visit")
     .insert({
       player_id: request.player_id,
       casino_id: casinoId,
-      visit_kind: 'gaming_identified_rated',
+      visit_kind: "gaming_identified_rated",
       visit_group_id: sourceVisit.visit_group_id,
-      gaming_day: '1970-01-01', // Overwritten by trigger
+      gaming_day: "1970-01-01", // Overwritten by trigger
     })
     .select(VISIT_SELECT)
     .single();
@@ -674,7 +689,7 @@ export async function startFromPrevious(
   // 8. Create first rating slip (segment) via RPC
   // Uses rpc_start_rating_slip which handles policy snapshot and RLS context
   const { data: newSlip, error: slipError } = await supabase.rpc(
-    'rpc_start_rating_slip',
+    "rpc_start_rating_slip",
     {
       p_casino_id: casinoId,
       p_actor_id: actorId,
@@ -682,7 +697,7 @@ export async function startFromPrevious(
       p_table_id: request.destination_table_id,
       p_seat_number: String(request.destination_seat_number),
       p_game_settings: (request.game_settings_override ??
-        {}) as import('@/types/database.types').Json,
+        {}) as import("@/types/database.types").Json,
     },
   );
 
@@ -690,8 +705,8 @@ export async function startFromPrevious(
 
   if (!newSlip) {
     throw new DomainError(
-      'INTERNAL_ERROR',
-      'rpc_start_rating_slip returned no data',
+      "INTERNAL_ERROR",
+      "rpc_start_rating_slip returned no data",
     );
   }
 

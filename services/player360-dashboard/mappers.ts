@@ -27,6 +27,45 @@ import type {
 // === Type Guards and Safe Converters ===
 
 /**
+ * Extract house_edge and decisions_per_hour from rating_slip.policy_snapshot.
+ *
+ * The RPC rpc_start_rating_slip snapshots these values from the game_settings
+ * TABLE into policy_snapshot.loyalty at slip creation time. The rating_slip's
+ * own game_settings JSON column stores input params (min_bet, max_bet) — NOT
+ * house_edge or decisions_per_hour.
+ *
+ * @see policy-snapshot.integration.test.ts for snapshot structure
+ */
+
+export function extractTheoSettings(
+  policySnapshot: Json,
+): { house_edge: number; decisions_per_hour: number } | null {
+  if (
+    !policySnapshot ||
+    typeof policySnapshot !== "object" ||
+    Array.isArray(policySnapshot)
+  ) {
+    return null;
+  }
+  const ps = policySnapshot as Record<string, unknown>;
+  const loyalty = ps.loyalty;
+  if (!loyalty || typeof loyalty !== "object" || Array.isArray(loyalty)) {
+    return null;
+  }
+  const loy = loyalty as Record<string, unknown>;
+  if (
+    typeof loy.house_edge !== "number" ||
+    typeof loy.decisions_per_hour !== "number"
+  ) {
+    return null;
+  }
+  return {
+    house_edge: loy.house_edge,
+    decisions_per_hour: loy.decisions_per_hour,
+  };
+}
+
+/**
  * Type-safe conversion of Json to Record<string, unknown>.
  * Validates at runtime that the value is a non-null object.
  */
