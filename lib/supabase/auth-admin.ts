@@ -80,6 +80,8 @@ export async function syncUserRLSClaims(
       `Failed to sync RLS claims for user ${userId}: ${error.message}`,
     );
   }
+
+  console.info('[CLAIMS] synced: userId=%s staffId=%s casinoId=%s role=%s', userId, claims.staff_id, claims.casino_id, claims.staff_role);
 }
 
 /**
@@ -107,4 +109,6 @@ export async function clearUserRLSClaims(userId: string): Promise<void> {
       `Failed to clear RLS claims for user ${userId}: ${error.message}`,
     );
   }
+
+  console.info('[CLAIMS] cleared: userId=%s', userId);
 }

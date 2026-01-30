@@ -2941,6 +2941,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: {
         Args: { p_casino_id: string }
         Returns: Json
@@ -3820,7 +3821,11 @@ export type Database = {
       }
       set_rls_context_from_staff: {
         Args: { p_correlation_id?: string }
-        Returns: undefined
+        Returns: {
+          actor_id: string
+          casino_id: string
+          staff_role: string
+        }[]
       }
       set_rls_context_internal: {
         Args: {

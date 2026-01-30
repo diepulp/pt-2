@@ -30,7 +30,7 @@ interface TableGridProps {
   isLoading?: boolean;
 }
 
-export const TableGrid = React.memo(function TableGrid({
+export function TableGrid({
   tables,
   selectedTableId,
   onTableSelect,
@@ -128,4 +128,4 @@ export const TableGrid = React.memo(function TableGrid({
       </div>
     </div>
   );
-});
+}

@@ -13,6 +13,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { markRpcContextInjected } from '@/lib/correlation';
 import type { Database } from '@/types/database.types';
 
 export interface RLSContext {
@@ -65,50 +66,66 @@ export async function getAuthContext(
 }
 
 /**
- * Inject RLS context via SET LOCAL (transaction-wrapped)
+ * Inject RLS context via SET LOCAL and return the authoritative context.
  *
- * Uses set_rls_context_from_staff() RPC per ADR-024 to ensure secure
- * context injection. The RPC derives actor_id, casino_id, and staff_role
- * from auth.uid() and the staff table - NOT from caller-provided params.
+ * AUTH-HARDENING v0.1 WS2: The RPC is the single source of truth.
+ * Returns the derived RLSContext so middleware can overwrite ctx.rlsContext
+ * with the exact values the RPC set in the Postgres session.
  *
- * ADR-024 Security Model:
- * - Context is derived from auth.uid() binding to staff.user_id
+ * Uses set_rls_context_from_staff() RPC per ADR-024:
+ * - Context derived from auth.uid() binding to staff.user_id
  * - No spoofable parameters accepted from client
  * - Staff must be active with valid casino assignment
- *
- * Pattern (in SQL):
- * ```sql
- * SET LOCAL app.actor_id = <derived from staff.id>;
- * SET LOCAL app.casino_id = <derived from staff.casino_id>;
- * SET LOCAL app.staff_role = <derived from staff.role>;
- * SET LOCAL application_name = 'correlation-id';
- * ```
- *
- * RLS policies then use:
- * ```sql
- * current_setting('app.casino_id')::uuid
- * current_setting('app.actor_id')::uuid
- * ```
+ * - RPC RETURNS TABLE (actor_id, casino_id, staff_role)
  *
  * @param supabase - Authenticated Supabase client
- * @param _context - DEPRECATED: Context is now derived server-side (kept for API compat)
  * @param correlationId - Optional trace ID for observability
+ * @returns The authoritative RLSContext derived by the RPC
  */
 export async function injectRLSContext(
   supabase: SupabaseClient<Database>,
-  _context: RLSContext,
   correlationId?: string,
-): Promise<void> {
-  // ADR-024: Call secure context injection that derives from auth.uid()
-  // The context parameter is ignored - kept for backward API compatibility
-  // The SQL function validates staff identity against auth.uid()
-  const { error } = await supabase.rpc('set_rls_context_from_staff', {
+): Promise<RLSContext> {
+  const { data, error } = await supabase.rpc('set_rls_context_from_staff', {
     p_correlation_id: correlationId,
   });
 
   if (error) {
+    console.error(
+      '[RLS] context injection failed: %s (correlationId=%s)',
+      error.message,
+      correlationId,
+    );
     throw new Error(`Failed to inject RLS context: ${error.message}`);
   }
+
+  const row = data?.[0];
+  if (!row) {
+    console.error(
+      '[RLS] RPC returned no context row (correlationId=%s)',
+      correlationId,
+    );
+    throw new Error('Failed to inject RLS context: RPC returned no data');
+  }
+
+  const context: RLSContext = {
+    actorId: row.actor_id,
+    casinoId: row.casino_id,
+    staffRole: row.staff_role,
+  };
+
+  // AUTH-HARDENING v0.1 WS6: Mark RPC context as injected for canary assertion
+  markRpcContextInjected();
+
+  console.info(
+    '[RLS] context set: actor=%s casino=%s role=%s (correlationId=%s)',
+    context.actorId,
+    context.casinoId,
+    context.staffRole,
+    correlationId,
+  );
+
+  return context;
 }
 
 /**

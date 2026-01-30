@@ -13,7 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
-import { syncUserRLSClaims } from '@/lib/supabase/auth-admin';
+import { reconcileStaffClaims } from '@/lib/supabase/claims-reconcile';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -349,20 +349,14 @@ export async function createStaff(
     throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
   }
 
-  // ADR-015 Phase 2: Sync JWT claims for authenticated staff (pit_boss, admin)
-  // Dealers have user_id = null and don't need JWT claims
-  if (input.user_id && input.casino_id) {
-    try {
-      await syncUserRLSClaims(input.user_id, {
-        casino_id: input.casino_id,
-        staff_role: input.role,
-        staff_id: data.id,
-      });
-    } catch {
-      // Silently ignore - claims sync is optimization, not critical path
-      // Database trigger provides backup sync mechanism
-    }
-  }
+  // AUTH-HARDENING WS3: Deterministic claims sync — errors propagate
+  await reconcileStaffClaims({
+    staffId: data.id,
+    userId: input.user_id ?? null,
+    casinoId: input.casino_id,
+    staffRole: input.role,
+    currentStatus: 'active',
+  });
 
   return toStaffDTO(data);
 }
@@ -402,6 +396,8 @@ export async function updateStaff(
     updateData.employee_id = input.employee_id;
   if (input.email !== undefined) updateData.email = input.email;
   if (input.casino_id !== undefined) updateData.casino_id = input.casino_id;
+  if (input.user_id !== undefined) updateData.user_id = input.user_id;
+  if (input.status !== undefined) updateData.status = input.status;
 
   const { data, error } = await supabase
     .from('staff')
@@ -426,31 +422,17 @@ export async function updateStaff(
     throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
   }
 
-  // ADR-015 Phase 2: Sync JWT claims if role or casino_id changed
-  // Only sync for authenticated staff (pit_boss, admin with user_id)
-  const roleChanged =
-    input.role !== undefined && input.role !== currentRow.role;
-  const casinoChanged =
-    input.casino_id !== undefined && input.casino_id !== currentRow.casino_id;
-
-  if (currentRow.user_id && (roleChanged || casinoChanged)) {
-    try {
-      // currentRow.casino_id is guaranteed non-null by RLS and foreign key constraints
-      const casinoId = data.casino_id ?? currentRow.casino_id;
-      if (!casinoId) {
-        throw new Error('casino_id is required for JWT claims sync');
-      }
-
-      await syncUserRLSClaims(currentRow.user_id, {
-        casino_id: casinoId,
-        staff_role: data.role,
-        staff_id: data.id,
-      });
-    } catch {
-      // Silently ignore - claims sync is optimization, not critical path
-      // Database trigger provides backup sync mechanism
-    }
-  }
+  // AUTH-HARDENING WS3: Deterministic claims reconciliation — errors propagate
+  await reconcileStaffClaims({
+    staffId: data.id,
+    userId: input.user_id !== undefined ? (input.user_id ?? null) : (currentRow.user_id ?? null),
+    casinoId: data.casino_id ?? currentRow.casino_id,
+    staffRole: data.role,
+    currentStatus: input.status ?? currentRow.status,
+    previousUserId: currentRow.user_id,
+    previousCasinoId: currentRow.casino_id,
+    previousStatus: currentRow.status,
+  });
 
   return toStaffDTO(data);
 }

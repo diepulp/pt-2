@@ -56,13 +56,38 @@ export function isDevMode(): boolean {
 /**
  * Check if dev auth bypass is enabled
  *
- * Can be disabled even in dev mode by setting DEV_AUTH_BYPASS=false
+ * AUTH-HARDENING v0.1 WS4: Requires explicit ENABLE_DEV_AUTH=true in dev mode.
+ * Previous behavior (bypass-by-default) replaced with opt-in gate.
  */
 export function isDevAuthBypassEnabled(): boolean {
   if (!isDevMode()) return false;
 
-  // Allow disabling dev bypass via env var for integration testing
-  if (process.env.DEV_AUTH_BYPASS === 'false') return false;
+  // Explicit opt-in required (AUTH-HARDENING v0.1)
+  return process.env.ENABLE_DEV_AUTH === 'true';
+}
 
-  return true;
+let _bypassLogEmitted = false;
+
+/**
+ * Assert dev auth bypass is allowed in the current environment.
+ *
+ * AUTH-HARDENING v0.1 WS4: Call at server startup to fail fast if bypass
+ * env vars leak into production.
+ *
+ * @throws Error if bypass is requested outside development mode
+ */
+export function assertDevAuthBypassAllowed(): void {
+  if (!isDevMode()) {
+    throw new Error(
+      '[AUTH LOCKDOWN] DEV_AUTH_BYPASS / ENABLE_DEV_AUTH cannot be used outside NODE_ENV=development. ' +
+        'Remove these env vars from production configuration.',
+    );
+  }
+
+  if (process.env.ENABLE_DEV_AUTH === 'true' && !_bypassLogEmitted) {
+    _bypassLogEmitted = true;
+    console.warn(
+      '[AUTH BYPASS ENABLED] Development auth bypass active — RLS policies rely on JWT metadata or mock context',
+    );
+  }
 }

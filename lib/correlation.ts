@@ -14,6 +14,8 @@ import { randomUUID } from 'crypto';
 interface CorrelationContext {
   correlationId: string;
   createdAt: Date;
+  /** AUTH-HARDENING v0.1 WS6: Set to true after RPC context injection */
+  rpcContextInjected?: boolean;
 }
 
 const correlationStorage = new AsyncLocalStorage<CorrelationContext>();
@@ -80,4 +82,40 @@ export async function runWithCorrelation<T>(
  */
 export function getCorrelationContext(): CorrelationContext | null {
   return correlationStorage.getStore() ?? null;
+}
+
+/**
+ * Mark that RPC context has been injected for this request.
+ *
+ * AUTH-HARDENING v0.1 WS6: Called by injectRLSContext() after successful
+ * RPC call. Used by assertRpcContextInjected() canary.
+ */
+export function markRpcContextInjected(): void {
+  const store = correlationStorage.getStore();
+  if (store) {
+    store.rpcContextInjected = true;
+  }
+}
+
+/**
+ * Canary assertion: warn if a DB query executes without prior RPC context.
+ *
+ * AUTH-HARDENING v0.1 WS6: Defensive monitoring for middleware regressions.
+ * If the middleware chain is skipped (code regression), write policies (WS5)
+ * will hard-fail; SELECT policies will silently use JWT. This canary
+ * detects that scenario.
+ *
+ * @param operation - Description of the DB operation for the log message
+ */
+export function assertRpcContextInjected(operation?: string): void {
+  const store = correlationStorage.getStore();
+  // No correlation context = not in a middleware-managed request (e.g., cron job)
+  // Only warn when we ARE in a request context but RPC was never called
+  if (store && !store.rpcContextInjected) {
+    console.error(
+      '[RLS CANARY] DB query executed without RPC context — JWT fallback in effect (operation=%s, correlationId=%s)',
+      operation ?? 'unknown',
+      store.correlationId,
+    );
+  }
 }

@@ -3510,6 +3510,15 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_save_rating_slip_with_buyin: {
+        Args: {
+          p_average_bet: number
+          p_buyin_amount_cents?: number
+          p_buyin_type?: string
+          p_slip_id: string
+        }
+        Returns: Json
+      }
       rpc_shift_active_visitors_summary: {
         Args: never
         Returns: {

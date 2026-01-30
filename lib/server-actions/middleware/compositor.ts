@@ -103,7 +103,15 @@ export async function withServerAction<T>(
   // Tracing must be first (outermost) to catch all errors
   middlewares.push(withTracing<T>());
 
-  if (!options.skipAuth) {
+  if (options.skipAuth) {
+    // AUTH-HARDENING v0.1 WS4+WS6: Structured warning when auth chain bypassed
+    // skipAuth means no RPC context — SELECT queries rely on JWT metadata
+    console.error(
+      '[AUTH BYPASS] skipAuth=true — auth chain bypassed, SELECT queries rely on JWT metadata (endpoint=%s, correlationId=%s)',
+      options.endpoint ?? 'unknown',
+      correlationId,
+    );
+  } else {
     middlewares.push(withAuth<T>());
     middlewares.push(withRLS<T>());
   }

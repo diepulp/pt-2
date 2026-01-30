@@ -1,5 +1,6 @@
 import { DomainError } from '@/lib/errors/domain-errors';
 import {
+  assertDevAuthBypassAllowed,
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
 } from '@/lib/supabase/dev-context';
@@ -18,7 +19,7 @@ import type { Middleware, MiddlewareContext } from './types';
  *
  * Populates ctx.rlsContext for downstream middleware.
  *
- * DEV MODE: When NODE_ENV=development and DEV_AUTH_BYPASS is not 'false',
+ * DEV MODE: When NODE_ENV=development AND ENABLE_DEV_AUTH=true (AUTH-HARDENING v0.1),
  * injects mock RLS context AND swaps to service role client to bypass RLS.
  * This is necessary because RLS policies require auth.uid() which is NULL
  * without a browser session.
@@ -29,12 +30,15 @@ import type { Middleware, MiddlewareContext } from './types';
 export function withAuth<T>(): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
     // DEV MODE: Use mock context and service client for local development
+    // AUTH-HARDENING v0.1 WS4: Requires ENABLE_DEV_AUTH=true + NODE_ENV=development
     if (isDevAuthBypassEnabled()) {
+      assertDevAuthBypassAllowed();
       console.warn(
-        '[DEV AUTH] Using mock RLS context + service client:',
+        '[AUTH BYPASS] DEV_AUTH active — using mock context (role=%s, casino=%s, endpoint=%s, correlationId=%s)',
         DEV_RLS_CONTEXT.staffRole,
-        '@',
         DEV_RLS_CONTEXT.casinoId.slice(0, 8),
+        ctx.endpoint ?? 'unknown',
+        ctx.correlationId,
       );
       ctx.rlsContext = DEV_RLS_CONTEXT;
       // Swap to service role client to bypass RLS auth.uid() check

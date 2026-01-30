@@ -16,12 +16,12 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 341-342
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { VisitLiveViewDTO } from "@/services/visit/dtos";
-import type { Database } from "@/types/database.types";
+import type { VisitLiveViewDTO } from '@/services/visit/dtos';
+import type { Database } from '@/types/database.types';
 
-import * as crud from "./crud";
+import * as crud from './crud';
 import type {
   ActivePlayerForDashboardDTO,
   CloseRatingSlipInput,
@@ -34,15 +34,13 @@ import type {
   RatingSlipListFilters,
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
-  SaveWithBuyInInput,
-  SaveWithBuyInResult,
-} from "./dtos";
-import { hasOpenSlipsForTable, countOpenSlipsForTable } from "./queries";
+} from './dtos';
+import { hasOpenSlipsForTable, countOpenSlipsForTable } from './queries';
 
 // Re-export DTOs, keys, and queries for consumers
-export * from "./dtos";
-export * from "./keys";
-export { hasOpenSlipsForTable, countOpenSlipsForTable } from "./queries";
+export * from './dtos';
+export * from './keys';
+export { hasOpenSlipsForTable, countOpenSlipsForTable } from './queries';
 
 // === Service Interface ===
 
@@ -129,7 +127,7 @@ export interface RatingSlipServiceInterface {
    */
   listForTable(
     tableId: string,
-    filters?: Omit<RatingSlipListFilters, "table_id" | "visit_id">,
+    filters?: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'>,
   ): Promise<{ items: RatingSlipDTO[]; cursor: string | null }>;
 
   /**
@@ -166,7 +164,7 @@ export interface RatingSlipServiceInterface {
    * @param filters - Optional list filters (status, limit, cursor)
    */
   listAll(
-    filters?: Omit<RatingSlipListFilters, "table_id" | "visit_id">,
+    filters?: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'>,
   ): Promise<{ items: RatingSlipDTO[]; cursor: string | null }>;
 
   // === Update Operations ===
@@ -181,24 +179,6 @@ export interface RatingSlipServiceInterface {
    * @throws RATING_SLIP_INVALID_STATE if slip is already closed
    */
   updateAverageBet(slipId: string, averageBet: number): Promise<RatingSlipDTO>;
-
-  // === Composite Operations (PERF-005) ===
-
-  /**
-   * Atomically update average_bet and record buy-in transaction.
-   * Single database roundtrip via composite RPC.
-   *
-   * PERF-005 WS7: Replaces sequential PATCH + POST pattern.
-   *
-   * @param slipId - Rating slip UUID
-   * @param input - SaveWithBuyInInput (average_bet, buyin_amount_cents?, buyin_type?)
-   * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
-   * @throws RATING_SLIP_NOT_OPEN if slip is already closed
-   */
-  saveWithBuyIn(
-    slipId: string,
-    input: SaveWithBuyInInput,
-  ): Promise<SaveWithBuyInResult>;
 
   // === Move Operations (PRD-016) ===
 
@@ -339,10 +319,6 @@ export function createRatingSlipService(
     // Update operations
     updateAverageBet: (slipId, averageBet) =>
       crud.updateAverageBet(supabase, slipId, averageBet),
-
-    // Composite operations (PERF-005)
-    saveWithBuyIn: (slipId, input) =>
-      crud.saveWithBuyIn(supabase, slipId, input),
 
     // Move operations (PRD-016)
     move: (casinoId, actorId, slipId, input) =>

@@ -12,7 +12,7 @@
 
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search, User, AlertCircle, Loader2, Info } from "lucide-react";
 import * as React from "react";
 import { toast } from "sonner";
@@ -28,18 +28,21 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useStartRatingSlip } from "@/hooks/rating-slip/use-rating-slip-mutations";
+import { dashboardKeys } from "@/hooks/dashboard";
 import {
   logError,
   getErrorMessage,
   formatValidationError,
   isFetchError,
+  isConflictError,
   isValidationError,
 } from "@/lib/errors/error-utils";
 import { cn } from "@/lib/utils";
 import { validateUUIDs, debugLogUUIDs } from "@/lib/validation";
 import type { PlayerSearchResultDTO } from "@/services/player/dtos";
 import { searchPlayers } from "@/services/player/http";
+import type { CreateRatingSlipInput } from "@/services/rating-slip/dtos";
+import { startRatingSlip } from "@/services/rating-slip/http";
 import { startVisit, getActiveVisit } from "@/services/visit/http";
 
 interface NewSlipModalProps {
@@ -67,9 +70,7 @@ export function NewSlipModal({
   initialSeatNumber,
   occupiedSeats = [],
 }: NewSlipModalProps) {
-  // PERF-005 WS8: Use canonical start hook (replaces inline useMutation)
-  // Canonical hook handles ratingSlipKeys + dashboardKeys invalidation.
-  const createSlipMutation = useStartRatingSlip();
+  const queryClient = useQueryClient();
 
   // Form state
   const [searchQuery, setSearchQuery] = React.useState("");
@@ -104,6 +105,43 @@ export function NewSlipModal({
     queryKey: ["players", "search", debouncedQuery],
     queryFn: () => searchPlayers(debouncedQuery, 10),
     enabled: debouncedQuery.length >= 2,
+  });
+
+  // Create slip mutation
+  const createSlipMutation = useMutation({
+    mutationFn: async (input: CreateRatingSlipInput) => {
+      return startRatingSlip(input);
+    },
+    onSuccess: () => {
+      // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
+      // Only invalidate this table's active slips - not all slips via .scope
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.activeSlips(tableId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.stats(casinoId),
+      });
+      // TARGETED: Invalidate tables for this casino only (occupancy changed)
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.tables(casinoId),
+      });
+      onOpenChange(false);
+    },
+    onError: (err: Error) => {
+      // Structured logging (development only, properly serialized)
+      logError(err, { component: "NewSlipModal", action: "createSlip" });
+
+      // Handle specific error cases with user-friendly messages
+      if (isFetchError(err) && err.code === "SEAT_ALREADY_OCCUPIED") {
+        setError(
+          "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
+        );
+      } else if (isValidationError(err)) {
+        setError(formatValidationError(err));
+      } else {
+        setError(getErrorMessage(err));
+      }
+    },
   });
 
   // Handle form submission
@@ -199,37 +237,12 @@ export function NewSlipModal({
         return;
       }
 
-      // 2. Create the rating slip (PERF-005 WS8: canonical hook with dashboard invalidation)
-      createSlipMutation.mutate(
-        {
-          input: {
-            visit_id: visitId,
-            table_id: tableId,
-            seat_number: selectedSeat,
-          },
-          casinoId,
-        },
-        {
-          onSuccess: () => {
-            onOpenChange(false);
-          },
-          onError: (err: Error) => {
-            logError(err, {
-              component: "NewSlipModal",
-              action: "createSlip",
-            });
-            if (isFetchError(err) && err.code === "SEAT_ALREADY_OCCUPIED") {
-              setError(
-                "This seat already has an active rating slip. Please choose a different seat or close the existing slip.",
-              );
-            } else if (isValidationError(err)) {
-              setError(formatValidationError(err));
-            } else {
-              setError(getErrorMessage(err));
-            }
-          },
-        },
-      );
+      // 2. Create the rating slip
+      createSlipMutation.mutate({
+        visit_id: visitId,
+        table_id: tableId,
+        seat_number: selectedSeat,
+      });
     } catch (err) {
       // Structured logging (development only, properly serialized)
       logError(err, { component: "NewSlipModal", action: "visitSetup" });

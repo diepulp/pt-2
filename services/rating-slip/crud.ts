@@ -33,8 +33,6 @@ import type {
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
   RatingSlipWithPlayerDTO,
-  SaveWithBuyInInput,
-  SaveWithBuyInResult,
 } from "./dtos";
 import {
   toActivePlayerForDashboardDTOList,
@@ -832,58 +830,6 @@ export async function listClosedForGamingDay(
   return {
     items: toClosedSlipForGamingDayDTOList(items),
     cursor,
-  };
-}
-
-// === Composite Save-with-BuyIn (PERF-005 WS7) ===
-
-/**
- * Atomically update average_bet and record buy-in transaction.
- * Uses rpc_save_rating_slip_with_buyin for single-roundtrip composite operation.
- *
- * PERF-005 WS7: Replaces sequential PATCH + POST pattern (4,935ms → ~2,500ms).
- * Cross-context: Writes to both rating_slip and player_financial_transaction.
- * Atomic: Both succeed or both fail (prevents double-entry bugs).
- *
- * ADR-024: RPC self-injects context via set_rls_context_from_staff().
- * INV-8: No casino_id or actor_id parameters.
- *
- * @param supabase - Supabase client with RLS context
- * @param slipId - Rating slip UUID
- * @param input - SaveWithBuyInInput (average_bet, optional buyin_amount_cents, buyin_type)
- * @returns SaveWithBuyInResult with updated slip and optional transaction_id
- * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
- * @throws RATING_SLIP_NOT_OPEN if slip is already closed
- */
-export async function saveWithBuyIn(
-  supabase: SupabaseClient<Database>,
-  slipId: string,
-  input: SaveWithBuyInInput,
-): Promise<SaveWithBuyInResult> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)(
-    "rpc_save_rating_slip_with_buyin",
-    {
-      p_slip_id: slipId,
-      p_average_bet: input.average_bet,
-      p_buyin_amount_cents: input.buyin_amount_cents ?? null,
-      p_buyin_type: input.buyin_type ?? "cash",
-    },
-  );
-
-  if (error) throw mapDatabaseError(error);
-
-  if (!data) {
-    throw new DomainError(
-      "INTERNAL_ERROR",
-      "rpc_save_rating_slip_with_buyin returned no data",
-    );
-  }
-
-  // RPC returns JSONB: { slip: row_to_json, transaction_id: uuid | null }
-  return {
-    slip: toRatingSlipDTO(data.slip),
-    transaction_id: data.transaction_id ?? null,
   };
 }
 

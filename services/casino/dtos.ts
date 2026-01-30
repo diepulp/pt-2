@@ -88,9 +88,12 @@ export type CreateStaffDTO = Pick<
 export type UpdateStaffDTO = Partial<
   Pick<
     StaffInsert,
-    'first_name' | 'last_name' | 'role' | 'employee_id' | 'email' | 'casino_id'
+    'first_name' | 'last_name' | 'role' | 'employee_id' | 'email' | 'casino_id' | 'user_id'
   >
->;
+> & {
+  /** Staff status — included for claims lifecycle (AUTH-HARDENING WS3) */
+  status?: 'active' | 'inactive';
+};
 
 // === Gaming Day DTO ===
 

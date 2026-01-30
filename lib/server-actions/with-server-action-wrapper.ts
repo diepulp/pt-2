@@ -87,10 +87,11 @@ export async function withServerAction<T>(
 
     try {
       // 1. Get authenticated context (validates auth.uid() → staff)
-      rlsContext = await getAuthContext(context.supabase);
+      // Used for early-reject only; RPC overwrites below
+      await getAuthContext(context.supabase);
 
-      // 2. Inject RLS context via SET LOCAL
-      await injectRLSContext(context.supabase, rlsContext, requestId);
+      // 2. Inject RLS context via SET LOCAL — RPC is single source of truth (AUTH-HARDENING WS2)
+      rlsContext = await injectRLSContext(context.supabase, requestId);
 
       // 3. Rate limiting check (if endpoint specified)
       if (context.endpoint) {

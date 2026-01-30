@@ -10,12 +10,12 @@
  * without explicit authorization checks.
  */
 
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
-import { isDevMode } from "./dev-context";
+import { assertDevAuthBypassAllowed, isDevMode } from './dev-context';
 
 /**
  * Create a Supabase client with service role privileges
@@ -31,7 +31,7 @@ export function createServiceClient(): SupabaseClient<Database> {
 
   if (!supabaseUrl || !serviceRoleKey) {
     throw new Error(
-      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY',
     );
   }
 
@@ -46,10 +46,13 @@ export function createServiceClient(): SupabaseClient<Database> {
 /**
  * Check if we should use service client for dev mode
  *
- * Returns true only in development when DEV_AUTH_BYPASS is enabled.
+ * AUTH-HARDENING v0.1 WS4: Dual gate — requires NODE_ENV=development AND ENABLE_DEV_AUTH=true.
+ * Calls assertDevAuthBypassAllowed() to fail fast in production.
  */
 export function shouldUseDevServiceClient(): boolean {
   if (!isDevMode()) return false;
-  if (process.env.DEV_AUTH_BYPASS === "false") return false;
+  if (process.env.ENABLE_DEV_AUTH !== 'true') return false;
+
+  assertDevAuthBypassAllowed();
   return true;
 }

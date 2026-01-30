@@ -356,37 +356,6 @@ export interface ClosedSlipForGamingDayDTO {
   } | null; // null for ghost visits
 }
 
-// === Save With Buy-In DTOs (PERF-005 WS7) ===
-
-/**
- * Input for the composite save-with-buyin operation.
- * Atomically updates average_bet and records buy-in transaction.
- *
- * @see PERF-005 WS7 Composite Save-with-BuyIn RPC
- */
-export interface SaveWithBuyInInput {
-  /** New average bet value (positive number) */
-  average_bet: number;
-  /** Buy-in amount in cents (0 or null to skip buy-in recording) */
-  buyin_amount_cents?: number | null;
-  /** Buy-in tender type (default: 'cash') */
-  buyin_type?: string;
-}
-
-/**
- * Result from the composite save-with-buyin RPC.
- * Contains updated slip fields and optional transaction ID.
- *
- * @see PERF-005 WS7 Composite Save-with-BuyIn RPC
- */
-
-export interface SaveWithBuyInResult {
-  /** Updated rating slip (with new average_bet) */
-  slip: RatingSlipDTO;
-  /** Financial transaction ID (null if no buy-in or ghost visit) */
-  transaction_id: string | null;
-}
-
 /**
  * Keyset cursor for closed slips pagination.
  * Uses (endTime, id) tuple for stable pagination under concurrent writes.

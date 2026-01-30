@@ -16,6 +16,7 @@
 
 "use client";
 
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { useOptimistic } from "react";
 
@@ -32,6 +33,7 @@ import {
   useDashboardRealtime,
   useDashboardPromoExposure,
   RealtimeStatusIndicator,
+  dashboardKeys,
 } from "@/hooks/dashboard";
 import {
   useSaveWithBuyIn,
@@ -47,6 +49,11 @@ import {
   logError,
   isFetchError,
 } from "@/lib/errors/error-utils";
+import {
+  pauseRatingSlip,
+  resumeRatingSlip,
+  closeRatingSlip,
+} from "@/services/rating-slip/http";
 
 import { ActiveSlipsPanel } from "./active-slips-panel";
 import { NewSlipModal } from "./new-slip-modal";
@@ -77,6 +84,8 @@ interface PitDashboardClientProps {
 }
 
 export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
+  const queryClient = useQueryClient();
+
   // Auth: Get staff ID from authenticated user
   const { staffId } = useAuth();
 
@@ -152,10 +161,56 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const closeWithFinancial = useCloseWithFinancial();
   const movePlayer = useMovePlayer();
 
-  // PERF-005 WS8 (P0-2 completion): Inline useMutation calls for pause/resume/close
-  // removed. Canonical hooks (usePauseRatingSlip, useResumeRatingSlip, useCloseRatingSlip)
-  // now live inside ActiveSlipsPanel, which provides consistent cache invalidation
-  // (ratingSlipKeys + dashboardKeys) and loyalty accrual via accrueOnClose().
+  // Mutations for slip actions
+  // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
+  const pauseMutation = useMutation({
+    mutationFn: pauseRatingSlip,
+    onSuccess: () => {
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.stats(casinoId),
+      });
+    },
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: resumeRatingSlip,
+    onSuccess: () => {
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.stats(casinoId),
+      });
+    },
+  });
+
+  const closeMutation = useMutation({
+    mutationFn: (slipId: string) => closeRatingSlip(slipId),
+    onSuccess: () => {
+      // TARGETED: Only invalidate this table's active slips
+      if (selectedTableId) {
+        queryClient.invalidateQueries({
+          queryKey: dashboardKeys.activeSlips(selectedTableId),
+        });
+      }
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.stats(casinoId),
+      });
+      // TARGETED: Invalidate tables for this casino only (occupancy changed)
+      queryClient.invalidateQueries({
+        queryKey: dashboardKeys.tables(casinoId),
+      });
+    },
+  });
 
   // Auto-select first active table if none selected
   React.useEffect(() => {
@@ -251,6 +306,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         playerId: ratingSlipModalData.player?.id ?? null,
         casinoId,
         tableId: ratingSlipModalData.slip.tableId,
+        staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,
@@ -374,46 +430,31 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   };
 
   // Handle seat click - open new slip modal or show context menu
-  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
-  const handleSeatClick = React.useCallback(
-    (
-      index: number,
-      occupant: { firstName: string; lastName: string } | null,
-    ) => {
-      const seatNumber = String(index + 1);
+  const handleSeatClick = (
+    index: number,
+    occupant: { firstName: string; lastName: string } | null,
+  ) => {
+    const seatNumber = String(index + 1);
 
-      if (occupant) {
-        // Seat is occupied - open modal for this slip
-        const slipOccupant = seatOccupants.get(seatNumber);
-        if (slipOccupant?.slipId) {
-          setSelectedSlip(slipOccupant.slipId);
-          openModal("rating-slip", { slipId: slipOccupant.slipId });
-        }
-      } else {
-        // Seat is empty - open new slip modal
-        setNewSlipSeatNumber(seatNumber);
-        openModal("new-slip", { seatNumber });
+    if (occupant) {
+      // Seat is occupied - open modal for this slip
+      const slipOccupant = seatOccupants.get(seatNumber);
+      if (slipOccupant?.slipId) {
+        setSelectedSlip(slipOccupant.slipId);
+        openModal("rating-slip", { slipId: slipOccupant.slipId });
       }
-    },
-    [seatOccupants, setSelectedSlip, openModal, setNewSlipSeatNumber],
-  );
+    } else {
+      // Seat is empty - open new slip modal
+      setNewSlipSeatNumber(seatNumber);
+      openModal("new-slip", { seatNumber });
+    }
+  };
 
   // Handle opening new slip modal (from panel button)
-  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
-  const handleNewSlip = React.useCallback(() => {
+  const handleNewSlip = () => {
     setNewSlipSeatNumber(undefined);
     openModal("new-slip", {});
-  }, [setNewSlipSeatNumber, openModal]);
-
-  // Handle slip click from active slips panel
-  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
-  const handleSlipClick = React.useCallback(
-    (slipId: string) => {
-      setSelectedSlip(slipId);
-      openModal("rating-slip", { slipId });
-    },
-    [setSelectedSlip, openModal],
-  );
+  };
 
   // Handle errors
   if (tablesError || statsError) {
@@ -516,7 +557,10 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
             tableId={selectedTableId ?? undefined}
             casinoId={casinoId}
             onNewSlip={handleNewSlip}
-            onSlipClick={handleSlipClick}
+            onSlipClick={(slipId) => {
+              setSelectedSlip(slipId);
+              openModal("rating-slip", { slipId });
+            }}
           />
         </div>
       </div>
