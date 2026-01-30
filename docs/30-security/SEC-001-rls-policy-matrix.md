@@ -9,8 +9,8 @@ last_review: 2025-12-25
 updated: 2025-12-25
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023, ADR-024]
-version: 1.6.0
+related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023, ADR-024, ADR-030]
+version: 1.7.0
 ---
 
 ## Overview
@@ -102,6 +102,38 @@ This pattern ensures:
 
 ---
 
+## Security Invariants Registry
+
+Consolidated invariants governing the auth/RLS security model. Each invariant is defined by its originating ADR and enforced through migrations, middleware, and tests.
+
+### ADR-024 Invariants (Context Derivation)
+
+| ID | Invariant | Enforcement |
+|----|-----------|-------------|
+| **INV-1** | `set_rls_context(...)` MUST NOT be executable by `authenticated` or `PUBLIC` roles | Migration: `REVOKE EXECUTE` |
+| **INV-2** | Only `set_rls_context_from_staff()` is callable by client roles for context injection | Migration: `GRANT EXECUTE` scoping |
+| **INV-3** | Staff identity MUST be bound to `auth.uid()` even when `staff_id` claim exists in JWT | RPC validation logic |
+| **INV-4** | Inactive staff MUST be blocked from deriving context | RPC: `WHERE status = 'active'` |
+| **INV-5** | Context MUST be set via `SET LOCAL` and MUST NOT leak across transactions (pooling safety) | `set_config(..., true)` third arg |
+| **INV-6** | Staff lookup MUST be deterministic (unique `staff.user_id` constraint, no `LIMIT 1` ambiguity) | Partial unique index on `staff.user_id` |
+| **INV-7** | All client-callable RPCs MUST call `set_rls_context_from_staff()` as first statement | ADR-015 scanner, PRD-015 remediation |
+| **INV-8** | No client-callable RPC may accept `casino_id`/`actor_id` as user input (ops-only exceptions allowed) | Code review, ADR-024 compliance |
+
+### ADR-030 Invariants (Auth Pipeline Hardening)
+
+| ID | Invariant | Enforcement |
+|----|-----------|-------------|
+| **INV-030-1** | `ctx.rlsContext` MUST be populated from the return value of `set_rls_context_from_staff()`, not from any independent derivation | `withRLS` middleware refactor (PR-1) |
+| **INV-030-2** | JWT claim sync/clear failures MUST be surfaced to callers (no silent swallowing) | Remove silent `try/catch` in `CasinoService` (PR-2) |
+| **INV-030-3** | `DEV_AUTH_BYPASS` MUST require `NODE_ENV=development` AND `ENABLE_DEV_AUTH=true`; violation at startup is a hard failure | `dev-context.ts` gate + startup check (PR-3) |
+| **INV-030-4** | `skipAuth` MUST NOT appear in production source files | CI lint test (PR-3) |
+| **INV-030-5** | Mutations (INSERT/UPDATE/DELETE) on security-critical tables MUST fail if `app.casino_id` session variable is absent, regardless of JWT claims | Write-path RLS policy migration (PR-4) |
+| **INV-030-6** | JWT fallback reliance during SELECT MUST be logged at the application layer | App-layer structured logging (PR-4) |
+
+**References:** [ADR-024](../80-adrs/ADR-024_DECISIONS.md), [ADR-030](../80-adrs/ADR-030-auth-system-hardening.md)
+
+---
+
 ## Policy Templates
 
 > **Note**: Pattern C (Hybrid) is the recommended pattern for all new policies. Legacy patterns are documented for migration reference only.
@@ -172,6 +204,8 @@ create policy "{table_name}_read_legacy"
 
 **Use For**: Tables requiring specific roles (pit_boss, admin)
 
+> **ADR-030 (INV-030-5):** For security-critical tables (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`), write policies MUST require session variables — no JWT COALESCE fallback. See Template 2b below. Other tables may continue using Pattern C until v0.2 rollout.
+
 **Pattern C (ADR-015 Compliant)**:
 
 ```sql
@@ -227,6 +261,37 @@ create policy "{table_name}_update_authorized_roles"
 - Compliance: `role in ('compliance', 'admin')` - Future service claim (see SEC-005)
 
 **Connection Pooling Safe**: Uses hybrid context resolution for both role check and casino scope verification.
+
+---
+
+### Template 2b: Write Access — Session Vars Required (ADR-030)
+
+**Use For**: INSERT/UPDATE/DELETE on security-critical tables (per INV-030-5)
+
+**Rationale:** If `withRLS` is skipped (via `skipAuth`, error, or misconfiguration), the COALESCE fallback would allow writes using stale JWT claims. Write policies on critical tables must fail closed.
+
+```sql
+-- Write policy (session vars required — no JWT fallback)
+create policy "{table_name}_insert_session_required"
+  on {table_name}
+  for insert with check (
+    auth.uid() IN (
+      select user_id
+      from staff
+      where casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+      and role in ('pit_boss', 'admin')
+      and status = 'active'
+      and user_id IS NOT NULL
+    )
+    AND casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+  );
+```
+
+**Key difference from Template 2:** No `COALESCE(..., auth.jwt()...)` — if `app.casino_id` is unset, the cast to `uuid` of an empty/null string yields `NULL`, and the equality check fails. Writes are denied.
+
+**Applies to:** `staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+
+**SELECT policies** on these tables retain the COALESCE fallback (Template 1) until v0.2.
 
 ---
 
@@ -737,11 +802,11 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 ---
 
-**Status**: ✅ **ADR-015 + ADR-024 COMPLIANT** (2026-01-06)
+**Status**: ✅ **ADR-015 + ADR-024 COMPLIANT** (2026-01-06) | ⚠️ **ADR-030 IN PROGRESS** (2026-01-29)
 **Migration**: ✅ Schema deployed, `set_rls_context_from_staff()` RPC for authoritative context
-**Pattern**: Pattern C (Hybrid) - Transaction-wrapped context with JWT fallback
-**Security**: ADR-024 remediation complete - `set_rls_context()` deprecated for client RPCs
-**Next**: All new RPCs must use `set_rls_context_from_staff()` (no spoofable inputs)
+**Pattern**: Pattern C (Hybrid) - Transaction-wrapped context with JWT fallback; **write-path tightening pending** (ADR-030 D4)
+**Security**: ADR-024 remediation complete; ADR-030 hardening proposed (TOCTOU removal, claims lifecycle, bypass lockdown, write-path enforcement)
+**Next**: ADR-030 PR-1 (RPC returns context) → PR-4 (write-path migration to Template 2b)
 
 ---
 
@@ -749,6 +814,7 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.7.0 | 2026-01-29 | **ADR-030 Alignment**: Added consolidated Security Invariants Registry (ADR-024 INV-1–8 + ADR-030 INV-030-1–6). Added Template 2b for write-path session-var-required policies (INV-030-5). Noted ADR-030 write-path tightening on Template 2. |
 | 1.6.0 | 2026-01-06 | **ADR-024 Alignment**: Updated Canonical RLS Pattern section to require `set_rls_context_from_staff()`. Deprecated `set_rls_context()` for client-callable RPCs. Added security invariants INV-7/INV-8. Updated RLS Context Injection section with authoritative context setter. |
 | 1.5.0 | 2026-01-06 | **PRD-LOYALTY-PROMO**: Added `promo_program`, `promo_coupon` tables to LoyaltyService (Promo Instruments) context. RPCs require ADR-024 compliance (`set_rls_context_from_staff()`). |
 | 1.3.0 | 2025-12-12 | **ADR-018 Reference**: Template 5 marked as MANDATORY for SECURITY DEFINER functions. Added cross-reference to ADR-018 governance pattern. |
