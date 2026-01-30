@@ -156,7 +156,7 @@ app/api/v1/{domain}/{action}/route.ts # Action (POST)
 
 ---
 
-### RLS Awareness (ADR-015 + SEC-006)
+### RLS Awareness (ADR-015 + ADR-030 + SEC-006)
 
 **Row-Level Security is automatically enforced** via the middleware chain:
 
@@ -164,9 +164,11 @@ app/api/v1/{domain}/{action}/route.ts # Action (POST)
 withAuth() → withRLS() → withIdempotency() → withAudit() → withTracing()
 ```
 
-**What `withRLS` does (ADR-015 compliant):**
-- Calls `set_rls_context()` RPC (transaction-wrapped, pooling-safe)
-- RLS policies use **Pattern C Hybrid**: transaction context + JWT fallback
+**What `withRLS` does (ADR-015 + ADR-030 compliant):**
+- Calls `set_rls_context_from_staff()` RPC which **returns** `{actor_id, casino_id, staff_role}` (ADR-030 D1)
+- Populates `ctx.rlsContext` strictly from this return value — no independent derivation
+- Read policies use **Pattern C Hybrid**: transaction context + JWT fallback
+- **Write policies on critical tables** (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`) require session vars only — no JWT fallback (ADR-030 D4)
 - All downstream queries are automatically casino-scoped
 
 **Pattern C Resolution (canonical):**
@@ -304,6 +306,7 @@ npm run type-check
 ### ADRs
 - **ADR-007** - API Surface Catalogue & OpenAPI Contract
 - **ADR-003** - State Management (React Query integration)
+- **ADR-030** - Auth System Hardening (write-path tightening, context single source of truth)
 
 ### Skill Resources
 | Resource | Purpose |

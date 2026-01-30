@@ -20,9 +20,11 @@ This document provides condensed patterns and anti-patterns. For the full workfl
 **Non-Negotiable Guardrails:**
 
 1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
-2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015)
+2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015); **write-path on critical tables requires session vars only** (ADR-030)
 3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
 4. **Append-only ledgers** — Finance/loyalty/compliance: no deletes, idempotency enforced (ADR-021)
+5. **Context single source of truth** — `ctx.rlsContext` from `set_rls_context_from_staff()` return value only; no independent derivation (ADR-030)
+6. **Bypass lockdown** — `DEV_AUTH_BYPASS` requires `NODE_ENV=development` + `ENABLE_DEV_AUTH=true`; `skipAuth` banned in production source (ADR-030)
 
 **References:**
 - `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`
@@ -163,6 +165,8 @@ CREATE POLICY "staff_casino_data" ON table_name
     )
   );
 ```
+
+**ADR-030 Write-Path Tightening:** INSERT/UPDATE/DELETE on critical tables (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`) use session vars only — no COALESCE JWT fallback. See SEC-001 Template 2b.
 
 For detailed RLS implementation, use the `rls-expert` skill.
 
@@ -367,5 +371,6 @@ done
 - **RLS External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` (AWS, Supabase, Crunchy Data patterns)
 - **ADR-020 RLS Strategy**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (Track A for MVP)
 - **ADR-023 Multi-Tenancy**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` (Pool primary, Silo escape hatch)
+- **ADR-030 Auth Hardening**: `docs/80-adrs/ADR-030-auth-system-hardening.md` (TOCTOU elimination, claims lifecycle, bypass lockdown, write-path enforcement)
 - **SEC-002 Security Model**: `docs/30-security/SEC-002-casino-scoped-security-model.md` (Casino-scoped boundaries)
 - **OPS-002 Silo Playbook**: `docs/50-ops/OPS-002-silo-provisioning-playbook.md` (Silo deployment operations)

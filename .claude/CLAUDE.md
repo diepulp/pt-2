@@ -93,6 +93,7 @@ Casino-scoped multi-tenancy with hybrid RLS (Track A per ADR-020).
 - ADR-018: SECURITY DEFINER governance
 - ADR-020: Track A hybrid strategy for MVP
 - ADR-024: Authoritative context derivation (supersedes spoofable self-injection)
+- ADR-030: Auth pipeline hardening — TOCTOU elimination, claims lifecycle, bypass lockdown, write-path session-var enforcement
 
 **References:** `docs/30-security/SEC-001-rls-policy-matrix.md`, `docs/30-security/SEC-002-casino-scoped-security-model.md`
 

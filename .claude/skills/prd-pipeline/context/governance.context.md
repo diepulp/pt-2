@@ -110,6 +110,12 @@ $$;
 1. **Never accept `p_casino_id` as parameter** (violates ADR-024 INV-8)
 2. **Never accept `p_actor_id` as parameter** (violates ADR-024 INV-8)
 3. **Never skip `set_rls_context_from_staff()`** in SECURITY DEFINER RPCs
+4. **Never use COALESCE JWT fallback on write policies for critical tables** (violates ADR-030 INV-030-5)
+5. **Never silently catch claim sync/clear errors** (violates ADR-030 INV-030-2)
+
+### ADR-030 RPC Change
+
+`set_rls_context_from_staff()` now `RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)`. Middleware consumes this return value as the single source of truth for `ctx.rlsContext` (ADR-030 INV-030-1).
 
 ---
 

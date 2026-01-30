@@ -295,6 +295,10 @@
 | ADR-015 | RLS Connection Pooling Strategy | Implemented | 2025-12-10 | - |
 | ADR-017 | Cashier Role Implementation | Implemented | 2025-12-10 | - |
 | ADR-018 | SECURITY DEFINER Governance | Implemented | 2025-12-12 | - |
+| ADR-020 | RLS Track A Hybrid Strategy | Implemented | 2025-12-15 | - |
+| ADR-023 | Multi-Tenancy Storage Model | Accepted | 2025-12-25 | - |
+| ADR-024 | Context Self-Injection Remediation | Implemented | 2025-12-29 | - |
+| ADR-030 | Auth System Hardening | Accepted | 2026-01-29 | - |
 
 **Location**: `80-adrs/`
 

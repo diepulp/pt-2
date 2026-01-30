@@ -135,5 +135,7 @@ Every EXECUTION-SPEC should include a Definition of Done with:
 - [ ] All workstream outputs created
 - [ ] All gates pass (type-check, lint, test, build)
 - [ ] No regressions in existing tests
-- [ ] Security invariants validated (ADR-024 compliance)
+- [ ] Security invariants validated (ADR-024 + ADR-030 compliance)
+- [ ] Write-path RLS on critical tables uses session vars only (ADR-030 INV-030-5)
+- [ ] No `skipAuth` in production source files (ADR-030 INV-030-4)
 - [ ] Documentation updated if needed

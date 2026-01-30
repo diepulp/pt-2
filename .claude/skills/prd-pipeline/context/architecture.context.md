@@ -85,6 +85,35 @@ $$;
 
 ---
 
+## ADR-030: Auth Pipeline Hardening (CRITICAL)
+
+**Document**: `docs/80-adrs/ADR-030-auth-system-hardening.md`
+**Status**: Accepted (2026-01-29)
+
+### Core Changes
+
+| Decision | What Changed |
+|----------|-------------|
+| **D1 — TOCTOU removal** | `set_rls_context_from_staff()` now `RETURNS TABLE(actor_id, casino_id, staff_role)`. Middleware uses ONLY this return value for `ctx.rlsContext`. |
+| **D2 — Claims lifecycle** | `syncUserRLSClaims()` / `clearUserRLSClaims()` failures surfaced (no silent try/catch). Claims cleared on deactivation. |
+| **D3 — Bypass lockdown** | `DEV_AUTH_BYPASS` requires `NODE_ENV=development` + `ENABLE_DEV_AUTH=true`. `skipAuth` banned in production. |
+| **D4 — Write-path tightening** | INSERT/UPDATE/DELETE on critical tables use session vars only — no JWT COALESCE fallback. |
+
+### Critical Tables (Session-Var-Only Writes)
+
+`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+
+### ADR-030 Invariants
+
+- **INV-030-1**: `ctx.rlsContext` from RPC return value only
+- **INV-030-2**: Claim sync/clear failures must be surfaced
+- **INV-030-3**: `DEV_AUTH_BYPASS` requires dual gate
+- **INV-030-4**: `skipAuth` banned in production source
+- **INV-030-5**: Mutations on critical tables fail without session vars
+- **INV-030-6**: JWT fallback during SELECT must be logged
+
+---
+
 ## DTO Patterns
 
 **Document**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`

@@ -93,6 +93,52 @@ CREATE POLICY "{table_name}_update_authorized_roles"
 
 ---
 
+## Template 2b: Write Access — Session Vars Required (ADR-030)
+
+Use for INSERT/UPDATE/DELETE on **critical tables** (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`). No JWT COALESCE fallback — writes fail closed if session context is absent.
+
+```sql
+-- Write policy (session vars required — no JWT fallback)
+CREATE POLICY "{table_name}_insert_session_required"
+  ON {table_name}
+  FOR INSERT WITH CHECK (
+    auth.uid() IN (
+      SELECT user_id
+      FROM staff
+      WHERE casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+      AND role IN ('pit_boss', 'admin')
+      AND status = 'active'
+      AND user_id IS NOT NULL
+    )
+    AND casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+  );
+
+-- Update policy (session vars required)
+CREATE POLICY "{table_name}_update_session_required"
+  ON {table_name}
+  FOR UPDATE USING (
+    auth.uid() IN (
+      SELECT user_id
+      FROM staff
+      WHERE casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+      AND role IN ('pit_boss', 'admin')
+      AND status = 'active'
+      AND user_id IS NOT NULL
+    )
+    AND casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+  ) WITH CHECK (
+    casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+  );
+```
+
+**Key difference from Template 2:** No `COALESCE(..., auth.jwt()...)` — if `app.casino_id` is unset, the cast of empty/null string yields `NULL`, equality fails, writes are denied.
+
+**SELECT policies** on these tables retain the COALESCE fallback (Template 1) until v0.2.
+
+**Reference:** `docs/80-adrs/ADR-030-auth-system-hardening.md` (D4), `docs/30-security/SEC-001-rls-policy-matrix.md` (Template 2b)
+
+---
+
 ## Template 3: Append-Only Ledger
 
 Use for financial transactions, loyalty ledger, MTL entries.

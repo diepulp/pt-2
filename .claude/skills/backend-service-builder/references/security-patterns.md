@@ -19,7 +19,7 @@ When implementing backend services, these multi-tenancy rules are MANDATORY:
 | Guardrail | Requirement |
 |-----------|-------------|
 | **Casino-scoped ownership** | Every tenant-owned table MUST have `casino_id` column. No cross-casino joins in services. |
-| **Hybrid RLS** | All queries operate under Pattern C (session context + JWT fallback). Never bypass RLS. |
+| **Hybrid RLS** | Reads use Pattern C (session context + JWT fallback). **Writes on critical tables use session vars only** (ADR-030). Never bypass RLS. |
 | **SECURITY DEFINER governance** | RPCs MUST validate `p_casino_id` matches context (Template 5 pattern). |
 | **Append-only ledgers** | Finance/loyalty/compliance tables: no UPDATE/DELETE. Corrections are new rows. |
 | **No service key in runtime** | Application code uses anon key + user auth. Service key = admin tooling only. |
@@ -27,6 +27,21 @@ When implementing backend services, these multi-tenancy rules are MANDATORY:
 **Pool vs Silo implications:**
 - Pool (default): RLS is the ONLY isolation. Policies MUST be correct.
 - Silo (escape hatch): Same RLS applies (defense in depth) + infrastructure boundary.
+
+---
+
+## ADR-030 Auth Pipeline Hardening (2026-01-29)
+
+Key changes affecting service implementations:
+
+| Decision | Impact on Services |
+|----------|-------------------|
+| **D1 — RPC returns context** | `set_rls_context_from_staff()` returns `{actor_id, casino_id, staff_role}`. Middleware uses ONLY this return value for `ctx.rlsContext`. |
+| **D2 — Claims lifecycle** | `syncUserRLSClaims()` / `clearUserRLSClaims()` failures MUST be surfaced. No silent `try/catch`. Claims cleared on staff deactivation. |
+| **D3 — Bypass lockdown** | `DEV_AUTH_BYPASS` requires `NODE_ENV=development` + `ENABLE_DEV_AUTH=true`. `skipAuth` banned in production source files. |
+| **D4 — Write-path tightening** | INSERT/UPDATE/DELETE on critical tables (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`) require `app.casino_id` session var — no JWT COALESCE fallback. |
+
+**Reference:** `docs/80-adrs/ADR-030-auth-system-hardening.md`
 
 ---
 
@@ -269,3 +284,5 @@ Before implementing any endpoint that uses casino context:
 - [ ] Empty/missing context throws error (no silent fallback)
 - [ ] Staff record lookup uses authenticated user.id
 - [ ] RLS policies use `current_setting('app.casino_id')` set server-side
+- [ ] Claims sync/clear errors are surfaced, not silently caught (ADR-030 D2)
+- [ ] No `skipAuth` in production source files (ADR-030 D3)

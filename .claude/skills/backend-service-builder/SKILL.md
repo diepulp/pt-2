@@ -133,8 +133,10 @@ Before marking service implementation complete, verify:
 - [ ] All validation scripts pass
 - [ ] Documentation consistency check run
 - [ ] Migration follows `YYYYMMDDHHMMSS_description.sql` naming
-- [ ] RLS policies use ADR-015 Pattern C (hybrid with JWT fallback)
+- [ ] RLS read policies use ADR-015 Pattern C (hybrid with JWT fallback)
+- [ ] RLS write policies on critical tables use session vars only — no JWT fallback (ADR-030)
 - [ ] **SECURITY DEFINER RPCs self-inject context before data access** (ADR-015)
+- [ ] Claims sync/clear errors surfaced, not silently caught (ADR-030 D2)
 
 ### RPC Self-Injection Requirement (ADR-015)
 

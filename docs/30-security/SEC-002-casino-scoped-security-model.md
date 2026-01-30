@@ -7,7 +7,7 @@ affects: [SEC-001]
 created: 2025-11-02
 last_review: 2025-12-25
 updated: 2025-12-25
-related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024]
+related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024, ADR-030]
 ---
 
 ## Purpose
@@ -29,9 +29,12 @@ PT-2 adopts a **Pool-based multi-tenancy model** as the default, with **Silo dep
 **Guardrails (Non-Negotiables):**
 
 1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
-2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015)
+2. **Hybrid RLS mandatory** — Policies use session context + JWT fallback (Pattern C per ADR-015); **write-path policies on critical tables require session vars only** (ADR-030 INV-030-5)
 3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
 4. **Append-only ledgers** — Finance/loyalty/compliance: no deletes, idempotency enforced (ADR-021)
+5. **Single source of truth for request context** — `ctx.rlsContext` populated only from `set_rls_context_from_staff()` return value; no independent derivation (ADR-030 INV-030-1)
+6. **Authoritative claims lifecycle** — JWT claim sync/clear failures must be surfaced, never silently swallowed; claims cleared on staff deactivation (ADR-030 INV-030-2)
+7. **Bypass knob lockdown** — `DEV_AUTH_BYPASS` requires `NODE_ENV=development` + `ENABLE_DEV_AUTH=true`; `skipAuth` restricted to test/seed paths with CI enforcement (ADR-030 INV-030-3, INV-030-4)
 
 **See:** `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` for full decision rationale.
 
@@ -61,9 +64,9 @@ PT-2 adopts a **Pool-based multi-tenancy model** as the default, with **Silo dep
 - **Policy Snapshots:** `rating_slip.policy_snapshot` captures the reward policy at issuance to support post-event audits without loosening RLS.
 - **No Cross-Casino Joins:** Queries spanning properties must go through aggregated, pre-authorized views; ad hoc joins using free-form keys are rejected.
 
-## RLS Context Injection (ADR-015, ADR-020, ADR-024)
+## RLS Context Injection (ADR-015, ADR-020, ADR-024, ADR-030)
 
-**Status:** ✅ Implemented (Phase 1 + Phase 2)
+**Status:** ✅ Implemented (Phase 1 + Phase 2 + ADR-030 hardening)
 **MVP Strategy (ADR-020):** Track A (Hybrid) is the MVP architecture. Track B (JWT-only) migration deferred until production validation prerequisites are met.
 
 PT-2 uses a hybrid context injection strategy for RLS policies, ensuring compatibility with Supabase connection pooling (Supavisor transaction mode).
@@ -72,6 +75,12 @@ PT-2 uses a hybrid context injection strategy for RLS policies, ensuring compati
 - All RPCs MUST call `set_rls_context_from_staff()` as the first statement.
 - RPCs MUST NOT accept `casino_id` or `actor_id` as input parameters.
 - Context is derived from JWT + `staff` table lookup; only optional input is `correlation_id`.
+
+**ADR-030 Auth Pipeline Hardening (implemented — 2026-01-29)**:
+- **D1 — TOCTOU removal:** `set_rls_context_from_staff()` returns the derived context (`actor_id`, `casino_id`, `staff_role`). Middleware populates `ctx.rlsContext` strictly from this return value — no independent staff lookup for context derivation. This eliminates drift between app-layer and Postgres-layer context.
+- **D2 — Claims lifecycle:** `syncUserRLSClaims()` / `clearUserRLSClaims()` failures are no longer silently swallowed. Staff deactivation or `user_id` removal triggers claim clearing.
+- **D3 — Bypass lockdown:** `DEV_AUTH_BYPASS` requires dual gate (`NODE_ENV=development` + `ENABLE_DEV_AUTH=true`). `skipAuth` restricted to test/seed files by CI lint.
+- **D4 — Write-path tightening:** INSERT/UPDATE/DELETE policies on critical tables require `app.casino_id` session variable (no JWT COALESCE fallback). SELECT retains fallback.
 
 ### Context Injection Mechanism
 
@@ -119,6 +128,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2026-01-29**: **ADR-030 Alignment**: Added guardrails #5–7 (single source of truth, authoritative claims lifecycle, bypass lockdown). Updated RLS Context Injection section with ADR-030 D1–D4 hardening decisions. Added ADR-030 to related ADRs.
 - **2026-01-06**: **PRD-LOYALTY-PROMO**: Added promo instrument capabilities to Role Model (pit_boss: issue/void/replace; admin: full access; compliance: read/inventory). Added promo RPCs to Scope Anchors with ADR-024 compliance note. Also corrected cashier source from "Service claim" to "staff_role enum" per ADR-017.
 - **2025-12-25**: Added Multi-Tenancy Storage Model section (ADR-023). Official stance: Pool Primary; Silo Optional.
 - **2025-12-15**: Added ADR-020 reference. Track A Hybrid is MVP architecture per ADR-020.

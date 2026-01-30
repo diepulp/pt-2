@@ -1,6 +1,6 @@
 ---
 name: rls-expert
-description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020/ADR-024 compliance. Covers authoritative context derivation via set_rls_context_from_staff() (ADR-024), hybrid RLS patterns (Pattern C), connection pooling compatibility, role-based access control, and MTL authorization (ADR-025). (project)
+description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020/ADR-024/ADR-030 compliance. Covers authoritative context derivation via set_rls_context_from_staff() (ADR-024), auth pipeline hardening (ADR-030), hybrid RLS patterns (Pattern C), connection pooling compatibility, role-based access control, and MTL authorization (ADR-025). (project)
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 ---
 
@@ -20,9 +20,10 @@ PT-2 Row-Level Security specialist for implementing secure, connection-pooling-c
 **Non-Negotiable Guardrails:**
 
 1. **Casino-scoped ownership** — Every tenant-owned row carries `casino_id`; cross-casino joins forbidden
-2. **Hybrid RLS mandatory** — Pattern C with session context + JWT fallback
+2. **Hybrid RLS mandatory** — Pattern C with session context + JWT fallback; **write-path policies on critical tables require session vars only** (ADR-030 INV-030-5)
 3. **SECURITY DEFINER governance** — RPCs must validate `p_casino_id` against context (ADR-018)
 4. **Append-only ledgers** — Finance/loyalty/compliance: denial policies for updates/deletes
+5. **Single source of truth for context** — `ctx.rlsContext` populated only from `set_rls_context_from_staff()` return value (ADR-030 INV-030-1)
 
 **Reference:** `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`
 
@@ -66,6 +67,36 @@ SELECT set_rls_context_from_staff(p_correlation_id := 'req-123');
 
 **Reference:** `docs/80-adrs/ADR-024_DECISIONS.md` (Frozen)
 
+## Auth Pipeline Hardening (ADR-030) ⚠️ CRITICAL
+
+**ADR-030 extends ADR-024 with end-to-end enforcement hardening.**
+
+### Key Changes (Implemented 2026-01-29)
+
+1. **RPC returns context (D1):** `set_rls_context_from_staff()` now `RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)`. Middleware populates `ctx.rlsContext` strictly from this return value — no independent derivation.
+2. **Claims lifecycle (D2):** `syncUserRLSClaims()` / `clearUserRLSClaims()` failures are surfaced (no silent try/catch). Claims cleared on staff deactivation.
+3. **Bypass lockdown (D3):** `DEV_AUTH_BYPASS` requires `NODE_ENV=development` + `ENABLE_DEV_AUTH=true`. `skipAuth` restricted to test/seed paths.
+4. **Write-path tightening (D4):** INSERT/UPDATE/DELETE on critical tables require `app.casino_id` session variable — **no JWT COALESCE fallback**. SELECT retains fallback.
+
+### ADR-030 Security Invariants
+
+| INV | Requirement |
+|-----|-------------|
+| INV-030-1 | `ctx.rlsContext` MUST come from `set_rls_context_from_staff()` return value, not independent derivation |
+| INV-030-2 | JWT claim sync/clear failures MUST be surfaced (no silent swallowing) |
+| INV-030-3 | `DEV_AUTH_BYPASS` MUST require `NODE_ENV=development` AND `ENABLE_DEV_AUTH=true` |
+| INV-030-4 | `skipAuth` MUST NOT appear in production source files (CI-enforced) |
+| INV-030-5 | Mutations on critical tables MUST fail if `app.casino_id` session var is absent |
+| INV-030-6 | JWT fallback reliance during SELECT MUST be logged at app layer |
+
+### Critical Tables (Session-Var-Only Writes)
+
+`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+
+These tables use **Template 2b** for write policies (no COALESCE fallback). SELECT policies retain Pattern C.
+
+**Reference:** `docs/80-adrs/ADR-030-auth-system-hardening.md`
+
 ## Current Strategy (ADR-020)
 
 **Track A (Hybrid) is the MVP architecture.** Track B (JWT-only) is the correct end-state, gated on prerequisites.
@@ -86,14 +117,14 @@ Invoke this skill when:
 - Implementing or updating RLS policies for existing tables
 - Writing SECURITY DEFINER RPCs that validate casino scope
 - Troubleshooting RLS policy failures or cross-tenant data leakage
-- Auditing policies for ADR-015/ADR-020 compliance
+- Auditing policies for ADR-015/ADR-020/ADR-030 compliance
 - Implementing role-gated write access (cashier, pit_boss, admin)
 - Setting up append-only ledger policies (finance, loyalty, MTL)
 
 ## Core Principles
 
 1. **Casino scope is non-negotiable** - Every casino-scoped table MUST enforce `casino_id` in RLS policies
-2. **Pattern C (Hybrid) is canonical for MVP** - Transaction context with JWT fallback (ADR-020)
+2. **Pattern C (Hybrid) is canonical for MVP** - Transaction context with JWT fallback (ADR-020); **write-path on critical tables uses session vars only** (ADR-030)
 3. **Connection pooling safe** - Use `set_rls_context()` RPC, never legacy SET LOCAL loops
 4. **Dealers are excluded** - Dealers have `user_id = NULL` and ZERO application permissions
 5. **No service keys in runtime** - All operations use anon key + user authentication
@@ -145,6 +176,18 @@ COALESCE(
 ```
 
 **Why NULLIF?** Empty strings from unset `current_setting()` must become NULL for COALESCE to work correctly.
+
+### Write-Path Pattern: Session Vars Only (ADR-030 D4)
+
+For INSERT/UPDATE/DELETE on critical tables (`staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`), **do not use COALESCE fallback**:
+
+```sql
+-- Write policy (session vars required — no JWT fallback)
+-- If app.casino_id is unset, the cast yields NULL → equality fails → write denied
+casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
+```
+
+This ensures writes fail closed if `withRLS` is skipped or misconfigured. SELECT policies on these tables retain the COALESCE fallback (Pattern C). See SEC-001 Template 2b.
 
 ## Staff Roles Quick Reference
 
@@ -263,6 +306,7 @@ For comprehensive documentation, load the appropriate reference file:
 | Topic | Reference File | When to Load |
 |-------|---------------|--------------|
 | **Context Security** | `docs/80-adrs/ADR-024_DECISIONS.md` | Understanding `set_rls_context_from_staff()` (ADR-024) |
+| **Auth Hardening** | `docs/80-adrs/ADR-030-auth-system-hardening.md` | TOCTOU elimination, claims lifecycle, bypass lockdown, write-path tightening (ADR-030) |
 | **Strategy Decision** | `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` | Understanding Track A vs Track B decision |
 | **External Validation** | `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` | When ambiguity arises about patterns |
 | **MTL Authorization** | `docs/80-adrs/ADR-025-mtl-authorization-model.md` | MTL access via staff_role (not service claims) |
@@ -295,7 +339,8 @@ After implementing RLS policies:
 3. **Policy patterns**: Confirm hybrid COALESCE pattern with JWT fallback
 4. **Role exclusions**: Dealers automatically excluded via `auth.uid()` check
 5. **ADR-024 compliance**: RPCs use `set_rls_context_from_staff()` (no spoofable params)
-6. **Cross-tenant test**: Verify cannot access other casino's data
+6. **ADR-030 compliance**: Write policies on critical tables use session vars only (no COALESCE)
+7. **Cross-tenant test**: Verify cannot access other casino's data
 
 ```sql
 -- Quick verification test (ADR-024 compliant)
@@ -317,6 +362,7 @@ INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
 ### Security-Critical (Read These First)
 
 - **ADR-024**: `docs/80-adrs/ADR-024_DECISIONS.md` - **CRITICAL: Context spoofing remediation**. Deprecates `set_rls_context()`, introduces authoritative `set_rls_context_from_staff()`. Frozen.
+- **ADR-030**: `docs/80-adrs/ADR-030-auth-system-hardening.md` - **CRITICAL: Auth pipeline hardening**. TOCTOU elimination, claims lifecycle, bypass lockdown, write-path session-var enforcement. Extends ADR-024.
 - **ADR-023**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` - **Pool primary, Silo escape hatch** multi-tenancy model
 - **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data.
 
@@ -493,6 +539,7 @@ python .claude/skills/rls-expert/scripts/regenerate_manifest.py
 
 | Priority | Document | Security Impact |
 |----------|----------|-----------------|
+| **CRITICAL** | ADR-030 | Auth pipeline hardening (write-path, claims, bypass) |
 | **CRITICAL** | ADR-024 | Context spoofing remediation |
 | **CRITICAL** | ADR-023 | Multi-tenant isolation model |
 | **CRITICAL** | ADR-018 | SECURITY DEFINER governance |
