@@ -16,7 +16,6 @@
 
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 import { useOptimistic } from "react";
 
@@ -33,7 +32,6 @@ import {
   useDashboardRealtime,
   useDashboardPromoExposure,
   RealtimeStatusIndicator,
-  dashboardKeys,
 } from "@/hooks/dashboard";
 import {
   useSaveWithBuyIn,
@@ -49,11 +47,6 @@ import {
   logError,
   isFetchError,
 } from "@/lib/errors/error-utils";
-import {
-  pauseRatingSlip,
-  resumeRatingSlip,
-  closeRatingSlip,
-} from "@/services/rating-slip/http";
 
 import { ActiveSlipsPanel } from "./active-slips-panel";
 import { NewSlipModal } from "./new-slip-modal";
@@ -84,8 +77,6 @@ interface PitDashboardClientProps {
 }
 
 export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
-  const queryClient = useQueryClient();
-
   // Auth: Get staff ID from authenticated user
   const { staffId } = useAuth();
 
@@ -161,56 +152,10 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const closeWithFinancial = useCloseWithFinancial();
   const movePlayer = useMovePlayer();
 
-  // Mutations for slip actions
-  // ISSUE-DD2C45CA: Targeted cache invalidation to prevent N×2 HTTP cascade
-  const pauseMutation = useMutation({
-    mutationFn: pauseRatingSlip,
-    onSuccess: () => {
-      // TARGETED: Only invalidate this table's active slips
-      if (selectedTableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(selectedTableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-    },
-  });
-
-  const resumeMutation = useMutation({
-    mutationFn: resumeRatingSlip,
-    onSuccess: () => {
-      // TARGETED: Only invalidate this table's active slips
-      if (selectedTableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(selectedTableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-    },
-  });
-
-  const closeMutation = useMutation({
-    mutationFn: (slipId: string) => closeRatingSlip(slipId),
-    onSuccess: () => {
-      // TARGETED: Only invalidate this table's active slips
-      if (selectedTableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(selectedTableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-      // TARGETED: Invalidate tables for this casino only (occupancy changed)
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables(casinoId),
-      });
-    },
-  });
+  // PERF-005 WS8 (P0-2 completion): Inline useMutation calls for pause/resume/close
+  // removed. Canonical hooks (usePauseRatingSlip, useResumeRatingSlip, useCloseRatingSlip)
+  // now live inside ActiveSlipsPanel, which provides consistent cache invalidation
+  // (ratingSlipKeys + dashboardKeys) and loyalty accrual via accrueOnClose().
 
   // Auto-select first active table if none selected
   React.useEffect(() => {
