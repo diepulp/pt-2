@@ -306,7 +306,6 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         playerId: ratingSlipModalData.player?.id ?? null,
         casinoId,
         tableId: ratingSlipModalData.slip.tableId,
-        staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,
@@ -430,31 +429,46 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   };
 
   // Handle seat click - open new slip modal or show context menu
-  const handleSeatClick = (
-    index: number,
-    occupant: { firstName: string; lastName: string } | null,
-  ) => {
-    const seatNumber = String(index + 1);
+  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
+  const handleSeatClick = React.useCallback(
+    (
+      index: number,
+      occupant: { firstName: string; lastName: string } | null,
+    ) => {
+      const seatNumber = String(index + 1);
 
-    if (occupant) {
-      // Seat is occupied - open modal for this slip
-      const slipOccupant = seatOccupants.get(seatNumber);
-      if (slipOccupant?.slipId) {
-        setSelectedSlip(slipOccupant.slipId);
-        openModal("rating-slip", { slipId: slipOccupant.slipId });
+      if (occupant) {
+        // Seat is occupied - open modal for this slip
+        const slipOccupant = seatOccupants.get(seatNumber);
+        if (slipOccupant?.slipId) {
+          setSelectedSlip(slipOccupant.slipId);
+          openModal("rating-slip", { slipId: slipOccupant.slipId });
+        }
+      } else {
+        // Seat is empty - open new slip modal
+        setNewSlipSeatNumber(seatNumber);
+        openModal("new-slip", { seatNumber });
       }
-    } else {
-      // Seat is empty - open new slip modal
-      setNewSlipSeatNumber(seatNumber);
-      openModal("new-slip", { seatNumber });
-    }
-  };
+    },
+    [seatOccupants, setSelectedSlip, openModal, setNewSlipSeatNumber],
+  );
 
   // Handle opening new slip modal (from panel button)
-  const handleNewSlip = () => {
+  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
+  const handleNewSlip = React.useCallback(() => {
     setNewSlipSeatNumber(undefined);
     openModal("new-slip", {});
-  };
+  }, [setNewSlipSeatNumber, openModal]);
+
+  // Handle slip click from active slips panel
+  // PERF-005 WS9: Stabilized with useCallback to prevent child re-renders
+  const handleSlipClick = React.useCallback(
+    (slipId: string) => {
+      setSelectedSlip(slipId);
+      openModal("rating-slip", { slipId });
+    },
+    [setSelectedSlip, openModal],
+  );
 
   // Handle errors
   if (tablesError || statsError) {
@@ -557,10 +571,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
             tableId={selectedTableId ?? undefined}
             casinoId={casinoId}
             onNewSlip={handleNewSlip}
-            onSlipClick={(slipId) => {
-              setSelectedSlip(slipId);
-              openModal("rating-slip", { slipId });
-            }}
+            onSlipClick={handleSlipClick}
           />
         </div>
       </div>

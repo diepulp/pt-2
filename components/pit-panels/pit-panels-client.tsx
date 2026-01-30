@@ -286,7 +286,6 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         playerId: modalData.player?.id ?? null,
         casinoId,
         tableId: modalData.slip.tableId,
-        staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,

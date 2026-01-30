@@ -1,16 +1,20 @@
 /**
  * Save With Buy-In Mutation Hook
  *
- * Handles saving average_bet changes and recording new buy-in transactions.
- * Combines three operations:
- * 1. Record buy-in transaction (if newBuyIn > 0)
- * 2. Update average_bet via PATCH endpoint
- * 3. Check compliance thresholds and auto-create MTL entry if needed (≥$3,000)
+ * PERF-005 WS7: Single HTTP roundtrip via composite RPC.
+ * Replaces sequential PATCH average_bet + POST financial_transaction pattern
+ * that caused 4,935ms save-flow latency.
+ *
+ * Handles:
+ * 1. Check compliance thresholds (client-side, pre-mutation)
+ * 2. Atomically save average_bet + record buy-in (single HTTP call)
+ * 3. Cache invalidation (targeted, not broad .scope)
  *
  * React 19: Uses TanStack Query optimistic updates for immediate UI feedback
  *
  * @see PRD-008a Rating Slip Modal Dashboard Integration
  * @see PRD-MTL-UI-GAPS WS7 Rating Slip Modal Integration
+ * @see PERF-005 WS7 Composite Save-with-BuyIn RPC
  */
 
 "use client";
@@ -23,11 +27,8 @@ import {
   notifyThreshold,
 } from "@/hooks/mtl/use-threshold-notifications";
 import { playerFinancialKeys } from "@/hooks/player-financial/keys";
-import { DomainError } from "@/lib/errors/domain-errors";
-import { getErrorMessage, logError } from "@/lib/errors/error-utils";
 import { mtlKeys } from "@/services/mtl/keys";
-import { createFinancialTransaction } from "@/services/player-financial/http";
-import { updateAverageBet } from "@/services/rating-slip/http";
+import { saveWithBuyIn } from "@/services/rating-slip/http";
 import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
@@ -38,12 +39,10 @@ export interface SaveWithBuyInInput {
   visitId: string;
   /** Player ID (null for ghost visits - skips buy-in transaction) */
   playerId: string | null;
-  /** Casino ID for transaction recording */
+  /** Casino ID for cache invalidation */
   casinoId: string;
   /** Table ID for targeted cache invalidation */
   tableId: string;
-  /** Staff ID for transaction recording */
-  staffId: string;
   /** New average bet value */
   averageBet: number;
   /** New buy-in amount in dollars (will be converted to cents) */
@@ -59,16 +58,20 @@ export interface SaveWithBuyInInput {
 /**
  * Mutation hook for saving rating slip changes with optional buy-in recording.
  *
+ * PERF-005 WS7: Uses composite RPC for single-roundtrip save.
+ * Atomically updates average_bet and records buy-in in one database transaction.
+ *
  * @example
  * ```tsx
- * const saveWithBuyIn = useSaveWithBuyIn();
+ * const saveWithBuyInMutation = useSaveWithBuyIn();
  *
  * const handleSave = async () => {
- *   await saveWithBuyIn.mutateAsync({
+ *   await saveWithBuyInMutation.mutateAsync({
  *     slipId: selectedSlipId,
  *     visitId: modalData.slip.visitId,
  *     playerId: modalData.player?.id ?? null,
  *     casinoId,
+ *     tableId,
  *     staffId,
  *     averageBet: Number(formState.averageBet),
  *     newBuyIn: Number(formState.newBuyIn),
@@ -82,11 +85,6 @@ export function useSaveWithBuyIn() {
   return useMutation({
     mutationFn: async ({
       slipId,
-      visitId,
-      playerId,
-      casinoId,
-      tableId,
-      staffId,
       averageBet,
       newBuyIn,
       playerDailyTotal,
@@ -99,61 +97,20 @@ export function useSaveWithBuyIn() {
         notifyThreshold(thresholdResult);
       }
 
-      // SEQUENTIAL: Update average_bet first, then record buy-in if successful
-      // FIX: Previously parallel operations caused double-entry bug when average_bet
-      // validation failed but financial transaction already committed.
-      // Now we only record buy-in AFTER average_bet update succeeds.
-
-      // Step 2: Update average_bet (critical path - errors propagate)
-      const updateResult = await updateAverageBet(slipId, {
+      // Step 2: PERF-005 WS7 — Single HTTP call via composite RPC
+      // Atomically: UPDATE average_bet + INSERT financial_transaction
+      // Replaces sequential PATCH → POST pattern (4,935ms → ~2,500ms)
+      const result = await saveWithBuyIn(slipId, {
         average_bet: averageBet,
+        buyin_amount_cents: newBuyIn > 0 ? Math.round(newBuyIn * 100) : null,
+        buyin_type: "cash",
       });
 
-      // Step 3: Record buy-in transaction (only after average_bet succeeds)
-      // GAP-ADR-026-UI-SHIPPABLE Patch C: If buy-in fails, save must fail
-      if (newBuyIn > 0 && playerId) {
-        try {
-          await createFinancialTransaction({
-            casino_id: casinoId,
-            player_id: playerId,
-            visit_id: visitId,
-            rating_slip_id: slipId,
-            amount: newBuyIn * 100, // Convert dollars to cents
-            direction: "in",
-            source: "pit",
-            tender_type: "cash",
-            created_by_staff_id: staffId,
-          });
-        } catch (txnError) {
-          // Check for STALE_GAMING_DAY_CONTEXT error
-          const errorMessage = getErrorMessage(txnError);
-          if (errorMessage.includes("STALE_GAMING_DAY_CONTEXT")) {
-            // Re-throw with domain error for caller to handle context refresh
-            throw new DomainError(
-              "STALE_GAMING_DAY_CONTEXT",
-              "Session context is stale. Please refresh and try again.",
-              { httpStatus: 409, retryable: true },
-            );
-          }
-          // Log all buy-in errors for visibility (Patch C requirement)
-          logError(txnError, {
-            component: "useSaveWithBuyIn",
-            action: "createFinancialTransaction",
-            metadata: { slipId, visitId, playerId },
-          });
-          // Re-throw to fail the save operation
-          throw txnError;
-        }
-      }
+      // NOTE: MTL entry creation is handled automatically by the forward bridge
+      // trigger (fn_derive_mtl_from_finance) when a financial transaction is inserted.
+      // No explicit MTL creation needed here. See ISSUE-FB8EB717.
 
-      // Step 4: MTL entry creation
-      // NOTE: The forward bridge trigger (fn_derive_mtl_from_finance) automatically
-      // creates an MTL entry when a financial transaction is inserted. This makes
-      // explicit MTL creation here REDUNDANT and would cause duplicate entries.
-      // The threshold notification (Step 1) still fires for UX feedback.
-      // See ISSUE-FB8EB717 for cents standardization details.
-
-      return { updateResult, thresholdResult };
+      return { ...result, thresholdResult };
     },
     onMutate: async ({ slipId, averageBet }) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update

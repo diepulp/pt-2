@@ -3,14 +3,17 @@
   "prd_title": "Rating Slip Comprehensive Performance Remediation",
   "source_doc": "docs/issues/perf/PERF-005-RATING-SLIP-COMPREHENSIVE-PERFORMANCE-AUDIT.md",
   "exec_spec": "docs/20-architecture/specs/PERF-005/EXECUTION-SPEC-PERF-005.md",
-  "status": "in_progress",
-  "current_phase": 1,
+  "status": "complete",
+  "current_phase": 5,
   "total_phases": 5,
-  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
-  "pending_workstreams": ["WS7", "WS8", "WS9", "WS10", "WS11"],
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS11"],
+  "pending_workstreams": [],
   "artifacts_created": [
     "docs/20-architecture/specs/PERF-005/EXECUTION-SPEC-PERF-005.md",
-    "supabase/migrations/20260129100000_perf005_close_rpc_inline_duration.sql"
+    "supabase/migrations/20260129100000_perf005_close_rpc_inline_duration.sql",
+    "supabase/migrations/20260129110000_perf005_save_with_buyin_rpc.sql",
+    "app/api/v1/rating-slips/[id]/save-with-buyin/route.ts",
+    "hooks/rating-slip/__tests__/use-rating-slip-mutations.test.tsx"
   ],
   "artifacts_modified": [
     "components/dashboard/table-grid.tsx",
@@ -19,24 +22,45 @@
     "hooks/rating-slip-modal/use-close-with-financial.ts",
     "hooks/rating-slip-modal/use-save-with-buyin.ts",
     "hooks/rating-slip-modal/use-move-player.ts",
+    "hooks/rating-slip-modal/__tests__/use-save-with-buyin.test.tsx",
     "services/mtl/keys.ts",
     "services/rating-slip/crud.ts",
+    "services/rating-slip/dtos.ts",
+    "services/rating-slip/http.ts",
+    "services/rating-slip/schemas.ts",
+    "services/rating-slip/index.ts",
     "hooks/dashboard/use-dashboard-slips.ts",
     "hooks/rating-slip/use-rating-slip.ts",
     "hooks/rating-slip/index.ts",
     "hooks/dashboard/index.ts",
-    "components/modals/rating-slip/rating-slip-modal.tsx"
+    "components/modals/rating-slip/rating-slip-modal.tsx",
+    "components/dashboard/active-slips-panel.tsx",
+    "components/dashboard/new-slip-modal.tsx",
+    "components/dashboard/pit-dashboard-client.tsx",
+    "components/pit-panels/pit-panels-client.tsx"
   ],
   "artifacts_deleted": [],
   "gates_passed": {
     "phase_1_type_check": "PASS",
-    "phase_1_lint": "PASS (0 errors, 1 pre-existing warning)"
+    "phase_1_lint": "PASS (0 errors, 1 pre-existing warning)",
+    "phase_2_type_check": "PASS",
+    "phase_2_lint": "PASS (0 errors, 8 pre-existing warnings)",
+    "phase_2_unit_tests": "PASS (4043 passed, 0 regressions)",
+    "phase_3_type_check": "PASS",
+    "phase_3_lint": "PASS",
+    "phase_4_unit_tests": "PASS (16 new + 8 updated + 112 existing mapper = 136 tests)",
+    "phase_5_type_check": "PASS",
+    "phase_5_lint": "PASS (0 errors, 8 pre-existing warnings)",
+    "phase_5_build": "PASS"
   },
   "test_results": {
-    "unit_tests": 0,
+    "unit_tests": 4163,
     "e2e_tests": 0,
-    "all_passing": false
+    "all_passing": true,
+    "new_tests": 16,
+    "updated_tests": 8
   },
   "created_at": "2026-01-29T00:00:00Z",
-  "notes": "Phase 1 complete. WS3: crud.move() NOT deleted (still used by service factory + integration tests). All 6 workstreams verified with type-check and lint."
+  "completed_at": "2026-01-29T12:00:00Z",
+  "notes": "All 11 workstreams complete across 5 phases. P0-1: Save-flow latency reduced via composite RPC (4,935ms → single roundtrip). P0-2: Loyalty accrual gap fixed via consolidated close hooks. P0-3: gaming_day serialization fixed. P1-5: Dashboard render optimization with React.memo + useCallback. Full build validated."
 }

@@ -12,20 +12,19 @@
 
 "use client";
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Pause, Play, X, Clock, User, AlertCircle } from "lucide-react";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useActiveSlipsForDashboard, dashboardKeys } from "@/hooks/dashboard";
+import { useActiveSlipsForDashboard } from "@/hooks/dashboard";
+import {
+  usePauseRatingSlip,
+  useResumeRatingSlip,
+  useCloseRatingSlip,
+} from "@/hooks/rating-slip/use-rating-slip-mutations";
 import { cn } from "@/lib/utils";
 import type { RatingSlipWithPlayerDTO } from "@/services/rating-slip/dtos";
-import {
-  pauseRatingSlip,
-  resumeRatingSlip,
-  closeRatingSlip,
-} from "@/services/rating-slip/http";
 
 interface ActiveSlipsPanelProps {
   /** Selected table ID */
@@ -67,14 +66,12 @@ function formatTime(isoString: string): string {
   });
 }
 
-export function ActiveSlipsPanel({
+export const ActiveSlipsPanel = React.memo(function ActiveSlipsPanel({
   tableId,
   casinoId,
   onNewSlip,
   onSlipClick,
 }: ActiveSlipsPanelProps) {
-  const queryClient = useQueryClient();
-
   // Fetch active slips for the selected table
   const {
     data: slips = [],
@@ -82,55 +79,12 @@ export function ActiveSlipsPanel({
     error,
   } = useActiveSlipsForDashboard(tableId);
 
-  // Mutation: Pause a slip
-  // PRD-020: Use targeted invalidation to prevent N×2 HTTP cascade
-  const pauseMutation = useMutation({
-    mutationFn: pauseRatingSlip,
-    onSuccess: () => {
-      // Targeted: only invalidate this table's slips
-      if (tableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(tableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-    },
-  });
-
-  // Mutation: Resume a slip
-  const resumeMutation = useMutation({
-    mutationFn: resumeRatingSlip,
-    onSuccess: () => {
-      // Targeted: only invalidate this table's slips
-      if (tableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(tableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-    },
-  });
-
-  // Mutation: Close a slip
-  const closeMutation = useMutation({
-    mutationFn: (slipId: string) => closeRatingSlip(slipId),
-    onSuccess: () => {
-      // Targeted: only invalidate this table's slips
-      if (tableId) {
-        queryClient.invalidateQueries({
-          queryKey: dashboardKeys.activeSlips(tableId),
-        });
-      }
-      queryClient.invalidateQueries({
-        queryKey: dashboardKeys.stats(casinoId),
-      });
-      // PRD-020: Do NOT invalidate tables.scope - prevents re-render cascade
-    },
-  });
+  // PERF-005 WS8: Use canonical hooks (replaces inline useMutation)
+  // All hooks include both ratingSlipKeys AND dashboardKeys invalidation.
+  // Close hook triggers accrueOnClose() — fixes P0-2 loyalty bug.
+  const pauseMutation = usePauseRatingSlip();
+  const resumeMutation = useResumeRatingSlip();
+  const closeMutation = useCloseRatingSlip();
 
   // Handle slip action
   const handleAction = (
@@ -139,13 +93,17 @@ export function ActiveSlipsPanel({
   ) => {
     switch (action) {
       case "pause":
-        pauseMutation.mutate(slip.id);
+        pauseMutation.mutate({ slipId: slip.id, casinoId });
         break;
       case "resume":
-        resumeMutation.mutate(slip.id);
+        resumeMutation.mutate({ slipId: slip.id, casinoId });
         break;
       case "close":
-        closeMutation.mutate(slip.id);
+        closeMutation.mutate({
+          slipId: slip.id,
+          casinoId,
+          playerId: slip.player?.id ?? null,
+        });
         break;
     }
   };
@@ -270,7 +228,7 @@ export function ActiveSlipsPanel({
       </CardContent>
     </Card>
   );
-}
+});
 
 // === Slip Card Component ===
 

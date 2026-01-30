@@ -8,9 +8,9 @@
  * @see ADR-013 Zod Validation Schemas
  */
 
-import { z } from 'zod';
+import { z } from "zod";
 
-import { uuidSchema } from '@/lib/validation';
+import { uuidSchema } from "@/lib/validation";
 
 // === Rating Slip Status Schema ===
 
@@ -19,10 +19,10 @@ import { uuidSchema } from '@/lib/validation';
  * Matches Database["public"]["Enums"]["rating_slip_status"].
  */
 export const ratingSlipStatusSchema = z.enum([
-  'open',
-  'paused',
-  'closed',
-  'archived',
+  "open",
+  "paused",
+  "closed",
+  "archived",
 ]);
 
 export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
@@ -33,11 +33,11 @@ export type RatingSlipStatusInput = z.infer<typeof ratingSlipStatusSchema>;
  * Used in list queries; 'active' is expanded to ['open', 'paused'] in crud.
  */
 export const ratingSlipQueryStatusSchema = z.enum([
-  'open',
-  'paused',
-  'closed',
-  'archived',
-  'active', // PRD-020: Alias for open+paused
+  "open",
+  "paused",
+  "closed",
+  "archived",
+  "active", // PRD-020: Alias for open+paused
 ]);
 
 export type RatingSlipQueryStatus = z.infer<typeof ratingSlipQueryStatusSchema>;
@@ -52,13 +52,13 @@ export type RatingSlipQueryStatus = z.infer<typeof ratingSlipQueryStatusSchema>;
  */
 export const createRatingSlipSchema = z.object({
   /** Required: visit ID (provides player identity) */
-  visit_id: uuidSchema('visit ID'),
+  visit_id: uuidSchema("visit ID"),
   /** Required: gaming table ID */
-  table_id: uuidSchema('table ID'),
+  table_id: uuidSchema("table ID"),
   /** Optional: seat position at table */
   seat_number: z
     .string()
-    .max(20, 'Seat number must be 20 characters or fewer')
+    .max(20, "Seat number must be 20 characters or fewer")
     .optional(),
   /** Optional: game-specific settings for theoretical calculation (JSON) */
   game_settings: z.any().optional(),
@@ -72,7 +72,7 @@ export type CreateRatingSlipInput = z.infer<typeof createRatingSlipSchema>;
  */
 export const closeRatingSlipSchema = z.object({
   /** Optional: final average bet amount (must be positive) */
-  average_bet: z.number().positive('Average bet must be positive').optional(),
+  average_bet: z.number().positive("Average bet must be positive").optional(),
 });
 
 export type CloseRatingSlipInput = z.infer<typeof closeRatingSlipSchema>;
@@ -82,7 +82,7 @@ export type CloseRatingSlipInput = z.infer<typeof closeRatingSlipSchema>;
  */
 export const updateAverageBetSchema = z.object({
   /** Average bet amount (must be positive) */
-  average_bet: z.number().positive('Average bet must be positive'),
+  average_bet: z.number().positive("Average bet must be positive"),
 });
 
 export type UpdateAverageBetInput = z.infer<typeof updateAverageBetSchema>;
@@ -95,15 +95,15 @@ export type UpdateAverageBetInput = z.infer<typeof updateAverageBetSchema>;
  */
 export const ratingSlipListQuerySchema = z.object({
   /** Filter by gaming table */
-  table_id: uuidSchema('table ID').optional(),
+  table_id: uuidSchema("table ID").optional(),
   /** Filter by visit */
-  visit_id: uuidSchema('visit ID').optional(),
+  visit_id: uuidSchema("visit ID").optional(),
   /** Filter by slip status. PRD-020: 'active' = open+paused */
   status: ratingSlipQueryStatusSchema.optional(),
   /** Results per page (default 20, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** Cursor for pagination (slip ID) */
-  cursor: uuidSchema('cursor').optional(),
+  cursor: uuidSchema("cursor").optional(),
 });
 
 export type RatingSlipListQuery = z.infer<typeof ratingSlipListQuerySchema>;
@@ -113,7 +113,7 @@ export type RatingSlipListQuery = z.infer<typeof ratingSlipListQuerySchema>;
  */
 export const activeSlipsQuerySchema = z.object({
   /** Required: gaming table ID */
-  table_id: uuidSchema('table ID'),
+  table_id: uuidSchema("table ID"),
 });
 
 export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
@@ -124,7 +124,7 @@ export type ActiveSlipsQuery = z.infer<typeof activeSlipsQuerySchema>;
  * Schema for rating slip detail route params.
  */
 export const ratingSlipRouteParamsSchema = z.object({
-  id: uuidSchema('rating slip ID'),
+  id: uuidSchema("rating slip ID"),
 });
 
 export type RatingSlipRouteParams = z.infer<typeof ratingSlipRouteParamsSchema>;
@@ -167,6 +167,30 @@ export const activePlayersCasinoWideQuerySchema = z.object({
 export type ActivePlayersCasinoWideQuery = z.infer<
   typeof activePlayersCasinoWideQuerySchema
 >;
+
+// === Save With Buy-In (PERF-005 WS7) ===
+
+/**
+ * Schema for composite save-with-buyin operation.
+ * Validates average_bet and optional buy-in amount.
+ *
+ * @see PERF-005 WS7 Composite Save-with-BuyIn RPC
+ */
+export const saveWithBuyInSchema = z.object({
+  /** Average bet amount (must be positive) */
+  average_bet: z.number().positive("Average bet must be positive"),
+  /** Buy-in amount in cents (0 or null to skip buy-in recording) */
+  buyin_amount_cents: z
+    .number()
+    .int("Buy-in amount must be a whole number (cents)")
+    .nonnegative("Buy-in amount cannot be negative")
+    .nullable()
+    .optional(),
+  /** Buy-in tender type (default: 'cash') */
+  buyin_type: z.enum(["cash", "chips"]).default("cash"),
+});
+
+export type SaveWithBuyInInput = z.infer<typeof saveWithBuyInSchema>;
 
 // === Re-exports for route handler convenience ===
 

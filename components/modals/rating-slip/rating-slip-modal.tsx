@@ -432,37 +432,43 @@ export function RatingSlipModal({
   const handlePauseSession = useCallback(() => {
     if (!modalData?.slip.id) return;
 
-    pauseRatingSlip.mutate(modalData.slip.id, {
-      onSuccess: () => {
-        toast.success("Session paused", {
-          description: "Loyalty accrual and session timer have been paused",
-        });
+    pauseRatingSlip.mutate(
+      { slipId: modalData.slip.id, casinoId: modalData.slip.casinoId },
+      {
+        onSuccess: () => {
+          toast.success("Session paused", {
+            description: "Loyalty accrual and session timer have been paused",
+          });
+        },
+        onError: (err) => {
+          toast.error("Failed to pause session", {
+            description: err.message,
+          });
+        },
       },
-      onError: (err) => {
-        toast.error("Failed to pause session", {
-          description: err.message,
-        });
-      },
-    });
-  }, [modalData?.slip.id, pauseRatingSlip]);
+    );
+  }, [modalData?.slip.id, modalData?.slip.casinoId, pauseRatingSlip]);
 
   // Handler to resume the session
   const handleResumeSession = useCallback(() => {
     if (!modalData?.slip.id) return;
 
-    resumeRatingSlip.mutate(modalData.slip.id, {
-      onSuccess: () => {
-        toast.success("Session resumed", {
-          description: "Loyalty accrual and session timer have resumed",
-        });
+    resumeRatingSlip.mutate(
+      { slipId: modalData.slip.id, casinoId: modalData.slip.casinoId },
+      {
+        onSuccess: () => {
+          toast.success("Session resumed", {
+            description: "Loyalty accrual and session timer have resumed",
+          });
+        },
+        onError: (err) => {
+          toast.error("Failed to resume session", {
+            description: err.message,
+          });
+        },
       },
-      onError: (err) => {
-        toast.error("Failed to resume session", {
-          description: err.message,
-        });
-      },
-    });
-  }, [modalData?.slip.id, resumeRatingSlip]);
+    );
+  }, [modalData?.slip.id, modalData?.slip.casinoId, resumeRatingSlip]);
 
   // Derived state for pause/resume button visibility
   const isPauseResumeLoading =
