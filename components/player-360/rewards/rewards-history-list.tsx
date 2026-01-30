@@ -6,18 +6,18 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { useState } from "react";
+import { useState } from 'react';
 
-import { cn } from "@/lib/utils";
-import type { RewardHistoryItemDTO } from "@/services/player360-dashboard/dtos";
+import { cn } from '@/lib/utils';
+import type { RewardHistoryItemDTO } from '@/services/player360-dashboard/dtos';
 
-import { RewardsHistoryItem } from "./rewards-history-item";
+import { RewardsHistoryItem } from './rewards-history-item';
 
 // === Types ===
 
-type FilterType = "all" | "matchplay" | "freeplay";
+type FilterType = 'all' | 'matchplay' | 'freeplay';
 
 // === Props ===
 
@@ -35,9 +35,9 @@ export interface RewardsHistoryListProps {
 // === Filter Chips ===
 
 const filterOptions: { value: FilterType; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "matchplay", label: "Match Play" },
-  { value: "freeplay", label: "Free Play" },
+  { value: 'all', label: 'All' },
+  { value: 'matchplay', label: 'Match Play' },
+  { value: 'freeplay', label: 'Free Play' },
 ];
 
 // === Component ===
@@ -66,11 +66,11 @@ export function RewardsHistoryList({
   maxItems = 3,
   className,
 }: RewardsHistoryListProps) {
-  const [filter, setFilter] = useState<FilterType>("all");
+  const [filter, setFilter] = useState<FilterType>('all');
 
   // Filter items
   const filteredItems = items.filter((item) => {
-    if (filter === "all") return true;
+    if (filter === 'all') return true;
     return item.rewardType === filter;
   });
 
@@ -78,7 +78,7 @@ export function RewardsHistoryList({
   const displayItems = filteredItems.slice(0, maxItems);
 
   return (
-    <div className={cn("", className)} data-testid="rewards-history-list">
+    <div className={cn('', className)} data-testid="rewards-history-list">
       {/* Filter Chips */}
       <div className="flex items-center gap-1 mb-2">
         {filterOptions.map((option) => (
@@ -87,11 +87,11 @@ export function RewardsHistoryList({
             type="button"
             onClick={() => setFilter(option.value)}
             className={cn(
-              "px-2 py-0.5 text-[10px] rounded-full transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              'px-2 py-0.5 text-[10px] rounded-full transition-colors',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
               filter === option.value
-                ? "bg-primary text-primary-foreground"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted",
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 text-muted-foreground hover:bg-muted',
             )}
             data-testid={`rewards-filter-${option.value}`}
           >

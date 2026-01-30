@@ -8,10 +8,10 @@
  * @see EXEC-SPEC-029.md WS-UX-D
  */
 
-"use client";
+'use client';
 
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // === Timeline Skeletons ===
 
@@ -26,8 +26,8 @@ export function TimelineCardSkeleton({ className }: TimelineCardSkeletonProps) {
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-3 rounded-lg",
-        "border border-border/30 bg-card/30",
+        'flex items-start gap-3 p-3 rounded-lg',
+        'border border-border/30 bg-card/30',
         className,
       )}
     >
@@ -66,7 +66,7 @@ export function TimelineListSkeleton({
   className,
 }: TimelineListSkeletonProps) {
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn('space-y-4', className)}>
       {/* Day header skeleton */}
       <div className="flex items-center gap-2 px-1">
         <Skeleton className="h-4 w-20" />
@@ -96,8 +96,8 @@ export function FilterBarSkeleton({ className }: FilterBarSkeletonProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-3 p-3",
-        "border-b border-border/40 bg-card/30",
+        'flex items-center gap-3 p-3',
+        'border-b border-border/40 bg-card/30',
         className,
       )}
     >
@@ -131,8 +131,8 @@ export function MetricTileSkeleton({ className }: MetricTileSkeletonProps) {
   return (
     <div
       className={cn(
-        "space-y-2 p-3 rounded-lg",
-        "border border-border/30 bg-card/30",
+        'space-y-2 p-3 rounded-lg',
+        'border border-border/30 bg-card/30',
         className,
       )}
     >
@@ -160,7 +160,7 @@ export function MetricsRailSkeleton({
   className,
 }: MetricsRailSkeletonProps) {
   return (
-    <div className={cn("p-4 space-y-4", className)}>
+    <div className={cn('p-4 space-y-4', className)}>
       {/* Header */}
       <div className="flex items-center gap-2">
         <Skeleton className="h-8 w-8 rounded-lg" />
@@ -190,8 +190,8 @@ export function NoteSkeleton({ className }: NoteSkeletonProps) {
   return (
     <div
       className={cn(
-        "space-y-2 p-3 rounded-lg",
-        "border border-border/30 bg-card/30",
+        'space-y-2 p-3 rounded-lg',
+        'border border-border/30 bg-card/30',
         className,
       )}
     >
@@ -218,7 +218,7 @@ export function CollaborationRailSkeleton({
   className,
 }: CollaborationRailSkeletonProps) {
   return (
-    <div className={cn("p-4 space-y-4", className)}>
+    <div className={cn('p-4 space-y-4', className)}>
       {/* Header */}
       <div className="flex items-center gap-2">
         <Skeleton className="h-8 w-8 rounded-lg" />
@@ -271,7 +271,7 @@ interface HeaderSkeletonProps {
  */
 export function HeaderSkeleton({ className }: HeaderSkeletonProps) {
   return (
-    <div className={cn("flex items-center gap-4 p-4", className)}>
+    <div className={cn('flex items-center gap-4 p-4', className)}>
       {/* Avatar */}
       <Skeleton className="h-12 w-12 rounded-xl shrink-0" />
 
@@ -305,7 +305,7 @@ interface DashboardSkeletonProps {
  */
 export function DashboardSkeleton({ className }: DashboardSkeletonProps) {
   return (
-    <div className={cn("flex flex-col h-full w-full", className)}>
+    <div className={cn('flex flex-col h-full w-full', className)}>
       {/* Header */}
       <div className="shrink-0 border-b border-border/40">
         <HeaderSkeleton />
@@ -339,7 +339,7 @@ export function DashboardSkeleton({ className }: DashboardSkeletonProps) {
 
 interface LoadingSpinnerProps {
   /** Size of the spinner */
-  size?: "sm" | "md" | "lg";
+  size?: 'sm' | 'md' | 'lg';
   /** Optional label */
   label?: string;
   className?: string;
@@ -349,26 +349,26 @@ interface LoadingSpinnerProps {
  * Centered loading spinner with optional label.
  */
 export function LoadingSpinner({
-  size = "md",
+  size = 'md',
   label,
   className,
 }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: "h-4 w-4",
-    md: "h-8 w-8",
-    lg: "h-12 w-12",
+    sm: 'h-4 w-4',
+    md: 'h-8 w-8',
+    lg: 'h-12 w-12',
   };
 
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-3",
+        'flex flex-col items-center justify-center gap-3',
         className,
       )}
     >
       <div
         className={cn(
-          "animate-spin rounded-full border-2 border-border border-t-accent",
+          'animate-spin rounded-full border-2 border-border border-t-accent',
           sizeClasses[size],
         )}
       />
@@ -391,13 +391,13 @@ interface InlineLoadingProps {
  * Inline loading indicator for "Loading more..." states.
  */
 export function InlineLoading({
-  text = "Loading...",
+  text = 'Loading...',
   className,
 }: InlineLoadingProps) {
   return (
     <div
       className={cn(
-        "flex items-center justify-center gap-2 py-4 text-muted-foreground",
+        'flex items-center justify-center gap-2 py-4 text-muted-foreground',
         className,
       )}
     >

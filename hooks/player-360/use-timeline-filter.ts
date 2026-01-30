@@ -7,11 +7,11 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
-import type { TimeLensRange } from "./use-player-weekly-series";
+import type { TimeLensRange } from './use-player-weekly-series';
 
 // === Source Category Types ===
 
@@ -21,13 +21,13 @@ import type { TimeLensRange } from "./use-player-weekly-series";
  * Aligned with timeline/types.ts SourceCategory.
  */
 export type SourceCategory =
-  | "session" // Session & Presence: visit_start, visit_end, visit_resume
-  | "gaming" // Gaming Activity: rating_start, rating_pause, rating_resume, rating_close
-  | "financial" // Financial: cash_in, cash_out, cash_observation, financial_adjustment
-  | "loyalty" // Loyalty & Rewards: points_earned, points_redeemed, promo_*
-  | "staff" // Staff Interactions: note_added, tag_applied, tag_removed
-  | "compliance" // Compliance: mtl_recorded
-  | "identity"; // Identity: player_enrolled, identity_verified
+  | 'session' // Session & Presence: visit_start, visit_end, visit_resume
+  | 'gaming' // Gaming Activity: rating_start, rating_pause, rating_resume, rating_close
+  | 'financial' // Financial: cash_in, cash_out, cash_observation, financial_adjustment
+  | 'loyalty' // Loyalty & Rewards: points_earned, points_redeemed, promo_*
+  | 'staff' // Staff Interactions: note_added, tag_applied, tag_removed
+  | 'compliance' // Compliance: mtl_recorded
+  | 'identity'; // Identity: player_enrolled, identity_verified
 
 // === Filter State Interface ===
 
@@ -63,7 +63,7 @@ export interface TimelineFilterActions {
 
 const defaultState: TimelineFilterState = {
   activeCategory: null,
-  timeLens: "12w",
+  timeLens: '12w',
   scrollToEventId: null,
 };
 

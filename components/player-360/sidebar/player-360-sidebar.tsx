@@ -5,17 +5,17 @@
  * Desktop: persistent collapsible sidebar. Mobile: hidden (use MobileDrawer instead).
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
-import { SidebarToggle } from "./sidebar-toggle";
+import { SidebarToggle } from './sidebar-toggle';
 
 // === Sidebar State Hook ===
 
-const SIDEBAR_STATE_KEY = "player-360-sidebar-collapsed";
+const SIDEBAR_STATE_KEY = 'player-360-sidebar-collapsed';
 
 interface SidebarState {
   isCollapsed: boolean;
@@ -26,9 +26,9 @@ interface SidebarState {
 
 export function useSidebarState(): SidebarState {
   const [isCollapsed, setIsCollapsed] = React.useState(() => {
-    if (typeof window === "undefined") return false;
+    if (typeof window === 'undefined') return false;
     const stored = localStorage.getItem(SIDEBAR_STATE_KEY);
-    return stored === "true";
+    return stored === 'true';
   });
 
   const toggle = React.useCallback(() => {
@@ -41,12 +41,12 @@ export function useSidebarState(): SidebarState {
 
   const expand = React.useCallback(() => {
     setIsCollapsed(false);
-    localStorage.setItem(SIDEBAR_STATE_KEY, "false");
+    localStorage.setItem(SIDEBAR_STATE_KEY, 'false');
   }, []);
 
   const collapse = React.useCallback(() => {
     setIsCollapsed(true);
-    localStorage.setItem(SIDEBAR_STATE_KEY, "true");
+    localStorage.setItem(SIDEBAR_STATE_KEY, 'true');
   }, []);
 
   return { isCollapsed, toggle, expand, collapse };
@@ -66,7 +66,7 @@ const SidebarContext = React.createContext<SidebarContextValue | null>(null);
 export function useSidebarContext(): SidebarContextValue {
   const context = React.useContext(SidebarContext);
   if (!context) {
-    throw new Error("useSidebarContext must be used within Player360Sidebar");
+    throw new Error('useSidebarContext must be used within Player360Sidebar');
   }
   return context;
 }
@@ -124,11 +124,11 @@ export function Player360Sidebar({
     <SidebarContext.Provider value={contextValue}>
       <aside
         className={cn(
-          "hidden lg:flex flex-col shrink-0",
-          "border-r border-border/40 bg-card/30",
-          "transition-all duration-200 ease-in-out",
-          "overflow-hidden",
-          isCollapsed ? "w-14" : "w-72 xl:w-80",
+          'hidden lg:flex flex-col shrink-0',
+          'border-r border-border/40 bg-card/30',
+          'transition-all duration-200 ease-in-out',
+          'overflow-hidden',
+          isCollapsed ? 'w-14' : 'w-72 xl:w-80',
           className,
         )}
         data-testid="player-360-sidebar"
@@ -137,8 +137,8 @@ export function Player360Sidebar({
         {/* Sidebar Header with Toggle */}
         <div
           className={cn(
-            "flex items-center shrink-0 h-14 border-b border-border/40 bg-background/50",
-            isCollapsed ? "justify-center px-2" : "justify-between px-4",
+            'flex items-center shrink-0 h-14 border-b border-border/40 bg-background/50',
+            isCollapsed ? 'justify-center px-2' : 'justify-between px-4',
           )}
         >
           {!isCollapsed && (

@@ -7,12 +7,12 @@
  * @see PRD-022-PATCH-OPTION-B-PLAYER-360-EMBEDDED-SEARCH.md
  */
 
-"use client";
+'use client';
 
-import * as React from "react";
+import * as React from 'react';
 
-import { Player360Layout } from "@/components/player-360";
-import { cn } from "@/lib/utils";
+import { Player360Layout } from '@/components/player-360';
+import { cn } from '@/lib/utils';
 
 interface Player360ShellProps {
   /** Currently selected player ID (null if none) */
@@ -33,7 +33,7 @@ export function Player360Shell({
   className,
 }: Player360ShellProps) {
   return (
-    <Player360Layout className={cn("h-[calc(100vh-4rem-3rem)]", className)}>
+    <Player360Layout className={cn('h-[calc(100vh-4rem-3rem)]', className)}>
       {/* Main Content Area - Full width now that sidebar is removed */}
       <div
         className="flex-1 flex flex-col min-w-0 overflow-hidden"

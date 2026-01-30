@@ -7,14 +7,14 @@
  * @see PRD-022 WS3 Navigation Utilities
  */
 
-"use client";
+'use client';
 
-import { ArrowLeft, ChevronRight, Home } from "lucide-react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowLeft, ChevronRight, Home } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-import { decodeReturnTo } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { decodeReturnTo } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 
 interface Player360BreadcrumbProps {
   playerName?: string;
@@ -22,12 +22,12 @@ interface Player360BreadcrumbProps {
 }
 
 export function Player360Breadcrumb({
-  playerName = "Player",
+  playerName = 'Player',
   className,
 }: Player360BreadcrumbProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const returnTo = decodeReturnTo(searchParams.get("returnTo"));
+  const returnTo = decodeReturnTo(searchParams.get('returnTo'));
 
   const handleBackClick = () => {
     router.push(returnTo);
@@ -37,7 +37,7 @@ export function Player360Breadcrumb({
     <nav
       data-testid="player-breadcrumb"
       className={cn(
-        "flex items-center justify-between gap-4 px-4 py-2 border-b border-border/40 bg-background/95 backdrop-blur-sm",
+        'flex items-center justify-between gap-4 px-4 py-2 border-b border-border/40 bg-background/95 backdrop-blur-sm',
         className,
       )}
     >

@@ -13,7 +13,7 @@
 
 /** Player profile fields (matches PlayerDTO) */
 export const PLAYER_SELECT =
-  "id, first_name, last_name, birth_date, created_at, middle_name, email, phone_number" as const;
+  'id, first_name, last_name, birth_date, created_at, middle_name, email, phone_number' as const;
 
 /** Player list fields (same as PLAYER_SELECT for consistency) */
 export const PLAYER_SELECT_LIST = PLAYER_SELECT;
@@ -22,7 +22,7 @@ export const PLAYER_SELECT_LIST = PLAYER_SELECT;
 
 /** Enrollment fields (matches PlayerEnrollmentDTO) */
 export const ENROLLMENT_SELECT =
-  "player_id, casino_id, status, enrolled_at" as const;
+  'player_id, casino_id, status, enrolled_at' as const;
 
 // === Search Selects ===
 

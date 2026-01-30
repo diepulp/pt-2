@@ -7,7 +7,7 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
 import {
   Banknote,
@@ -16,17 +16,17 @@ import {
   Gift,
   MessageSquare,
   UserCheck,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import * as React from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 import {
   SOURCE_CATEGORY_STYLES,
   type SourceCategory,
   type TimelineCardCollapsed,
-} from "./types";
+} from './types';
 
 // === Types ===
 
@@ -58,12 +58,12 @@ const CATEGORY_CONFIG: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { category: "session", label: "Session", icon: UserCheck },
-  { category: "gaming", label: "Gaming", icon: Gamepad2 },
-  { category: "financial", label: "Financial", icon: Banknote },
-  { category: "loyalty", label: "Loyalty", icon: Gift },
-  { category: "compliance", label: "Compliance", icon: ClipboardCheck },
-  { category: "staff", label: "Notes", icon: MessageSquare },
+  { category: 'session', label: 'Session', icon: UserCheck },
+  { category: 'gaming', label: 'Gaming', icon: Gamepad2 },
+  { category: 'financial', label: 'Financial', icon: Banknote },
+  { category: 'loyalty', label: 'Loyalty', icon: Gift },
+  { category: 'compliance', label: 'Compliance', icon: ClipboardCheck },
+  { category: 'staff', label: 'Notes', icon: MessageSquare },
 ];
 
 // === Component ===
@@ -114,10 +114,10 @@ export function CategoryIndicatorBar({
   return (
     <div
       className={cn(
-        "sticky top-0 z-20",
-        "flex items-center gap-1.5 px-4 py-2",
-        "bg-background/95 backdrop-blur-sm",
-        "border-b border-border/40",
+        'sticky top-0 z-20',
+        'flex items-center gap-1.5 px-4 py-2',
+        'bg-background/95 backdrop-blur-sm',
+        'border-b border-border/40',
         className,
       )}
     >
@@ -137,29 +137,29 @@ export function CategoryIndicatorBar({
               onClick={() => handleClick(indicator)}
               disabled={!indicator.hasEvents && !isActive}
               className={cn(
-                "group flex items-center gap-1.5 px-2 py-1 rounded-full",
-                "text-xs font-medium transition-all duration-150",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                'group flex items-center gap-1.5 px-2 py-1 rounded-full',
+                'text-xs font-medium transition-all duration-150',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 // Active state
                 isActive && [
                   style.bg,
                   style.text,
-                  "ring-2 ring-offset-1 ring-offset-background",
+                  'ring-2 ring-offset-1 ring-offset-background',
                   style.border,
                 ],
                 // Has events but not active
                 !isActive &&
                   indicator.hasEvents && [
-                    "bg-muted/30 hover:bg-muted/50",
-                    "text-foreground",
-                    "border border-transparent hover:border-border/40",
+                    'bg-muted/30 hover:bg-muted/50',
+                    'text-foreground',
+                    'border border-transparent hover:border-border/40',
                   ],
                 // No events
                 !isActive &&
                   !indicator.hasEvents && [
-                    "bg-transparent",
-                    "text-muted-foreground/50",
-                    "cursor-not-allowed",
+                    'bg-transparent',
+                    'text-muted-foreground/50',
+                    'cursor-not-allowed',
                   ],
               )}
               aria-pressed={isActive}
@@ -169,15 +169,15 @@ export function CategoryIndicatorBar({
               {/* Indicator dot */}
               <span
                 className={cn(
-                  "w-2 h-2 rounded-full transition-colors",
-                  isActive && style.bg.replace("bg-", "bg-").replace("/50", ""),
+                  'w-2 h-2 rounded-full transition-colors',
+                  isActive && style.bg.replace('bg-', 'bg-').replace('/50', ''),
                   !isActive && indicator.hasEvents && style.text,
-                  !isActive && !indicator.hasEvents && "bg-muted-foreground/30",
+                  !isActive && !indicator.hasEvents && 'bg-muted-foreground/30',
                 )}
                 style={{
                   backgroundColor: indicator.hasEvents
                     ? undefined
-                    : "currentColor",
+                    : 'currentColor',
                   opacity: indicator.hasEvents ? 1 : 0.3,
                 }}
               />
@@ -185,12 +185,12 @@ export function CategoryIndicatorBar({
               {/* Icon */}
               <IconComponent
                 className={cn(
-                  "w-3.5 h-3.5 transition-colors",
+                  'w-3.5 h-3.5 transition-colors',
                   isActive && style.text,
-                  !isActive && indicator.hasEvents && "text-foreground",
+                  !isActive && indicator.hasEvents && 'text-foreground',
                   !isActive &&
                     !indicator.hasEvents &&
-                    "text-muted-foreground/50",
+                    'text-muted-foreground/50',
                 )}
               />
 
@@ -199,10 +199,10 @@ export function CategoryIndicatorBar({
               {indicator.count > 0 && (
                 <span
                   className={cn(
-                    "min-w-[1.25rem] px-1 py-0 text-[10px] rounded-full text-center",
+                    'min-w-[1.25rem] px-1 py-0 text-[10px] rounded-full text-center',
                     isActive
-                      ? "bg-background/20 text-current"
-                      : "bg-muted/50 text-muted-foreground",
+                      ? 'bg-background/20 text-current'
+                      : 'bg-muted/50 text-muted-foreground',
                   )}
                 >
                   {indicator.count}
@@ -218,8 +218,8 @@ export function CategoryIndicatorBar({
         <button
           onClick={() => onCategoryClick(null)}
           className={cn(
-            "ml-auto text-xs text-muted-foreground hover:text-foreground",
-            "px-2 py-1 rounded hover:bg-muted/50 transition-colors",
+            'ml-auto text-xs text-muted-foreground hover:text-foreground',
+            'px-2 py-1 rounded hover:bg-muted/50 transition-colors',
           )}
         >
           Clear

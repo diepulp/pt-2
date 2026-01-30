@@ -8,13 +8,13 @@
  * @see EXEC-SPEC-029.md WS-UX-E
  */
 
-"use client";
+'use client';
 
-import { Check, Loader2, Plus, X } from "lucide-react";
-import * as React from "react";
+import { Check, Loader2, Plus, X } from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -22,20 +22,20 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
+} from '@/components/ui/command';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 // === Types ===
 
 /**
  * Tag category per ADR-029.
  */
-export type TagCategory = "vip" | "attention" | "service" | "custom";
+export type TagCategory = 'vip' | 'attention' | 'service' | 'custom';
 
 /**
  * Player tag for display.
@@ -61,24 +61,24 @@ interface TagCategoryStyle {
 
 const TAG_CATEGORY_STYLES: Record<TagCategory, TagCategoryStyle> = {
   vip: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/30",
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
   },
   attention: {
-    bg: "bg-red-500/10",
-    text: "text-red-400",
-    border: "border-red-500/30",
+    bg: 'bg-red-500/10',
+    text: 'text-red-400',
+    border: 'border-red-500/30',
   },
   service: {
-    bg: "bg-blue-500/10",
-    text: "text-blue-400",
-    border: "border-blue-500/30",
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-blue-500/30',
   },
   custom: {
-    bg: "bg-slate-500/10",
-    text: "text-slate-400",
-    border: "border-slate-500/30",
+    bg: 'bg-slate-500/10',
+    text: 'text-slate-400',
+    border: 'border-slate-500/30',
   },
 };
 
@@ -155,7 +155,7 @@ export function TagChips({
   };
 
   return (
-    <div className={cn("space-y-3", className)}>
+    <div className={cn('space-y-3', className)}>
       {/* Applied tags */}
       <div className="flex flex-wrap gap-2">
         {tags.map((tag) => (
@@ -202,7 +202,7 @@ export function TagChips({
                           // Create custom tag from search input
                           const input =
                             document.querySelector<HTMLInputElement>(
-                              "[cmdk-input]",
+                              '[cmdk-input]',
                             );
                           if (input?.value) {
                             handleApply(input.value);
@@ -223,8 +223,8 @@ export function TagChips({
                         >
                           <Check
                             className={cn(
-                              "mr-2 h-3 w-3",
-                              "opacity-0", // Always hidden since these are suggestions
+                              'mr-2 h-3 w-3',
+                              'opacity-0', // Always hidden since these are suggestions
                             )}
                           />
                           {tagName}
@@ -242,7 +242,7 @@ export function TagChips({
       {/* Tag count */}
       {tags.length > 0 && (
         <p className="text-[10px] text-muted-foreground/60">
-          {tags.length} tag{tags.length !== 1 ? "s" : ""} applied
+          {tags.length} tag{tags.length !== 1 ? 's' : ''} applied
         </p>
       )}
 
@@ -308,11 +308,11 @@ export function TagChip({
     <Badge
       variant="outline"
       className={cn(
-        "h-6 pl-2 pr-1 text-xs gap-1",
+        'h-6 pl-2 pr-1 text-xs gap-1',
         style.bg,
         style.text,
         style.border,
-        isRemoving && "opacity-50",
+        isRemoving && 'opacity-50',
         className,
       )}
     >
@@ -322,8 +322,8 @@ export function TagChip({
           onClick={onRemove}
           disabled={isRemoving}
           className={cn(
-            "ml-0.5 p-0.5 rounded-sm hover:bg-black/10 dark:hover:bg-white/10",
-            "transition-colors",
+            'ml-0.5 p-0.5 rounded-sm hover:bg-black/10 dark:hover:bg-white/10',
+            'transition-colors',
           )}
           aria-label={`Remove ${tag.name} tag`}
         >
@@ -344,9 +344,9 @@ export function TagChip({
  * Common predefined tags organized by category.
  */
 export const PREDEFINED_TAGS: Record<TagCategory, string[]> = {
-  vip: ["VIP", "High Roller", "Gold Member", "Platinum Member"],
-  attention: ["Watch", "Banned", "Self-Excluded", "Problem Gambler"],
-  service: ["Comp Pending", "Host Assigned", "Birthday", "Anniversary"],
+  vip: ['VIP', 'High Roller', 'Gold Member', 'Platinum Member'],
+  attention: ['Watch', 'Banned', 'Self-Excluded', 'Problem Gambler'],
+  service: ['Comp Pending', 'Host Assigned', 'Birthday', 'Anniversary'],
   custom: [],
 };
 
@@ -366,5 +366,5 @@ export function getTagCategory(tagName: string): TagCategory {
       return category as TagCategory;
     }
   }
-  return "custom";
+  return 'custom';
 }

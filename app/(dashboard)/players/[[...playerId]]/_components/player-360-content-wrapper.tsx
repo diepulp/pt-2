@@ -7,21 +7,21 @@
  * @see PRD-022-PATCH-OPTION-B-PLAYER-360-EMBEDDED-SEARCH.md
  */
 
-"use client";
+'use client';
 
-import { useRouter } from "next/navigation";
-import { useEffect, useCallback } from "react";
+import { useRouter } from 'next/navigation';
+import { useEffect, useCallback } from 'react';
 
 import {
   Player360Body,
   Player360Header,
   Player360HeaderContent,
   useRecentPlayers,
-} from "@/components/player-360";
-import { usePlayer } from "@/hooks/player/use-player";
+} from '@/components/player-360';
+import { usePlayer } from '@/hooks/player/use-player';
 
 // Import the timeline content from the existing location
-import { TimelinePageContent } from "../../[playerId]/timeline/_components/timeline-content";
+import { TimelinePageContent } from '../../[playerId]/timeline/_components/timeline-content';
 
 interface Player360ContentWrapperProps {
   playerId: string;
@@ -47,10 +47,10 @@ export function Player360ContentWrapper({
 
   // Anchor scroll on mount
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#timeline") {
+    if (typeof window !== 'undefined' && window.location.hash === '#timeline') {
       requestAnimationFrame(() => {
-        const el = document.getElementById("timeline");
-        el?.scrollIntoView({ behavior: "smooth" });
+        const el = document.getElementById('timeline');
+        el?.scrollIntoView({ behavior: 'smooth' });
       });
     }
   }, []);

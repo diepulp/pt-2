@@ -12,7 +12,7 @@
 import type {
   InteractionEventDTO,
   TimelineResponse,
-} from "@/services/player-timeline/dtos";
+} from '@/services/player-timeline/dtos';
 
 // === Pagination Cursor ===
 
@@ -214,11 +214,11 @@ export const DEFAULT_VIRTUALIZATION_CONFIG: TimelineVirtualizationConfig = {
  * Loading state for timeline UI.
  */
 export type TimelineLoadingState =
-  | "idle"
-  | "loading-initial"
-  | "loading-more"
-  | "refetching"
-  | "error";
+  | 'idle'
+  | 'loading-initial'
+  | 'loading-more'
+  | 'refetching'
+  | 'error';
 
 /**
  * Determines the loading state from hook result.
@@ -229,11 +229,11 @@ export function getLoadingState(
   isRefetching: boolean,
   isError: boolean,
 ): TimelineLoadingState {
-  if (isError) return "error";
-  if (isLoading) return "loading-initial";
-  if (isFetchingNextPage) return "loading-more";
-  if (isRefetching) return "refetching";
-  return "idle";
+  if (isError) return 'error';
+  if (isLoading) return 'loading-initial';
+  if (isFetchingNextPage) return 'loading-more';
+  if (isRefetching) return 'refetching';
+  return 'idle';
 }
 
 // === Pagination UI Text ===
@@ -246,7 +246,7 @@ export function getPaginationText(
   hasMore: boolean,
 ): string {
   if (loadedCount === 0) {
-    return "No events found";
+    return 'No events found';
   }
   if (hasMore) {
     return `Showing ${loadedCount} events (more available)`;
@@ -259,15 +259,15 @@ export function getPaginationText(
  */
 export function getLoadingText(state: TimelineLoadingState): string {
   switch (state) {
-    case "loading-initial":
-      return "Loading timeline...";
-    case "loading-more":
-      return "Loading older events...";
-    case "refetching":
-      return "Refreshing...";
-    case "error":
-      return "Failed to load timeline";
+    case 'loading-initial':
+      return 'Loading timeline...';
+    case 'loading-more':
+      return 'Loading older events...';
+    case 'refetching':
+      return 'Refreshing...';
+    case 'error':
+      return 'Failed to load timeline';
     default:
-      return "";
+      return '';
   }
 }

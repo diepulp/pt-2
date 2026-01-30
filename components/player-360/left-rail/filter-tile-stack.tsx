@@ -7,12 +7,12 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import type { PlayerSummaryDTO, SourceCategory } from "@/hooks/player-360";
-import { cn } from "@/lib/utils";
+import type { PlayerSummaryDTO, SourceCategory } from '@/hooks/player-360';
+import { cn } from '@/lib/utils';
 
-import { FilterTile } from "./filter-tile";
+import { FilterTile } from './filter-tile';
 
 // === Props ===
 
@@ -31,7 +31,7 @@ export interface FilterTileStackProps {
 
 function formatCurrency(value: number): string {
   const absValue = Math.abs(value);
-  const prefix = value < 0 ? "-" : "";
+  const prefix = value < 0 ? '-' : '';
   if (absValue >= 1000) {
     return `${prefix}$${(absValue / 1000).toFixed(1)}k`;
   }
@@ -77,7 +77,7 @@ export function FilterTileStack({
 }: FilterTileStackProps) {
   return (
     <div
-      className={cn("flex flex-col gap-1.5", className)}
+      className={cn('flex flex-col gap-1.5', className)}
       data-testid="filter-tile-stack"
     >
       <FilterTile
@@ -85,12 +85,12 @@ export function FilterTileStack({
         value={formatCurrency(data.sessionValue.netWinLoss)}
         delta={
           data.sessionValue.trendPercent !== 0
-            ? `${data.sessionValue.trendPercent > 0 ? "+" : ""}${data.sessionValue.trendPercent.toFixed(0)}%`
+            ? `${data.sessionValue.trendPercent > 0 ? '+' : ''}${data.sessionValue.trendPercent.toFixed(0)}%`
             : undefined
         }
         category="session"
-        isActive={activeCategory === "session"}
-        onFilter={() => onCategoryChange("session")}
+        isActive={activeCategory === 'session'}
+        onFilter={() => onCategoryChange('session')}
         onClear={() => onCategoryChange(null)}
       />
 
@@ -98,8 +98,8 @@ export function FilterTileStack({
         title="Financial"
         value={formatCurrency(data.cashVelocity.sessionTotal)}
         category="financial"
-        isActive={activeCategory === "financial"}
-        onFilter={() => onCategoryChange("financial")}
+        isActive={activeCategory === 'financial'}
+        onFilter={() => onCategoryChange('financial')}
         onClear={() => onCategoryChange(null)}
       />
 
@@ -107,19 +107,19 @@ export function FilterTileStack({
         title="Gaming"
         value={formatDuration(data.engagement.durationMinutes)}
         category="gaming"
-        isActive={activeCategory === "gaming"}
-        onFilter={() => onCategoryChange("gaming")}
+        isActive={activeCategory === 'gaming'}
+        onFilter={() => onCategoryChange('gaming')}
         onClear={() => onCategoryChange(null)}
       />
 
       <FilterTile
         title="Loyalty"
         value={
-          data.rewardsEligibility.status === "available" ? "Eligible" : "—"
+          data.rewardsEligibility.status === 'available' ? 'Eligible' : '—'
         }
         category="loyalty"
-        isActive={activeCategory === "loyalty"}
-        onFilter={() => onCategoryChange("loyalty")}
+        isActive={activeCategory === 'loyalty'}
+        onFilter={() => onCategoryChange('loyalty')}
         onClear={() => onCategoryChange(null)}
       />
     </div>

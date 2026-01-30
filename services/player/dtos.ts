@@ -8,33 +8,33 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md §814-888
  */
 
-import type { Database } from "@/types/database.types";
+import type { Database } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type PlayerRow = Database["public"]["Tables"]["player"]["Row"];
-type PlayerInsert = Database["public"]["Tables"]["player"]["Insert"];
-type PlayerCasinoRow = Database["public"]["Tables"]["player_casino"]["Row"];
+type PlayerRow = Database['public']['Tables']['player']['Row'];
+type PlayerInsert = Database['public']['Tables']['player']['Insert'];
+type PlayerCasinoRow = Database['public']['Tables']['player_casino']['Row'];
 
 // === Player DTOs ===
 
 /** Public player profile */
 export type PlayerDTO = Pick<
   PlayerRow,
-  | "id"
-  | "first_name"
-  | "last_name"
-  | "birth_date"
-  | "created_at"
-  | "middle_name"
-  | "email"
-  | "phone_number"
+  | 'id'
+  | 'first_name'
+  | 'last_name'
+  | 'birth_date'
+  | 'created_at'
+  | 'middle_name'
+  | 'email'
+  | 'phone_number'
 >;
 
 /** Player creation input */
 export type CreatePlayerDTO = Pick<
   PlayerInsert,
-  "first_name" | "last_name" | "birth_date"
+  'first_name' | 'last_name' | 'birth_date'
 >;
 
 /**
@@ -51,12 +51,12 @@ export type CreatePlayerWithContextDTO = CreatePlayerDTO & {
 export type UpdatePlayerDTO = Partial<
   Pick<
     PlayerInsert,
-    | "first_name"
-    | "last_name"
-    | "birth_date"
-    | "middle_name"
-    | "email"
-    | "phone_number"
+    | 'first_name'
+    | 'last_name'
+    | 'birth_date'
+    | 'middle_name'
+    | 'email'
+    | 'phone_number'
   >
 >;
 
@@ -65,7 +65,7 @@ export type UpdatePlayerDTO = Partial<
 /** Player enrollment status in a casino */
 export type PlayerEnrollmentDTO = Pick<
   PlayerCasinoRow,
-  "player_id" | "casino_id" | "status" | "enrolled_at"
+  'player_id' | 'casino_id' | 'status' | 'enrolled_at'
 >;
 
 /**
@@ -92,14 +92,14 @@ export interface PlayerSearchResultDTO {
   /** Date of birth for name collision prevention */
   birth_date: string | null;
   /** Enrollment status in the querying casino */
-  enrollment_status: "enrolled" | "not_enrolled";
+  enrollment_status: 'enrolled' | 'not_enrolled';
 }
 
 // === Player Identity DTOs (ADR-022) ===
 
-type PlayerIdentityRow = Database["public"]["Tables"]["player_identity"]["Row"];
+type PlayerIdentityRow = Database['public']['Tables']['player_identity']['Row'];
 type PlayerIdentityInsert =
-  Database["public"]["Tables"]["player_identity"]["Insert"];
+  Database['public']['Tables']['player_identity']['Insert'];
 
 /** Address structure from ID document */
 export interface IdentityAddress {
@@ -142,7 +142,7 @@ export interface PlayerIdentityDTO {
   issueDate: string | null;
   expirationDate: string | null;
   issuingState: string | null;
-  documentType: "drivers_license" | "passport" | "state_id" | null;
+  documentType: 'drivers_license' | 'passport' | 'state_id' | null;
   verifiedAt: string | null;
   verifiedBy: string | null;
   createdAt: string;
@@ -164,7 +164,7 @@ export interface PlayerIdentityInput {
   /** Date of birth from ID */
   birthDate?: string;
   /** Gender: 'm', 'f', 'x' */
-  gender?: "m" | "f" | "x";
+  gender?: 'm' | 'f' | 'x';
   /** Eye color from ID */
   eyeColor?: string;
   /** Height (format: "6-01" for 6'1") */
@@ -180,7 +180,7 @@ export interface PlayerIdentityInput {
   /** Issuing state/province */
   issuingState?: string;
   /** Document type */
-  documentType?: "drivers_license" | "passport" | "state_id";
+  documentType?: 'drivers_license' | 'passport' | 'state_id';
 }
 
 // === Filter Types (for query keys and HTTP fetchers) ===
@@ -190,7 +190,7 @@ export type PlayerListFilters = {
   /** Search query (name) - min 2 chars */
   q?: string;
   /** Filter by enrollment status */
-  status?: "active" | "inactive";
+  status?: 'active' | 'inactive';
   /** Cursor for pagination (created_at timestamp) */
   cursor?: string;
   /** Max results per page */
@@ -200,5 +200,5 @@ export type PlayerListFilters = {
 /** Filters for enrollment queries */
 export type PlayerEnrollmentFilters = {
   /** Filter by enrollment status */
-  status?: "active" | "inactive";
+  status?: 'active' | 'inactive';
 };

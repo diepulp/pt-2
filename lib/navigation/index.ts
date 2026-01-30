@@ -8,7 +8,7 @@
  */
 
 // New simplified navigation (PRD-022-PATCH-OPTION-B)
-export { buildPlayerUrl, buildPlayerUrlWithAnchor } from "./return-to";
+export { buildPlayerUrl, buildPlayerUrlWithAnchor } from './return-to';
 
 // Legacy navigation utilities (deprecated but retained for compatibility)
 export {
@@ -17,4 +17,4 @@ export {
   decodeReturnTo,
   encodeReturnTo,
   validateReturnTo,
-} from "./return-to";
+} from './return-to';

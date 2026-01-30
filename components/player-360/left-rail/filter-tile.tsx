@@ -7,12 +7,12 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { X } from "lucide-react";
+import { X } from 'lucide-react';
 
-import type { SourceCategory } from "@/hooks/player-360";
-import { cn } from "@/lib/utils";
+import type { SourceCategory } from '@/hooks/player-360';
+import { cn } from '@/lib/utils';
 
 // === Props ===
 
@@ -77,7 +77,7 @@ export function FilterTile({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleClick();
     }
@@ -90,10 +90,10 @@ export function FilterTile({
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       className={cn(
-        "relative flex items-center justify-between w-full px-3 py-2 rounded-md cursor-pointer",
-        "border border-border/40 bg-card/30 transition-all",
-        "hover:bg-card/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        isActive && "ring-2 ring-primary bg-primary/5",
+        'relative flex items-center justify-between w-full px-3 py-2 rounded-md cursor-pointer',
+        'border border-border/40 bg-card/30 transition-all',
+        'hover:bg-card/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+        isActive && 'ring-2 ring-primary bg-primary/5',
         className,
       )}
       data-testid={`filter-tile-${category}`}
@@ -106,8 +106,8 @@ export function FilterTile({
         {delta && (
           <span
             className={cn(
-              "text-xs",
-              delta.startsWith("+") ? "text-emerald-400" : "text-red-400",
+              'text-xs',
+              delta.startsWith('+') ? 'text-emerald-400' : 'text-red-400',
             )}
           >
             {delta}

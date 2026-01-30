@@ -12,7 +12,7 @@ export {
   usePlayerTimeline,
   type UseInfinitePlayerTimelineOptions,
   type UsePlayerTimelineOptions,
-} from "./use-player-timeline";
+} from './use-player-timeline';
 
 // Re-export commonly used types for convenience
 export type {
@@ -21,4 +21,4 @@ export type {
   Phase1EventType,
   TimelineFilters,
   TimelineResponse,
-} from "@/services/player-timeline/dtos";
+} from '@/services/player-timeline/dtos';

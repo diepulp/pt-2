@@ -7,7 +7,7 @@
  * @see PRD-022 WS2 Timeline Route Handler
  */
 
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
   request: NextRequest,
@@ -21,6 +21,6 @@ export async function GET(
     url.searchParams.set(key, value);
   });
 
-  url.hash = "timeline";
+  url.hash = 'timeline';
   return NextResponse.redirect(url, 308);
 }

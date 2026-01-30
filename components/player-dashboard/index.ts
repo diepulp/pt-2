@@ -7,6 +7,6 @@
  * @see PRD-022 WS9 Component Cleanup
  */
 
-export { PlayerDashboard } from "./player-dashboard";
-export { PlayerSearchCommand } from "./player-search-command";
-export { PlayerListRow } from "./player-list-row";
+export { PlayerDashboard } from './player-dashboard';
+export { PlayerSearchCommand } from './player-search-command';
+export { PlayerListRow } from './player-list-row';

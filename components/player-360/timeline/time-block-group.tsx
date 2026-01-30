@@ -7,19 +7,19 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { ChevronDown } from "lucide-react";
-import * as LucideIcons from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import * as React from "react";
+import { ChevronDown } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import * as React from 'react';
 
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
 
 import {
   EVENT_TYPE_LABELS,
@@ -27,7 +27,7 @@ import {
   SOURCE_CATEGORY_STYLES,
   type SourceCategory,
   type TimelineCardCollapsed,
-} from "./types";
+} from './types';
 
 // === Types ===
 
@@ -66,26 +66,26 @@ interface TimelineEventCardProps {
 // === Icon Mapping ===
 
 const ICON_MAP: Record<string, LucideIcon> = {
-  "log-in": LucideIcons.LogIn,
-  "log-out": LucideIcons.LogOut,
-  "refresh-cw": LucideIcons.RefreshCw,
+  'log-in': LucideIcons.LogIn,
+  'log-out': LucideIcons.LogOut,
+  'refresh-cw': LucideIcons.RefreshCw,
   play: LucideIcons.Play,
   pause: LucideIcons.Pause,
   square: LucideIcons.Square,
-  "arrow-down-circle": LucideIcons.ArrowDownCircle,
-  "arrow-up-circle": LucideIcons.ArrowUpCircle,
+  'arrow-down-circle': LucideIcons.ArrowDownCircle,
+  'arrow-up-circle': LucideIcons.ArrowUpCircle,
   eye: LucideIcons.Eye,
   edit: LucideIcons.Edit,
-  "plus-circle": LucideIcons.PlusCircle,
+  'plus-circle': LucideIcons.PlusCircle,
   gift: LucideIcons.Gift,
   settings: LucideIcons.Settings,
   ticket: LucideIcons.Ticket,
-  "file-text": LucideIcons.FileText,
+  'file-text': LucideIcons.FileText,
   tag: LucideIcons.Tag,
-  "tag-x": LucideIcons.Tags,
+  'tag-x': LucideIcons.Tags,
   shield: LucideIcons.Shield,
-  "user-plus": LucideIcons.UserPlus,
-  "badge-check": LucideIcons.BadgeCheck,
+  'user-plus': LucideIcons.UserPlus,
+  'badge-check': LucideIcons.BadgeCheck,
 };
 
 function getIconComponent(iconName: string): LucideIcon {
@@ -99,9 +99,9 @@ function getIconComponent(iconName: string): LucideIcon {
  */
 function formatTime(isoDate: string): string {
   const date = new Date(isoDate);
-  return date.toLocaleTimeString("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
+  return date.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
     hour12: true,
   });
 }
@@ -118,9 +118,9 @@ function formatTimeRange(startTime: string, endTime: string): string {
  */
 function formatDate(isoDate: string): string {
   const date = new Date(isoDate);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
   });
 }
 
@@ -139,34 +139,34 @@ function TimelineEventCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full flex items-start gap-3 p-3 text-left",
-        "border-l-2 ml-4",
-        "hover:bg-accent/5 transition-colors",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
-        isHighlighted && "bg-accent/10",
+        'w-full flex items-start gap-3 p-3 text-left',
+        'border-l-2 ml-4',
+        'hover:bg-accent/5 transition-colors',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
+        isHighlighted && 'bg-accent/10',
         style.border,
       )}
     >
       {/* Category indicator dot */}
       <div
         className={cn(
-          "absolute -left-[5px] w-2 h-2 rounded-full mt-2",
+          'absolute -left-[5px] w-2 h-2 rounded-full mt-2',
           style.bg,
           style.border,
-          "border",
+          'border',
         )}
       />
 
       {/* Icon */}
       <div
         className={cn(
-          "flex items-center justify-center w-8 h-8 rounded-lg shrink-0",
+          'flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
           style.bg,
           style.border,
-          "border",
+          'border',
         )}
       >
-        <IconComponent className={cn("w-4 h-4", style.text)} />
+        <IconComponent className={cn('w-4 h-4', style.text)} />
       </div>
 
       {/* Content */}
@@ -175,7 +175,7 @@ function TimelineEventCard({
           {/* Category badge */}
           <span
             className={cn(
-              "text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded",
+              'text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded',
               style.bg,
               style.text,
             )}
@@ -201,13 +201,13 @@ function TimelineEventCard({
         {card.amount !== null && card.amount !== undefined && (
           <span
             className={cn(
-              "text-xs font-semibold",
+              'text-xs font-semibold',
               card.amount >= 0
-                ? "text-green-600 dark:text-green-400"
-                : "text-red-600 dark:text-red-400",
+                ? 'text-green-600 dark:text-green-400'
+                : 'text-red-600 dark:text-red-400',
             )}
           >
-            {card.amount >= 0 ? "+" : ""}$
+            {card.amount >= 0 ? '+' : ''}$
             {Math.abs(card.amount).toLocaleString()}
           </span>
         )}
@@ -259,22 +259,22 @@ export function TimeBlockGroup({
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className={cn("relative", className)}
+      className={cn('relative', className)}
     >
       {/* Block Header */}
       <CollapsibleTrigger
         className={cn(
-          "w-full flex items-center gap-3 px-4 py-2",
-          "bg-muted/30 hover:bg-muted/50 transition-colors",
-          "border-y border-border/40",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring",
+          'w-full flex items-center gap-3 px-4 py-2',
+          'bg-muted/30 hover:bg-muted/50 transition-colors',
+          'border-y border-border/40',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring',
         )}
       >
         {/* Expand/Collapse indicator */}
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-muted-foreground transition-transform duration-200",
-            isOpen && "rotate-180",
+            'w-4 h-4 text-muted-foreground transition-transform duration-200',
+            isOpen && 'rotate-180',
           )}
         />
 
@@ -296,15 +296,15 @@ export function TimeBlockGroup({
               <div
                 key={category}
                 className={cn(
-                  "flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px]",
+                  'flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px]',
                   style.bg,
                   style.text,
                 )}
                 title={`${SOURCE_CATEGORY_STYLES[category].label}: ${count}`}
               >
                 <span
-                  className={cn("w-1.5 h-1.5 rounded-full", style.text)}
-                  style={{ backgroundColor: "currentColor" }}
+                  className={cn('w-1.5 h-1.5 rounded-full', style.text)}
+                  style={{ backgroundColor: 'currentColor' }}
                 />
                 <span className="font-medium">{count}</span>
               </div>
@@ -314,7 +314,7 @@ export function TimeBlockGroup({
 
         {/* Total event count */}
         <span className="text-xs text-muted-foreground">
-          {filteredEvents.length} event{filteredEvents.length !== 1 ? "s" : ""}
+          {filteredEvents.length} event{filteredEvents.length !== 1 ? 's' : ''}
         </span>
       </CollapsibleTrigger>
 

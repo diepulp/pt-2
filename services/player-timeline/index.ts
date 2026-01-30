@@ -29,7 +29,7 @@ export type {
   RatingEventMetadata,
   TagEventMetadata,
   VisitEventMetadata,
-} from "./dtos";
+} from './dtos';
 
 // Mappers
 export {
@@ -37,11 +37,11 @@ export {
   getSourceCategory,
   mapRpcResultToTimelineResponse,
   mapRpcRowToEvent,
-} from "./mappers";
-export type { SourceCategory } from "./mappers";
+} from './mappers';
+export type { SourceCategory } from './mappers';
 
 // CRUD
-export { fetchPlayerTimeline, getPlayerTimeline } from "./crud";
+export { fetchPlayerTimeline, getPlayerTimeline } from './crud';
 
 // Query Keys
-export { playerTimelineKeys } from "./keys";
+export { playerTimelineKeys } from './keys';

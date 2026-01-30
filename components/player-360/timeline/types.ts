@@ -13,7 +13,7 @@ import type {
   InteractionEventDTO,
   InteractionEventMetadata,
   InteractionEventType,
-} from "@/services/player-timeline/dtos";
+} from '@/services/player-timeline/dtos';
 
 // === Source Categories ===
 
@@ -22,47 +22,47 @@ import type {
  * Maps to chip colors and section headers in the UI.
  */
 export type SourceCategory =
-  | "session" // visit_start, visit_end, visit_resume
-  | "gaming" // rating_start, rating_pause, rating_resume, rating_close
-  | "financial" // cash_in, cash_out, cash_observation, financial_adjustment
-  | "loyalty" // points_earned, points_redeemed, points_adjusted, promo_*
-  | "staff" // note_added, tag_applied, tag_removed
-  | "compliance" // mtl_recorded
-  | "identity"; // player_enrolled, identity_verified
+  | 'session' // visit_start, visit_end, visit_resume
+  | 'gaming' // rating_start, rating_pause, rating_resume, rating_close
+  | 'financial' // cash_in, cash_out, cash_observation, financial_adjustment
+  | 'loyalty' // points_earned, points_redeemed, points_adjusted, promo_*
+  | 'staff' // note_added, tag_applied, tag_removed
+  | 'compliance' // mtl_recorded
+  | 'identity'; // player_enrolled, identity_verified
 
 /**
  * Maps event types to their source category for UI grouping.
  */
 const SOURCE_CATEGORY_MAP: Record<InteractionEventType, SourceCategory> = {
   // Session & Presence
-  visit_start: "session",
-  visit_end: "session",
-  visit_resume: "session",
+  visit_start: 'session',
+  visit_end: 'session',
+  visit_resume: 'session',
   // Gaming Activity
-  rating_start: "gaming",
-  rating_pause: "gaming",
-  rating_resume: "gaming",
-  rating_close: "gaming",
+  rating_start: 'gaming',
+  rating_pause: 'gaming',
+  rating_resume: 'gaming',
+  rating_close: 'gaming',
   // Financial
-  cash_in: "financial",
-  cash_out: "financial",
-  cash_observation: "financial",
-  financial_adjustment: "financial",
+  cash_in: 'financial',
+  cash_out: 'financial',
+  cash_observation: 'financial',
+  financial_adjustment: 'financial',
   // Loyalty & Rewards
-  points_earned: "loyalty",
-  points_redeemed: "loyalty",
-  points_adjusted: "loyalty",
-  promo_issued: "loyalty",
-  promo_redeemed: "loyalty",
+  points_earned: 'loyalty',
+  points_redeemed: 'loyalty',
+  points_adjusted: 'loyalty',
+  promo_issued: 'loyalty',
+  promo_redeemed: 'loyalty',
   // Staff Interactions
-  note_added: "staff",
-  tag_applied: "staff",
-  tag_removed: "staff",
+  note_added: 'staff',
+  tag_applied: 'staff',
+  tag_removed: 'staff',
   // Compliance
-  mtl_recorded: "compliance",
+  mtl_recorded: 'compliance',
   // Identity
-  player_enrolled: "identity",
-  identity_verified: "identity",
+  player_enrolled: 'identity',
+  identity_verified: 'identity',
 };
 
 /**
@@ -71,7 +71,7 @@ const SOURCE_CATEGORY_MAP: Record<InteractionEventType, SourceCategory> = {
 export function getSourceCategory(
   eventType: InteractionEventType,
 ): SourceCategory {
-  return SOURCE_CATEGORY_MAP[eventType] ?? "session";
+  return SOURCE_CATEGORY_MAP[eventType] ?? 'session';
 }
 
 // === Event Icons ===
@@ -81,26 +81,26 @@ export function getSourceCategory(
  * Uses Lucide icon names compatible with shadcn/ui.
  */
 export type EventIcon =
-  | "log-in"
-  | "log-out"
-  | "refresh-cw"
-  | "play"
-  | "pause"
-  | "square"
-  | "arrow-down-circle"
-  | "arrow-up-circle"
-  | "eye"
-  | "edit"
-  | "plus-circle"
-  | "gift"
-  | "settings"
-  | "ticket"
-  | "file-text"
-  | "tag"
-  | "tag-x"
-  | "shield"
-  | "user-plus"
-  | "badge-check";
+  | 'log-in'
+  | 'log-out'
+  | 'refresh-cw'
+  | 'play'
+  | 'pause'
+  | 'square'
+  | 'arrow-down-circle'
+  | 'arrow-up-circle'
+  | 'eye'
+  | 'edit'
+  | 'plus-circle'
+  | 'gift'
+  | 'settings'
+  | 'ticket'
+  | 'file-text'
+  | 'tag'
+  | 'tag-x'
+  | 'shield'
+  | 'user-plus'
+  | 'badge-check';
 
 /**
  * Maps event types to their display icons.
@@ -108,34 +108,34 @@ export type EventIcon =
  */
 export const EVENT_ICON_MAP: Record<InteractionEventType, EventIcon> = {
   // Session & Presence
-  visit_start: "log-in",
-  visit_end: "log-out",
-  visit_resume: "refresh-cw",
+  visit_start: 'log-in',
+  visit_end: 'log-out',
+  visit_resume: 'refresh-cw',
   // Gaming Activity
-  rating_start: "play",
-  rating_pause: "pause",
-  rating_resume: "refresh-cw",
-  rating_close: "square",
+  rating_start: 'play',
+  rating_pause: 'pause',
+  rating_resume: 'refresh-cw',
+  rating_close: 'square',
   // Financial
-  cash_in: "arrow-down-circle",
-  cash_out: "arrow-up-circle",
-  cash_observation: "eye",
-  financial_adjustment: "edit",
+  cash_in: 'arrow-down-circle',
+  cash_out: 'arrow-up-circle',
+  cash_observation: 'eye',
+  financial_adjustment: 'edit',
   // Loyalty & Rewards
-  points_earned: "plus-circle",
-  points_redeemed: "gift",
-  points_adjusted: "settings",
-  promo_issued: "ticket",
-  promo_redeemed: "gift",
+  points_earned: 'plus-circle',
+  points_redeemed: 'gift',
+  points_adjusted: 'settings',
+  promo_issued: 'ticket',
+  promo_redeemed: 'gift',
   // Staff Interactions
-  note_added: "file-text",
-  tag_applied: "tag",
-  tag_removed: "tag-x",
+  note_added: 'file-text',
+  tag_applied: 'tag',
+  tag_removed: 'tag-x',
   // Compliance
-  mtl_recorded: "shield",
+  mtl_recorded: 'shield',
   // Identity
-  player_enrolled: "user-plus",
-  identity_verified: "badge-check",
+  player_enrolled: 'user-plus',
+  identity_verified: 'badge-check',
 };
 
 /**
@@ -170,46 +170,46 @@ export const SOURCE_CATEGORY_STYLES: Record<
   SourceCategoryStyle
 > = {
   session: {
-    bg: "bg-blue-50 dark:bg-blue-950",
-    text: "text-blue-700 dark:text-blue-300",
-    border: "border-blue-200 dark:border-blue-800",
-    label: "Session",
+    bg: 'bg-blue-50 dark:bg-blue-950',
+    text: 'text-blue-700 dark:text-blue-300',
+    border: 'border-blue-200 dark:border-blue-800',
+    label: 'Session',
   },
   gaming: {
-    bg: "bg-purple-50 dark:bg-purple-950",
-    text: "text-purple-700 dark:text-purple-300",
-    border: "border-purple-200 dark:border-purple-800",
-    label: "Gaming",
+    bg: 'bg-purple-50 dark:bg-purple-950',
+    text: 'text-purple-700 dark:text-purple-300',
+    border: 'border-purple-200 dark:border-purple-800',
+    label: 'Gaming',
   },
   financial: {
-    bg: "bg-green-50 dark:bg-green-950",
-    text: "text-green-700 dark:text-green-300",
-    border: "border-green-200 dark:border-green-800",
-    label: "Financial",
+    bg: 'bg-green-50 dark:bg-green-950',
+    text: 'text-green-700 dark:text-green-300',
+    border: 'border-green-200 dark:border-green-800',
+    label: 'Financial',
   },
   loyalty: {
-    bg: "bg-amber-50 dark:bg-amber-950",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-200 dark:border-amber-800",
-    label: "Loyalty",
+    bg: 'bg-amber-50 dark:bg-amber-950',
+    text: 'text-amber-700 dark:text-amber-300',
+    border: 'border-amber-200 dark:border-amber-800',
+    label: 'Loyalty',
   },
   staff: {
-    bg: "bg-slate-50 dark:bg-slate-950",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-200 dark:border-slate-800",
-    label: "Staff",
+    bg: 'bg-slate-50 dark:bg-slate-950',
+    text: 'text-slate-700 dark:text-slate-300',
+    border: 'border-slate-200 dark:border-slate-800',
+    label: 'Staff',
   },
   compliance: {
-    bg: "bg-red-50 dark:bg-red-950",
-    text: "text-red-700 dark:text-red-300",
-    border: "border-red-200 dark:border-red-800",
-    label: "Compliance",
+    bg: 'bg-red-50 dark:bg-red-950',
+    text: 'text-red-700 dark:text-red-300',
+    border: 'border-red-200 dark:border-red-800',
+    label: 'Compliance',
   },
   identity: {
-    bg: "bg-cyan-50 dark:bg-cyan-950",
-    text: "text-cyan-700 dark:text-cyan-300",
-    border: "border-cyan-200 dark:border-cyan-800",
-    label: "Identity",
+    bg: 'bg-cyan-50 dark:bg-cyan-950',
+    text: 'text-cyan-700 dark:text-cyan-300',
+    border: 'border-cyan-200 dark:border-cyan-800',
+    label: 'Identity',
   },
 };
 
@@ -306,28 +306,28 @@ export function toExpandedCard(
  * Used in filter chips and card headers.
  */
 export const EVENT_TYPE_LABELS: Record<InteractionEventType, string> = {
-  visit_start: "Check-in",
-  visit_end: "Check-out",
-  visit_resume: "Visit Resumed",
-  rating_start: "Started Play",
-  rating_pause: "Paused Play",
-  rating_resume: "Resumed Play",
-  rating_close: "Ended Play",
-  cash_in: "Buy-in",
-  cash_out: "Cash-out",
-  cash_observation: "Cash Observation",
-  financial_adjustment: "Adjustment",
-  points_earned: "Points Earned",
-  points_redeemed: "Points Redeemed",
-  points_adjusted: "Points Adjusted",
-  promo_issued: "Promo Issued",
-  promo_redeemed: "Promo Redeemed",
-  note_added: "Note Added",
-  tag_applied: "Tag Applied",
-  tag_removed: "Tag Removed",
-  mtl_recorded: "MTL Entry",
-  player_enrolled: "Enrolled",
-  identity_verified: "ID Verified",
+  visit_start: 'Check-in',
+  visit_end: 'Check-out',
+  visit_resume: 'Visit Resumed',
+  rating_start: 'Started Play',
+  rating_pause: 'Paused Play',
+  rating_resume: 'Resumed Play',
+  rating_close: 'Ended Play',
+  cash_in: 'Buy-in',
+  cash_out: 'Cash-out',
+  cash_observation: 'Cash Observation',
+  financial_adjustment: 'Adjustment',
+  points_earned: 'Points Earned',
+  points_redeemed: 'Points Redeemed',
+  points_adjusted: 'Points Adjusted',
+  promo_issued: 'Promo Issued',
+  promo_redeemed: 'Promo Redeemed',
+  note_added: 'Note Added',
+  tag_applied: 'Tag Applied',
+  tag_removed: 'Tag Removed',
+  mtl_recorded: 'MTL Entry',
+  player_enrolled: 'Enrolled',
+  identity_verified: 'ID Verified',
 };
 
 /**
@@ -347,22 +347,22 @@ export const EVENT_TYPES_BY_CATEGORY: Record<
   SourceCategory,
   InteractionEventType[]
 > = {
-  session: ["visit_start", "visit_end", "visit_resume"],
-  gaming: ["rating_start", "rating_pause", "rating_resume", "rating_close"],
+  session: ['visit_start', 'visit_end', 'visit_resume'],
+  gaming: ['rating_start', 'rating_pause', 'rating_resume', 'rating_close'],
   financial: [
-    "cash_in",
-    "cash_out",
-    "cash_observation",
-    "financial_adjustment",
+    'cash_in',
+    'cash_out',
+    'cash_observation',
+    'financial_adjustment',
   ],
   loyalty: [
-    "points_earned",
-    "points_redeemed",
-    "points_adjusted",
-    "promo_issued",
-    "promo_redeemed",
+    'points_earned',
+    'points_redeemed',
+    'points_adjusted',
+    'promo_issued',
+    'promo_redeemed',
   ],
-  staff: ["note_added", "tag_applied", "tag_removed"],
-  compliance: ["mtl_recorded"],
-  identity: ["player_enrolled", "identity_verified"],
+  staff: ['note_added', 'tag_applied', 'tag_removed'],
+  compliance: ['mtl_recorded'],
+  identity: ['player_enrolled', 'identity_verified'],
 };

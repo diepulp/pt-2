@@ -8,9 +8,9 @@
  * @see EXEC-SPEC-029.md WS-UX-D
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 import {
   AlertCircle,
   Calendar,
@@ -26,14 +26,14 @@ import {
   User,
   UserX,
   X,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import type { PlayerSearchResultDTO } from "@/services/player/dtos";
-import { searchPlayers } from "@/services/player/http";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
+import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import { searchPlayers } from '@/services/player/http';
 
 // === Base Empty State ===
 
@@ -71,7 +71,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center p-8",
+        'flex flex-col items-center justify-center text-center p-8',
         className,
       )}
     >
@@ -129,7 +129,7 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center p-8",
+        'flex flex-col items-center justify-center text-center p-8',
         className,
       )}
     >
@@ -161,7 +161,7 @@ export function ErrorState({
 
 interface TimelineEmptyProps {
   /** Type of empty state */
-  type: "no-events" | "no-results" | "no-player";
+  type: 'no-events' | 'no-results' | 'no-player';
   /** Callback to widen date range */
   onWidenDateRange?: () => void;
   /** Callback to clear filters */
@@ -183,7 +183,7 @@ export function TimelineEmpty({
   className,
 }: TimelineEmptyProps) {
   switch (type) {
-    case "no-events":
+    case 'no-events':
       return (
         <EmptyState
           icon={<History className="h-8 w-8 text-muted-foreground/50" />}
@@ -191,14 +191,14 @@ export function TimelineEmpty({
           description="This player has no activity recorded for the selected date range."
           action={
             onWidenDateRange
-              ? { label: "Widen date range", onClick: onWidenDateRange }
+              ? { label: 'Widen date range', onClick: onWidenDateRange }
               : undefined
           }
           className={className}
         />
       );
 
-    case "no-results":
+    case 'no-results':
       return (
         <EmptyState
           icon={<Filter className="h-8 w-8 text-muted-foreground/50" />}
@@ -206,14 +206,14 @@ export function TimelineEmpty({
           description="No events match your current filters. Try adjusting your selection."
           action={
             onClearFilters
-              ? { label: "Clear filters", onClick: onClearFilters }
+              ? { label: 'Clear filters', onClick: onClearFilters }
               : undefined
           }
           className={className}
         />
       );
 
-    case "no-player":
+    case 'no-player':
       return (
         <EmptyState
           icon={<Search className="h-8 w-8 text-muted-foreground/50" />}
@@ -221,7 +221,7 @@ export function TimelineEmpty({
           description="Search for and select a player to view their timeline."
           action={
             onSelectPlayer
-              ? { label: "Search players", onClick: onSelectPlayer }
+              ? { label: 'Search players', onClick: onSelectPlayer }
               : undefined
           }
           className={className}
@@ -237,7 +237,7 @@ export function TimelineEmpty({
 
 interface MetricsEmptyProps {
   /** Reason for empty state */
-  reason: "no-player" | "no-data" | "insufficient-data";
+  reason: 'no-player' | 'no-data' | 'insufficient-data';
   className?: string;
 }
 
@@ -246,7 +246,7 @@ interface MetricsEmptyProps {
  */
 export function MetricsEmpty({ reason, className }: MetricsEmptyProps) {
   switch (reason) {
-    case "no-player":
+    case 'no-player':
       return (
         <EmptyState
           icon={<UserX className="h-8 w-8 text-muted-foreground/50" />}
@@ -256,7 +256,7 @@ export function MetricsEmpty({ reason, className }: MetricsEmptyProps) {
         />
       );
 
-    case "no-data":
+    case 'no-data':
       return (
         <EmptyState
           icon={<Calendar className="h-8 w-8 text-muted-foreground/50" />}
@@ -266,7 +266,7 @@ export function MetricsEmpty({ reason, className }: MetricsEmptyProps) {
         />
       );
 
-    case "insufficient-data":
+    case 'insufficient-data':
       return (
         <EmptyState
           icon={<History className="h-8 w-8 text-muted-foreground/50" />}
@@ -298,7 +298,7 @@ export function NotesEmpty({ onAddNote, className }: NotesEmptyProps) {
       icon={<FileText className="h-8 w-8 text-muted-foreground/50" />}
       title="No notes yet"
       description="Be the first to add a note about this player."
-      action={onAddNote ? { label: "Add note", onClick: onAddNote } : undefined}
+      action={onAddNote ? { label: 'Add note', onClick: onAddNote } : undefined}
       className={className}
     />
   );
@@ -319,7 +319,7 @@ export function TagsEmpty({ onAddTag, className }: TagsEmptyProps) {
       icon={<Tag className="h-8 w-8 text-muted-foreground/50" />}
       title="No tags applied"
       description="Apply tags to categorize and quickly identify this player."
-      action={onAddTag ? { label: "Add tag", onClick: onAddTag } : undefined}
+      action={onAddTag ? { label: 'Add tag', onClick: onAddTag } : undefined}
       className={className}
     />
   );
@@ -342,8 +342,8 @@ export function CompactEmpty({ icon, message, className }: CompactEmptyProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 py-3 px-4 text-muted-foreground",
-        "rounded-lg border border-dashed border-border/50",
+        'flex items-center gap-2 py-3 px-4 text-muted-foreground',
+        'rounded-lg border border-dashed border-border/50',
         className,
       )}
     >
@@ -377,7 +377,7 @@ export function TimelineError({
 }: TimelineErrorProps) {
   return (
     <ErrorState
-      message={message || "Timeline unavailable"}
+      message={message || 'Timeline unavailable'}
       correlationId={correlationId}
       onRetry={onRetry}
       className={className}
@@ -409,7 +409,7 @@ export function NoPermission({ resource, className }: NoPermissionProps) {
 
 // === Recent Players Hook (for empty state and header) ===
 
-const STORAGE_KEY = "player-360-recent-players";
+const STORAGE_KEY = 'player-360-recent-players';
 const MAX_RECENT = 10;
 
 interface RecentPlayer {
@@ -473,20 +473,20 @@ function formatTimeAgo(isoDate: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
-  if (diffMins < 1) return "Just now";
+  if (diffMins < 1) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // === Status Color Utility ===
 
-const getStatusColor = (status: "enrolled" | "not_enrolled") =>
-  status === "enrolled"
-    ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-    : "bg-slate-400/20 text-slate-400 border-slate-400/30";
+const getStatusColor = (status: 'enrolled' | 'not_enrolled') =>
+  status === 'enrolled'
+    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+    : 'bg-slate-400/20 text-slate-400 border-slate-400/30';
 
 // === Player 360 Empty State with Search (PRD-022-PATCH-OPTION-B) ===
 
@@ -507,31 +507,31 @@ export function Player360EmptyState({
   className,
 }: Player360EmptyStateProps) {
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
   const { recentPlayers, isLoaded, removeRecent, clearAll } =
     useRecentPlayers();
 
   // Detect OS for keyboard shortcut display
   const isMac =
-    typeof window !== "undefined" &&
+    typeof window !== 'undefined' &&
     // eslint-disable-next-line @typescript-eslint/no-explicit-any -- userAgentData not in all TS type defs yet
     ((navigator as any).userAgentData?.platform
       ?.toLowerCase()
-      .includes("mac") ??
-      navigator.userAgent.toLowerCase().includes("mac"));
-  const modKey = isMac ? "⌘" : "Ctrl";
+      .includes('mac') ??
+      navigator.userAgent.toLowerCase().includes('mac'));
+  const modKey = isMac ? '⌘' : 'Ctrl';
 
   // Keyboard shortcut handler
   React.useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         inputRef.current?.focus();
       }
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Debounce search term (300ms)
@@ -540,7 +540,7 @@ export function Player360EmptyState({
       if (searchTerm.length >= 2) {
         setDebouncedSearch(searchTerm);
       } else {
-        setDebouncedSearch("");
+        setDebouncedSearch('');
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -552,7 +552,7 @@ export function Player360EmptyState({
     isLoading: isSearching,
     error,
   } = useQuery({
-    queryKey: ["players", "search", debouncedSearch],
+    queryKey: ['players', 'search', debouncedSearch],
     queryFn: () => searchPlayers(debouncedSearch, 20),
     enabled: debouncedSearch.length >= 2,
     staleTime: 30_000,
@@ -560,8 +560,8 @@ export function Player360EmptyState({
 
   const handleSelect = (player: PlayerSearchResultDTO) => {
     onSelectPlayer?.(player.id);
-    setSearchTerm("");
-    setDebouncedSearch("");
+    setSearchTerm('');
+    setDebouncedSearch('');
   };
 
   const handleSelectRecent = (playerId: string) => {
@@ -569,8 +569,8 @@ export function Player360EmptyState({
   };
 
   const handleClear = () => {
-    setSearchTerm("");
-    setDebouncedSearch("");
+    setSearchTerm('');
+    setDebouncedSearch('');
     inputRef.current?.focus();
   };
 
@@ -579,8 +579,8 @@ export function Player360EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-start h-full pt-16 px-4",
-        "bg-gradient-to-b from-transparent via-accent/5 to-transparent",
+        'flex flex-col items-center justify-start h-full pt-16 px-4',
+        'bg-gradient-to-b from-transparent via-accent/5 to-transparent',
         className,
       )}
       data-testid="player-360-empty-state"
@@ -591,10 +591,10 @@ export function Player360EmptyState({
           <div className="absolute inset-0 w-20 h-20 bg-accent/20 rounded-full blur-xl" />
           <div
             className={cn(
-              "relative w-16 h-16 rounded-full",
-              "bg-gradient-to-br from-accent/20 to-accent/5",
-              "border border-accent/30",
-              "flex items-center justify-center",
+              'relative w-16 h-16 rounded-full',
+              'bg-gradient-to-br from-accent/20 to-accent/5',
+              'border border-accent/30',
+              'flex items-center justify-center',
             )}
           >
             <Search className="h-8 w-8 text-accent/70" />
@@ -620,12 +620,12 @@ export function Player360EmptyState({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className={cn(
-              "w-full pl-12 pr-24 py-3 text-base rounded-xl",
-              "bg-background/80 border border-border/60",
-              "focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60",
-              "placeholder:text-muted-foreground/50",
-              "transition-all duration-200",
-              "shadow-sm",
+              'w-full pl-12 pr-24 py-3 text-base rounded-xl',
+              'bg-background/80 border border-border/60',
+              'focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60',
+              'placeholder:text-muted-foreground/50',
+              'transition-all duration-200',
+              'shadow-sm',
             )}
             data-testid="search-input"
           />
@@ -673,26 +673,26 @@ export function Player360EmptyState({
                     key={player.id}
                     onClick={() => handleSelect(player)}
                     className={cn(
-                      "w-full flex items-center gap-3 px-4 py-3",
-                      "hover:bg-muted/50 transition-colors text-left",
-                      "border-b border-border/30 last:border-b-0",
+                      'w-full flex items-center gap-3 px-4 py-3',
+                      'hover:bg-muted/50 transition-colors text-left',
+                      'border-b border-border/30 last:border-b-0',
                     )}
                     data-testid={`player-result-${player.id.slice(0, 8)}`}
                   >
                     {/* Avatar */}
                     <div
                       className={cn(
-                        "w-10 h-10 rounded-full shrink-0",
-                        "bg-gradient-to-br from-accent/20 to-accent/5",
-                        "border border-accent/30",
-                        "flex items-center justify-center",
-                        "text-sm font-medium text-accent",
+                        'w-10 h-10 rounded-full shrink-0',
+                        'bg-gradient-to-br from-accent/20 to-accent/5',
+                        'border border-accent/30',
+                        'flex items-center justify-center',
+                        'text-sm font-medium text-accent',
                       )}
                     >
                       {player.full_name
-                        .split(" ")
+                        .split(' ')
                         .map((n) => n[0])
-                        .join("")
+                        .join('')
                         .slice(0, 2)}
                     </div>
 
@@ -705,13 +705,13 @@ export function Player360EmptyState({
                         <Badge
                           variant="outline"
                           className={cn(
-                            "text-[10px] h-4 px-1.5 capitalize shrink-0",
+                            'text-[10px] h-4 px-1.5 capitalize shrink-0',
                             getStatusColor(player.enrollment_status),
                           )}
                         >
-                          {player.enrollment_status === "enrolled"
-                            ? "Enrolled"
-                            : "Not Enrolled"}
+                          {player.enrollment_status === 'enrolled'
+                            ? 'Enrolled'
+                            : 'Not Enrolled'}
                         </Badge>
                       </div>
                       <div className="text-xs text-muted-foreground truncate">
@@ -724,8 +724,8 @@ export function Player360EmptyState({
                     {/* Selection indicator */}
                     <div
                       className={cn(
-                        "w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0",
-                        "border-accent/30 group-hover:border-accent",
+                        'w-6 h-6 rounded-full border-2 flex items-center justify-center shrink-0',
+                        'border-accent/30 group-hover:border-accent',
                       )}
                     >
                       <Check className="h-3 w-3 text-accent opacity-0 group-hover:opacity-100" />
@@ -760,9 +760,9 @@ export function Player360EmptyState({
                     <div
                       key={player.id}
                       className={cn(
-                        "group flex items-center gap-3 px-4 py-3",
-                        "hover:bg-muted/30 transition-colors",
-                        "border-b border-border/30 last:border-b-0",
+                        'group flex items-center gap-3 px-4 py-3',
+                        'hover:bg-muted/30 transition-colors',
+                        'border-b border-border/30 last:border-b-0',
                       )}
                     >
                       <button
@@ -771,9 +771,9 @@ export function Player360EmptyState({
                       >
                         <div
                           className={cn(
-                            "w-9 h-9 rounded-full shrink-0",
-                            "bg-muted/50 border border-border/50",
-                            "flex items-center justify-center",
+                            'w-9 h-9 rounded-full shrink-0',
+                            'bg-muted/50 border border-border/50',
+                            'flex items-center justify-center',
                           )}
                         >
                           <User className="h-4 w-4 text-muted-foreground" />
@@ -793,8 +793,8 @@ export function Player360EmptyState({
                           removeRecent(player.id);
                         }}
                         className={cn(
-                          "p-1.5 rounded-md hover:bg-muted/50",
-                          "opacity-0 group-hover:opacity-100 transition-opacity",
+                          'p-1.5 rounded-md hover:bg-muted/50',
+                          'opacity-0 group-hover:opacity-100 transition-opacity',
                         )}
                         aria-label={`Remove ${player.name} from recent`}
                       >

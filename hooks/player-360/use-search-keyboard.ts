@@ -9,9 +9,9 @@
  * @see EXECUTION-SPEC-PRD-022-PATCH-OPTION-B.md WS7
  */
 
-"use client";
+'use client';
 
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef } from 'react';
 
 // === Types ===
 
@@ -76,19 +76,19 @@ export function useSearchKeyboard({
       // Ignore if user is typing in an input/textarea (except our search input)
       const target = event.target as HTMLElement;
       const isInInput =
-        target.tagName === "INPUT" ||
-        target.tagName === "TEXTAREA" ||
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
         target.isContentEditable;
 
       // === Cmd/Ctrl + K: Focus search ===
-      if ((event.metaKey || event.ctrlKey) && event.key === "k") {
+      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         event.preventDefault();
         focusSearch();
         return;
       }
 
       // === Escape key behavior ===
-      if (event.key === "Escape") {
+      if (event.key === 'Escape') {
         const isOurSearchFocused =
           document.activeElement === searchInputRef.current;
         const inputHasValue = !!searchInputRef.current?.value;
@@ -144,9 +144,9 @@ export function useSearchKeyboard({
   useEffect(() => {
     if (!enabled) return;
 
-    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown);
       if (escTimeoutRef.current) {
         clearTimeout(escTimeoutRef.current);
       }
@@ -167,13 +167,13 @@ export function useSearchKeyboard({
  */
 export function useModifierKey(): string {
   // SSR-safe check
-  if (typeof window === "undefined") return "Ctrl";
+  if (typeof window === 'undefined') return 'Ctrl';
 
   // Use userAgentData when available (modern browsers), fallback to userAgent
   const isMac =
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigator as any).userAgentData?.platform?.toLowerCase().includes("mac") ??
-    navigator.userAgent.toLowerCase().includes("mac");
+    (navigator as any).userAgentData?.platform?.toLowerCase().includes('mac') ??
+    navigator.userAgent.toLowerCase().includes('mac');
 
-  return isMac ? "⌘" : "Ctrl";
+  return isMac ? '⌘' : 'Ctrl';
 }

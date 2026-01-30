@@ -10,10 +10,10 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md §341-342
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   CreatePlayerDTO,
@@ -23,7 +23,7 @@ import type {
   PlayerListFilters,
   PlayerSearchResultDTO,
   UpdatePlayerDTO,
-} from "./dtos";
+} from './dtos';
 import {
   toEnrollmentDTO,
   toEnrollmentDTOOrNull,
@@ -31,12 +31,12 @@ import {
   toPlayerDTOList,
   toPlayerDTOOrNull,
   toPlayerSearchResultDTOList,
-} from "./mappers";
+} from './mappers';
 import {
   ENROLLMENT_SELECT,
   PLAYER_SEARCH_SELECT,
   PLAYER_SELECT,
-} from "./selects";
+} from './selects';
 
 // === Error Mapping ===
 
@@ -48,13 +48,13 @@ function mapDatabaseError(error: {
   code?: string;
   message: string;
 }): DomainError {
-  if (error.code === "23505") {
-    return new DomainError("PLAYER_ALREADY_EXISTS", "Player already exists");
+  if (error.code === '23505') {
+    return new DomainError('PLAYER_ALREADY_EXISTS', 'Player already exists');
   }
-  if (error.code === "23503") {
-    return new DomainError("PLAYER_NOT_FOUND", "Referenced player not found");
+  if (error.code === '23503') {
+    return new DomainError('PLAYER_NOT_FOUND', 'Referenced player not found');
   }
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // === Player CRUD ===
@@ -68,9 +68,9 @@ export async function getPlayerById(
   playerId: string,
 ): Promise<PlayerDTO | null> {
   const { data, error } = await supabase
-    .from("player")
+    .from('player')
     .select(PLAYER_SELECT)
-    .eq("id", playerId)
+    .eq('id', playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -88,9 +88,9 @@ export async function listPlayers(
   const limit = filters.limit ?? 20;
 
   let query = supabase
-    .from("player")
+    .from('player')
     .select(PLAYER_SELECT)
-    .order("created_at", { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(limit + 1);
 
   // Apply search filter if provided
@@ -101,7 +101,7 @@ export async function listPlayers(
 
   // Apply cursor-based pagination
   if (filters.cursor) {
-    query = query.lt("created_at", filters.cursor);
+    query = query.lt('created_at', filters.cursor);
   }
 
   const { data, error } = await query;
@@ -138,7 +138,7 @@ export async function createPlayer(
   input: CreatePlayerWithContextDTO,
 ): Promise<PlayerDTO> {
   // Use RPC for transaction-safe creation with RLS context
-  const { data, error } = await supabase.rpc("rpc_create_player", {
+  const { data, error } = await supabase.rpc('rpc_create_player', {
     p_casino_id: input.casino_id,
     p_first_name: input.first_name,
     p_last_name: input.last_name,
@@ -147,11 +147,11 @@ export async function createPlayer(
 
   if (error) {
     // Map RPC-specific error codes
-    if (error.message?.includes("Unauthorized")) {
-      throw new DomainError("FORBIDDEN", error.message);
+    if (error.message?.includes('Unauthorized')) {
+      throw new DomainError('FORBIDDEN', error.message);
     }
-    if (error.message?.includes("Actor not found")) {
-      throw new DomainError("FORBIDDEN", "Invalid staff context");
+    if (error.message?.includes('Actor not found')) {
+      throw new DomainError('FORBIDDEN', 'Invalid staff context');
     }
     throw mapDatabaseError(error);
   }
@@ -199,15 +199,15 @@ export async function updatePlayer(
     updateData.phone_number = input.phone_number;
 
   const { data, error } = await supabase
-    .from("player")
+    .from('player')
     .update(updateData)
-    .eq("id", playerId)
+    .eq('id', playerId)
     .select(PLAYER_SELECT)
     .single();
 
   if (error) {
-    if (error.code === "PGRST116") {
-      throw new DomainError("PLAYER_NOT_FOUND");
+    if (error.code === 'PGRST116') {
+      throw new DomainError('PLAYER_NOT_FOUND');
     }
     throw mapDatabaseError(error);
   }
@@ -237,7 +237,7 @@ export async function searchPlayers(
   }
 
   // Query from player table with !inner join to player_casino for RLS
-  let queryBuilder = supabase.from("player").select(PLAYER_SEARCH_SELECT);
+  let queryBuilder = supabase.from('player').select(PLAYER_SEARCH_SELECT);
 
   if (words.length === 1) {
     // Single word: match first_name OR last_name with prefix
@@ -289,10 +289,10 @@ export async function getPlayerEnrollment(
   casinoId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .select(ENROLLMENT_SELECT)
-    .eq("player_id", playerId)
-    .eq("casino_id", casinoId)
+    .eq('player_id', playerId)
+    .eq('casino_id', casinoId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);
@@ -308,9 +308,9 @@ export async function getPlayerEnrollmentByPlayerId(
   playerId: string,
 ): Promise<PlayerEnrollmentDTO | null> {
   const { data, error } = await supabase
-    .from("player_casino")
+    .from('player_casino')
     .select(ENROLLMENT_SELECT)
-    .eq("player_id", playerId)
+    .eq('player_id', playerId)
     .maybeSingle();
 
   if (error) throw mapDatabaseError(error);

@@ -7,11 +7,11 @@
  * @see PRD-022 WS1 Player 360 Canonical Route
  */
 
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
 
-import { TimelinePageContent } from "../timeline/_components/timeline-content";
+import { TimelinePageContent } from '../timeline/_components/timeline-content';
 
 interface Player360ContentProps {
   playerId: string;
@@ -22,11 +22,11 @@ interface Player360ContentProps {
 export function Player360Content({ playerId }: Player360ContentProps) {
   // Anchor scroll on mount
   useEffect(() => {
-    if (typeof window !== "undefined" && window.location.hash === "#timeline") {
+    if (typeof window !== 'undefined' && window.location.hash === '#timeline') {
       // Small delay to allow DOM to settle
       requestAnimationFrame(() => {
-        const el = document.getElementById("timeline");
-        el?.scrollIntoView({ behavior: "smooth" });
+        const el = document.getElementById('timeline');
+        el?.scrollIntoView({ behavior: 'smooth' });
       });
     }
   }, []);

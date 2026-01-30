@@ -7,14 +7,14 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from 'date-fns';
 
-import type { PlayerSummaryDTO, SourceCategory } from "@/hooks/player-360";
-import { cn } from "@/lib/utils";
+import type { PlayerSummaryDTO, SourceCategory } from '@/hooks/player-360';
+import { cn } from '@/lib/utils';
 
-import { SummaryTile } from "./summary-tile";
+import { SummaryTile } from './summary-tile';
 
 // === Props ===
 
@@ -33,7 +33,7 @@ export interface SummaryBandProps {
 
 function formatCurrency(value: number): string {
   const absValue = Math.abs(value);
-  const prefix = value < 0 ? "-" : "";
+  const prefix = value < 0 ? '-' : '';
   if (absValue >= 1000) {
     return `${prefix}$${(absValue / 1000).toFixed(1)}k`;
   }
@@ -57,18 +57,18 @@ function formatTimeAgo(isoDate: string): string {
   try {
     return formatDistanceToNow(new Date(isoDate), { addSuffix: true });
   } catch {
-    return "";
+    return '';
   }
 }
 
 function getEngagementLabel(status: string): string {
   switch (status) {
-    case "active":
-      return "Active";
-    case "cooling":
-      return "Cooling";
-    case "dormant":
-      return "Dormant";
+    case 'active':
+      return 'Active';
+    case 'cooling':
+      return 'Cooling';
+    case 'dormant':
+      return 'Dormant';
     default:
       return status;
   }
@@ -76,12 +76,12 @@ function getEngagementLabel(status: string): string {
 
 function getEligibilityLabel(status: string): string {
   switch (status) {
-    case "available":
-      return "Eligible";
-    case "not_available":
-      return "Not Eligible";
-    case "unknown":
-      return "Unknown";
+    case 'available':
+      return 'Eligible';
+    case 'not_available':
+      return 'Not Eligible';
+    case 'unknown':
+      return 'Unknown';
     default:
       return status;
   }
@@ -126,7 +126,7 @@ export function SummaryBand({
 
   return (
     <div
-      className={cn("grid grid-cols-2 lg:grid-cols-4 gap-3", className)}
+      className={cn('grid grid-cols-2 lg:grid-cols-4 gap-3', className)}
       data-testid="summary-band"
     >
       {/* Session Value Tile */}
@@ -141,8 +141,8 @@ export function SummaryBand({
         }
         trend={data.sessionValue.trendPercent}
         category="session"
-        isActive={activeCategory === "session"}
-        onClick={() => handleTileClick("session")}
+        isActive={activeCategory === 'session'}
+        onClick={() => handleTileClick('session')}
       />
 
       {/* Cash Velocity Tile */}
@@ -156,8 +156,8 @@ export function SummaryBand({
             : undefined
         }
         category="financial"
-        isActive={activeCategory === "financial"}
-        onClick={() => handleTileClick("financial")}
+        isActive={activeCategory === 'financial'}
+        onClick={() => handleTileClick('financial')}
       />
 
       {/* Engagement Tile */}
@@ -171,8 +171,8 @@ export function SummaryBand({
             : undefined
         }
         category="gaming"
-        isActive={activeCategory === "gaming"}
-        onClick={() => handleTileClick("gaming")}
+        isActive={activeCategory === 'gaming'}
+        onClick={() => handleTileClick('gaming')}
       />
 
       {/* Rewards Eligibility Tile */}
@@ -186,8 +186,8 @@ export function SummaryBand({
             : undefined
         }
         category="loyalty"
-        isActive={activeCategory === "loyalty"}
-        onClick={() => handleTileClick("loyalty")}
+        isActive={activeCategory === 'loyalty'}
+        onClick={() => handleTileClick('loyalty')}
       />
     </div>
   );

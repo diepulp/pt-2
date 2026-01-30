@@ -9,18 +9,18 @@
  * @see EXEC-SPEC-029.md WS2-D
  */
 
-"use client";
+'use client';
 
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { getPlayerTimeline } from "@/services/player-timeline/crud";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { getPlayerTimeline } from '@/services/player-timeline/crud';
 import type {
   TimelineCursor,
   TimelineFilters,
   TimelineResponse,
-} from "@/services/player-timeline/dtos";
-import { playerTimelineKeys } from "@/services/player-timeline/keys";
+} from '@/services/player-timeline/dtos';
+import { playerTimelineKeys } from '@/services/player-timeline/keys';
 
 // === Hook Options ===
 
@@ -225,4 +225,4 @@ export type {
   Phase1EventType,
   TimelineFilters,
   TimelineResponse,
-} from "@/services/player-timeline/dtos";
+} from '@/services/player-timeline/dtos';

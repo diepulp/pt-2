@@ -8,23 +8,23 @@
  * @see EXEC-SPEC-029.md WS-UX-E
  */
 
-"use client";
+'use client';
 
-import { Eye, EyeOff, Loader2, Send, Users } from "lucide-react";
-import * as React from "react";
+import { Eye, EyeOff, Loader2, Send, Users } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
 
-import type { NoteVisibility } from "./panel";
+import type { NoteVisibility } from './panel';
 
 // === Visibility Config ===
 
@@ -37,21 +37,21 @@ interface VisibilityOption {
 
 const VISIBILITY_OPTIONS: VisibilityOption[] = [
   {
-    value: "private",
-    label: "Private",
-    description: "Only you can see this",
+    value: 'private',
+    label: 'Private',
+    description: 'Only you can see this',
     icon: <EyeOff className="h-3.5 w-3.5" />,
   },
   {
-    value: "team",
-    label: "Team",
-    description: "Your shift team can see this",
+    value: 'team',
+    label: 'Team',
+    description: 'Your shift team can see this',
     icon: <Users className="h-3.5 w-3.5" />,
   },
   {
-    value: "all",
-    label: "All Staff",
-    description: "All staff can see this",
+    value: 'all',
+    label: 'All Staff',
+    description: 'All staff can see this',
     icon: <Eye className="h-3.5 w-3.5" />,
   },
 ];
@@ -78,13 +78,13 @@ interface NoteComposerProps {
 export function NoteComposer({
   onSubmit,
   isSubmitting = false,
-  placeholder = "Add a note about this player...",
+  placeholder = 'Add a note about this player...',
   maxLength = 1000,
   autoFocus = false,
   className,
 }: NoteComposerProps) {
-  const [content, setContent] = React.useState("");
-  const [visibility, setVisibility] = React.useState<NoteVisibility>("team");
+  const [content, setContent] = React.useState('');
+  const [visibility, setVisibility] = React.useState<NoteVisibility>('team');
   const [isFocused, setIsFocused] = React.useState(false);
 
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
@@ -100,7 +100,7 @@ export function NoteComposer({
 
     try {
       await onSubmit(content.trim(), visibility);
-      setContent("");
+      setContent('');
       // Keep visibility for next note
     } catch {
       // Error handling is done in parent
@@ -110,7 +110,7 @@ export function NoteComposer({
   // Handle keyboard shortcuts
   const handleKeyDown = (e: React.KeyboardEvent) => {
     // Cmd/Ctrl + Enter to submit
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter" && canSubmit) {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && canSubmit) {
       e.preventDefault();
       handleSubmit(e);
     }
@@ -123,9 +123,9 @@ export function NoteComposer({
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-lg border border-border/40 bg-card/50",
-        "transition-all duration-200",
-        isExpanded && "border-accent/30",
+        'rounded-lg border border-border/40 bg-card/50',
+        'transition-all duration-200',
+        isExpanded && 'border-accent/30',
         className,
       )}
     >
@@ -142,11 +142,11 @@ export function NoteComposer({
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
         className={cn(
-          "resize-none border-0 bg-transparent",
-          "focus-visible:ring-0 focus-visible:ring-offset-0",
-          "placeholder:text-muted-foreground/50",
-          "transition-all duration-200",
-          isExpanded ? "min-h-[80px]" : "min-h-[44px]",
+          'resize-none border-0 bg-transparent',
+          'focus-visible:ring-0 focus-visible:ring-offset-0',
+          'placeholder:text-muted-foreground/50',
+          'transition-all duration-200',
+          isExpanded ? 'min-h-[80px]' : 'min-h-[44px]',
         )}
         maxLength={maxLength + 100} // Allow typing over to show warning
       />
@@ -179,8 +179,8 @@ export function NoteComposer({
             {/* Character count */}
             <span
               className={cn(
-                "text-[10px]",
-                isOverLimit ? "text-red-400" : "text-muted-foreground/60",
+                'text-[10px]',
+                isOverLimit ? 'text-red-400' : 'text-muted-foreground/60',
               )}
             >
               {charCount}/{maxLength}
@@ -213,10 +213,10 @@ export function NoteComposer({
       {isFocused && content.length > 0 && (
         <div className="px-3 pb-2">
           <p className="text-[10px] text-muted-foreground/50">
-            Press{" "}
+            Press{' '}
             <kbd className="px-1 py-0.5 rounded bg-muted/50 font-mono text-[9px]">
               ⌘ Enter
-            </kbd>{" "}
+            </kbd>{' '}
             to submit
           </p>
         </div>
@@ -254,7 +254,7 @@ export function QuickNoteButton({
       variant="outline"
       size="sm"
       onClick={() => onClick(content)}
-      className={cn("h-7 px-2 text-xs gap-1.5", className)}
+      className={cn('h-7 px-2 text-xs gap-1.5', className)}
     >
       {icon}
       {label}
@@ -275,14 +275,14 @@ interface QuickNotesRowProps {
  */
 export function QuickNotesRow({ onSelectNote, className }: QuickNotesRowProps) {
   const quickNotes = [
-    { label: "VIP treatment", content: "Provided VIP treatment per request." },
-    { label: "Comp issued", content: "Issued complimentary as approved." },
-    { label: "ID verified", content: "Identity verified at table." },
-    { label: "Follow-up", content: "Follow-up required: " },
+    { label: 'VIP treatment', content: 'Provided VIP treatment per request.' },
+    { label: 'Comp issued', content: 'Issued complimentary as approved.' },
+    { label: 'ID verified', content: 'Identity verified at table.' },
+    { label: 'Follow-up', content: 'Follow-up required: ' },
   ];
 
   return (
-    <div className={cn("flex flex-wrap gap-1.5", className)}>
+    <div className={cn('flex flex-wrap gap-1.5', className)}>
       {quickNotes.map((note) => (
         <QuickNoteButton
           key={note.label}

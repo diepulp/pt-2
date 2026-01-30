@@ -8,7 +8,7 @@
  * @see EXEC-SPEC-029.md WS2-B
  */
 
-import type { Json } from "@/types/database.types";
+import type { Json } from '@/types/database.types';
 
 import type {
   ComplianceEventMetadata,
@@ -24,7 +24,7 @@ import type {
   TagEventMetadata,
   TimelineResponse,
   VisitEventMetadata,
-} from "./dtos";
+} from './dtos';
 
 // === Type Guards ===
 
@@ -35,7 +35,7 @@ import type {
 export function isJsonObject(
   value: Json,
 ): value is { [key: string]: Json | undefined } {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**
@@ -55,59 +55,59 @@ export function toMetadataRecord(json: Json): Record<string, unknown> {
  * Event types that use VisitEventMetadata.
  */
 const VISIT_EVENT_TYPES: InteractionEventType[] = [
-  "visit_start",
-  "visit_end",
-  "visit_resume",
+  'visit_start',
+  'visit_end',
+  'visit_resume',
 ];
 
 /**
  * Event types that use RatingEventMetadata.
  */
 const RATING_EVENT_TYPES: InteractionEventType[] = [
-  "rating_start",
-  "rating_pause",
-  "rating_resume",
-  "rating_close",
+  'rating_start',
+  'rating_pause',
+  'rating_resume',
+  'rating_close',
 ];
 
 /**
  * Event types that use FinancialEventMetadata.
  */
 const FINANCIAL_EVENT_TYPES: InteractionEventType[] = [
-  "cash_in",
-  "cash_out",
-  "cash_observation",
-  "financial_adjustment",
+  'cash_in',
+  'cash_out',
+  'cash_observation',
+  'financial_adjustment',
 ];
 
 /**
  * Event types that use LoyaltyEventMetadata.
  */
 const LOYALTY_EVENT_TYPES: InteractionEventType[] = [
-  "points_earned",
-  "points_redeemed",
-  "points_adjusted",
+  'points_earned',
+  'points_redeemed',
+  'points_adjusted',
 ];
 
 /**
  * Event types that use PromoEventMetadata.
  */
 const PROMO_EVENT_TYPES: InteractionEventType[] = [
-  "promo_issued",
-  "promo_redeemed",
+  'promo_issued',
+  'promo_redeemed',
 ];
 
 /**
  * Event types that use ComplianceEventMetadata.
  */
-const COMPLIANCE_EVENT_TYPES: InteractionEventType[] = ["mtl_recorded"];
+const COMPLIANCE_EVENT_TYPES: InteractionEventType[] = ['mtl_recorded'];
 
 /**
  * Event types that use IdentityEventMetadata.
  */
 const IDENTITY_EVENT_TYPES: InteractionEventType[] = [
-  "player_enrolled",
-  "identity_verified",
+  'player_enrolled',
+  'identity_verified',
 ];
 
 /**
@@ -122,17 +122,17 @@ function validateMetadata(
   if (VISIT_EVENT_TYPES.includes(eventType)) {
     return {
       visitKind:
-        (raw.visitKind as VisitEventMetadata["visitKind"]) ??
-        "gaming_identified_rated",
-      gamingDay: (raw.gamingDay as string) ?? "",
+        (raw.visitKind as VisitEventMetadata['visitKind']) ??
+        'gaming_identified_rated',
+      gamingDay: (raw.gamingDay as string) ?? '',
     } satisfies VisitEventMetadata;
   }
 
   // Rating events
   if (RATING_EVENT_TYPES.includes(eventType)) {
     return {
-      tableId: (raw.tableId as string) ?? "",
-      tableName: (raw.tableName as string) ?? "",
+      tableId: (raw.tableId as string) ?? '',
+      tableName: (raw.tableName as string) ?? '',
       seatNumber: (raw.seatNumber as string | null) ?? null,
       previousSlipId: raw.previousSlipId as string | undefined,
       durationSeconds: raw.durationSeconds as number | undefined,
@@ -143,10 +143,10 @@ function validateMetadata(
   // Financial events
   if (FINANCIAL_EVENT_TYPES.includes(eventType)) {
     return {
-      direction: (raw.direction as FinancialEventMetadata["direction"]) ?? "in",
-      source: (raw.source as FinancialEventMetadata["source"]) ?? "pit",
-      tenderType: (raw.tenderType as string) ?? "",
-      visitId: (raw.visitId as string) ?? "",
+      direction: (raw.direction as FinancialEventMetadata['direction']) ?? 'in',
+      source: (raw.source as FinancialEventMetadata['source']) ?? 'pit',
+      tenderType: (raw.tenderType as string) ?? '',
+      visitId: (raw.visitId as string) ?? '',
       note: raw.note as string | undefined,
     } satisfies FinancialEventMetadata;
   }
@@ -154,7 +154,7 @@ function validateMetadata(
   // Loyalty events
   if (LOYALTY_EVENT_TYPES.includes(eventType)) {
     return {
-      reason: (raw.reason as string) ?? "",
+      reason: (raw.reason as string) ?? '',
       ratingSlipId: raw.ratingSlipId as string | undefined,
       visitId: raw.visitId as string | undefined,
       note: raw.note as string | undefined,
@@ -164,7 +164,7 @@ function validateMetadata(
   // Promo events
   if (PROMO_EVENT_TYPES.includes(eventType)) {
     return {
-      promoType: (raw.promoType as string) ?? "",
+      promoType: (raw.promoType as string) ?? '',
       promoCode: raw.promoCode as string | undefined,
       amount: raw.amount as number | undefined,
     } satisfies PromoEventMetadata;
@@ -174,10 +174,10 @@ function validateMetadata(
   if (COMPLIANCE_EVENT_TYPES.includes(eventType)) {
     return {
       direction:
-        (raw.direction as ComplianceEventMetadata["direction"]) ?? "in",
-      txnType: (raw.txnType as string) ?? "",
-      source: (raw.source as string) ?? "",
-      gamingDay: (raw.gamingDay as string) ?? "",
+        (raw.direction as ComplianceEventMetadata['direction']) ?? 'in',
+      txnType: (raw.txnType as string) ?? '',
+      source: (raw.source as string) ?? '',
+      gamingDay: (raw.gamingDay as string) ?? '',
     } satisfies ComplianceEventMetadata;
   }
 
@@ -185,36 +185,36 @@ function validateMetadata(
   if (IDENTITY_EVENT_TYPES.includes(eventType)) {
     return {
       documentType: raw.documentType as
-        | "drivers_license"
-        | "passport"
-        | "state_id"
+        | 'drivers_license'
+        | 'passport'
+        | 'state_id'
         | undefined,
       issuingState: raw.issuingState as string | undefined,
     };
   }
 
   // Note events
-  if (eventType === "note_added") {
+  if (eventType === 'note_added') {
     return {
-      content: (raw.content as string) ?? "",
-      visibility: (raw.visibility as NoteEventMetadata["visibility"]) ?? "team",
+      content: (raw.content as string) ?? '',
+      visibility: (raw.visibility as NoteEventMetadata['visibility']) ?? 'team',
     } satisfies NoteEventMetadata;
   }
 
   // Tag events
-  if (eventType === "tag_applied" || eventType === "tag_removed") {
+  if (eventType === 'tag_applied' || eventType === 'tag_removed') {
     return {
-      tagName: (raw.tagName as string) ?? "",
+      tagName: (raw.tagName as string) ?? '',
       tagCategory:
-        (raw.tagCategory as TagEventMetadata["tagCategory"]) ?? "custom",
+        (raw.tagCategory as TagEventMetadata['tagCategory']) ?? 'custom',
     } satisfies TagEventMetadata;
   }
 
   // Fallback: return minimal valid metadata (defensive)
   // This case handles unknown event types that shouldn't occur in production
   return {
-    visitKind: "gaming_identified_rated",
-    gamingDay: (raw.gamingDay as string) ?? "",
+    visitKind: 'gaming_identified_rated',
+    gamingDay: (raw.gamingDay as string) ?? '',
   } satisfies VisitEventMetadata;
 }
 
@@ -271,13 +271,13 @@ export function mapRpcResultToTimelineResponse(
  * Maps event type to source category for UI grouping.
  */
 export type SourceCategory =
-  | "session"
-  | "gaming"
-  | "financial"
-  | "loyalty"
-  | "staff"
-  | "compliance"
-  | "identity";
+  | 'session'
+  | 'gaming'
+  | 'financial'
+  | 'loyalty'
+  | 'staff'
+  | 'compliance'
+  | 'identity';
 
 /**
  * Returns the source category for an event type.
@@ -285,23 +285,23 @@ export type SourceCategory =
 export function getSourceCategory(
   eventType: InteractionEventType,
 ): SourceCategory {
-  if (VISIT_EVENT_TYPES.includes(eventType)) return "session";
-  if (RATING_EVENT_TYPES.includes(eventType)) return "gaming";
-  if (FINANCIAL_EVENT_TYPES.includes(eventType)) return "financial";
+  if (VISIT_EVENT_TYPES.includes(eventType)) return 'session';
+  if (RATING_EVENT_TYPES.includes(eventType)) return 'gaming';
+  if (FINANCIAL_EVENT_TYPES.includes(eventType)) return 'financial';
   if (
     LOYALTY_EVENT_TYPES.includes(eventType) ||
     PROMO_EVENT_TYPES.includes(eventType)
   )
-    return "loyalty";
+    return 'loyalty';
   if (
-    eventType === "note_added" ||
-    eventType === "tag_applied" ||
-    eventType === "tag_removed"
+    eventType === 'note_added' ||
+    eventType === 'tag_applied' ||
+    eventType === 'tag_removed'
   )
-    return "staff";
-  if (COMPLIANCE_EVENT_TYPES.includes(eventType)) return "compliance";
-  if (IDENTITY_EVENT_TYPES.includes(eventType)) return "identity";
-  return "session"; // fallback
+    return 'staff';
+  if (COMPLIANCE_EVENT_TYPES.includes(eventType)) return 'compliance';
+  if (IDENTITY_EVENT_TYPES.includes(eventType)) return 'identity';
+  return 'session'; // fallback
 }
 
 /**
@@ -309,28 +309,28 @@ export function getSourceCategory(
  */
 export function getEventTypeLabel(eventType: InteractionEventType): string {
   const labels: Record<InteractionEventType, string> = {
-    visit_start: "Check-in",
-    visit_end: "Check-out",
-    visit_resume: "Visit Resumed",
-    rating_start: "Started Play",
-    rating_pause: "Paused Play",
-    rating_resume: "Resumed Play",
-    rating_close: "Ended Play",
-    cash_in: "Buy-in",
-    cash_out: "Cash-out",
-    cash_observation: "Cash Observation",
-    financial_adjustment: "Adjustment",
-    points_earned: "Points Earned",
-    points_redeemed: "Points Redeemed",
-    points_adjusted: "Points Adjusted",
-    promo_issued: "Promo Issued",
-    promo_redeemed: "Promo Redeemed",
-    note_added: "Note Added",
-    tag_applied: "Tag Applied",
-    tag_removed: "Tag Removed",
-    mtl_recorded: "MTL Entry",
-    player_enrolled: "Enrolled",
-    identity_verified: "ID Verified",
+    visit_start: 'Check-in',
+    visit_end: 'Check-out',
+    visit_resume: 'Visit Resumed',
+    rating_start: 'Started Play',
+    rating_pause: 'Paused Play',
+    rating_resume: 'Resumed Play',
+    rating_close: 'Ended Play',
+    cash_in: 'Buy-in',
+    cash_out: 'Cash-out',
+    cash_observation: 'Cash Observation',
+    financial_adjustment: 'Adjustment',
+    points_earned: 'Points Earned',
+    points_redeemed: 'Points Redeemed',
+    points_adjusted: 'Points Adjusted',
+    promo_issued: 'Promo Issued',
+    promo_redeemed: 'Promo Redeemed',
+    note_added: 'Note Added',
+    tag_applied: 'Tag Applied',
+    tag_removed: 'Tag Removed',
+    mtl_recorded: 'MTL Entry',
+    player_enrolled: 'Enrolled',
+    identity_verified: 'ID Verified',
   };
   return labels[eventType] ?? eventType;
 }

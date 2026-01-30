@@ -1,0 +1,16 @@
+node_modules/
+.next/
+out/
+build/
+coverage/
+dist/
+trees/
+*.min.js
+*.min.css
+package-lock.json
+types/remote/database.types.ts
+supabase/migrations/
+.claude/
+.codex/
+.serena/
+perf-005-trace-dashboard.json.gz

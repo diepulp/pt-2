@@ -7,9 +7,9 @@
  * @see ADR-029-player-360-interaction-event-taxonomy.md
  */
 
-import type { TimelineFilters } from "./dtos";
+import type { TimelineFilters } from './dtos';
 
-const ROOT = ["player-timeline"] as const;
+const ROOT = ['player-timeline'] as const;
 
 /**
  * Serializes timeline filters to a stable string key.
@@ -29,14 +29,14 @@ export const playerTimelineKeys = {
   /** Timeline list for a player with optional filters */
   list: Object.assign(
     (playerId: string, filters: TimelineFilters = {}) =>
-      [...ROOT, "list", playerId, serialize(filters)] as const,
-    { scope: [...ROOT, "list"] as const },
+      [...ROOT, 'list', playerId, serialize(filters)] as const,
+    { scope: [...ROOT, 'list'] as const },
   ),
 
   /** Infinite timeline query for a player with optional filters */
   infinite: (playerId: string, filters: TimelineFilters = {}) =>
-    [...ROOT, "infinite", playerId, serialize(filters)] as const,
+    [...ROOT, 'infinite', playerId, serialize(filters)] as const,
 
   /** Single event detail (for drilldown) */
-  detail: (eventId: string) => [...ROOT, "detail", eventId] as const,
+  detail: (eventId: string) => [...ROOT, 'detail', eventId] as const,
 };

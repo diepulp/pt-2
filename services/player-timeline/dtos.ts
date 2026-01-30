@@ -17,49 +17,49 @@
  */
 export type InteractionEventType =
   // Session & Presence
-  | "visit_start"
-  | "visit_end"
-  | "visit_resume"
+  | 'visit_start'
+  | 'visit_end'
+  | 'visit_resume'
   // Gaming Activity
-  | "rating_start"
-  | "rating_pause"
-  | "rating_resume"
-  | "rating_close"
+  | 'rating_start'
+  | 'rating_pause'
+  | 'rating_resume'
+  | 'rating_close'
   // Financial
-  | "cash_in"
-  | "cash_out"
-  | "cash_observation"
-  | "financial_adjustment"
+  | 'cash_in'
+  | 'cash_out'
+  | 'cash_observation'
+  | 'financial_adjustment'
   // Loyalty & Rewards
-  | "points_earned"
-  | "points_redeemed"
-  | "points_adjusted"
-  | "promo_issued"
-  | "promo_redeemed"
+  | 'points_earned'
+  | 'points_redeemed'
+  | 'points_adjusted'
+  | 'promo_issued'
+  | 'promo_redeemed'
   // Staff Interactions
-  | "note_added"
-  | "tag_applied"
-  | "tag_removed"
+  | 'note_added'
+  | 'tag_applied'
+  | 'tag_removed'
   // Compliance
-  | "mtl_recorded"
+  | 'mtl_recorded'
   // Identity & Enrollment
-  | "player_enrolled"
-  | "identity_verified";
+  | 'player_enrolled'
+  | 'identity_verified';
 
 /**
  * Phase 1 MVP event types (9 events from 5 tables).
  * Used for type narrowing in Phase 1 implementations.
  */
 export type Phase1EventType =
-  | "visit_start"
-  | "visit_end"
-  | "rating_start"
-  | "rating_close"
-  | "cash_in"
-  | "cash_out"
-  | "points_earned"
-  | "points_redeemed"
-  | "mtl_recorded";
+  | 'visit_start'
+  | 'visit_end'
+  | 'rating_start'
+  | 'rating_close'
+  | 'cash_in'
+  | 'cash_out'
+  | 'points_earned'
+  | 'points_redeemed'
+  | 'mtl_recorded';
 
 // === Metadata Type Contracts (Discriminated Union) ===
 
@@ -68,9 +68,9 @@ export type Phase1EventType =
  */
 export interface VisitEventMetadata {
   visitKind:
-    | "reward_identified"
-    | "gaming_identified_rated"
-    | "gaming_ghost_unrated";
+    | 'reward_identified'
+    | 'gaming_identified_rated'
+    | 'gaming_ghost_unrated';
   gamingDay: string; // YYYY-MM-DD
 }
 
@@ -93,8 +93,8 @@ export interface RatingEventMetadata {
  * Financial event metadata (cash_in, cash_out, cash_observation, financial_adjustment).
  */
 export interface FinancialEventMetadata {
-  direction: "in" | "out";
-  source: "pit" | "cage" | "system";
+  direction: 'in' | 'out';
+  source: 'pit' | 'cage' | 'system';
   tenderType: string;
   visitId: string;
   note?: string;
@@ -115,7 +115,7 @@ export interface LoyaltyEventMetadata {
  */
 export interface NoteEventMetadata {
   content: string;
-  visibility: "private" | "team" | "all";
+  visibility: 'private' | 'team' | 'all';
 }
 
 /**
@@ -123,14 +123,14 @@ export interface NoteEventMetadata {
  */
 export interface TagEventMetadata {
   tagName: string;
-  tagCategory: "vip" | "attention" | "service" | "custom";
+  tagCategory: 'vip' | 'attention' | 'service' | 'custom';
 }
 
 /**
  * Compliance event metadata (mtl_recorded).
  */
 export interface ComplianceEventMetadata {
-  direction: "in" | "out";
+  direction: 'in' | 'out';
   txnType: string;
   source: string;
   gamingDay: string;
@@ -140,7 +140,7 @@ export interface ComplianceEventMetadata {
  * Identity event metadata (player_enrolled, identity_verified).
  */
 export interface IdentityEventMetadata {
-  documentType?: "drivers_license" | "passport" | "state_id";
+  documentType?: 'drivers_license' | 'passport' | 'state_id';
   issuingState?: string;
 }
 

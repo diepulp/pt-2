@@ -11,13 +11,13 @@
  * @see PRD-022-PATCH-OPTION-B Embedded Search
  */
 
-"use client";
+'use client';
 
-import { AlertTriangle } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { AlertTriangle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 interface PlayerDashboardProps {
   className?: string;
@@ -35,13 +35,13 @@ export function PlayerDashboard({ className }: PlayerDashboardProps) {
   useEffect(() => {
     // Small delay to allow the deprecation notice to be seen (dev only)
     const timer = setTimeout(() => {
-      router.replace("/players");
+      router.replace('/players');
     }, 100);
     return () => clearTimeout(timer);
   }, [router]);
 
   return (
-    <div className={cn("space-y-4", className)} data-testid="player-dashboard">
+    <div className={cn('space-y-4', className)} data-testid="player-dashboard">
       <DeprecationNotice />
     </div>
   );

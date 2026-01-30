@@ -8,18 +8,18 @@
  * @see EXEC-SPEC-029.md WS2-C
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import type { Database } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import type {
   InteractionEventType,
   RpcTimelineRow,
   TimelineQuery,
   TimelineResponse,
-} from "./dtos";
-import { mapRpcResultToTimelineResponse, toMetadataRecord } from "./mappers";
+} from './dtos';
+import { mapRpcResultToTimelineResponse, toMetadataRecord } from './mappers';
 
 // === Error Mapping ===
 
@@ -28,22 +28,22 @@ import { mapRpcResultToTimelineResponse, toMetadataRecord } from "./mappers";
  */
 function mapRpcError(error: { code?: string; message: string }): DomainError {
   // P0001 = Custom PL/pgSQL exception
-  if (error.code === "P0001") {
-    if (error.message.includes("Casino context")) {
+  if (error.code === 'P0001') {
+    if (error.message.includes('Casino context')) {
       return new DomainError(
-        "UNAUTHORIZED",
-        "Casino context not established. Ensure you are authenticated.",
+        'UNAUTHORIZED',
+        'Casino context not established. Ensure you are authenticated.',
       );
     }
-    if (error.message.includes("Cursor must include")) {
+    if (error.message.includes('Cursor must include')) {
       return new DomainError(
-        "VALIDATION_ERROR",
-        "Invalid pagination cursor. Provide both cursorAt and cursorId, or neither.",
+        'VALIDATION_ERROR',
+        'Invalid pagination cursor. Provide both cursorAt and cursorId, or neither.',
       );
     }
   }
 
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // === Read Operations ===
@@ -78,7 +78,7 @@ export async function getPlayerTimeline(
   supabase: SupabaseClient<Database>,
   query: TimelineQuery,
 ): Promise<TimelineResponse> {
-  const { data, error } = await supabase.rpc("rpc_get_player_timeline", {
+  const { data, error } = await supabase.rpc('rpc_get_player_timeline', {
     p_player_id: query.playerId,
     p_event_types: query.eventTypes,
     p_from_date: query.fromDate,
@@ -94,7 +94,7 @@ export async function getPlayerTimeline(
 
   // Type from database.types.ts: Database['public']['Functions']['rpc_get_player_timeline']['Returns']
   type RpcRow =
-    Database["public"]["Functions"]["rpc_get_player_timeline"]["Returns"][number];
+    Database['public']['Functions']['rpc_get_player_timeline']['Returns'][number];
 
   // Map RPC result to RpcTimelineRow
   // Note: Generated types don't capture nullability for RPC returns, so we handle it

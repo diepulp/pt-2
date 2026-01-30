@@ -4,17 +4,17 @@
  * Button to trigger the PlayerEditModal from the Player 360 header.
  */
 
-"use client";
+'use client';
 
-import { Pencil } from "lucide-react";
+import { Pencil } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface PlayerEditButtonProps {
   /** Click handler to open the edit modal */
@@ -22,7 +22,7 @@ interface PlayerEditButtonProps {
   /** Whether the button is disabled */
   disabled?: boolean;
   /** Optional variant */
-  variant?: "default" | "outline" | "ghost";
+  variant?: 'default' | 'outline' | 'ghost';
   /** Additional class names */
   className?: string;
 }
@@ -30,7 +30,7 @@ interface PlayerEditButtonProps {
 export function PlayerEditButton({
   onClick,
   disabled = false,
-  variant = "outline",
+  variant = 'outline',
   className,
 }: PlayerEditButtonProps) {
   return (
@@ -42,8 +42,8 @@ export function PlayerEditButton({
           onClick={onClick}
           disabled={disabled}
           className={cn(
-            "gap-1.5",
-            "hover:bg-accent/10 hover:border-accent/30",
+            'gap-1.5',
+            'hover:bg-accent/10 hover:border-accent/30',
             className,
           )}
           data-testid="edit-profile-button"

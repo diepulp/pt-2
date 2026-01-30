@@ -14,14 +14,14 @@
  * @see PERF-002 Pit Dashboard Data Flow Optimization
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 
-import { dashboardKeys } from "./keys";
-import type { DashboardStats } from "./types";
+import { dashboardKeys } from './keys';
+import type { DashboardStats } from './types';
 
 /**
  * Response shape from rpc_get_dashboard_stats RPC.
@@ -71,7 +71,7 @@ export function useDashboardStats(casinoId: string | undefined) {
       // Note: RPC not yet in database.types.ts until migration runs on remote
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase.rpc as any)(
-        "rpc_get_dashboard_stats",
+        'rpc_get_dashboard_stats',
       );
 
       if (error) {
@@ -79,7 +79,7 @@ export function useDashboardStats(casinoId: string | undefined) {
       }
 
       if (!data) {
-        throw new Error("No stats data returned from RPC");
+        throw new Error('No stats data returned from RPC');
       }
 
       // Type assertion for JSONB response (RPC returns unknown when not in types)

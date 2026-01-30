@@ -8,14 +8,14 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { getPlayerSummary } from "@/services/player360-dashboard/crud";
-import type { PlayerSummaryDTO } from "@/services/player360-dashboard/dtos";
-import { player360DashboardKeys } from "@/services/player360-dashboard/keys";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { getPlayerSummary } from '@/services/player360-dashboard/crud';
+import type { PlayerSummaryDTO } from '@/services/player360-dashboard/dtos';
+import { player360DashboardKeys } from '@/services/player360-dashboard/keys';
 
 // === Hook Options ===
 
@@ -92,4 +92,4 @@ export type {
   PlayerEngagementDTO,
   PlayerSessionValueDTO,
   RewardsEligibilityDTO,
-} from "@/services/player360-dashboard/dtos";
+} from '@/services/player360-dashboard/dtos';

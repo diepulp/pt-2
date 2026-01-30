@@ -8,14 +8,14 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { getWeeklySeries } from "@/services/player360-dashboard/crud";
-import type { WeeklySeriesDTO } from "@/services/player360-dashboard/dtos";
-import { player360DashboardKeys } from "@/services/player360-dashboard/keys";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { getWeeklySeries } from '@/services/player360-dashboard/crud';
+import type { WeeklySeriesDTO } from '@/services/player360-dashboard/dtos';
+import { player360DashboardKeys } from '@/services/player360-dashboard/keys';
 
 // === Time Lens Types ===
 
@@ -25,18 +25,18 @@ import { player360DashboardKeys } from "@/services/player360-dashboard/keys";
  * - 90d: Last 90 days (~13 weeks)
  * - 12w: Last 12 weeks
  */
-export type TimeLensRange = "30d" | "90d" | "12w";
+export type TimeLensRange = '30d' | '90d' | '12w';
 
 /**
  * Converts time lens to number of weeks.
  */
 function timeLensToWeeks(timeLens: TimeLensRange): number {
   switch (timeLens) {
-    case "30d":
+    case '30d':
       return 4;
-    case "90d":
+    case '90d':
       return 13;
-    case "12w":
+    case '12w':
       return 12;
     default:
       return 12;
@@ -93,7 +93,7 @@ export function usePlayerWeeklySeries(
   playerId: string,
   options: UsePlayerWeeklySeriesOptions = {},
 ) {
-  const { timeLens = "12w", enabled = true, staleTime = 300_000 } = options;
+  const { timeLens = '12w', enabled = true, staleTime = 300_000 } = options;
 
   const supabase = createBrowserComponentClient();
   const weeks = timeLensToWeeks(timeLens);
@@ -111,4 +111,4 @@ export function usePlayerWeeklySeries(
 export type {
   WeeklyBucketDTO,
   WeeklySeriesDTO,
-} from "@/services/player360-dashboard/dtos";
+} from '@/services/player360-dashboard/dtos';

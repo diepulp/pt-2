@@ -16,8 +16,8 @@
  * @see WS8 Navigation Cleanup
  */
 
-const VALID_PREFIX = "/players";
-const DEFAULT_RETURN = "/players";
+const VALID_PREFIX = '/players';
+const DEFAULT_RETURN = '/players';
 
 /**
  * Encode a return path for use in URL query params.
@@ -59,9 +59,9 @@ export function validateReturnTo(path: string): boolean {
   // Must start with valid prefix
   if (!path.startsWith(VALID_PREFIX)) return false;
   // Reject protocol-relative URLs (open redirect)
-  if (path.startsWith("//")) return false;
+  if (path.startsWith('//')) return false;
   // Reject path traversal attempts
-  if (path.includes("..")) return false;
+  if (path.includes('..')) return false;
   // Reject URLs with protocols
   if (/^[a-z]+:/i.test(path)) return false;
   return true;

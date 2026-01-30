@@ -8,20 +8,20 @@
  * @see EXECUTION-SPEC-PRD-022-PATCH-OPTION-B.md WS6
  */
 
-"use client";
+'use client';
 
-import { Menu, Search, User } from "lucide-react";
-import * as React from "react";
+import { Menu, Search, User } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
 
 interface MobileDrawerProps {
   /** Currently selected player ID */
@@ -71,7 +71,7 @@ export function MobileDrawer({
         <Button
           variant="ghost"
           size="icon"
-          className={cn("lg:hidden h-9 w-9", className)}
+          className={cn('lg:hidden h-9 w-9', className)}
           data-testid="mobile-menu-button"
           aria-label="Open player search"
         >

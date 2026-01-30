@@ -7,12 +7,12 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { TrendingDown, TrendingUp } from "lucide-react";
+import { TrendingDown, TrendingUp } from 'lucide-react';
 
-import type { SourceCategory } from "@/hooks/player-360";
-import { cn } from "@/lib/utils";
+import type { SourceCategory } from '@/hooks/player-360';
+import { cn } from '@/lib/utils';
 
 // === Design Tokens ===
 
@@ -21,24 +21,24 @@ const categoryStyles: Record<
   { bg: string; text: string; border: string }
 > = {
   session: {
-    bg: "bg-emerald-500/10",
-    text: "text-emerald-400",
-    border: "border-emerald-500/20",
+    bg: 'bg-emerald-500/10',
+    text: 'text-emerald-400',
+    border: 'border-emerald-500/20',
   },
   financial: {
-    bg: "bg-blue-500/10",
-    text: "text-blue-400",
-    border: "border-blue-500/20",
+    bg: 'bg-blue-500/10',
+    text: 'text-blue-400',
+    border: 'border-blue-500/20',
   },
   gaming: {
-    bg: "bg-slate-500/10",
-    text: "text-slate-300",
-    border: "border-slate-500/20",
+    bg: 'bg-slate-500/10',
+    text: 'text-slate-300',
+    border: 'border-slate-500/20',
   },
   loyalty: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/20",
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/20',
   },
 };
 
@@ -102,11 +102,11 @@ export function SummaryTile({
       type="button"
       onClick={onClick}
       className={cn(
-        "relative flex flex-col items-start p-3 rounded-lg border transition-all",
-        "hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        'relative flex flex-col items-start p-3 rounded-lg border transition-all',
+        'hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
         styles.bg,
         styles.border,
-        isActive && "ring-2 ring-primary",
+        isActive && 'ring-2 ring-primary',
         className,
       )}
       data-testid={`summary-tile-${category}`}
@@ -119,16 +119,16 @@ export function SummaryTile({
 
       {/* Primary Value + Trend */}
       <div className="flex items-center gap-2">
-        <span className={cn("text-xl font-semibold", styles.text)}>
+        <span className={cn('text-xl font-semibold', styles.text)}>
           {primaryValue}
         </span>
         {trend !== undefined && trend !== 0 && (
           <span
             className={cn(
-              "flex items-center text-xs",
-              trend > 0 ? "text-emerald-400" : "text-red-400",
+              'flex items-center text-xs',
+              trend > 0 ? 'text-emerald-400' : 'text-red-400',
             )}
-            aria-label={`${trend > 0 ? "Up" : "Down"} ${Math.abs(trend)}%`}
+            aria-label={`${trend > 0 ? 'Up' : 'Down'} ${Math.abs(trend)}%`}
           >
             {trend > 0 ? (
               <TrendingUp className="h-3 w-3 mr-0.5" />

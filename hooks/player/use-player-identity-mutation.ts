@@ -8,14 +8,14 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import type {
   PlayerIdentityDTO,
   PlayerIdentityInput,
-} from "@/services/player/dtos";
-import { getIdentity, upsertIdentity } from "@/services/player/http";
-import { playerKeys } from "@/services/player/keys";
+} from '@/services/player/dtos';
+import { getIdentity, upsertIdentity } from '@/services/player/http';
+import { playerKeys } from '@/services/player/keys';
 
 /**
  * Fetches player identity information.
@@ -23,7 +23,7 @@ import { playerKeys } from "@/services/player/keys";
  */
 export function usePlayerIdentity(playerId: string) {
   return useQuery({
-    queryKey: [...playerKeys.detail(playerId), "identity"] as const,
+    queryKey: [...playerKeys.detail(playerId), 'identity'] as const,
     queryFn: () => getIdentity(playerId),
     enabled: !!playerId,
     staleTime: 60_000,

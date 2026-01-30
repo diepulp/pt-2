@@ -8,28 +8,28 @@
  * @see EXEC-SPEC-029.md WS-UX-E
  */
 
-"use client";
+'use client';
 
-import { MessageSquare, Share2, Tag, Users } from "lucide-react";
-import * as React from "react";
+import { MessageSquare, Share2, Tag, Users } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
-import { NotesEmpty, TagsEmpty } from "../empty-states";
-import { Panel, PanelContent, PanelHeader } from "../layout";
-import { CollaborationRailSkeleton, NoteSkeleton } from "../skeletons";
+import { NotesEmpty, TagsEmpty } from '../empty-states';
+import { Panel, PanelContent, PanelHeader } from '../layout';
+import { CollaborationRailSkeleton, NoteSkeleton } from '../skeletons';
 
-import { NoteComposer } from "./note-composer";
-import { TagChips, type PlayerTag } from "./tag-chips";
+import { NoteComposer } from './note-composer';
+import { TagChips, type PlayerTag } from './tag-chips';
 
 // === Types ===
 
 /**
  * Note visibility levels per ADR-029.
  */
-export type NoteVisibility = "private" | "team" | "all";
+export type NoteVisibility = 'private' | 'team' | 'all';
 
 /**
  * Player note for display in collaboration panel.
@@ -52,7 +52,7 @@ export interface PlayerNote {
 export interface PlayerSnapshot {
   playerId: string;
   playerName: string;
-  engagementBand: "active" | "cooling" | "dormant";
+  engagementBand: 'active' | 'cooling' | 'dormant';
   lastSeen: string;
   todayCashIn: number;
   todayCashOut: number;
@@ -108,7 +108,7 @@ export function CollaborationPanel({
   isSubmittingNote = false,
   className,
 }: CollaborationPanelProps) {
-  const [activeTab, setActiveTab] = React.useState<"notes" | "tags">("notes");
+  const [activeTab, setActiveTab] = React.useState<'notes' | 'tags'>('notes');
 
   // Loading state
   if (isLoading) {
@@ -118,7 +118,7 @@ export function CollaborationPanel({
   // Error state - still show panel but with limited functionality
   if (error) {
     return (
-      <Panel className={cn("h-full flex flex-col", className)}>
+      <Panel className={cn('h-full flex flex-col', className)}>
         <PanelHeader
           icon={<Users className="h-4 w-4 text-accent" />}
           title="Collaboration"
@@ -140,7 +140,7 @@ export function CollaborationPanel({
     const snapshot: PlayerSnapshot = {
       playerId,
       playerName,
-      engagementBand: "active", // TODO: derive from metrics
+      engagementBand: 'active', // TODO: derive from metrics
       lastSeen: new Date().toISOString(),
       todayCashIn: 0, // TODO: derive from financial data
       todayCashOut: 0,
@@ -151,7 +151,7 @@ export function CollaborationPanel({
   };
 
   return (
-    <Panel className={cn("h-full flex flex-col", className)}>
+    <Panel className={cn('h-full flex flex-col', className)}>
       <PanelHeader
         icon={<Users className="h-4 w-4 text-accent" />}
         title="Collaboration"
@@ -172,7 +172,7 @@ export function CollaborationPanel({
 
       <Tabs
         value={activeTab}
-        onValueChange={(v) => setActiveTab(v as "notes" | "tags")}
+        onValueChange={(v) => setActiveTab(v as 'notes' | 'tags')}
         className="flex-1 flex flex-col min-h-0"
       >
         <TabsList className="w-full justify-start px-4 py-0 h-10 bg-transparent border-b border-border/40 rounded-none">
@@ -261,15 +261,15 @@ interface NoteCardProps {
  */
 function NoteCard({ note, className }: NoteCardProps) {
   const visibilityLabels: Record<NoteVisibility, string> = {
-    private: "Private",
-    team: "Team",
-    all: "All Staff",
+    private: 'Private',
+    team: 'Team',
+    all: 'All Staff',
   };
 
   const visibilityColors: Record<NoteVisibility, string> = {
-    private: "bg-slate-500/10 text-slate-400",
-    team: "bg-blue-500/10 text-blue-400",
-    all: "bg-green-500/10 text-green-400",
+    private: 'bg-slate-500/10 text-slate-400',
+    team: 'bg-blue-500/10 text-blue-400',
+    all: 'bg-green-500/10 text-green-400',
   };
 
   const formatTimestamp = (isoString: string) => {
@@ -280,22 +280,22 @@ function NoteCard({ note, className }: NoteCardProps) {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Just now";
+    if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   return (
     <div
       className={cn(
-        "p-3 rounded-lg",
-        "border border-border/40 bg-card/50",
+        'p-3 rounded-lg',
+        'border border-border/40 bg-card/50',
         className,
       )}
     >
@@ -307,7 +307,7 @@ function NoteCard({ note, className }: NoteCardProps) {
           </span>
           <span
             className={cn(
-              "text-[10px] px-1.5 py-0.5 rounded-full",
+              'text-[10px] px-1.5 py-0.5 rounded-full',
               visibilityColors[note.visibility],
             )}
           >

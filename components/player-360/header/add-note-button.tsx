@@ -7,17 +7,17 @@
  * @see PRD-023 Player 360 Panels v0 - WS6
  */
 
-"use client";
+'use client';
 
-import { FileText } from "lucide-react";
+import { FileText } from 'lucide-react';
 
-import { Button } from "@/components/ui/button";
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 
 // === Props ===
 
@@ -56,7 +56,7 @@ export function AddNoteButton({
   const button = (
     <Button
       variant="outline"
-      size={compact ? "icon" : "sm"}
+      size={compact ? 'icon' : 'sm'}
       onClick={onClick}
       disabled={disabled}
       className="gap-1.5"

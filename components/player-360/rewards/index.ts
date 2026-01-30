@@ -9,14 +9,14 @@
 export {
   RewardsEligibilityCard,
   type RewardsEligibilityCardProps,
-} from "./rewards-eligibility-card";
+} from './rewards-eligibility-card';
 
 export {
   RewardsHistoryItem,
   type RewardsHistoryItemProps,
-} from "./rewards-history-item";
+} from './rewards-history-item';
 
 export {
   RewardsHistoryList,
   type RewardsHistoryListProps,
-} from "./rewards-history-list";
+} from './rewards-history-list';

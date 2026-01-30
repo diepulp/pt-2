@@ -1,43 +1,43 @@
-"use client";
+'use client';
 
-import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2 } from "lucide-react";
-import * as React from "react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
+import * as React from 'react';
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 import type {
   PlayerDTO,
   IdentityAddress,
   PlayerIdentityDTO,
-} from "@/services/player/dtos";
+} from '@/services/player/dtos';
 
 const playerEditSchema = z.object({
-  first_name: z.string().min(1, "First name is required").max(100),
+  first_name: z.string().min(1, 'First name is required').max(100),
   middle_name: z.string().max(100).nullable().optional(),
-  last_name: z.string().min(1, "Last name is required").max(100),
+  last_name: z.string().min(1, 'Last name is required').max(100),
   birth_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format')
     .nullable()
     .optional(),
   email: z
     .string()
-    .email("Invalid email")
+    .email('Invalid email')
     .nullable()
     .optional()
-    .or(z.literal("")),
+    .or(z.literal('')),
   phone_number: z
     .string()
-    .min(7, "Phone number must be at least 7 characters")
+    .min(7, 'Phone number must be at least 7 characters')
     .max(20)
     .nullable()
     .optional()
-    .or(z.literal("")),
+    .or(z.literal('')),
   address_street: z.string().max(200).nullable().optional(),
   address_city: z.string().max(100).nullable().optional(),
   address_state: z.string().max(50).nullable().optional(),
@@ -70,15 +70,15 @@ export function PlayerEditForm({
     resolver: zodResolver(playerEditSchema),
     defaultValues: {
       first_name: player.first_name,
-      middle_name: player.middle_name ?? "",
+      middle_name: player.middle_name ?? '',
       last_name: player.last_name,
-      birth_date: player.birth_date ?? identity?.birthDate ?? "",
-      email: player.email ?? "",
-      phone_number: player.phone_number ?? "",
-      address_street: address?.street ?? "",
-      address_city: address?.city ?? "",
-      address_state: address?.state ?? "",
-      address_postal_code: address?.postalCode ?? "",
+      birth_date: player.birth_date ?? identity?.birthDate ?? '',
+      email: player.email ?? '',
+      phone_number: player.phone_number ?? '',
+      address_street: address?.street ?? '',
+      address_city: address?.city ?? '',
+      address_state: address?.state ?? '',
+      address_postal_code: address?.postalCode ?? '',
     },
   });
 
@@ -88,15 +88,15 @@ export function PlayerEditForm({
       const addr = identity.address as IdentityAddress | null;
       form.reset({
         first_name: player.first_name,
-        middle_name: player.middle_name ?? "",
+        middle_name: player.middle_name ?? '',
         last_name: player.last_name,
-        birth_date: player.birth_date ?? identity.birthDate ?? "",
-        email: player.email ?? "",
-        phone_number: player.phone_number ?? "",
-        address_street: addr?.street ?? "",
-        address_city: addr?.city ?? "",
-        address_state: addr?.state ?? "",
-        address_postal_code: addr?.postalCode ?? "",
+        birth_date: player.birth_date ?? identity.birthDate ?? '',
+        email: player.email ?? '',
+        phone_number: player.phone_number ?? '',
+        address_street: addr?.street ?? '',
+        address_city: addr?.city ?? '',
+        address_state: addr?.state ?? '',
+        address_postal_code: addr?.postalCode ?? '',
       });
     }
   }, [identity, player, form]);
@@ -121,7 +121,7 @@ export function PlayerEditForm({
           >
             <Input
               id="first_name"
-              {...form.register("first_name")}
+              {...form.register('first_name')}
               aria-invalid={!!form.formState.errors.first_name}
             />
           </FormField>
@@ -130,7 +130,7 @@ export function PlayerEditForm({
             label="Middle Name"
             error={form.formState.errors.middle_name?.message}
           >
-            <Input id="middle_name" {...form.register("middle_name")} />
+            <Input id="middle_name" {...form.register('middle_name')} />
           </FormField>
           <FormField
             id="last_name"
@@ -140,7 +140,7 @@ export function PlayerEditForm({
           >
             <Input
               id="last_name"
-              {...form.register("last_name")}
+              {...form.register('last_name')}
               aria-invalid={!!form.formState.errors.last_name}
             />
           </FormField>
@@ -154,7 +154,7 @@ export function PlayerEditForm({
             <Input
               id="birth_date"
               type="date"
-              {...form.register("birth_date")}
+              {...form.register('birth_date')}
               aria-invalid={!!form.formState.errors.birth_date}
             />
           </FormField>
@@ -175,7 +175,7 @@ export function PlayerEditForm({
             <Input
               id="email"
               type="email"
-              {...form.register("email")}
+              {...form.register('email')}
               aria-invalid={!!form.formState.errors.email}
             />
           </FormField>
@@ -187,7 +187,7 @@ export function PlayerEditForm({
             <Input
               id="phone_number"
               type="tel"
-              {...form.register("phone_number")}
+              {...form.register('phone_number')}
               aria-invalid={!!form.formState.errors.phone_number}
             />
           </FormField>
@@ -204,7 +204,7 @@ export function PlayerEditForm({
           label="Street"
           error={form.formState.errors.address_street?.message}
         >
-          <Input id="address_street" {...form.register("address_street")} />
+          <Input id="address_street" {...form.register('address_street')} />
         </FormField>
         <div className="grid grid-cols-3 gap-4">
           <FormField
@@ -212,14 +212,14 @@ export function PlayerEditForm({
             label="City"
             error={form.formState.errors.address_city?.message}
           >
-            <Input id="address_city" {...form.register("address_city")} />
+            <Input id="address_city" {...form.register('address_city')} />
           </FormField>
           <FormField
             id="address_state"
             label="State"
             error={form.formState.errors.address_state?.message}
           >
-            <Input id="address_state" {...form.register("address_state")} />
+            <Input id="address_state" {...form.register('address_state')} />
           </FormField>
           <FormField
             id="address_postal_code"
@@ -228,7 +228,7 @@ export function PlayerEditForm({
           >
             <Input
               id="address_postal_code"
-              {...form.register("address_postal_code")}
+              {...form.register('address_postal_code')}
             />
           </FormField>
         </div>

@@ -1,20 +1,20 @@
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, Loader2, Search, User, X } from "lucide-react";
-import * as React from "react";
+import { useQuery } from '@tanstack/react-query';
+import { Check, ChevronsUpDown, Loader2, Search, User, X } from 'lucide-react';
+import * as React from 'react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { usePlayerDashboard } from "@/hooks/ui/use-player-dashboard";
-import { cn } from "@/lib/utils";
-import type { PlayerSearchResultDTO } from "@/services/player/dtos";
-import { searchPlayers } from "@/services/player/http";
+} from '@/components/ui/popover';
+import { usePlayerDashboard } from '@/hooks/ui/use-player-dashboard';
+import { cn } from '@/lib/utils';
+import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import { searchPlayers } from '@/services/player/http';
 
 // Transform API response to component format
 interface PlayerDisplay {
@@ -23,7 +23,7 @@ interface PlayerDisplay {
   lastName: string;
   fullName: string;
   birthDate: string | null;
-  status: "active" | "inactive";
+  status: 'active' | 'inactive';
 }
 
 function toPlayerDisplay(dto: PlayerSearchResultDTO): PlayerDisplay {
@@ -33,7 +33,7 @@ function toPlayerDisplay(dto: PlayerSearchResultDTO): PlayerDisplay {
     lastName: dto.last_name,
     fullName: dto.full_name,
     birthDate: dto.birth_date,
-    status: dto.enrollment_status === "enrolled" ? "active" : "inactive",
+    status: dto.enrollment_status === 'enrolled' ? 'active' : 'inactive',
   };
 }
 
@@ -46,8 +46,8 @@ export function PlayerSearchCommand({
 }: PlayerSearchCommandProps) {
   const { selectedPlayerId, setSelectedPlayer } = usePlayerDashboard();
   const [open, setOpen] = React.useState(false);
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [debouncedSearch, setDebouncedSearch] = React.useState("");
+  const [searchTerm, setSearchTerm] = React.useState('');
+  const [debouncedSearch, setDebouncedSearch] = React.useState('');
 
   // Debounce search term
   React.useEffect(() => {
@@ -55,7 +55,7 @@ export function PlayerSearchCommand({
       if (searchTerm.length >= 2) {
         setDebouncedSearch(searchTerm);
       } else {
-        setDebouncedSearch("");
+        setDebouncedSearch('');
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -67,7 +67,7 @@ export function PlayerSearchCommand({
     isLoading: isSearching,
     error,
   } = useQuery({
-    queryKey: ["players", "search", debouncedSearch],
+    queryKey: ['players', 'search', debouncedSearch],
     queryFn: () => searchPlayers(debouncedSearch, 20),
     enabled: debouncedSearch.length >= 2,
     staleTime: 30_000, // 30 seconds
@@ -87,10 +87,10 @@ export function PlayerSearchCommand({
   }, []);
 
   // Status badge styling
-  const getStatusColor = (status: "active" | "inactive") =>
-    status === "active"
-      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-      : "bg-slate-400/20 text-slate-400 border-slate-400/30";
+  const getStatusColor = (status: 'active' | 'inactive') =>
+    status === 'active'
+      ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+      : 'bg-slate-400/20 text-slate-400 border-slate-400/30';
 
   return (
     <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/50 backdrop-blur-sm">
@@ -111,7 +111,7 @@ export function PlayerSearchCommand({
               <p className="text-sm text-muted-foreground">
                 {selectedPlayer
                   ? `Viewing ${selectedPlayer.firstName} ${selectedPlayer.lastName}`
-                  : "Select a player to view details"}
+                  : 'Select a player to view details'}
               </p>
             </div>
           </div>
@@ -124,20 +124,20 @@ export function PlayerSearchCommand({
                 role="combobox"
                 aria-expanded={open}
                 className={cn(
-                  "w-[320px] justify-between h-10",
-                  "bg-background/50 border-border/50",
-                  "hover:bg-muted/50 hover:border-accent/30",
-                  "transition-all duration-200",
+                  'w-[320px] justify-between h-10',
+                  'bg-background/50 border-border/50',
+                  'hover:bg-muted/50 hover:border-accent/30',
+                  'transition-all duration-200',
                 )}
               >
                 {selectedPlayer ? (
                   <div className="flex items-center gap-2">
                     <div
                       className={cn(
-                        "w-2 h-2 rounded-full",
-                        selectedPlayer.status === "active"
-                          ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-                          : "bg-slate-500",
+                        'w-2 h-2 rounded-full',
+                        selectedPlayer.status === 'active'
+                          ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                          : 'bg-slate-500',
                       )}
                     />
                     <span className="font-medium">
@@ -146,13 +146,13 @@ export function PlayerSearchCommand({
                     <Badge
                       variant="outline"
                       className={cn(
-                        "text-[10px] h-5 px-1.5 capitalize",
+                        'text-[10px] h-5 px-1.5 capitalize',
                         getStatusColor(selectedPlayer.status),
                       )}
                     >
-                      {selectedPlayer.status === "active"
-                        ? "Enrolled"
-                        : "Not Enrolled"}
+                      {selectedPlayer.status === 'active'
+                        ? 'Enrolled'
+                        : 'Not Enrolled'}
                     </Badge>
                   </div>
                 ) : (
@@ -177,7 +177,7 @@ export function PlayerSearchCommand({
                 />
                 {searchTerm && (
                   <button
-                    onClick={() => setSearchTerm("")}
+                    onClick={() => setSearchTerm('')}
                     className="p-1 hover:bg-muted/50 rounded"
                   >
                     <X className="h-3.5 w-3.5 text-muted-foreground" />
@@ -207,25 +207,25 @@ export function PlayerSearchCommand({
                         key={player.id}
                         onClick={() => {
                           const newPlayerId =
-                            player.id === selectedPlayerId ? "" : player.id;
+                            player.id === selectedPlayerId ? '' : player.id;
                           onSelectPlayer(newPlayerId);
                           setSelectedPlayer(newPlayerId || null);
                           setOpen(false);
-                          setSearchTerm("");
+                          setSearchTerm('');
                         }}
                         className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-md",
-                          "hover:bg-muted/50 transition-colors text-left group",
-                          selectedPlayerId === player.id && "bg-accent/10",
+                          'w-full flex items-center gap-3 px-3 py-2.5 rounded-md',
+                          'hover:bg-muted/50 transition-colors text-left group',
+                          selectedPlayerId === player.id && 'bg-accent/10',
                         )}
                       >
                         {/* Selection indicator */}
                         <div
                           className={cn(
-                            "w-5 h-5 rounded border flex items-center justify-center shrink-0",
+                            'w-5 h-5 rounded border flex items-center justify-center shrink-0',
                             selectedPlayerId === player.id
-                              ? "bg-accent border-accent"
-                              : "border-border/50",
+                              ? 'bg-accent border-accent'
+                              : 'border-border/50',
                           )}
                         >
                           {selectedPlayerId === player.id && (
@@ -242,13 +242,13 @@ export function PlayerSearchCommand({
                             <Badge
                               variant="outline"
                               className={cn(
-                                "text-[10px] h-4 px-1 capitalize",
+                                'text-[10px] h-4 px-1 capitalize',
                                 getStatusColor(player.status),
                               )}
                             >
-                              {player.status === "active"
-                                ? "Enrolled"
-                                : "Not Enrolled"}
+                              {player.status === 'active'
+                                ? 'Enrolled'
+                                : 'Not Enrolled'}
                             </Badge>
                           </div>
                           <div className="text-xs text-muted-foreground">
@@ -261,10 +261,10 @@ export function PlayerSearchCommand({
                         {/* Status dot */}
                         <div
                           className={cn(
-                            "w-2 h-2 rounded-full shrink-0",
-                            player.status === "active"
-                              ? "bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]"
-                              : "bg-slate-500",
+                            'w-2 h-2 rounded-full shrink-0',
+                            player.status === 'active'
+                              ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.5)]'
+                              : 'bg-slate-500',
                           )}
                         />
                       </button>
@@ -288,11 +288,11 @@ export function PlayerSearchCommand({
             <Badge
               variant="outline"
               className={cn(
-                "text-[10px] capitalize",
+                'text-[10px] capitalize',
                 getStatusColor(selectedPlayer.status),
               )}
             >
-              {selectedPlayer.status === "active" ? "Enrolled" : "Not Enrolled"}
+              {selectedPlayer.status === 'active' ? 'Enrolled' : 'Not Enrolled'}
             </Badge>
           </div>
         )}

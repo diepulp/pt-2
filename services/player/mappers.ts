@@ -14,7 +14,7 @@ import type {
   PlayerDTO,
   PlayerEnrollmentDTO,
   PlayerSearchResultDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -144,7 +144,7 @@ export function toPlayerSearchResultDTO(
     full_name: `${row.first_name} ${row.last_name}`,
     birth_date: birthDate,
     enrollment_status:
-      enrollmentStatus === "active" ? "enrolled" : "not_enrolled",
+      enrollmentStatus === 'active' ? 'enrolled' : 'not_enrolled',
   };
 }
 

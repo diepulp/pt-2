@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { LayoutGrid } from "lucide-react";
-import * as React from "react";
-import { toast } from "sonner";
+import { LayoutGrid } from 'lucide-react';
+import * as React from 'react';
+import { toast } from 'sonner';
 
-import { EnrollPlayerModal } from "@/components/enrollment/enroll-player-modal";
-import { TableLayoutTerminal } from "@/components/table";
-import type { PitMapPit } from "@/components/table/pit-map-selector";
-import { TableLimitsDialog } from "@/components/table/table-limits-dialog";
+import { EnrollPlayerModal } from '@/components/enrollment/enroll-player-modal';
+import { TableLayoutTerminal } from '@/components/table';
+import type { PitMapPit } from '@/components/table/pit-map-selector';
+import { TableLimitsDialog } from '@/components/table/table-limits-dialog';
 import {
   TableToolbar,
   TableToolbarCompact,
-} from "@/components/table/table-toolbar";
-import type { DashboardTableDTO } from "@/hooks/dashboard/types";
+} from '@/components/table/table-toolbar';
+import type { DashboardTableDTO } from '@/hooks/dashboard/types';
 import {
   useTableSettings,
   useUpdateTableLimits,
-} from "@/hooks/table-context/use-table-settings";
-import type { RatingSlipWithPlayerDTO } from "@/services/rating-slip/dtos";
+} from '@/hooks/table-context/use-table-settings';
+import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 
 interface SeatOccupant {
   firstName: string;
@@ -66,17 +66,17 @@ export function TablesPanel({
 }: TablesPanelProps) {
   // Get last activity time for header context
   const lastActivity = React.useMemo(() => {
-    if (activeSlips.length === 0) return "No activity";
+    if (activeSlips.length === 0) return 'No activity';
 
     const latest = activeSlips.reduce((latest, slip) => {
       const slipTime = new Date(slip.start_time).getTime();
       return slipTime > latest ? slipTime : latest;
     }, 0);
 
-    return new Date(latest).toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
+    return new Date(latest).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
       hour12: true,
     });
   }, [activeSlips]);
@@ -85,7 +85,7 @@ export function TablesPanel({
   const [limitsDialogOpen, setLimitsDialogOpen] = React.useState(false);
   // Enroll player modal state
   const [enrollModalOpen, setEnrollModalOpen] = React.useState(false);
-  const tableId = selectedTable?.id ?? "";
+  const tableId = selectedTable?.id ?? '';
   const { data: tableSettings } = useTableSettings(tableId);
   const { mutateAsync: updateLimits, isPending: isUpdatingLimits } =
     useUpdateTableLimits(tableId);
@@ -94,10 +94,10 @@ export function TablesPanel({
     async (minBet: number, maxBet: number) => {
       try {
         await updateLimits({ min_bet: minBet, max_bet: maxBet });
-        toast.success("Table limits updated");
+        toast.success('Table limits updated');
         setLimitsDialogOpen(false);
       } catch {
-        toast.error("Failed to update limits");
+        toast.error('Failed to update limits');
       }
     },
     [updateLimits],

@@ -8,7 +8,7 @@
  * @see EXEC-SPEC-029.md WS-UX-F
  */
 
-"use client";
+'use client';
 
 import {
   ArrowDown,
@@ -18,18 +18,18 @@ import {
   Copy,
   Share2,
   Tag,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 // === Types ===
 
 /**
  * Engagement band classification.
  */
-export type EngagementBand = "active" | "cooling" | "dormant";
+export type EngagementBand = 'active' | 'cooling' | 'dormant';
 
 /**
  * Player snapshot data for sharing.
@@ -70,22 +70,22 @@ interface EngagementBandStyle {
 
 const ENGAGEMENT_BAND_STYLES: Record<EngagementBand, EngagementBandStyle> = {
   active: {
-    bg: "bg-green-500/10",
-    text: "text-green-400",
-    border: "border-green-500/30",
-    label: "Active",
+    bg: 'bg-green-500/10',
+    text: 'text-green-400',
+    border: 'border-green-500/30',
+    label: 'Active',
   },
   cooling: {
-    bg: "bg-amber-500/10",
-    text: "text-amber-400",
-    border: "border-amber-500/30",
-    label: "Cooling",
+    bg: 'bg-amber-500/10',
+    text: 'text-amber-400',
+    border: 'border-amber-500/30',
+    label: 'Cooling',
   },
   dormant: {
-    bg: "bg-slate-500/10",
-    text: "text-slate-400",
-    border: "border-slate-500/30",
-    label: "Dormant",
+    bg: 'bg-slate-500/10',
+    text: 'text-slate-400',
+    border: 'border-slate-500/30',
+    label: 'Dormant',
   },
 };
 
@@ -127,22 +127,22 @@ export function SnapshotCard({
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return "Just now";
+    if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffHours < 24) return `${diffHours}h ago`;
     if (diffDays < 7) return `${diffDays}d ago`;
 
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
     });
   };
 
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-lg",
-        "border border-border/40 bg-card/50 backdrop-blur-sm",
+        'relative overflow-hidden rounded-lg',
+        'border border-border/40 bg-card/50 backdrop-blur-sm',
         className,
       )}
     >
@@ -155,9 +155,9 @@ export function SnapshotCard({
           {/* Avatar initials */}
           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold bg-gradient-to-br from-accent/40 to-accent/60 shrink-0">
             {snapshot.playerName
-              .split(" ")
+              .split(' ')
               .map((n) => n[0])
-              .join("")
+              .join('')
               .slice(0, 2)}
           </div>
 
@@ -176,7 +176,7 @@ export function SnapshotCard({
         <Badge
           variant="outline"
           className={cn(
-            "h-5 text-[10px] shrink-0",
+            'h-5 text-[10px] shrink-0',
             bandStyle.bg,
             bandStyle.text,
             bandStyle.border,
@@ -188,7 +188,7 @@ export function SnapshotCard({
       </div>
 
       {/* Content */}
-      <div className={cn("p-3", compact ? "space-y-2" : "space-y-3")}>
+      <div className={cn('p-3', compact ? 'space-y-2' : 'space-y-3')}>
         {/* Last seen */}
         <div className="flex items-center gap-1.5 text-muted-foreground">
           <Clock className="h-3 w-3" />
@@ -326,20 +326,20 @@ export function CompactSnapshot({
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "w-full flex items-center gap-3 p-2 rounded-lg text-left",
-        "border border-border/30 bg-card/30",
-        "transition-colors",
-        onClick && "hover:bg-card/50 hover:border-border/50 cursor-pointer",
-        !onClick && "cursor-default",
+        'w-full flex items-center gap-3 p-2 rounded-lg text-left',
+        'border border-border/30 bg-card/30',
+        'transition-colors',
+        onClick && 'hover:bg-card/50 hover:border-border/50 cursor-pointer',
+        !onClick && 'cursor-default',
         className,
       )}
     >
       {/* Avatar */}
       <div className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-semibold bg-gradient-to-br from-accent/40 to-accent/60 shrink-0">
         {snapshot.playerName
-          .split(" ")
+          .split(' ')
           .map((n) => n[0])
-          .join("")
+          .join('')
           .slice(0, 2)}
       </div>
 
@@ -355,10 +355,10 @@ export function CompactSnapshot({
       {/* Engagement indicator */}
       <div
         className={cn(
-          "w-2 h-2 rounded-full shrink-0",
-          snapshot.engagementBand === "active" && "bg-green-400",
-          snapshot.engagementBand === "cooling" && "bg-amber-400",
-          snapshot.engagementBand === "dormant" && "bg-slate-400",
+          'w-2 h-2 rounded-full shrink-0',
+          snapshot.engagementBand === 'active' && 'bg-green-400',
+          snapshot.engagementBand === 'cooling' && 'bg-amber-400',
+          snapshot.engagementBand === 'dormant' && 'bg-slate-400',
         )}
         title={bandStyle.label}
       />
@@ -376,7 +376,7 @@ export function snapshotToText(snapshot: PlayerSnapshotData): string {
     `Player: ${snapshot.playerName}`,
     `Status: ${ENGAGEMENT_BAND_STYLES[snapshot.engagementBand].label}`,
     `Gaming Day: ${snapshot.gamingDay}`,
-    "",
+    '',
     `Cash In: $${snapshot.todayCashIn.toLocaleString()}`,
     `Cash Out: $${snapshot.todayCashOut.toLocaleString()}`,
   ];
@@ -386,14 +386,14 @@ export function snapshotToText(snapshot: PlayerSnapshotData): string {
   }
 
   if (snapshot.tags.length > 0) {
-    lines.push("", `Tags: ${snapshot.tags.join(", ")}`);
+    lines.push('', `Tags: ${snapshot.tags.join(', ')}`);
   }
 
   if (snapshot.note) {
-    lines.push("", `Note: ${snapshot.note}`);
+    lines.push('', `Note: ${snapshot.note}`);
   }
 
-  return lines.join("\n");
+  return lines.join('\n');
 }
 
 /**

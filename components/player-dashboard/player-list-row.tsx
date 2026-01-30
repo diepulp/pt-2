@@ -7,12 +7,12 @@
  * @see PRD-022 WS4 Dashboard Demotion
  */
 
-"use client";
+'use client';
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { buildPlayerDetailUrl } from "@/lib/navigation";
-import { cn } from "@/lib/utils";
+import { buildPlayerDetailUrl } from '@/lib/navigation';
+import { cn } from '@/lib/utils';
 
 interface PlayerListRowProps {
   player: {
@@ -38,12 +38,12 @@ export function PlayerListRow({
   const handleClick = () => {
     // Capture current location as returnTo (preserving query params)
     const currentUrl =
-      pathname + (searchParams.toString() ? `?${searchParams}` : "");
+      pathname + (searchParams.toString() ? `?${searchParams}` : '');
     router.push(buildPlayerDetailUrl(player.id, currentUrl));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter" || e.key === " ") {
+    if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleClick();
     }
@@ -58,8 +58,8 @@ export function PlayerListRow({
       data-testid={`player-row-${player.id}`}
       data-selected={isSelected}
       className={cn(
-        "cursor-pointer hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50",
-        isSelected && "bg-muted",
+        'cursor-pointer hover:bg-muted/50 transition-colors focus:outline-none focus:ring-2 focus:ring-accent/50',
+        isSelected && 'bg-muted',
         className,
       )}
     >

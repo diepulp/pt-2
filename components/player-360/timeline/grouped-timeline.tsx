@@ -9,17 +9,17 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { Loader2 } from "lucide-react";
-import * as React from "react";
+import { Loader2 } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-import { CategoryIndicatorBar } from "./category-indicator-bar";
-import { groupEventsIntoBlocks, TimeBlockGroup } from "./time-block-group";
-import type { SourceCategory, TimelineCardCollapsed } from "./types";
+import { CategoryIndicatorBar } from './category-indicator-bar';
+import { groupEventsIntoBlocks, TimeBlockGroup } from './time-block-group';
+import type { SourceCategory, TimelineCardCollapsed } from './types';
 
 // === Types ===
 
@@ -54,7 +54,7 @@ interface GroupedTimelineProps {
 
 // === Empty State ===
 
-function TimelineEmptyState({ type }: { type: "no-events" | "no-matches" }) {
+function TimelineEmptyState({ type }: { type: 'no-events' | 'no-matches' }) {
   return (
     <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
       <div className="w-16 h-16 rounded-full bg-muted/30 flex items-center justify-center mb-4">
@@ -73,12 +73,12 @@ function TimelineEmptyState({ type }: { type: "no-events" | "no-matches" }) {
         </svg>
       </div>
       <h3 className="text-sm font-medium text-foreground mb-1">
-        {type === "no-events" ? "No activity yet" : "No matching events"}
+        {type === 'no-events' ? 'No activity yet' : 'No matching events'}
       </h3>
       <p className="text-xs text-muted-foreground max-w-[240px]">
-        {type === "no-events"
+        {type === 'no-events'
           ? "This player doesn't have any recorded events in the selected time range."
-          : "Try adjusting your category filter to see more events."}
+          : 'Try adjusting your category filter to see more events.'}
       </p>
     </div>
   );
@@ -210,7 +210,7 @@ export function GroupedTimeline({
         if (block) {
           // Scroll to block (could be enhanced with individual event refs)
           const blockElement = document.getElementById(`block-${block.id}`);
-          blockElement?.scrollIntoView({ behavior: "smooth", block: "start" });
+          blockElement?.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
       }
     },
@@ -241,7 +241,7 @@ export function GroupedTimeline({
   if (isError) {
     return (
       <TimelineErrorState
-        message={errorMessage ?? "An unexpected error occurred"}
+        message={errorMessage ?? 'An unexpected error occurred'}
         onRetry={onRetry}
       />
     );
@@ -253,7 +253,7 @@ export function GroupedTimeline({
   }
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn('flex flex-col h-full', className)}>
       {/* Sticky Category Indicator Bar */}
       <CategoryIndicatorBar
         cards={cards}

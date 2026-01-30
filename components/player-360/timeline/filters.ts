@@ -12,7 +12,7 @@
 import type {
   InteractionEventType,
   TimelineQuery,
-} from "@/services/player-timeline/dtos";
+} from '@/services/player-timeline/dtos';
 
 // === Date Presets ===
 
@@ -21,23 +21,23 @@ import type {
  * Per UX baseline: date presets dropdown + custom range modal.
  */
 export type DatePreset =
-  | "today"
-  | "yesterday"
-  | "last_7_days"
-  | "last_30_days"
-  | "this_gaming_day"
-  | "custom";
+  | 'today'
+  | 'yesterday'
+  | 'last_7_days'
+  | 'last_30_days'
+  | 'this_gaming_day'
+  | 'custom';
 
 /**
  * Human-readable labels for date presets.
  */
 export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  today: "Today",
-  yesterday: "Yesterday",
-  last_7_days: "Last 7 Days",
-  last_30_days: "Last 30 Days",
-  this_gaming_day: "This Gaming Day",
-  custom: "Custom Range",
+  today: 'Today',
+  yesterday: 'Yesterday',
+  last_7_days: 'Last 7 Days',
+  last_30_days: 'Last 30 Days',
+  this_gaming_day: 'This Gaming Day',
+  custom: 'Custom Range',
 };
 
 /**
@@ -55,8 +55,8 @@ export interface CustomDateRange {
  * Either a preset or custom range.
  */
 export type DateRangeFilter =
-  | { type: "preset"; preset: Exclude<DatePreset, "custom"> }
-  | { type: "custom"; range: CustomDateRange };
+  | { type: 'preset'; preset: Exclude<DatePreset, 'custom'> }
+  | { type: 'custom'; range: CustomDateRange };
 
 // === Timeline Filters ===
 
@@ -83,7 +83,7 @@ export interface TimelineUIFilters {
  */
 export const DEFAULT_TIMELINE_FILTERS: TimelineUIFilters = {
   eventTypes: [],
-  dateRange: { type: "preset", preset: "last_7_days" },
+  dateRange: { type: 'preset', preset: 'last_7_days' },
   exceptionsOnly: false,
   limit: 50,
 };
@@ -99,42 +99,42 @@ export const DEFAULT_TIMELINE_FILTERS: TimelineUIFilters = {
  * @returns Object with fromDate and toDate ISO strings
  */
 export function datePresetToRange(
-  preset: Exclude<DatePreset, "custom">,
+  preset: Exclude<DatePreset, 'custom'>,
   gamingDayDate?: string,
 ): { fromDate: string; toDate: string } {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  const today = now.toISOString().split('T')[0];
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
 
   switch (preset) {
-    case "today":
+    case 'today':
       return { fromDate: today, toDate: today };
 
-    case "yesterday": {
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
+    case 'yesterday': {
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
       return { fromDate: yesterdayStr, toDate: yesterdayStr };
     }
 
-    case "last_7_days": {
+    case 'last_7_days': {
       const weekAgo = new Date(now);
       weekAgo.setDate(weekAgo.getDate() - 7);
       return {
-        fromDate: weekAgo.toISOString().split("T")[0],
+        fromDate: weekAgo.toISOString().split('T')[0],
         toDate: today,
       };
     }
 
-    case "last_30_days": {
+    case 'last_30_days': {
       const monthAgo = new Date(now);
       monthAgo.setDate(monthAgo.getDate() - 30);
       return {
-        fromDate: monthAgo.toISOString().split("T")[0],
+        fromDate: monthAgo.toISOString().split('T')[0],
         toDate: today,
       };
     }
 
-    case "this_gaming_day": {
+    case 'this_gaming_day': {
       // Gaming day is provided by casino context
       // If not available, fall back to today
       const gd = gamingDayDate ?? today;
@@ -160,12 +160,12 @@ export function filtersToQuery(
   playerId: string,
   filters: TimelineUIFilters,
   gamingDayDate?: string,
-): Omit<TimelineQuery, "cursorAt" | "cursorId"> {
+): Omit<TimelineQuery, 'cursorAt' | 'cursorId'> {
   // Resolve date range
   let fromDate: string | undefined;
   let toDate: string | undefined;
 
-  if (filters.dateRange.type === "preset") {
+  if (filters.dateRange.type === 'preset') {
     const range = datePresetToRange(filters.dateRange.preset, gamingDayDate);
     fromDate = range.fromDate;
     toDate = range.toDate;
@@ -198,8 +198,8 @@ export function hasActiveFilters(filters: TimelineUIFilters): boolean {
   // Check date range (comparing preset/custom type)
   if (filters.dateRange.type !== defaults.dateRange.type) return true;
   if (
-    filters.dateRange.type === "preset" &&
-    defaults.dateRange.type === "preset" &&
+    filters.dateRange.type === 'preset' &&
+    defaults.dateRange.type === 'preset' &&
     filters.dateRange.preset !== defaults.dateRange.preset
   ) {
     return true;
@@ -235,7 +235,7 @@ export function getFilterSummary(filters: TimelineUIFilters): string {
     parts.push(`${filters.eventTypes.length} event type(s)`);
   }
 
-  if (filters.dateRange.type === "preset") {
+  if (filters.dateRange.type === 'preset') {
     parts.push(DATE_PRESET_LABELS[filters.dateRange.preset]);
   } else {
     parts.push(
@@ -244,10 +244,10 @@ export function getFilterSummary(filters: TimelineUIFilters): string {
   }
 
   if (filters.exceptionsOnly) {
-    parts.push("Exceptions only");
+    parts.push('Exceptions only');
   }
 
-  return parts.join(", ") || "No filters applied";
+  return parts.join(', ') || 'No filters applied';
 }
 
 // === URL Serialization ===
@@ -262,22 +262,22 @@ export function filtersToSearchParams(
   const params = new URLSearchParams();
 
   if (filters.eventTypes.length > 0) {
-    params.set("eventTypes", filters.eventTypes.join(","));
+    params.set('eventTypes', filters.eventTypes.join(','));
   }
 
-  if (filters.dateRange.type === "preset") {
-    params.set("datePreset", filters.dateRange.preset);
+  if (filters.dateRange.type === 'preset') {
+    params.set('datePreset', filters.dateRange.preset);
   } else {
-    params.set("fromDate", filters.dateRange.range.fromDate);
-    params.set("toDate", filters.dateRange.range.toDate);
+    params.set('fromDate', filters.dateRange.range.fromDate);
+    params.set('toDate', filters.dateRange.range.toDate);
   }
 
   if (filters.exceptionsOnly) {
-    params.set("exceptionsOnly", "true");
+    params.set('exceptionsOnly', 'true');
   }
 
   if (filters.limit !== DEFAULT_TIMELINE_FILTERS.limit) {
-    params.set("limit", filters.limit.toString());
+    params.set('limit', filters.limit.toString());
   }
 
   return params;
@@ -293,32 +293,32 @@ export function searchParamsToFilters(
   const filters: Partial<TimelineUIFilters> = {};
 
   // Parse event types
-  const eventTypesParam = params.get("eventTypes");
+  const eventTypesParam = params.get('eventTypes');
   if (eventTypesParam) {
-    filters.eventTypes = eventTypesParam.split(",") as InteractionEventType[];
+    filters.eventTypes = eventTypesParam.split(',') as InteractionEventType[];
   }
 
   // Parse date range
-  const datePreset = params.get("datePreset") as DatePreset | null;
-  const fromDate = params.get("fromDate");
-  const toDate = params.get("toDate");
+  const datePreset = params.get('datePreset') as DatePreset | null;
+  const fromDate = params.get('fromDate');
+  const toDate = params.get('toDate');
 
-  if (datePreset && datePreset !== "custom") {
-    filters.dateRange = { type: "preset", preset: datePreset };
+  if (datePreset && datePreset !== 'custom') {
+    filters.dateRange = { type: 'preset', preset: datePreset };
   } else if (fromDate && toDate) {
     filters.dateRange = {
-      type: "custom",
+      type: 'custom',
       range: { fromDate, toDate },
     };
   }
 
   // Parse exceptions toggle
-  if (params.get("exceptionsOnly") === "true") {
+  if (params.get('exceptionsOnly') === 'true') {
     filters.exceptionsOnly = true;
   }
 
   // Parse limit
-  const limitParam = params.get("limit");
+  const limitParam = params.get('limit');
   if (limitParam) {
     const limit = parseInt(limitParam, 10);
     if (!isNaN(limit) && limit > 0) {

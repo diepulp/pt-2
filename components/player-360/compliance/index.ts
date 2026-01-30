@@ -9,5 +9,5 @@ export {
   CtrProgressTile,
   MtlEntryRow,
   MtlSummary,
-} from "./panel";
-export type { CtrStatus, MtlEntry } from "./panel";
+} from './panel';
+export type { CtrStatus, MtlEntry } from './panel';

@@ -13,16 +13,16 @@
  * @see PRD-022-PATCH-OPTION-B-PLAYER-360-EMBEDDED-SEARCH.md
  */
 
-import { Suspense } from "react";
+import { Suspense } from 'react';
 
 import {
   DashboardSkeleton,
   Player360LayoutProvider,
-} from "@/components/player-360";
+} from '@/components/player-360';
 
-import { Player360ContentWrapper } from "./_components/player-360-content-wrapper";
-import { Player360EmptyStateWrapper } from "./_components/player-360-empty-state-wrapper";
-import { Player360Shell } from "./_components/player-360-shell";
+import { Player360ContentWrapper } from './_components/player-360-content-wrapper';
+import { Player360EmptyStateWrapper } from './_components/player-360-empty-state-wrapper';
+import { Player360Shell } from './_components/player-360-shell';
 
 interface PageProps {
   params: Promise<{ playerId?: string[] }>;

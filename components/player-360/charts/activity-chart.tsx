@@ -7,9 +7,9 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
-import { format, parseISO } from "date-fns";
+import { format, parseISO } from 'date-fns';
 import {
   Bar,
   BarChart,
@@ -19,10 +19,10 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-} from "recharts";
+} from 'recharts';
 
-import type { WeeklySeriesDTO } from "@/hooks/player-360";
-import { cn } from "@/lib/utils";
+import type { WeeklySeriesDTO } from '@/hooks/player-360';
+import { cn } from '@/lib/utils';
 
 // === Props ===
 
@@ -39,14 +39,14 @@ export interface ActivityChartProps {
 
 // === Chart Colors ===
 
-const VISIT_COLOR = "hsl(217, 91%, 60%)"; // blue-500
-const REWARD_COLOR = "hsl(45, 93%, 47%)"; // amber-500
+const VISIT_COLOR = 'hsl(217, 91%, 60%)'; // blue-500
+const REWARD_COLOR = 'hsl(45, 93%, 47%)'; // amber-500
 
 // === Formatters ===
 
 function formatWeekLabel(weekStart: string): string {
   try {
-    return format(parseISO(weekStart), "MMM d");
+    return format(parseISO(weekStart), 'MMM d');
   } catch {
     return weekStart;
   }
@@ -79,7 +79,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
             style={{ backgroundColor: entry.color }}
           />
           <span className="text-muted-foreground">
-            {entry.dataKey === "visitCount" ? "Visits" : "Rewards"}:
+            {entry.dataKey === 'visitCount' ? 'Visits' : 'Rewards'}:
           </span>
           <span className="font-medium">{entry.value}</span>
         </div>
@@ -126,7 +126,7 @@ export function ActivityChart({
 
   return (
     <div
-      className={cn("w-full", className)}
+      className={cn('w-full', className)}
       data-testid="activity-chart"
       role="img"
       aria-label={`Activity chart showing visits and rewards from ${data.periodStart} to ${data.periodEnd}`}
@@ -144,19 +144,19 @@ export function ActivityChart({
           />
           <XAxis
             dataKey="weekLabel"
-            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}
           />
           <Tooltip
             content={<CustomTooltip />}
-            cursor={{ fill: "hsl(var(--muted))", opacity: 0.3 }}
+            cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }}
           />
           <Legend
             verticalAlign="top"
@@ -165,7 +165,7 @@ export function ActivityChart({
             iconSize={8}
             formatter={(value) => (
               <span className="text-xs text-muted-foreground">
-                {value === "visitCount" ? "Visits" : "Rewards"}
+                {value === 'visitCount' ? 'Visits' : 'Rewards'}
               </span>
             )}
           />
@@ -174,7 +174,7 @@ export function ActivityChart({
             fill={VISIT_COLOR}
             radius={[2, 2, 0, 0]}
             maxBarSize={24}
-            cursor={onBucketClick ? "pointer" : undefined}
+            cursor={onBucketClick ? 'pointer' : undefined}
             onClick={(_data, _index, e) => {
               // Access weekStart from the original data payload
               const payload = (
@@ -190,7 +190,7 @@ export function ActivityChart({
             fill={REWARD_COLOR}
             radius={[2, 2, 0, 0]}
             maxBarSize={24}
-            cursor={onBucketClick ? "pointer" : undefined}
+            cursor={onBucketClick ? 'pointer' : undefined}
             onClick={(_data, _index, e) => {
               const payload = (
                 e as unknown as { payload?: { weekStart?: string } }

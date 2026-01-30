@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { toast } from "sonner";
+import { toast } from 'sonner';
 
 import {
   Dialog,
@@ -8,20 +8,20 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/components/ui/dialog';
 import {
   usePlayer,
   useUpdatePlayer,
   usePlayerIdentity,
   useUpdatePlayerIdentity,
-} from "@/hooks/player";
+} from '@/hooks/player';
 import type {
   UpdatePlayerDTO,
   PlayerIdentityInput,
   IdentityAddress,
-} from "@/services/player/dtos";
+} from '@/services/player/dtos';
 
-import { PlayerEditForm, type PlayerEditFormValues } from "./player-edit-form";
+import { PlayerEditForm, type PlayerEditFormValues } from './player-edit-form';
 
 interface PlayerEditModalProps {
   playerId: string;
@@ -49,18 +49,18 @@ export function PlayerEditModal({
     dirtyFields: Partial<Record<keyof PlayerEditFormValues, boolean>>,
   ) => {
     const playerFields: (keyof UpdatePlayerDTO)[] = [
-      "first_name",
-      "last_name",
-      "birth_date",
-      "middle_name",
-      "email",
-      "phone_number",
+      'first_name',
+      'last_name',
+      'birth_date',
+      'middle_name',
+      'email',
+      'phone_number',
     ];
     const addressFields: (keyof PlayerEditFormValues)[] = [
-      "address_street",
-      "address_city",
-      "address_state",
-      "address_postal_code",
+      'address_street',
+      'address_city',
+      'address_state',
+      'address_postal_code',
     ];
 
     const hasPlayerChanges = playerFields.some((f) => dirtyFields[f]);
@@ -75,7 +75,7 @@ export function PlayerEditModal({
           if (dirtyFields[field]) {
             const value = values[field];
             (playerUpdate as Record<string, unknown>)[field] =
-              value === "" ? null : value;
+              value === '' ? null : value;
           }
         }
         promises.push(
@@ -97,11 +97,11 @@ export function PlayerEditModal({
       }
 
       await Promise.all(promises);
-      toast.success("Player profile updated successfully");
+      toast.success('Player profile updated successfully');
       onOpenChange(false);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to update profile";
+        error instanceof Error ? error.message : 'Failed to update profile';
       toast.error(message);
     }
   };
@@ -132,7 +132,7 @@ export function PlayerEditModal({
         <DialogHeader>
           <DialogTitle>Edit Player Profile</DialogTitle>
           <DialogDescription>
-            Update personal information, contact details, and address for{" "}
+            Update personal information, contact details, and address for{' '}
             {player.first_name} {player.last_name}.
           </DialogDescription>
         </DialogHeader>

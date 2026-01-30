@@ -7,9 +7,9 @@
  * @see PRD-003 Player & Visit Management
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { uuidSchema } from "@/lib/validation";
+import { uuidSchema } from '@/lib/validation';
 
 // === Player CRUD Schemas ===
 
@@ -17,15 +17,15 @@ import { uuidSchema } from "@/lib/validation";
 export const createPlayerSchema = z.object({
   first_name: z
     .string()
-    .min(1, "First name is required")
-    .max(100, "First name too long"),
+    .min(1, 'First name is required')
+    .max(100, 'First name too long'),
   last_name: z
     .string()
-    .min(1, "Last name is required")
-    .max(100, "Last name too long"),
+    .min(1, 'Last name is required')
+    .max(100, 'Last name too long'),
   birth_date: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
     .optional(),
 });
 
@@ -36,21 +36,21 @@ export const updatePlayerSchema = z
     last_name: z.string().min(1).max(100).optional(),
     birth_date: z
       .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
+      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
       .nullable()
       .optional(),
     middle_name: z.string().max(100).nullable().optional(),
-    email: z.string().email("Invalid email format").nullable().optional(),
+    email: z.string().email('Invalid email format').nullable().optional(),
     phone_number: z
       .string()
-      .min(7, "Phone number must be at least 7 characters")
+      .min(7, 'Phone number must be at least 7 characters')
       .max(20)
       .nullable()
       .optional(),
   })
   .refine(
     (data) => Object.values(data).some((v) => v !== undefined),
-    "At least one field must be provided for update",
+    'At least one field must be provided for update',
   );
 
 // === Player Search/List Schemas ===
@@ -58,9 +58,9 @@ export const updatePlayerSchema = z
 /** Schema for player list query params */
 export const playerListQuerySchema = z.object({
   /** Search query - minimum 2 characters for search */
-  q: z.string().min(2, "Search query must be at least 2 characters").optional(),
+  q: z.string().min(2, 'Search query must be at least 2 characters').optional(),
   /** Filter by enrollment status */
-  status: z.enum(["active", "inactive"]).optional(),
+  status: z.enum(['active', 'inactive']).optional(),
   /** Pagination cursor (ISO timestamp) */
   cursor: z.string().optional(),
   /** Results per page (default 20, max 100) */
@@ -71,7 +71,7 @@ export const playerListQuerySchema = z.object({
 
 /** Schema for enrollment route params */
 export const playerIdParamSchema = z.object({
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
 });
 
 /** Schema for enrollment request body (empty - casino comes from RLS) */
@@ -81,7 +81,7 @@ export const enrollPlayerSchema = z.object({}).strict();
 
 /** Schema for player detail route params */
 export const playerRouteParamsSchema = z.object({
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
 });
 
 // === Player Identity Schemas (ADR-022) ===
@@ -98,12 +98,12 @@ export const identityAddressSchema = z
 
 /** Schema for creating/updating player identity */
 export const playerIdentitySchema = z.object({
-  documentNumber: z.string().min(1, "Document number is required").optional(),
+  documentNumber: z.string().min(1, 'Document number is required').optional(),
   birthDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Birth date must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
     .optional(),
-  gender: z.enum(["m", "f", "x"]).optional(),
+  gender: z.enum(['m', 'f', 'x']).optional(),
   eyeColor: z.string().max(50).optional(),
   height: z
     .string()
@@ -113,14 +113,14 @@ export const playerIdentitySchema = z.object({
   address: identityAddressSchema,
   issueDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Issue date must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Issue date must be YYYY-MM-DD format')
     .optional(),
   expirationDate: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Expiration date must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expiration date must be YYYY-MM-DD format')
     .optional(),
   issuingState: z.string().max(50).optional(),
-  documentType: z.enum(["drivers_license", "passport", "state_id"]).optional(),
+  documentType: z.enum(['drivers_license', 'passport', 'state_id']).optional(),
 });
 
 // === Type Exports ===

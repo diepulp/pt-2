@@ -8,7 +8,7 @@
  * @see EXEC-SPEC-029.md WS-UX-F
  */
 
-"use client";
+'use client';
 
 import {
   AlertTriangle,
@@ -18,14 +18,14 @@ import {
   Clock,
   ExternalLink,
   Shield,
-} from "lucide-react";
+} from 'lucide-react';
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-import { Panel, PanelContent, PanelHeader } from "../layout";
-import { MetricTileSkeleton } from "../skeletons";
+import { Panel, PanelContent, PanelHeader } from '../layout';
+import { MetricTileSkeleton } from '../skeletons';
 
 // === Types ===
 
@@ -51,7 +51,7 @@ export interface CtrStatus {
 export interface MtlEntry {
   id: string;
   /** Direction: cash-in or cash-out */
-  direction: "in" | "out";
+  direction: 'in' | 'out';
   /** Transaction type */
   txnType: string;
   /** Amount in dollars */
@@ -98,7 +98,7 @@ export function CompliancePanel({
   // Loading state
   if (isLoading) {
     return (
-      <Panel className={cn("flex flex-col", className)}>
+      <Panel className={cn('flex flex-col', className)}>
         <PanelHeader
           icon={<Shield className="h-4 w-4 text-accent" />}
           title="Compliance"
@@ -113,7 +113,7 @@ export function CompliancePanel({
   }
 
   return (
-    <Panel className={cn("flex flex-col", className)}>
+    <Panel className={cn('flex flex-col', className)}>
       <PanelHeader
         icon={<Shield className="h-4 w-4 text-accent" />}
         title="Compliance"
@@ -201,12 +201,12 @@ function CtrProgressTile({ status, className }: CtrProgressTileProps) {
   return (
     <div
       className={cn(
-        "p-3 rounded-lg border",
+        'p-3 rounded-lg border',
         status.isTriggered
-          ? "border-red-500/30 bg-red-500/5"
+          ? 'border-red-500/30 bg-red-500/5'
           : isNearThreshold
-            ? "border-amber-500/30 bg-amber-500/5"
-            : "border-border/40 bg-card/50",
+            ? 'border-amber-500/30 bg-amber-500/5'
+            : 'border-border/40 bg-card/50',
         className,
       )}
     >
@@ -220,13 +220,13 @@ function CtrProgressTile({ status, className }: CtrProgressTileProps) {
             <Badge
               variant="outline"
               className={cn(
-                "h-5 text-[10px]",
+                'h-5 text-[10px]',
                 status.isFiled
-                  ? "bg-green-500/10 text-green-400 border-green-500/30"
-                  : "bg-red-500/10 text-red-400 border-red-500/30",
+                  ? 'bg-green-500/10 text-green-400 border-green-500/30'
+                  : 'bg-red-500/10 text-red-400 border-red-500/30',
               )}
             >
-              {status.isFiled ? "Filed" : "Triggered"}
+              {status.isFiled ? 'Filed' : 'Triggered'}
             </Badge>
           )}
           {isNearThreshold && (
@@ -248,12 +248,12 @@ function CtrProgressTile({ status, className }: CtrProgressTileProps) {
       <div className="h-2 w-full bg-muted rounded-full overflow-hidden mb-2">
         <div
           className={cn(
-            "h-full transition-all",
+            'h-full transition-all',
             status.isTriggered
-              ? "bg-red-500"
+              ? 'bg-red-500'
               : isNearThreshold
-                ? "bg-amber-500"
-                : "bg-accent",
+                ? 'bg-amber-500'
+                : 'bg-accent',
           )}
           style={{ width: `${percentage}%` }}
         />
@@ -286,15 +286,15 @@ function MtlSummary({ entries, className }: MtlSummaryProps) {
   if (entries.length === 0) return null;
 
   const cashIn = entries
-    .filter((e) => e.direction === "in")
+    .filter((e) => e.direction === 'in')
     .reduce((sum, e) => sum + e.amount, 0);
 
   const cashOut = entries
-    .filter((e) => e.direction === "out")
+    .filter((e) => e.direction === 'out')
     .reduce((sum, e) => sum + e.amount, 0);
 
   return (
-    <div className={cn("grid grid-cols-2 gap-3", className)}>
+    <div className={cn('grid grid-cols-2 gap-3', className)}>
       {/* Cash In Total */}
       <div className="p-2.5 rounded-lg border border-border/40 bg-card/50">
         <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
@@ -333,9 +333,9 @@ interface MtlEntryRowProps {
  */
 function MtlEntryRow({ entry, onClick, className }: MtlEntryRowProps) {
   const formatTime = (isoString: string) => {
-    return new Date(isoString).toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
+    return new Date(isoString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
     });
   };
 
@@ -344,24 +344,24 @@ function MtlEntryRow({ entry, onClick, className }: MtlEntryRowProps) {
       onClick={onClick}
       disabled={!onClick}
       className={cn(
-        "w-full flex items-center gap-3 p-2 rounded-lg text-left",
-        "border border-border/30 bg-card/30",
-        "transition-colors",
-        onClick && "hover:bg-card/50 hover:border-border/50 cursor-pointer",
-        !onClick && "cursor-default",
+        'w-full flex items-center gap-3 p-2 rounded-lg text-left',
+        'border border-border/30 bg-card/30',
+        'transition-colors',
+        onClick && 'hover:bg-card/50 hover:border-border/50 cursor-pointer',
+        !onClick && 'cursor-default',
         className,
       )}
     >
       {/* Direction icon */}
       <div
         className={cn(
-          "flex items-center justify-center w-8 h-8 rounded-lg shrink-0",
-          entry.direction === "in"
-            ? "bg-green-500/10 text-green-400"
-            : "bg-red-500/10 text-red-400",
+          'flex items-center justify-center w-8 h-8 rounded-lg shrink-0',
+          entry.direction === 'in'
+            ? 'bg-green-500/10 text-green-400'
+            : 'bg-red-500/10 text-red-400',
         )}
       >
-        {entry.direction === "in" ? (
+        {entry.direction === 'in' ? (
           <ArrowDown className="h-4 w-4" />
         ) : (
           <ArrowUp className="h-4 w-4" />
@@ -385,11 +385,11 @@ function MtlEntryRow({ entry, onClick, className }: MtlEntryRowProps) {
       {/* Amount */}
       <span
         className={cn(
-          "text-sm font-semibold shrink-0",
-          entry.direction === "in" ? "text-green-400" : "text-red-400",
+          'text-sm font-semibold shrink-0',
+          entry.direction === 'in' ? 'text-green-400' : 'text-red-400',
         )}
       >
-        {entry.direction === "in" ? "+" : "-"}${entry.amount.toLocaleString()}
+        {entry.direction === 'in' ? '+' : '-'}${entry.amount.toLocaleString()}
       </span>
 
       {/* Chevron if clickable */}

@@ -9,5 +9,5 @@ export {
   copySnapshotToClipboard,
   SnapshotCard,
   snapshotToText,
-} from "./card";
-export type { EngagementBand, PlayerSnapshotData } from "./card";
+} from './card';
+export type { EngagementBand, PlayerSnapshotData } from './card';
