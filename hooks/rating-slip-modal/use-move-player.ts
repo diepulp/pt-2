@@ -10,21 +10,21 @@
  * @see EXECUTION-SPEC-PRD-008.md WS5
  */
 
-'use client';
+"use client";
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { dashboardKeys } from '@/hooks/dashboard/keys';
-import { accrueOnClose } from '@/services/loyalty/http';
-import { loyaltyKeys } from '@/services/loyalty/keys';
-import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
-import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
+import { dashboardKeys } from "@/hooks/dashboard/keys";
+import { accrueOnClose } from "@/services/loyalty/http";
+import { loyaltyKeys } from "@/services/loyalty/keys";
+import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
 import type {
   MovePlayerInput,
   MovePlayerResponse,
-} from '@/services/rating-slip-modal/http';
-import { movePlayer } from '@/services/rating-slip-modal/http';
-import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
+} from "@/services/rating-slip-modal/http";
+import { movePlayer } from "@/services/rating-slip-modal/http";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 /**
  * Mutation input for moving a player.
@@ -230,7 +230,7 @@ export function useMovePlayer() {
           seat_number: data.newSlip.seatNumber,
           start_time: data.newSlip.startTime,
           end_time: null,
-          status: data.newSlip.status as RatingSlipDTO['status'],
+          status: data.newSlip.status as RatingSlipDTO["status"],
           average_bet: variables.averageBet ?? previousSlip.average_bet,
           game_settings: previousSlip.game_settings,
           policy_snapshot: previousSlip.policy_snapshot,
@@ -292,20 +292,22 @@ export function useMovePlayer() {
           // Use closedSlipId as idempotency key (already a UUID)
           // RPC dedupes via UNIQUE(casino_id, rating_slip_id) WHERE reason='base_accrual'
           idempotencyKey: data.closedSlipId,
-        }).catch((accrualError) => {
-          // Log but don't fail - loyalty accrual is best-effort
-          console.warn(
-            `[useMovePlayer] Loyalty accrual failed for closed slip ${data.closedSlipId}:`,
-            accrualError,
-          );
+        }).catch(() => {
+          // Fire-and-forget: loyalty accrual is best-effort, silently swallow errors
         });
 
         // Invalidate loyalty balance and ledger for the player
         queryClient.invalidateQueries({
           queryKey: loyaltyKeys.balance(variables.playerId, variables.casinoId),
         });
+        // PERF-005: Use 4-element prefix to match all filtered ledger variants
         queryClient.invalidateQueries({
-          queryKey: loyaltyKeys.ledger(variables.playerId, variables.casinoId),
+          queryKey: [
+            "loyalty",
+            "ledger",
+            variables.casinoId,
+            variables.playerId,
+          ],
         });
       }
 

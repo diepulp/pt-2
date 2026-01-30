@@ -18,22 +18,22 @@
  * @see ISSUE-47B1DFF1 Loyalty accrual integration
  */
 
-'use client';
+"use client";
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { dashboardKeys } from '@/hooks/dashboard/keys';
-import { playerFinancialKeys } from '@/hooks/player-financial/keys';
-import { toast } from '@/hooks/ui';
-import { accrueOnClose } from '@/services/loyalty/http';
-import { loyaltyKeys } from '@/services/loyalty/keys';
+import { dashboardKeys } from "@/hooks/dashboard/keys";
+import { playerFinancialKeys } from "@/hooks/player-financial/keys";
+import { toast } from "@/hooks/ui";
+import { accrueOnClose } from "@/services/loyalty/http";
+import { loyaltyKeys } from "@/services/loyalty/keys";
 import {
   closeRatingSlip,
   createPitCashObservation,
   PitObservationError,
-} from '@/services/rating-slip/http';
-import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
-import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
+} from "@/services/rating-slip/http";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 export interface CloseWithFinancialInput {
   /** Rating slip ID to close */
@@ -102,8 +102,8 @@ export function useCloseWithFinancial() {
               visitId,
               amount: chipsTaken, // Amount in dollars (RPC expects dollars)
               ratingSlipId: slipId,
-              amountKind: 'estimate',
-              source: 'walk_with',
+              amountKind: "estimate",
+              source: "walk_with",
               // Use slipId as idempotency key to prevent duplicate observations
               idempotencyKey: `chips-taken-${slipId}`,
             }).catch((err: unknown) => {
@@ -111,8 +111,8 @@ export function useCloseWithFinancial() {
               const message =
                 err instanceof PitObservationError
                   ? err.message
-                  : 'Failed to record chips taken observation';
-              toast.error('Chips Taken Error', {
+                  : "Failed to record chips taken observation";
+              toast.error("Chips Taken Error", {
                 description: message,
               });
               // Don't fail the close operation - observation is best-effort
@@ -137,12 +137,8 @@ export function useCloseWithFinancial() {
           // Use slipId as idempotency key (already a UUID)
           // RPC dedupes via UNIQUE(casino_id, rating_slip_id) WHERE reason='base_accrual'
           idempotencyKey: slipId,
-        }).catch((accrualError) => {
-          // Log but don't fail - loyalty accrual is best-effort
-          console.warn(
-            `[useCloseWithFinancial] Loyalty accrual failed for slip ${slipId}:`,
-            accrualError,
-          );
+        }).catch(() => {
+          // Fire-and-forget: loyalty accrual is best-effort, silently swallow errors
         });
       }
 
@@ -168,7 +164,7 @@ export function useCloseWithFinancial() {
             ...old,
             slip: {
               ...old.slip,
-              status: 'closed',
+              status: "closed",
             },
           };
         },
@@ -218,9 +214,11 @@ export function useCloseWithFinancial() {
         queryClient.invalidateQueries({
           queryKey: loyaltyKeys.balance(playerId, casinoId),
         });
-        // TARGETED: Invalidate only this player's ledger (not all player ledgers)
+        // PERF-005: Use 4-element prefix to match all filtered ledger variants
+        // loyaltyKeys.ledger() generates a 5-element key with serialized filters
+        // that misses filtered queries due to TanStack Query prefix matching
         queryClient.invalidateQueries({
-          queryKey: loyaltyKeys.ledger(playerId, casinoId),
+          queryKey: ["loyalty", "ledger", casinoId, playerId],
         });
       }
     },

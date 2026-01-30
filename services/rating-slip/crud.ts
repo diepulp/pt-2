@@ -168,40 +168,14 @@ export async function start(
   actorId: string,
   input: CreateRatingSlipInput,
 ): Promise<RatingSlipDTO> {
-  // Pre-validate visit before calling RPC for better error handling
-  const { data: visitData, error: visitError } = await supabase
-    .from("visit")
-    .select("id, player_id, ended_at, casino_id")
-    .eq("id", input.visit_id)
-    .maybeSingle();
-
-  if (visitError) throw mapDatabaseError(visitError);
-
-  if (!visitData) {
-    throw new DomainError(
-      "VISIT_NOT_FOUND",
-      `Visit not found: ${input.visit_id}`,
-    );
-  }
-
-  if (visitData.ended_at !== null) {
-    throw new DomainError(
-      "VISIT_NOT_OPEN",
-      "Visit is not active. Cannot start rating slip.",
-    );
-  }
-
-  if (visitData.casino_id !== casinoId) {
-    throw new DomainError(
-      "VISIT_CASINO_MISMATCH",
-      "Visit does not belong to the specified casino",
-    );
-  }
+  // PERF-005 WS6: Pre-validation removed — rpc_start_rating_slip performs identical
+  // validation internally with distinguishable error codes:
+  //   - VISIT_NOT_OPEN (visit missing, ended, or wrong casino)
+  //   - TABLE_NOT_ACTIVE (table not found or inactive)
+  //   - casino_id mismatch (RLS context mismatch)
+  // Saves ~50ms per start operation (1 fewer SELECT roundtrip).
 
   // Note: Ghost visits (player_id = null) CAN have rating slips per ADR-014.
-  // Rating slips for ghost visits provide compliance-only telemetry for
-  // finance, MTL, and AML tracking. LoyaltyService checks for ghost visits
-  // at accrual time and excludes them from automated point calculation.
 
   const { data, error } = await supabase.rpc("rpc_start_rating_slip", {
     p_casino_id: casinoId,
@@ -331,14 +305,9 @@ export async function close(
     );
   }
 
-  // PRD-016: Set final_duration_seconds on the closed slip
-  // This field is used by move() to calculate accumulated_seconds for the next slip
-  const { error: updateError } = await supabase
-    .from("rating_slip")
-    .update({ final_duration_seconds: result.duration_seconds })
-    .eq("id", slipId);
-
-  if (updateError) throw mapDatabaseError(updateError);
+  // PERF-005 WS5: final_duration_seconds is now set inside rpc_close_rating_slip
+  // (migration 20260129100000_perf005_close_rpc_inline_duration.sql)
+  // No separate UPDATE needed — saves ~50-100ms per close operation.
 
   // The RPC returns { slip: RatingSlipRow, duration_seconds: number }
   return toRatingSlipWithDurationDTO(result.slip, result.duration_seconds);

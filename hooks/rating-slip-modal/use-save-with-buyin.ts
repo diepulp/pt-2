@@ -13,23 +13,23 @@
  * @see PRD-MTL-UI-GAPS WS7 Rating Slip Modal Integration
  */
 
-'use client';
+"use client";
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { dashboardKeys } from "@/hooks/dashboard/keys";
 import {
   checkCumulativeThreshold,
   notifyThreshold,
-} from '@/hooks/mtl/use-threshold-notifications';
-import { playerFinancialKeys } from '@/hooks/player-financial/keys';
-import { DomainError } from '@/lib/errors/domain-errors';
-import { getErrorMessage, logError } from '@/lib/errors/error-utils';
-import { mtlKeys } from '@/services/mtl/keys';
-import { createFinancialTransaction } from '@/services/player-financial/http';
-import { updateAverageBet } from '@/services/rating-slip/http';
-import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
-import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
+} from "@/hooks/mtl/use-threshold-notifications";
+import { playerFinancialKeys } from "@/hooks/player-financial/keys";
+import { DomainError } from "@/lib/errors/domain-errors";
+import { getErrorMessage, logError } from "@/lib/errors/error-utils";
+import { mtlKeys } from "@/services/mtl/keys";
+import { createFinancialTransaction } from "@/services/player-financial/http";
+import { updateAverageBet } from "@/services/rating-slip/http";
+import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 export interface SaveWithBuyInInput {
   /** Rating slip ID */
@@ -119,26 +119,26 @@ export function useSaveWithBuyIn() {
             visit_id: visitId,
             rating_slip_id: slipId,
             amount: newBuyIn * 100, // Convert dollars to cents
-            direction: 'in',
-            source: 'pit',
-            tender_type: 'cash',
+            direction: "in",
+            source: "pit",
+            tender_type: "cash",
             created_by_staff_id: staffId,
           });
         } catch (txnError) {
           // Check for STALE_GAMING_DAY_CONTEXT error
           const errorMessage = getErrorMessage(txnError);
-          if (errorMessage.includes('STALE_GAMING_DAY_CONTEXT')) {
+          if (errorMessage.includes("STALE_GAMING_DAY_CONTEXT")) {
             // Re-throw with domain error for caller to handle context refresh
             throw new DomainError(
-              'STALE_GAMING_DAY_CONTEXT',
-              'Session context is stale. Please refresh and try again.',
+              "STALE_GAMING_DAY_CONTEXT",
+              "Session context is stale. Please refresh and try again.",
               { httpStatus: 409, retryable: true },
             );
           }
           // Log all buy-in errors for visibility (Patch C requirement)
           logError(txnError, {
-            component: 'useSaveWithBuyIn',
-            action: 'createFinancialTransaction',
+            component: "useSaveWithBuyIn",
+            action: "createFinancialTransaction",
             metadata: { slipId, visitId, playerId },
           });
           // Re-throw to fail the save operation
@@ -217,9 +217,9 @@ export function useSaveWithBuyIn() {
           queryKey: mtlKeys.gamingDaySummary.scope,
         });
 
-        // Invalidate patron daily total
+        // Invalidate patron daily total (PERF-005: use key factory)
         queryClient.invalidateQueries({
-          queryKey: ['mtl', 'patron-daily-total', casinoId, playerId],
+          queryKey: mtlKeys.patronDailyTotal(casinoId, playerId),
         });
       }
     },

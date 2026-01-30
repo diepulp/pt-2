@@ -11,44 +11,41 @@
  */
 
 // Query key factory
-export { dashboardKeys } from './keys';
+export { dashboardKeys } from "./keys";
 
 // Table hooks
 export {
   useDashboardTables,
   useDashboardActiveTables,
-} from './use-dashboard-tables';
+} from "./use-dashboard-tables";
 
 // Slip hooks
-export {
-  useDashboardSlips,
-  useActiveSlipsForDashboard,
-} from './use-dashboard-slips';
+export { useActiveSlipsForDashboard } from "./use-dashboard-slips";
 
 // Stats hooks
 export {
   useDashboardStats,
   useDashboardStatsWithGamingDay,
-} from './use-dashboard-stats';
+} from "./use-dashboard-stats";
 
 // Realtime hooks (P1)
 export {
   useDashboardRealtime,
   RealtimeStatusIndicator,
-} from './use-dashboard-realtime';
+} from "./use-dashboard-realtime";
 
 // Promo exposure hooks (PRD-LOYALTY-PROMO)
 export {
   useDashboardPromoExposure,
   type PromoExposureRollupDTO,
   type PromoExposureRollupQuery,
-} from './use-promo-exposure';
+} from "./use-promo-exposure";
 
 // Casino-wide active players hook (GAP-ACTIVITY-PANEL-CASINO-WIDE)
 export {
   useCasinoActivePlayers,
   type UseCasinoActivePlayersOptions,
-} from './use-casino-active-players';
+} from "./use-casino-active-players";
 
 // Re-export types for convenience
 export type {
@@ -62,4 +59,4 @@ export type {
   TableStatus,
   GameType,
   RatingSlipDTO,
-} from './types';
+} from "./types";

@@ -10,22 +10,22 @@
  * @see EXECUTION-SPEC-PRD-006.md WS5
  */
 
-'use client';
+"use client";
 
 import type {
   RealtimeChannel,
   RealtimePostgresChangesPayload,
-} from '@supabase/supabase-js';
-import { useQueryClient } from '@tanstack/react-query';
-import * as React from 'react';
+} from "@supabase/supabase-js";
+import { useQueryClient } from "@tanstack/react-query";
+import * as React from "react";
 
-import { createBrowserComponentClient } from '@/lib/supabase/client';
-import type { Database } from '@/types/database.types';
+import { createBrowserComponentClient } from "@/lib/supabase/client";
+import type { Database } from "@/types/database.types";
 
-import { dashboardKeys } from './keys';
+import { dashboardKeys } from "./keys";
 
-type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
-type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
+type GamingTableRow = Database["public"]["Tables"]["gaming_table"]["Row"];
+type RatingSlipRow = Database["public"]["Tables"]["rating_slip"]["Row"];
 
 interface UseDashboardRealtimeOptions {
   /** Casino ID to scope subscriptions */
@@ -83,11 +83,11 @@ export function useDashboardRealtime({
       .channel(channelName)
       // Subscribe to gaming_table changes
       .on<GamingTableRow>(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'gaming_table',
+          event: "*",
+          schema: "public",
+          table: "gaming_table",
           filter: `casino_id=eq.${casinoId}`,
         },
         (payload: RealtimePostgresChangesPayload<GamingTableRow>) => {
@@ -96,11 +96,11 @@ export function useDashboardRealtime({
       )
       // Subscribe to rating_slip changes
       .on<RatingSlipRow>(
-        'postgres_changes',
+        "postgres_changes",
         {
-          event: '*',
-          schema: 'public',
-          table: 'rating_slip',
+          event: "*",
+          schema: "public",
+          table: "rating_slip",
           filter: `casino_id=eq.${casinoId}`,
         },
         (payload: RealtimePostgresChangesPayload<RatingSlipRow>) => {
@@ -108,15 +108,15 @@ export function useDashboardRealtime({
         },
       )
       .subscribe((status: string) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === "SUBSCRIBED") {
           setIsConnected(true);
           setError(null);
-        } else if (status === 'CHANNEL_ERROR') {
+        } else if (status === "CHANNEL_ERROR") {
           setIsConnected(false);
-          setError(new Error('Realtime channel error'));
-        } else if (status === 'TIMED_OUT') {
+          setError(new Error("Realtime channel error"));
+        } else if (status === "TIMED_OUT") {
           setIsConnected(false);
-          setError(new Error('Realtime connection timed out'));
+          setError(new Error("Realtime connection timed out"));
         }
       });
 
@@ -128,9 +128,9 @@ export function useDashboardRealtime({
     ) {
       setLastUpdate(new Date());
 
-      // Invalidate tables query
+      // Invalidate tables query (scoped to this casino)
       queryClient.invalidateQueries({
-        queryKey: dashboardKeys.tables.scope,
+        queryKey: dashboardKeys.tables(casinoId),
       });
 
       // Invalidate stats

@@ -9,19 +9,19 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery } from "@tanstack/react-query";
 
 import type {
   RatingSlipDTO,
   RatingSlipListFilters,
   RatingSlipWithPausesDTO,
-} from '@/services/rating-slip/dtos';
+} from "@/services/rating-slip/dtos";
 import {
   getRatingSlip,
   getRatingSlipDuration,
   listRatingSlips,
-} from '@/services/rating-slip/http';
-import { ratingSlipKeys } from '@/services/rating-slip/keys';
+} from "@/services/rating-slip/http";
+import { ratingSlipKeys } from "@/services/rating-slip/keys";
 
 /**
  * Fetches a single rating slip by ID with pause history.
@@ -58,35 +58,13 @@ export function useRatingSlipList(filters?: RatingSlipListFilters) {
  */
 export function useRatingSlipsForTable(
   tableId: string | undefined,
-  filters?: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'>,
+  filters?: Omit<RatingSlipListFilters, "table_id" | "visit_id">,
 ) {
   return useQuery({
     queryKey: ratingSlipKeys.forTable(tableId!, filters),
     queryFn: () => listRatingSlips({ ...filters, table_id: tableId }),
     enabled: !!tableId,
     staleTime: 30_000, // 30 seconds
-  });
-}
-
-/**
- * Fetches only active (open or paused) rating slips for a table.
- * Used for pit boss view of current table activity.
- *
- * @param tableId - Gaming table UUID (undefined disables the query)
- */
-export function useActiveSlipsForTable(tableId: string | undefined) {
-  return useQuery({
-    queryKey: ratingSlipKeys.activeForTable(tableId!),
-    queryFn: async (): Promise<RatingSlipDTO[]> => {
-      // Fetch both open and paused slips in parallel
-      const [openResult, pausedResult] = await Promise.all([
-        listRatingSlips({ table_id: tableId, status: 'open' }),
-        listRatingSlips({ table_id: tableId, status: 'paused' }),
-      ]);
-      return [...openResult.items, ...pausedResult.items];
-    },
-    enabled: !!tableId,
-    staleTime: 15_000, // 15 seconds - more frequent for active slips
   });
 }
 

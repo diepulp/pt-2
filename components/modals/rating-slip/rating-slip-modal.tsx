@@ -1,45 +1,45 @@
-'use client';
+"use client";
 
-import { Pause, Play, RefreshCw, X } from 'lucide-react';
+import { Pause, Play, RefreshCw, X } from "lucide-react";
 import React, {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useTransition,
-} from 'react';
-import { toast } from 'sonner';
+} from "react";
+import { toast } from "sonner";
 
-import { CtrBanner } from '@/components/mtl/ctr-banner';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { CtrBanner } from "@/components/mtl/ctr-banner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { usePatronDailyTotal } from '@/hooks/mtl/use-patron-daily-total';
-import { checkCumulativeThreshold } from '@/hooks/mtl/use-threshold-notifications';
-import { useCreateFinancialAdjustment } from '@/hooks/player-financial';
+} from "@/components/ui/dialog";
+import { useGamingDay } from "@/hooks/casino/use-gaming-day";
+import { usePatronDailyTotal } from "@/hooks/mtl/use-patron-daily-total";
+import { checkCumulativeThreshold } from "@/hooks/mtl/use-threshold-notifications";
+import { useCreateFinancialAdjustment } from "@/hooks/player-financial";
 import {
   usePauseRatingSlip,
   useResumeRatingSlip,
-} from '@/hooks/rating-slip/use-rating-slip-mutations';
-import { useRatingSlipModalData } from '@/hooks/rating-slip-modal';
-import { useRatingSlipModal } from '@/hooks/ui/use-rating-slip-modal';
-import { useAuth } from '@/hooks/use-auth';
-import { useGamingDay } from '@/hooks/use-casino';
-import type { AdjustmentReasonCode } from '@/services/player-financial/dtos';
+} from "@/hooks/rating-slip/use-rating-slip-mutations";
+import { useRatingSlipModalData } from "@/hooks/rating-slip-modal";
+import { useRatingSlipModal } from "@/hooks/ui/use-rating-slip-modal";
+import { useAuth } from "@/hooks/use-auth";
+import type { AdjustmentReasonCode } from "@/services/player-financial/dtos";
 
-import { AdjustmentModal } from './adjustment-modal';
-import { FormSectionAverageBet } from './form-section-average-bet';
-import { FormSectionCashIn } from './form-section-cash-in';
-import { FormSectionChipsTaken } from './form-section-chips-taken';
-import { FormSectionMovePlayer } from './form-section-move-player';
-import { FormSectionStartTime } from './form-section-start-time';
-import { RatingSlipModalSkeleton } from './rating-slip-modal-skeleton';
+import { AdjustmentModal } from "./adjustment-modal";
+import { FormSectionAverageBet } from "./form-section-average-bet";
+import { FormSectionCashIn } from "./form-section-cash-in";
+import { FormSectionChipsTaken } from "./form-section-chips-taken";
+import { FormSectionMovePlayer } from "./form-section-move-player";
+import { FormSectionStartTime } from "./form-section-start-time";
+import { RatingSlipModalSkeleton } from "./rating-slip-modal-skeleton";
 
 /**
  * Converts an ISO timestamp to datetime-local format in the user's local timezone.
@@ -57,10 +57,10 @@ function toLocalDateTimeString(isoTimestamp: string): string {
 
   // Format as local datetime-local string
   const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
@@ -204,7 +204,10 @@ export function RatingSlipModal({
 
   // Fetch canonical gaming day from server (respects casino timezone and cutoff)
   // ISSUE-CLIENT-GD-003: Must use server-side gaming day for MTL threshold calculations
-  const { data: gamingDay } = useGamingDay(modalData?.slip.casinoId ?? '');
+  // PERF-005 WS4: Use new hook (returns GamingDayDTO) and extract .gaming_day string
+  // to prevent [object Object] serialization bug in MTL query parameters
+  const { data: gamingDayData } = useGamingDay();
+  const gamingDay = gamingDayData?.gaming_day;
 
   // Fetch patron's daily total for MTL threshold checking (WS7)
   // Only fetch when modal is open and we have player data
@@ -228,10 +231,10 @@ export function RatingSlipModal({
       initializeForm({
         averageBet: modalData.slip.averageBet.toString(),
         startTime: toLocalDateTimeString(modalData.slip.startTime),
-        newBuyIn: '0',
+        newBuyIn: "0",
         newTableId: modalData.slip.tableId,
-        newSeatNumber: modalData.slip.seatNumber || '',
-        chipsTaken: '0',
+        newSeatNumber: modalData.slip.seatNumber || "",
+        chipsTaken: "0",
       });
     }
   }, [modalData, initializeForm]);
@@ -264,7 +267,7 @@ export function RatingSlipModal({
     const newBuyIn = Number(formState.newBuyIn) || 0;
 
     if (newBuyIn > 0 && averageBet <= 0) {
-      return 'Average bet must be set before recording a buy-in';
+      return "Average bet must be set before recording a buy-in";
     }
     return null;
   }, [formState.averageBet, formState.newBuyIn]);
@@ -382,7 +385,7 @@ export function RatingSlipModal({
       note: string;
     }) => {
       if (!modalData || !casinoId || !modalData.player) {
-        setAdjustmentError('Missing required data for adjustment');
+        setAdjustmentError("Missing required data for adjustment");
         return;
       }
 
@@ -396,15 +399,15 @@ export function RatingSlipModal({
           note: data.note,
         });
 
-        toast.success('Adjustment created', {
-          description: `${data.deltaAmount >= 0 ? '+' : ''}$${data.deltaAmount.toFixed(2)} adjustment recorded`,
+        toast.success("Adjustment created", {
+          description: `${data.deltaAmount >= 0 ? "+" : ""}$${data.deltaAmount.toFixed(2)} adjustment recorded`,
         });
 
         handleCloseAdjustmentModal();
         // Modal data will refresh automatically via query invalidation
       } catch (err) {
         const message =
-          err instanceof Error ? err.message : 'Failed to create adjustment';
+          err instanceof Error ? err.message : "Failed to create adjustment";
         setAdjustmentError(message);
       }
     },
@@ -431,12 +434,12 @@ export function RatingSlipModal({
 
     pauseRatingSlip.mutate(modalData.slip.id, {
       onSuccess: () => {
-        toast.success('Session paused', {
-          description: 'Loyalty accrual and session timer have been paused',
+        toast.success("Session paused", {
+          description: "Loyalty accrual and session timer have been paused",
         });
       },
       onError: (err) => {
-        toast.error('Failed to pause session', {
+        toast.error("Failed to pause session", {
           description: err.message,
         });
       },
@@ -449,12 +452,12 @@ export function RatingSlipModal({
 
     resumeRatingSlip.mutate(modalData.slip.id, {
       onSuccess: () => {
-        toast.success('Session resumed', {
-          description: 'Loyalty accrual and session timer have resumed',
+        toast.success("Session resumed", {
+          description: "Loyalty accrual and session timer have resumed",
         });
       },
       onError: (err) => {
-        toast.error('Failed to resume session', {
+        toast.error("Failed to resume session", {
           description: err.message,
         });
       },
@@ -464,9 +467,9 @@ export function RatingSlipModal({
   // Derived state for pause/resume button visibility
   const isPauseResumeLoading =
     pauseRatingSlip.isPending || resumeRatingSlip.isPending;
-  const canPause = modalData?.slip.status === 'open';
-  const canResume = modalData?.slip.status === 'paused';
-  const isPaused = modalData?.slip.status === 'paused';
+  const canPause = modalData?.slip.status === "open";
+  const canResume = modalData?.slip.status === "paused";
+  const isPaused = modalData?.slip.status === "paused";
 
   // === EARLY RETURNS (after all hooks) ===
 
@@ -487,7 +490,7 @@ export function RatingSlipModal({
             </DialogDescription>
           </DialogHeader>
           <div className="p-4 bg-red-950/80 text-red-200 border border-red-800 rounded-lg font-medium">
-            {fetchError.message || 'Failed to load rating slip data'}
+            {fetchError.message || "Failed to load rating slip data"}
           </div>
           <Button onClick={onClose}>Close</Button>
         </DialogContent>
@@ -525,8 +528,8 @@ export function RatingSlipModal({
   const playerName = modalData
     ? modalData.player
       ? `${modalData.player.firstName} ${modalData.player.lastName}`
-      : 'Ghost Visit'
-    : legacyRatingSlip?.playerName || 'Unknown Player';
+      : "Ghost Visit"
+    : legacyRatingSlip?.playerName || "Unknown Player";
 
   const selectedTable =
     tables.find((t) => t.gaming_table_id === formState.newTableId) || null;
@@ -575,13 +578,13 @@ export function RatingSlipModal({
             {/* Gaming Day Display (ADR-026) */}
             {modalData?.slip.gamingDay && (
               <DialogDescription>
-                Gaming Day:{' '}
+                Gaming Day:{" "}
                 {new Date(
-                  modalData.slip.gamingDay + 'T00:00:00',
+                  modalData.slip.gamingDay + "T00:00:00",
                 ).toLocaleDateString(undefined, {
-                  weekday: 'short',
-                  month: 'short',
-                  day: 'numeric',
+                  weekday: "short",
+                  month: "short",
+                  day: "numeric",
                 })}
               </DialogDescription>
             )}
@@ -681,8 +684,8 @@ export function RatingSlipModal({
                     <span
                       className={`font-mono font-semibold ${
                         computedNetPosition >= 0
-                          ? 'text-green-600'
-                          : 'text-red-600'
+                          ? "text-green-600"
+                          : "text-red-600"
                       }`}
                     >
                       ${computedNetPosition.toFixed(2)}
@@ -712,15 +715,15 @@ export function RatingSlipModal({
                     aria-label="Refresh points balance"
                   >
                     <RefreshCw
-                      className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
+                      className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
                     />
                   </Button>
                 </div>
               </div>
 
               {/* Session Reward Suggestion (for open and paused slips) */}
-              {(modalData?.slip.status === 'open' ||
-                modalData?.slip.status === 'paused') && (
+              {(modalData?.slip.status === "open" ||
+                modalData?.slip.status === "paused") && (
                 <div className="mt-3 pt-3 border-t border-border">
                   <div className="flex justify-between items-center">
                     <span className="text-sm text-muted-foreground">
@@ -732,17 +735,17 @@ export function RatingSlipModal({
                       )}
                     </span>
                     <span
-                      className={`text-lg font-semibold ${isPaused ? 'text-amber-400' : 'text-green-600'}`}
+                      className={`text-lg font-semibold ${isPaused ? "text-amber-400" : "text-green-600"}`}
                     >
                       {suggestedPoints != null
                         ? `+${suggestedPoints.toLocaleString()} pts`
-                        : '--'}
+                        : "--"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {isPaused
-                      ? 'Accrual paused — resume session to continue earning'
-                      : 'Based on current session activity'}
+                      ? "Accrual paused — resume session to continue earning"
+                      : "Based on current session activity"}
                   </p>
                 </div>
               )}
@@ -750,7 +753,7 @@ export function RatingSlipModal({
               {/* Player Tier (if available) */}
               {modalData?.loyalty?.tier && (
                 <div className="mt-2 text-xs text-muted-foreground">
-                  Tier:{' '}
+                  Tier:{" "}
                   <span className="uppercase font-semibold">
                     {modalData.loyalty.tier}
                   </span>
@@ -768,12 +771,12 @@ export function RatingSlipModal({
               disabled={isPending || !isDirty || !!validationError || isPaused}
             >
               {isPending
-                ? 'Saving...'
+                ? "Saving..."
                 : validationError
-                  ? 'Fix Errors'
+                  ? "Fix Errors"
                   : isDirty
-                    ? 'Save Changes'
-                    : 'No Changes'}
+                    ? "Save Changes"
+                    : "No Changes"}
             </Button>
 
             {/* Pause/Resume Toggle Button */}
@@ -787,7 +790,7 @@ export function RatingSlipModal({
                 aria-label="Pause session - stops loyalty accrual and session timer"
               >
                 {isPauseResumeLoading ? (
-                  'Pausing...'
+                  "Pausing..."
                 ) : (
                   <>
                     <Pause className="h-4 w-4 mr-2" />
@@ -806,7 +809,7 @@ export function RatingSlipModal({
                 aria-label="Resume session - restarts loyalty accrual and session timer"
               >
                 {isPauseResumeLoading ? (
-                  'Resuming...'
+                  "Resuming..."
                 ) : (
                   <>
                     <Play className="h-4 w-4 mr-2" />
@@ -824,7 +827,7 @@ export function RatingSlipModal({
               disabled={isPending || !!error}
             >
               {isPending ? (
-                'Closing...'
+                "Closing..."
               ) : (
                 <>
                   <X className="h-4 w-4 mr-2" />

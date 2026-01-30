@@ -9,7 +9,7 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import type {
   CloseRatingSlipInput,
@@ -17,16 +17,16 @@ import type {
   RatingSlipDTO,
   RatingSlipWithDurationDTO,
   UpdateAverageBetInput,
-} from '@/services/rating-slip/dtos';
+} from "@/services/rating-slip/dtos";
 import {
   closeRatingSlip,
   pauseRatingSlip,
   resumeRatingSlip,
   startRatingSlip,
   updateAverageBet,
-} from '@/services/rating-slip/http';
-import { ratingSlipKeys } from '@/services/rating-slip/keys';
-import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
+} from "@/services/rating-slip/http";
+import { ratingSlipKeys } from "@/services/rating-slip/keys";
+import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
 
 /**
  * Starts a new rating slip for a visit at a gaming table.
@@ -44,12 +44,7 @@ export function useStartRatingSlip() {
     onSuccess: (data: RatingSlipDTO) => {
       // Set detail cache for the new slip
       queryClient.setQueryData(ratingSlipKeys.detail(data.id), data);
-      // Invalidate all list queries
-      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
-      // Invalidate table-specific queries
-      queryClient.invalidateQueries({
-        queryKey: ratingSlipKeys.forTable.scope,
-      });
+      // Invalidate active slips for this table (targeted, not broad .scope)
       queryClient.invalidateQueries({
         queryKey: ratingSlipKeys.activeForTable(data.table_id),
       });
@@ -80,9 +75,7 @@ export function usePauseRatingSlip() {
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(data.id),
       });
-      // Invalidate list queries
-      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
-      // Invalidate active slips for this table
+      // Invalidate active slips for this table (targeted, not broad .scope)
       queryClient.invalidateQueries({
         queryKey: ratingSlipKeys.activeForTable(data.table_id),
       });
@@ -98,7 +91,6 @@ export function usePauseRatingSlip() {
  * Invalidates:
  * - Slip detail (status changed to 'open')
  * - Modal data (for immediate UI update)
- * - All list queries
  * - Active slips for table
  */
 export function useResumeRatingSlip() {
@@ -113,9 +105,7 @@ export function useResumeRatingSlip() {
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(data.id),
       });
-      // Invalidate list queries
-      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
-      // Invalidate active slips for this table
+      // Invalidate active slips for this table (targeted, not broad .scope)
       queryClient.invalidateQueries({
         queryKey: ratingSlipKeys.activeForTable(data.table_id),
       });
@@ -148,9 +138,7 @@ export function useCloseRatingSlip() {
     onSuccess: (data: RatingSlipWithDurationDTO) => {
       // Update detail cache with closed status
       queryClient.setQueryData(ratingSlipKeys.detail(data.id), data);
-      // Invalidate list queries
-      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
-      // Invalidate active slips for this table (slip no longer active)
+      // Invalidate active slips for this table (slip no longer active, targeted)
       queryClient.invalidateQueries({
         queryKey: ratingSlipKeys.activeForTable(data.table_id),
       });
