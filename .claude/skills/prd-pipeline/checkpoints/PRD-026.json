@@ -1,0 +1,54 @@
+{
+  "prd": "PRD-026",
+  "prd_title": "Shift Dashboard v3: Three-Panel Layout & Statistical Model Readiness",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["components/ui/chart.tsx"],
+    "WS2": [
+      "components/shift-dashboard-v3/layout/shift-dashboard-layout.tsx",
+      "components/shift-dashboard-v3/layout/shift-dashboard-header.tsx",
+      "components/shift-dashboard-v3/layout/shift-left-rail.tsx",
+      "components/shift-dashboard-v3/layout/shift-center-panel.tsx",
+      "components/shift-dashboard-v3/layout/shift-right-rail.tsx",
+      "components/shift-dashboard-v3/layout/index.ts"
+    ],
+    "WS3": [
+      "components/shift-dashboard-v3/left-rail/hero-win-loss-compact.tsx",
+      "components/shift-dashboard-v3/left-rail/secondary-kpi-stack.tsx",
+      "components/shift-dashboard-v3/left-rail/quality-summary-card.tsx",
+      "components/shift-dashboard-v3/left-rail/index.ts"
+    ],
+    "WS4": [
+      "components/shift-dashboard-v3/charts/floor-activity-radar.tsx",
+      "components/shift-dashboard-v3/charts/index.ts"
+    ],
+    "WS5": [
+      "components/shift-dashboard-v3/charts/win-loss-trend-chart.tsx"
+    ],
+    "WS6": [
+      "components/shift-dashboard-v3/right-rail/telemetry-rail-panel.tsx",
+      "components/shift-dashboard-v3/right-rail/quality-detail-card.tsx",
+      "components/shift-dashboard-v3/right-rail/rail-collapse-toggle.tsx",
+      "components/shift-dashboard-v3/right-rail/collapsed-icon-strip.tsx",
+      "components/shift-dashboard-v3/right-rail/index.ts"
+    ],
+    "WS7": [
+      "app/review/shift-dashboard-v3/page.tsx",
+      "app/review/shift-dashboard-v3/shift-dashboard-v3.tsx",
+      "components/shift-dashboard-v3/index.ts"
+    ],
+    "WS8": [
+      "components/shift-dashboard-v3/__tests__/shift-dashboard-layout.test.tsx",
+      "components/shift-dashboard-v3/__tests__/floor-activity-radar.test.tsx",
+      "components/shift-dashboard-v3/__tests__/win-loss-trend-chart.test.tsx",
+      "e2e/workflows/shift-dashboard-v3-layout.spec.ts"
+    ]
+  },
+  "gates_passed": ["type-check", "lint", "build", "test-pass"],
+  "gates_pending": [],
+  "timestamp": "2026-01-31T14:00:00Z"
+}
