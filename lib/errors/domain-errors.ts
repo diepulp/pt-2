@@ -273,7 +273,12 @@ export type CasinoErrorCode =
   | 'STAFF_UNAUTHORIZED'
   | 'STAFF_CASINO_MISMATCH'
   | 'STAFF_ROLE_CONSTRAINT_VIOLATION'
-  | 'STAFF_ALREADY_EXISTS';
+  | 'STAFF_ALREADY_EXISTS'
+  // Onboarding (PRD-025)
+  | 'STAFF_ALREADY_BOUND'
+  | 'INVITE_ALREADY_EXISTS'
+  | 'INVITE_NOT_FOUND'
+  | 'INVITE_EXPIRED';
 
 export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   CASINO_NOT_FOUND: 'Casino not found',
@@ -285,6 +290,11 @@ export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   STAFF_ROLE_CONSTRAINT_VIOLATION:
     'Staff role constraint violation: dealer cannot have user_id; pit_boss/admin must have user_id',
   STAFF_ALREADY_EXISTS: 'Staff member already exists',
+  // Onboarding (PRD-025)
+  STAFF_ALREADY_BOUND: 'You already have an active casino.',
+  INVITE_ALREADY_EXISTS: 'An active invite already exists for this email.',
+  INVITE_NOT_FOUND: 'This invite link is invalid.',
+  INVITE_EXPIRED: 'This invite has expired.',
 };
 
 // ============================================================================

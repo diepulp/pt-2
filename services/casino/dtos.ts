@@ -107,6 +107,61 @@ export type UpdateStaffDTO = Partial<
   status?: 'active' | 'inactive';
 };
 
+// === Staff Invite DTOs (PRD-025) ===
+
+type StaffInviteRow = Database['public']['Tables']['staff_invite']['Row'];
+
+/** Staff invite public view (excludes token_hash for security) */
+export type StaffInviteDTO = Pick<
+  StaffInviteRow,
+  | 'id'
+  | 'casino_id'
+  | 'email'
+  | 'staff_role'
+  | 'expires_at'
+  | 'accepted_at'
+  | 'created_at'
+>;
+
+/** Bootstrap casino RPC input */
+export interface BootstrapCasinoInput {
+  casino_name: string;
+  timezone?: string;
+  gaming_day_start?: string;
+}
+
+/** Bootstrap casino RPC result */
+export interface BootstrapCasinoResult {
+  casino_id: string;
+  staff_id: string;
+  staff_role: string;
+}
+
+/** Create staff invite input */
+export interface CreateInviteInput {
+  email: string;
+  role: Database['public']['Enums']['staff_role'];
+}
+
+/** Create staff invite RPC result */
+export interface CreateInviteResult {
+  invite_id: string;
+  raw_token: string;
+  expires_at: string;
+}
+
+/** Accept staff invite input */
+export interface AcceptInviteInput {
+  token: string;
+}
+
+/** Accept staff invite RPC result */
+export interface AcceptInviteResult {
+  staff_id: string;
+  casino_id: string;
+  staff_role: string;
+}
+
 // === Gaming Day DTO ===
 
 /**

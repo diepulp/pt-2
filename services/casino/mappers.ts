@@ -10,7 +10,12 @@
  * @see SPEC-PRD-000-casino-foundation.md section 4.2
  */
 
-import type { CasinoDTO, CasinoSettingsDTO, StaffDTO } from './dtos';
+import type {
+  CasinoDTO,
+  CasinoSettingsDTO,
+  StaffDTO,
+  StaffInviteDTO,
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -157,4 +162,43 @@ export function toStaffDTOOrNull(
   row: StaffSelectedRow | null,
 ): StaffDTO | null {
   return row ? toStaffDTO(row) : null;
+}
+
+// === Staff Invite Mappers ===
+
+/**
+ * Row shape returned by staff_invite SELECT (excluding token_hash).
+ */
+type StaffInviteSelectedRow = {
+  id: string;
+  casino_id: string;
+  email: string;
+  staff_role: 'dealer' | 'pit_boss' | 'cashier' | 'admin';
+  expires_at: string;
+  accepted_at: string | null;
+  created_at: string;
+};
+
+/**
+ * Maps a selected staff_invite row to StaffInviteDTO.
+ */
+export function toStaffInviteDTO(row: StaffInviteSelectedRow): StaffInviteDTO {
+  return {
+    id: row.id,
+    casino_id: row.casino_id,
+    email: row.email,
+    staff_role: row.staff_role,
+    expires_at: row.expires_at,
+    accepted_at: row.accepted_at,
+    created_at: row.created_at,
+  };
+}
+
+/**
+ * Maps an array of staff_invite rows to StaffInviteDTO[].
+ */
+export function toStaffInviteDTOList(
+  rows: StaffInviteSelectedRow[],
+): StaffInviteDTO[] {
+  return rows.map(toStaffInviteDTO);
 }

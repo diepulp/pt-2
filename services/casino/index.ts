@@ -21,14 +21,21 @@ import type { Database } from '@/types/database.types';
 
 import * as crud from './crud';
 import type {
+  AcceptInviteInput,
+  AcceptInviteResult,
+  BootstrapCasinoInput,
+  BootstrapCasinoResult,
   CasinoDTO,
   CasinoListFilters,
   CasinoSettingsDTO,
   CasinoStaffFilters,
   CreateCasinoDTO,
+  CreateInviteInput,
+  CreateInviteResult,
   CreateStaffDTO,
   GamingDayDTO,
   StaffDTO,
+  StaffInviteDTO,
   UpdateCasinoDTO,
   UpdateCasinoSettingsDTO,
   UpdateStaffDTO,
@@ -120,6 +127,20 @@ export interface CasinoServiceInterface {
    */
   updateStaff(staffId: string, input: UpdateStaffDTO): Promise<StaffDTO>;
 
+  // === Onboarding (PRD-025) ===
+
+  /** Bootstrap a new casino tenant — atomic casino + settings + admin staff */
+  bootstrapCasino(input: BootstrapCasinoInput): Promise<BootstrapCasinoResult>;
+
+  /** Create a staff invite (admin-only) */
+  createStaffInvite(input: CreateInviteInput): Promise<CreateInviteResult>;
+
+  /** Accept a staff invite — creates staff binding */
+  acceptStaffInvite(input: AcceptInviteInput): Promise<AcceptInviteResult>;
+
+  /** List staff invites for the current casino (admin-only) */
+  listStaffInvites(): Promise<StaffInviteDTO[]>;
+
   // === Gaming Day ===
 
   /**
@@ -172,6 +193,16 @@ export function createCasinoService(
 
     updateStaff: (staffId, input) => crud.updateStaff(supabase, staffId, input),
 
+    // === Onboarding (PRD-025) ===
+
+    bootstrapCasino: (input) => crud.bootstrapCasino(supabase, input),
+
+    createStaffInvite: (input) => crud.createStaffInvite(supabase, input),
+
+    acceptStaffInvite: (input) => crud.acceptStaffInvite(supabase, input),
+
+    listStaffInvites: () => crud.listStaffInvites(supabase),
+
     // === Gaming Day (business logic, not pure CRUD) ===
 
     async computeGamingDay(casinoId, timestamp) {
@@ -209,8 +240,11 @@ export function createCasinoService(
 
 // Re-export CRUD functions for direct use in server actions
 export {
+  acceptStaffInvite,
+  bootstrapCasino,
   createCasino,
   createStaff,
+  createStaffInvite,
   deleteCasino,
   enrollPlayer,
   getCasinoById,
@@ -218,6 +252,7 @@ export {
   getStaffById,
   listCasinos,
   listStaff,
+  listStaffInvites,
   updateCasino,
   updateCasinoSettings,
   updateStaff,
