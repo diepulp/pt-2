@@ -5,23 +5,25 @@
  * Shares structure with main dashboard layout.
  */
 
+import { redirect } from 'next/navigation';
+
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
+import { createClient } from '@/lib/supabase/server';
 
 export default async function ProtectedLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  // TODO: Add authentication check
-  // const supabase = await createClient();
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser();
-  //
-  // if (!user) {
-  //   redirect("/auth/login");
-  // }
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/auth/login');
+  }
 
   // Main sidebar collapsed width: 56px (3.5rem / w-14)
   // Header height: 64px (4rem / h-16)

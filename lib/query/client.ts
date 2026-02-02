@@ -1,5 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
 
+import { isAuthError } from '@/lib/errors/error-utils';
+
 /**
  * Domain-Tiered Stale Times
  *
@@ -89,8 +91,11 @@ export function makeQueryClient(): QueryClient {
         // Keep unused data in cache for 30 minutes
         gcTime: 30 * 60 * 1000,
 
-        // Retry failed queries twice
-        retry: 2,
+        // Retry failed queries twice, but never retry auth errors (401)
+        retry: (failureCount, error) => {
+          if (isAuthError(error)) return false;
+          return failureCount < 2;
+        },
 
         // Don't refetch on window focus (prevents unexpected refetches)
         refetchOnWindowFocus: false,

@@ -14,7 +14,7 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-"use client";
+'use client';
 
 import {
   ChevronDown,
@@ -22,8 +22,8 @@ import {
   MessageSquare,
   Shield,
   Tag,
-} from "lucide-react";
-import * as React from "react";
+} from 'lucide-react';
+import * as React from 'react';
 
 import {
   ActivityChart,
@@ -40,29 +40,35 @@ import {
   SummaryBand,
   TimeLensControl,
   usePlayer360Layout,
-} from "@/components/player-360";
+} from '@/components/player-360';
+import {
+  CompliancePanel,
+  type CtrStatus,
+} from '@/components/player-360/compliance/panel';
 import {
   GroupedTimeline,
   toCollapsedCard,
-} from "@/components/player-360/timeline";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from '@/components/player-360/timeline';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from '@/components/ui/collapsible';
+import { useGamingDay } from '@/hooks/casino';
+import { useGamingDaySummary } from '@/hooks/mtl';
 import {
   usePlayerSummary,
   usePlayerWeeklySeries,
+  useRecentEvents,
   useTimelineFilter,
   type SourceCategory,
-} from "@/hooks/player-360";
-import { useInfinitePlayerTimeline } from "@/hooks/player-timeline";
-import type { InteractionEventType } from "@/services/player-timeline/dtos";
-import type {
-  RecentEventsDTO,
-  RewardHistoryItemDTO,
-} from "@/services/player360-dashboard/dtos";
+} from '@/hooks/player-360';
+import { useInfinitePlayerTimeline } from '@/hooks/player-timeline';
+import { useAuth } from '@/hooks/use-auth';
+import type { InteractionEventType } from '@/services/player-timeline/dtos';
+import type { RewardHistoryItemDTO } from '@/services/player360-dashboard/dtos';
+import { getCurrentGamingDay } from '@/services/player360-dashboard/mappers';
 
 // === Types ===
 
@@ -74,24 +80,24 @@ interface TimelinePageContentProps {
 
 const CATEGORY_EVENT_TYPE_MAP: Record<SourceCategory, InteractionEventType[]> =
   {
-    session: ["visit_start", "visit_end", "visit_resume"],
-    gaming: ["rating_start", "rating_pause", "rating_resume", "rating_close"],
+    session: ['visit_start', 'visit_end', 'visit_resume'],
+    gaming: ['rating_start', 'rating_pause', 'rating_resume', 'rating_close'],
     financial: [
-      "cash_in",
-      "cash_out",
-      "cash_observation",
-      "financial_adjustment",
+      'cash_in',
+      'cash_out',
+      'cash_observation',
+      'financial_adjustment',
     ],
     loyalty: [
-      "points_earned",
-      "points_redeemed",
-      "points_adjusted",
-      "promo_issued",
-      "promo_redeemed",
+      'points_earned',
+      'points_redeemed',
+      'points_adjusted',
+      'promo_issued',
+      'promo_redeemed',
     ],
-    staff: ["note_added", "tag_applied", "tag_removed"],
-    compliance: ["mtl_recorded"],
-    identity: ["player_enrolled", "identity_verified"],
+    staff: ['note_added', 'tag_applied', 'tag_removed'],
+    compliance: ['mtl_recorded'],
+    identity: ['player_enrolled', 'identity_verified'],
   };
 
 // === Main Content Component ===
@@ -109,6 +115,10 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
     return CATEGORY_EVENT_TYPE_MAP[activeCategory] ?? undefined;
   }, [activeCategory]);
 
+  // Compute casino-aware gaming day (falls back to UTC calendar date while loading)
+  const { data: gamingDayData } = useGamingDay();
+  const gamingDay = gamingDayData?.gaming_day ?? getCurrentGamingDay();
+
   // Chart collapsed state
   const [isChartCollapsed, setIsChartCollapsed] = React.useState(false);
 
@@ -120,7 +130,7 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
     data: summaryData,
     isLoading: isSummaryLoading,
     error: summaryError,
-  } = usePlayerSummary(playerId);
+  } = usePlayerSummary(playerId, { gamingDay });
 
   // Fetch weekly series for chart
   const { data: weeklyData, isLoading: isWeeklyLoading } =
@@ -132,6 +142,7 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
     isLoading,
     isError,
     error,
+    refetch,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -164,27 +175,41 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
 
   // Handle rewards card "show related events"
   const handleShowLoyaltyEvents = React.useCallback(() => {
-    setCategory("loyalty");
-    timelineRef.current?.scrollIntoView({ behavior: "smooth" });
+    setCategory('loyalty');
+    timelineRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [setCategory]);
 
-  // Mock recent events data (would come from hook in production)
-  const mockRecentEvents: RecentEventsDTO = React.useMemo(
-    () => ({
-      lastBuyIn: summaryData?.cashVelocity.lastBuyInAt
-        ? {
-            at: summaryData.cashVelocity.lastBuyInAt,
-            amount: summaryData.cashVelocity.sessionTotal,
-          }
-        : null,
-      lastReward:
-        summaryData?.rewardsEligibility.status === "available"
-          ? null
-          : { at: new Date().toISOString(), type: "Matchplay" },
-      lastNote: null,
-    }),
-    [summaryData],
-  );
+  // === WS4: Recent Events Hook ===
+  const { data: recentEventsData } = useRecentEvents(playerId);
+  const recentEvents = recentEventsData ?? {
+    lastBuyIn: null,
+    lastReward: null,
+    lastNote: null,
+  };
+
+  // === WS2: Compliance Panel Hooks ===
+  const { casinoId } = useAuth();
+  const { data: complianceData, isLoading: isComplianceLoading } =
+    useGamingDaySummary({
+      casinoId: casinoId ?? '',
+      gamingDay: summaryData?.gamingDay ?? gamingDay,
+      patronId: playerId,
+    });
+
+  // Transform compliance data to panel props
+  const ctrStatus: CtrStatus | null = React.useMemo(() => {
+    if (!complianceData?.items?.[0]) return null;
+    const item = complianceData.items[0];
+    return {
+      todayTotal: (item.total_in ?? 0) + (item.total_out ?? 0),
+      threshold: 10000,
+      isTriggered:
+        item.agg_badge_in === 'agg_ctr_met' ||
+        item.agg_badge_out === 'agg_ctr_met',
+      isFiled: false, // CTR filing status not tracked yet
+      gamingDay: item.gaming_day,
+    };
+  }, [complianceData]);
 
   // Mock rewards history (would come from hook in production)
   const mockRewardsHistory: RewardHistoryItemDTO[] = [];
@@ -249,9 +274,9 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
           <div className="mt-auto">
             <JumpToNav
               targets={[
-                { id: "summary", label: "Summary" },
-                { id: "chart", label: "Activity Chart" },
-                { id: "timeline", label: "Timeline" },
+                { id: 'summary', label: 'Summary' },
+                { id: 'chart', label: 'Activity Chart' },
+                { id: 'timeline', label: 'Timeline' },
               ]}
             />
           </div>
@@ -307,7 +332,7 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
                       Activity
                     </CardTitle>
                     <ChevronDown
-                      className={`w-4 h-4 transition-transform ${isChartCollapsed ? "" : "rotate-180"}`}
+                      className={`w-4 h-4 transition-transform ${isChartCollapsed ? '' : 'rotate-180'}`}
                     />
                   </CollapsibleTrigger>
                 </CardHeader>
@@ -323,7 +348,7 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
                           // TODO: Implement date range filtering using weekStart
                           // For now, scroll to timeline section
                           timelineRef.current?.scrollIntoView({
-                            behavior: "smooth",
+                            behavior: 'smooth',
                           });
                         }}
                       />
@@ -336,13 +361,13 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
 
           {/* Recent Events Strip */}
           <RecentEventsStrip
-            data={mockRecentEvents}
+            data={recentEvents}
             onEventClick={(type) => {
               // Scroll to timeline and filter by type
-              if (type === "buyIn") setCategory("financial");
-              if (type === "reward") setCategory("loyalty");
-              if (type === "note") setCategory("staff");
-              timelineRef.current?.scrollIntoView({ behavior: "smooth" });
+              if (type === 'buyIn') setCategory('financial');
+              if (type === 'reward') setCategory('loyalty');
+              if (type === 'note') setCategory('staff');
+              timelineRef.current?.scrollIntoView({ behavior: 'smooth' });
             }}
           />
 
@@ -356,7 +381,9 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
               hasNextPage={hasNextPage ?? false}
               isFetchingNextPage={isFetchingNextPage}
               onFetchNextPage={fetchNextPage}
-              onRetry={() => window.location.reload()}
+              onRetry={() => {
+                void refetch();
+              }}
               activeCategory={activeCategory}
               onCategoryChange={handleCategoryChange}
               onEventClick={(_event) => {
@@ -373,22 +400,22 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
         {/* Tab Switcher */}
         <div className="flex border-b border-border/40">
           <button
-            onClick={() => setActiveRightTab("collaboration")}
+            onClick={() => setActiveRightTab('collaboration')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeRightTab === "collaboration"
-                ? "text-foreground border-b-2 border-accent"
-                : "text-muted-foreground hover:text-foreground"
+              activeRightTab === 'collaboration'
+                ? 'text-foreground border-b-2 border-accent'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <MessageSquare className="w-4 h-4 inline-block mr-1.5" />
             Notes
           </button>
           <button
-            onClick={() => setActiveRightTab("compliance")}
+            onClick={() => setActiveRightTab('compliance')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeRightTab === "compliance"
-                ? "text-foreground border-b-2 border-accent"
-                : "text-muted-foreground hover:text-foreground"
+              activeRightTab === 'compliance'
+                ? 'text-foreground border-b-2 border-accent'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             <Shield className="w-4 h-4 inline-block mr-1.5" />
@@ -398,8 +425,14 @@ export function TimelinePageContent({ playerId }: TimelinePageContentProps) {
 
         {/* Panel Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          {activeRightTab === "collaboration" && <CollaborationPlaceholder />}
-          {activeRightTab === "compliance" && <CompliancePlaceholder />}
+          {activeRightTab === 'collaboration' && <CollaborationPlaceholder />}
+          {activeRightTab === 'compliance' && (
+            <CompliancePanel
+              ctrStatus={ctrStatus}
+              mtlEntries={[]}
+              isLoading={isComplianceLoading}
+            />
+          )}
         </div>
       </Player360RightRail>
     </>
@@ -432,24 +465,6 @@ function CollaborationPlaceholder() {
         <div className="text-center py-8 text-muted-foreground">
           <Tag className="h-8 w-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">Tags will appear here</p>
-          <p className="text-xs mt-1">Coming in Phase 4</p>
-        </div>
-      </PanelContent>
-    </div>
-  );
-}
-
-function CompliancePlaceholder() {
-  return (
-    <div className="space-y-4">
-      <PanelHeader
-        icon={<Shield className="h-4 w-4 text-accent" />}
-        title="Compliance Status"
-      />
-      <PanelContent padding={false}>
-        <div className="text-center py-8 text-muted-foreground">
-          <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-sm">CTR & MTL data will appear here</p>
           <p className="text-xs mt-1">Coming in Phase 4</p>
         </div>
       </PanelContent>

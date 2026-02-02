@@ -233,6 +233,19 @@ export function isDomainError(error: unknown): error is DomainError {
 }
 
 /**
+ * Check if error is an authentication error (401 / UNAUTHORIZED).
+ */
+export function isAuthError(error: unknown): boolean {
+  if (error instanceof FetchError) {
+    return error.status === 401 || error.code === 'UNAUTHORIZED';
+  }
+  if (error instanceof DomainError) {
+    return error.httpStatus === 401 || error.code === 'UNAUTHORIZED';
+  }
+  return false;
+}
+
+/**
  * Check if error is a validation error.
  */
 export function isValidationError(error: unknown): boolean {
