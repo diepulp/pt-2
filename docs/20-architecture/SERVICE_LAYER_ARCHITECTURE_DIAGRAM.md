@@ -1,23 +1,23 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v3.2.0)
+title: Service Layer Architecture Diagram (v3.3.0)
 owner: Architecture
 status: Accepted
-last_review: 2026-01-17
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014, ADR-015, ADR-028]
+last_review: 2026-02-02
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015, ADR-028, ADR-029, ADR-030, ADR-031, ADR-032]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 3.2.0
-**Date**: 2026-01-17
-**Status**: Accepted (Aligned with SRM v4.10.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028)
+**Version**: 3.3.0
+**Date**: 2026-02-02
+**Status**: Accepted (Aligned with SRM v4.11.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
 
 **Canonical References** (SDLC Taxonomy Peers):
-- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.3.0)
+- **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.11.0)
 - **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
 - **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
 - **RLS Pooling**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (JWT claims, Pattern C hybrid)
@@ -28,6 +28,8 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-013, ADR-014, ADR-015, ADR-028
 - **Observability**: `docs/50-ops/OBSERVABILITY_SPEC.md` (Correlation/audit patterns)
 - **API Contracts**: `docs/25-api-data/API_SURFACE_MVP.md` (ServiceHttpResult envelope)
 - **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
+- **Error Boundaries**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md` (Render-layer error handling, extends ADR-012)
+- **Auth Hardening**: `docs/80-adrs/ADR-030-auth-system-hardening.md` (TOCTOU elimination, claims lifecycle)
 - **Event Catalog**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md` (Event contracts)
 - **Temporal Patterns**: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` (Gaming day authority)
 
@@ -773,6 +775,8 @@ export async function executeOperation<T>(
 >
 > Error mapping (PostgreSQL → Domain codes → HTTP status) is fully documented in ERROR_TAXONOMY_AND_RESILIENCE.md.
 > Implementation: `lib/server-actions/error-map.ts`
+>
+> **Render-Layer Errors**: React rendering errors (null dereferences, malformed data, browser API failures) are caught by error boundaries per `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`. Three-tier hierarchy: route-level `error.tsx` → `PanelErrorBoundary` → `QueryErrorResetBoundary`.
 
 ---
 
@@ -1528,12 +1532,20 @@ This pattern ensures:
 
 ## Document History
 
-**Version**: 3.2.0
-**Date**: 2026-01-17
-**Status**: Accepted (Aligned with SRM v4.10.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028)
+**Version**: 3.3.0
+**Date**: 2026-02-02
+**Status**: Accepted (Aligned with SRM v4.11.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.3.0 (2026-02-02)** - Staleness Sync (ADR-029 through ADR-032):
+- ✅ Fixed SRM version inconsistency: canonical reference updated from v4.3.0 to v4.11.0
+- ✅ Added ADR-029, ADR-030, ADR-031, ADR-032 to affects list
+- ✅ Added ADR-032 (Frontend Error Boundary Architecture) to canonical references
+- ✅ Added ADR-030 (Auth System Hardening) to canonical references
+- ✅ Added render-layer error note to Error Mapping Strategy section
+- ✅ Updated alignment status table
 
 **v3.2.0 (2026-01-17)** - ADR-028 Table Status Standardization:
 - ✅ Added `labels.ts` to service directory structure (§337-340)
@@ -1632,14 +1644,18 @@ This pattern ensures:
 
 | SDLC Peer | Status | Notes |
 |-----------|--------|-------|
-| SRM v4.10.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, ADR-028 labels.ts |
+| SRM v4.11.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, ADR-029 timeline |
 | DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Quick reference table, detailed patterns externalized |
 | SEC-001 | ✅ ALIGNED | RLS patterns externalized, key principles retained |
 | ADR-015 | ✅ ALIGNED | JWT claims Phase 2, hybrid Pattern C, connection pooling |
 | ADR-028 | ✅ ALIGNED | Table Status Standardization, labels.ts pattern |
+| ADR-029 | ✅ ALIGNED | Player 360° Dashboard Event Taxonomy |
+| ADR-030 | ✅ ALIGNED | Auth System Hardening — canonical reference added |
+| ADR-031 | ✅ ALIGNED | Financial Amount Convention — affects list |
+| ADR-032 | ✅ ALIGNED | Frontend Error Boundary Architecture — canonical reference + error mapping note |
 | EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
-| ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized |
+| ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized, render-layer note added |
 | REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |
-| ADR-003, ADR-004, ADR-008, ADR-014 | ✅ ALIGNED | Referenced throughout |
+| ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014 | ✅ ALIGNED | Referenced throughout |
 
 **Next Review**: When SRM or security contracts evolve

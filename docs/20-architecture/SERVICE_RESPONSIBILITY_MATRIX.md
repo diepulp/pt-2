@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.11.0
+nsversion: 4.11.1
 status: CANONICAL
-effective: 2026-01-21
+effective: 2026-02-02
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -11,11 +11,14 @@ source_of_truth:
   - docs/30-security/SEC-002-casino-scoped-security-model.md
   - docs/25-api-data/DTO_CANONICAL_STANDARD.md
   - docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md
+  - docs/70-governance/ERROR_HANDLING_STANDARD.md
   - docs/20-architecture/EDGE_TRANSPORT_POLICY.md
   - docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md
   - docs/80-adrs/ADR-017-cashier-role-implementation.md
   - docs/80-adrs/ADR-018-security-definer-governance.md
   - docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md
+  - docs/80-adrs/ADR-030-auth-system-hardening.md
+  - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
   - docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md
@@ -24,8 +27,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.11.0 (ADR-029 Player 360° Dashboard Event Taxonomy)
-> **Date**: 2026-01-21
+> **Version**: 4.11.1 (Cross-reference sync — ADR-030, ADR-031, ADR-032)
+> **Date**: 2026-02-02
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -49,6 +52,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.11.1 (2026-02-02)** – **Cross-reference sync (ADR-030, ADR-031, ADR-032)**: Added ADR-030 (Auth System Hardening), ADR-032 (Frontend Error Boundary Architecture) to source_of_truth. Added ADR-030, ADR-031, ADR-032 to Related Documents table. Added ERROR_HANDLING_STANDARD.md to source_of_truth references. No schema or ownership changes.
 - **4.11.0 (2026-01-21)** – **ADR-029 Player 360° Dashboard Event Taxonomy**: Added PlayerTimelineService (planned) for unified player interaction timeline. New tables planned: `player_note`, `player_tag`. New enum: `interaction_event_type`. New RPC: `rpc_get_player_timeline`. Cross-context timeline reads all service tables via UNION ALL view. See `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` and `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`.
 - **4.10.0 (2026-01-17)** – **ADR-028 Table Status Standardization**: Added `labels.ts` pattern to TableContextService for centralized UI label/color constants. Documented `TableAvailability` and `SessionPhase` type aliases. Added `drop_posted_at` column to `table_session` for count posting status. RPC availability gate added to `rpc_open_table_session`. See `docs/80-adrs/ADR-028-table-status-standardization.md`.
 - **4.9.0 (2025-12-25)** – **ADR-023 Multi-Tenancy Formalization**: Official tenancy stance declared: Pool Primary; Silo Optional. Added SEC-002 and ADR-023 to source_of_truth. SEC-001/SEC-002 updated with tenancy cross-references. See `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md`.
@@ -703,6 +707,9 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md` | Player identity implementation |
 | `docs/20-architecture/specs/ADR-022/DOD-022.md` | Player identity DoD gates |
 | `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` | Player 360° event taxonomy |
+| `docs/80-adrs/ADR-030-auth-system-hardening.md` | Auth pipeline hardening — TOCTOU elimination, claims lifecycle |
+| `docs/80-adrs/ADR-031-financial-amount-convention.md` | Financial amount convention (cents storage, dollars at boundary) |
+| `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md` | Frontend error boundary three-tier hierarchy (extends ADR-012) |
 | `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md` | Event taxonomy quick reference |
 
 ---
@@ -721,8 +728,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.11.0
+**Document Version**: 4.11.1
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-01-21 (ADR-029 — Player 360° Dashboard Event Taxonomy)
+**Updated**: 2026-02-02 (Cross-reference sync — ADR-030, ADR-031, ADR-032)
 **Status**: CANONICAL - Registry + Invariants Only

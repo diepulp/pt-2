@@ -1,8 +1,8 @@
 # Error Taxonomy & Resilience Framework
 
-**Status**: MANDATORY (Enforced at edge layer)
-**Effective**: 2025-11-09
-**Purpose**: Prevent Postgres errors from leaking to UI, implement retry policies, and protect hot paths with rate limiting
+**Status**: MANDATORY (Enforced at edge layer and render layer)
+**Effective**: 2025-11-09 (updated 2026-02-02)
+**Purpose**: Prevent Postgres errors from leaking to UI, implement retry policies, protect hot paths with rate limiting, and handle render-layer errors via error boundaries
 
 ---
 
@@ -658,6 +658,31 @@ catch (error) {
 
 ---
 
+## 5. Render-Layer Error Handling (ADR-032)
+
+Errors that escape the `ServiceResult<T>` pipeline and occur during React rendering are a distinct error class not covered by the service/transport/client layers above. These include:
+
+| Error Type | Example | Without Boundaries |
+|------------|---------|-------------------|
+| Null dereference in render | `player.name` when `player` is `undefined` | White screen |
+| Malformed data in JSX | Array method on non-array query result | White screen |
+| Browser API failure | `navigator.clipboard.writeText` throws | Unhandled rejection |
+| Zustand selector crash | Store shape changes, selector throws | White screen |
+| Component lifecycle error | `useEffect` cleanup throws | White screen |
+
+**Solution**: Three-tier React Error Boundary hierarchy (ADR-032):
+
+1. **Tier 1 — `error.tsx`** (route segment): Last-resort full-page recovery
+2. **Tier 2 — `PanelErrorBoundary`** (layout panels): Per-panel isolation with inline retry
+3. **Tier 3 — `QueryErrorResetBoundary`** (data subtrees): TanStack Query integration for failed query retry
+
+**Key constraint**: Error boundaries use the same `logError()`, `getErrorMessage()`, `isRetryableError()`, and `isAuthError()` utilities defined in `lib/errors/error-utils.ts`. No parallel utility creation.
+
+**ADR**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`
+**Components**: `components/error-boundary/error-state.tsx`, `components/error-boundary/panel-error-boundary.tsx`
+
+---
+
 ## References
 
 - **Domain Errors**: `lib/errors/domain-errors.ts`
@@ -666,9 +691,12 @@ catch (error) {
 - **Rate Limiter**: `lib/errors/rate-limiter.ts`
 - **Server Action Wrapper**: `lib/server-actions/with-server-action-wrapper.ts`
 - **SRM Error Taxonomy**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
+- **Error Handling Standard**: `docs/70-governance/ERROR_HANDLING_STANDARD.md`
+- **Error Boundary ADR**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`
+- **Error Handling Layers ADR**: `docs/80-adrs/ADR-012-error-handling-layers.md`
 
 ---
 
-**Effective Date**: 2025-11-09
-**Enforcement**: Mandatory for all edge layer operations
+**Effective Date**: 2025-11-09 (render-layer section added 2026-02-02)
+**Enforcement**: Mandatory for all edge layer and render layer operations
 **Migration**: Existing services must adopt domain errors in Sprint 2

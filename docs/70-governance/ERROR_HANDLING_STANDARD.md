@@ -1,8 +1,9 @@
 # Error Handling Standard
 
 > **Status:** Active
-> **Last Updated:** 2025-12-20
+> **Last Updated:** 2026-02-02
 > **Category:** GOV (Governance)
+> **Extends:** ADR-012 (Error Handling Layers), ADR-032 (Frontend Error Boundary Architecture)
 
 ## Overview
 
@@ -181,9 +182,54 @@ To migrate existing components:
 
 4. **Remove local formatValidationError functions** - use the centralized one.
 
+## React Error Boundaries (ADR-032)
+
+Errors that occur **during React rendering** — outside the `ServiceResult<T>` pipeline — are caught by a three-tier error boundary hierarchy. Error boundaries use the **same utilities** defined above (`logError()`, `getErrorMessage()`, `isRetryableError()`, `isAuthError()`).
+
+### Three-Tier Hierarchy
+
+| Tier | Mechanism | Scope | Recovery |
+|------|-----------|-------|----------|
+| 1 | Next.js `error.tsx` | Entire route segment | `reset()` re-renders segment |
+| 2 | `PanelErrorBoundary` | Individual layout panel | Reset panel + invalidate queries |
+| 3 | `QueryErrorResetBoundary` | Query-dependent subtree | Retry failed queries |
+
+### Error Types Caught
+
+- Null dereferences in render (`player.name` when `player` is `undefined`)
+- Malformed data in JSX (array method on non-array query result)
+- Browser API failures (`NotAllowedError` from clipboard, etc.)
+- Zustand selector crashes (store shape changes)
+- Component lifecycle errors (`useEffect` cleanup throws)
+
+### Invariants (ADR-032)
+
+- **INV-032-1**: Error boundaries MUST NOT use raw `console.error()`. Use `logError()` only.
+- **INV-032-2**: Error boundaries MUST NOT swallow errors silently. Every caught error produces a `logError()` call and a visible UI state change.
+- **INV-032-3**: `isAuthError(error)` MUST trigger navigation to login, not an error UI.
+
+### Standard Pattern
+
+```typescript
+// In PanelErrorBoundary.componentDidCatch:
+logError(error, {
+  component: `PanelErrorBoundary:${panelName}`,
+  action: 'render-error',
+  metadata: {
+    digest: error.digest,
+    componentStack: errorInfo?.componentStack?.slice(0, 500),
+  },
+});
+```
+
+**Components**: `components/error-boundary/error-state.tsx`, `components/error-boundary/panel-error-boundary.tsx`
+**ADR**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`
+
 ## Related Documents
 
-- `docs/20-architecture/specs/ERROR_TAXONOMY_AND_RESILIENCE.md` - Error classification
+- `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md` - Error boundary architecture (extends ADR-012)
+- `docs/80-adrs/ADR-012-error-handling-layers.md` - Error handling layers (DomainError vs ServiceResult)
+- `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` - Error classification
 - `lib/errors/domain-errors.ts` - Domain error codes and messages
 - `lib/http/fetch-json.ts` - FetchError class definition
 - `lib/errors/retry-policy.ts` - Retry logic for transient failures
@@ -207,4 +253,5 @@ All components migrated to use standardized error handling:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.1 | 2026-02-02 | Added React Error Boundaries section (ADR-032), updated Related Documents |
 | 1.0 | 2025-12-20 | Initial standard created |

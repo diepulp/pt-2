@@ -1,10 +1,10 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2025-12-12
-**Taxonomy Version**: 1.2 (SEC-006 RLS Hardening)
+**Last Updated**: 2026-02-02
+**Taxonomy Version**: 1.3 (ADR-032 Error Boundaries, ADR-031 Financial Convention, ADR-030 Auth Hardening)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
-**SRM Status**: v4.4.0 (SEC-006 RLS Hardening, ADR-018 Governance)
+**SRM Status**: v4.11.0 (ADR-029 Player 360° Dashboard Event Taxonomy)
 **Purpose**: Navigation hub and document registry for PT-2 architecture documentation
 
 ---
@@ -68,6 +68,11 @@
 |----|-------|--------|----------|
 | PRD-001 | Player Management System Requirements | Active | `10-prd/PRD-001_Player_Management_System_Requirements.md` |
 | PRD-011 | Route Handler Test Coverage Initiative | Draft | `10-prd/PRD-011-route-handler-test-coverage.md` |
+| PRD-022 | Player 360 Navigation Consolidation | Draft | `10-prd/PRD-022-player-360-navigation-consolidation.md` |
+| PRD-023 | Player 360 Panels v0 | Draft | `10-prd/PRD-023-player-360-panels-v0.md` |
+| PRD-024 | Landing Page Overhaul + Start Gateway | Draft | `10-prd/PRD-024-landing-page-start-gateway-v0.md` |
+| PRD-025 | Onboarding v0.1: Tenant Bootstrap & Invites | Proposed | `10-prd/PRD-025-onboarding-bootstrap-invites-v0.md` |
+| PRD-026 | Shift Dashboard v3: Three-Panel Layout | Draft | `10-prd/PRD-026-shift-dashboard-three-panel-layout-v0.md` |
 
 **Purpose**: User stories, acceptance criteria, release goals
 
@@ -83,7 +88,7 @@
 | ID | Title | Status | Location |
 |----|-------|--------|----------|
 | ARCH-001 | Service Responsibility Matrix (compressed) | Active | `20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` |
-| ARCH-002 | Service Layer Architecture Diagram v2.1.2 | Accepted | `20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
+| ARCH-002 | Service Layer Architecture Diagram v3.3.0 | Accepted | `20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | ARCH-003 | SRM Mapping Table | Active | `20-architecture/SRM_MAPPING_TABLE.md` |
 | ARCH-004 | Balanced Architecture Quick Reference | Active | `20-architecture/BALANCED_ARCHITECTURE_QUICK.md` |
 | TEMP-001 | Gaming Day Specification | Active | `20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` |
@@ -262,6 +267,8 @@
 | GOV-004 | DTO Canonical Standard | Accepted | `70-governance/DTO_CANONICAL_STANDARD.md` |
 | GOV-005 | Frontend Canonical Standard | Accepted | `70-governance/FRONT_END_CANONICAL_STANDARD.md` |
 | GOV-006 | Server Actions Architecture v1.2 | Accepted | `70-governance/SERVER_ACTIONS_ARCHITECTURE.md` |
+| GOV-007 | Error Handling Standard | Active | `70-governance/ERROR_HANDLING_STANDARD.md` |
+| GOV-008 | Error Taxonomy & Resilience | Active | `70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` |
 | GOV-PAT-001 | Service Factory Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md` |
 | GOV-PAT-002 | Mapper Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md` |
 
@@ -298,7 +305,14 @@
 | ADR-020 | RLS Track A Hybrid Strategy | Implemented | 2025-12-15 | - |
 | ADR-023 | Multi-Tenancy Storage Model | Accepted | 2025-12-25 | - |
 | ADR-024 | Context Self-Injection Remediation | Implemented | 2025-12-29 | - |
+| ADR-025 | MTL Authorization Model | Accepted | 2026-01-02 | - |
+| ADR-026 | Gaming-Day-Scoped Visits | Accepted | 2026-01-16 | - |
+| ADR-027 | Table Bank Mode Dual Policy | Accepted | 2026-01-16 | - |
+| ADR-028 | Table Status Standardization | Proposed | 2026-01-16 | - |
+| ADR-029 | Player 360° Interaction Event Taxonomy | Proposed | 2026-01-21 | - |
 | ADR-030 | Auth System Hardening | Accepted | 2026-01-29 | - |
+| ADR-031 | Financial Amount Convention (Cents/Dollars) | Proposed | 2026-02-02 | - |
+| ADR-032 | Frontend Error Boundary Architecture | Proposed | 2026-02-02 | Extends ADR-012 |
 
 **Location**: `80-adrs/`
 
@@ -386,37 +400,36 @@
 
 ---
 
-## 📝 Recent Changes (2025-12-12)
+## Recent Changes (2026-02-02)
 
-### SEC-006 RLS Hardening & ADR-018 Governance ✅
+### Canonical Docs Staleness Sync (ADR-030, ADR-031, ADR-032)
+
+**What Changed**:
+- ✅ SRM status synced from v4.4.0 to v4.11.0 (was 49 days behind)
+- ✅ ADR registry updated: ADR-025 through ADR-032 added (8 missing entries)
+- ✅ PRD registry updated: PRD-022 through PRD-026 added (5 missing entries)
+- ✅ GOV registry updated: ERROR_HANDLING_STANDARD and ERROR_TAXONOMY added
+- ✅ SLAD version reference updated from v2.1.2 to v3.3.0
+- ✅ ERROR_HANDLING_STANDARD.md updated with ADR-032 React error boundary patterns
+- ✅ ERROR_TAXONOMY_AND_RESILIENCE.md updated with render-layer error section
+- ✅ SLAD updated to v3.3.0 with ADR-029 through ADR-032 references
+- ✅ SRM source_of_truth updated with ADR-030, ADR-032 references
+
+**Key Additions**:
+- ADR-030: Auth System Hardening — TOCTOU elimination, claims lifecycle, bypass lockdown
+- ADR-031: Financial Amount Convention — cents storage, dollars at boundary
+- ADR-032: Frontend Error Boundary Architecture — three-tier hierarchy extending ADR-012
+
+### Previous: SEC-006 RLS Hardening & ADR-018 Governance (2025-12-12)
 
 **What Changed**:
 - ✅ SEC-006 RLS audit complete - FloorLayoutService full RLS coverage (5 tables)
 - ✅ ADR-018 created - SECURITY DEFINER function governance (Template 5)
-- ✅ 7 SECURITY DEFINER RPCs hardened with context validation
-- ✅ Append-only denial policies added to 4 ledger tables
-- ✅ SEC-001 updated to v1.3.0 with Template 5 (mandatory) and Template 6 (subquery)
 - ✅ SRM updated to v4.4.0 with SEC-006 references
-- ✅ SECURITY_TENANCY_UPGRADE.md updated with Templates 5 & 6
-- ✅ ADR registry updated with ADR-015, ADR-017, ADR-018
-
-**Security Improvements**:
-- SECURITY DEFINER functions now validate `p_casino_id` against authenticated context
-- FloorLayoutService tables use Pattern C (hybrid) with subquery pattern for derived tables
-- Ledger tables (`loyalty_ledger`, `mtl_entry`, `*_outbox`) have explicit denial policies
-
-**Migration**: `supabase/migrations/20251212080915_sec006_rls_hardening.sql`
-
-### Previous: INDEX.md Refactored to Registry-Only (2025-11-20)
-
-**What Changed**:
-- ✅ Removed project status sections (Phase Completion, Service Layer Status)
-- ✅ Fixed broken file path references to match current taxonomy structure
-- ✅ Clarified purpose: Navigation hub and document registry only
 
 ---
 
-**Index Version**: 2.3.0 (SEC-006 RLS Hardening)
-**Last Updated**: 2025-12-12
+**Index Version**: 2.4.0 (Staleness Sync — ADR-030/031/032)
+**Last Updated**: 2026-02-02
 **Maintained By**: Development Team
 **Next Review**: Weekly
