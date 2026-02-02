@@ -12,6 +12,9 @@
  * @see rpc_shift_table_metrics, rpc_shift_pit_metrics, rpc_shift_casino_metrics
  */
 
+import type { ProvenanceMetadata } from './provenance';
+import type { CoverageTier } from './snapshot-rules';
+
 // === Input Parameter Types ===
 
 /**
@@ -90,6 +93,9 @@ export interface ShiftTableMetricsDTO {
   // Exception flags
   missing_opening_snapshot: boolean;
   missing_closing_snapshot: boolean;
+
+  // Trust metadata (WS1: provenance propagation)
+  provenance: ProvenanceMetadata;
 }
 
 // === Pit Metrics DTO ===
@@ -136,6 +142,13 @@ export interface ShiftPitMetricsDTO {
   win_loss_inventory_total_cents: number;
   /** Aggregated win/loss from estimated drop method across all tables, in cents */
   win_loss_estimated_total_cents: number;
+
+  // Coverage (WS2: snapshot preconditions)
+  snapshot_coverage_ratio: number;
+  coverage_tier: CoverageTier;
+
+  // Trust metadata (WS1: provenance propagation)
+  provenance: ProvenanceMetadata;
 }
 
 // === Dashboard Summary DTO (BFF) ===
@@ -196,4 +209,11 @@ export interface ShiftCasinoMetricsDTO {
   win_loss_inventory_total_cents: number;
   /** Aggregated win/loss from estimated drop method across all tables, in cents */
   win_loss_estimated_total_cents: number;
+
+  // Coverage (WS2: snapshot preconditions)
+  snapshot_coverage_ratio: number;
+  coverage_tier: CoverageTier;
+
+  // Trust metadata (WS1: provenance propagation)
+  provenance: ProvenanceMetadata;
 }

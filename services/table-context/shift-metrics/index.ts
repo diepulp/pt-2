@@ -17,6 +17,24 @@ export type {
   ShiftTableMetricsDTO,
 } from './dtos';
 
+// Provenance
+export type { NullReason, ProvenanceMetadata } from './provenance';
+export {
+  deriveTableProvenance,
+  rollupCasinoProvenance,
+  rollupPitProvenance,
+} from './provenance';
+
+// Snapshot Rules
+export type { CoverageTier } from './snapshot-rules';
+export {
+  computeAggregatedCoverageRatio,
+  computeTableCoverageRatio,
+  computeTableNullReasons,
+  getCoverageTier,
+  isSnapshotStale,
+} from './snapshot-rules';
+
 // Zod Schemas
 export {
   shiftCasinoMetricsQuerySchema,

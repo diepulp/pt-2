@@ -12,12 +12,16 @@
 import { ChevronRightIcon } from 'lucide-react';
 import { useState } from 'react';
 
+import {
+  MetricGradeBadge,
+  TelemetryQualityIndicator,
+  CoverageBar,
+} from '@/components/shift-dashboard-v3/trust';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { getTelemetryQualityColor } from '@/lib/colors';
 import { formatCents } from '@/lib/format';
 import type {
   ShiftPitMetricsDTO,
@@ -43,30 +47,9 @@ export interface MetricsTableProps {
 }
 
 /**
- * Quality dots indicator (replaces text labels).
+ * Quality indicator using trust primitives (WS6).
+ * Replaces legacy QualityDots with TelemetryQualityIndicator.
  */
-function QualityDots({
-  quality,
-}: {
-  quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
-}) {
-  const config = getTelemetryQualityColor(quality);
-  const filled =
-    quality === 'GOOD_COVERAGE' ? 4 : quality === 'LOW_COVERAGE' ? 2 : 0;
-
-  return (
-    <div className="flex gap-0.5">
-      {[...Array(4)].map((_, i) => (
-        <div
-          key={i}
-          className={`h-2 w-2 rounded-full ${
-            i < filled ? config.bg : 'bg-slate-700'
-          }`}
-        />
-      ))}
-    </div>
-  );
-}
 
 /**
  * Status badge for table status.
@@ -117,10 +100,12 @@ function PitRow({
       <td className="py-3 px-4 text-right font-mono tabular-nums">
         {formatCents(pit.credits_total_cents)}
       </td>
-      <td className="py-3 px-4 text-center">
-        <span className="text-xs text-muted-foreground">
-          {pit.tables_good_coverage_count}/{pit.tables_count}
-        </span>
+      <td className="py-3 px-4">
+        <CoverageBar
+          ratio={pit.snapshot_coverage_ratio}
+          tier={pit.coverage_tier}
+          size="sm"
+        />
       </td>
       <td className="py-3 px-4 text-right">
         <span className="text-xs text-muted-foreground">
@@ -166,7 +151,13 @@ function TableRow({
         {formatCents(table.credits_total_cents)}
       </td>
       <td className="py-3 px-4 text-center">
-        <QualityDots quality={table.telemetry_quality} />
+        <TelemetryQualityIndicator
+          quality={table.telemetry_quality}
+          showLabel
+        />
+      </td>
+      <td className="py-3 px-4 text-center">
+        <MetricGradeBadge grade={table.metric_grade} size="sm" />
       </td>
       <td className="py-3 px-4 text-right">
         <StatusBadge isActive={isActive} />
@@ -297,7 +288,7 @@ export function MetricsTable({
                       Credits
                     </th>
                     <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
-                      Quality
+                      Coverage
                     </th>
                     <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
                       Tables
@@ -350,7 +341,7 @@ export function MetricsTable({
                       Credits
                     </th>
                     <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
-                      Quality
+                      Coverage
                     </th>
                     <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
                       Tables
@@ -405,6 +396,9 @@ export function MetricsTable({
                     <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
                       Quality
                     </th>
+                    <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
+                      Grade
+                    </th>
                     <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
                       Status
                     </th>
@@ -423,7 +417,7 @@ export function MetricsTable({
                   {(!filteredTables || filteredTables.length === 0) && (
                     <tr>
                       <td
-                        colSpan={6}
+                        colSpan={7}
                         className="py-8 text-center text-sm text-muted-foreground"
                       >
                         No table data available

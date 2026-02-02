@@ -23,6 +23,7 @@ import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getAlertSeverityColor } from '@/lib/colors';
 import { formatCents } from '@/lib/format';
+import { cn } from '@/lib/utils';
 import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
 export interface AlertsStripProps {
@@ -118,6 +119,24 @@ function AlertItem({
               alert.message
             )}
           </p>
+
+          {/* Downgrade indicator (WS6: trust integration) */}
+          {alert.downgraded && (
+            <p
+              className={cn(
+                'mt-1 text-[10px] italic',
+                alert.downgrade_reason === 'no_coverage'
+                  ? 'text-zinc-400'
+                  : 'text-amber-400',
+              )}
+            >
+              Downgraded from {alert.original_severity}
+              {alert.downgrade_reason === 'low_coverage' &&
+                ' — low telemetry coverage'}
+              {alert.downgrade_reason === 'no_coverage' &&
+                ' — no telemetry coverage'}
+            </p>
+          )}
 
           {/* Recommended action */}
           <p className="mt-1 text-xs text-muted-foreground">

@@ -23,6 +23,12 @@ import type {
   ShiftCashObsTableParams,
   ShiftCashObsTimeWindow,
 } from './dtos';
+import {
+  computeAlertSeverity,
+  getWorstQuality,
+  isAllowedAlertKind,
+} from './shift-cash-obs/severity';
+import type { TelemetryQuality } from './shift-cash-obs/severity';
 
 // Type helper for RPC calls until remote types are regenerated
 type SupabaseRpc = SupabaseClient<Database>['rpc'];
@@ -228,12 +234,57 @@ export async function getShiftCashObsSummary(
   params: ShiftCashObsTimeWindow,
 ): Promise<CashObsSummaryDTO> {
   // Execute all 4 RPC calls in parallel
-  const [casino, pits, tables, alerts] = await Promise.all([
+  const [casino, pits, tables, rawAlerts] = await Promise.all([
     getShiftCashObsCasino(supabase, params),
     getShiftCashObsPit(supabase, params),
     getShiftCashObsTable(supabase, params),
     getShiftCashObsAlerts(supabase, params),
   ]);
+
+  // Apply severity guardrails (WS3: SHIFT_SEVERITY_ALLOWLISTS_v1.md)
+  // Build table quality lookup for severity downgrade decisions
+  const tableQualityMap = new Map<string, TelemetryQuality>();
+  for (const t of tables) {
+    // Map telemetry coverage to quality based on observation count
+    const quality: TelemetryQuality =
+      t.cash_out_observation_count > 0 ? 'GOOD_COVERAGE' : 'NONE';
+    tableQualityMap.set(t.table_id, quality);
+  }
+
+  // Build pit quality from worst-of constituent tables
+  const pitQualityMap = new Map<string, TelemetryQuality>();
+  const pitTablesQuality = new Map<string, TelemetryQuality[]>();
+  for (const t of tables) {
+    if (!t.pit) continue;
+    const existing = pitTablesQuality.get(t.pit) ?? [];
+    const quality: TelemetryQuality =
+      t.cash_out_observation_count > 0 ? 'GOOD_COVERAGE' : 'NONE';
+    existing.push(quality);
+    pitTablesQuality.set(t.pit, existing);
+  }
+  for (const [pit, qualities] of pitTablesQuality) {
+    pitQualityMap.set(pit, getWorstQuality(qualities));
+  }
+
+  // Enrich alerts with severity guardrails
+  const alerts: CashObsSpikeAlertDTO[] = rawAlerts
+    .filter((a) => isAllowedAlertKind(a.alert_type))
+    .map((alert) => {
+      const entityQuality =
+        alert.entity_type === 'table'
+          ? (tableQualityMap.get(alert.entity_id) ?? 'NONE')
+          : (pitQualityMap.get(alert.entity_id) ?? 'NONE');
+
+      const result = computeAlertSeverity(alert.severity, entityQuality);
+
+      return {
+        ...alert,
+        severity: result.severity,
+        original_severity: result.original_severity,
+        downgraded: result.downgraded,
+        downgrade_reason: result.downgrade_reason,
+      };
+    });
 
   return {
     casino,

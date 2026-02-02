@@ -1,5 +1,6 @@
 'use client';
 
+import { MetricGradeBadge } from '@/components/shift-dashboard-v3/trust';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { formatCents } from '@/lib/format';
@@ -14,6 +15,7 @@ interface CompactKpiProps {
   title: string;
   valueCents: number | null | undefined;
   accentColor: string;
+  metricGrade?: 'ESTIMATE' | 'AUTHORITATIVE';
   isLoading?: boolean;
 }
 
@@ -21,6 +23,7 @@ function CompactKpi({
   title,
   valueCents,
   accentColor,
+  metricGrade,
   isLoading,
 }: CompactKpiProps) {
   if (isLoading) {
@@ -39,9 +42,12 @@ function CompactKpi({
     <Card className="relative overflow-hidden">
       <div className={`absolute left-0 top-0 h-full w-1 ${accentColor}`} />
       <div className="py-2.5 pl-4 pr-3">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          {title}
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            {title}
+          </p>
+          {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
+        </div>
         <p className="mt-1 text-lg font-semibold font-mono tabular-nums">
           {formatCents(valueCents)}
         </p>
@@ -76,6 +82,7 @@ export function SecondaryKpiStack({ data, isLoading }: SecondaryKpiStackProps) {
         title="Est. Drop"
         valueCents={isLoading ? null : estDropTotal}
         accentColor="bg-amber-500"
+        metricGrade="ESTIMATE"
         isLoading={isLoading}
       />
     </div>

@@ -334,6 +334,10 @@ export interface CashObsSpikeAlertDTO {
   threshold: number;
   message: string;
   is_telemetry: true;
+  // Severity guardrail tracking (WS3: SHIFT_SEVERITY_ALLOWLISTS_v1.md)
+  original_severity?: 'info' | 'warn' | 'critical';
+  downgraded?: boolean;
+  downgrade_reason?: 'low_coverage' | 'no_coverage';
 }
 
 // === Shift Cash Obs Input Types ===

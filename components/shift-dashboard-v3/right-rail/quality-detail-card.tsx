@@ -2,6 +2,7 @@
 
 import { ShieldCheckIcon } from 'lucide-react';
 
+import { TelemetryQualityIndicator } from '@/components/shift-dashboard-v3/trust';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export interface QualityDetailCardProps {
@@ -32,23 +33,24 @@ export function QualityDetailCard({
     );
   }
 
-  const tiers = [
+  const tiers: Array<{
+    quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
+    count: number;
+    textColor: string;
+  }> = [
     {
-      label: 'Good',
+      quality: 'GOOD_COVERAGE',
       count: goodCount,
-      color: 'bg-emerald-500',
       textColor: 'text-emerald-500',
     },
     {
-      label: 'Low',
+      quality: 'LOW_COVERAGE',
       count: lowCount,
-      color: 'bg-amber-500',
       textColor: 'text-amber-500',
     },
     {
-      label: 'None',
+      quality: 'NONE',
       count: noneCount,
-      color: 'bg-slate-500',
       textColor: 'text-slate-400',
     },
   ];
@@ -63,13 +65,14 @@ export function QualityDetailCard({
       </div>
       {tiers.map((tier) => (
         <div
-          key={tier.label}
+          key={tier.quality}
           className="flex items-center justify-between rounded bg-muted/20 px-2 py-1.5"
         >
-          <div className="flex items-center gap-2">
-            <span className={`h-2 w-2 rounded-full ${tier.color}`} />
-            <span className="text-xs">{tier.label}</span>
-          </div>
+          <TelemetryQualityIndicator
+            quality={tier.quality}
+            showLabel
+            size="sm"
+          />
           <span className={`text-xs font-mono tabular-nums ${tier.textColor}`}>
             {tier.count}
           </span>

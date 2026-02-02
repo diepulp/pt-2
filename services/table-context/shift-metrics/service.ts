@@ -21,6 +21,15 @@ import type {
   ShiftPitMetricsParams,
   ShiftTableMetricsDTO,
 } from './dtos';
+import {
+  deriveTableProvenance,
+  rollupCasinoProvenance,
+  rollupPitProvenance,
+} from './provenance';
+import {
+  computeAggregatedCoverageRatio,
+  getCoverageTier,
+} from './snapshot-rules';
 
 // Type helper for RPC calls until remote types are regenerated
 type SupabaseRpc = SupabaseClient<Database>['rpc'];
@@ -140,7 +149,8 @@ export async function getShiftAllPitsMetrics(
       existing.win_loss_estimated_total_cents +=
         table.win_loss_estimated_cents ?? 0;
     } else {
-      // Create new pit entry
+      // Create new pit entry (coverage/provenance computed below)
+
       pitMap.set(table.pit_id, {
         pit_id: table.pit_id,
         window_start: table.window_start,
@@ -159,8 +169,34 @@ export async function getShiftAllPitsMetrics(
         estimated_drop_buyins_total_cents: table.estimated_drop_buyins_cents,
         win_loss_inventory_total_cents: table.win_loss_inventory_cents ?? 0,
         win_loss_estimated_total_cents: table.win_loss_estimated_cents ?? 0,
+        // Placeholder values — recomputed after all tables aggregated
+        snapshot_coverage_ratio: 0,
+        coverage_tier: 'NONE' as const,
+        provenance: deriveTableProvenance(table),
       });
     }
+  }
+
+  // Build pit-to-tables lookup for provenance/coverage computation
+  const pitTablesMap = new Map<string, ShiftTableMetricsDTO[]>();
+  for (const table of tableMetrics) {
+    if (!table.pit_id) continue;
+    const arr = pitTablesMap.get(table.pit_id) ?? [];
+    arr.push(table);
+    pitTablesMap.set(table.pit_id, arr);
+  }
+
+  // Recompute coverage and provenance per pit
+  for (const [pitId, pit] of pitMap) {
+    const pitTables = pitTablesMap.get(pitId) ?? [];
+    const ratio = computeAggregatedCoverageRatio(
+      pit.tables_with_opening_snapshot,
+      pit.tables_with_closing_snapshot,
+      pit.tables_count,
+    );
+    pit.snapshot_coverage_ratio = ratio;
+    pit.coverage_tier = getCoverageTier(ratio);
+    pit.provenance = rollupPitProvenance(pitTables);
   }
 
   return Array.from(pitMap.values());
@@ -213,8 +249,15 @@ export async function getShiftDashboardSummary(
 
   // Client-side aggregation for pits (same logic as getShiftAllPitsMetrics)
   const pitMap = new Map<string, ShiftPitMetricsDTO>();
+  const pitTablesMap = new Map<string, ShiftTableMetricsDTO[]>();
+
   for (const table of tables) {
     if (!table.pit_id) continue;
+
+    // Track tables per pit for provenance rollup
+    const arr = pitTablesMap.get(table.pit_id) ?? [];
+    arr.push(table);
+    pitTablesMap.set(table.pit_id, arr);
 
     const existing = pitMap.get(table.pit_id);
     if (existing) {
@@ -261,24 +304,50 @@ export async function getShiftDashboardSummary(
         estimated_drop_buyins_total_cents: table.estimated_drop_buyins_cents,
         win_loss_inventory_total_cents: table.win_loss_inventory_cents ?? 0,
         win_loss_estimated_total_cents: table.win_loss_estimated_cents ?? 0,
+        // Placeholder — recomputed below
+        snapshot_coverage_ratio: 0,
+        coverage_tier: 'NONE' as const,
+        provenance: deriveTableProvenance(table),
       });
     }
   }
+
+  // Recompute coverage and provenance per pit
+  for (const [pitId, pit] of pitMap) {
+    const pitTables = pitTablesMap.get(pitId) ?? [];
+    const ratio = computeAggregatedCoverageRatio(
+      pit.tables_with_opening_snapshot,
+      pit.tables_with_closing_snapshot,
+      pit.tables_count,
+    );
+    pit.snapshot_coverage_ratio = ratio;
+    pit.coverage_tier = getCoverageTier(ratio);
+    pit.provenance = rollupPitProvenance(pitTables);
+  }
+
   const pits = Array.from(pitMap.values());
 
   // Client-side aggregation for casino
   const uniquePitIds = new Set(tables.map((t) => t.pit_id).filter(Boolean));
+  const casinoOpeningCount = tables.filter(
+    (t) => !t.missing_opening_snapshot,
+  ).length;
+  const casinoClosingCount = tables.filter(
+    (t) => !t.missing_closing_snapshot,
+  ).length;
+  const casinoCoverageRatio = computeAggregatedCoverageRatio(
+    casinoOpeningCount,
+    casinoClosingCount,
+    tables.length,
+  );
+
   const casino: ShiftCasinoMetricsDTO = {
     window_start: tables[0]?.window_start ?? params.startTs,
     window_end: tables[0]?.window_end ?? params.endTs,
     tables_count: tables.length,
     pits_count: uniquePitIds.size,
-    tables_with_opening_snapshot: tables.filter(
-      (t) => !t.missing_opening_snapshot,
-    ).length,
-    tables_with_closing_snapshot: tables.filter(
-      (t) => !t.missing_closing_snapshot,
-    ).length,
+    tables_with_opening_snapshot: casinoOpeningCount,
+    tables_with_closing_snapshot: casinoClosingCount,
     tables_with_telemetry_count: tables.filter(
       (t) => t.telemetry_quality !== 'NONE',
     ).length,
@@ -311,6 +380,10 @@ export async function getShiftDashboardSummary(
       (sum, t) => sum + (t.win_loss_estimated_cents ?? 0),
       0,
     ),
+    // Coverage (WS2) and provenance (WS1) — computed from ALL tables
+    snapshot_coverage_ratio: casinoCoverageRatio,
+    coverage_tier: getCoverageTier(casinoCoverageRatio),
+    provenance: rollupCasinoProvenance(tables),
   };
 
   return { casino, pits, tables };
@@ -320,7 +393,7 @@ export async function getShiftDashboardSummary(
 
 function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
   const r = row as Record<string, unknown>;
-  return {
+  const dto: Omit<ShiftTableMetricsDTO, 'provenance'> = {
     table_id: r.table_id as string,
     table_label: r.table_label as string,
     pit_id: (r.pit_id as string) ?? null,
@@ -355,17 +428,26 @@ function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
     missing_opening_snapshot: Boolean(r.missing_opening_snapshot),
     missing_closing_snapshot: Boolean(r.missing_closing_snapshot),
   };
+
+  // Attach provenance (WS1)
+  const provenance = deriveTableProvenance(dto);
+  return { ...dto, provenance };
 }
 
 function toShiftPitMetrics(row: unknown): ShiftPitMetricsDTO {
   const r = row as Record<string, unknown>;
+  const withOpening = Number(r.tables_with_opening_snapshot ?? 0);
+  const withClosing = Number(r.tables_with_closing_snapshot ?? 0);
+  const total = Number(r.tables_count ?? 0);
+  const ratio = computeAggregatedCoverageRatio(withOpening, withClosing, total);
+
   return {
     pit_id: r.pit_id as string,
     window_start: r.window_start as string,
     window_end: r.window_end as string,
-    tables_count: Number(r.tables_count ?? 0),
-    tables_with_opening_snapshot: Number(r.tables_with_opening_snapshot ?? 0),
-    tables_with_closing_snapshot: Number(r.tables_with_closing_snapshot ?? 0),
+    tables_count: total,
+    tables_with_opening_snapshot: withOpening,
+    tables_with_closing_snapshot: withClosing,
     tables_with_telemetry_count: Number(r.tables_with_telemetry_count ?? 0),
     tables_good_coverage_count: Number(r.tables_good_coverage_count ?? 0),
     tables_grade_estimate: Number(r.tables_grade_estimate ?? 0),
@@ -386,10 +468,31 @@ function toShiftPitMetrics(row: unknown): ShiftPitMetricsDTO {
     win_loss_estimated_total_cents: Number(
       r.win_loss_estimated_total_cents ?? 0,
     ),
+    snapshot_coverage_ratio: ratio,
+    coverage_tier: getCoverageTier(ratio),
+    // RPC-based pit metrics don't have table-level detail; derive minimal provenance
+    provenance: {
+      source: 'telemetry',
+      grade: 'ESTIMATE',
+      quality:
+        Number(r.tables_good_coverage_count ?? 0) > 0
+          ? 'GOOD_COVERAGE'
+          : 'NONE',
+      coverage_ratio: ratio,
+      null_reasons: [],
+    },
   };
 }
 
 function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
+  const emptyProvenance = {
+    source: 'telemetry' as const,
+    grade: 'ESTIMATE' as const,
+    quality: 'NONE' as const,
+    coverage_ratio: 0,
+    null_reasons: [] as import('./provenance').NullReason[],
+  };
+
   if (!row) {
     return {
       window_start: '',
@@ -408,16 +511,24 @@ function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
       estimated_drop_buyins_total_cents: 0,
       win_loss_inventory_total_cents: 0,
       win_loss_estimated_total_cents: 0,
+      snapshot_coverage_ratio: 0,
+      coverage_tier: 'NONE',
+      provenance: emptyProvenance,
     };
   }
   const r = row as Record<string, unknown>;
+  const withOpening = Number(r.tables_with_opening_snapshot ?? 0);
+  const withClosing = Number(r.tables_with_closing_snapshot ?? 0);
+  const total = Number(r.tables_count ?? 0);
+  const ratio = computeAggregatedCoverageRatio(withOpening, withClosing, total);
+
   return {
     window_start: r.window_start as string,
     window_end: r.window_end as string,
-    tables_count: Number(r.tables_count ?? 0),
+    tables_count: total,
     pits_count: Number(r.pits_count ?? 0),
-    tables_with_opening_snapshot: Number(r.tables_with_opening_snapshot ?? 0),
-    tables_with_closing_snapshot: Number(r.tables_with_closing_snapshot ?? 0),
+    tables_with_opening_snapshot: withOpening,
+    tables_with_closing_snapshot: withClosing,
     tables_with_telemetry_count: Number(r.tables_with_telemetry_count ?? 0),
     tables_good_coverage_count: Number(r.tables_good_coverage_count ?? 0),
     tables_grade_estimate: Number(r.tables_grade_estimate ?? 0),
@@ -438,5 +549,16 @@ function toShiftCasinoMetrics(row: unknown): ShiftCasinoMetricsDTO {
     win_loss_estimated_total_cents: Number(
       r.win_loss_estimated_total_cents ?? 0,
     ),
+    snapshot_coverage_ratio: ratio,
+    coverage_tier: getCoverageTier(ratio),
+    // RPC-based casino metrics don't have table-level detail; derive minimal provenance
+    provenance: {
+      ...emptyProvenance,
+      quality:
+        Number(r.tables_good_coverage_count ?? 0) > 0
+          ? ('GOOD_COVERAGE' as const)
+          : ('NONE' as const),
+      coverage_ratio: ratio,
+    },
   };
 }

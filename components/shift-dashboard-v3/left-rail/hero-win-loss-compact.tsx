@@ -1,5 +1,6 @@
 'use client';
 
+import { MetricGradeBadge } from '@/components/shift-dashboard-v3/trust';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWinLossColor } from '@/lib/colors';
@@ -7,6 +8,7 @@ import { formatCents } from '@/lib/format';
 
 export interface HeroWinLossCompactProps {
   winLossCents: number | null | undefined;
+  metricGrade?: 'ESTIMATE' | 'AUTHORITATIVE';
   isLoading?: boolean;
 }
 
@@ -16,6 +18,7 @@ export interface HeroWinLossCompactProps {
  */
 export function HeroWinLossCompact({
   winLossCents,
+  metricGrade,
   isLoading,
 }: HeroWinLossCompactProps) {
   if (isLoading) {
@@ -35,9 +38,12 @@ export function HeroWinLossCompact({
     <Card className="relative overflow-hidden">
       <div className={`absolute left-0 top-0 h-1 w-full ${colorConfig.bg}`} />
       <div className="p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          Win/Loss
-        </p>
+        <div className="flex items-center gap-1.5">
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Win/Loss
+          </p>
+          {metricGrade && <MetricGradeBadge grade={metricGrade} size="sm" />}
+        </div>
         <p
           className={`mt-2 text-3xl font-semibold font-mono tabular-nums ${colorConfig.text}`}
         >
