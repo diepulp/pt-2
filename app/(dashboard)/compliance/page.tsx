@@ -45,7 +45,7 @@ export default async function CompliancePage() {
       staffRole = context.staffRole ?? undefined;
     } catch (error) {
       console.error('Failed to get auth context:', error);
-      redirect('/auth/login');
+      redirect('/signin');
     }
   } else if (isDevAuthBypassEnabled()) {
     // DEV MODE: Use mock context
@@ -55,7 +55,7 @@ export default async function CompliancePage() {
     staffRole = DEV_RLS_CONTEXT.staffRole;
   } else {
     // PRODUCTION: Redirect to login
-    redirect('/auth/login');
+    redirect('/signin');
   }
 
   // Role check: only pit_boss and admin can access compliance dashboard

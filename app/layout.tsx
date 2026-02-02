@@ -10,8 +10,9 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata: Metadata = {
   metadataBase: new URL(defaultUrl),
-  title: 'Advance Player Tracker',
-  description: 'The fastest way to build apps with Next.js and Supabase',
+  title: 'Player Tracker',
+  description:
+    'Shift-ready operations for table games. Track play, rewards, visits, and floor activity in one place.',
 };
 
 const jetbrainsMono = JetBrains_Mono({

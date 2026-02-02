@@ -19,4 +19,4 @@ export {
 //   toast.error("Failed to save", { description: "Check connection" })
 //   toast.info("Processing...")
 //   toast.warning("Unsaved changes")
-export { toast } from '@/components/landing-page/ui/sonner';
+export { toast } from 'sonner';
