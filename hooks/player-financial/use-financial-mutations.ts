@@ -11,6 +11,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
 import type {
   CreateFinancialAdjustmentInput,
   CreateFinancialTxnInput,
@@ -155,6 +156,14 @@ export function useCreateFinancialAdjustment() {
       // We need to invalidate all modal data since adjustment affects totals
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.scope,
+      });
+
+      // Invalidate shift dashboard metrics (adjustment changes telemetry totals)
+      queryClient.invalidateQueries({
+        queryKey: shiftDashboardKeys.summary.scope,
+      });
+      queryClient.invalidateQueries({
+        queryKey: shiftDashboardKeys.allMetrics(),
       });
     },
   });

@@ -30,6 +30,8 @@ pit[P].estimated_drop_rated_total_cents = SUM(table.estimated_drop_rated_cents W
 pit[P].estimated_drop_grind_total_cents = SUM(table.estimated_drop_grind_cents WHERE table.pit_id = P)
 ```
 
+**Superset invariant**: `buyins_total = rated_total + grind_total` holds because `RATED_ADJUSTMENT` telemetry rows (which may be negative) are included in `rated_total`. Adjustments modify the rated component, keeping the superset identity valid.
+
 ### 1.2 Win/Loss Reconciliation (NULL-aware)
 
 ```

@@ -48,7 +48,7 @@ function createMockPitData(count: number): ShiftPitMetricsDTO[] {
     credits_total_cents: 50000 * (i + 1),
     estimated_drop_rated_total_cents: 200000,
     estimated_drop_grind_total_cents: 50000,
-    estimated_drop_buyins_total_cents: 30000,
+    estimated_drop_buyins_total_cents: 250000, // invariant: rated (200000) + grind (50000)
     win_loss_inventory_total_cents: 150000 * (i + 1),
     win_loss_estimated_total_cents: 175000 * (i + 1),
   }));

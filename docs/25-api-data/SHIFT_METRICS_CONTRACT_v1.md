@@ -45,7 +45,7 @@ All three levels are returned in a single `ShiftDashboardSummaryDTO` via the BFF
 | `closing_bankroll_total_cents` | `number` | cents | Closing chip tray total |
 | `fills_total_cents` | `number` | cents | Chip fills delivered to table |
 | `credits_total_cents` | `number` | cents | Chip credits removed from table |
-| `estimated_drop_rated_cents` | `number` | cents | Buy-ins from rated players |
+| `estimated_drop_rated_cents` | `number` | cents | Buy-ins from rated players (includes `RATED_ADJUSTMENT` telemetry — negative adjustments reduce total) |
 | `estimated_drop_grind_cents` | `number` | cents | Buy-ins from unrated players |
 | `estimated_drop_buyins_cents` | `number` | cents | Total buy-ins (rated + grind) |
 | `win_loss_inventory_cents` | `number \| null` | cents | Win/loss via inventory method |
