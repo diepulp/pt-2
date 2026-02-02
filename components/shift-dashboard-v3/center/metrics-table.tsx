@@ -17,13 +17,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getTelemetryQualityColor } from '@/lib/colors';
+import { formatCents } from '@/lib/format';
 import type {
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
 } from '@/services/table-context/shift-metrics/dtos';
-
-import { getTelemetryQualityColor } from '../lib/colors';
-import { formatCents } from '../lib/format';
 
 export interface MetricsTableProps {
   /** Casino summary (optional) for tab display */

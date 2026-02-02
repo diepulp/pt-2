@@ -39,7 +39,13 @@ export type UpdateCasinoDTO = Partial<CreateCasinoDTO>;
 
 // === Casino Settings DTOs ===
 
-/** Public casino settings (excludes internal audit fields) */
+/**
+ * Public casino settings (excludes internal audit fields).
+ *
+ * ADR-031 unit annotations:
+ * - `watchlist_floor`: MTL watchlist threshold in cents (default 300000 = $3,000)
+ * - `ctr_threshold`: CTR reporting threshold in cents (default 1000000 = $10,000)
+ */
 export type CasinoSettingsDTO = Pick<
   CasinoSettingsRow,
   | 'id'
@@ -88,7 +94,13 @@ export type CreateStaffDTO = Pick<
 export type UpdateStaffDTO = Partial<
   Pick<
     StaffInsert,
-    'first_name' | 'last_name' | 'role' | 'employee_id' | 'email' | 'casino_id' | 'user_id'
+    | 'first_name'
+    | 'last_name'
+    | 'role'
+    | 'employee_id'
+    | 'email'
+    | 'casino_id'
+    | 'user_id'
   >
 > & {
   /** Staff status — included for claims lifecycle (AUTH-HARDENING WS3) */

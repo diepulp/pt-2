@@ -41,6 +41,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useGamingDaySummary } from '@/hooks/mtl/use-gaming-day-summary';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlGamingDaySummaryDTO } from '@/services/mtl/dtos';
 
@@ -56,20 +57,6 @@ export interface GamingDaySummaryProps {
   /** Number of items per page */
   pageSize?: number;
   className?: string;
-}
-
-/**
- * Format currency for display
- * @param amountCents - Amount in cents (from database)
- * @returns Formatted currency string in dollars
- */
-function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**
@@ -282,7 +269,7 @@ export function GamingDaySummary({
                           'text-green-600 dark:text-green-400',
                         )}
                       >
-                        {formatCurrency(summary.total_in)}
+                        {formatCents(summary.total_in)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_in} txn
@@ -298,7 +285,7 @@ export function GamingDaySummary({
                           'text-red-600 dark:text-red-400',
                         )}
                       >
-                        {formatCurrency(summary.total_out)}
+                        {formatCents(summary.total_out)}
                       </div>
                       <div className="text-xs text-muted-foreground">
                         {summary.count_out} txn

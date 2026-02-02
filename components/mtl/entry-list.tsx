@@ -37,6 +37,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMtlEntries } from '@/hooks/mtl/use-mtl-entries';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlEntryDTO } from '@/services/mtl/dtos';
 
@@ -54,20 +55,6 @@ export interface EntryListProps {
   /** Number of items per page */
   pageSize?: number;
   className?: string;
-}
-
-/**
- * Format currency for display
- * @param amountCents - Amount in cents (from database)
- * @returns Formatted currency string in dollars
- */
-function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**
@@ -239,7 +226,7 @@ export function EntryList({
                   )}
                 >
                   {entry.direction === 'in' ? '+' : '-'}
-                  {formatCurrency(entry.amount)}
+                  {formatCents(entry.amount)}
                 </TableCell>
                 <TableCell>
                   <EntryBadge badge={entry.entry_badge} size="sm" />

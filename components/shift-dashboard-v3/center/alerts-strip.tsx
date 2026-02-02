@@ -21,10 +21,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { getAlertSeverityColor } from '@/lib/colors';
+import { formatCents } from '@/lib/format';
 import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
-
-import { getAlertSeverityColor } from '../lib/colors';
-import { formatCents } from '../lib/format';
 
 export interface AlertsStripProps {
   /** List of alerts */

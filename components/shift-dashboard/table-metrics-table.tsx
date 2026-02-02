@@ -28,26 +28,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { formatCents } from '@/lib/format';
 import type { ShiftTableMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface TableMetricsTableProps {
   data: ShiftTableMetricsDTO[] | undefined;
   isLoading?: boolean;
   pitFilter?: string;
-}
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '—';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
 }
 
 /**
@@ -255,21 +242,21 @@ export function TableMetricsTable({
                       {table.pit_id ?? '—'}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(table.opening_bankroll_total_cents)}
+                      {formatCents(table.opening_bankroll_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(table.closing_bankroll_total_cents)}
+                      {formatCents(table.closing_bankroll_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(table.fills_total_cents)}
+                      {formatCents(table.fills_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
-                      {formatCurrency(table.credits_total_cents)}
+                      {formatCents(table.credits_total_cents)}
                     </TableCell>
                     <TableCell className="text-right font-mono text-sm tabular-nums">
                       {table.metric_grade === 'AUTHORITATIVE'
-                        ? formatCurrency(table.win_loss_inventory_cents)
-                        : formatCurrency(table.win_loss_estimated_cents)}
+                        ? formatCents(table.win_loss_inventory_cents)
+                        : formatCents(table.win_loss_estimated_cents)}
                     </TableCell>
                     <TableCell className="text-center">
                       <TelemetryBadge quality={table.telemetry_quality} />

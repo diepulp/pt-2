@@ -23,26 +23,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatCents } from '@/lib/format';
 import type { ShiftPitMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface PitMetricsTableProps {
   data: ShiftPitMetricsDTO[] | undefined;
   isLoading?: boolean;
   onPitSelect?: (pitId: string) => void;
-}
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
 }
 
 /**
@@ -171,16 +158,16 @@ export function PitMetricsTable({
                     {pit.tables_count}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCurrency(pit.win_loss_inventory_total_cents)}
+                    {formatCents(pit.win_loss_inventory_total_cents)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCurrency(pit.win_loss_estimated_total_cents)}
+                    {formatCents(pit.win_loss_estimated_total_cents)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCurrency(pit.fills_total_cents)}
+                    {formatCents(pit.fills_total_cents)}
                   </TableCell>
                   <TableCell className="text-right font-mono text-sm tabular-nums">
-                    {formatCurrency(pit.credits_total_cents)}
+                    {formatCents(pit.credits_total_cents)}
                   </TableCell>
                   <TableCell className="text-center">
                     <CoverageBadge

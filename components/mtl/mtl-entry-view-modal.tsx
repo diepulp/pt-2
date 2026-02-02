@@ -46,6 +46,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { useMtlEntries } from '@/hooks/mtl/use-mtl-entries';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlDirection, MtlEntryDTO } from '@/services/mtl/dtos';
 
@@ -87,20 +88,6 @@ const APPROACHING_AMOUNT = MTL_THRESHOLD_AMOUNT * APPROACHING_PCT; // $2,700 in 
 // ============================================================================
 // Utility Functions
 // ============================================================================
-
-/**
- * Format currency for display
- * @param amountCents - Amount in CENTS (from database, per ISSUE-FB8EB717)
- * @returns Formatted currency string in dollars
- */
-function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amountCents / 100);
-}
 
 function getThresholdState(total: number): ThresholdState {
   if (total >= MTL_THRESHOLD_AMOUNT) return 'crossed';
@@ -190,7 +177,7 @@ function RunningTotalDisplay({
                 : 'text-foreground',
           )}
         >
-          {formatCurrency(total)}
+          {formatCents(total)}
         </div>
 
         <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden print:bg-gray-200">
@@ -212,10 +199,10 @@ function RunningTotalDisplay({
         <div className="mt-1 flex justify-between text-xs text-muted-foreground font-mono">
           <span>$0</span>
           <span className={cn(state === 'approaching' && 'text-amber-500')}>
-            ${(APPROACHING_AMOUNT / 100).toLocaleString()}
+            {formatCents(APPROACHING_AMOUNT)}
           </span>
           <span className={cn(state === 'crossed' && 'text-red-500')}>
-            ${(MTL_THRESHOLD_AMOUNT / 100).toLocaleString()}
+            {formatCents(MTL_THRESHOLD_AMOUNT)}
           </span>
         </div>
       </div>
@@ -316,7 +303,7 @@ function TransactionLogTable({
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
-                  {formatCurrency(entry.amount)}
+                  {formatCents(entry.amount)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -327,7 +314,7 @@ function TransactionLogTable({
                       'text-amber-600 dark:text-amber-400 print:text-amber-700',
                   )}
                 >
-                  {formatCurrency(entry.runningCashIn)}
+                  {formatCents(entry.runningCashIn)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -338,7 +325,7 @@ function TransactionLogTable({
                       'text-amber-600 dark:text-amber-400 print:text-amber-700',
                   )}
                 >
-                  {formatCurrency(entry.runningCashOut)}
+                  {formatCents(entry.runningCashOut)}
                 </TableCell>
                 {onAdjust && (
                   <TableCell className="text-center print:hidden">
@@ -374,7 +361,7 @@ function TransactionLogTable({
                   'text-amber-600 dark:text-amber-400 print:text-amber-700',
               )}
             >
-              {formatCurrency(runningCashIn)}
+              {formatCents(runningCashIn)}
             </TableCell>
             <TableCell
               className={cn(
@@ -385,7 +372,7 @@ function TransactionLogTable({
                   'text-amber-600 dark:text-amber-400 print:text-amber-700',
               )}
             >
-              {formatCurrency(runningCashOut)}
+              {formatCents(runningCashOut)}
             </TableCell>
             {onAdjust && <TableCell className="print:hidden" />}
           </TableRow>
@@ -432,7 +419,7 @@ export function MtlEntryViewModal({
     gamingDay,
   });
 
-  const entries = entriesData?.items ?? [];
+  const entries = useMemo(() => entriesData?.items ?? [], [entriesData?.items]);
 
   // Calculate totals
   const totals = useMemo(() => {

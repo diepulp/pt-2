@@ -24,6 +24,7 @@ import {
   checkCumulativeThreshold,
   type ThresholdLevel,
 } from '@/hooks/mtl/use-threshold-notifications';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -97,18 +98,6 @@ const LEVEL_CONFIG: Record<
 // Helper Functions
 // ============================================================================
 
-/**
- * Format currency for display
- */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 // ============================================================================
 // Component
 // ============================================================================
@@ -158,7 +147,7 @@ export function BuyInThresholdIndicator({
       )}
       role="status"
       aria-live="polite"
-      aria-label={`Daily total projection: ${formatCurrency(projectedTotal)}`}
+      aria-label={`Daily total projection: ${formatDollars(projectedTotal)}`}
     >
       {/* Status Icon */}
       {config.icon === 'alert' && (
@@ -179,16 +168,16 @@ export function BuyInThresholdIndicator({
         className={cn('flex items-center gap-1 font-mono', config.textClass)}
       >
         <span className="text-muted-foreground">
-          {formatCurrency(currentDailyTotal)}
+          {formatDollars(currentDailyTotal)}
         </span>
         <span className="text-muted-foreground/60">+</span>
-        <span className="font-medium">{formatCurrency(newBuyInAmount)}</span>
+        <span className="font-medium">{formatDollars(newBuyInAmount)}</span>
         <ChevronRight
           className="h-3 w-3 text-muted-foreground/60"
           aria-hidden="true"
         />
         <span className={cn('font-semibold', showLabel && config.textClass)}>
-          {formatCurrency(projectedTotal)}
+          {formatDollars(projectedTotal)}
         </span>
       </div>
 

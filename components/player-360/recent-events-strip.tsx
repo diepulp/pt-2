@@ -12,6 +12,7 @@
 import { formatDistanceToNow } from 'date-fns';
 import { DollarSign, Gift, FileText, Minus } from 'lucide-react';
 
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { RecentEventsDTO } from '@/services/player360-dashboard/dtos';
 
@@ -88,15 +89,6 @@ function formatTimeAgo(isoDate: string): string {
   }
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
 // === Component ===
 
 /**
@@ -138,7 +130,7 @@ export function RecentEventsStrip({
       <EventItem
         icon={<DollarSign className="w-4 h-4 text-emerald-400" />}
         label="Last Buy-In"
-        value={data.lastBuyIn ? formatCurrency(data.lastBuyIn.amount) : null}
+        value={data.lastBuyIn ? formatDollars(data.lastBuyIn.amount) : null}
         detail={data.lastBuyIn ? formatTimeAgo(data.lastBuyIn.at) : null}
         onClick={data.lastBuyIn ? () => onEventClick?.('buyIn') : undefined}
       />

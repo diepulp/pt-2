@@ -13,7 +13,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 import type { ShiftPitMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface WinLossTrendChartProps {
@@ -46,7 +46,7 @@ const SERIES_COLORS: Record<SeriesKey, string> = {
 };
 
 function formatLabel(value: number): string {
-  return formatCurrency(value);
+  return formatCents(value);
 }
 
 /**
@@ -155,7 +155,7 @@ export function WinLossTrendChart({
           <ChartTooltip
             content={
               <ChartTooltipContent
-                formatter={(value) => formatCurrency(value as number)}
+                formatter={(value) => formatCents(value as number)}
               />
             }
           />

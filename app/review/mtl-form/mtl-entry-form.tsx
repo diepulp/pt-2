@@ -111,7 +111,7 @@ const TRANSACTION_TYPES: {
 // Utility Functions
 // ============================================================================
 
-function formatCurrency(amount: number): string {
+function formatDollars(amount: number): string {
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -229,7 +229,7 @@ function RunningTotalDisplay({
                 : 'text-foreground',
           )}
         >
-          {formatCurrency(total)}
+          {formatDollars(total)}
         </div>
 
         <div className="mt-2 h-1 bg-muted rounded-full overflow-hidden">
@@ -608,7 +608,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                   </span>
                 </TableCell>
                 <TableCell className="text-right font-mono font-medium">
-                  {formatCurrency(entry.amount)}
+                  {formatDollars(entry.amount)}
                 </TableCell>
                 <TableCell
                   className={cn(
@@ -621,14 +621,14 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                 >
                   {entry.direction === 'cash_in' ? (
                     <span className="relative">
-                      {formatCurrency(entry.runningCashIn)}
+                      {formatDollars(entry.runningCashIn)}
                       {cashInState !== 'none' && isLatest && (
                         <span className="absolute -right-1 -top-1 w-2 h-2 bg-current rounded-full animate-ping" />
                       )}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">
-                      {formatCurrency(entry.runningCashIn)}
+                      {formatDollars(entry.runningCashIn)}
                     </span>
                   )}
                 </TableCell>
@@ -643,14 +643,14 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                 >
                   {entry.direction === 'cash_out' ? (
                     <span className="relative">
-                      {formatCurrency(entry.runningCashOut)}
+                      {formatDollars(entry.runningCashOut)}
                       {cashOutState !== 'none' && isLatest && (
                         <span className="absolute -right-1 -top-1 w-2 h-2 bg-current rounded-full animate-ping" />
                       )}
                     </span>
                   ) : (
                     <span className="text-muted-foreground">
-                      {formatCurrency(entry.runningCashOut)}
+                      {formatDollars(entry.runningCashOut)}
                     </span>
                   )}
                 </TableCell>
@@ -691,7 +691,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                   'text-amber-600 dark:text-amber-400',
               )}
             >
-              {formatCurrency(runningCashIn)}
+              {formatDollars(runningCashIn)}
             </TableCell>
             <TableCell
               className={cn(
@@ -702,7 +702,7 @@ function TransactionLogTable({ entries }: { entries: MtlEntry[] }) {
                   'text-amber-600 dark:text-amber-400',
               )}
             >
-              {formatCurrency(runningCashOut)}
+              {formatDollars(runningCashOut)}
             </TableCell>
             <TableCell colSpan={3} className="text-xs text-muted-foreground">
               <span className="flex items-center gap-1">

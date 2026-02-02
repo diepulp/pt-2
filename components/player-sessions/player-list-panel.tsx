@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 import type { GamingDayInfo, PlayerInfo } from './start-from-previous';
@@ -76,15 +77,6 @@ function formatTime(isoString: string): string {
     minute: '2-digit',
     hour12: true,
   });
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatGamingDay(gamingDay: string): string {
@@ -239,7 +231,7 @@ function PlayerRow({
               ) : (
                 <TrendingDown className="w-3 h-3" />
               )}
-              {formatCurrency(Math.abs(player.total_net_today))}
+              {formatDollars(Math.abs(player.total_net_today))}
             </div>
           </div>
 

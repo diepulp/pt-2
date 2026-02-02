@@ -22,7 +22,7 @@ import type {
   CashObsTableRollupDTO,
 } from '@/services/table-context/dtos';
 
-import { formatCurrency } from '../lib/format';
+import { formatCents } from '../lib/format';
 
 export interface TelemetryDrawerProps {
   /** Casino-level cash observations */
@@ -86,7 +86,7 @@ export function TelemetryDrawer({
         <div className="flex items-center gap-2">
           {!isExpanded && casinoData && (
             <span className="text-xs text-muted-foreground font-mono">
-              {formatCurrency(casinoData.cash_out_observed_estimate_total)}{' '}
+              {formatCents(casinoData.cash_out_observed_estimate_total)}{' '}
               observed
             </span>
           )}
@@ -119,7 +119,7 @@ export function TelemetryDrawer({
                         Cash Out (Estimated)
                       </p>
                       <p className="font-mono text-sm tabular-nums text-amber-500">
-                        {formatCurrency(
+                        {formatCents(
                           casinoData.cash_out_observed_estimate_total,
                         )}
                       </p>
@@ -129,7 +129,7 @@ export function TelemetryDrawer({
                         Cash Out (Confirmed)
                       </p>
                       <p className="font-mono text-sm tabular-nums">
-                        {formatCurrency(
+                        {formatCents(
                           casinoData.cash_out_observed_confirmed_total,
                         )}
                       </p>
@@ -163,7 +163,7 @@ export function TelemetryDrawer({
                           <span className="text-muted-foreground">
                             Est:{' '}
                             <span className="font-mono text-amber-500">
-                              {formatCurrency(
+                              {formatCents(
                                 pit.cash_out_observed_estimate_total,
                               )}
                             </span>
@@ -200,7 +200,7 @@ export function TelemetryDrawer({
                           <span className="font-mono">{table.table_label}</span>
                           <div className="flex items-center gap-3">
                             <span className="text-amber-500 font-mono">
-                              {formatCurrency(
+                              {formatCents(
                                 table.cash_out_observed_estimate_total,
                               )}
                             </span>

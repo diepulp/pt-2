@@ -16,6 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 // ============================================================================
@@ -106,15 +107,6 @@ function formatDate(isoString: string): string {
     month: 'short',
     day: 'numeric',
   });
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function formatGamingDay(gamingDay: string): string {
@@ -218,13 +210,13 @@ function ClosedSessionRow({
           <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
           <span className="text-muted-foreground">In:</span>
           <span className="font-medium tabular-nums">
-            {formatCurrency(session.total_buy_in)}
+            {formatDollars(session.total_buy_in)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
           <span className="text-muted-foreground">Out:</span>
           <span className="font-medium tabular-nums">
-            {formatCurrency(session.total_cash_out)}
+            {formatDollars(session.total_cash_out)}
           </span>
         </div>
         <div className="flex items-center gap-1.5">
@@ -242,7 +234,7 @@ function ClosedSessionRow({
             )}
           >
             {isPositive ? '+' : ''}
-            {formatCurrency(session.net)}
+            {formatDollars(session.net)}
           </span>
         </div>
         <Badge

@@ -29,7 +29,7 @@ export interface FilterTileStackProps {
 
 // === Formatters ===
 
-function formatCurrency(value: number): string {
+function formatDollars(value: number): string {
   const absValue = Math.abs(value);
   const prefix = value < 0 ? '-' : '';
   if (absValue >= 1000) {
@@ -82,7 +82,7 @@ export function FilterTileStack({
     >
       <FilterTile
         title="Session"
-        value={formatCurrency(data.sessionValue.netWinLoss)}
+        value={formatDollars(data.sessionValue.netWinLoss)}
         delta={
           data.sessionValue.trendPercent !== 0
             ? `${data.sessionValue.trendPercent > 0 ? '+' : ''}${data.sessionValue.trendPercent.toFixed(0)}%`
@@ -96,7 +96,7 @@ export function FilterTileStack({
 
       <FilterTile
         title="Financial"
-        value={formatCurrency(data.cashVelocity.sessionTotal)}
+        value={formatDollars(data.cashVelocity.sessionTotal)}
         category="financial"
         isActive={activeCategory === 'financial'}
         onFilter={() => onCategoryChange('financial')}

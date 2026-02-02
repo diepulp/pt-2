@@ -28,6 +28,7 @@ import * as React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTableRundown } from '@/hooks/table-context/use-table-rundown';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { TableBankMode } from '@/services/table-context/dtos';
 import { TABLE_BANK_MODE_LABELS } from '@/services/table-context/labels';
@@ -54,20 +55,6 @@ interface MetricRowProps {
 }
 
 // === Helper Functions ===
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '—';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
-}
 
 // === Sub-Components ===
 
@@ -122,7 +109,7 @@ function MetricRow({
             )}
           >
             {prefix}
-            {formatCurrency(value)}
+            {formatCents(value)}
           </span>
         </div>
       ) : (
@@ -263,7 +250,7 @@ export function RundownSummaryPanel({
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Par Target</span>
                 <span className="font-mono text-muted-foreground">
-                  {formatCurrency(rundown.need_total_cents)}
+                  {formatCents(rundown.need_total_cents)}
                 </span>
               </div>
               {rundown.closing_total_cents !== null &&
@@ -282,7 +269,7 @@ export function RundownSummaryPanel({
                       {rundown.closing_total_cents >= rundown.need_total_cents
                         ? '+'
                         : ''}
-                      {formatCurrency(
+                      {formatCents(
                         rundown.closing_total_cents - rundown.need_total_cents,
                       )}
                     </span>

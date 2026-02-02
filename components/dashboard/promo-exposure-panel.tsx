@@ -21,6 +21,7 @@ import * as React from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { PromoExposureRollupDTO } from '@/services/loyalty/rollups';
 
@@ -99,18 +100,6 @@ function MetricCard({
 }
 
 /**
- * Format currency for display.
- */
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-/**
  * Calculate void rate percentage.
  */
 function calculateVoidRate(voided: number, issued: number): number {
@@ -184,7 +173,7 @@ export function PromoExposurePanel({
           label="Issued"
           value={exposure?.issuedCount ?? 0}
           subValue={
-            exposure ? formatCurrency(exposure.totalIssuedFaceValue) : undefined
+            exposure ? formatDollars(exposure.totalIssuedFaceValue) : undefined
           }
           isLoading={isLoading}
         />
@@ -194,7 +183,7 @@ export function PromoExposurePanel({
           label="Outstanding"
           value={exposure?.outstandingCount ?? 0}
           subValue={
-            exposure ? formatCurrency(exposure.outstandingFaceValue) : undefined
+            exposure ? formatDollars(exposure.outstandingFaceValue) : undefined
           }
           variant={
             exposure && exposure.outstandingCount > 0 ? 'warning' : 'default'
@@ -206,7 +195,7 @@ export function PromoExposurePanel({
         <MetricCard
           label="Patron Risk"
           value={
-            exposure ? formatCurrency(exposure.totalIssuedPatronRisk) : '$0'
+            exposure ? formatDollars(exposure.totalIssuedPatronRisk) : '$0'
           }
           isLoading={isLoading}
         />

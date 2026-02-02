@@ -38,6 +38,7 @@ import {
 } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMtlEntry } from '@/hooks/mtl/use-mtl-entries';
+import { formatCents } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { MtlAuditNoteDTO } from '@/services/mtl/dtos';
 
@@ -52,20 +53,6 @@ export interface EntryDetailProps {
   /** Current staff ID for note attribution */
   staffId?: string;
   className?: string;
-}
-
-/**
- * Format currency for display
- * @param amountCents - Amount in cents (from database)
- * @returns Formatted currency string in dollars
- */
-function formatCurrency(amountCents: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(amountCents / 100); // Convert cents to dollars
 }
 
 /**
@@ -178,7 +165,7 @@ export function EntryDetail({
             )}
           >
             {isInflow ? '+' : '-'}
-            {formatCurrency(entry.amount)}
+            {formatCents(entry.amount)}
           </div>
 
           {/* Details Grid */}

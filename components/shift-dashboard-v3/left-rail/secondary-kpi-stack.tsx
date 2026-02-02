@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 import type { ShiftCasinoMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface SecondaryKpiStackProps {
@@ -43,7 +43,7 @@ function CompactKpi({
           {title}
         </p>
         <p className="mt-1 text-lg font-semibold font-mono tabular-nums">
-          {formatCurrency(valueCents)}
+          {formatCents(valueCents)}
         </p>
       </div>
     </Card>

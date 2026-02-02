@@ -14,7 +14,7 @@ import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
-import { formatCurrency, formatCurrencyDelta } from '../lib/format';
+import { formatCents, formatCentsDelta } from '../lib/format';
 
 export interface SecondaryKpiCardProps {
   /** KPI title */
@@ -68,7 +68,7 @@ export function SecondaryKpiCard({
 
         {/* Value */}
         <p className="mt-2 text-2xl font-semibold font-mono tabular-nums">
-          {formatCurrency(valueCents)}
+          {formatCents(valueCents)}
         </p>
 
         {/* Subtitle */}
@@ -83,14 +83,14 @@ export function SecondaryKpiCard({
               <>
                 <TrendingUpIcon className="h-3 w-3 text-emerald-500" />
                 <span className="text-emerald-500">
-                  {formatCurrencyDelta(trend.value)}
+                  {formatCentsDelta(trend.value)}
                 </span>
               </>
             ) : (
               <>
                 <TrendingDownIcon className="h-3 w-3 text-rose-500" />
                 <span className="text-rose-500">
-                  {formatCurrencyDelta(-trend.value)}
+                  {formatCentsDelta(-trend.value)}
                 </span>
               </>
             )}

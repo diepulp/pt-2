@@ -16,25 +16,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCents } from '@/lib/format';
 import type { ShiftCasinoMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
 
 export interface CasinoSummaryCardProps {
   data: ShiftCasinoMetricsDTO | undefined;
   isLoading?: boolean;
-}
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
 }
 
 /**
@@ -222,7 +209,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Win/Loss (Inventory) */}
           <KpiCard
             title="Win/Loss (Inventory)"
-            value={formatCurrency(data.win_loss_inventory_total_cents)}
+            value={formatCents(data.win_loss_inventory_total_cents)}
             subtitle="Based on snapshots"
             accentColor="bg-accent"
           />
@@ -230,7 +217,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Win/Loss (Estimated) */}
           <KpiCard
             title="Win/Loss (Estimated)"
-            value={formatCurrency(data.win_loss_estimated_total_cents)}
+            value={formatCents(data.win_loss_estimated_total_cents)}
             subtitle="Based on telemetry"
             accentColor="bg-emerald-500"
           />
@@ -238,7 +225,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Total Fills */}
           <KpiCard
             title="Fills"
-            value={formatCurrency(data.fills_total_cents)}
+            value={formatCents(data.fills_total_cents)}
             subtitle={`${data.tables_count} tables`}
             accentColor="bg-blue-500"
           />
@@ -246,7 +233,7 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
           {/* Total Credits */}
           <KpiCard
             title="Credits"
-            value={formatCurrency(data.credits_total_cents)}
+            value={formatCents(data.credits_total_cents)}
             subtitle={`${data.tables_count} tables`}
             accentColor="bg-violet-500"
           />
@@ -256,21 +243,21 @@ export function CasinoSummaryCard({ data, isLoading }: CasinoSummaryCardProps) {
         <div className="mt-4 grid gap-4 grid-cols-1 sm:grid-cols-3">
           <KpiCard
             title="Est. Drop (Rated)"
-            value={formatCurrency(data.estimated_drop_rated_total_cents)}
+            value={formatCents(data.estimated_drop_rated_total_cents)}
             subtitle="Rated player buy-ins"
             accentColor="bg-amber-500"
           />
 
           <KpiCard
             title="Est. Drop (Grind)"
-            value={formatCurrency(data.estimated_drop_grind_total_cents)}
+            value={formatCents(data.estimated_drop_grind_total_cents)}
             subtitle="Unrated play estimate"
             accentColor="bg-amber-500"
           />
 
           <KpiCard
             title="Est. Drop (Cash)"
-            value={formatCurrency(data.estimated_drop_buyins_total_cents)}
+            value={formatCents(data.estimated_drop_buyins_total_cents)}
             subtitle="Observed buy-ins"
             accentColor="bg-amber-500"
           />

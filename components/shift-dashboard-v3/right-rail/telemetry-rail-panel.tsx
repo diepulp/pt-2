@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { formatCurrency } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
@@ -76,17 +76,13 @@ export function TelemetryRailPanel({
                 <div>
                   <p className="text-[9px] text-muted-foreground">Estimated</p>
                   <p className="font-mono tabular-nums text-amber-500">
-                    {formatCurrency(
-                      casinoData.cash_out_observed_estimate_total,
-                    )}
+                    {formatCents(casinoData.cash_out_observed_estimate_total)}
                   </p>
                 </div>
                 <div>
                   <p className="text-[9px] text-muted-foreground">Confirmed</p>
                   <p className="font-mono tabular-nums">
-                    {formatCurrency(
-                      casinoData.cash_out_observed_confirmed_total,
-                    )}
+                    {formatCents(casinoData.cash_out_observed_confirmed_total)}
                   </p>
                 </div>
               </div>
@@ -120,7 +116,7 @@ export function TelemetryRailPanel({
                     >
                       <span className="font-mono">{pit.pit}</span>
                       <span className="font-mono text-amber-500">
-                        {formatCurrency(pit.cash_out_observed_estimate_total)}
+                        {formatCents(pit.cash_out_observed_estimate_total)}
                       </span>
                     </div>
                   ))}

@@ -19,25 +19,12 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCents } from '@/lib/format';
 import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
 export interface AlertsPanelProps {
   data: CashObsSpikeAlertDTO[] | undefined;
   isLoading?: boolean;
-}
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
 }
 
 /**
@@ -104,13 +91,13 @@ function AlertCard({ alert }: { alert: CashObsSpikeAlertDTO }) {
         <div>
           <span className="text-muted-foreground">Observed: </span>
           <span className="font-mono tabular-nums text-amber-600">
-            {formatCurrency(alert.observed_value)}
+            {formatCents(alert.observed_value)}
           </span>
         </div>
         <div>
           <span className="text-muted-foreground">Threshold: </span>
           <span className="font-mono tabular-nums">
-            {formatCurrency(alert.threshold)}
+            {formatCents(alert.threshold)}
           </span>
         </div>
       </div>

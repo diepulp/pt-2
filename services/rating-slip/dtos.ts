@@ -12,13 +12,13 @@
  * @see EXECUTION-SPEC-PRD-002.md
  */
 
-import type { Database, Json } from "@/types/database.types";
+import type { Database, Json } from '@/types/database.types';
 
 // === Base Row Types (for Pick/Omit derivation) ===
 
-type RatingSlipRow = Database["public"]["Tables"]["rating_slip"]["Row"];
+type RatingSlipRow = Database['public']['Tables']['rating_slip']['Row'];
 type RatingSlipPauseRow =
-  Database["public"]["Tables"]["rating_slip_pause"]["Row"];
+  Database['public']['Tables']['rating_slip_pause']['Row'];
 
 // === Rating Slip Status Enum (derived from database) ===
 
@@ -35,7 +35,7 @@ type RatingSlipPauseRow =
  * @see PRD-002 section 5.1 State Machine
  */
 export type RatingSlipStatus =
-  Database["public"]["Enums"]["rating_slip_status"];
+  Database['public']['Enums']['rating_slip_status'];
 
 // === Rating Slip DTOs ===
 
@@ -45,6 +45,8 @@ export type RatingSlipStatus =
  * Note: player_id is NOT included. Per SRM v4.0.0 invariant,
  * player identity is derived from visit.player_id at query time.
  *
+ * ADR-031: `average_bet` is in dollars (stored as-is from user input, not cents).
+ *
  * @example
  * // To get player for a slip:
  * // 1. Query visit where id = slip.visit_id
@@ -52,21 +54,21 @@ export type RatingSlipStatus =
  */
 export type RatingSlipDTO = Pick<
   RatingSlipRow,
-  | "id"
-  | "casino_id"
-  | "visit_id"
-  | "table_id"
-  | "seat_number"
-  | "start_time"
-  | "end_time"
-  | "status"
-  | "average_bet"
-  | "game_settings"
-  | "policy_snapshot"
-  | "previous_slip_id"
-  | "move_group_id"
-  | "accumulated_seconds"
-  | "final_duration_seconds"
+  | 'id'
+  | 'casino_id'
+  | 'visit_id'
+  | 'table_id'
+  | 'seat_number'
+  | 'start_time'
+  | 'end_time'
+  | 'status'
+  | 'average_bet'
+  | 'game_settings'
+  | 'policy_snapshot'
+  | 'previous_slip_id'
+  | 'move_group_id'
+  | 'accumulated_seconds'
+  | 'final_duration_seconds'
 >;
 
 /**
@@ -103,12 +105,12 @@ export interface RatingSlipWithPausesDTO extends RatingSlipDTO {
  */
 export type RatingSlipPauseDTO = Pick<
   RatingSlipPauseRow,
-  | "id"
-  | "rating_slip_id"
-  | "casino_id"
-  | "started_at"
-  | "ended_at"
-  | "created_by"
+  | 'id'
+  | 'rating_slip_id'
+  | 'casino_id'
+  | 'started_at'
+  | 'ended_at'
+  | 'created_by'
 >;
 
 // === Input DTOs ===
@@ -188,7 +190,7 @@ export interface MoveRatingSlipResult {
  * Status filter values for rating slip list queries.
  * PRD-020: Includes 'active' alias for open+paused slips.
  */
-export type RatingSlipQueryStatus = RatingSlipStatus | "active"; // PRD-020: Alias for open+paused
+export type RatingSlipQueryStatus = RatingSlipStatus | 'active'; // PRD-020: Alias for open+paused
 
 /**
  * Filters for rating slip list queries.
@@ -212,7 +214,7 @@ export type RatingSlipListFilters = {
 // pit_cash_observation is owned by RatingSlipService per SRM v4.0.0
 
 type PitCashObservationRow =
-  Database["public"]["Tables"]["pit_cash_observation"]["Row"];
+  Database['public']['Tables']['pit_cash_observation']['Row'];
 
 /**
  * Input for creating a pit cash observation.
@@ -228,9 +230,9 @@ export type CreatePitCashObservationInput = {
   /** Rating slip ID (optional) - convenience link */
   ratingSlipId?: string;
   /** Amount kind: 'estimate' (default) or 'cage_confirmed' */
-  amountKind?: Database["public"]["Enums"]["observation_amount_kind"];
+  amountKind?: Database['public']['Enums']['observation_amount_kind'];
   /** Source: 'walk_with' (default), 'phone_confirmed', or 'observed' */
-  source?: Database["public"]["Enums"]["observation_source"];
+  source?: Database['public']['Enums']['observation_source'];
   /** Timestamp of observation (optional, defaults to now) */
   observedAt?: string;
   /** Optional note */
@@ -251,21 +253,22 @@ export type CreatePitCashObservationInput = {
  */
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First camelCase DTO for RPC response mapping per PRD-OPS-CASH-OBS-001
 export type PitCashObservationDTO = {
-  id: PitCashObservationRow["id"];
-  casinoId: PitCashObservationRow["casino_id"];
-  gamingDay: PitCashObservationRow["gaming_day"];
-  playerId: PitCashObservationRow["player_id"];
-  visitId: PitCashObservationRow["visit_id"];
-  ratingSlipId: PitCashObservationRow["rating_slip_id"];
-  direction: PitCashObservationRow["direction"];
-  amount: PitCashObservationRow["amount"];
-  amountKind: PitCashObservationRow["amount_kind"];
-  source: PitCashObservationRow["source"];
-  observedAt: PitCashObservationRow["observed_at"];
-  createdByStaffId: PitCashObservationRow["created_by_staff_id"];
-  note: PitCashObservationRow["note"];
-  idempotencyKey: PitCashObservationRow["idempotency_key"];
-  createdAt: PitCashObservationRow["created_at"];
+  id: PitCashObservationRow['id'];
+  casinoId: PitCashObservationRow['casino_id'];
+  gamingDay: PitCashObservationRow['gaming_day'];
+  playerId: PitCashObservationRow['player_id'];
+  visitId: PitCashObservationRow['visit_id'];
+  ratingSlipId: PitCashObservationRow['rating_slip_id'];
+  direction: PitCashObservationRow['direction'];
+  /** Observed cash amount in dollars */
+  amount: PitCashObservationRow['amount'];
+  amountKind: PitCashObservationRow['amount_kind'];
+  source: PitCashObservationRow['source'];
+  observedAt: PitCashObservationRow['observed_at'];
+  createdByStaffId: PitCashObservationRow['created_by_staff_id'];
+  note: PitCashObservationRow['note'];
+  idempotencyKey: PitCashObservationRow['idempotency_key'];
+  createdAt: PitCashObservationRow['created_at'];
 };
 
 // === Rating Slip with Player DTO (Dashboard Optimization) ===
@@ -317,7 +320,8 @@ export interface ActivePlayerForDashboardDTO {
   pitName: string | null;
   seatNumber: string | null;
   startTime: string;
-  status: "open" | "paused";
+  status: 'open' | 'paused';
+  /** Average bet in dollars */
   averageBet: number | null;
   player: {
     id: string;
@@ -347,6 +351,7 @@ export interface ClosedSlipForGamingDayDTO {
   start_time: string;
   end_time: string;
   final_duration_seconds: number | null;
+  /** Average bet in dollars */
   average_bet: number | null;
   player: {
     id: string;

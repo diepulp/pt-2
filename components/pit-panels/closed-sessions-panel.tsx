@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useClosedSlipsForGamingDay } from '@/hooks/rating-slip';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import type { ClosedSlipForGamingDayDTO } from '@/services/rating-slip/dtos';
 
@@ -64,10 +65,10 @@ export function ClosedSessionsPanel({
     });
   };
 
-  // Format currency
-  const formatCurrency = (amount: number | null) => {
+  // Format currency (dollars from service layer)
+  const formatDollarsLocal = (amount: number | null) => {
     if (amount === null) return '--';
-    return `$${amount.toLocaleString()}`;
+    return formatDollars(amount);
   };
 
   if (isLoading) {
@@ -149,7 +150,7 @@ export function ClosedSessionsPanel({
                   onStartFromPrevious={() => onStartFromPrevious(slip.id)}
                   formatDuration={formatDuration}
                   formatTime={formatTime}
-                  formatCurrency={formatCurrency}
+                  formatDollars={formatDollarsLocal}
                 />
               ))}
 
@@ -228,13 +229,13 @@ function ClosedSlipRow({
   onStartFromPrevious,
   formatDuration,
   formatTime,
-  formatCurrency,
+  formatDollars,
 }: {
   slip: ClosedSlipForGamingDayDTO;
   onStartFromPrevious: () => void;
   formatDuration: (seconds: number | null) => string;
   formatTime: (timestamp: string) => string;
-  formatCurrency: (amount: number | null) => string;
+  formatDollars: (amount: number | null) => string;
 }) {
   const playerName = slip.player
     ? `${slip.player.first_name} ${slip.player.last_name}`
@@ -288,7 +289,7 @@ function ClosedSlipRow({
             <>
               <span className="text-muted-foreground/40">|</span>
               <span className="font-mono text-accent">
-                {formatCurrency(slip.average_bet)} avg
+                {formatDollars(slip.average_bet)} avg
               </span>
             </>
           )}

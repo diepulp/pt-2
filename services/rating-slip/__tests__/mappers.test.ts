@@ -721,4 +721,243 @@ describe('Rating Slip Mappers', () => {
       expect(result.duration_seconds).toBe(604800);
     });
   });
+
+  // ===========================================================================
+  // toActivePlayerForDashboardDTO (PERF-003)
+  // ===========================================================================
+
+  describe('toActivePlayerForDashboardDTO', () => {
+    // Import the mapper - must be done at test time after mocks
+    const {
+      toActivePlayerForDashboardDTO,
+      toActivePlayerForDashboardDTOList,
+    } = require('../mappers');
+
+    const mockActivePlayerRow = {
+      slip_id: 'slip-123',
+      visit_id: 'visit-456',
+      table_id: 'table-789',
+      table_name: 'Blackjack 1',
+      pit_name: 'Main Pit',
+      seat_number: '3',
+      start_time: '2026-01-26T10:00:00Z',
+      status: 'open',
+      average_bet: '100.00',
+      player_id: 'player-001',
+      player_first_name: 'John',
+      player_last_name: 'Doe',
+      player_birth_date: '1985-03-15',
+      player_tier: 'Gold',
+    };
+
+    const mockGhostVisitRow = {
+      slip_id: 'slip-ghost',
+      visit_id: 'visit-ghost',
+      table_id: 'table-789',
+      table_name: 'Blackjack 1',
+      pit_name: null,
+      seat_number: null,
+      start_time: '2026-01-26T11:00:00Z',
+      status: 'paused',
+      average_bet: null,
+      player_id: null,
+      player_first_name: null,
+      player_last_name: null,
+      player_birth_date: null,
+      player_tier: null,
+    };
+
+    it('should map all fields correctly', () => {
+      const result = toActivePlayerForDashboardDTO(mockActivePlayerRow);
+
+      expect(result).toEqual({
+        slipId: 'slip-123',
+        visitId: 'visit-456',
+        tableId: 'table-789',
+        tableName: 'Blackjack 1',
+        pitName: 'Main Pit',
+        seatNumber: '3',
+        startTime: '2026-01-26T10:00:00Z',
+        status: 'open',
+        averageBet: 100,
+        player: {
+          id: 'player-001',
+          firstName: 'John',
+          lastName: 'Doe',
+          birthDate: '1985-03-15',
+          tier: 'Gold',
+        },
+      });
+    });
+
+    it('should convert average_bet string to number', () => {
+      const result = toActivePlayerForDashboardDTO(mockActivePlayerRow);
+
+      expect(typeof result.averageBet).toBe('number');
+      expect(result.averageBet).toBe(100);
+    });
+
+    it('should handle null average_bet', () => {
+      const result = toActivePlayerForDashboardDTO(mockGhostVisitRow);
+
+      expect(result.averageBet).toBeNull();
+    });
+
+    it('should handle ghost visit (null player)', () => {
+      const result = toActivePlayerForDashboardDTO(mockGhostVisitRow);
+
+      expect(result.player).toBeNull();
+      expect(result.slipId).toBe('slip-ghost');
+      expect(result.status).toBe('paused');
+    });
+
+    it('should handle null pit_name', () => {
+      const result = toActivePlayerForDashboardDTO(mockGhostVisitRow);
+
+      expect(result.pitName).toBeNull();
+    });
+
+    it('should handle null seat_number', () => {
+      const result = toActivePlayerForDashboardDTO(mockGhostVisitRow);
+
+      expect(result.seatNumber).toBeNull();
+    });
+
+    it('should transform snake_case to camelCase', () => {
+      const result = toActivePlayerForDashboardDTO(mockActivePlayerRow);
+
+      // Verify camelCase transformation
+      expect(result).toHaveProperty('slipId');
+      expect(result).toHaveProperty('visitId');
+      expect(result).toHaveProperty('tableId');
+      expect(result).toHaveProperty('tableName');
+      expect(result).toHaveProperty('pitName');
+      expect(result).toHaveProperty('seatNumber');
+      expect(result).toHaveProperty('startTime');
+      expect(result).toHaveProperty('averageBet');
+      expect(result.player).toHaveProperty('firstName');
+      expect(result.player).toHaveProperty('lastName');
+      expect(result.player).toHaveProperty('birthDate');
+    });
+
+    it('should handle null player fields with empty string fallback', () => {
+      const rowWithNullNames = {
+        ...mockActivePlayerRow,
+        player_first_name: null,
+        player_last_name: null,
+      };
+
+      const result = toActivePlayerForDashboardDTO(rowWithNullNames);
+
+      expect(result.player?.firstName).toBe('');
+      expect(result.player?.lastName).toBe('');
+    });
+
+    it('should return a new object (immutability)', () => {
+      const result = toActivePlayerForDashboardDTO(mockActivePlayerRow);
+
+      expect(result).not.toBe(mockActivePlayerRow);
+    });
+  });
+
+  // ===========================================================================
+  // toActivePlayerForDashboardDTOList (PERF-003)
+  // ===========================================================================
+
+  describe('toActivePlayerForDashboardDTOList', () => {
+    const { toActivePlayerForDashboardDTOList } = require('../mappers');
+
+    const mockRow1 = {
+      slip_id: 'slip-1',
+      visit_id: 'visit-1',
+      table_id: 'table-1',
+      table_name: 'Blackjack 1',
+      pit_name: 'Main Pit',
+      seat_number: '1',
+      start_time: '2026-01-26T10:00:00Z',
+      status: 'open',
+      average_bet: '100.00',
+      player_id: 'player-1',
+      player_first_name: 'Alice',
+      player_last_name: 'Smith',
+      player_birth_date: '1990-01-01',
+      player_tier: 'Silver',
+    };
+
+    const mockRow2 = {
+      slip_id: 'slip-2',
+      visit_id: 'visit-2',
+      table_id: 'table-2',
+      table_name: 'Roulette 1',
+      pit_name: 'VIP Pit',
+      seat_number: '5',
+      start_time: '2026-01-26T11:00:00Z',
+      status: 'paused',
+      average_bet: '250.00',
+      player_id: 'player-2',
+      player_first_name: 'Bob',
+      player_last_name: 'Jones',
+      player_birth_date: '1985-06-15',
+      player_tier: 'Gold',
+    };
+
+    it('should map empty array', () => {
+      const result = toActivePlayerForDashboardDTOList([]);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should map single item array', () => {
+      const result = toActivePlayerForDashboardDTOList([mockRow1]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].slipId).toBe('slip-1');
+      expect(result[0].player?.firstName).toBe('Alice');
+    });
+
+    it('should map multiple items', () => {
+      const result = toActivePlayerForDashboardDTOList([mockRow1, mockRow2]);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].slipId).toBe('slip-1');
+      expect(result[1].slipId).toBe('slip-2');
+    });
+
+    it('should preserve order', () => {
+      const result = toActivePlayerForDashboardDTOList([mockRow2, mockRow1]);
+
+      expect(result[0].slipId).toBe('slip-2');
+      expect(result[1].slipId).toBe('slip-1');
+    });
+
+    it('should handle mixed player/ghost visits', () => {
+      const ghostRow = {
+        slip_id: 'slip-ghost',
+        visit_id: 'visit-ghost',
+        table_id: 'table-1',
+        table_name: 'Blackjack 1',
+        pit_name: null,
+        seat_number: null,
+        start_time: '2026-01-26T12:00:00Z',
+        status: 'open',
+        average_bet: null,
+        player_id: null,
+        player_first_name: null,
+        player_last_name: null,
+        player_birth_date: null,
+        player_tier: null,
+      };
+
+      const result = toActivePlayerForDashboardDTOList([
+        mockRow1,
+        ghostRow,
+        mockRow2,
+      ]);
+
+      expect(result).toHaveLength(3);
+      expect(result[0].player).not.toBeNull();
+      expect(result[1].player).toBeNull();
+      expect(result[2].player).not.toBeNull();
+    });
+  });
 });

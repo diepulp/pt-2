@@ -31,7 +31,7 @@ export interface SummaryBandProps {
 
 // === Formatters ===
 
-function formatCurrency(value: number): string {
+function formatDollars(value: number): string {
   const absValue = Math.abs(value);
   const prefix = value < 0 ? '-' : '';
   if (absValue >= 1000) {
@@ -132,8 +132,8 @@ export function SummaryBand({
       {/* Session Value Tile */}
       <SummaryTile
         title="Session Value"
-        primaryValue={formatCurrency(data.sessionValue.netWinLoss)}
-        secondaryValue={`Theo: ${formatCurrency(data.sessionValue.theoEstimate)}`}
+        primaryValue={formatDollars(data.sessionValue.netWinLoss)}
+        secondaryValue={`Theo: ${formatDollars(data.sessionValue.theoEstimate)}`}
         microDetail={
           data.sessionValue.lastActionAt
             ? formatTimeAgo(data.sessionValue.lastActionAt)
@@ -149,7 +149,7 @@ export function SummaryBand({
       <SummaryTile
         title="Cash Velocity"
         primaryValue={formatRate(data.cashVelocity.ratePerHour)}
-        secondaryValue={`Total: ${formatCurrency(data.cashVelocity.sessionTotal)}`}
+        secondaryValue={`Total: ${formatDollars(data.cashVelocity.sessionTotal)}`}
         microDetail={
           data.cashVelocity.lastBuyInAt
             ? `Last buy-in ${formatTimeAgo(data.cashVelocity.lastBuyInAt)}`

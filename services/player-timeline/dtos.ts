@@ -150,6 +150,7 @@ export interface IdentityEventMetadata {
 export interface PromoEventMetadata {
   promoType: string;
   promoCode?: string;
+  /** Promo amount in dollars */
   amount?: number;
 }
 
@@ -192,7 +193,7 @@ export interface InteractionEventDTO {
   sourceId: string;
   /** Human-readable summary */
   summary: string;
-  /** Monetary or points amount (null if N/A) */
+  /** Monetary amount in dollars or loyalty points; unit depends on eventType */
   amount: number | null;
   /** Event-specific payload (typed per eventType) */
   metadata: InteractionEventMetadata;
@@ -250,6 +251,7 @@ export interface RpcTimelineRow {
   source_table: string;
   source_id: string;
   summary: string;
+  /** Raw amount — dollars for financial events (RPC converts from cents), points for loyalty */
   amount: number | null;
   metadata: Record<string, unknown>;
   has_more: boolean;

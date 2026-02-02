@@ -22,6 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { formatCents } from '@/lib/format';
 import type {
   CashObsCasinoRollupDTO,
   CashObsPitRollupDTO,
@@ -34,20 +35,6 @@ export interface CashObservationsPanelProps {
   tablesData?: CashObsTableRollupDTO[];
   isLoading?: boolean;
   view?: 'casino' | 'pit' | 'table';
-}
-
-/**
- * Format cents to currency string.
- */
-function formatCurrency(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
-  const dollars = cents / 100;
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(dollars);
 }
 
 /**
@@ -101,13 +88,13 @@ function CasinoSummary({
       <div>
         <p className="text-xs text-muted-foreground">Estimated Total</p>
         <p className="text-xl font-semibold font-mono tabular-nums text-amber-600">
-          {formatCurrency(data.cash_out_observed_estimate_total)}
+          {formatCents(data.cash_out_observed_estimate_total)}
         </p>
       </div>
       <div>
         <p className="text-xs text-muted-foreground">Confirmed Total</p>
         <p className="text-xl font-semibold font-mono tabular-nums text-amber-600">
-          {formatCurrency(data.cash_out_observed_confirmed_total)}
+          {formatCents(data.cash_out_observed_confirmed_total)}
         </p>
       </div>
       <div>
@@ -190,10 +177,10 @@ function PitsTable({
           <TableRow key={pit.pit}>
             <TableCell className="font-medium">{pit.pit}</TableCell>
             <TableCell className="text-right font-mono text-sm tabular-nums text-amber-600">
-              {formatCurrency(pit.cash_out_observed_estimate_total)}
+              {formatCents(pit.cash_out_observed_estimate_total)}
             </TableCell>
             <TableCell className="text-right font-mono text-sm tabular-nums text-amber-600">
-              {formatCurrency(pit.cash_out_observed_confirmed_total)}
+              {formatCents(pit.cash_out_observed_confirmed_total)}
             </TableCell>
             <TableCell className="text-right font-mono text-xs">
               {pit.cash_out_observation_count}
@@ -285,10 +272,10 @@ function TablesTable({
               {table.pit ?? '—'}
             </TableCell>
             <TableCell className="text-right font-mono text-sm tabular-nums text-amber-600">
-              {formatCurrency(table.cash_out_observed_estimate_total)}
+              {formatCents(table.cash_out_observed_estimate_total)}
             </TableCell>
             <TableCell className="text-right font-mono text-sm tabular-nums text-amber-600">
-              {formatCurrency(table.cash_out_observed_confirmed_total)}
+              {formatCents(table.cash_out_observed_confirmed_total)}
             </TableCell>
             <TableCell className="text-right font-mono text-xs">
               {table.cash_out_observation_count}

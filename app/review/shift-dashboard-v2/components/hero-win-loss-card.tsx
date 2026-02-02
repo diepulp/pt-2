@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/tooltip';
 
 import { getWinLossColor } from '../lib/colors';
-import { formatCurrency, formatCurrencyDelta } from '../lib/format';
+import { formatCents, formatCentsDelta } from '../lib/format';
 
 export interface HeroWinLossCardProps {
   /** Primary win/loss value in cents (estimated with telemetry) */
@@ -113,7 +113,7 @@ export function HeroWinLossCard({
         <p
           className={`mt-4 text-5xl font-semibold font-mono tabular-nums ${colorConfig.text}`}
         >
-          {formatCurrency(primaryValue)}
+          {formatCents(primaryValue)}
         </p>
 
         {/* Trend indicator (future) */}
@@ -123,14 +123,14 @@ export function HeroWinLossCard({
               <>
                 <TrendingUpIcon className="h-4 w-4 text-emerald-500" />
                 <span className="text-emerald-500">
-                  {formatCurrencyDelta(priorShiftDelta)}
+                  {formatCentsDelta(priorShiftDelta)}
                 </span>
               </>
             ) : (
               <>
                 <TrendingDownIcon className="h-4 w-4 text-rose-500" />
                 <span className="text-rose-500">
-                  {formatCurrencyDelta(priorShiftDelta)}
+                  {formatCentsDelta(priorShiftDelta)}
                 </span>
               </>
             )}
@@ -145,7 +145,7 @@ export function HeroWinLossCard({
               Inventory
             </p>
             <p className="mt-1 text-xl font-mono tabular-nums">
-              {formatCurrency(inventoryWinLossCents)}
+              {formatCents(inventoryWinLossCents)}
             </p>
             <p className="text-[10px] text-muted-foreground">(tray delta)</p>
           </div>
@@ -155,7 +155,7 @@ export function HeroWinLossCard({
               Estimated
             </p>
             <p className="mt-1 text-xl font-mono tabular-nums">
-              {formatCurrency(estimatedWinLossCents)}
+              {formatCents(estimatedWinLossCents)}
             </p>
             <p className="text-[10px] text-muted-foreground">(+telemetry)</p>
           </div>

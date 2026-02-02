@@ -3,7 +3,7 @@
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getWinLossColor } from '@/lib/colors';
-import { formatCurrency } from '@/lib/format';
+import { formatCents } from '@/lib/format';
 
 export interface HeroWinLossCompactProps {
   winLossCents: number | null | undefined;
@@ -41,7 +41,7 @@ export function HeroWinLossCompact({
         <p
           className={`mt-2 text-3xl font-semibold font-mono tabular-nums ${colorConfig.text}`}
         >
-          {formatCurrency(value)}
+          {formatCents(value)}
         </p>
       </div>
     </Card>

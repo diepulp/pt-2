@@ -6,8 +6,9 @@
 
 /**
  * Format cents to currency string with proper thousand separators.
+ * @param cents - Amount in cents (1 dollar = 100)
  */
-export function formatCurrency(cents: number | null | undefined): string {
+export function formatCents(cents: number | null | undefined): string {
   if (cents == null) return '$0';
   const dollars = cents / 100;
   return new Intl.NumberFormat('en-US', {
@@ -39,8 +40,9 @@ export function formatPercentage(
 
 /**
  * Format cents delta with sign indicator.
+ * @param cents - Amount in cents (1 dollar = 100)
  */
-export function formatCurrencyDelta(cents: number | null | undefined): string {
+export function formatCentsDelta(cents: number | null | undefined): string {
   if (cents == null) return '$0';
   const dollars = cents / 100;
   const formatted = new Intl.NumberFormat('en-US', {
