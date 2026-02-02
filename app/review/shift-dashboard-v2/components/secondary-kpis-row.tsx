@@ -21,11 +21,8 @@ export interface SecondaryKpisRowProps {
 }
 
 export function SecondaryKpisRow({ data, isLoading }: SecondaryKpisRowProps) {
-  // Compute combined estimated drop
-  const estDropTotal =
-    (data?.estimated_drop_rated_total_cents ?? 0) +
-    (data?.estimated_drop_grind_total_cents ?? 0) +
-    (data?.estimated_drop_buyins_total_cents ?? 0);
+  // buyins_total_cents is already the sum of rated + grind (see rpc_shift_table_metrics)
+  const estDropTotal = data?.estimated_drop_buyins_total_cents ?? 0;
 
   return (
     <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
@@ -51,7 +48,7 @@ export function SecondaryKpisRow({ data, isLoading }: SecondaryKpisRowProps) {
       <SecondaryKpiCard
         title="Est. Drop"
         valueCents={isLoading ? null : estDropTotal}
-        subtitle="Rated + Grind + Cash"
+        subtitle="Rated + Grind"
         accentColor="bg-amber-500"
         isLoading={isLoading}
       />

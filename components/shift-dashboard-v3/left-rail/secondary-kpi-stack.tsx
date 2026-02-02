@@ -55,10 +55,8 @@ function CompactKpi({
  * Fills, Credits, Est. Drop in compact vertical layout.
  */
 export function SecondaryKpiStack({ data, isLoading }: SecondaryKpiStackProps) {
-  const estDropTotal =
-    (data?.estimated_drop_rated_total_cents ?? 0) +
-    (data?.estimated_drop_grind_total_cents ?? 0) +
-    (data?.estimated_drop_buyins_total_cents ?? 0);
+  // buyins_total_cents is already the sum of rated + grind (see rpc_shift_table_metrics)
+  const estDropTotal = data?.estimated_drop_buyins_total_cents ?? 0;
 
   return (
     <div className="grid grid-cols-1 gap-2">
