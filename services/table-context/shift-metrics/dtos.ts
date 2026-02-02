@@ -52,29 +52,38 @@ export interface ShiftTableMetricsDTO {
   // Opening snapshot
   opening_snapshot_id: string | null;
   opening_snapshot_at: string | null;
+  /** Opening bankroll total in cents (sum of all chip denominations at shift start) */
   opening_bankroll_total_cents: number;
 
   // Closing snapshot
   closing_snapshot_id: string | null;
   closing_snapshot_at: string | null;
+  /** Closing bankroll total in cents (sum of all chip denominations at shift end) */
   closing_bankroll_total_cents: number;
 
   // Fills and credits
+  /** Total chip fills brought to the table in cents */
   fills_total_cents: number;
+  /** Total chip credits removed from the table in cents */
   credits_total_cents: number;
 
   // Drop custody
   drop_custody_present: boolean;
 
   // Telemetry (estimated drop)
+  /** Estimated drop from rated buy-ins only, in cents (subset of buyins_cents) */
   estimated_drop_rated_cents: number;
+  /** Estimated drop from grind buy-ins only, in cents (subset of buyins_cents) */
   estimated_drop_grind_cents: number;
+  /** Estimated drop total in cents — superset: equals rated_cents + grind_cents */
   estimated_drop_buyins_cents: number;
   telemetry_quality: 'GOOD_COVERAGE' | 'LOW_COVERAGE' | 'NONE';
   telemetry_notes: string;
 
   // Win/Loss
+  /** Win/loss from inventory method in cents (opening + fills - credits - closing). Null if snapshots missing. */
   win_loss_inventory_cents: number | null;
+  /** Win/loss from estimated drop method in cents (drop - closing + opening - fills + credits). Null if drop unavailable. */
   win_loss_estimated_cents: number | null;
   metric_grade: 'ESTIMATE' | 'AUTHORITATIVE';
 
@@ -109,16 +118,23 @@ export interface ShiftPitMetricsDTO {
   tables_grade_estimate: number;
 
   // Fills and credits
+  /** Total chip fills across all tables in the pit, in cents */
   fills_total_cents: number;
+  /** Total chip credits across all tables in the pit, in cents */
   credits_total_cents: number;
 
   // Telemetry (estimated drop totals)
+  /** Estimated drop from rated buy-ins across all tables, in cents (subset of buyins_total_cents) */
   estimated_drop_rated_total_cents: number;
+  /** Estimated drop from grind buy-ins across all tables, in cents (subset of buyins_total_cents) */
   estimated_drop_grind_total_cents: number;
+  /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
   // Win/Loss totals
+  /** Aggregated win/loss from inventory method across all tables, in cents */
   win_loss_inventory_total_cents: number;
+  /** Aggregated win/loss from estimated drop method across all tables, in cents */
   win_loss_estimated_total_cents: number;
 }
 
@@ -162,15 +178,22 @@ export interface ShiftCasinoMetricsDTO {
   tables_grade_estimate: number;
 
   // Fills and credits
+  /** Total chip fills across all tables in the casino, in cents */
   fills_total_cents: number;
+  /** Total chip credits across all tables in the casino, in cents */
   credits_total_cents: number;
 
   // Telemetry (estimated drop totals)
+  /** Estimated drop from rated buy-ins across all tables, in cents (subset of buyins_total_cents) */
   estimated_drop_rated_total_cents: number;
+  /** Estimated drop from grind buy-ins across all tables, in cents (subset of buyins_total_cents) */
   estimated_drop_grind_total_cents: number;
+  /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
   // Win/Loss totals
+  /** Aggregated win/loss from inventory method across all tables, in cents */
   win_loss_inventory_total_cents: number;
+  /** Aggregated win/loss from estimated drop method across all tables, in cents */
   win_loss_estimated_total_cents: number;
 }
