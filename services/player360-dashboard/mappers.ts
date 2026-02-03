@@ -7,10 +7,10 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-import type { Json } from "@/types/remote/database.types";
+import type { Json } from '@/types/remote/database.types';
 
-import type { VisitFinancialSummaryDTO } from "../player-financial/dtos";
-import type { VisitDTO } from "../visit/dtos";
+import type { VisitFinancialSummaryDTO } from '../player-financial/dtos';
+import type { VisitDTO } from '../visit/dtos';
 
 import type {
   PlayerCashVelocityDTO,
@@ -22,7 +22,7 @@ import type {
   RewardsEligibilityDTO,
   WeeklyBucketDTO,
   WeeklySeriesDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Type Guards and Safe Converters ===
 
@@ -42,20 +42,20 @@ export function extractTheoSettings(
 ): { house_edge: number; decisions_per_hour: number } | null {
   if (
     !policySnapshot ||
-    typeof policySnapshot !== "object" ||
+    typeof policySnapshot !== 'object' ||
     Array.isArray(policySnapshot)
   ) {
     return null;
   }
   const ps = policySnapshot as Record<string, unknown>;
   const loyalty = ps.loyalty;
-  if (!loyalty || typeof loyalty !== "object" || Array.isArray(loyalty)) {
+  if (!loyalty || typeof loyalty !== 'object' || Array.isArray(loyalty)) {
     return null;
   }
   const loy = loyalty as Record<string, unknown>;
   if (
-    typeof loy.house_edge !== "number" ||
-    typeof loy.decisions_per_hour !== "number"
+    typeof loy.house_edge !== 'number' ||
+    typeof loy.decisions_per_hour !== 'number'
   ) {
     return null;
   }
@@ -73,7 +73,7 @@ export function toMetadataRecord(metadata: Json): Record<string, unknown> {
   if (metadata === null || metadata === undefined) {
     return {};
   }
-  if (typeof metadata === "object" && !Array.isArray(metadata)) {
+  if (typeof metadata === 'object' && !Array.isArray(metadata)) {
     // Type guard verified, safe to use as Record
     return metadata;
   }
@@ -127,11 +127,53 @@ function minutesSince(isoTimestamp: string): number {
 }
 
 /**
- * Get ISO date string for current gaming day.
- * For MVP, uses local date. In production, should use casino timezone.
+ * Get YYYY-MM-DD string for the current gaming day.
+ *
+ * Mirrors the DB `compute_gaming_day(casino_id, now())` logic:
+ *   1. Convert current time to the casino's local timezone
+ *   2. If before gaming_day_start_time, the gaming day is the previous calendar day
+ *
+ * Hardcoded to America/Los_Angeles + 06:00 start for MVP single-casino.
+ * TODO: Parameterize per-casino when multi-casino support lands.
+ *
+ * @see compute_gaming_day() in Postgres
+ * @see casino_settings.gaming_day_start_time / .timezone
+ * @see ISSUE-580A8D81 Root Cause #2
  */
 export function getCurrentGamingDay(): string {
-  return new Date().toISOString().slice(0, 10);
+  const CASINO_TZ = 'America/Los_Angeles';
+  const GAMING_START_HOUR = 6; // casino_settings.gaming_day_start_time = '06:00'
+
+  const now = new Date();
+
+  // Get date parts in casino timezone
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: CASINO_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: 'numeric',
+    hour12: false,
+  });
+  const parts = Object.fromEntries(
+    fmt.formatToParts(now).map(({ type, value }) => [type, value]),
+  );
+
+  const year = Number(parts.year);
+  const month = Number(parts.month);
+  const day = Number(parts.day);
+  const hour = Number(parts.hour);
+
+  // Before gaming day start → gaming day = previous calendar day
+  if (hour < GAMING_START_HOUR) {
+    const prev = new Date(year, month - 1, day - 1);
+    const py = prev.getFullYear();
+    const pm = String(prev.getMonth() + 1).padStart(2, '0');
+    const pd = String(prev.getDate()).padStart(2, '0');
+    return `${py}-${pm}-${pd}`;
+  }
+
+  return `${parts.year}-${parts.month}-${String(day).padStart(2, '0')}`;
 }
 
 /**
@@ -258,13 +300,13 @@ export function mapToEngagement(
   const minutesAgo = minutesSince(lastSeenAt);
 
   // Determine engagement status
-  let status: "active" | "cooling" | "dormant";
+  let status: 'active' | 'cooling' | 'dormant';
   if (minutesAgo <= ACTIVE_THRESHOLD_MINUTES) {
-    status = "active";
+    status = 'active';
   } else if (minutesAgo <= COOLING_THRESHOLD_MINUTES) {
-    status = "cooling";
+    status = 'cooling';
   } else {
-    status = "dormant";
+    status = 'dormant';
   }
 
   // Calculate session duration
@@ -302,10 +344,10 @@ export function mapToRewardsEligibility(
   // If no loyalty record, rules aren't configured
   if (!loyaltyBalance) {
     return {
-      status: "unknown",
+      status: 'unknown',
       nextEligibleAt: null,
-      reasonCodes: ["RULES_NOT_CONFIGURED"],
-      guidance: "Loyalty rules not configured for this casino",
+      reasonCodes: ['RULES_NOT_CONFIGURED'],
+      guidance: 'Loyalty rules not configured for this casino',
     };
   }
 
@@ -316,9 +358,9 @@ export function mapToRewardsEligibility(
 
     if (cooldownExpires.getTime() > Date.now()) {
       return {
-        status: "not_available",
+        status: 'not_available',
         nextEligibleAt: cooldownExpires.toISOString(),
-        reasonCodes: ["COOLDOWN_ACTIVE"],
+        reasonCodes: ['COOLDOWN_ACTIVE'],
         guidance: `Cooldown active until ${cooldownExpires.toLocaleTimeString()}`,
       };
     }
@@ -326,9 +368,9 @@ export function mapToRewardsEligibility(
 
   // Player is eligible
   return {
-    status: "available",
+    status: 'available',
     nextEligibleAt: null,
-    reasonCodes: ["AVAILABLE"],
+    reasonCodes: ['AVAILABLE'],
     guidance: null,
   };
 }
@@ -443,13 +485,13 @@ export function mapToRewardHistoryItem(ledgerEntry: {
   visit_id: string | null;
 }): RewardHistoryItemDTO {
   // Map entry_type to reward type
-  let rewardType: RewardHistoryItemDTO["rewardType"] = "other";
-  if (ledgerEntry.entry_type === "redemption") {
-    rewardType = "comp";
-  } else if (ledgerEntry.entry_type.includes("promo")) {
-    rewardType = "matchplay";
-  } else if (ledgerEntry.entry_type.includes("free")) {
-    rewardType = "freeplay";
+  let rewardType: RewardHistoryItemDTO['rewardType'] = 'other';
+  if (ledgerEntry.entry_type === 'redemption') {
+    rewardType = 'comp';
+  } else if (ledgerEntry.entry_type.includes('promo')) {
+    rewardType = 'matchplay';
+  } else if (ledgerEntry.entry_type.includes('free')) {
+    rewardType = 'freeplay';
   }
 
   return {
@@ -458,8 +500,8 @@ export function mapToRewardHistoryItem(ledgerEntry: {
     rewardType,
     amount: Math.abs(ledgerEntry.points),
     issuedBy: {
-      id: ledgerEntry.staff_id ?? "system",
-      name: ledgerEntry.staff_name ?? "System",
+      id: ledgerEntry.staff_id ?? 'system',
+      name: ledgerEntry.staff_name ?? 'System',
     },
     visitId: ledgerEntry.visit_id,
   };
@@ -482,12 +524,12 @@ export function mapToRecentEvents(
     summary: string;
   }>,
 ): RecentEventsDTO {
-  let lastBuyIn: RecentEventsDTO["lastBuyIn"] = null;
-  let lastReward: RecentEventsDTO["lastReward"] = null;
-  let lastNote: RecentEventsDTO["lastNote"] = null;
+  let lastBuyIn: RecentEventsDTO['lastBuyIn'] = null;
+  let lastReward: RecentEventsDTO['lastReward'] = null;
+  let lastNote: RecentEventsDTO['lastNote'] = null;
 
   for (const event of events) {
-    if (!lastBuyIn && event.event_type === "cash_in") {
+    if (!lastBuyIn && event.event_type === 'cash_in') {
       lastBuyIn = {
         at: event.occurred_at,
         amount: event.amount ?? 0,
@@ -495,15 +537,15 @@ export function mapToRecentEvents(
     }
     if (
       !lastReward &&
-      (event.event_type === "points_redeemed" ||
-        event.event_type === "promo_issued")
+      (event.event_type === 'points_redeemed' ||
+        event.event_type === 'promo_issued')
     ) {
       lastReward = {
         at: event.occurred_at,
-        type: event.event_type === "promo_issued" ? "promo" : "comp",
+        type: event.event_type === 'promo_issued' ? 'promo' : 'comp',
       };
     }
-    if (!lastNote && event.event_type === "note_added") {
+    if (!lastNote && event.event_type === 'note_added') {
       lastNote = {
         at: event.occurred_at,
         preview: event.summary.slice(0, 50),

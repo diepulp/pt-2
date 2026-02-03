@@ -83,7 +83,5 @@ export function useGamingDaySummary(filters: MtlGamingDaySummaryQueryFilters) {
     },
     enabled: hasRequiredFilters,
     staleTime: 15_000, // 15 seconds - aggregates update with new transactions
-    refetchOnWindowFocus: true,
-    refetchInterval: 60_000, // 1 minute - compliance dashboard auto-refresh
   });
 }
