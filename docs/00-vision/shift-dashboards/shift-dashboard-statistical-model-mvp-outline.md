@@ -147,7 +147,7 @@ Deliverable (MVP): keep basic spike alerts, but standardize severity mapping and
 ---
 
 ### Area H — Theoretical / Expected Value (theo) layer
-Theo requires configuration and is explicitly blocked today:
+Theo requires configuration and is explicitly blocked today **needs review**:
 - decisions per hour by game type
 - house advantage by game type
 - effective-dated table limits (table settings)
@@ -176,6 +176,8 @@ Design the dashboard like an operations console:
 - **“Shareable snapshots”**: copy/paste summaries into shift reports (structured text)
 
 Deliverable (MVP): prioritize *triage speed* over “analytics theatre.”
+
+**Note** Refer to player dashboard UI for developing shift dashboard layout. 
 
 ---
 
