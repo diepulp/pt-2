@@ -203,7 +203,9 @@ interface Player360CenterProps {
  */
 export function Player360Center({ children, className }: Player360CenterProps) {
   return (
-    <main
+    <div
+      role="region"
+      aria-label="Player timeline"
       className={cn(
         'flex flex-col flex-1 min-w-0',
         'overflow-hidden',
@@ -211,7 +213,7 @@ export function Player360Center({ children, className }: Player360CenterProps) {
       )}
     >
       {children}
-    </main>
+    </div>
   );
 }
 
@@ -240,7 +242,7 @@ export function Player360RightRail({
         'border-l border-border/40',
         'bg-card/30',
         'overflow-y-auto',
-        'transition-all duration-200 ease-in-out',
+        'transition-[width] duration-200 ease-in-out',
         isRightRailCollapsed ? 'w-12' : 'w-80',
         className,
       )}

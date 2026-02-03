@@ -9,6 +9,8 @@
 
 'use client';
 
+import { memo } from 'react';
+
 import type { PlayerSummaryDTO, SourceCategory } from '@/hooks/player-360';
 import { cn } from '@/lib/utils';
 
@@ -69,7 +71,7 @@ function formatDuration(minutes: number): string {
  * }
  * ```
  */
-export function FilterTileStack({
+export const FilterTileStack = memo(function FilterTileStack({
   data,
   activeCategory,
   onCategoryChange,
@@ -124,4 +126,4 @@ export function FilterTileStack({
       />
     </div>
   );
-}
+});

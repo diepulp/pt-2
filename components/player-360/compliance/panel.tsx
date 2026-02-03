@@ -19,6 +19,7 @@ import {
   ExternalLink,
   Shield,
 } from 'lucide-react';
+import { memo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -87,7 +88,7 @@ interface CompliancePanelProps {
 /**
  * Compliance panel with CTR progress and MTL list.
  */
-export function CompliancePanel({
+export const CompliancePanel = memo(function CompliancePanel({
   ctrStatus,
   mtlEntries,
   isLoading = false,
@@ -178,7 +179,7 @@ export function CompliancePanel({
       </PanelContent>
     </Panel>
   );
-}
+});
 
 // === CTR Progress Tile ===
 

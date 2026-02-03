@@ -4,14 +4,19 @@
  * Client-side hook to access authenticated user and staff claims.
  * Reads staff_id and other RLS claims from JWT app_metadata.
  *
+ * Uses TanStack Query internally for dedup/caching across multiple consumers.
+ * Auth state changes are propagated via query cache invalidation.
+ *
  * @see lib/supabase/auth-admin.ts for claim structure
  * @see ADR-015 for RLS context strategy
+ * @see PERF-006 WS5 — TanStack Query dedup for auth
  */
 
 'use client';
 
 import type { User } from '@supabase/supabase-js';
-import { useEffect, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 import {
@@ -33,11 +38,28 @@ interface UseAuthResult {
   isLoading: boolean;
 }
 
+/** Stable query key for auth user data */
+const AUTH_QUERY_KEY = ['auth', 'user'] as const;
+
+/**
+ * Fetch the current authenticated user from Supabase.
+ * Pure function used as TanStack Query queryFn.
+ */
+async function fetchAuthUser(): Promise<User | null> {
+  const supabase = createBrowserComponentClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  return user;
+}
+
 /**
  * Hook to access authenticated user and staff claims.
  *
  * Returns staff_id from JWT app_metadata for use in mutations.
  * In development mode, returns mock staff_id if no user is authenticated.
+ *
+ * Multiple consumers share a single cached result via TanStack Query.
  *
  * @example
  * ```tsx
@@ -52,29 +74,29 @@ interface UseAuthResult {
  * ```
  */
 export function useAuth(): UseAuthResult {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const queryClient = useQueryClient();
 
+  const { data: user = null, isLoading } = useQuery({
+    queryKey: AUTH_QUERY_KEY,
+    queryFn: fetchAuthUser,
+    staleTime: 1000 * 60 * 5, // 5 min — auth doesn't change often
+    refetchOnWindowFocus: false,
+  });
+
+  // Subscribe to auth state changes and update query cache
   useEffect(() => {
     const supabase = createBrowserComponentClient();
 
-    // Get initial user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      setIsLoading(false);
-    });
-
-    // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      queryClient.setQueryData(AUTH_QUERY_KEY, session?.user ?? null);
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
 
   // Extract staff claims from app_metadata
   const appMetadata = user?.app_metadata as StaffClaims | undefined;

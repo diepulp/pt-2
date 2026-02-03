@@ -368,12 +368,16 @@ export function LoadingSpinner({
     >
       <div
         className={cn(
-          'animate-spin rounded-full border-2 border-border border-t-accent',
+          'motion-safe:animate-spin rounded-full border-2 border-border border-t-accent',
           sizeClasses[size],
         )}
+        role="status"
+        aria-label="Loading"
       />
       {label && (
-        <p className="text-sm text-muted-foreground animate-pulse">{label}</p>
+        <p className="text-sm text-muted-foreground motion-safe:animate-pulse">
+          {label}
+        </p>
       )}
     </div>
   );
@@ -401,7 +405,11 @@ export function InlineLoading({
         className,
       )}
     >
-      <div className="h-4 w-4 animate-spin rounded-full border-2 border-border border-t-accent" />
+      <div
+        className="h-4 w-4 motion-safe:animate-spin rounded-full border-2 border-border border-t-accent"
+        role="status"
+        aria-label="Loading"
+      />
       <span className="text-sm">{text}</span>
     </div>
   );

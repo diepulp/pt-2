@@ -15,11 +15,15 @@ import { TimelinePageContent } from '../timeline/_components/timeline-content';
 
 interface Player360ContentProps {
   playerId: string;
+  gamingDay: string;
   // returnTo is passed down for potential use by child components
   // Currently used by Player360Breadcrumb via searchParams
 }
 
-export function Player360Content({ playerId }: Player360ContentProps) {
+export function Player360Content({
+  playerId,
+  gamingDay,
+}: Player360ContentProps) {
   // Anchor scroll on mount
   useEffect(() => {
     if (typeof window !== 'undefined' && window.location.hash === '#timeline') {
@@ -33,7 +37,7 @@ export function Player360Content({ playerId }: Player360ContentProps) {
 
   return (
     <div data-testid="player-360-page">
-      <TimelinePageContent playerId={playerId} />
+      <TimelinePageContent playerId={playerId} gamingDay={gamingDay} />
     </div>
   );
 }

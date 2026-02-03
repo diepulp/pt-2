@@ -61,6 +61,7 @@ export function IssueRewardButton({
       onClick={onClick}
       disabled={!enabled}
       className="gap-1.5"
+      aria-label={compact ? 'Issue reward' : undefined}
       data-testid="issue-reward-button"
     >
       <Gift className="w-4 h-4" />

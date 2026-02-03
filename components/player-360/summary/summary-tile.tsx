@@ -119,7 +119,7 @@ export function SummaryTile({
 
       {/* Primary Value + Trend */}
       <div className="flex items-center gap-2">
-        <span className={cn('text-xl font-semibold', styles.text)}>
+        <span className={cn('text-xl font-semibold tabular-nums', styles.text)}>
           {primaryValue}
         </span>
         {trend !== undefined && trend !== 0 && (

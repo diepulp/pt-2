@@ -10,6 +10,7 @@
 'use client';
 
 import { format, parseISO } from 'date-fns';
+import { memo } from 'react';
 import {
   Bar,
   BarChart,
@@ -112,7 +113,7 @@ function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
  * }
  * ```
  */
-export function ActivityChart({
+export const ActivityChart = memo(function ActivityChart({
   data,
   onBucketClick,
   height = 200,
@@ -204,4 +205,4 @@ export function ActivityChart({
       </ResponsiveContainer>
     </div>
   );
-}
+});

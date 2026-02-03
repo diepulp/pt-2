@@ -424,6 +424,7 @@ interface RecentPlayer {
 export function useRecentPlayers() {
   const [recentPlayers, setRecentPlayers] = React.useState<RecentPlayer[]>([]);
   const [isLoaded, setIsLoaded] = React.useState(false);
+  const isInitialLoad = React.useRef(true);
 
   React.useEffect(() => {
     try {
@@ -438,6 +439,10 @@ export function useRecentPlayers() {
   }, []);
 
   React.useEffect(() => {
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
     if (isLoaded) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(recentPlayers));
     }
@@ -445,12 +450,12 @@ export function useRecentPlayers() {
 
   const addRecent = React.useCallback((id: string, name: string) => {
     setRecentPlayers((prev) => {
+      if (prev[0]?.id === id) return prev; // Already first — skip
       const filtered = prev.filter((p) => p.id !== id);
-      const updated = [
+      return [
         { id, name, viewedAt: new Date().toISOString() },
         ...filtered,
       ].slice(0, MAX_RECENT);
-      return updated;
     });
   }, []);
 
@@ -509,17 +514,20 @@ export function Player360EmptyState({
   const inputRef = React.useRef<HTMLInputElement>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [debouncedSearch, setDebouncedSearch] = React.useState('');
+  const [selectedIndex, setSelectedIndex] = React.useState(-1);
   const { recentPlayers, isLoaded, removeRecent, clearAll } =
     useRecentPlayers();
 
-  // Detect OS for keyboard shortcut display
-  const isMac =
-    typeof window !== 'undefined' &&
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- userAgentData not in all TS type defs yet
-    ((navigator as any).userAgentData?.platform
-      ?.toLowerCase()
-      .includes('mac') ??
-      navigator.userAgent.toLowerCase().includes('mac'));
+  // Detect OS for keyboard shortcut display (deferred to avoid hydration mismatch)
+  const [isMac, setIsMac] = React.useState(false);
+  React.useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const ua = (navigator as any).userAgentData;
+    const mac =
+      ua?.platform?.toLowerCase().includes('mac') ??
+      navigator.userAgent.toLowerCase().includes('mac');
+    setIsMac(mac);
+  }, []);
   const modKey = isMac ? '⌘' : 'Ctrl';
 
   // Keyboard shortcut handler
@@ -542,6 +550,7 @@ export function Player360EmptyState({
       } else {
         setDebouncedSearch('');
       }
+      setSelectedIndex(-1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -572,6 +581,28 @@ export function Player360EmptyState({
     setSearchTerm('');
     setDebouncedSearch('');
     inputRef.current?.focus();
+  };
+
+  // Keyboard navigation for combobox search results
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) =>
+        prev < searchResults.length - 1 ? prev + 1 : prev,
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault();
+      if (searchResults[selectedIndex]) {
+        handleSelect(searchResults[selectedIndex]);
+        setSelectedIndex(-1);
+      }
+    } else if (e.key === 'Escape') {
+      handleClear();
+      setSelectedIndex(-1);
+    }
   };
 
   const showSearchResults = searchTerm.length >= 2;
@@ -619,21 +650,34 @@ export function Player360EmptyState({
             placeholder="Search by name, ID, or phone..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
+            role="combobox"
+            aria-expanded={showSearchResults}
+            aria-haspopup="listbox"
+            aria-controls="empty-state-search-listbox"
+            aria-autocomplete="list"
+            aria-activedescendant={
+              selectedIndex >= 0
+                ? `empty-state-search-option-${selectedIndex}`
+                : undefined
+            }
             className={cn(
               'w-full pl-12 pr-24 py-3 text-base rounded-xl',
               'bg-background/80 border border-border/60',
               'focus:outline-none focus:ring-2 focus:ring-accent/40 focus:border-accent/60',
               'placeholder:text-muted-foreground/50',
-              'transition-all duration-200',
+              'transition-colors duration-200',
               'shadow-sm',
             )}
+            aria-label="Search players"
             data-testid="search-input"
           />
           {/* Keyboard shortcut hint or clear button */}
           {searchTerm ? (
             <button
               onClick={handleClear}
-              className="absolute right-4 top-1/2 -translate-y-1/2 p-1 hover:bg-muted/50 rounded"
+              className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted/50 rounded"
+              aria-label="Clear search"
             >
               <X className="h-4 w-4 text-muted-foreground" />
             </button>
@@ -650,12 +694,28 @@ export function Player360EmptyState({
           )}
         </div>
 
+        {/* aria-live region for search status */}
+        <div role="status" aria-live="polite" className="sr-only">
+          {isSearching
+            ? 'Searching...'
+            : debouncedSearch.length >= 2
+              ? searchResults.length > 0
+                ? `${searchResults.length} results found`
+                : 'No results found'
+              : ''}
+        </div>
+
         {/* Search Results */}
         {showSearchResults && (
-          <div className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-lg overflow-hidden mb-4">
+          <div
+            id="empty-state-search-listbox"
+            role="listbox"
+            aria-label="Search results"
+            className="bg-card/90 backdrop-blur-sm rounded-xl border border-border/50 shadow-lg overflow-hidden mb-4"
+          >
             {isSearching ? (
               <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
                 <span>Searching...</span>
               </div>
             ) : error ? (
@@ -668,14 +728,18 @@ export function Player360EmptyState({
               </div>
             ) : (
               <div className="max-h-72 overflow-y-auto">
-                {searchResults.map((player) => (
+                {searchResults.map((player, index) => (
                   <button
                     key={player.id}
+                    id={`empty-state-search-option-${index}`}
+                    role="option"
+                    aria-selected={selectedIndex === index}
                     onClick={() => handleSelect(player)}
                     className={cn(
                       'w-full flex items-center gap-3 px-4 py-3',
                       'hover:bg-muted/50 transition-colors text-left',
                       'border-b border-border/30 last:border-b-0',
+                      selectedIndex === index && 'bg-muted/50',
                     )}
                     data-testid={`player-result-${player.id.slice(0, 8)}`}
                   >

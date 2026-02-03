@@ -10,6 +10,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
+import { memo } from 'react';
 
 import type { PlayerSummaryDTO, SourceCategory } from '@/hooks/player-360';
 import { cn } from '@/lib/utils';
@@ -110,7 +111,7 @@ function getEligibilityLabel(status: string): string {
  * }
  * ```
  */
-export function SummaryBand({
+export const SummaryBand = memo(function SummaryBand({
   data,
   activeCategory,
   onCategoryChange,
@@ -191,4 +192,4 @@ export function SummaryBand({
       />
     </div>
   );
-}
+});

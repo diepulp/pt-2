@@ -29,9 +29,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { usePlayer } from '@/hooks/player/use-player';
 import { cn } from '@/lib/utils';
-import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import type { PlayerDTO, PlayerSearchResultDTO } from '@/services/player/dtos';
 import { getPlayerEnrollment, searchPlayers } from '@/services/player/http';
 import { playerKeys } from '@/services/player/keys';
 
@@ -42,6 +41,12 @@ import { PlayerEditButton } from './player-edit-button';
 interface Player360HeaderContentProps {
   /** Player ID to display */
   playerId: string;
+  /** Player data from parent (eliminates duplicate usePlayer subscription) */
+  player?: PlayerDTO | null;
+  /** Whether player data is loading */
+  playerLoading?: boolean;
+  /** Error from player data fetch */
+  playerError?: Error | null;
   /** Whether to show back navigation */
   showBack?: boolean;
   /** Callback when a different player is selected via search */
@@ -62,6 +67,9 @@ const getStatusColor = (status: 'enrolled' | 'not_enrolled' | string) =>
  */
 export function Player360HeaderContent({
   playerId,
+  player = null,
+  playerLoading = false,
+  playerError = null,
   showBack = false,
   onSelectPlayer,
   className,
@@ -73,10 +81,13 @@ export function Player360HeaderContent({
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [selectedIndex, setSelectedIndex] = useState(-1);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
 
-  const { data: player, isLoading, error } = usePlayer(playerId);
+  // Use props from parent (single usePlayer subscription in ContentWrapper)
+  const isLoading = playerLoading;
+  const error = playerError;
 
   // Fetch enrollment status separately
   const { data: enrollment } = useQuery({
@@ -94,6 +105,7 @@ export function Player360HeaderContent({
       } else {
         setDebouncedSearch('');
       }
+      setSelectedIndex(-1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchTerm]);
@@ -148,7 +160,11 @@ export function Player360HeaderContent({
   };
 
   const handleShare = async () => {
-    await navigator.clipboard.writeText(window.location.href);
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+    } catch {
+      // Clipboard API may not be available in all contexts
+    }
   };
 
   const handleSelectPlayer = useCallback(
@@ -175,15 +191,36 @@ export function Player360HeaderContent({
   const enrollmentStatus =
     enrollment?.status === 'active' ? 'enrolled' : 'not_enrolled';
 
-  // Detect OS for keyboard hint
-  const isMac =
-    typeof window !== 'undefined' &&
+  // Detect OS for keyboard hint (deferred to avoid hydration mismatch)
+  const [isMac, setIsMac] = useState(false);
+  useEffect(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ((navigator as any).userAgentData?.platform
-      ?.toLowerCase()
-      .includes('mac') ??
-      navigator.userAgent.toLowerCase().includes('mac'));
+    const ua = (navigator as any).userAgentData;
+    const mac =
+      ua?.platform?.toLowerCase().includes('mac') ??
+      navigator.userAgent.toLowerCase().includes('mac');
+    setIsMac(mac);
+  }, []);
   const modKey = isMac ? '⌘' : 'Ctrl';
+
+  // Keyboard navigation for combobox search results
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setSelectedIndex((prev) =>
+        prev < searchResults.length - 1 ? prev + 1 : prev,
+      );
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setSelectedIndex((prev) => (prev > 0 ? prev - 1 : -1));
+    } else if (e.key === 'Enter' && selectedIndex >= 0) {
+      e.preventDefault();
+      if (searchResults[selectedIndex]) {
+        handleSelectPlayer(searchResults[selectedIndex]);
+        setSelectedIndex(-1);
+      }
+    }
+  };
 
   return (
     <div
@@ -201,6 +238,7 @@ export function Player360HeaderContent({
             size="icon"
             onClick={handleBack}
             className="shrink-0 h-8 w-8"
+            aria-label="Go back"
             data-testid="header-back-button"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -210,10 +248,10 @@ export function Player360HeaderContent({
         {/* Player Identity */}
         {isLoading ? (
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-full bg-muted animate-pulse" />
+            <div className="h-10 w-10 rounded-full bg-muted motion-safe:animate-pulse" />
             <div className="space-y-1.5">
-              <div className="h-5 w-32 bg-muted animate-pulse rounded" />
-              <div className="h-3 w-20 bg-muted animate-pulse rounded" />
+              <div className="h-5 w-32 bg-muted motion-safe:animate-pulse rounded" />
+              <div className="h-3 w-20 bg-muted motion-safe:animate-pulse rounded" />
             </div>
           </div>
         ) : error ? (
@@ -283,27 +321,54 @@ export function Player360HeaderContent({
                 placeholder="Search players..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                role="combobox"
+                aria-expanded={searchTerm.length >= 2}
+                aria-haspopup="listbox"
+                aria-controls="header-search-listbox"
+                aria-autocomplete="list"
+                aria-activedescendant={
+                  selectedIndex >= 0
+                    ? `header-search-option-${selectedIndex}`
+                    : undefined
+                }
                 className={cn(
                   'w-64 pl-9 pr-8 py-1.5 text-sm rounded-lg',
                   'bg-background/80 border border-border/60',
                   'focus:outline-none focus:ring-2 focus:ring-accent/40',
                   'placeholder:text-muted-foreground/50',
                 )}
+                aria-label="Search players"
                 data-testid="header-search-input"
               />
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               {searchTerm && (
                 <button
                   onClick={handleClearSearch}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-muted/50 rounded"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-2 hover:bg-muted/50 rounded"
+                  aria-label="Clear search"
                 >
                   <X className="h-3.5 w-3.5 text-muted-foreground" />
                 </button>
               )}
 
+              {/* aria-live region for search status */}
+              <div role="status" aria-live="polite" className="sr-only">
+                {isSearching
+                  ? 'Searching...'
+                  : debouncedSearch.length >= 2
+                    ? searchResults.length > 0
+                      ? `${searchResults.length} results found`
+                      : 'No results found'
+                    : ''}
+              </div>
+
               {/* Search Results Dropdown */}
               {searchTerm.length >= 2 && (
                 <div
+                  id="header-search-listbox"
+                  role="listbox"
+                  aria-label="Search results"
                   className={cn(
                     'absolute top-full left-0 right-0 mt-1 z-50',
                     'bg-card/95 backdrop-blur-sm rounded-lg border border-border/50',
@@ -312,7 +377,7 @@ export function Player360HeaderContent({
                 >
                   {isSearching ? (
                     <div className="flex items-center justify-center gap-2 py-4 text-sm text-muted-foreground">
-                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 motion-safe:animate-spin" />
                       <span>Searching...</span>
                     </div>
                   ) : searchResults.length === 0 ? (
@@ -320,15 +385,19 @@ export function Player360HeaderContent({
                       No players found
                     </div>
                   ) : (
-                    searchResults.map((result) => (
+                    searchResults.map((result, index) => (
                       <button
                         key={result.id}
+                        id={`header-search-option-${index}`}
+                        role="option"
+                        aria-selected={selectedIndex === index}
                         onClick={() => handleSelectPlayer(result)}
                         className={cn(
                           'w-full flex items-center gap-3 px-3 py-2',
                           'hover:bg-muted/50 transition-colors text-left',
                           'border-b border-border/30 last:border-b-0',
                           result.id === playerId && 'bg-accent/10',
+                          selectedIndex === index && 'bg-muted/50',
                         )}
                       >
                         <div
@@ -399,6 +468,9 @@ export function Player360HeaderContent({
               size="icon"
               onClick={() => setIsFavorite(!isFavorite)}
               className="h-8 w-8"
+              aria-label={
+                isFavorite ? 'Remove from favorites' : 'Add to favorites'
+              }
               data-testid="favorite-button"
             >
               {isFavorite ? (
@@ -421,6 +493,7 @@ export function Player360HeaderContent({
               size="icon"
               onClick={handleShare}
               className="h-8 w-8"
+              aria-label="Share player link"
               data-testid="share-button"
             >
               <Share2 className="h-4 w-4" />
@@ -442,12 +515,14 @@ export function Player360HeaderContent({
         />
       </div>
 
-      {/* Edit Modal */}
-      <PlayerEditModal
-        playerId={playerId}
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-      />
+      {/* Edit Modal — conditionally rendered to avoid idle subscriptions */}
+      {editModalOpen && (
+        <PlayerEditModal
+          playerId={playerId}
+          open={editModalOpen}
+          onOpenChange={setEditModalOpen}
+        />
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 # MVP Implementation Roadmap
 
 **ID**: ARCH-MVP-ROADMAP
-**Version**: 2.3.0
+**Version**: 2.4.0
 **Status**: CANONICAL
 **Created**: 2025-11-29
-**Updated**: 2026-01-02
+**Updated**: 2026-02-02
 **Owner**: Lead Architect
 
 ---
@@ -34,6 +34,7 @@
 | **3** | **PRD-005** | **COMPLETE** ✅ | MTLService (Pattern A, AML/CTR compliance, 12 workstreams) |
 | **SEC** | **ADR-022** | **COMPLETE** ✅ | Player Identity & Enrollment Architecture (8 migrations) |
 | **SEC** | **ADR-024** | **COMPLETE** ✅ | RLS Context Spoofing Remediation (16 RPCs hardened) |
+| **PERF** | **PERF-006** | **COMPLETE** ✅ | Player 360 Render Cascade — Performance, QA & Accessibility Audit (7 workstreams, 41 tests, ADR-032) |
 
 ---
 
@@ -1132,7 +1133,14 @@ graph LR
 
 ### ✅ Completed Since Last Update
 
-1. **MTLService (PRD-005)**: COMPLETE ✅ (2026-01-03)
+1. **PERF-006 Player 360 Render Cascade Audit**: COMPLETE ✅ (2026-02-02)
+   - 7 workstreams: Quick Wins, Error Boundaries, State Isolation, Component Architecture Refactor, Data Flow & Bundle, ARIA Combobox, Integration & E2E Tests
+   - ADR-032 created (Frontend Error Boundary Architecture)
+   - 41 new unit tests across 3 test suites
+   - E2E tautological assertions eliminated in player-360-navigation.spec.ts and player-360-panels.spec.ts
+   - Key deliverables: PanelErrorBoundary, route error.tsx, filter reset on playerId change, 3-panel layout refactor, lazy-loaded ActivityChart, ARIA combobox pattern
+
+2. **MTLService (PRD-005)**: COMPLETE ✅ (2026-01-03)
    - Full Pattern A implementation with 12 workstreams
    - Two-tier badge system: Entry badges (UX) + Aggregate badges (Compliance)
    - CTR threshold logic per 31 CFR § 1021.311
@@ -1280,6 +1288,8 @@ CREATE INDEX ix_outbox_pending ON finance_outbox (status, created_at)
 - **ADR-023**: Multi-tenancy Storage Model Selection
 - **ADR-024**: RLS Context Spoofing Remediation (COMPLETE 2025-12-31, 16 RPCs hardened) ✅
 - **ADR-025**: MTL Authorization Model (COMPLETE 2026-01-03, staff_role-based, no service claims) ✅
+- **ADR-030**: Auth Pipeline Hardening (TOCTOU elimination, claims lifecycle, bypass lockdown)
+- **ADR-032**: Frontend Error Boundary Architecture (COMPLETE 2026-02-02, extends ADR-012, PanelErrorBoundary + route error.tsx) ✅
 
 ### Other
 

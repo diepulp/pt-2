@@ -19,12 +19,15 @@ import {
   useRecentPlayers,
 } from '@/components/player-360';
 import { usePlayer } from '@/hooks/player/use-player';
+import { useTimelineFilterStore } from '@/hooks/player-360/use-timeline-filter';
 
 // Import the timeline content from the existing location
 import { TimelinePageContent } from '../../[playerId]/timeline/_components/timeline-content';
 
 interface Player360ContentWrapperProps {
   playerId: string;
+  /** Server-computed gaming day (PERF-006 WS5) */
+  gamingDay: string;
 }
 
 /**
@@ -32,10 +35,21 @@ interface Player360ContentWrapperProps {
  */
 export function Player360ContentWrapper({
   playerId,
+  gamingDay,
 }: Player360ContentWrapperProps) {
   const router = useRouter();
-  const { data: player } = usePlayer(playerId);
+  const {
+    data: player,
+    isLoading: playerLoading,
+    error: playerError,
+  } = usePlayer(playerId);
   const { addRecent } = useRecentPlayers();
+  const clearFilter = useTimelineFilterStore((s) => s.clearFilter);
+
+  // Reset timeline filters when navigating between players (P0-2)
+  useEffect(() => {
+    clearFilter();
+  }, [playerId, clearFilter]);
 
   // Add to recent players when viewing
   useEffect(() => {
@@ -69,13 +83,16 @@ export function Player360ContentWrapper({
       <Player360Header>
         <Player360HeaderContent
           playerId={playerId}
+          player={player}
+          playerLoading={playerLoading}
+          playerError={playerError}
           onSelectPlayer={handleSelectPlayer}
         />
       </Player360Header>
 
       {/* Body with timeline */}
       <Player360Body>
-        <TimelinePageContent playerId={playerId} />
+        <TimelinePageContent playerId={playerId} gamingDay={gamingDay} />
       </Player360Body>
     </div>
   );

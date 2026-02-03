@@ -159,7 +159,7 @@ function TimelineLoadingSkeleton() {
 /**
  * Grouped timeline with sticky category indicators and time-block grouping.
  */
-export function GroupedTimeline({
+export const GroupedTimeline = React.memo(function GroupedTimeline({
   cards,
   isLoading,
   isError,
@@ -316,4 +316,4 @@ export function GroupedTimeline({
       </div>
     </div>
   );
-}
+});

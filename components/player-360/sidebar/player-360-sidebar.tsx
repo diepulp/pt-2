@@ -126,7 +126,7 @@ export function Player360Sidebar({
         className={cn(
           'hidden lg:flex flex-col shrink-0',
           'border-r border-border/40 bg-card/30',
-          'transition-all duration-200 ease-in-out',
+          'transition-[width] duration-200 ease-in-out',
           'overflow-hidden',
           isCollapsed ? 'w-14' : 'w-72 xl:w-80',
           className,

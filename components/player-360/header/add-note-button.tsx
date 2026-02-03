@@ -60,6 +60,7 @@ export function AddNoteButton({
       onClick={onClick}
       disabled={disabled}
       className="gap-1.5"
+      aria-label={compact ? 'Add note' : undefined}
       data-testid="add-note-button"
     >
       <FileText className="w-4 h-4" />
