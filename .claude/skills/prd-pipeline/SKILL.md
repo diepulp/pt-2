@@ -93,7 +93,23 @@ These files contain deterministic rules that MUST be validated against during sp
    - If input matches `ISSUE-XXX` pattern: resolve to `docs/issues/ISSUE-XXX*.md`
    - Extract spec ID from filename for checkpoint naming (e.g., `PIT_DASHBOARD_DATA_FLOW_INVESTIGATION` → checkpoint ID)
 2. **Load context files** (architecture, governance, quality)
-3. Invoke `lead-architect` skill for **scaffolding only**:
+3. **BLOCKING REQUIREMENT — Delegate to lead-architect via Skill tool:**
+
+   > **DO NOT perform architectural scaffolding yourself.**
+   > You MUST invoke the `Skill` tool to delegate scaffolding to `lead-architect`.
+   > The general agent lacks bounded context ownership knowledge and will produce
+   > incorrect phase ordering and workstream boundaries if it does this inline.
+
+   **Required tool call:**
+   ```
+   Skill(skill="lead-architect", args="EXECUTION-SPEC scaffolding for {PRD_ID}:
+     Specification: {spec_file_path}
+     Task: Produce workstream SKELETON only (ID, name, type, bounded_context, dependencies).
+     DO NOT produce granular outputs, patterns, or implementation hints.
+     Output format: YAML workstream skeleton per SKILL.md §EXECUTION-SPEC Scaffolding Role.")
+   ```
+
+   **Expected output from lead-architect** (skeleton only):
    - Vertical slice boundaries
    - Bounded context ownership per workstream
    - Phase ordering and dependencies
@@ -103,10 +119,18 @@ These files contain deterministic rules that MUST be validated against during sp
 
 ### Stage 2: Expert Consultation (with Context Injection)
 
-4. Route each workstream to its domain expert for refinement **WITH governance context**:
+4. **BLOCKING REQUIREMENT — Delegate to domain experts via Skill tool:**
 
-   | Workstream Type | Expert Skill |
-   |-----------------|--------------|
+   > **DO NOT refine workstream specifications yourself.**
+   > You MUST invoke the `Skill` tool for EACH workstream, routing to the correct
+   > domain expert. The general agent lacks domain-specific pattern knowledge
+   > (ADR-015 RLS, DTO canonical, React 19 useTransition) and will produce
+   > non-compliant specifications if it does this inline.
+
+   **Domain → Expert Skill routing table:**
+
+   | Workstream Type | Expert Skill (exact Skill tool name) |
+   |-----------------|--------------------------------------|
    | `database`, `service-layer` | `backend-service-builder` |
    | `rls` | `rls-expert` |
    | `route-handlers` | `api-builder` |
@@ -115,21 +139,40 @@ These files contain deterministic rules that MUST be validated against during sp
    | `unit-tests` (component) | `frontend-design-pt-2` |
    | `e2e-tests` | `e2e-testing` |
 
-   **CRITICAL**: Each expert consultation MUST include:
-   - Relevant sections from `context/architecture.context.md` (SRM ownership, DTO patterns)
-   - Relevant sections from `context/governance.context.md` (test locations, migration standards)
-   - Relevant sections from `context/quality.context.md` (coverage targets, gate requirements)
+   **Required tool call per workstream:**
+   ```
+   Skill(skill="{expert_skill_name}", args="Expert consultation for {PRD_ID} {WS_ID}:
+     Workstream: {WS_NAME}
+     Type: {workstream_type}
+     Bounded Context: {bounded_context}
+     Dependencies: {dependencies}
 
-   **Note**: All executors are Skills. Task agents are deprecated for pipeline execution.
+     Architectural Skeleton from lead-architect:
+     {skeleton_yaml}
 
-5. **Invoke experts IN PARALLEL** when workstreams have no design dependencies:
+     GOVERNANCE CONTEXT (MUST COMPLY):
+     {Inject relevant sections from context/architecture.context.md}
+     {Inject relevant sections from context/governance.context.md}
+     {Inject relevant sections from context/quality.context.md}
+
+     Task: Refine this workstream with domain-specific details (outputs, patterns, validation).
+     Return enriched workstream YAML.")
+   ```
+
+   **CRITICAL**: Each expert consultation MUST include governance context injection.
+   See `references/expert-routing.md` for full context extraction rules per domain.
+
+   **All executors are Skills. Task agents are deprecated for pipeline execution.**
+
+5. **Invoke experts IN PARALLEL** when workstreams have no design dependencies.
+   Send a SINGLE message with MULTIPLE `Skill` tool calls:
    ```
    ┌─────────────────────────────────────────────────────────────┐
-   │ SINGLE MESSAGE with MULTIPLE Skill/Task invocations:       │
+   │ SINGLE MESSAGE — multiple Skill tool calls:                │
    ├─────────────────────────────────────────────────────────────┤
-   │ Skill(backend-service-builder, "refine WS1, WS3 + context")│
-   │ Skill(rls-expert, "refine WS2 + context")                  │
-   │ Skill(api-builder, "refine WS4 + context")                 │
+   │ Skill(skill="backend-service-builder", args="refine WS1…") │
+   │ Skill(skill="rls-expert", args="refine WS2…")              │
+   │ Skill(skill="api-builder", args="refine WS4…")             │
    └─────────────────────────────────────────────────────────────┘
    ```
 
@@ -182,24 +225,30 @@ Approve execution plan? [y/n/edit]
 
 ## Phase 3: Phased Execution
 
+> **BLOCKING REQUIREMENT — All workstream execution MUST use the Skill tool.**
+> DO NOT implement workstreams inline. Each workstream MUST be dispatched to its
+> executor skill via `Skill(skill="{executor}", args="...")`. The general agent
+> orchestrates (parses, dispatches, collects, validates) but NEVER writes
+> implementation code itself.
+
 For each execution phase:
 
 1. Parse workstreams from EXECUTION-SPEC YAML frontmatter
-2. **Invoke Skills IN PARALLEL** (see Critical Requirement below)
+2. **Dispatch via Skill tool IN PARALLEL** (see pattern below)
 3. Update checkpoint after each workstream completes
 4. Run validation gate (see `references/gate-protocol.md`)
 5. Pause for human approval before next phase
 
-### CRITICAL: Parallel Skill Invocation
+### CRITICAL: Parallel Skill Dispatch
 
-Workstreams marked as `parallel` in execution_phases MUST invoke using **multiple Skill calls in a SINGLE message**. This is the ONLY way to achieve concurrent execution.
+Workstreams marked as `parallel` in execution_phases MUST be dispatched using
+**multiple Skill tool calls in a SINGLE message**:
 
-**Correct Pattern**:
 ```
-When phase has parallel: [WS2, WS3], invoke BOTH in ONE message:
+When phase has parallel: [WS2, WS3], send ONE message with TWO Skill calls:
 
 ┌─────────────────────────────────────────────────────────────┐
-│ SINGLE MESSAGE with MULTIPLE Skill invocations:             │
+│ SINGLE MESSAGE — multiple Skill tool calls:                 │
 ├─────────────────────────────────────────────────────────────┤
 │ Skill(skill="backend-service-builder", args="WS2...")       │
 │ Skill(skill="api-builder", args="WS3...")                   │
@@ -208,8 +257,8 @@ When phase has parallel: [WS2, WS3], invoke BOTH in ONE message:
 
 **Wrong Pattern** (causes sequential execution):
 ```
-❌ Message 1: Skill(WS2) → wait
-❌ Message 2: Skill(WS3) → wait
+Message 1: Skill(WS2) → wait
+Message 2: Skill(WS3) → wait
 ```
 
 ### Executor Selection (Skills Only)
@@ -218,8 +267,8 @@ Consult `references/executor-registry.md` for the complete mapping.
 
 **All workstreams use Skills. Task agents are deprecated.**
 
-| Workstream Domain | Skill |
-|-------------------|-------|
+| Workstream Domain | Skill (exact `skill=` value) |
+|-------------------|------------------------------|
 | Database/Service Layer | `backend-service-builder` |
 | Route Handlers | `api-builder` |
 | RLS Policies | `rls-expert` |
@@ -229,7 +278,9 @@ Consult `references/executor-registry.md` for the complete mapping.
 
 ### Workstream Prompt Template
 
-```markdown
+Each `Skill` call MUST use this template for the `args` parameter:
+
+```
 Execute workstream {WS_ID} for {PRD_ID}:
 
 **Workstream**: {WS_NAME}

@@ -55,23 +55,21 @@ This command invokes the `prd-pipeline` skill to orchestrate:
 
 ## Action
 
-Invoke the `prd-pipeline` skill with the provided specification input:
+**BLOCKING REQUIREMENT: Invoke the `prd-pipeline` skill via the Skill tool.**
 
+DO NOT attempt to execute the pipeline logic inline. The `prd-pipeline` skill
+contains orchestration logic, expert routing, and checkpoint management that
+MUST run through the skill's workflow.
+
+**Required tool call:**
 ```
-Use the prd-pipeline skill to execute $ARGUMENTS through the implementation pipeline.
-
-If $ARGUMENTS is "--resume", continue from the last saved checkpoint.
-
-If $ARGUMENTS is a file path (contains "/" or ends with ".md"):
-  - Use the file path directly as the specification document
-  - Extract spec ID from filename for checkpoint naming
-
-If $ARGUMENTS matches PRD-XXX pattern:
-  - Resolve to docs/10-prd/PRD-XXX*.md
-
-If $ARGUMENTS matches EXEC-SPEC-XXX pattern:
-  - Resolve to docs/20-architecture/specs/*/EXEC-SPEC-XXX.md
-
-Follow the gate approval protocol - pause after each phase for human review.
-Preserve all artifacts on failure to allow manual fix and resume.
+Skill(skill="prd-pipeline", args="$ARGUMENTS")
 ```
+
+**Input resolution** (performed by prd-pipeline after invocation):
+- `--resume` → continue from the last saved checkpoint
+- File path (contains `/` or ends with `.md`) → use directly as specification document
+- `PRD-XXX` pattern → resolve to `docs/10-prd/PRD-XXX*.md`
+- `EXEC-SPEC-XXX` pattern → resolve to `docs/20-architecture/specs/*/EXEC-SPEC-XXX.md`
+
+The prd-pipeline skill handles gate approvals, expert routing, and checkpoint management.

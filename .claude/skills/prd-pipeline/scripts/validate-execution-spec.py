@@ -58,11 +58,12 @@ SRM_EXCLUSIVE_OWNERSHIP = {
 # Bounded context services that use Pattern A (contract-first DTOs)
 PATTERN_A_SERVICES = {"LoyaltyService", "FinanceService", "MTLService", "TableContextService"}
 
-# Test location standard (from quality.context.md ADR-002)
-TEST_LOCATION_PATTERN = r"__tests__/services/[\w-]+/"
+# Test location standard (from governance.context.md — co-located canonical pattern)
+# Canonical: services/{domain}/__tests__/*.test.ts (co-located with service)
+# Also valid: __tests__/services/{domain}/ (top-level, legacy)
+TEST_LOCATION_PATTERN = r"services/[\w-]+/__tests__/"
 WRONG_TEST_LOCATIONS = [
-    r"services/[\w-]+/__tests__/",  # Tests inside service folder
-    r"\.integration\.test\.ts",      # Wrong naming convention
+    r"\.integration\.test\.ts",      # Wrong naming convention (use .int.test.ts)
 ]
 
 # Valid executor configurations
@@ -79,7 +80,6 @@ VALID_SKILLS = {
     "backend-service-builder",
     "api-builder",
     "frontend-design-pt-2",
-    "frontend-design:frontend-design-pt-2",  # Plugin skill for PT-2 React components
     "e2e-testing",
     "rls-expert",
     "qa-specialist",

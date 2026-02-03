@@ -83,7 +83,7 @@ Skill(skill="skill-name", args="Execute workstream WS1 for PRD-XXX...")
 | `backend-service-builder` | Backend | DTOs, migrations, service factories, CRUD |
 | `api-builder` | API | OpenAPI contracts, route handlers, middleware |
 | `rls-expert` | Security | RLS policies, ADR-015/020 patterns, SECURITY DEFINER |
-| `frontend-design:frontend-design-pt-2` | Frontend | React 19 components, Zustand stores, hooks |
+| `frontend-design-pt-2` | Frontend | React 19 components, Zustand stores, hooks |
 | `e2e-testing` | Testing | Playwright E2E tests, TDD workflow |
 | `qa-specialist` | Quality | Test coverage validation, quality gates |
 | `performance-engineer` | Performance | Query optimization, SLOs, benchmarks |
@@ -106,17 +106,17 @@ Skill(skill="skill-name", args="Execute workstream WS1 for PRD-XXX...")
 
 | Workstream Type | Skill |
 |-----------------|-------|
-| Zustand Stores | `frontend-design:frontend-design-pt-2` |
-| Selector Hooks (useShallow) | `frontend-design:frontend-design-pt-2` |
-| React Query Hooks | `frontend-design:frontend-design-pt-2` |
-| React 19 Components | `frontend-design:frontend-design-pt-2` |
-| Modal Integration (useTransition) | `frontend-design:frontend-design-pt-2` |
+| Zustand Stores | `frontend-design-pt-2` |
+| Selector Hooks (useShallow) | `frontend-design-pt-2` |
+| React Query Hooks | `frontend-design-pt-2` |
+| React 19 Components | `frontend-design-pt-2` |
+| Modal Integration (useTransition) | `frontend-design-pt-2` |
 
 ### Testing Workstreams
 
 | Workstream Type | Skill |
 |-----------------|-------|
-| Unit Tests | `backend-service-builder` (for service tests) or `frontend-design:frontend-design-pt-2` (for component tests) |
+| Unit Tests | `backend-service-builder` (for service tests) or `frontend-design-pt-2` (for component tests) |
 | Integration Tests | `backend-service-builder` |
 | E2E Tests | `e2e-testing` |
 | Quality Gates | `qa-specialist` |
@@ -144,9 +144,9 @@ But within the PRD pipeline, **all workstreams must use Skills**.
 
 | Old (Deprecated) | New (Required) |
 |------------------|----------------|
-| `typescript-pro` for Zustand | `frontend-design:frontend-design-pt-2` |
-| `typescript-pro` for unit tests | `backend-service-builder` or `frontend-design:frontend-design-pt-2` |
-| `typescript-pro` for React Query | `frontend-design:frontend-design-pt-2` |
+| `typescript-pro` for Zustand | `frontend-design-pt-2` |
+| `typescript-pro` for unit tests | `backend-service-builder` or `frontend-design-pt-2` |
+| `typescript-pro` for React Query | `frontend-design-pt-2` |
 | `Plan` for architecture | `lead-architect` |
 
 ---

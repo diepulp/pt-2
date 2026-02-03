@@ -32,13 +32,13 @@ service: PlayerService
 workstreams:
   WS1:
     name: Database Layer
-    agent: backend-developer
+    executor: backend-service-builder
     depends_on: []
     outputs: [migration files]
     gate: schema-validation
   WS2:
     name: Service Layer
-    agent: backend-developer
+    executor: backend-service-builder
     depends_on: [WS1]
     outputs: [*.ts files]
     gate: type-check
@@ -92,9 +92,13 @@ Create checkpoint at `.claude/skills/feature-pipeline/checkpoints/{feature}.json
 }
 ```
 
-### Step 4: Execute Phases (PARALLEL SPAWNING)
+### Step 4: Execute Phases (Skill Dispatch)
 
-**CRITICAL**: Workstreams in the same phase MUST be spawned in a SINGLE message using multiple Task tool calls with `run_in_background: true`.
+**BLOCKING REQUIREMENT**: Each workstream MUST be dispatched to its executor
+skill via the `Skill` tool. DO NOT implement workstreams inline.
+
+Workstreams in the same phase MUST be dispatched in a **SINGLE message** using
+multiple `Skill` tool calls for parallel execution.
 
 For each execution phase:
 
@@ -106,37 +110,30 @@ Executing Phase {N}: {workstream names}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Workstreams:
-  {WS_ID}: {name} → {agent}
-  {WS_ID}: {name} → {agent}
+  {WS_ID}: {name} → {executor}
+  {WS_ID}: {name} → {executor}
 
-Spawning agents in parallel...
+Dispatching to executor skills...
 ```
 
-#### 4b. Spawn Parallel Agents
+#### 4b. Dispatch via Skill Tool (Parallel)
 
-**IN A SINGLE MESSAGE**, spawn ALL workstreams for this phase:
+**IN A SINGLE MESSAGE**, dispatch ALL workstreams for this phase:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ SINGLE MESSAGE with MULTIPLE Task tool invocations:            │
+│ SINGLE MESSAGE — multiple Skill tool calls:                     │
 ├─────────────────────────────────────────────────────────────────┤
-│ Task 1:                                                         │
-│   subagent_type: "{agent from workstream}"                      │
-│   description: "{WS_ID}: {name}"                                │
-│   prompt: "<workstream prompt with EXEC-SPEC section>"          │
-│   run_in_background: true                                       │
-├─────────────────────────────────────────────────────────────────┤
-│ Task 2:                                                         │
-│   subagent_type: "{agent from workstream}"                      │
-│   description: "{WS_ID}: {name}"                                │
-│   prompt: "<workstream prompt with EXEC-SPEC section>"          │
-│   run_in_background: true                                       │
+│ Skill(skill="{executor from WS1}", args="Execute WS1...")       │
+│ Skill(skill="{executor from WS2}", args="Execute WS2...")       │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 #### 4c. Workstream Prompt Template
 
-```markdown
+Each `Skill` call MUST use this template for the `args` parameter:
+
+```
 Execute workstream {WS_ID} for {feature}:
 
 **Workstream**: {name}
@@ -159,17 +156,7 @@ Execute workstream {WS_ID} for {feature}:
 {List expected output files}
 ```
 
-#### 4d. Collect Results
-
-Use `TaskOutput` tool to wait for each background task:
-
-```
-for each task_id:
-  result = TaskOutput(task_id, block=true)
-  update checkpoint with artifacts
-```
-
-#### 4e. Run Gate Validation
+#### 4d. Run Gate Validation
 
 After ALL workstreams in phase complete:
 
@@ -247,16 +234,21 @@ Artifacts:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## Agent Type Mapping
+## Executor Skill Mapping
 
-| Workstream Type | subagent_type | Capability |
-|-----------------|---------------|------------|
-| Database Layer | `backend-developer` | Migrations, RLS, types |
-| Service Layer | `backend-developer` | Factory, DTOs, CRUD |
-| Route Handlers | `api-expert` | Routes with middleware |
-| UI Components | `pt2-frontend-implementer` | React components |
-| RLS/Security | `rls-security-specialist` | RLS policies, tests |
-| Tests | `backend-developer` | Unit + integration |
+All workstreams use Skills. Task agents are deprecated for pipeline execution.
+
+| Workstream Type | Skill (exact `skill=` value) | Capability |
+|-----------------|------------------------------|------------|
+| Database Layer | `backend-service-builder` | Migrations, RLS, types |
+| Service Layer | `backend-service-builder` | Factory, DTOs, CRUD |
+| Route Handlers | `api-builder` | Routes with middleware |
+| UI Components | `frontend-design-pt-2` | React 19 components |
+| RLS/Security | `rls-expert` | RLS policies, tests |
+| Unit Tests (service) | `backend-service-builder` | Unit + integration |
+| Unit Tests (component) | `frontend-design-pt-2` | RTL + Jest |
+| E2E Tests | `e2e-testing` | Playwright |
+| Quality Gates | `qa-specialist` | Coverage validation |
 
 ## Error Handling
 

@@ -1,0 +1,88 @@
+{
+  "prd": "PRD-025",
+  "prd_title": "Onboarding v0.1 — Tenant Bootstrap, Staff Invites & Company Posture",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "execution_spec": "docs/20-architecture/specs/PRD-025/EXECUTION-SPEC-PRD-025.md",
+    "prd": "docs/10-prd/PRD-025-onboarding-bootstrap-invites-v0.md"
+  },
+  "gates_passed": ["spec-validation", "schema-validation", "type-check", "test-pass", "lint"],
+  "gates_pending": [],
+  "pipeline_stages": {
+    "stage_0_governance_context": "complete",
+    "stage_1_architect_scaffold": "complete",
+    "stage_2_expert_consultation": "complete",
+    "stage_3_assembly_validation": "complete"
+  },
+  "expert_consultations": {
+    "rls-expert": "WS1, WS2, WS3 — refined RLS policies, GAP-4 approach, token hashing, typed ERRCODEs",
+    "backend-service-builder": "WS4, WS5 — refined DTOs, schemas, crud wrappers, test scenarios, fixed test paths",
+    "frontend-design": "WS6 — refined component architecture, server/client split, auth guards, skipAuth pattern, mutation hooks"
+  },
+  "workstream_results": {
+    "WS1": {
+      "status": "complete",
+      "migration": "supabase/migrations/20260131100000_prd025_staff_invite_company_rls.sql",
+      "note": "staff_invite table + company RLS lockdown applied to local DB"
+    },
+    "WS2": {
+      "status": "complete",
+      "migration": "supabase/migrations/20260131100100_prd025_rpc_bootstrap_casino.sql",
+      "note": "rpc_bootstrap_casino + GAP-4 company context applied to local DB"
+    },
+    "WS3": {
+      "status": "complete",
+      "migration": "supabase/migrations/20260131100200_prd025_rpc_invite_create_accept.sql",
+      "note": "rpc_create_staff_invite + rpc_accept_staff_invite applied to local DB"
+    },
+    "WS4": {
+      "status": "complete",
+      "files": [
+        "services/casino/dtos.ts",
+        "services/casino/schemas.ts",
+        "services/casino/crud.ts",
+        "services/casino/keys.ts",
+        "services/casino/http.ts",
+        "services/casino/index.ts",
+        "lib/errors/domain-errors.ts"
+      ],
+      "note": "CasinoService onboarding extensions — DTOs, schemas, crud, keys, http, error codes"
+    },
+    "WS5": {
+      "status": "complete",
+      "files": [
+        "services/casino/__tests__/bootstrap.test.ts",
+        "services/casino/__tests__/invite.test.ts",
+        "services/casino/__tests__/onboarding-rpc-contract.test.ts"
+      ],
+      "note": "33 unit tests passing — bootstrap, invite CRUD, schema validation, type contract assertions"
+    },
+    "WS6": {
+      "status": "complete",
+      "files": [
+        "app/(onboarding)/bootstrap/page.tsx",
+        "app/(onboarding)/bootstrap/_actions.ts",
+        "components/onboarding/bootstrap-form.tsx",
+        "app/(onboarding)/invite/manage/page.tsx",
+        "app/(onboarding)/invite/manage/_actions.ts",
+        "components/onboarding/invite-form.tsx",
+        "components/onboarding/invite-list.tsx",
+        "app/(onboarding)/invite/accept/page.tsx",
+        "app/(onboarding)/invite/accept/_actions.ts",
+        "components/onboarding/accept-invite-handler.tsx",
+        "hooks/casino/use-onboarding-mutations.ts"
+      ],
+      "note": "Bootstrap wizard, invite management, accept invite handler with auth guards"
+    }
+  },
+  "validation_result": "PASSED (3 warnings)",
+  "validator_fix": "Fixed test location rule in validate-execution-spec.py — co-located services/{domain}/__tests__/ is canonical per governance.context.md",
+  "pre_existing_issues": [
+    "app/(public)/start/page.tsx:48 — setup_status column not in casino_settings (not PRD-025 related)"
+  ],
+  "timestamp": "2026-01-31T12:00:00Z"
+}

@@ -23,7 +23,7 @@ context/quality.context.md       # Test strategy, coverage targets, quality gate
 | `backend-service-builder` | SRM ownership, DTO patterns (Pattern A vs Canonical), migration standards |
 | `rls-expert` | RLS same-migration rule, SEC-003 role taxonomy, SECURITY DEFINER/INVOKER |
 | `api-builder` | Route handler standards, OpenAPI conventions, ServiceHttpResult |
-| `frontend-design:frontend-design-pt-2` | Component patterns, test location, state management (ADR-003) |
+| `frontend-design-pt-2` | Component patterns, test location, state management (ADR-003) |
 | `qa-specialist` | Coverage targets (≥90%), test naming (*.int.test.ts), quality gates |
 
 ---
@@ -117,17 +117,17 @@ For each workstream in skeleton:
 
 | Workstream Type | Expert Skill | Consult For |
 |-----------------|--------------|-------------|
-| `react-components` | `frontend-design:frontend-design-pt-2` | React 19 patterns, PT-2 layout conventions |
-| `zustand-stores` | `frontend-design:frontend-design-pt-2` | Store design, devtools middleware, ADR-003 |
-| `react-query-hooks` | `frontend-design:frontend-design-pt-2` | Query/mutation patterns, cache invalidation |
-| `modal-integration` | `frontend-design:frontend-design-pt-2` | useTransition patterns, optimistic updates |
+| `react-components` | `frontend-design-pt-2` | React 19 patterns, PT-2 layout conventions |
+| `zustand-stores` | `frontend-design-pt-2` | Store design, devtools middleware, ADR-003 |
+| `react-query-hooks` | `frontend-design-pt-2` | Query/mutation patterns, cache invalidation |
+| `modal-integration` | `frontend-design-pt-2` | useTransition patterns, optimistic updates |
 
 ### Testing Domain
 
 | Workstream Type | Expert Skill | Consult For |
 |-----------------|--------------|-------------|
 | `e2e-tests` | `e2e-testing` | Playwright patterns, TDD workflow |
-| `unit-tests` | `backend-service-builder` (service) or `frontend-design:frontend-design-pt-2` (component) | Jest/RTL patterns, mocking strategies |
+| `unit-tests` | `backend-service-builder` (service) or `frontend-design-pt-2` (component) | Jest/RTL patterns, mocking strategies |
 | `rls-tests` | `rls-expert` | Policy testing, multi-tenant scenarios |
 
 ### Cross-Cutting

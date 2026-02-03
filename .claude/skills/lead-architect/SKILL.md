@@ -37,7 +37,7 @@ python .claude/skills/lead-architect/scripts/check_primitive_freshness.py
 | Service layer details | `backend-service-builder` | DTOs, migrations, CRUD patterns |
 | API/Route handlers | `api-builder` | OpenAPI contracts, route implementation |
 | RLS policies | `rls-expert` | ADR-015/020 patterns, security |
-| React components | `frontend-design:frontend-design-pt-2` | React 19 patterns, PT-2 UI |
+| React components | `frontend-design-pt-2` | React 19 patterns, PT-2 UI |
 | E2E testing | `e2e-testing` | Playwright patterns, TDD |
 
 ### EXECUTION-SPEC Scaffolding Role
