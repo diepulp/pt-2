@@ -1,10 +1,14 @@
 # TEMP-002: Temporal Authority Pattern
 
 **Status**: Active
-**Version**: 1.0
+**Version**: 1.2
 **Owner**: CasinoService
 **Applies to**: All services that depend on casino time/gaming day
-**Last Updated**: 2025-11-17
+**Last Updated**: 2026-02-02
+
+> **Enforcement:** This pattern is enforced by [TEMP-003: Temporal Governance Enforcement](./TEMP-003-temporal-governance-enforcement.md). Banned patterns, the RSC safe path, and remediation checklists live there.
+>
+> **Registry:** See [INDEX.md](./INDEX.md) for the full temporal pattern registry.
 
 ---
 
@@ -64,24 +68,25 @@ Document the temporal authority pattern for PT-2, which establishes CasinoServic
 **Use Case**: Auto-populate `gaming_day` columns in transactional tables
 
 **Mechanism**:
-- Trigger function reads `casino_settings.gaming_day_start_time`
-- Computes gaming day using `compute_gaming_day()` function
+- Trigger function reads `casino_settings.gaming_day_start_time` (type: `time`)
+- Calls Layer 1 `compute_gaming_day(ts, gstart)` — the IMMUTABLE pure math function (see TEMP-001 §3.1)
 - Sets `gaming_day` column before row insert/update
 
 **Example** (Finance):
 ```sql
+-- Trigger calls Layer 1 (pure math) directly
 create or replace function set_fin_txn_gaming_day()
 returns trigger language plpgsql as $$
 declare
-  gstart interval;
+  gstart time;
 begin
   -- READ-ONLY: Fetch from temporal authority
-  select coalesce(gaming_day_start_time::interval, interval '06:00:00')
+  select coalesce(gaming_day_start_time, time '06:00')
   into gstart
   from casino_settings
   where casino_id = new.casino_id;
 
-  -- COMPUTE: Apply gaming day calculation
+  -- COMPUTE: Call Layer 1 pure math function
   new.gaming_day := compute_gaming_day(
     coalesce(new.created_at, now()),
     gstart
@@ -109,11 +114,13 @@ end$$;
 **Use Case**: Server-side functions that need gaming day context
 
 **Mechanism**:
-- RPC function accepts `casino_id` parameter
-- Internally reads `casino_settings.gaming_day_start_time`
+- RPC function calls Layer 2 `compute_gaming_day(casino_id, timestamp)` — the casino-scoped wrapper (see TEMP-001 §3.2)
+- Or: RPC reads `casino_settings` directly and calls Layer 1 pure math function
 - Returns computed values or executes logic using gaming day
 
-**Example** (MTL Threshold Check):
+> **Function layering note:** RPCs that accept `casino_id` as a parameter call Layer 2 directly. The planned `rpc_current_gaming_day()` (Layer 3, TEMP-001 §3.3) will derive `casino_id` from RLS context instead, per ADR-024. See TEMP-003 §5 for the migration plan.
+
+**Example** (MTL Threshold Check — uses Layer 2):
 ```sql
 create or replace function rpc_check_daily_threshold(
   p_casino_id uuid,
@@ -124,24 +131,21 @@ returns jsonb
 language plpgsql
 as $$
 declare
-  v_gstart interval;
   v_gaming_day date;
   v_total numeric;
   v_threshold numeric;
 begin
-  -- READ-ONLY: Fetch temporal config
-  select
-    gaming_day_start_time::interval,
-    ctr_threshold
-  into v_gstart, v_threshold
+  -- COMPUTE: Use Layer 2 casino-scoped wrapper
+  v_gaming_day := compute_gaming_day(
+    p_casino_id,
+    p_check_date::timestamptz
+  );
+
+  -- Fetch threshold from casino_settings
+  select ctr_threshold
+  into v_threshold
   from casino_settings
   where casino_id = p_casino_id;
-
-  -- COMPUTE: Calculate gaming day for check date
-  v_gaming_day := compute_gaming_day(
-    p_check_date::timestamptz,
-    v_gstart
-  );
 
   -- AGGREGATE: Sum transactions for gaming day
   select coalesce(sum(amount), 0)
@@ -877,7 +881,49 @@ describe('Temporal Propagation Integration', () => {
 
 ---
 
-## 8. Migration Checklist
+## 8. RSC / Performance Safe Path (added v1.1)
+
+> **Full enforcement details:** [TEMP-003 §4: Performance Without Temporal Drift](./TEMP-003-temporal-governance-enforcement.md#4-performance-without-temporal-drift)
+
+### 8.1 The Problem
+
+Performance optimizations that bypass `useGamingDay()` to avoid client-side waterfall cascades can accidentally create a **second temporal authority** in JavaScript. This is the exact failure mode that caused the P0 Player 360 incident.
+
+The waterfall being optimized:
+```
+useAuth → useGamingDay() → usePlayerSummary(gamingDay) → useGamingDaySummary
+```
+
+The **wrong** fix: replace the RPC with a JS function that computes gaming day using `new Date()`.
+
+### 8.2 The Only Allowed RSC Path
+
+React Server Components that need `gaming_day` without client waterfalls **must** follow this sequence:
+
+1. Create server Supabase client
+2. Set RLS context (`set_rls_context_from_staff()` or equivalent)
+3. Call `rpc_current_gaming_day()` — derives scope from session context, not parameters
+4. Fetch dashboard data using the `gaming_day` returned by the DB
+5. Pass `gaming_day` down as props to client components
+
+This removes the waterfall without violating the temporal authority hierarchy defined in §2.
+
+### 8.3 Banned Patterns
+
+The following are **hard-banned** in query paths (see TEMP-003 §3 for the full table):
+
+- `new Date().toISOString().slice(0, 10)` — UTC date ≠ gaming day
+- `getUTC*()` math for business dates
+- `new Date()` arithmetic to compute `gaming_day`
+- Accepting `gaming_day` as RPC/service input
+
+### 8.4 Antipattern Reference
+
+> [`docs/issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md`](../../issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md)
+
+---
+
+## 9. Migration Checklist
 
 When adding temporal authority dependency to a new service:
 
@@ -891,20 +937,25 @@ When adding temporal authority dependency to a new service:
 
 ---
 
-## 9. References
+## 10. References
 
+- **Gaming Day Specification**: [TEMP-001](./TEMP-001-gaming-day-specification.md) — Canonical computation spec
+- **Governance Enforcement**: [TEMP-003](./TEMP-003-temporal-governance-enforcement.md) — Banned patterns, CI gates, remediation
+- **Temporal Pattern Registry**: [INDEX.md](./INDEX.md)
 - **SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (lines 924, 943, 976-977, 2059)
-- **Gaming Day Spec**: TEMP-001
 - **CasinoService**: `services/casino/`
 - **DTO Standard**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md`
 - **Service Template**: `docs/70-governance/SERVICE_TEMPLATE.md`
+- **Antipattern Case Study**: [`ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION`](../../issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md)
 
 ---
 
-## 10. Changelog
+## 11. Changelog
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 1.2 | 2026-02-02 | Fixed function signatures (`interval` → `time`), Layer 1/2 references in §3A/3B | Lead Architect |
+| 1.1 | 2026-02-02 | RSC safe path (§8), cross-links to TEMP-001/TEMP-003, antipattern ref | Lead Architect |
 | 1.0 | 2025-11-17 | Initial specification extracted from SRM | System |
 
 ---

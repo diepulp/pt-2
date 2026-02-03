@@ -2550,7 +2550,14 @@ export type Database = {
             Args: { p_casino_id: string; p_timestamp?: string }
             Returns: string
           }
-        | { Args: { gstart: string; ts: string }; Returns: string }
+        | {
+            Args: { p_gaming_day_start: unknown; p_ts: string }
+            Returns: string
+          }
+      compute_gaming_day_for_casino: {
+        Args: { p_ts?: string }
+        Returns: string
+      }
       compute_slip_final_seconds: {
         Args: { p_slip_id: string }
         Returns: number
@@ -2884,6 +2891,17 @@ export type Database = {
           p_last_name: string
         }
         Returns: Json
+      }
+      rpc_current_gaming_day: {
+        Args: { p_timestamp?: string }
+        Returns: string
+      }
+      rpc_gaming_day_range: {
+        Args: { p_end_timestamp?: string; p_weeks?: number }
+        Returns: {
+          end_gd: string
+          start_gd: string
+        }[]
       }
       rpc_get_current_table_session: {
         Args: { p_gaming_table_id: string }

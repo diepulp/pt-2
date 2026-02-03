@@ -78,8 +78,8 @@ export function usePlayerSummary(
 
   return useQuery({
     queryKey: player360DashboardKeys.summary({ playerId, gamingDay }),
-    queryFn: () => getPlayerSummary(supabase, playerId, gamingDay),
-    enabled: enabled && !!playerId,
+    queryFn: () => getPlayerSummary(supabase, playerId, gamingDay!),
+    enabled: enabled && !!playerId && !!gamingDay,
     staleTime,
   });
 }

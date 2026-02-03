@@ -10,6 +10,7 @@ import noHeaderCasinoContext from './.eslint-rules/no-header-casino-context.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
+import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -148,6 +149,38 @@ const eslintConfig = [
           ],
         },
       ],
+    },
+  },
+  // ==========================================================================
+  // TEMP-003 / PRD-027: Temporal governance enforcement
+  // Prevents JS temporal bypass patterns in query paths (services/, app/, hooks/)
+  // ==========================================================================
+  {
+    files: [
+      'services/**/*.ts',
+      'services/**/*.tsx',
+      'app/**/*.ts',
+      'app/**/*.tsx',
+      'hooks/**/*.ts',
+      'hooks/**/*.tsx',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/__tests__/**',
+      '**/__mocks__/**',
+    ],
+    plugins: {
+      'temporal-rules': {
+        rules: {
+          'no-temporal-bypass': noTemporalBypass,
+        },
+      },
+    },
+    rules: {
+      'temporal-rules/no-temporal-bypass': 'error',
     },
   },
   // Production paths security - Block service client (SEC-001)

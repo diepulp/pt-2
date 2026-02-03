@@ -13,23 +13,22 @@
  * @see EXECUTION-SPEC-PRD-023.md WS1
  */
 
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from "@/lib/errors/domain-errors";
-import { calculateTheoFromDuration } from "@/lib/theo";
-import type { Database, Json } from "@/types/database.types";
+import { DomainError } from '@/lib/errors/domain-errors';
+import { callGamingDayRangeRpc } from '@/lib/gaming-day/rpc';
+import { calculateTheoFromDuration } from '@/lib/theo';
+import type { Database, Json } from '@/types/database.types';
 
 import type {
   PlayerSummaryDTO,
   RecentEventsDTO,
   RewardHistoryItemDTO,
   WeeklySeriesDTO,
-} from "./dtos";
+} from './dtos';
 import {
   composePlayerSummary,
   extractTheoSettings,
-  getCurrentGamingDay,
-  getWeeksAgoDate,
   mapToCashVelocity,
   mapToEngagement,
   mapToRecentEvents,
@@ -39,7 +38,7 @@ import {
   mapToWeeklySeries,
   parseLoyaltyData,
   toMetadataRecord,
-} from "./mappers";
+} from './mappers';
 
 // === Error Mapping ===
 
@@ -51,19 +50,19 @@ function mapDatabaseError(error: {
   message: string;
 }): DomainError {
   // Handle RPC-raised exceptions
-  if (error.message?.includes("Casino context")) {
+  if (error.message?.includes('Casino context')) {
     return new DomainError(
-      "UNAUTHORIZED",
-      "Casino context not established. Ensure you are authenticated.",
+      'UNAUTHORIZED',
+      'Casino context not established. Ensure you are authenticated.',
     );
   }
 
   // PGRST116 = No rows returned
-  if (error.code === "PGRST116") {
-    return new DomainError("NOT_FOUND", "Player not found");
+  if (error.code === 'PGRST116') {
+    return new DomainError('NOT_FOUND', 'Player not found');
   }
 
-  return new DomainError("INTERNAL_ERROR", error.message, { details: error });
+  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
 }
 
 // === Summary Operations ===
@@ -82,9 +81,9 @@ function mapDatabaseError(error: {
 export async function getPlayerSummary(
   supabase: SupabaseClient<Database>,
   playerId: string,
-  gamingDay?: string,
+  gamingDay: string,
 ): Promise<PlayerSummaryDTO> {
-  const currentGamingDay = gamingDay ?? getCurrentGamingDay();
+  const currentGamingDay = gamingDay;
 
   try {
     // Fetch data in parallel for efficiency
@@ -97,40 +96,40 @@ export async function getPlayerSummary(
     ] = await Promise.all([
       // 1. Get active visit for the player
       supabase
-        .from("visit")
-        .select("id, player_id, casino_id, started_at, ended_at, visit_kind")
-        .eq("player_id", playerId)
-        .is("ended_at", null)
+        .from('visit')
+        .select('id, player_id, casino_id, started_at, ended_at, visit_kind')
+        .eq('player_id', playerId)
+        .is('ended_at', null)
         .maybeSingle(),
 
       // 2. Get financial summary for current gaming day
       // This aggregates total_in, total_out for the player
       supabase
-        .from("player_financial_transaction")
-        .select("amount, direction, created_at")
-        .eq("player_id", playerId)
-        .eq("gaming_day", currentGamingDay),
+        .from('player_financial_transaction')
+        .select('amount, direction, created_at')
+        .eq('player_id', playerId)
+        .eq('gaming_day', currentGamingDay),
 
       // 3. Get loyalty balance
       supabase
-        .from("player_loyalty")
-        .select("*")
-        .eq("player_id", playerId)
+        .from('player_loyalty')
+        .select('*')
+        .eq('player_id', playerId)
         .maybeSingle(),
 
       // 4. WS1: Get last activity timestamp from timeline for engagement status
-      supabase.rpc("rpc_get_player_timeline", {
+      supabase.rpc('rpc_get_player_timeline', {
         p_player_id: playerId,
         p_limit: 1,
       }),
 
       // 5. WS3: Get most recent reward redemption for cooldown check
       supabase
-        .from("loyalty_ledger")
-        .select("created_at")
-        .eq("player_id", playerId)
-        .eq("reason", "redeem")
-        .order("created_at", { ascending: false })
+        .from('loyalty_ledger')
+        .select('created_at')
+        .eq('player_id', playerId)
+        .eq('reason', 'redeem')
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle(),
     ]);
@@ -138,14 +137,14 @@ export async function getPlayerSummary(
     // Handle errors
     if (
       activeVisitResult.error &&
-      activeVisitResult.error.code !== "PGRST116"
+      activeVisitResult.error.code !== 'PGRST116'
     ) {
       throw mapDatabaseError(activeVisitResult.error);
     }
     if (financialSummaryResult.error) {
       throw mapDatabaseError(financialSummaryResult.error);
     }
-    if (loyaltyResult.error && loyaltyResult.error.code !== "PGRST116") {
+    if (loyaltyResult.error && loyaltyResult.error.code !== 'PGRST116') {
       throw mapDatabaseError(loyaltyResult.error);
     }
     // Timeline RPC may return empty array (no error for no rows)
@@ -155,7 +154,7 @@ export async function getPlayerSummary(
     // Last redemption may not exist (PGRST116 is OK)
     if (
       lastRedemptionResult.error &&
-      lastRedemptionResult.error.code !== "PGRST116"
+      lastRedemptionResult.error.code !== 'PGRST116'
     ) {
       throw mapDatabaseError(lastRedemptionResult.error);
     }
@@ -180,10 +179,10 @@ export async function getPlayerSummary(
 
     if (activeVisit) {
       ratingSlipsResult = await supabase
-        .from("rating_slip")
-        .select("average_bet, accumulated_seconds, policy_snapshot, status")
-        .eq("visit_id", activeVisit.id)
-        .in("status", ["open", "paused"]);
+        .from('rating_slip')
+        .select('average_bet, accumulated_seconds, policy_snapshot, status')
+        .eq('visit_id', activeVisit.id)
+        .in('status', ['open', 'paused']);
 
       if (ratingSlipsResult.error) {
         throw mapDatabaseError(ratingSlipsResult.error);
@@ -196,10 +195,10 @@ export async function getPlayerSummary(
     // player_financial_transaction.amount is stored in cents (see use-save-with-buyin.ts)
     // Convert to dollars for DTO consumption by UI components
     const totalInCents = transactions
-      .filter((t) => t.direction === "in")
+      .filter((t) => t.direction === 'in')
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const totalOutCents = transactions
-      .filter((t) => t.direction === "out")
+      .filter((t) => t.direction === 'out')
       .reduce((sum, t) => sum + (t.amount ?? 0), 0);
     const totalIn = totalInCents / 100;
     const totalOut = totalOutCents / 100;
@@ -211,8 +210,8 @@ export async function getPlayerSummary(
     const financialSummary =
       transactions.length > 0
         ? {
-            visit_id: activeVisit?.id ?? "",
-            casino_id: activeVisit?.casino_id ?? "",
+            visit_id: activeVisit?.id ?? '',
+            casino_id: activeVisit?.casino_id ?? '',
             total_in: totalIn,
             total_out: totalOut,
             net_amount: totalIn - totalOut,
@@ -257,15 +256,15 @@ export async function getPlayerSummary(
       activeVisit
         ? {
             id: activeVisit.id,
-            player_id: activeVisit.player_id ?? "",
+            player_id: activeVisit.player_id ?? '',
             casino_id: activeVisit.casino_id,
             started_at: activeVisit.started_at,
             ended_at: activeVisit.ended_at,
             visit_kind:
               (activeVisit.visit_kind as
-                | "reward_identified"
-                | "gaming_identified_rated"
-                | "gaming_ghost_unrated") ?? "gaming_identified_rated",
+                | 'reward_identified'
+                | 'gaming_identified_rated'
+                | 'gaming_ghost_unrated') ?? 'gaming_identified_rated',
             visit_group_id: activeVisit.id,
             gaming_day: currentGamingDay,
           }
@@ -322,26 +321,42 @@ export async function getWeeklySeries(
   playerId: string,
   weeks = 12,
 ): Promise<WeeklySeriesDTO> {
-  const periodStart = getWeeksAgoDate(weeks);
-
   try {
+    // Get gaming day range from DB (replaces JS getWeeksAgoDate)
+    const rangeResult = await callGamingDayRangeRpc(supabase, weeks);
+
+    if (rangeResult.error) {
+      throw mapDatabaseError(rangeResult.error);
+    }
+
+    const range = rangeResult.data?.[0];
+    if (!range) {
+      throw new DomainError(
+        'INTERNAL_ERROR',
+        'Gaming day range RPC returned no data',
+      );
+    }
+
+    const periodStart = range.start_gd;
+    const periodEnd = range.end_gd;
+
     // Fetch visits and loyalty entries in parallel
     const [visitsResult, rewardsResult] = await Promise.all([
       // Get visits within the period
       supabase
-        .from("visit")
-        .select("id, started_at")
-        .eq("player_id", playerId)
-        .gte("started_at", `${periodStart}T00:00:00Z`),
+        .from('visit')
+        .select('id, started_at')
+        .eq('player_id', playerId)
+        .gte('started_at', `${periodStart}T00:00:00Z`),
 
       // Get reward entries (redemptions) within the period
       // Using 'reason' column which contains the loyalty reason enum
       supabase
-        .from("loyalty_ledger")
-        .select("id, created_at, reason")
-        .eq("player_id", playerId)
-        .eq("reason", "redeem")
-        .gte("created_at", `${periodStart}T00:00:00Z`),
+        .from('loyalty_ledger')
+        .select('id, created_at, reason')
+        .eq('player_id', playerId)
+        .eq('reason', 'redeem')
+        .gte('created_at', `${periodStart}T00:00:00Z`),
     ]);
 
     if (visitsResult.error) {
@@ -358,7 +373,7 @@ export async function getWeeklySeries(
       issued_at: r.created_at,
     }));
 
-    return mapToWeeklySeries(visits, rewards, weeks);
+    return mapToWeeklySeries(visits, rewards, weeks, periodStart, periodEnd);
   } catch (error) {
     if (error instanceof DomainError) {
       throw error;
@@ -387,7 +402,7 @@ export async function getRewardHistory(
     // Get recent redemptions from loyalty ledger
     // Using 'reason' and 'points_delta' which are the actual column names
     const { data, error } = await supabase
-      .from("loyalty_ledger")
+      .from('loyalty_ledger')
       .select(
         `
         id,
@@ -398,9 +413,9 @@ export async function getRewardHistory(
         visit_id
       `,
       )
-      .eq("player_id", playerId)
-      .eq("reason", "redeem")
-      .order("created_at", { ascending: false })
+      .eq('player_id', playerId)
+      .eq('reason', 'redeem')
+      .order('created_at', { ascending: false })
       .limit(limit);
 
     if (error) {
@@ -445,13 +460,13 @@ export async function getRecentEvents(
 ): Promise<RecentEventsDTO> {
   try {
     // Use the player timeline RPC to get recent events
-    const { data, error } = await supabase.rpc("rpc_get_player_timeline", {
+    const { data, error } = await supabase.rpc('rpc_get_player_timeline', {
       p_player_id: playerId,
       p_event_types: [
-        "cash_in",
-        "points_redeemed",
-        "promo_issued",
-        "note_added",
+        'cash_in',
+        'points_redeemed',
+        'promo_issued',
+        'note_added',
       ],
       p_limit: 10, // Fetch enough to find all three event types
     });
@@ -468,7 +483,7 @@ export async function getRecentEvents(
       occurred_at: row.occurred_at,
       amount: row.amount,
       metadata: toMetadataRecord(row.metadata),
-      summary: row.summary ?? "",
+      summary: row.summary ?? '',
     }));
 
     return mapToRecentEvents(events);
