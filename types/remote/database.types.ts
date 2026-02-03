@@ -3510,15 +3510,6 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_save_rating_slip_with_buyin: {
-        Args: {
-          p_average_bet: number
-          p_buyin_amount_cents?: number
-          p_buyin_type?: string
-          p_slip_id: string
-        }
-        Returns: Json
-      }
       rpc_shift_active_visitors_summary: {
         Args: never
         Returns: {
@@ -3810,7 +3801,11 @@ export type Database = {
       }
       set_rls_context_from_staff: {
         Args: { p_correlation_id?: string }
-        Returns: undefined
+        Returns: {
+          actor_id: string
+          casino_id: string
+          staff_role: string
+        }[]
       }
       set_rls_context_internal: {
         Args: {
