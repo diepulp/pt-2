@@ -49,7 +49,8 @@ export function useShiftDashboardSummary(
     queryKey: shiftDashboardKeys.summary(window),
     queryFn: () => fetchShiftDashboardSummary(window.start, window.end),
     enabled: enabled && !!window.start && !!window.end,
-    staleTime: 60_000, // 1 minute - matches existing hooks
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
   });
 }

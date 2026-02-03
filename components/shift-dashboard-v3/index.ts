@@ -1,3 +1,5 @@
+export { ShiftDashboardV3 } from './shift-dashboard-v3';
+
 export {
   ShiftDashboardLayout,
   useShiftDashboardLayout,
@@ -14,6 +16,8 @@ export {
 } from './left-rail';
 
 export { FloorActivityRadar, WinLossTrendChart } from './charts';
+
+export { AlertsStrip, MetricsTable } from './center';
 
 export {
   TelemetryRailPanel,

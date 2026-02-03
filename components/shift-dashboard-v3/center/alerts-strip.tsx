@@ -89,7 +89,7 @@ function AlertItem({
     <button
       type="button"
       onClick={onClick}
-      className={`w-full text-left p-3 rounded-lg ${colorConfig.bgMuted} border ${colorConfig.border}/30 hover:${colorConfig.border}/50 transition-colors`}
+      className={`w-full text-left p-3 rounded-lg ${colorConfig.bgMuted} border ${colorConfig.borderMuted} ${colorConfig.hoverBorder} focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors`}
     >
       <div className="flex items-start gap-3">
         <SeverityIcon severity={alert.severity} />
@@ -99,7 +99,7 @@ function AlertItem({
           <div className="flex items-center gap-2">
             <Badge
               variant="outline"
-              className={`${colorConfig.text} ${colorConfig.border}/50 text-[10px] uppercase`}
+              className={`${colorConfig.text} ${colorConfig.borderMuted} text-[10px] uppercase`}
             >
               {alert.severity}
             </Badge>

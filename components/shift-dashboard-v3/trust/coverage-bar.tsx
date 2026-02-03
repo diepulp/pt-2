@@ -68,6 +68,11 @@ export function CoverageBar({
   const bar = (
     <div
       data-testid="coverage-bar"
+      role="progressbar"
+      aria-valuenow={percentage}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={`${TIER_LABELS[tier]}: ${percentage}%`}
       className={cn(
         'flex w-full overflow-hidden rounded-full bg-muted',
         barHeight,

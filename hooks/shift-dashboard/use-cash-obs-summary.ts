@@ -9,8 +9,6 @@
  * @see PRD-Shift-Dashboards-v0.2
  */
 
-'use client';
-
 import { useQuery } from '@tanstack/react-query';
 
 import type { CashObsSummaryDTO } from '@/services/table-context/dtos';
@@ -55,8 +53,8 @@ export function useCashObsSummary(options: UseCashObsSummaryOptions) {
     queryKey: shiftDashboardKeys.cashObsSummary(window),
     queryFn: () => fetchCashObsSummary(window.start, window.end),
     enabled: enabled && !!window.start && !!window.end,
-    staleTime: 30_000, // 30 seconds - matches alerts refresh
+    staleTime: 30_000,
+    refetchInterval: 30_000,
     refetchOnWindowFocus: true,
-    refetchInterval: 60_000, // Auto-refresh every minute
   });
 }

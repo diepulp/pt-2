@@ -56,8 +56,14 @@ export function TelemetryQualityIndicator({
     <span
       data-testid="telemetry-quality-indicator"
       className={cn('inline-flex items-center gap-1', className)}
+      {...(!showLabel && {
+        'aria-label': `Telemetry quality: ${config.label}`,
+      })}
     >
-      <span className="relative flex items-center justify-center">
+      <span
+        className="relative flex items-center justify-center"
+        aria-hidden="true"
+      >
         {/* Base circle (always visible) */}
         <span
           className={cn(

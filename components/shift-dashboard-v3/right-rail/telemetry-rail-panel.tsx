@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDownIcon, ChevronRightIcon, EyeIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -127,34 +127,47 @@ export function TelemetryRailPanel({
 
           {/* Top 5 Tables */}
           {tablesData && tablesData.length > 0 && (
-            <div>
-              <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
-                Top Tables
-              </p>
-              <div className="mt-1 space-y-0.5">
-                {[...tablesData]
-                  .sort(
-                    (a, b) =>
-                      b.cash_out_observation_count -
-                      a.cash_out_observation_count,
-                  )
-                  .slice(0, 5)
-                  .map((table) => (
-                    <div
-                      key={table.table_id}
-                      className="flex items-center justify-between px-1 py-0.5 text-[10px]"
-                    >
-                      <span className="font-mono">{table.table_label}</span>
-                      <span className="font-mono text-amber-500">
-                        {table.cash_out_observation_count} obs
-                      </span>
-                    </div>
-                  ))}
-              </div>
-            </div>
+            <TopTablesSection tablesData={tablesData} />
           )}
         </>
       )}
+    </div>
+  );
+}
+
+function TopTablesSection({
+  tablesData,
+}: {
+  tablesData: CashObsTableRollupDTO[];
+}) {
+  const sortedTopTables = useMemo(
+    () =>
+      [...tablesData]
+        .sort(
+          (a, b) => b.cash_out_observation_count - a.cash_out_observation_count,
+        )
+        .slice(0, 5),
+    [tablesData],
+  );
+
+  return (
+    <div>
+      <p className="text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+        Top Tables
+      </p>
+      <div className="mt-1 space-y-0.5">
+        {sortedTopTables.map((table) => (
+          <div
+            key={table.table_id}
+            className="flex items-center justify-between px-1 py-0.5 text-[10px]"
+          >
+            <span className="font-mono">{table.table_label}</span>
+            <span className="font-mono text-amber-500">
+              {table.cash_out_observation_count} obs
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

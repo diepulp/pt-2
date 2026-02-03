@@ -45,6 +45,10 @@ const SERIES_COLORS: Record<SeriesKey, string> = {
   credits: 'var(--color-credits)',
 };
 
+const DOT_LARGE = { r: 4 } as const;
+const DOT_SMALL = { r: 3 } as const;
+const ACTIVE_DOT_LARGE = { r: 6 } as const;
+
 function formatLabel(value: number): string {
   return formatCents(value);
 }
@@ -127,7 +131,8 @@ export function WinLossTrendChart({
                 key={key}
                 type="button"
                 onClick={() => toggleSeries(key)}
-                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors ${
+                aria-pressed={activeSeries.includes(key)}
+                className={`rounded-full px-2.5 py-0.5 text-[10px] font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${
                   activeSeries.includes(key)
                     ? 'bg-foreground text-background'
                     : 'bg-muted text-muted-foreground hover:bg-muted/80'
@@ -139,6 +144,13 @@ export function WinLossTrendChart({
           </div>
         )}
       </div>
+
+      {/* Screen reader summary of chart data */}
+      <div
+        className="sr-only"
+        role="img"
+        aria-label={`Win/Loss trend across ${chartData.length} pits. ${chartData.map((d) => `${d.pitLabel}: ${formatCents(d.winLoss)}`).join(', ')}.`}
+      />
 
       <ChartContainer
         config={chartConfig}
@@ -166,8 +178,8 @@ export function WinLossTrendChart({
               dataKey="winLoss"
               stroke={SERIES_COLORS.winLoss}
               strokeWidth={2}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
+              dot={DOT_LARGE}
+              activeDot={ACTIVE_DOT_LARGE}
             >
               <LabelList
                 dataKey="winLoss"
@@ -185,7 +197,7 @@ export function WinLossTrendChart({
               dataKey="fills"
               stroke={SERIES_COLORS.fills}
               strokeWidth={2}
-              dot={{ r: 3 }}
+              dot={DOT_SMALL}
             />
           )}
           {activeSeries.includes('credits') && (
@@ -195,7 +207,7 @@ export function WinLossTrendChart({
               dataKey="credits"
               stroke={SERIES_COLORS.credits}
               strokeWidth={2}
-              dot={{ r: 3 }}
+              dot={DOT_SMALL}
             />
           )}
           {activeSeries.length > 1 && (

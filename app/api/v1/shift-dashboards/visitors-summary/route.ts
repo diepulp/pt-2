@@ -32,21 +32,15 @@ export async function GET(request: NextRequest) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        // Call the RPC function (no params needed - uses RLS context)
-        // Note: Cast to any because RPC is not yet in generated types
-        // Run `npm run db:types` after migration to fix
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data, error } = await (mwCtx.supabase.rpc as any)(
+        const { data, error } = await mwCtx.supabase.rpc(
           'rpc_shift_active_visitors_summary',
         );
 
         if (error) {
-          throw new Error(`Database error: ${error.message}`);
+          throw new Error('Failed to fetch active visitors summary');
         }
 
-        // RPC returns a single row, extract it
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const row = Array.isArray(data) ? data[0] : (data as any);
+        const row = Array.isArray(data) ? data[0] : data;
 
         // Handle null/empty response
         if (!row) {

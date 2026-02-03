@@ -10,12 +10,12 @@
 'use client';
 
 import { ChevronRightIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
+import { PitTable } from '@/components/shift-dashboard-v3/center/pit-table';
 import {
   MetricGradeBadge,
   TelemetryQualityIndicator,
-  CoverageBar,
 } from '@/components/shift-dashboard-v3/trust';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,11 +47,6 @@ export interface MetricsTableProps {
 }
 
 /**
- * Quality indicator using trust primitives (WS6).
- * Replaces legacy QualityDots with TelemetryQualityIndicator.
- */
-
-/**
  * Status badge for table status.
  */
 function StatusBadge({ isActive }: { isActive: boolean }) {
@@ -66,53 +61,6 @@ function StatusBadge({ isActive }: { isActive: boolean }) {
     >
       {isActive ? 'Active' : 'Inactive'}
     </Badge>
-  );
-}
-
-/**
- * Pit metrics row.
- */
-function PitRow({
-  pit,
-  onSelect,
-}: {
-  pit: ShiftPitMetricsDTO;
-  onSelect?: () => void;
-}) {
-  return (
-    <tr className="border-b border-border/50 hover:bg-muted/30 transition-colors">
-      <td className="py-3 px-4">
-        <button
-          type="button"
-          onClick={onSelect}
-          className="flex items-center gap-2 font-mono text-sm hover:text-emerald-500 transition-colors"
-        >
-          {pit.pit_id}
-          <ChevronRightIcon className="h-3 w-3" />
-        </button>
-      </td>
-      <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(pit.win_loss_estimated_total_cents)}
-      </td>
-      <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(pit.fills_total_cents)}
-      </td>
-      <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(pit.credits_total_cents)}
-      </td>
-      <td className="py-3 px-4">
-        <CoverageBar
-          ratio={pit.snapshot_coverage_ratio}
-          tier={pit.coverage_tier}
-          size="sm"
-        />
-      </td>
-      <td className="py-3 px-4 text-right">
-        <span className="text-xs text-muted-foreground">
-          {pit.tables_count} tables
-        </span>
-      </td>
-    </tr>
   );
 }
 
@@ -135,7 +83,7 @@ function TableRow({
         <button
           type="button"
           onClick={onSelect}
-          className="flex items-center gap-2 font-mono text-sm hover:text-emerald-500 transition-colors"
+          className="flex items-center gap-2 font-mono text-sm hover:text-emerald-500 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 transition-colors"
         >
           {table.table_label}
           <ChevronRightIcon className="h-3 w-3" />
@@ -210,10 +158,14 @@ export function MetricsTable({
     setActiveTab('casino');
   };
 
-  // Filter tables by selected pit
-  const filteredTables = selectedPitId
-    ? tablesData?.filter((t) => t.pit_id === selectedPitId)
-    : tablesData;
+  // Filter tables by selected pit (memoized to avoid re-filtering on re-render)
+  const filteredTables = useMemo(
+    () =>
+      selectedPitId
+        ? tablesData?.filter((t) => t.pit_id === selectedPitId)
+        : tablesData,
+    [tablesData, selectedPitId],
+  );
 
   return (
     <Card className="overflow-hidden">
@@ -271,51 +223,11 @@ export function MetricsTable({
           {isLoading ? (
             <TableSkeleton />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">
-                      Pit
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Win/Loss
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Fills
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Credits
-                    </th>
-                    <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
-                      Coverage
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Tables
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pitsData?.map((pit) => (
-                    <PitRow
-                      key={pit.pit_id}
-                      pit={pit}
-                      onSelect={() => handlePitSelect(pit.pit_id)}
-                    />
-                  ))}
-                  {(!pitsData || pitsData.length === 0) && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No pit data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <PitTable
+              pitsData={pitsData}
+              onPitSelect={handlePitSelect}
+              caption="Casino pit metrics overview"
+            />
           )}
         </TabsContent>
 
@@ -324,51 +236,11 @@ export function MetricsTable({
           {isLoading ? (
             <TableSkeleton />
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-muted/30">
-                    <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">
-                      Pit
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Win/Loss
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Fills
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Credits
-                    </th>
-                    <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
-                      Coverage
-                    </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
-                      Tables
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pitsData?.map((pit) => (
-                    <PitRow
-                      key={pit.pit_id}
-                      pit={pit}
-                      onSelect={() => handlePitSelect(pit.pit_id)}
-                    />
-                  ))}
-                  {(!pitsData || pitsData.length === 0) && (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No pit data available
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <PitTable
+              pitsData={pitsData}
+              onPitSelect={handlePitSelect}
+              caption="Pit-level metrics breakdown"
+            />
           )}
         </TabsContent>
 
@@ -379,27 +251,52 @@ export function MetricsTable({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
+                <caption className="sr-only">
+                  Table-level metrics
+                  {selectedPitId ? ` for pit ${selectedPitId}` : ''}
+                </caption>
                 <thead>
                   <tr className="border-b border-border bg-muted/30">
-                    <th className="py-2 px-4 text-left text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-left text-xs font-medium text-muted-foreground"
+                    >
                       Table
                     </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-right text-xs font-medium text-muted-foreground"
+                    >
                       Win/Loss
                     </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-right text-xs font-medium text-muted-foreground"
+                    >
                       Fills
                     </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-right text-xs font-medium text-muted-foreground"
+                    >
                       Credits
                     </th>
-                    <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-center text-xs font-medium text-muted-foreground"
+                    >
                       Quality
                     </th>
-                    <th className="py-2 px-4 text-center text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-center text-xs font-medium text-muted-foreground"
+                    >
                       Grade
                     </th>
-                    <th className="py-2 px-4 text-right text-xs font-medium text-muted-foreground">
+                    <th
+                      scope="col"
+                      className="py-2 px-4 text-right text-xs font-medium text-muted-foreground"
+                    >
                       Status
                     </th>
                   </tr>
