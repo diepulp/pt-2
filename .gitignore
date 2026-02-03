@@ -29,7 +29,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-playwright-report/data/
+playwright-report/
+test-results/
 cypress/downloads/
 cypress/screenshots/
 
@@ -67,3 +68,14 @@ certificates
 .tool-usage.log
 .claude/skills.backup/
 .claude/settings.json
+.claude/vercel-deploy-claimable.zip
+
+# Python cache
+__pycache__/
+
+# Temporary artifacts
+*.trace.json.gz
+perf-*-trace-*.json.gz
+plan.md
+.playwright-mcp/
+.codex/
