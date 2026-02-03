@@ -100,7 +100,7 @@ const alertColors: Record<TableAlert['severity'], string> = {
   critical: 'bg-rose-500/20 text-rose-400 border-rose-500/30 animate-pulse',
 };
 
-function formatCurrency(amount: number): string {
+function formatDollars(amount: number): string {
   if (amount >= 1000) {
     return `$${(amount / 1000).toFixed(amount >= 10000 ? 0 : 1)}K`;
   }
@@ -179,7 +179,7 @@ export const TableCard = memo(function TableCard({
             Min
           </span>
           <span className="font-mono font-medium text-foreground">
-            {table.minBet ? formatCurrency(table.minBet) : '—'}
+            {table.minBet ? formatDollars(table.minBet) : '—'}
           </span>
         </div>
         <div className="w-px h-3 bg-border" />
@@ -188,7 +188,7 @@ export const TableCard = memo(function TableCard({
             Max
           </span>
           <span className="font-mono font-medium text-foreground">
-            {table.maxBet ? formatCurrency(table.maxBet) : '—'}
+            {table.maxBet ? formatDollars(table.maxBet) : '—'}
           </span>
         </div>
       </div>
