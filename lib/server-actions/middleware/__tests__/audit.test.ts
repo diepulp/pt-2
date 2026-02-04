@@ -1,3 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '@/types/database.types';
+
 import { withAudit } from '../audit';
 import type { MiddlewareContext } from '../types';
 
@@ -6,7 +10,7 @@ describe('withAudit middleware', () => {
   const mockInsert = jest.fn();
   const mockSupabase = {
     from: jest.fn().mockReturnValue({ insert: mockInsert }),
-  } as any;
+  } as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {

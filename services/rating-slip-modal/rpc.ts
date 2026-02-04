@@ -361,14 +361,12 @@ export async function movePlayerViaRPC(
   input: MovePlayerInput,
 ): Promise<MovePlayerResponse> {
   // Call the consolidated RPC
-  // Note: rpc_move_player is not in generated types yet (migration not applied)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)('rpc_move_player', {
+  const { data, error } = await supabase.rpc('rpc_move_player', {
     p_casino_id: casinoId,
     p_slip_id: slipId,
     p_new_table_id: input.destinationTableId,
-    p_new_seat_number: input.destinationSeatNumber ?? null,
-    p_average_bet: input.averageBet ?? null,
+    p_new_seat_number: input.destinationSeatNumber ?? undefined,
+    p_average_bet: input.averageBet ?? undefined,
   });
 
   if (error) {
@@ -499,9 +497,7 @@ export async function resolveCurrentSlipContext(
   supabase: SupabaseClient<Database>,
   slipId: string,
 ): Promise<ResolveSlipContextDTO> {
-  // Note: rpc_resolve_current_slip_context is not in generated types yet (migration pending)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase.rpc as any)(
+  const { data, error } = await supabase.rpc(
     'rpc_resolve_current_slip_context',
     {
       p_slip_id: slipId,

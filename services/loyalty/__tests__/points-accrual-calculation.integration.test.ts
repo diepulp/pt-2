@@ -25,7 +25,7 @@ import { randomUUID } from 'crypto';
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '/home/diepulp/projects/pt-2/types/database.types.ts';
+import type { Database } from '@/types/database.types';
 import {
   createRatingSlipService,
   RatingSlipServiceInterface,

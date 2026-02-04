@@ -13,6 +13,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { narrowJsonRecord } from '@/lib/json/narrows';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -207,8 +208,7 @@ export async function accrueOnClose(
   input: AccrueOnCloseInput,
 ): Promise<AccrueOnCloseOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)('rpc_accrue_on_close', {
+    const { data, error } = await supabase.rpc('rpc_accrue_on_close', {
       p_rating_slip_id: input.ratingSlipId,
       p_casino_id: input.casinoId,
       p_idempotency_key: input.idempotencyKey,
@@ -256,8 +256,7 @@ export async function redeem(
   input: RedeemInput,
 ): Promise<RedeemOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)('rpc_redeem', {
+    const { data, error } = await supabase.rpc('rpc_redeem', {
       p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
@@ -265,8 +264,8 @@ export async function redeem(
       p_note: input.note,
       p_idempotency_key: input.idempotencyKey,
       p_allow_overdraw: input.allowOverdraw ?? false,
-      p_reward_id: input.rewardId ?? null,
-      p_reference: input.reference ?? null,
+      p_reward_id: input.rewardId ?? undefined,
+      p_reference: input.reference ?? undefined,
     });
 
     if (error) {
@@ -309,8 +308,7 @@ export async function manualCredit(
   input: ManualCreditInput,
 ): Promise<ManualCreditOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)('rpc_manual_credit', {
+    const { data, error } = await supabase.rpc('rpc_manual_credit', {
       p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
@@ -359,12 +357,11 @@ export async function applyPromotion(
   input: ApplyPromotionInput,
 ): Promise<ApplyPromotionOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)('rpc_apply_promotion', {
+    const { data, error } = await supabase.rpc('rpc_apply_promotion', {
       p_casino_id: input.casinoId,
       p_rating_slip_id: input.ratingSlipId,
       p_campaign_id: input.campaignId,
-      p_promo_multiplier: input.promoMultiplier ?? null,
+      p_promo_multiplier: input.promoMultiplier ?? undefined,
       p_bonus_points: input.bonusPoints,
       p_idempotency_key: input.idempotencyKey,
     });
@@ -410,12 +407,11 @@ export async function evaluateSuggestion(
   asOfTs?: string,
 ): Promise<SessionRewardSuggestionOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
+    const { data, error } = await supabase.rpc(
       'evaluate_session_reward_suggestion',
       {
         p_rating_slip_id: slipId,
-        p_as_of_ts: asOfTs ?? null,
+        p_as_of_ts: asOfTs ?? undefined,
       },
     );
 
@@ -485,18 +481,14 @@ export async function getBalance(
       );
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Schema compatibility layer for balance field migration
-    const rawData = data as any;
+    const rawData = data;
 
     const row: PlayerLoyaltyRow = {
       player_id: rawData.player_id,
       casino_id: rawData.casino_id,
-      current_balance: rawData.current_balance ?? rawData.balance ?? 0,
+      current_balance: rawData.current_balance ?? 0,
       tier: rawData.tier ?? null,
-      preferences:
-        typeof rawData.preferences === 'object' && rawData.preferences !== null
-          ? rawData.preferences
-          : {},
+      preferences: narrowJsonRecord(rawData.preferences),
       updated_at: rawData.updated_at,
     };
 
@@ -526,8 +518,8 @@ export async function getLedger(
 ): Promise<LedgerPageResponse> {
   try {
     // Decode cursor if provided
-    let cursorCreatedAt: string | null = null;
-    let cursorId: string | null = null;
+    let cursorCreatedAt: string | undefined = undefined;
+    let cursorId: string | undefined = undefined;
 
     if (query.cursor) {
       const decoded = decodeLedgerCursor(query.cursor);
@@ -537,17 +529,13 @@ export async function getLedger(
 
     const limit = Math.min(query.limit ?? 20, 100);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_get_player_ledger',
-      {
-        p_casino_id: query.casinoId,
-        p_player_id: query.playerId,
-        p_cursor_created_at: cursorCreatedAt,
-        p_cursor_id: cursorId,
-        p_limit: limit,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_get_player_ledger', {
+      p_casino_id: query.casinoId,
+      p_player_id: query.playerId,
+      p_cursor_created_at: cursorCreatedAt,
+      p_cursor_id: cursorId,
+      p_limit: limit,
+    });
 
     if (error) {
       throw mapDatabaseError(error);
@@ -590,8 +578,7 @@ export async function reconcileBalance(
   casinoId: string,
 ): Promise<ReconcileBalanceRpcResponse> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
+    const { data, error } = await supabase.rpc(
       'rpc_reconcile_loyalty_balance',
       {
         p_player_id: playerId,

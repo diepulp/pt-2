@@ -7,7 +7,7 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-import type { Json } from '@/types/remote/database.types';
+import type { Json } from '@/types/database.types';
 
 import type { VisitFinancialSummaryDTO } from '../player-financial/dtos';
 import type { VisitDTO } from '../visit/dtos';

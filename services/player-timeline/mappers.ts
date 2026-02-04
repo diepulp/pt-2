@@ -8,7 +8,10 @@
  * @see EXEC-SPEC-029.md WS2-B
  */
 
-import type { Json } from '@/types/database.types';
+import {
+  isJsonObject,
+  narrowJsonRecord as toMetadataRecord,
+} from '@/lib/json/narrows';
 
 import type {
   ComplianceEventMetadata,
@@ -26,28 +29,8 @@ import type {
   VisitEventMetadata,
 } from './dtos';
 
-// === Type Guards ===
-
-/**
- * Type guard for JSON object (non-null, non-array object).
- * Used to safely convert RPC Json metadata to Record<string, unknown>.
- */
-export function isJsonObject(
-  value: Json,
-): value is { [key: string]: Json | undefined } {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
-}
-
-/**
- * Safely converts Json to Record<string, unknown>.
- * Returns empty object if input is null, primitive, or array.
- */
-export function toMetadataRecord(json: Json): Record<string, unknown> {
-  if (isJsonObject(json)) {
-    return json;
-  }
-  return {};
-}
+// Re-export JSONB boundary helpers from canonical module
+export { isJsonObject, toMetadataRecord };
 
 // === Metadata Validation ===
 

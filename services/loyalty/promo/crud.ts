@@ -177,8 +177,7 @@ export async function listPrograms(
   query: PromoProgramListQuery = {},
 ): Promise<PromoProgramDTO[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    let builder = (supabase as any)
+    let builder = supabase
       .from('promo_program')
       .select('*')
       .order('created_at', { ascending: false });
@@ -229,8 +228,7 @@ export async function getProgram(
   programId: string,
 ): Promise<PromoProgramDTO | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('promo_program')
       .select('*')
       .eq('id', programId)
@@ -266,10 +264,10 @@ export async function createProgram(
   input: CreatePromoProgramInput,
 ): Promise<PromoProgramDTO> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('promo_program')
       .insert({
+        casino_id: input.casinoId,
         name: input.name,
         promo_type: input.promoType ?? 'match_play',
         face_value_amount: input.faceValueAmount,
@@ -315,8 +313,7 @@ export async function updateProgram(
     if (input.startAt !== undefined) updates.start_at = input.startAt;
     if (input.endAt !== undefined) updates.end_at = input.endAt;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('promo_program')
       .update(updates)
       .eq('id', input.id)
@@ -355,19 +352,15 @@ export async function issueCoupon(
   input: IssueCouponInput,
 ): Promise<IssueCouponOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_issue_promo_coupon',
-      {
-        p_promo_program_id: input.promoProgramId,
-        p_validation_number: input.validationNumber,
-        p_idempotency_key: input.idempotencyKey,
-        p_player_id: input.playerId ?? null,
-        p_visit_id: input.visitId ?? null,
-        p_expires_at: input.expiresAt ?? null,
-        p_correlation_id: input.correlationId ?? null,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_issue_promo_coupon', {
+      p_promo_program_id: input.promoProgramId,
+      p_validation_number: input.validationNumber,
+      p_idempotency_key: input.idempotencyKey,
+      p_player_id: input.playerId ?? undefined,
+      p_visit_id: input.visitId ?? undefined,
+      p_expires_at: input.expiresAt ?? undefined,
+      p_correlation_id: input.correlationId ?? undefined,
+    });
 
     if (error) {
       throw mapPromoError(error);
@@ -404,15 +397,11 @@ export async function voidCoupon(
   input: VoidCouponInput,
 ): Promise<VoidCouponOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_void_promo_coupon',
-      {
-        p_coupon_id: input.couponId,
-        p_idempotency_key: input.idempotencyKey,
-        p_correlation_id: input.correlationId ?? null,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_void_promo_coupon', {
+      p_coupon_id: input.couponId,
+      p_idempotency_key: input.idempotencyKey,
+      p_correlation_id: input.correlationId ?? undefined,
+    });
 
     if (error) {
       throw mapPromoError(error);
@@ -449,17 +438,13 @@ export async function replaceCoupon(
   input: ReplaceCouponInput,
 ): Promise<ReplaceCouponOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_replace_promo_coupon',
-      {
-        p_coupon_id: input.couponId,
-        p_new_validation_number: input.newValidationNumber,
-        p_idempotency_key: input.idempotencyKey,
-        p_new_expires_at: input.newExpiresAt ?? null,
-        p_correlation_id: input.correlationId ?? null,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_replace_promo_coupon', {
+      p_coupon_id: input.couponId,
+      p_new_validation_number: input.newValidationNumber,
+      p_idempotency_key: input.idempotencyKey,
+      p_new_expires_at: input.newExpiresAt ?? undefined,
+      p_correlation_id: input.correlationId ?? undefined,
+    });
 
     if (error) {
       throw mapPromoError(error);
@@ -494,14 +479,10 @@ export async function getCouponInventory(
   query: CouponInventoryQuery = {},
 ): Promise<CouponInventoryOutput> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_promo_coupon_inventory',
-      {
-        p_promo_program_id: query.promoProgramId ?? null,
-        p_status: query.status ?? null,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_promo_coupon_inventory', {
+      p_promo_program_id: query.promoProgramId ?? undefined,
+      p_status: query.status ?? undefined,
+    });
 
     if (error) {
       throw mapPromoError(error);
@@ -528,8 +509,7 @@ export async function listCoupons(
   query: PromoCouponListQuery = {},
 ): Promise<PromoCouponDTO[]> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    let builder = (supabase as any)
+    let builder = supabase
       .from('promo_coupon')
       .select('*')
       .order('issued_at', { ascending: false });
@@ -590,8 +570,7 @@ export async function getCoupon(
   couponId: string,
 ): Promise<PromoCouponDTO | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('promo_coupon')
       .select('*')
       .eq('id', couponId)
@@ -626,8 +605,7 @@ export async function getCouponByValidationNumber(
   validationNumber: string,
 ): Promise<PromoCouponDTO | null> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Table not in types until migration applied
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('promo_coupon')
       .select('*')
       .eq('validation_number', validationNumber)

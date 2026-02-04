@@ -30,10 +30,6 @@ import {
 } from './shift-cash-obs/severity';
 import type { TelemetryQuality } from './shift-cash-obs/severity';
 
-// Type helper for RPC calls until remote types are regenerated
-type SupabaseRpc = SupabaseClient<Database>['rpc'];
-type RpcFn = ReturnType<SupabaseRpc>;
-
 /**
  * Get table-level cash observation rollups for a shift window.
  * Only includes observations linked to a rating slip (has table context).
@@ -42,15 +38,11 @@ export async function getShiftCashObsTable(
   supabase: SupabaseClient<Database>,
   params: ShiftCashObsTableParams,
 ): Promise<CashObsTableRollupDTO[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_cash_obs_table',
-    {
-      p_start_ts: params.startTs,
-      p_end_ts: params.endTs,
-      p_table_id: params.tableId ?? null,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_cash_obs_table', {
+    p_start_ts: params.startTs,
+    p_end_ts: params.endTs,
+    p_table_id: params.tableId ?? undefined,
+  });
 
   if (error) {
     throw new DomainError(
@@ -70,15 +62,11 @@ export async function getShiftCashObsPit(
   supabase: SupabaseClient<Database>,
   params: ShiftCashObsPitParams,
 ): Promise<CashObsPitRollupDTO[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_cash_obs_pit',
-    {
-      p_start_ts: params.startTs,
-      p_end_ts: params.endTs,
-      p_pit: params.pit ?? null,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_cash_obs_pit', {
+    p_start_ts: params.startTs,
+    p_end_ts: params.endTs,
+    p_pit: params.pit ?? undefined,
+  });
 
   if (error) {
     throw new DomainError(
@@ -99,14 +87,10 @@ export async function getShiftCashObsCasino(
   supabase: SupabaseClient<Database>,
   params: ShiftCashObsTimeWindow,
 ): Promise<CashObsCasinoRollupDTO> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_cash_obs_casino',
-    {
-      p_start_ts: params.startTs,
-      p_end_ts: params.endTs,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_cash_obs_casino', {
+    p_start_ts: params.startTs,
+    p_end_ts: params.endTs,
+  });
 
   if (error) {
     throw new DomainError(
@@ -130,14 +114,10 @@ export async function getShiftCashObsAlerts(
   supabase: SupabaseClient<Database>,
   params: ShiftCashObsTimeWindow,
 ): Promise<CashObsSpikeAlertDTO[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_cash_obs_alerts',
-    {
-      p_start_ts: params.startTs,
-      p_end_ts: params.endTs,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_cash_obs_alerts', {
+    p_start_ts: params.startTs,
+    p_end_ts: params.endTs,
+  });
 
   if (error) {
     throw new DomainError(

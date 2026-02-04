@@ -74,6 +74,9 @@ export interface PromoProgramDTO {
  * Input for creating a promo program.
  */
 export interface CreatePromoProgramInput {
+  /** Casino UUID — injected from authoritative RLS context, never from user input */
+  casinoId: string;
+
   /** Program name */
   name: string;
 
