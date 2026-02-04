@@ -241,6 +241,31 @@ Track these metrics for system health:
 - **Player search**: search → open visit → view ledger flow
 - **Table operations**: table assignment, player movement
 
+## Temporal Performance Anti-Pattern (TEMP-003, PRD-027)
+
+### P0 Incident: JS Gaming Day Bypass
+
+A performance optimization (PERF-006) replaced the canonical `useGamingDay()` → RPC path with a pure-JS `getCurrentGamingDay()` that used `new Date().toISOString().slice(0, 10)` (UTC). After UTC midnight (4 PM Pacific), JS returned tomorrow's date while the DB still considered today the current gaming day. Every Player 360 financial panel showed $0.
+
+**Root Cause:** Performance optimization created a second temporal authority in JavaScript.
+
+**Lesson:** Performance optimizations that bypass shared hooks/RPCs must not replace DB-derived values with JS date math. The correct RSC optimization path:
+
+1. Create server Supabase client
+2. Set RLS context
+3. Call `rpc_current_gaming_day()` (< 5ms p95)
+4. Pass gaming day as prop to client components
+
+The RPC latency is negligible (< 5ms). JS date math saves nothing and risks a P0 regression.
+
+**References:**
+- `docs/20-architecture/temporal-patterns/INDEX.md` (Temporal patterns registry)
+- `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` (Enforcement standard)
+- `docs/issues/ISSUE-GAMING-DAY-TIMEZONE-STANDARDIZATION.md` (P0 incident case study)
+- `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` (Remediation PRD)
+
+---
+
 ## Performance Review Checklist
 
 For PR reviews involving database or API changes:
@@ -252,6 +277,7 @@ For PR reviews involving database or API changes:
 - [ ] Benchmark results show no p95 regression >10%
 - [ ] Connection pooling implications considered
 - [ ] Batch operations preferred over loops
+- [ ] **No JS gaming day computation** replacing DB RPCs (TEMP-003 — P0 incident pattern)
 
 See `references/pr-checklist.md` for detailed checklist.
 

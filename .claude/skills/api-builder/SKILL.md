@@ -332,6 +332,35 @@ npm run type-check
 
 ---
 
+## Temporal Patterns (TEMP-001/002/003)
+
+When building API endpoints that involve `gaming_day`, date ranges, or casino time:
+
+**Registry:** `docs/20-architecture/temporal-patterns/INDEX.md`
+
+### Canonical Gaming Day API
+
+The existing `GET /api/v1/casino/gaming-day` route handler correctly calls Layer 2 `compute_gaming_day(casino_id, timestamp)` — this is the canonical client-facing endpoint for gaming day.
+
+### Rules for Route Handlers
+
+1. **Never compute gaming day in JS.** Route handlers must use DB RPCs (`compute_gaming_day`, `rpc_current_gaming_day`) for gaming day resolution.
+2. **Never accept `gaming_day` as request input** for query construction. Gaming day is always DB-derived.
+3. **Date range queries** must use `rpc_gaming_day_range()` — not JS "weeks ago" arithmetic.
+4. **Temporal RPCs** (`rpc_current_gaming_day`, `rpc_gaming_day_range`) derive `casino_id` from RLS context — no `casino_id` parameter (ADR-024).
+
+### Banned Patterns in Route Handlers
+
+| Pattern | Why | Fix |
+|---------|-----|-----|
+| `new Date().toISOString().slice(0, 10)` | UTC date ≠ gaming day | Use `rpc_current_gaming_day()` |
+| `getWeeksAgoDate()` (JS date math) | Diverges from DB boundaries | Use `rpc_gaming_day_range()` |
+| Accepting `gaming_day` in request body | Bypasses trigger derivation | Derive from DB |
+
+**References:** TEMP-003 §3 (banned patterns), TEMP-001 §3 (function layering), PRD-027 (implementation plan)
+
+---
+
 ## Anti-Patterns
 
 ### Avoid
@@ -343,6 +372,7 @@ npm run type-check
 - `ReturnType<typeof ...>` inference
 - Skipping Zod validation
 - Forgetting to await params Promise (Next.js 15)
+- **JS gaming day computation** in route handlers (use DB RPCs — TEMP-003)
 
 ### Required
 - Document route in API_SURFACE_MVP.md first

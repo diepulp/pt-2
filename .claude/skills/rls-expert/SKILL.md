@@ -222,6 +222,48 @@ MTL (Monetary Transaction Log) uses `staff_role` for authorization, NOT service 
 
 **Reference:** `docs/80-adrs/ADR-025-mtl-authorization-model.md`
 
+## Temporal RPC Security (TEMP-001/003, PRD-027)
+
+Temporal RPCs (`rpc_current_gaming_day`, `rpc_gaming_day_range`) follow the same RLS context derivation rules as all other casino-scoped RPCs:
+
+### Security Requirements
+
+1. **No `casino_id` parameter.** These RPCs derive scope from `current_setting('app.casino_id', true)` (ADR-024 INV-8).
+2. **SECURITY DEFINER** with `set_rls_context_from_staff()` call or RLS-context derivation.
+3. **Fail closed.** If `app.casino_id` is not set, the RPC must raise an exception — no silent fallback.
+
+### `rpc_current_gaming_day` Pattern
+
+```sql
+-- Layer 3: Derives casino from RLS context, no spoofable parameters
+create or replace function rpc_current_gaming_day(
+  p_timestamp timestamptz default now()
+) returns date
+language plpgsql stable security definer as $$
+declare
+  v_casino_id uuid;
+begin
+  v_casino_id := current_setting('app.casino_id', true)::uuid;
+  if v_casino_id is null then
+    raise exception 'RLS context not set: app.casino_id is required';
+  end if;
+  return compute_gaming_day(v_casino_id, p_timestamp);
+end;
+$$;
+```
+
+### Validation
+
+When auditing temporal RPCs, verify:
+- [ ] No `casino_id` parameter accepted
+- [ ] `app.casino_id` derived from session context
+- [ ] Fails closed on missing context
+- [ ] Calls `compute_gaming_day()` (Layer 2) internally — no inline boundary logic
+
+**References:** TEMP-001 §3.3, TEMP-003 §5, PRD-027 §5.1
+
+---
+
 ## Anti-Patterns to Avoid
 
 ### DON'T: Legacy SET LOCAL Loop

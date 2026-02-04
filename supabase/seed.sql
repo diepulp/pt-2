@@ -598,13 +598,13 @@ INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, ra
 
 -- Cash-outs (negative amounts) require txn_kind='adjustment' with reason_code and note
 -- Per chk_adjustment_requires_justification constraint from ADR migration
-INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, txn_kind, reason_code, note, created_at) VALUES
+INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, txn_kind, reason_code, note, created_by_staff_id, created_at) VALUES
   -- Player 1 cash-out
-  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', 'adjustment', 'other', 'Player cashed out at session end - chips to cash exchange at cage', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
+  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', 'adjustment', 'other', 'Player cashed out at session end - chips to cash exchange at cage', '5a000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
   -- Player 5 cash-out
-  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', 'adjustment', 'other', 'VIP player session close - full chip redemption at cage window', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
+  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', 'adjustment', 'other', 'VIP player session close - full chip redemption at cage window', '5a000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
   -- Player 6 cash-out
-  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', 'adjustment', 'other', 'Session end cash-out - player redeemed remaining chips', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
+  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', 'adjustment', 'other', 'Session end cash-out - player redeemed remaining chips', '5a000000-0000-0000-0000-000000000002', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
 
 -- Casino 2 transactions
 INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type) VALUES

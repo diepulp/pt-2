@@ -27,6 +27,8 @@ import type { Database } from '@/types/database.types';
  * @returns ISO date string (YYYY-MM-DD)
  * @throws DomainError on RPC failure
  */
+
+//TODO: remove once db:types includes rpc_current_gaming_day
 export async function getServerGamingDay(
   supabase: SupabaseClient<Database>,
 ): Promise<string> {

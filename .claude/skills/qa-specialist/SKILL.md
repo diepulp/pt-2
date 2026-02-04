@@ -285,6 +285,15 @@ Before approving a release, verify all gates pass:
 - [ ] Cross-casino data access denied
 - [ ] Authentication required for protected routes
 
+### GATE-6: Temporal Integrity (TEMP-003 §7, PRD-027)
+- [ ] Gaming day boundary tests pass: 05:50 local, 06:10 local, 00:10 UTC
+- [ ] DST transition tests pass: spring forward, fall back
+- [ ] `rpc_current_gaming_day()` reflects `casino_settings` changes immediately
+- [ ] No JS gaming day computation in query paths (`toISOString().slice()`, `new Date()` arithmetic)
+- [ ] RSC pages use `getServerGamingDay()` — not JS date math
+- [ ] Client components use `useGamingDay()` from `hooks/casino/use-gaming-day`
+- [ ] Triggers call `compute_gaming_day()` — no inline boundary logic
+
 ### GATE-4: Error Handling
 - [ ] No Postgres error codes leak to UI
 - [ ] Graceful degradation on network failure

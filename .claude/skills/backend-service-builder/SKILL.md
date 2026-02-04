@@ -100,6 +100,10 @@ Authoritative governance documents referenced by this skill:
 | ADR-002 | `docs/80-adrs/ADR-002-test-location-standard.md` | Test organization |
 | QA-001 | `docs/40-quality/QA-001-service-testing-strategy.md` | Testing strategy |
 | QA-004 | `docs/40-quality/QA-004-tdd-standard.md` | TDD workflow |
+| TEMP-001 | `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` | Gaming day computation spec |
+| TEMP-002 | `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | Temporal authority pattern |
+| TEMP-003 | `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` | Banned patterns, enforcement |
+| PRD-027 | `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` | System time standardization |
 
 ---
 
@@ -119,6 +123,67 @@ date +%Y%m%d%H%M%S
 ### RLS Policies (ADR-015 Pattern C)
 
 All new RLS policies MUST use Pattern C with JWT fallback. See `references/migration-workflow.md`.
+
+---
+
+## Temporal Patterns (TEMP-001/002/003, PRD-027)
+
+**Registry:** `docs/20-architecture/temporal-patterns/INDEX.md`
+
+### Non-Negotiable Rules
+
+1. **The database owns `gaming_day`.** Application code must NEVER derive `gaming_day`, gaming-day boundaries, or weekly/monthly ranges using JS date math.
+2. **All triggers must call `compute_gaming_day()`.** No inline reimplementation of boundary logic.
+3. **RPCs must not accept `casino_id` for temporal computation.** Use `rpc_current_gaming_day()` which derives scope from RLS context (ADR-024).
+
+### When Building Services That Touch Gaming Day
+
+| Context | Correct Approach | Layer | Reference |
+|---------|-----------------|-------|-----------|
+| New table with `gaming_day` column | Create trigger calling Layer 1 `compute_gaming_day(ts, gstart)` | Layer 1 | TEMP-001 §3.1, §4 |
+| Service needing current gaming day | Call Layer 2 `compute_gaming_day(casino_id, timestamp)` via RPC | Layer 2 | TEMP-001 §3.2 |
+| RSC page needing gaming day | Use `getServerGamingDay(supabase)` → `rpc_current_gaming_day()` | Layer 3 | TEMP-003 §4.3 |
+| Weekly/range date queries | Use `rpc_gaming_day_range(p_weeks)` — no JS "weeks ago" math | Layer 3 | TEMP-003 §5 |
+
+### Banned Patterns (TEMP-003 §3)
+
+- `new Date().toISOString().slice(0, 10)` — UTC calendar date ≠ gaming day
+- `getUTCFullYear()` / `getUTCMonth()` / `getUTCDate()` for business dates
+- `new Date()` arithmetic to compute `gaming_day`
+- Accepting `gaming_day` as RPC/service input
+
+### Trigger Template (Layer 1)
+
+```sql
+-- Standard trigger: fetch gstart as TIME, call Layer 1 pure math
+create or replace function set_{table}_gaming_day()
+returns trigger language plpgsql as $$
+declare
+  gstart time;
+begin
+  select coalesce(gaming_day_start_time, time '06:00')
+  into gstart
+  from casino_settings
+  where casino_id = new.casino_id;
+
+  new.gaming_day := compute_gaming_day(
+    coalesce(new.created_at, now()),
+    gstart
+  );
+  return new;
+end$$;
+```
+
+### Migration Checklist (Gaming Day Tables)
+
+When adding `gaming_day` to a new table (per TEMP-001 §12):
+
+- [ ] Add `gaming_day date NOT NULL` column
+- [ ] Create trigger calling `compute_gaming_day()` (Layer 1)
+- [ ] Attach `BEFORE INSERT OR UPDATE` trigger
+- [ ] Add index on `(casino_id, gaming_day DESC)`
+- [ ] Ensure service write contract rejects `gaming_day` as input
+- [ ] Run `npm run db:types`
 
 ---
 

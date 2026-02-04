@@ -171,6 +171,20 @@ migration_name.sql                  # Missing timestamp
 
 **Always** generate a real timestamp when creating migrations. Never use placeholder values like `000000`.
 
+### Temporal Standardization (TEMP-001/002/003)
+
+When designing or reviewing architecture that touches `gaming_day`, date ranges, casino time, or timezone-aware queries:
+
+1. **Start at the Temporal Patterns Registry**: `docs/20-architecture/temporal-patterns/INDEX.md`
+2. **Three-layer function contract**: Layer 1 (IMMUTABLE pure math), Layer 2 (casino-scoped wrapper), Layer 3 (RLS-context wrapper). See TEMP-001 §3.
+3. **CasinoService is the single temporal authority**. No other service or JS code may define business dates.
+4. **RPCs derive scope from RLS context** (ADR-024). No `casino_id` parameter on temporal RPCs.
+5. **Triggers must call `compute_gaming_day()`** — no inline boundary logic (TEMP-003 §6).
+6. **Banned in query paths**: `toISOString().slice(0, 10)`, `new Date()` arithmetic, `getUTC*()` for business dates.
+7. **RSC performance path**: Server components must use `getServerGamingDay()` → `rpc_current_gaming_day()` — never JS date math (TEMP-003 §4.2).
+
+**Implementation**: PRD-027 defines workstreams for `rpc_current_gaming_day()`, `rpc_gaming_day_range()`, MTL trigger fix, server helper, ESLint gate, and boundary tests.
+
 ### Anti-Patterns (Critical)
 
 **Migration:**
@@ -290,6 +304,11 @@ migration_name.sql                  # Missing timestamp
 | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` | DTO rules (v2.1.0) |
 | `docs/80-adrs/ADR-013-zod-validation-schemas.md` | Zod requirements |
 | `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` | OE checks |
+| `docs/20-architecture/temporal-patterns/INDEX.md` | Temporal patterns registry |
+| `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` | Gaming day computation (3-layer contract) |
+| `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | CasinoService temporal authority |
+| `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` | Banned patterns, CI gates, remediation |
+| `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` | System time standardization PRD |
 
 ### Related Skills
 

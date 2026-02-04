@@ -1,4 +1,4 @@
-  ---
+---
 title: "LoyaltyService Extension — Promotional Instruments (Match Play) (v0.1 redacted)"
 status: draft
 owner: LoyaltyService (SRM: Reward policy & assignment)

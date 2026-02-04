@@ -63,7 +63,7 @@ export interface FinancialTransactionDTO {
   visit_id: string;
   /** Optional: Associated rating slip */
   rating_slip_id: string | null;
-  /** Transaction amount (can be negative for adjustments) */
+  /** Transaction amount in cents (1 dollar = 100). Can be negative for adjustments. */
   amount: number;
   /** Transaction direction ('in' or 'out') */
   direction: FinancialDirection;
@@ -107,11 +107,11 @@ export interface VisitFinancialSummaryDTO {
   visit_id: string;
   /** Casino scope */
   casino_id: string;
-  /** Total amount IN (buy-ins, markers issued) */
+  /** Total amount IN in cents (buy-ins, markers issued) */
   total_in: number;
-  /** Total amount OUT (cashouts, marker repayments) */
+  /** Total amount OUT in cents (cashouts, marker repayments) */
   total_out: number;
-  /** Net amount (total_in - total_out) */
+  /** Net amount in cents (total_in - total_out) */
   net_amount: number;
   /** Number of transactions */
   transaction_count: number;
@@ -136,7 +136,7 @@ export interface CreateFinancialTxnInput {
   player_id: string;
   /** Visit ID (required - NOT NULL) */
   visit_id: string;
-  /** Transaction amount (positive number) */
+  /** Transaction amount in cents (positive number) */
   amount: number;
   /** Transaction direction */
   direction: FinancialDirection;
@@ -234,9 +234,9 @@ export interface CreateFinancialAdjustmentInput {
   /** Visit ID */
   visit_id: string;
   /**
-   * Delta amount (signed).
-   * - Positive: increases total (e.g., +$50 if buy-in was under-reported)
-   * - Negative: decreases total (e.g., -$100 if buy-in was over-reported)
+   * Delta amount in cents (signed).
+   * - Positive: increases total (e.g., +5000 cents = +$50 if buy-in was under-reported)
+   * - Negative: decreases total (e.g., -10000 cents = -$100 if buy-in was over-reported)
    */
   delta_amount: number;
   /** Reason for the adjustment (required) */
@@ -255,12 +255,13 @@ export interface CreateFinancialAdjustmentInput {
  * Provides the UX of "editable total" while preserving audit trail.
  * Shows: Original entries, adjustment total, and net total.
  */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Computed aggregate DTO, not a table projection
 export type VisitCashInWithAdjustmentsDTO = {
-  /** Sum of original 'in' transactions (before adjustments) */
+  /** Sum of original 'in' transactions in cents (before adjustments) */
   original_total: number;
-  /** Sum of all adjustment transactions (can be negative) */
+  /** Sum of all adjustment transactions in cents (can be negative) */
   adjustment_total: number;
-  /** Net total (original_total + adjustment_total) */
+  /** Net total in cents (original_total + adjustment_total) */
   net_total: number;
   /** Number of adjustment transactions */
   adjustment_count: number;
