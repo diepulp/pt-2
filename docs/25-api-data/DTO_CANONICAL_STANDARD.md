@@ -716,6 +716,117 @@ export type PlayerAdminDTO = Pick<
 
 ---
 
+### Pattern 7: JSONB Boundary Narrowing
+
+**Problem**: Supabase types JSONB columns and RPC returns as `Json` — a wide union type that requires narrowing before use.
+
+```typescript
+// Json type (from Supabase generated types)
+type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
+```
+
+**Incorrect (banned by pre-commit Check 11):**
+```typescript
+// ❌ WRONG: Inline cast in crud.ts
+const metadata = data.preferences as Record<string, unknown>;
+
+// ❌ WRONG: Double-assertion for RPC JSONB
+return toVisitLiveViewDTOOrNull(data as unknown as VisitLiveViewRpcResponse);
+```
+
+**Correct: Use canonical narrowing helpers**
+
+All JSONB narrowing MUST go through `lib/json/narrows.ts`:
+
+```typescript
+// lib/json/narrows.ts — Canonical JSONB boundary helpers
+import type { Json } from '@/types/database.types';
+
+// Type guard for runtime validation
+export function isJsonObject(value: Json): value is { [key: string]: Json | undefined };
+
+// Narrow to Record (returns {} for non-objects)
+export function narrowJsonRecord(value: Json): Record<string, unknown>;
+
+// Narrow RPC JSONB to typed response (unsafe — trusts RPC contract)
+export function narrowRpcJson<T>(data: Json): T;
+```
+
+**Usage in mappers.ts:**
+```typescript
+// ✅ CORRECT: services/rating-slip/mappers.ts
+import { narrowRpcJson } from '@/lib/json/narrows';
+
+export function toVisitLiveViewDTOOrNull(data: Json | null): VisitLiveViewDTO | null {
+  if (!data) return null;
+  return toVisitLiveViewDTO(narrowRpcJson<VisitLiveViewRpcResponse>(data));
+}
+```
+
+**Usage in crud.ts:**
+```typescript
+// ✅ CORRECT: services/loyalty/crud.ts
+import { narrowJsonRecord } from '@/lib/json/narrows';
+
+const row: PlayerLoyaltyRow = {
+  // ...
+  preferences: narrowJsonRecord(rawData.preferences), // ✅ Centralized narrowing
+};
+```
+
+**Why centralized narrowing matters:**
+- Pre-commit hook Check 11 bans `as [A-Z]` in crud.ts
+- ESLint `no-dto-type-assertions` bans `as SomeDTO` in services/
+- Centralized helpers provide auditable boundary crossing
+- Changes to Json handling are localized to one module
+
+**Cross-references:**
+- Implementation: `lib/json/narrows.ts`
+- Enforcement: `.husky/pre-commit-service-check.sh` Check 11
+- ESLint rule: `no-dto-type-assertions`
+
+---
+
+### Pattern 8: RPC Parameter Normalization (null vs undefined)
+
+**Problem**: Supabase generated types represent optional RPC parameters as `param?: type` (TypeScript optional property = `type | undefined`). Code using `?? null` causes type errors after removing `as any` casts.
+
+**Incorrect:**
+```typescript
+// ❌ WRONG: null not assignable to string | undefined
+const { data, error } = await supabase.rpc('rpc_promo_exposure_rollup', {
+  p_gaming_day: query.gamingDay ?? null,  // Type error
+  p_shift_id: query.shiftId ?? null,      // Type error
+});
+```
+
+**Correct:**
+```typescript
+// ✅ CORRECT: undefined omits the parameter (Supabase uses SQL DEFAULT)
+const { data, error } = await supabase.rpc('rpc_promo_exposure_rollup', {
+  p_gaming_day: query.gamingDay ?? undefined,
+  p_shift_id: query.shiftId ?? undefined,
+});
+```
+
+**Semantic difference:**
+| Pattern | JS behavior | SQL behavior |
+|---------|-------------|--------------|
+| `?? null` | Sends `null` | `p_gaming_day = NULL` |
+| `?? undefined` | Omits key | Parameter uses SQL `DEFAULT` |
+
+For RPCs with `DEFAULT NULL` parameters, both produce the same SQL result, but `?? undefined` is type-correct.
+
+**When to use `?? null`:**
+- Direct table `.insert()` / `.update()` where column type is `text | null`
+- You explicitly want to set a value to SQL NULL (not omit it)
+
+**Cross-references:**
+- Issue analysis: `docs/issues/dual-type-system/PARAM-NORMALIZATION-001.md`
+- Type System Audit: `docs/issues/ISSUE-TYPE-SYSTEM-AUDIT-2026-02-03.md`
+
+---
+
 ## Benefits
 
 ### 1. Automatic Schema Sync

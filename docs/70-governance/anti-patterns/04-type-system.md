@@ -148,6 +148,99 @@ function toModalDTO(data: RpcReturns): RatingSlipModalDTO {
 
 ---
 
+## JSONB Boundary Anti-Patterns
+
+### ❌ NEVER use inline `as` casts for JSONB in crud.ts
+
+```typescript
+// ❌ WRONG: Inline cast in crud.ts (blocked by pre-commit Check 11)
+const metadata = data.preferences as Record<string, unknown>;
+
+// ❌ WRONG: Double-assertion for RPC JSONB
+return toDTO(data as unknown as MyRpcResponse);
+
+// ✅ CORRECT: Use centralized helpers from lib/json/narrows.ts
+import { narrowJsonRecord, narrowRpcJson } from '@/lib/json/narrows';
+
+const metadata = narrowJsonRecord(data.preferences);
+return toDTO(narrowRpcJson<MyRpcResponse>(data));
+```
+
+**Enforcement:**
+- `.husky/pre-commit-service-check.sh` Check 11: Bans `as [A-Z]` in crud.ts
+- ESLint `no-dto-type-assertions`: Bans `as SomeDTO` in services/**/*.ts
+
+**Canonical module:** `lib/json/narrows.ts` provides:
+- `isJsonObject()` — type guard
+- `narrowJsonRecord()` — Json → Record<string, unknown>
+- `narrowRpcJson<T>()` — Json → typed RPC response
+
+---
+
+## RPC Parameter Anti-Patterns
+
+### ❌ NEVER use `?? null` for optional RPC parameters
+
+```typescript
+// ❌ WRONG: null not assignable to string | undefined
+const { data } = await supabase.rpc('rpc_promo_exposure_rollup', {
+  p_gaming_day: query.gamingDay ?? null,  // Type error after removing as any
+});
+
+// ✅ CORRECT: undefined omits the parameter (uses SQL DEFAULT)
+const { data } = await supabase.rpc('rpc_promo_exposure_rollup', {
+  p_gaming_day: query.gamingDay ?? undefined,
+});
+```
+
+**Why:** Supabase generates optional RPC params as `param?: type` (= `type | undefined`). The `null` literal is not assignable to `undefined`. Using `?? null` only compiled when the RPC call was wrapped in `as any`.
+
+**Exception:** Use `?? null` for direct table inserts/updates where the column type is explicitly nullable:
+```typescript
+// ✅ OK: Table column is text | null
+await supabase.from('promo_program').insert({
+  start_at: input.startAt ?? null,  // Column allows NULL
+});
+```
+
+---
+
+## Supabase Client Anti-Patterns
+
+### ❌ NEVER use `(supabase.rpc as any)` or `(supabase as any)`
+
+```typescript
+// ❌ WRONG: Bypasses type safety, hides parameter/return type mismatches
+const { data } = await (supabase.rpc as any)('rpc_accrue_on_close', { ... });
+
+// ✅ CORRECT: Direct typed call (requires canonical types to be current)
+const { data } = await supabase.rpc('rpc_accrue_on_close', { ... });
+```
+
+**If you see "RPC does not exist" errors:**
+1. Run `npm run db:types` to regenerate canonical types
+2. If local DB is stale, run `supabase db reset`
+3. See `docs/issues/dual-type-system/DB-CONTRACT-STALENESS-PROTOCOL.md`
+
+**Pre-existing casts discovered in 2026-02-03 audit:** 37 instances across loyalty, rating-slip, table-context, dashboard contexts. All removed — canonical types are current.
+
+### ❌ NEVER use `{} as any` for test mocks
+
+```typescript
+// ❌ WRONG: Untyped mock
+const mockSupabase = {} as any;
+
+// ✅ CORRECT: Typed double
+import type { SupabaseClient } from '@supabase/supabase-js';
+import type { Database } from '@/types/database.types';
+
+const mockSupabase = {} as unknown as SupabaseClient<Database>;
+```
+
+**Why:** `as unknown as SupabaseClient<Database>` documents intent and catches shape mismatches if the mock is used where methods are expected.
+
+---
+
 ## Shared Types
 
 ### ❌ NEVER redefine infrastructure types
@@ -183,6 +276,17 @@ import type { Database } from '@/types/database.types';
 - [ ] **Pattern B services** (Player, Visit, Casino, FloorLayout): No `export interface.*DTO`
 - [ ] **Pattern A services** (Loyalty, Finance, MTL, TableContext): Has `mappers.ts` if using DTOs
 - [ ] No manual type redefinitions in `types/` folder
-- [ ] No `as` casting for RPC/query responses
+- [ ] No `as` casting for RPC/query responses in crud.ts (use `lib/json/narrows.ts`)
+- [ ] No `(supabase.rpc as any)` or `(supabase as any)` casts
+- [ ] No `?? null` for optional RPC parameters (use `?? undefined`)
+- [ ] No `{} as any` in test mocks (use `as unknown as SupabaseClient<Database>`)
 - [ ] Types regenerated after migrations (`npm run db:types`)
 - [ ] Using canonical infrastructure types
+
+## Cross-References
+
+- **JSONB boundary helpers:** `lib/json/narrows.ts`
+- **Staleness protocol:** `docs/issues/dual-type-system/DB-CONTRACT-STALENESS-PROTOCOL.md`
+- **Param normalization:** `docs/issues/dual-type-system/PARAM-NORMALIZATION-001.md`
+- **Type system audit:** `docs/issues/ISSUE-TYPE-SYSTEM-AUDIT-2026-02-03.md`
+- **Pre-commit enforcement:** `.husky/pre-commit-service-check.sh` (Check 10, 11)
