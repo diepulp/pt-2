@@ -7,6 +7,11 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "13.0.4"
+  }
   public: {
     Tables: {
       audit_log: {
@@ -688,6 +693,47 @@ export type Database = {
           },
         ]
       }
+      loyalty_earn_config: {
+        Row: {
+          casino_id: string
+          created_at: string
+          default_point_multiplier: number
+          effective_from: string | null
+          is_active: boolean
+          points_per_theo: number
+          rounding_policy: string
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          default_point_multiplier?: number
+          effective_from?: string | null
+          is_active?: boolean
+          points_per_theo?: number
+          rounding_policy?: string
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          default_point_multiplier?: number
+          effective_from?: string | null
+          is_active?: boolean
+          points_per_theo?: number
+          rounding_policy?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_earn_config_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: true
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_ledger: {
         Row: {
           campaign_id: string | null
@@ -774,6 +820,54 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_outbox: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          event_type: string
+          id: string
+          ledger_id: string | null
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ledger_id?: string | null
+          payload: Json
+          processed_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ledger_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_outbox_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_ledger"
             referencedColumns: ["id"]
           },
         ]
@@ -1814,6 +1908,224 @@ export type Database = {
           },
         ]
       }
+      reward_catalog: {
+        Row: {
+          casino_id: string
+          code: string
+          created_at: string
+          family: Database["public"]["Enums"]["reward_family"]
+          fulfillment: string | null
+          id: string
+          is_active: boolean
+          kind: string
+          metadata: Json
+          name: string
+          ui_tags: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          code: string
+          created_at?: string
+          family: Database["public"]["Enums"]["reward_family"]
+          fulfillment?: string | null
+          id?: string
+          is_active?: boolean
+          kind: string
+          metadata?: Json
+          name: string
+          ui_tags?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          code?: string
+          created_at?: string
+          family?: Database["public"]["Enums"]["reward_family"]
+          fulfillment?: string | null
+          id?: string
+          is_active?: boolean
+          kind?: string
+          metadata?: Json
+          name?: string
+          ui_tags?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_catalog_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_eligibility: {
+        Row: {
+          casino_id: string
+          id: string
+          max_tier: string | null
+          min_points_balance: number | null
+          min_tier: string | null
+          reward_id: string
+          visit_kinds: string[] | null
+        }
+        Insert: {
+          casino_id: string
+          id?: string
+          max_tier?: string | null
+          min_points_balance?: number | null
+          min_tier?: string | null
+          reward_id: string
+          visit_kinds?: string[] | null
+        }
+        Update: {
+          casino_id?: string
+          id?: string
+          max_tier?: string | null
+          min_points_balance?: number | null
+          min_tier?: string | null
+          reward_id?: string
+          visit_kinds?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_eligibility_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_eligibility_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_entitlement_tier: {
+        Row: {
+          benefit: Json
+          casino_id: string
+          id: string
+          reward_id: string
+          tier: string
+        }
+        Insert: {
+          benefit: Json
+          casino_id: string
+          id?: string
+          reward_id: string
+          tier: string
+        }
+        Update: {
+          benefit?: Json
+          casino_id?: string
+          id?: string
+          reward_id?: string
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_entitlement_tier_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_entitlement_tier_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_limits: {
+        Row: {
+          casino_id: string
+          cooldown_minutes: number | null
+          id: string
+          max_issues: number
+          requires_note: boolean
+          reward_id: string
+          scope: string
+        }
+        Insert: {
+          casino_id: string
+          cooldown_minutes?: number | null
+          id?: string
+          max_issues?: number
+          requires_note?: boolean
+          reward_id: string
+          scope: string
+        }
+        Update: {
+          casino_id?: string
+          cooldown_minutes?: number | null
+          id?: string
+          max_issues?: number
+          requires_note?: boolean
+          reward_id?: string
+          scope?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_limits_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_limits_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "reward_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reward_price_points: {
+        Row: {
+          allow_overdraw: boolean
+          casino_id: string
+          points_cost: number
+          reward_id: string
+        }
+        Insert: {
+          allow_overdraw?: boolean
+          casino_id: string
+          points_cost: number
+          reward_id: string
+        }
+        Update: {
+          allow_overdraw?: boolean
+          casino_id?: string
+          points_cost?: number
+          reward_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reward_price_points_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reward_price_points_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: true
+            referencedRelation: "reward_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           casino_id: string
@@ -2546,7 +2858,7 @@ export type Database = {
             Returns: string
           }
         | {
-            Args: { p_gaming_day_start: string; p_ts: string }
+            Args: { p_gaming_day_start: unknown; p_ts: string }
             Returns: string
           }
       compute_gaming_day_for_casino: {
@@ -3901,6 +4213,7 @@ export type Database = {
         | "cleared"
       promo_type_enum: "match_play"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
+      reward_family: "points_comp" | "entitlement"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
       staff_status: "active" | "inactive"
       table_bank_mode: "INVENTORY_COUNT" | "IMPREST_TO_PAR"
@@ -4107,6 +4420,7 @@ export const Constants = {
       ],
       promo_type_enum: ["match_play"],
       rating_slip_status: ["open", "paused", "closed", "archived"],
+      reward_family: ["points_comp", "entitlement"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],
       staff_status: ["active", "inactive"],
       table_bank_mode: ["INVENTORY_COUNT", "IMPREST_TO_PAR"],
@@ -4120,4 +4434,3 @@ export const Constants = {
     },
   },
 } as const
-

@@ -149,4 +149,30 @@ export const loyaltyKeys = {
 
   /** Key for replace coupon mutation */
   replaceCoupon: () => [...ROOT, 'replace-coupon'] as const,
+
+  // === Reward Catalog Keys (ADR-033) ===
+
+  /** List reward catalog entries with optional filters */
+  rewardList: Object.assign(
+    (
+      filters: {
+        family?: string;
+        kind?: string;
+        isActive?: boolean;
+        search?: string;
+      } = {},
+    ) => [...ROOT, 'reward', 'list', serializeKeyFilters(filters)] as const,
+    { scope: [...ROOT, 'reward', 'list'] as const },
+  ),
+
+  /** Single reward detail by ID */
+  rewardDetail: (rewardId: string) =>
+    [...ROOT, 'reward', 'detail', rewardId] as const,
+
+  /** Casino earn configuration */
+  earnConfig: () => [...ROOT, 'earn-config'] as const,
+
+  /** Eligible rewards for a player */
+  eligibleRewards: (playerId: string) =>
+    [...ROOT, 'eligible-rewards', playerId] as const,
 };
