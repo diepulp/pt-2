@@ -1,10 +1,13 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { DomainError } from '@/lib/errors/domain-errors';
+import type { Database } from '@/types/database.types';
 
 import { withIdempotency } from '../idempotency';
 import type { MiddlewareContext } from '../types';
 
 describe('withIdempotency middleware', () => {
-  const mockSupabase = {} as any;
+  const mockSupabase = {} as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {

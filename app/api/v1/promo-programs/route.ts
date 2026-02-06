@@ -93,7 +93,10 @@ export async function POST(request: NextRequest) {
       async (mwCtx) => {
         const service = createPromoService(mwCtx.supabase);
 
-        const program = await service.createProgram(input);
+        const program = await service.createProgram({
+          ...input,
+          casinoId: mwCtx.rlsContext!.casinoId,
+        });
 
         return {
           ok: true as const,

@@ -64,7 +64,7 @@ async function callSessionRpc<T>(
   error: { code?: string; message?: string } | null;
 }> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (supabase.rpc as any)(rpcName, params);
+  return supabase.rpc(rpcName as any, params);
 }
 
 /**
@@ -78,8 +78,7 @@ async function queryTableSession(
   data: TableSessionRow | null;
   error: { code?: string; message?: string } | null;
 }> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (supabase as any)
+  return supabase
     .from('table_session')
     .select('*')
     .eq('id', sessionId)

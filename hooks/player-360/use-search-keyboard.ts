@@ -171,8 +171,7 @@ export function useModifierKey(): string {
 
   // Use userAgentData when available (modern browsers), fallback to userAgent
   const isMac =
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (navigator as any).userAgentData?.platform?.toLowerCase().includes('mac') ??
+    navigator.userAgentData?.platform?.toLowerCase().includes('mac') ??
     navigator.userAgent.toLowerCase().includes('mac');
 
   return isMac ? '⌘' : 'Ctrl';

@@ -33,8 +33,11 @@ jest.mock('@/lib/server-actions/error-map', () => ({
   }),
 }));
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import type { ServiceResult } from '@/lib/http/service-response';
 import { getAuthContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 import { withServerAction, createServerActionWrapper } from '../compositor';
 
@@ -43,7 +46,7 @@ describe('withServerAction compositor', () => {
     from: jest.fn().mockReturnValue({
       insert: jest.fn().mockResolvedValue({ error: null }),
     }),
-  } as any;
+  } as unknown as SupabaseClient<Database>;
 
   beforeEach(() => {
     jest.clearAllMocks();

@@ -39,7 +39,7 @@ A seed file issue caused **S1 staleness** (local DB missing migrations), which c
 | Term | Meaning |
 |------|---------|
 | **canonical runtime types** | `types/database.types.ts` — the only import target for all runtime code. Generated from local DB via `npm run db:types-local` (preferred) or from remote via fallback. Represents the migration contract. |
-| **remote snapshot** | `types/remote/database.types.ts` — CI validation artifact generated from remote project via `npm run db:types`. **Never imported by runtime code.** |
+| **remote snapshot** | `types/remote/database.types.ts` — CI validation artifact generated from remote project via `npm run db:types` Generated from the deployed remote DB to verify it matches repo migrations/canonical types. **Never imported by runtime code.** |
 | **schema authority** | The repo migrations folder (`supabase/migrations/`). Remote DB and local DB instances must match migrations. |
 | **S1–S4** | Staleness categories defined in the protocol. This incident was S1 → S2 cascade. |
 

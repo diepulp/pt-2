@@ -494,9 +494,11 @@ fi
 
 # ==============================================================================
 # Check 10: console.* in production paths BANNED (Anti-Patterns §686-705)
+# Excludes test files (__tests__/*.ts, *.test.ts, *.spec.ts)
 # ==============================================================================
 if [ -n "$STAGED_SERVICE_FILES" ]; then
-  CONSOLE_VIOLATIONS=$(echo "$STAGED_SERVICE_FILES" | xargs grep -l "console\.\(log\|error\|warn\|debug\|info\)" 2>/dev/null || true)
+  PRODUCTION_SERVICE_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -v "__tests__/" | grep -v "\.test\.ts$" | grep -v "\.spec\.ts$" || true)
+  CONSOLE_VIOLATIONS=$(echo "$PRODUCTION_SERVICE_FILES" | xargs grep -l "console\.\(log\|error\|warn\|debug\|info\)" 2>/dev/null || true)
 
   if [ -n "$CONSOLE_VIOLATIONS" ]; then
     echo "❌ ANTI-PATTERN: console.* in service files"

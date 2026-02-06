@@ -521,8 +521,7 @@ export function Player360EmptyState({
   // Detect OS for keyboard shortcut display (deferred to avoid hydration mismatch)
   const [isMac, setIsMac] = React.useState(false);
   React.useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ua = (navigator as any).userAgentData;
+    const ua = navigator.userAgentData;
     const mac =
       ua?.platform?.toLowerCase().includes('mac') ??
       navigator.userAgent.toLowerCase().includes('mac');

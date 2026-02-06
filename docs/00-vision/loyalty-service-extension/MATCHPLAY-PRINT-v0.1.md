@@ -37,7 +37,7 @@ No floor-entered values. The floor’s only action is **click → print dialog**
   - unique `validation_number`
   - `face_value_amount`
   - `required_match_wager_amount`
-  - `expires_at` (optional)
+  - `expires_at` (valid per gaming day only)
   - lifecycle status (`issued`, `voided`, `expired`, `replaced`)
   - `metadata` JSON (print channel/batch, etc.)
 - Match play policy is represented as an active promo program (e.g., `promo_program`) with:

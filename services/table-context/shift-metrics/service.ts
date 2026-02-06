@@ -31,10 +31,6 @@ import {
   getCoverageTier,
 } from './snapshot-rules';
 
-// Type helper for RPC calls until remote types are regenerated
-type SupabaseRpc = SupabaseClient<Database>['rpc'];
-type RpcFn = ReturnType<SupabaseRpc>;
-
 /**
  * Get per-table shift metrics for a time window.
  * Returns all active tables in the caller's casino with their metrics.
@@ -43,14 +39,10 @@ export async function getShiftTableMetrics(
   supabase: SupabaseClient<Database>,
   params: ShiftMetricsTimeWindow,
 ): Promise<ShiftTableMetricsDTO[]> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_table_metrics',
-    {
-      p_window_start: params.startTs,
-      p_window_end: params.endTs,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_table_metrics', {
+    p_window_start: params.startTs,
+    p_window_end: params.endTs,
+  });
 
   if (error) {
     throw new DomainError(
@@ -71,15 +63,11 @@ export async function getShiftPitMetrics(
   supabase: SupabaseClient<Database>,
   params: ShiftPitMetricsParams,
 ): Promise<ShiftPitMetricsDTO | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_pit_metrics',
-    {
-      p_window_start: params.startTs,
-      p_window_end: params.endTs,
-      p_pit_id: params.pitId,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_pit_metrics', {
+    p_window_start: params.startTs,
+    p_window_end: params.endTs,
+    p_pit_id: params.pitId,
+  });
 
   if (error) {
     throw new DomainError(
@@ -210,14 +198,10 @@ export async function getShiftCasinoMetrics(
   supabase: SupabaseClient<Database>,
   params: ShiftMetricsTimeWindow,
 ): Promise<ShiftCasinoMetricsDTO> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPCs not in remote types yet
-  const { data, error } = (await (supabase.rpc as any)(
-    'rpc_shift_casino_metrics',
-    {
-      p_window_start: params.startTs,
-      p_window_end: params.endTs,
-    },
-  )) as RpcFn;
+  const { data, error } = await supabase.rpc('rpc_shift_casino_metrics', {
+    p_window_start: params.startTs,
+    p_window_end: params.endTs,
+  });
 
   if (error) {
     throw new DomainError(

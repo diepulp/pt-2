@@ -3,14 +3,17 @@ jest.mock('@/lib/supabase/rls-context', () => ({
   getAuthContext: jest.fn(),
 }));
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { DomainError } from '@/lib/errors/domain-errors';
 import { getAuthContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 import { withAuth } from '../auth';
 import type { MiddlewareContext } from '../types';
 
 describe('withAuth middleware', () => {
-  const mockSupabase = {} as any;
+  const mockSupabase = {} as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {

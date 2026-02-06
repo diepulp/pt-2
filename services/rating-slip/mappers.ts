@@ -11,8 +11,9 @@
  * @see SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md section 327-365
  */
 
-import type { VisitLiveViewDTO } from "@/services/visit/dtos";
-import type { Json } from "@/types/database.types";
+import { narrowRpcJson } from '@/lib/json/narrows';
+import type { VisitLiveViewDTO } from '@/services/visit/dtos';
+import type { Json } from '@/types/database.types';
 
 import type {
   ActivePlayerForDashboardDTO,
@@ -23,7 +24,7 @@ import type {
   RatingSlipWithDurationDTO,
   RatingSlipWithPausesDTO,
   RatingSlipWithPlayerDTO,
-} from "./dtos";
+} from './dtos';
 
 // === Selected Row Types (match what selects.ts queries return) ===
 
@@ -282,13 +283,13 @@ type VisitLiveViewRpcResponse = {
   player_id: string;
   player_first_name: string;
   player_last_name: string;
-  visit_status: "open" | "closed";
+  visit_status: 'open' | 'closed';
   started_at: string;
   current_segment_slip_id: string | null;
   current_segment_table_id: string | null;
   current_segment_table_name: string | null;
   current_segment_seat_number: string | null;
-  current_segment_status: "open" | "paused" | null;
+  current_segment_status: 'open' | 'paused' | null;
   current_segment_started_at: string | null;
   current_segment_average_bet: number | null;
   session_total_duration_seconds: number;
@@ -344,13 +345,15 @@ export function toVisitLiveViewDTO(
 }
 
 /**
- * Maps nullable RPC response to VisitLiveViewDTO or null.
- * Used when RPC returns NULL for non-existent visits.
+ * Maps nullable RPC JSONB response to VisitLiveViewDTO or null.
+ * Accepts Json (the Supabase JSONB return type) at the boundary
+ * and narrows to VisitLiveViewRpcResponse via lib/json/narrows.
  */
 export function toVisitLiveViewDTOOrNull(
-  data: VisitLiveViewRpcResponse | null,
+  data: Json | null,
 ): VisitLiveViewDTO | null {
-  return data ? toVisitLiveViewDTO(data) : null;
+  if (!data) return null;
+  return toVisitLiveViewDTO(narrowRpcJson<VisitLiveViewRpcResponse>(data));
 }
 
 // === Closed Session Mappers (Start From Previous Panel) ===
@@ -459,13 +462,13 @@ export function toActivePlayerForDashboardDTO(
     pitName: row.pit_name,
     seatNumber: row.seat_number,
     startTime: row.start_time,
-    status: row.status as "open" | "paused",
+    status: row.status as 'open' | 'paused',
     averageBet: row.average_bet ? Number(row.average_bet) : null,
     player: row.player_id
       ? {
           id: row.player_id,
-          firstName: row.player_first_name ?? "",
-          lastName: row.player_last_name ?? "",
+          firstName: row.player_first_name ?? '',
+          lastName: row.player_last_name ?? '',
           birthDate: row.player_birth_date,
           tier: row.player_tier,
         }

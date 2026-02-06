@@ -2,13 +2,16 @@ jest.mock('@/lib/server-actions/error-map', () => ({
   mapDatabaseError: jest.fn(),
 }));
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { mapDatabaseError } from '@/lib/server-actions/error-map';
+import type { Database } from '@/types/database.types';
 
 import { withTracing } from '../tracing';
 import type { MiddlewareContext } from '../types';
 
 describe('withTracing middleware', () => {
-  const mockSupabase = {} as any;
+  const mockSupabase = {} as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {

@@ -2,14 +2,17 @@ jest.mock('@/lib/supabase/rls-context', () => ({
   injectRLSContext: jest.fn(),
 }));
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { DomainError } from '@/lib/errors/domain-errors';
 import { injectRLSContext } from '@/lib/supabase/rls-context';
+import type { Database } from '@/types/database.types';
 
 import { withRLS } from '../rls';
 import type { MiddlewareContext } from '../types';
 
 describe('withRLS middleware', () => {
-  const mockSupabase = {} as any;
+  const mockSupabase = {} as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {

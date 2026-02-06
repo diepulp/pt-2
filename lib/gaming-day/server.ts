@@ -11,10 +11,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
-import {
-  callCurrentGamingDayAtRpc,
-  callCurrentGamingDayRpc,
-} from '@/lib/gaming-day/rpc';
 import type { Database } from '@/types/database.types';
 
 /**
@@ -27,12 +23,10 @@ import type { Database } from '@/types/database.types';
  * @returns ISO date string (YYYY-MM-DD)
  * @throws DomainError on RPC failure
  */
-
-//TODO: remove once db:types includes rpc_current_gaming_day
 export async function getServerGamingDay(
   supabase: SupabaseClient<Database>,
 ): Promise<string> {
-  const { data, error } = await callCurrentGamingDayRpc(supabase);
+  const { data, error } = await supabase.rpc('rpc_current_gaming_day');
 
   if (error) {
     throw new DomainError(
@@ -68,7 +62,9 @@ export async function getServerGamingDayAt(
   supabase: SupabaseClient<Database>,
   ts: string,
 ): Promise<string> {
-  const { data, error } = await callCurrentGamingDayAtRpc(supabase, ts);
+  const { data, error } = await supabase.rpc('rpc_current_gaming_day', {
+    p_timestamp: ts,
+  });
 
   if (error) {
     throw new DomainError(

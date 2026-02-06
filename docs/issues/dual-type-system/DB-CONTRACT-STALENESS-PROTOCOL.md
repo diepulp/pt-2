@@ -149,13 +149,55 @@ Forbidden in runtime code:
 - defining local `Database` interfaces
 - re-exporting multiple Database types
 
-### G3 — No casts around `.rpc(...)`
-Forbidden outside an explicitly allowed shim file:
-- `as any`, `as unknown as`, `@ts-ignore` used to bypass `.rpc(...)` typing
+### G3 — No casts around `.rpc(...)` or Supabase client
+Forbidden in runtime code (no exceptions):
+- `(supabase.rpc as any)` — RPC call bypass
+- `(supabase as any)` — client bypass
+- `@ts-ignore` or `@ts-expect-error` to suppress RPC typing errors
 
-If a shim is temporarily required:
-- it must live in exactly one file (documented allowlist)
-- it must have a removal condition (“delete once db:types includes RPC”)
+**Post-audit status (2026-02-04):** 37 such casts were removed. Canonical types are current. If types appear stale, follow Steps 1–4 of the remediation procedure. Do NOT re-add casts.
+
+### G4 — RPC parameter normalization (null vs undefined)
+Supabase optional RPC parameters are typed as `param?: type` (= `type | undefined`).
+
+Required pattern:
+```typescript
+// ✅ CORRECT: undefined omits the key, RPC uses SQL DEFAULT
+p_gaming_day: query.gamingDay ?? undefined,
+
+// ❌ WRONG: null is not assignable to undefined
+p_gaming_day: query.gamingDay ?? null,
+```
+
+Exception: Use `?? null` only for direct table inserts/updates where the column is explicitly nullable.
+
+### G5 — JSONB boundary narrowing
+JSONB columns and RPC returns are typed as `Json` (wide union). Narrowing MUST use centralized helpers.
+
+Required pattern:
+```typescript
+// ✅ CORRECT: Centralized narrowing in lib/json/narrows.ts
+import { narrowJsonRecord, narrowRpcJson } from '@/lib/json/narrows';
+const metadata = narrowJsonRecord(data.preferences);
+const typed = narrowRpcJson<MyRpcResponse>(data);
+
+// ❌ WRONG: Inline cast in crud.ts (blocked by pre-commit Check 11)
+const metadata = data.preferences as Record<string, unknown>;
+```
+
+**Enforcement:** `.husky/pre-commit-service-check.sh` Check 11 bans `as [A-Z]` in crud.ts files.
+
+### G6 — Test mock typing
+Test doubles for Supabase client must be typed, not `any`.
+
+Required pattern:
+```typescript
+// ✅ CORRECT
+const mockSupabase = {} as unknown as SupabaseClient<Database>;
+
+// ❌ WRONG
+const mockSupabase = {} as any;
+```
 
 ---
 

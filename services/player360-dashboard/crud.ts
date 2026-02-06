@@ -16,7 +16,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
-import { callGamingDayRangeRpc } from '@/lib/gaming-day/rpc';
 import { calculateTheoFromDuration } from '@/lib/theo';
 import type { Database, Json } from '@/types/database.types';
 
@@ -323,7 +322,9 @@ export async function getWeeklySeries(
 ): Promise<WeeklySeriesDTO> {
   try {
     // Get gaming day range from DB (replaces JS getWeeksAgoDate)
-    const rangeResult = await callGamingDayRangeRpc(supabase, weeks);
+    const rangeResult = await supabase.rpc('rpc_gaming_day_range', {
+      p_weeks: weeks,
+    });
 
     if (rangeResult.error) {
       throw mapDatabaseError(rangeResult.error);
