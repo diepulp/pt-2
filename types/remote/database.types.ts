@@ -783,6 +783,54 @@ export type Database = {
           },
         ]
       }
+      loyalty_outbox: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          event_type: string
+          id: string
+          ledger_id: string | null
+          payload: Json
+          processed_at: string | null
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          event_type: string
+          id?: string
+          ledger_id?: string | null
+          payload: Json
+          processed_at?: string | null
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          ledger_id?: string | null
+          payload?: Json
+          processed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_outbox_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mtl_audit_note: {
         Row: {
           created_at: string

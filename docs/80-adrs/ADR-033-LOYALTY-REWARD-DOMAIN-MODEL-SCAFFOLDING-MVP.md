@@ -186,17 +186,19 @@ No campaign logic.
 
 ## Dependencies / Preconditions
 
-### Hard Dependency: `loyalty_outbox` Table (P0)
+### Hard Dependency: `loyalty_outbox` Table (P0) — RESOLVED
 
-The investigation report (`LOYALTY-REWARDS-SYSTEM-COMPREHENSIVE-OVERVIEW.md`) confirmed that `loyalty_outbox` was dropped in migration `20251213003000` and **never recreated**. Three promo RPCs (`rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`) INSERT into this table and will fail at runtime with "relation loyalty_outbox does not exist."
+**Status:** RESOLVED via PRD-028 (migration `20260206005335_prd028_restore_loyalty_outbox.sql`)
 
-This is **not in scope** for the reward domain model. `loyalty_outbox` is loyalty event infrastructure, not "what rewards exist." However, it is a **hard dependency for entitlement issuance paths**: Flow B (Entitlement/Instrument) calls the existing promo coupon RPCs. If those RPCs fail because `loyalty_outbox` is missing, the entitlement flow is broken regardless of how complete the catalog is.
+The investigation report (`LOYALTY-REWARDS-SYSTEM-COMPREHENSIVE-OVERVIEW.md`) confirmed that `loyalty_outbox` was dropped in migration `20251213003000` and never recreated. Three promo RPCs (`rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`) INSERT into this table and were failing at runtime.
 
-**Resolution requirement:** Before or concurrent with reward domain model implementation, one of:
-- Recreate `loyalty_outbox` with the schema expected by the promo RPCs, OR
-- Remove the `INSERT INTO loyalty_outbox` statements from the three promo RPCs if the outbox pattern is no longer desired
+**Resolution (PRD-028, 2026-02-06):** Table restored with:
+- Full 8-column schema (`id`, `casino_id`, `ledger_id` (nullable for promo events), `event_type`, `payload`, `created_at`, `processed_at`, `attempt_count`)
+- Casino-scoped RLS (Pattern C hybrid — SELECT and INSERT policies)
+- Append-only enforcement (REVOKE UPDATE/DELETE + denial policies)
+- Partial index `ix_loyalty_outbox_unprocessed` for future consumer
 
-**Owner:** Loyalty infrastructure (not this ADR).
+All three promo RPCs now execute without error. Flow B (Entitlement/Instrument) is unblocked.
 
 ### Soft Dependencies
 
@@ -214,7 +216,7 @@ The investigation report surfaced several bugs and debt items in the existing lo
 
 | Item | Severity | Why It Matters for This ADR | Reference |
 |------|----------|----------------------------|-----------|
-| `loyalty_outbox` table missing | **P0** | Flow B (entitlement issuance) calls promo RPCs that fail without it | See Dependencies above |
+| ~~`loyalty_outbox` table missing~~ | ~~**P0**~~ **RESOLVED** | Restored via PRD-028 (migration `20260206005335`). Flow B unblocked. | PRD-028 |
 | Divergent mid-session reward module | **P1** | `services/loyalty/mid-session-reward.ts` defines a conflicting `LoyaltyReason` enum and its API route is a stub. Should be reconciled or removed before new reward service code is added, to avoid type confusion during implementation. | Investigation report §5, P1 |
 | Inconsistent lazy-create pattern | **P2** | `rpc_manual_credit` and `rpc_apply_promotion` silently create `player_loyalty` records; `rpc_accrue_on_close` hard-fails if missing. Points comp issuance (Flow A) calls `rpc_redeem` which also lazy-creates. Behavior should be standardized before reward issuance goes live. | Investigation report §5, P2 |
 
@@ -225,7 +227,7 @@ The investigation report surfaced several bugs and debt items in the existing lo
 | Materialized view never refreshed | P2 | `mv_loyalty_balance_reconciliation` is for drift detection, not issuance. Stale view does not affect reward flows. | Investigation report §5, P2 |
 | `player_loyalty` INSERT RLS relaxed | P2 | Auth-hardening migration broadened the INSERT policy. Mitigated by RPCs having their own role checks. Does not affect catalog reads or issuance calls. | Investigation report §5, P2 |
 | `rpc_issue_mid_session_reward` missing SECURITY keyword | P3 | Legacy RPC defaults to INVOKER by PostgreSQL convention. Not called by any reward flow in this ADR. | Investigation report §5, P3 |
-| SRM lists `loyalty_outbox` as deployed | P2 | Documentation drift. Should be corrected when the outbox decision is made (recreate vs remove). | Investigation report §5, P0 (SRM note) |
+| ~~SRM lists `loyalty_outbox` as deployed~~ | ~~P2~~ **RESOLVED** | SRM is now accurate — table is deployed (PRD-028). | PRD-028 |
 
 ## Consequences
 
