@@ -84,7 +84,9 @@ export type LoyaltyErrorCode =
   | 'INVALID_COUPON_STATUS'
   | 'ANONYMOUS_ISSUANCE_DISABLED'
   | 'DUPLICATE_VALIDATION_NUMBER'
-  | 'DUPLICATE_ENTRY';
+  | 'DUPLICATE_ENTRY'
+  // Reward Catalog Errors (ADR-033)
+  | 'REWARD_NOT_FOUND';
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: 'Insufficient loyalty points balance',
@@ -108,6 +110,8 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   DUPLICATE_VALIDATION_NUMBER:
     'A coupon with this validation number already exists',
   DUPLICATE_ENTRY: 'Duplicate entry detected',
+  // Reward Catalog Errors (ADR-033)
+  REWARD_NOT_FOUND: 'Reward catalog entry not found',
 };
 
 // ============================================================================

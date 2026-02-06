@@ -46,6 +46,9 @@ export * from './http';
 // Note: PromoExposureRollupDTO and PromoExposureRollupQuery are exported via promo/dtos.ts
 export * from './promo';
 
+// Re-export reward catalog sub-module (ADR-033)
+export * from './reward';
+
 // Re-export promo rollups function (PRD-LOYALTY-PROMO WS7)
 // DTOs already exported via ./promo
 export { getPromoExposureRollup } from './rollups';
