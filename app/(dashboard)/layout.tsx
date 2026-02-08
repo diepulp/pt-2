@@ -15,7 +15,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect('/signin');
   }
 
   // Main sidebar collapsed width: 56px (3.5rem / w-14)

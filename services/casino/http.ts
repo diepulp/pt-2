@@ -13,11 +13,17 @@ import { IDEMPOTENCY_HEADER } from '@/lib/http/headers';
 import type { PlayerEnrollmentDTO } from '@/services/player/dtos';
 
 import type {
+  AcceptInviteInput,
+  AcceptInviteResult,
+  BootstrapCasinoInput,
+  BootstrapCasinoResult,
   CasinoDTO,
   CasinoListFilters,
   CasinoSettingsDTO,
   CasinoStaffFilters,
   CreateCasinoDTO,
+  CreateInviteInput,
+  CreateInviteResult,
   CreateStaffDTO,
   GamingDayDTO,
   StaffDTO,
@@ -214,5 +220,51 @@ export async function enrollPlayer(
       [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
     },
     body: JSON.stringify({}),
+  });
+}
+
+// === Onboarding (PRD-025) ===
+
+const ONBOARDING_BASE = '/api/v1/onboarding';
+
+/** Bootstrap a new casino tenant */
+export async function fetchBootstrapCasino(
+  input: BootstrapCasinoInput,
+): Promise<BootstrapCasinoResult> {
+  return fetchJSON<BootstrapCasinoResult>(`${ONBOARDING_BASE}/bootstrap`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+/** Create a staff invite */
+export async function fetchCreateInvite(
+  input: CreateInviteInput,
+): Promise<CreateInviteResult> {
+  return fetchJSON<CreateInviteResult>(`${ONBOARDING_BASE}/invite`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+/** Accept a staff invite */
+export async function fetchAcceptInvite(
+  input: AcceptInviteInput,
+): Promise<AcceptInviteResult> {
+  return fetchJSON<AcceptInviteResult>(`${ONBOARDING_BASE}/invite/accept`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [IDEMPOTENCY_HEADER]: generateIdempotencyKey(),
+    },
+    body: JSON.stringify(input),
   });
 }

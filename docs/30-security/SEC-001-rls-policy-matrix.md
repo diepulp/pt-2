@@ -71,6 +71,8 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
 | PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance, compliance & pit_boss staff in same `casino_id` | `rpc_create_financial_txn` (cashier/admin: full access; pit_boss: table buy-ins only per SEC-005 v1.1.0) | Append-only ledger; deletes disabled; gaming day derived via trigger. Pit boss constraints: direction='in', tender_type IN ('cash','chips'), visit_id required. |
 | MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. **PRD-010**: `mtl_audit_note` explicit denial policies for UPDATE/DELETE (Template 3). |
+| CasinoService (Onboarding) | `staff_invite` | Admin-only within `casino_id` (Template 2b session-var-only for ALL ops including SELECT — PII tightening) | Admin-only INSERT/UPDATE; no DELETE | **PRD-025**: Invite-based staff onboarding. Token stored as SHA-256 hash; `token_hash` column not readable by `authenticated` role (column-level privilege restriction). Unique partial index enforces one active invite per casino+email. All three policies (SELECT/INSERT/UPDATE) use NULLIF-only — no COALESCE JWT fallback. |
+| CasinoService (Metadata) | `company` | **Deny-by-default** — no permissive policies for `authenticated` role | service_role and SECURITY DEFINER RPCs only | **PRD-025**: Company is organizational metadata, not a security boundary. RLS enabled with zero permissive policies. `company_id` is not part of the RLS context (`app.company_id` does not exist). Access restricted to service_role for administrative operations. |
 
 ---
 
@@ -814,6 +816,7 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 1.8.0 | 2026-01-31 | **PRD-025 Onboarding**: Added `staff_invite` (admin-only, Template 2b session-var-only for ALL ops — PII tightening) and `company` (deny-by-default, no permissive policies) to Policy Matrix. Column-level privilege restriction on `token_hash`. |
 | 1.7.0 | 2026-01-29 | **ADR-030 Alignment**: Added consolidated Security Invariants Registry (ADR-024 INV-1–8 + ADR-030 INV-030-1–6). Added Template 2b for write-path session-var-required policies (INV-030-5). Noted ADR-030 write-path tightening on Template 2. |
 | 1.6.0 | 2026-01-06 | **ADR-024 Alignment**: Updated Canonical RLS Pattern section to require `set_rls_context_from_staff()`. Deprecated `set_rls_context()` for client-callable RPCs. Added security invariants INV-7/INV-8. Updated RLS Context Injection section with authoritative context setter. |
 | 1.5.0 | 2026-01-06 | **PRD-LOYALTY-PROMO**: Added `promo_program`, `promo_coupon` tables to LoyaltyService (Promo Instruments) context. RPCs require ADR-024 compliance (`set_rls_context_from_staff()`). |

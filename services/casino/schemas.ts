@@ -53,7 +53,12 @@ export const updateCasinoSettingsSchema = z.object({
 // === Staff Schemas ===
 
 /** Staff roles enum */
-export const staffRoleSchema = z.enum(['dealer', 'pit_boss', 'admin']);
+export const staffRoleSchema = z.enum([
+  'dealer',
+  'pit_boss',
+  'cashier',
+  'admin',
+]);
 
 /**
  * Schema for creating a staff member with role constraint refinement.
@@ -120,6 +125,32 @@ export const staffListQuerySchema = z.object({
     .positive()
     .max(100, 'Limit cannot exceed 100')
     .default(20),
+});
+
+// === Onboarding Schemas (PRD-025) ===
+
+/** Bootstrap casino input (called from /bootstrap form) */
+export const bootstrapCasinoSchema = z.object({
+  casino_name: z.string().min(1, 'Casino name is required').max(100),
+  timezone: z.string().min(1).max(64).optional(),
+  gaming_day_start: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format')
+    .optional(),
+});
+
+/** Staff invite creation input (admin-only) */
+export const createInviteSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  role: z.enum(['dealer', 'pit_boss', 'cashier', 'admin']),
+});
+
+/** Invite acceptance input (token from URL) */
+export const acceptInviteSchema = z.object({
+  token: z
+    .string()
+    .length(64, 'Token must be 64-character hex string')
+    .regex(/^[0-9a-f]{64}$/, 'Token must be lowercase hexadecimal'),
 });
 
 // === Alert Threshold Schemas (PRD-LOYALTY-PROMO WS6) ===
@@ -272,3 +303,7 @@ export type AlertThresholdsInput = z.infer<typeof alertThresholdsSchema>;
 export type UpdateAlertThresholdsInput = z.infer<
   typeof updateAlertThresholdsSchema
 >;
+// Onboarding (PRD-025)
+export type BootstrapCasinoSchemaInput = z.infer<typeof bootstrapCasinoSchema>;
+export type CreateInviteSchemaInput = z.infer<typeof createInviteSchema>;
+export type AcceptInviteSchemaInput = z.infer<typeof acceptInviteSchema>;

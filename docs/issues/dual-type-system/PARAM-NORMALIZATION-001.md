@@ -1,6 +1,6 @@
 # Param Normalization Standard
 **ID:** PARAM-NORMALIZATION-001  
-**Status:** Draft  
+**Status:** Active
 **Scope:** All Supabase RPC calls and query construction across PT-2 bounded contexts.  
 **Goal:** Eliminate systemic `null` vs `undefined` mismatches that bypass defaults, widen/empty filters, and cause silent “successful null” results.
 
@@ -30,8 +30,23 @@ These are **not equivalent** in Postgres default args, `COALESCE`, and query sem
 
 ---
 
-## 2) Standard Helper: `omitUndefined`
-All RPC args **must** be normalized at the boundary.
+## 2) Decision Rule
+
+**If args come from a validated DTO that cannot be null → no extra normalization needed.**
+`JSON.stringify` already drops `undefined` keys. The Supabase client serializes via JSON, so a Zod-parsed DTO typed as `string | undefined` (never `string | null`) is safe as-is.
+
+**If args come from anything else → normalize at the boundary.**
+Prefer `omitUndefined`; otherwise explicit `?? undefined` is acceptable.
+
+"Anything else" includes: DB row data, query params, merged partials, nullable column values, or any source where `null` could leak in.
+
+### Standard Helper: `omitUndefined`
+
+**Location:** `lib/query/omit-undefined.ts`
+
+```ts
+import { omitUndefined } from '@/lib/query/omit-undefined';
+```
 
 ```ts
 export function omitUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
@@ -41,7 +56,7 @@ export function omitUndefined<T extends Record<string, unknown>>(obj: T): Partia
 }
 ```
 
-### Standard RPC usage
+### Gold standard: boundary normalization
 ```ts
 const args = omitUndefined({
   required_id,
@@ -53,7 +68,13 @@ const args = omitUndefined({
 const { data, error } = await supabase.rpc('rpc_name', args);
 ```
 
-**Rule:** If an RPC arg is optional, it must be `T | undefined` in TS and must be removed from the payload when undefined.
+### Acceptable local tactic: `?? undefined`
+For hotfixes or non-boundary code where adding the import is overkill:
+```ts
+p_gaming_day: query.gamingDay ?? undefined,
+```
+
+This is fine but not the gold standard. Prefer `omitUndefined` for new or refactored RPC calls assembling args from nullable/DB-shaped sources.
 
 ---
 
@@ -107,7 +128,8 @@ Any `.rpc` bypass is forbidden outside a single explicitly allowed migration shi
 ## 6) DoD
 A bounded-context refactor that touches RPCs/queries is “done” when:
 
-- [ ] All RPC arg objects pass through `omitUndefined`
+- [ ] RPC args from nullable/DB-shaped sources are normalized at the boundary (`omitUndefined` or `?? undefined`)
+- [ ] RPC args from validated DTOs (Zod-parsed, never-null) need no extra normalization
 - [ ] No RPC optional args are sent as `null`
 - [ ] Query filters are only applied when values are defined
 - [ ] No `as any` / `as unknown as` used to bypass `.rpc` typing

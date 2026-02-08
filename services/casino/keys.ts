@@ -55,6 +55,14 @@ export const casinoKeys = {
     { scope: [...ROOT, 'staff'] as const },
   ),
 
+  // === Staff Invites (PRD-025) ===
+
+  /** Staff invite queries (admin-only) */
+  staffInvites: Object.assign(
+    () => [...ROOT, 'staff-invites', 'list'] as const,
+    { scope: [...ROOT, 'staff-invites'] as const },
+  ),
+
   // === Gaming Day ===
 
   /**
