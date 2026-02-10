@@ -52,6 +52,16 @@ const gameTypeConfig: Record<
   baccarat: {
     label: 'Baccarat',
     abbr: 'BAC',
+    color: 'bg-amber-500/20 text-amber-400 border-amber-500/30',
+  },
+  pai_gow: {
+    label: 'Pai Gow',
+    abbr: 'PG',
+    color: 'bg-purple-500/20 text-purple-400 border-purple-500/30',
+  },
+  carnival: {
+    label: 'Carnival',
+    abbr: 'CRN',
     color: 'bg-violet-500/20 text-violet-400 border-violet-500/30',
   },
 };

@@ -339,8 +339,8 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
   INLINE_DTO_VIOLATIONS=""
 
   for file in $STAGED_SERVICE_FILES; do
-    # Skip dtos.ts files (that's where DTOs should be)
-    if echo "$file" | grep -q "/dtos\.ts$"; then
+    # Skip dtos.ts and *-dtos.ts files (that's where DTOs should be)
+    if echo "$file" | grep -qE "[-/]dtos\.ts$"; then
       continue
     fi
 
@@ -359,8 +359,8 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
       continue
     fi
 
-    # Skip schemas.ts (Zod-inferred types are valid co-location)
-    if echo "$file" | grep -q "/schemas\.ts$"; then
+    # Skip schemas.ts and *-schemas.ts (Zod-inferred types are valid co-location)
+    if echo "$file" | grep -qE "[-/]schemas\.ts$"; then
       continue
     fi
 

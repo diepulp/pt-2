@@ -51,6 +51,8 @@ const gameTypeLabels: Record<GameType, string> = {
   poker: 'Poker',
   roulette: 'Roulette',
   baccarat: 'Baccarat',
+  pai_gow: 'Pai Gow',
+  carnival: 'Carnival',
 };
 
 const statusConfig = {

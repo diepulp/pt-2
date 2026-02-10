@@ -4049,6 +4049,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_seed_game_settings_defaults: {
+        Args: { p_template?: string }
+        Returns: number
+      }
       rpc_shift_active_visitors_summary: {
         Args: never
         Returns: {

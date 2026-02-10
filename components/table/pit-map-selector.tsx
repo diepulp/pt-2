@@ -82,6 +82,8 @@ const GAME_TYPE_LABELS: Record<GameType, string> = {
   poker: 'PK',
   roulette: 'RL',
   baccarat: 'BA',
+  pai_gow: 'PG',
+  carnival: 'CRN',
 };
 
 /**
