@@ -2135,6 +2135,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
           status: Database["public"]["Enums"]["staff_status"]
           user_id: string | null
@@ -2147,6 +2148,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          pin_hash?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
           user_id?: string | null
@@ -2159,6 +2161,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
           user_id?: string | null
@@ -2169,6 +2172,51 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_pin_attempts: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          id: string
+          last_attempt_at: string
+          staff_id: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string
+          staff_id: string
+          window_start: string
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string
+          staff_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_pin_attempts_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_pin_attempts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -3199,6 +3247,10 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_clear_pin_attempts: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       rpc_current_gaming_day: {
         Args: { p_timestamp?: string }
         Returns: string
@@ -3208,6 +3260,13 @@ export type Database = {
         Returns: {
           end_gd: string
           start_gd: string
+        }[]
+      }
+      rpc_increment_pin_attempt: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          attempt_count: number
+          is_limited: boolean
         }[]
       }
       rpc_get_current_table_session: {

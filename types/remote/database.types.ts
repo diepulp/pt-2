@@ -107,6 +107,8 @@ export type Database = {
           id: string
           promo_allow_anonymous_issuance: boolean
           promo_require_exact_match: boolean
+          setup_completed_at: string | null
+          setup_status: string
           table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
           timezone: string
           updated_at: string
@@ -121,6 +123,8 @@ export type Database = {
           id?: string
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
+          setup_completed_at?: string | null
+          setup_status?: string
           table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
           updated_at?: string
@@ -135,6 +139,8 @@ export type Database = {
           id?: string
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
+          setup_completed_at?: string | null
+          setup_status?: string
           table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
           updated_at?: string
@@ -535,51 +541,69 @@ export type Database = {
       game_settings: {
         Row: {
           casino_id: string
+          code: string
           created_at: string
           decisions_per_hour: number
+          deck_profile: string | null
           game_type: Database["public"]["Enums"]["game_type"]
           house_edge: number
           id: string
           max_bet: number | null
           min_bet: number | null
           name: string
+          notes: string | null
           point_multiplier: number | null
           points_conversion_rate: number | null
+          rating_edge_for_comp: number | null
           rotation_interval_minutes: number | null
           seats_available: number
+          shoe_decks: number | null
           updated_at: string
+          variant_name: string | null
         }
         Insert: {
           casino_id: string
+          code: string
           created_at?: string
           decisions_per_hour?: number
+          deck_profile?: string | null
           game_type: Database["public"]["Enums"]["game_type"]
           house_edge?: number
           id?: string
           max_bet?: number | null
           min_bet?: number | null
           name: string
+          notes?: string | null
           point_multiplier?: number | null
           points_conversion_rate?: number | null
+          rating_edge_for_comp?: number | null
           rotation_interval_minutes?: number | null
           seats_available?: number
+          shoe_decks?: number | null
           updated_at?: string
+          variant_name?: string | null
         }
         Update: {
           casino_id?: string
+          code?: string
           created_at?: string
           decisions_per_hour?: number
+          deck_profile?: string | null
           game_type?: Database["public"]["Enums"]["game_type"]
           house_edge?: number
           id?: string
           max_bet?: number | null
           min_bet?: number | null
           name?: string
+          notes?: string | null
           point_multiplier?: number | null
           points_conversion_rate?: number | null
+          rating_edge_for_comp?: number | null
           rotation_interval_minutes?: number | null
           seats_available?: number
+          shoe_decks?: number | null
           updated_at?: string
+          variant_name?: string | null
         }
         Relationships: [
           {
@@ -587,6 +611,57 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      game_settings_side_bet: {
+        Row: {
+          casino_id: string
+          created_at: string
+          enabled_by_default: boolean
+          game_settings_id: string
+          house_edge: number
+          id: string
+          paytable_id: string | null
+          side_bet_name: string
+          updated_at: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          enabled_by_default?: boolean
+          game_settings_id: string
+          house_edge: number
+          id?: string
+          paytable_id?: string | null
+          side_bet_name: string
+          updated_at?: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          enabled_by_default?: boolean
+          game_settings_id?: string
+          house_edge?: number
+          id?: string
+          paytable_id?: string | null
+          side_bet_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_settings_side_bet_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_settings_side_bet_game_settings_id_fkey"
+            columns: ["game_settings_id"]
+            isOneToOne: false
+            referencedRelation: "game_settings"
             referencedColumns: ["id"]
           },
         ]
@@ -2135,6 +2210,7 @@ export type Database = {
           first_name: string
           id: string
           last_name: string
+          pin_hash: string | null
           role: Database["public"]["Enums"]["staff_role"]
           status: Database["public"]["Enums"]["staff_status"]
           user_id: string | null
@@ -2147,6 +2223,7 @@ export type Database = {
           first_name: string
           id?: string
           last_name: string
+          pin_hash?: string | null
           role: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
           user_id?: string | null
@@ -2159,6 +2236,7 @@ export type Database = {
           first_name?: string
           id?: string
           last_name?: string
+          pin_hash?: string | null
           role?: Database["public"]["Enums"]["staff_role"]
           status?: Database["public"]["Enums"]["staff_status"]
           user_id?: string | null
@@ -2169,6 +2247,102 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_invite: {
+        Row: {
+          accepted_at: string | null
+          casino_id: string
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          casino_id: string
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at: string
+          id?: string
+          staff_role: Database["public"]["Enums"]["staff_role"]
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          staff_role?: Database["public"]["Enums"]["staff_role"]
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invite_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invite_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      staff_pin_attempts: {
+        Row: {
+          attempt_count: number
+          casino_id: string
+          created_at: string
+          id: string
+          last_attempt_at: string
+          staff_id: string
+          window_start: string
+        }
+        Insert: {
+          attempt_count?: number
+          casino_id: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string
+          staff_id: string
+          window_start: string
+        }
+        Update: {
+          attempt_count?: number
+          casino_id?: string
+          created_at?: string
+          id?: string
+          last_attempt_at?: string
+          staff_id?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_pin_attempts_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_pin_attempts_staff_id_fkey"
+            columns: ["staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -2900,6 +3074,14 @@ export type Database = {
           original_total: number
         }[]
       }
+      rpc_accept_staff_invite: {
+        Args: { p_token: string }
+        Returns: {
+          casino_id: string
+          staff_id: string
+          staff_role: string
+        }[]
+      }
       rpc_accrue_on_close: {
         Args: {
           p_casino_id: string
@@ -2952,10 +3134,23 @@ export type Database = {
           points_delta: number
         }[]
       }
+      rpc_bootstrap_casino: {
+        Args: {
+          p_casino_name: string
+          p_gaming_day_start?: string
+          p_timezone?: string
+        }
+        Returns: {
+          casino_id: string
+          staff_id: string
+          staff_role: string
+        }[]
+      }
       rpc_check_table_seat_availability: {
         Args: { p_seat_number: number; p_table_id: string }
         Returns: Json
       }
+      rpc_clear_pin_attempts: { Args: never; Returns: undefined }
       rpc_close_rating_slip: {
         Args: {
           p_average_bet?: number
@@ -3199,6 +3394,18 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_staff_invite: {
+        Args: {
+          p_email: string
+          p_role: Database["public"]["Enums"]["staff_role"]
+          p_ttl_hours?: number
+        }
+        Returns: {
+          expires_at: string
+          invite_id: string
+          raw_token: string
+        }[]
+      }
       rpc_current_gaming_day: {
         Args: { p_timestamp?: string }
         Returns: string
@@ -3340,6 +3547,13 @@ export type Database = {
       rpc_get_visit_loyalty_summary: {
         Args: { p_visit_id: string }
         Returns: Json
+      }
+      rpc_increment_pin_attempt: {
+        Args: never
+        Returns: {
+          attempt_count: number
+          is_limited: boolean
+        }[]
       }
       rpc_issue_mid_session_reward: {
         Args: {
@@ -4165,7 +4379,13 @@ export type Database = {
         | "pending_activation"
         | "active"
         | "retired"
-      game_type: "blackjack" | "poker" | "roulette" | "baccarat"
+      game_type:
+        | "blackjack"
+        | "poker"
+        | "roulette"
+        | "baccarat"
+        | "pai_gow"
+        | "carnival"
       interaction_event_type:
         | "visit_start"
         | "visit_end"
@@ -4368,7 +4588,14 @@ export const Constants = {
         "active",
         "retired",
       ],
-      game_type: ["blackjack", "poker", "roulette", "baccarat"],
+      game_type: [
+        "blackjack",
+        "poker",
+        "roulette",
+        "baccarat",
+        "pai_gow",
+        "carnival",
+      ],
       interaction_event_type: [
         "visit_start",
         "visit_end",
