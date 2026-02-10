@@ -5,6 +5,7 @@ import { FlatCompat } from '@eslint/eslintrc';
 
 import dtoColumnAllowlist from './.eslint-rules/dto-column-allowlist.js';
 import noCrossContextDbImports from './.eslint-rules/no-cross-context-db-imports.js';
+import noDirectTemplate2bDml from './.eslint-rules/no-direct-template2b-dml.js';
 import noDtoTypeAssertions from './.eslint-rules/no-dto-type-assertions.js';
 import noHeaderCasinoContext from './.eslint-rules/no-header-casino-context.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
@@ -59,10 +60,13 @@ const eslintConfig = [
           'dto-column-allowlist': dtoColumnAllowlist,
           'no-dto-type-assertions': noDtoTypeAssertions,
           'no-service-result-return': noServiceResultReturn,
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
         },
       },
     },
     rules: {
+      // ADR-030 D5 (INV-030-7): Ban direct DML against Template 2b tables
+      'custom-rules/no-direct-template2b-dml': 'error',
       // Enable custom rule for ReturnType detection
       'custom-rules/no-return-type-inference': 'error',
       // Enable custom rule for manual DTO prevention (SRM canonical standard)
@@ -130,12 +134,15 @@ const eslintConfig = [
       'security-rules': {
         rules: {
           'no-header-casino-context': noHeaderCasinoContext,
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
         },
       },
     },
     rules: {
       // V4 FIX: Prevent casino context from headers - security vulnerability
       'security-rules/no-header-casino-context': 'error',
+      // ADR-030 D5 (INV-030-7): Ban direct DML against Template 2b tables
+      'security-rules/no-direct-template2b-dml': 'error',
       // SEC-001: Block service client in production API paths (bypasses RLS)
       'no-restricted-imports': [
         'error',

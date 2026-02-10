@@ -4053,6 +4053,7 @@ export type Database = {
         Args: { p_template?: string }
         Returns: number
       }
+      rpc_set_staff_pin: { Args: { p_pin_hash: string }; Returns: undefined }
       rpc_shift_active_visitors_summary: {
         Args: never
         Returns: {

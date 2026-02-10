@@ -330,6 +330,7 @@ export async function createStaff(
     throw new DomainError('STAFF_ROLE_CONSTRAINT_VIOLATION');
   }
 
+  // eslint-disable-next-line custom-rules/no-direct-template2b-dml -- INV-030-7 exception: service_role client bypasses RLS (admin staff management)
   const { data, error } = await supabase
     .from('staff')
     .insert({
@@ -407,6 +408,7 @@ export async function updateStaff(
   if (input.user_id !== undefined) updateData.user_id = input.user_id;
   if (input.status !== undefined) updateData.status = input.status;
 
+  // eslint-disable-next-line custom-rules/no-direct-template2b-dml -- INV-030-7 exception: service_role client bypasses RLS (admin staff management)
   const { data, error } = await supabase
     .from('staff')
     .update(updateData)

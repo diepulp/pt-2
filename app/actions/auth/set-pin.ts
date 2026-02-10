@@ -1,10 +1,16 @@
 /**
  * Set PIN Server Action
  *
- * Validates PIN (Zod + denylist), bcrypt hashes, and stores in staff.pin_hash.
- * Uses authed client — RLS policy enforces self-only update (ADR-030 D4).
+ * Validates PIN (Zod + denylist), bcrypt hashes, and persists via
+ * rpc_set_staff_pin (self-contained SECURITY DEFINER RPC).
+ *
+ * ADR-030 D5 (INV-030-7): Template 2b writes use self-contained RPCs.
+ * The RPC calls set_rls_context_from_staff() and writes in the same
+ * transaction — session vars are available for the UPDATE.
  *
  * @see EXECUTION-SPEC-GAP-SIGN-OUT.md §WS5
+ * @see PATCH-DELTA-EXECUTION-SPEC-GAP-SIGN-OUT-v0.3.md §2
+ * @see ISSUE-SET-PIN-SILENT-RLS-FAILURE.md
  */
 'use server';
 
@@ -28,18 +34,6 @@ export async function setPinAction(pin: string): Promise<ServiceResult<void>> {
   return withServerAction(
     supabase,
     async (mwCtx) => {
-      const staffId = mwCtx.rlsContext?.actorId;
-      if (!staffId) {
-        return {
-          ok: false as const,
-          code: 'UNAUTHORIZED' as const,
-          error: 'No staff context available',
-          requestId: mwCtx.correlationId,
-          durationMs: Date.now() - mwCtx.startedAt,
-          timestamp: new Date().toISOString(),
-        };
-      }
-
       // Validate PIN format + denylist
       const parsed = pinSchema.safeParse(pin);
       if (!parsed.success) {
@@ -56,16 +50,18 @@ export async function setPinAction(pin: string): Promise<ServiceResult<void>> {
       // Hash PIN with bcrypt (salt rounds = 10)
       const pinHash = await bcrypt.hash(parsed.data, 10);
 
-      // Update staff.pin_hash via authed client — RLS enforces self-only
-      const { error: updateError } = await mwCtx.supabase
-        .from('staff')
-        .update({ pin_hash: pinHash })
-        .eq('id', staffId);
+      // Persist via self-contained RPC (ADR-030 D5 INV-030-7).
+      // The RPC injects context and writes in the same transaction —
+      // no staffId param needed (ADR-024 INV-8: no spoofable params).
+      const { error: updateError } = await mwCtx.supabase.rpc(
+        'rpc_set_staff_pin',
+        { p_pin_hash: pinHash },
+      );
 
       if (updateError) {
         return {
           ok: false as const,
-          code: 'INTERNAL_ERROR' as const,
+          code: 'PIN_SET_FAILED' as const,
           error: updateError.message,
           requestId: mwCtx.correlationId,
           durationMs: Date.now() - mwCtx.startedAt,
