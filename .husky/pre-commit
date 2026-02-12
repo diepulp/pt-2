@@ -13,5 +13,8 @@
 # Zustand state management pattern validation (PRD-013)
 .husky/pre-commit-zustand-check.sh || exit 1
 
+# ADR-034: RLS write-path enforcement (Category A tables = RPC-only writes)
+.husky/pre-commit-rls-write-path.sh || exit 1
+
 # Run lint-staged for all staged files
 npm run lint-staged

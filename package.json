@@ -18,6 +18,7 @@
     "memori:ingest": "python scripts/memori-ingest.py",
     "memori:test": "python scripts/memori-test.py",
     "memori:setup": "npm run memori:init && npm run memori:ingest && npm run memori:test",
+    "generate:category-a": "npx tsx scripts/generate-category-a-config.ts",
     "db:types": "npx supabase gen types typescript --project-id vaicxfihdldgepzryhpd --schema public > types/remote/database.types.ts",
     "db:types-local": "npx supabase gen types typescript --local --schema public > types/database.types.ts",
     "analyze": "ANALYZE=true next build",

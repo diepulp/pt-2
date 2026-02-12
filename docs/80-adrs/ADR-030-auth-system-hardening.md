@@ -125,7 +125,20 @@ casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
 
 `SELECT` policies retain the COALESCE fallback for now (v0.1 scope) to avoid widespread breakage. Application-layer logging is added to detect when the JWT branch is exercised during reads, providing data for a future v0.2 tightening.
 
-**Tables affected first (highest sensitivity):** `staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+**Tables affected first (highest sensitivity):** `staff`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+
+> **Note (PRD-034):** `player` was removed from the D4 critical list. Its write policies use COALESCE (PostgREST-compatible), and `updatePlayer()` uses PostgREST DML. Tightening would break this path without a compensating RPC migration. `player` remains Category B.
+
+#### Category A Table Registry (Machine-Readable)
+
+The following block is the canonical source of truth for Category A tables. It is consumed by `scripts/generate-category-a-config.ts` to produce `config/rls-category-a-tables.json`. Do not edit manually — update this list and run `npm run generate:category-a`.
+
+<!-- CATEGORY-A-REGISTRY -->
+- `staff`
+- `staff_pin_attempts`
+- `staff_invite`
+- `player_casino`
+<!-- /CATEGORY-A-REGISTRY -->
 
 ### D5: Template 2b Writes Must Use Self-Contained RPCs (Transport Constraint)
 

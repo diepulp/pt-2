@@ -2,38 +2,53 @@
  * ESLint Rule: no-direct-template2b-dml
  *
  * Purpose: Prevent direct PostgREST DML (.from(table).insert/update/delete)
- * against tables with Template 2b RLS policies (session-var-only, no JWT
- * COALESCE fallback). Session vars set by the middleware's RPC are
- * transaction-local and lost across separate HTTP requests, causing writes
- * to silently affect 0 rows.
+ * against Category A tables (session-var-only RLS, no JWT COALESCE fallback).
+ * Session vars set by the middleware's RPC are transaction-local and lost
+ * across separate HTTP requests, causing writes to silently affect 0 rows.
  *
- * Reference: ADR-030 D5 (INV-030-7)
+ * Taxonomy: "Category A" (ADR-034) = "Template 2b" (SEC-001 write-policy template)
+ *
+ * Reference: ADR-034 (RLS Write-Path Compatibility & Enforcement)
+ *            ADR-030 D5 (INV-030-7)
  *            ISSUE-SET-PIN-SILENT-RLS-FAILURE
  *            docs/30-security/SEC-001-rls-policy-matrix.md §Template 2b
  *
  * @example
- * // ❌ BAD - Direct DML against Template 2b table
+ * // ❌ BAD - Direct DML against Category A table
  * await supabase.from('staff').update({ pin_hash: hash }).eq('id', staffId);
- * await supabase.from('staff_pin_attempts').insert({ ... });
+ * await supabase.from('player_casino').upsert({ ... });
  *
  * // ✅ GOOD - Self-contained RPC with internal set_rls_context_from_staff()
  * await supabase.rpc('rpc_set_staff_pin', { p_pin_hash: hash });
- * await supabase.rpc('rpc_increment_pin_attempt');
+ * await supabase.rpc('rpc_enroll_player', { p_player_id: id });
  */
 
-// Tables with Template 2b RLS policies (session-var-only, no JWT fallback).
-// Maintain this list as new Template 2b policies are added.
-// Source: SEC-001 §Template 2b + ADR-030 D4
-const TEMPLATE_2B_TABLES = new Set([
-  'staff',
-  'staff_pin_attempts',
-  // Future: add tables as they migrate to Template 2b
-  // 'player',
-  // 'player_financial_transaction',
-  // 'visit',
-  // 'rating_slip',
-  // 'loyalty_ledger',
-]);
+// Category A tables: session-var-only writes, no JWT COALESCE fallback (ADR-034).
+// Writes MUST use SECURITY DEFINER RPCs with internal set_rls_context_from_staff().
+// Source: config/rls-category-a-tables.json (generated from ADR-030)
+//
+// Dynamic loading: reads from config file at lint-time so the ESLint rule stays
+// in sync with the canonical ADR-030 registry without manual edits.
+const CATEGORY_A_TABLES = (() => {
+  const path = require('path');
+  const fs = require('fs');
+  const configPath = path.resolve(__dirname, '..', 'config', 'rls-category-a-tables.json');
+  try {
+    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+    if (Array.isArray(config.categoryA) && config.categoryA.length > 0) {
+      return new Set(config.categoryA);
+    }
+  } catch {
+    // Fall through to hardcoded fallback
+  }
+  // Fallback: hardcoded list if config is missing (e.g. fresh clone before generate)
+  return new Set([
+    'staff',
+    'staff_invite',
+    'staff_pin_attempts',
+    'player_casino',
+  ]);
+})();
 
 // DML methods that are prohibited on Template 2b tables
 const WRITE_METHODS = new Set(['insert', 'update', 'delete', 'upsert']);
@@ -43,17 +58,17 @@ module.exports = {
     type: 'problem',
     docs: {
       description:
-        'Prevent direct PostgREST DML against tables with Template 2b RLS policies (ADR-030 D5, INV-030-7)',
+        'Prevent direct PostgREST DML against Category A tables (ADR-034, ADR-030 D5, INV-030-7)',
       category: 'Security',
       recommended: true,
     },
     messages: {
       noDirectDml:
-        'INV-030-7 VIOLATION: Direct .from(\'{{tableName}}\').{{method}}() is prohibited. ' +
-        'Table `{{tableName}}` has a Template 2b RLS policy (session-var-only). ' +
+        'ADR-034 VIOLATION: Direct .from(\'{{tableName}}\').{{method}}() is prohibited. ' +
+        'Table `{{tableName}}` is Category A (session-var-only RLS, no JWT COALESCE fallback). ' +
         'Session vars from the middleware RPC are transaction-local and lost across HTTP requests. ' +
         'Use a SECURITY DEFINER RPC that calls set_rls_context_from_staff() internally. ' +
-        'See ADR-030 D5.',
+        'See ADR-034.',
     },
     schema: [],
   },
@@ -103,7 +118,7 @@ module.exports = {
           tableName = tableArg.quasis[0].value?.cooked;
         }
 
-        if (!tableName || !TEMPLATE_2B_TABLES.has(tableName)) return;
+        if (!tableName || !CATEGORY_A_TABLES.has(tableName)) return;
 
         context.report({
           node,

@@ -22,7 +22,8 @@ export type InfrastructureErrorCode =
   | 'FORBIDDEN'
   | 'INTERNAL_ERROR'
   | 'RATE_LIMIT_EXCEEDED'
-  | 'IDEMPOTENCY_CONFLICT';
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'RLS_WRITE_DENIED';
 
 // ============================================================================
 // VISIT DOMAIN ERRORS

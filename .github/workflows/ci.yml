@@ -24,5 +24,8 @@ jobs:
         run: npm run lint
       - name: Type Check
         run: npm run type-check
+      - name: RLS Write-Path Lint (ADR-034)
+        # ADR-034 ratified as "Accepted" (2026-02-11). Blocking.
+        run: bash scripts/lint-rls-write-path.sh
       - name: Test
         run: npm test

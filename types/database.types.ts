@@ -108,6 +108,7 @@ export type Database = {
           promo_allow_anonymous_issuance: boolean
           promo_require_exact_match: boolean
           setup_completed_at: string | null
+          setup_completed_by: string | null
           setup_status: string
           table_bank_mode: Database["public"]["Enums"]["table_bank_mode"]
           timezone: string
@@ -124,6 +125,7 @@ export type Database = {
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
           setup_completed_at?: string | null
+          setup_completed_by?: string | null
           setup_status?: string
           table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
@@ -140,6 +142,7 @@ export type Database = {
           promo_allow_anonymous_issuance?: boolean
           promo_require_exact_match?: boolean
           setup_completed_at?: string | null
+          setup_completed_by?: string | null
           setup_status?: string
           table_bank_mode?: Database["public"]["Enums"]["table_bank_mode"]
           timezone?: string
@@ -152,6 +155,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: true
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "casino_settings_setup_completed_by_fkey"
+            columns: ["setup_completed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -672,6 +682,7 @@ export type Database = {
           created_at: string
           id: string
           label: string
+          label_normalized: string | null
           par_total_cents: number | null
           par_updated_at: string | null
           par_updated_by: string | null
@@ -684,6 +695,7 @@ export type Database = {
           created_at?: string
           id?: string
           label: string
+          label_normalized?: string | null
           par_total_cents?: number | null
           par_updated_at?: string | null
           par_updated_by?: string | null
@@ -696,6 +708,7 @@ export type Database = {
           created_at?: string
           id?: string
           label?: string
+          label_normalized?: string | null
           par_total_cents?: number | null
           par_updated_at?: string | null
           par_updated_by?: string | null
@@ -3203,6 +3216,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_complete_casino_setup: { Args: { p_skip?: boolean }; Returns: Json }
       rpc_compute_table_rundown: {
         Args: { p_session_id: string }
         Returns: {
@@ -3394,6 +3408,23 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_staff: {
+        Args: {
+          p_employee_id?: string
+          p_first_name: string
+          p_last_name: string
+          p_role: Database["public"]["Enums"]["staff_role"]
+        }
+        Returns: {
+          casino_id: string
+          employee_id: string
+          first_name: string
+          id: string
+          last_name: string
+          role: string
+          status: string
+        }[]
+      }
       rpc_create_staff_invite: {
         Args: {
           p_email: string
@@ -3409,6 +3440,16 @@ export type Database = {
       rpc_current_gaming_day: {
         Args: { p_timestamp?: string }
         Returns: string
+      }
+      rpc_enroll_player: {
+        Args: { p_player_id: string }
+        Returns: {
+          casino_id: string
+          enrolled_at: string
+          enrolled_by: string
+          player_id: string
+          status: string
+        }[]
       }
       rpc_gaming_day_range: {
         Args: { p_end_timestamp?: string; p_weeks?: number }
@@ -4286,6 +4327,7 @@ export type Database = {
               created_at: string
               id: string
               label: string
+              label_normalized: string | null
               par_total_cents: number | null
               par_updated_at: string | null
               par_updated_by: string | null
@@ -4312,6 +4354,7 @@ export type Database = {
               created_at: string
               id: string
               label: string
+              label_normalized: string | null
               par_total_cents: number | null
               par_updated_at: string | null
               par_updated_by: string | null

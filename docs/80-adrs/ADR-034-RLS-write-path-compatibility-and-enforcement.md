@@ -4,7 +4,7 @@ doc_type: 'adr'
 version: '0.1.0'
 date: '2026-02-11'
 timezone: 'America/Los_Angeles'
-status: 'proposed'
+status: 'accepted'
 owners:
   - 'Platform / Security'
 related:
@@ -44,7 +44,7 @@ We standardize **two RLS write postures** and make the choice **enforceable** by
 
 ## Status
 
-Proposed. Acceptance gate: CI write-path lint (Phase 2) must be merged before enforcement is considered active.
+**Accepted** (2026-02-11). CI write-path lint merged (PRD-034 Phase 1). Enforcement active in warning-only mode; transitions to blocking after full CI integration.
 
 ---
 

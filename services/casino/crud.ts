@@ -458,12 +458,14 @@ export async function updateStaff(
  * SLAD ownership: CasinoService owns player_casino table per bounded context.
  * This is the canonical enrollment operation.
  *
+ * PRD-034: Uses SECURITY DEFINER RPC instead of PostgREST DML on Category A
+ * table `player_casino`. Casino ID and actor ID derived from session context
+ * (ADR-024 INV-8).
+ *
  * Idempotent - returns existing enrollment if already enrolled.
  *
  * @param supabase - Supabase client with RLS context
  * @param playerId - Player identifier
- * @param casinoId - Casino identifier
- * @param enrolledBy - Staff member who enrolled the player
  * @returns Enrollment DTO
  *
  * @throws {DomainError} PLAYER_NOT_FOUND - Player doesn't exist
@@ -475,27 +477,17 @@ export async function updateStaff(
 export async function enrollPlayer(
   supabase: SupabaseClient<Database>,
   playerId: string,
-  casinoId: string,
-  enrolledBy: string,
 ): Promise<PlayerEnrollmentDTO> {
-  // Step 1: Create player_casino enrollment
   const { data, error } = await supabase
-    .from('player_casino')
-    .upsert(
-      {
-        player_id: playerId,
-        casino_id: casinoId,
-        enrolled_by: enrolledBy,
-        status: 'active',
-      },
-      {
-        onConflict: 'player_id,casino_id',
-      },
-    )
-    .select('player_id, casino_id, status, enrolled_at, enrolled_by')
+    .rpc('rpc_enroll_player', {
+      p_player_id: playerId,
+    })
     .single();
 
   if (error) {
+    if (error.code === 'P0002') {
+      throw new DomainError('PLAYER_NOT_FOUND', 'Player does not exist');
+    }
     if (error.code === '23503') {
       throw new DomainError('PLAYER_NOT_FOUND', 'Player does not exist');
     }

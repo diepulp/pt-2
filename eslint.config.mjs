@@ -159,6 +159,33 @@ const eslintConfig = [
     },
   },
   // ==========================================================================
+  // ADR-034: RLS Write-Path enforcement for server actions & lib paths
+  // Prevents PostgREST DML against Category A tables outside services/ and app/api/
+  // Covers: app/**/_actions.ts, app/**/actions.ts, lib/**/*.ts
+  // ==========================================================================
+  {
+    files: ['app/**/_actions.ts', 'app/**/actions.ts', 'lib/**/*.ts'],
+    ignores: [
+      'app/api/**', // Already covered by security-rules block above
+      'app/actions/**', // Already covered by security-rules block above
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      'lib/supabase/service.ts', // Service client definition itself
+    ],
+    plugins: {
+      'adr034-rules': {
+        rules: {
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
+        },
+      },
+    },
+    rules: {
+      // ADR-034: Ban direct DML against Category A tables in server actions and lib
+      'adr034-rules/no-direct-template2b-dml': 'error',
+    },
+  },
+  // ==========================================================================
   // TEMP-003 / PRD-027: Temporal governance enforcement
   // Prevents JS temporal bypass patterns in query paths (services/, app/, hooks/)
   // ==========================================================================

@@ -10,6 +10,7 @@
 import { z } from 'zod';
 
 import { uuidSchema, uuidSchemaNullable } from '@/lib/validation';
+import type { Database } from '@/types/database.types';
 
 // === Casino Schemas ===
 
@@ -288,6 +289,35 @@ export const updateAlertThresholdsSchema = z
   })
   .partial();
 
+// === Setup Wizard Schemas (PRD-030) ===
+
+/** Table bank mode enum — derived from Database Enums to prevent drift */
+const TABLE_BANK_MODES = [
+  'INVENTORY_COUNT',
+  'IMPREST_TO_PAR',
+] as const satisfies readonly Database['public']['Enums']['table_bank_mode'][];
+
+export const tableBankModeSchema = z.enum(TABLE_BANK_MODES);
+
+/** Setup wizard: complete setup input */
+export const completeSetupSchema = z.object({
+  skip: z.boolean().optional(),
+});
+
+/** Setup wizard: casino settings (Step 1) — extends updateCasinoSettingsSchema with table_bank_mode */
+export const setupCasinoSettingsSchema = updateCasinoSettingsSchema.extend({
+  table_bank_mode: tableBankModeSchema,
+});
+
+/** Valid seed template names — single source of truth for RPC + UI + tests */
+export const SEED_TEMPLATES = ['small_pit_starter'] as const;
+export type SeedTemplate = (typeof SEED_TEMPLATES)[number];
+
+/** Setup wizard: seed game settings (Step 2) */
+export const seedGameSettingsSchema = z.object({
+  template: z.enum(SEED_TEMPLATES),
+});
+
 // === Type Exports (inferred from schemas) ===
 
 export type CreateCasinoInput = z.infer<typeof createCasinoSchema>;
@@ -307,3 +337,9 @@ export type UpdateAlertThresholdsInput = z.infer<
 export type BootstrapCasinoSchemaInput = z.infer<typeof bootstrapCasinoSchema>;
 export type CreateInviteSchemaInput = z.infer<typeof createInviteSchema>;
 export type AcceptInviteSchemaInput = z.infer<typeof acceptInviteSchema>;
+// Setup Wizard (PRD-030)
+export type CompleteSetupInput = z.infer<typeof completeSetupSchema>;
+export type SetupCasinoSettingsInput = z.infer<
+  typeof setupCasinoSettingsSchema
+>;
+export type SeedGameSettingsInput = z.infer<typeof seedGameSettingsSchema>;
