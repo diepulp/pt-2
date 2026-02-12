@@ -12,6 +12,9 @@
 
 import { z } from 'zod';
 
+import { uuidSchema } from '@/lib/validation';
+import type { Database } from '@/types/database.types';
+
 // === UUID Format Schema ===
 
 /**
@@ -30,12 +33,23 @@ const uuidFormat = (fieldName = 'ID') =>
 // === Enum Schemas ===
 
 export const tableStatusSchema = z.enum(['inactive', 'active', 'closed']);
-export const gameTypeSchema = z.enum([
+
+/**
+ * Game type enum — derived from Database Enums to prevent drift (PRD-030 delta v1 §3).
+ * When a new game_type is added to the DB enum, update this list and `satisfies` will
+ * catch any mismatch at compile time.
+ */
+type GameType = Database['public']['Enums']['game_type'];
+const GAME_TYPES = [
   'blackjack',
   'poker',
   'roulette',
   'baccarat',
-]);
+  'pai_gow',
+  'carnival',
+] as const satisfies readonly GameType[];
+export const gameTypeSchema = z.enum(GAME_TYPES);
+
 export const snapshotTypeSchema = z.enum(['open', 'close', 'rundown']);
 
 // === Chipset Schema ===
@@ -243,3 +257,22 @@ export type TableSessionRouteParams = z.infer<
 export type CurrentSessionRouteParams = z.infer<
   typeof currentSessionRouteParamsSchema
 >;
+
+// === Setup Wizard Schemas (PRD-030) ===
+
+/** Setup wizard: create/upsert a gaming table (Step 3) */
+export const createGamingTableSchema = z.object({
+  label: z.string().min(1, 'Table label is required').max(50),
+  type: gameTypeSchema,
+  pit: z.string().max(50).optional(),
+});
+
+/** Setup wizard: update table par target (Step 4) */
+export const updateTableParSchema = z.object({
+  tableId: uuidSchema('table ID'),
+  parTotalCents: z.number().int().min(0).nullable(),
+});
+
+// Setup Wizard type exports (PRD-030)
+export type CreateGamingTableInput = z.infer<typeof createGamingTableSchema>;
+export type UpdateTableParInput = z.infer<typeof updateTableParSchema>;

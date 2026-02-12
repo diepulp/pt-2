@@ -138,6 +138,7 @@ const NAVBAR_HEIGHT = '4rem'; // 64px (h-16)
 export function AppSidebar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const closeTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+  const isChildMenuOpenRef = React.useRef(false);
 
   const handleMouseEnter = React.useCallback(() => {
     if (closeTimeoutRef.current) {
@@ -148,10 +149,24 @@ export function AppSidebar() {
   }, []);
 
   const handleMouseLeave = React.useCallback(() => {
+    // Don't collapse sidebar while a child dropdown/menu is open
+    if (isChildMenuOpenRef.current) return;
     // Reduced from 300ms to 150ms for snappier feel
     closeTimeoutRef.current = setTimeout(() => {
       setIsOpen(false);
     }, 150);
+  }, []);
+
+  /** Track child dropdown state; trigger deferred close when it dismisses */
+  const handleChildMenuOpenChange = React.useCallback((open: boolean) => {
+    isChildMenuOpenRef.current = open;
+    if (!open) {
+      // Dropdown just closed — start close timer so the sidebar collapses
+      // if the cursor is already outside (will be cancelled by mouseEnter)
+      closeTimeoutRef.current = setTimeout(() => {
+        setIsOpen(false);
+      }, 150);
+    }
   }, []);
 
   // Cleanup on unmount
@@ -287,7 +302,7 @@ export function AppSidebar() {
 
         {/* Footer */}
         <div className="p-2">
-          <NavUser />
+          <NavUser onDropdownOpenChange={handleChildMenuOpenChange} />
         </div>
       </div>
     </>

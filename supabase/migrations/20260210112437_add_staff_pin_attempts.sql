@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Migration: Staff PIN rate-limit attempts table
--- Created: 20260210112001
+-- Created: 20260210112437
 -- Purpose: DB-backed rate limiting for PIN verification (replaces in-memory)
 -- Bounded Context: CasinoService (Foundational) — operational rate-limit state, follows audit_log precedent
 -- ============================================================================

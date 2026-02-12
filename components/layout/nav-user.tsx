@@ -42,7 +42,11 @@ function getInitials(email: string | null | undefined): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-export function NavUser() {
+interface NavUserProps {
+  onDropdownOpenChange?: (open: boolean) => void;
+}
+
+export function NavUser({ onDropdownOpenChange }: NavUserProps) {
   const { user, staffRole, isLoading } = useAuth();
   const { signOut, isPending, errorState, retrySignOut, performLocalCleanup } =
     useSignOut();
@@ -66,7 +70,7 @@ export function NavUser() {
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu onOpenChange={onDropdownOpenChange}>
         <DropdownMenuTrigger asChild>
           <button className="flex items-center gap-3 rounded-lg px-2 py-2 text-sm transition-colors hover:bg-sidebar-accent/50 w-full">
             <Avatar className="h-8 w-8 rounded-lg">

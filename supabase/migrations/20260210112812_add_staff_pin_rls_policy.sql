@@ -1,6 +1,6 @@
 -- ============================================================================
 -- Migration: Allow staff to update their own pin_hash (column-restricted)
--- Created: 20260210112002
+-- Created: 20260210112812
 -- ADR-030 D4 compliant: Template 2b (session vars required, no JWT fallback)
 -- Purpose: Self-service PIN setup for lock screen
 -- Column restriction: authenticated can only UPDATE pin_hash on staff

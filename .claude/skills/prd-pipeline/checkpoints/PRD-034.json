@@ -1,0 +1,76 @@
+{
+  "prd_id": "PRD-034",
+  "prd_title": "RLS Write-Path Remediation & Enforcement",
+  "status": "executing",
+  "execution_spec": "docs/20-architecture/specs/PRD-034/EXECUTION-SPEC-PRD-034.md",
+  "created_at": "2026-02-11T17:55:00Z",
+  "updated_at": "2026-02-12T02:20:00Z",
+  "current_phase": 1,
+  "total_phases": 2,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "failed_workstreams": [],
+  "gates_passed": [],
+  "execution_phases": [
+    {
+      "name": "Phase 1 — Remediation + Tooling (P0/P1, all parallel)",
+      "workstreams": ["WS1", "WS2", "WS3", "WS4"],
+      "gates": ["schema-validation", "type-check", "lint", "build"],
+      "status": "in_progress"
+    },
+    {
+      "name": "Phase 2 — Governance + Hardening (P2)",
+      "workstreams": ["WS5", "WS6"],
+      "gates": ["type-check", "test-pass", "build"],
+      "status": "pending"
+    }
+  ],
+  "spec_approval": {
+    "approved": true,
+    "patches_applied": [
+      "Patch 1: WS3 Category A list — example-only, generator parses CATEGORY-A-REGISTRY block from ADR-030",
+      "Patch 2: ESLint naming — TEMPLATE_2B_TABLES renamed to CATEGORY_A_TABLES, messages use Category A language",
+      "Patch 3: WS3 detection — deterministic same-statement chain rule; policy-lint wrapped = coalesce( precedes current_setting in same clause",
+      "Patch 4: WS4 assertion — returns T[] instead of asserts, truthful type",
+      "Patch 5: WS2 UPSERT columns (status, enrolled_by, enrolled_at update; PK, created_at don't); WS6 cross-casino token abuse test",
+      "Blocker 1: WS3(c) pg_policies view (not pg_policy catalog) — qual/with_check text columns directly",
+      "Blocker 2: WS5 must ensure ADR-030 contains CATEGORY-A-REGISTRY block for generator",
+      "Tightening 1: WS3 client identifiers narrowed to ctx.supabase, mwCtx.supabase only; bare supabase needs marker comment",
+      "Tightening 2: WS1 NOTIFY pgrst marked optional",
+      "Tightening 3: WS6 added role elevation + arbitrary casino assignment abuse tests",
+      "Additional: build gate added to both phases, WS1 OWNER TO postgres, WS3/WS5 gate sequencing (warning-only until ratification)"
+    ]
+  },
+  "notes": {
+    "prd030_migration_caveat": "20260211060000_prd030_fix_gaming_table_write_policies_coalesce.sql was applied to remote Supabase during PRD-030 without ADR-034 framework. Migration is technically correct (Pattern C on non-critical table) but was created unilaterally. WS3 Category B policy-lint will validate. If issues found, PRD-034 migration supersedes.",
+    "ws1_implementation_state": "NOT STARTED — background agent was killed during research phase (reading types/DTOs). No files written yet.",
+    "ws1_key_context": {
+      "bug": "POST /api/v1/casino/staff route.ts lines 147-151 does .from('staff').insert() — PostgREST DML against Category A table",
+      "fix": "Create rpc_create_staff SECURITY DEFINER RPC, update route to .rpc('rpc_create_staff', {...}).single()",
+      "pattern_reference": "supabase/migrations/20260208140548_prd025_rpc_invite_create_accept.sql (rpc_create_staff_invite)",
+      "route_file": "app/api/v1/casino/staff/route.ts",
+      "staff_columns": "id, first_name, last_name, role, status, employee_id, casino_id, email, user_id, pin_hash, created_at",
+      "staff_role_enum": "dealer | pit_boss | cashier | admin",
+      "audit_log_exists": true,
+      "audit_log_columns": "id, casino_id, actor_id, entity_type, entity_id, action, metadata, created_at"
+    },
+    "ws2_key_context": {
+      "bug": "services/casino/crud.ts:475-510 enrollPlayer() does .from('player_casino').upsert() — PostgREST DML against Category A table",
+      "fix": "Create rpc_enroll_player SECURITY DEFINER RPC, update enrollPlayer() to use .rpc()",
+      "upsert_columns_on_conflict": "status='active', enrolled_by=actor, enrolled_at=now(). PK and created_at unchanged.",
+      "callers": "route handler, SLAD tests, hooks, HTTP layer"
+    },
+    "ws3_key_context": {
+      "eslint_rule": ".eslint-rules/no-direct-template2b-dml.js — rename TEMPLATE_2B_TABLES to CATEGORY_A_TABLES, add player_casino",
+      "ci_file": ".github/workflows/ci.yml — add RLS Write-Path Lint step with continue-on-error: true",
+      "scripts_to_create": ["scripts/generate-category-a-config.ts", "scripts/lint-rls-write-path.sh", "scripts/lint-rls-category-b-policies.sh"],
+      "config_to_create": "config/rls-category-a-tables.json"
+    },
+    "ws4_key_context": {
+      "files_to_create": ["lib/supabase/assert-rows-affected.ts", "lib/errors/rls-write-denied-error.ts", "lib/supabase/__tests__/assert-rows-affected.test.ts"],
+      "signature": "assertRowsAffected<T>(result, options): T[] — returns normalized array, throws RlsWriteDeniedError on empty",
+      "domain_error_base": "lib/errors/domain-errors.ts — DomainError class exists, RlsWriteDeniedError extends it"
+    },
+    "resume_instructions": "Run /prd-execute PRD-034 --resume. All 4 Phase 1 workstreams need implementation. Start with WS1 (P0 active bug), then WS4 (smallest), then WS2, then WS3 (largest). Or run WS1+WS4 in parallel, then WS2+WS3."
+  }
+}

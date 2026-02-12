@@ -138,7 +138,7 @@ export function LockScreen() {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md"
+      className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-xl"
       style={{ zIndex: Z.LOCK_SCREEN }}
       role="dialog"
       aria-modal="true"
