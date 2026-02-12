@@ -22,9 +22,13 @@ import type { Database } from '@/types/database.types';
 
 import {
   completeSetupAction,
+  createCustomGameSettingsAction,
   createGamingTableAction,
+  deleteGameSettingsAction,
+  getSeededGamesAction,
   seedGameSettingsAction,
   updateCasinoSettingsAction,
+  updateGameSettingsAction,
   updateTableParAction,
 } from './_dev-actions';
 
@@ -103,28 +107,58 @@ export function SetupWizardDev({
         template: SEED_TEMPLATES[0],
       });
       if (result.ok && result.data) {
-        router.refresh();
+        // In dev mode, populate local state with mock seeded games
+        const seeded = await getSeededGamesAction();
+        setGames(seeded);
       } else {
         setError(result.error ?? 'Failed to seed game settings');
       }
     });
   }
 
-  // Dev stubs for game CRUD — dev wizard doesn't have full actions
-  function handleCreateGame(_data: GameSettingsFormData) {
-    setError('Create game not available in dev mode');
+  function handleCreateGame(data: GameSettingsFormData) {
+    startTransition(async () => {
+      setError(null);
+      const result = await createCustomGameSettingsAction(data);
+      if (result.ok && result.data) {
+        setGames((prev) => [...prev, result.data!]);
+      } else {
+        setError(result.error ?? 'Failed to create game setting');
+      }
+    });
   }
 
-  function handleUpdateGame(_id: string, _data: GameSettingsFormData) {
-    setError('Update game not available in dev mode');
+  function handleUpdateGame(id: string, data: GameSettingsFormData) {
+    startTransition(async () => {
+      setError(null);
+      const result = await updateGameSettingsAction({ id, ...data });
+      if (result.ok && result.data) {
+        setGames((prev) => prev.map((g) => (g.id === id ? result.data! : g)));
+      } else {
+        setError(result.error ?? 'Failed to update game setting');
+      }
+    });
   }
 
-  function handleDeleteGame(_id: string) {
-    setError('Delete game not available in dev mode');
+  function handleDeleteGame(id: string) {
+    startTransition(async () => {
+      setError(null);
+      const result = await deleteGameSettingsAction({ id });
+      if (result.ok) {
+        setGames((prev) => prev.filter((g) => g.id !== id));
+      } else {
+        setError(result.error ?? 'Failed to delete game setting');
+      }
+    });
   }
 
   function handleSaveTables(
-    localTables: Array<{ label: string; type: string; pit?: string }>,
+    localTables: Array<{
+      label: string;
+      type: string;
+      pit?: string;
+      game_settings_id?: string;
+    }>,
   ) {
     startTransition(async () => {
       setError(null);
@@ -135,6 +169,7 @@ export function SetupWizardDev({
           label: t.label,
           type: t.type,
           pit: t.pit,
+          game_settings_id: t.game_settings_id,
         });
         if (result.ok && result.data) {
           savedTables.push(result.data);
@@ -213,6 +248,7 @@ export function SetupWizardDev({
         return (
           <StepCreateTables
             existingTables={tables}
+            gameSettings={games}
             isPending={isPending}
             onSave={handleSaveTables}
             onBack={goBack}
@@ -233,7 +269,7 @@ export function SetupWizardDev({
         return (
           <StepReviewComplete
             settings={settings}
-            gameCount={games.length}
+            games={games}
             tables={tables}
             isPending={isPending}
             onComplete={handleComplete}
