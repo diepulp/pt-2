@@ -1,0 +1,83 @@
+{
+  "prd_id": "PRD-030",
+  "prd_title": "Setup Wizard — Casino Configuration, Table Provisioning & Need/Par Bootstrap",
+  "spec_path": "docs/20-architecture/specs/PRD-030/EXECUTION-SPEC-PRD-030.md",
+  "status": "complete",
+  "created_at": "2026-02-11T01:58:00Z",
+  "updated_at": "2026-02-11T18:45:00Z",
+  "current_phase": 4,
+  "total_phases": 4,
+  "workstreams": {
+    "WS1": { "name": "Setup Completion RPC Migration", "status": "complete", "executor": "rls-expert" },
+    "WS2": { "name": "Setup Wizard Server Actions", "status": "complete", "executor": "backend-service-builder" },
+    "WS3": { "name": "Setup Wizard UI (5-Step Flow)", "status": "complete", "executor": "frontend-design-pt-2" },
+    "WS4": { "name": "Backend Integration Tests", "status": "complete", "executor": "backend-service-builder" },
+    "WS5": { "name": "E2E Tests", "status": "complete", "executor": "e2e-testing" }
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "blocking_issues": [
+    {
+      "id": "GAMING-TABLE-RLS-WRITE-POLICY",
+      "issue_doc": "docs/issues/remediation/rls-write-path/ISSUE-GAMING-TABLE-RLS-WRITE-POLICY-SESSION-VAR-ONLY.md",
+      "severity": "blocker",
+      "summary": "gaming_table INSERT/UPDATE RLS policies used session-var-only pattern on a non-critical table (not in ADR-030 list). Migration applied to fix with COALESCE.",
+      "remediation_migration": "supabase/migrations/20260211184701_fix_gaming_table_write_policies_coalesce.sql",
+      "status": "resolved",
+      "review_required_by": "/rls-expert",
+      "review_outcome": "APPROVED — gaming_table confirmed Category B per ADR-030 registry + SEC-001 ADR-034 cross-reference. Pattern C COALESCE form matches canonical template. dealer_rotation noted as potential future sibling issue (low risk, currently RPC-only writes)."
+    },
+    {
+      "id": "SETUP-WIZARD-SEED-TEMPLATE-MISMATCH",
+      "issue_doc": "docs/issues/ISSUE-SETUP-WIZARD-SEED-TEMPLATE-MISMATCH.md",
+      "severity": "blocker",
+      "summary": "setup-wizard.tsx passed template 'standard' but RPC only accepts 'small_pit_starter'. Fixed in-place.",
+      "status": "resolved"
+    }
+  ],
+  "ws5_progress": {
+    "e2e_test_results": "4 passed, 1 skipped (feature flag)",
+    "tests": {
+      "full_flow": "PASS (14.5s) — all 5 steps, bootstrap to /pit",
+      "skip_flow": "SKIPPED — NEXT_PUBLIC_ENABLE_SKIP_SETUP not enabled (expected)",
+      "reentry_setup": "PASS (3.8s) — /setup redirects to /pit when setup_status='ready'",
+      "reentry_start": "PASS (4.6s) — /start redirects to /pit when setup_status='ready'",
+      "midflow_refresh": "PASS (13.8s) — resumes at correct step, no duplicate rows"
+    }
+  },
+  "artifacts_created": [
+    "docs/20-architecture/specs/PRD-030/EXECUTION-SPEC-PRD-030.md",
+    "supabase/migrations/20260211020000_prd030_rpc_complete_casino_setup.sql",
+    "supabase/migrations/20260211184701_fix_gaming_table_write_policies_coalesce.sql",
+    "app/(onboarding)/setup/_actions.ts",
+    "app/(onboarding)/setup/setup-wizard.tsx",
+    "services/casino/schemas.ts (PRD-030 additions)",
+    "services/table-context/schemas.ts (PRD-030 additions)",
+    "types/database.types.ts (synced from remote)",
+    "app/(onboarding)/setup/page.tsx",
+    "app/(onboarding)/setup/steps/step-casino-basics.tsx",
+    "app/(onboarding)/setup/steps/step-game-seed.tsx",
+    "app/(onboarding)/setup/steps/step-create-tables.tsx",
+    "app/(onboarding)/setup/steps/step-par-targets.tsx",
+    "app/(onboarding)/setup/steps/step-review-complete.tsx",
+    "app/(onboarding)/setup/components/wizard-stepper.tsx",
+    "app/(onboarding)/setup/components/bank-mode-selector.tsx",
+    "app/(onboarding)/setup/components/table-row-form.tsx",
+    "app/(onboarding)/setup/components/par-entry-row.tsx",
+    "app/(onboarding)/layout.tsx",
+    "services/casino/__tests__/setup-wizard-rpc.int.test.ts (38 tests)",
+    "e2e/fixtures/setup-wizard-fixtures.ts",
+    "e2e/workflows/setup-wizard.spec.ts (4 pass, 1 skip)",
+    "docs/issues/remediation/rls-write-path/ISSUE-GAMING-TABLE-RLS-WRITE-POLICY-SESSION-VAR-ONLY.md",
+    "docs/issues/ISSUE-SETUP-WIZARD-SEED-TEMPLATE-MISMATCH.md"
+  ],
+  "notes": {
+    "WS1_details": "Migration creates: setup_completed_by column on casino_settings, label_normalized generated column on gaming_table, unique index on (casino_id, label_normalized), rpc_complete_casino_setup SECURITY DEFINER RPC. Applied to remote Supabase.",
+    "WS2_details": "5 server actions in _actions.ts. All enforce admin role explicitly. casino_id from RLS context (ADR-024). gameTypeSchema derives from Database Enums with satisfies (drift-proof).",
+    "WS3_details": "12 files: Server component page with resume-step algorithm, SetupWizard client orchestrator with useTransition (React 19), 5 step components, 4 sub-components. Skip Setup gated by NEXT_PUBLIC_ENABLE_SKIP_SETUP. Enum-derived game types (no hard-coded lists).",
+    "WS4_details": "38 tests in 5 groups: Schema Validation (24), Enum Drift (3), Resume-Step Algorithm (7), RPC Type Contract (4). All pass.",
+    "WS5_details": "E2E tests created: 4 scenarios (5 tests). Custom auth helper (authenticateAndNavigate) avoids net::ERR_ABORTED. stepTitle helper for shadcn CardTitle data-slot selector. selectTimezone helper with hydration wait for Radix Select reliability. Two application bugs discovered and remediated during E2E testing.",
+    "rls_review": "RLS expert review completed 2026-02-11. gaming_table confirmed Category B per ADR-030 registry + ADR-034. COALESCE fix is correct. dealer_rotation flagged as potential sibling (low-risk, RPC-only writes currently).",
+    "completion_summary": "All 5 workstreams complete. All 5 gates passed (schema-validation, type-check, lint, test-pass, build). 2 blocking issues discovered and resolved during execution."
+  }
+}

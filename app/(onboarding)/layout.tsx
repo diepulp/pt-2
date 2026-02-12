@@ -5,7 +5,7 @@ export default function OnboardingLayout({
 }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="w-full max-w-lg p-6">{children}</div>
+      <div className="w-full max-w-3xl p-6">{children}</div>
     </div>
   );
 }

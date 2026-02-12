@@ -76,7 +76,7 @@ describe('Bounded Context Ownership', () => {
 
       // Validate function signature (TypeScript will catch this at compile time)
       const enrollPlayerFn = casinoCrudModule.enrollPlayer;
-      expect(enrollPlayerFn.length).toBe(4); // (supabase, playerId, casinoId, enrolledBy)
+      expect(enrollPlayerFn.length).toBe(2); // (supabase, playerId) — PRD-034: casino_id/actor_id derived from RPC context
     });
   });
 
@@ -156,8 +156,8 @@ describe('Bounded Context Ownership', () => {
       expect(enrollPlayerFn).toBeDefined();
 
       // TypeScript validates the signature at compile time
-      // Runtime check: function should accept 4 parameters
-      expect(enrollPlayerFn.length).toBe(4);
+      // Runtime check: function should accept 2 parameters (PRD-034: RPC context derivation)
+      expect(enrollPlayerFn.length).toBe(2);
     });
   });
 
