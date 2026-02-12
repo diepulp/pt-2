@@ -1,8 +1,20 @@
 'use client';
 
+/**
+ * Dev wizard orchestrator — thin copy of setup-wizard.tsx with dev action imports.
+ * All step/UI components are imported from the production path (no duplication).
+ */
+
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import type { GameSettingsFormData } from '@/app/(onboarding)/setup/components/game-settings-form';
+import { WizardStepper } from '@/app/(onboarding)/setup/components/wizard-stepper';
+import { StepCasinoBasics } from '@/app/(onboarding)/setup/steps/step-casino-basics';
+import { StepCreateTables } from '@/app/(onboarding)/setup/steps/step-create-tables';
+import { StepGameSeed } from '@/app/(onboarding)/setup/steps/step-game-seed';
+import { StepParTargets } from '@/app/(onboarding)/setup/steps/step-par-targets';
+import { StepReviewComplete } from '@/app/(onboarding)/setup/steps/step-review-complete';
 import { Button } from '@/components/ui/button';
 import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 import { SEED_TEMPLATES } from '@/services/casino/schemas';
@@ -10,21 +22,11 @@ import type { Database } from '@/types/database.types';
 
 import {
   completeSetupAction,
-  createCustomGameSettingsAction,
   createGamingTableAction,
-  deleteGameSettingsAction,
   seedGameSettingsAction,
   updateCasinoSettingsAction,
-  updateGameSettingsAction,
   updateTableParAction,
-} from './_actions';
-import type { GameSettingsFormData } from './components/game-settings-form';
-import { WizardStepper } from './components/wizard-stepper';
-import { StepCasinoBasics } from './steps/step-casino-basics';
-import { StepCreateTables } from './steps/step-create-tables';
-import { StepGameSeed } from './steps/step-game-seed';
-import { StepParTargets } from './steps/step-par-targets';
-import { StepReviewComplete } from './steps/step-review-complete';
+} from './_dev-actions';
 
 type CasinoSettingsRow = Database['public']['Tables']['casino_settings']['Row'];
 type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
@@ -37,34 +39,28 @@ const STEP_LABELS = [
   'Review & Complete',
 ] as const;
 
-interface SetupWizardProps {
+interface SetupWizardDevProps {
   casinoSettings: CasinoSettingsRow | null;
   gameSettings: GameSettingsDTO[];
   gamingTables: GamingTableRow[];
   initialStep: number;
 }
 
-export function SetupWizard({
+export function SetupWizardDev({
   casinoSettings,
   gameSettings,
   gamingTables,
   initialStep,
-}: SetupWizardProps) {
+}: SetupWizardDevProps) {
   const [currentStep, setCurrentStep] = useState(initialStep);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  // Evolving wizard state from server prefetch
   const [settings, setSettings] = useState(casinoSettings);
   const [games, setGames] = useState<GameSettingsDTO[]>(gameSettings);
   const [tables, setTables] = useState<GamingTableRow[]>(gamingTables);
   const [error, setError] = useState<string | null>(null);
 
-  const canSkip =
-    typeof window !== 'undefined' &&
-    process.env.NEXT_PUBLIC_ENABLE_SKIP_SETUP === 'true';
-
-  // Navigation
   function goNext() {
     setError(null);
     setCurrentStep((s) => Math.min(s + 1, 4));
@@ -75,20 +71,18 @@ export function SetupWizard({
     setCurrentStep((s) => Math.max(s - 1, 0));
   }
 
-  // Skip setup — marks setup ready without completing steps
   function handleSkip() {
     startTransition(async () => {
       setError(null);
       const result = await completeSetupAction({ skip: true });
       if (result.ok) {
-        router.push('/start');
+        router.push('/dev/setup?done=1');
       } else {
         setError(result.error ?? 'Failed to skip setup');
       }
     });
   }
 
-  // Step 0: Save casino basics
   function handleSaveBasics(formData: FormData) {
     startTransition(async () => {
       setError(null);
@@ -102,7 +96,6 @@ export function SetupWizard({
     });
   }
 
-  // Step 1: Seed game settings
   function handleSeedGames() {
     startTransition(async () => {
       setError(null);
@@ -110,7 +103,6 @@ export function SetupWizard({
         template: SEED_TEMPLATES[0],
       });
       if (result.ok && result.data) {
-        // Reload page to fetch full game settings after seeding
         router.refresh();
       } else {
         setError(result.error ?? 'Failed to seed game settings');
@@ -118,46 +110,19 @@ export function SetupWizard({
     });
   }
 
-  // Step 1: Create custom game
-  function handleCreateGame(data: GameSettingsFormData) {
-    startTransition(async () => {
-      setError(null);
-      const result = await createCustomGameSettingsAction(data);
-      if (result.ok && result.data) {
-        setGames((prev) => [...prev, result.data!]);
-      } else {
-        setError(result.error ?? 'Failed to create game setting');
-      }
-    });
+  // Dev stubs for game CRUD — dev wizard doesn't have full actions
+  function handleCreateGame(_data: GameSettingsFormData) {
+    setError('Create game not available in dev mode');
   }
 
-  // Step 1: Update game
-  function handleUpdateGame(id: string, data: GameSettingsFormData) {
-    startTransition(async () => {
-      setError(null);
-      const result = await updateGameSettingsAction({ id, ...data });
-      if (result.ok && result.data) {
-        setGames((prev) => prev.map((g) => (g.id === id ? result.data! : g)));
-      } else {
-        setError(result.error ?? 'Failed to update game setting');
-      }
-    });
+  function handleUpdateGame(_id: string, _data: GameSettingsFormData) {
+    setError('Update game not available in dev mode');
   }
 
-  // Step 1: Delete game
-  function handleDeleteGame(id: string) {
-    startTransition(async () => {
-      setError(null);
-      const result = await deleteGameSettingsAction({ id });
-      if (result.ok) {
-        setGames((prev) => prev.filter((g) => g.id !== id));
-      } else {
-        setError(result.error ?? 'Failed to delete game setting');
-      }
-    });
+  function handleDeleteGame(_id: string) {
+    setError('Delete game not available in dev mode');
   }
 
-  // Step 2: Save all tables on Next
   function handleSaveTables(
     localTables: Array<{ label: string; type: string; pit?: string }>,
   ) {
@@ -186,7 +151,6 @@ export function SetupWizard({
     });
   }
 
-  // Step 3: Save par targets on Next
   function handleSavePar(
     parEntries: Array<{ tableId: string; parTotalCents: number | null }>,
   ) {
@@ -210,13 +174,12 @@ export function SetupWizard({
     });
   }
 
-  // Step 4: Complete setup
   function handleComplete() {
     startTransition(async () => {
       setError(null);
       const result = await completeSetupAction({ skip: false });
       if (result.ok) {
-        router.push('/start');
+        router.push('/dev/setup?done=1');
       } else {
         setError(result.error ?? 'Failed to complete setup');
       }
@@ -303,19 +266,17 @@ export function SetupWizard({
 
       {renderStep()}
 
-      {canSkip && (
-        <div className="text-center pt-2">
-          <Button
-            variant="link"
-            size="sm"
-            className="text-muted-foreground"
-            onClick={handleSkip}
-            disabled={isPending}
-          >
-            {isPending ? 'Skipping...' : 'Skip Setup'}
-          </Button>
-        </div>
-      )}
+      <div className="text-center pt-2">
+        <Button
+          variant="link"
+          size="sm"
+          className="text-muted-foreground"
+          onClick={handleSkip}
+          disabled={isPending}
+        >
+          {isPending ? 'Skipping...' : 'Skip Setup'}
+        </Button>
+      </div>
     </div>
   );
 }

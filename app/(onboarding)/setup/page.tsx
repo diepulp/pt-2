@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
+import { listGameSettings } from '@/services/casino/game-settings-crud';
 import type { Database } from '@/types/database.types';
 
 import { SetupWizard } from './setup-wizard';
@@ -53,11 +54,8 @@ export default async function SetupPage() {
     redirect('/start');
   }
 
-  // Fetch game_settings (to detect if already seeded)
-  const { data: gameSettings } = await supabase
-    .from('game_settings')
-    .select('id, name, game_type')
-    .eq('casino_id', casinoId);
+  // Fetch full game_settings via CRUD (returns GameSettingsDTO[])
+  const gameSettings = await listGameSettings(supabase);
 
   // Fetch gaming_tables (to detect existing tables for re-entry)
   const { data: gamingTables } = await supabase
@@ -66,14 +64,17 @@ export default async function SetupPage() {
     .eq('casino_id', casinoId)
     .order('created_at', { ascending: true });
 
-  const games = gameSettings ?? [];
   const tables = gamingTables ?? [];
-  const initialStep = computeInitialStep(settings, games.length, tables.length);
+  const initialStep = computeInitialStep(
+    settings,
+    gameSettings.length,
+    tables.length,
+  );
 
   return (
     <SetupWizard
       casinoSettings={settings}
-      gameSettings={games}
+      gameSettings={gameSettings}
       gamingTables={tables}
       initialStep={initialStep}
     />

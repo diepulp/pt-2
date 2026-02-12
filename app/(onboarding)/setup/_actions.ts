@@ -10,9 +10,22 @@
  * Context: casino_id derived from RLS context (ADR-024), never from user input.
  */
 
+import { z } from 'zod';
+
+import { DomainError } from '@/lib/errors/domain-errors';
 import type { ServiceResult } from '@/lib/http/service-response';
 import { withServerAction } from '@/lib/server-actions/middleware/compositor';
 import { createClient } from '@/lib/supabase/server';
+import {
+  createGameSettings,
+  updateGameSettings,
+  deleteGameSettings,
+} from '@/services/casino/game-settings-crud';
+import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
+import {
+  createGameSettingsSchema,
+  updateGameSettingsSchema,
+} from '@/services/casino/game-settings-schemas';
 import {
   completeSetupSchema,
   setupCasinoSettingsSchema,
@@ -61,6 +74,24 @@ function forbidden(
     ok: false,
     code: 'FORBIDDEN',
     error: message,
+    requestId: correlationId,
+    durationMs: Date.now() - startedAt,
+    timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Map DomainError to ServiceResult.
+ */
+function mapDomainError(
+  error: DomainError,
+  correlationId: string,
+  startedAt: number,
+): ServiceResult<never> {
+  return {
+    ok: false,
+    code: error.code,
+    error: error.message,
     requestId: correlationId,
     durationMs: Date.now() - startedAt,
     timestamp: new Date().toISOString(),
@@ -393,5 +424,200 @@ export async function updateTableParAction(input: {
       };
     },
     { domain: 'table-context', action: 'update-par' },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 6. createCustomGameSettingsAction
+// ---------------------------------------------------------------------------
+
+/**
+ * Create a custom game setting (Step 2 — Game Management).
+ * casino_id is injected from RLS context (ADR-024), never from user input.
+ */
+export async function createCustomGameSettingsAction(input: {
+  game_type: string;
+  code: string;
+  name: string;
+  variant_name?: string | null;
+  shoe_decks?: number | null;
+  deck_profile?: string | null;
+  house_edge: number;
+  rating_edge_for_comp?: number | null;
+  decisions_per_hour: number;
+  seats_available: number;
+  min_bet?: number | null;
+  max_bet?: number | null;
+  notes?: string | null;
+}): Promise<ServiceResult<GameSettingsDTO>> {
+  const supabase = await createClient();
+
+  return withServerAction(
+    supabase,
+    async (ctx) => {
+      if (ctx.rlsContext?.staffRole !== 'admin') {
+        return forbidden(ctx.correlationId, ctx.startedAt);
+      }
+
+      // Inject casino_id from context — client must NOT supply it
+      const validated = createGameSettingsSchema.parse({
+        ...input,
+        casino_id: ctx.rlsContext!.casinoId,
+      });
+
+      try {
+        const result = await createGameSettings(ctx.supabase, {
+          casino_id: validated.casino_id,
+          game_type: validated.game_type,
+          code: validated.code,
+          name: validated.name,
+          variant_name: validated.variant_name ?? null,
+          shoe_decks: validated.shoe_decks ?? null,
+          deck_profile: validated.deck_profile ?? null,
+          house_edge: validated.house_edge,
+          rating_edge_for_comp: validated.rating_edge_for_comp ?? null,
+          decisions_per_hour: validated.decisions_per_hour,
+          seats_available: validated.seats_available,
+          min_bet: validated.min_bet ?? null,
+          max_bet: validated.max_bet ?? null,
+          notes: validated.notes ?? null,
+        });
+
+        return {
+          ok: true,
+          code: 'OK' as const,
+          data: result,
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      } catch (err) {
+        if (err instanceof DomainError) {
+          return mapDomainError(err, ctx.correlationId, ctx.startedAt);
+        }
+        throw err;
+      }
+    },
+    { domain: 'casino', action: 'create-game-settings' },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 7. updateGameSettingsAction
+// ---------------------------------------------------------------------------
+
+const updateGameSettingsIdSchema = z.string().uuid('Invalid game settings ID');
+
+/**
+ * Update a game setting (Step 2 — Game Management).
+ * id passed separately from update fields. RLS scopes to casino.
+ */
+export async function updateGameSettingsAction(input: {
+  id: string;
+  game_type?: string;
+  name?: string;
+  variant_name?: string | null;
+  shoe_decks?: number | null;
+  deck_profile?: string | null;
+  house_edge?: number;
+  rating_edge_for_comp?: number | null;
+  decisions_per_hour?: number;
+  seats_available?: number;
+  min_bet?: number | null;
+  max_bet?: number | null;
+  notes?: string | null;
+}): Promise<ServiceResult<GameSettingsDTO>> {
+  const supabase = await createClient();
+
+  return withServerAction(
+    supabase,
+    async (ctx) => {
+      if (ctx.rlsContext?.staffRole !== 'admin') {
+        return forbidden(ctx.correlationId, ctx.startedAt);
+      }
+
+      const id = updateGameSettingsIdSchema.parse(input.id);
+      const { id: _, ...updateFields } = input;
+      const validated = updateGameSettingsSchema.parse(updateFields);
+
+      // Reject no-op updates (at least one mutable field required)
+      if (Object.keys(validated).length === 0) {
+        return {
+          ok: false,
+          code: 'VALIDATION_ERROR',
+          error: 'At least one field must be provided for update',
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      try {
+        const result = await updateGameSettings(ctx.supabase, id, validated);
+
+        return {
+          ok: true,
+          code: 'OK' as const,
+          data: result,
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      } catch (err) {
+        if (err instanceof DomainError) {
+          return mapDomainError(err, ctx.correlationId, ctx.startedAt);
+        }
+        throw err;
+      }
+    },
+    { domain: 'casino', action: 'update-game-settings' },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 8. deleteGameSettingsAction
+// ---------------------------------------------------------------------------
+
+const deleteGameSettingsIdSchema = z.object({
+  id: z.string().uuid('Invalid game settings ID'),
+});
+
+/**
+ * Delete a game setting (Step 2 — Game Management).
+ * Hard delete — cascades to side bets. RLS scopes to casino.
+ */
+export async function deleteGameSettingsAction(input: {
+  id: string;
+}): Promise<ServiceResult<{ deleted: true }>> {
+  const supabase = await createClient();
+
+  return withServerAction(
+    supabase,
+    async (ctx) => {
+      if (ctx.rlsContext?.staffRole !== 'admin') {
+        return forbidden(ctx.correlationId, ctx.startedAt);
+      }
+
+      const validated = deleteGameSettingsIdSchema.parse(input);
+
+      try {
+        await deleteGameSettings(ctx.supabase, validated.id);
+
+        return {
+          ok: true,
+          code: 'OK' as const,
+          data: { deleted: true as const },
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      } catch (err) {
+        if (err instanceof DomainError) {
+          return mapDomainError(err, ctx.correlationId, ctx.startedAt);
+        }
+        throw err;
+      }
+    },
+    { domain: 'casino', action: 'delete-game-settings' },
   );
 }

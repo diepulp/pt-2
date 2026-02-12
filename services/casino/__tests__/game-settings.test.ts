@@ -11,6 +11,9 @@
  * @see services/casino/game-settings-schemas.ts
  */
 
+import { DomainError } from '@/lib/errors/domain-errors';
+
+import { deleteGameSettings } from '../game-settings-crud';
 import {
   toGameSettingsDTO,
   toGameSettingsDTOList,
@@ -548,5 +551,94 @@ describe('Side Bet Schemas', () => {
       });
       expect(result.success).toBe(true);
     });
+  });
+});
+
+// ============================================================================
+// CRUD Tests — deleteGameSettings
+// ============================================================================
+
+describe('deleteGameSettings CRUD', () => {
+  function createMockSupabase(overrides: {
+    deleteError?: { code: string; message: string } | null;
+    deleteCount?: number;
+  }) {
+    const eqFn = jest.fn().mockResolvedValue({
+      error: overrides.deleteError ?? null,
+      count: overrides.deleteCount ?? 1,
+    });
+
+    const deleteFn = jest.fn().mockReturnValue({ eq: eqFn });
+
+    const fromFn = jest.fn().mockReturnValue({ delete: deleteFn });
+
+    return {
+      client: { from: fromFn } as unknown as Parameters<
+        typeof deleteGameSettings
+      >[0],
+      from: fromFn,
+      delete: deleteFn,
+      eq: eqFn,
+    };
+  }
+
+  it('calls supabase.from("game_settings").delete().eq("id", id)', async () => {
+    const mock = createMockSupabase({ deleteCount: 1 });
+
+    await deleteGameSettings(mock.client, 'gs-001');
+
+    expect(mock.from).toHaveBeenCalledWith('game_settings');
+    expect(mock.delete).toHaveBeenCalledWith({ count: 'exact' });
+    expect(mock.eq).toHaveBeenCalledWith('id', 'gs-001');
+  });
+
+  it('throws DomainError(NOT_FOUND) when count is 0', async () => {
+    const mock = createMockSupabase({ deleteCount: 0 });
+
+    await expect(deleteGameSettings(mock.client, 'gs-missing')).rejects.toThrow(
+      DomainError,
+    );
+
+    try {
+      await deleteGameSettings(mock.client, 'gs-missing');
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainError);
+      expect((err as DomainError).code).toBe('NOT_FOUND');
+    }
+  });
+
+  it('throws DomainError(INTERNAL_ERROR) on DB errors', async () => {
+    const mock = createMockSupabase({
+      deleteError: { code: '42P01', message: 'relation does not exist' },
+    });
+
+    await expect(deleteGameSettings(mock.client, 'gs-001')).rejects.toThrow(
+      DomainError,
+    );
+
+    try {
+      await deleteGameSettings(mock.client, 'gs-001');
+    } catch (err) {
+      expect(err).toBeInstanceOf(DomainError);
+      expect((err as DomainError).code).toBe('INTERNAL_ERROR');
+    }
+  });
+
+  it('does not require casino_id parameter (RLS handles scoping)', async () => {
+    const mock = createMockSupabase({ deleteCount: 1 });
+
+    await deleteGameSettings(mock.client, 'gs-001');
+
+    // Verify only 'id' was used in the eq chain, not casino_id
+    expect(mock.eq).toHaveBeenCalledTimes(1);
+    expect(mock.eq).toHaveBeenCalledWith('id', 'gs-001');
+  });
+
+  it('returns void on successful delete', async () => {
+    const mock = createMockSupabase({ deleteCount: 1 });
+
+    const result = await deleteGameSettings(mock.client, 'gs-001');
+
+    expect(result).toBeUndefined();
   });
 });

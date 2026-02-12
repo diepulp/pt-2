@@ -311,6 +311,29 @@ export async function updateSideBet(
   return toGameSettingsSideBetDTO(data);
 }
 
+/**
+ * Delete a game setting by ID.
+ * Hard delete — no soft_deleted_at column on game_settings.
+ * RLS handles casino scoping. game_settings_side_bet has ON DELETE CASCADE.
+ */
+export async function deleteGameSettings(
+  supabase: SupabaseClient<Database>,
+  id: string,
+): Promise<void> {
+  const { error, count } = await supabase
+    .from('game_settings')
+    .delete({ count: 'exact' })
+    .eq('id', id);
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  }
+
+  if (count === 0) {
+    throw new DomainError('NOT_FOUND', 'Game setting not found');
+  }
+}
+
 // === Seed RPC ===
 
 /**
