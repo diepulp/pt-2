@@ -1,5 +1,7 @@
 'use client';
 
+import { useMemo } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -9,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 import type { Database } from '@/types/database.types';
 
 type GameType = Database['public']['Enums']['game_type'];
@@ -36,10 +39,12 @@ export interface TableFormRow {
   label: string;
   type: GameType;
   pit: string;
+  game_settings_id: string | null;
 }
 
 interface TableRowFormProps {
   row: TableFormRow;
+  gameSettings: GameSettingsDTO[];
   onChange: (updated: TableFormRow) => void;
   onRemove: () => void;
   disabled?: boolean;
@@ -47,10 +52,17 @@ interface TableRowFormProps {
 
 export function TableRowForm({
   row,
+  gameSettings,
   onChange,
   onRemove,
   disabled,
 }: TableRowFormProps) {
+  // Filter variants to match current game_type
+  const variants = useMemo(
+    () => gameSettings.filter((gs) => gs.game_type === row.type),
+    [gameSettings, row.type],
+  );
+
   return (
     <div className="flex items-center gap-2">
       <Input
@@ -62,7 +74,9 @@ export function TableRowForm({
       />
       <Select
         value={row.type}
-        onValueChange={(v) => onChange({ ...row, type: v as GameType })}
+        onValueChange={(v) =>
+          onChange({ ...row, type: v as GameType, game_settings_id: null })
+        }
         disabled={disabled}
       >
         <SelectTrigger className="w-[140px]">
@@ -76,6 +90,26 @@ export function TableRowForm({
           ))}
         </SelectContent>
       </Select>
+      {variants.length > 0 && (
+        <Select
+          value={row.game_settings_id ?? ''}
+          onValueChange={(v) =>
+            onChange({ ...row, game_settings_id: v || null })
+          }
+          disabled={disabled}
+        >
+          <SelectTrigger className="w-[200px]">
+            <SelectValue placeholder="Variant (optional)" />
+          </SelectTrigger>
+          <SelectContent>
+            {variants.map((gs) => (
+              <SelectItem key={gs.id} value={gs.id}>
+                {gs.variant_name ?? gs.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
       <Input
         value={row.pit}
         onChange={(e) => onChange({ ...row, pit: e.target.value })}

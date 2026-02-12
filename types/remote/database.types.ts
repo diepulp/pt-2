@@ -680,6 +680,7 @@ export type Database = {
         Row: {
           casino_id: string
           created_at: string
+          game_settings_id: string | null
           id: string
           label: string
           label_normalized: string | null
@@ -693,6 +694,7 @@ export type Database = {
         Insert: {
           casino_id: string
           created_at?: string
+          game_settings_id?: string | null
           id?: string
           label: string
           label_normalized?: string | null
@@ -706,6 +708,7 @@ export type Database = {
         Update: {
           casino_id?: string
           created_at?: string
+          game_settings_id?: string | null
           id?: string
           label?: string
           label_normalized?: string | null
@@ -722,6 +725,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gaming_table_game_settings_id_fkey"
+            columns: ["game_settings_id"]
+            isOneToOne: false
+            referencedRelation: "game_settings"
             referencedColumns: ["id"]
           },
           {
@@ -4325,6 +4335,7 @@ export type Database = {
             Returns: {
               casino_id: string
               created_at: string
+              game_settings_id: string | null
               id: string
               label: string
               label_normalized: string | null
@@ -4352,6 +4363,7 @@ export type Database = {
             Returns: {
               casino_id: string
               created_at: string
+              game_settings_id: string | null
               id: string
               label: string
               label_normalized: string | null

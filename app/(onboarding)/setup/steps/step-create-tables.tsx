@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 import type { Database } from '@/types/database.types';
 
 import { TableRowForm } from '../components/table-row-form';
@@ -34,7 +35,13 @@ function nextRowId() {
 }
 
 function createEmptyRow(gameType: GameType = 'blackjack'): TableFormRow {
-  return { id: nextRowId(), label: '', type: gameType, pit: '' };
+  return {
+    id: nextRowId(),
+    label: '',
+    type: gameType,
+    pit: '',
+    game_settings_id: null,
+  };
 }
 
 function existingToFormRow(t: GamingTableRow): TableFormRow {
@@ -43,20 +50,28 @@ function existingToFormRow(t: GamingTableRow): TableFormRow {
     label: t.label,
     type: t.type,
     pit: t.pit ?? '',
+    game_settings_id: t.game_settings_id ?? null,
   };
 }
 
 interface StepCreateTablesProps {
   existingTables: GamingTableRow[];
+  gameSettings: GameSettingsDTO[];
   isPending: boolean;
   onSave: (
-    tables: Array<{ label: string; type: string; pit?: string }>,
+    tables: Array<{
+      label: string;
+      type: string;
+      pit?: string;
+      game_settings_id?: string;
+    }>,
   ) => void;
   onBack: () => void;
 }
 
 export function StepCreateTables({
   existingTables,
+  gameSettings,
   isPending,
   onSave,
   onBack,
@@ -89,6 +104,7 @@ export function StepCreateTables({
       label: `${prefix}-${String(startNum + i).padStart(2, '0')}`,
       type: gameType,
       pit: '',
+      game_settings_id: null,
     }));
 
     setRows((prev) => [...prev, ...newRows]);
@@ -112,6 +128,7 @@ export function StepCreateTables({
         label: r.label.trim(),
         type: r.type,
         pit: r.pit.trim() || undefined,
+        game_settings_id: r.game_settings_id ?? undefined,
       })),
     );
   }
@@ -132,6 +149,7 @@ export function StepCreateTables({
             <TableRowForm
               key={row.id}
               row={row}
+              gameSettings={gameSettings}
               onChange={(updated) => updateRow(idx, updated)}
               onRemove={() => removeRow(idx)}
               disabled={isPending}
@@ -157,6 +175,33 @@ export function StepCreateTables({
             disabled={isPending}
           >
             + 4 Blackjack
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addBulk('baccarat', 2)}
+            disabled={isPending}
+          >
+            + 2 Baccarat
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addBulk('pai_gow', 1)}
+            disabled={isPending}
+          >
+            + 1 Pai Gow
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => addBulk('carnival', 2)}
+            disabled={isPending}
+          >
+            + 2 Carnival
           </Button>
           <Button
             type="button"

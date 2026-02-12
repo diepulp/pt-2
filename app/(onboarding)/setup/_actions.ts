@@ -316,6 +316,7 @@ export async function createGamingTableAction(input: {
   label: string;
   type: string;
   pit?: string;
+  game_settings_id?: string;
 }): Promise<ServiceResult<GamingTableRow>> {
   const supabase = await createClient();
 
@@ -336,6 +337,7 @@ export async function createGamingTableAction(input: {
             label: validated.label,
             type: validated.type,
             pit: validated.pit ?? null,
+            game_settings_id: validated.game_settings_id ?? null,
             status: 'active',
           },
           { onConflict: 'casino_id,label_normalized' },

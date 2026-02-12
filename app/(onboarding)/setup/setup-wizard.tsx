@@ -159,7 +159,12 @@ export function SetupWizard({
 
   // Step 2: Save all tables on Next
   function handleSaveTables(
-    localTables: Array<{ label: string; type: string; pit?: string }>,
+    localTables: Array<{
+      label: string;
+      type: string;
+      pit?: string;
+      game_settings_id?: string;
+    }>,
   ) {
     startTransition(async () => {
       setError(null);
@@ -170,6 +175,7 @@ export function SetupWizard({
           label: t.label,
           type: t.type,
           pit: t.pit,
+          game_settings_id: t.game_settings_id,
         });
         if (result.ok && result.data) {
           savedTables.push(result.data);
@@ -250,6 +256,7 @@ export function SetupWizard({
         return (
           <StepCreateTables
             existingTables={tables}
+            gameSettings={games}
             isPending={isPending}
             onSave={handleSaveTables}
             onBack={goBack}
@@ -270,7 +277,7 @@ export function SetupWizard({
         return (
           <StepReviewComplete
             settings={settings}
-            gameCount={games.length}
+            games={games}
             tables={tables}
             isPending={isPending}
             onComplete={handleComplete}

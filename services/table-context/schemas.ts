@@ -265,6 +265,7 @@ export const createGamingTableSchema = z.object({
   label: z.string().min(1, 'Table label is required').max(50),
   type: gameTypeSchema,
   pit: z.string().max(50).optional(),
+  game_settings_id: z.string().uuid('Invalid game settings ID').optional(),
 });
 
 /** Setup wizard: update table par target (Step 4) */

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -34,6 +34,24 @@ import {
   type GameSettingsFormData,
 } from '../components/game-settings-form';
 
+const GAME_TYPE_LABELS: Record<string, string> = {
+  blackjack: 'Blackjack',
+  poker: 'Poker',
+  roulette: 'Roulette',
+  baccarat: 'Baccarat',
+  pai_gow: 'Pai Gow',
+  carnival: 'Carnival',
+};
+
+const GAME_TYPE_ORDER = [
+  'blackjack',
+  'baccarat',
+  'pai_gow',
+  'carnival',
+  'poker',
+  'roulette',
+];
+
 type FormMode =
   | { type: 'closed' }
   | { type: 'create' }
@@ -66,6 +84,21 @@ export function StepGameSeed({
   );
 
   const hasGames = games.length > 0;
+
+  const groupedGames = useMemo(() => {
+    const groups = new Map<string, GameSettingsDTO[]>();
+    for (const game of games) {
+      const existing = groups.get(game.game_type) ?? [];
+      existing.push(game);
+      groups.set(game.game_type, existing);
+    }
+    // Sort by defined order
+    return GAME_TYPE_ORDER.filter((gt) => groups.has(gt)).map((gt) => ({
+      gameType: gt,
+      label: GAME_TYPE_LABELS[gt] ?? gt,
+      items: groups.get(gt)!,
+    }));
+  }, [games]);
 
   function handleCreateSubmit(data: GameSettingsFormData) {
     onCreateGame(data);
@@ -121,67 +154,79 @@ export function StepGameSeed({
           )}
         </div>
 
-        {/* Game list table */}
+        {/* Game list grouped by game_type */}
         {hasGames && formMode.type === 'closed' && (
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Variant</TableHead>
-                  <TableHead className="text-right">House Edge</TableHead>
-                  <TableHead className="text-right">Decisions/hr</TableHead>
-                  <TableHead className="text-right">Seats</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {games.map((game) => (
-                  <TableRow key={game.id}>
-                    <TableCell className="font-medium">{game.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {game.game_type.replace('_', ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {game.variant_name ?? '\u2014'}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {game.house_edge}%
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {game.decisions_per_hour}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {game.seats_available}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setFormMode({ type: 'edit', game })}
-                          disabled={isPending}
-                        >
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-destructive hover:text-destructive"
-                          onClick={() => setDeleteTarget(game)}
-                          disabled={isPending}
-                        >
-                          Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <div className="space-y-4">
+            {groupedGames.map((group) => (
+              <div key={group.gameType}>
+                <div className="mb-2 flex items-center gap-2">
+                  <h4 className="text-sm font-medium">{group.label}</h4>
+                  <Badge variant="secondary" className="text-xs">
+                    {group.items.length}
+                  </Badge>
+                </div>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Variant</TableHead>
+                        <TableHead className="text-right">House Edge</TableHead>
+                        <TableHead className="text-right">
+                          Decisions/hr
+                        </TableHead>
+                        <TableHead className="text-right">Seats</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {group.items.map((game) => (
+                        <TableRow key={game.id}>
+                          <TableCell className="font-medium">
+                            {game.name}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {game.variant_name ?? '\u2014'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {game.house_edge}%
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {game.decisions_per_hour}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {game.seats_available}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() =>
+                                  setFormMode({ type: 'edit', game })
+                                }
+                                disabled={isPending}
+                              >
+                                Edit
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                                onClick={() => setDeleteTarget(game)}
+                                disabled={isPending}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
