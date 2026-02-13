@@ -29,3 +29,9 @@ jobs:
         run: bash scripts/lint-rls-write-path.sh
       - name: Test
         run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          # Stub env vars for build-time validation (not connecting to real Supabase)
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

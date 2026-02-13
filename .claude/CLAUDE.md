@@ -25,7 +25,8 @@ pt-2/
 npm run dev              # Dev server at localhost:3000
 npm run build            # Production build
 npm run test             # Jest tests
-npm run db:types         # Regenerate types after migrations (CRITICAL)
+npm run db:types-local   # Regenerate types after local migrations (CRITICAL)
+npm run db:types         # Regenerate types from remote (validation only)
 npm run type-check       # TypeScript strict check
 npm run lint             # ESLint
 npm run e2e:playwright   # Playwright E2E tests
@@ -47,10 +48,12 @@ Start at `docs/INDEX.md` for full navigation. Key docs:
 - **Over-Engineering Guardrail** (`docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`) - Complexity rules
 
 Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
+- **CI/CD Pipeline** (`docs/deployments/CICD-PIPELINE-SPEC.md`) - Pipeline gates and workflow topology
+- **Environment Flow** (`docs/deployments/ENVIRONMENT-FLOW.md`) - Supabase remote flow and environment architecture
 
 ## Critical Guardrails
 
-1. **Types**: Import from `types/remote/database.types.ts` only. Run `npm run db:types` after migrations.
+1. **Types**: Import from `@/types/database.types` for all application code. Run `npm run db:types-local` after local migrations. Run `npm run db:types` for remote validation only.
 2. **Services**: Functional factories, not classes. Explicit interfaces, no `ReturnType<>`.
 3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
 4. **Code Quality**: No `as any`, no `console.*` in production code.
