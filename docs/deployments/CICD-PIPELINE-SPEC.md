@@ -218,7 +218,7 @@ If the diff is non-empty, the developer forgot to regenerate types after a migra
 | Requirement | Value | Rationale |
 |-------------|-------|-----------|
 | **Runner** | `ubuntu-latest` | Standard GitHub Actions runner |
-| **Node.js** | 22 | LTS, lockfileVersion 3 compatibility |
+| **Node.js** | 24 | LTS (Krypton), matches local dev, lockfileVersion 3 compatibility |
 | **Timeout** | 20 minutes | Sufficient for build + 177 migrations |
 | **npm install** | `npm ci` | Deterministic, CI-safe |
 | **Supabase CLI** | `^2.54.11` | Required for typegen drift check |
@@ -229,7 +229,7 @@ If the diff is non-empty, the developer forgot to regenerate types after a migra
 ```yaml
 - uses: actions/setup-node@v4
   with:
-    node-version: "20"
+    node-version: "24"
     cache: "npm"
 ```
 
