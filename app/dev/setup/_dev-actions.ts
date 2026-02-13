@@ -14,10 +14,10 @@ import {
   createGameSettingsSchema,
   updateGameSettingsSchema,
 } from '@/services/casino/game-settings-schemas';
+import type { GameSettingsTemplate } from '@/services/casino/game-settings-templates';
 import {
   completeSetupSchema,
   setupCasinoSettingsSchema,
-  seedGameSettingsSchema,
 } from '@/services/casino/schemas';
 import {
   createGamingTableSchema,
@@ -30,7 +30,6 @@ import {
   mockCompleteSetupResult,
   mockGameSettingsRow,
   mockGamingTableRow,
-  mockSeededGames,
 } from './_mock-data';
 
 type CasinoSettingsRow = Database['public']['Tables']['casino_settings']['Row'];
@@ -42,10 +41,6 @@ interface CompleteSetupResult {
   setup_status: string;
   setup_completed_at: string;
   setup_completed_by: string;
-}
-
-interface SeedGameSettingsResult {
-  seeded_count: number;
 }
 
 interface UpdateTableParResult {
@@ -97,20 +92,36 @@ export async function updateCasinoSettingsAction(
 }
 
 // ---------------------------------------------------------------------------
-// 3. seedGameSettingsAction
+// 3. seedSelectedGamesAction
 // ---------------------------------------------------------------------------
 
-/** Seed returns mock count AND the mock games array for local state update */
-export async function seedGameSettingsAction(input: {
-  template: string;
-}): Promise<ServiceResult<SeedGameSettingsResult>> {
-  seedGameSettingsSchema.parse(input);
-  return devResult({ seeded_count: 6 });
-}
-
-/** Returns mock seeded games for dev wizard to populate local state */
-export async function getSeededGamesAction(): Promise<GameSettingsDTO[]> {
-  return mockSeededGames() as unknown as GameSettingsDTO[];
+export async function seedSelectedGamesAction(input: {
+  games: GameSettingsTemplate[];
+}): Promise<ServiceResult<{ created: GameSettingsDTO[]; skipped: number }>> {
+  const created: GameSettingsDTO[] = [];
+  for (const game of input.games) {
+    const validated = createGameSettingsSchema.parse({
+      ...game,
+      casino_id: 'ca000000-0000-4000-a000-000000000001',
+    });
+    const row = mockGameSettingsRow({
+      game_type: validated.game_type,
+      code: validated.code,
+      name: validated.name,
+      variant_name: validated.variant_name ?? null,
+      shoe_decks: validated.shoe_decks ?? null,
+      deck_profile: validated.deck_profile ?? null,
+      house_edge: validated.house_edge,
+      rating_edge_for_comp: validated.rating_edge_for_comp ?? null,
+      decisions_per_hour: validated.decisions_per_hour,
+      seats_available: validated.seats_available,
+      min_bet: validated.min_bet ?? null,
+      max_bet: validated.max_bet ?? null,
+      notes: validated.notes ?? null,
+    });
+    created.push(row as unknown as GameSettingsDTO);
+  }
+  return devResult({ created, skipped: 0 });
 }
 
 // ---------------------------------------------------------------------------
@@ -174,7 +185,7 @@ export async function createCustomGameSettingsAction(input: {
 }): Promise<ServiceResult<GameSettingsDTO>> {
   const validated = createGameSettingsSchema.parse({
     ...input,
-    casino_id: 'ca000000-0000-0000-0000-000000000001',
+    casino_id: 'ca000000-0000-4000-a000-000000000001',
   });
   const row = mockGameSettingsRow({
     game_type: validated.game_type,

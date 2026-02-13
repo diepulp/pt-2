@@ -17,7 +17,7 @@ import { StepParTargets } from '@/app/(onboarding)/setup/steps/step-par-targets'
 import { StepReviewComplete } from '@/app/(onboarding)/setup/steps/step-review-complete';
 import { Button } from '@/components/ui/button';
 import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
-import { SEED_TEMPLATES } from '@/services/casino/schemas';
+import type { GameSettingsTemplate } from '@/services/casino/game-settings-templates';
 import type { Database } from '@/types/database.types';
 
 import {
@@ -25,8 +25,7 @@ import {
   createCustomGameSettingsAction,
   createGamingTableAction,
   deleteGameSettingsAction,
-  getSeededGamesAction,
-  seedGameSettingsAction,
+  seedSelectedGamesAction,
   updateCasinoSettingsAction,
   updateGameSettingsAction,
   updateTableParAction,
@@ -100,18 +99,14 @@ export function SetupWizardDev({
     });
   }
 
-  function handleSeedGames() {
+  function handleSeedSelected(templates: GameSettingsTemplate[]) {
     startTransition(async () => {
       setError(null);
-      const result = await seedGameSettingsAction({
-        template: SEED_TEMPLATES[0],
-      });
+      const result = await seedSelectedGamesAction({ games: templates });
       if (result.ok && result.data) {
-        // In dev mode, populate local state with mock seeded games
-        const seeded = await getSeededGamesAction();
-        setGames(seeded);
+        setGames((prev) => [...prev, ...result.data!.created]);
       } else {
-        setError(result.error ?? 'Failed to seed game settings');
+        setError(result.error ?? 'Failed to add selected games');
       }
     });
   }
@@ -236,7 +231,7 @@ export function SetupWizardDev({
           <StepGameSeed
             games={games}
             isPending={isPending}
-            onSeed={handleSeedGames}
+            onSeedSelected={handleSeedSelected}
             onCreateGame={handleCreateGame}
             onUpdateGame={handleUpdateGame}
             onDeleteGame={handleDeleteGame}

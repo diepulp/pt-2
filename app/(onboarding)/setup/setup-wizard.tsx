@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
-import { SEED_TEMPLATES } from '@/services/casino/schemas';
+import type { GameSettingsTemplate } from '@/services/casino/game-settings-templates';
 import type { Database } from '@/types/database.types';
 
 import {
@@ -13,7 +13,7 @@ import {
   createCustomGameSettingsAction,
   createGamingTableAction,
   deleteGameSettingsAction,
-  seedGameSettingsAction,
+  seedSelectedGamesAction,
   updateCasinoSettingsAction,
   updateGameSettingsAction,
   updateTableParAction,
@@ -102,18 +102,15 @@ export function SetupWizard({
     });
   }
 
-  // Step 1: Seed game settings
-  function handleSeedGames() {
+  // Step 1: Seed selected game templates
+  function handleSeedSelected(templates: GameSettingsTemplate[]) {
     startTransition(async () => {
       setError(null);
-      const result = await seedGameSettingsAction({
-        template: SEED_TEMPLATES[0],
-      });
+      const result = await seedSelectedGamesAction({ games: templates });
       if (result.ok && result.data) {
-        // Reload page to fetch full game settings after seeding
-        router.refresh();
+        setGames((prev) => [...prev, ...result.data!.created]);
       } else {
-        setError(result.error ?? 'Failed to seed game settings');
+        setError(result.error ?? 'Failed to add selected games');
       }
     });
   }
@@ -244,7 +241,7 @@ export function SetupWizard({
           <StepGameSeed
             games={games}
             isPending={isPending}
-            onSeed={handleSeedGames}
+            onSeedSelected={handleSeedSelected}
             onCreateGame={handleCreateGame}
             onUpdateGame={handleUpdateGame}
             onDeleteGame={handleDeleteGame}

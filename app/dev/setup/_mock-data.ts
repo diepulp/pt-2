@@ -8,8 +8,8 @@ import type { Database } from '@/types/database.types';
 type CasinoSettingsRow = Database['public']['Tables']['casino_settings']['Row'];
 type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
 
-const DEV_CASINO_ID = 'ca000000-0000-0000-0000-000000000001';
-const DEV_ACTOR_ID = '5a000000-0000-0000-0000-000000000001';
+const DEV_CASINO_ID = 'ca000000-0000-4000-a000-000000000001';
+const DEV_ACTOR_ID = '5a000000-0000-4000-a000-000000000001';
 
 export function mockCasinoSettingsRow(
   overrides?: Partial<CasinoSettingsRow>,

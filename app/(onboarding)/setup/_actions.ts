@@ -26,6 +26,7 @@ import {
   createGameSettingsSchema,
   updateGameSettingsSchema,
 } from '@/services/casino/game-settings-schemas';
+import type { GameSettingsTemplate } from '@/services/casino/game-settings-templates';
 import {
   completeSetupSchema,
   setupCasinoSettingsSchema,
@@ -300,6 +301,90 @@ export async function seedGameSettingsAction(input: {
       };
     },
     { domain: 'casino', action: 'seed-game-settings' },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 3b. seedSelectedGamesAction
+// ---------------------------------------------------------------------------
+
+/**
+ * Seed selected games from the template catalog (Step 2).
+ * Unlike seedGameSettingsAction which bulk-inserts all 11 defaults via RPC,
+ * this action creates only the user-selected games via the CRUD layer.
+ * ON CONFLICT-safe: skips games whose code already exists for this casino.
+ */
+export async function seedSelectedGamesAction(input: {
+  games: GameSettingsTemplate[];
+}): Promise<ServiceResult<{ created: GameSettingsDTO[]; skipped: number }>> {
+  const supabase = await createClient();
+
+  return withServerAction(
+    supabase,
+    async (ctx) => {
+      if (ctx.rlsContext?.staffRole !== 'admin') {
+        return forbidden(ctx.correlationId, ctx.startedAt);
+      }
+
+      if (!input.games || input.games.length === 0) {
+        return {
+          ok: false,
+          code: 'VALIDATION_ERROR',
+          error: 'At least one game must be selected',
+          requestId: ctx.correlationId,
+          durationMs: Date.now() - ctx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
+      const casinoId = ctx.rlsContext!.casinoId;
+      const created: GameSettingsDTO[] = [];
+      let skipped = 0;
+
+      for (const game of input.games) {
+        const validated = createGameSettingsSchema.parse({
+          ...game,
+          casino_id: casinoId,
+        });
+
+        try {
+          const result = await createGameSettings(ctx.supabase, {
+            casino_id: validated.casino_id,
+            game_type: validated.game_type,
+            code: validated.code,
+            name: validated.name,
+            variant_name: validated.variant_name ?? null,
+            shoe_decks: validated.shoe_decks ?? null,
+            deck_profile: validated.deck_profile ?? null,
+            house_edge: validated.house_edge,
+            rating_edge_for_comp: validated.rating_edge_for_comp ?? null,
+            decisions_per_hour: validated.decisions_per_hour,
+            seats_available: validated.seats_available,
+            min_bet: validated.min_bet ?? null,
+            max_bet: validated.max_bet ?? null,
+            notes: validated.notes ?? null,
+          });
+          created.push(result);
+        } catch (err) {
+          // Skip duplicates gracefully (code already exists for this casino)
+          if (err instanceof DomainError && err.code === 'UNIQUE_VIOLATION') {
+            skipped++;
+            continue;
+          }
+          throw err;
+        }
+      }
+
+      return {
+        ok: true,
+        code: 'OK' as const,
+        data: { created, skipped },
+        requestId: ctx.correlationId,
+        durationMs: Date.now() - ctx.startedAt,
+        timestamp: new Date().toISOString(),
+      };
+    },
+    { domain: 'casino', action: 'seed-selected-games' },
   );
 }
 

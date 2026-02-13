@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
+import {
+  DEFAULT_GAME_TEMPLATES,
+  type GameSettingsTemplate,
+} from '@/services/casino/game-settings-templates';
 
 import {
   GameSettingsForm,
@@ -57,10 +62,12 @@ type FormMode =
   | { type: 'create' }
   | { type: 'edit'; game: GameSettingsDTO };
 
+type ViewMode = 'catalog' | 'configured';
+
 interface StepGameSeedProps {
   games: GameSettingsDTO[];
   isPending: boolean;
-  onSeed: () => void;
+  onSeedSelected: (templates: GameSettingsTemplate[]) => void;
   onCreateGame: (data: GameSettingsFormData) => void;
   onUpdateGame: (id: string, data: GameSettingsFormData) => void;
   onDeleteGame: (id: string) => void;
@@ -68,10 +75,24 @@ interface StepGameSeedProps {
   onBack: () => void;
 }
 
+function groupByType<T extends { game_type: string }>(items: T[]) {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const existing = groups.get(item.game_type) ?? [];
+    existing.push(item);
+    groups.set(item.game_type, existing);
+  }
+  return GAME_TYPE_ORDER.filter((gt) => groups.has(gt)).map((gt) => ({
+    gameType: gt,
+    label: GAME_TYPE_LABELS[gt] ?? gt,
+    items: groups.get(gt)!,
+  }));
+}
+
 export function StepGameSeed({
   games,
   isPending,
-  onSeed,
+  onSeedSelected,
   onCreateGame,
   onUpdateGame,
   onDeleteGame,
@@ -82,23 +103,79 @@ export function StepGameSeed({
   const [deleteTarget, setDeleteTarget] = useState<GameSettingsDTO | null>(
     null,
   );
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(
+    () => new Set(DEFAULT_GAME_TEMPLATES.map((t) => t.code)),
+  );
+  const [viewMode, setViewMode] = useState<ViewMode>(
+    games.length > 0 ? 'configured' : 'catalog',
+  );
 
   const hasGames = games.length > 0;
+  const existingCodes = useMemo(
+    () => new Set(games.map((g) => g.code)),
+    [games],
+  );
 
-  const groupedGames = useMemo(() => {
-    const groups = new Map<string, GameSettingsDTO[]>();
-    for (const game of games) {
-      const existing = groups.get(game.game_type) ?? [];
-      existing.push(game);
-      groups.set(game.game_type, existing);
+  // Templates not yet added to the casino
+  const availableTemplates = useMemo(
+    () => DEFAULT_GAME_TEMPLATES.filter((t) => !existingCodes.has(t.code)),
+    [existingCodes],
+  );
+
+  const groupedTemplates = useMemo(
+    () => groupByType(availableTemplates),
+    [availableTemplates],
+  );
+
+  const groupedGames = useMemo(() => groupByType(games), [games]);
+
+  const selectedCount = availableTemplates.filter((t) =>
+    selectedCodes.has(t.code),
+  ).length;
+
+  function toggleCode(code: string) {
+    setSelectedCodes((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) {
+        next.delete(code);
+      } else {
+        next.add(code);
+      }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selectedCount === availableTemplates.length) {
+      // Deselect all available
+      setSelectedCodes((prev) => {
+        const next = new Set(prev);
+        for (const t of availableTemplates) {
+          next.delete(t.code);
+        }
+        return next;
+      });
+    } else {
+      // Select all available
+      setSelectedCodes((prev) => {
+        const next = new Set(prev);
+        for (const t of availableTemplates) {
+          next.add(t.code);
+        }
+        return next;
+      });
     }
-    // Sort by defined order
-    return GAME_TYPE_ORDER.filter((gt) => groups.has(gt)).map((gt) => ({
-      gameType: gt,
-      label: GAME_TYPE_LABELS[gt] ?? gt,
-      items: groups.get(gt)!,
-    }));
-  }, [games]);
+  }
+
+  function handleAddSelected() {
+    const selected = availableTemplates.filter((t) =>
+      selectedCodes.has(t.code),
+    );
+    if (selected.length > 0) {
+      onSeedSelected(selected);
+      setViewMode('configured');
+    }
+  }
 
   function handleCreateSubmit(data: GameSettingsFormData) {
     onCreateGame(data);
@@ -124,25 +201,42 @@ export function StepGameSeed({
       <CardHeader>
         <CardTitle>Game Settings</CardTitle>
         <CardDescription>
-          Configure game settings for your casino. Seed defaults or add custom
-          games.
+          Select default games for your casino or add custom ones. You can edit
+          any game after adding it.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Action buttons */}
+        {/* View toggle + action buttons */}
         <div className="flex flex-wrap items-center gap-2">
+          {hasGames && (
+            <>
+              <Button
+                variant={viewMode === 'configured' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('configured')}
+                disabled={isPending}
+              >
+                Your Games
+              </Button>
+              {availableTemplates.length > 0 && (
+                <Button
+                  variant={viewMode === 'catalog' ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setViewMode('catalog')}
+                  disabled={isPending}
+                >
+                  Add from Catalog
+                </Button>
+              )}
+            </>
+          )}
           <Button
-            variant={hasGames ? 'outline' : 'default'}
+            variant="outline"
             size="sm"
-            onClick={onSeed}
-            disabled={isPending}
-          >
-            {isPending ? 'Seeding...' : 'Seed Default Games'}
-          </Button>
-          <Button
-            variant={hasGames ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setFormMode({ type: 'create' })}
+            onClick={() => {
+              setViewMode('configured');
+              setFormMode({ type: 'create' });
+            }}
             disabled={isPending || formMode.type !== 'closed'}
           >
             Add Custom Game
@@ -154,89 +248,206 @@ export function StepGameSeed({
           )}
         </div>
 
-        {/* Game list grouped by game_type */}
-        {hasGames && formMode.type === 'closed' && (
+        {/* ============================================= */}
+        {/* CATALOG VIEW: Selectable template games       */}
+        {/* ============================================= */}
+        {viewMode === 'catalog' && formMode.type === 'closed' && (
           <div className="space-y-4">
-            {groupedGames.map((group) => (
-              <div key={group.gameType}>
-                <div className="mb-2 flex items-center gap-2">
-                  <h4 className="text-sm font-medium">{group.label}</h4>
-                  <Badge variant="secondary" className="text-xs">
-                    {group.items.length}
-                  </Badge>
+            {availableTemplates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                All default games have been added. Use &ldquo;Add Custom
+                Game&rdquo; to create additional games.
+              </p>
+            ) : (
+              <>
+                {/* Select all toggle */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={selectedCount === availableTemplates.length}
+                      onCheckedChange={toggleAll}
+                      disabled={isPending}
+                    />
+                    <label
+                      htmlFor="select-all"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                    >
+                      Select all ({availableTemplates.length} available)
+                    </label>
+                  </div>
+                  <Button
+                    size="sm"
+                    onClick={handleAddSelected}
+                    disabled={isPending || selectedCount === 0}
+                  >
+                    {isPending
+                      ? 'Adding...'
+                      : `Add ${selectedCount} Selected Game${selectedCount !== 1 ? 's' : ''}`}
+                  </Button>
                 </div>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Variant</TableHead>
-                        <TableHead className="text-right">House Edge</TableHead>
-                        <TableHead className="text-right">
-                          Decisions/hr
-                        </TableHead>
-                        <TableHead className="text-right">Seats</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {group.items.map((game) => (
-                        <TableRow key={game.id}>
-                          <TableCell className="font-medium">
-                            {game.name}
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {game.variant_name ?? '\u2014'}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {game.house_edge}%
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {game.decisions_per_hour}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {game.seats_available}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() =>
-                                  setFormMode({ type: 'edit', game })
-                                }
-                                disabled={isPending}
-                              >
-                                Edit
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setDeleteTarget(game)}
-                                disabled={isPending}
-                              >
-                                Delete
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </div>
-            ))}
+
+                {/* Template list grouped by game_type */}
+                {groupedTemplates.map((group) => (
+                  <div key={group.gameType}>
+                    <h4 className="mb-2 text-sm font-medium">{group.label}</h4>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-10" />
+                            <TableHead>Name</TableHead>
+                            <TableHead>Variant</TableHead>
+                            <TableHead className="text-right">
+                              House Edge
+                            </TableHead>
+                            <TableHead className="text-right">
+                              Decisions/hr
+                            </TableHead>
+                            <TableHead className="text-right">Seats</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {group.items.map((tmpl) => (
+                            <TableRow
+                              key={tmpl.code}
+                              className="cursor-pointer"
+                              onClick={() => toggleCode(tmpl.code)}
+                            >
+                              <TableCell>
+                                <Checkbox
+                                  checked={selectedCodes.has(tmpl.code)}
+                                  onCheckedChange={() => toggleCode(tmpl.code)}
+                                  disabled={isPending}
+                                  onClick={(e) => e.stopPropagation()}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                {tmpl.name}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {tmpl.variant_name ?? '\u2014'}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {tmpl.house_edge}%
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {tmpl.decisions_per_hour}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {tmpl.seats_available}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
 
-        {/* Empty state */}
-        {!hasGames && formMode.type === 'closed' && (
+        {/* ============================================= */}
+        {/* CONFIGURED VIEW: Games already added          */}
+        {/* ============================================= */}
+        {viewMode === 'configured' &&
+          hasGames &&
+          formMode.type === 'closed' && (
+            <div className="space-y-4">
+              {groupedGames.map((group) => (
+                <div key={group.gameType}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <h4 className="text-sm font-medium">{group.label}</h4>
+                    <Badge variant="secondary" className="text-xs">
+                      {group.items.length}
+                    </Badge>
+                  </div>
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Variant</TableHead>
+                          <TableHead className="text-right">
+                            House Edge
+                          </TableHead>
+                          <TableHead className="text-right">
+                            Decisions/hr
+                          </TableHead>
+                          <TableHead className="text-right">Seats</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {group.items.map((game) => (
+                          <TableRow key={game.id}>
+                            <TableCell className="font-medium">
+                              {game.name}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {game.variant_name ?? '\u2014'}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {game.house_edge}%
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {game.decisions_per_hour}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {game.seats_available}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() =>
+                                    setFormMode({ type: 'edit', game })
+                                  }
+                                  disabled={isPending}
+                                >
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => setDeleteTarget(game)}
+                                  disabled={isPending}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+        {/* Empty state — no games, catalog view */}
+        {!hasGames && viewMode === 'catalog' && formMode.type !== 'closed' && (
           <p className="text-sm text-muted-foreground">
-            No games configured yet. Seed defaults to get started quickly, or
-            add a custom game.
+            No games configured yet. Select from the catalog above or add a
+            custom game.
           </p>
         )}
+
+        {/* Configured view with no games yet */}
+        {viewMode === 'configured' &&
+          !hasGames &&
+          formMode.type === 'closed' && (
+            <p className="text-sm text-muted-foreground">
+              No games configured yet. Select games from the catalog or add a
+              custom game.
+            </p>
+          )}
 
         {/* Create form */}
         {formMode.type === 'create' && (
