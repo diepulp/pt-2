@@ -89,6 +89,15 @@ const eslintConfig = [
         },
       ],
 
+      // Enforce type assertion style (PRD §3.3)
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        {
+          assertionStyle: 'as',
+          objectLiteralTypeAssertions: 'allow-as-parameter',
+        },
+      ],
+
       // Ban ReturnType inference patterns (PRD §3.3: Ban ReturnType<typeof createXService>)
       // NOTE: DTO interface checks moved to custom-rules/no-manual-dto-interfaces.js
       // which supports RPC response exceptions via JSDoc annotations
@@ -101,7 +110,23 @@ const eslintConfig = [
           message:
             'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3). Define explicit interface: export interface XService { methodName(): ReturnType }',
         },
+        {
+          // Ban direct typeof createXService inference
+          selector: 'TSTypeQuery[exprName.name=/^create.*Service$/]',
+          message:
+            'ANTI-PATTERN: Direct typeof inference for services is banned. Define explicit interfaces.',
+        },
+        {
+          // Ban class-based services with decorators
+          selector: 'ClassDeclaration[decorators]',
+          message:
+            'ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.',
+        },
       ],
+
+      // Enforce named exports only in services (no default exports)
+      'import/no-default-export': 'error',
+      'import/prefer-default-export': 'off',
 
       // Ban @deprecated code patterns
       'no-warning-comments': [
@@ -124,6 +149,27 @@ const eslintConfig = [
 
       // No console in services (use structured logging)
       'no-console': 'warn',
+    },
+  },
+  // Realtime services: ban global managers and singletons
+  {
+    files: ['services/**/realtime*.ts', 'services/**/subscriptions*.ts'],
+    ignores: ['**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/.*Manager$/]',
+          message:
+            'Ban global real-time managers. Use hook-scoped subscriptions instead.',
+        },
+        {
+          selector: 'CallExpression[callee.property.name="singleton"]',
+          message:
+            'No singleton patterns in real-time services. Each hook manages its own subscription.',
+        },
+      ],
     },
   },
   // API Routes security configuration - V4 FIX (WORKFLOW-PRD-002)
@@ -363,19 +409,7 @@ const eslintConfig = [
       'jsx-a11y/no-static-element-interactions': 'off',
       'react/no-unknown-property': 'off',
       '@next/next/no-img-element': 'off',
-      'prettier/prettier': [
-        'error',
-        {
-          trailingComma: 'all',
-          semi: true,
-          tabWidth: 2,
-          singleQuote: true,
-          printWidth: 80,
-          endOfLine: 'auto',
-          arrowParens: 'always',
-        },
-        { usePrettierrc: false },
-      ],
+      'prettier/prettier': 'error',
     },
     settings: {
       react: {

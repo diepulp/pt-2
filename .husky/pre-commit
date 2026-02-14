@@ -17,4 +17,4 @@
 .husky/pre-commit-rls-write-path.sh || exit 1
 
 # Run lint-staged for all staged files
-npm run lint-staged
+npx lint-staged

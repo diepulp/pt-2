@@ -1,5 +1,8 @@
 {
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev:kill": "uv run scripts/dev-cleanup.sh",
     "dev": "npm run dev:kill && next dev --webpack",
@@ -8,10 +11,9 @@
     "build:webpack": "next build --webpack",
     "start": "next start",
     "type-check": "tsc --noEmit --strict",
-    "lint": "eslint .",
-    "lint:check": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
-    "lint-staged": "lint-staged",
+    "lint": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 eslint",
+    "lint:check": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 eslint --max-warnings=0",
+    "lint:fix": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 eslint --fix",
     "agents:compile": "node scripts/compile_agents.mjs",
     "agents:check": "node scripts/compile_agents.mjs --check",
     "memori:init": "python scripts/memori-init-db.py",
@@ -148,5 +150,10 @@
     "ts-jest": "^29.4.4",
     "tsx": "^4.20.6",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }
