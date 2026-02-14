@@ -27,7 +27,7 @@ jest.mock('@/lib/supabase/server', () => {
       maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
     };
     // Add Promise resolution to support await
-    builder.then = function (resolve: (value: any) => void) {
+    builder.then = function (resolve: (value: unknown) => void) {
       resolve({ data: [], error: null });
       return Promise.resolve({ data: [], error: null });
     };
@@ -60,7 +60,7 @@ jest.mock('@/lib/server-actions/middleware', () => ({
               .fn()
               .mockResolvedValue({ data: null, error: null }),
           };
-          builder.then = function (resolve: (value: any) => void) {
+          builder.then = function (resolve: (value: unknown) => void) {
             resolve({ data: [], error: null });
             return Promise.resolve({ data: [], error: null });
           };

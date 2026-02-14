@@ -236,10 +236,7 @@ describe('Player360ContentWrapper', () => {
         />,
       );
 
-      expect(mockAddRecent).toHaveBeenCalledWith(
-        'player-abc-123',
-        'John Doe',
-      );
+      expect(mockAddRecent).toHaveBeenCalledWith('player-abc-123', 'John Doe');
     });
 
     it('does not add to recent when player data is null', () => {

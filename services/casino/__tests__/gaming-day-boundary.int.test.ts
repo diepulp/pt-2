@@ -30,9 +30,7 @@ import type { Database } from '@/types/database.types';
  * The mock tracks calls to `rpc()` and returns preconfigured responses.
  * This mirrors the pattern used in services/casino/__tests__/crud.unit.test.ts.
  */
-function createMockSupabase(
-  rpcImpl: jest.Mock,
-): SupabaseClient<Database> {
+function createMockSupabase(rpcImpl: jest.Mock): SupabaseClient<Database> {
   return {
     rpc: rpcImpl,
   } as unknown as SupabaseClient<Database>;
@@ -268,9 +266,12 @@ describe('Gaming Day Boundary & DST Tests', () => {
 
       const supabase = createMockSupabase(mockRpc);
       const client = supabase as unknown as SupabaseClient<Database>;
-      const { data, error } = await client.rpc('rpc_gaming_day_range' as never, {
-        p_weeks: 4,
-      } as never);
+      const { data, error } = await client.rpc(
+        'rpc_gaming_day_range' as never,
+        {
+          p_weeks: 4,
+        } as never,
+      );
 
       expect(error).toBeNull();
       expect(data).toEqual([{ start_gd: '2026-01-06', end_gd: '2026-02-03' }]);
@@ -278,7 +279,8 @@ describe('Gaming Day Boundary & DST Tests', () => {
       // Verify: end_gd - start_gd = 28 days
       const start = new Date('2026-01-06');
       const end = new Date('2026-02-03');
-      const diffDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+      const diffDays =
+        (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
       expect(diffDays).toBe(28);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_gaming_day_range', {
@@ -296,9 +298,12 @@ describe('Gaming Day Boundary & DST Tests', () => {
       const client = supabase as unknown as SupabaseClient<Database>;
 
       // DB default: p_weeks=4, but client must still pass it explicitly
-      await client.rpc('rpc_gaming_day_range' as never, {
-        p_weeks: 4,
-      } as never);
+      await client.rpc(
+        'rpc_gaming_day_range' as never,
+        {
+          p_weeks: 4,
+        } as never,
+      );
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_gaming_day_range', {
         p_weeks: 4,
@@ -325,9 +330,7 @@ describe('Gaming Day Boundary & DST Tests', () => {
     });
 
     it('throws DomainError when RPC returns null data', async () => {
-      const mockRpc = jest
-        .fn()
-        .mockResolvedValue({ data: null, error: null });
+      const mockRpc = jest.fn().mockResolvedValue({ data: null, error: null });
       const supabase = createMockSupabase(mockRpc);
 
       await expect(getServerGamingDay(supabase)).rejects.toThrow(DomainError);

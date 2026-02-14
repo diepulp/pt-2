@@ -25,8 +25,9 @@ jest.mock('bcryptjs', () => ({
 }));
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { verifyPinAction } = require('../verify-pin');
 const bcrypt = require('bcryptjs');
+
+const { verifyPinAction } = require('../verify-pin');
 
 describe('verifyPinAction', () => {
   const mockSelect = jest.fn();
@@ -58,7 +59,7 @@ describe('verifyPinAction', () => {
     jest.clearAllMocks();
 
     mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: Function) =>
+      async (_supabase: unknown, handler: (...args: unknown[]) => unknown) =>
         handler(setupMwCtx()),
     );
 

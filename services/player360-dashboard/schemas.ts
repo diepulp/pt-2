@@ -7,18 +7,18 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-import { z } from "zod";
+import { z } from 'zod';
 
-import { uuidSchema } from "@/lib/validation";
+import { uuidSchema } from '@/lib/validation';
 
 // === Reason Code Schema ===
 
 export const reasonCodeSchema = z.enum([
-  "AVAILABLE",
-  "COOLDOWN_ACTIVE",
-  "MIN_PLAY_NOT_MET",
-  "DAILY_LIMIT_REACHED",
-  "RULES_NOT_CONFIGURED",
+  'AVAILABLE',
+  'COOLDOWN_ACTIVE',
+  'MIN_PLAY_NOT_MET',
+  'DAILY_LIMIT_REACHED',
+  'RULES_NOT_CONFIGURED',
 ]);
 
 // === Summary Query Schema ===
@@ -29,11 +29,11 @@ export const reasonCodeSchema = z.enum([
  */
 export const summaryQuerySchema = z.object({
   /** Player ID (UUID) */
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
   /** Optional gaming day override (ISO date) */
   gamingDay: z
     .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Gaming day must be YYYY-MM-DD format")
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Gaming day must be YYYY-MM-DD format')
     .optional(),
 });
 
@@ -45,7 +45,7 @@ export const summaryQuerySchema = z.object({
  */
 export const activityQuerySchema = z.object({
   /** Player ID (UUID) */
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
   /** Number of weeks to fetch (default 12, max 52) */
   weeks: z.coerce.number().int().min(1).max(52).default(12),
 });
@@ -58,7 +58,7 @@ export const activityQuerySchema = z.object({
  */
 export const rewardHistoryQuerySchema = z.object({
   /** Player ID (UUID) */
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
   /** Max items to return (default 5, max 20) */
   limit: z.coerce.number().int().min(1).max(20).default(5),
 });
@@ -70,7 +70,7 @@ export const rewardHistoryQuerySchema = z.object({
  * Used by API routes to validate path parameters.
  */
 export const player360RouteParamsSchema = z.object({
-  playerId: uuidSchema("player ID"),
+  playerId: uuidSchema('player ID'),
 });
 
 // === Type Exports ===

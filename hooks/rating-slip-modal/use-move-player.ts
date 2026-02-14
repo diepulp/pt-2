@@ -10,21 +10,21 @@
  * @see EXECUTION-SPEC-PRD-008.md WS5
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { dashboardKeys } from "@/hooks/dashboard/keys";
-import { accrueOnClose } from "@/services/loyalty/http";
-import { loyaltyKeys } from "@/services/loyalty/keys";
-import type { RatingSlipDTO } from "@/services/rating-slip/dtos";
-import type { RatingSlipModalDTO } from "@/services/rating-slip-modal/dtos";
+import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { accrueOnClose } from '@/services/loyalty/http';
+import { loyaltyKeys } from '@/services/loyalty/keys';
+import type { RatingSlipDTO } from '@/services/rating-slip/dtos';
+import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
 import type {
   MovePlayerInput,
   MovePlayerResponse,
-} from "@/services/rating-slip-modal/http";
-import { movePlayer } from "@/services/rating-slip-modal/http";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/services/rating-slip-modal/http';
+import { movePlayer } from '@/services/rating-slip-modal/http';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
  * Mutation input for moving a player.
@@ -230,7 +230,7 @@ export function useMovePlayer() {
           seat_number: data.newSlip.seatNumber,
           start_time: data.newSlip.startTime,
           end_time: null,
-          status: data.newSlip.status as RatingSlipDTO["status"],
+          status: data.newSlip.status as RatingSlipDTO['status'],
           average_bet: variables.averageBet ?? previousSlip.average_bet,
           game_settings: previousSlip.game_settings,
           policy_snapshot: previousSlip.policy_snapshot,
@@ -303,8 +303,8 @@ export function useMovePlayer() {
         // PERF-005: Use 4-element prefix to match all filtered ledger variants
         queryClient.invalidateQueries({
           queryKey: [
-            "loyalty",
-            "ledger",
+            'loyalty',
+            'ledger',
             variables.casinoId,
             variables.playerId,
           ],

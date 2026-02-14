@@ -170,9 +170,9 @@ describe('getWorstQuality', () => {
   });
 
   it('returns NONE when mixed GOOD, LOW, and NONE', () => {
-    expect(
-      getWorstQuality(['GOOD_COVERAGE', 'LOW_COVERAGE', 'NONE']),
-    ).toBe('NONE');
+    expect(getWorstQuality(['GOOD_COVERAGE', 'LOW_COVERAGE', 'NONE'])).toBe(
+      'NONE',
+    );
   });
 
   it('returns NONE for single NONE', () => {
@@ -257,8 +257,6 @@ describe('SeverityResult contract', () => {
     const result = computeAlertSeverity('critical', 'NONE');
     expect(result.downgraded).toBe(true);
     expect(result.downgrade_reason).toBeDefined();
-    expect(['low_coverage', 'no_coverage']).toContain(
-      result.downgrade_reason,
-    );
+    expect(['low_coverage', 'no_coverage']).toContain(result.downgrade_reason);
   });
 });

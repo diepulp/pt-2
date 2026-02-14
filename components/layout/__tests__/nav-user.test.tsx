@@ -64,7 +64,11 @@ describe('NavUser', () => {
     const { container } = render(<NavUser />);
 
     // Skeleton elements should be present (no user data visible)
-    expect(container.querySelectorAll('[class*="animate-pulse"], [data-slot="skeleton"]').length).toBeGreaterThan(0);
+    expect(
+      container.querySelectorAll(
+        '[class*="animate-pulse"], [data-slot="skeleton"]',
+      ).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText('pitboss@casino.com')).not.toBeInTheDocument();
   });
 

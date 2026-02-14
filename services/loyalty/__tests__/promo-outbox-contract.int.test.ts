@@ -26,13 +26,7 @@
 
 import { randomUUID } from 'crypto';
 
-import {
-  describe,
-  it,
-  expect,
-  beforeAll,
-  afterAll,
-} from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
@@ -270,10 +264,7 @@ async function createTestFixture(
 
   const cleanup = async () => {
     // Clean outbox rows
-    await supabase
-      .from('loyalty_outbox')
-      .delete()
-      .eq('casino_id', casino.id);
+    await supabase.from('loyalty_outbox').delete().eq('casino_id', casino.id);
 
     // Clean casino (CASCADE handles settings etc.)
     await supabase.from('casino').delete().eq('id', casino.id);

@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-import type { ShiftPitMetricsDTO, ShiftTableMetricsDTO } from '@/services/table-context/shift-metrics/dtos';
+import type {
+  ShiftPitMetricsDTO,
+  ShiftTableMetricsDTO,
+} from '@/services/table-context/shift-metrics/dtos';
 
 import { MetricsTable } from '../center/metrics-table';
 
@@ -75,11 +78,7 @@ const mockTables: ShiftTableMetricsDTO[] = [
 describe('MetricsTable', () => {
   it('renders loading skeleton when isLoading', () => {
     const { container } = render(
-      <MetricsTable
-        pitsData={undefined}
-        tablesData={undefined}
-        isLoading
-      />,
+      <MetricsTable pitsData={undefined} tablesData={undefined} isLoading />,
     );
     // Casino tab is default active — loading state should not show table data
     expect(screen.queryByText('PIT-1')).not.toBeInTheDocument();
@@ -101,12 +100,7 @@ describe('MetricsTable', () => {
   });
 
   it('shows empty state when no pit data', () => {
-    render(
-      <MetricsTable
-        pitsData={[]}
-        tablesData={[]}
-      />,
-    );
+    render(<MetricsTable pitsData={[]} tablesData={[]} />);
 
     expect(screen.getByText('No pit data available')).toBeInTheDocument();
   });
@@ -114,12 +108,7 @@ describe('MetricsTable', () => {
   it('switches to By Pit tab', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MetricsTable
-        pitsData={mockPits}
-        tablesData={mockTables}
-      />,
-    );
+    render(<MetricsTable pitsData={mockPits} tablesData={mockTables} />);
 
     await user.click(screen.getByRole('tab', { name: /By Pit/i }));
     // Pit data should still be shown (same view)
@@ -129,12 +118,7 @@ describe('MetricsTable', () => {
   it('switches to By Table tab and shows tables', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MetricsTable
-        pitsData={mockPits}
-        tablesData={mockTables}
-      />,
-    );
+    render(<MetricsTable pitsData={mockPits} tablesData={mockTables} />);
 
     await user.click(screen.getByRole('tab', { name: /By Table/i }));
     expect(screen.getByText('BJ-01')).toBeInTheDocument();
@@ -144,12 +128,7 @@ describe('MetricsTable', () => {
   it('shows empty state in table tab when no tables', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MetricsTable
-        pitsData={mockPits}
-        tablesData={[]}
-      />,
-    );
+    render(<MetricsTable pitsData={mockPits} tablesData={[]} />);
 
     await user.click(screen.getByRole('tab', { name: /By Table/i }));
     expect(screen.getByText('No table data available')).toBeInTheDocument();
@@ -182,12 +161,7 @@ describe('MetricsTable', () => {
   it('shows "All Pits" back button during drill-down', async () => {
     const user = userEvent.setup();
 
-    render(
-      <MetricsTable
-        pitsData={mockPits}
-        tablesData={mockTables}
-      />,
-    );
+    render(<MetricsTable pitsData={mockPits} tablesData={mockTables} />);
 
     // Drill down to PIT-1
     await user.click(screen.getByText('PIT-1'));

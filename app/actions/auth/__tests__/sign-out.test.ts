@@ -38,7 +38,11 @@ describe('signOutAction', () => {
 
     // Default: withServerAction calls the handler with a mocked middleware context
     mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: Function, _options: unknown) => {
+      async (
+        _supabase: unknown,
+        handler: (...args: unknown[]) => unknown,
+        _options: unknown,
+      ) => {
         const mwCtx = {
           supabase: {},
           correlationId: 'test-corr-id',
@@ -125,7 +129,11 @@ describe('signOutAction', () => {
   it('emits auth.sign_out.failed on handler error', async () => {
     // Override withServerAction to simulate a handler whose inner try throws
     mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: Function, _options: unknown) => {
+      async (
+        _supabase: unknown,
+        handler: (...args: unknown[]) => unknown,
+        _options: unknown,
+      ) => {
         const mwCtx = {
           supabase: {},
           correlationId: 'test-corr-id',

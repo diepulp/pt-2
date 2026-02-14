@@ -21,8 +21,6 @@ source_of_truth:
   - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
-  - docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md
-  - docs/20-architecture/specs/ADR-022/DOD-022.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
@@ -713,8 +711,6 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/80-adrs/ADR-018-security-definer-governance.md` | SECURITY DEFINER function governance |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
 | `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md` | Player identity decisions (frozen) |
-| `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md` | Player identity implementation |
-| `docs/20-architecture/specs/ADR-022/DOD-022.md` | Player identity DoD gates |
 | `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` | Player 360° event taxonomy |
 | `docs/80-adrs/ADR-030-auth-system-hardening.md` | Auth pipeline hardening — TOCTOU elimination, claims lifecycle |
 | `docs/80-adrs/ADR-031-financial-amount-convention.md` | Financial amount convention (cents storage, dollars at boundary) |

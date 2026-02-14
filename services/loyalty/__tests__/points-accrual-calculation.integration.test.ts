@@ -26,6 +26,7 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
+
 import {
   createRatingSlipService,
   RatingSlipServiceInterface,

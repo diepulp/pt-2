@@ -30,11 +30,14 @@ describe('assertRowsAffected', () => {
 
   it('error includes table name and operation', () => {
     try {
-      assertRowsAffected({ data: null, error: null }, {
-        table: 'player_casino',
-        operation: 'upsert',
-        context: 'enrollPlayer',
-      });
+      assertRowsAffected(
+        { data: null, error: null },
+        {
+          table: 'player_casino',
+          operation: 'upsert',
+          context: 'enrollPlayer',
+        },
+      );
       fail('Expected RlsWriteDeniedError');
     } catch (err) {
       expect(err).toBeInstanceOf(RlsWriteDeniedError);

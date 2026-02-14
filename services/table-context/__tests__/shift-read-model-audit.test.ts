@@ -13,20 +13,20 @@
  * @see SHIFT_PROVENANCE_ROLLUP_ALGO_v1.md
  */
 
+import { isAllowedAlertKind } from '../shift-cash-obs/severity';
 import type {
   ShiftCasinoMetricsDTO,
   ShiftPitMetricsDTO,
   ShiftTableMetricsDTO,
 } from '../shift-metrics/dtos';
 import {
-  computeAggregatedCoverageRatio,
-  getCoverageTier,
-} from '../shift-metrics/snapshot-rules';
-import {
   rollupCasinoProvenance,
   rollupPitProvenance,
 } from '../shift-metrics/provenance';
-import { isAllowedAlertKind } from '../shift-cash-obs/severity';
+import {
+  computeAggregatedCoverageRatio,
+  getCoverageTier,
+} from '../shift-metrics/snapshot-rules';
 
 // === Factory Helper ===
 
@@ -120,8 +120,7 @@ function aggregatePitsFromTables(
         tables_count: 1,
         tables_with_opening_snapshot: table.missing_opening_snapshot ? 0 : 1,
         tables_with_closing_snapshot: table.missing_closing_snapshot ? 0 : 1,
-        tables_with_telemetry_count:
-          table.telemetry_quality !== 'NONE' ? 1 : 0,
+        tables_with_telemetry_count: table.telemetry_quality !== 'NONE' ? 1 : 0,
         tables_good_coverage_count:
           table.telemetry_quality === 'GOOD_COVERAGE' ? 1 : 0,
         tables_grade_estimate: 1,

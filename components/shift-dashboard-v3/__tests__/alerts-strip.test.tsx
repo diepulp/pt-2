@@ -53,17 +53,24 @@ describe('AlertsStrip', () => {
 
   it('renders empty state when no alerts', () => {
     render(<AlertsStrip alerts={[]} />);
-    expect(screen.getByText('No spike alerts in current time window')).toBeInTheDocument();
+    expect(
+      screen.getByText('No spike alerts in current time window'),
+    ).toBeInTheDocument();
   });
 
   it('renders empty state when alerts is undefined', () => {
     render(<AlertsStrip alerts={undefined} />);
-    expect(screen.getByText('No spike alerts in current time window')).toBeInTheDocument();
+    expect(
+      screen.getByText('No spike alerts in current time window'),
+    ).toBeInTheDocument();
   });
 
   it('renders alerts sorted by severity (critical first)', () => {
     render(
-      <AlertsStrip alerts={[infoAlert, criticalAlert, warnAlert]} maxDisplay={3} />,
+      <AlertsStrip
+        alerts={[infoAlert, criticalAlert, warnAlert]}
+        maxDisplay={3}
+      />,
     );
 
     const alertButtons = screen.getAllByRole('button');
@@ -75,7 +82,10 @@ describe('AlertsStrip', () => {
 
   it('limits displayed alerts to maxDisplay', () => {
     render(
-      <AlertsStrip alerts={[criticalAlert, warnAlert, infoAlert]} maxDisplay={2} />,
+      <AlertsStrip
+        alerts={[criticalAlert, warnAlert, infoAlert]}
+        maxDisplay={2}
+      />,
     );
 
     // Should only show 2 alerts
@@ -85,18 +95,14 @@ describe('AlertsStrip', () => {
   });
 
   it('shows severity badge counts', () => {
-    render(
-      <AlertsStrip alerts={[criticalAlert, warnAlert]} maxDisplay={3} />,
-    );
+    render(<AlertsStrip alerts={[criticalAlert, warnAlert]} maxDisplay={3} />);
 
     expect(screen.getByText('1 critical')).toBeInTheDocument();
     expect(screen.getByText('1 warn')).toBeInTheDocument();
   });
 
   it('shows total count in header', () => {
-    render(
-      <AlertsStrip alerts={[criticalAlert, warnAlert]} maxDisplay={3} />,
-    );
+    render(<AlertsStrip alerts={[criticalAlert, warnAlert]} maxDisplay={3} />);
 
     expect(screen.getByText('(2)')).toBeInTheDocument();
   });
@@ -118,18 +124,14 @@ describe('AlertsStrip', () => {
   });
 
   it('displays cash-out threshold message for spike alerts', () => {
-    render(
-      <AlertsStrip alerts={[criticalAlert]} maxDisplay={3} />,
-    );
+    render(<AlertsStrip alerts={[criticalAlert]} maxDisplay={3} />);
 
     expect(screen.getByText(/exceeds/)).toBeInTheDocument();
     expect(screen.getByText(/threshold/)).toBeInTheDocument();
   });
 
   it('shows downgrade indicator for downgraded alerts', () => {
-    render(
-      <AlertsStrip alerts={[warnAlert]} maxDisplay={3} />,
-    );
+    render(<AlertsStrip alerts={[warnAlert]} maxDisplay={3} />);
 
     expect(screen.getByText(/Downgraded from critical/)).toBeInTheDocument();
     expect(screen.getByText(/low telemetry coverage/)).toBeInTheDocument();
@@ -155,9 +157,7 @@ describe('AlertsStrip', () => {
   });
 
   it('does not show View All when alerts fit within maxDisplay', () => {
-    render(
-      <AlertsStrip alerts={[criticalAlert]} maxDisplay={3} />,
-    );
+    render(<AlertsStrip alerts={[criticalAlert]} maxDisplay={3} />);
 
     expect(screen.queryByText('View All')).not.toBeInTheDocument();
   });

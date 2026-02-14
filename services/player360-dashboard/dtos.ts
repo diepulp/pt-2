@@ -14,11 +14,11 @@
  * AVAILABLE = player can receive a reward now
  */
 export type ReasonCode =
-  | "AVAILABLE"
-  | "COOLDOWN_ACTIVE"
-  | "MIN_PLAY_NOT_MET"
-  | "DAILY_LIMIT_REACHED"
-  | "RULES_NOT_CONFIGURED";
+  | 'AVAILABLE'
+  | 'COOLDOWN_ACTIVE'
+  | 'MIN_PLAY_NOT_MET'
+  | 'DAILY_LIMIT_REACHED'
+  | 'RULES_NOT_CONFIGURED';
 
 // === Snapshot Band DTOs ===
 
@@ -59,7 +59,7 @@ export interface PlayerCashVelocityDTO {
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Aggregated DTO from multiple services
 export interface PlayerEngagementDTO {
   /** Engagement status classification */
-  status: "active" | "cooling" | "dormant";
+  status: 'active' | 'cooling' | 'dormant';
   /** Session duration in minutes */
   durationMinutes: number;
   /** ISO timestamp of last activity */
@@ -75,7 +75,7 @@ export interface PlayerEngagementDTO {
 // eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Aggregated DTO from multiple services
 export interface RewardsEligibilityDTO {
   /** Eligibility status */
-  status: "available" | "not_available" | "unknown";
+  status: 'available' | 'not_available' | 'unknown';
   /** ISO timestamp when next eligible (if cooldown active) */
   nextEligibleAt: string | null;
   /** List of reason codes explaining status */
@@ -144,7 +144,7 @@ export interface RewardHistoryItemDTO {
   /** ISO timestamp when issued */
   issuedAt: string;
   /** Reward type classification */
-  rewardType: "matchplay" | "freeplay" | "comp" | "other";
+  rewardType: 'matchplay' | 'freeplay' | 'comp' | 'other';
   /** Reward amount (points or dollar value) */
   amount: number;
   /** Staff member who issued reward */

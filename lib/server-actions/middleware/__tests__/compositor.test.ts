@@ -118,6 +118,7 @@ describe('createServerActionWrapper', () => {
     from: jest.fn().mockReturnValue({
       insert: jest.fn().mockResolvedValue({ error: null }),
     }),
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
   it('should create wrapper with default config', async () => {

@@ -195,9 +195,7 @@ describe('TimelinePageContent', () => {
       expect(screen.getByTestId('summary-panel')).toHaveTextContent(
         'player-xyz',
       );
-      expect(screen.getByTestId('chart-panel')).toHaveTextContent(
-        'player-xyz',
-      );
+      expect(screen.getByTestId('chart-panel')).toHaveTextContent('player-xyz');
       expect(screen.getByTestId('timeline-panel')).toHaveTextContent(
         'player-xyz',
       );
@@ -248,9 +246,9 @@ describe('TimelinePageContent', () => {
       expect(
         screen.getByTestId('compliance-panel-wrapper'),
       ).toBeInTheDocument();
-      expect(
-        screen.getByTestId('compliance-panel-wrapper'),
-      ).toHaveTextContent('Compliance:player-123:2026-01-26');
+      expect(screen.getByTestId('compliance-panel-wrapper')).toHaveTextContent(
+        'Compliance:player-123:2026-01-26',
+      );
     });
 
     it('calls setActiveRightTab when tab button is clicked', async () => {

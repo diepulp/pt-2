@@ -66,9 +66,8 @@ type _AssertReturnColumns = CreateStaffReturnRow extends {
 const _returnColumnsCheck: _AssertReturnColumns = true;
 
 // Verify employee_id is optional (has ? modifier in Args)
-type _AssertEmployeeIdOptional = undefined extends CreateStaffArgs['p_employee_id']
-  ? true
-  : never;
+type _AssertEmployeeIdOptional =
+  undefined extends CreateStaffArgs['p_employee_id'] ? true : never;
 const _employeeIdOptionalCheck: _AssertEmployeeIdOptional = true;
 
 // ============================================================================

@@ -59,7 +59,11 @@ export async function reconcileStaffClaims(
   if (currentStatus === 'inactive' && previousStatus !== 'inactive') {
     const clearTarget = userId ?? previousUserId;
     if (clearTarget) {
-      console.info('[CLAIMS RECONCILE] staff deactivated — clearing claims: staffId=%s userId=%s', staffId, clearTarget);
+      console.info(
+        '[CLAIMS RECONCILE] staff deactivated — clearing claims: staffId=%s userId=%s',
+        staffId,
+        clearTarget,
+      );
       await clearUserRLSClaims(clearTarget);
     }
     return;
@@ -67,7 +71,11 @@ export async function reconcileStaffClaims(
 
   // 2. user_id was removed → clear claims for previous user_id
   if (!userId && previousUserId) {
-    console.info('[CLAIMS RECONCILE] user_id removed — clearing claims: staffId=%s previousUserId=%s', staffId, previousUserId);
+    console.info(
+      '[CLAIMS RECONCILE] user_id removed — clearing claims: staffId=%s previousUserId=%s',
+      staffId,
+      previousUserId,
+    );
     await clearUserRLSClaims(previousUserId);
     return;
   }
@@ -79,7 +87,12 @@ export async function reconcileStaffClaims(
 
   // 3. casino_id changed → clear old claims before re-sync
   if (previousCasinoId && previousCasinoId !== casinoId && previousUserId) {
-    console.info('[CLAIMS RECONCILE] casino_id changed — clearing stale claims before re-sync: staffId=%s oldCasino=%s newCasino=%s', staffId, previousCasinoId, casinoId);
+    console.info(
+      '[CLAIMS RECONCILE] casino_id changed — clearing stale claims before re-sync: staffId=%s oldCasino=%s newCasino=%s',
+      staffId,
+      previousCasinoId,
+      casinoId,
+    );
     await clearUserRLSClaims(previousUserId);
   }
 

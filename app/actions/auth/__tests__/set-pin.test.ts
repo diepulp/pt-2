@@ -33,7 +33,7 @@ describe('setPinAction', () => {
     });
 
     mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: Function) => {
+      async (_supabase: unknown, handler: (...args: unknown[]) => unknown) => {
         const mwCtx = {
           supabase: {
             from: () => ({ update: mockUpdate }),
@@ -96,7 +96,7 @@ describe('setPinAction', () => {
 
   it('returns UNAUTHORIZED when no staff context', async () => {
     mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: Function) => {
+      async (_supabase: unknown, handler: (...args: unknown[]) => unknown) => {
         return handler({
           supabase: {},
           correlationId: 'test',

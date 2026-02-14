@@ -7,7 +7,13 @@ jest.mock('recharts', () => {
     ResponsiveContainer: ({ children }: { children: React.ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
-    RadarChart: ({ children, data }: { children: React.ReactNode; data: unknown[] }) => (
+    RadarChart: ({
+      children,
+      data,
+    }: {
+      children: React.ReactNode;
+      data: unknown[];
+    }) => (
       <div data-testid="radar-chart" data-points={data.length}>
         {children}
       </div>
@@ -19,8 +25,12 @@ jest.mock('recharts', () => {
     PolarAngleAxis: ({ dataKey }: { dataKey: string }) => (
       <div data-testid="polar-angle-axis" data-key={dataKey} />
     ),
-    Tooltip: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
-    Legend: ({ children }: { children?: React.ReactNode }) => <div>{children}</div>,
+    Tooltip: ({ children }: { children?: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
+    Legend: ({ children }: { children?: React.ReactNode }) => (
+      <div>{children}</div>
+    ),
   };
 });
 
@@ -28,13 +38,7 @@ import { FloorActivityRadar } from '../charts/floor-activity-radar';
 
 describe('FloorActivityRadar', () => {
   it('renders loading skeleton', () => {
-    render(
-      <FloorActivityRadar
-        ratedCount={0}
-        unratedCount={0}
-        isLoading
-      />,
-    );
+    render(<FloorActivityRadar ratedCount={0} unratedCount={0} isLoading />);
     // Should show skeleton, not chart
     expect(screen.queryByTestId('radar-chart')).not.toBeInTheDocument();
   });
@@ -47,7 +51,10 @@ describe('FloorActivityRadar', () => {
         ratedPercentage={70}
       />,
     );
-    expect(screen.getByTestId('radar-chart')).toHaveAttribute('data-points', '2');
+    expect(screen.getByTestId('radar-chart')).toHaveAttribute(
+      'data-points',
+      '2',
+    );
     expect(screen.getByTestId('radar-rated')).toBeInTheDocument();
     expect(screen.getByTestId('radar-unrated')).toBeInTheDocument();
   });
@@ -65,7 +72,10 @@ describe('FloorActivityRadar', () => {
         pitBreakdown={breakdown}
       />,
     );
-    expect(screen.getByTestId('radar-chart')).toHaveAttribute('data-points', '3');
+    expect(screen.getByTestId('radar-chart')).toHaveAttribute(
+      'data-points',
+      '3',
+    );
   });
 
   it('shows value-generating callout with percentage', () => {
@@ -76,26 +86,20 @@ describe('FloorActivityRadar', () => {
         ratedPercentage={70}
       />,
     );
-    expect(screen.getByText('70% of floor generating value')).toBeInTheDocument();
+    expect(
+      screen.getByText('70% of floor generating value'),
+    ).toBeInTheDocument();
   });
 
   it('computes percentage when not provided', () => {
-    render(
-      <FloorActivityRadar
-        ratedCount={75}
-        unratedCount={25}
-      />,
-    );
-    expect(screen.getByText('75% of floor generating value')).toBeInTheDocument();
+    render(<FloorActivityRadar ratedCount={75} unratedCount={25} />);
+    expect(
+      screen.getByText('75% of floor generating value'),
+    ).toBeInTheDocument();
   });
 
   it('shows total active count', () => {
-    render(
-      <FloorActivityRadar
-        ratedCount={42}
-        unratedCount={18}
-      />,
-    );
+    render(<FloorActivityRadar ratedCount={42} unratedCount={18} />);
     expect(screen.getByText('60 active')).toBeInTheDocument();
   });
 });
