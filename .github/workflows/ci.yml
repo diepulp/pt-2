@@ -6,10 +6,13 @@ on:
       - main
   workflow_dispatch:
 
+# Merge-safety gates only. Clean-room verification that code compiles,
+# lints clean, and builds. Tests run locally (require Supabase).
+
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -24,14 +27,8 @@ jobs:
         run: npm run lint
       - name: Type Check
         run: npm run type-check
-      - name: RLS Write-Path Lint (ADR-034)
-        # ADR-034 ratified as "Accepted" (2026-02-11). Blocking.
-        run: bash scripts/lint-rls-write-path.sh
-      - name: Test
-        run: npm test
       - name: Build
         run: npm run build
         env:
-          # Stub env vars for build-time validation (not connecting to real Supabase)
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

@@ -60,6 +60,29 @@ Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
 6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` (`YYYYMMDDHHMMSS_description.sql`).
 
+## Agent Shell Safety (MANDATORY)
+
+The agent runner buffers all stdout/stderr in memory. Large output WILL crash VS Code, the terminal daemon, and the agent session. **Every command must be output-safe.**
+
+**Rules:**
+1. **NEVER pipe `gh run view --log` or `--log-failed` directly.** Write to file first, then read with the Read tool:
+   ```bash
+   gh run view <ID> --log-failed > /tmp/ci-log.log 2>&1
+   # Then use Read tool or Grep tool on /tmp/ci-log.log
+   ```
+2. **NEVER run `npm test`, `npm run lint`, or any command that can produce >100 lines** without output control. Use `--quiet`, `--silent`, or redirect to file.
+3. **For CI status**, use minimal-output commands:
+   ```bash
+   gh pr checks <N>                          # summary only
+   gh run view <ID> --json jobs --jq '...'   # structured, small
+   ```
+4. **For test runs**, always redirect output:
+   ```bash
+   npm run test:ci > /tmp/test-output.log 2>&1
+   # Then grep/read the file for results
+   ```
+5. **General rule**: If a command might produce large output, **write to /tmp first, then read selectively**. No exceptions.
+
 ## Service Layer Pattern
 
 Services live in `services/{domain}/` with this structure:
