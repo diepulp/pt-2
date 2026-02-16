@@ -41,7 +41,6 @@
     "**/__tests__",
     "**/*.test.ts",
     "**/*.spec.ts",
-    "reference-pt-1",
     "trees/**"
   ]
 }
