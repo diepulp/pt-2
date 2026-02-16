@@ -50,7 +50,7 @@ next-env.d.ts
 /.validation
 
 # reference
-# /reference-pt-1
+/reference-pt-1
 
 # OpenAPI generated clients
 /generated
