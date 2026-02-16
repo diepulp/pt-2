@@ -117,8 +117,8 @@ const eslintConfig = [
             'ANTI-PATTERN: Direct typeof inference for services is banned. Define explicit interfaces.',
         },
         {
-          // Ban class-based services with decorators
-          selector: 'ClassDeclaration[decorators]',
+          // Ban class-based services (Error subclasses are exempt)
+          selector: 'ClassDeclaration:not([superClass.name="Error"])',
           message:
             'ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.',
         },
