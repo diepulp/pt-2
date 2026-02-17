@@ -280,9 +280,7 @@ describe('PRD-033 Confirmation Mappers', () => {
 
   describe('toTableDropEventDTOFromAcknowledgeRpc', () => {
     it('maps all 14 fields correctly for acknowledged drop', () => {
-      const dto = toTableDropEventDTOFromAcknowledgeRpc(
-        mockAcknowledgeDropRpc,
-      );
+      const dto = toTableDropEventDTOFromAcknowledgeRpc(mockAcknowledgeDropRpc);
 
       expect(dto).toEqual({
         id: 'drop-001',
@@ -322,9 +320,7 @@ describe('PRD-033 Confirmation Mappers', () => {
     });
 
     it('returns a new object (immutability)', () => {
-      const dto = toTableDropEventDTOFromAcknowledgeRpc(
-        mockAcknowledgeDropRpc,
-      );
+      const dto = toTableDropEventDTOFromAcknowledgeRpc(mockAcknowledgeDropRpc);
       expect(dto).not.toBe(mockAcknowledgeDropRpc);
     });
   });

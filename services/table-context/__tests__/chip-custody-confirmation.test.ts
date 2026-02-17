@@ -356,7 +356,9 @@ describe('PRD-033 Cashier Confirmation Operations', () => {
 
     it('returns empty array when no fills', async () => {
       const queryChain = createMockQueryChain([]);
-      const supabase = { from: jest.fn().mockReturnValue(queryChain) } as MockSupabase;
+      const supabase = {
+        from: jest.fn().mockReturnValue(queryChain),
+      } as MockSupabase;
 
       const result = await listFills(supabase, {});
 
@@ -364,11 +366,13 @@ describe('PRD-033 Cashier Confirmation Operations', () => {
     });
 
     it('throws DomainError on query failure', async () => {
-      const queryChain = createMockQueryChain(
-        [],
-        { message: 'Query failed', code: 'PGRST301' },
-      );
-      const supabase = { from: jest.fn().mockReturnValue(queryChain) } as MockSupabase;
+      const queryChain = createMockQueryChain([], {
+        message: 'Query failed',
+        code: 'PGRST301',
+      });
+      const supabase = {
+        from: jest.fn().mockReturnValue(queryChain),
+      } as MockSupabase;
 
       await expect(listFills(supabase, {})).rejects.toThrow(DomainError);
     });

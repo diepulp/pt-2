@@ -14,8 +14,7 @@ import {
   type WizardState,
 } from '../wizard-validation';
 
-type CasinoSettingsRow =
-  Database['public']['Tables']['casino_settings']['Row'];
+type CasinoSettingsRow = Database['public']['Tables']['casino_settings']['Row'];
 type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
 
 // ---------------------------------------------------------------------------
@@ -38,22 +37,17 @@ function makeSettings(
   } as CasinoSettingsRow;
 }
 
-function makeGame(
-  id: string,
-  game_type: string,
-): GameSettingsDTO {
+function makeGame(id: string, game_type: string): GameSettingsDTO {
   return { id, game_type } as GameSettingsDTO;
 }
 
-function makeTable(
-  overrides: {
-    id: string;
-    label: string;
-    type: string;
-    game_settings_id?: string | null;
-    par_total_cents?: number | null;
-  },
-): GamingTableRow {
+function makeTable(overrides: {
+  id: string;
+  label: string;
+  type: string;
+  game_settings_id?: string | null;
+  par_total_cents?: number | null;
+}): GamingTableRow {
   return {
     game_settings_id: null,
     par_total_cents: null,
