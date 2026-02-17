@@ -19,7 +19,7 @@ export function WizardStepper({
     <nav
       role="navigation"
       aria-label="Setup wizard progress"
-      className="flex items-center justify-between gap-2"
+      className="flex items-center gap-2"
     >
       {steps.map((label, idx) => {
         const isComplete = idx < currentStep;

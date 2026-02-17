@@ -1,0 +1,14 @@
+{
+  "prd_id": "PRD-033",
+  "prd_title": "Cashier Workflow MVP: Operational Telemetry Attestations",
+  "spec_path": "docs/20-architecture/specs/PRD-033/EXECUTION-SPEC-PRD-033.md",
+  "status": "initialized",
+  "current_phase": 0,
+  "total_phases": 5,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS3b", "WS4", "WS5", "WS6"],
+  "failed_workstreams": [],
+  "gates_passed": [],
+  "created_at": "2026-02-16T23:27:17Z",
+  "updated_at": "2026-02-16T23:27:17Z"
+}

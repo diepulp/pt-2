@@ -298,7 +298,7 @@ export function SetupWizardDev({
         steps={STEP_LABELS}
         currentStep={currentStep}
         onStepClick={handleStepClick}
-        optionalSteps={[3]}
+        optionalSteps={[]}
       />
 
       {error && (
