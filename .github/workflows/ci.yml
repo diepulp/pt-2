@@ -6,23 +6,33 @@ on:
       - main
   workflow_dispatch:
 
+# Merge-safety gates only. Clean-room verification that code compiles,
+# lints clean, and builds. Tests run locally (require Supabase).
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   checks:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version-file: '.nvmrc'
+          cache: 'npm'
       - name: Install
         run: npm ci
       - name: Lint
         run: npm run lint
       - name: Type Check
         run: npm run type-check
-      - name: Test
-        run: npm test
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

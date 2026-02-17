@@ -91,8 +91,10 @@
 | ARCH-002 | Service Layer Architecture Diagram v3.3.0 | Accepted | `20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` |
 | ARCH-003 | SRM Mapping Table | Active | `20-architecture/SRM_MAPPING_TABLE.md` |
 | ARCH-004 | Balanced Architecture Quick Reference | Active | `20-architecture/BALANCED_ARCHITECTURE_QUICK.md` |
-| TEMP-001 | Gaming Day Specification | Active | `20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` |
-| TEMP-002 | Temporal Authority Pattern | Active | `20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` |
+| TEMP-001 | Gaming Day Specification | Active (v1.1) | `20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` |
+| TEMP-002 | Temporal Authority Pattern | Active (v1.1) | `20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` |
+| TEMP-003 | Temporal Governance Enforcement | Active (v1.0) | `20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` |
+| TEMP-IDX | Temporal Patterns Registry | Active | `20-architecture/temporal-patterns/INDEX.md` |
 
 **Purpose**: Bounded contexts, system diagrams, integration contracts, NFRs
 
@@ -100,7 +102,7 @@
 - **SRM** (1,848 lines): Canonical bounded context registry - compressed for maintainability
 - **SRM Mapping Table**: Links SRM sections to detailed taxonomy documents
 - **Service Layer Diagram**: Visual patterns + anti-patterns with mermaid
-- **Temporal Patterns**: Gaming day authority and edge case handling
+- **Temporal Patterns**: Gaming day authority, edge case handling, and [governance enforcement registry](20-architecture/temporal-patterns/INDEX.md)
 
 **Recent Changes** (2025-11-17):
 - ✅ SRM compressed by 13% (279 lines saved)

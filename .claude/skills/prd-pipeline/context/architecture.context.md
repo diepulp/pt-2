@@ -169,9 +169,43 @@ export type ExampleServiceInterface = ReturnType<typeof createExampleService>;
 
 ---
 
+## Temporal Patterns (TEMP-001/002/003, PRD-027)
+
+**Registry:** `docs/20-architecture/temporal-patterns/INDEX.md`
+
+### Canonical Contract
+
+Gaming day computation uses a three-layer function contract:
+
+| Layer | Function | Volatility | Callers |
+|-------|----------|-----------|---------|
+| **Layer 1** | `compute_gaming_day(ts, gstart time)` | `IMMUTABLE` — pure math | DB triggers |
+| **Layer 2** | `compute_gaming_day(casino_id, timestamp)` | `STABLE, SECURITY DEFINER` | Route handlers, RPCs |
+| **Layer 3** | `rpc_current_gaming_day(timestamp)` | `STABLE, SECURITY DEFINER` | RSC server helpers, server actions |
+
+### Invariants (non-negotiable)
+
+1. **Database owns `gaming_day`** via `casino_settings` + `compute_gaming_day()`. No JS derivation.
+2. **No inline reimplementation** in triggers or stored procedures.
+3. **No parameter bypass** — temporal RPCs derive `casino_id` from RLS context (ADR-024).
+4. **Banned patterns**: `toISOString().slice(0, 10)`, `new Date()` arithmetic, `getUTC*()` for business dates.
+
+### EXECUTION-SPEC Implications
+
+When generating EXECUTION-SPECs for workstreams that touch `gaming_day`:
+- Database workstreams must specify trigger function creation (Layer 1 pattern)
+- Service workstreams must use DB RPCs for gaming day — not JS date math
+- Frontend workstreams must use `getServerGamingDay()` (RSC) or `useGamingDay()` (client)
+- Test workstreams must include boundary tests: pre-boundary, post-boundary, UTC-midnight, DST
+
+**References:** TEMP-001 (spec), TEMP-002 (authority pattern), TEMP-003 (enforcement), PRD-027 (standardization)
+
+---
+
 ## Cross-Cutting Rules
 
 1. **No `as any`** - Use proper typing or `unknown` with type guards
 2. **No `console.*` in production** - Use structured logging
 3. **Types from `database.types.ts` only** - Run `npm run db:types` after migrations
 4. **Functional factories** - No class-based services
+5. **No JS gaming day computation** - Use DB RPCs per TEMP-001/003

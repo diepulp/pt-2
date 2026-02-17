@@ -606,16 +606,17 @@ export async function ensureGameSettings(
     {
       casino_id: casinoId,
       game_type: gameType,
-      name: `${gameType} Standard`, // Required field
-      house_edge: 1.5, // 1.5%
+      code: `${gameType}_standard`,
+      name: `${gameType} Standard`,
+      house_edge: 1.5,
       decisions_per_hour: 70,
       points_conversion_rate: 10.0,
       point_multiplier: 1.0,
       seats_available: 7,
     },
     {
-      onConflict: 'casino_id,game_type',
-      ignoreDuplicates: false, // Always update if exists
+      onConflict: 'casino_id,code',
+      ignoreDuplicates: false,
     },
   );
 

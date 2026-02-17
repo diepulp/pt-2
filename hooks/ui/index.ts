@@ -14,4 +14,4 @@ export {
 } from './use-rating-slip-modal';
 
 // Re-export Sonner toast for consistent imports
-export { toast } from '@/components/landing-page/ui/sonner';
+export { toast } from 'sonner';

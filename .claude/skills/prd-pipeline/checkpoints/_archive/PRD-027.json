@@ -1,0 +1,86 @@
+{
+  "prd": "PRD-027",
+  "prd_title": "System Time & Gaming Day Standardization",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "skipped_workstreams": ["WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": {
+      "migration": "supabase/migrations/20260203005841_prd027_temporal_rpcs.sql",
+      "functions_created": [
+        "compute_gaming_day(timestamptz, interval) — Layer 1 IMMUTABLE (migrated from time)",
+        "compute_gaming_day_for_casino(timestamptz) — Layer 2 STABLE SECURITY DEFINER",
+        "rpc_current_gaming_day(timestamptz) — Layer 3 client-callable",
+        "rpc_gaming_day_range(int, timestamptz) — Layer 3 range RPC"
+      ],
+      "functions_fixed": [
+        "trg_mtl_entry_set_gaming_day() — calls Layer 1 instead of inline logic"
+      ],
+      "functions_locked": [
+        "compute_gaming_day(uuid, timestamptz) — REVOKE'd from anon/authenticated"
+      ]
+    },
+    "WS2": {
+      "files_created": [
+        "lib/gaming-day/server.ts"
+      ],
+      "files_modified": [
+        "services/player360-dashboard/mappers.ts — removed getCurrentGamingDay(), getWeeksAgoDate(); refactored mapToWeeklySeries to accept periodStart/periodEnd",
+        "services/player360-dashboard/crud.ts — gamingDay now required; getWeeklySeries uses rpc_gaming_day_range",
+        "services/player360-dashboard/index.ts — removed deprecated re-exports",
+        "app/(dashboard)/players/[[...playerId]]/page.tsx — uses getServerGamingDay(supabase)",
+        "hooks/player-360/use-player-summary.ts — gated on !!gamingDay",
+        "hooks/player-360/use-player-eligibility.ts — added gamingDay option, gated on !!gamingDay"
+      ]
+    },
+    "WS3": {
+      "files_modified": [
+        "components/pit-panels/pit-panels-client.tsx — import from @/hooks/casino/use-gaming-day, extract .gaming_day from GamingDayDTO",
+        "components/dashboard/pit-dashboard-client.tsx — import from @/hooks/casino/use-gaming-day, extract .gaming_day from GamingDayDTO"
+      ]
+    },
+    "WS4": {
+      "files_modified": [
+        ".eslint-rules/no-temporal-bypass.js — added getServerGamingDayAt to BANNED_FUNCTIONS"
+      ]
+    },
+    "WS5": {
+      "files_created": [
+        "services/casino/__tests__/gaming-day-boundary.int.test.ts"
+      ],
+      "tests_passed": "15/15 boundary tests + 66/66 mapper tests"
+    },
+    "WS6": {
+      "status": "skipped",
+      "reason": "Observability tripwire (Could/FR-9) is moot — PRD-027 eliminated all JS gaming day computation, leaving no dual-path to compare. The WS5 test suite verifies the helper-to-RPC contract directly."
+    }
+  },
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "gates_pending": [],
+  "completion_summary": {
+    "total_workstreams": 6,
+    "completed": 5,
+    "skipped": 1,
+    "definition_of_done": {
+      "compute_gaming_day_for_casino_exists": true,
+      "rpc_current_gaming_day_works": true,
+      "rpc_gaming_day_range_works": true,
+      "player360_uses_getServerGamingDay": true,
+      "crud_uses_rpc_gaming_day_range": true,
+      "getCurrentGamingDay_deleted": true,
+      "getWeeksAgoDate_deleted": true,
+      "pit_components_canonical_import": true,
+      "trg_mtl_entry_uses_layer1": true,
+      "rpcs_security_definer": true,
+      "boundary_tests_pass": true,
+      "mapper_tests_pass": true,
+      "eslint_no_temporal_bypass_clean": true,
+      "legacy_overload_revoked": true,
+      "build_passes": true
+    }
+  },
+  "timestamp": "2026-02-03T03:15:00Z"
+}

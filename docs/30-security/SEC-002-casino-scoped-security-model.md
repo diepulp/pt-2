@@ -112,6 +112,27 @@ create policy "table_read_hybrid"
 **See:** `SEC-001-rls-policy-matrix.md` for complete policy templates.
 **ADR:** `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md`
 
+## Company-as-Metadata Posture (PRD-025)
+
+> **Decision**: `company` is organizational metadata, not a security boundary.
+
+PT-2's multi-tenancy model anchors isolation at the **casino** level (`casino_id`), not the company level. The `company` table stores organizational metadata (name, address) but does not participate in RLS context derivation — there is no `app.company_id` session variable.
+
+| Aspect | Casino (Security Boundary) | Company (Metadata) |
+|--------|---------------------------|-------------------|
+| RLS scope anchor | `casino_id` on all operational tables | Not used in RLS policies |
+| Session variable | `app.casino_id` (SET LOCAL) | None — no `app.company_id` |
+| Context derivation | `set_rls_context_from_staff()` derives from staff→casino | Not derived |
+| Table RLS posture | Permissive policies (Pattern C / Template 2b) | **Deny-by-default** (no permissive policies) |
+| Access path | RLS policies + SECURITY DEFINER RPCs | service_role + SECURITY DEFINER RPCs only |
+
+**Implications for Onboarding (PRD-025)**:
+- `rpc_bootstrap_casino` creates the casino directly; company association is optional (`casino.company_id` is nullable)
+- Staff invites are scoped to `casino_id`, not `company_id`
+- Future multi-casino-per-company features will use `casino_id` joins, not company-level RLS
+
+**Migration**: `20260201173235_prd025_staff_invite_company_rls.sql` — enables RLS on `company` with zero permissive policies (deny-by-default for `authenticated` role).
+
 ## Interaction Points
 
 - **Service Responsibility Matrix (`ARCH-SRM`)** defines ownership and RLS expectations consumed by this model.
@@ -128,6 +149,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2026-01-31**: **PRD-025 Onboarding**: Added "Company-as-Metadata Posture" section. Codified decision that `company` is metadata (not security boundary), no `app.company_id`, deny-by-default RLS. Staff invites scoped to `casino_id`.
 - **2026-01-29**: **ADR-030 Alignment**: Added guardrails #5–7 (single source of truth, authoritative claims lifecycle, bypass lockdown). Updated RLS Context Injection section with ADR-030 D1–D4 hardening decisions. Added ADR-030 to related ADRs.
 - **2026-01-06**: **PRD-LOYALTY-PROMO**: Added promo instrument capabilities to Role Model (pit_boss: issue/void/replace; admin: full access; compliance: read/inventory). Added promo RPCs to Scope Anchors with ADR-024 compliance note. Also corrected cashier source from "Service claim" to "staff_role enum" per ADR-017.
 - **2025-12-25**: Added Multi-Tenancy Storage Model section (ADR-023). Official stance: Pool Primary; Silo Optional.

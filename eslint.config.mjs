@@ -5,11 +5,13 @@ import { FlatCompat } from '@eslint/eslintrc';
 
 import dtoColumnAllowlist from './.eslint-rules/dto-column-allowlist.js';
 import noCrossContextDbImports from './.eslint-rules/no-cross-context-db-imports.js';
+import noDirectTemplate2bDml from './.eslint-rules/no-direct-template2b-dml.js';
 import noDtoTypeAssertions from './.eslint-rules/no-dto-type-assertions.js';
 import noHeaderCasinoContext from './.eslint-rules/no-header-casino-context.js';
 import noManualDTOInterfaces from './.eslint-rules/no-manual-dto-interfaces.js';
 import noReturnTypeInference from './.eslint-rules/no-return-type-inference.js';
 import noServiceResultReturn from './.eslint-rules/no-service-result-return.js';
+import noTemporalBypass from './.eslint-rules/no-temporal-bypass.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -58,10 +60,13 @@ const eslintConfig = [
           'dto-column-allowlist': dtoColumnAllowlist,
           'no-dto-type-assertions': noDtoTypeAssertions,
           'no-service-result-return': noServiceResultReturn,
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
         },
       },
     },
     rules: {
+      // ADR-030 D5 (INV-030-7): Ban direct DML against Template 2b tables
+      'custom-rules/no-direct-template2b-dml': 'error',
       // Enable custom rule for ReturnType detection
       'custom-rules/no-return-type-inference': 'error',
       // Enable custom rule for manual DTO prevention (SRM canonical standard)
@@ -84,6 +89,15 @@ const eslintConfig = [
         },
       ],
 
+      // Enforce type assertion style (PRD §3.3)
+      '@typescript-eslint/consistent-type-assertions': [
+        'error',
+        {
+          assertionStyle: 'as',
+          objectLiteralTypeAssertions: 'allow-as-parameter',
+        },
+      ],
+
       // Ban ReturnType inference patterns (PRD §3.3: Ban ReturnType<typeof createXService>)
       // NOTE: DTO interface checks moved to custom-rules/no-manual-dto-interfaces.js
       // which supports RPC response exceptions via JSDoc annotations
@@ -96,7 +110,23 @@ const eslintConfig = [
           message:
             'ANTI-PATTERN: ReturnType<typeof ...> is banned in service exports (PRD §3.3). Define explicit interface: export interface XService { methodName(): ReturnType }',
         },
+        {
+          // Ban direct typeof createXService inference
+          selector: 'TSTypeQuery[exprName.name=/^create.*Service$/]',
+          message:
+            'ANTI-PATTERN: Direct typeof inference for services is banned. Define explicit interfaces.',
+        },
+        {
+          // Ban class-based services (Error subclasses are exempt)
+          selector: 'ClassDeclaration:not([superClass.name="Error"])',
+          message:
+            'ANTI-PATTERN: Class-based services are banned (PRD §3.3). Use functional factories instead.',
+        },
       ],
+
+      // Enforce named exports only in services (no default exports)
+      'import/no-default-export': 'error',
+      'import/prefer-default-export': 'off',
 
       // Ban @deprecated code patterns
       'no-warning-comments': [
@@ -121,6 +151,27 @@ const eslintConfig = [
       'no-console': 'warn',
     },
   },
+  // Realtime services: ban global managers and singletons
+  {
+    files: ['services/**/realtime*.ts', 'services/**/subscriptions*.ts'],
+    ignores: ['**/*.test.ts', '**/*.spec.ts'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector:
+            'VariableDeclaration[kind="const"] > VariableDeclarator[id.name=/.*Manager$/]',
+          message:
+            'Ban global real-time managers. Use hook-scoped subscriptions instead.',
+        },
+        {
+          selector: 'CallExpression[callee.property.name="singleton"]',
+          message:
+            'No singleton patterns in real-time services. Each hook manages its own subscription.',
+        },
+      ],
+    },
+  },
   // API Routes security configuration - V4 FIX (WORKFLOW-PRD-002)
   {
     files: ['app/api/**/*.ts', 'app/actions/**/*.ts', 'pages/api/**/*.ts'],
@@ -129,12 +180,15 @@ const eslintConfig = [
       'security-rules': {
         rules: {
           'no-header-casino-context': noHeaderCasinoContext,
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
         },
       },
     },
     rules: {
       // V4 FIX: Prevent casino context from headers - security vulnerability
       'security-rules/no-header-casino-context': 'error',
+      // ADR-030 D5 (INV-030-7): Ban direct DML against Template 2b tables
+      'security-rules/no-direct-template2b-dml': 'error',
       // SEC-001: Block service client in production API paths (bypasses RLS)
       'no-restricted-imports': [
         'error',
@@ -148,6 +202,65 @@ const eslintConfig = [
           ],
         },
       ],
+    },
+  },
+  // ==========================================================================
+  // ADR-034: RLS Write-Path enforcement for server actions & lib paths
+  // Prevents PostgREST DML against Category A tables outside services/ and app/api/
+  // Covers: app/**/_actions.ts, app/**/actions.ts, lib/**/*.ts
+  // ==========================================================================
+  {
+    files: ['app/**/_actions.ts', 'app/**/actions.ts', 'lib/**/*.ts'],
+    ignores: [
+      'app/api/**', // Already covered by security-rules block above
+      'app/actions/**', // Already covered by security-rules block above
+      '**/__tests__/**',
+      '**/*.test.ts',
+      '**/*.spec.ts',
+      'lib/supabase/service.ts', // Service client definition itself
+    ],
+    plugins: {
+      'adr034-rules': {
+        rules: {
+          'no-direct-template2b-dml': noDirectTemplate2bDml,
+        },
+      },
+    },
+    rules: {
+      // ADR-034: Ban direct DML against Category A tables in server actions and lib
+      'adr034-rules/no-direct-template2b-dml': 'error',
+    },
+  },
+  // ==========================================================================
+  // TEMP-003 / PRD-027: Temporal governance enforcement
+  // Prevents JS temporal bypass patterns in query paths (services/, app/, hooks/)
+  // ==========================================================================
+  {
+    files: [
+      'services/**/*.ts',
+      'services/**/*.tsx',
+      'app/**/*.ts',
+      'app/**/*.tsx',
+      'hooks/**/*.ts',
+      'hooks/**/*.tsx',
+    ],
+    ignores: [
+      '**/*.test.ts',
+      '**/*.test.tsx',
+      '**/*.spec.ts',
+      '**/*.spec.tsx',
+      '**/__tests__/**',
+      '**/__mocks__/**',
+    ],
+    plugins: {
+      'temporal-rules': {
+        rules: {
+          'no-temporal-bypass': noTemporalBypass,
+        },
+      },
+    },
+    rules: {
+      'temporal-rules/no-temporal-bypass': 'error',
     },
   },
   // Production paths security - Block service client (SEC-001)
@@ -296,19 +409,7 @@ const eslintConfig = [
       'jsx-a11y/no-static-element-interactions': 'off',
       'react/no-unknown-property': 'off',
       '@next/next/no-img-element': 'off',
-      'prettier/prettier': [
-        'error',
-        {
-          trailingComma: 'all',
-          semi: true,
-          tabWidth: 2,
-          singleQuote: true,
-          printWidth: 80,
-          endOfLine: 'auto',
-          arrowParens: 'always',
-        },
-        { usePrettierrc: false },
-      ],
+      'prettier/prettier': 'error',
     },
     settings: {
       react: {

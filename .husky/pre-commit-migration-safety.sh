@@ -77,8 +77,8 @@ for FILE in $MIGRATION_FILES; do
   HAS_CREATE_POLICY=$(git diff --cached "$FILE" | grep -c '^+.*CREATE POLICY' || true)
 
   if [ "$HAS_DROP_POLICY" -gt 0 ] || [ "$HAS_CREATE_POLICY" -gt 0 ]; then
-    # Check for review markers
-    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015\|VERIFIED_SAFE\|RLS_REVIEW_COMPLETE' || true)
+    # Check for review markers (ADR-015, ADR-034, or explicit safe markers)
+    HAS_ADR_REFERENCE=$(git diff --cached "$FILE" | grep -c 'ADR-015\|ADR-034\|VERIFIED_SAFE\|RLS_REVIEW_COMPLETE' || true)
     HAS_MIGRATION_HEADER=$(git diff --cached "$FILE" | grep -c '^+-- Migration:\|^+-- Description:\|^+-- Reference:' || true)
 
     if [ "$HAS_ADR_REFERENCE" -eq 0 ] || [ "$HAS_MIGRATION_HEADER" -lt 2 ]; then
@@ -142,7 +142,12 @@ for FILE in $MIGRATION_FILES; do
         echo "  • SET LOCAL doesn't persist across pooled connections"
         echo "  • Causes RLS bypass or access denial errors"
         echo ""
-        echo "REQUIRED PATTERN (ADR-015 Hybrid):"
+        echo "ADR-034 POSTURE CHECK:"
+        echo "  • Category A tables: session-var-only is CORRECT (RPC-only writes)"
+        echo "  • Category B tables: MUST use COALESCE hybrid pattern"
+        echo "  • Verify table category in config/rls-category-a-tables.json"
+        echo ""
+        echo "REQUIRED PATTERN for Category B (ADR-015 Hybrid):"
         echo "  casino_id = COALESCE("
         echo "    NULLIF(current_setting('app.casino_id', true), '')::uuid,"
         echo "    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid"
@@ -150,7 +155,7 @@ for FILE in $MIGRATION_FILES; do
         echo ""
         echo "REFERENCE:"
         echo "  • ADR-015: docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md"
-        echo "  • Example: supabase/migrations/20251209183401_adr015_hybrid_rls_policies.sql"
+        echo "  • ADR-034: docs/80-adrs/ADR-034-RLS-write-path-compatibility-and-enforcement.md"
         echo ""
         WARNINGS_FOUND=1
       fi

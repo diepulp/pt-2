@@ -9,19 +9,19 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
 import type {
   RatingSlipDTO,
   RatingSlipListFilters,
   RatingSlipWithPausesDTO,
-} from "@/services/rating-slip/dtos";
+} from '@/services/rating-slip/dtos';
 import {
   getRatingSlip,
   getRatingSlipDuration,
   listRatingSlips,
-} from "@/services/rating-slip/http";
-import { ratingSlipKeys } from "@/services/rating-slip/keys";
+} from '@/services/rating-slip/http';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
 
 /**
  * Fetches a single rating slip by ID with pause history.
@@ -58,7 +58,7 @@ export function useRatingSlipList(filters?: RatingSlipListFilters) {
  */
 export function useRatingSlipsForTable(
   tableId: string | undefined,
-  filters?: Omit<RatingSlipListFilters, "table_id" | "visit_id">,
+  filters?: Omit<RatingSlipListFilters, 'table_id' | 'visit_id'>,
 ) {
   return useQuery({
     queryKey: ratingSlipKeys.forTable(tableId!, filters),

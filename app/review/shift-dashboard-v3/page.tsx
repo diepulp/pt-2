@@ -17,7 +17,7 @@ export default async function ShiftDashboardV3Page() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect('/signin');
   }
 
   return <ShiftDashboardV3 />;

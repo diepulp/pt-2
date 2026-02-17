@@ -339,8 +339,8 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
   INLINE_DTO_VIOLATIONS=""
 
   for file in $STAGED_SERVICE_FILES; do
-    # Skip dtos.ts files (that's where DTOs should be)
-    if echo "$file" | grep -q "/dtos\.ts$"; then
+    # Skip dtos.ts and *-dtos.ts files (that's where DTOs should be)
+    if echo "$file" | grep -qE "[-/]dtos\.ts$"; then
       continue
     fi
 
@@ -359,8 +359,8 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
       continue
     fi
 
-    # Skip schemas.ts (Zod-inferred types are valid co-location)
-    if echo "$file" | grep -q "/schemas\.ts$"; then
+    # Skip schemas.ts and *-schemas.ts (Zod-inferred types are valid co-location)
+    if echo "$file" | grep -qE "[-/]schemas\.ts$"; then
       continue
     fi
 
@@ -494,9 +494,11 @@ fi
 
 # ==============================================================================
 # Check 10: console.* in production paths BANNED (Anti-Patterns §686-705)
+# Excludes test files (__tests__/*.ts, *.test.ts, *.spec.ts)
 # ==============================================================================
 if [ -n "$STAGED_SERVICE_FILES" ]; then
-  CONSOLE_VIOLATIONS=$(echo "$STAGED_SERVICE_FILES" | xargs grep -l "console\.\(log\|error\|warn\|debug\|info\)" 2>/dev/null || true)
+  PRODUCTION_SERVICE_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -v "__tests__/" | grep -v "\.test\.ts$" | grep -v "\.spec\.ts$" || true)
+  CONSOLE_VIOLATIONS=$(echo "$PRODUCTION_SERVICE_FILES" | xargs grep -l "console\.\(log\|error\|warn\|debug\|info\)" 2>/dev/null || true)
 
   if [ -n "$CONSOLE_VIOLATIONS" ]; then
     echo "❌ ANTI-PATTERN: console.* in service files"

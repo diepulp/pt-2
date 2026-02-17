@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+.cache/
 
 # debug
 npm-debug.log*
@@ -49,7 +50,7 @@ next-env.d.ts
 /.validation
 
 # reference
-# /reference-pt-1
+/reference-pt-1
 
 # OpenAPI generated clients
 /generated

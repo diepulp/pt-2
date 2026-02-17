@@ -8,9 +8,11 @@ const mockUseCashObsSummary = jest.fn();
 const mockUseActiveVisitorsSummary = jest.fn();
 
 jest.mock('@/hooks/shift-dashboard', () => ({
-  useShiftDashboardSummary: (...args: unknown[]) => mockUseShiftDashboardSummary(...args),
+  useShiftDashboardSummary: (...args: unknown[]) =>
+    mockUseShiftDashboardSummary(...args),
   useCashObsSummary: (...args: unknown[]) => mockUseCashObsSummary(...args),
-  useActiveVisitorsSummary: (...args: unknown[]) => mockUseActiveVisitorsSummary(...args),
+  useActiveVisitorsSummary: (...args: unknown[]) =>
+    mockUseActiveVisitorsSummary(...args),
   shiftDashboardKeys: {
     root: ['shift-dashboard'],
   },
@@ -35,11 +37,14 @@ jest.mock('@/components/shift-dashboard-v3/charts', () => ({
   ),
 }));
 
-jest.mock('@/components/shift-dashboard-v3/charts/win-loss-trend-chart', () => ({
-  WinLossTrendChart: ({ isLoading }: { isLoading?: boolean }) => (
-    <div data-testid="win-loss-chart">{isLoading ? 'loading' : 'loaded'}</div>
-  ),
-}));
+jest.mock(
+  '@/components/shift-dashboard-v3/charts/win-loss-trend-chart',
+  () => ({
+    WinLossTrendChart: ({ isLoading }: { isLoading?: boolean }) => (
+      <div data-testid="win-loss-chart">{isLoading ? 'loading' : 'loaded'}</div>
+    ),
+  }),
+);
 
 jest.mock('@/components/shift-dashboard-v3/layout', () => ({
   ShiftDashboardLayout: ({ children }: { children: React.ReactNode }) => (
@@ -89,7 +94,9 @@ jest.mock('@/components/shift-dashboard/time-window-selector', () => ({
 }));
 
 jest.mock('@/components/error-boundary', () => ({
-  PanelErrorBoundary: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  PanelErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 const mockSummary = {
@@ -118,13 +125,20 @@ const mockSummary = {
 };
 
 const mockCashObs = {
-  casino: { cash_out_observed_estimate_total: 50000, cash_out_observation_count: 12 },
+  casino: {
+    cash_out_observed_estimate_total: 50000,
+    cash_out_observation_count: 12,
+  },
   pits: [],
   tables: [],
   alerts: [],
 };
 
-const mockVisitors = { rated_count: 45, unrated_count: 12, rated_percentage: 78.9 };
+const mockVisitors = {
+  rated_count: 45,
+  unrated_count: 12,
+  rated_percentage: 78.9,
+};
 
 function setupHooks({
   summaryData = undefined as typeof mockSummary | undefined,
@@ -161,7 +175,11 @@ beforeEach(() => {
 
 describe('ShiftDashboardV3', () => {
   it('renders layout structure', () => {
-    setupHooks({ summaryLoading: true, cashObsLoading: true, visitorsLoading: true });
+    setupHooks({
+      summaryLoading: true,
+      cashObsLoading: true,
+      visitorsLoading: true,
+    });
 
     render(<ShiftDashboardV3 />);
 
@@ -173,7 +191,11 @@ describe('ShiftDashboardV3', () => {
   });
 
   it('passes loading state to child components', () => {
-    setupHooks({ summaryLoading: true, cashObsLoading: true, visitorsLoading: true });
+    setupHooks({
+      summaryLoading: true,
+      cashObsLoading: true,
+      visitorsLoading: true,
+    });
 
     render(<ShiftDashboardV3 />);
 
@@ -200,7 +222,11 @@ describe('ShiftDashboardV3', () => {
   });
 
   it('renders dashboard title', () => {
-    setupHooks({ summaryLoading: true, cashObsLoading: true, visitorsLoading: true });
+    setupHooks({
+      summaryLoading: true,
+      cashObsLoading: true,
+      visitorsLoading: true,
+    });
 
     render(<ShiftDashboardV3 />);
 
@@ -208,7 +234,11 @@ describe('ShiftDashboardV3', () => {
   });
 
   it('renders time window selector', () => {
-    setupHooks({ summaryLoading: true, cashObsLoading: true, visitorsLoading: true });
+    setupHooks({
+      summaryLoading: true,
+      cashObsLoading: true,
+      visitorsLoading: true,
+    });
 
     render(<ShiftDashboardV3 />);
 
@@ -228,7 +258,11 @@ describe('ShiftDashboardV3', () => {
   });
 
   it('does not render coverage bar when no casino data', () => {
-    setupHooks({ summaryLoading: true, cashObsLoading: true, visitorsLoading: true });
+    setupHooks({
+      summaryLoading: true,
+      cashObsLoading: true,
+      visitorsLoading: true,
+    });
 
     render(<ShiftDashboardV3 />);
 

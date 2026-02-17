@@ -18,7 +18,10 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015
 
 **Canonical References** (SDLC Taxonomy Peers):
 - **Contract Authority**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.11.0)
-- **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns)
+- **Type System**: `docs/25-api-data/DTO_CANONICAL_STANDARD.md` (Mandatory DTO patterns, JSONB boundary, param normalization)
+- **Type System Anti-Patterns**: `docs/70-governance/anti-patterns/04-type-system.md` (Cast bans, test mock typing)
+- **Type Staleness Protocol**: `docs/issues/dual-type-system/DB-CONTRACT-STALENESS-PROTOCOL.md` (G1–G6 guardrails)
+- **JSONB Boundary**: `lib/json/narrows.ts` (Canonical narrowing helpers: `narrowJsonRecord`, `narrowRpcJson`)
 - **Security/RLS**: `docs/30-security/SEC-001-rls-policy-matrix.md` (Casino-scoped RLS)
 - **RLS Pooling**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (JWT claims, Pattern C hybrid)
 - **Edge Transport**: `docs/20-architecture/EDGE_TRANSPORT_POLICY.md` (withServerAction middleware)

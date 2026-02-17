@@ -17,13 +17,20 @@ import { reconcileStaffClaims } from '@/lib/supabase/claims-reconcile';
 import type { Database } from '@/types/database.types';
 
 import type {
+  AcceptInviteInput,
+  AcceptInviteResult,
+  BootstrapCasinoInput,
+  BootstrapCasinoResult,
   CasinoDTO,
   CasinoListFilters,
   CasinoSettingsDTO,
   CasinoStaffFilters,
   CreateCasinoDTO,
+  CreateInviteInput,
+  CreateInviteResult,
   CreateStaffDTO,
   StaffDTO,
+  StaffInviteDTO,
   UpdateCasinoDTO,
   UpdateCasinoSettingsDTO,
   UpdateStaffDTO,
@@ -37,6 +44,7 @@ import {
   toStaffDTO,
   toStaffDTOList,
   toStaffDTOOrNull,
+  toStaffInviteDTOList,
 } from './mappers';
 import {
   CASINO_SELECT_PUBLIC,
@@ -322,6 +330,7 @@ export async function createStaff(
     throw new DomainError('STAFF_ROLE_CONSTRAINT_VIOLATION');
   }
 
+  // eslint-disable-next-line custom-rules/no-direct-template2b-dml -- INV-030-7 exception: service_role client bypasses RLS (admin staff management)
   const { data, error } = await supabase
     .from('staff')
     .insert({
@@ -399,6 +408,7 @@ export async function updateStaff(
   if (input.user_id !== undefined) updateData.user_id = input.user_id;
   if (input.status !== undefined) updateData.status = input.status;
 
+  // eslint-disable-next-line custom-rules/no-direct-template2b-dml -- INV-030-7 exception: service_role client bypasses RLS (admin staff management)
   const { data, error } = await supabase
     .from('staff')
     .update(updateData)
@@ -425,7 +435,10 @@ export async function updateStaff(
   // AUTH-HARDENING WS3: Deterministic claims reconciliation — errors propagate
   await reconcileStaffClaims({
     staffId: data.id,
-    userId: input.user_id !== undefined ? (input.user_id ?? null) : (currentRow.user_id ?? null),
+    userId:
+      input.user_id !== undefined
+        ? (input.user_id ?? null)
+        : (currentRow.user_id ?? null),
     casinoId: data.casino_id ?? currentRow.casino_id,
     staffRole: data.role,
     currentStatus: input.status ?? currentRow.status,
@@ -445,12 +458,14 @@ export async function updateStaff(
  * SLAD ownership: CasinoService owns player_casino table per bounded context.
  * This is the canonical enrollment operation.
  *
+ * PRD-034: Uses SECURITY DEFINER RPC instead of PostgREST DML on Category A
+ * table `player_casino`. Casino ID and actor ID derived from session context
+ * (ADR-024 INV-8).
+ *
  * Idempotent - returns existing enrollment if already enrolled.
  *
  * @param supabase - Supabase client with RLS context
  * @param playerId - Player identifier
- * @param casinoId - Casino identifier
- * @param enrolledBy - Staff member who enrolled the player
  * @returns Enrollment DTO
  *
  * @throws {DomainError} PLAYER_NOT_FOUND - Player doesn't exist
@@ -462,27 +477,17 @@ export async function updateStaff(
 export async function enrollPlayer(
   supabase: SupabaseClient<Database>,
   playerId: string,
-  casinoId: string,
-  enrolledBy: string,
 ): Promise<PlayerEnrollmentDTO> {
-  // Step 1: Create player_casino enrollment
   const { data, error } = await supabase
-    .from('player_casino')
-    .upsert(
-      {
-        player_id: playerId,
-        casino_id: casinoId,
-        enrolled_by: enrolledBy,
-        status: 'active',
-      },
-      {
-        onConflict: 'player_id,casino_id',
-      },
-    )
-    .select('player_id, casino_id, status, enrolled_at, enrolled_by')
+    .rpc('rpc_enroll_player', {
+      p_player_id: playerId,
+    })
     .single();
 
   if (error) {
+    if (error.code === 'P0002') {
+      throw new DomainError('PLAYER_NOT_FOUND', 'Player does not exist');
+    }
     if (error.code === '23503') {
       throw new DomainError('PLAYER_NOT_FOUND', 'Player does not exist');
     }
@@ -520,4 +525,160 @@ function toPlayerEnrollmentDTO(row: {
     enrolled_at: row.enrolled_at,
     enrolled_by: row.enrolled_by,
   };
+}
+
+// === Onboarding (PRD-025) ===
+
+/**
+ * Bootstrap a new casino tenant — atomic casino + settings + admin staff.
+ * Calls reconcileStaffClaims after success (ADR-030 D2).
+ */
+export async function bootstrapCasino(
+  supabase: SupabaseClient<Database>,
+  input: BootstrapCasinoInput,
+): Promise<BootstrapCasinoResult> {
+  const { data, error } = await supabase.rpc('rpc_bootstrap_casino', {
+    p_casino_name: input.casino_name,
+    p_timezone: input.timezone,
+    p_gaming_day_start: input.gaming_day_start,
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new DomainError('STAFF_ALREADY_BOUND');
+    }
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new DomainError('INTERNAL_ERROR', 'Bootstrap RPC returned no data');
+  }
+
+  const result: BootstrapCasinoResult = {
+    casino_id: row.casino_id,
+    staff_id: row.staff_id,
+    staff_role: row.staff_role,
+  };
+
+  // Sync JWT claims for the new admin (ADR-030 D2)
+  await reconcileStaffClaims({
+    staffId: result.staff_id,
+    userId: (await supabase.auth.getUser()).data.user?.id ?? null,
+    casinoId: result.casino_id,
+    staffRole: result.staff_role,
+    currentStatus: 'active',
+  });
+
+  return result;
+}
+
+/**
+ * Create a staff invite (admin-only).
+ * RPC handles context derivation, admin validation, and token hashing.
+ */
+export async function createStaffInvite(
+  supabase: SupabaseClient<Database>,
+  input: CreateInviteInput,
+): Promise<CreateInviteResult> {
+  const { data, error } = await supabase.rpc('rpc_create_staff_invite', {
+    p_email: input.email,
+    p_role: input.role,
+  });
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new DomainError('INVITE_ALREADY_EXISTS');
+    }
+    if (error.code === 'P0001') {
+      throw new DomainError('FORBIDDEN');
+    }
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'Create invite RPC returned no data',
+    );
+  }
+
+  return {
+    invite_id: row.invite_id,
+    raw_token: row.raw_token,
+    expires_at: row.expires_at,
+  };
+}
+
+/**
+ * Accept a staff invite — creates staff binding.
+ * Calls reconcileStaffClaims after success (ADR-030 D2).
+ */
+export async function acceptStaffInvite(
+  supabase: SupabaseClient<Database>,
+  input: AcceptInviteInput,
+): Promise<AcceptInviteResult> {
+  const { data, error } = await supabase.rpc('rpc_accept_staff_invite', {
+    p_token: input.token,
+  });
+
+  if (error) {
+    if (error.code === 'P0002') {
+      throw new DomainError('INVITE_NOT_FOUND');
+    }
+    if (error.code === 'P0003') {
+      throw new DomainError('INVITE_EXPIRED');
+    }
+    if (error.code === '23505') {
+      throw new DomainError('STAFF_ALREADY_BOUND');
+    }
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  }
+
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'Accept invite RPC returned no data',
+    );
+  }
+
+  const result: AcceptInviteResult = {
+    staff_id: row.staff_id,
+    casino_id: row.casino_id,
+    staff_role: row.staff_role,
+  };
+
+  // Sync JWT claims for the new staff member (ADR-030 D2)
+  await reconcileStaffClaims({
+    staffId: result.staff_id,
+    userId: (await supabase.auth.getUser()).data.user?.id ?? null,
+    casinoId: result.casino_id,
+    staffRole: result.staff_role,
+    currentStatus: 'active',
+  });
+
+  return result;
+}
+
+/**
+ * List staff invites for the current casino (admin-only, RLS-scoped).
+ * Excludes token_hash — column-level REVOKE prevents reading it anyway.
+ */
+export async function listStaffInvites(
+  supabase: SupabaseClient<Database>,
+): Promise<StaffInviteDTO[]> {
+  const { data, error } = await supabase
+    .from('staff_invite')
+    .select(
+      'id, casino_id, email, staff_role, expires_at, accepted_at, created_at',
+    )
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  }
+
+  return toStaffInviteDTOList(data ?? []);
 }

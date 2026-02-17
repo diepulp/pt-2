@@ -90,22 +90,22 @@ describe('isSnapshotStale', () => {
 
   it('returns false when closing is within 30 minutes of window end', () => {
     // 5 minutes before end
-    expect(
-      isSnapshotStale('2026-01-15T15:55:00Z', windowEnd, 'closing'),
-    ).toBe(false);
+    expect(isSnapshotStale('2026-01-15T15:55:00Z', windowEnd, 'closing')).toBe(
+      false,
+    );
   });
 
   it('returns false at exactly 30 minutes from window end', () => {
-    expect(
-      isSnapshotStale('2026-01-15T15:30:00Z', windowEnd, 'closing'),
-    ).toBe(false);
+    expect(isSnapshotStale('2026-01-15T15:30:00Z', windowEnd, 'closing')).toBe(
+      false,
+    );
   });
 
   it('returns true when closing is >30 minutes before window end', () => {
     // 31 minutes before end
-    expect(
-      isSnapshotStale('2026-01-15T15:29:00Z', windowEnd, 'closing'),
-    ).toBe(true);
+    expect(isSnapshotStale('2026-01-15T15:29:00Z', windowEnd, 'closing')).toBe(
+      true,
+    );
   });
 
   it('returns true for opening taken hours after window start', () => {

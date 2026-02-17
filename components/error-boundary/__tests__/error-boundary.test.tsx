@@ -19,9 +19,8 @@ import { PanelErrorBoundary } from '../panel-error-boundary';
 // === Mocks ===
 
 const mockLogError = jest.fn();
-const mockGetErrorMessage = jest.fn(
-  (error: unknown) =>
-    error instanceof Error ? error.message : 'An unexpected error occurred',
+const mockGetErrorMessage = jest.fn((error: unknown) =>
+  error instanceof Error ? error.message : 'An unexpected error occurred',
 );
 const mockIsRetryableError = jest.fn(() => false);
 
@@ -53,7 +52,7 @@ function GoodChild() {
 // Suppress React error boundary console noise in tests
 const originalConsoleError = console.error;
 beforeAll(() => {
-  console.error = jest.fn()
+  console.error = jest.fn();
 });
 afterAll(() => {
   console.error = originalConsoleError;
@@ -233,9 +232,7 @@ describe('Player360Error (error.tsx)', () => {
   let Player360Error: typeof import('@/app/(dashboard)/players/[[...playerId]]/error').default;
 
   beforeAll(async () => {
-    const mod = await import(
-      '@/app/(dashboard)/players/[[...playerId]]/error'
-    );
+    const mod = await import('@/app/(dashboard)/players/[[...playerId]]/error');
     Player360Error = mod.default;
   });
 

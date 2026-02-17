@@ -81,7 +81,13 @@ export async function syncUserRLSClaims(
     );
   }
 
-  console.info('[CLAIMS] synced: userId=%s staffId=%s casinoId=%s role=%s', userId, claims.staff_id, claims.casino_id, claims.staff_role);
+  console.info(
+    '[CLAIMS] synced: userId=%s staffId=%s casinoId=%s role=%s',
+    userId,
+    claims.staff_id,
+    claims.casino_id,
+    claims.staff_role,
+  );
 }
 
 /**

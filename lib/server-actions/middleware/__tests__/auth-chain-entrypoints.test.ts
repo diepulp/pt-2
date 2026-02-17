@@ -11,8 +11,9 @@
  */
 
 import { readFileSync } from 'fs';
-import { globSync } from 'glob';
 import path from 'path';
+
+import { globSync } from 'glob';
 
 const PROJECT_ROOT = path.resolve(__dirname, '../../../../');
 
@@ -24,30 +25,37 @@ const AUTH_CHAIN_ALLOWLIST: Record<string, string> = {
   // Public Supabase auth callback — no user session exists yet
   'app/(public)/auth/confirm/route.ts': 'Public auth OTP verification callback',
   // 308 redirect only — no data access, no auth needed
-  'app/(dashboard)/players/[playerId]/timeline/route.ts': 'HTTP 308 redirect, no data access',
+  'app/(dashboard)/players/[playerId]/timeline/route.ts':
+    'HTTP 308 redirect, no data access',
   // Legacy routes using direct Supabase client (RLS enforced at DB layer).
   // TODO(AUTH-HARDENING v0.2): Migrate to withServerAction compositor pattern.
-  'app/api/v1/casinos/[casinoId]/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/casinos/[casinoId]/staff/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/casinos/[casinoId]/settings/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/finance/transactions/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/finance/transactions/[transactionId]/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/loyalty/balances/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
-  'app/api/v1/loyalty/mid-session-reward/route.ts': 'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/casinos/[casinoId]/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/casinos/[casinoId]/staff/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/casinos/[casinoId]/settings/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/finance/transactions/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/finance/transactions/[transactionId]/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/loyalty/balances/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  'app/api/v1/loyalty/mid-session-reward/route.ts':
+    'Legacy route — RLS-only, no compositor (v0.2 migration)',
 };
 
 /** Patterns indicating the file uses the auth middleware chain */
-const AUTH_CHAIN_PATTERNS = [
-  /withServerAction\s*[(<]/,
-  /withAuth\s*[(<]/,
-];
+const AUTH_CHAIN_PATTERNS = [/withServerAction\s*[(<]/, /withAuth\s*[(<]/];
 
 function isServerAction(content: string): boolean {
   return content.includes("'use server'") || content.includes('"use server"');
 }
 
 function isRouteHandler(content: string): boolean {
-  return /export\s+async\s+function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(/.test(content);
+  return /export\s+async\s+function\s+(GET|POST|PUT|DELETE|PATCH)\s*\(/.test(
+    content,
+  );
 }
 
 function usesAuthChain(content: string): boolean {
@@ -85,8 +93,8 @@ describe('Auth chain entrypoint coverage', () => {
     if (!hasAuthChain) {
       throw new Error(
         `${relativePath} is a production entrypoint (server action or route handler) ` +
-        `but does NOT use withServerAction() or withAuth(). ` +
-        `Either add the auth chain or add to AUTH_CHAIN_ALLOWLIST with justification.`,
+          `but does NOT use withServerAction() or withAuth(). ` +
+          `Either add the auth chain or add to AUTH_CHAIN_ALLOWLIST with justification.`,
       );
     }
   });

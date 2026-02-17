@@ -22,7 +22,8 @@ export type InfrastructureErrorCode =
   | 'FORBIDDEN'
   | 'INTERNAL_ERROR'
   | 'RATE_LIMIT_EXCEEDED'
-  | 'IDEMPOTENCY_CONFLICT';
+  | 'IDEMPOTENCY_CONFLICT'
+  | 'RLS_WRITE_DENIED';
 
 // ============================================================================
 // VISIT DOMAIN ERRORS
@@ -84,7 +85,9 @@ export type LoyaltyErrorCode =
   | 'INVALID_COUPON_STATUS'
   | 'ANONYMOUS_ISSUANCE_DISABLED'
   | 'DUPLICATE_VALIDATION_NUMBER'
-  | 'DUPLICATE_ENTRY';
+  | 'DUPLICATE_ENTRY'
+  // Reward Catalog Errors (ADR-033)
+  | 'REWARD_NOT_FOUND';
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: 'Insufficient loyalty points balance',
@@ -108,6 +111,8 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   DUPLICATE_VALIDATION_NUMBER:
     'A coupon with this validation number already exists',
   DUPLICATE_ENTRY: 'Duplicate entry detected',
+  // Reward Catalog Errors (ADR-033)
+  REWARD_NOT_FOUND: 'Reward catalog entry not found',
 };
 
 // ============================================================================
@@ -269,7 +274,12 @@ export type CasinoErrorCode =
   | 'STAFF_UNAUTHORIZED'
   | 'STAFF_CASINO_MISMATCH'
   | 'STAFF_ROLE_CONSTRAINT_VIOLATION'
-  | 'STAFF_ALREADY_EXISTS';
+  | 'STAFF_ALREADY_EXISTS'
+  // Onboarding (PRD-025)
+  | 'STAFF_ALREADY_BOUND'
+  | 'INVITE_ALREADY_EXISTS'
+  | 'INVITE_NOT_FOUND'
+  | 'INVITE_EXPIRED';
 
 export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   CASINO_NOT_FOUND: 'Casino not found',
@@ -281,6 +291,11 @@ export const CASINO_ERROR_MESSAGES: Record<CasinoErrorCode, string> = {
   STAFF_ROLE_CONSTRAINT_VIOLATION:
     'Staff role constraint violation: dealer cannot have user_id; pit_boss/admin must have user_id',
   STAFF_ALREADY_EXISTS: 'Staff member already exists',
+  // Onboarding (PRD-025)
+  STAFF_ALREADY_BOUND: 'You already have an active casino.',
+  INVITE_ALREADY_EXISTS: 'An active invite already exists for this email.',
+  INVITE_NOT_FOUND: 'This invite link is invalid.',
+  INVITE_EXPIRED: 'This invite has expired.',
 };
 
 // ============================================================================

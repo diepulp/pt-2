@@ -23,6 +23,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+// eslint-disable-next-line no-restricted-imports -- Integration test requires direct Supabase client
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { createStaff, updateStaff } from '../../../services/casino/crud';

@@ -23,6 +23,8 @@ import { player360DashboardKeys } from '@/services/player360-dashboard/keys';
  * Options for player eligibility query.
  */
 export interface UsePlayerEligibilityOptions {
+  /** Override gaming day context (YYYY-MM-DD) */
+  gamingDay?: string;
   /** Enable/disable the query (default: true) */
   enabled?: boolean;
   /** Custom stale time in milliseconds (default: 30s) */
@@ -69,15 +71,15 @@ export function usePlayerEligibility(
   playerId: string,
   options: UsePlayerEligibilityOptions = {},
 ) {
-  const { enabled = true, staleTime = 30_000 } = options;
+  const { gamingDay, enabled = true, staleTime = 30_000 } = options;
 
   const supabase = createBrowserComponentClient();
 
   return useQuery({
     // Use summary query key - data will be shared/cached with usePlayerSummary
-    queryKey: player360DashboardKeys.summary({ playerId }),
-    queryFn: () => getPlayerSummary(supabase, playerId),
-    enabled: enabled && !!playerId,
+    queryKey: player360DashboardKeys.summary({ playerId, gamingDay }),
+    queryFn: () => getPlayerSummary(supabase, playerId, gamingDay!),
+    enabled: enabled && !!playerId && !!gamingDay,
     staleTime,
     // Select only the eligibility portion
     select: (data): RewardsEligibilityDTO => data.rewardsEligibility,

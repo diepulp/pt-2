@@ -10,22 +10,22 @@
  * @see EXECUTION-SPEC-PRD-006.md WS4
  */
 
-"use client";
+'use client';
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Pause, Play, X, Clock, User, AlertCircle } from "lucide-react";
-import * as React from "react";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { Pause, Play, X, Clock, User, AlertCircle } from 'lucide-react';
+import * as React from 'react';
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useActiveSlipsForDashboard, dashboardKeys } from "@/hooks/dashboard";
-import { cn } from "@/lib/utils";
-import type { RatingSlipWithPlayerDTO } from "@/services/rating-slip/dtos";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useActiveSlipsForDashboard, dashboardKeys } from '@/hooks/dashboard';
+import { cn } from '@/lib/utils';
+import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 import {
   pauseRatingSlip,
   resumeRatingSlip,
   closeRatingSlip,
-} from "@/services/rating-slip/http";
+} from '@/services/rating-slip/http';
 
 interface ActiveSlipsPanelProps {
   /** Selected table ID */
@@ -60,9 +60,9 @@ function formatDuration(startTime: string, endTime?: string | null): string {
  * Format time from ISO string to HH:MM format.
  */
 function formatTime(isoString: string): string {
-  return new Date(isoString).toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
+  return new Date(isoString).toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   });
 }
@@ -135,16 +135,16 @@ export function ActiveSlipsPanel({
   // Handle slip action
   const handleAction = (
     slip: RatingSlipWithPlayerDTO,
-    action: "pause" | "resume" | "close",
+    action: 'pause' | 'resume' | 'close',
   ) => {
     switch (action) {
-      case "pause":
+      case 'pause':
         pauseMutation.mutate(slip.id);
         break;
-      case "resume":
+      case 'resume':
         resumeMutation.mutate(slip.id);
         break;
-      case "close":
+      case 'close':
         closeMutation.mutate(slip.id);
         break;
     }
@@ -157,7 +157,7 @@ export function ActiveSlipsPanel({
         <CardContent className="flex flex-col items-center justify-center py-12">
           <div
             className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             Select a Table
           </div>
@@ -176,7 +176,7 @@ export function ActiveSlipsPanel({
         <CardHeader className="pb-3">
           <CardTitle
             className="text-sm font-bold uppercase tracking-widest"
-            style={{ fontFamily: "monospace" }}
+            style={{ fontFamily: 'monospace' }}
           >
             Active Slips
           </CardTitle>
@@ -204,7 +204,7 @@ export function ActiveSlipsPanel({
           <div>
             <div
               className="text-xs font-bold uppercase tracking-widest text-destructive"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               Error Loading Slips
             </div>
@@ -222,7 +222,7 @@ export function ActiveSlipsPanel({
       <CardHeader className="flex flex-row items-center justify-between pb-3">
         <CardTitle
           className="text-sm font-bold uppercase tracking-widest"
-          style={{ fontFamily: "monospace" }}
+          style={{ fontFamily: 'monospace' }}
         >
           Active Slips ({slips.length})
         </CardTitle>
@@ -242,7 +242,7 @@ export function ActiveSlipsPanel({
           <div className="flex flex-col items-center justify-center py-8 text-center">
             <div
               className="text-xs font-bold uppercase tracking-widest text-muted-foreground/70"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
               No Active Slips
             </div>
@@ -276,33 +276,33 @@ export function ActiveSlipsPanel({
 
 interface SlipCardProps {
   slip: RatingSlipWithPlayerDTO;
-  onAction: (action: "pause" | "resume" | "close") => void;
+  onAction: (action: 'pause' | 'resume' | 'close') => void;
   onSlipClick?: (slipId: string) => void;
   isLoading: boolean;
 }
 
 function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
-  const isPaused = slip.status === "paused";
-  const isOpen = slip.status === "open";
+  const isPaused = slip.status === 'paused';
+  const isOpen = slip.status === 'open';
 
   return (
     <div
       className={cn(
-        "group relative rounded-lg border-2 p-3 transition-all",
+        'group relative rounded-lg border-2 p-3 transition-all',
         isPaused
-          ? "border-yellow-500/50 bg-yellow-500/5"
-          : "border-accent/30 bg-accent/5 hover:border-accent/50",
-        onSlipClick && "cursor-pointer",
+          ? 'border-yellow-500/50 bg-yellow-500/5'
+          : 'border-accent/30 bg-accent/5 hover:border-accent/50',
+        onSlipClick && 'cursor-pointer',
       )}
       onClick={() => onSlipClick?.(slip.id)}
     >
       {/* Status indicator */}
       <div
         className={cn(
-          "absolute right-3 top-3 h-2 w-2 rounded-full",
+          'absolute right-3 top-3 h-2 w-2 rounded-full',
           isPaused
-            ? "bg-yellow-500 animate-pulse"
-            : "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]",
+            ? 'bg-yellow-500 animate-pulse'
+            : 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]',
         )}
       />
 
@@ -314,9 +314,9 @@ function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
             <User className="h-3.5 w-3.5 text-muted-foreground" />
             <span
               className="text-sm font-bold"
-              style={{ fontFamily: "monospace" }}
+              style={{ fontFamily: 'monospace' }}
             >
-              Seat {slip.seat_number ?? "—"}
+              Seat {slip.seat_number ?? '—'}
             </span>
             {isPaused && (
               <span className="rounded bg-yellow-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-yellow-600 dark:text-yellow-400">
@@ -351,7 +351,7 @@ function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              onAction("pause");
+              onAction('pause');
             }}
             disabled={isLoading}
             className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider"
@@ -366,7 +366,7 @@ function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
             size="sm"
             onClick={(e) => {
               e.stopPropagation();
-              onAction("resume");
+              onAction('resume');
             }}
             disabled={isLoading}
             className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-green-600 hover:text-green-600 dark:text-green-400"
@@ -380,7 +380,7 @@ function SlipCard({ slip, onAction, onSlipClick, isLoading }: SlipCardProps) {
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            onAction("close");
+            onAction('close');
           }}
           disabled={isLoading}
           className="h-7 gap-1.5 text-xs font-semibold uppercase tracking-wider text-destructive hover:text-destructive"

@@ -125,7 +125,118 @@ casino_id = NULLIF(current_setting('app.casino_id', true), '')::uuid
 
 `SELECT` policies retain the COALESCE fallback for now (v0.1 scope) to avoid widespread breakage. Application-layer logging is added to detect when the JWT branch is exercised during reads, providing data for a future v0.2 tightening.
 
-**Tables affected first (highest sensitivity):** `staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+**Tables affected first (highest sensitivity):** `staff`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+
+> **Note (PRD-034):** `player` was removed from the D4 critical list. Its write policies use COALESCE (PostgREST-compatible), and `updatePlayer()` uses PostgREST DML. Tightening would break this path without a compensating RPC migration. `player` remains Category B.
+
+#### Category A Table Registry (Machine-Readable)
+
+The following block is the canonical source of truth for Category A tables. It is consumed by `scripts/generate-category-a-config.ts` to produce `config/rls-category-a-tables.json`. Do not edit manually — update this list and run `npm run generate:category-a`.
+
+<!-- CATEGORY-A-REGISTRY -->
+- `staff`
+- `staff_pin_attempts`
+- `staff_invite`
+- `player_casino`
+<!-- /CATEGORY-A-REGISTRY -->
+
+### D5: Template 2b Writes Must Use Self-Contained RPCs (Transport Constraint)
+
+**Status:** Accepted
+**Date:** 2026-02-10
+**Trigger:** ISSUE-SET-PIN-SILENT-RLS-FAILURE — `setPinAction` silently wrote 0 rows against a Template 2b policy
+
+D4 specifies **what** the RLS policy must look like (no COALESCE fallback). D5 specifies **how** application code must interact with it.
+
+#### The Transport Problem
+
+`set_rls_context_from_staff()` uses `set_config(name, val, true)` — **transaction-local**. The `withServerAction` middleware calls this RPC as one PostgREST HTTP request (Transaction A). The handler's `.from(table).update()` is a separate HTTP request (Transaction B). Session vars from Transaction A do not exist in Transaction B.
+
+```
+withServerAction middleware chain:
+
+  withRLS → supabase.rpc('set_rls_context_from_staff')  ← HTTP request #1, Transaction A
+    └─ SET LOCAL app.casino_id = '...'                   ← transaction-local, lost on commit
+
+  handler → supabase.from('staff').update({ pin_hash })  ← HTTP request #2, Transaction B
+    └─ RLS evaluates: casino_id = current_setting('app.casino_id') → NULL
+    └─ 0 rows match. PostgREST returns success. Nothing written.
+```
+
+Template 2b policies evaluate `casino_id = NULL` → always false → UPDATE/INSERT/DELETE silently affects 0 rows → action returns `ok: true` with no data persisted.
+
+#### The Rule
+
+**If an RLS policy depends on `current_setting('app.*')` with no JWT COALESCE fallback (Template 2b), then:**
+
+1. **PROHIBITED:** `.from(table).insert()`, `.from(table).update()`, `.from(table).delete()` in application code (server actions, services, route handlers). These are separate PostgREST transactions — session vars are not available.
+
+2. **REQUIRED:** All writes MUST go through a SECURITY DEFINER RPC (`rpc_*`) that calls `set_rls_context_from_staff()` as its first statement. The RPC body executes the DML within the same transaction where session vars were set.
+
+3. **RPC template:**
+   ```sql
+   CREATE FUNCTION public.rpc_{action}_{table}(...)
+   RETURNS ...
+   LANGUAGE plpgsql
+   SECURITY DEFINER
+   SET search_path = pg_catalog, public
+   AS $$
+   DECLARE
+     v_staff_id  uuid;
+     v_casino_id uuid;
+   BEGIN
+     -- Step 1: Context injection (same transaction)
+     PERFORM public.set_rls_context_from_staff();
+     v_staff_id  := NULLIF(current_setting('app.actor_id', true), '')::uuid;
+     v_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+
+     IF v_staff_id IS NULL OR v_casino_id IS NULL THEN
+       RAISE EXCEPTION 'UNAUTHORIZED: RLS context not available'
+         USING ERRCODE = 'P0001';
+     END IF;
+
+     -- Step 2: DML with row-level gating
+     UPDATE {table} SET ...
+     WHERE id = v_staff_id AND casino_id = v_casino_id AND status = 'active';
+
+     IF NOT FOUND THEN
+       RAISE EXCEPTION 'NOT_FOUND: target record not accessible'
+         USING ERRCODE = 'P0002';
+     END IF;
+   END;
+   $$;
+
+   -- ADR-018 lockdown
+   REVOKE ALL ON FUNCTION public.rpc_{action}_{table}(...) FROM PUBLIC;
+   REVOKE ALL ON FUNCTION public.rpc_{action}_{table}(...) FROM anon;
+   GRANT EXECUTE ON FUNCTION public.rpc_{action}_{table}(...) TO authenticated;
+   ```
+
+4. **Application code calls:**
+   ```ts
+   // CORRECT — single transaction, session vars available
+   await mwCtx.supabase.rpc('rpc_set_staff_pin', { p_pin_hash: pinHash });
+
+   // WRONG — separate transaction, session vars lost
+   await mwCtx.supabase.from('staff').update({ pin_hash: pinHash }).eq('id', staffId);
+   ```
+
+#### Conformance Examples
+
+| Operation | Conforms? | Pattern |
+|-----------|-----------|---------|
+| `rpc_increment_pin_attempt()` | Yes | Self-contained RPC, internal `set_rls_context_from_staff()` |
+| `rpc_clear_pin_attempts()` | Yes | Same |
+| `rpc_create_financial_txn()` | Yes | Same |
+| `setPinAction` → `.from('staff').update()` | **No** | Direct PostgREST DML against Template 2b policy |
+
+#### Lint / Review Guards
+
+1. **CI grep guard:** Fail if any `.from('staff').update(` or `.from('staff').insert(` or `.from('staff').delete(` appears in `app/` or `services/` code. Extend to all Template 2b tables as policies are migrated.
+
+2. **Code review checklist item:** "Does this write target a table with a Template 2b RLS policy? If yes, verify the write uses an `rpc_*` function, not direct PostgREST DML."
+
+3. **Migration review:** When adding a Template 2b policy to a table, audit all existing `.from(table)` write calls in the codebase and migrate them to RPCs in the same PR.
 
 ---
 
@@ -145,6 +256,8 @@ All invariants from ADR-024 remain in force. ADR-030 adds:
 
 **INV-030-6:** JWT fallback reliance during SELECT must be logged at the application layer.
 
+**INV-030-7:** Writes against Template 2b policies (session-var-only, no JWT COALESCE) MUST use self-contained SECURITY DEFINER RPCs that call `set_rls_context_from_staff()` internally. Direct PostgREST DML (`.from(table).insert/update/delete`) is PROHIBITED because session vars are transaction-local and do not survive across separate HTTP requests. (D5)
+
 ---
 
 ## Consequences
@@ -154,6 +267,7 @@ All invariants from ADR-024 remain in force. ADR-030 adds:
 - **Deterministic context:** Eliminates TOCTOU drift — middleware, service logic, and Postgres policies all consume the same context from one RPC call
 - **Observable claim lifecycle:** Stale JWT claims become visible through logging rather than silently granting access
 - **Fail-closed writes:** Mutations cannot succeed on stale or absent session context, even if JWT metadata exists
+- **Silent-write prevention (D5):** Template 2b writes must go through self-contained RPCs, eliminating the class of bugs where PostgREST DML silently affects 0 rows due to transaction-boundary session var loss
 - **Defense in depth:** Bypass knobs are double-gated and CI-enforced, preventing accidental production exposure
 - **Auditable:** Structured logging provides grep-able evidence of auth pipeline health
 
@@ -251,6 +365,8 @@ Full metrics pipeline deferred to v0.2.
 - [ ] RPC return context used everywhere (no second derivation)
 - [ ] Claim sync/clear has explicit error handling
 - [ ] Writes cannot succeed without `app.*` session context
+- [ ] No `.from(table).insert/update/delete` against Template 2b tables in `app/` or `services/` code
+- [ ] All Template 2b writes use `rpc_*` functions with internal `set_rls_context_from_staff()`
 
 ---
 
@@ -268,5 +384,6 @@ Full metrics pipeline deferred to v0.2.
 
 ## Changelog
 
+- 2026-02-10: **D5 amendment** — Template 2b transport constraint (INV-030-7). Triggered by ISSUE-SET-PIN-SILENT-RLS-FAILURE: `setPinAction` silently failed because PostgREST DML runs in a separate transaction from the middleware's RPC context injection. Codifies: Template 2b writes MUST use self-contained SECURITY DEFINER RPCs.
 - 2026-01-30: Status updated to Accepted — implementation landed in commit 32890bf
 - 2026-01-29: Initial ADR proposed based on auth hardening audit and execution patch

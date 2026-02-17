@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.11.1
+nsversion: 4.12.0
 status: CANONICAL
 effective: 2026-02-02
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -21,13 +21,11 @@ source_of_truth:
   - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
-  - docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md
-  - docs/20-architecture/specs/ADR-022/DOD-022.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.11.1 (Cross-reference sync — ADR-030, ADR-031, ADR-032)
+> **Version**: 4.12.0 (GAP-SIGN-OUT: staff_pin_attempts ownership)
 > **Date**: 2026-02-02
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -52,6 +50,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.12.0 (2026-02-10)** – **GAP-SIGN-OUT ownership registration**: Added `staff_pin_attempts` (planned, MVP) to CasinoService. Follows `audit_log` precedent: cross-cutting operational rate-limit state owned by foundational context. Resolved governance drift where EXECUTION-SPEC used "Auth (cross-cutting)" — not a declared SRM bounded context. No schema changes (table created by GAP-SIGN-OUT WS4 migration).
 - **4.11.1 (2026-02-02)** – **Cross-reference sync (ADR-030, ADR-031, ADR-032)**: Added ADR-030 (Auth System Hardening), ADR-032 (Frontend Error Boundary Architecture) to source_of_truth. Added ADR-030, ADR-031, ADR-032 to Related Documents table. Added ERROR_HANDLING_STANDARD.md to source_of_truth references. No schema or ownership changes.
 - **4.11.0 (2026-01-21)** – **ADR-029 Player 360° Dashboard Event Taxonomy**: Added PlayerTimelineService (planned) for unified player interaction timeline. New tables planned: `player_note`, `player_tag`. New enum: `interaction_event_type`. New RPC: `rpc_get_player_timeline`. Cross-context timeline reads all service tables via UNION ALL view. See `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` and `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`.
 - **4.10.0 (2026-01-17)** – **ADR-028 Table Status Standardization**: Added `labels.ts` pattern to TableContextService for centralized UI label/color constants. Documented `TableAvailability` and `SessionPhase` type aliases. Added `drop_posted_at` column to `table_session` for count posting status. RPC availability gate added to `rpc_open_table_session`. See `docs/80-adrs/ADR-028-table-status-standardization.md`.
@@ -99,7 +98,7 @@ Approved JSON blobs (all others require first-class columns):
 
 | Domain | Service | Owns Tables | Bounded Context |
 |--------|---------|-------------|-----------------|
-| **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino** | Root temporal authority, global policy, & player enrollment |
+| **Foundational** | CasinoService | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, *staff_pin_attempts* ⁴ | Root temporal authority, global policy, & player enrollment |
 | **Identity** | PlayerService | player, *player_identity* ², *player_note* ³, *player_tag* ³ | Identity management & collaboration artifacts |
 | **Analytics** | PlayerTimelineService ³ | (read-only view across all services) | Unified player interaction timeline |
 | **Operational** | TableContextService | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry |
@@ -113,6 +112,7 @@ Approved JSON blobs (all others require first-class columns):
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
 > ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
+> ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).
 
 ---
 
@@ -120,9 +120,12 @@ Approved JSON blobs (all others require first-class columns):
 
 **Owns**: `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`, `player_casino`
 
+**Planned (MVP)** per GAP-SIGN-OUT: `staff_pin_attempts`
+
 **Bounded Context**: "What are the operational parameters and policy boundaries of this casino property? Which players are enrolled?"
 
 **Note**: Player enrollment (`player_casino`) is owned by CasinoService per ADR-022 D5.
+**Note**: `staff_pin_attempts` is operational rate-limit state for staff PIN verification. Follows `audit_log` precedent — cross-cutting operational data owned by foundational context.
 
 ### Schema Invariants
 
@@ -136,6 +139,10 @@ Approved JSON blobs (all others require first-class columns):
 | `staff` | `user_id` | references auth.users(id) | Auth linkage (NULL for dealers) |
 | `staff` | `role` | NOT NULL, enum | No default; explicit assignment |
 | `staff` | `casino_id` | references casino(id) | Casino scoping |
+| `staff_pin_attempts` ⁴ | `casino_id` | NOT NULL, FK to casino | Casino scoping |
+| `staff_pin_attempts` ⁴ | `staff_id` | NOT NULL, FK to staff | Staff reference |
+| `staff_pin_attempts` ⁴ | `window_start` | NOT NULL | 15-min bucketed window (computed by RPC) |
+| `staff_pin_attempts` ⁴ | — | UNIQUE | (`casino_id`, `staff_id`, `window_start`) |
 
 ### Contracts
 
@@ -704,8 +711,6 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/80-adrs/ADR-018-security-definer-governance.md` | SECURITY DEFINER function governance |
 | `docs/80-adrs/ADR-014-Ghost-Gaming-Visits-and-Non-Loyalty-Play-Handling.md` | Visit archetype model |
 | `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md` | Player identity decisions (frozen) |
-| `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md` | Player identity implementation |
-| `docs/20-architecture/specs/ADR-022/DOD-022.md` | Player identity DoD gates |
 | `docs/80-adrs/ADR-029-player-360-interaction-event-taxonomy.md` | Player 360° event taxonomy |
 | `docs/80-adrs/ADR-030-auth-system-hardening.md` | Auth pipeline hardening — TOCTOU elimination, claims lifecycle |
 | `docs/80-adrs/ADR-031-financial-amount-convention.md` | Financial amount convention (cents storage, dollars at boundary) |
@@ -728,8 +733,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.11.1
+**Document Version**: 4.12.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-02-02 (Cross-reference sync — ADR-030, ADR-031, ADR-032)
+**Updated**: 2026-02-10 (GAP-SIGN-OUT: staff_pin_attempts ownership)
 **Status**: CANONICAL - Registry + Invariants Only

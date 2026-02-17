@@ -2,7 +2,7 @@
 -- Purpose: Populate database with realistic test data for all rating slip workflows
 -- Coverage: 2 casinos, 6 players, 6 tables, all rating slip states
 -- Created: 2025-12-02
--- Updated: 2026-01-18 (ADR-024, ADR-026, ADR-027, ADR-028 compliance)
+-- Updated: 2026-02-10 (PRD-029: game_settings.code column)
 -- NOTE: All UUIDs use valid hex characters (0-9, a-f) only
 --
 -- ADR Compliance:
@@ -73,7 +73,7 @@ INSERT INTO casino (id, company_id, name, location, address, status) VALUES
 -- 3. CASINO SETTINGS (ADR-027: table_bank_mode added)
 -- ============================================================================
 
-INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, table_bank_mode) VALUES
+INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, table_bank_mode, setup_status, setup_completed_at) VALUES
   (
     'c5000000-0000-0000-0000-000000000001',
     'ca000000-0000-0000-0000-000000000001',
@@ -81,7 +81,9 @@ INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, wat
     'America/Los_Angeles',
     3000.00,
     10000.00,
-    'INVENTORY_COUNT'  -- ADR-027: Casino 1 uses inventory count model
+    'INVENTORY_COUNT',  -- ADR-027: Casino 1 uses inventory count model
+    'ready',
+    now()
   ),
   (
     'c5000000-0000-0000-0000-000000000002',
@@ -90,7 +92,9 @@ INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, wat
     'America/Los_Angeles',
     5000.00,
     10000.00,
-    'IMPREST_TO_PAR'  -- ADR-027: Casino 2 uses imprest-to-par model
+    'IMPREST_TO_PAR',  -- ADR-027: Casino 2 uses imprest-to-par model
+    'ready',
+    now()
   );
 
 -- ============================================================================
@@ -145,15 +149,16 @@ INSERT INTO gaming_table (id, casino_id, label, pit, type, status, par_total_cen
 -- NOTE: house_edge is stored as PERCENTAGE (e.g., 0.5 = 0.5%, not 0.005)
 -- The calculate_theo_from_snapshot function divides by 100, so:
 --   0.5% house edge → store as 0.5 → formula uses 0.5/100 = 0.005
-INSERT INTO game_settings (id, casino_id, game_type, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes, points_conversion_rate, point_multiplier) VALUES
+-- PRD-029: `code` is required (NOT NULL) — unique per (casino_id, code)
+INSERT INTO game_settings (id, casino_id, game_type, code, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes, points_conversion_rate, point_multiplier) VALUES
   -- Casino 1
-  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.5, 60, 7, 30, 10.0, 1.0),
-  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'Texas Hold''em', 50.00, 10000.00, 2.5, 30, 9, 60, 8.0, 1.0),
-  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'American Roulette', 10.00, 2000.00, 5.3, 40, 8, 30, 12.0, 1.0),
-  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 1.1, 80, 7, 30, 10.0, 1.5),
+  ('65000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'blackjack', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.5, 60, 7, 30, 10.0, 1.0),
+  ('65000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'poker', 'poker', 'Texas Hold''em', 50.00, 10000.00, 2.5, 30, 9, 60, 8.0, 1.0),
+  ('65000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'roulette', 'roulette', 'American Roulette', 10.00, 2000.00, 5.3, 40, 8, 30, 12.0, 1.0),
+  ('65000000-0000-0000-0000-000000000004', 'ca000000-0000-0000-0000-000000000001', 'baccarat', 'baccarat', 'Mini Baccarat', 100.00, 25000.00, 1.1, 80, 7, 30, 10.0, 1.5),
   -- Casino 2
-  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.4, 50, 6, 45, 15.0, 2.0),
-  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 1.0, 70, 7, 60, 20.0, 2.5);
+  ('65000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000002', 'blackjack', 'blackjack', 'High Limit Blackjack', 100.00, 25000.00, 0.4, 50, 6, 45, 15.0, 2.0),
+  ('65000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000002', 'baccarat', 'baccarat', 'VIP Baccarat', 500.00, 100000.00, 1.0, 70, 7, 60, 20.0, 2.5);
 
 -- ============================================================================
 -- 7. PLAYERS (6 players)
@@ -598,13 +603,13 @@ INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, ra
 
 -- Cash-outs (negative amounts) require txn_kind='adjustment' with reason_code and note
 -- Per chk_adjustment_requires_justification constraint from ADR migration
-INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, txn_kind, reason_code, note, created_at) VALUES
+INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type, txn_kind, reason_code, note, created_by_staff_id, created_at) VALUES
   -- Player 1 cash-out
-  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', 'adjustment', 'other', 'Player cashed out at session end - chips to cash exchange at cage', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
+  ('f1000000-0000-0000-0000-000000000006', 'a1000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000005', 'd1000000-0000-0000-0000-000000000005', -1250.00, 'cash', 'adjustment', 'other', 'Player cashed out at session end - chips to cash exchange at cage', '5a000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '2 hours'),
   -- Player 5 cash-out
-  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', 'adjustment', 'other', 'VIP player session close - full chip redemption at cage window', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
+  ('f1000000-0000-0000-0000-000000000009', 'a1000000-0000-0000-0000-000000000005', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000006', 'd1000000-0000-0000-0000-000000000006', -18000.00, 'cash', 'adjustment', 'other', 'VIP player session close - full chip redemption at cage window', '5a000000-0000-0000-0000-000000000001', NOW() - INTERVAL '1 day' - INTERVAL '3 hours'),
   -- Player 6 cash-out
-  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', 'adjustment', 'other', 'Session end cash-out - player redeemed remaining chips', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
+  ('f1000000-0000-0000-0000-000000000011', 'a1000000-0000-0000-0000-000000000006', 'ca000000-0000-0000-0000-000000000001', 'b1000000-0000-0000-0000-000000000007', 'd1000000-0000-0000-0000-000000000007', -150.00, 'cash', 'adjustment', 'other', 'Session end cash-out - player redeemed remaining chips', '5a000000-0000-0000-0000-000000000002', NOW() - INTERVAL '1 day' - INTERVAL '1 hour');
 
 -- Casino 2 transactions
 INSERT INTO player_financial_transaction (id, player_id, casino_id, visit_id, rating_slip_id, amount, tender_type) VALUES
@@ -1116,6 +1121,7 @@ END $$;
 -- - 6 Gaming tables (3 active at Casino 1, 1 inactive, 2 at Casino 2)
 --     - All active tables have par_total_cents set (ADR-027)
 -- - 6 Game settings (per casino, per game type)
+--     - Includes `code` column (PRD-029, NOT NULL)
 --     - Includes points_conversion_rate and point_multiplier (ISSUE-752833A6)
 -- - 6 Players with casino enrollments
 -- - 9 Player loyalty records (with tiers)

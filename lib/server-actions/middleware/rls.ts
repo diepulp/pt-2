@@ -24,7 +24,10 @@ import type { Middleware, MiddlewareContext } from './types';
 export function withRLS<T>(): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
     try {
-      const rpcContext = await injectRLSContext(ctx.supabase, ctx.correlationId);
+      const rpcContext = await injectRLSContext(
+        ctx.supabase,
+        ctx.correlationId,
+      );
       // Overwrite ctx.rlsContext with RPC-derived context (single source of truth)
       ctx.rlsContext = rpcContext;
       return next();

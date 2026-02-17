@@ -42,7 +42,7 @@ export default async function PitPage() {
       casinoId = context.casinoId;
     } catch (error) {
       console.error('Failed to get auth context:', error);
-      redirect('/auth/login');
+      redirect('/signin');
     }
   } else if (isDevAuthBypassEnabled()) {
     // DEV MODE: Use mock context
@@ -51,7 +51,7 @@ export default async function PitPage() {
     casinoId = DEV_RLS_CONTEXT.casinoId;
   } else {
     // PRODUCTION: Redirect to login
-    redirect('/auth/login');
+    redirect('/signin');
   }
 
   // Height: viewport - header (4rem) - main padding (3rem = p-6 top + bottom)

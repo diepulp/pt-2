@@ -1,0 +1,6 @@
+{
+  "_generated": "DO NOT EDIT. Run: npm run generate:category-a",
+  "_source": "docs/80-adrs/ADR-030-auth-system-hardening.md",
+  "_extracted_at": "2026-02-12T02:50:22.897Z",
+  "categoryA": ["player_casino", "staff", "staff_invite", "staff_pin_attempts"]
+}

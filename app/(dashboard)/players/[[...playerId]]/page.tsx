@@ -21,8 +21,9 @@ import {
   DashboardSkeleton,
   Player360LayoutProvider,
 } from '@/components/player-360';
+import { getServerGamingDay } from '@/lib/gaming-day/server';
+import { createClient } from '@/lib/supabase/server';
 import { isValidUUID } from '@/lib/validation/uuid';
-import { getCurrentGamingDay } from '@/services/player360-dashboard/mappers';
 
 import { Player360ContentWrapper } from './_components/player-360-content-wrapper';
 import { Player360EmptyStateWrapper } from './_components/player-360-empty-state-wrapper';
@@ -37,8 +38,9 @@ export default async function Player360Page({ params }: PageProps) {
   // Catch-all returns array - first segment is the playerId
   const playerId = playerIdSegments?.[0] ?? null;
 
-  // Compute gaming day server-side to eliminate client-side waterfall (PERF-006 WS5)
-  const gamingDay = getCurrentGamingDay();
+  // Compute gaming day server-side via DB RPC (PRD-027: eliminates JS temporal bypass)
+  const supabase = await createClient();
+  const gamingDay = await getServerGamingDay(supabase);
 
   // Validate UUID format — reject malformed URLs before enabling queries (P1-5)
   if (playerId && !isValidUUID(playerId)) {

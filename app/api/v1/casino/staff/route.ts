@@ -136,24 +136,21 @@ export async function POST(request: NextRequest) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        const casinoId = mwCtx.rlsContext!.casinoId;
-
-        // Force casino_id to authenticated user's casino (security)
-        const staffData = {
-          ...input,
-          casino_id: casinoId,
-        };
-
+        // PRD-034: Use SECURITY DEFINER RPC instead of PostgREST DML
+        // on Category A table `staff`. RPC derives casino_id from
+        // session context (ADR-024 INV-8) and validates admin role.
         const { data, error } = await mwCtx.supabase
-          .from('staff')
-          .insert(staffData)
-          .select(STAFF_SELECT)
+          .rpc('rpc_create_staff', {
+            p_first_name: input.first_name,
+            p_last_name: input.last_name,
+            p_role: input.role,
+            p_employee_id: input.employee_id ?? undefined,
+          })
           .single();
 
         if (error) {
-          // Handle constraint violations
+          // Handle constraint violations from RPC
           if (error.code === '23514') {
-            // Check constraint violation (staff role constraint)
             throw new DomainError(
               'STAFF_ROLE_CONSTRAINT_VIOLATION',
               undefined,
@@ -164,10 +161,15 @@ export async function POST(request: NextRequest) {
             );
           }
           if (error.code === '23505') {
-            // Unique violation
             throw new DomainError('STAFF_ALREADY_EXISTS', undefined, {
               httpStatus: 409,
               details: { postgresCode: error.code, message: error.message },
+            });
+          }
+          if (error.code === 'P0001') {
+            throw new DomainError('STAFF_UNAUTHORIZED', undefined, {
+              httpStatus: 403,
+              details: { message: error.message },
             });
           }
           throw error;

@@ -557,6 +557,57 @@ if (isError) {
 
 ---
 
+## Gaming Day Resolution (TEMP-001/002/003)
+
+**Registry:** `docs/20-architecture/temporal-patterns/INDEX.md`
+
+The gaming day is a casino-configurable business date boundary (default: 06:00 local time). **The database is the single source of truth** — application code must never derive gaming day using JS date math.
+
+### Server Component (RSC) Pattern
+
+```typescript
+// app/(dashboard)/players/[[...playerId]]/page.tsx
+import { getServerGamingDay } from '@/lib/gaming-day/server'
+
+export default async function Page() {
+  const supabase = await createClient()
+  // Canonical: DB RPC derives gaming day from casino_settings
+  const gamingDay = await getServerGamingDay(supabase)
+
+  // Pass down as prop — client never computes gaming day
+  return <PlayerDashboard gamingDay={gamingDay} />
+}
+```
+
+### Client Component Pattern
+
+```typescript
+'use client'
+import { useGamingDay } from '@/hooks/casino/use-gaming-day'
+
+function PitDashboard() {
+  const { gamingDay, isLoading } = useGamingDay()
+  // Hook calls GET /api/v1/casino/gaming-day → compute_gaming_day() in DB
+  // Never compute gaming day locally
+}
+```
+
+### Banned Patterns
+
+```typescript
+// FORBIDDEN: JS date math for gaming day
+const gamingDay = new Date().toISOString().slice(0, 10) // UTC ≠ gaming day
+const weeksAgo = new Date(Date.now() - 7 * 86400000)   // Wrong boundaries
+
+// CORRECT: Always from DB
+const gamingDay = await getServerGamingDay(supabase)     // RSC
+const { gamingDay } = useGamingDay()                     // Client
+```
+
+**References:** TEMP-003 §4 (RSC safe path), TEMP-001 §3 (function layering), PRD-027 §6
+
+---
+
 ## Quick Checklist
 
 When building PT-2 frontend components:

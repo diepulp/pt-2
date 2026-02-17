@@ -136,16 +136,12 @@ export async function getPromoExposureRollup(
   query: PromoExposureRollupQuery = {},
 ): Promise<PromoExposureRollupDTO> {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- RPC not in types until migration applied
-    const { data, error } = await (supabase.rpc as any)(
-      'rpc_promo_exposure_rollup',
-      {
-        p_gaming_day: query.gamingDay ?? null,
-        p_shift_id: query.shiftId ?? null,
-        p_from_ts: query.fromTs ?? null,
-        p_to_ts: query.toTs ?? null,
-      },
-    );
+    const { data, error } = await supabase.rpc('rpc_promo_exposure_rollup', {
+      p_gaming_day: query.gamingDay ?? undefined,
+      p_shift_id: query.shiftId ?? undefined,
+      p_from_ts: query.fromTs ?? undefined,
+      p_to_ts: query.toTs ?? undefined,
+    });
 
     if (error) {
       throw mapRollupError(error);

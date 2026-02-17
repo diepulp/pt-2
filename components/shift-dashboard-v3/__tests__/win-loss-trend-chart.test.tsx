@@ -137,7 +137,9 @@ describe('WinLossTrendChart', () => {
 
   it('renders series toggle pills', () => {
     render(<WinLossTrendChart pitsData={createMockPitData(3)} />);
-    expect(screen.getByRole('button', { name: 'Win/Loss' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Win/Loss' }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Fills' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Credits' })).toBeInTheDocument();
   });

@@ -10,6 +10,7 @@
 import { z } from 'zod';
 
 import { uuidSchema, uuidSchemaNullable } from '@/lib/validation';
+import type { Database } from '@/types/database.types';
 
 // === Casino Schemas ===
 
@@ -53,7 +54,12 @@ export const updateCasinoSettingsSchema = z.object({
 // === Staff Schemas ===
 
 /** Staff roles enum */
-export const staffRoleSchema = z.enum(['dealer', 'pit_boss', 'admin']);
+export const staffRoleSchema = z.enum([
+  'dealer',
+  'pit_boss',
+  'cashier',
+  'admin',
+]);
 
 /**
  * Schema for creating a staff member with role constraint refinement.
@@ -120,6 +126,32 @@ export const staffListQuerySchema = z.object({
     .positive()
     .max(100, 'Limit cannot exceed 100')
     .default(20),
+});
+
+// === Onboarding Schemas (PRD-025) ===
+
+/** Bootstrap casino input (called from /bootstrap form) */
+export const bootstrapCasinoSchema = z.object({
+  casino_name: z.string().min(1, 'Casino name is required').max(100),
+  timezone: z.string().min(1).max(64).optional(),
+  gaming_day_start: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format')
+    .optional(),
+});
+
+/** Staff invite creation input (admin-only) */
+export const createInviteSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  role: z.enum(['dealer', 'pit_boss', 'cashier', 'admin']),
+});
+
+/** Invite acceptance input (token from URL) */
+export const acceptInviteSchema = z.object({
+  token: z
+    .string()
+    .length(64, 'Token must be 64-character hex string')
+    .regex(/^[0-9a-f]{64}$/, 'Token must be lowercase hexadecimal'),
 });
 
 // === Alert Threshold Schemas (PRD-LOYALTY-PROMO WS6) ===
@@ -257,6 +289,35 @@ export const updateAlertThresholdsSchema = z
   })
   .partial();
 
+// === Setup Wizard Schemas (PRD-030) ===
+
+/** Table bank mode enum — derived from Database Enums to prevent drift */
+const TABLE_BANK_MODES = [
+  'INVENTORY_COUNT',
+  'IMPREST_TO_PAR',
+] as const satisfies readonly Database['public']['Enums']['table_bank_mode'][];
+
+export const tableBankModeSchema = z.enum(TABLE_BANK_MODES);
+
+/** Setup wizard: complete setup input */
+export const completeSetupSchema = z.object({
+  skip: z.boolean().optional(),
+});
+
+/** Setup wizard: casino settings (Step 1) — extends updateCasinoSettingsSchema with table_bank_mode */
+export const setupCasinoSettingsSchema = updateCasinoSettingsSchema.extend({
+  table_bank_mode: tableBankModeSchema,
+});
+
+/** Valid seed template names — single source of truth for RPC + UI + tests */
+export const SEED_TEMPLATES = ['small_pit_starter'] as const;
+export type SeedTemplate = (typeof SEED_TEMPLATES)[number];
+
+/** Setup wizard: seed game settings (Step 2) */
+export const seedGameSettingsSchema = z.object({
+  template: z.enum(SEED_TEMPLATES),
+});
+
 // === Type Exports (inferred from schemas) ===
 
 export type CreateCasinoInput = z.infer<typeof createCasinoSchema>;
@@ -272,3 +333,13 @@ export type AlertThresholdsInput = z.infer<typeof alertThresholdsSchema>;
 export type UpdateAlertThresholdsInput = z.infer<
   typeof updateAlertThresholdsSchema
 >;
+// Onboarding (PRD-025)
+export type BootstrapCasinoSchemaInput = z.infer<typeof bootstrapCasinoSchema>;
+export type CreateInviteSchemaInput = z.infer<typeof createInviteSchema>;
+export type AcceptInviteSchemaInput = z.infer<typeof acceptInviteSchema>;
+// Setup Wizard (PRD-030)
+export type CompleteSetupInput = z.infer<typeof completeSetupSchema>;
+export type SetupCasinoSettingsInput = z.infer<
+  typeof setupCasinoSettingsSchema
+>;
+export type SeedGameSettingsInput = z.infer<typeof seedGameSettingsSchema>;

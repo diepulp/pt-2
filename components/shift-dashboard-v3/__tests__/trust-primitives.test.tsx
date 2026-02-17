@@ -39,9 +39,7 @@ describe('MetricGradeBadge', () => {
   });
 
   it('applies custom className', () => {
-    render(
-      <MetricGradeBadge grade="ESTIMATE" className="custom-class" />,
-    );
+    render(<MetricGradeBadge grade="ESTIMATE" className="custom-class" />);
     expect(screen.getByTestId('metric-grade-badge').className).toContain(
       'custom-class',
     );
@@ -72,16 +70,12 @@ describe('TelemetryQualityIndicator', () => {
   });
 
   it('shows label when showLabel is true', () => {
-    render(
-      <TelemetryQualityIndicator quality="GOOD_COVERAGE" showLabel />,
-    );
+    render(<TelemetryQualityIndicator quality="GOOD_COVERAGE" showLabel />);
     expect(screen.getByText('Good')).toBeInTheDocument();
   });
 
   it('shows "Low" label for LOW_COVERAGE', () => {
-    render(
-      <TelemetryQualityIndicator quality="LOW_COVERAGE" showLabel />,
-    );
+    render(<TelemetryQualityIndicator quality="LOW_COVERAGE" showLabel />);
     expect(screen.getByText('Low')).toBeInTheDocument();
   });
 

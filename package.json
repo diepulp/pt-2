@@ -1,5 +1,8 @@
 {
   "private": true,
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "scripts": {
     "dev:kill": "uv run scripts/dev-cleanup.sh",
     "dev": "npm run dev:kill && next dev --webpack",
@@ -8,23 +11,23 @@
     "build:webpack": "next build --webpack",
     "start": "next start",
     "type-check": "tsc --noEmit --strict",
-    "lint": "eslint .",
-    "lint:check": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
-    "lint-staged": "lint-staged",
+    "lint": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 -n 50 eslint --quiet --no-warn-ignored --cache --cache-location .cache/eslint",
+    "lint:check": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 -n 50 eslint --no-warn-ignored --max-warnings=0",
+    "lint:fix": "git ls-files -z -- '*.ts' '*.tsx' '*.js' '*.jsx' | xargs -0 -n 50 eslint --no-warn-ignored --fix",
     "agents:compile": "node scripts/compile_agents.mjs",
     "agents:check": "node scripts/compile_agents.mjs --check",
     "memori:init": "python scripts/memori-init-db.py",
     "memori:ingest": "python scripts/memori-ingest.py",
     "memori:test": "python scripts/memori-test.py",
     "memori:setup": "npm run memori:init && npm run memori:ingest && npm run memori:test",
+    "generate:category-a": "npx tsx scripts/generate-category-a-config.ts",
     "db:types": "npx supabase gen types typescript --project-id vaicxfihdldgepzryhpd --schema public > types/remote/database.types.ts",
-    "db:types-local": "npx supabase gen types typescript --local public > types/database.types.ts",
+    "db:types-local": "npx supabase gen types typescript --local --schema public > types/database.types.ts",
     "analyze": "ANALYZE=true next build",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:ci": "jest --ci --coverage --maxWorkers=2",
+    "test:ci": "jest --ci --maxWorkers=2 --testPathIgnorePatterns='integration\\.test' --testPathIgnorePatterns='\\.int\\.test' --testPathIgnorePatterns='e2e/'",
     "cypress": "cypress open",
     "cypress:headless": "cypress run",
     "e2e": "start-server-and-test dev http://localhost:3000 cypress",
@@ -83,6 +86,7 @@
     "@tanstack/react-query": "^5.90.2",
     "@tanstack/react-query-devtools": "^5.90.2",
     "@tanstack/react-virtual": "^3.13.12",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
@@ -115,6 +119,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
+    "@types/bcryptjs": "^2.4.6",
     "@types/jest": "^30.0.0",
     "@types/node": "^20",
     "@types/pg": "^8.15.5",
@@ -145,5 +150,10 @@
     "ts-jest": "^29.4.4",
     "tsx": "^4.20.6",
     "typescript": "^5"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx}": [
+      "eslint --fix"
+    ]
   }
 }

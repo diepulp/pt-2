@@ -25,7 +25,8 @@ pt-2/
 npm run dev              # Dev server at localhost:3000
 npm run build            # Production build
 npm run test             # Jest tests
-npm run db:types         # Regenerate types after migrations (CRITICAL)
+npm run db:types-local   # Regenerate types after local migrations (CRITICAL)
+npm run db:types         # Regenerate types from remote (validation only)
 npm run type-check       # TypeScript strict check
 npm run lint             # ESLint
 npm run e2e:playwright   # Playwright E2E tests
@@ -47,15 +48,40 @@ Start at `docs/INDEX.md` for full navigation. Key docs:
 - **Over-Engineering Guardrail** (`docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md`) - Complexity rules
 
 Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
+- **CI/CD Pipeline** (`docs/deployments/CICD-PIPELINE-SPEC.md`) - Pipeline gates and workflow topology
+- **Environment Flow** (`docs/deployments/ENVIRONMENT-FLOW.md`) - Supabase remote flow and environment architecture
 
 ## Critical Guardrails
 
-1. **Types**: Import from `types/remote/database.types.ts` only. Run `npm run db:types` after migrations.
+1. **Types**: Import from `@/types/database.types` for all application code. Run `npm run db:types-local` after local migrations. Run `npm run db:types` for remote validation only.
 2. **Services**: Functional factories, not classes. Explicit interfaces, no `ReturnType<>`.
 3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
 4. **Code Quality**: No `as any`, no `console.*` in production code.
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
 6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` (`YYYYMMDDHHMMSS_description.sql`).
+
+## Agent Shell Safety (MANDATORY)
+
+The agent runner buffers all stdout/stderr in memory. Large output WILL crash VS Code, the terminal daemon, and the agent session. **Every command must be output-safe.**
+
+**Rules:**
+1. **NEVER pipe `gh run view --log` or `--log-failed` directly.** Write to file first, then read with the Read tool:
+   ```bash
+   gh run view <ID> --log-failed > /tmp/ci-log.log 2>&1
+   # Then use Read tool or Grep tool on /tmp/ci-log.log
+   ```
+2. **NEVER run `npm test`, `npm run lint`, or any command that can produce >100 lines** without output control. Use `--quiet`, `--silent`, or redirect to file.
+3. **For CI status**, use minimal-output commands:
+   ```bash
+   gh pr checks <N>                          # summary only
+   gh run view <ID> --json jobs --jq '...'   # structured, small
+   ```
+4. **For test runs**, always redirect output:
+   ```bash
+   npm run test:ci > /tmp/test-output.log 2>&1
+   # Then grep/read the file for results
+   ```
+5. **General rule**: If a command might produce large output, **write to /tmp first, then read selectively**. No exceptions.
 
 ## Service Layer Pattern
 

@@ -68,11 +68,7 @@ export function useDashboardStats(casinoId: string | undefined) {
 
       // PERF-002: Single RPC call replaces 4 HTTP requests
       // ADR-024 compliant: RPC derives casino_id from set_rls_context_from_staff()
-      // Note: RPC not yet in database.types.ts until migration runs on remote
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase.rpc as any)(
-        'rpc_get_dashboard_stats',
-      );
+      const { data, error } = await supabase.rpc('rpc_get_dashboard_stats');
 
       if (error) {
         throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
@@ -83,7 +79,7 @@ export function useDashboardStats(casinoId: string | undefined) {
       }
 
       // Type assertion for JSONB response (RPC returns unknown when not in types)
-      const stats = data as DashboardStatsRpcResponse;
+      const stats = data as unknown as DashboardStatsRpcResponse;
 
       return {
         activeTablesCount: stats.activeTablesCount,

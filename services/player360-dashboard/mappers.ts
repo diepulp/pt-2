@@ -7,7 +7,7 @@
  * @see PRD-023 Player 360 Panels v0
  */
 
-import type { Json } from '@/types/remote/database.types';
+import type { Json } from '@/types/database.types';
 
 import type { VisitFinancialSummaryDTO } from '../player-financial/dtos';
 import type { VisitDTO } from '../visit/dtos';
@@ -127,65 +127,6 @@ function minutesSince(isoTimestamp: string): number {
 }
 
 /**
- * Get YYYY-MM-DD string for the current gaming day.
- *
- * Mirrors the DB `compute_gaming_day(casino_id, now())` logic:
- *   1. Convert current time to the casino's local timezone
- *   2. If before gaming_day_start_time, the gaming day is the previous calendar day
- *
- * Hardcoded to America/Los_Angeles + 06:00 start for MVP single-casino.
- * TODO: Parameterize per-casino when multi-casino support lands.
- *
- * @see compute_gaming_day() in Postgres
- * @see casino_settings.gaming_day_start_time / .timezone
- * @see ISSUE-580A8D81 Root Cause #2
- */
-export function getCurrentGamingDay(): string {
-  const CASINO_TZ = 'America/Los_Angeles';
-  const GAMING_START_HOUR = 6; // casino_settings.gaming_day_start_time = '06:00'
-
-  const now = new Date();
-
-  // Get date parts in casino timezone
-  const fmt = new Intl.DateTimeFormat('en-US', {
-    timeZone: CASINO_TZ,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: 'numeric',
-    hour12: false,
-  });
-  const parts = Object.fromEntries(
-    fmt.formatToParts(now).map(({ type, value }) => [type, value]),
-  );
-
-  const year = Number(parts.year);
-  const month = Number(parts.month);
-  const day = Number(parts.day);
-  const hour = Number(parts.hour);
-
-  // Before gaming day start → gaming day = previous calendar day
-  if (hour < GAMING_START_HOUR) {
-    const prev = new Date(year, month - 1, day - 1);
-    const py = prev.getFullYear();
-    const pm = String(prev.getMonth() + 1).padStart(2, '0');
-    const pd = String(prev.getDate()).padStart(2, '0');
-    return `${py}-${pm}-${pd}`;
-  }
-
-  return `${parts.year}-${parts.month}-${String(day).padStart(2, '0')}`;
-}
-
-/**
- * Get ISO date string for a given number of weeks ago.
- */
-export function getWeeksAgoDate(weeks: number): string {
-  const date = new Date();
-  date.setDate(date.getDate() - weeks * 7);
-  return date.toISOString().slice(0, 10);
-}
-
-/**
  * Get the Monday of the week containing a given date.
  */
 export function getWeekStart(date: Date): string {
@@ -193,6 +134,7 @@ export function getWeekStart(date: Date): string {
   const day = d.getDay();
   const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust for Monday
   d.setDate(diff);
+  // eslint-disable-next-line temporal-rules/no-temporal-bypass -- Display bucket label, not gaming day derivation (PRD-027)
   return d.toISOString().slice(0, 10);
 }
 
@@ -414,21 +356,23 @@ export function composePlayerSummary(
  * @param visits - List of visits with started_at timestamps
  * @param rewards - List of rewards with issued_at timestamps
  * @param weeks - Number of weeks to include
+ * @param periodStart - Start date (YYYY-MM-DD) from rpc_gaming_day_range
+ * @param periodEnd - End date (YYYY-MM-DD) from rpc_gaming_day_range
  * @returns WeeklySeriesDTO with buckets
  */
 export function mapToWeeklySeries(
   visits: Array<{ started_at: string }>,
   rewards: Array<{ issued_at: string }>,
   weeks: number,
+  periodStart: string,
+  periodEnd: string,
 ): WeeklySeriesDTO {
-  const periodEnd = getCurrentGamingDay();
-  const periodStart = getWeeksAgoDate(weeks);
-
-  // Initialize buckets for each week
+  // Initialize buckets for each week using DB-provided periodEnd as reference
   const bucketMap = new Map<string, WeeklyBucketDTO>();
+  const refDate = new Date(`${periodEnd}T00:00:00`);
   for (let i = 0; i < weeks; i++) {
-    const weekDate = new Date();
-    weekDate.setDate(weekDate.getDate() - i * 7);
+    const weekDate = new Date(refDate);
+    weekDate.setDate(refDate.getDate() - i * 7);
     const weekStart = getWeekStart(weekDate);
     bucketMap.set(weekStart, {
       weekStart,

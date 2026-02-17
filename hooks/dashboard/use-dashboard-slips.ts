@@ -13,15 +13,15 @@
  * @see PERF-002 Pit Dashboard Data Flow Optimization
  */
 
-"use client";
+'use client';
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery } from '@tanstack/react-query';
 
-import { createBrowserComponentClient } from "@/lib/supabase/client";
-import { listActiveForTableWithPlayer } from "@/services/rating-slip/crud";
-import type { RatingSlipWithPlayerDTO } from "@/services/rating-slip/dtos";
+import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { listActiveForTableWithPlayer } from '@/services/rating-slip/crud';
+import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 
-import { dashboardKeys } from "./keys";
+import { dashboardKeys } from './keys';
 
 /**
  * Fetches active (open + paused) slips for a table with player names.

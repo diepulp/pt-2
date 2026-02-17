@@ -11,9 +11,9 @@ import type {
   ActivityFilters,
   RewardHistoryFilters,
   SummaryFilters,
-} from "./dtos";
+} from './dtos';
 
-const ROOT = ["player360-dashboard"] as const;
+const ROOT = ['player360-dashboard'] as const;
 
 /**
  * Serializes filter objects to a stable string key.
@@ -47,8 +47,8 @@ export const player360DashboardKeys = {
    */
   summary: Object.assign(
     (filters: SummaryFilters) =>
-      [...ROOT, "summary", serialize(filters)] as const,
-    { scope: [...ROOT, "summary"] as const },
+      [...ROOT, 'summary', serialize(filters)] as const,
+    { scope: [...ROOT, 'summary'] as const },
   ),
 
   /**
@@ -57,8 +57,8 @@ export const player360DashboardKeys = {
    */
   activity: Object.assign(
     (filters: ActivityFilters) =>
-      [...ROOT, "activity", serialize(filters)] as const,
-    { scope: [...ROOT, "activity"] as const },
+      [...ROOT, 'activity', serialize(filters)] as const,
+    { scope: [...ROOT, 'activity'] as const },
   ),
 
   /**
@@ -67,8 +67,8 @@ export const player360DashboardKeys = {
    */
   rewardHistory: Object.assign(
     (filters: RewardHistoryFilters) =>
-      [...ROOT, "reward-history", serialize(filters)] as const,
-    { scope: [...ROOT, "reward-history"] as const },
+      [...ROOT, 'reward-history', serialize(filters)] as const,
+    { scope: [...ROOT, 'reward-history'] as const },
   ),
 
   /**
@@ -76,5 +76,5 @@ export const player360DashboardKeys = {
    * @param playerId - Player ID
    */
   recentEvents: (playerId: string) =>
-    [...ROOT, "recent-events", playerId] as const,
+    [...ROOT, 'recent-events', playerId] as const,
 };

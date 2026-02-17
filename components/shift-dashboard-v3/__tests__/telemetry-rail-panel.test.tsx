@@ -16,17 +16,55 @@ const mockCasino: CashObsCasinoRollupDTO = {
 };
 
 const mockPits: CashObsPitRollupDTO[] = [
-  { pit: 'PIT-1', cash_out_observed_estimate_total: 25000, cash_out_observation_count: 6 },
-  { pit: 'PIT-2', cash_out_observed_estimate_total: 15000, cash_out_observation_count: 4 },
+  {
+    pit: 'PIT-1',
+    cash_out_observed_estimate_total: 25000,
+    cash_out_observation_count: 6,
+  },
+  {
+    pit: 'PIT-2',
+    cash_out_observed_estimate_total: 15000,
+    cash_out_observation_count: 4,
+  },
 ];
 
 const mockTables: CashObsTableRollupDTO[] = [
-  { table_id: 'T1', table_label: 'BJ-01', cash_out_observed_estimate_total: 10000, cash_out_observation_count: 5 },
-  { table_id: 'T2', table_label: 'BJ-02', cash_out_observed_estimate_total: 8000, cash_out_observation_count: 4 },
-  { table_id: 'T3', table_label: 'BJ-03', cash_out_observed_estimate_total: 6000, cash_out_observation_count: 3 },
-  { table_id: 'T4', table_label: 'BJ-04', cash_out_observed_estimate_total: 4000, cash_out_observation_count: 2 },
-  { table_id: 'T5', table_label: 'BJ-05', cash_out_observed_estimate_total: 2000, cash_out_observation_count: 1 },
-  { table_id: 'T6', table_label: 'BJ-06', cash_out_observed_estimate_total: 1000, cash_out_observation_count: 1 },
+  {
+    table_id: 'T1',
+    table_label: 'BJ-01',
+    cash_out_observed_estimate_total: 10000,
+    cash_out_observation_count: 5,
+  },
+  {
+    table_id: 'T2',
+    table_label: 'BJ-02',
+    cash_out_observed_estimate_total: 8000,
+    cash_out_observation_count: 4,
+  },
+  {
+    table_id: 'T3',
+    table_label: 'BJ-03',
+    cash_out_observed_estimate_total: 6000,
+    cash_out_observation_count: 3,
+  },
+  {
+    table_id: 'T4',
+    table_label: 'BJ-04',
+    cash_out_observed_estimate_total: 4000,
+    cash_out_observation_count: 2,
+  },
+  {
+    table_id: 'T5',
+    table_label: 'BJ-05',
+    cash_out_observed_estimate_total: 2000,
+    cash_out_observation_count: 1,
+  },
+  {
+    table_id: 'T6',
+    table_label: 'BJ-06',
+    cash_out_observed_estimate_total: 1000,
+    cash_out_observation_count: 1,
+  },
 ];
 
 describe('TelemetryRailPanel', () => {

@@ -340,6 +340,58 @@ if (showTheme) {
 
 ---
 
+## Temporal Patterns — Gaming Day (TEMP-001/002/003)
+
+**Registry:** `docs/20-architecture/temporal-patterns/INDEX.md`
+
+### Hard-Banned in Query Paths
+
+These patterns are **never acceptable** when constructing a `gaming_day` value for data fetching or query construction:
+
+| Pattern | Why Banned | Correct Approach |
+|---------|-----------|-----------------|
+| `new Date().toISOString().slice(0, 10)` | UTC date ≠ gaming day | Use `useGamingDay()` hook or `getServerGamingDay()` |
+| `getUTCFullYear()` / `getUTCMonth()` / `getUTCDate()` | UTC math ignores casino timezone + start time | DB-derived gaming day only |
+| `new Date()` arithmetic for gaming day | Creates second temporal authority | `rpc_current_gaming_day()` via DB |
+| `getCurrentGamingDay()` (deprecated) | Hardcoded timezone/start time | `getServerGamingDay()` in RSC, `useGamingDay()` in client |
+
+### Allowed Only in Presentation
+
+- `Intl.DateTimeFormat` with casino timezone — display formatting only
+- `date-fns` / `dayjs` formatting — display labels, never query construction
+
+### Client Components
+
+Use `useGamingDay()` from `hooks/casino/use-gaming-day` (calls `GET /api/v1/casino/gaming-day` → DB RPC):
+
+```typescript
+import { useGamingDay } from '@/hooks/casino/use-gaming-day'
+
+function PitDashboard() {
+  const { gamingDay } = useGamingDay()
+  // Use gamingDay for queries — never compute it locally
+}
+```
+
+### Server Components (RSC)
+
+Use `getServerGamingDay()` canonical helper (calls `rpc_current_gaming_day()` → DB):
+
+```typescript
+// app/(dashboard)/players/page.tsx
+import { getServerGamingDay } from '@/lib/gaming-day/server'
+
+export default async function Page() {
+  const supabase = await createClient()
+  const gamingDay = await getServerGamingDay(supabase)
+  return <PlayerDashboard gamingDay={gamingDay} />
+}
+```
+
+**References:** TEMP-003 §4 (RSC safe path), PRD-027 §6
+
+---
+
 ## Forbidden Patterns
 
 | Pattern | Issue | Fix |

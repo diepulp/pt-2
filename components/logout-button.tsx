@@ -1,21 +1,14 @@
 'use client';
 
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-
 import { Button } from '@/components/ui/button';
-import { createBrowserComponentClient } from '@/lib/supabase/client';
+import { useSignOut } from '@/hooks/auth/use-sign-out';
 
 export function LogoutButton() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
+  const { signOut, isPending } = useSignOut();
 
-  const logout = async () => {
-    const supabase = createBrowserComponentClient();
-    await supabase.auth.signOut();
-    queryClient.clear();
-    router.push('/auth/login');
-  };
-
-  return <Button onClick={logout}>Logout</Button>;
+  return (
+    <Button onClick={signOut} disabled={isPending}>
+      {isPending ? 'Signing out...' : 'Logout'}
+    </Button>
+  );
 }

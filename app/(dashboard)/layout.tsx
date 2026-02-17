@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { AppSidebar } from '@/components/layout/app-sidebar';
 import { Header } from '@/components/layout/header';
+import { LockScreenProvider } from '@/components/layout/lock-screen-provider';
 import { createClient } from '@/lib/supabase/server';
 
 export default async function DashboardLayout({
@@ -15,7 +16,7 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/auth/login');
+    redirect('/signin');
   }
 
   // Main sidebar collapsed width: 56px (3.5rem / w-14)
@@ -39,6 +40,7 @@ export default async function DashboardLayout({
       <main className="pt-16 pl-14 min-h-screen">
         <div className="p-6">{children}</div>
       </main>
+      <LockScreenProvider />
     </div>
   );
 }

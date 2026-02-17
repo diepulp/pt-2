@@ -9,7 +9,7 @@
  * @see PRD-002 Rating Slip Service
  */
 
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type {
   CloseRatingSlipInput,
@@ -17,16 +17,16 @@ import type {
   RatingSlipDTO,
   RatingSlipWithDurationDTO,
   UpdateAverageBetInput,
-} from "@/services/rating-slip/dtos";
+} from '@/services/rating-slip/dtos';
 import {
   closeRatingSlip,
   pauseRatingSlip,
   resumeRatingSlip,
   startRatingSlip,
   updateAverageBet,
-} from "@/services/rating-slip/http";
-import { ratingSlipKeys } from "@/services/rating-slip/keys";
-import { ratingSlipModalKeys } from "@/services/rating-slip-modal/keys";
+} from '@/services/rating-slip/http';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
+import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
  * Starts a new rating slip for a visit at a gaming table.

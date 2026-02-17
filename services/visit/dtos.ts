@@ -138,6 +138,7 @@ export interface ActiveVisitDTO {
  * - `resumed`: true if resuming same-day visit (vs creating new)
  * - `gamingDay`: ISO date (YYYY-MM-DD) for the visit's gaming day
  */
+
 export interface StartVisitResultDTO {
   /** The visit (new or existing) */
   visit: VisitDTO;
@@ -231,17 +232,17 @@ export interface VisitLiveViewDTO {
   current_segment_status: 'open' | 'paused' | null;
   /** Current segment start timestamp (null if no active slip) */
   current_segment_started_at: string | null;
-  /** Current average bet (null if no active slip) */
+  /** Current average bet in dollars (stored as dollars in rating_slip) */
   current_segment_average_bet: number | null;
 
   // Session totals (aggregated across all slips)
   /** Total play duration in seconds (closed slips + active slip) */
   session_total_duration_seconds: number;
-  /** Total buy-in amount (sum of 'in' transactions) */
+  /** Total buy-in amount in dollars (converted from cents at service layer) */
   session_total_buy_in: number;
-  /** Total cash-out amount (sum of 'out' transactions) */
+  /** Total cash-out amount in dollars (converted from cents at service layer) */
   session_total_cash_out: number;
-  /** Net amount (buy_in - cash_out) */
+  /** Net amount in dollars (buy_in - cash_out, converted at service layer) */
   session_net: number;
   /** Total loyalty points earned (0 until loyalty system implemented) */
   session_points_earned: number;
@@ -311,11 +312,11 @@ export interface RecentSessionDTO {
   last_seat_number: number | null;
   /** Total session duration in seconds */
   total_duration_seconds: number;
-  /** Total buy-in amount */
+  /** Total buy-in amount in dollars (converted from cents at service layer) */
   total_buy_in: number;
-  /** Total cash-out amount */
+  /** Total cash-out amount in dollars (converted from cents at service layer) */
   total_cash_out: number;
-  /** Net amount (buy_in - cash_out) */
+  /** Net amount in dollars (converted from cents at service layer) */
   net: number;
   /** Total loyalty points earned */
   points_earned: number;
@@ -355,7 +356,7 @@ export interface LastSessionContextDTO {
   last_seat_number: number;
   /** Last game settings (game-specific config) */
   last_game_settings: Record<string, unknown> | null;
-  /** Last average bet amount */
+  /** Last average bet in dollars */
   last_average_bet: number | null;
   /** When session ended */
   ended_at: string;

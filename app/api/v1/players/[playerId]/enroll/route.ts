@@ -97,12 +97,8 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
           enrollment = existingEnrollment;
         } else {
           // New enrollment needed
-          enrollment = await enrollPlayer(
-            mwCtx.supabase,
-            params.playerId,
-            staffData.casino_id,
-            staffData.id, // enrolled_by
-          );
+          // PRD-034: RPC derives casino_id and actor_id from session context
+          enrollment = await enrollPlayer(mwCtx.supabase, params.playerId);
         }
 
         return {

@@ -71,6 +71,8 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
 | PlayerFinancialService (Finance) | `player_financial_transaction` | Authenticated finance, compliance & pit_boss staff in same `casino_id` | `rpc_create_financial_txn` (cashier/admin: full access; pit_boss: table buy-ins only per SEC-005 v1.1.0) | Append-only ledger; deletes disabled; gaming day derived via trigger. Pit boss constraints: direction='in', tender_type IN ('cash','chips'), visit_id required. |
 | MTLService (Compliance) | `mtl_entry`, `mtl_audit_note` | Authenticated compliance staff within `casino_id` | Cashier + compliance services with matching `casino_id` | Immutable cash transaction log; notes append-only; thresholds hinge on casino settings. Ghost visits are first-class for CTR/cash movement. **PRD-010**: `mtl_audit_note` explicit denial policies for UPDATE/DELETE (Template 3). |
+| CasinoService (Onboarding) | `staff_invite` | Admin-only within `casino_id` (Template 2b session-var-only for ALL ops including SELECT — PII tightening) | Admin-only INSERT/UPDATE; no DELETE | **PRD-025**: Invite-based staff onboarding. Token stored as SHA-256 hash; `token_hash` column not readable by `authenticated` role (column-level privilege restriction). Unique partial index enforces one active invite per casino+email. All three policies (SELECT/INSERT/UPDATE) use NULLIF-only — no COALESCE JWT fallback. |
+| CasinoService (Metadata) | `company` | **Deny-by-default** — no permissive policies for `authenticated` role | service_role and SECURITY DEFINER RPCs only | **PRD-025**: Company is organizational metadata, not a security boundary. RLS enabled with zero permissive policies. `company_id` is not part of the RLS context (`app.company_id` does not exist). Access restricted to service_role for administrative operations. |
 
 ---
 
@@ -129,6 +131,7 @@ Consolidated invariants governing the auth/RLS security model. Each invariant is
 | **INV-030-4** | `skipAuth` MUST NOT appear in production source files | CI lint test (PR-3) |
 | **INV-030-5** | Mutations (INSERT/UPDATE/DELETE) on security-critical tables MUST fail if `app.casino_id` session variable is absent, regardless of JWT claims | Write-path RLS policy migration (PR-4) |
 | **INV-030-6** | JWT fallback reliance during SELECT MUST be logged at the application layer | App-layer structured logging (PR-4) |
+| **INV-030-7** | Writes against Template 2b policies MUST use self-contained SECURITY DEFINER RPCs with internal `set_rls_context_from_staff()`. Direct PostgREST DML (`.from(table).insert/update/delete`) is PROHIBITED — session vars are transaction-local and lost across HTTP requests. | CI grep guard + code review checklist (D5) |
 
 **References:** [ADR-024](../80-adrs/ADR-024_DECISIONS.md), [ADR-030](../80-adrs/ADR-030-auth-system-hardening.md)
 
@@ -270,6 +273,8 @@ create policy "{table_name}_update_authorized_roles"
 
 **Rationale:** If `withRLS` is skipped (via `skipAuth`, error, or misconfiguration), the COALESCE fallback would allow writes using stale JWT claims. Write policies on critical tables must fail closed.
 
+> **INV-030-7 Transport Constraint (ADR-030 D5):** Application code MUST NOT use `.from(table).insert/update/delete` against tables with Template 2b policies. Session vars set by the middleware's `set_rls_context_from_staff()` RPC are transaction-local (`set_config(name, val, true)`) and do not survive across separate PostgREST HTTP requests. All Template 2b writes MUST go through self-contained SECURITY DEFINER RPCs that call `set_rls_context_from_staff()` internally. See [ISSUE-SET-PIN-SILENT-RLS-FAILURE](../issues/ISSUE-SET-PIN-SILENT-RLS-FAILURE.md) for the failure case.
+
 ```sql
 -- Write policy (session vars required — no JWT fallback)
 create policy "{table_name}_insert_session_required"
@@ -289,7 +294,7 @@ create policy "{table_name}_insert_session_required"
 
 **Key difference from Template 2:** No `COALESCE(..., auth.jwt()...)` — if `app.casino_id` is unset, the cast to `uuid` of an empty/null string yields `NULL`, and the equality check fails. Writes are denied.
 
-**Applies to:** `staff`, `player`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
+**Applies to:** `staff`, `staff_pin_attempts`, `staff_invite`, `player_casino`, `player_financial_transaction`, `visit`, `rating_slip`, `loyalty_ledger`
 
 **SELECT policies** on these tables retain the COALESCE fallback (Template 1) until v0.2.
 
@@ -810,10 +815,39 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 
 ---
 
+## Category A/B Write Posture Cross-Reference (ADR-034)
+
+ADR-034 defines two RLS write postures with CI enforcement. This section maps each casino-scoped table to its posture.
+
+| Table | Category | Write Posture | Write Mechanism | CI Enforced |
+|-------|----------|--------------|-----------------|-------------|
+| `staff` | **A** | Session-var-only (Template 2b) | `rpc_create_staff`, `rpc_set_staff_pin` | Yes |
+| `staff_pin_attempts` | **A** | Session-var-only (Template 2b) | `rpc_increment_pin_attempt`, `rpc_clear_pin_attempts` | Yes |
+| `staff_invite` | **A** | Session-var-only (Template 2b, all ops) | `rpc_create_staff_invite`, `rpc_accept_staff_invite` | Yes |
+| `player_casino` | **A** | Session-var-only (Template 2b) | `rpc_create_player`, `rpc_enroll_player` | Yes |
+| `player` | **B** | Hybrid COALESCE (Template 2) | PostgREST DML (authenticated client) | No |
+| `casino` | N/A | Read-only (service_role for setup) | `rpc_bootstrap_casino` | No |
+| `casino_settings` | **B** | Hybrid COALESCE | `rpc_complete_casino_setup`, PostgREST DML | No |
+| `visit` | **B** (D4 target) | Hybrid COALESCE (Template 2) | PostgREST DML | Pending migration to A |
+| `rating_slip` | **B** (D4 target) | Hybrid COALESCE (Template 2) | PostgREST DML | Pending migration to A |
+| `player_financial_transaction` | **B** (D4 target) | Append-only (Template 3) | `rpc_create_financial_txn` | Pending migration to A |
+| `loyalty_ledger` | **B** (D4 target) | Append-only (Template 3) | `rpc_issue_mid_session_reward` | Pending migration to A |
+| `game_settings` | **B** | Hybrid COALESCE | PostgREST DML | No |
+| `gaming_table` | **B** | Hybrid COALESCE | PostgREST DML | No |
+
+**Canonical source of truth**: Category A table list is owned by ADR-030 (`<!-- CATEGORY-A-REGISTRY -->` block). CI lint config generated by `npm run generate:category-a`.
+
+**Reference**: [ADR-034](../80-adrs/ADR-034-RLS-write-path-compatibility-and-enforcement.md)
+
+---
+
 ### Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.0.0 | 2026-02-11 | **ADR-034 Ratification**: Added Category A/B Write Posture Cross-Reference section. Updated Template 2b applies-to list (added `staff_pin_attempts`, `staff_invite`, `player_casino`). Category A table registry sourced from ADR-030. |
+| 1.9.0 | 2026-02-10 | **ADR-030 D5**: Added INV-030-7 transport constraint to Template 2b — direct PostgREST DML prohibited, SECURITY DEFINER RPCs required. Triggered by ISSUE-SET-PIN-SILENT-RLS-FAILURE. |
+| 1.8.0 | 2026-01-31 | **PRD-025 Onboarding**: Added `staff_invite` (admin-only, Template 2b session-var-only for ALL ops — PII tightening) and `company` (deny-by-default, no permissive policies) to Policy Matrix. Column-level privilege restriction on `token_hash`. |
 | 1.7.0 | 2026-01-29 | **ADR-030 Alignment**: Added consolidated Security Invariants Registry (ADR-024 INV-1–8 + ADR-030 INV-030-1–6). Added Template 2b for write-path session-var-required policies (INV-030-5). Noted ADR-030 write-path tightening on Template 2. |
 | 1.6.0 | 2026-01-06 | **ADR-024 Alignment**: Updated Canonical RLS Pattern section to require `set_rls_context_from_staff()`. Deprecated `set_rls_context()` for client-callable RPCs. Added security invariants INV-7/INV-8. Updated RLS Context Injection section with authoritative context setter. |
 | 1.5.0 | 2026-01-06 | **PRD-LOYALTY-PROMO**: Added `promo_program`, `promo_coupon` tables to LoyaltyService (Promo Instruments) context. RPCs require ADR-024 compliance (`set_rls_context_from_staff()`). |
