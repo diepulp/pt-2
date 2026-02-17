@@ -74,6 +74,11 @@ export function SetupWizardDev({
     setCurrentStep((s) => Math.max(s - 1, 0));
   }
 
+  function handleStepClick(targetStep: number) {
+    setError(null);
+    setCurrentStep(targetStep);
+  }
+
   function handleSkip() {
     startTransition(async () => {
       setError(null);
@@ -253,6 +258,7 @@ export function SetupWizardDev({
         return (
           <StepParTargets
             tables={tables}
+            gameSettings={games}
             bankMode={settings?.table_bank_mode ?? null}
             isPending={isPending}
             onSave={handleSavePar}
@@ -269,6 +275,7 @@ export function SetupWizardDev({
             isPending={isPending}
             onComplete={handleComplete}
             onBack={goBack}
+            onJumpToStep={handleStepClick}
           />
         );
       default:
@@ -287,7 +294,12 @@ export function SetupWizardDev({
         </p>
       </div>
 
-      <WizardStepper steps={STEP_LABELS} currentStep={currentStep} />
+      <WizardStepper
+        steps={STEP_LABELS}
+        currentStep={currentStep}
+        onStepClick={handleStepClick}
+        optionalSteps={[3]}
+      />
 
       {error && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">

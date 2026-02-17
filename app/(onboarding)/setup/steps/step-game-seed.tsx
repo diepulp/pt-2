@@ -42,7 +42,6 @@ import {
 const GAME_TYPE_LABELS: Record<string, string> = {
   blackjack: 'Blackjack',
   poker: 'Poker',
-  roulette: 'Roulette',
   baccarat: 'Baccarat',
   pai_gow: 'Pai Gow',
   carnival: 'Carnival',
@@ -54,7 +53,6 @@ const GAME_TYPE_ORDER = [
   'pai_gow',
   'carnival',
   'poker',
-  'roulette',
 ];
 
 type FormMode =

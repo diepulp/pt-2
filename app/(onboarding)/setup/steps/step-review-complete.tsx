@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,6 +12,11 @@ import {
 import { Separator } from '@/components/ui/separator';
 import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 import type { Database } from '@/types/database.types';
+
+import {
+  validateAllSteps,
+  type ValidationIssue,
+} from '../lib/wizard-validation';
 
 type CasinoSettingsRow = Database['public']['Tables']['casino_settings']['Row'];
 type GamingTableRow = Database['public']['Tables']['gaming_table']['Row'];
@@ -29,7 +32,6 @@ const BANK_MODE_LABELS: Record<
 const GAME_TYPE_LABELS: Record<string, string> = {
   blackjack: 'Blackjack',
   poker: 'Poker',
-  roulette: 'Roulette',
   baccarat: 'Baccarat',
   pai_gow: 'Pai Gow',
   carnival: 'Carnival',
@@ -41,7 +43,6 @@ const GAME_TYPE_ORDER = [
   'pai_gow',
   'carnival',
   'poker',
-  'roulette',
 ];
 
 interface StepReviewCompleteProps {
@@ -51,6 +52,66 @@ interface StepReviewCompleteProps {
   isPending: boolean;
   onComplete: () => void;
   onBack: () => void;
+  onJumpToStep: (step: number) => void;
+}
+
+function SectionStatus({ issues }: { issues: ValidationIssue[] }) {
+  const hasBlockers = issues.some((i) => i.severity === 'blocker');
+  const hasWarnings = issues.some((i) => i.severity === 'warning');
+
+  if (hasBlockers) {
+    return <Badge variant="destructive">Needs Fix</Badge>;
+  }
+  if (hasWarnings) {
+    return (
+      <Badge variant="secondary" className="border-amber-300 text-amber-600">
+        Warning
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="secondary" className="border-green-300 text-green-600">
+      Complete
+    </Badge>
+  );
+}
+
+function IssueList({
+  issues,
+  onFix,
+}: {
+  issues: ValidationIssue[];
+  onFix: () => void;
+}) {
+  if (issues.length === 0) return null;
+  return (
+    <div className="mt-2 space-y-1 rounded-md border border-muted p-2">
+      {issues.map((issue) => (
+        <div
+          key={issue.ruleId}
+          className="flex items-center justify-between gap-2 text-sm"
+        >
+          <span
+            className={
+              issue.severity === 'blocker'
+                ? 'text-destructive'
+                : 'text-amber-600'
+            }
+          >
+            {issue.message}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-auto shrink-0 px-2 py-0.5 text-xs"
+            onClick={onFix}
+          >
+            Fix
+          </Button>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export function StepReviewComplete({
@@ -60,49 +121,73 @@ export function StepReviewComplete({
   isPending,
   onComplete,
   onBack,
+  onJumpToStep,
 }: StepReviewCompleteProps) {
+  // Derived validation audit — not stored as state
+  const allIssues = validateAllSteps({ settings, games, tables });
+  const hasBlockers = allIssues.some((i) => i.severity === 'blocker');
+  const blockerCount = allIssues.filter((i) => i.severity === 'blocker').length;
+
+  // Group issues by step
+  const issuesByStep = new Map<number, ValidationIssue[]>();
+  for (const issue of allIssues) {
+    const existing = issuesByStep.get(issue.step) ?? [];
+    existing.push(issue);
+    issuesByStep.set(issue.step, existing);
+  }
+
   const tablesWithPar = tables.filter(
     (t) => t.par_total_cents != null && t.par_total_cents > 0,
   );
 
-  // Build a lookup map from game_settings_id to variant name
-  const gameSettingsMap = useMemo(() => {
-    const map = new Map<string, GameSettingsDTO>();
-    for (const gs of games) {
-      map.set(gs.id, gs);
-    }
-    return map;
-  }, [games]);
+  // Build lookup for variant names
+  const gameSettingsMap = new Map<string, GameSettingsDTO>();
+  for (const gs of games) {
+    gameSettingsMap.set(gs.id, gs);
+  }
 
-  // Group games by game_type for summary
-  const groupedGames = useMemo(() => {
-    const groups = new Map<string, GameSettingsDTO[]>();
-    for (const game of games) {
-      const existing = groups.get(game.game_type) ?? [];
-      existing.push(game);
-      groups.set(game.game_type, existing);
-    }
-    return GAME_TYPE_ORDER.filter((gt) => groups.has(gt)).map((gt) => ({
+  // Group games by type for summary
+  const groups = new Map<string, GameSettingsDTO[]>();
+  for (const game of games) {
+    const existing = groups.get(game.game_type) ?? [];
+    existing.push(game);
+    groups.set(game.game_type, existing);
+  }
+  const groupedGames = GAME_TYPE_ORDER.filter((gt) => groups.has(gt)).map(
+    (gt) => ({
       gameType: gt,
       label: GAME_TYPE_LABELS[gt] ?? gt,
       items: groups.get(gt)!,
-    }));
-  }, [games]);
+    }),
+  );
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Review & Complete</CardTitle>
         <CardDescription>
-          Review your setup and complete the wizard.
+          {hasBlockers
+            ? `${blockerCount} issue${blockerCount !== 1 ? 's' : ''} to resolve before completing setup`
+            : 'Everything looks good. Complete your setup.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* Casino Settings */}
+        {/* Audit Status Banner */}
+        {hasBlockers && (
+          <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+            Some steps have issues that need to be resolved before completing
+            setup.
+          </div>
+        )}
+
+        {/* Step 0: Casino Settings */}
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Casino Settings
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Casino Settings
+            </h3>
+            <SectionStatus issues={issuesByStep.get(0) ?? []} />
+          </div>
           <div className="grid gap-2 text-sm sm:grid-cols-3">
             <div>
               <span className="text-muted-foreground">Timezone: </span>
@@ -128,11 +213,15 @@ export function StepReviewComplete({
               </span>
             </div>
           </div>
+          <IssueList
+            issues={issuesByStep.get(0) ?? []}
+            onFix={() => onJumpToStep(0)}
+          />
         </div>
 
         <Separator />
 
-        {/* Game Settings */}
+        {/* Step 1: Game Settings */}
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-medium text-muted-foreground">
@@ -141,6 +230,7 @@ export function StepReviewComplete({
             <Badge variant="secondary">
               {games.length} game{games.length !== 1 ? 's' : ''} configured
             </Badge>
+            <SectionStatus issues={issuesByStep.get(1) ?? []} />
           </div>
           {groupedGames.length > 0 && (
             <div className="grid gap-1 text-sm">
@@ -158,15 +248,22 @@ export function StepReviewComplete({
               ))}
             </div>
           )}
+          <IssueList
+            issues={issuesByStep.get(1) ?? []}
+            onFix={() => onJumpToStep(1)}
+          />
         </div>
 
         <Separator />
 
-        {/* Tables */}
+        {/* Step 2: Gaming Tables */}
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground">
-            Gaming Tables
-          </h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Gaming Tables
+            </h3>
+            <SectionStatus issues={issuesByStep.get(2) ?? []} />
+          </div>
           {tables.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No tables configured.
@@ -193,22 +290,53 @@ export function StepReviewComplete({
                         Pit: {t.pit}
                       </span>
                     )}
-                    {t.par_total_cents != null && t.par_total_cents > 0 && (
-                      <span className="text-muted-foreground text-xs">
-                        Par: ${(t.par_total_cents / 100).toLocaleString()}
-                      </span>
-                    )}
                   </div>
                 );
               })}
             </div>
           )}
-          {tablesWithPar.length > 0 && (
-            <p className="text-xs text-muted-foreground">
-              {tablesWithPar.length} of {tables.length} tables have par targets
-              set.
+          <IssueList
+            issues={issuesByStep.get(2) ?? []}
+            onFix={() => onJumpToStep(2)}
+          />
+        </div>
+
+        <Separator />
+
+        {/* Step 3: Par Targets */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-muted-foreground">
+              Par Targets
+            </h3>
+            <SectionStatus issues={issuesByStep.get(3) ?? []} />
+          </div>
+          {tablesWithPar.length > 0 ? (
+            <div className="space-y-1">
+              <div className="grid gap-1 text-sm">
+                {tablesWithPar.map((t) => (
+                  <div key={t.id} className="flex items-center gap-2">
+                    <span className="font-medium">{t.label}</span>
+                    <span className="text-muted-foreground text-xs">
+                      Par: ${(t.par_total_cents! / 100).toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {tablesWithPar.length} of {tables.length} tables have par
+                targets set.
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No par targets configured.
             </p>
           )}
+          <IssueList
+            issues={issuesByStep.get(3) ?? []}
+            onFix={() => onJumpToStep(3)}
+          />
         </div>
 
         <Separator />
@@ -217,7 +345,7 @@ export function StepReviewComplete({
           <Button variant="outline" onClick={onBack} disabled={isPending}>
             Back
           </Button>
-          <Button onClick={onComplete} disabled={isPending}>
+          <Button onClick={onComplete} disabled={isPending || hasBlockers}>
             {isPending ? 'Completing...' : 'Complete Setup'}
           </Button>
         </div>

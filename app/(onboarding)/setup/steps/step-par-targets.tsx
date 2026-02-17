@@ -10,6 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 import type { Database } from '@/types/database.types';
 
 import { ParEntryRow } from '../components/par-entry-row';
@@ -19,6 +20,7 @@ type TableBankMode = Database['public']['Enums']['table_bank_mode'];
 
 interface StepParTargetsProps {
   tables: GamingTableRow[];
+  gameSettings: GameSettingsDTO[];
   bankMode: TableBankMode | null;
   isPending: boolean;
   onSave: (
@@ -30,12 +32,18 @@ interface StepParTargetsProps {
 
 export function StepParTargets({
   tables,
+  gameSettings,
   bankMode,
   isPending,
   onSave,
   onBack,
   onSkip,
 }: StepParTargetsProps) {
+  // Build lookup for variant names
+  const gameSettingsMap = new Map<string, GameSettingsDTO>();
+  for (const gs of gameSettings) {
+    gameSettingsMap.set(gs.id, gs);
+  }
   // Initialize par values from existing data (cents → dollars for display)
   const [parValues, setParValues] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -79,18 +87,24 @@ export function StepParTargets({
           </p>
         ) : (
           <div className="space-y-3">
-            {tables.map((t) => (
-              <ParEntryRow
-                key={t.id}
-                tableId={t.id}
-                tableLabel={t.label}
-                gameType={t.type}
-                value={parValues[t.id] ?? ''}
-                bankMode={bankMode}
-                onChange={(v) => handleChange(t.id, v)}
-                disabled={isPending}
-              />
-            ))}
+            {tables.map((t) => {
+              const linkedGame = t.game_settings_id
+                ? gameSettingsMap.get(t.game_settings_id)
+                : null;
+              return (
+                <ParEntryRow
+                  key={t.id}
+                  tableId={t.id}
+                  tableLabel={t.label}
+                  gameType={t.type}
+                  variantName={linkedGame?.variant_name ?? undefined}
+                  value={parValues[t.id] ?? ''}
+                  bankMode={bankMode}
+                  onChange={(v) => handleChange(t.id, v)}
+                  disabled={isPending}
+                />
+              );
+            })}
           </div>
         )}
 

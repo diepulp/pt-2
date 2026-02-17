@@ -21,10 +21,11 @@ import type { RLSContext } from './rls-context';
  * @see supabase/seed.sql - Staff section
  */
 export const DEV_RLS_CONTEXT: RLSContext = {
-  // Marcus Thompson - Pit Boss at Lucky Star Downtown (Casino 1)
+  // Dev context uses admin role to cover all routes including /setup wizard.
+  // UUIDs match seed data: Marcus Thompson at Lucky Star Downtown (Casino 1).
   actorId: '5a000000-0000-0000-0000-000000000001',
   casinoId: 'ca000000-0000-0000-0000-000000000001',
-  staffRole: 'pit_boss',
+  staffRole: 'admin',
 };
 
 /**
