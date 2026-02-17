@@ -9,6 +9,10 @@ on:
 # Merge-safety gates only. Clean-room verification that code compiles,
 # lints clean, and builds. Tests run locally (require Supabase).
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+  
 jobs:
   checks:
     runs-on: ubuntu-latest
@@ -19,8 +23,8 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
+          node-version-file: '.nvmrc'
+          cache: 'npm'
       - name: Install
         run: npm ci
       - name: Lint
