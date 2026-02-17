@@ -117,9 +117,7 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
         <Card>
           <CardHeader>
             <CardTitle>Invite Accepted</CardTitle>
-            <CardDescription>
-              Finalizing your session...
-            </CardDescription>
+            <CardDescription>Finalizing your session...</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="mb-3 text-sm text-destructive">{refreshError}</p>
