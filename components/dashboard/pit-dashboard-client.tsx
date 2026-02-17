@@ -54,6 +54,7 @@ import {
   resumeRatingSlip,
   closeRatingSlip,
 } from '@/services/rating-slip/http';
+import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { ActiveSlipsPanel } from './active-slips-panel';
 import { NewSlipModal } from './new-slip-modal';
@@ -158,6 +159,9 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
   const { data: ratingSlipModalData } = useRatingSlipModalData(
     isModalOpen && modalType === 'rating-slip' ? selectedSlipId : null,
   );
+
+  // Zustand store action: reset additive fields after save to prevent double-entry
+  const initializeForm = useRatingSlipModalStore((s) => s.initializeForm);
 
   // Mutations: Modal operations
   const saveWithBuyIn = useSaveWithBuyIn();
@@ -313,6 +317,16 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,
+      });
+      // Reset additive fields before closing to prevent double-entry if modal reopens quickly.
+      // newBuyIn and chipsTaken create financial transactions — must be zeroed.
+      initializeForm({
+        averageBet: formState.averageBet,
+        startTime: formState.startTime,
+        newBuyIn: '0',
+        newTableId: formState.newTableId,
+        newSeatNumber: formState.newSeatNumber,
+        chipsTaken: '0',
       });
       // PRD-019 WS3: Show success toast and close modal after successful save
       toast.success('Rating slip saved');

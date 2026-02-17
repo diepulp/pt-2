@@ -57,6 +57,7 @@ import {
   closeRatingSlip,
 } from '@/services/rating-slip/http';
 import { resolveCurrentSlipContext } from '@/services/rating-slip-modal/rpc';
+import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { NewSlipModal } from '../dashboard/new-slip-modal';
 import {
@@ -136,6 +137,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const { data: modalData } = useRatingSlipModalData(
     isModalOpen ? selectedSlipId : null,
   );
+
+  // Zustand store action: reset additive fields after save to prevent double-entry
+  const initializeForm = useRatingSlipModalStore((s) => s.initializeForm);
 
   // Mutations: Modal operations
   const saveWithBuyIn = useSaveWithBuyIn();
@@ -286,6 +290,17 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
         playerDailyTotal: formState.playerDailyTotal,
+      });
+      // Reset additive fields to prevent double-entry on subsequent save clicks.
+      // newBuyIn and chipsTaken create financial transactions — must be zeroed.
+      // initializeForm sets both formState and originalState, making isDirty = false.
+      initializeForm({
+        averageBet: formState.averageBet,
+        startTime: formState.startTime,
+        newBuyIn: '0',
+        newTableId: formState.newTableId,
+        newSeatNumber: formState.newSeatNumber,
+        chipsTaken: '0',
       });
       toast.success('Changes saved');
     } catch (error) {
