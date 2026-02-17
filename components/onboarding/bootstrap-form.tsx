@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState, useTransition } from 'react';
 
 import { bootstrapAction } from '@/app/(onboarding)/bootstrap/_actions';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { ServiceResult } from '@/lib/http/service-response';
+import { refreshAndVerifyClaims } from '@/lib/supabase/refresh-claims';
 import type { BootstrapCasinoResult } from '@/services/casino/dtos';
 
 const TIMEZONES = [
@@ -45,27 +46,62 @@ async function handleBootstrap(
 export function BootstrapForm() {
   const [state, formAction, isPending] = useActionState(handleBootstrap, null);
   const router = useRouter();
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [isRetrying, startRetryTransition] = useTransition();
 
   useEffect(() => {
-    if (state?.code === 'OK') {
-      // Give a moment for claims to propagate, then redirect
-      const timer = setTimeout(() => router.push('/start'), 1500);
-      return () => clearTimeout(timer);
-    }
+    if (state?.code !== 'OK') return;
+
+    let cancelled = false;
+
+    (async () => {
+      const result = await refreshAndVerifyClaims();
+      if (cancelled) return;
+
+      if (result.ok) {
+        router.push('/start');
+      } else {
+        setRefreshError(result.error ?? 'Claims verification failed');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [state, router]);
 
   if (state?.code === 'OK') {
+    const handleRetry = () => {
+      startRetryTransition(async () => {
+        const result = await refreshAndVerifyClaims();
+        if (result.ok) {
+          router.push('/start');
+        } else {
+          setRefreshError(result.error ?? 'Claims verification failed');
+        }
+      });
+    };
+
     return (
       <Card>
         <CardHeader>
           <CardTitle>Casino Created</CardTitle>
           <CardDescription>
-            Your workspace is ready. Redirecting...
+            {refreshError
+              ? 'Finalizing your session...'
+              : 'Your workspace is ready. Redirecting...'}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => router.push('/start')} className="w-full">
-            Go to Dashboard
+          {refreshError && (
+            <p className="mb-3 text-sm text-destructive">{refreshError}</p>
+          )}
+          <Button
+            onClick={handleRetry}
+            className="w-full"
+            disabled={isRetrying}
+          >
+            {isRetrying ? 'Retrying...' : 'Go to Dashboard'}
           </Button>
         </CardContent>
       </Card>

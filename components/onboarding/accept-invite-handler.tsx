@@ -2,7 +2,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useRouter } from 'next/navigation';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -12,6 +12,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { refreshAndVerifyClaims } from '@/lib/supabase/refresh-claims';
 import { fetchAcceptInvite } from '@/services/casino/http';
 
 interface AcceptInviteHandlerProps {
@@ -21,11 +22,18 @@ interface AcceptInviteHandlerProps {
 export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
   const router = useRouter();
   const triggered = useRef(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [isRetrying, startRetryTransition] = useTransition();
 
   const mutation = useMutation({
     mutationFn: fetchAcceptInvite,
-    onSuccess: () => {
-      router.push('/start');
+    onSuccess: async () => {
+      const result = await refreshAndVerifyClaims();
+      if (result.ok) {
+        router.push('/start');
+      } else {
+        setRefreshError(result.error ?? 'Claims verification failed');
+      }
     },
   });
 
@@ -93,6 +101,38 @@ export function AcceptInviteHandler({ token }: AcceptInviteHandlerProps) {
   }
 
   if (mutation.isSuccess) {
+    if (refreshError) {
+      const handleRetry = () => {
+        startRetryTransition(async () => {
+          const result = await refreshAndVerifyClaims();
+          if (result.ok) {
+            router.push('/start');
+          } else {
+            setRefreshError(result.error ?? 'Claims verification failed');
+          }
+        });
+      };
+
+      return (
+        <Card>
+          <CardHeader>
+            <CardTitle>Invite Accepted</CardTitle>
+            <CardDescription>Finalizing your session...</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="mb-3 text-sm text-destructive">{refreshError}</p>
+            <Button
+              onClick={handleRetry}
+              className="w-full"
+              disabled={isRetrying}
+            >
+              {isRetrying ? 'Retrying...' : 'Go to Dashboard'}
+            </Button>
+          </CardContent>
+        </Card>
+      );
+    }
+
     return (
       <Card>
         <CardContent className="py-8 text-center">

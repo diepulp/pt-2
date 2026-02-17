@@ -1,4 +1,5 @@
 import { DomainError } from '@/lib/errors/domain-errors';
+import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { injectRLSContext } from '@/lib/supabase/rls-context';
 
 import type { Middleware, MiddlewareContext } from './types';
@@ -23,6 +24,14 @@ import type { Middleware, MiddlewareContext } from './types';
  */
 export function withRLS<T>(): Middleware<T> {
   return async (ctx: MiddlewareContext, next) => {
+    // INV-030-8: Dev bypass — context already set by withAuth() from DEV_RLS_CONTEXT.
+    // Service-role client has no auth.uid(), so the RPC would always fail.
+    // Invariant: only dev bypass sets ctx.rlsContext before withRLS() in the current
+    // middleware chain. If future refactors change this, revisit this guard.
+    if (ctx.rlsContext && isDevAuthBypassEnabled()) {
+      return next();
+    }
+
     try {
       const rpcContext = await injectRLSContext(
         ctx.supabase,
