@@ -158,6 +158,11 @@ export interface TableFillDTO {
   received_by: string | null;
   slip_no: string | null;
   created_at: string;
+  status: string;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  confirmed_amount_cents: number | null;
+  discrepancy_note: string | null;
 }
 
 export interface RequestTableFillInput {
@@ -186,6 +191,11 @@ export interface TableCreditDTO {
   received_by: string | null;
   slip_no: string | null;
   created_at: string;
+  status: string;
+  confirmed_at: string | null;
+  confirmed_by: string | null;
+  confirmed_amount_cents: number | null;
+  discrepancy_note: string | null;
 }
 
 export interface RequestTableCreditInput {
@@ -216,6 +226,8 @@ export interface TableDropEventDTO {
   delivered_at: string | null;
   delivered_scan_at: string | null;
   note: string | null;
+  cage_received_at: string | null;
+  cage_received_by: string | null;
 }
 
 export interface LogDropEventInput {
@@ -232,7 +244,40 @@ export interface LogDropEventInput {
   note?: string;
 }
 
+// === Cashier Confirmation Input DTOs (PRD-033) ===
+
+export interface ConfirmTableFillInput {
+  fillId: string;
+  confirmedAmountCents: number;
+  discrepancyNote?: string;
+}
+
+export interface ConfirmTableCreditInput {
+  creditId: string;
+  confirmedAmountCents: number;
+  discrepancyNote?: string;
+}
+
+export interface AcknowledgeDropInput {
+  dropEventId: string;
+}
+
 // === Filter Types ===
+
+export type FillListFilters = {
+  status?: 'requested' | 'confirmed';
+  gaming_day?: string;
+};
+
+export type CreditListFilters = {
+  status?: 'requested' | 'confirmed';
+  gaming_day?: string;
+};
+
+export type DropListFilters = {
+  cageReceived?: boolean;
+  gaming_day?: string;
+};
 
 export type TableListFilters = {
   casinoId?: string;

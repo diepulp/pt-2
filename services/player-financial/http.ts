@@ -255,6 +255,7 @@ export async function createFinancialAdjustment(
     txn_kind: data.txn_kind,
     reason_code: data.reason_code,
     note: data.note,
+    external_ref: data.external_ref,
   };
 }
 

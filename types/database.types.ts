@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.4"
-  }
   public: {
     Tables: {
       audit_log: {
@@ -1275,6 +1270,7 @@ export type Database = {
           created_at: string
           created_by_staff_id: string | null
           direction: Database["public"]["Enums"]["financial_direction"] | null
+          external_ref: string | null
           gaming_day: string | null
           id: string
           idempotency_key: string | null
@@ -1296,6 +1292,7 @@ export type Database = {
           created_at?: string
           created_by_staff_id?: string | null
           direction?: Database["public"]["Enums"]["financial_direction"] | null
+          external_ref?: string | null
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
@@ -1317,6 +1314,7 @@ export type Database = {
           created_at?: string
           created_by_staff_id?: string | null
           direction?: Database["public"]["Enums"]["financial_direction"] | null
+          external_ref?: string | null
           gaming_day?: string | null
           id?: string
           idempotency_key?: string | null
@@ -2466,12 +2464,17 @@ export type Database = {
           authorized_by: string | null
           casino_id: string
           chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
+          discrepancy_note: string | null
           id: string
           received_by: string | null
           request_id: string
           sent_by: string | null
           slip_no: string | null
+          status: string
           table_id: string
         }
         Insert: {
@@ -2479,12 +2482,17 @@ export type Database = {
           authorized_by?: string | null
           casino_id: string
           chipset: Json
+          confirmed_amount_cents?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
+          discrepancy_note?: string | null
           id?: string
           received_by?: string | null
           request_id: string
           sent_by?: string | null
           slip_no?: string | null
+          status?: string
           table_id: string
         }
         Update: {
@@ -2492,12 +2500,17 @@ export type Database = {
           authorized_by?: string | null
           casino_id?: string
           chipset?: Json
+          confirmed_amount_cents?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
+          discrepancy_note?: string | null
           id?: string
           received_by?: string | null
           request_id?: string
           sent_by?: string | null
           slip_no?: string | null
+          status?: string
           table_id?: string
         }
         Relationships: [
@@ -2513,6 +2526,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -2540,6 +2560,8 @@ export type Database = {
       }
       table_drop_event: {
         Row: {
+          cage_received_at: string | null
+          cage_received_by: string | null
           casino_id: string
           delivered_at: string | null
           delivered_scan_at: string | null
@@ -2555,6 +2577,8 @@ export type Database = {
           witnessed_by: string | null
         }
         Insert: {
+          cage_received_at?: string | null
+          cage_received_by?: string | null
           casino_id: string
           delivered_at?: string | null
           delivered_scan_at?: string | null
@@ -2570,6 +2594,8 @@ export type Database = {
           witnessed_by?: string | null
         }
         Update: {
+          cage_received_at?: string | null
+          cage_received_by?: string | null
           casino_id?: string
           delivered_at?: string | null
           delivered_scan_at?: string | null
@@ -2585,6 +2611,13 @@ export type Database = {
           witnessed_by?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "table_drop_event_cage_received_by_fkey"
+            columns: ["cage_received_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "table_drop_event_casino_id_fkey"
             columns: ["casino_id"]
@@ -2620,39 +2653,54 @@ export type Database = {
           amount_cents: number
           casino_id: string
           chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           delivered_by: string | null
+          discrepancy_note: string | null
           id: string
           received_by: string | null
           request_id: string
           requested_by: string | null
           slip_no: string | null
+          status: string
           table_id: string
         }
         Insert: {
           amount_cents: number
           casino_id: string
           chipset: Json
+          confirmed_amount_cents?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           delivered_by?: string | null
+          discrepancy_note?: string | null
           id?: string
           received_by?: string | null
           request_id: string
           requested_by?: string | null
           slip_no?: string | null
+          status?: string
           table_id: string
         }
         Update: {
           amount_cents?: number
           casino_id?: string
           chipset?: Json
+          confirmed_amount_cents?: number | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
           created_at?: string
           delivered_by?: string | null
+          discrepancy_note?: string | null
           id?: string
           received_by?: string | null
           request_id?: string
           requested_by?: string | null
           slip_no?: string | null
+          status?: string
           table_id?: string
         }
         Relationships: [
@@ -2661,6 +2709,13 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -3055,7 +3110,7 @@ export type Database = {
             Returns: string
           }
         | {
-            Args: { p_gaming_day_start: unknown; p_ts: string }
+            Args: { p_gaming_day_start: string; p_ts: string }
             Returns: string
           }
       compute_gaming_day_for_casino: {
@@ -3118,6 +3173,32 @@ export type Database = {
           points_delta: number
           theo: number
         }[]
+      }
+      rpc_acknowledge_drop_received: {
+        Args: { p_drop_event_id: string }
+        Returns: {
+          cage_received_at: string | null
+          cage_received_by: string | null
+          casino_id: string
+          delivered_at: string | null
+          delivered_scan_at: string | null
+          drop_box_id: string
+          gaming_day: string | null
+          id: string
+          note: string | null
+          removed_at: string
+          removed_by: string | null
+          seal_no: string | null
+          seq_no: number | null
+          table_id: string
+          witnessed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_drop_event"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_activate_floor_layout: {
         Args: {
@@ -3242,6 +3323,68 @@ export type Database = {
           table_win_cents: number
         }[]
       }
+      rpc_confirm_table_credit: {
+        Args: {
+          p_confirmed_amount_cents: number
+          p_credit_id: string
+          p_discrepancy_note?: string
+        }
+        Returns: {
+          amount_cents: number
+          authorized_by: string | null
+          casino_id: string
+          chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          discrepancy_note: string | null
+          id: string
+          received_by: string | null
+          request_id: string
+          sent_by: string | null
+          slip_no: string | null
+          status: string
+          table_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_credit"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_confirm_table_fill: {
+        Args: {
+          p_confirmed_amount_cents: number
+          p_discrepancy_note?: string
+          p_fill_id: string
+        }
+        Returns: {
+          amount_cents: number
+          casino_id: string
+          chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          delivered_by: string | null
+          discrepancy_note: string | null
+          id: string
+          received_by: string | null
+          request_id: string
+          requested_by: string | null
+          slip_no: string | null
+          status: string
+          table_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_fill"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_financial_adjustment: {
         Args: {
           p_casino_id: string
@@ -3259,6 +3402,7 @@ export type Database = {
           created_at: string
           created_by_staff_id: string | null
           direction: Database["public"]["Enums"]["financial_direction"] | null
+          external_ref: string | null
           gaming_day: string | null
           id: string
           idempotency_key: string | null
@@ -3330,6 +3474,7 @@ export type Database = {
               direction:
                 | Database["public"]["Enums"]["financial_direction"]
                 | null
+              external_ref: string | null
               gaming_day: string | null
               id: string
               idempotency_key: string | null
@@ -3764,6 +3909,8 @@ export type Database = {
           p_witnessed_by: string
         }
         Returns: {
+          cage_received_at: string | null
+          cage_received_by: string | null
           casino_id: string
           delivered_at: string | null
           delivered_scan_at: string | null
@@ -4020,12 +4167,17 @@ export type Database = {
           authorized_by: string | null
           casino_id: string
           chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
+          discrepancy_note: string | null
           id: string
           received_by: string | null
           request_id: string
           sent_by: string | null
           slip_no: string | null
+          status: string
           table_id: string
         }
         SetofOptions: {
@@ -4050,13 +4202,18 @@ export type Database = {
           amount_cents: number
           casino_id: string
           chipset: Json
+          confirmed_amount_cents: number | null
+          confirmed_at: string | null
+          confirmed_by: string | null
           created_at: string
           delivered_by: string | null
+          discrepancy_note: string | null
           id: string
           received_by: string | null
           request_id: string
           requested_by: string | null
           slip_no: string | null
+          status: string
           table_id: string
         }
         SetofOptions: {
@@ -4721,3 +4878,4 @@ export const Constants = {
     },
   },
 } as const
+

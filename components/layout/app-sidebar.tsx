@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Banknote,
   Bell,
   FileText,
   Gift,
@@ -41,6 +42,16 @@ const navGroups: NavGroup[] = [
           { title: 'Floor View', url: '/pit' },
           { title: 'Table Status', url: '/pit/tables' },
           { title: 'Active Sessions', url: '/pit/sessions' },
+        ],
+      },
+      {
+        title: 'Cashier',
+        url: '/cashier',
+        icon: Banknote,
+        children: [
+          { title: 'Patron Transactions', url: '/cashier/patron-transactions' },
+          { title: 'Confirmations', url: '/cashier/operational-confirmations' },
+          { title: 'Drop Receipts', url: '/cashier/drop-acknowledgements' },
         ],
       },
       {

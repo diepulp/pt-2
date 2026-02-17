@@ -65,7 +65,12 @@ export const TABLE_FILL_SELECT = `
   delivered_by,
   received_by,
   slip_no,
-  created_at
+  created_at,
+  status,
+  confirmed_at,
+  confirmed_by,
+  confirmed_amount_cents,
+  discrepancy_note
 ` as const;
 
 // Credit projection
@@ -80,7 +85,12 @@ export const TABLE_CREDIT_SELECT = `
   sent_by,
   received_by,
   slip_no,
-  created_at
+  created_at,
+  status,
+  confirmed_at,
+  confirmed_by,
+  confirmed_amount_cents,
+  discrepancy_note
 ` as const;
 
 // Drop event projection
@@ -97,7 +107,9 @@ export const TABLE_DROP_EVENT_SELECT = `
   removed_at,
   delivered_at,
   delivered_scan_at,
-  note
+  note,
+  cage_received_at,
+  cage_received_by
 ` as const;
 
 // Table settings projection

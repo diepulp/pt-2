@@ -94,6 +94,8 @@ export interface FinancialTransactionDTO {
     | null;
   /** Note explaining the transaction (required for adjustments) */
   note: string | null;
+  /** Receipt/ticket reference for cage transactions (PRD-033) */
+  external_ref: string | null;
 }
 
 /**
