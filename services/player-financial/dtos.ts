@@ -156,6 +156,8 @@ export interface CreateFinancialTxnInput {
   idempotency_key?: string;
   /** Optional: Custom timestamp (defaults to now()) */
   created_at?: string;
+  /** Optional: Receipt/ticket reference for cage transactions (PRD-033) */
+  external_ref?: string;
 }
 
 // === Filter Types ===

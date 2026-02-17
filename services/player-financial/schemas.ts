@@ -88,6 +88,11 @@ const createFinancialTxnBaseSchema = z.object({
     .optional(),
   /** Optional: custom timestamp (ISO 8601 format) */
   created_at: z.string().datetime().optional(),
+  /** Optional: receipt/ticket reference for cage transactions (PRD-033) */
+  external_ref: z
+    .string()
+    .max(255, 'External ref must be 255 characters or fewer')
+    .optional(),
 });
 
 /**
