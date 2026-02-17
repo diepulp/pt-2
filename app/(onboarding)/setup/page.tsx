@@ -42,14 +42,7 @@ export default async function SetupPage() {
   // Client used for DB queries — service role when dev bypass active (no RLS session)
   let queryClient = supabase;
 
-  // DEBUG: Remove after confirming bypass works
-  console.warn(
-    '[SETUP DEBUG] user=%s, NODE_ENV=%s, ENABLE_DEV_AUTH=%s, bypassEnabled=%s',
-    !!user,
-    process.env.NODE_ENV,
-    process.env.ENABLE_DEV_AUTH,
-    isDevAuthBypassEnabled(),
-  );
+  const devBypass = !user && isDevAuthBypassEnabled();
 
   if (user) {
     const cid = user.app_metadata?.casino_id;
@@ -57,9 +50,8 @@ export default async function SetupPage() {
       redirect('/bootstrap');
     }
     casinoId = cid;
-  } else if (isDevAuthBypassEnabled()) {
+  } else if (devBypass) {
     // DEV MODE: Use mock context + service client for RLS-free queries
-    console.warn('[DEV AUTH] Using mock casinoId for /setup wizard');
     casinoId = DEV_RLS_CONTEXT.casinoId;
     queryClient = createServiceClient();
   } else {
@@ -73,8 +65,8 @@ export default async function SetupPage() {
     .eq('casino_id', casinoId)
     .single();
 
-  // Already completed — redirect to gateway
-  if (settings?.setup_status === 'ready') {
+  // Already completed — redirect to gateway (skip in dev bypass to allow re-entry)
+  if (settings?.setup_status === 'ready' && !devBypass) {
     redirect('/start');
   }
 
