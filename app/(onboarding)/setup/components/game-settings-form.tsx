@@ -18,7 +18,6 @@ import type { GameSettingsDTO } from '@/services/casino/game-settings-dtos';
 const GAME_TYPES = [
   { value: 'blackjack', label: 'Blackjack' },
   { value: 'poker', label: 'Poker' },
-  { value: 'roulette', label: 'Roulette' },
   { value: 'baccarat', label: 'Baccarat' },
   { value: 'pai_gow', label: 'Pai Gow' },
   { value: 'carnival', label: 'Carnival' },

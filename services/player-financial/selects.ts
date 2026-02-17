@@ -13,7 +13,7 @@
 
 /** Full transaction record for detail views (getById, getByIdempotencyKey) */
 export const FINANCIAL_TXN_SELECT =
-  'id, casino_id, player_id, visit_id, rating_slip_id, amount, direction, source, tender_type, created_by_staff_id, related_transaction_id, created_at, gaming_day, idempotency_key, txn_kind, reason_code, note' as const;
+  'id, casino_id, player_id, visit_id, rating_slip_id, amount, direction, source, tender_type, created_by_staff_id, related_transaction_id, created_at, gaming_day, idempotency_key, txn_kind, reason_code, note, external_ref' as const;
 
 /** Transaction list fields (same as FINANCIAL_TXN_SELECT for mapper compatibility) */
 export const FINANCIAL_TXN_SELECT_LIST = FINANCIAL_TXN_SELECT;

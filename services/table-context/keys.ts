@@ -46,6 +46,14 @@ export const tableContextKeys = {
   // Table settings (betting limits)
   settings: (tableId: string) => [...ROOT, 'settings', tableId] as const,
 
+  // Cashier pending queues (PRD-033)
+  pendingFills: (gamingDay?: string) =>
+    [...ROOT, 'pending-fills', gamingDay ?? 'current'] as const,
+  pendingCredits: (gamingDay?: string) =>
+    [...ROOT, 'pending-credits', gamingDay ?? 'current'] as const,
+  unacknowledgedDrops: (gamingDay?: string) =>
+    [...ROOT, 'unacknowledged-drops', gamingDay ?? 'current'] as const,
+
   // Shift cash observation rollups (PRD-SHIFT-DASHBOARDS v0.2 PATCH)
   shiftCashObs: {
     table: (

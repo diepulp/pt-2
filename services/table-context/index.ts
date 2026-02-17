@@ -21,6 +21,12 @@ import {
   logInventorySnapshot,
   requestTableCredit,
   requestTableFill,
+  confirmTableFill,
+  confirmTableCredit,
+  acknowledgeDropReceived,
+  listFills,
+  listCredits,
+  listDropEvents,
 } from './chip-custody';
 import { getActiveTables, getTableById, listTables } from './crud';
 import {
@@ -65,6 +71,13 @@ import type {
   TableBankMode,
   TableRundownDTO,
   PostTableDropTotalInput,
+  // PRD-033: Cashier Confirmation DTOs
+  ConfirmTableFillInput,
+  ConfirmTableCreditInput,
+  AcknowledgeDropInput,
+  FillListFilters,
+  CreditListFilters,
+  DropListFilters,
 } from './dtos';
 import { computeTableRundown, postTableDropTotal } from './rundown';
 import {
@@ -121,6 +134,13 @@ export type {
   TableBankMode,
   TableRundownDTO,
   PostTableDropTotalInput,
+  // PRD-033: Cashier Confirmation DTOs
+  ConfirmTableFillInput,
+  ConfirmTableCreditInput,
+  AcknowledgeDropInput,
+  FillListFilters,
+  CreditListFilters,
+  DropListFilters,
 };
 export { tableContextKeys } from './keys';
 
@@ -203,6 +223,16 @@ export interface TableContextServiceInterface {
     sessionId: string,
     dropTotalCents: number,
   ): Promise<TableSessionDTO>;
+
+  // Cashier confirmation operations (PRD-033)
+  confirmFill(input: ConfirmTableFillInput): Promise<TableFillDTO>;
+  confirmCredit(input: ConfirmTableCreditInput): Promise<TableCreditDTO>;
+  acknowledgeDropReceived(
+    input: AcknowledgeDropInput,
+  ): Promise<TableDropEventDTO>;
+  listFills(filters?: FillListFilters): Promise<TableFillDTO[]>;
+  listCredits(filters?: CreditListFilters): Promise<TableCreditDTO[]>;
+  listDropEvents(filters?: DropListFilters): Promise<TableDropEventDTO[]>;
 }
 
 // === Service Factory ===
@@ -261,5 +291,14 @@ export function createTableContextService(
     computeRundown: (sessionId) => computeTableRundown(supabase, sessionId),
     postDropTotal: (sessionId, dropTotalCents) =>
       postTableDropTotal(supabase, sessionId, dropTotalCents),
+
+    // Cashier confirmation operations (PRD-033)
+    confirmFill: (input) => confirmTableFill(supabase, input),
+    confirmCredit: (input) => confirmTableCredit(supabase, input),
+    acknowledgeDropReceived: (input) =>
+      acknowledgeDropReceived(supabase, input),
+    listFills: (filters) => listFills(supabase, filters),
+    listCredits: (filters) => listCredits(supabase, filters),
+    listDropEvents: (filters) => listDropEvents(supabase, filters),
   };
 }

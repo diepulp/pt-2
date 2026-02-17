@@ -1,0 +1,108 @@
+{
+  "prd_id": "PRD-033",
+  "prd_title": "Cashier Workflow MVP: Operational Telemetry Attestations",
+  "spec_path": "docs/20-architecture/specs/PRD-033/EXECUTION-SPEC-PRD-033.md",
+  "status": "complete",
+  "current_phase": 5,
+  "total_phases": 5,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS3b", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "migrations_applied": [
+    "20260217001615_prd033_fill_credit_confirmation_columns.sql",
+    "20260217001616_prd033_drop_event_cage_received_columns.sql",
+    "20260217001617_prd033_financial_txn_external_ref.sql",
+    "20260217001700_prd033_cashier_confirmation_rpcs.sql",
+    "20260217001701_prd033_update_request_rpcs_status.sql",
+    "20260217001702_prd033_immutability_rls_enforcement.sql"
+  ],
+  "ws1_summary": {
+    "status": "completed",
+    "deliverables": [
+      "table_fill: +status, +confirmed_at, +confirmed_by, +confirmed_amount_cents, +discrepancy_note",
+      "table_credit: same 5 columns as table_fill",
+      "table_drop_event: +cage_received_at, +cage_received_by",
+      "player_financial_transaction: +external_ref",
+      "Partial indexes: idx_table_fill_status_casino, idx_table_credit_status_casino, idx_drop_event_pending"
+    ]
+  },
+  "ws2_summary": {
+    "status": "completed",
+    "deliverables": [
+      "rpc_confirm_table_fill(p_fill_id, p_confirmed_amount_cents, p_discrepancy_note) — SECURITY DEFINER, ADR-024",
+      "rpc_confirm_table_credit(p_credit_id, p_confirmed_amount_cents, p_discrepancy_note) — SECURITY DEFINER, ADR-024",
+      "rpc_acknowledge_drop_received(p_drop_event_id) — SECURITY DEFINER, ADR-024",
+      "rpc_request_table_fill updated: status='requested' on INSERT",
+      "rpc_request_table_credit updated: status='requested' on INSERT",
+      "Immutability RLS: table_fill_update and table_credit_update restricted to status='requested' + pit_boss/admin"
+    ]
+  },
+  "ws3_summary": {
+    "status": "completed",
+    "deliverables": [
+      "dtos.ts: +5 confirmation fields on TableFillDTO/TableCreditDTO, +2 cage-received fields on TableDropEventDTO, +3 input DTOs, +3 filter types",
+      "mappers.ts: Updated toTableFillDTO/toTableCreditDTO/toTableDropEventDTO + new RPC mappers + row-based mappers",
+      "schemas.ts: +confirmTableFillSchema, +confirmTableCreditSchema, +fillListQuerySchema, +creditListQuerySchema, +dropListQuerySchema",
+      "chip-custody.ts: +confirmTableFill, +confirmTableCredit, +acknowledgeDropReceived, +listFills, +listCredits, +listDropEvents",
+      "keys.ts: +pendingFills, +pendingCredits, +unacknowledgedDrops cache keys",
+      "selects.ts: Updated TABLE_FILL_SELECT (+5 cols), TABLE_CREDIT_SELECT (+5 cols), TABLE_DROP_EVENT_SELECT (+2 cols)",
+      "index.ts: +6 new operations on TableContextServiceInterface + factory, +6 DTO re-exports",
+      "http.ts: +confirmTableFill, +confirmTableCredit, +acknowledgeDropReceived, +fetchPendingFills, +fetchPendingCredits, +fetchUnacknowledgedDrops"
+    ]
+  },
+  "ws3b_summary": {
+    "status": "completed",
+    "deliverables": [
+      "services/player-financial/dtos.ts: +external_ref field on FinancialTransactionDTO",
+      "services/player-financial/mappers.ts: +external_ref mapping in toFinancialTransactionDTO",
+      "services/player-financial/selects.ts: +external_ref in FINANCIAL_TXN_SELECT",
+      "services/player-financial/http.ts: +external_ref in adjustment creation mapper"
+    ]
+  },
+  "ws4_summary": {
+    "status": "completed",
+    "deliverables": [
+      "PATCH /api/v1/table-context/fills/[id]/confirm — confirm fill fulfillment",
+      "PATCH /api/v1/table-context/credits/[id]/confirm — confirm credit receipt",
+      "PATCH /api/v1/table-context/drop-events/[id]/acknowledge — stamp drop received",
+      "GET /api/v1/table-context/fills — list fills with status/gaming_day filter, default gaming_day via rpc_current_gaming_day()",
+      "GET /api/v1/table-context/credits — list credits with status/gaming_day filter",
+      "GET /api/v1/table-context/drop-events — list drops with cage_received/gaming_day filter"
+    ]
+  },
+  "ws5_summary": {
+    "status": "completed",
+    "deliverables": [
+      "app/(dashboard)/cashier/layout.tsx — tab navigation layout",
+      "app/(dashboard)/cashier/page.tsx — redirect to patron-transactions",
+      "app/(dashboard)/cashier/patron-transactions/page.tsx — coming soon placeholder",
+      "app/(dashboard)/cashier/operational-confirmations/page.tsx + view — pending fill/credit queue with inline confirm",
+      "app/(dashboard)/cashier/drop-acknowledgements/page.tsx + view — unacknowledged drops with stamp action",
+      "components/cashier/cashier-tab-nav.tsx — 3-tab navigation",
+      "components/cashier/amount-display.tsx — cents-to-dollars display (ADR-031)",
+      "components/cashier/pending-fill-credit-queue.tsx — fill/credit queues with confirm forms",
+      "components/cashier/drop-acknowledgement-list.tsx — drop list with acknowledge action",
+      "components/cashier/recent-confirmations-list.tsx — today's confirmed items",
+      "hooks/cashier/use-cashier-operations.ts — 3 queries + 3 mutations with optimistic updates",
+      "components/layout/app-sidebar.tsx — Cashier nav entry with Banknote icon + 3 children"
+    ]
+  },
+  "ws6_summary": {
+    "status": "completed",
+    "deliverables": [
+      "services/table-context/__tests__/mappers-confirmation.test.ts — 26 tests: all 6 PRD-033 mappers",
+      "services/table-context/__tests__/chip-custody-confirmation.test.ts — 15 tests: 3 RPC confirmations + 3 list operations",
+      "app/api/v1/table-context/fills/[id]/confirm/__tests__/route.test.ts — 6 tests: PATCH handler",
+      "app/api/v1/table-context/credits/[id]/confirm/__tests__/route.test.ts — 5 tests: PATCH handler",
+      "app/api/v1/table-context/drop-events/[id]/acknowledge/__tests__/route.test.ts — 4 tests: PATCH handler",
+      "e2e/workflows/cashier-workflow.spec.ts — Playwright stubs for operational confirmations + navigation",
+      "SRM v4.13.0 — PRD-033 schema invariants, RPCs, routes, changelog"
+    ]
+  },
+  "next_phase": null,
+  "resume_instructions": "PRD-033 pipeline complete. All 7 workstreams delivered, all 5 gates passed.",
+  "completed_at": "2026-02-17T04:00:00Z",
+  "created_at": "2026-02-16T23:27:17Z",
+  "updated_at": "2026-02-17T04:00:00Z"
+}

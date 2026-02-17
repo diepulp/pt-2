@@ -22,6 +22,12 @@ import type {
   RequestTableCreditInput,
   TableDropEventDTO,
   LogDropEventInput,
+  ConfirmTableFillInput,
+  ConfirmTableCreditInput,
+  AcknowledgeDropInput,
+  FillListFilters,
+  CreditListFilters,
+  DropListFilters,
 } from './dtos';
 import {
   toTableInventorySnapshotDTO,
@@ -29,7 +35,20 @@ import {
   toTableCreditDTO,
   toTableDropEventDTO,
   toTableInventorySnapshotDTOListFromRows,
+  toTableFillDTOFromConfirmRpc,
+  toTableCreditDTOFromConfirmRpc,
+  toTableDropEventDTOFromAcknowledgeRpc,
+  toTableFillDTOFromRow,
+  toTableFillDTOListFromRows,
+  toTableCreditDTOFromRow,
+  toTableCreditDTOListFromRows,
+  toTableDropEventDTOListFromRows,
 } from './mappers';
+import {
+  TABLE_FILL_SELECT,
+  TABLE_CREDIT_SELECT,
+  TABLE_DROP_EVENT_SELECT,
+} from './selects';
 
 // === Inventory Snapshot ===
 
@@ -79,15 +98,13 @@ export async function requestTableFill(
     if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
         .from('table_fill')
-        .select(
-          'id, casino_id, table_id, request_id, chipset, amount_cents, requested_by, delivered_by, received_by, slip_no, created_at',
-        )
+        .select(TABLE_FILL_SELECT)
         .eq('casino_id', input.casinoId)
         .eq('request_id', input.requestId)
         .single();
 
       if (existing && !lookupError) {
-        return toTableFillDTO(existing);
+        return toTableFillDTOFromRow(existing);
       }
 
       throw new DomainError('TABLE_FILL_REJECTED', 'Idempotency lookup failed');
@@ -120,15 +137,13 @@ export async function requestTableCredit(
     if (error.code === '23505') {
       const { data: existing, error: lookupError } = await supabase
         .from('table_credit')
-        .select(
-          'id, casino_id, table_id, request_id, chipset, amount_cents, authorized_by, sent_by, received_by, slip_no, created_at',
-        )
+        .select(TABLE_CREDIT_SELECT)
         .eq('casino_id', input.casinoId)
         .eq('request_id', input.requestId)
         .single();
 
       if (existing && !lookupError) {
-        return toTableCreditDTO(existing);
+        return toTableCreditDTOFromRow(existing);
       }
 
       throw new DomainError(
@@ -190,4 +205,134 @@ export async function getInventoryHistory(
   }
 
   return toTableInventorySnapshotDTOListFromRows(data ?? []);
+}
+
+// === Cashier Confirmation Operations (PRD-033) ===
+
+export async function confirmTableFill(
+  supabase: SupabaseClient<Database>,
+  input: ConfirmTableFillInput,
+): Promise<TableFillDTO> {
+  const { data, error } = await supabase.rpc('rpc_confirm_table_fill', {
+    p_fill_id: input.fillId,
+    p_confirmed_amount_cents: input.confirmedAmountCents,
+    p_discrepancy_note: input.discrepancyNote,
+  });
+
+  if (error) {
+    throw new DomainError('TABLE_FILL_REJECTED', error.message);
+  }
+
+  return toTableFillDTOFromConfirmRpc(data);
+}
+
+export async function confirmTableCredit(
+  supabase: SupabaseClient<Database>,
+  input: ConfirmTableCreditInput,
+): Promise<TableCreditDTO> {
+  const { data, error } = await supabase.rpc('rpc_confirm_table_credit', {
+    p_credit_id: input.creditId,
+    p_confirmed_amount_cents: input.confirmedAmountCents,
+    p_discrepancy_note: input.discrepancyNote,
+  });
+
+  if (error) {
+    throw new DomainError('TABLE_CREDIT_REJECTED', error.message);
+  }
+
+  return toTableCreditDTOFromConfirmRpc(data);
+}
+
+export async function acknowledgeDropReceived(
+  supabase: SupabaseClient<Database>,
+  input: AcknowledgeDropInput,
+): Promise<TableDropEventDTO> {
+  const { data, error } = await supabase.rpc('rpc_acknowledge_drop_received', {
+    p_drop_event_id: input.dropEventId,
+  });
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message);
+  }
+
+  return toTableDropEventDTOFromAcknowledgeRpc(data);
+}
+
+// === List Operations with Filters (PRD-033 pending queue queries) ===
+
+export async function listFills(
+  supabase: SupabaseClient<Database>,
+  filters: FillListFilters = {},
+): Promise<TableFillDTO[]> {
+  let query = supabase
+    .from('table_fill')
+    .select(TABLE_FILL_SELECT)
+    .order('created_at', { ascending: false });
+
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters.gaming_day) {
+    query = query.eq('gaming_day', filters.gaming_day);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message);
+  }
+
+  return toTableFillDTOListFromRows(data ?? []);
+}
+
+export async function listCredits(
+  supabase: SupabaseClient<Database>,
+  filters: CreditListFilters = {},
+): Promise<TableCreditDTO[]> {
+  let query = supabase
+    .from('table_credit')
+    .select(TABLE_CREDIT_SELECT)
+    .order('created_at', { ascending: false });
+
+  if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+  if (filters.gaming_day) {
+    query = query.eq('gaming_day', filters.gaming_day);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message);
+  }
+
+  return toTableCreditDTOListFromRows(data ?? []);
+}
+
+export async function listDropEvents(
+  supabase: SupabaseClient<Database>,
+  filters: DropListFilters = {},
+): Promise<TableDropEventDTO[]> {
+  let query = supabase
+    .from('table_drop_event')
+    .select(TABLE_DROP_EVENT_SELECT)
+    .order('removed_at', { ascending: false });
+
+  if (filters.cageReceived === true) {
+    query = query.not('cage_received_at', 'is', null);
+  } else if (filters.cageReceived === false) {
+    query = query.is('cage_received_at', null);
+  }
+  if (filters.gaming_day) {
+    query = query.eq('gaming_day', filters.gaming_day);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message);
+  }
+
+  return toTableDropEventDTOListFromRows(data ?? []);
 }

@@ -60,6 +60,7 @@ export function toFinancialTransactionDTO(
     txn_kind: row.txn_kind,
     reason_code: row.reason_code,
     note: row.note,
+    external_ref: row.external_ref,
   };
 }
 

@@ -1,0 +1,34 @@
+{
+  "prd_id": "GAP-SETUP-WIZARD",
+  "prd_title": "Setup Wizard Hardening — Table Creation Overhaul & Validation Gates",
+  "spec_path": "docs/20-architecture/specs/GAP-SETUP-WIZARD/EXECUTION-SPEC-GAP-SETUP-WIZARD.md",
+  "source_doc": "docs/issues/gaps/onboarding-setup-wizard/GAP-SETUP-WIZARD-CONSOLIDATED-v2.md",
+  "status": "complete",
+  "current_phase": 3,
+  "created_at": "2026-02-16T00:00:00Z",
+  "updated_at": "2026-02-16T00:00:00Z",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["type-check", "lint", "test-pass", "build"],
+  "phases": [
+    {
+      "name": "Phase 1 — Table Creation Overhaul",
+      "workstreams": ["WS1"],
+      "gates": ["type-check", "lint"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 2 — Validation & Polish",
+      "workstreams": ["WS2", "WS4"],
+      "gates": ["type-check", "lint"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 3 — Audit, Navigation & Tests",
+      "workstreams": ["WS3", "WS5", "WS6"],
+      "gates": ["type-check", "lint", "test-pass", "build"],
+      "status": "complete"
+    }
+  ]
+}

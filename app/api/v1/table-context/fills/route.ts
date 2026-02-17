@@ -13,14 +13,73 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
+  parseQuery,
   readJsonBody,
   requireIdempotencyKey,
   successResponse,
 } from '@/lib/http/service-response';
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
-import { requestTableFill } from '@/services/table-context/chip-custody';
-import { requestTableFillSchema } from '@/services/table-context/schemas';
+import {
+  listFills,
+  requestTableFill,
+} from '@/services/table-context/chip-custody';
+import {
+  fillListQuerySchema,
+  requestTableFillSchema,
+} from '@/services/table-context/schemas';
+
+/**
+ * GET /api/v1/table-context/fills
+ *
+ * List fills with optional filters (status, gaming_day).
+ * If gaming_day not provided, defaults to current via rpc_current_gaming_day().
+ */
+export async function GET(request: NextRequest) {
+  const ctx = createRequestContext(request);
+
+  try {
+    const supabase = await createClient();
+    const query = parseQuery(request, fillListQuerySchema);
+
+    const result = await withServerAction(
+      supabase,
+      async (mwCtx) => {
+        let gamingDay = query.gaming_day;
+        if (!gamingDay) {
+          const { data } = await mwCtx.supabase.rpc('rpc_current_gaming_day');
+          gamingDay = data ?? undefined;
+        }
+
+        const fills = await listFills(mwCtx.supabase, {
+          status: query.status,
+          gaming_day: gamingDay,
+        });
+
+        return {
+          ok: true as const,
+          code: 'OK' as const,
+          data: fills,
+          requestId: mwCtx.correlationId,
+          durationMs: Date.now() - mwCtx.startedAt,
+          timestamp: new Date().toISOString(),
+        };
+      },
+      {
+        domain: 'table-context',
+        action: 'list-fills',
+        correlationId: ctx.requestId,
+      },
+    );
+
+    if (!result.ok) {
+      return errorResponse(ctx, result);
+    }
+    return successResponse(ctx, result.data);
+  } catch (error) {
+    return errorResponse(ctx, error);
+  }
+}
 
 /**
  * POST /api/v1/table-context/fills

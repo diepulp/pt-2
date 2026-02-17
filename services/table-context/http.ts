@@ -32,6 +32,8 @@ import type {
   UpdateTableLimitsRequestBody,
   CloseTableSessionRequestBody,
   OpenTableSessionRequestBody,
+  ConfirmTableFillRequestBody,
+  ConfirmTableCreditRequestBody,
 } from './schemas';
 
 const BASE_URL = '/api/v1';
@@ -315,4 +317,116 @@ export async function fetchCurrentTableSession(
     // 404 means no active session
     return null;
   }
+}
+
+// === Cashier Confirmation Operations (PRD-033) ===
+
+/**
+ * Confirms a table fill fulfillment.
+ * PATCH /api/v1/table-context/fills/[id]/confirm
+ */
+export async function confirmTableFill(
+  fillId: string,
+  input: ConfirmTableFillRequestBody,
+  idempotencyKey?: string,
+): Promise<TableFillDTO> {
+  return fetchJSON<TableFillDTO>(
+    `${BASE_URL}/table-context/fills/${fillId}/confirm`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+/**
+ * Confirms a table credit receipt.
+ * PATCH /api/v1/table-context/credits/[id]/confirm
+ */
+export async function confirmTableCredit(
+  creditId: string,
+  input: ConfirmTableCreditRequestBody,
+  idempotencyKey?: string,
+): Promise<TableCreditDTO> {
+  return fetchJSON<TableCreditDTO>(
+    `${BASE_URL}/table-context/credits/${creditId}/confirm`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+/**
+ * Acknowledges drop box received at cage.
+ * PATCH /api/v1/table-context/drop-events/[id]/acknowledge
+ */
+export async function acknowledgeDropReceived(
+  dropEventId: string,
+  idempotencyKey?: string,
+): Promise<TableDropEventDTO> {
+  return fetchJSON<TableDropEventDTO>(
+    `${BASE_URL}/table-context/drop-events/${dropEventId}/acknowledge`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+    },
+  );
+}
+
+/**
+ * Fetches pending fills (status=requested) for current gaming day.
+ * GET /api/v1/table-context/fills?status=requested&gaming_day=...
+ */
+export async function fetchPendingFills(
+  gamingDay?: string,
+): Promise<TableFillDTO[]> {
+  const params = buildParams({
+    status: 'requested',
+    gaming_day: gamingDay,
+  });
+  return fetchJSON<TableFillDTO[]>(`${BASE_URL}/table-context/fills?${params}`);
+}
+
+/**
+ * Fetches pending credits (status=requested) for current gaming day.
+ * GET /api/v1/table-context/credits?status=requested&gaming_day=...
+ */
+export async function fetchPendingCredits(
+  gamingDay?: string,
+): Promise<TableCreditDTO[]> {
+  const params = buildParams({
+    status: 'requested',
+    gaming_day: gamingDay,
+  });
+  return fetchJSON<TableCreditDTO[]>(
+    `${BASE_URL}/table-context/credits?${params}`,
+  );
+}
+
+/**
+ * Fetches unacknowledged drops for current gaming day.
+ * GET /api/v1/table-context/drop-events?cage_received=false&gaming_day=...
+ */
+export async function fetchUnacknowledgedDrops(
+  gamingDay?: string,
+): Promise<TableDropEventDTO[]> {
+  const params = buildParams({
+    cage_received: 'false',
+    gaming_day: gamingDay,
+  });
+  return fetchJSON<TableDropEventDTO[]>(
+    `${BASE_URL}/table-context/drop-events?${params}`,
+  );
 }

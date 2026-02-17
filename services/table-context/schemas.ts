@@ -277,3 +277,61 @@ export const updateTableParSchema = z.object({
 // Setup Wizard type exports (PRD-030)
 export type CreateGamingTableInput = z.infer<typeof createGamingTableSchema>;
 export type UpdateTableParInput = z.infer<typeof updateTableParSchema>;
+
+// === Cashier Route Params (PRD-033) ===
+
+/** Route params schema for cashier confirmation endpoints ([id] param). */
+export const cashierRouteParamsSchema = z.object({
+  id: uuidFormat('ID'),
+});
+
+export type CashierRouteParams = z.infer<typeof cashierRouteParamsSchema>;
+
+// === Cashier Confirmation Schemas (PRD-033) ===
+
+export const confirmTableFillSchema = z.object({
+  confirmed_amount_cents: z.number().int().positive('Amount must be positive'),
+  discrepancy_note: z.string().min(1).max(500).optional(),
+});
+
+export const confirmTableCreditSchema = z.object({
+  confirmed_amount_cents: z.number().int().positive('Amount must be positive'),
+  discrepancy_note: z.string().min(1).max(500).optional(),
+});
+
+// No body schema needed for drop acknowledgement (just URL param)
+
+export const fillListQuerySchema = z.object({
+  status: z.enum(['requested', 'confirmed']).optional(),
+  gaming_day: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+
+export const creditListQuerySchema = z.object({
+  status: z.enum(['requested', 'confirmed']).optional(),
+  gaming_day: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+
+export const dropListQuerySchema = z.object({
+  cage_received: z.enum(['true', 'false']).optional(),
+  gaming_day: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});
+
+// Cashier confirmation transport type exports (PRD-033)
+export type ConfirmTableFillRequestBody = z.infer<
+  typeof confirmTableFillSchema
+>;
+export type ConfirmTableCreditRequestBody = z.infer<
+  typeof confirmTableCreditSchema
+>;
+export type FillListQueryParams = z.infer<typeof fillListQuerySchema>;
+export type CreditListQueryParams = z.infer<typeof creditListQuerySchema>;
+export type DropListQueryParams = z.infer<typeof dropListQuerySchema>;

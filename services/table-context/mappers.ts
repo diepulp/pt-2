@@ -23,6 +23,12 @@ import type {
   ChipsetPayload,
 } from './dtos';
 
+// Row types for direct queries (pending queue GET endpoints)
+type TableFillRow = Database['public']['Tables']['table_fill']['Row'];
+type TableCreditRow = Database['public']['Tables']['table_credit']['Row'];
+type TableDropEventRow =
+  Database['public']['Tables']['table_drop_event']['Row'];
+
 // === Row Types (match query projections) ===
 
 type GamingTableSelectedRow = {
@@ -169,6 +175,11 @@ export function toTableFillDTO(rpcResult: RpcTableFillReturn): TableFillDTO {
     received_by: rpcResult.received_by,
     slip_no: rpcResult.slip_no,
     created_at: rpcResult.created_at,
+    status: rpcResult.status,
+    confirmed_at: rpcResult.confirmed_at,
+    confirmed_by: rpcResult.confirmed_by,
+    confirmed_amount_cents: rpcResult.confirmed_amount_cents,
+    discrepancy_note: rpcResult.discrepancy_note,
   };
 }
 
@@ -188,6 +199,11 @@ export function toTableCreditDTO(
     received_by: rpcResult.received_by,
     slip_no: rpcResult.slip_no,
     created_at: rpcResult.created_at,
+    status: rpcResult.status,
+    confirmed_at: rpcResult.confirmed_at,
+    confirmed_by: rpcResult.confirmed_by,
+    confirmed_amount_cents: rpcResult.confirmed_amount_cents,
+    discrepancy_note: rpcResult.discrepancy_note,
   };
 }
 
@@ -208,6 +224,8 @@ export function toTableDropEventDTO(
     delivered_at: rpcResult.delivered_at,
     delivered_scan_at: rpcResult.delivered_scan_at,
     note: rpcResult.note,
+    cage_received_at: rpcResult.cage_received_at,
+    cage_received_by: rpcResult.cage_received_by,
   };
 }
 
@@ -284,4 +302,169 @@ export function toTableRundownDTO(row: RpcRundownRow): TableRundownDTO {
     table_bank_mode: row.table_bank_mode,
     need_total_cents: row.need_total_cents,
   };
+}
+
+// === Cashier Confirmation RPC Mappers (PRD-033) ===
+
+type RpcConfirmFillReturn =
+  Database['public']['Functions']['rpc_confirm_table_fill']['Returns'];
+type RpcConfirmCreditReturn =
+  Database['public']['Functions']['rpc_confirm_table_credit']['Returns'];
+type RpcAcknowledgeDropReturn =
+  Database['public']['Functions']['rpc_acknowledge_drop_received']['Returns'];
+
+export function toTableFillDTOFromConfirmRpc(
+  rpcResult: RpcConfirmFillReturn,
+): TableFillDTO {
+  return {
+    id: rpcResult.id,
+    casino_id: rpcResult.casino_id,
+    table_id: rpcResult.table_id,
+    request_id: rpcResult.request_id,
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
+    chipset: rpcResult.chipset as ChipsetPayload,
+    amount_cents: rpcResult.amount_cents,
+    requested_by: rpcResult.requested_by,
+    delivered_by: rpcResult.delivered_by,
+    received_by: rpcResult.received_by,
+    slip_no: rpcResult.slip_no,
+    created_at: rpcResult.created_at,
+    status: rpcResult.status,
+    confirmed_at: rpcResult.confirmed_at,
+    confirmed_by: rpcResult.confirmed_by,
+    confirmed_amount_cents: rpcResult.confirmed_amount_cents,
+    discrepancy_note: rpcResult.discrepancy_note,
+  };
+}
+
+export function toTableCreditDTOFromConfirmRpc(
+  rpcResult: RpcConfirmCreditReturn,
+): TableCreditDTO {
+  return {
+    id: rpcResult.id,
+    casino_id: rpcResult.casino_id,
+    table_id: rpcResult.table_id,
+    request_id: rpcResult.request_id,
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
+    chipset: rpcResult.chipset as ChipsetPayload,
+    amount_cents: rpcResult.amount_cents,
+    authorized_by: rpcResult.authorized_by,
+    sent_by: rpcResult.sent_by,
+    received_by: rpcResult.received_by,
+    slip_no: rpcResult.slip_no,
+    created_at: rpcResult.created_at,
+    status: rpcResult.status,
+    confirmed_at: rpcResult.confirmed_at,
+    confirmed_by: rpcResult.confirmed_by,
+    confirmed_amount_cents: rpcResult.confirmed_amount_cents,
+    discrepancy_note: rpcResult.discrepancy_note,
+  };
+}
+
+export function toTableDropEventDTOFromAcknowledgeRpc(
+  rpcResult: RpcAcknowledgeDropReturn,
+): TableDropEventDTO {
+  return {
+    id: rpcResult.id,
+    casino_id: rpcResult.casino_id,
+    table_id: rpcResult.table_id,
+    drop_box_id: rpcResult.drop_box_id,
+    seal_no: rpcResult.seal_no,
+    gaming_day: rpcResult.gaming_day,
+    seq_no: rpcResult.seq_no,
+    removed_by: rpcResult.removed_by,
+    witnessed_by: rpcResult.witnessed_by,
+    removed_at: rpcResult.removed_at,
+    delivered_at: rpcResult.delivered_at,
+    delivered_scan_at: rpcResult.delivered_scan_at,
+    note: rpcResult.note,
+    cage_received_at: rpcResult.cage_received_at,
+    cage_received_by: rpcResult.cage_received_by,
+  };
+}
+
+// === Row-based mappers for direct queries (PRD-033 pending queue endpoints) ===
+
+export function toTableFillDTOFromRow(row: TableFillRow): TableFillDTO {
+  return {
+    id: row.id,
+    casino_id: row.casino_id,
+    table_id: row.table_id,
+    request_id: row.request_id,
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
+    chipset: row.chipset as ChipsetPayload,
+    amount_cents: row.amount_cents,
+    requested_by: row.requested_by,
+    delivered_by: row.delivered_by,
+    received_by: row.received_by,
+    slip_no: row.slip_no,
+    created_at: row.created_at,
+    status: row.status,
+    confirmed_at: row.confirmed_at,
+    confirmed_by: row.confirmed_by,
+    confirmed_amount_cents: row.confirmed_amount_cents,
+    discrepancy_note: row.discrepancy_note,
+  };
+}
+
+export function toTableFillDTOListFromRows(
+  rows: TableFillRow[],
+): TableFillDTO[] {
+  return rows.map(toTableFillDTOFromRow);
+}
+
+export function toTableCreditDTOFromRow(row: TableCreditRow): TableCreditDTO {
+  return {
+    id: row.id,
+    casino_id: row.casino_id,
+    table_id: row.table_id,
+    request_id: row.request_id,
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
+    chipset: row.chipset as ChipsetPayload,
+    amount_cents: row.amount_cents,
+    authorized_by: row.authorized_by,
+    sent_by: row.sent_by,
+    received_by: row.received_by,
+    slip_no: row.slip_no,
+    created_at: row.created_at,
+    status: row.status,
+    confirmed_at: row.confirmed_at,
+    confirmed_by: row.confirmed_by,
+    confirmed_amount_cents: row.confirmed_amount_cents,
+    discrepancy_note: row.discrepancy_note,
+  };
+}
+
+export function toTableCreditDTOListFromRows(
+  rows: TableCreditRow[],
+): TableCreditDTO[] {
+  return rows.map(toTableCreditDTOFromRow);
+}
+
+export function toTableDropEventDTOFromRow(
+  row: TableDropEventRow,
+): TableDropEventDTO {
+  return {
+    id: row.id,
+    casino_id: row.casino_id,
+    table_id: row.table_id,
+    drop_box_id: row.drop_box_id,
+    seal_no: row.seal_no,
+    gaming_day: row.gaming_day,
+    seq_no: row.seq_no,
+    removed_by: row.removed_by,
+    witnessed_by: row.witnessed_by,
+    removed_at: row.removed_at,
+    delivered_at: row.delivered_at,
+    delivered_scan_at: row.delivered_scan_at,
+    note: row.note,
+    cage_received_at: row.cage_received_at,
+    cage_received_by: row.cage_received_by,
+  };
+}
+
+export function toTableDropEventDTOListFromRows(
+  rows: TableDropEventRow[],
+): TableDropEventDTO[] {
+  return rows.map(toTableDropEventDTOFromRow);
 }

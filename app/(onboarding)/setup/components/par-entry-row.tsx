@@ -23,6 +23,7 @@ interface ParEntryRowProps {
   tableId: string;
   tableLabel: string;
   gameType: string;
+  variantName?: string;
   value: string;
   bankMode: TableBankMode | null;
   onChange: (value: string) => void;
@@ -33,6 +34,7 @@ export function ParEntryRow({
   tableId,
   tableLabel,
   gameType,
+  variantName,
   value,
   bankMode,
   onChange,
@@ -51,6 +53,7 @@ export function ParEntryRow({
         </Label>
         <p className="text-xs text-muted-foreground capitalize">
           {gameType.replace('_', ' ')}
+          {variantName ? ` (${variantName})` : ''}
         </p>
       </div>
       <div className="flex items-center gap-2">

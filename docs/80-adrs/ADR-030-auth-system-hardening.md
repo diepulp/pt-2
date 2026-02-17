@@ -238,25 +238,62 @@ Template 2b policies evaluate `casino_id = NULL` → always false → UPDATE/INS
 
 3. **Migration review:** When adding a Template 2b policy to a table, audit all existing `.from(table)` write calls in the codebase and migrate them to RPCs in the same PR.
 
+### D6: Onboarding Bootstrap Mode (Middleware Relaxation)
+
+**Status:** Accepted
+**Date:** 2026-02-16
+**Trigger:** ISSUE-RLS-CONTEXT-INJECTION-ONBOARDING-CHICKEN-EGG — Setup wizard server actions fail because `withRLS()` unconditionally calls the context RPC with a service-role client (dev bypass) or stale JWT (production), and `withAuth()` requires staff before `withRLS()` can run.
+
+During onboarding/bootstrap, steady-state invariants (D1 staff requirement, D2 claim freshness) do not yet hold. D6 codifies the middleware relaxations and the claims refresh barrier.
+
+#### Onboarding Rules
+
+1. **`requireSession = true`, `requireStaff = false`** for bootstrap actions. The `bootstrapAction` and setup wizard actions that run before or immediately after tenant provisioning may encounter users without a staff record or with stale JWT claims. These actions use `skipAuth: true` (bootstrap) or require only session validation (setup wizard after refresh).
+
+2. **`withRLS()` must respect dev bypass context.** When `isDevAuthBypassEnabled()` is true and `ctx.rlsContext` is already populated by `withAuth()`, `withRLS()` MUST skip the `set_rls_context_from_staff()` RPC. The service-role client has no `auth.uid()`, so the RPC will always fail. (INV-030-8)
+
+3. **Mandatory claims refresh barrier.** After any operation that writes JWT claims via `reconcileStaffClaims()` / `syncUserRLSClaims()`, the client flow MUST call `await supabase.auth.refreshSession()` before navigating to RLS-gated routes. This ensures the cookie JWT carries the newly-minted `staff_id` / `casino_id` / `staff_role` claims. Affected flows:
+   - Bootstrap form (`/bootstrap`) — after `rpc_bootstrap_casino` succeeds
+   - Invite acceptance (`/invite/accept`) — after `rpc_accept_staff_invite` succeeds
+   - All navigation exit points (buttons, timeouts, redirects) must await refresh
+
+4. **Tenant-empty guard for bootstrap admin.** Bootstrap admin assignment (`staff_role = admin`) is a one-time privilege, allowed only when the tenant is "empty" (no existing staff for the casino). Once any staff exists, onboarding uses controlled enrollment (invite links or admin-created accounts). Enforced by `rpc_bootstrap_casino`.
+
+#### Context Merge Precedence
+
+`ctx.rlsContext` sources merge with the following precedence (highest wins):
+1. Explicit dev context (`DEV_RLS_CONTEXT`, dev bypass only)
+2. RPC-derived context (`set_rls_context_from_staff()` return value)
+3. JWT fallback (`auth.jwt() -> app_metadata`)
+4. Empty (no context — action must handle gracefully or fail)
+
+`withRLS()` MUST NOT overwrite a higher-precedence source with a lower one.
+
+#### Scope
+
+D6 applies only to onboarding routes (`/bootstrap`, `/setup`, `/invite/accept`). All other routes continue to enforce steady-state invariants (D1-D5). See [Appendix A](./ADR-030_APPENDIX-A_onboarding-bootstrap-mode.md) for the full execution policy, implementation checklist, and end-to-end flow.
+
 ---
 
 ## Security Invariants
 
 All invariants from ADR-024 remain in force. ADR-030 adds:
 
-**INV-030-1:** `ctx.rlsContext` MUST be populated from the return value of `set_rls_context_from_staff()`, not from any independent derivation.
+**INV-030-1:** `ctx.rlsContext` MUST be populated from the return value of `set_rls_context_from_staff()`, not from any independent derivation. **Exception:** When dev bypass is active (INV-030-3), `ctx.rlsContext` is populated from `DEV_RLS_CONTEXT` and the RPC is skipped, because the service-role client has no `auth.uid()`.
 
 **INV-030-2:** JWT claim sync/clear failures MUST be surfaced to callers (no silent swallowing).
 
 **INV-030-3:** `DEV_AUTH_BYPASS` MUST require `NODE_ENV=development` AND `ENABLE_DEV_AUTH=true`. Violation at startup is a hard failure.
 
-**INV-030-4:** `skipAuth` MUST NOT appear in production source files (CI-enforced).
+**INV-030-4:** `skipAuth` MUST NOT appear in production source files (CI-enforced). **Exception:** Onboarding bootstrap actions (`/bootstrap`, `/invite/accept`) that run before staff/casino context exists are exempt; these MUST be explicitly allowlisted and logged.
 
 **INV-030-5:** Mutations (INSERT/UPDATE/DELETE) on security-critical tables MUST fail if `app.casino_id` session variable is absent, regardless of JWT claims.
 
 **INV-030-6:** JWT fallback reliance during SELECT must be logged at the application layer.
 
 **INV-030-7:** Writes against Template 2b policies (session-var-only, no JWT COALESCE) MUST use self-contained SECURITY DEFINER RPCs that call `set_rls_context_from_staff()` internally. Direct PostgREST DML (`.from(table).insert/update/delete`) is PROHIBITED because session vars are transaction-local and do not survive across separate HTTP requests. (D5)
+
+**INV-030-8:** In dev bypass mode (INV-030-3), `withRLS()` MUST NOT call `set_rls_context_from_staff()` because the service-role client lacks `auth.uid()`. The `ctx.rlsContext` set by `withAuth()` from `DEV_RLS_CONTEXT` is authoritative in dev bypass mode. (D6)
 
 ---
 
@@ -379,11 +416,15 @@ Full metrics pipeline deferred to v0.2.
 - [AUTH-HARDENING v0.1 Execution Patch](../00-vision/auth-hardening/AUTH-HARDENING-v0.1-EXECUTION-PATCH.md) — Implementation plan
 - [SEC-001: RLS Policy Matrix](../30-security/SEC-001-rls-policy-matrix.md)
 - [SEC-002: Casino-Scoped Security Model](../30-security/SEC-002-casino-scoped-security-model.md)
+- [ADR-030 Appendix A: Onboarding Bootstrap Mode](./ADR-030_APPENDIX-A_onboarding-bootstrap-mode.md) — Execution policy for D6
+- [Onboarding Gap Resolution](../00-vision/company-onboarding/ONBOARDING-BOOTSTRAP-ADMIN-STAFF-ROLE-GAP.md) — Bootstrap admin provisioning algorithm
+- [ISSUE: RLS Context Injection](../issues/ISSUE-RLS-CONTEXT-INJECTION-ONBOARDING-CHICKEN-EGG.md) — Root cause analysis
 
 ---
 
 ## Changelog
 
+- 2026-02-16: **D6 amendment** — Onboarding bootstrap mode (INV-030-8). Triggered by ISSUE-RLS-CONTEXT-INJECTION-ONBOARDING-CHICKEN-EGG: `withRLS()` unconditionally called the context RPC with a service-role client (dev bypass) or stale JWT (production), blocking setup wizard actions. Codifies: dev bypass skips RPC injection; mandatory `refreshSession()` barrier after claims writes; context merge precedence. Added INV-030-1 dev bypass exception and INV-030-4 onboarding exemption. See [Appendix A](./ADR-030_APPENDIX-A_onboarding-bootstrap-mode.md).
 - 2026-02-10: **D5 amendment** — Template 2b transport constraint (INV-030-7). Triggered by ISSUE-SET-PIN-SILENT-RLS-FAILURE: `setPinAction` silently failed because PostgREST DML runs in a separate transaction from the middleware's RPC context injection. Codifies: Template 2b writes MUST use self-contained SECURITY DEFINER RPCs.
 - 2026-01-30: Status updated to Accepted — implementation landed in commit 32890bf
 - 2026-01-29: Initial ADR proposed based on auth hardening audit and execution patch

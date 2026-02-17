@@ -1,6 +1,11 @@
 import { redirect } from 'next/navigation';
 
+import {
+  DEV_RLS_CONTEXT,
+  isDevAuthBypassEnabled,
+} from '@/lib/supabase/dev-context';
 import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/service';
 import { listGameSettings } from '@/services/casino/game-settings-crud';
 import type { Database } from '@/types/database.types';
 
@@ -33,32 +38,43 @@ export default async function SetupPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
+  let casinoId: string;
+  // Client used for DB queries — service role when dev bypass active (no RLS session)
+  let queryClient = supabase;
+
+  const devBypass = !user && isDevAuthBypassEnabled();
+
+  if (user) {
+    const cid = user.app_metadata?.casino_id;
+    if (!cid) {
+      redirect('/bootstrap');
+    }
+    casinoId = cid;
+  } else if (devBypass) {
+    // DEV MODE: Use mock context + service client for RLS-free queries
+    casinoId = DEV_RLS_CONTEXT.casinoId;
+    queryClient = createServiceClient();
+  } else {
     redirect('/signin?redirect=/setup');
   }
 
-  const casinoId = user.app_metadata?.casino_id;
-  if (!casinoId) {
-    redirect('/bootstrap');
-  }
-
   // Fetch casino_settings
-  const { data: settings } = await supabase
+  const { data: settings } = await queryClient
     .from('casino_settings')
     .select('*')
     .eq('casino_id', casinoId)
     .single();
 
-  // Already completed — redirect to gateway
-  if (settings?.setup_status === 'ready') {
+  // Already completed — redirect to gateway (skip in dev bypass to allow re-entry)
+  if (settings?.setup_status === 'ready' && !devBypass) {
     redirect('/start');
   }
 
   // Fetch full game_settings via CRUD (returns GameSettingsDTO[])
-  const gameSettings = await listGameSettings(supabase);
+  const gameSettings = await listGameSettings(queryClient);
 
   // Fetch gaming_tables (to detect existing tables for re-entry)
-  const { data: gamingTables } = await supabase
+  const { data: gamingTables } = await queryClient
     .from('gaming_table')
     .select('*')
     .eq('casino_id', casinoId)

@@ -1,3 +1,6 @@
+# Migration naming convention enforcement (MIGRATION_NAMING_STANDARD.md)
+.husky/pre-commit-migration-naming.sh || exit 1
+
 # Migration safety checks - prevent RLS policy regressions (ISSUE-002 prevention)
 .husky/pre-commit-migration-safety.sh || exit 1
 
