@@ -60,7 +60,7 @@ const mockVisitSummary = {
   total_in: 1000,
   total_out: 250,
   net_amount: 750,
-  transaction_count: 5,
+  event_count: 5,
   first_transaction_at: '2025-01-15T10:00:00Z',
   last_transaction_at: '2025-01-15T14:00:00Z',
 };

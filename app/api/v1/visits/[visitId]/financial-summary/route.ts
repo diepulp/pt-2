@@ -10,7 +10,7 @@
  * - total_in: Sum of all 'in' direction transactions
  * - total_out: Sum of all 'out' direction transactions
  * - net_amount: total_in - total_out
- * - transaction_count: Number of transactions
+ * - event_count: Number of transactions
  * - first_transaction_at: Timestamp of first transaction
  * - last_transaction_at: Timestamp of last transaction
  */

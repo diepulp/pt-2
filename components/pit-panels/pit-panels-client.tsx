@@ -289,6 +289,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+        chipsTaken: Number(formState.chipsTaken || 0),
         playerDailyTotal: formState.playerDailyTotal,
       });
       // Reset additive fields to prevent double-entry on subsequent save clicks.

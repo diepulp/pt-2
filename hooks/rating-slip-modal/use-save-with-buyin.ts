@@ -27,7 +27,10 @@ import { DomainError } from '@/lib/errors/domain-errors';
 import { getErrorMessage, logError } from '@/lib/errors/error-utils';
 import { mtlKeys } from '@/services/mtl/keys';
 import { createFinancialTransaction } from '@/services/player-financial/http';
-import { updateAverageBet } from '@/services/rating-slip/http';
+import {
+  createPitCashObservation,
+  updateAverageBet,
+} from '@/services/rating-slip/http';
 import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
 import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
@@ -48,6 +51,8 @@ export interface SaveWithBuyInInput {
   averageBet: number;
   /** New buy-in amount in dollars (will be converted to cents) */
   newBuyIn: number;
+  /** Chips taken amount in dollars (recorded as pit_cash_observation) */
+  chipsTaken: number;
   /**
    * Player's current daily total (cash-in) for threshold calculation.
    * If provided, enables threshold checking and auto-MTL creation.
@@ -89,6 +94,7 @@ export function useSaveWithBuyIn() {
       staffId,
       averageBet,
       newBuyIn,
+      chipsTaken,
       playerDailyTotal,
     }: SaveWithBuyInInput) => {
       // Step 1: Check compliance thresholds if daily total is provided
@@ -143,6 +149,29 @@ export function useSaveWithBuyIn() {
           });
           // Re-throw to fail the save operation
           throw txnError;
+        }
+      }
+
+      // Step 3b: Record chips-taken observation (only after average_bet succeeds)
+      // Mirrors buy-in pattern: if chips-taken fails, save must fail
+      if (chipsTaken > 0 && playerId) {
+        try {
+          await createPitCashObservation({
+            visitId,
+            amount: chipsTaken, // Amount in dollars (RPC expects dollars)
+            ratingSlipId: slipId,
+            amountKind: 'estimate',
+            source: 'walk_with',
+            // Unique key per save to allow multiple mid-session observations
+            idempotencyKey: `chips-taken-save-${slipId}-${Date.now()}`,
+          });
+        } catch (obsError) {
+          logError(obsError, {
+            component: 'useSaveWithBuyIn',
+            action: 'createPitCashObservation',
+            metadata: { slipId, visitId, playerId },
+          });
+          throw obsError;
         }
       }
 

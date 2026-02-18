@@ -26,4 +26,4 @@ export const FINANCIAL_TXN_SELECT_MIN =
 
 /** Visit financial summary (from materialized view) */
 export const VISIT_SUMMARY_SELECT =
-  'visit_id, casino_id, total_in, total_out, net_amount, transaction_count, first_transaction_at, last_transaction_at' as const;
+  'visit_id, casino_id, total_in, total_out, net_amount, event_count, first_transaction_at, last_transaction_at' as const;

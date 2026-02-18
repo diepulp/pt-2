@@ -397,7 +397,7 @@ export async function getVisitSummary(
           total_in: 0,
           total_out: 0,
           net_amount: 0,
-          transaction_count: 0,
+          event_count: 0,
           first_transaction_at: null,
           last_transaction_at: null,
         };

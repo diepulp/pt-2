@@ -106,7 +106,7 @@ export function toVisitFinancialSummaryDTO(
     total_in: row.total_in ?? 0,
     total_out: row.total_out ?? 0,
     net_amount: row.net_amount ?? 0,
-    transaction_count: row.transaction_count ?? 0,
+    event_count: row.event_count ?? 0,
     first_transaction_at: row.first_transaction_at,
     last_transaction_at: row.last_transaction_at,
   };

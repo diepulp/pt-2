@@ -612,7 +612,7 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
         expect(data.visit_id).toBe(testVisit1Id);
         expect(data.casino_id).toBe(testCasino1Id);
         expect(data.total_in).toBeGreaterThanOrEqual(500);
-        expect(data.transaction_count).toBeGreaterThanOrEqual(1);
+        expect(data.event_count).toBeGreaterThanOrEqual(1);
       }
     });
 

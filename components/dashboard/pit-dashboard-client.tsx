@@ -316,6 +316,7 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+        chipsTaken: Number(formState.chipsTaken || 0),
         playerDailyTotal: formState.playerDailyTotal,
       });
       // Reset additive fields before closing to prevent double-entry if modal reopens quickly.

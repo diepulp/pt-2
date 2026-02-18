@@ -110,7 +110,7 @@ export interface PlayerFinancialService {
    * - total_in: Sum of all 'in' transactions
    * - total_out: Sum of all 'out' transactions
    * - net_amount: total_in - total_out
-   * - transaction_count: Number of transactions
+   * - event_count: Number of transactions
    * - first/last transaction timestamps
    *
    * @param visitId - Visit UUID

@@ -3069,30 +3069,15 @@ export type Database = {
       visit_financial_summary: {
         Row: {
           casino_id: string | null
+          event_count: number | null
           first_transaction_at: string | null
           last_transaction_at: string | null
           net_amount: number | null
           total_in: number | null
           total_out: number | null
-          transaction_count: number | null
           visit_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "player_financial_transaction_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {

@@ -116,7 +116,7 @@ export interface VisitFinancialSummaryDTO {
   /** Net amount in cents (total_in - total_out) */
   net_amount: number;
   /** Number of transactions */
-  transaction_count: number;
+  event_count: number;
   /** First transaction timestamp */
   first_transaction_at: string | null;
   /** Last transaction timestamp */
