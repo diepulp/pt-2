@@ -27,6 +27,16 @@ jobs:
           cache: 'npm'
       - name: Install
         run: npm ci
+      - name: Env drift guard
+        run: |
+          # Fail if the old (wrong) env var name reappears in runtime code or templates.
+          # Docs/issues are excluded — they reference the old name for historical context.
+          if grep -r --include='*.ts' --include='*.tsx' --include='*.js' --include='*.env*' \
+            'PUBLISHABLE_OR_ANON_KEY' . \
+            --exclude-dir=node_modules --exclude-dir=.next --exclude-dir=docs; then
+            echo "::error::Found PUBLISHABLE_OR_ANON_KEY in runtime code or templates. Use ANON_KEY."
+            exit 1
+          fi
       - name: Lint
         run: npm run lint
       - name: Type Check

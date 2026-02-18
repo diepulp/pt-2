@@ -19,7 +19,7 @@ BASE_URL=http://localhost:3000
 
 # Supabase connection (local instance)
 NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY=your-local-anon-key
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
 
 # Service role key for test data setup/teardown
 SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
@@ -27,7 +27,7 @@ SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
 
 Get the keys from `npx supabase status`:
 - Use `API URL` for `NEXT_PUBLIC_SUPABASE_URL`
-- Use `anon key` for `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY`
+- Use `anon key` for `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - Use `service_role key` for `SUPABASE_SERVICE_ROLE_KEY`
 
 ## Running Tests

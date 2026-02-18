@@ -7,10 +7,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-// This check can be removed, it is just for tutorial purposes
+// UX-only: used by app/protected/layout.tsx to show <EnvVarWarning /> vs <AuthButton />.
+// NOT used for security paths — middleware enforces env presence via fail-loud assertion.
 export const hasEnvVars =
   process.env.NEXT_PUBLIC_SUPABASE_URL &&
-  process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_OR_ANON_KEY;
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 /**
  * Extract clean, user-friendly error message from Error objects
