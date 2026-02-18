@@ -2,14 +2,15 @@
 # ==============================================================================
 # Migration Naming Convention Enforcement
 # ==============================================================================
-# Version: 1.0.0
+# Version: 1.1.0
 # Date: 2026-02-17
 # References:
 #   - docs/60-release/MIGRATION_NAMING_STANDARD.md
 #
 # Validates STAGED migration files against naming convention:
 #   - Format: YYYYMMDDHHMMSS_description.sql
-#   - No placeholder timestamps (000000 seconds)
+#   - No placeholder timestamps (HHMMSS = 000000)
+#   - No round timestamps (MMSS = 0000, e.g. 180000)
 #   - Detects fabricated sequential timestamps (1-second increments)
 #   - Description must be snake_case
 # ==============================================================================
@@ -87,14 +88,25 @@ for FILEPATH in $STAGED_MIGRATIONS; do
     continue
   fi
 
-  # ── Check 3: Placeholder timestamp detection ───────────────────────────
-  # Timestamps ending in 000000, 000001, etc. (6 trailing zeros in time) are suspicious
+  # ── Check 3: Fabricated timestamp detection ──────────────────────────────
+  # A real `date +"%Y%m%d%H%M%S"` almost never lands on :00:00.
+  # Detect two patterns:
+  #   3a. Full time placeholder: HHMMSS = 000000 (midnight placeholder)
+  #   3b. Round minutes+seconds: MMSS = 0000 (e.g. 180000, 140000)
+  #       This is the most common fabrication: pick a round hour, leave MM:SS as 00.
   TIME_PART=$(echo "$TS" | cut -c9-14)
+  MMSS=$(echo "$TS" | cut -c11-14)
   if echo "$TIME_PART" | grep -qE '^0{6}$'; then
-    echo "⚠️  NAMING WARNING: $FILENAME — placeholder timestamp ($TIME_PART)"
-    echo "   Timestamps should be generated with: date +\"%Y%m%d%H%M%S\""
+    echo "❌ NAMING VIOLATION: $FILENAME — midnight placeholder timestamp ($TIME_PART)"
+    echo "   Timestamps must be generated with: date +\"%Y%m%d%H%M%S\""
     echo ""
-    WARNINGS=$((WARNINGS + 1))
+    VIOLATIONS=$((VIOLATIONS + 1))
+  elif [ "$MMSS" = "0000" ]; then
+    echo "❌ NAMING VIOLATION: $FILENAME — round timestamp (MM:SS = 00:00)"
+    echo "   Timestamps must be generated with: date +\"%Y%m%d%H%M%S\""
+    echo "   A real timestamp almost never lands on :00:00."
+    echo ""
+    VIOLATIONS=$((VIOLATIONS + 1))
   fi
 done
 
