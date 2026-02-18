@@ -12,6 +12,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { playerFinancialKeys } from '@/hooks/player-financial/keys';
 import type {
   AdjustmentReasonCode,
   FinancialTransactionDTO,
@@ -21,14 +22,14 @@ import {
   createFinancialTransaction,
   listFinancialTransactions,
 } from '@/services/player-financial/http';
-import { playerFinancialKeys } from '@/services/player-financial/keys';
+// GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 4: use canonical hooks key factory
 
 // === Cache Key Helper ===
 
 /** Stable key for the cashier cash-outs query, including gamingDay segment. */
 function cashOutsKey(gamingDay?: string) {
   return [
-    ...playerFinancialKeys.transactions(),
+    ...playerFinancialKeys.list.scope,
     'cashier-cash-outs',
     gamingDay,
   ] as const;
@@ -97,7 +98,7 @@ export function useCashOutCreate(gamingDay?: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: playerFinancialKeys.transactions(),
+        queryKey: playerFinancialKeys.list.scope,
       });
     },
   });
@@ -156,7 +157,7 @@ export function useVoidCashOut(gamingDay?: string) {
     },
     onSettled: () => {
       queryClient.invalidateQueries({
-        queryKey: playerFinancialKeys.transactions(),
+        queryKey: playerFinancialKeys.list.scope,
       });
     },
   });

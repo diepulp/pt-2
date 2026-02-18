@@ -12,6 +12,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
+import { mtlKeys } from '@/services/mtl/keys';
 import type {
   CreateFinancialAdjustmentInput,
   CreateFinancialTxnInput,
@@ -164,6 +165,19 @@ export function useCreateFinancialAdjustment() {
       });
       queryClient.invalidateQueries({
         queryKey: shiftDashboardKeys.allMetrics(),
+      });
+
+      // GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 2:
+      // Forward bridge trigger now creates mtl_entry for adjustments.
+      // Invalidate MTL caches so compliance dashboard reflects the change.
+      queryClient.invalidateQueries({
+        queryKey: mtlKeys.entries.scope,
+      });
+      queryClient.invalidateQueries({
+        queryKey: mtlKeys.gamingDaySummary.scope,
+      });
+      queryClient.invalidateQueries({
+        queryKey: mtlKeys.patronDailyTotal(data.casino_id, data.player_id),
       });
     },
   });

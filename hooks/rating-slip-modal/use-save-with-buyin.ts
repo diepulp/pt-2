@@ -193,7 +193,7 @@ export function useSaveWithBuyIn() {
         );
       }
     },
-    onSuccess: (result, { slipId, visitId, tableId, playerId, casinoId }) => {
+    onSuccess: (_result, { slipId, visitId, tableId, playerId, casinoId }) => {
       // Invalidate modal data
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(slipId),
@@ -209,15 +209,17 @@ export function useSaveWithBuyIn() {
         queryKey: dashboardKeys.activeSlips(tableId),
       });
 
-      // Forward bridge trigger creates MTL entries from financial transactions.
-      // Invalidate MTL caches when threshold was met (for UI badge updates).
-      if (result.thresholdResult?.shouldCreateMtl && playerId) {
-        // Invalidate gaming day summary (aggregates changed)
+      // GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 3:
+      // Forward bridge trigger creates MTL entries for ALL pit cash/chips
+      // transactions unconditionally (not gated on threshold).
+      // Cache invalidation must also be unconditional to match.
+      if (playerId) {
         queryClient.invalidateQueries({
           queryKey: mtlKeys.gamingDaySummary.scope,
         });
-
-        // Invalidate patron daily total (PERF-005: use key factory)
+        queryClient.invalidateQueries({
+          queryKey: mtlKeys.entries.scope,
+        });
         queryClient.invalidateQueries({
           queryKey: mtlKeys.patronDailyTotal(casinoId, playerId),
         });
