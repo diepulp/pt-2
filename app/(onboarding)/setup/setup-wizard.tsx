@@ -280,6 +280,16 @@ export function SetupWizard({
         }
       }
 
+      // Sync par values back to local state so Review step sees them
+      const parMap = new Map(
+        parEntries.map((e) => [e.tableId, e.parTotalCents]),
+      );
+      setTables((prev) =>
+        prev.map((t) =>
+          parMap.has(t.id) ? { ...t, par_total_cents: parMap.get(t.id)! } : t,
+        ),
+      );
+
       goNext();
     });
   }
