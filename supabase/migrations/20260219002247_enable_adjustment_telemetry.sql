@@ -1,9 +1,16 @@
 -- ============================================================================
 -- Migration: Enable Adjustment Telemetry Flow
--- Created: 2026-02-02
--- Issue: ISSUE-SHIFT-DASH-STALE-ADJ (P1)
--- Purpose: Fix 5 compounding gaps that prevent buy-in adjustments from
---          reaching the shift dashboard telemetry pipeline.
+-- Created: 2026-02-19 00:22:47
+-- Purpose: Relax telemetry constraints for adjustments, inherit rating_slip_id
+--          in adjustment RPC, extend bridge trigger for adjustment path, and
+--          update shift metrics to include RATED_ADJUSTMENT.
+--
+-- History:
+--   This migration consolidates WS2 changes originally shipped in
+--   20260202123200_fix_bridge_100x_inflation.sql (deleted — naming violation,
+--   fully superseded) and 20260202123300_enable_adjustment_telemetry.sql
+--   (deleted — naming violation, WS2 deltas carried forward here).
+--   See MIGRATION_NAMING_STANDARD.md §Temporal Integrity Rules.
 --
 -- Sub-tasks (all atomic in single transaction):
 --   WS2-A: Relax telemetry constraints for negative amounts & RATED_ADJUSTMENT
@@ -204,7 +211,6 @@ COMMENT ON FUNCTION rpc_create_financial_adjustment IS
 -- ==========================================================================
 -- Now handles both rated buy-ins AND rated adjustments.
 -- ADR-031: amount passes through as-is (already cents, no conversion).
--- CRITICAL: This replaces the WS1 version and MUST NOT reintroduce * 100.
 
 CREATE OR REPLACE FUNCTION bridge_rated_buyin_to_telemetry()
 RETURNS TRIGGER

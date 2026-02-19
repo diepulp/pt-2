@@ -23,7 +23,7 @@
 -- References:
 --   - 20260116111329_finance_to_mtl_derivation.sql (original)
 --   - 20260119162505_fix_mtl_bridge_cents_to_dollars.sql (latest function body)
---   - 20260202123300_enable_adjustment_telemetry.sql (telemetry fix pattern)
+--   - 20260219002247_enable_adjustment_telemetry.sql (telemetry fix pattern; replaces deleted 20260202123300)
 -- ============================================================================
 
 BEGIN;

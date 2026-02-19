@@ -71,7 +71,7 @@ Cash-in adjustments made in the rating slip do not reflect in the MTL compliance
 
 The forward bridge trigger `trg_derive_mtl_from_finance` only fires for `tender_type IN ('cash', 'chips')`. Financial adjustments use `tender_type = 'adjustment'` + `txn_kind = 'adjustment'`, so **no `mtl_entry` row is ever created** for adjustments. The `mtl_gaming_day_summary` view (which aggregates from `mtl_entry`) shows stale totals.
 
-Note: The telemetry bridge trigger WAS fixed for adjustments in migration `20260202123300_enable_adjustment_telemetry.sql`, but the MTL bridge was **overlooked in the same fix**.
+Note: The telemetry bridge trigger WAS fixed for adjustments in migration `20260219002247_enable_adjustment_telemetry.sql` (replaces deleted `20260202123300`), but the MTL bridge was **overlooked in the same fix**.
 
 | Scenario | `visit_financial_summary` (Rating Slip reads) | `mtl_entry` (MTL reads) | `table_buyin_telemetry` (Shift Dashboard) |
 |----------|-----------------------------------------------|------------------------|------------------------------------------|
@@ -181,7 +181,7 @@ After mutation success, invalidate + refetch in deterministic order for the visi
 | File | Role |
 |------|------|
 | `supabase/migrations/20260116111329_finance_to_mtl_derivation.sql` | Existing trigger logic (reference) |
-| `supabase/migrations/20260202123300_enable_adjustment_telemetry.sql` | Telemetry fix pattern (reference) |
+| `supabase/migrations/20260219002247_enable_adjustment_telemetry.sql` | Telemetry fix pattern (reference; replaces deleted 20260202123300) |
 | NEW migration | Extend MTL bridge trigger + backfill |
 | `hooks/player-financial/use-financial-mutations.ts` | Add MTL key invalidation (Fix 2) |
 | `hooks/rating-slip-modal/use-save-with-buyin.ts` | Unconditional MTL invalidation (Fix 3) |
