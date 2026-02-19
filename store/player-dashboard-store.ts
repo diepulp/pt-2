@@ -14,6 +14,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { DataOnly } from './types';
+
 export interface PlayerDashboardStore {
   /**
    * Selected player ID for row highlight in list view only.
@@ -22,7 +24,15 @@ export interface PlayerDashboardStore {
   selectedPlayerId: string | null;
   setSelectedPlayer: (id: string | null) => void;
   clearSelection: () => void;
+
+  // ADR-035: Full session reset
+  resetSession: () => void;
 }
+
+/** ADR-035 INV-035-1: Typed initial state for session reset. */
+export const PLAYER_DASHBOARD_INITIAL_STATE = {
+  selectedPlayerId: null,
+} satisfies DataOnly<PlayerDashboardStore>;
 
 export const usePlayerDashboardStore = create<PlayerDashboardStore>()(
   devtools(
@@ -39,6 +49,14 @@ export const usePlayerDashboardStore = create<PlayerDashboardStore>()(
           { selectedPlayerId: null },
           undefined,
           'playerDashboard/clearSelection',
+        ),
+
+      // ADR-035: Full session reset
+      resetSession: () =>
+        set(
+          { ...PLAYER_DASHBOARD_INITIAL_STATE },
+          undefined,
+          'playerDashboard/resetSession',
         ),
     }),
     { name: 'PlayerDashboardStore' },

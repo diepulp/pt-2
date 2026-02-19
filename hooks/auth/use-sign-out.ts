@@ -22,6 +22,7 @@ import {
   cleanupClientInstance,
   createBrowserComponentClient,
 } from '@/lib/supabase/client';
+import { resetSessionState } from '@/store/reset-session-state';
 
 type SignOutErrorState = {
   show: boolean;
@@ -60,6 +61,7 @@ export function useSignOut() {
     supabase.auth.signOut({ scope: 'local' });
     cleanupClientInstance();
     queryClient.clear();
+    resetSessionState(); // ADR-035 INV-035-2: fallback path
     setErrorState({ show: false, message: '' });
     // Redirect with flag for degraded sign-out banner
     try {
@@ -104,6 +106,9 @@ export function useSignOut() {
       } catch {
         // Soft fail: continue to redirect
       }
+
+      // Step 3.5: Session state reset (ADR-035 INV-035-2)
+      resetSessionState();
 
       // Step 4: Redirect — soft fail
       performRedirect();

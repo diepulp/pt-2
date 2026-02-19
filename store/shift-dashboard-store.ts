@@ -3,6 +3,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { DataOnly } from './types';
+
 export type ShiftLens = 'casino' | 'pit' | 'table';
 export type TimeWindowPreset = '8h' | '12h' | '24h' | 'current' | 'custom';
 
@@ -11,7 +13,7 @@ export interface ShiftTimeWindow {
   end: string; // ISO timestamp
 }
 
-interface ShiftDashboardStore {
+export interface ShiftDashboardStore {
   // === Time Window State ===
   timeWindow: ShiftTimeWindow | null;
   timeWindowPreset: TimeWindowPreset;
@@ -32,7 +34,19 @@ interface ShiftDashboardStore {
   drillDownToPit: (pitId: string) => void;
   drillDownToTable: (tableId: string, pitId?: string) => void;
   resetNavigation: () => void;
+
+  // ADR-035: Full session reset
+  resetSession: () => void;
 }
+
+/** ADR-035 INV-035-1: Typed initial state for session reset. */
+export const SHIFT_DASHBOARD_INITIAL_STATE = {
+  timeWindow: null,
+  timeWindowPreset: '8h' as const,
+  lens: 'casino' as const,
+  selectedPitId: null,
+  selectedTableId: null,
+} satisfies DataOnly<ShiftDashboardStore>;
 
 export const useShiftDashboardStore = create<ShiftDashboardStore>()(
   devtools(
@@ -96,6 +110,14 @@ export const useShiftDashboardStore = create<ShiftDashboardStore>()(
           { lens: 'casino', selectedPitId: null, selectedTableId: null },
           undefined,
           'shift-dashboard/resetNavigation',
+        ),
+
+      // ADR-035: Full session reset (resets ALL fields including time window)
+      resetSession: () =>
+        set(
+          { ...SHIFT_DASHBOARD_INITIAL_STATE },
+          undefined,
+          'shift-dashboard/resetSession',
         ),
     }),
     { name: 'shift-dashboard-store' },

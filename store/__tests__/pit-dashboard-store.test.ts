@@ -10,7 +10,10 @@
 
 import { act, renderHook } from '@testing-library/react';
 
-import { usePitDashboardStore } from '../pit-dashboard-store';
+import {
+  usePitDashboardStore,
+  PIT_DASHBOARD_INITIAL_STATE,
+} from '../pit-dashboard-store';
 
 describe('usePitDashboardStore', () => {
   // Reset store state before each test
@@ -203,6 +206,74 @@ describe('usePitDashboardStore', () => {
       expect(typeof result.current.setActivePanel).toBe('function');
       expect(typeof result.current.setNewSlipSeatNumber).toBe('function');
       expect(typeof result.current.clearSelection).toBe('function');
+    });
+  });
+
+  describe('resetSession()', () => {
+    it('should reset ALL data fields to PIT_DASHBOARD_INITIAL_STATE', () => {
+      const { result } = renderHook(() => usePitDashboardStore());
+
+      // Set every data field to non-default values
+      act(() => {
+        result.current.setSelectedTable('table-dirty-123');
+        result.current.setSelectedSlip('slip-dirty-456');
+        result.current.setSelectedPitLabel('Pit A');
+        result.current.setActivePanel('analytics');
+        result.current.setNewSlipSeatNumber('7');
+        result.current.setActivitySearchQuery('search query');
+        result.current.setActivitySortMode('alpha-asc');
+      });
+
+      // Reset
+      act(() => {
+        result.current.resetSession();
+      });
+
+      // Verify each field matches INITIAL_STATE
+      expect(result.current.selectedTableId).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.selectedTableId,
+      );
+      expect(result.current.selectedSlipId).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.selectedSlipId,
+      );
+      expect(result.current.selectedPitLabel).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.selectedPitLabel,
+      );
+      expect(result.current.activePanel).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.activePanel,
+      );
+      expect(result.current.newSlipSeatNumber).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.newSlipSeatNumber,
+      );
+      expect(result.current.activitySearchQuery).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.activitySearchQuery,
+      );
+      expect(result.current.activitySortMode).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.activitySortMode,
+      );
+    });
+
+    it('should reset activePanel unlike clearSelection() which preserves it', () => {
+      const { result } = renderHook(() => usePitDashboardStore());
+
+      act(() => {
+        result.current.setActivePanel('analytics');
+        result.current.setSelectedTable('table-123');
+      });
+
+      // clearSelection does not reset activePanel
+      act(() => {
+        result.current.clearSelection();
+      });
+      expect(result.current.activePanel).toBe('analytics');
+
+      // resetSession DOES reset activePanel back to 'tables'
+      act(() => {
+        result.current.resetSession();
+      });
+      expect(result.current.activePanel).toBe(
+        PIT_DASHBOARD_INITIAL_STATE.activePanel,
+      );
     });
   });
 

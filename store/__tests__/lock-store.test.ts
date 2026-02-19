@@ -7,7 +7,7 @@
 
 import { act } from '@testing-library/react';
 
-import { useLockStore } from '../lock-store';
+import { useLockStore, LOCK_INITIAL_STATE } from '../lock-store';
 
 describe('useLockStore', () => {
   beforeEach(() => {
@@ -109,6 +109,46 @@ describe('useLockStore', () => {
     });
 
     expect(useLockStore.getState().hasHydrated).toBe(true);
+  });
+
+  describe('resetSession()', () => {
+    it('should reset isLocked, lockReason, and lockedAt to LOCK_INITIAL_STATE values', () => {
+      // Lock the store first
+      useLockStore.getState().lock('manual');
+      const lockedState = useLockStore.getState();
+      expect(lockedState.isLocked).toBe(true);
+      expect(lockedState.lockReason).toBe('manual');
+      expect(lockedState.lockedAt).not.toBeNull();
+
+      // Reset
+      useLockStore.getState().resetSession();
+      const state = useLockStore.getState();
+
+      expect(state.isLocked).toBe(LOCK_INITIAL_STATE.isLocked);
+      expect(state.lockReason).toBe(LOCK_INITIAL_STATE.lockReason);
+      expect(state.lockedAt).toBe(LOCK_INITIAL_STATE.lockedAt);
+    });
+
+    it('should preserve hasHydrated across resetSession()', () => {
+      // Set hasHydrated to true (simulating post-rehydration state)
+      useLockStore.setState({ hasHydrated: true });
+
+      // Lock the store
+      useLockStore.getState().lock('idle');
+      expect(useLockStore.getState().isLocked).toBe(true);
+
+      // Reset session
+      useLockStore.getState().resetSession();
+      const state = useLockStore.getState();
+
+      // Lock data fields are cleared
+      expect(state.isLocked).toBe(false);
+      expect(state.lockReason).toBeNull();
+      expect(state.lockedAt).toBeNull();
+
+      // hasHydrated is preserved — it reflects persist middleware lifecycle, not session state
+      expect(state.hasHydrated).toBe(true);
+    });
   });
 
   it('store is pure state: no side-effect imports', () => {

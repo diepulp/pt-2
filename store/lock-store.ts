@@ -16,7 +16,9 @@
 import { create } from 'zustand';
 import { createJSONStorage, devtools, persist } from 'zustand/middleware';
 
-interface LockStore {
+import type { DataOnly } from './types';
+
+export interface LockStore {
   isLocked: boolean;
   lockReason: 'manual' | 'idle' | null;
   lockedAt: number | null;
@@ -24,7 +26,17 @@ interface LockStore {
   lock: (reason: 'manual' | 'idle') => void;
   unlock: () => void;
   setHasHydrated: (v: boolean) => void;
+
+  // ADR-035: Full session reset (hasHydrated excluded)
+  resetSession: () => void;
 }
+
+/** ADR-035 INV-035-1: Typed initial state for session reset. hasHydrated excluded — reflects persist middleware lifecycle. */
+export const LOCK_INITIAL_STATE = {
+  isLocked: false,
+  lockReason: null,
+  lockedAt: null,
+} satisfies Omit<DataOnly<LockStore>, 'hasHydrated'>;
 
 export const useLockStore = create<LockStore>()(
   devtools(
@@ -47,6 +59,10 @@ export const useLockStore = create<LockStore>()(
             'unlock',
           ),
         setHasHydrated: (v) => set({ hasHydrated: v }, false, 'setHasHydrated'),
+
+        // ADR-035: Full session reset (hasHydrated untouched)
+        resetSession: () =>
+          set({ ...LOCK_INITIAL_STATE }, false, 'lock/resetSession'),
       }),
       {
         name: 'pt2_lock_v1',

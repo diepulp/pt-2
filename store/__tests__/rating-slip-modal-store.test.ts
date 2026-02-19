@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react';
 
 import {
   useRatingSlipModalStore,
+  RATING_SLIP_MODAL_INITIAL_STATE,
   type ModalFormState,
 } from '@/store/rating-slip-modal-store';
 
@@ -656,6 +657,68 @@ describe('RatingSlipModalStore', () => {
       expect(result.current.formState.averageBet).toBe('100');
       expect(result.current.formState.newBuyIn).toBe('500');
       expect(result.current.formState.chipsTaken).toBe('200');
+    });
+  });
+
+  describe('resetSession()', () => {
+    it('should reset slipId, formState, and originalState to RATING_SLIP_MODAL_INITIAL_STATE', () => {
+      const { result } = renderHook(() => useRatingSlipModalStore());
+
+      // Initialize form with mock data and set slipId
+      act(() => {
+        result.current.setSlipId('slip-dirty-789');
+        result.current.initializeForm(mockFormData);
+        result.current.updateField('averageBet', '999');
+      });
+
+      expect(result.current.slipId).toBe('slip-dirty-789');
+      expect(result.current.formState.averageBet).toBe('999');
+
+      // Reset
+      act(() => {
+        result.current.resetSession();
+      });
+
+      // Verify slipId is null
+      expect(result.current.slipId).toBe(RATING_SLIP_MODAL_INITIAL_STATE.slipId);
+
+      // Verify formState matches emptyFormState
+      expect(result.current.formState).toEqual(
+        RATING_SLIP_MODAL_INITIAL_STATE.formState,
+      );
+
+      // Verify originalState matches emptyFormState
+      expect(result.current.originalState).toEqual(
+        RATING_SLIP_MODAL_INITIAL_STATE.originalState,
+      );
+    });
+
+    it('should differ from resetForm() which resets to originalState, not emptyFormState', () => {
+      const { result } = renderHook(() => useRatingSlipModalStore());
+
+      // Initialize with non-empty data and make edits
+      act(() => {
+        result.current.initializeForm(mockFormData);
+        result.current.updateField('averageBet', '999');
+      });
+
+      // resetForm() resets formState back to originalState (mockFormData), not empty
+      act(() => {
+        result.current.resetForm();
+      });
+      expect(result.current.formState).toEqual(mockFormData);
+      expect(result.current.originalState).toEqual(mockFormData);
+
+      // resetSession() resets ALL the way to emptyFormState
+      act(() => {
+        result.current.resetSession();
+      });
+      expect(result.current.formState).toEqual(
+        RATING_SLIP_MODAL_INITIAL_STATE.formState,
+      );
+      expect(result.current.originalState).toEqual(
+        RATING_SLIP_MODAL_INITIAL_STATE.originalState,
+      );
     });
   });
 

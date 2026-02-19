@@ -15,3 +15,4 @@ export type {
   TimeWindowPreset,
   ShiftTimeWindow,
 } from './shift-dashboard-store';
+export { useLockStore } from './lock-store';

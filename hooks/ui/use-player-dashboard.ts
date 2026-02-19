@@ -29,6 +29,7 @@ export function usePlayerDashboard(): PlayerDashboardStore {
       selectedPlayerId: state.selectedPlayerId,
       setSelectedPlayer: state.setSelectedPlayer,
       clearSelection: state.clearSelection,
+      resetSession: state.resetSession,
     })),
   );
 }
