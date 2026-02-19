@@ -680,7 +680,9 @@ describe('RatingSlipModalStore', () => {
       });
 
       // Verify slipId is null
-      expect(result.current.slipId).toBe(RATING_SLIP_MODAL_INITIAL_STATE.slipId);
+      expect(result.current.slipId).toBe(
+        RATING_SLIP_MODAL_INITIAL_STATE.slipId,
+      );
 
       // Verify formState matches emptyFormState
       expect(result.current.formState).toEqual(

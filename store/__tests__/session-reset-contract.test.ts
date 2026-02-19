@@ -13,24 +13,23 @@
 import { act } from '@testing-library/react';
 
 import * as storeBarrel from '../index';
-import { useLockStore } from '../lock-store';
-import { LOCK_INITIAL_STATE } from '../lock-store';
+import { LOCK_INITIAL_STATE, useLockStore } from '../lock-store';
 import {
-  usePitDashboardStore,
   PIT_DASHBOARD_INITIAL_STATE,
+  usePitDashboardStore,
 } from '../pit-dashboard-store';
 import {
-  usePlayerDashboardStore,
   PLAYER_DASHBOARD_INITIAL_STATE,
+  usePlayerDashboardStore,
 } from '../player-dashboard-store';
 import {
-  useRatingSlipModalStore,
   RATING_SLIP_MODAL_INITIAL_STATE,
+  useRatingSlipModalStore,
 } from '../rating-slip-modal-store';
 import { resetSessionState } from '../reset-session-state';
 import {
-  useShiftDashboardStore,
   SHIFT_DASHBOARD_INITIAL_STATE,
+  useShiftDashboardStore,
 } from '../shift-dashboard-store';
 
 // Classification lists — INV-035-4
@@ -45,11 +44,12 @@ const SESSION_SCOPED_HOOKS = [
 const APP_SCOPED_HOOKS = ['useUIStore'] as const;
 
 /** Pick only the keys present in `initial` from `state`. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only helper comparing store snapshots
-function pickData(state: any, initial: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.keys(initial).map((k) => [k, state[k]]),
-  );
+function pickData(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- test-only helper comparing store snapshots
+  state: any,
+  initial: Record<string, unknown>,
+): Record<string, unknown> {
+  return Object.fromEntries(Object.keys(initial).map((k) => [k, state[k]]));
 }
 
 describe('Session Reset Contract (INV-035-4)', () => {
@@ -90,7 +90,10 @@ describe('Session Reset Contract (INV-035-4)', () => {
       });
 
       useShiftDashboardStore.setState({
-        timeWindow: { start: '2026-01-01T00:00:00Z', end: '2026-01-01T08:00:00Z' },
+        timeWindow: {
+          start: '2026-01-01T00:00:00Z',
+          end: '2026-01-01T08:00:00Z',
+        },
         timeWindowPreset: '24h',
         lens: 'table',
         selectedPitId: 'pit-999',
@@ -131,27 +134,45 @@ describe('Session Reset Contract (INV-035-4)', () => {
     });
 
     // Assert each store matches INITIAL_STATE
-    expect(pickData(usePitDashboardStore.getState(), PIT_DASHBOARD_INITIAL_STATE))
-      .toEqual(PIT_DASHBOARD_INITIAL_STATE);
+    expect(
+      pickData(usePitDashboardStore.getState(), PIT_DASHBOARD_INITIAL_STATE),
+    ).toEqual(PIT_DASHBOARD_INITIAL_STATE);
 
-    expect(pickData(usePlayerDashboardStore.getState(), PLAYER_DASHBOARD_INITIAL_STATE))
-      .toEqual(PLAYER_DASHBOARD_INITIAL_STATE);
+    expect(
+      pickData(
+        usePlayerDashboardStore.getState(),
+        PLAYER_DASHBOARD_INITIAL_STATE,
+      ),
+    ).toEqual(PLAYER_DASHBOARD_INITIAL_STATE);
 
-    expect(pickData(useShiftDashboardStore.getState(), SHIFT_DASHBOARD_INITIAL_STATE))
-      .toEqual(SHIFT_DASHBOARD_INITIAL_STATE);
+    expect(
+      pickData(
+        useShiftDashboardStore.getState(),
+        SHIFT_DASHBOARD_INITIAL_STATE,
+      ),
+    ).toEqual(SHIFT_DASHBOARD_INITIAL_STATE);
 
-    expect(pickData(useRatingSlipModalStore.getState(), RATING_SLIP_MODAL_INITIAL_STATE))
-      .toEqual(RATING_SLIP_MODAL_INITIAL_STATE);
+    expect(
+      pickData(
+        useRatingSlipModalStore.getState(),
+        RATING_SLIP_MODAL_INITIAL_STATE,
+      ),
+    ).toEqual(RATING_SLIP_MODAL_INITIAL_STATE);
 
-    expect(pickData(useLockStore.getState(), LOCK_INITIAL_STATE))
-      .toEqual(LOCK_INITIAL_STATE);
+    expect(pickData(useLockStore.getState(), LOCK_INITIAL_STATE)).toEqual(
+      LOCK_INITIAL_STATE,
+    );
   });
 
   // ── Lock store hasHydrated preserved ──────────────────────────────
 
   it('lock store hasHydrated is NOT reset', () => {
     act(() => {
-      useLockStore.setState({ hasHydrated: true, isLocked: true, lockReason: 'manual' });
+      useLockStore.setState({
+        hasHydrated: true,
+        isLocked: true,
+        lockReason: 'manual',
+      });
     });
 
     act(() => {
@@ -204,12 +225,18 @@ describe('Session Reset Contract (INV-035-4)', () => {
     act(() => {
       resetSessionState();
     });
-    const snapshot1 = pickData(usePitDashboardStore.getState(), PIT_DASHBOARD_INITIAL_STATE);
+    const snapshot1 = pickData(
+      usePitDashboardStore.getState(),
+      PIT_DASHBOARD_INITIAL_STATE,
+    );
 
     act(() => {
       resetSessionState();
     });
-    const snapshot2 = pickData(usePitDashboardStore.getState(), PIT_DASHBOARD_INITIAL_STATE);
+    const snapshot2 = pickData(
+      usePitDashboardStore.getState(),
+      PIT_DASHBOARD_INITIAL_STATE,
+    );
 
     expect(snapshot1).toEqual(snapshot2);
   });
