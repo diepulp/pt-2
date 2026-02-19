@@ -57,6 +57,7 @@ import {
   closeRatingSlip,
 } from '@/services/rating-slip/http';
 import { resolveCurrentSlipContext } from '@/services/rating-slip-modal/rpc';
+import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { NewSlipModal } from '../dashboard/new-slip-modal';
 import {
@@ -137,6 +138,9 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     isModalOpen ? selectedSlipId : null,
   );
 
+  // Zustand store action: reset additive fields after save to prevent double-entry
+  const initializeForm = useRatingSlipModalStore((s) => s.initializeForm);
+
   // Mutations: Modal operations
   const saveWithBuyIn = useSaveWithBuyIn();
   const closeWithFinancial = useCloseWithFinancial();
@@ -190,15 +194,14 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     },
   });
 
-  // Auto-select first active table if none selected
+  // Auto-select: validates current selection, auto-corrects if stale (ADR-035 INV-035-3)
   React.useEffect(() => {
-    if (!selectedTableId && tables.length > 0) {
-      const firstActive = tables.find((t) => t.status === 'active');
-      if (firstActive) {
-        setSelectedTable(firstActive.id);
-      } else {
-        // Fallback to first table if no active tables
-        setSelectedTable(tables[0].id);
+    if (tables.length > 0) {
+      const currentValid =
+        selectedTableId && tables.some((t) => t.id === selectedTableId);
+      if (!currentValid) {
+        const firstActive = tables.find((t) => t.status === 'active');
+        setSelectedTable(firstActive?.id ?? tables[0].id);
       }
     }
   }, [tables, selectedTableId, setSelectedTable]);
@@ -285,7 +288,19 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+        chipsTaken: Number(formState.chipsTaken || 0),
         playerDailyTotal: formState.playerDailyTotal,
+      });
+      // Reset additive fields to prevent double-entry on subsequent save clicks.
+      // newBuyIn and chipsTaken create financial transactions — must be zeroed.
+      // initializeForm sets both formState and originalState, making isDirty = false.
+      initializeForm({
+        averageBet: formState.averageBet,
+        startTime: formState.startTime,
+        newBuyIn: '0',
+        newTableId: formState.newTableId,
+        newSeatNumber: formState.newSeatNumber,
+        chipsTaken: '0',
       });
       toast.success('Changes saved');
     } catch (error) {
@@ -453,7 +468,11 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     seats,
     activeSlips,
     stats: stats ?? null,
-    isLoading: tablesLoading || statsLoading,
+    isLoading:
+      tablesLoading ||
+      statsLoading ||
+      (tables.length > 0 &&
+        (!selectedTableId || !tables.some((t) => t.id === selectedTableId))),
     gamingDay: gamingDayString ? { date: gamingDayString } : null,
     realtimeConnected,
     realtimeError,

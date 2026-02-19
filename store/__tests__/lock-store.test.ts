@@ -1,18 +1,23 @@
 /**
  * Lock Store Tests
  *
+ * @see LOCK-SCREEN-OPERATIONAL-PRIVACY-CONTRACT.md
  * @see EXECUTION-SPEC-GAP-SIGN-OUT.md §WS7
  */
 
-import { useLockStore } from '../lock-store';
+import { act } from '@testing-library/react';
+
+import { useLockStore, LOCK_INITIAL_STATE } from '../lock-store';
 
 describe('useLockStore', () => {
   beforeEach(() => {
+    sessionStorage.clear();
     // Reset store to initial state
     useLockStore.setState({
       isLocked: false,
       lockReason: null,
       lockedAt: null,
+      hasHydrated: false,
     });
   });
 
@@ -50,6 +55,100 @@ describe('useLockStore', () => {
     expect(state.isLocked).toBe(false);
     expect(state.lockReason).toBeNull();
     expect(state.lockedAt).toBeNull();
+  });
+
+  it('persists lock state to sessionStorage', () => {
+    useLockStore.getState().lock('manual');
+
+    const stored = sessionStorage.getItem('pt2_lock_v1');
+    expect(stored).not.toBeNull();
+
+    const parsed = JSON.parse(stored!);
+    expect(parsed.state.isLocked).toBe(true);
+    expect(parsed.state.lockReason).toBe('manual');
+    expect(parsed.state.lockedAt).toEqual(expect.any(Number));
+  });
+
+  it('does not persist hasHydrated or actions to sessionStorage', () => {
+    useLockStore.getState().lock('manual');
+
+    const stored = sessionStorage.getItem('pt2_lock_v1');
+    const parsed = JSON.parse(stored!);
+
+    expect(parsed.state).not.toHaveProperty('hasHydrated');
+    expect(parsed.state).not.toHaveProperty('lock');
+    expect(parsed.state).not.toHaveProperty('unlock');
+    expect(parsed.state).not.toHaveProperty('setHasHydrated');
+  });
+
+  it('rehydrates lock state from sessionStorage', async () => {
+    // Seed sessionStorage as if a prior tab session had locked
+    const seed = {
+      state: { isLocked: true, lockReason: 'idle', lockedAt: 1000 },
+      version: 0,
+    };
+    sessionStorage.setItem('pt2_lock_v1', JSON.stringify(seed));
+
+    // Trigger rehydration
+    await act(async () => {
+      await useLockStore.persist.rehydrate();
+    });
+
+    const state = useLockStore.getState();
+    expect(state.isLocked).toBe(true);
+    expect(state.lockReason).toBe('idle');
+    expect(state.lockedAt).toBe(1000);
+    expect(state.hasHydrated).toBe(true);
+  });
+
+  it('hasHydrated is set to true after rehydration', async () => {
+    expect(useLockStore.getState().hasHydrated).toBe(false);
+
+    await act(async () => {
+      await useLockStore.persist.rehydrate();
+    });
+
+    expect(useLockStore.getState().hasHydrated).toBe(true);
+  });
+
+  describe('resetSession()', () => {
+    it('should reset isLocked, lockReason, and lockedAt to LOCK_INITIAL_STATE values', () => {
+      // Lock the store first
+      useLockStore.getState().lock('manual');
+      const lockedState = useLockStore.getState();
+      expect(lockedState.isLocked).toBe(true);
+      expect(lockedState.lockReason).toBe('manual');
+      expect(lockedState.lockedAt).not.toBeNull();
+
+      // Reset
+      useLockStore.getState().resetSession();
+      const state = useLockStore.getState();
+
+      expect(state.isLocked).toBe(LOCK_INITIAL_STATE.isLocked);
+      expect(state.lockReason).toBe(LOCK_INITIAL_STATE.lockReason);
+      expect(state.lockedAt).toBe(LOCK_INITIAL_STATE.lockedAt);
+    });
+
+    it('should preserve hasHydrated across resetSession()', () => {
+      // Set hasHydrated to true (simulating post-rehydration state)
+      useLockStore.setState({ hasHydrated: true });
+
+      // Lock the store
+      useLockStore.getState().lock('idle');
+      expect(useLockStore.getState().isLocked).toBe(true);
+
+      // Reset session
+      useLockStore.getState().resetSession();
+      const state = useLockStore.getState();
+
+      // Lock data fields are cleared
+      expect(state.isLocked).toBe(false);
+      expect(state.lockReason).toBeNull();
+      expect(state.lockedAt).toBeNull();
+
+      // hasHydrated is preserved — it reflects persist middleware lifecycle, not session state
+      expect(state.hasHydrated).toBe(true);
+    });
   });
 
   it('store is pure state: no side-effect imports', () => {

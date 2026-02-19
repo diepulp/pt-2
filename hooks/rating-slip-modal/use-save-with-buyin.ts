@@ -27,7 +27,10 @@ import { DomainError } from '@/lib/errors/domain-errors';
 import { getErrorMessage, logError } from '@/lib/errors/error-utils';
 import { mtlKeys } from '@/services/mtl/keys';
 import { createFinancialTransaction } from '@/services/player-financial/http';
-import { updateAverageBet } from '@/services/rating-slip/http';
+import {
+  createPitCashObservation,
+  updateAverageBet,
+} from '@/services/rating-slip/http';
 import type { RatingSlipModalDTO } from '@/services/rating-slip-modal/dtos';
 import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
@@ -48,6 +51,8 @@ export interface SaveWithBuyInInput {
   averageBet: number;
   /** New buy-in amount in dollars (will be converted to cents) */
   newBuyIn: number;
+  /** Chips taken amount in dollars (recorded as pit_cash_observation) */
+  chipsTaken: number;
   /**
    * Player's current daily total (cash-in) for threshold calculation.
    * If provided, enables threshold checking and auto-MTL creation.
@@ -89,6 +94,7 @@ export function useSaveWithBuyIn() {
       staffId,
       averageBet,
       newBuyIn,
+      chipsTaken,
       playerDailyTotal,
     }: SaveWithBuyInInput) => {
       // Step 1: Check compliance thresholds if daily total is provided
@@ -146,6 +152,29 @@ export function useSaveWithBuyIn() {
         }
       }
 
+      // Step 3b: Record chips-taken observation (only after average_bet succeeds)
+      // Mirrors buy-in pattern: if chips-taken fails, save must fail
+      if (chipsTaken > 0 && playerId) {
+        try {
+          await createPitCashObservation({
+            visitId,
+            amount: chipsTaken, // Amount in dollars (RPC expects dollars)
+            ratingSlipId: slipId,
+            amountKind: 'estimate',
+            source: 'walk_with',
+            // Unique key per save to allow multiple mid-session observations
+            idempotencyKey: `chips-taken-save-${slipId}-${Date.now()}`,
+          });
+        } catch (obsError) {
+          logError(obsError, {
+            component: 'useSaveWithBuyIn',
+            action: 'createPitCashObservation',
+            metadata: { slipId, visitId, playerId },
+          });
+          throw obsError;
+        }
+      }
+
       // Step 4: MTL entry creation
       // NOTE: The forward bridge trigger (fn_derive_mtl_from_finance) automatically
       // creates an MTL entry when a financial transaction is inserted. This makes
@@ -193,7 +222,7 @@ export function useSaveWithBuyIn() {
         );
       }
     },
-    onSuccess: (result, { slipId, visitId, tableId, playerId, casinoId }) => {
+    onSuccess: (_result, { slipId, visitId, tableId, playerId, casinoId }) => {
       // Invalidate modal data
       queryClient.invalidateQueries({
         queryKey: ratingSlipModalKeys.data(slipId),
@@ -209,15 +238,17 @@ export function useSaveWithBuyIn() {
         queryKey: dashboardKeys.activeSlips(tableId),
       });
 
-      // Forward bridge trigger creates MTL entries from financial transactions.
-      // Invalidate MTL caches when threshold was met (for UI badge updates).
-      if (result.thresholdResult?.shouldCreateMtl && playerId) {
-        // Invalidate gaming day summary (aggregates changed)
+      // GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 3:
+      // Forward bridge trigger creates MTL entries for ALL pit cash/chips
+      // transactions unconditionally (not gated on threshold).
+      // Cache invalidation must also be unconditional to match.
+      if (playerId) {
         queryClient.invalidateQueries({
           queryKey: mtlKeys.gamingDaySummary.scope,
         });
-
-        // Invalidate patron daily total (PERF-005: use key factory)
+        queryClient.invalidateQueries({
+          queryKey: mtlKeys.entries.scope,
+        });
         queryClient.invalidateQueries({
           queryKey: mtlKeys.patronDailyTotal(casinoId, playerId),
         });

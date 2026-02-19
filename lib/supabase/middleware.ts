@@ -1,18 +1,29 @@
 import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { hasEnvVars } from '../utils';
+const REQUIRED_ENV = [
+  'NEXT_PUBLIC_SUPABASE_URL',
+  'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+] as const;
+
+function getMissingEnv(): string[] {
+  return REQUIRED_ENV.filter((key) => !process.env[key]);
+}
 
 export async function updateSession(request: NextRequest) {
+  const missing = getMissingEnv();
+  if (missing.length > 0) {
+    // Fail loud: log the specific vars (no secrets) and return a controlled 500.
+    // In dev, the console message is actionable. In prod, Vercel logs capture it.
+    console.error(
+      `[middleware] Fatal: missing env vars: ${missing.join(', ')}`,
+    );
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
-
-  // If the env vars are not set, skip middleware check. You can remove this
-  // once you setup the project.
-  if (!hasEnvVars) {
-    return supabaseResponse;
-  }
 
   // With Fluid compute, don't put this client in a global environment
   // variable. Always create a new one on each request.

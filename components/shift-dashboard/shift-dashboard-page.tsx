@@ -84,6 +84,16 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
     window: stableWindow,
   });
 
+  // ADR-035 INV-035-3: Validate selectedPitId against loaded data
+  useEffect(() => {
+    if (summary?.pits && selectedPitId) {
+      const pitExists = summary.pits.some((p) => p.pit_id === selectedPitId);
+      if (!pitExists) {
+        resetNavigation();
+      }
+    }
+  }, [summary?.pits, selectedPitId, resetNavigation]);
+
   // Handle pit selection for drill-down (compound action)
   const handlePitSelect = (pitId: string) => {
     drillDownToPit(pitId);

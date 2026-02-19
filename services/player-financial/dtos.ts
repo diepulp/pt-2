@@ -116,7 +116,7 @@ export interface VisitFinancialSummaryDTO {
   /** Net amount in cents (total_in - total_out) */
   net_amount: number;
   /** Number of transactions */
-  transaction_count: number;
+  event_count: number;
   /** First transaction timestamp */
   first_transaction_at: string | null;
   /** Last transaction timestamp */
@@ -156,6 +156,8 @@ export interface CreateFinancialTxnInput {
   idempotency_key?: string;
   /** Optional: Custom timestamp (defaults to now()) */
   created_at?: string;
+  /** Optional: Receipt/ticket reference for cage transactions (PRD-033) */
+  external_ref?: string;
 }
 
 // === Filter Types ===

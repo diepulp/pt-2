@@ -47,7 +47,7 @@ jobs:
 
             if [ "$RPC_COUNT" -gt 0 ]; then
               # RPC function(s) found - verify set_rls_context call exists
-              CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context\s*\(' "$FILE" || true)
+              CONTEXT_CALL=$(grep -icE 'PERFORM\s+set_rls_context(_from_staff)?\s*\(' "$FILE" || true)
 
               if [ "$CONTEXT_CALL" -eq 0 ]; then
                 echo "❌ VIOLATION: $FILE"

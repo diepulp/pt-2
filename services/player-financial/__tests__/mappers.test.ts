@@ -70,7 +70,7 @@ const mockVisitSummaryRow = {
   total_in: 1000,
   total_out: 250,
   net_amount: 750,
-  transaction_count: 5,
+  event_count: 5,
   first_transaction_at: '2025-01-15T10:00:00Z',
   last_transaction_at: '2025-01-15T14:00:00Z',
 };
@@ -81,7 +81,7 @@ const mockVisitSummaryRowEmpty = {
   total_in: null,
   total_out: null,
   net_amount: null,
-  transaction_count: null,
+  event_count: null,
   first_transaction_at: null,
   last_transaction_at: null,
 };
@@ -284,7 +284,7 @@ describe('Player Financial Mappers', () => {
         total_in: 1000,
         total_out: 250,
         net_amount: 750,
-        transaction_count: 5,
+        event_count: 5,
         first_transaction_at: '2025-01-15T10:00:00Z',
         last_transaction_at: '2025-01-15T14:00:00Z',
       });
@@ -298,7 +298,7 @@ describe('Player Financial Mappers', () => {
       expect(result.total_in).toBe(0);
       expect(result.total_out).toBe(0);
       expect(result.net_amount).toBe(0);
-      expect(result.transaction_count).toBe(0);
+      expect(result.event_count).toBe(0);
       expect(result.first_transaction_at).toBeNull();
       expect(result.last_transaction_at).toBeNull();
     });
@@ -315,7 +315,7 @@ describe('Player Financial Mappers', () => {
         total_in: 0,
         total_out: 0,
         net_amount: 0,
-        transaction_count: 0,
+        event_count: 0,
       };
 
       const result = toVisitFinancialSummaryDTO(zeroRow);
@@ -323,7 +323,7 @@ describe('Player Financial Mappers', () => {
       expect(result.total_in).toBe(0);
       expect(result.total_out).toBe(0);
       expect(result.net_amount).toBe(0);
-      expect(result.transaction_count).toBe(0);
+      expect(result.event_count).toBe(0);
     });
 
     it('should handle negative net_amount (player won)', () => {
@@ -443,12 +443,12 @@ describe('Player Financial Mappers', () => {
     it('should handle very large transaction counts in summary', () => {
       const largeSummary = {
         ...mockVisitSummaryRow,
-        transaction_count: 10000,
+        event_count: 10000,
       };
 
       const result = toVisitFinancialSummaryDTO(largeSummary);
 
-      expect(result.transaction_count).toBe(10000);
+      expect(result.event_count).toBe(10000);
     });
 
     it('should handle high-precision amounts in summary', () => {

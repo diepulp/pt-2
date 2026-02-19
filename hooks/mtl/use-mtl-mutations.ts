@@ -19,6 +19,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
+import { playerFinancialKeys } from '@/hooks/player-financial/keys';
 import type {
   CreateMtlEntryInput,
   CreateMtlAuditNoteInput,
@@ -28,7 +29,7 @@ import type {
 } from '@/services/mtl/dtos';
 import { createMtlEntry, createMtlAuditNote } from '@/services/mtl/http';
 import { mtlKeys } from '@/services/mtl/keys';
-import { playerFinancialKeys } from '@/services/player-financial/keys';
+// GAP-CASHIN-ADJUSTMENT-MTL-SYNC Fix 4: use canonical hooks key factory
 import { ratingSlipModalKeys } from '@/services/rating-slip-modal/keys';
 
 /**
@@ -90,14 +91,12 @@ export function useCreateMtlEntry() {
       if (variables.visit_id) {
         // Invalidate visit financial summary to refresh total_buy_in
         queryClient.invalidateQueries({
-          queryKey: playerFinancialKeys.visitSummary({
-            visit_id: variables.visit_id,
-          }),
+          queryKey: playerFinancialKeys.visitSummary(variables.visit_id),
         });
 
         // Invalidate all transaction lists (new txn was created by trigger)
         queryClient.invalidateQueries({
-          queryKey: playerFinancialKeys.transactions.scope,
+          queryKey: playerFinancialKeys.list.scope,
         });
       }
 

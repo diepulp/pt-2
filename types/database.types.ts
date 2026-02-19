@@ -3069,30 +3069,15 @@ export type Database = {
       visit_financial_summary: {
         Row: {
           casino_id: string | null
+          event_count: number | null
           first_transaction_at: string | null
           last_transaction_at: string | null
           net_amount: number | null
           total_in: number | null
           total_out: number | null
-          transaction_count: number | null
           visit_id: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "player_financial_transaction_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_financial_transaction_visit_id_fkey"
-            columns: ["visit_id"]
-            isOneToOne: false
-            referencedRelation: "visit"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Functions: {
@@ -3425,78 +3410,51 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_create_financial_txn:
-        | {
-            Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_idempotency_key?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: string
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_casino_id: string
-              p_created_at?: string
-              p_created_by_staff_id: string
-              p_direction: Database["public"]["Enums"]["financial_direction"]
-              p_idempotency_key?: string
-              p_player_id: string
-              p_rating_slip_id?: string
-              p_related_transaction_id?: string
-              p_source: Database["public"]["Enums"]["financial_source"]
-              p_tender_type?: string
-              p_visit_id: string
-            }
-            Returns: {
-              amount: number
-              casino_id: string
-              created_at: string
-              created_by_staff_id: string | null
-              direction:
-                | Database["public"]["Enums"]["financial_direction"]
-                | null
-              external_ref: string | null
-              gaming_day: string | null
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              player_id: string
-              rating_slip_id: string | null
-              reason_code:
-                | Database["public"]["Enums"]["adjustment_reason_code"]
-                | null
-              related_transaction_id: string | null
-              source: Database["public"]["Enums"]["financial_source"] | null
-              tender_type: string | null
-              txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "player_financial_transaction"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_create_financial_txn: {
+        Args: {
+          p_amount: number
+          p_casino_id: string
+          p_created_at?: string
+          p_created_by_staff_id: string
+          p_direction: Database["public"]["Enums"]["financial_direction"]
+          p_external_ref?: string
+          p_idempotency_key?: string
+          p_player_id: string
+          p_rating_slip_id?: string
+          p_related_transaction_id?: string
+          p_source: Database["public"]["Enums"]["financial_source"]
+          p_tender_type?: string
+          p_visit_id: string
+        }
+        Returns: {
+          amount: number
+          casino_id: string
+          created_at: string
+          created_by_staff_id: string | null
+          direction: Database["public"]["Enums"]["financial_direction"] | null
+          external_ref: string | null
+          gaming_day: string | null
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          player_id: string
+          rating_slip_id: string | null
+          reason_code:
+            | Database["public"]["Enums"]["adjustment_reason_code"]
+            | null
+          related_transaction_id: string | null
+          source: Database["public"]["Enums"]["financial_source"] | null
+          tender_type: string | null
+          txn_kind: Database["public"]["Enums"]["financial_txn_kind"]
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "player_financial_transaction"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_floor_layout: {
         Args: { p_casino_id: string; p_description: string; p_name: string }
         Returns: {

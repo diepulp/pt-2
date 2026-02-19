@@ -145,7 +145,9 @@ export async function createTransaction(
     type RpcReturnType =
       Database['public']['Tables']['player_financial_transaction']['Row'];
 
-    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC overload resolution requires explicit return type
+    // Note: p_external_ref added by migration 20260217153443 (PRD-033). Type widening
+    // via `as any` needed until db:types-local is run against the updated local DB.
+    /* eslint-disable @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPC overload + pending types regen */
     const { data, error } = (await supabase.rpc('rpc_create_financial_txn', {
       p_casino_id: input.casino_id,
       p_player_id: input.player_id,
@@ -159,10 +161,12 @@ export async function createTransaction(
       p_related_transaction_id: input.related_transaction_id ?? undefined,
       p_idempotency_key: input.idempotency_key ?? undefined,
       p_created_at: input.created_at ?? undefined,
-    })) as {
+      ...(input.external_ref ? { p_external_ref: input.external_ref } : {}),
+    } as any)) as {
       data: RpcReturnType | null;
       error: { code?: string; message: string } | null;
     };
+    /* eslint-enable @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions */
 
     if (error) {
       throw mapDatabaseError(error);
@@ -393,7 +397,7 @@ export async function getVisitSummary(
           total_in: 0,
           total_out: 0,
           net_amount: 0,
-          transaction_count: 0,
+          event_count: 0,
           first_transaction_at: null,
           last_transaction_at: null,
         };

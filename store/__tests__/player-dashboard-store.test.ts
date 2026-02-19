@@ -1,6 +1,9 @@
 import { act, renderHook } from '@testing-library/react';
 
-import { usePlayerDashboardStore } from '@/store/player-dashboard-store';
+import {
+  usePlayerDashboardStore,
+  PLAYER_DASHBOARD_INITIAL_STATE,
+} from '@/store/player-dashboard-store';
 
 describe('PlayerDashboardStore', () => {
   beforeEach(() => {
@@ -85,6 +88,54 @@ describe('PlayerDashboardStore', () => {
       });
 
       expect(result.current.selectedPlayerId).toBe(null);
+    });
+  });
+
+  describe('resetSession()', () => {
+    it('should reset selectedPlayerId to PLAYER_DASHBOARD_INITIAL_STATE value', () => {
+      const { result } = renderHook(() => usePlayerDashboardStore());
+
+      // Set selectedPlayerId to a non-default value
+      act(() => {
+        result.current.setSelectedPlayer('player-dirty-999');
+      });
+      expect(result.current.selectedPlayerId).toBe('player-dirty-999');
+
+      // Reset
+      act(() => {
+        result.current.resetSession();
+      });
+
+      // Verify it matches INITIAL_STATE
+      expect(result.current.selectedPlayerId).toBe(
+        PLAYER_DASHBOARD_INITIAL_STATE.selectedPlayerId,
+      );
+    });
+
+    it('should reset independently of clearSelection()', () => {
+      const { result } = renderHook(() => usePlayerDashboardStore());
+
+      // Verify clearSelection still works on its own
+      act(() => {
+        result.current.setSelectedPlayer('player-abc');
+      });
+
+      act(() => {
+        result.current.clearSelection();
+      });
+      expect(result.current.selectedPlayerId).toBe(null);
+
+      // Verify resetSession also resets to null
+      act(() => {
+        result.current.setSelectedPlayer('player-xyz');
+      });
+
+      act(() => {
+        result.current.resetSession();
+      });
+      expect(result.current.selectedPlayerId).toBe(
+        PLAYER_DASHBOARD_INITIAL_STATE.selectedPlayerId,
+      );
     });
   });
 

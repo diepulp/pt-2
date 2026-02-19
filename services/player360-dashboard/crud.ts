@@ -214,7 +214,7 @@ export async function getPlayerSummary(
             total_in: totalIn,
             total_out: totalOut,
             net_amount: totalIn - totalOut,
-            transaction_count: transactions.length,
+            event_count: transactions.length,
             first_transaction_at:
               transactions[transactions.length - 1]?.created_at ?? null,
             last_transaction_at: lastTxn?.created_at ?? null,

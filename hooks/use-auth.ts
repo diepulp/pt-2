@@ -23,6 +23,7 @@ import {
   DEV_RLS_CONTEXT,
   isDevAuthBypassEnabled,
 } from '@/lib/supabase/dev-context';
+import { resetSessionState } from '@/store/reset-session-state';
 
 interface StaffClaims {
   staff_id: string;
@@ -89,8 +90,13 @@ export function useAuth(): UseAuthResult {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, session?.user ?? null);
+
+      // ADR-035 INV-035-2: Reset Zustand on server-side session invalidation
+      if (event === 'SIGNED_OUT') {
+        resetSessionState();
+      }
     });
 
     return () => {

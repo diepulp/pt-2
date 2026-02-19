@@ -3,6 +3,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
+import type { DataOnly } from './types';
+
 /**
  * Modal form state shape for rating slip editing.
  * String values are used for controlled form inputs.
@@ -46,6 +48,9 @@ export interface RatingSlipModalStore {
   ) => void;
   decrementField: (field: 'averageBet' | 'newBuyIn' | 'chipsTaken') => void;
   adjustStartTime: (action: 'add' | 'subtract', minutes: number) => void;
+
+  // ADR-035: Full session reset
+  resetSession: () => void;
 }
 
 const emptyFormState: ModalFormState = {
@@ -56,6 +61,13 @@ const emptyFormState: ModalFormState = {
   newSeatNumber: '',
   chipsTaken: '0',
 };
+
+/** ADR-035 INV-035-1: Typed initial state for session reset. */
+export const RATING_SLIP_MODAL_INITIAL_STATE = {
+  slipId: null,
+  formState: emptyFormState,
+  originalState: emptyFormState,
+} satisfies DataOnly<RatingSlipModalStore>;
 
 export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
   devtools(
@@ -152,6 +164,14 @@ export const useRatingSlipModalStore = create<RatingSlipModalStore>()(
           },
           undefined,
           `ratingSlipModal/adjustStartTime:${action}:${minutes}`,
+        ),
+
+      // ADR-035: Full session reset
+      resetSession: () =>
+        set(
+          { ...RATING_SLIP_MODAL_INITIAL_STATE },
+          undefined,
+          'ratingSlipModal/resetSession',
         ),
     }),
     { name: 'RatingSlipModalStore' },

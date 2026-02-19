@@ -54,6 +54,7 @@ import {
   resumeRatingSlip,
   closeRatingSlip,
 } from '@/services/rating-slip/http';
+import { useRatingSlipModalStore } from '@/store/rating-slip-modal-store';
 
 import { ActiveSlipsPanel } from './active-slips-panel';
 import { NewSlipModal } from './new-slip-modal';
@@ -159,6 +160,9 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     isModalOpen && modalType === 'rating-slip' ? selectedSlipId : null,
   );
 
+  // Zustand store action: reset additive fields after save to prevent double-entry
+  const initializeForm = useRatingSlipModalStore((s) => s.initializeForm);
+
   // Mutations: Modal operations
   const saveWithBuyIn = useSaveWithBuyIn();
   const closeWithFinancial = useCloseWithFinancial();
@@ -215,15 +219,14 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     },
   });
 
-  // Auto-select first active table if none selected
+  // Auto-select: validates current selection, auto-corrects if stale (ADR-035 INV-035-3)
   React.useEffect(() => {
-    if (!selectedTableId && tables.length > 0) {
-      const firstActive = tables.find((t) => t.status === 'active');
-      if (firstActive) {
-        setSelectedTable(firstActive.id);
-      } else {
-        // Fallback to first table if no active tables
-        setSelectedTable(tables[0].id);
+    if (tables.length > 0) {
+      const currentValid =
+        selectedTableId && tables.some((t) => t.id === selectedTableId);
+      if (!currentValid) {
+        const firstActive = tables.find((t) => t.status === 'active');
+        setSelectedTable(firstActive?.id ?? tables[0].id);
       }
     }
   }, [tables, selectedTableId, setSelectedTable]);
@@ -312,7 +315,18 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
         staffId,
         averageBet: Number(formState.averageBet),
         newBuyIn: Number(formState.newBuyIn || formState.cashIn || 0),
+        chipsTaken: Number(formState.chipsTaken || 0),
         playerDailyTotal: formState.playerDailyTotal,
+      });
+      // Reset additive fields before closing to prevent double-entry if modal reopens quickly.
+      // newBuyIn and chipsTaken create financial transactions — must be zeroed.
+      initializeForm({
+        averageBet: formState.averageBet,
+        startTime: formState.startTime,
+        newBuyIn: '0',
+        newTableId: formState.newTableId,
+        newSeatNumber: formState.newSeatNumber,
+        chipsTaken: '0',
       });
       // PRD-019 WS3: Show success toast and close modal after successful save
       toast.success('Rating slip saved');
@@ -458,6 +472,24 @@ export function PitDashboardClient({ casinoId }: PitDashboardClientProps) {
     setNewSlipSeatNumber(undefined);
     openModal('new-slip', {});
   };
+
+  // ADR-035 INV-035-3: Prevent "No Table Selected" flash during auto-select gap
+  const selectionInvalid =
+    tables.length > 0 &&
+    (!selectedTableId || !tables.some((t) => t.id === selectedTableId));
+
+  if (tablesLoading || selectionInvalid) {
+    return (
+      <div className="space-y-6">
+        <div className="h-12 animate-pulse rounded-lg bg-muted" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-64 animate-pulse rounded-lg bg-muted" />
+          <div className="lg:col-span-1 h-64 animate-pulse rounded-lg bg-muted" />
+        </div>
+        <div className="h-48 animate-pulse rounded-lg bg-muted" />
+      </div>
+    );
+  }
 
   // Handle errors
   if (tablesError || statsError) {
