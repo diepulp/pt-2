@@ -169,7 +169,7 @@ WHERE n.nspname = 'public'
 
 **TypeScript impact:** Zero. Production callers never pass `p_actor_id`. Test callers use `service_role` client.
 
-### Migration 3: `20260220004200_adr018_revoke_public_security_remediation.sql`
+### Migration 3: `20260219235800_adr018_revoke_public_security_remediation.sql`
 
 **Findings addressed:** M-1, M-2, M-3 (MEDIUM), M-4 (MEDIUM), L-3 (LOW)
 

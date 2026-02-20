@@ -118,7 +118,7 @@ describe('assertDevAuthBypassAllowed', () => {
 // ---------------------------------------------------------------------------
 
 describe('CI Guard: skipAuth usage', () => {
-  it('skipAuth: true must not appear in non-test source files', () => {
+  it('skipAuth: true must not appear in non-test source files (onboarding exempt per ADR-030 D6)', () => {
     const projectRoot = join(__dirname, '..', '..', '..');
 
     // Scan all TypeScript files in app/, lib/, services/, components/
@@ -134,6 +134,7 @@ describe('CI Guard: skipAuth usage', () => {
           '**/test-utils/**',
           '**/seed/**',
           '**/node_modules/**',
+          '**/app/(onboarding)/**', // ADR-030 D6: onboarding routes exempt
         ],
       },
     );
@@ -150,7 +151,7 @@ describe('CI Guard: skipAuth usage', () => {
     }
 
     if (violations.length > 0) {
-      fail(
+      throw new Error(
         `skipAuth: true found in production source files (AUTH-HARDENING v0.1 WS4):\n` +
           violations.map((v) => `  - ${v}`).join('\n') +
           '\n\nMove skipAuth usage to __tests__/ or test-utils/ directories.',
