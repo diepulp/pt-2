@@ -11,7 +11,7 @@ mvp_phase: 2
 pre_existing:
   - id: P1-MIG-3
     name: "P1 Migration 3: REVOKE/GRANT + M-4 + L-3"
-    file: "supabase/migrations/20260220004200_adr018_revoke_public_security_remediation.sql"
+    file: "supabase/migrations/20260219235800_adr018_revoke_public_security_remediation.sql"
     findings: [M-1, M-2, M-3, M-4, L-3]
     status: shipped
 
@@ -225,7 +225,7 @@ risks:
 
 Comprehensive security posture remediation implementing 4 SQL migrations + 3 code fixes across 3 priority tiers (P0/P1/P2). Addresses CRITICAL (C-1, C-2), HIGH (H-1 through H-4), MEDIUM (M-1 through M-4), and LOW (L-1 through L-5) findings from the SEC-AUDIT-2026-02-19 RLS Violations Matrix.
 
-**P1 Migration 3 already shipped** (`20260220004200_adr018_revoke_public_security_remediation.sql`) covering M-1/M-2/M-3/M-4/L-3.
+**P1 Migration 3 already shipped** (`20260219235800_adr018_revoke_public_security_remediation.sql`) covering M-1/M-2/M-3/M-4/L-3.
 
 **Zero production TypeScript changes required.** All production callers already use the secure code path. Verified by:
 - **CI grep gate** (Audit Fix #5): Scan `app/`, `lib/`, `services/`, `hooks/` (excluding `__tests__/`, `*.test.*`, `test-utils/`) for `.rpc('rpc_create_pit_cash_observation'` and `.rpc('rpc_log_table_buyin_telemetry'` calls passing `p_actor_id` in arg objects. Fail condition: any match found.
