@@ -298,3 +298,4 @@ The critical path is: **Setup Wizard → Table Creation with Par → Operational
 3. Should `par_total_cents` support denomination breakdown targets (not just total) in MVP?
 4. Should `effective_from_gaming_day` semantics be added to `gaming_table.par_total_cents` even in the flat-column MVP (as a second column)?
 5. What privileges allow par import without per-row approval during onboarding?
+

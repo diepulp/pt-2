@@ -7,7 +7,7 @@ affects: [SEC-001]
 created: 2025-11-02
 last_review: 2025-12-25
 updated: 2025-12-25
-related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024, ADR-030]
+related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024, ADR-030, ADR-035]
 ---
 
 ## Purpose
@@ -149,6 +149,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2026-02-19**: **ADR-035 Cross-Reference**: Added ADR-035 to related ADRs. ADR-035 establishes client-side session reset contract — the client-side counterpart to ADR-030's server-side auth pipeline hardening. Ensures Zustand stores and browser storage (PII) are cleaned across auth boundaries.
 - **2026-01-31**: **PRD-025 Onboarding**: Added "Company-as-Metadata Posture" section. Codified decision that `company` is metadata (not security boundary), no `app.company_id`, deny-by-default RLS. Staff invites scoped to `casino_id`.
 - **2026-01-29**: **ADR-030 Alignment**: Added guardrails #5–7 (single source of truth, authoritative claims lifecycle, bypass lockdown). Updated RLS Context Injection section with ADR-030 D1–D4 hardening decisions. Added ADR-030 to related ADRs.
 - **2026-01-06**: **PRD-LOYALTY-PROMO**: Added promo instrument capabilities to Role Model (pit_boss: issue/void/replace; admin: full access; compliance: read/inventory). Added promo RPCs to Scope Anchors with ADR-024 compliance note. Also corrected cashier source from "Service claim" to "staff_role enum" per ADR-017.

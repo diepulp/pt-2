@@ -1,10 +1,10 @@
 # PT-2 Documentation Index
 
-**Last Updated**: 2026-02-02
-**Taxonomy Version**: 1.3 (ADR-032 Error Boundaries, ADR-031 Financial Convention, ADR-030 Auth Hardening)
+**Last Updated**: 2026-02-19
+**Taxonomy Version**: 1.4 (ADR-035 Client State Lifecycle, ADR-032 Error Boundaries, ADR-031 Financial Convention, ADR-030 Auth Hardening)
 **Architecture Strategy**: Hybrid Model (HORIZONTAL + VERTICAL)
 **Reference**: [SDLC_TAXONOMY_INVENTORY.md](srn-modularization/SDLC_TAXONOMY_INVENTORY.md)
-**SRM Status**: v4.11.0 (ADR-029 Player 360° Dashboard Event Taxonomy)
+**SRM Status**: v4.14.0 (ADR-035 Client State Lifecycle)
 **Purpose**: Navigation hub and document registry for PT-2 architecture documentation
 
 ---
@@ -315,6 +315,7 @@
 | ADR-030 | Auth System Hardening | Accepted | 2026-01-29 | - |
 | ADR-031 | Financial Amount Convention (Cents/Dollars) | Proposed | 2026-02-02 | - |
 | ADR-032 | Frontend Error Boundary Architecture | Proposed | 2026-02-02 | Extends ADR-012 |
+| ADR-035 | Client State Lifecycle Across Auth Transitions | Accepted | 2026-02-18 | Extends ADR-003 §8 |
 
 **Location**: `80-adrs/`
 
@@ -402,9 +403,23 @@
 
 ---
 
-## Recent Changes (2026-02-02)
+## Recent Changes (2026-02-19)
 
-### Canonical Docs Staleness Sync (ADR-030, ADR-031, ADR-032)
+### ADR-035 Client State Lifecycle (2026-02-19)
+
+**What Changed**:
+- ✅ SRM updated to v4.14.0: New "Client State Lifecycle" section — store classification, session reset contract, auth integration points
+- ✅ SLAD updated to v3.4.0: ADR-035 canonical reference added, client state lifecycle patterns
+- ✅ ADR-035 added to ADR registry (Accepted, extends ADR-003 §8)
+- ✅ ADR-003 Section 8 cross-referenced with ADR-035 session lifecycle extension
+- ✅ ADR-030 Related field updated (ADR-035 is client-side counterpart)
+- ✅ SEC-002 related ADRs updated with ADR-035
+
+**Key Additions**:
+- ADR-035: Session Reset Contract — Zustand store lifecycle classification (session vs app scoped), `resetSessionState()` orchestrator, defensive selection validation, browser storage PII cleanup
+- Complements ADR-030 server-side auth hardening with client-side lifecycle correctness
+
+### Previous: Canonical Docs Staleness Sync (ADR-030, ADR-031, ADR-032)
 
 **What Changed**:
 - ✅ SRM status synced from v4.4.0 to v4.11.0 (was 49 days behind)
@@ -431,7 +446,7 @@
 
 ---
 
-**Index Version**: 2.4.0 (Staleness Sync — ADR-030/031/032)
-**Last Updated**: 2026-02-02
+**Index Version**: 2.5.0 (ADR-035 Client State Lifecycle)
+**Last Updated**: 2026-02-19
 **Maintained By**: Development Team
 **Next Review**: Weekly

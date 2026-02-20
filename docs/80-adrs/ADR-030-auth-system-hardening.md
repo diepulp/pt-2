@@ -5,7 +5,7 @@
 **Owner:** Security/Platform
 **Decision type:** Architecture + Security
 **Supersedes:** None (extends ADR-024)
-**Related:** ADR-015, ADR-020, ADR-024, SEC-001, SEC-002
+**Related:** ADR-015, ADR-020, ADR-024, ADR-035, SEC-001, SEC-002
 **Source:** `docs/00-vision/auth-hardening/PT-2_AUTH_SYSTEM_HARDENING_REPORT.md`, `docs/00-vision/auth-hardening/AUTH-HARDENING-v0.1-EXECUTION-PATCH.md`
 
 ---

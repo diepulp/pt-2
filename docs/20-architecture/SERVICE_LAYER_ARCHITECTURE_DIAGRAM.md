@@ -4,14 +4,14 @@ title: Service Layer Architecture Diagram (v3.3.0)
 owner: Architecture
 status: Accepted
 last_review: 2026-02-02
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015, ADR-028, ADR-029, ADR-030, ADR-031, ADR-032]
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015, ADR-028, ADR-029, ADR-030, ADR-031, ADR-032, ADR-035]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 3.3.0
-**Date**: 2026-02-02
-**Status**: Accepted (Aligned with SRM v4.11.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032)
+**Version**: 3.4.0
+**Date**: 2026-02-19
+**Status**: Accepted (Aligned with SRM v4.14.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032 + ADR-035)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -33,6 +33,7 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015
 - **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
 - **Error Boundaries**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md` (Render-layer error handling, extends ADR-012)
 - **Auth Hardening**: `docs/80-adrs/ADR-030-auth-system-hardening.md` (TOCTOU elimination, claims lifecycle)
+- **Client State Lifecycle**: `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md` (Session reset contract, store classification)
 - **Event Catalog**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md` (Event contracts)
 - **Temporal Patterns**: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` (Gaming day authority)
 
@@ -960,6 +961,42 @@ export function usePlayerList(filters: PlayerListFilters = {}) {
 
 ---
 
+## Client State Lifecycle (ADR-035)
+
+> **Canonical Reference**: `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`
+
+### Session Reset Contract
+
+Zustand stores are classified by lifecycle scope. Session-scoped stores MUST be reset on auth transitions (sign-out, server-side session invalidation). App-scoped stores persist across sessions.
+
+```
+store/
+├── types.ts                    # DataOnly<T> utility type for typed INITIAL_STATE
+├── pit-dashboard-store.ts      # Session-scoped (resetSession + INITIAL_STATE)
+├── player-dashboard-store.ts   # Session-scoped
+├── shift-dashboard-store.ts    # Session-scoped
+├── rating-slip-modal-store.ts  # Session-scoped
+├── lock-store.ts               # Session-scoped (hasHydrated excluded)
+├── ui-store.ts                 # App-scoped (defensive closeModal only)
+├── reset-session-state.ts      # Orchestrator: resets all session stores + localStorage
+├── index.ts                    # Barrel: all hooks exported, classified
+└── __tests__/
+    └── session-reset-contract.test.ts  # INV-035-4 completeness assertion
+```
+
+**Orchestrator Pattern** (`reset-session-state.ts`):
+- Plain synchronous function (NOT a React hook)
+- Resets all session-scoped stores via `resetSession()` action
+- Calls `useUIStore.getState().closeModal()` defensively
+- Clears `localStorage` PII entries (`player-360-recent-players`)
+- Invoked from: normal sign-out, fallback sign-out, `onAuthStateChange` SIGNED_OUT
+
+**Store Registration Rule** (INV-035-4): New stores MUST be exported from `store/index.ts` and classified as session or app scoped. Contract test enforces completeness.
+
+**Defensive Selection Validation** (INV-035-3): Any `selectedId` from a Zustand store MUST be validated against loaded server data before rendering. Invalid selections auto-correct.
+
+---
+
 ## Anti-Pattern Guardrails
 
 ### ❌ BANNED Patterns
@@ -1535,12 +1572,18 @@ This pattern ensures:
 
 ## Document History
 
-**Version**: 3.3.0
-**Date**: 2026-02-02
-**Status**: Accepted (Aligned with SRM v4.11.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032)
+**Version**: 3.4.0
+**Date**: 2026-02-19
+**Status**: Accepted (Aligned with SRM v4.14.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032 + ADR-035)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.4.0 (2026-02-19)** - ADR-035 Client State Lifecycle:
+- ✅ Added "Client State Lifecycle" section — session reset contract, store classification, orchestrator pattern
+- ✅ Added ADR-035 to affects list and canonical references
+- ✅ Updated SRM reference from v4.11.0 to v4.14.0
+- ✅ Added alignment status entry for ADR-035
 
 **v3.3.0 (2026-02-02)** - Staleness Sync (ADR-029 through ADR-032):
 - ✅ Fixed SRM version inconsistency: canonical reference updated from v4.3.0 to v4.11.0
@@ -1647,7 +1690,7 @@ This pattern ensures:
 
 | SDLC Peer | Status | Notes |
 |-----------|--------|-------|
-| SRM v4.11.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, ADR-029 timeline |
+| SRM v4.14.0 | ✅ ALIGNED | References cross-context matrix, DTO patterns, ADR-029 timeline, ADR-035 store lifecycle |
 | DTO_CANONICAL_STANDARD.md | ✅ ALIGNED | Quick reference table, detailed patterns externalized |
 | SEC-001 | ✅ ALIGNED | RLS patterns externalized, key principles retained |
 | ADR-015 | ✅ ALIGNED | JWT claims Phase 2, hybrid Pattern C, connection pooling |
@@ -1656,6 +1699,7 @@ This pattern ensures:
 | ADR-030 | ✅ ALIGNED | Auth System Hardening — canonical reference added |
 | ADR-031 | ✅ ALIGNED | Financial Amount Convention — affects list |
 | ADR-032 | ✅ ALIGNED | Frontend Error Boundary Architecture — canonical reference + error mapping note |
+| ADR-035 | ✅ ALIGNED | Client State Lifecycle — session reset contract, store classification, orchestrator |
 | EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
 | ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized, render-layer note added |
 | REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |

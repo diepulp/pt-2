@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.13.0
+nsversion: 4.14.0
 status: CANONICAL
-effective: 2026-02-17
+effective: 2026-02-19
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -19,14 +19,15 @@ source_of_truth:
   - docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md
   - docs/80-adrs/ADR-030-auth-system-hardening.md
   - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
+  - docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.12.0 (GAP-SIGN-OUT: staff_pin_attempts ownership)
-> **Date**: 2026-02-02
+> **Version**: 4.14.0 (ADR-035: Client State Lifecycle)
+> **Date**: 2026-02-19
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -52,6 +53,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.14.0 (2026-02-19)** – **ADR-035 Client State Lifecycle**: Added client-side store lifecycle governance to Platform/Frontend context. New section: Client State Lifecycle (session reset contract, store classification, `resetSessionState()` orchestrator). ADR-035 added to `source_of_truth` references. Cross-references ADR-003 Section 8 (Zustand scope) and ADR-030 (server-side auth hardening counterpart). See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
 - **4.13.0 (2026-02-17)** – **PRD-033 Cashier Workflow MVP**: Added confirmation lifecycle columns to `table_fill` (status, confirmed_at, confirmed_by, confirmed_amount_cents, discrepancy_note), `table_credit` (same 5), `table_drop_event` (cage_received_at, cage_received_by). 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_confirm_table_fill`, `rpc_confirm_table_credit`, `rpc_acknowledge_drop_received`. 6 new API routes (3 PATCH confirmations + 3 GET list endpoints with filters). Immutability enforced via RLS: UPDATE restricted to `status='requested'`. `player_financial_transaction.external_ref` added (PlayerFinancialService). Cashier Console UI at `/cashier` with 3 tab screens.
 - **4.12.0 (2026-02-10)** – **GAP-SIGN-OUT ownership registration**: Added `staff_pin_attempts` (planned, MVP) to CasinoService. Follows `audit_log` precedent: cross-cutting operational rate-limit state owned by foundational context. Resolved governance drift where EXECUTION-SPEC used "Auth (cross-cutting)" — not a declared SRM bounded context. No schema changes (table created by GAP-SIGN-OUT WS4 migration).
 - **4.11.1 (2026-02-02)** – **Cross-reference sync (ADR-030, ADR-031, ADR-032)**: Added ADR-030 (Auth System Hardening), ADR-032 (Frontend Error Boundary Architecture) to source_of_truth. Added ADR-030, ADR-031, ADR-032 to Related Documents table. Added ERROR_HANDLING_STANDARD.md to source_of_truth references. No schema or ownership changes.
@@ -698,6 +700,43 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 ---
 
+## Client State Lifecycle (Platform / Frontend — ADR-035)
+
+**Bounded Context**: "What client-side state persists across auth transitions, and how is it governed?"
+
+ADR-035 establishes a formal **Session Reset Contract** for Zustand stores and browser storage across auth boundaries. This is the client-side counterpart to ADR-030's server-side auth pipeline hardening.
+
+### Store Classification
+
+| Store / Storage | Scope | Reset Requirement | Owner |
+|---|---|---|---|
+| `pitDashboardStore` | **Session** | Full reset of all data fields | Platform / Frontend |
+| `playerDashboardStore` | **Session** | Full reset of all data fields | Platform / Frontend |
+| `shiftDashboardStore` | **Session** | Full reset of all data fields | Platform / Frontend |
+| `ratingSlipModalStore` | **Session** | Full reset of all data fields | Platform / Frontend |
+| `lockStore` | **Session** | Unlock; `hasHydrated` excluded (persist middleware lifecycle) | Platform / Frontend |
+| `uiStore` | **App** | Defensive `closeModal()` only; sidebar preference persists | Platform / Frontend |
+| `player-360-recent-players` (localStorage) | **Session** | `removeItem()` — PII (player names) + casino-scoped IDs | Platform / Frontend |
+
+### Contracts
+
+- **Orchestrator**: `resetSessionState()` — plain synchronous function that resets all session-scoped stores + browser storage in one atomic call
+- **Registration Enforcement**: New session-scoped stores MUST register with `resetSessionState()`. Contract test enforces store-inventory completeness via barrel export assertion (INV-035-4)
+- **Defensive Validation**: Any "selected ID" from client state MUST be validated against loaded server data before rendering (INV-035-3)
+
+### Auth Integration Points
+
+`resetSessionState()` is invoked during all auth-ending paths (INV-035-2):
+1. Normal sign-out (after `queryClient.clear()`)
+2. Fallback/local-cleanup sign-out
+3. `onAuthStateChange` `SIGNED_OUT` event
+
+**ADR**: `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`
+**Extends**: ADR-003 Section 8 (Zustand Scope)
+**Complements**: ADR-030 (client-side counterpart to server-side auth hardening)
+
+---
+
 ## Centralized Enum Catalog
 
 ```sql
@@ -758,6 +797,7 @@ create type tender_type as enum ('cash','chips','marker');
 | `docs/80-adrs/ADR-030-auth-system-hardening.md`                             | Auth pipeline hardening — TOCTOU elimination, claims lifecycle   |
 | `docs/80-adrs/ADR-031-financial-amount-convention.md`                       | Financial amount convention (cents storage, dollars at boundary) |
 | `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`              | Frontend error boundary three-tier hierarchy (extends ADR-012)   |
+| `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`           | Client state session reset contract (extends ADR-003, complements ADR-030) |
 | `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`                             | Event taxonomy quick reference                                   |
 
 ---
@@ -776,8 +816,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.12.0
+**Document Version**: 4.14.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-02-10 (GAP-SIGN-OUT: staff_pin_attempts ownership)
+**Updated**: 2026-02-19 (ADR-035: Client State Lifecycle)
 **Status**: CANONICAL - Registry + Invariants Only

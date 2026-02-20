@@ -208,6 +208,8 @@ usePlayerRealtime((evt) => {
 
 ### 8) Zustand for **Ephemeral UI State** (Only)
 
+> **Extended by ADR-035** — ADR-035 formalizes a Session Reset Contract for Zustand stores across auth transitions. It classifies stores as **session-scoped** (reset on sign-out) or **app-scoped** (persist across sessions), and introduces a `resetSessionState()` orchestrator. See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
+
 **Scope**
 - Modals, navigation, transient filters (that don’t need sharing), wizard drafts, bulk selections, view prefs.
 
