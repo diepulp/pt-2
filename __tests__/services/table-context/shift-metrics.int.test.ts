@@ -208,7 +208,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_visit_id: visitId,
           p_rating_slip_id: ratingSlipId,
           p_tender_type: 'cash',
-          p_actor_id: pitBossId,
         },
       );
 
@@ -232,7 +231,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 10000, // $100
           p_telemetry_kind: 'GRIND_BUYIN',
           p_tender_type: 'cash',
-          p_actor_id: pitBossId,
         },
       );
 
@@ -254,7 +252,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 2500,
           p_telemetry_kind: 'GRIND_BUYIN',
           p_idempotency_key: idempotencyKey,
-          p_actor_id: pitBossId,
         },
       );
 
@@ -266,7 +263,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 2500,
           p_telemetry_kind: 'GRIND_BUYIN',
           p_idempotency_key: idempotencyKey,
-          p_actor_id: pitBossId,
         },
       );
 
@@ -280,7 +276,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_table_id: tableId1,
           p_amount_cents: 10000,
           p_telemetry_kind: 'RATED_BUYIN',
-          p_actor_id: pitBossId,
         },
       );
 
@@ -296,7 +291,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_amount_cents: 10000,
           p_telemetry_kind: 'GRIND_BUYIN',
           p_visit_id: visitId,
-          p_actor_id: pitBossId,
         },
       );
 
@@ -311,7 +305,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_table_id: tableId1,
           p_amount_cents: 0,
           p_telemetry_kind: 'GRIND_BUYIN',
-          p_actor_id: pitBossId,
         },
       );
 
@@ -369,7 +362,6 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         p_table_id: tableId1,
         p_amount_cents: 7500,
         p_telemetry_kind: 'GRIND_BUYIN',
-        p_actor_id: pitBossId,
       });
     });
 
@@ -379,7 +371,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 
@@ -393,7 +385,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const table1Metrics = data?.find(
@@ -411,7 +403,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const table1Metrics = data?.find(
@@ -426,7 +418,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const table1Metrics = data?.find(
@@ -448,7 +440,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const table1Metrics = data?.find(
@@ -464,7 +456,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const table1Metrics = data?.find(
@@ -478,7 +470,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       // Table2 has no snapshots
@@ -497,7 +489,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { error } = await serviceClient.rpc('rpc_shift_table_metrics', {
         p_window_start: windowEnd.toISOString(), // Invalid: start after end
         p_window_end: windowStart.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       expect(error).not.toBeNull();
@@ -511,7 +503,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
         p_pit_id: 'PIT-A',
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       expect(error).toBeNull();
@@ -531,7 +523,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
         p_pit_id: 'PIT-A',
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const rollup = data?.[0];
@@ -544,7 +536,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
         p_pit_id: 'NONEXISTENT-PIT',
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       expect(error).toBeNull();
@@ -560,7 +552,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 
@@ -578,7 +570,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_casino_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const rollup = data?.[0];
@@ -590,7 +582,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_casino_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const rollup = data?.[0];
@@ -605,7 +597,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_casino_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const rollup = data?.[0];
@@ -617,7 +609,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
       const { data } = await serviceClient.rpc('rpc_shift_casino_metrics', {
         p_window_start: windowStart.toISOString(),
         p_window_end: windowEnd.toISOString(),
-        p_actor_id: pitBossId,
+        p_internal_actor_id: pitBossId,
       });
 
       const rollup = data?.[0];
@@ -641,7 +633,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 
@@ -674,7 +666,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
           p_pit_id: 'PIT-A',
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 
@@ -700,7 +692,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 
@@ -732,7 +724,7 @@ describeIntegration('Shift Metrics Integration Tests', () => {
         {
           p_window_start: windowStart.toISOString(),
           p_window_end: windowEnd.toISOString(),
-          p_actor_id: pitBossId,
+          p_internal_actor_id: pitBossId,
         },
       );
 

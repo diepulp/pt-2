@@ -1961,7 +1961,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           p_rating_slip_id: testRatingSlipId,
           p_amount_kind: 'estimate',
           p_source: 'walk_with',
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -2196,7 +2195,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           p_amount_kind: 'estimate',
           p_source: 'walk_with',
           p_idempotency_key: idempotencyKey,
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -2214,7 +2212,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           p_amount_kind: 'estimate',
           p_source: 'walk_with',
           p_idempotency_key: idempotencyKey,
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -2260,7 +2257,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
             p_amount: 500,
             p_amount_kind: 'estimate',
             p_source: 'walk_with',
-            p_actor_id: testStaff1Id, // Casino 1 staff
           },
         );
 

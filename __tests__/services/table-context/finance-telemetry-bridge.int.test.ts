@@ -385,7 +385,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_table_id: tableId,
           p_amount_cents: 2500,
           p_telemetry_kind: 'GRIND_BUYIN',
-          p_actor_id: pitBossId,
           // No p_source specified - should default to 'manual_ops'
         },
       );
@@ -402,7 +401,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_table_id: tableId,
           p_amount_cents: 3500,
           p_telemetry_kind: 'GRIND_BUYIN',
-          p_actor_id: pitBossId,
           p_source: 'manual_ops',
         },
       );
@@ -419,7 +417,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_table_id: tableId,
           p_amount_cents: 1000,
           p_telemetry_kind: 'GRIND_BUYIN',
-          p_actor_id: pitBossId,
           p_source: 'invalid_source',
         },
       );
@@ -442,7 +439,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_visit_id: visitId,
           p_rating_slip_id: ratingSlipId,
           p_tender_type: 'cash',
-          p_actor_id: pitBossId,
           p_source: 'manual_ops',
         },
       );

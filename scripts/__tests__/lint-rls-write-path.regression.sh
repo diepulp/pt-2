@@ -45,16 +45,10 @@ fi
 VIOLATION_FILE="$PROJECT_ROOT/app/_synthetic_rls_violation_test.ts"
 
 cat > "$VIOLATION_FILE" << EOF
-// Synthetic violation file for regression testing
-// This file should trigger the RLS write-path lint
-
+// Synthetic violation for regression testing
 export async function syntheticViolation(ctx: { supabase: any }) {
-  const { data, error } = await ctx.supabase
-    .from('${FIRST_TABLE}')
-    .insert({ first_name: 'test', last_name: 'user' })
-    .select()
-    .single();
-  return { data, error };
+  const { data } = await ctx.supabase.from('${FIRST_TABLE}').insert({ first_name: 'test' }).select().single();
+  return data;
 }
 EOF
 

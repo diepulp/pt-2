@@ -3132,7 +3132,6 @@ export type Database = {
           suggested_theo: number
         }[]
       }
-      exec_sql: { Args: { sql: string }; Returns: undefined }
       get_visit_cash_in_with_adjustments: {
         Args: { p_visit_id: string }
         Returns: {
@@ -3483,7 +3482,6 @@ export type Database = {
       }
       rpc_create_pit_cash_observation: {
         Args: {
-          p_actor_id?: string
           p_amount: number
           p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
           p_idempotency_key?: string
@@ -3783,80 +3781,42 @@ export type Database = {
           visit_id: string
         }[]
       }
-      rpc_log_table_buyin_telemetry:
-        | {
-            Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_source?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_log_table_buyin_telemetry: {
+        Args: {
+          p_amount_cents: number
+          p_idempotency_key?: string
+          p_note?: string
+          p_rating_slip_id?: string
+          p_source?: string
+          p_table_id: string
+          p_telemetry_kind: string
+          p_tender_type?: string
+          p_visit_id?: string
+        }
+        Returns: {
+          actor_id: string
+          amount_cents: number
+          casino_id: string
+          created_at: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          occurred_at: string
+          rating_slip_id: string | null
+          source: string | null
+          table_id: string
+          telemetry_kind: string
+          tender_type: string | null
+          visit_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_buyin_telemetry"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_log_table_drop: {
         Args: {
           p_casino_id: string
@@ -4374,7 +4334,7 @@ export type Database = {
       }
       rpc_start_rating_slip: {
         Args: {
-          p_actor_id: string
+          p_actor_id?: string
           p_casino_id: string
           p_game_settings: Json
           p_seat_number: string

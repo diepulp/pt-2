@@ -84,6 +84,21 @@ All gates are **blocking** — PR cannot merge if any gate fails.
 - Prevents schema changes from being merged without updated types
 - Requires Supabase CLI + local stack in CI (ephemeral)
 
+### Optional Validation Gates
+
+These gates are **non-blocking** and conditioned on environment availability. They exit 0 with a warning when prerequisites are missing.
+
+#### Category B RLS Policy Lint
+
+- **Script:** `scripts/lint-rls-category-b-policies.sh`
+- **Condition:** Runs only when `DATABASE_URL` secret is available (requires live PostgreSQL)
+- **When to run:** After migrations are applied, before deployment
+- **What it checks:** Category B write policies (INSERT/UPDATE/ALL) have proper `COALESCE` wrapping around `current_setting('app.*')` for PostgREST compatibility
+- **Graceful degradation:** Exits 0 with `WARNING` when no database connection is available — CI passes, but manual verification is required
+- **ADR Reference:** ADR-034
+
+> **Note:** This is a local-only check today. It is not wired into `ci.yml`. Developers should run it manually after applying migrations to a local or linked Supabase instance.
+
 ---
 
 ## 3. Migration Lint (`migration-lint.yml`)

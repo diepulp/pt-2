@@ -64,6 +64,20 @@
         "SKILL.md: Canonical Documentation References"
       ]
     },
+    "ADR-035": {
+      "path": "docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md",
+      "sha256": "0ecede92b3442d9c7c40d63d7f4a81261426e4f6dfcdcaa130bcf6eede0a1745",
+      "title": "Client State Lifecycle Across Auth Transitions",
+      "status": "Accepted",
+      "category": "security_critical",
+      "security_impact": "HIGH - Client-side auth boundary, cross-casino PII leak prevention",
+      "last_verified": "2026-02-19",
+      "skill_sections": [
+        "SKILL.md: Client-Side Auth Boundary (ADR-035)",
+        "SKILL.md: Canonical Documentation References",
+        "SKILL.md: Tracked Source Documents table"
+      ]
+    },
     "ADR-020": {
       "path": "docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md",
       "sha256": "714e45b8bc39a41a812a6f8472c3ade02ff4e71310199623f22b852dc44e2862",

@@ -1,6 +1,6 @@
 ---
 name: rls-expert
-description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020/ADR-024/ADR-030 compliance. Covers authoritative context derivation via set_rls_context_from_staff() (ADR-024), auth pipeline hardening (ADR-030), hybrid RLS patterns (Pattern C), connection pooling compatibility, role-based access control, and MTL authorization (ADR-025). (project)
+description: PT-2 Row-Level Security (RLS) specialist for implementing, validating, and troubleshooting casino-scoped RLS policies. This skill should be used when creating new database tables, writing RLS policies, implementing SECURITY DEFINER RPCs, troubleshooting multi-tenant data access, or auditing existing policies for ADR-015/ADR-020/ADR-024/ADR-030/ADR-035 compliance. Covers authoritative context derivation via set_rls_context_from_staff() (ADR-024), auth pipeline hardening (ADR-030), client-side auth boundary lifecycle (ADR-035), hybrid RLS patterns (Pattern C), connection pooling compatibility, role-based access control, and MTL authorization (ADR-025). (project)
 allowed-tools: Read, Write, Edit, Glob, Grep, Bash, TodoWrite
 ---
 
@@ -96,6 +96,36 @@ SELECT set_rls_context_from_staff(p_correlation_id := 'req-123');
 These tables use **Template 2b** for write policies (no COALESCE fallback). SELECT policies retain Pattern C.
 
 **Reference:** `docs/80-adrs/ADR-030-auth-system-hardening.md`
+
+## Client-Side Auth Boundary (ADR-035)
+
+**ADR-035 is the client-side counterpart to ADR-030.** While ADR-030 hardens the server-side auth pipeline, ADR-035 establishes the client-side lifecycle contract that prevents casino-scoped data from leaking across auth boundaries via in-memory state and browser storage.
+
+### RLS-Relevant Security Concerns
+
+1. **Cross-casino PII leak (INV-035-6):** `localStorage` entries containing player names and casino-scoped entity IDs (table IDs, pit IDs, player IDs) persist across sign-out boundaries on shared workstations. Without cleanup, User B's session may expose User A's casino-scoped PII.
+2. **Stale casino-scoped UUIDs:** Zustand stores holding `selectedTableId`, `selectedPitId`, `selectedPlayerId` retain values from a prior casino context after soft navigation sign-out/sign-in. These UUIDs may resolve against a different casino's data if the same user has access to multiple casinos.
+3. **Session reset contract:** A `resetSessionState()` orchestrator clears all session-scoped client state atomically — the client-side equivalent of clearing RLS context at session end.
+
+### ADR-035 Security Invariants (RLS-Relevant Subset)
+
+| INV | Requirement | RLS Relevance |
+|-----|-------------|---------------|
+| INV-035-2 | `resetSessionState()` invoked during every auth-ending path | Clears casino-scoped entity references from client memory |
+| INV-035-6 | `localStorage.removeItem('player-360-recent-players')` in orchestrator | Prevents cross-casino PII leak (player names + IDs) |
+| INV-035-3 | Selected IDs validated against current server data before rendering | Defense-in-depth against stale casino-scoped references |
+
+### Relationship to Server-Side RLS
+
+```
+ADR-024/030 (Server)              ADR-035 (Client)
+─────────────────────             ────────────────────
+RLS context set per request  →    Session state reset per auth transition
+Session vars cleared at txn end → Zustand stores reset at sign-out
+Casino scope enforced in DB   →   Casino-scoped IDs cleared from memory/storage
+```
+
+**Reference:** `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`
 
 ## Current Strategy (ADR-020)
 
@@ -349,6 +379,7 @@ For comprehensive documentation, load the appropriate reference file:
 |-------|---------------|--------------|
 | **Context Security** | `docs/80-adrs/ADR-024_DECISIONS.md` | Understanding `set_rls_context_from_staff()` (ADR-024) |
 | **Auth Hardening** | `docs/80-adrs/ADR-030-auth-system-hardening.md` | TOCTOU elimination, claims lifecycle, bypass lockdown, write-path tightening (ADR-030) |
+| **Client Auth Boundary** | `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md` | Client-side session reset, cross-casino PII leak prevention, stale UUID cleanup (ADR-035) |
 | **Strategy Decision** | `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` | Understanding Track A vs Track B decision |
 | **External Validation** | `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` | When ambiguity arises about patterns |
 | **MTL Authorization** | `docs/80-adrs/ADR-025-mtl-authorization-model.md` | MTL access via staff_role (not service claims) |
@@ -405,6 +436,7 @@ INSERT INTO your_table (casino_id, ...) VALUES ('other-casino-uuid', ...);
 
 - **ADR-024**: `docs/80-adrs/ADR-024_DECISIONS.md` - **CRITICAL: Context spoofing remediation**. Deprecates `set_rls_context()`, introduces authoritative `set_rls_context_from_staff()`. Frozen.
 - **ADR-030**: `docs/80-adrs/ADR-030-auth-system-hardening.md` - **CRITICAL: Auth pipeline hardening**. TOCTOU elimination, claims lifecycle, bypass lockdown, write-path session-var enforcement. Extends ADR-024.
+- **ADR-035**: `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md` - **HIGH: Client-side auth boundary**. Session reset contract, cross-casino PII leak prevention (localStorage), stale casino-scoped UUID cleanup. Complements ADR-030.
 - **ADR-023**: `docs/80-adrs/ADR-023-multi-tenancy-storage-model-selection.md` - **Pool primary, Silo escape hatch** multi-tenancy model
 - **External Validation**: `docs/20-architecture/AUTH_RLS_EXTERNAL_REFERENCE_OVERVIEW.md` - **START HERE when ambiguity arises**. Battle-tested patterns from AWS, Supabase, Crunchy Data.
 
@@ -582,6 +614,7 @@ python .claude/skills/rls-expert/scripts/regenerate_manifest.py
 | Priority | Document | Security Impact |
 |----------|----------|-----------------|
 | **CRITICAL** | ADR-030 | Auth pipeline hardening (write-path, claims, bypass) |
+| **HIGH** | ADR-035 | Client-side auth boundary (cross-casino PII leak, session reset) |
 | **CRITICAL** | ADR-024 | Context spoofing remediation |
 | **CRITICAL** | ADR-023 | Multi-tenant isolation model |
 | **CRITICAL** | ADR-018 | SECURITY DEFINER governance |

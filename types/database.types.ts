@@ -3127,7 +3127,6 @@ export type Database = {
           suggested_theo: number
         }[]
       }
-      exec_sql: { Args: { sql: string }; Returns: undefined }
       get_visit_cash_in_with_adjustments: {
         Args: { p_visit_id: string }
         Returns: {
@@ -3478,7 +3477,6 @@ export type Database = {
       }
       rpc_create_pit_cash_observation: {
         Args: {
-          p_actor_id?: string
           p_amount: number
           p_amount_kind?: Database["public"]["Enums"]["observation_amount_kind"]
           p_idempotency_key?: string
@@ -3778,80 +3776,42 @@ export type Database = {
           visit_id: string
         }[]
       }
-      rpc_log_table_buyin_telemetry:
-        | {
-            Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_actor_id?: string
-              p_amount_cents: number
-              p_idempotency_key?: string
-              p_note?: string
-              p_rating_slip_id?: string
-              p_source?: string
-              p_table_id: string
-              p_telemetry_kind: string
-              p_tender_type?: string
-              p_visit_id?: string
-            }
-            Returns: {
-              actor_id: string
-              amount_cents: number
-              casino_id: string
-              created_at: string
-              gaming_day: string
-              id: string
-              idempotency_key: string | null
-              note: string | null
-              occurred_at: string
-              rating_slip_id: string | null
-              source: string | null
-              table_id: string
-              telemetry_kind: string
-              tender_type: string | null
-              visit_id: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "table_buyin_telemetry"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_log_table_buyin_telemetry: {
+        Args: {
+          p_amount_cents: number
+          p_idempotency_key?: string
+          p_note?: string
+          p_rating_slip_id?: string
+          p_source?: string
+          p_table_id: string
+          p_telemetry_kind: string
+          p_tender_type?: string
+          p_visit_id?: string
+        }
+        Returns: {
+          actor_id: string
+          amount_cents: number
+          casino_id: string
+          created_at: string
+          gaming_day: string
+          id: string
+          idempotency_key: string | null
+          note: string | null
+          occurred_at: string
+          rating_slip_id: string | null
+          source: string | null
+          table_id: string
+          telemetry_kind: string
+          tender_type: string | null
+          visit_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_buyin_telemetry"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_log_table_drop: {
         Args: {
           p_casino_id: string
@@ -4274,90 +4234,168 @@ export type Database = {
           table_label: string
         }[]
       }
-      rpc_shift_casino_metrics: {
-        Args: {
-          p_actor_id?: string
-          p_window_end: string
-          p_window_start: string
-        }
-        Returns: {
-          credits_total_cents: number
-          estimated_drop_buyins_total_cents: number
-          estimated_drop_grind_total_cents: number
-          estimated_drop_rated_total_cents: number
-          fills_total_cents: number
-          pits_count: number
-          tables_count: number
-          tables_good_coverage_count: number
-          tables_grade_estimate: number
-          tables_with_closing_snapshot: number
-          tables_with_opening_snapshot: number
-          tables_with_telemetry_count: number
-          win_loss_estimated_total_cents: number
-          win_loss_inventory_total_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
-      rpc_shift_pit_metrics: {
-        Args: {
-          p_actor_id?: string
-          p_pit_id: string
-          p_window_end: string
-          p_window_start: string
-        }
-        Returns: {
-          credits_total_cents: number
-          estimated_drop_buyins_total_cents: number
-          estimated_drop_grind_total_cents: number
-          estimated_drop_rated_total_cents: number
-          fills_total_cents: number
-          pit_id: string
-          tables_count: number
-          tables_good_coverage_count: number
-          tables_grade_estimate: number
-          tables_with_closing_snapshot: number
-          tables_with_opening_snapshot: number
-          tables_with_telemetry_count: number
-          win_loss_estimated_total_cents: number
-          win_loss_inventory_total_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
-      rpc_shift_table_metrics: {
-        Args: {
-          p_actor_id?: string
-          p_window_end: string
-          p_window_start: string
-        }
-        Returns: {
-          closing_bankroll_total_cents: number
-          closing_snapshot_at: string
-          closing_snapshot_id: string
-          credits_total_cents: number
-          drop_custody_present: boolean
-          estimated_drop_buyins_cents: number
-          estimated_drop_grind_cents: number
-          estimated_drop_rated_cents: number
-          fills_total_cents: number
-          metric_grade: string
-          missing_closing_snapshot: boolean
-          missing_opening_snapshot: boolean
-          opening_bankroll_total_cents: number
-          opening_snapshot_at: string
-          opening_snapshot_id: string
-          pit_id: string
-          table_id: string
-          table_label: string
-          telemetry_notes: string
-          telemetry_quality: string
-          win_loss_estimated_cents: number
-          win_loss_inventory_cents: number
-          window_end: string
-          window_start: string
-        }[]
-      }
+      rpc_shift_casino_metrics:
+        | {
+            Args: { p_window_end: string; p_window_start: string }
+            Returns: {
+              credits_total_cents: number
+              estimated_drop_buyins_total_cents: number
+              estimated_drop_grind_total_cents: number
+              estimated_drop_rated_total_cents: number
+              fills_total_cents: number
+              pits_count: number
+              tables_count: number
+              tables_good_coverage_count: number
+              tables_grade_estimate: number
+              tables_with_closing_snapshot: number
+              tables_with_opening_snapshot: number
+              tables_with_telemetry_count: number
+              win_loss_estimated_total_cents: number
+              win_loss_inventory_total_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
+        | {
+            Args: {
+              p_internal_actor_id: string
+              p_window_end: string
+              p_window_start: string
+            }
+            Returns: {
+              credits_total_cents: number
+              estimated_drop_buyins_total_cents: number
+              estimated_drop_grind_total_cents: number
+              estimated_drop_rated_total_cents: number
+              fills_total_cents: number
+              pits_count: number
+              tables_count: number
+              tables_good_coverage_count: number
+              tables_grade_estimate: number
+              tables_with_closing_snapshot: number
+              tables_with_opening_snapshot: number
+              tables_with_telemetry_count: number
+              win_loss_estimated_total_cents: number
+              win_loss_inventory_total_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
+      rpc_shift_pit_metrics:
+        | {
+            Args: {
+              p_pit_id: string
+              p_window_end: string
+              p_window_start: string
+            }
+            Returns: {
+              credits_total_cents: number
+              estimated_drop_buyins_total_cents: number
+              estimated_drop_grind_total_cents: number
+              estimated_drop_rated_total_cents: number
+              fills_total_cents: number
+              pit_id: string
+              tables_count: number
+              tables_good_coverage_count: number
+              tables_grade_estimate: number
+              tables_with_closing_snapshot: number
+              tables_with_opening_snapshot: number
+              tables_with_telemetry_count: number
+              win_loss_estimated_total_cents: number
+              win_loss_inventory_total_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
+        | {
+            Args: {
+              p_internal_actor_id: string
+              p_pit_id: string
+              p_window_end: string
+              p_window_start: string
+            }
+            Returns: {
+              credits_total_cents: number
+              estimated_drop_buyins_total_cents: number
+              estimated_drop_grind_total_cents: number
+              estimated_drop_rated_total_cents: number
+              fills_total_cents: number
+              pit_id: string
+              tables_count: number
+              tables_good_coverage_count: number
+              tables_grade_estimate: number
+              tables_with_closing_snapshot: number
+              tables_with_opening_snapshot: number
+              tables_with_telemetry_count: number
+              win_loss_estimated_total_cents: number
+              win_loss_inventory_total_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
+      rpc_shift_table_metrics:
+        | {
+            Args: { p_window_end: string; p_window_start: string }
+            Returns: {
+              closing_bankroll_total_cents: number
+              closing_snapshot_at: string
+              closing_snapshot_id: string
+              credits_total_cents: number
+              drop_custody_present: boolean
+              estimated_drop_buyins_cents: number
+              estimated_drop_grind_cents: number
+              estimated_drop_rated_cents: number
+              fills_total_cents: number
+              metric_grade: string
+              missing_closing_snapshot: boolean
+              missing_opening_snapshot: boolean
+              opening_bankroll_total_cents: number
+              opening_snapshot_at: string
+              opening_snapshot_id: string
+              pit_id: string
+              table_id: string
+              table_label: string
+              telemetry_notes: string
+              telemetry_quality: string
+              win_loss_estimated_cents: number
+              win_loss_inventory_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
+        | {
+            Args: {
+              p_internal_actor_id: string
+              p_window_end: string
+              p_window_start: string
+            }
+            Returns: {
+              closing_bankroll_total_cents: number
+              closing_snapshot_at: string
+              closing_snapshot_id: string
+              credits_total_cents: number
+              drop_custody_present: boolean
+              estimated_drop_buyins_cents: number
+              estimated_drop_grind_cents: number
+              estimated_drop_rated_cents: number
+              fills_total_cents: number
+              metric_grade: string
+              missing_closing_snapshot: boolean
+              missing_opening_snapshot: boolean
+              opening_bankroll_total_cents: number
+              opening_snapshot_at: string
+              opening_snapshot_id: string
+              pit_id: string
+              table_id: string
+              table_label: string
+              telemetry_notes: string
+              telemetry_quality: string
+              win_loss_estimated_cents: number
+              win_loss_inventory_cents: number
+              window_end: string
+              window_start: string
+            }[]
+          }
       rpc_start_or_resume_visit: {
         Args: { p_player_id: string }
         Returns: {
@@ -4369,7 +4407,7 @@ export type Database = {
       }
       rpc_start_rating_slip: {
         Args: {
-          p_actor_id: string
+          p_actor_id?: string
           p_casino_id: string
           p_game_settings: Json
           p_seat_number: string
