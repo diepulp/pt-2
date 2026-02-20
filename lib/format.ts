@@ -16,12 +16,12 @@
  *
  * @example formatDollars(100)   // "$100"
  * @example formatDollars(1500)  // "$1,500"
- * @example formatDollars(null)  // "$0"
+ * @example formatDollars(null)  // "—"
  *
  * @see ADR-031 Rule 3
  */
 export function formatDollars(dollars: number | null | undefined): string {
-  if (dollars == null) return '$0';
+  if (dollars == null) return '\u2014';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -38,12 +38,12 @@ export function formatDollars(dollars: number | null | undefined): string {
  *
  * @example formatCents(10000)  // "$100"
  * @example formatCents(150000) // "$1,500"
- * @example formatCents(null)   // "$0"
+ * @example formatCents(null)   // "—"
  *
  * @see ADR-031 Rule 3
  */
 export function formatCents(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
+  if (cents == null) return '\u2014';
   return formatDollars(cents / 100);
 }
 
@@ -57,7 +57,7 @@ export function formatCents(cents: number | null | undefined): string {
  * @see ADR-031 Rule 3
  */
 export function formatDollarsDelta(dollars: number | null | undefined): string {
-  if (dollars == null) return '$0';
+  if (dollars == null) return '\u2014';
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',
@@ -77,7 +77,7 @@ export function formatDollarsDelta(dollars: number | null | undefined): string {
  * @see ADR-031 Rule 3
  */
 export function formatCentsDelta(cents: number | null | undefined): string {
-  if (cents == null) return '$0';
+  if (cents == null) return '\u2014';
   return formatDollarsDelta(cents / 100);
 }
 

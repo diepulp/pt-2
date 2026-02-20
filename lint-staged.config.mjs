@@ -74,6 +74,20 @@ export default {
     ];
   },
 
+  // Test files - prettier only (ESLint runs separately in CI)
+  '**/*.{test,spec}.{ts,tsx}': (filenames) => {
+    const filteredFiles = filenames.filter(
+      (file) =>
+        !file.includes('.claude/') &&
+        !file.includes('node_modules/') &&
+        !file.includes('cypress/'),
+    );
+
+    if (filteredFiles.length === 0) return [];
+
+    return [`prettier --write ${filteredFiles.join(' ')}`];
+  },
+
   // JSON files - prettier only (no ESLint)
   '**/*.json': (filenames) => {
     const ignoredPatterns = [

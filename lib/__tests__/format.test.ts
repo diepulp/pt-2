@@ -2,6 +2,7 @@
  * Unit tests for lib/format.ts
  *
  * ADR-031: Tests for the explicit formatting API.
+ * PRD-036: Null values return em-dash "—" (not "$0").
  * Covers formatDollars, formatCents, formatDollarsDelta, formatCentsDelta,
  * and backward compatibility of deprecated formatCurrency/formatCurrencyDelta.
  */
@@ -37,12 +38,12 @@ describe('formatDollars', () => {
     expect(formatDollars(-1500)).toBe('-$1,500');
   });
 
-  it('returns "$0" for null', () => {
-    expect(formatDollars(null)).toBe('$0');
+  it('returns "—" for null (PRD-036)', () => {
+    expect(formatDollars(null)).toBe('\u2014');
   });
 
-  it('returns "$0" for undefined', () => {
-    expect(formatDollars(undefined)).toBe('$0');
+  it('returns "—" for undefined (PRD-036)', () => {
+    expect(formatDollars(undefined)).toBe('\u2014');
   });
 
   it('formats small amounts without decimals', () => {
@@ -71,12 +72,16 @@ describe('formatCents', () => {
     expect(formatCents(-150000)).toBe('-$1,500');
   });
 
-  it('returns "$0" for null', () => {
-    expect(formatCents(null)).toBe('$0');
+  it('returns "—" for null (PRD-036)', () => {
+    expect(formatCents(null)).toBe('\u2014');
   });
 
-  it('returns "$0" for undefined', () => {
-    expect(formatCents(undefined)).toBe('$0');
+  it('returns "—" for undefined (PRD-036)', () => {
+    expect(formatCents(undefined)).toBe('\u2014');
+  });
+
+  it('zero is NOT null — still renders as $0', () => {
+    expect(formatCents(0)).toBe('$0');
   });
 });
 
@@ -94,9 +99,9 @@ describe('formatDollars / formatCents equivalence', () => {
     expect(formatDollars(1500)).toBe(formatCents(150000));
   });
 
-  it('null equivalence', () => {
+  it('null equivalence — both return em-dash', () => {
     expect(formatDollars(null)).toBe(formatCents(null));
-    expect(formatDollars(null)).toBe('$0');
+    expect(formatDollars(null)).toBe('\u2014');
   });
 });
 
@@ -119,12 +124,12 @@ describe('formatDollarsDelta', () => {
     expect(formatDollarsDelta(0)).toBe('+$0');
   });
 
-  it('returns "$0" for null', () => {
-    expect(formatDollarsDelta(null)).toBe('$0');
+  it('returns "—" for null (PRD-036)', () => {
+    expect(formatDollarsDelta(null)).toBe('\u2014');
   });
 
-  it('returns "$0" for undefined', () => {
-    expect(formatDollarsDelta(undefined)).toBe('$0');
+  it('returns "—" for undefined (PRD-036)', () => {
+    expect(formatDollarsDelta(undefined)).toBe('\u2014');
   });
 });
 
@@ -147,12 +152,12 @@ describe('formatCentsDelta', () => {
     expect(formatCentsDelta(0)).toBe('+$0');
   });
 
-  it('returns "$0" for null', () => {
-    expect(formatCentsDelta(null)).toBe('$0');
+  it('returns "—" for null (PRD-036)', () => {
+    expect(formatCentsDelta(null)).toBe('\u2014');
   });
 
-  it('returns "$0" for undefined', () => {
-    expect(formatCentsDelta(undefined)).toBe('$0');
+  it('returns "—" for undefined (PRD-036)', () => {
+    expect(formatCentsDelta(undefined)).toBe('\u2014');
   });
 });
 
@@ -165,8 +170,8 @@ describe('formatCurrency (deprecated)', () => {
     expect(formatCurrency(10000)).toBe('$100');
     expect(formatCurrency(150000)).toBe('$1,500');
     expect(formatCurrency(0)).toBe('$0');
-    expect(formatCurrency(null)).toBe('$0');
-    expect(formatCurrency(undefined)).toBe('$0');
+    expect(formatCurrency(null)).toBe('\u2014');
+    expect(formatCurrency(undefined)).toBe('\u2014');
   });
 
   it('matches formatCents output exactly', () => {
@@ -185,8 +190,8 @@ describe('formatCurrencyDelta (deprecated)', () => {
     expect(formatCurrencyDelta(10000)).toBe('+$100');
     expect(formatCurrencyDelta(-5000)).toBe('-$50');
     expect(formatCurrencyDelta(0)).toBe('+$0');
-    expect(formatCurrencyDelta(null)).toBe('$0');
-    expect(formatCurrencyDelta(undefined)).toBe('$0');
+    expect(formatCurrencyDelta(null)).toBe('\u2014');
+    expect(formatCurrencyDelta(undefined)).toBe('\u2014');
   });
 
   it('matches formatCentsDelta output exactly', () => {
