@@ -45,6 +45,10 @@ function makeTable(
     metric_grade: 'AUTHORITATIVE',
     missing_opening_snapshot: false,
     missing_closing_snapshot: false,
+    opening_source: 'snapshot:prior_count',
+    opening_bankroll_cents: 50000_00,
+    opening_at: '2026-01-15T07:55:00Z',
+    coverage_type: 'full',
     provenance: {
       source: 'inventory',
       grade: 'AUTHORITATIVE',

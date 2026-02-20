@@ -15,6 +15,7 @@ import { useMemo, useState } from 'react';
 import { PitTable } from '@/components/shift-dashboard-v3/center/pit-table';
 import {
   MetricGradeBadge,
+  OpeningSourceBadge,
   TelemetryQualityIndicator,
 } from '@/components/shift-dashboard-v3/trust';
 import { Badge } from '@/components/ui/badge';
@@ -90,7 +91,10 @@ function TableRow({
         </button>
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
-        {formatCents(table.win_loss_estimated_cents)}
+        <span className="inline-flex items-center gap-1">
+          {formatCents(table.win_loss_estimated_cents)}
+          <OpeningSourceBadge source={table.opening_source} />
+        </span>
       </td>
       <td className="py-3 px-4 text-right font-mono tabular-nums">
         {formatCents(table.fills_total_cents)}
