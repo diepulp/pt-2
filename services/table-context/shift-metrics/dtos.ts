@@ -12,7 +12,11 @@
  * @see rpc_shift_table_metrics, rpc_shift_pit_metrics, rpc_shift_casino_metrics
  */
 
-import type { ProvenanceMetadata } from './provenance';
+import type {
+  CoverageType,
+  OpeningSource,
+  ProvenanceMetadata,
+} from './provenance';
 import type { CoverageTier } from './snapshot-rules';
 
 // === Input Parameter Types ===
@@ -94,6 +98,16 @@ export interface ShiftTableMetricsDTO {
   missing_opening_snapshot: boolean;
   missing_closing_snapshot: boolean;
 
+  // PRD-036: Opening baseline provenance
+  /** Which source was used for the opening baseline (ranked cascade) */
+  opening_source: OpeningSource | null;
+  /** The resolved opening bankroll value in cents (nullable) */
+  opening_bankroll_cents: number | null;
+  /** Timestamp of the source used for opening baseline (nullable) */
+  opening_at: string | null;
+  /** Coverage type: 'full', 'partial', or 'unknown' */
+  coverage_type: CoverageType | null;
+
   // Trust metadata (WS1: provenance propagation)
   provenance: ProvenanceMetadata;
 }
@@ -137,11 +151,15 @@ export interface ShiftPitMetricsDTO {
   /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
-  // Win/Loss totals
+  // Win/Loss totals (PRD-036: nullable — null when all tables have null win/loss)
   /** Aggregated win/loss from inventory method across all tables, in cents */
-  win_loss_inventory_total_cents: number;
+  win_loss_inventory_total_cents: number | null;
   /** Aggregated win/loss from estimated drop method across all tables, in cents */
-  win_loss_estimated_total_cents: number;
+  win_loss_estimated_total_cents: number | null;
+
+  // PRD-036: Baseline missing count
+  /** Number of tables with no opening baseline (opening_source = 'none') */
+  tables_missing_baseline_count: number;
 
   // Coverage (WS2: snapshot preconditions)
   snapshot_coverage_ratio: number;
@@ -204,11 +222,15 @@ export interface ShiftCasinoMetricsDTO {
   /** Estimated drop total across all tables, in cents — superset: equals rated + grind */
   estimated_drop_buyins_total_cents: number;
 
-  // Win/Loss totals
+  // Win/Loss totals (PRD-036: nullable — null when all tables have null win/loss)
   /** Aggregated win/loss from inventory method across all tables, in cents */
-  win_loss_inventory_total_cents: number;
+  win_loss_inventory_total_cents: number | null;
   /** Aggregated win/loss from estimated drop method across all tables, in cents */
-  win_loss_estimated_total_cents: number;
+  win_loss_estimated_total_cents: number | null;
+
+  // PRD-036: Baseline missing count
+  /** Number of tables with no opening baseline (opening_source = 'none') */
+  tables_missing_baseline_count: number;
 
   // Coverage (WS2: snapshot preconditions)
   snapshot_coverage_ratio: number;

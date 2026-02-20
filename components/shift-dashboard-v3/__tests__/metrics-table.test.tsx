@@ -19,6 +19,10 @@ jest.mock('@/components/shift-dashboard-v3/trust', () => ({
   CoverageBar: ({ ratio }: { ratio: number }) => (
     <div data-testid="coverage-bar">{Math.round(ratio * 100)}%</div>
   ),
+  OpeningSourceBadge: ({ source }: { source: string | null }) =>
+    source && source !== 'snapshot:prior_count' ? (
+      <span data-testid="opening-source-badge">{source}</span>
+    ) : null,
 }));
 
 const mockPits: ShiftPitMetricsDTO[] = [

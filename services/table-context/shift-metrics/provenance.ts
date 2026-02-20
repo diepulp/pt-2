@@ -12,6 +12,16 @@ import type { ShiftTableMetricsDTO } from './dtos';
 
 // === Types ===
 
+/** PRD-036: Opening baseline source from ranked cascade */
+export type OpeningSource =
+  | 'snapshot:prior_count'
+  | 'bootstrap:par_target'
+  | 'fallback:earliest_in_window'
+  | 'none';
+
+/** PRD-036: Coverage type for opening baseline */
+export type CoverageType = 'full' | 'partial' | 'unknown';
+
 export type NullReason =
   | 'missing_opening'
   | 'missing_closing'

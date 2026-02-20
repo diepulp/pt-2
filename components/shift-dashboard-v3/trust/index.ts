@@ -18,6 +18,9 @@ export type { MetricGradeBadgeProps } from './metric-grade-badge';
 export { MissingDataWarning } from './missing-data-warning';
 export type { MissingDataWarningProps } from './missing-data-warning';
 
+export { OpeningSourceBadge } from './opening-source-badge';
+export type { OpeningSourceBadgeProps } from './opening-source-badge';
+
 export { ProvenanceTooltip } from './provenance-tooltip';
 export type { ProvenanceTooltipProps } from './provenance-tooltip';
 
