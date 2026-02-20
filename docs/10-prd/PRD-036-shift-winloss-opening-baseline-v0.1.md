@@ -102,12 +102,13 @@ This affects every new casino on their first shift and any table that has never 
 
 | # | Requirement | Rationale |
 |---|-------------|-----------|
-| FR-1 | `rpc_shift_table_metrics` SHALL try opening baseline sources in order: (A) pre-window snapshot, (C) `gaming_table.par_total_cents`, (D) earliest in-window snapshot, (E) NULL | Policy §4 ranked hierarchy. Source B is identical to A when no synthetic snapshots exist. |
+| FR-1 | `rpc_shift_table_metrics` SHALL try opening baseline sources in order: (A) pre-window snapshot, (C) `gaming_table.par_total_cents`, (D) earliest in-window snapshot, (E) NULL | Policy §4 ranked hierarchy. Source B is treated as part of A **only if** the system cannot distinguish a semantic opening snapshot. In that case the baseline is labeled `snapshot:prior_count`. |
 | FR-2 | When Source C is used, `opening_bankroll_cents` SHALL equal `gaming_table.par_total_cents` for that table | Policy §4.3 — par is the bootstrap estimate |
 | FR-3 | The RPC return type SHALL include: `opening_source` (text), `opening_bankroll_cents` (bigint nullable), `opening_at` (timestamptz nullable), `coverage_type` (text) | Policy §6 provenance contract |
-| FR-4 | `opening_source` SHALL be one of: `'snapshot:verified_open'`, `'snapshot:prior_count'`, `'bootstrap:par_target'`, `'fallback:earliest_in_window'`, `'none'` | Policy §4 enum values |
+| FR-4 | `opening_source` SHALL be one of: `'snapshot:prior_count'`, `'snapshot:prior_count'`, `'bootstrap:par_target'`, `'fallback:earliest_in_window'`, `'none'` | Policy §4 enum values |
 | FR-5 | `coverage_type` SHALL be `'full'` for Sources A/B/C, `'partial'` for Source D, `'unknown'` for Source E | Policy §5 decision table |
 | FR-6 | Casino-level aggregation SHALL exclude tables with NULL `win_loss_inventory_cents` from the sum and track the excluded count | Prevents null-to-zero coalescing that masks missing data |
+- Casino-level totals **sum known tables only** and display `missing_baseline_count` (and optionally the list of table_ids) so ops can see what's excluded.
 | FR-7 | `formatCents(null)` SHALL return `"—"` (em dash), not `"$0"` | Policy §8 "stop lying" |
 | FR-8 | When `opening_source = 'none'`, the UI SHALL display "N/A" with a "Record opening count" CTA | Policy §8 actionable UX |
 | FR-9 | When `opening_source = 'bootstrap:par_target'`, the UI SHALL show a "Bootstrapped from par" indicator | Policy §8 transparency |
@@ -147,7 +148,7 @@ This affects every new casino on their first shift and any table that has never 
 2. Dashboard queries `rpc_shift_table_metrics`
 3. RPC: pre-window snapshot found → Source A
 4. Dashboard shows normal win/loss value, no indicator
-5. Provenance: `opening_source = 'snapshot:verified_open'`, `coverage_type = 'full'`
+5. Provenance: `opening_source = 'snapshot:prior_count'`, `coverage_type = 'full'`
 
 ### Flow 3: No Par Set, No Snapshots (Source E — Unknown)
 
@@ -173,7 +174,7 @@ This affects every new casino on their first shift and any table that has never 
 | Dependency | Status | Impact |
 |------------|--------|--------|
 | `gaming_table.par_total_cents` column | Exists (ADR-027 migration) | Source C reads from this column |
-| `gaming_table.par_updated_at` column | Exists (ADR-027 migration) | Used for `opening_at` when Source C |
+| `gaming_table.par_set_at (or the canonical par timestamp column; verify actual field name in current schema)` column | Exists (ADR-027 migration) | Used for `opening_at` when Source C |
 | `chipset_total_cents()` function | Exists | Used by current opening/closing snapshot CTEs |
 | `set_rls_context_from_staff()` | Exists (ADR-024) | RPC context derivation unchanged |
 
@@ -259,7 +260,7 @@ opening_baseline AS (
     ) AS opening_bankroll_cents,
 
     CASE
-      WHEN pre.snapshot_id IS NOT NULL THEN 'snapshot:verified_open'
+      WHEN pre.snapshot_id IS NOT NULL THEN 'snapshot:prior_count'
       WHEN gt.par_total_cents IS NOT NULL THEN 'bootstrap:par_target'
       WHEN inw.snapshot_id IS NOT NULL THEN 'fallback:earliest_in_window'
       ELSE 'none'
@@ -305,8 +306,8 @@ opening_baseline AS (
 CASE
   WHEN ob.opening_bankroll_cents IS NOT NULL AND cs.snapshot_id IS NOT NULL THEN
     (cs.bankroll_total_cents - ob.opening_bankroll_cents)
-    + COALESCE(fa.fills_total, 0)
-    - COALESCE(ca.credits_total, 0)
+        - COALESCE(fa.fills_total, 0)
+        + COALESCE(ca.credits_total, 0)
   ELSE NULL
 END::bigint AS win_loss_inventory_cents,
 
@@ -328,7 +329,7 @@ ob.coverage_type
 
 ```typescript
 // Add to ShiftTableMetricsDTO
-opening_source: 'snapshot:verified_open' | 'snapshot:prior_count' | 'bootstrap:par_target' | 'fallback:earliest_in_window' | 'none' | null;
+opening_source: 'snapshot:prior_count' | 'snapshot:prior_count' | 'bootstrap:par_target' | 'fallback:earliest_in_window' | 'none' | null;
 opening_bankroll_cents: number | null;
 opening_at: string | null;
 coverage_type: 'full' | 'partial' | 'unknown' | null;
@@ -400,3 +401,12 @@ export function formatCents(cents: number | null | undefined): string {
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.1.0 | 2026-02-19 | Initial draft from ISSUE-B8B516AF investigation + POLICY-SHIFT-WINLOSS-OPENING-BASELINE |
+
+---
+## Audit Fold-In (2026-02-19)
+- Fixed win/loss SQL formula to align with canonical sign convention: `(closing - opening) - fills + credits`.
+- Removed misleading `snapshot:verified_open` labeling; baseline-from-snapshot is now labeled `snapshot:prior_count` unless true opening semantics exist.
+- Clarified ranked baseline order as `A/B → C → D → E`.
+- Defined partial-window semantics for Source D.
+- Made casino aggregation behavior explicit: sum known tables + expose missing baseline count.
+- Replaced `par_updated_at` reference with a schema-verified par timestamp placeholder.
