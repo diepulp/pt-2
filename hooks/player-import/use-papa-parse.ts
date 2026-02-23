@@ -1,10 +1,11 @@
 /**
- * Papa Parse Web Worker Hook
+ * Papa Parse Hook with Structural Repair
  *
- * Wraps Papa Parse for browser-side CSV parsing with Web Worker support.
- * Decouples parsing from upload — rows are queued locally for independent upload.
+ * Wraps Papa Parse for browser-side CSV parsing. Runs a pre-parse structural
+ * repair step to neutralize bare quotes that cause row swallowing.
  *
  * @see PRD-037 CSV Player Import — ADR-036 D1
+ * @see docs/issues/gaps/csv-import/csv_row_loss_fix.md
  */
 
 'use client';
@@ -12,12 +13,19 @@
 import Papa from 'papaparse';
 import { useRef, useState } from 'react';
 
+import type { RepairReport } from '@/lib/csv/csv-structural-repair';
+import {
+  CsvMultilineQuotedFieldError,
+  repairCsvStructure,
+} from '@/lib/csv/csv-structural-repair';
+
 export interface ParseResult {
   headers: string[];
   rows: Record<string, string>[];
   totalRows: number;
   isComplete: boolean;
   errors: Papa.ParseError[];
+  repairReport: RepairReport | null;
 }
 
 const INITIAL_RESULT: ParseResult = {
@@ -26,68 +34,112 @@ const INITIAL_RESULT: ParseResult = {
   totalRows: 0,
   isComplete: false,
   errors: [],
+  repairReport: null,
 };
 
 /**
- * Hook for parsing CSV files using Papa Parse with Web Worker.
+ * Hook for parsing CSV files using Papa Parse with structural repair.
  *
- * Returns parsed headers and rows, completion status, and abort capability.
- * Parsing runs in a Web Worker to prevent UI blocking.
+ * Reads the file as text, repairs bare-quote structural issues, then parses
+ * the repaired string. Includes async race safety — rapid file switches
+ * discard stale results.
  */
 export function usePapaParse() {
   const [result, setResult] = useState<ParseResult>(INITIAL_RESULT);
   const [isParsing, setIsParsing] = useState(false);
   const abortRef = useRef(false);
+  const parseTokenRef = useRef(0);
 
-  function parseFile(file: File) {
+  async function parseFile(file: File) {
+    const token = ++parseTokenRef.current;
     abortRef.current = false;
     setIsParsing(true);
     setResult(INITIAL_RESULT);
 
-    const collectedRows: Record<string, string>[] = [];
-    let headers: string[] = [];
+    let repairReport: RepairReport | null = null;
 
-    Papa.parse<Record<string, string>>(file, {
-      header: true,
-      skipEmptyLines: true,
-      worker: true,
-      dynamicTyping: false,
-      step(stepResult) {
-        if (abortRef.current) return;
+    try {
+      const rawText = await file.text();
 
-        if (headers.length === 0 && stepResult.meta.fields) {
-          headers = stepResult.meta.fields;
-        }
+      if (token !== parseTokenRef.current) return;
 
-        collectedRows.push(stepResult.data);
-      },
-      complete(completeResult) {
-        setResult({
-          headers,
-          rows: collectedRows,
-          totalRows: collectedRows.length,
-          isComplete: true,
-          errors: completeResult?.errors ?? [],
-        });
-        setIsParsing(false);
-      },
-      error(error: Error) {
-        setResult((prev) => ({
-          ...prev,
-          isComplete: true,
-          errors: [
-            ...prev.errors,
-            {
-              type: 'FieldMismatch',
-              code: 'TooFewFields',
-              message: error.message,
-              row: 0,
-            },
-          ],
-        }));
-        setIsParsing(false);
-      },
-    });
+      const { text: repairedText, report } = repairCsvStructure(rawText);
+      repairReport = report;
+
+      if (token !== parseTokenRef.current) return;
+
+      const collectedRows: Record<string, string>[] = [];
+      let headers: string[] = [];
+
+      Papa.parse<Record<string, string>>(repairedText, {
+        header: true,
+        skipEmptyLines: true,
+        worker: false,
+        dynamicTyping: false,
+        step(stepResult) {
+          if (abortRef.current) return;
+
+          if (headers.length === 0 && stepResult.meta.fields) {
+            headers = stepResult.meta.fields;
+          }
+
+          collectedRows.push(stepResult.data);
+        },
+        complete(completeResult) {
+          if (token !== parseTokenRef.current) return;
+          setResult({
+            headers,
+            rows: collectedRows,
+            totalRows: collectedRows.length,
+            isComplete: true,
+            errors: completeResult?.errors ?? [],
+            repairReport,
+          });
+          setIsParsing(false);
+        },
+        error(error: Error) {
+          if (token !== parseTokenRef.current) return;
+          setResult((prev) => ({
+            ...prev,
+            isComplete: true,
+            errors: [
+              ...prev.errors,
+              {
+                type: 'FieldMismatch',
+                code: 'TooFewFields',
+                message: error.message,
+                row: 0,
+              },
+            ],
+            repairReport,
+          }));
+          setIsParsing(false);
+        },
+      });
+    } catch (err) {
+      if (token !== parseTokenRef.current) return;
+
+      const message =
+        err instanceof CsvMultilineQuotedFieldError
+          ? err.message
+          : 'Failed to read or repair CSV file.';
+
+      setResult((prev) => ({
+        ...prev,
+        isComplete: true,
+        errors: [
+          ...prev.errors,
+          {
+            type: 'FieldMismatch',
+            code: 'TooFewFields',
+            message,
+            row: 0,
+          },
+        ],
+        repairReport: null,
+      }));
+      setIsParsing(false);
+    }
   }
 
   function abort() {

@@ -174,6 +174,7 @@ export function ImportWizard() {
               parser.result.isComplete ? parser.result.totalRows : null
             }
             isParsing={parser.isParsing}
+            linesRepaired={parser.result.repairReport?.linesRepaired ?? 0}
           />
         );
 

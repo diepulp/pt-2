@@ -34,6 +34,7 @@ interface StepFileSelectionProps {
   onVendorLabelChange: (label: string) => void;
   parsedRowCount: number | null;
   isParsing: boolean;
+  linesRepaired: number;
 }
 
 export function StepFileSelection({
@@ -43,6 +44,7 @@ export function StepFileSelection({
   onVendorLabelChange,
   parsedRowCount,
   isParsing,
+  linesRepaired,
 }: StepFileSelectionProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -161,6 +163,13 @@ export function StepFileSelection({
               {parsedRowCount !== null && !isParsing && (
                 <p className="text-muted-foreground mt-2 text-xs">
                   {parsedRowCount.toLocaleString()} rows detected
+                </p>
+              )}
+              {linesRepaired > 0 && parsedRowCount !== null && !isParsing && (
+                <p className="mt-1 text-xs text-amber-600">
+                  {linesRepaired} line{linesRepaired !== 1 ? 's' : ''} had
+                  invalid quoting and {linesRepaired !== 1 ? 'were' : 'was'}{' '}
+                  automatically repaired.
                 </p>
               )}
             </div>
