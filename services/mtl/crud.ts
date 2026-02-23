@@ -425,11 +425,21 @@ export async function getGamingDaySummary(
 ): Promise<{ items: MtlGamingDaySummaryDTO[]; next_cursor: string | null }> {
   const limit = filters.limit ?? 20;
 
+  // Fetch thresholds BEFORE query so we can filter at DB level.
+  // getCasinoThresholds converts casino_settings (dollars) → cents,
+  // matching mtl_entry.amount and the view's aggregates (all cents per ADR-031).
+  const thresholds = await getCasinoThresholds(supabase, filters.casino_id);
+
   let query = supabase
     .from('mtl_gaming_day_summary')
     .select(MTL_GAMING_DAY_SUMMARY_SELECT)
     .eq('casino_id', filters.casino_id)
     .eq('gaming_day', filters.gaming_day)
+    // Exclude patrons whose aggregates dropped below all thresholds
+    // after buy-in reversals or adjustments (cents vs cents)
+    .or(
+      `total_in.gte.${thresholds.watchlistFloor},total_out.gte.${thresholds.watchlistFloor}`,
+    )
     .order('total_volume', { ascending: false })
     .limit(limit + 1);
 
@@ -459,8 +469,6 @@ export async function getGamingDaySummary(
   const { data, error } = await query;
 
   if (error) throw mapDatabaseError(error);
-
-  const thresholds = await getCasinoThresholds(supabase, filters.casino_id);
 
   // Handle pagination
   const hasMore = (data?.length ?? 0) > limit;

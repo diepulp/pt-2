@@ -35,9 +35,10 @@ type MtlGamingDaySummaryRow =
 describe('MTLService Mappers', () => {
   // === Test Data ===
 
+  // Thresholds in CENTS per ADR-031 ($3,000 = 300000, $10,000 = 1000000)
   const thresholds: CasinoThresholds = {
-    watchlistFloor: 3000,
-    ctrThreshold: 10000,
+    watchlistFloor: 300000,
+    ctrThreshold: 1000000,
   };
 
   const mockEntryRow: MtlEntryRow = {
@@ -47,7 +48,7 @@ describe('MTLService Mappers', () => {
     staff_id: 'staff-uuid-1',
     rating_slip_id: 'slip-uuid-1',
     visit_id: 'visit-uuid-1',
-    amount: 5000,
+    amount: 500000, // $5,000 in cents
     direction: 'in',
     txn_type: 'buy_in',
     source: 'table',
@@ -65,21 +66,22 @@ describe('MTLService Mappers', () => {
     created_at: '2025-01-15T14:31:00Z',
   };
 
+  // All amounts in CENTS per ADR-031 (e.g., 1500000 = $15,000)
   const mockGamingDaySummaryRow: MtlGamingDaySummaryRow = {
     casino_id: 'casino-uuid-1',
     patron_uuid: 'patron-uuid-1',
     gaming_day: '2025-01-15',
-    total_in: 15000,
+    total_in: 1500000,
     count_in: 3,
-    max_single_in: 8000,
+    max_single_in: 800000,
     first_in_at: '2025-01-15T10:00:00Z',
     last_in_at: '2025-01-15T14:30:00Z',
-    total_out: 7000,
+    total_out: 700000,
     count_out: 2,
-    max_single_out: 4500,
+    max_single_out: 450000,
     first_out_at: '2025-01-15T11:00:00Z',
     last_out_at: '2025-01-15T13:00:00Z',
-    total_volume: 22000,
+    total_volume: 2200000,
     entry_count: 5,
   };
 
@@ -87,56 +89,56 @@ describe('MTLService Mappers', () => {
 
   describe('deriveEntryBadge', () => {
     it('returns "none" for amounts below watchlist floor', () => {
-      expect(deriveEntryBadge(500, thresholds)).toBe('none');
-      expect(deriveEntryBadge(2999, thresholds)).toBe('none');
+      expect(deriveEntryBadge(50000, thresholds)).toBe('none'); // $500
+      expect(deriveEntryBadge(299900, thresholds)).toBe('none'); // $2,999
     });
 
     it('returns "watchlist_near" for amounts >= watchlist floor and <= 90% of CTR', () => {
-      expect(deriveEntryBadge(3000, thresholds)).toBe('watchlist_near');
-      expect(deriveEntryBadge(5000, thresholds)).toBe('watchlist_near');
-      expect(deriveEntryBadge(9000, thresholds)).toBe('watchlist_near');
+      expect(deriveEntryBadge(300000, thresholds)).toBe('watchlist_near'); // $3,000
+      expect(deriveEntryBadge(500000, thresholds)).toBe('watchlist_near'); // $5,000
+      expect(deriveEntryBadge(900000, thresholds)).toBe('watchlist_near'); // $9,000
     });
 
     it('returns "ctr_near" for amounts > 90% of CTR threshold and <= CTR threshold', () => {
-      expect(deriveEntryBadge(9001, thresholds)).toBe('ctr_near');
-      expect(deriveEntryBadge(9500, thresholds)).toBe('ctr_near');
-      expect(deriveEntryBadge(9999, thresholds)).toBe('ctr_near');
+      expect(deriveEntryBadge(900100, thresholds)).toBe('ctr_near'); // $9,001
+      expect(deriveEntryBadge(950000, thresholds)).toBe('ctr_near'); // $9,500
+      expect(deriveEntryBadge(999900, thresholds)).toBe('ctr_near'); // $9,999
     });
 
     it('returns "ctr_near" for amount exactly at CTR threshold (CRITICAL: uses >, not >=)', () => {
       // CRITICAL COMPLIANCE REQUIREMENT:
       // Amount exactly at $10,000 is NOT reportable, therefore badge is "ctr_near"
       // Per 31 CFR § 1021.311: "each transaction in currency of more than $10,000"
-      expect(deriveEntryBadge(10000, thresholds)).toBe('ctr_near');
+      expect(deriveEntryBadge(1000000, thresholds)).toBe('ctr_near'); // $10,000
     });
 
     it('returns "ctr_met" for amounts > CTR threshold', () => {
-      expect(deriveEntryBadge(10001, thresholds)).toBe('ctr_met');
-      expect(deriveEntryBadge(15000, thresholds)).toBe('ctr_met');
-      expect(deriveEntryBadge(50000, thresholds)).toBe('ctr_met');
+      expect(deriveEntryBadge(1000100, thresholds)).toBe('ctr_met'); // $10,001
+      expect(deriveEntryBadge(1500000, thresholds)).toBe('ctr_met'); // $15,000
+      expect(deriveEntryBadge(5000000, thresholds)).toBe('ctr_met'); // $50,000
     });
 
     it('handles edge case: amount at exactly 90% of CTR threshold', () => {
-      // 90% of 10000 = 9000
-      expect(deriveEntryBadge(9000, thresholds)).toBe('watchlist_near');
-      expect(deriveEntryBadge(9000.01, thresholds)).toBe('ctr_near');
+      // 90% of 1000000 = 900000
+      expect(deriveEntryBadge(900000, thresholds)).toBe('watchlist_near');
+      expect(deriveEntryBadge(900001, thresholds)).toBe('ctr_near');
     });
 
     it('handles zero and negative amounts', () => {
       expect(deriveEntryBadge(0, thresholds)).toBe('none');
-      expect(deriveEntryBadge(-100, thresholds)).toBe('none');
+      expect(deriveEntryBadge(-10000, thresholds)).toBe('none');
     });
 
     it('handles custom thresholds', () => {
       const customThresholds: CasinoThresholds = {
-        watchlistFloor: 5000,
-        ctrThreshold: 10000,
+        watchlistFloor: 500000, // $5,000
+        ctrThreshold: 1000000, // $10,000
       };
 
-      expect(deriveEntryBadge(4999, customThresholds)).toBe('none');
-      expect(deriveEntryBadge(5000, customThresholds)).toBe('watchlist_near');
-      expect(deriveEntryBadge(9001, customThresholds)).toBe('ctr_near');
-      expect(deriveEntryBadge(10001, customThresholds)).toBe('ctr_met');
+      expect(deriveEntryBadge(499900, customThresholds)).toBe('none');
+      expect(deriveEntryBadge(500000, customThresholds)).toBe('watchlist_near');
+      expect(deriveEntryBadge(900100, customThresholds)).toBe('ctr_near');
+      expect(deriveEntryBadge(1000100, customThresholds)).toBe('ctr_met');
     });
   });
 
@@ -144,43 +146,44 @@ describe('MTLService Mappers', () => {
 
   describe('deriveAggBadge', () => {
     it('returns "none" for totals below watchlist floor', () => {
-      expect(deriveAggBadge(500, thresholds)).toBe('none');
-      expect(deriveAggBadge(2999, thresholds)).toBe('none');
+      expect(deriveAggBadge(50000, thresholds)).toBe('none'); // $500
+      expect(deriveAggBadge(299900, thresholds)).toBe('none'); // $2,999
     });
 
     it('returns "agg_watchlist" for totals >= watchlist floor and <= 90% of CTR', () => {
-      expect(deriveAggBadge(3000, thresholds)).toBe('agg_watchlist');
-      expect(deriveAggBadge(5000, thresholds)).toBe('agg_watchlist');
-      expect(deriveAggBadge(9000, thresholds)).toBe('agg_watchlist');
+      expect(deriveAggBadge(300000, thresholds)).toBe('agg_watchlist'); // $3,000
+      expect(deriveAggBadge(500000, thresholds)).toBe('agg_watchlist'); // $5,000
+      expect(deriveAggBadge(900000, thresholds)).toBe('agg_watchlist'); // $9,000
     });
 
     it('returns "agg_ctr_near" for totals > 90% of CTR threshold and <= CTR threshold', () => {
-      expect(deriveAggBadge(9001, thresholds)).toBe('agg_ctr_near');
-      expect(deriveAggBadge(9500, thresholds)).toBe('agg_ctr_near');
-      expect(deriveAggBadge(9999, thresholds)).toBe('agg_ctr_near');
+      expect(deriveAggBadge(900100, thresholds)).toBe('agg_ctr_near'); // $9,001
+      expect(deriveAggBadge(950000, thresholds)).toBe('agg_ctr_near'); // $9,500
+      expect(deriveAggBadge(999900, thresholds)).toBe('agg_ctr_near'); // $9,999
     });
 
     it('returns "agg_ctr_near" for total exactly at CTR threshold (CRITICAL: uses >, not >=)', () => {
       // CRITICAL COMPLIANCE REQUIREMENT:
       // Daily total exactly at $10,000 is NOT reportable, therefore badge is "agg_ctr_near"
       // Per 31 CFR § 1021.311: "aggregate amount of transactions...more than $10,000"
-      expect(deriveAggBadge(10000, thresholds)).toBe('agg_ctr_near');
+      expect(deriveAggBadge(1000000, thresholds)).toBe('agg_ctr_near'); // $10,000
     });
 
     it('returns "agg_ctr_met" for totals > CTR threshold', () => {
-      expect(deriveAggBadge(10001, thresholds)).toBe('agg_ctr_met');
-      expect(deriveAggBadge(15000, thresholds)).toBe('agg_ctr_met');
-      expect(deriveAggBadge(50000, thresholds)).toBe('agg_ctr_met');
+      expect(deriveAggBadge(1000100, thresholds)).toBe('agg_ctr_met'); // $10,001
+      expect(deriveAggBadge(1500000, thresholds)).toBe('agg_ctr_met'); // $15,000
+      expect(deriveAggBadge(5000000, thresholds)).toBe('agg_ctr_met'); // $50,000
     });
 
     it('handles edge case: total at exactly 90% of CTR threshold', () => {
-      expect(deriveAggBadge(9000, thresholds)).toBe('agg_watchlist');
-      expect(deriveAggBadge(9000.01, thresholds)).toBe('agg_ctr_near');
+      // 90% of 1000000 = 900000
+      expect(deriveAggBadge(900000, thresholds)).toBe('agg_watchlist');
+      expect(deriveAggBadge(900001, thresholds)).toBe('agg_ctr_near');
     });
 
     it('handles zero and negative totals', () => {
       expect(deriveAggBadge(0, thresholds)).toBe('none');
-      expect(deriveAggBadge(-100, thresholds)).toBe('none');
+      expect(deriveAggBadge(-10000, thresholds)).toBe('none');
     });
   });
 
@@ -197,7 +200,7 @@ describe('MTLService Mappers', () => {
         staff_id: 'staff-uuid-1',
         rating_slip_id: 'slip-uuid-1',
         visit_id: 'visit-uuid-1',
-        amount: 5000,
+        amount: 500000,
         direction: 'in',
         txn_type: 'buy_in',
         source: 'table',
@@ -210,28 +213,28 @@ describe('MTLService Mappers', () => {
     });
 
     it('derives correct badge for amount below watchlist', () => {
-      const row = { ...mockEntryRow, amount: 1000 };
+      const row = { ...mockEntryRow, amount: 100000 }; // $1,000
       const result = mapMtlEntryRow(row, thresholds);
 
       expect(result.entry_badge).toBe('none');
     });
 
     it('derives correct badge for amount in ctr_near range', () => {
-      const row = { ...mockEntryRow, amount: 9500 };
+      const row = { ...mockEntryRow, amount: 950000 }; // $9,500
       const result = mapMtlEntryRow(row, thresholds);
 
       expect(result.entry_badge).toBe('ctr_near');
     });
 
     it('derives correct badge for amount exactly at CTR threshold', () => {
-      const row = { ...mockEntryRow, amount: 10000 };
+      const row = { ...mockEntryRow, amount: 1000000 }; // $10,000
       const result = mapMtlEntryRow(row, thresholds);
 
       expect(result.entry_badge).toBe('ctr_near');
     });
 
     it('derives correct badge for amount above CTR threshold', () => {
-      const row = { ...mockEntryRow, amount: 12500 };
+      const row = { ...mockEntryRow, amount: 1250000 }; // $12,500
       const result = mapMtlEntryRow(row, thresholds);
 
       expect(result.entry_badge).toBe('ctr_met');
@@ -261,7 +264,7 @@ describe('MTLService Mappers', () => {
         ...mockEntryRow,
         direction: 'out',
         txn_type: 'cash_out',
-        amount: 8000,
+        amount: 800000, // $8,000
       };
 
       const result = mapMtlEntryRow(row, thresholds);
@@ -325,9 +328,9 @@ describe('MTLService Mappers', () => {
 
     it('maps multiple items with different badge levels', () => {
       const rows: MtlEntryRow[] = [
-        { ...mockEntryRow, id: 'entry-1', amount: 1000 },
-        { ...mockEntryRow, id: 'entry-2', amount: 9500 },
-        { ...mockEntryRow, id: 'entry-3', amount: 12000 },
+        { ...mockEntryRow, id: 'entry-1', amount: 100000 }, // $1,000 → none
+        { ...mockEntryRow, id: 'entry-2', amount: 950000 }, // $9,500 → ctr_near
+        { ...mockEntryRow, id: 'entry-3', amount: 1200000 }, // $12,000 → ctr_met
       ];
 
       const result = mapMtlEntryRowList(rows, thresholds);
@@ -512,20 +515,23 @@ describe('MTLService Mappers', () => {
       expect(result).toEqual({
         casino_id: 'casino-uuid-1',
         patron_uuid: 'patron-uuid-1',
+        patron_first_name: null,
+        patron_last_name: null,
+        patron_date_of_birth: null,
         gaming_day: '2025-01-15',
-        total_in: 15000,
+        total_in: 1500000,
         count_in: 3,
-        max_single_in: 8000,
+        max_single_in: 800000,
         first_in_at: '2025-01-15T10:00:00Z',
         last_in_at: '2025-01-15T14:30:00Z',
         agg_badge_in: 'agg_ctr_met',
-        total_out: 7000,
+        total_out: 700000,
         count_out: 2,
-        max_single_out: 4500,
+        max_single_out: 450000,
         first_out_at: '2025-01-15T11:00:00Z',
         last_out_at: '2025-01-15T13:00:00Z',
         agg_badge_out: 'agg_watchlist',
-        total_volume: 22000,
+        total_volume: 2200000,
         entry_count: 5,
       });
     });
@@ -533,8 +539,8 @@ describe('MTLService Mappers', () => {
     it('derives separate badges for in and out totals', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_in: 9500, // ctr_near
-        total_out: 12000, // ctr_met
+        total_in: 950000, // $9,500 → ctr_near
+        total_out: 1200000, // $12,000 → ctr_met
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -546,7 +552,7 @@ describe('MTLService Mappers', () => {
     it('handles total_in exactly at CTR threshold', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_in: 10000,
+        total_in: 1000000, // $10,000
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -557,7 +563,7 @@ describe('MTLService Mappers', () => {
     it('handles total_out exactly at CTR threshold', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_out: 10000,
+        total_out: 1000000, // $10,000
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -565,10 +571,10 @@ describe('MTLService Mappers', () => {
       expect(result.agg_badge_out).toBe('agg_ctr_near');
     });
 
-    it('handles total_in at exactly CTR threshold + $1', () => {
+    it('handles total_in at exactly CTR threshold + 1 cent', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_in: 10001,
+        total_in: 1000001, // $10,000.01
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -576,10 +582,10 @@ describe('MTLService Mappers', () => {
       expect(result.agg_badge_in).toBe('agg_ctr_met');
     });
 
-    it('handles total_out at exactly CTR threshold + $1', () => {
+    it('handles total_out at exactly CTR threshold + 1 cent', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_out: 10001,
+        total_out: 1000001, // $10,000.01
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -692,12 +698,20 @@ describe('MTLService Mappers', () => {
 
     it('maps multiple items with different badge levels', () => {
       const rows: MtlGamingDaySummaryRow[] = [
-        { ...mockGamingDaySummaryRow, patron_uuid: 'patron-1', total_in: 2000 },
-        { ...mockGamingDaySummaryRow, patron_uuid: 'patron-2', total_in: 9500 },
+        {
+          ...mockGamingDaySummaryRow,
+          patron_uuid: 'patron-1',
+          total_in: 200000,
+        }, // $2,000 → none
+        {
+          ...mockGamingDaySummaryRow,
+          patron_uuid: 'patron-2',
+          total_in: 950000,
+        }, // $9,500 → ctr_near
         {
           ...mockGamingDaySummaryRow,
           patron_uuid: 'patron-3',
-          total_in: 15000,
+          total_in: 1500000, // $15,000 → ctr_met
         },
       ];
 
@@ -725,10 +739,10 @@ describe('MTLService Mappers', () => {
   // === Default Thresholds Tests ===
 
   describe('DEFAULT_THRESHOLDS', () => {
-    it('exports correct default values per PRD-005', () => {
+    it('exports correct default values per PRD-005 (in cents per ADR-031)', () => {
       expect(DEFAULT_THRESHOLDS).toEqual({
-        watchlistFloor: 3000,
-        ctrThreshold: 10000,
+        watchlistFloor: 300000, // $3,000
+        ctrThreshold: 1000000, // $10,000
       });
     });
 
@@ -743,13 +757,13 @@ describe('MTLService Mappers', () => {
 
   describe('Edge Cases', () => {
     it('handles very large amounts', () => {
-      expect(deriveEntryBadge(1000000, thresholds)).toBe('ctr_met');
-      expect(deriveAggBadge(1000000, thresholds)).toBe('agg_ctr_met');
+      expect(deriveEntryBadge(100000000, thresholds)).toBe('ctr_met'); // $1,000,000
+      expect(deriveAggBadge(100000000, thresholds)).toBe('agg_ctr_met');
     });
 
-    it('handles decimal amounts', () => {
-      expect(deriveEntryBadge(10000.5, thresholds)).toBe('ctr_met');
-      expect(deriveEntryBadge(9999.99, thresholds)).toBe('ctr_near');
+    it('handles decimal amounts (sub-cent precision)', () => {
+      expect(deriveEntryBadge(1000050, thresholds)).toBe('ctr_met'); // $10,000.50
+      expect(deriveEntryBadge(999999, thresholds)).toBe('ctr_near'); // $9,999.99
     });
 
     it('handles zero total_volume in summary', () => {
@@ -785,36 +799,36 @@ describe('MTLService Mappers', () => {
       // These tests ensure we never regress on the compliance requirement
       // Per 31 CFR § 1021.311: "more than $10,000"
 
-      // Below threshold
-      expect(deriveEntryBadge(9999.99, thresholds)).not.toBe('ctr_met');
+      // Below threshold ($9,999.99)
+      expect(deriveEntryBadge(999999, thresholds)).not.toBe('ctr_met');
 
-      // Exactly at threshold - NOT reportable
-      expect(deriveEntryBadge(10000, thresholds)).toBe('ctr_near');
-      expect(deriveEntryBadge(10000, thresholds)).not.toBe('ctr_met');
+      // Exactly at threshold ($10,000) - NOT reportable
+      expect(deriveEntryBadge(1000000, thresholds)).toBe('ctr_near');
+      expect(deriveEntryBadge(1000000, thresholds)).not.toBe('ctr_met');
 
-      // Above threshold - reportable
-      expect(deriveEntryBadge(10000.01, thresholds)).toBe('ctr_met');
-      expect(deriveEntryBadge(10001, thresholds)).toBe('ctr_met');
+      // Above threshold - reportable ($10,000.01, $10,001)
+      expect(deriveEntryBadge(1000001, thresholds)).toBe('ctr_met');
+      expect(deriveEntryBadge(1000100, thresholds)).toBe('ctr_met');
     });
 
     it('CRITICAL: CTR threshold uses strictly > not >= for aggregate badge', () => {
-      // Below threshold
-      expect(deriveAggBadge(9999.99, thresholds)).not.toBe('agg_ctr_met');
+      // Below threshold ($9,999.99)
+      expect(deriveAggBadge(999999, thresholds)).not.toBe('agg_ctr_met');
 
-      // Exactly at threshold - NOT reportable
-      expect(deriveAggBadge(10000, thresholds)).toBe('agg_ctr_near');
-      expect(deriveAggBadge(10000, thresholds)).not.toBe('agg_ctr_met');
+      // Exactly at threshold ($10,000) - NOT reportable
+      expect(deriveAggBadge(1000000, thresholds)).toBe('agg_ctr_near');
+      expect(deriveAggBadge(1000000, thresholds)).not.toBe('agg_ctr_met');
 
-      // Above threshold - reportable
-      expect(deriveAggBadge(10000.01, thresholds)).toBe('agg_ctr_met');
-      expect(deriveAggBadge(10001, thresholds)).toBe('agg_ctr_met');
+      // Above threshold - reportable ($10,000.01, $10,001)
+      expect(deriveAggBadge(1000001, thresholds)).toBe('agg_ctr_met');
+      expect(deriveAggBadge(1000100, thresholds)).toBe('agg_ctr_met');
     });
 
     it('CRITICAL: separate in/out totals for aggregate badges', () => {
       const row: MtlGamingDaySummaryRow = {
         ...mockGamingDaySummaryRow,
-        total_in: 5000, // Not reportable
-        total_out: 12000, // Reportable
+        total_in: 500000, // $5,000 → agg_watchlist
+        total_out: 1200000, // $12,000 → agg_ctr_met
       };
 
       const result = mapGamingDaySummaryRow(row, thresholds);
@@ -823,7 +837,7 @@ describe('MTLService Mappers', () => {
       expect(result.agg_badge_in).toBe('agg_watchlist');
       expect(result.agg_badge_out).toBe('agg_ctr_met');
 
-      // NOT combined (that would be 17000 which is wrong)
+      // NOT combined (that would be $17,000 which is wrong)
       expect(result.agg_badge_in).not.toBe('agg_ctr_met');
     });
   });
