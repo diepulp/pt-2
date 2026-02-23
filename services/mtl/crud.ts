@@ -425,19 +425,24 @@ export async function getGamingDaySummary(
 ): Promise<{ items: MtlGamingDaySummaryDTO[]; next_cursor: string | null }> {
   const limit = filters.limit ?? 20;
 
-  // Fetch thresholds BEFORE query so we can filter at DB level
-  const thresholds = await getCasinoThresholds(supabase, filters.casino_id);
+  // Fetch raw watchlist floor for DB-level filter.
+  // casino_settings.watchlist_floor is in DOLLARS — same unit as
+  // mtl_entry.amount and the view's total_in / total_out columns.
+  // (getCasinoThresholds converts dollars→cents for badge computation,
+  // but the DB filter must compare in the view's native unit.)
+  const { data: settings } = await supabase
+    .from('casino_settings')
+    .select('watchlist_floor')
+    .eq('casino_id', filters.casino_id)
+    .maybeSingle();
+  const rawFloor = settings?.watchlist_floor ?? 3000;
 
   let query = supabase
     .from('mtl_gaming_day_summary')
     .select(MTL_GAMING_DAY_SUMMARY_SELECT)
     .eq('casino_id', filters.casino_id)
     .eq('gaming_day', filters.gaming_day)
-    // Exclude patrons whose aggregates dropped below all thresholds
-    // after buy-in reversals or adjustments
-    .or(
-      `total_in.gte.${thresholds.watchlistFloor},total_out.gte.${thresholds.watchlistFloor}`,
-    )
+    .or(`total_in.gte.${rawFloor},total_out.gte.${rawFloor}`)
     .order('total_volume', { ascending: false })
     .limit(limit + 1);
 
@@ -467,6 +472,9 @@ export async function getGamingDaySummary(
   const { data, error } = await query;
 
   if (error) throw mapDatabaseError(error);
+
+  // Thresholds for badge computation (dollars→cents, used by deriveAggBadge)
+  const thresholds = await getCasinoThresholds(supabase, filters.casino_id);
 
   // Handle pagination
   const hasMore = (data?.length ?? 0) > limit;
