@@ -1,0 +1,28 @@
+{
+  "prd": "PRD-016",
+  "prd_title": "Rating Slip Session Continuity",
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20251222002622_prd016_rating_slip_continuity.sql"],
+    "WS2": ["supabase/migrations/20251222002623_prd016_compute_slip_final_seconds.sql"],
+    "WS3": ["supabase/migrations/20251222002624_prd016_rpc_get_visit_live_view.sql"],
+    "WS4": ["services/rating-slip/crud.ts", "services/rating-slip/dtos.ts", "services/rating-slip/index.ts", "services/rating-slip/mappers.ts", "services/rating-slip/selects.ts", "services/visit/dtos.ts"],
+    "WS5": ["app/api/v1/rating-slips/[id]/move/route.ts"],
+    "WS6": ["app/api/v1/visits/[visitId]/live-view/route.ts"],
+    "WS7": ["services/rating-slip/__tests__/rating-slip-continuity.test.ts", "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts"]
+  },
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "commit"],
+  "gates_pending": [],
+  "commit_hash": "f20ed91",
+  "migrations_applied": [
+    "20251222002622_prd016_rating_slip_continuity.sql",
+    "20251222002623_prd016_compute_slip_final_seconds.sql",
+    "20251222002624_prd016_rpc_get_visit_live_view.sql",
+    "20251222014553_prd016_rpc_live_view_adr015.sql"
+  ],
+  "timestamp": "2025-12-22T06:15:00Z"
+}

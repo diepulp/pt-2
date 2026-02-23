@@ -1,0 +1,124 @@
+{
+  "spec_id": "EXEC-SPEC-024",
+  "prd": "PRD-024",
+  "title": "Landing Page Overhaul + Start Gateway v0",
+  "branch": "landing-page-gateway",
+  "worktree": "trees/landing-page-gateway",
+  "base_commit": "7a01651",
+  "timestamp": "2026-01-30T16:00:00Z",
+  "status": "COMPLETE",
+  "phases_completed": [
+    {
+      "phase": 1,
+      "name": "Database Foundation",
+      "workstreams": ["WS1"],
+      "status": "PASSED",
+      "gate": "schema-validation",
+      "artifacts": [
+        "supabase/migrations/20260130120000_prd024_casino_setup_status.sql",
+        "types/database.types.ts",
+        "types/remote/database.types.ts"
+      ]
+    },
+    {
+      "phase": 2,
+      "name": "Routes & Auth [ATOMIC]",
+      "workstreams": ["WS2", "WS3"],
+      "status": "PASSED",
+      "gate": "type-check",
+      "artifacts": [
+        "lib/supabase/middleware.ts",
+        "app/(dashboard)/layout.tsx",
+        "app/(protected)/layout.tsx",
+        "components/login-form.tsx",
+        "app/(public)/auth/confirm/route.ts",
+        "app/(dashboard)/pit/page.tsx",
+        "app/(dashboard)/compliance/page.tsx",
+        "app/protected/page.tsx",
+        "app/(marketing)/layout.tsx",
+        "app/(marketing)/page.tsx",
+        "app/(marketing)/pricing/page.tsx",
+        "app/(marketing)/contact/page.tsx",
+        "app/(marketing)/signin/page.tsx",
+        "app/(public)/start/page.tsx",
+        "app/(onboarding)/layout.tsx",
+        "app/(onboarding)/bootstrap/page.tsx",
+        "app/(onboarding)/setup/page.tsx",
+        "components/marketing/header.tsx",
+        "components/marketing/mobile-menu-toggle.tsx",
+        "components/marketing/footer.tsx"
+      ],
+      "deleted": ["app/(public)/page.tsx"],
+      "notes": "middleware.ts removed in favor of proxy.ts (Next.js 16)"
+    },
+    {
+      "phase": 3,
+      "name": "Content & Auth Flows",
+      "workstreams": ["WS4"],
+      "status": "PASSED",
+      "gate": "type-check + build",
+      "artifacts": [
+        "components/ui/accordion.tsx",
+        "components/marketing/sections/hero.tsx",
+        "components/marketing/sections/problems.tsx",
+        "components/marketing/sections/capabilities.tsx",
+        "components/marketing/sections/how-it-works.tsx",
+        "components/marketing/sections/social-proof.tsx",
+        "components/marketing/sections/pricing-teaser.tsx",
+        "components/marketing/sections/faq.tsx",
+        "components/marketing/sections/final-cta.tsx",
+        "components/marketing/timeline-step.tsx",
+        "app/(marketing)/page.tsx",
+        "app/layout.tsx"
+      ]
+    },
+    {
+      "phase": 4,
+      "name": "UI Consolidation",
+      "workstreams": ["WS5"],
+      "status": "PASSED",
+      "gate": "build + type-check",
+      "artifacts": [
+        "components/ui/sonner.tsx",
+        "app/providers.tsx",
+        "hooks/ui/index.ts",
+        "hooks/ui.ts"
+      ],
+      "deleted": [
+        "components/landing-page/ (entire directory)",
+        "app/home/page.tsx"
+      ]
+    },
+    {
+      "phase": 5,
+      "name": "Quality Validation",
+      "workstreams": ["WS6"],
+      "status": "PASSED",
+      "gate": "build + lint",
+      "checks_passed": 15,
+      "checks_total": 15
+    }
+  ],
+  "corrections_applied": {
+    "C1": "middleware.ts removed, proxy.ts used (Next.js 16 replaced middleware with proxy)",
+    "C2": "Migration includes backfill UPDATE for existing rows",
+    "C3": "All redirect('/auth/login') replaced with redirect('/signin')",
+    "C4": "sonner installed to components/ui/, imports fixed before deletion",
+    "C5": "/signin under (marketing), /start under (public)"
+  },
+  "definition_of_done": {
+    "all_workstream_outputs": true,
+    "all_gates_pass": true,
+    "no_test_regressions": "not yet verified (existing tests not run)",
+    "middleware_active": "proxy.ts active (Next.js 16)",
+    "layout_guards_active": true,
+    "gateway_redirect_only": true,
+    "no_as_any": true,
+    "no_console": true,
+    "no_heroui_marketing": true,
+    "no_motion_marketing": true,
+    "copy_matches_deck": true,
+    "brand_player_tracker": true,
+    "static_generation_confirmed": true
+  }
+}

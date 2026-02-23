@@ -1,0 +1,26 @@
+{
+  "prd_id": "ADR-031",
+  "prd_title": "Financial Amount Convention — Cents Storage, Dollars at Service Boundary",
+  "spec_path": "docs/20-architecture/specs/ADR-031/EXECUTION-SPEC-ADR-031.md",
+  "status": "complete",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["type-check", "test-pass", "schema-validation", "lint", "build"],
+  "created_at": "2026-02-02T01:17:51Z",
+  "updated_at": "2026-02-02T04:30:00Z",
+  "artifacts": [
+    "lib/format.ts",
+    "lib/__tests__/format.test.ts",
+    "supabase/migrations/20260202011751_adr031_financial_column_comments.sql",
+    "services/visit/dtos.ts",
+    "services/rating-slip/dtos.ts",
+    "services/player-financial/dtos.ts",
+    "services/player-timeline/dtos.ts",
+    "services/casino/dtos.ts",
+    "components/mtl/mtl-entry-view-modal.tsx",
+    "components/mtl/mtl-entry-form.tsx"
+  ]
+}

@@ -1,9 +1,9 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.14.0
+nsversion: 4.15.0
 status: CANONICAL
-effective: 2026-02-19
+effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
 source_of_truth:
   - database schema (supabase/migrations/)
@@ -26,8 +26,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.14.0 (ADR-035: Client State Lifecycle)
-> **Date**: 2026-02-19
+> **Version**: 4.15.0 (PRD-037: CSV Player Import)
+> **Date**: 2026-02-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -53,6 +53,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.15.0 (2026-02-23)** – **PRD-037 CSV Player Import**: Added PlayerImportService (Onboarding context) with ownership of `import_batch`, `import_row`. New enums: `import_batch_status`, `import_row_status`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_import_create_batch`, `rpc_import_stage_rows`, `rpc_import_execute`. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via execute RPC only. Identifier resolution indexes on `player(lower(email))`, `player(phone_number)`. See `docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md` and ADR-036.
 - **4.14.0 (2026-02-19)** – **ADR-035 Client State Lifecycle**: Added client-side store lifecycle governance to Platform/Frontend context. New section: Client State Lifecycle (session reset contract, store classification, `resetSessionState()` orchestrator). ADR-035 added to `source_of_truth` references. Cross-references ADR-003 Section 8 (Zustand scope) and ADR-030 (server-side auth hardening counterpart). See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
 - **4.13.0 (2026-02-17)** – **PRD-033 Cashier Workflow MVP**: Added confirmation lifecycle columns to `table_fill` (status, confirmed_at, confirmed_by, confirmed_amount_cents, discrepancy_note), `table_credit` (same 5), `table_drop_event` (cage_received_at, cage_received_by). 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_confirm_table_fill`, `rpc_confirm_table_credit`, `rpc_acknowledge_drop_received`. 6 new API routes (3 PATCH confirmations + 3 GET list endpoints with filters). Immutability enforced via RLS: UPDATE restricted to `status='requested'`. `player_financial_transaction.external_ref` added (PlayerFinancialService). Cashier Console UI at `/cashier` with 3 tab screens.
 - **4.12.0 (2026-02-10)** – **GAP-SIGN-OUT ownership registration**: Added `staff_pin_attempts` (planned, MVP) to CasinoService. Follows `audit_log` precedent: cross-cutting operational rate-limit state owned by foundational context. Resolved governance drift where EXECUTION-SPEC used "Auth (cross-cutting)" — not a declared SRM bounded context. No schema changes (table created by GAP-SIGN-OUT WS4 migration).
@@ -114,11 +115,13 @@ Approved JSON blobs (all others require first-class columns):
 | **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon                                                | Reward policy & assignment                                  |
 | **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
+| **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
 > ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
 > ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).
+> ⁵ PlayerImportService owns staging tables only. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via `rpc_import_execute` SECURITY DEFINER RPC. See ADR-036.
 
 ---
 
@@ -700,6 +703,66 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
 ---
 
+## PlayerImportService (Onboarding Context)
+
+**Owns**: `import_batch`, `import_row`
+
+**Bounded Context**: "What vendor CSV data has been staged for import, and what was the outcome of the merge?"
+
+### Schema Invariants
+
+| Table          | Column                | Constraint          | Notes                                         |
+| -------------- | --------------------- | ------------------- | --------------------------------------------- |
+| `import_batch` | `casino_id`           | NOT NULL, FK        | Casino scoping                                |
+| `import_batch` | `created_by_staff_id` | NOT NULL, FK        | Actor attribution                             |
+| `import_batch` | `idempotency_key`     | NOT NULL            | Idempotency control                           |
+| `import_batch` | —                     | UNIQUE              | (`casino_id`, `idempotency_key`)              |
+| `import_batch` | `status`              | NOT NULL, enum      | `import_batch_status`                         |
+| `import_batch` | `column_mapping`      | jsonb, NOT NULL     | Vendor-to-canonical column mapping            |
+| `import_batch` | `report_summary`      | jsonb, NULLABLE     | Populated after execute                       |
+| `import_row`   | `batch_id`            | NOT NULL, FK CASCADE| Parent batch reference                        |
+| `import_row`   | `casino_id`           | NOT NULL, FK        | Casino scoping                                |
+| `import_row`   | —                     | UNIQUE              | (`batch_id`, `row_number`)                    |
+| `import_row`   | `status`              | NOT NULL, enum      | `import_row_status`                           |
+| `import_row`   | `matched_player_id`   | NULLABLE, FK        | Set for created/linked rows                   |
+
+### RPCs (SECURITY DEFINER, ADR-024)
+
+| RPC | Role Gate | Description |
+| --- | --------- | ----------- |
+| `rpc_import_create_batch` | admin, pit_boss | Create batch or return existing on idempotency match |
+| `rpc_import_stage_rows` | admin, pit_boss | Stage rows with FOR UPDATE lock, 10k cap, ON CONFLICT DO NOTHING |
+| `rpc_import_execute` | admin, pit_boss | Execute merge: create/link/conflict with two-phase error pattern |
+
+### Cross-Context Writes
+
+`rpc_import_execute` performs schema-qualified writes to:
+- `public.player` (PlayerService) — INSERT new player records
+- `public.player_casino` (CasinoService) — INSERT enrollment records
+
+These are the only cross-context writes, performed within a SECURITY DEFINER RPC with full context derivation.
+
+### Contracts
+
+- **Idempotency**: Batch creation idempotent via `(casino_id, idempotency_key)` UNIQUE
+- **Staging immutability**: Staged rows are immutable; to correct, create a new batch
+- **Execute idempotency**: Re-executing a completed/failed batch returns existing state
+- **Batch row limit**: Server-enforced 10,000 row maximum per batch
+- **Statement timeout**: Execute RPC bounded at 120s
+
+### Cross-Context Consumption
+
+| Consumer             | Consumes Via                                                |
+| -------------------- | ----------------------------------------------------------- |
+| PlayerImportService  | `player` (PlayerService) — identifier resolution reads      |
+| PlayerImportService  | `player_casino` (CasinoService) — enrollment lookup + write |
+
+**Full Schema**: `supabase/migrations/20260223021214_prd037_csv_player_import_schema.sql`
+**RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#playerimportservice`
+**ADR**: `docs/00-vision/csv-import/ADR-036-csv-player-import-strategy.PATCH-DELTA.md`
+
+---
+
 ## Client State Lifecycle (Platform / Frontend — ADR-035)
 
 **Bounded Context**: "What client-side state persists across auth transitions, and how is it governed?"
@@ -752,6 +815,9 @@ create type floor_layout_version_status as enum ('draft','pending_activation','a
 create type financial_direction as enum ('in','out');
 create type financial_source as enum ('pit','cage','system');
 create type tender_type as enum ('cash','chips','marker');
+-- PlayerImportService enums (PRD-037)
+create type import_batch_status as enum ('staging','executing','completed','failed');
+create type import_row_status as enum ('staged','created','linked','skipped','conflict','error');
 ```
 
 **Change policy**: Additive values only; removals require deprecation plus data rewrite.
@@ -770,6 +836,8 @@ create type tender_type as enum ('cash','chips','marker');
 | MTLService          | FinanceService     | Reconciliation via triggers                                  |
 | TableContextService | RatingSlipService  | Published query/DTO `hasOpenSlipsForTable` (open-slip guard) |
 | TableContextService | FloorLayoutService | `floor_layout.activated` events                              |
+| PlayerImportService | PlayerService      | `player` reads for identifier resolution, INSERTs via SECURITY DEFINER RPC |
+| PlayerImportService | CasinoService      | `player_casino` reads for enrollment lookup, INSERTs via SECURITY DEFINER RPC |
 
 **Rule**: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs—never by reaching into another service's tables directly.
 
@@ -816,8 +884,8 @@ create type tender_type as enum ('cash','chips','marker');
 
 ---
 
-**Document Version**: 4.14.0
+**Document Version**: 4.15.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-02-19 (ADR-035: Client State Lifecycle)
+**Updated**: 2026-02-23 (PRD-037: CSV Player Import — PlayerImportService)
 **Status**: CANONICAL - Registry + Invariants Only

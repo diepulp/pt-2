@@ -1,0 +1,80 @@
+{
+  "prd": "AUTH-HARDENING-v0.1",
+  "prd_title": "Auth/RLS Reliability Hardening (Multi-Tenant SaaS Baseline)",
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": {
+      "migration": "supabase/migrations/20260129211000_auth_hardening_rpc_return_context.sql",
+      "description": "RPC Return Type Migration: set_rls_context_from_staff() now RETURNS TABLE (actor_id, casino_id, staff_role). Migration applied to local DB, types regenerated.",
+      "gate": "schema-validation PASSED"
+    },
+    "WS2": {
+      "files_modified": [
+        "lib/supabase/rls-context.ts",
+        "lib/server-actions/middleware/rls.ts",
+        "lib/server-actions/with-server-action-wrapper.ts"
+      ],
+      "description": "Middleware Single-Source-of-Truth: injectRLSContext() now returns RLSContext from RPC response. withRLS overwrites ctx.rlsContext with RPC-derived context. Deprecated _context param removed. Structured logging added. Legacy wrapper updated.",
+      "gate": "type-check PASSED"
+    },
+    "WS3": {
+      "files_modified": [
+        "lib/supabase/auth-admin.ts",
+        "lib/supabase/claims-reconcile.ts",
+        "services/casino/dtos.ts",
+        "services/casino/crud.ts"
+      ],
+      "files_created": [
+        "lib/supabase/claims-reconcile.ts",
+        "lib/supabase/__tests__/claims-lifecycle.test.ts",
+        "lib/server-actions/middleware/__tests__/auth-chain-entrypoints.test.ts"
+      ],
+      "description": "Claims Lifecycle Hardening: Silent try/catch removed from createStaff/updateStaff. reconcileStaffClaims() helper handles sync/clear logic. UpdateStaffDTO extended with status/user_id. Structured logging in auth-admin.ts. claims-lifecycle tests (8/8 pass). Auth-chain entrypoints regression test (92/92 pass, 7 legacy routes allowlisted for v0.2).",
+      "gate": "type-check PASSED, test-pass PASSED"
+    },
+    "WS4": {
+      "files_modified": [
+        "lib/supabase/dev-context.ts",
+        "lib/supabase/service.ts",
+        "lib/server-actions/middleware/compositor.ts",
+        "lib/server-actions/middleware/auth.ts",
+        ".env.example"
+      ],
+      "files_created": [
+        "lib/supabase/__tests__/bypass-lockdown.test.ts"
+      ],
+      "description": "Bypass Lockdown: isDevAuthBypassEnabled() now requires ENABLE_DEV_AUTH=true (explicit opt-in). assertDevAuthBypassAllowed() throws outside dev mode. shouldUseDevServiceClient() dual-gated. skipAuth emits [AUTH BYPASS] structured log. CI guard test scans for skipAuth in production files. .env.example updated. 8/8 tests pass.",
+      "gate": "type-check PASSED, lint PASSED (WS4 files), test-pass PASSED"
+    },
+    "WS5": {
+      "migration": "supabase/migrations/20260129211100_auth_hardening_write_rls_tightening.sql",
+      "description": "Write RLS Policy Tightening: Removed JWT COALESCE fallback from all INSERT/UPDATE/DELETE policies across 10 tables. Writes now require session vars (app.casino_id, app.actor_id) set by set_rls_context_from_staff(). All role gates preserved. Denial policies unchanged. player_financial_transaction INSERT now includes casino_id check (was missing). Staff policies tightened to admin-only per EXEC-SPEC.",
+      "gate": "schema-validation PENDING (migration not applied to local DB — requires supabase db reset)"
+    },
+    "WS6": {
+      "files_modified": [
+        "lib/supabase/rls-context.ts",
+        "lib/correlation.ts",
+        "lib/server-actions/middleware/compositor.ts"
+      ],
+      "description": "JWT Fallback Observability: markRpcContextInjected() flag set after successful RPC call. assertRpcContextInjected() canary detects missing RPC context before DB queries. Bypass-mode [AUTH BYPASS] log in compositor. RPC failure is fatal (no fallback). All existing [AUTH BYPASS] logs in auth middleware cover dev-bypass path.",
+      "gate": "type-check PASSED"
+    }
+  },
+  "gates_passed": ["type-check", "test-pass"],
+  "gates_pending": ["schema-validation (WS5 migration requires DB reset)"],
+  "notes": [
+    "Working directory: /home/diepulp/projects/pt-2/trees/auth-hardening (git worktree, branch: auth-hardening)",
+    "WS1-WS3 completed in prior session",
+    "WS4 bypass lockdown: 8/8 tests pass. ENABLE_DEV_AUTH=true required for dev bypass",
+    "WS5 migration written but NOT applied to local DB (requires supabase db reset to apply both WS1+WS5 migrations)",
+    "WS6 canary uses AsyncLocalStorage correlation context. markRpcContextInjected + assertRpcContextInjected added",
+    "Pre-existing test failures in integration tests (chk_policy_snapshot_if_loyalty constraint) are NOT related to auth-hardening",
+    "All auth-hardening tests pass: 108/108 (bypass-lockdown 8, claims-lifecycle 8, auth-chain-entrypoints 92)"
+  ],
+  "timestamp": "2026-01-30T04:00:00Z"
+}

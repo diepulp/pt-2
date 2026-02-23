@@ -1,0 +1,84 @@
+{
+  "prd_id": "PERF-002",
+  "prd_title": "Pit Dashboard Data Flow Optimization",
+  "status": "completed",
+  "created_at": "2026-01-26T18:00:00Z",
+  "updated_at": "2026-01-26T20:15:00Z",
+  "execution_spec_path": "docs/20-architecture/specs/PERF-002/EXECUTION-SPEC-PERF-002.md",
+  "current_phase": 5,
+  "current_phase_name": "Phase 5 - Tests & Validation",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "artifacts_created": [
+    "supabase/migrations/20260126163939_perf002_dashboard_stats_rpc.sql",
+    "services/rating-slip/selects.ts (RATING_SLIP_WITH_PLAYER_SELECT)",
+    "services/rating-slip/dtos.ts (RatingSlipWithPlayerDTO)",
+    "services/rating-slip/mappers.ts (toRatingSlipWithPlayerDTO, toRatingSlipWithPlayerDTOList)",
+    "services/rating-slip/crud.ts (listActiveForTableWithPlayer)",
+    "hooks/dashboard/use-dashboard-stats.ts (refactored to use rpc_get_dashboard_stats RPC)",
+    "hooks/dashboard/use-dashboard-slips.ts (refactored to use listActiveForTableWithPlayer)",
+    "components/dashboard/seat-context-menu.tsx (added mapSlipsWithPlayerToOccupants)",
+    "components/dashboard/pit-dashboard-client.tsx (removed useCasinoActivePlayers, uses mapSlipsWithPlayerToOccupants)",
+    "components/dashboard/active-slips-panel.tsx (updated to RatingSlipWithPlayerDTO)",
+    "components/pit-panels/panel-container.tsx (updated to RatingSlipWithPlayerDTO)",
+    "components/pit-panels/tables-panel.tsx (updated to RatingSlipWithPlayerDTO)",
+    "components/pit-panels/pit-panels-static.tsx (updated mock data to RatingSlipWithPlayerDTO)",
+    "components/pit-panels/pit-panels-client.tsx (uses mapSlipsWithPlayerToOccupants)",
+    "services/rating-slip/__tests__/mappers.test.ts (added toRatingSlipWithPlayerDTO tests)"
+  ],
+  "execution_context": {
+    "optimization_summary": {
+      "before": "11+ HTTP requests on dashboard load",
+      "after": "~5 requests (4 stats calls → 1 RPC, player fetch eliminated)",
+      "key_changes": [
+        "rpc_get_dashboard_stats: Single RPC returns activeTablesCount, openSlipsCount, checkedInPlayersCount",
+        "RatingSlipWithPlayerDTO: Embeds player firstName/lastName (no tier - comes from player_loyalty table)",
+        "listActiveForTableWithPlayer: CRUD function with visit→player join",
+        "useCasinoActivePlayers removed: Player names now embedded in slip data"
+      ]
+    },
+    "type_changes": {
+      "RatingSlipDTO": "Still exists, unchanged",
+      "RatingSlipWithPlayerDTO": "New - has player: { id, firstName, lastName } | null instead of game_settings, policy_snapshot, etc.",
+      "useActiveSlipsForDashboard": "Now returns RatingSlipWithPlayerDTO[] instead of RatingSlipDTO[]"
+    },
+    "notes": [
+      "Migration uses ADR-024 pattern: set_rls_context_from_staff() for casino derivation",
+      "RPC not in database.types.ts yet - uses (supabase.rpc as any) pattern",
+      "tier field excluded from RatingSlipWithPlayerDTO (requires player_loyalty join)"
+    ],
+    "validation_results": {
+      "unit_tests": {
+        "toRatingSlipWithPlayerDTO": "11 tests added and passing",
+        "coverage": "Maps slip with player, handles ghost visits, preserves order, handles mixed player/ghost"
+      },
+      "performance_targets": {
+        "rpc_get_dashboard_stats": "Target p95 < 80ms (Fast tier) - RPC uses index scans",
+        "listActiveForTableWithPlayer": "Target p95 < 150ms (Standard tier)",
+        "dashboard_page_load": "Target p95 < 800ms (down from ~1800ms baseline)"
+      },
+      "explain_analyze_queries": [
+        "SELECT COUNT(*) FROM gaming_table WHERE casino_id = $1 AND status = 'active' -- Expected: Index Scan, <5ms",
+        "SELECT COUNT(*) FROM rating_slip WHERE casino_id = $1 AND status IN ('open', 'paused') -- Expected: Bitmap Index Scan, <10ms",
+        "SELECT COUNT(DISTINCT player_id) FROM visit WHERE casino_id = $1 AND ended_at IS NULL AND player_id IS NOT NULL -- Expected: Index Scan, <20ms"
+      ]
+    }
+  },
+  "definition_of_done": {
+    "completed": [
+      "All workstreams complete (WS1-WS8)",
+      "All gates pass (schema-validation, type-check, lint, test-pass, build)",
+      "Unit tests for toRatingSlipWithPlayerDTO mapper (11 tests)",
+      "Player names embedded in slip data (no separate fetch)"
+    ],
+    "verification_needed": [
+      "Network tab shows ≤5 requests on dashboard load (down from 11)",
+      "Player names display correctly in seat occupants (not 'Player #3' placeholders)",
+      "EXPLAIN ANALYZE confirms index usage in production"
+    ]
+  },
+  "resume_instructions": "Pipeline COMPLETE. All phases and workstreams finished.\n\nTo verify in production:\n1. Deploy migration to Supabase\n2. Run npm run db:types to update database.types.ts\n3. Verify network tab shows ~5 requests (was 11+)\n4. Run EXPLAIN ANALYZE queries to validate index usage",
+  "error": null
+}

@@ -1,0 +1,62 @@
+{
+  "prd": "PRD-MTL-UI-GAPS",
+  "prd_title": "MTL UI Implementation Gap Closure",
+  "status": "complete",
+  "created_at": "2026-01-16T00:00:00.000Z",
+  "updated_at": "2026-01-16T15:30:00.000Z",
+  "execution_spec_path": "docs/20-architecture/specs/PRD-MTL-UI-GAPS/EXECUTION-SPEC-PRD-MTL-UI-GAPS.md",
+  "source_document": "docs/00-vision/mtl-service-evolution/MTL_UI_IMPLEMENTATION_GAP_ANALYSIS.md",
+  "current_phase": 5,
+  "total_phases": 5,
+  "workstreams": {
+    "WS1": { "status": "completed", "name": "Finance→MTL Derivation Trigger", "executor": "backend-service-builder" },
+    "WS2": { "status": "completed", "name": "useThresholdNotifications Hook", "executor": "frontend-design-pt-2" },
+    "WS3": { "status": "completed", "name": "usePatronDailyTotal Hook", "executor": "frontend-design-pt-2" },
+    "WS4": { "status": "completed", "name": "BuyInThresholdIndicator Component", "executor": "frontend-design-pt-2" },
+    "WS5": { "status": "completed", "name": "CtrBanner Component", "executor": "frontend-design-pt-2" },
+    "WS6": { "status": "completed", "name": "MtlEntryForm Component (React 19)", "executor": "frontend-design-pt-2" },
+    "WS7": { "status": "completed", "name": "Rating Slip Modal Integration", "executor": "frontend-design-pt-2" },
+    "WS8": { "status": "completed", "name": "Compliance Dashboard Integration", "executor": "frontend-design-pt-2" },
+    "WS9": { "status": "completed", "name": "Unit Tests", "executor": "frontend-design-pt-2" },
+    "WS10": { "status": "completed", "name": "E2E Tests", "executor": "e2e-testing" }
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10"],
+  "pending_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "test-pass", "build"],
+  "artifacts": [
+    "supabase/migrations/20260116111329_finance_to_mtl_derivation.sql",
+    "hooks/mtl/use-threshold-notifications.ts",
+    "hooks/mtl/use-patron-daily-total.ts",
+    "components/mtl/ctr-banner.tsx",
+    "components/mtl/mtl-txn-type-codes.ts",
+    "components/mtl/mtl-entry-form.tsx",
+    "components/rating-slip/buy-in-threshold-indicator.tsx",
+    "components/mtl/compliance-dashboard.tsx (updated)",
+    "hooks/rating-slip-modal/use-save-with-buyin.ts (updated)",
+    "components/modals/rating-slip/form-section-cash-in.tsx (updated)",
+    "components/modals/rating-slip/rating-slip-modal.tsx (updated)",
+    "__tests__/hooks/mtl/use-threshold-notifications.test.ts",
+    "__tests__/hooks/mtl/use-patron-daily-total.test.ts",
+    "__tests__/components/mtl/mtl-txn-type-codes.test.ts",
+    "e2e/fixtures/mtl-fixtures.ts",
+    "e2e/mtl-threshold-notifications.spec.ts"
+  ],
+  "notes": [
+    "WS6 updated to replicate official Affinity Gaming MTL paper form (MTL-FORM.png)",
+    "WS6 uses React 19 form patterns: useActionState, useFormStatus",
+    "Transaction type codes 1-12 from official form legend",
+    "Executor name updated from frontend-design:frontend-design-pt-2 to frontend-design-pt-2",
+    "Phase 1 completed: WS1 (database trigger) and WS2 (threshold hook) implemented",
+    "Phase 2 completed: WS3 (daily total hook), WS5 (CTR banner), WS6 (entry form) implemented",
+    "Phase 3 completed: WS4 (BuyInThresholdIndicator) and WS8 (Compliance Dashboard New Entry button) implemented",
+    "Phase 4 completed: WS7 (Rating Slip Modal) - integrated threshold notifications, BuyInThresholdIndicator, CTR banner, and auto-MTL creation",
+    "Phase 5 completed: WS9 (Unit Tests) and WS10 (E2E Tests) - all tests pass, build gate verified"
+  ],
+  "execution_phases": [
+    { "phase": 1, "name": "Foundation", "workstreams": ["WS1", "WS2"], "status": "completed" },
+    { "phase": 2, "name": "Core Hooks & Components", "workstreams": ["WS3", "WS5", "WS6"], "status": "completed" },
+    { "phase": 3, "name": "Dependent Components", "workstreams": ["WS4", "WS8"], "status": "completed" },
+    { "phase": 4, "name": "Integration", "workstreams": ["WS7"], "status": "completed" },
+    { "phase": 5, "name": "Testing", "workstreams": ["WS9", "WS10"], "status": "completed" }
+  ]
+}

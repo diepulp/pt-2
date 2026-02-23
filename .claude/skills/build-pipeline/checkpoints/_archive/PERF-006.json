@@ -1,0 +1,117 @@
+{
+  "prd_id": "PERF-006",
+  "prd_title": "Player 360 Render Cascade — Comprehensive Performance, QA & Accessibility Audit",
+  "spec_path": "docs/20-architecture/specs/PERF-006/EXECUTION-SPEC-PERF-006.md",
+  "source_doc": "docs/issues/perf/PERF-006-PLAYER-360-RENDER-CASCADE-COMPREHENSIVE-AUDIT.md",
+  "status": "complete",
+  "created_at": "2026-02-02T00:00:00Z",
+  "approved_at": "2026-02-02T00:00:00Z",
+  "completed_at": "2026-02-02T00:00:00Z",
+  "current_phase": 5,
+  "total_phases": 5,
+  "workstreams": {
+    "WS1": {
+      "name": "Quick Wins — Performance & Accessibility",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 1
+    },
+    "WS2": {
+      "name": "Error Boundaries & Route Resilience",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 1
+    },
+    "WS3": {
+      "name": "State Isolation & Input Validation",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 2
+    },
+    "WS4": {
+      "name": "Component Architecture Refactor",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 3
+    },
+    "WS5": {
+      "name": "Data Flow & Bundle Optimization",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 4
+    },
+    "WS6": {
+      "name": "ARIA Combobox & Advanced Accessibility",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 2
+    },
+    "WS7": {
+      "name": "Integration & E2E Tests",
+      "executor": "frontend-design-pt-2",
+      "status": "complete",
+      "phase": 5
+    }
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "execution_phases": [
+    {
+      "name": "Phase 1 — Quick Wins + Error Boundaries",
+      "parallel": ["WS1", "WS2"],
+      "gates": ["type-check", "lint"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 2 — State Isolation + ARIA Combobox",
+      "parallel": ["WS3", "WS6"],
+      "gates": ["type-check"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 3 — Component Architecture Refactor",
+      "parallel": ["WS4"],
+      "gates": ["type-check", "lint"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 4 — Data Flow & Bundle",
+      "parallel": ["WS5"],
+      "gates": ["type-check"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 5 — Testing",
+      "parallel": ["WS7"],
+      "gates": ["test-pass", "build"],
+      "status": "complete"
+    }
+  ],
+  "artifacts": {
+    "execution_spec": "docs/20-architecture/specs/PERF-006/EXECUTION-SPEC-PERF-006.md",
+    "adr": "docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md",
+    "source_audit": "docs/issues/perf/PERF-006-PLAYER-360-RENDER-CASCADE-COMPREHENSIVE-AUDIT.md"
+  },
+  "gate_results": {
+    "phase_1": {
+      "type-check": "pass",
+      "lint": "pass (warnings only, no new errors)"
+    },
+    "phase_2": {
+      "type-check": "pass",
+      "lint": "pass (no new errors in modified files)"
+    },
+    "phase_3": {
+      "type-check": "pass",
+      "lint": "pass (0 errors, 0 warnings in modified files)"
+    },
+    "phase_4": {
+      "type-check": "pass",
+      "lint": "pass (0 errors, 0 warnings in modified files)"
+    },
+    "phase_5": {
+      "test-pass": "pass (41 tests, 3 suites, 0 failures)",
+      "build": "pass (exit 0)"
+    }
+  },
+  "notes": "Frontend-only audit. No database migrations, RLS, or RPC changes. ADR-032 created for error boundary architecture (extends ADR-012). Phase 1 complete: WS1 (10 quick wins) + WS2 (error.tsx + PanelErrorBoundary). Phase 2 complete: WS3 (filter reset on playerId change + UUID validation in page.tsx) + WS6 (ARIA combobox pattern on both search dropdowns, aria-live regions, nested main fix, hydration fix for isMac detection, touch target sizing). Phase 3 complete: WS4 — lifted usePlayer() to ContentWrapper (eliminated duplicate subscription in header), split TimelinePageContent from 473 LOC/9 hooks to thin orchestrator (166 LOC/2 hooks) with 5 isolated panel wrappers (SummaryPanel, ChartPanel, TimelinePanel, FilterPanel, CompliancePanelWrapper), applied React.memo to 5 leaf components (GroupedTimeline, ActivityChart, SummaryBand, FilterTileStack, CompliancePanel). Phase 4 complete: WS5 — gamingDay computed server-side in page.tsx RSC (eliminated useGamingDay client waterfall), useAuth refactored to TanStack Query internals (dedup/caching across consumers), granular Zustand selectors in ChartPanel (timeLens only), TimelinePanel (activeCategory + setCategory), FilterPanel (activeCategory + setCategory), ActivityChart lazy-loaded via next/dynamic with ssr:false (Recharts removed from initial bundle). Phase 5 complete: WS7 — 3 new unit test files (41 tests): error-boundary.test.tsx (21 tests — PanelErrorBoundary isolation, retry, a11y + Player360Error route boundary), player-360-content-wrapper.test.tsx (9 tests — composition, filter reset on playerId change, recent tracking, navigation), timeline-content.test.tsx (11 tests — 3-panel layout, tab switching, prop forwarding, component isolation). Fixed tautological E2E assertions in player-360-navigation.spec.ts and player-360-panels.spec.ts — eliminated all if(visible){expect(visible)} patterns, replaced with test.skip when auth unavailable so tests never pass vacuously."
+}

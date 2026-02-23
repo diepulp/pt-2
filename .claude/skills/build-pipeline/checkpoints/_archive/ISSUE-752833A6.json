@@ -1,0 +1,39 @@
+{
+  "prd": "ISSUE-752833A6",
+  "prd_title": "Policy Snapshot Remediation",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "execution_spec": "docs/20-architecture/specs/ISSUE-752833A6/EXECUTION-SPEC-752833A6.md",
+    "WS1": [
+      "supabase/migrations/20251227170749_fix_policy_snapshot_population.sql",
+      "supabase/migrations/20251227170840_harden_accrual_json_casting.sql"
+    ],
+    "WS2": [
+      "supabase/migrations/20251227171805_add_accrual_kind_column.sql"
+    ],
+    "WS3": [
+      "services/rating-slip/__tests__/policy-snapshot.integration.test.ts",
+      "supabase/migrations/20251228020000_repair_rpc_self_injection.sql",
+      "supabase/migrations/20251228020001_fix_accrue_player_lookup.sql"
+    ],
+    "WS4": ["build validation passed"]
+  },
+  "gates_passed": ["spec_approved", "schema-validation-ws1", "schema-validation-ws2", "test-pass", "build"],
+  "gates_pending": [],
+  "review_notes": [
+    "CHECK constraint fixed: added IS NOT NULL guard",
+    "JSON casting hygiene: NULLIF + COALESCE pattern for read path",
+    "Join path verified: gaming_table.type -> game_settings.game_type",
+    "Backfill step added: existing NULL rows -> compliance_only before CHECK",
+    "compliance_only test cases added to WS3",
+    "WS3 updated to use e2e-testing skill",
+    "All RPCs have ADR-015 Phase 1A self-injection",
+    "Self-injection restored in rpc_start_rating_slip (repair migration)",
+    "Fixed rpc_accrue_on_close player_id lookup via visit table join"
+  ],
+  "timestamp": "2025-12-28T02:35:00Z"
+}

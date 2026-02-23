@@ -1,0 +1,57 @@
+{
+  "prd_id": "GAP-TBL-RUNDOWN",
+  "prd_title": "Gap Analysis: Table Rundown → Shift Dashboards Data Pipeline Bridge",
+  "service": "TableContext",
+  "source_doc": "docs/00-vision/table-context-read-model/GAP_ANALYSIS_TABLE_RUNDOWN_INTEGRATION_REWRITE_v0.4.0.md",
+  "execution_spec": "docs/20-architecture/specs/GAP-TBL-RUNDOWN/EXECUTION-SPEC-GAP-TBL-RUNDOWN_PATCHED_v0.2.0.md",
+  "status": "complete",
+  "current_phase": 4,
+  "total_phases": 4,
+  "phases": [
+    {
+      "name": "Phase 1 - Schema Extension",
+      "workstreams": ["WS1"],
+      "status": "complete",
+      "gates": ["schema-validation"]
+    },
+    {
+      "name": "Phase 2 - Functions",
+      "workstreams": ["WS2", "WS4"],
+      "status": "complete",
+      "gates": ["schema-validation"]
+    },
+    {
+      "name": "Phase 3 - Trigger",
+      "workstreams": ["WS3"],
+      "status": "complete",
+      "gates": ["schema-validation"]
+    },
+    {
+      "name": "Phase 4 - Tests",
+      "workstreams": ["WS5"],
+      "status": "complete",
+      "gates": ["type-check"]
+    }
+  ],
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "artifacts": {
+    "migrations": [
+      "supabase/migrations/20260115000100_table_buyin_telemetry_source_column.sql",
+      "supabase/migrations/20260115000200_fn_bridge_finance_to_telemetry.sql",
+      "supabase/migrations/20260115000201_rpc_log_table_buyin_telemetry_source.sql",
+      "supabase/migrations/20260115000300_trg_bridge_finance_to_telemetry.sql"
+    ],
+    "tests": [
+      "__tests__/services/table-context/finance-telemetry-bridge.int.test.ts"
+    ],
+    "specs": [
+      "docs/20-architecture/specs/GAP-TBL-RUNDOWN/EXECUTION-SPEC-GAP-TBL-RUNDOWN.md",
+      "docs/20-architecture/specs/GAP-TBL-RUNDOWN/EXECUTION-SPEC-GAP-TBL-RUNDOWN_PATCHED_v0.2.0.md"
+    ]
+  },
+  "created_at": "2026-01-15T00:00:00.000Z",
+  "updated_at": "2026-01-15T12:00:00.000Z",
+  "completed_at": "2026-01-15T12:00:00.000Z"
+}

@@ -1,0 +1,26 @@
+{
+  "spec_id": "EXEC-SPEC-ADR-027",
+  "prd": "ADR-027",
+  "prd_title": "Table Bank Mode (Visibility Slice, MVP)",
+  "status": "complete",
+  "created_at": "2026-01-17T00:00:00Z",
+  "updated_at": "2026-01-17T16:30:00Z",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "pending_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "test-pass", "build"],
+  "artifacts": {
+    "execution_spec": "docs/20-architecture/specs/ADR-027/EXECUTION-SPEC-ADR-027.md",
+    "WS1": "supabase/migrations/20260117153430_adr027_table_bank_mode_schema.sql",
+    "WS2": "supabase/migrations/20260117153726_adr027_rpc_session_mode_binding.sql",
+    "WS3": "supabase/migrations/20260117153727_adr027_rpc_rundown.sql",
+    "WS4_dtos": "services/table-context/dtos.ts",
+    "WS4_mappers": "services/table-context/mappers.ts",
+    "WS4_labels": "services/table-context/labels.ts",
+    "WS4_rundown": "services/table-context/rundown.ts",
+    "WS5_hooks": "hooks/table-context/use-table-rundown.ts",
+    "WS6_panel": "components/table/rundown-summary-panel.tsx",
+    "WS7_tests": "services/table-context/__tests__/rundown.test.ts"
+  },
+  "error": null
+}

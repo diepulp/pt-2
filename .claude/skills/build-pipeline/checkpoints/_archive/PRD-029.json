@@ -1,0 +1,39 @@
+{
+  "prd_id": "PRD-029",
+  "prd_title": "Game Settings Schema Evolution — Wizard Template Support",
+  "spec_path": "docs/20-architecture/specs/PRD-029/EXECUTION-SPEC-PRD-029.md",
+  "status": "complete",
+  "created_at": "2026-02-10T08:11:19Z",
+  "updated_at": "2026-02-10T12:00:00Z",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "in_progress_workstreams_written": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "gates_pending": [],
+  "patches_applied": ["PATCH-DELTA-v0.1.1 (A-F)"],
+  "completion_summary": {
+    "files_created": [
+      "supabase/migrations/20260210081119_prd029_game_settings_schema_evolution.sql",
+      "supabase/migrations/20260210081120_prd029_rpc_seed_game_settings_defaults.sql",
+      "services/casino/game-settings-dtos.ts",
+      "services/casino/game-settings-side-bet-dtos.ts",
+      "services/casino/game-settings-schemas.ts",
+      "services/casino/game-settings-mappers.ts",
+      "services/casino/game-settings-crud.ts",
+      "services/casino/__tests__/game-settings.test.ts"
+    ],
+    "files_modified": [
+      "types/database.types.ts",
+      "types/remote/database.types.ts",
+      "app/review/pit-map/components/table-card.tsx",
+      "app/review/pit-map/components/table-grid.tsx",
+      "components/table/pit-map-selector.tsx",
+      "e2e/fixtures/rating-slip-fixtures.ts"
+    ],
+    "tests": "68 tests passing (mappers + Zod schema validation)",
+    "enum_expansion_fixes": "pai_gow and carnival added to 3 UI Record<GameType> maps + e2e fixture updated with code column"
+  }
+}

@@ -321,6 +321,30 @@ export const FLOOR_LAYOUT_ERROR_MESSAGES: Record<FloorLayoutErrorCode, string> =
   };
 
 // ============================================================================
+// IMPORT DOMAIN ERRORS (PRD-037)
+// ============================================================================
+
+export type ImportErrorCode =
+  | 'IMPORT_BATCH_NOT_FOUND'
+  | 'IMPORT_BATCH_NOT_STAGING'
+  | 'IMPORT_BATCH_ALREADY_EXECUTING'
+  | 'IMPORT_ROW_NO_IDENTIFIER'
+  | 'IMPORT_ROW_VALIDATION_FAILED'
+  | 'IMPORT_IDEMPOTENCY_CONFLICT'
+  | 'IMPORT_SIZE_LIMIT_EXCEEDED';
+
+export const IMPORT_ERROR_MESSAGES: Record<ImportErrorCode, string> = {
+  IMPORT_BATCH_NOT_FOUND: 'Import batch not found or not visible',
+  IMPORT_BATCH_NOT_STAGING: 'Import batch is not in staging status',
+  IMPORT_BATCH_ALREADY_EXECUTING: 'Import batch is currently executing',
+  IMPORT_ROW_NO_IDENTIFIER: 'Row is missing both email and phone identifiers',
+  IMPORT_ROW_VALIDATION_FAILED: 'Row failed schema validation',
+  IMPORT_IDEMPOTENCY_CONFLICT:
+    'Idempotency key already used for a different batch',
+  IMPORT_SIZE_LIMIT_EXCEEDED: 'File or row count exceeds import limits',
+};
+
+// ============================================================================
 // COMBINED DOMAIN ERROR TYPE
 // ============================================================================
 
@@ -334,7 +358,8 @@ export type DomainErrorCode =
   | TableContextErrorCode
   | PlayerErrorCode
   | CasinoErrorCode
-  | FloorLayoutErrorCode;
+  | FloorLayoutErrorCode
+  | ImportErrorCode;
 
 // ============================================================================
 // DOMAIN ERROR CLASS
@@ -375,6 +400,7 @@ export class DomainError extends Error {
       PLAYER_ERROR_MESSAGES,
       CASINO_ERROR_MESSAGES,
       FLOOR_LAYOUT_ERROR_MESSAGES,
+      IMPORT_ERROR_MESSAGES,
     ];
 
     for (const map of messageMaps) {
@@ -415,11 +441,19 @@ export class DomainError extends Error {
     // 409 - Conflict
     if (
       code === 'UNIQUE_VIOLATION' ||
+      code === 'IDEMPOTENCY_CONFLICT' ||
       code.includes('ALREADY') ||
       code.includes('DUPLICATE') ||
-      code.includes('CONCURRENT')
+      code.includes('CONCURRENT') ||
+      code.includes('NOT_STAGING') ||
+      code.includes('IDEMPOTENCY_CONFLICT')
     ) {
       return 409;
+    }
+
+    // 413 - Payload too large
+    if (code.includes('SIZE_LIMIT')) {
+      return 413;
     }
 
     // 422 - Unprocessable entity (business logic violations)
@@ -427,7 +461,9 @@ export class DomainError extends Error {
       code.includes('INSUFFICIENT') ||
       code.includes('EXCEEDED') ||
       code.includes('VIOLATION') ||
-      code.includes('REJECTED')
+      code.includes('REJECTED') ||
+      code.includes('NO_IDENTIFIER') ||
+      code.includes('VALIDATION_FAILED')
     ) {
       return 422;
     }

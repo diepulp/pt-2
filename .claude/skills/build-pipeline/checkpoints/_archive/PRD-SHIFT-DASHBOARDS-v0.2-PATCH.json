@@ -1,0 +1,140 @@
+{
+  "prd": "SHIFT-DASHBOARDS-CASH-OBS",
+  "prd_title": "Shift Dashboards v0.2 PATCH - Cash Observations Telemetry",
+  "prd_source": "docs/10-prd/PRD-Shift-Dashboards-Shift-Reports-v0.2_PATCH_cash-observations.md",
+  "spec_location": "docs/20-architecture/specs/PRD-SHIFT-DASHBOARDS-v0.2-PATCH/EXECUTION-SPEC.md",
+  "current_phase": 4,
+  "status": "complete",
+
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+
+  "workstream_summary": {
+    "WS1": {
+      "name": "Rollup RPCs",
+      "executor": "backend-service-builder",
+      "type": "database",
+      "outputs": ["supabase/migrations/20260107015907_shift_cash_obs_rollup_rpcs.sql"]
+    },
+    "WS2": {
+      "name": "Spike Alerts",
+      "executor": "backend-service-builder",
+      "type": "database",
+      "outputs": ["supabase/migrations/20260107020746_shift_cash_obs_alerts.sql"]
+    },
+    "WS3": {
+      "name": "TypeScript DTOs",
+      "executor": "backend-service-builder",
+      "type": "service-layer",
+      "outputs": [
+        "services/table-context/dtos.ts (extended)",
+        "services/table-context/keys.ts (extended)",
+        "services/table-context/shift-cash-obs.ts (new)",
+        "services/table-context/index.ts (extended)"
+      ]
+    },
+    "WS4": {
+      "name": "Integration Tests",
+      "executor": "qa-specialist",
+      "type": "unit-tests",
+      "outputs": ["services/table-context/__tests__/shift-cash-obs.test.ts (new)"]
+    }
+  },
+
+  "execution_phases": [
+    {
+      "name": "Phase 1 - Database Layer",
+      "parallel": ["WS1"],
+      "gates": ["schema-validation"],
+      "status": "completed"
+    },
+    {
+      "name": "Phase 2 - Alerts & Types",
+      "parallel": ["WS2", "WS3"],
+      "gates": ["schema-validation", "type-check"],
+      "status": "completed"
+    },
+    {
+      "name": "Phase 3 - Testing",
+      "parallel": ["WS4"],
+      "gates": ["test-pass"],
+      "status": "completed"
+    }
+  ],
+
+  "gates_passed": [
+    "schema-validation (Phase 1)",
+    "schema-validation (Phase 2)",
+    "type-check (Phase 2)",
+    "test-pass (Phase 3)",
+    "lint (final)",
+    "type-check (final)"
+  ],
+
+  "artifacts_created": {
+    "migrations": [
+      "supabase/migrations/20260107015907_shift_cash_obs_rollup_rpcs.sql",
+      "supabase/migrations/20260107020746_shift_cash_obs_alerts.sql"
+    ],
+    "service_layer": [
+      "services/table-context/shift-cash-obs.ts"
+    ],
+    "tests": [
+      "services/table-context/__tests__/shift-cash-obs.test.ts"
+    ],
+    "modified_files": [
+      "services/table-context/dtos.ts",
+      "services/table-context/keys.ts",
+      "services/table-context/index.ts"
+    ]
+  },
+
+  "rpcs_created": [
+    "rpc_shift_cash_obs_table(p_start_ts, p_end_ts, p_table_id)",
+    "rpc_shift_cash_obs_pit(p_start_ts, p_end_ts, p_pit)",
+    "rpc_shift_cash_obs_casino(p_start_ts, p_end_ts)",
+    "rpc_shift_cash_obs_alerts(p_start_ts, p_end_ts)"
+  ],
+
+  "dtos_created": [
+    "CashObsTableRollupDTO",
+    "CashObsPitRollupDTO",
+    "CashObsCasinoRollupDTO",
+    "CashObsSpikeAlertDTO",
+    "ShiftCashObsTimeWindow",
+    "ShiftCashObsTableParams",
+    "ShiftCashObsPitParams"
+  ],
+
+  "service_functions_created": [
+    "getShiftCashObsTable(supabase, params)",
+    "getShiftCashObsPit(supabase, params)",
+    "getShiftCashObsCasino(supabase, params)",
+    "getShiftCashObsAlerts(supabase, params)"
+  ],
+
+  "react_query_keys_added": [
+    "tableContextKeys.shiftCashObs.table",
+    "tableContextKeys.shiftCashObs.pit",
+    "tableContextKeys.shiftCashObs.casino",
+    "tableContextKeys.shiftCashObs.alerts"
+  ],
+
+  "test_coverage": {
+    "unit_tests_passed": 16,
+    "integration_tests_todo": 15,
+    "note": "Integration tests stubbed pending RPC deployment to remote database"
+  },
+
+  "notes": [
+    "All RPCs use SECURITY INVOKER with ADR-024 context injection",
+    "TELEMETRY-ONLY: All alerts flagged with is_telemetry=true",
+    "Table/pit rollups exclude observations without rating_slip_id",
+    "Casino rollups include ALL observations",
+    "Default thresholds: table $5000, pit $25000"
+  ],
+
+  "timestamp": "2026-01-07T02:30:00Z",
+  "completed_at": "2026-01-07T02:30:00Z"
+}

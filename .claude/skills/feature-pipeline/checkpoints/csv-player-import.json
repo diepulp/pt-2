@@ -1,0 +1,26 @@
+{
+  "feature_id": "csv-player-import",
+  "current_phase": 6,
+  "status": "complete",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/csv-player-import/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-CSV-PLAYER-IMPORT.md",
+    "design_brief": "docs/02-design/RFC-CSV-PLAYER-IMPORT.md",
+    "sec_note": "docs/30-security/SEC-NOTE-CSV-PLAYER-IMPORT.md",
+    "adr": "docs/80-adrs/ADR-036-csv-player-import-strategy.md",
+    "prd": "docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md"
+  },
+  "timestamp": "2026-02-23T12:00:00Z",
+  "context": {
+    "vision_docs": [
+      "docs/00-vision/csv-import/SYNTHESIS-CSV-IMPORT-LANE1.md",
+      "docs/00-vision/csv-import/PRD-CSV-IMPORT-LANE1-MVP.md",
+      "docs/00-vision/csv-import/ADR-TEMPLATE-CSV-PLAYER-IMPORT-STRATEGY.md",
+      "docs/00-vision/csv-import/PATCH-PLAN-PRD-PLAYER-IMPORT-EMBEDDED.md",
+      "docs/00-vision/csv-import/PRD-LOYALTY-TIER-RECONCILIATION-v0.md"
+    ],
+    "direction": "Lane 1 MVP: Browser-side Papa Parse + staging tables + execute RPC"
+  }
+}

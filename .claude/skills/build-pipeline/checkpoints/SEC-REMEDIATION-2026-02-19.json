@@ -1,0 +1,26 @@
+{
+  "prd_id": "SEC-REMEDIATION-2026-02-19",
+  "spec_file": "docs/30-security/compliance/SEC-REMEDIATION-STRATEGY-2026-02-19.md",
+  "execution_spec": "docs/20-architecture/specs/SEC-REMEDIATION-2026-02-19/EXECUTION-SPEC-SEC-REMEDIATION-2026-02-19.md",
+  "status": "complete",
+  "current_phase": 5,
+  "total_phases": 5,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "pre_existing": ["P1-MIG-3"],
+  "created_at": "2026-02-19T00:00:00Z",
+  "updated_at": "2026-02-20T07:00:00Z",
+  "notes": {
+    "WS1": "bypass-lockdown.test.ts: replaced fail() with throw, added onboarding exemption. 8/8 tests pass.",
+    "WS2": "P0 migration 20260220050000_sec_audit_p0_actor_id_bypass_remediation.sql applied. C-1/C-2 DROP+CREATE (p_actor_id removed), H-4 role gate added. Catalog assertion 0 rows. Types regenerated clean.",
+    "WS3": "Removed p_actor_id from 16 test calls across 3 files. type-check passes.",
+    "WS4": "Migration 20260220060000_sec_h1_h2_h3_shift_metrics_service_role_gate.sql applied. DROP+CREATE for 3 internal functions (p_actor_id→p_internal_actor_id + service_role body gate + casino scope validation). Created 3 SECURITY INVOKER wrappers. Renamed 20 test references. 6 overloads confirmed. type-check passes.",
+    "WS5": "Fixed lint-rls-write-path.regression.sh: single-line synthetic violation for grep pattern matching.",
+    "WS6": "Migration 20260220070000_fix_game_settings_side_bet_nullif_and_search_path.sql applied. 3 RLS policies fixed (NULLIF + 'manager'→'admin'). 29 SECURITY DEFINER functions got search_path=pg_catalog,public. type-check passes.",
+    "WS7": "scripts/audit-rpc-context-injection.sh created. Audits 77 functions: 70 OK, 1 WARN (rpc_bootstrap_casino — expected), 6 INFO (SECURITY INVOKER wrappers).",
+    "WS8": "docs/deployments/CICD-PIPELINE-SPEC.md updated with Optional Validation Gates subsection documenting Category B RLS policy lint.",
+    "migration_applied_locally": "20260220050000 + 20260220060000 + 20260220070000 applied via docker exec psql.",
+    "known_deferred": "rpc_start_rating_slip (M-4 Phase 2) and rpc_update_table_status (SEC-007 hardened) retain p_actor_id — out of scope."
+  }
+}

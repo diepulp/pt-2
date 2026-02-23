@@ -1,0 +1,47 @@
+{
+  "prd": "ADR-022",
+  "prd_title": "Player Identity & Enrollment Architecture (Casino-Scoped, Least-Privilege)",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "supabase/migrations/20251225120000_adr022_player_contact_columns.sql",
+      "supabase/migrations/20251225120001_adr022_player_enrollment_index.sql",
+      "supabase/migrations/20251225120002_adr022_player_casino_enrolled_by.sql",
+      "supabase/migrations/20251225120003_adr022_player_identity_mvp.sql",
+      "supabase/migrations/20251225120004_adr022_identity_immutability_trigger.sql"
+    ],
+    "WS2": [
+      "supabase/migrations/20251225120005_adr022_delete_denial_policies.sql",
+      "supabase/migrations/20251225120006_adr022_player_casino_actor_binding.sql",
+      "__tests__/rls/player-identity.test.ts"
+    ],
+    "WS3": [
+      "services/player/identity.ts",
+      "services/player/dtos.ts",
+      "services/player/schemas.ts",
+      "services/casino/crud.ts",
+      "services/player/crud.ts",
+      "services/player/index.ts"
+    ],
+    "WS4": [
+      "components/enrollment/document-input.tsx",
+      "components/enrollment/identity-form.tsx"
+    ],
+    "WS5": [
+      "__tests__/integration/player-identity.test.ts",
+      "__tests__/constraints/player-identity.test.ts"
+    ],
+    "WS6": [
+      "__tests__/slad/player-identity-ownership.test.ts",
+      "services/casino/index.ts",
+      "app/api/v1/players/[playerId]/enroll/route.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check", "lint", "slad-pass"],
+  "gates_pending": [],
+  "timestamp": "2025-12-25T14:30:00Z"
+}

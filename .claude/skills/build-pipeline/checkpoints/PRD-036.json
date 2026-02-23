@@ -1,0 +1,13 @@
+{
+  "prd_id": "PRD-036",
+  "spec_path": "docs/20-architecture/specs/PRD-036/EXECUTION-SPEC-PRD-036.md",
+  "status": "initialized",
+  "current_phase": 0,
+  "total_phases": 4,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "failed_workstreams": [],
+  "gates_passed": [],
+  "created_at": "2026-02-19T16:46:31Z",
+  "updated_at": "2026-02-19T16:46:31Z"
+}

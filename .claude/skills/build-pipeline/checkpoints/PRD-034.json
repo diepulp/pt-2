@@ -1,0 +1,105 @@
+{
+  "prd_id": "PRD-034",
+  "prd_title": "RLS Write-Path Remediation & Enforcement",
+  "status": "complete",
+  "execution_spec": "docs/20-architecture/specs/PRD-034/EXECUTION-SPEC-PRD-034.md",
+  "created_at": "2026-02-11T17:55:00Z",
+  "updated_at": "2026-02-11T18:50:00Z",
+  "current_phase": 2,
+  "total_phases": 2,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
+  "execution_phases": [
+    {
+      "name": "Phase 1 — Remediation + Tooling (P0/P1, all parallel)",
+      "workstreams": ["WS1", "WS2", "WS3", "WS4"],
+      "gates": ["schema-validation", "type-check", "lint", "build"],
+      "status": "complete"
+    },
+    {
+      "name": "Phase 2 — Governance + Hardening (P2)",
+      "workstreams": ["WS5", "WS6"],
+      "gates": ["type-check", "test-pass", "build"],
+      "status": "complete"
+    }
+  ],
+  "ws1_completion": {
+    "files_created": [
+      "supabase/migrations/20260211184702_create_rpc_create_staff.sql",
+      "services/casino/__tests__/rpc-create-staff.int.test.ts"
+    ],
+    "files_modified": [
+      "app/api/v1/casino/staff/route.ts",
+      "types/database.types.ts",
+      "types/remote/database.types.ts"
+    ],
+    "migration_applied": true,
+    "tests_passing": true
+  },
+  "ws2_completion": {
+    "files_created": [
+      "supabase/migrations/20260211184703_create_rpc_enroll_player.sql"
+    ],
+    "files_modified": [
+      "services/casino/crud.ts",
+      "app/api/v1/players/[playerId]/enroll/route.ts",
+      "__tests__/slad/player-identity-ownership.test.ts",
+      "types/database.types.ts",
+      "types/remote/database.types.ts"
+    ],
+    "migration_applied": true,
+    "tests_passing": true
+  },
+  "ws3_completion": {
+    "files_created": [
+      "scripts/generate-category-a-config.ts",
+      "scripts/lint-rls-write-path.sh",
+      "scripts/lint-rls-category-b-policies.sh",
+      "scripts/__tests__/lint-rls-write-path.regression.sh"
+    ],
+    "files_modified": [
+      ".eslint-rules/no-direct-template2b-dml.js",
+      ".github/workflows/ci.yml",
+      "package.json"
+    ],
+    "tests_passing": true,
+    "notes": "Generator requires CATEGORY-A-REGISTRY block in ADR-030 (WS5 deliverable). CI lint runs in warning-only mode until ADR-034 ratification."
+  },
+  "ws4_completion": {
+    "files_created": [
+      "lib/errors/rls-write-denied-error.ts",
+      "lib/supabase/assert-rows-affected.ts",
+      "lib/supabase/__tests__/assert-rows-affected.test.ts"
+    ],
+    "files_modified": [
+      "lib/errors/domain-errors.ts"
+    ],
+    "tests_passing": true
+  },
+  "ws5_completion": {
+    "files_modified": [
+      "docs/80-adrs/ADR-030-auth-system-hardening.md",
+      "docs/80-adrs/ADR-034-RLS-write-path-compatibility-and-enforcement.md",
+      "docs/30-security/SEC-001-rls-policy-matrix.md"
+    ],
+    "files_generated": [
+      "config/rls-category-a-tables.json"
+    ],
+    "notes": "Removed player from D4 critical list. Added CATEGORY-A-REGISTRY block (4 tables). ADR-034 ratified. SEC-001 v2.0.0 with Category A/B cross-reference."
+  },
+  "ws6_completion": {
+    "files_created": [
+      "services/casino/__tests__/rpc-bootstrap-casino-abuse.int.test.ts",
+      "services/casino/__tests__/rpc-accept-staff-invite-abuse.int.test.ts"
+    ],
+    "tests_passing": true,
+    "test_count": 18,
+    "notes": "Type contract + abuse-case scenario tests for both privileged RPCs. Cross-casino, role misuse, replay/idempotency covered."
+  },
+  "notes": {
+    "migration_rename_v2": "All 4 untracked migrations renamed with real timestamps and proper verb prefixes per MIGRATION_NAMING_STANDARD.md. Old: prd030_/prd034_ prefix + artificial timestamps. New: create_/fix_ prefix + real timestamps (184700-184703).",
+    "completion": "All 6 workstreams complete. All gates pass: type-check, test-pass (27 tests), build."
+  }
+}

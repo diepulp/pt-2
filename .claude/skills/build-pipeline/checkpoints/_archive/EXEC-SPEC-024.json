@@ -1,0 +1,76 @@
+{
+  "prd": "EXEC-SPEC-024",
+  "prd_title": "ADR-024 RLS Context Self-Injection Remediation",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "workstream_details": {
+    "WS1": {
+      "name": "Deploy New Context Functions",
+      "agent": "rls-expert",
+      "depends_on": [],
+      "outputs": ["migration_adr024_rls_context_from_staff.sql"],
+      "gate": "schema-validation",
+      "description": "Create set_rls_context_from_staff() and set_rls_context_internal() functions, add staff.user_id unique constraint"
+    },
+    "WS2": {
+      "name": "Update Loyalty RPCs (7)",
+      "agent": "rls-expert",
+      "depends_on": ["WS1"],
+      "outputs": ["migration_adr024_loyalty_rpcs.sql"],
+      "gate": "type-check",
+      "description": "Update rpc_accrue_on_close, rpc_redeem, rpc_manual_credit, rpc_apply_promotion, rpc_reconcile_loyalty_balance, rpc_get_player_ledger, rpc_issue_mid_session_reward"
+    },
+    "WS3": {
+      "name": "Update Visit/Analytics RPCs (5)",
+      "agent": "rls-expert",
+      "depends_on": ["WS1"],
+      "outputs": ["migration_adr024_visit_rpcs.sql"],
+      "gate": "type-check",
+      "description": "Update rpc_check_table_seat_availability, rpc_get_visit_loyalty_summary, rpc_get_visit_last_segment, rpc_get_player_recent_sessions, rpc_get_player_last_session_context"
+    },
+    "WS4": {
+      "name": "Update Dashboard RPCs (4)",
+      "agent": "rls-expert",
+      "depends_on": ["WS1"],
+      "outputs": ["migration_adr024_dashboard_rpcs.sql"],
+      "gate": "type-check",
+      "description": "Update rpc_get_visit_live_view, rpc_get_rating_slip_modal_data, rpc_get_dashboard_tables_with_counts, rpc_start_rating_slip"
+    },
+    "WS5": {
+      "name": "Deprecate Old Function",
+      "agent": "rls-expert",
+      "depends_on": ["WS2", "WS3", "WS4"],
+      "outputs": ["migration_adr024_deprecate_old_context.sql"],
+      "gate": "type-check",
+      "description": "Revoke set_rls_context() from authenticated role, add deprecation comment"
+    },
+    "WS6": {
+      "name": "Security Tests",
+      "agent": "e2e-testing",
+      "depends_on": ["WS5"],
+      "outputs": ["services/security/__tests__/rls-context.test.ts", "services/security/__tests__/rls-context.integration.test.ts"],
+      "gate": "test-pass",
+      "description": "Create unit and integration tests per EXEC-SPEC-024 Test Requirements"
+    }
+  },
+  "execution_phases": [
+    {"phase": 1, "parallel": ["WS1"]},
+    {"phase": 2, "parallel": ["WS2", "WS3", "WS4"]},
+    {"phase": 3, "parallel": ["WS5"]},
+    {"phase": 4, "parallel": ["WS6"]}
+  ],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20251229152317_adr024_rls_context_from_staff.sql"],
+    "WS2": ["supabase/migrations/20251229154020_adr024_loyalty_rpcs.sql"],
+    "WS3": ["supabase/migrations/20251229154018_adr024_visit_rpcs.sql"],
+    "WS4": ["supabase/migrations/20251229154013_adr024_dashboard_rpcs.sql"],
+    "WS5": ["supabase/migrations/20251229155051_adr024_deprecate_old_context.sql"],
+    "WS6": ["services/security/__tests__/rls-context.test.ts", "services/security/__tests__/rls-context.integration.test.ts"]
+  },
+  "gates_passed": ["schema-validation", "type-check", "test-pass"],
+  "gates_pending": [],
+  "timestamp": "2025-12-29T16:15:00Z"
+}

@@ -1,0 +1,38 @@
+{
+  "prd": "GAP-SEEDED-GAME-SETTINGS-ORPHANED",
+  "prd_title": "Connect Seeded Game Settings to Gaming Tables via Setup Wizard",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "supabase/migrations/20260212210814_add_gaming_table_game_settings_fk.sql",
+      "supabase/migrations/20260212210815_fix_seed_rating_edge_for_comp.sql",
+      "types/database.types.ts"
+    ],
+    "WS2": [
+      "services/table-context/schemas.ts",
+      "app/(onboarding)/setup/_actions.ts",
+      "app/(onboarding)/setup/setup-wizard.tsx"
+    ],
+    "WS3": [
+      "app/(onboarding)/setup/steps/step-game-seed.tsx"
+    ],
+    "WS4": [
+      "app/(onboarding)/setup/components/table-row-form.tsx",
+      "app/(onboarding)/setup/steps/step-create-tables.tsx",
+      "app/(onboarding)/setup/setup-wizard.tsx"
+    ],
+    "WS5": [
+      "app/(onboarding)/setup/steps/step-review-complete.tsx",
+      "app/(onboarding)/setup/setup-wizard.tsx",
+      "app/dev/setup/setup-wizard-dev.tsx",
+      "app/dev/setup/_dev-actions.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check", "build"],
+  "gates_pending": [],
+  "timestamp": "2026-02-12T21:20:00Z"
+}

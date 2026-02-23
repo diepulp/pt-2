@@ -1,0 +1,49 @@
+{
+  "prd_id": "PRD-028",
+  "prd_title": "Restore loyalty_outbox Table (P0 Bug Fix)",
+  "status": "complete",
+  "execution_spec": "docs/20-architecture/specs/PRD-028/EXECUTION-SPEC-PRD-028.md",
+  "current_phase": 2,
+  "total_phases": 2,
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "test-pass"],
+  "created_at": "2026-02-06T00:53:35Z",
+  "updated_at": "2026-02-06T02:30:00Z",
+  "phase_1_summary": {
+    "status": "complete",
+    "workstreams": ["WS1"],
+    "gate": "schema-validation (npm run db:types) — PASSED",
+    "artifacts": [
+      "supabase/migrations/20260206005335_prd028_restore_loyalty_outbox.sql",
+      "types/remote/database.types.ts (regenerated — loyalty_outbox now present with all 8 columns)"
+    ],
+    "migration_applied": true,
+    "notes": "Migration applied to remote. DROP TABLE IF EXISTS reported 'table does not exist, skipping' (expected — the table was dropped in 20251213003000). Types regenerated with correct schema: ledger_id nullable, FKs to casino and loyalty_ledger confirmed."
+  },
+  "phase_2_summary": {
+    "status": "complete",
+    "workstreams": ["WS2", "WS3"],
+    "gates": ["type-check — PASSED", "test-pass — PASSED (5/5)"],
+    "artifacts": [
+      "docs/80-adrs/ADR-033-LOYALTY-REWARD-DOMAIN-MODEL-SCAFFOLDING-MVP.md (hard dependency marked RESOLVED, tech debt items updated)",
+      "services/loyalty/__tests__/promo-outbox-contract.int.test.ts (5 tests, all passing)"
+    ],
+    "WS2_notes": "SRM verified accurate (loyalty_outbox already listed under LoyaltyService, line 109/403/425). ADR-033 updated: hard dependency section marked RESOLVED with PRD-028 details, P0 tech debt item marked RESOLVED, SRM drift P2 item marked RESOLVED.",
+    "WS3_notes": "Tests verify outbox schema contract using direct INSERT (same 4-column pattern as promo RPCs). Pre-existing audit_log schema mismatch in promo RPCs prevents end-to-end RPC testing — out of scope for PRD-028."
+  },
+  "review_history": [
+    "P0 fix: acceptance criteria tightened to exact counts (6 statements)",
+    "P0 fix: DROP+CREATE instead of IF NOT EXISTS for schema drift protection",
+    "P0 fix: RLS bypass analysis with exact Postgres semantics (table owner exemption)",
+    "P0 fix: exact policy SQL predicates included (Pattern C COALESCE)",
+    "P1 fix: FK preflight assertion (DO $preflight$ block)",
+    "P1 fix: append-only enforcement rationale (Layer 1 REVOKE vs Layer 2 denial, what each protects)",
+    "P1 fix: casino_id context assertion added to all RPC test cases",
+    "P1 fix: table ownership verification (DO $owner_check$ + test case)",
+    "P1 fix: denial policy auth.uid() redundancy documented (SEC-006 consistency)",
+    "P1 fix: index IF NOT EXISTS scoped to index only, not table",
+    "Cleanup: stale duplicate sentence removed from WS1 description"
+  ]
+}
