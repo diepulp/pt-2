@@ -4,13 +4,13 @@
   "spec_path": "docs/21-exec-spec/EXEC-037-csv-player-import.md",
   "prd_path": "docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md",
   "branch": "csv-import",
-  "status": "executing",
-  "current_phase": 1,
+  "status": "complete",
+  "current_phase": 5,
   "total_phases": 5,
-  "completed_workstreams": [],
-  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "pending_workstreams": [],
   "failed_workstreams": [],
-  "gates_passed": [],
+  "gates_passed": ["schema-validation", "type-check", "lint", "test-pass", "build"],
   "gov010_check": "passed",
   "spec_approved": true,
   "spec_approved_at": "2026-02-23T13:15:00Z",
@@ -63,14 +63,159 @@
       "Consistency fix: index language uses explicit CREATE INDEX SQL everywhere"
     ]
   },
-  "resume_instructions": "EXEC-SPEC approved. Resume with Phase 3 execution starting at Phase 1 (WS1: Database Schema & RPCs). Dispatch WS1 to backend-service-builder skill. After WS1 gate passes (schema-validation), dispatch Phase 2 (WS2 + WS3 in parallel). Follow execution_phases from EXEC-SPEC YAML frontmatter.",
+  "ws1_details": {
+    "completed_at": "2026-02-23T16:30:00Z",
+    "gate": "schema-validation",
+    "gate_result": "PASS",
+    "artifacts": [
+      "supabase/migrations/20260223021214_prd037_csv_player_import_schema.sql",
+      "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md (v4.14.0 → v4.15.0)",
+      "types/database.types.ts (regenerated)"
+    ],
+    "migration_contents": [
+      "Enums: import_batch_status, import_row_status",
+      "Tables: import_batch (PK uuid, casino_id FK, idempotency UNIQUE), import_row (PK uuid, batch_id FK CASCADE, UNIQUE batch_id+row_number)",
+      "Indexes: import_batch(casino_id,status), import_row(batch_id,status), player(lower(email)), player(phone_number), player_casino(casino_id,player_id)",
+      "Trigger: trg_import_batch_updated_at (BEFORE UPDATE)",
+      "RPC: rpc_import_create_batch(p_idempotency_key, p_file_name, p_vendor_label, p_column_mapping) — idempotent upsert",
+      "RPC: rpc_import_stage_rows(p_batch_id, p_rows) — FOR UPDATE lock, 10k cap, ON CONFLICT DO NOTHING",
+      "RPC: rpc_import_execute(p_batch_id) — statement_timeout 120s, FOR UPDATE lock, 3-outcome routing (create/link/conflict), two-phase error pattern",
+      "GRANT: REVOKE ALL FROM PUBLIC; GRANT EXECUTE TO authenticated on all 3 RPCs",
+      "RLS: ENABLE + FORCE ROW LEVEL SECURITY on both tables (policies in WS2)",
+      "NOTIFY pgrst, 'reload schema'"
+    ],
+    "srm_update": "v4.15.0 — PlayerImportService registered in Onboarding domain, owns import_batch + import_row, 3 RPCs, cross-context writes to player + player_casino, enum catalog updated, cross-context consumption rules added"
+  },
+  "ws2_details": {
+    "completed_at": "2026-02-23T17:00:00Z",
+    "gate": "type-check",
+    "gate_result": "PASS",
+    "artifacts": [
+      "supabase/migrations/20260223021215_prd037_csv_player_import_rls.sql"
+    ],
+    "policies": [
+      "import_batch_select: Pattern C hybrid + role gate (admin, pit_boss)",
+      "import_batch_insert: Session-vars only + actor binding (created_by_staff_id = app.actor_id) + role gate",
+      "import_batch_update: Session-vars only + role gate",
+      "import_batch_no_delete: Denial (auth.uid() IS NOT NULL AND false)",
+      "import_row_select: Pattern C hybrid + role gate",
+      "import_row_insert: Session-vars only + role gate",
+      "import_row_update: Session-vars only + role gate",
+      "import_row_no_delete: Denial"
+    ]
+  },
+  "ws3_details": {
+    "completed_at": "2026-02-23T17:00:00Z",
+    "gate": "type-check",
+    "gate_result": "PASS",
+    "artifacts": [
+      "services/player-import/dtos.ts",
+      "services/player-import/schemas.ts",
+      "services/player-import/keys.ts",
+      "services/player-import/mappers.ts",
+      "services/player-import/crud.ts",
+      "services/player-import/http.ts",
+      "services/player-import/index.ts",
+      "services/player-import/README.md",
+      "lib/errors/domain-errors.ts (ImportErrorCode added)"
+    ],
+    "service_pattern": "Pattern C (Hybrid) — Pattern A for ImportPlayerV1/ImportBatchReportV1/ColumnMapping, Pattern B (Pick) for ImportBatchDTO/ImportRowDTO",
+    "service_factory": "createPlayerImportService(supabase) with explicit PlayerImportServiceInterface"
+  },
+  "ws4_details": {
+    "completed_at": "2026-02-23T18:30:00Z",
+    "gate": "lint",
+    "gate_result": "PASS",
+    "artifacts": [
+      "app/api/v1/player-import/batches/route.ts",
+      "app/api/v1/player-import/batches/[id]/route.ts",
+      "app/api/v1/player-import/batches/[id]/rows/route.ts",
+      "app/api/v1/player-import/batches/[id]/execute/route.ts"
+    ],
+    "endpoints": [
+      "POST /api/v1/player-import/batches — Create batch (idempotent)",
+      "GET  /api/v1/player-import/batches — List batches (cursor paginated)",
+      "GET  /api/v1/player-import/batches/:id — Get batch + report summary",
+      "POST /api/v1/player-import/batches/:id/rows — Stage rows (max 2000, idempotent)",
+      "GET  /api/v1/player-import/batches/:id/rows — List rows (cursor paginated)",
+      "POST /api/v1/player-import/batches/:id/execute — Execute merge (idempotent)"
+    ],
+    "patterns_followed": [
+      "withServerAction middleware on all service calls",
+      "requireIdempotencyKey on all POST mutations",
+      "Zod validation for all request bodies and query params",
+      "await segmentData.params for dynamic route segments (Next.js 16)",
+      "ServiceHttpResult<T> response contract via successResponse/errorResponse",
+      "export const dynamic = 'force-dynamic' on all routes"
+    ]
+  },
+  "ws5_details": {
+    "completed_at": "2026-02-23T21:00:00Z",
+    "gate": "type-check",
+    "gate_result": "PASS",
+    "artifacts": [
+      "lib/csv/csv-sanitize.ts",
+      "lib/csv/column-auto-detect.ts",
+      "hooks/player-import/use-papa-parse.ts",
+      "hooks/player-import/use-column-mapping.ts",
+      "hooks/player-import/use-staging-upload.ts",
+      "hooks/player-import/use-import-report.ts",
+      "hooks/player-import/use-csv-download.ts",
+      "hooks/player-import/use-import-wizard.ts",
+      "components/player-import/import-wizard.tsx",
+      "components/player-import/step-file-selection.tsx",
+      "components/player-import/step-column-mapping.tsx",
+      "components/player-import/step-preview.tsx",
+      "components/player-import/step-staging-upload.tsx",
+      "components/player-import/step-execute.tsx",
+      "components/player-import/step-report.tsx",
+      "components/player-import/column-mapping-row.tsx",
+      "components/player-import/report-summary-card.tsx",
+      "components/player-import/csv-download-button.tsx",
+      "app/(protected)/player-import/page.tsx"
+    ]
+  },
+  "ws6_details": {
+    "completed_at": "2026-02-23T21:30:00Z",
+    "gate": "test-pass",
+    "gate_result": "PASS",
+    "test_results": "7 suites, 172 tests, all passing",
+    "artifacts": [
+      "services/player-import/__tests__/schemas.test.ts",
+      "services/player-import/__tests__/mappers.test.ts",
+      "services/player-import/__tests__/column-mapping.test.ts",
+      "services/player-import/__tests__/csv-sanitization.test.ts",
+      "services/player-import/__tests__/http-contract.test.ts",
+      "services/player-import/__tests__/rls-policies.int.test.ts",
+      "services/player-import/__tests__/execute-rpc.int.test.ts"
+    ]
+  },
+  "ws7_details": {
+    "completed_at": "2026-02-23T22:30:00Z",
+    "gate": "test-pass",
+    "gate_result": "PASS",
+    "build_gate_result": "PASS",
+    "artifacts": [
+      "e2e/workflows/csv-player-import.spec.ts",
+      "e2e/fixtures/import-test-data.ts",
+      "e2e/fixtures/sample-csvs/valid-players.csv",
+      "e2e/fixtures/sample-csvs/unknown-headers.csv",
+      "e2e/fixtures/sample-csvs/missing-identifiers.csv"
+    ],
+    "test_scenarios": [
+      "Happy Path: upload valid-players.csv → auto-detect 5 columns → preview 5 rows → stage → execute → report 5 created",
+      "Alias Detection: upload unknown-headers.csv → alias dictionary detects all 5 non-standard headers → complete flow → 5 created",
+      "Validation Warnings: upload missing-identifiers.csv → preview shows 2 rows missing identifiers badge + warning text"
+    ]
+  },
+  "resume_instructions": "PIPELINE COMPLETE. All 7 workstreams delivered, all 5 gates passed (schema-validation, type-check, lint, test-pass, build). Ready for DoD validation and PR.",
   "execution_phases": [
-    {"phase": 1, "name": "Foundation", "workstreams": ["WS1"], "gates": ["schema-validation"], "status": "pending"},
-    {"phase": 2, "name": "RLS + Service Layer", "workstreams": ["WS2", "WS3"], "gates": ["type-check"], "status": "pending"},
-    {"phase": 3, "name": "Route Handlers", "workstreams": ["WS4"], "gates": ["lint"], "status": "pending"},
-    {"phase": 4, "name": "Frontend + Service Tests", "workstreams": ["WS5", "WS6"], "gates": ["type-check", "test-pass"], "status": "pending"},
-    {"phase": 5, "name": "E2E Tests + Final Build", "workstreams": ["WS7"], "gates": ["test-pass", "build"], "status": "pending"}
+    {"phase": 1, "name": "Foundation", "workstreams": ["WS1"], "gates": ["schema-validation"], "status": "complete"},
+    {"phase": 2, "name": "RLS + Service Layer", "workstreams": ["WS2", "WS3"], "gates": ["type-check"], "status": "complete"},
+    {"phase": 3, "name": "Route Handlers", "workstreams": ["WS4"], "gates": ["lint"], "status": "complete"},
+    {"phase": 4, "name": "Frontend + Service Tests", "workstreams": ["WS5", "WS6"], "gates": ["type-check", "test-pass"], "status": "complete"},
+    {"phase": 5, "name": "E2E Tests + Final Build", "workstreams": ["WS7"], "gates": ["test-pass", "build"], "status": "complete"}
   ],
   "created_at": "2026-02-23T12:00:00Z",
-  "updated_at": "2026-02-23T13:15:00Z"
+  "updated_at": "2026-02-23T22:30:00Z"
 }
