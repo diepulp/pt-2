@@ -1,51 +1,59 @@
 ---
 name: feature-pipeline
-description: Linear feature development pipeline with explicit boundaries and executable gates. Prevents scope creep by enforcing SRM-first ownership, Feature Boundary Statements, SEC notes, ADR freeze, and CI-testable DoD gates. Orchestrates prd-writer, lead-architect, and prd-pipeline skills.
+description: >
+  Linear feature development pipeline (design-time only) with explicit boundaries
+  and executable gates. Prevents scope creep by enforcing SRM-first ownership,
+  Feature Scaffold, Design Brief/RFC, SEC notes, ADR freeze, and PRD discipline.
+  Produces *what* and *why*; delegates *how* to build-pipeline.
+  Orchestrates prd-writer and lead-architect skills.
+version: 2.0.0
+supersedes: feature-pipeline v1.0.0 (7-phase with EXEC-SPEC/Execute)
 ---
 
 # Feature Development Pipeline
 
 **Purpose:** Stop "requirements entropy" and endless ADR iterations by forcing bounded scope + measurable gates.
 
-**Core Principle:** A feature is *done* when:
+**Core Principle:** A feature design is *done* when:
 1. Its **bounded context** is explicit (what's in/out)
-2. Its **gates** are executable (how we prove it's done)
+2. Its **decisions** are locked in ADRs (durable, small, stable)
+3. Its **PRD** references those ADRs and defines *what must be true*
 
-Docs don't end a feature. **Gates do.**
+Design doesn't build. **Build-pipeline does.**
 
 ---
 
 ## Quick Start
 
 ```
-/feature-start player-identity-enrollment
+/feature csv-player-import
 ```
 
-This initiates the 7-phase linear pipeline with gates at each transition.
+This starts (or resumes) the 6-phase design pipeline with gates at each transition.
 
 ---
 
 ## Pipeline Phases
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│  Phase 0: SRM Check         → Ownership sentence                │
-│     ↓ GATE: srm-ownership                                       │
-│  Phase 1: Feature Brief     → 1-page scope + non-goals          │
-│     ↓ GATE: brief-approved                                      │
-│  Phase 2: PRD               → Behavior + acceptance criteria    │
-│     ↓ GATE: prd-approved                                        │
-│  Phase 3: SEC Note          → Assets/threats/controls           │
-│     ↓ GATE: sec-approved                                        │
-│  Phase 4: ADR (if needed)   → Durable decisions ONLY            │
-│     ↓ GATE: adr-frozen                                          │
-│  Phase 5: EXEC-SPEC + DoD   → Implementation + executable gates │
-│     ↓ GATE: dod-executable                                      │
-│  Phase 6: Execute           → Workstream implementation         │
-│     ↓ GATE: implementation-complete                             │
-│  DONE                                                           │
-└─────────────────────────────────────────────────────────────────┘
++---------------------------------------------------------------+
+|  Phase 0: SRM Check           -> Ownership sentence            |
+|     | GATE: srm-ownership                                      |
+|  Phase 1: Feature Scaffold    -> Intent + constraints + options |
+|     | GATE: scaffold-approved                                   |
+|  Phase 2: Design Brief / RFC  -> Direction + alternatives      |
+|     | GATE: design-approved                                     |
+|  Phase 3: SEC Note            -> Assets/threats/controls       |
+|     | GATE: sec-approved                                        |
+|  Phase 4: ADR(s)              -> Durable decisions ONLY        |
+|     | GATE: adr-frozen                                          |
+|  Phase 5: PRD                 -> Requirements + ADR references |
+|     | GATE: prd-approved                                        |
+|  HANDOFF -> /build PRD-###                                     |
++---------------------------------------------------------------+
 ```
+
+Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and instructs user to run `/build PRD-###`. No EXEC-SPEC generation, no workstream execution -- that's build-pipeline's domain.
 
 ---
 
@@ -56,7 +64,7 @@ This initiates the 7-phase linear pipeline with gates at each transition.
 
 > "This feature belongs to **{OwnerService}** and may only touch **{Writes}**; cross-context needs go through **{Contracts}**."
 
-**Gate:** `srm-ownership` — If you can't write this sentence, you're not ready to design.
+**Gate:** `srm-ownership` -- If you can't write this sentence, you're not ready to design.
 
 **Workflow:**
 1. Load SRM (`docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`)
@@ -64,47 +72,52 @@ This initiates the 7-phase linear pipeline with gates at each transition.
 3. List writes (tables/RPCs) and reads
 4. Identify cross-context contracts (DTOs/RPCs)
 5. Write ownership sentence
+6. Create `docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md` using `references/feature-boundary-template.md`
 
 ---
 
-## Phase 1: Feature Brief (1 Page)
+## Phase 1: Feature Scaffold
 
-**Goal:** Prevent scope creep by declaring intent + non-goals up front.
-**Rule:** No implementation detail here.
+**Goal:** Pin intent, constraints, and decisions needed before design work begins.
+**Rule:** Disposable, timeboxed (30-60 min). No implementation detail.
 
-**Template:** See `references/feature-brief-template.md`
+**Template:** `docs/01-scaffolds/TEMPLATE.md`
+**Output:** `docs/01-scaffolds/SCAFFOLD-###-{feature}.md`
 
 **Must Include:**
-- **Goal:** What outcome exists after shipping that did not exist before
-- **Primary Actor:** Role/persona who triggers the feature
-- **Primary Scenario:** One sentence
-- **Non-Goals:** 5+ explicit exclusions (the anti-scope)
-- **Bounded Context:** Owner + writes/reads + cross-context contracts
-- **Success Metric:** One measurable outcome
+- **Intent:** What outcome changes after shipping
+- **Constraints:** Hard walls (budget, compliance, existing contracts)
+- **Non-goals:** What we refuse to do
+- **Options:** 2-4 max with tradeoffs
+- **Decision to make:** Explicit statement of what needs deciding
+- **Open questions / unknowns**
 
-**Gate:** `brief-approved` — If you can't list non-goals, you're about to overbuild.
+**Gate:** `scaffold-approved` -- If you can't list 2+ options with tradeoffs, you haven't thought enough.
+
+**Delegates to:** Inline (orchestrator can do this -- it's a framing doc, not domain-specific)
 
 ---
 
-## Phase 2: PRD
+## Phase 2: Design Brief / RFC
 
-**Goal:** Define the *what* with testable statements.
-**Rule:** PRD ends in DoD-friendly acceptance criteria.
+**Goal:** Propose direction with enough detail to identify ADR-worthy decisions.
+**Rule:** Funnel style -- context -> scope -> overview -> details -> alternatives.
 
-**Delegation:** Invoke `prd-writer` skill
+**Template:** `docs/02-design/TEMPLATE.md`
+**Output:** `docs/02-design/RFC-###-{feature}.md`
 
 **Must Include:**
-- User flows (happy path + 2-3 critical unhappy paths)
-- Acceptance criteria as verifiable statements
-- Out of scope (reiterated)
-- Data classification (PII / financial / compliance / operational)
+- **Context:** Problem, forces, prior art
+- **Scope & Goals:** In/out scope, success criteria
+- **Proposed Direction:** Overview
+- **Detailed Design:** Data model, service layer, API, UI, security
+- **Cross-Cutting Concerns:** Performance, migration, observability
+- **Alternatives Considered**
+- **Decisions Required:** Each decision that needs an ADR
 
-**Acceptance Criteria Format (DoD-Ready):**
-- "Dealer cannot view player identity fields."
-- "Enrollment requires casino scoping and records `enrolled_by`."
-- "Duplicate document hash returns a deterministic error code."
+**Gate:** `design-approved` -- If you can't name the decisions that need ADRs, the design is incomplete.
 
-**Gate:** `prd-approved` — If it can't be proven by a test, it's not a criterion.
+**Delegates to:** `lead-architect` skill
 
 ---
 
@@ -121,20 +134,20 @@ This initiates the 7-phase linear pipeline with gates at each transition.
 - **Controls:** RLS rules, actor binding, hashing/encryption stance, rate limits
 - **Deferred Risks:** Explicitly allowed risks for MVP (and why)
 
-**Gate:** `sec-approved` — If you store sensitive values, you must justify storage form.
+**Gate:** `sec-approved` -- If you store sensitive values, you must justify storage form.
 
 ---
 
-## Phase 4: ADR (Only for Durable Decisions)
+## Phase 4: ADR(s) (Only for Durable Decisions)
 
 **Goal:** Capture decisions that are hard to reverse or reused widely.
-**Rule:** ADR ≠ diary. ADR is for **durable** architecture decisions.
+**Rule:** ADR != diary. ADR is for **durable** architecture decisions.
 
 **Delegation:** Invoke `lead-architect` skill
 
 **ADR-Worthy Examples:**
 - "Identity stored as hash + last4 (no plaintext doc number)."
-- "Enrollment gating uses EXISTS + role gate (not role-only)."
+- "CSV import uses streaming parser (not load-all-into-memory)."
 - "Actor binding uses `app.actor_id` session var + DB enforcement."
 
 **What Goes in ADR:**
@@ -145,99 +158,133 @@ This initiates the 7-phase linear pipeline with gates at each transition.
 - Alternatives considered
 
 **What Does NOT Go in ADR:**
-- RLS policy SQL (→ EXEC-SPEC)
-- Trigger bodies (→ EXEC-SPEC)
-- Index definitions (→ EXEC-SPEC)
-- Migration steps (→ EXEC-SPEC)
+- RLS policy SQL (-> EXEC-SPEC)
+- Trigger bodies (-> EXEC-SPEC)
+- Index definitions (-> EXEC-SPEC)
+- Migration steps (-> EXEC-SPEC)
 
-**Gate:** `adr-frozen` — If it can change next sprint with low fallout, it's not an ADR.
+**Gate:** `adr-frozen` -- ADR contains only context/decision/consequences, no SQL/code. Implementation detail goes to EXEC-SPEC (enforced by gate).
 
 ---
 
-## Phase 5: EXEC-SPEC + DoD Gate Checklist
+## Phase 5: PRD
 
-**Goal:** Convert PRD criteria into concrete implementation + enforce closure.
-**Rule:** Every criterion maps to a place in code.
+**Goal:** Define *what must be true* with testable statements. Now has scaffold, RFC, SEC note, and ADR(s) as input context.
+**Rule:** PRD references ADR IDs for mechanism decisions. If changing a library requires rewriting the PRD, reject it.
 
-**Outputs:**
-1. **EXEC-SPEC** — Implementation details (mutable)
-2. **DoD Gate Checklist** — Executable CI gates
+**Delegation:** Invoke `prd-writer` skill
 
-**Template:** See `references/dod-gate-template.md`
+**Must Include:**
+- User flows (happy path + 2-3 critical unhappy paths)
+- Acceptance criteria as verifiable statements
+- Out of scope (reiterated)
+- Data classification (PII / financial / compliance / operational)
+- `scaffold_ref:` frontmatter field pointing to scaffold
+- `adr_refs:` frontmatter field listing ADR IDs
 
-**EXEC-SPEC Must Include:**
-- Schema/migrations (tables, indexes, constraints, triggers)
-- RLS policies (USING/WITH CHECK; role matrix enforcement)
-- APIs/RPCs (inputs/outputs, error codes, idempotency keys)
-- UI changes (form states, error mapping, loading/empty states)
-- Migration/backfill (even if "none" — state it)
+**Adversarial Review (Mini One-Pager):**
 
-**DoD Gate Checklist Format:**
+After `prd-writer` produces the PRD, invoke `devils-advocate` in lightweight mode:
 
-```yaml
-gates:
-  functional:
-    A1_schema_exists:
-      assertion: "player_identity table exists with correct columns"
-      test_file: "__tests__/schema/player-identity.test.ts"
-      ci_command: "npm test -- -t 'schema'"
+```
+Skill(skill="devils-advocate", args="Mini One-Pager review of {PRD_ID}:
+  PRD: {prd_path}
+  Scaffold: {scaffold_path}
+  RFC: {rfc_path}
+  SEC Note: {sec_note_path}
+  ADR(s): {adr_paths}
 
-  security:
-    B1_dealer_cannot_read:
-      assertion: "SELECT as dealer → 0 rows"
-      test_file: "__tests__/rls/player-identity.test.ts"
-      ci_command: "npm test -- -t 'dealer CANNOT read'"
-      critical: true  # Blocks deployment
-
-  integrity:
-    C1_fk_enforced:
-      assertion: "INSERT without enrollment → FK error"
-      test_file: "__tests__/constraints/player-identity.test.ts"
-      ci_command: "npm test -- -t 'enrollment prerequisite'"
+  Use Mini One-Pager mode (Verdict, P0 breaks, Missing decisions, Patch delta).
+  Focus on: coherence across artifacts, testable acceptance criteria,
+  scope creep, and missing non-functional requirements.")
 ```
 
-**Gate:** `dod-executable` — Every acceptance criterion maps to migration/policy/test/handler/UI state.
+- P0 findings: `prd-approved` gate **FAILS**. Enter retry protocol (see below).
+- P1-P3 findings: Advisory. Noted in handoff display for build-pipeline awareness.
+
+**Retry protocol (on P0 FAIL):**
+
+Present P0 findings to the human:
+
+```
+---------------------------------------------
+[FAIL] PRD Adversarial Review (Attempt {N}/2)
+---------------------------------------------
+
+P0 Findings ({count}):
+  1. {P0 finding summary}
+  2. {P0 finding summary}
+
+Options:
+  1. Revise PRD (delegate to prd-writer with DA findings)
+  2. Override with reason (record waiver, proceed to handoff)
+  3. Abort pipeline
+---------------------------------------------
+```
+
+- **Option 1 (Revise):** Delegate back to `prd-writer` with DA findings as revision context.
+  Re-run DA Mini One-Pager after revision. Update attempt count.
+- **Option 2 (Override):** Record override reason in checkpoint. Proceed to `prd-approved` gate
+  with override noted in handoff display.
+- **Option 3 (Abort):** Mark checkpoint `status` as `"failed"`, record DA findings. Stop.
+
+**Max 2 DA attempts.** After 2 consecutive P0 verdicts, the pipeline forces
+a human decision: override-with-reason or abort. No further automatic revision loops.
+
+**Gate:** `prd-approved` -- If it can't be proven by a test, it's not a criterion. No unresolved P0 findings from adversarial review.
+
+**Terminal phase**: On approval, output handoff instruction.
 
 ---
 
-## Phase 6: Execute
+## Handoff
 
-**Goal:** Implement the feature via workstreams.
-**Delegation:** Invoke `prd-pipeline` skill via `/prd-execute`
+On `prd-approved`, display:
 
-**Workflow:**
-1. prd-pipeline parses EXEC-SPEC
-2. Spawns capability agents for workstreams
-3. Runs validation gates (type-check, lint, test-pass)
-4. Updates MVP progress
+```
+---------------------------------------------
+Feature Design Complete: {feature-name}
+---------------------------------------------
 
-**Gate:** `implementation-complete` — All DoD gates pass in CI.
+Artifacts:
+  [PASS] Scaffold: docs/01-scaffolds/SCAFFOLD-###-{slug}.md
+  [PASS] RFC:      docs/02-design/RFC-###-{slug}.md
+  [PASS] SEC Note: docs/20-architecture/specs/{feature}/SEC_NOTE.md
+  [PASS] ADR(s):   docs/80-adrs/ADR-###-{slug}.md
+  [PASS] PRD:      docs/10-prd/PRD-###-{slug}.md
+  [PASS] DA Review: {verdict} ({P0_count} P0, {P1_count} P1)
+
+Next: /build PRD-###
+---------------------------------------------
+```
 
 ---
 
-## Definition of Done (Feature Complete)
+## Slash Commands
 
-A feature is "Done" when all buckets are green:
+| Command | Purpose |
+|---------|---------|
+| `/feature <name>` | Start new or resume existing feature pipeline |
+| `/feature-status` | Show current phase, gates passed/pending |
 
-### A) Functional Gates
-- [ ] PRD acceptance criteria pass
-- [ ] Happy path + critical unhappy paths validated
+---
 
-### B) Security Gates
-- [ ] Role matrix proven by automated tests (allow + deny)
-- [ ] No cross-casino reads/writes possible
-- [ ] Actor binding enforced in DB (not "trusted from client")
+## Smart Detection Logic
 
-### C) Data Integrity Gates
-- [ ] Uniqueness/immutability enforced (constraints/triggers)
-- [ ] Concurrency/race behavior defined and tested
+```
+/feature <argument>
 
-### D) Operability Gates
-- [ ] Errors are typed/actionable (no raw SQL leakage to UI)
-- [ ] Minimal audit is consistent (or explicitly omitted)
-- [ ] Migration rollback story exists (or blast radius is isolated)
+If argument == "status":
+  -> display status (read-only)
 
-**Gate:** `all-gates-pass` — If you can't run it in CI, it's not DoD.
+If checkpoint exists for <argument>:
+  -> resume from last phase
+  -> re-check current gate if previously failed
+
+If no checkpoint exists:
+  -> start new pipeline at Phase 0
+  -> create checkpoint
+```
 
 ---
 
@@ -247,21 +294,20 @@ A feature is "Done" when all buckets are green:
 
 ```json
 {
-  "feature_id": "player-identity-enrollment",
+  "feature_id": "csv-player-import",
   "current_phase": 3,
   "status": "in_progress",
-  "gates_passed": ["srm-ownership", "brief-approved", "prd-approved"],
-  "gates_pending": ["sec-approved", "adr-frozen", "dod-executable", "implementation-complete"],
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved"],
+  "gates_pending": ["sec-approved", "adr-frozen", "prd-approved"],
   "artifacts": {
-    "feature_boundary": "docs/20-architecture/specs/ADR-022/FEATURE_BOUNDARY.md",
-    "feature_brief": "docs/20-architecture/specs/ADR-022/FEATURE_BRIEF.md",
-    "prd": "docs/10-prd/PRD-022.md",
+    "feature_boundary": "docs/20-architecture/specs/csv-player-import/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-001-csv-player-import.md",
+    "design_brief": "docs/02-design/RFC-001-csv-player-import.md",
     "sec_note": null,
     "adr": null,
-    "exec_spec": null,
-    "dod_gates": null
+    "prd": null
   },
-  "timestamp": "2025-12-24T10:00:00Z"
+  "timestamp": "2026-02-22T10:00:00Z"
 }
 ```
 
@@ -269,34 +315,39 @@ A feature is "Done" when all buckets are green:
 
 ---
 
-## Slash Commands
-
-| Command | Purpose |
-|---------|---------|
-| `/feature-start <name>` | Start new feature pipeline at Phase 0 |
-| `/feature-status` | Show current phase, gates passed/pending |
-| `/feature-resume` | Resume from last checkpoint |
-| `/feature-freeze-adr <adr-id>` | Refactor ADR into Decision + EXEC-SPEC + DoD |
-
----
-
 ## Integration with Existing Skills
 
 | Phase | Delegates To | How |
 |-------|--------------|-----|
-| Phase 2 (PRD) | `prd-writer` | Skill invocation with Feature Boundary context |
+| Phase 2 (RFC) | `lead-architect` | Skill invocation with Feature Scaffold context |
 | Phase 4 (ADR) | `lead-architect` | Skill invocation, then freeze operation |
-| Phase 6 (Execute) | `prd-pipeline` | `/prd-execute` with EXEC-SPEC |
+| Phase 5 (PRD) | `prd-writer` | Skill invocation with Scaffold + RFC + SEC + ADR context |
+| Phase 5 (PRD Review) | `devils-advocate` | Skill invocation, Mini One-Pager mode |
+
+---
+
+## Clean Boundary
+
+| Concern | Owner | Artifacts |
+|---------|-------|-----------|
+| What problem, what options | feature-pipeline | Scaffold (`docs/01-scaffolds/`) |
+| What approach + alternatives | feature-pipeline | RFC (`docs/02-design/`) |
+| What security risks | feature-pipeline | SEC Note |
+| What decisions are locked | feature-pipeline | ADR(s) (`docs/80-adrs/`) |
+| What must be true | feature-pipeline | PRD (`docs/10-prd/`) |
+| How to build it | build-pipeline | EXEC-SPEC (`docs/21-exec-spec/`) |
+| Building it | build-pipeline | Code, migrations, tests |
+| Proving it's done | build-pipeline | DoD gates, CI validation |
 
 ---
 
 ## Why Features "Never End" (The Anti-Pattern)
 
 **Bad Loop:**
-"Design → discover edge case → redesign → discover deeper edge case → redesign…"
+"Design -> discover edge case -> redesign -> discover deeper edge case -> redesign..."
 
 **Good Loop:**
-"Define boundary + gates → implement → prove gates → ship → iterate."
+"Define boundary + gates -> implement -> prove gates -> ship -> iterate."
 
 Edge cases don't stop existing. You stop letting them expand the scope.
 
@@ -306,44 +357,22 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 
 | File | Purpose |
 |------|---------|
-| `references/feature-brief-template.md` | Phase 1 template |
-| `references/feature-boundary-template.md` | Ownership + scope template |
+| `references/feature-boundary-template.md` | Phase 0 template |
+| `docs/01-scaffolds/TEMPLATE.md` | Phase 1 template |
+| `docs/02-design/TEMPLATE.md` | Phase 2 template |
 | `references/sec-note-template.md` | Phase 3 template |
-| `references/dod-gate-template.md` | Phase 5 DoD template |
-| `references/phase-protocol.md` | Gate approval UX |
 
 ---
 
-## Examples
+## Definition of Done (Feature Design Complete)
 
-### ADR Freeze Operation
+A feature design is "Done" when all gates are green and handoff is ready:
 
-When an ADR is carrying implementation detail:
-
-```
-/feature-freeze-adr ADR-022
-
-Result:
-  ADR-022_*.md → ADR-022_DECISIONS.md (frozen, durable decisions only)
-  + EXEC-SPEC-022.md (implementation details, mutable)
-  + DOD-022.md (executable gate checklist)
-```
-
-### Feature Start
-
-```
-/feature-start player-identity-enrollment
-
-Phase 0: SRM-First Ownership
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-Loading SRM...
-
-This feature belongs to **PlayerService** (identity artifacts) and
-**CasinoService** (enrollment relationship). PlayerService writes to
-`player`, `player_identity`; CasinoService writes to `player_casino`.
-Cross-context needs go through **PlayerEnrollmentDTO**.
-
-Gate: srm-ownership
-Is this ownership correct? [y/n/edit]
-```
+- [ ] SRM ownership sentence written and boundary declared
+- [ ] Scaffold pins intent, constraints, 2+ options with tradeoffs
+- [ ] RFC proposes direction, identifies ADR-worthy decisions
+- [ ] SEC Note covers assets, threats, controls, deferred risks
+- [ ] ADR(s) contain only durable decisions (no implementation SQL/code)
+- [ ] PRD references ADR IDs, defines testable acceptance criteria
+- [ ] Adversarial review passed (no P0 findings)
+- [ ] Handoff instruction displayed with all artifact paths
