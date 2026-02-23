@@ -67,7 +67,7 @@ export function usePapaParse() {
           rows: collectedRows,
           totalRows: collectedRows.length,
           isComplete: true,
-          errors: completeResult.errors,
+          errors: completeResult?.errors ?? [],
         });
         setIsParsing(false);
       },

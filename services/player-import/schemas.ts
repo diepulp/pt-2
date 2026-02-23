@@ -69,6 +69,40 @@ export const createBatchSchema = z.object({
   column_mapping: z.record(z.string(), z.string()).default({}),
 });
 
+/**
+ * Permissive schema for normalized_payload during staging.
+ * Row-level validation (email format, identifier requirement) is enforced
+ * server-side by rpc_import_execute — staging accepts all rows as-is so
+ * the user can see validation outcomes in the report.
+ */
+const stageRowNormalizedPayloadSchema = z.object({
+  contract_version: z.literal('v1'),
+  source: z
+    .object({
+      vendor: z.string().optional(),
+      file_name: z.string().optional(),
+    })
+    .optional()
+    .default({}),
+  row_ref: z.object({
+    row_number: z.number().int().min(1),
+  }),
+  identifiers: z.object({
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    external_id: z.string().optional(),
+  }),
+  profile: z
+    .object({
+      first_name: z.string().optional(),
+      last_name: z.string().optional(),
+      dob: z.string().nullable().optional(),
+    })
+    .optional()
+    .default({}),
+  notes: z.string().optional(),
+});
+
 /** Schema for staging rows into a batch */
 export const stageRowsSchema = z.object({
   rows: z
@@ -76,7 +110,7 @@ export const stageRowsSchema = z.object({
       z.object({
         row_number: z.number().int().min(1),
         raw_row: z.record(z.string(), z.unknown()),
-        normalized_payload: importPlayerV1Schema,
+        normalized_payload: stageRowNormalizedPayloadSchema,
       }),
     )
     .min(1, 'At least one row is required')
