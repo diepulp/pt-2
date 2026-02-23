@@ -840,5 +840,59 @@ describe('MTLService Mappers', () => {
       // NOT combined (that would be $17,000 which is wrong)
       expect(result.agg_badge_in).not.toBe('agg_ctr_met');
     });
+
+    it('CRITICAL: watchlist floor uses >= (not >) for both filter and badge', () => {
+      // The DB-level .or() filter uses .gte (>=) for watchlistFloor.
+      // Badge derivation must use the same >= semantics so that every
+      // patron included by the filter receives at least an "agg_watchlist"
+      // badge — no patron should pass the filter but get badge "none".
+      const exactlyAtFloor = thresholds.watchlistFloor; // 300000 ($3,000)
+
+      // Badge at exactly watchlistFloor → agg_watchlist (not "none")
+      expect(deriveAggBadge(exactlyAtFloor, thresholds)).toBe('agg_watchlist');
+      expect(deriveEntryBadge(exactlyAtFloor, thresholds)).toBe(
+        'watchlist_near',
+      );
+
+      // One cent below → none (filter would exclude this patron)
+      expect(deriveAggBadge(exactlyAtFloor - 1, thresholds)).toBe('none');
+      expect(deriveEntryBadge(exactlyAtFloor - 1, thresholds)).toBe('none');
+    });
+
+    it('CRITICAL: patron below threshold on BOTH directions gets badge "none"', () => {
+      // A patron with total_in < watchlistFloor AND total_out < watchlistFloor
+      // should receive "none" badges for both directions.
+      // The DB filter excludes them from list queries, but single-patron
+      // queries (usePatronDailyTotal) bypass the filter and must still
+      // compute correct badges.
+      const belowThreshold: MtlGamingDaySummaryRow = {
+        ...mockGamingDaySummaryRow,
+        total_in: 200000, // $2,000 — below $3,000 floor
+        total_out: 100000, // $1,000 — below $3,000 floor
+      };
+
+      const result = mapGamingDaySummaryRow(belowThreshold, thresholds);
+
+      expect(result.agg_badge_in).toBe('none');
+      expect(result.agg_badge_out).toBe('none');
+      // Totals are still correctly mapped (not zeroed)
+      expect(result.total_in).toBe(200000);
+      expect(result.total_out).toBe(100000);
+    });
+
+    it('CRITICAL: patron above threshold on ONE direction is included', () => {
+      // The DB filter uses OR — a patron meeting threshold on only one
+      // direction must still appear and get correct badges for both.
+      const mixedThreshold: MtlGamingDaySummaryRow = {
+        ...mockGamingDaySummaryRow,
+        total_in: 100000, // $1,000 — below floor → "none"
+        total_out: 500000, // $5,000 — above floor → "agg_watchlist"
+      };
+
+      const result = mapGamingDaySummaryRow(mixedThreshold, thresholds);
+
+      expect(result.agg_badge_in).toBe('none');
+      expect(result.agg_badge_out).toBe('agg_watchlist');
+    });
   });
 });

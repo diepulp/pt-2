@@ -435,13 +435,18 @@ export async function getGamingDaySummary(
     .select(MTL_GAMING_DAY_SUMMARY_SELECT)
     .eq('casino_id', filters.casino_id)
     .eq('gaming_day', filters.gaming_day)
-    // Exclude patrons whose aggregates dropped below all thresholds
-    // after buy-in reversals or adjustments (cents vs cents)
-    .or(
-      `total_in.gte.${thresholds.watchlistFloor},total_out.gte.${thresholds.watchlistFloor}`,
-    )
     .order('total_volume', { ascending: false })
     .limit(limit + 1);
+
+  // Apply threshold filter ONLY for list queries (no specific patron).
+  // When patron_uuid is specified (e.g. usePatronDailyTotal), we must
+  // return the actual totals regardless of threshold — the buy-in
+  // workflow needs them for projected-total / CTR banner calculation.
+  if (!filters.patron_uuid) {
+    query = query.or(
+      `total_in.gte.${thresholds.watchlistFloor},total_out.gte.${thresholds.watchlistFloor}`,
+    );
+  }
 
   // Apply optional filters
   if (filters.patron_uuid) {
