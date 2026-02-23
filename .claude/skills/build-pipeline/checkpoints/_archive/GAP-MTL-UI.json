@@ -1,0 +1,46 @@
+{
+  "prd_id": "GAP-MTL-UI",
+  "prd_title": "MTL UI Terminology and Form Integration",
+  "status": "complete",
+  "started_at": "2026-01-19T00:00:00Z",
+  "completed_at": "2026-01-19T16:25:00Z",
+  "current_phase": 2,
+  "total_phases": 2,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "execution_spec_path": "docs/20-architecture/specs/GAP-MTL-UI-TERMINOLOGY/EXECUTION-SPEC-GAP-MTL-UI-TERMINOLOGY.md",
+  "gates_passed": ["type-check", "build"],
+  "artifacts_created": [
+    "supabase/migrations/20260119160045_add_patron_dob_to_mtl_gaming_day_summary.sql",
+    "supabase/migrations/20260119162505_fix_mtl_bridge_cents_to_dollars.sql (post-release fix)",
+    "components/mtl/compliance-dashboard.tsx (edited)",
+    "components/mtl/gaming-day-summary.tsx (edited)",
+    "components/mtl/mtl-entry-form.tsx (replaced)",
+    "components/mtl/mtl-txn-type-codes.ts (edited)",
+    "services/mtl/dtos.ts (edited)",
+    "services/mtl/selects.ts (edited)",
+    "services/mtl/mappers.ts (edited)",
+    "hooks/rating-slip-modal/use-save-with-buyin.ts (bugfix: MTL stores dollars, not cents)"
+  ],
+  "post_release_fixes": [
+    {
+      "date": "2026-01-19",
+      "issue": "MTL amounts displayed as 100x inflated (e.g., $300,000 instead of $3,000)",
+      "root_cause": "Financial transactions store amounts in cents but MTL expects dollars. Bridge trigger and direct MTL creation were using cents.",
+      "fixes": [
+        "hooks/rating-slip-modal/use-save-with-buyin.ts: Changed MTL entry creation from `newBuyIn * 100` to `newBuyIn` (dollars)",
+        "supabase/migrations/20260119162505_fix_mtl_bridge_cents_to_dollars.sql: Bridge trigger now divides by 100"
+      ]
+    },
+    {
+      "date": "2026-01-19",
+      "issue": "MTL vs CTR tracking conflated in gaming-day-summary.tsx banner",
+      "root_cause": "Banner counted CTR triggers (agg_ctr_met > $10k aggregate) but labeled as 'MTL Thresholds Met'. Per GAP-MTL-UI-TERMINOLOGY, MTL is single-transaction threshold (>= $3k), not aggregate.",
+      "fixes": [
+        "components/mtl/gaming-day-summary.tsx: Added separate MTL banner (amber) showing patron count with MTL threshold met (row existence = single transaction >= $3k). CTR banner (red) now correctly labeled as 'CTR Triggers' showing aggregate > $10k."
+      ]
+    }
+  ],
+  "error": null
+}

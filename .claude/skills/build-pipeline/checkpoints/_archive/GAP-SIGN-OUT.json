@@ -1,0 +1,24 @@
+{
+  "spec_id": "GAP-SIGN-OUT",
+  "spec_title": "Sign-Out & Lock Screen Implementation",
+  "source_document": "docs/issues/gaps/GAP-SIGN-OUT-IMPLEMENTATION.md",
+  "execution_spec": "docs/20-architecture/specs/GAP-SIGN-OUT/EXECUTION-SPEC-GAP-SIGN-OUT.md",
+  "status": "complete",
+  "created_at": "2026-02-10T00:00:00Z",
+  "updated_at": "2026-02-10T14:30:00Z",
+  "current_phase": 5,
+  "total_phases": 5,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": [
+    "phase1:type-check",
+    "phase2:type-check",
+    "phase2:test-pass",
+    "phase3:type-check",
+    "phase4:type-check",
+    "phase5:type-check",
+    "phase5:test-pass"
+  ],
+  "notes": "All 7 workstreams complete. 8 test suites, 46 tests passing. Type-check clean for all GAP-SIGN-OUT files. Build gate has pre-existing failure in app/(public)/start/page.tsx (setup_status column) — confirmed same failure on clean main branch. No new build errors introduced."
+}

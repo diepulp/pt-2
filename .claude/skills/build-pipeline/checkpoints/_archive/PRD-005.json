@@ -1,0 +1,165 @@
+{
+  "prd": "PRD-005",
+  "prd_title": "MTL Service - AML/CTR Compliance Tracking",
+  "current_phase": 8,
+  "status": "complete",
+  "security_adrs": ["ADR-025"],
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS11", "WS12"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "pre_execution": [
+      "docs/80-adrs/ADR-025-mtl-authorization-model.md",
+      "docs/30-security/SEC-003-rbac-matrix.md (v1.3.0)",
+      "docs/20-architecture/specs/PRD-005/EXECUTION-SPEC-PRD-005.md"
+    ],
+    "WS1": [
+      "supabase/migrations/20260103002836_prd005_mtl_service.sql",
+      "supabase/migrations/20260103004320_prd005_mtl_occurred_at_and_guards.sql",
+      "types/database.types.ts"
+    ],
+    "WS2": [
+      "services/mtl/dtos.ts",
+      "services/mtl/schemas.ts",
+      "services/mtl/selects.ts",
+      "services/mtl/mappers.ts",
+      "services/mtl/keys.ts (updated)"
+    ],
+    "WS3": [
+      "services/mtl/crud.ts",
+      "services/mtl/index.ts",
+      "services/mtl/http.ts",
+      "services/mtl/view-model.ts (updated - CTR strictly > fix)"
+    ],
+    "WS4": [
+      "app/api/v1/mtl/entries/route.ts (GET, POST)",
+      "app/api/v1/mtl/entries/[entryId]/route.ts (GET)",
+      "app/api/v1/mtl/entries/[entryId]/audit-notes/route.ts (GET, POST)",
+      "app/api/v1/mtl/gaming-day-summary/route.ts (GET) [NEW]"
+    ],
+    "WS5": [
+      "hooks/mtl/index.ts",
+      "hooks/mtl/use-mtl-entries.ts (useMtlEntries, useMtlEntry)",
+      "hooks/mtl/use-mtl-mutations.ts (useCreateMtlEntry, useCreateMtlAuditNote)",
+      "hooks/mtl/use-gaming-day-summary.ts (useGamingDaySummary)"
+    ],
+    "WS6": [
+      "services/mtl/__tests__/mappers.test.ts (67 tests, 100% coverage)",
+      "services/mtl/__tests__/view-model.test.ts"
+    ],
+    "WS7": [
+      "lib/supabase/__tests__/rls-mtl.integration.test.ts (comprehensive RLS tests)"
+    ],
+    "WS8": [
+      "app/api/v1/mtl/gaming-day-summary/__tests__/route.test.ts (12 tests)"
+    ],
+    "WS9": [
+      "components/mtl/entry-badge.tsx (Tier 1 UX badge)",
+      "components/mtl/agg-badge.tsx (Tier 2 Compliance badge with AggBadgePair)",
+      "components/mtl/entry-list.tsx (paginated table with badges)"
+    ],
+    "WS10": [
+      "components/mtl/entry-detail.tsx (detail view with audit trail)",
+      "components/mtl/audit-note-form.tsx (append-only note form)"
+    ],
+    "WS11": [
+      "components/mtl/gaming-day-summary.tsx (compliance authority table)",
+      "components/mtl/compliance-dashboard.tsx (main dashboard)",
+      "components/mtl/index.ts (barrel export)",
+      "app/(dashboard)/compliance/page.tsx (server component with auth)"
+    ],
+    "WS12": [
+      "Build validation passed"
+    ]
+  },
+  "gates_passed": ["security-adr-approved", "execution-spec-approved", "schema-validation", "type-check", "lint", "build"],
+  "gates_pending": [],
+  "timestamp": "2026-01-03T08:30:00Z",
+  "execution_spec_path": "docs/20-architecture/specs/PRD-005/EXECUTION-SPEC-PRD-005.md",
+  "authorization_model": {
+    "source": "ADR-025 v1.1.0",
+    "mtl_entry": {
+      "SELECT": ["pit_boss", "cashier", "admin"],
+      "INSERT": ["pit_boss", "cashier", "admin"],
+      "UPDATE": [],
+      "DELETE": []
+    },
+    "mtl_audit_note": {
+      "SELECT": ["pit_boss", "admin"],
+      "INSERT": ["pit_boss", "admin"],
+      "UPDATE": [],
+      "DELETE": []
+    }
+  },
+  "route_summary": {
+    "entries_list_create": {
+      "path": "/api/v1/mtl/entries",
+      "methods": ["GET", "POST"],
+      "roles": ["pit_boss", "cashier", "admin"]
+    },
+    "entry_detail": {
+      "path": "/api/v1/mtl/entries/[entryId]",
+      "methods": ["GET"],
+      "roles": ["pit_boss", "cashier", "admin"]
+    },
+    "audit_notes": {
+      "path": "/api/v1/mtl/entries/[entryId]/audit-notes",
+      "methods": ["GET", "POST"],
+      "roles": ["pit_boss", "admin"]
+    },
+    "gaming_day_summary": {
+      "path": "/api/v1/mtl/gaming-day-summary",
+      "methods": ["GET"],
+      "roles": ["pit_boss", "admin"],
+      "note": "COMPLIANCE AUTHORITY surface"
+    }
+  },
+  "ship_gates": {
+    "rls_matrix": "complete",
+    "append_only": "complete",
+    "ui_gating": "complete",
+    "tests": "complete",
+    "docs_stitched": "complete"
+  },
+  "schema_additions": {
+    "enums": ["mtl_txn_type", "mtl_source"],
+    "columns": ["txn_type", "source", "gaming_day", "occurred_at"],
+    "indexes": ["ux_mtl_entry_casino_idem", "ix_mtl_patron_day", "ix_mtl_gaming_day_direction", "ix_mtl_txn_type", "ix_mtl_occurred_at"],
+    "views": ["mtl_gaming_day_summary"],
+    "constraints": ["chk_mtl_direction_txn_type_alignment"],
+    "triggers": ["trg_mtl_entry_set_gaming_day", "trg_mtl_entry_no_update", "trg_mtl_entry_no_delete", "trg_mtl_audit_note_no_update", "trg_mtl_audit_note_no_delete"]
+  },
+  "dto_summary": {
+    "pattern": "A (Contract-First)",
+    "entry_types": ["MtlEntryDTO", "MtlEntryWithNotesDTO", "MtlAuditNoteDTO"],
+    "summary_types": ["MtlGamingDaySummaryDTO"],
+    "input_types": ["CreateMtlEntryInput", "CreateMtlAuditNoteInput"],
+    "filter_types": ["MtlEntryFilters", "MtlGamingDaySummaryFilters"],
+    "badge_functions": ["deriveEntryBadge (Tier 1 UX)", "deriveAggBadge (Tier 2 COMPLIANCE)"],
+    "ctr_semantics": "strictly > (not >=) per 31 CFR § 1021.311"
+  },
+  "service_summary": {
+    "factory": "createMtlService(supabase)",
+    "interface": "MtlServiceInterface",
+    "operations": {
+      "create": ["createEntry (idempotent)", "createAuditNote (append-only)"],
+      "read": ["getEntryById", "listEntries", "getAuditNotes", "getGamingDaySummary"]
+    },
+    "http_fetchers": ["createMtlEntry", "listMtlEntries", "getMtlEntry", "createMtlAuditNote", "getMtlAuditNotes", "getGamingDaySummary"]
+  },
+  "ui_summary": {
+    "components": [
+      "EntryBadge - Tier 1 UX badge",
+      "AggBadge + AggBadgePair - Tier 2 Compliance badges",
+      "EntryList - Paginated entry table",
+      "EntryDetail - Detail view with audit trail",
+      "AuditNoteForm - Append-only note form",
+      "GamingDaySummary - Compliance authority table",
+      "ComplianceDashboard - Main dashboard with drilldown"
+    ],
+    "pages": [
+      "/compliance - Dashboard with auth gating"
+    ]
+  },
+  "completion_summary": "PRD-005 MTL Service implementation complete. All 12 workstreams finished. Build validation passed."
+}

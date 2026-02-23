@@ -1,0 +1,39 @@
+{
+  "prd": "PRD-012",
+  "prd_title": "Table Betting Limits Management",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "services/table-context/dtos.ts",
+      "services/table-context/schemas.ts",
+      "services/table-context/selects.ts",
+      "services/table-context/mappers.ts",
+      "services/table-context/table-settings.ts",
+      "services/table-context/keys.ts",
+      "services/table-context/http.ts",
+      "services/table-context/index.ts"
+    ],
+    "WS2": [
+      "app/api/v1/tables/[tableId]/settings/route.ts"
+    ],
+    "WS3": [
+      "hooks/table-context/use-table-settings.ts",
+      "hooks/table-context/index.ts"
+    ],
+    "WS4": [
+      "components/table/table-limits-dialog.tsx",
+      "components/table/table-layout-terminal.tsx"
+    ],
+    "WS5": [
+      "services/table-context/__tests__/table-settings.test.ts",
+      "app/api/v1/tables/[tableId]/settings/__tests__/route.test.ts"
+    ]
+  },
+  "gates_passed": ["type-check-phase1", "type-check-phase2", "lint-phase2", "type-check-phase3", "test-pass"],
+  "gates_pending": [],
+  "timestamp": "2025-12-21T13:00:00Z"
+}

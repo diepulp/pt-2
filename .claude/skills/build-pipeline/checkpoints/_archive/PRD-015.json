@@ -1,0 +1,51 @@
+{
+  "prd": "PRD-015",
+  "prd_title": "ADR-015 Phase 1A Remediation - RPC Self-Injection Completion",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20251221173711_prd015_ws1_financial_rpc_self_injection.sql"],
+    "WS2": ["supabase/migrations/20251221173703_prd015_ws2_loyalty_rpcs_self_injection.sql"],
+    "WS3": ["supabase/migrations/20251221173716_prd015_ws3_table_mgmt_rpcs_self_injection.sql"],
+    "WS4": ["supabase/migrations/20251221173703_prd015_ws4_casino_ops_rpcs_self_injection.sql"],
+    "WS5": [
+      "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts",
+      "lib/supabase/__tests__/pit-boss-financial-txn.test.ts",
+      "docs/audits/PRD-015-WS5-TEST-IMPLEMENTATION.md"
+    ],
+    "WS6": [
+      ".husky/pre-commit-rpc-lint.sh",
+      ".github/workflows/migration-lint.yml"
+    ],
+    "WS7": [
+      "docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md",
+      "docs/issues/ISSUE-5FE4A689-RPC-SELF-INJECTION-SYSTEMATIC-GAP-20251221.md"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check", "test-pass", "build"],
+  "gates_pending": [],
+  "execution_phases": [
+    {
+      "name": "Phase 1 - RPC Self-Injection",
+      "workstreams": ["WS1", "WS2", "WS3", "WS4"],
+      "gate": "schema-validation",
+      "status": "passed"
+    },
+    {
+      "name": "Phase 2 - Testing",
+      "workstreams": ["WS5"],
+      "gate": "test-pass",
+      "status": "passed"
+    },
+    {
+      "name": "Phase 3 - CI and Documentation",
+      "workstreams": ["WS6", "WS7"],
+      "gate": "build",
+      "status": "passed"
+    }
+  ],
+  "timestamp": "2025-12-21T18:05:00Z"
+}

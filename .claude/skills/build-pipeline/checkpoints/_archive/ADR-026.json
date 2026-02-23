@@ -1,0 +1,151 @@
+{
+  "prd_id": "ADR-026",
+  "prd_title": "Gaming-Day-Scoped Visits",
+  "status": "complete",
+  "current_phase": 5,
+  "started_at": "2026-01-16T22:00:00Z",
+  "completed_at": "2026-01-16T23:45:00Z",
+  "updated_at": "2026-01-16T23:45:00Z",
+  "execution_spec_path": "docs/20-architecture/specs/ADR-026/EXECUTION-SPEC-ADR-026-PATCH.md",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "type-check", "build"],
+  "gates_failed": [],
+  "artifacts": [
+    "supabase/migrations/20260116194341_adr026_gaming_day_scoped_visits.sql",
+    "supabase/migrations/20260116220541_adr026_rpc_start_or_resume_visit.sql",
+    "supabase/migrations/20260116220542_adr026_bff_gaming_day_filter.sql",
+    "types/remote/database.types.ts",
+    "types/database.types.ts",
+    "services/visit/crud.ts",
+    "services/visit/dtos.ts",
+    "services/visit/__tests__/gaming-day-boundary.int.test.ts",
+    "components/dashboard/new-slip-modal.tsx",
+    "components/modals/rating-slip/rating-slip-modal.tsx"
+  ],
+  "workstream_details": {
+    "WS1": {
+      "name": "Database Schema",
+      "status": "completed",
+      "completed_at": "2026-01-16T19:45:00Z",
+      "deliverables": [
+        "visit.gaming_day column (NOT NULL)",
+        "set_visit_gaming_day() trigger function",
+        "trg_visit_gaming_day trigger",
+        "uq_visit_player_gaming_day_active unique index",
+        "ix_visit_casino_gaming_day performance index"
+      ],
+      "acceptance_criteria": {
+        "db_types_succeeds": true,
+        "gaming_day_column_exists": true,
+        "trigger_uses_canonical_function": true,
+        "unique_index_prevents_duplicates": true
+      }
+    },
+    "WS2": {
+      "name": "SECURITY DEFINER RPC",
+      "status": "completed",
+      "completed_at": "2026-01-16T22:06:00Z",
+      "deliverables": [
+        "rpc_start_or_resume_visit(p_player_id uuid) SECURITY DEFINER RPC",
+        "ADR-024 context injection via set_rls_context_from_staff()",
+        "Gaming day boundary handling (close stale visits)",
+        "Rating slip closure on rollover (INV-6)",
+        "Race condition handling via unique_violation exception",
+        "Audit log entry for visit_rollover"
+      ],
+      "acceptance_criteria": {
+        "security_definer_with_search_path": true,
+        "calls_set_rls_context_from_staff": true,
+        "derives_casino_id_from_context": true,
+        "handles_race_conditions": true,
+        "closes_stale_rating_slips": true
+      }
+    },
+    "WS3": {
+      "name": "BFF RPC Fix",
+      "status": "completed",
+      "completed_at": "2026-01-16T22:06:00Z",
+      "deliverables": [
+        "Updated rpc_get_rating_slip_modal_data with gaming_day filter",
+        "Financial aggregation filtered by visit.gaming_day (INV-3)",
+        "gamingDay response field from visit (not slip.start_time::date)",
+        "Uses v_context_casino_id throughout (ADR-024)"
+      ],
+      "acceptance_criteria": {
+        "financial_totals_filtered_by_gaming_day": true,
+        "gaming_day_from_visit_not_slip": true,
+        "uses_context_casino_id": true,
+        "db_types_succeeds": true
+      }
+    },
+    "WS4": {
+      "name": "Service Layer Update",
+      "status": "completed",
+      "completed_at": "2026-01-16T23:15:00Z",
+      "deliverables": [
+        "Updated startVisit() to call rpc_start_or_resume_visit",
+        "Extended StartVisitResultDTO with resumed and gamingDay fields",
+        "Fixed gaming_day placeholder in direct inserts (createRewardVisit, createGhostGamingVisit, startFromPrevious)",
+        "Updated E2E fixtures with gaming_day placeholder"
+      ],
+      "acceptance_criteria": {
+        "startVisit_calls_new_rpc": true,
+        "no_client_side_update_calls": true,
+        "dto_includes_resumed_and_gamingDay": true,
+        "type_check_passes": true,
+        "build_succeeds": true
+      }
+    },
+    "WS5": {
+      "name": "UI Integration",
+      "status": "completed",
+      "completed_at": "2026-01-16T23:40:00Z",
+      "deliverables": [
+        "Resuming session notification toast in new-slip-modal.tsx (lines 212-218)",
+        "Gaming day display in rating-slip-modal.tsx header (lines 510-519)",
+        "Uses sonner toast with Info icon for user notification"
+      ],
+      "acceptance_criteria": {
+        "resuming_notification_shown": true,
+        "gaming_day_displayed_in_modal": true,
+        "no_ui_regressions": true
+      }
+    },
+    "WS6": {
+      "name": "Integration Tests",
+      "status": "completed",
+      "completed_at": "2026-01-16T23:42:00Z",
+      "deliverables": [
+        "services/visit/__tests__/gaming-day-boundary.int.test.ts",
+        "Tests for gaming_day column and trigger",
+        "Tests for uq_visit_player_gaming_day_active unique index",
+        "Tests for visit_group_id continuity",
+        "Tests for rating slip closure on rollover",
+        "Tests for ghost visits bypassing constraint"
+      ],
+      "acceptance_criteria": {
+        "trigger_tests_pass": true,
+        "unique_constraint_tests_pass": true,
+        "continuity_tests_pass": true
+      }
+    },
+    "WS7": {
+      "name": "Quality Validation",
+      "status": "completed",
+      "completed_at": "2026-01-16T23:45:00Z",
+      "deliverables": [
+        "TypeScript type-check passes",
+        "Production build succeeds",
+        "All validation gates green"
+      ],
+      "acceptance_criteria": {
+        "type_check_passes": true,
+        "build_succeeds": true,
+        "no_regressions": true
+      }
+    }
+  },
+  "notes": "ADR-026 Gaming-Day-Scoped Visits implementation complete. All 7 workstreams finished. Build and type-check gates passed."
+}

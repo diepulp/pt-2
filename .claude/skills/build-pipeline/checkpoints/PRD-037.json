@@ -1,0 +1,76 @@
+{
+  "prd_id": "PRD-037",
+  "prd_title": "CSV Player Import — Lane 1 MVP",
+  "spec_path": "docs/21-exec-spec/EXEC-037-csv-player-import.md",
+  "prd_path": "docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md",
+  "branch": "csv-import",
+  "status": "executing",
+  "current_phase": 1,
+  "total_phases": 5,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "failed_workstreams": [],
+  "gates_passed": [],
+  "gov010_check": "passed",
+  "spec_approved": true,
+  "spec_approved_at": "2026-02-23T13:15:00Z",
+  "adversarial_review": {
+    "verdict": "Ship w/ gates",
+    "attempt": 1,
+    "p0_count": 0,
+    "p1_count": 7,
+    "p2_count": 6,
+    "p3_count": 2,
+    "patch_delta_applied": true,
+    "patches_applied": [
+      "FOR UPDATE replaces FOR UPDATE SKIP LOCKED",
+      "LOWER(email) case-insensitive matching",
+      "linked = skip (no player field updates)",
+      "Server-side batch row limit (10,000)",
+      "Identifier resolution indexes",
+      "GRANT EXECUTE TO authenticated",
+      "updated_at trigger on import_batch",
+      "SEC Note T4: single quote → tab prefix (0x09)",
+      "RLS integration tests added to WS6",
+      "Execute RPC integration tests added to WS6",
+      "Single transaction semantics clarified",
+      "statement_timeout = 120s on execute RPC"
+    ]
+  },
+  "audit_foldin": {
+    "source": "docs/21-exec-spec/EXEC-037-csv-player-import.AUDIT-FOLDIN.md",
+    "applied": true,
+    "fixes_applied": [
+      "Endpoint count clarified: 6 endpoints across 4 route files",
+      "Preview/report note: client-side derived, no dedicated endpoints",
+      "Stage rows retry safety: ON CONFLICT (batch_id, row_number) DO NOTHING",
+      "Execute failure: two-phase pattern (subtransaction for writes, outer persists failure metadata)",
+      "SECURITY DEFINER defense-in-depth clarification added",
+      "CSV sanitization broadened: added \\t and \\r triggers",
+      "Pinned set_rls_context_from_staff() signature in Architecture Context"
+    ]
+  },
+  "audit_foldin_2": {
+    "source": "docs/21-exec-spec/EXEC-037-csv-player-import.AUDIT-AGAIN-FOLDIN.md",
+    "verdict": "Green-lightable",
+    "applied": true,
+    "fixes_applied": [
+      "Stage RPC locks batch row FOR UPDATE before 10k cap check (race condition fix)",
+      "Execute concurrent-call behavior explicit: wait on lock → return final report, no reprocess",
+      "Functional index called out: CREATE INDEX IF NOT EXISTS idx_player_email_lower ON public.player (lower(email))",
+      "Staging immutability rule clarified: to correct a row, create new batch",
+      "Consistency fix: removed duplicate acceptance criterion for batch row limit",
+      "Consistency fix: index language uses explicit CREATE INDEX SQL everywhere"
+    ]
+  },
+  "resume_instructions": "EXEC-SPEC approved. Resume with Phase 3 execution starting at Phase 1 (WS1: Database Schema & RPCs). Dispatch WS1 to backend-service-builder skill. After WS1 gate passes (schema-validation), dispatch Phase 2 (WS2 + WS3 in parallel). Follow execution_phases from EXEC-SPEC YAML frontmatter.",
+  "execution_phases": [
+    {"phase": 1, "name": "Foundation", "workstreams": ["WS1"], "gates": ["schema-validation"], "status": "pending"},
+    {"phase": 2, "name": "RLS + Service Layer", "workstreams": ["WS2", "WS3"], "gates": ["type-check"], "status": "pending"},
+    {"phase": 3, "name": "Route Handlers", "workstreams": ["WS4"], "gates": ["lint"], "status": "pending"},
+    {"phase": 4, "name": "Frontend + Service Tests", "workstreams": ["WS5", "WS6"], "gates": ["type-check", "test-pass"], "status": "pending"},
+    {"phase": 5, "name": "E2E Tests + Final Build", "workstreams": ["WS7"], "gates": ["test-pass", "build"], "status": "pending"}
+  ],
+  "created_at": "2026-02-23T12:00:00Z",
+  "updated_at": "2026-02-23T13:15:00Z"
+}

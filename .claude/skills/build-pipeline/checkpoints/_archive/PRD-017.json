@@ -1,0 +1,44 @@
+{
+  "prd": "PRD-017",
+  "prd_title": "Start From Previous Session (Visit Continuation)",
+  "current_phase": 6,
+  "status": "completed",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20251222015000_prd017_visit_continuation.sql"],
+    "WS2": ["supabase/migrations/20251222015001_prd017_rpc_table_availability.sql"],
+    "WS3": ["supabase/migrations/20251222015002_prd017_rpc_loyalty_summary.sql"],
+    "WS4": ["supabase/migrations/20251222015003_prd017_rpc_last_segment.sql"],
+    "WS5": ["supabase/migrations/20251222015004_prd017_rpc_recent_sessions.sql"],
+    "WS6": ["supabase/migrations/20251222015005_prd017_rpc_last_session_context.sql"],
+    "WS7": ["services/visit/crud.ts", "services/visit/dtos.ts", "services/visit/schemas.ts", "services/visit/index.ts", "services/visit/keys.ts", "services/visit/selects.ts", "services/visit/mappers.ts"],
+    "WS8": ["app/api/v1/visits/start-from-previous/route.ts"],
+    "WS9": ["app/api/v1/players/[playerId]/recent-sessions/route.ts"],
+    "WS10": ["e2e/workflows/visit-continuation.spec.ts"]
+  },
+  "gates_passed": ["schema-validation", "type-check", "lint"],
+  "gates_pending": ["test-pass"],
+  "execution_notes": {
+    "WS1": "visit_group_id column, trigger, partial unique index, pagination indexes",
+    "WS2": "rpc_check_table_seat_availability - SECURITY INVOKER, checks table status and seat occupancy",
+    "WS3": "rpc_get_visit_loyalty_summary - SECURITY INVOKER, returns points_earned for visit",
+    "WS4": "rpc_get_visit_last_segment - SECURITY INVOKER, returns last table/seat/settings/average_bet",
+    "WS5": "rpc_get_player_recent_sessions - paginated closed sessions with aggregates, cursor-based pagination",
+    "WS6": "rpc_get_player_last_session_context - prefill data for continuation form",
+    "WS7": "VisitService extended with getPlayerRecentSessions, getPlayerLastSessionContext, startFromPrevious",
+    "WS8": "POST /api/v1/visits/start-from-previous with withServerAction middleware, idempotency support",
+    "WS9": "GET /api/v1/players/[playerId]/recent-sessions with Zod validation, cursor pagination",
+    "WS10": "E2E tests created: 17 tests covering recent-sessions API, start-from-previous workflow, visit_group_id DB behavior, error cases (400/401/403/404/409/422). Infrastructure issue: RLS blocking service role client - requires separate investigation."
+  },
+  "next_actions": [
+    "Fix E2E test infrastructure: service role client RLS bypass not working (player table)",
+    "Run test-pass gate after E2E infrastructure fixed"
+  ],
+  "infrastructure_issues": {
+    "e2e_rls_bypass": "Service role client hitting RLS policy on player table during test fixture setup. Existing rating-slip-fixtures.ts has same issue (uses non-existent casino_id on player table). E2E test infrastructure needs audit."
+  },
+  "resume_command": "/prd-execute PRD-017 --resume",
+  "timestamp": "2025-12-22T21:45:00Z"
+}

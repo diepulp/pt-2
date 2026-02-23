@@ -1,0 +1,22 @@
+{
+  "prd_id": "ISSUE-SHIFT-DASH-STALE-ADJ",
+  "prd_title": "Shift Dashboard Telemetry Pipeline — Stale Data, 100x Inflation, Adjustment Blackout",
+  "spec_path": "docs/20-architecture/specs/ISSUE-SHIFT-DASH-STALE-ADJ/EXECUTION-SPEC-ISSUE-SHIFT-DASH-STALE-ADJ.md",
+  "status": "complete",
+  "created_at": "2026-02-02T12:31:50Z",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["schema-validation", "test-pass", "build"],
+  "last_updated": "2026-02-02T14:00:00Z",
+  "session_notes": {
+    "ws1_output": "supabase/migrations/20260202123200_fix_bridge_100x_inflation.sql — removed *100 from bridge, repaired corrupted data, added ADR-031 comment",
+    "ws2_output": "supabase/migrations/20260202123300_enable_adjustment_telemetry.sql — relaxed constraints (chk_amount_nonzero, RATED_ADJUSTMENT kind), inherited rating_slip_id in adjustment RPC, extended bridge for adjustment path, updated rpc_shift_table_metrics telemetry_agg to include RATED_ADJUSTMENT in rated_cents/rated_count",
+    "ws3_output": "hooks/player-financial/use-financial-mutations.ts — added shiftDashboardKeys import, added summary.scope + allMetrics() invalidation in useCreateFinancialAdjustment onSuccess",
+    "ws4_output": "Fixed test mock invariant (buyins 30000 -> 250000 = rated 200000 + grind 50000), updated SHIFT_METRICS_CONTRACT_v1.md §2 with RATED_ADJUSTMENT note, updated SHIFT_READ_MODEL_AUDIT_v1.md §1.1 with superset invariant explanation",
+    "phase2_gates_pending": "schema-validation and type-check gates not yet run for Phase 2 (Supabase in read-only mode for migrations)",
+    "supabase_readonly": "apply_migration failed with read-only mode — migration files written to disk for deployment"
+  }
+}

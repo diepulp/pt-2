@@ -1,0 +1,13 @@
+{
+  "prd": "PRD-Shift-Dashboards-v0.2",
+  "prd_title": "Shift Dashboards Implementation (Telemetry + Core Metrics)",
+  "current_phase": 0,
+  "status": "initialized",
+  "completed_workstreams": [],
+  "in_progress_workstreams": [],
+  "pending_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "artifacts": {},
+  "gates_passed": [],
+  "gates_pending": ["type-check (WS1)", "type-check (WS2)", "type-check (WS3)", "type-check (WS4)", "build (WS5)", "test-pass (WS6)"],
+  "timestamp": "2026-01-14T10:00:00Z"
+}

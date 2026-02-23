@@ -1,0 +1,15 @@
+{
+  "spec_id": "GAP-SETUP-WIZARD-CUSTOM-GAME-SETTINGS",
+  "source": "docs/issues/gaps/onboarding-setup-wizard/GAP-SETUP-WIZARD-CUSTOM-GAME-SETTINGS.md",
+  "execution_spec": "docs/20-architecture/specs/GAP-SETUP-WIZARD-CUSTOM-GAME-SETTINGS/EXECUTION-SPEC-GAP-SETUP-WIZARD-CUSTOM-GAME-SETTINGS.PATCHED.md",
+  "status": "complete",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": ["phase_1:type-check", "phase_2:type-check", "phase_3:build", "phase_3:test-pass"],
+  "created_at": "2026-02-12",
+  "updated_at": "2026-02-12",
+  "notes": "All 4 workstreams complete. deleteGameSettings CRUD, 3 server actions, full game management UI, and 5 unit tests."
+}

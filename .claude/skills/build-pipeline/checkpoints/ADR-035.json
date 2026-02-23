@@ -1,0 +1,28 @@
+{
+  "spec_id": "EXEC-SPEC-ADR-035",
+  "prd": "ADR-035",
+  "source": "docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md",
+  "status": "complete",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "gates_passed": [
+    { "phase": 1, "gate": "type-check", "workstreams": ["WS1", "WS4"] },
+    { "phase": 2, "gate": "type-check", "workstreams": ["WS2", "WS5"] },
+    { "phase": 2, "gate": "test-pass", "workstreams": ["WS5"], "tests": "7/7 passed" },
+    { "phase": 3, "gate": "type-check", "workstreams": ["WS3", "WS6"] },
+    { "phase": 3, "gate": "test-pass", "workstreams": ["WS6"], "tests": "123/123 passed (7 suites)" },
+    { "phase": 3, "gate": "build", "workstreams": ["WS3", "WS6"] }
+  ],
+  "created_at": "2026-02-18T00:00:00Z",
+  "updated_at": "2026-02-18T18:00:00Z",
+  "execution_spec_path": "docs/20-architecture/specs/ADR-035/EXECUTION-SPEC-ADR-035.md",
+  "worktree": "trees/state-lifecycle-contract",
+  "notes": {
+    "phase1_summary": "WS1: DataOnly<T> in store/types.ts, INITIAL_STATE + resetSession() on all 5 session stores. WS4: Defensive auto-select on pit-panels-client, pit-dashboard-client (selectionInvalid guard), shift-dashboard-page (pit_id validation). Fixed use-player-dashboard.ts facade return type.",
+    "phase2_summary": "WS2: store/reset-session-state.ts orchestrator (5 resets + closeModal + localStorage). WS5: useLockStore added to barrel, 7/7 contract tests pass (inventory completeness, INITIAL_STATE reset, hasHydrated preserved, sidebar preserved, modal closed, idempotency, localStorage cleanup).",
+    "phase3_summary": "WS3: resetSessionState() wired into all 3 auth-ending paths — normal sign-out (after queryClient.clear, before redirect), fallback performLocalCleanup (after queryClient.clear), and onAuthStateChange SIGNED_OUT handler. WS6: resetSession() tests added to all 4 existing store test files + new shift-dashboard-store.test.ts (8 describe blocks). Lock store hasHydrated preservation verified. 123 tests across 7 suites."
+  }
+}

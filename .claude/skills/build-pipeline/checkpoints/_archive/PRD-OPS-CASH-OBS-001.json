@@ -1,0 +1,45 @@
+{
+  "prd": "PRD-OPS-CASH-OBS-001",
+  "prd_title": "Operational Cash-Out Observations (Walk-With / Chips Taken)",
+  "current_phase": 3,
+  "status": "gates_pending",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS5"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "deferred_workstreams": ["WS4"],
+  "artifacts": {
+    "WS1": [
+      "supabase/migrations/20260106021105_prd_ops_cash_obs_001_pit_cash_observation.sql"
+    ],
+    "WS2": [
+      "supabase/migrations/20260106021106_prd_ops_cash_obs_001_rpc.sql"
+    ],
+    "WS3": [
+      "services/rating-slip/dtos.ts (pit_cash_observation types added)",
+      "services/rating-slip/http.ts (createPitCashObservation added)",
+      "hooks/rating-slip-modal/use-close-with-financial.ts"
+    ],
+    "WS5": [
+      "hooks/rating-slip-modal/__tests__/use-close-with-financial.test.tsx",
+      "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check"],
+  "gates_pending": ["test-pass", "rls-test"],
+  "deferred_reason": "WS4 blocked on PRD-0xx Shift Dashboards (Path B fact tables not implemented)",
+  "commits": [
+    "2fa918e feat(db): add pit_cash_observation table and RPC for PRD-OPS-CASH-OBS-001",
+    "dbb39eb feat(pit-observation): complete WS3 client integration and WS5 tests"
+  ],
+  "next_steps": [
+    "Run: npx supabase db reset --local",
+    "Run: npm run db:types",
+    "Run: npm test -- lib/supabase/__tests__/rls-pooling-safety.integration.test.ts"
+  ],
+  "architecture_fix": {
+    "issue": "Bounded context violation - pit_cash_observation was incorrectly implemented as separate service",
+    "resolution": "Moved DTOs and HTTP functions from services/pit-observation/ into services/rating-slip/ per SRM v4.0.0",
+    "timestamp": "2026-01-06T03:30:00Z"
+  },
+  "timestamp": "2026-01-06T03:30:00Z"
+}

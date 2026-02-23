@@ -1,0 +1,54 @@
+{
+  "prd": "PRD-TABLE-SESSION-LIFECYCLE-MVP",
+  "prd_title": "Table Session Lifecycle MVP",
+  "current_phase": 5,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": {
+      "migration": "supabase/migrations/20260115025236_table_session_lifecycle.sql"
+    },
+    "WS2": {
+      "migration": "supabase/migrations/20260115025237_table_session_rpcs.sql"
+    },
+    "WS3": {
+      "files": [
+        "services/table-context/dtos.ts",
+        "services/table-context/schemas.ts",
+        "services/table-context/keys.ts",
+        "services/table-context/table-session.ts",
+        "services/table-context/http.ts",
+        "services/table-context/index.ts",
+        "lib/errors/domain-errors.ts"
+      ]
+    },
+    "WS4": {
+      "files": [
+        "app/api/v1/table-sessions/route.ts",
+        "app/api/v1/table-sessions/[id]/rundown/route.ts",
+        "app/api/v1/table-sessions/[id]/close/route.ts",
+        "app/api/v1/tables/[tableId]/current-session/route.ts"
+      ]
+    },
+    "WS5": {
+      "files": [
+        "hooks/table-context/use-table-session.ts",
+        "hooks/table-context/index.ts",
+        "components/table/session-status-banner.tsx",
+        "components/table/session-action-buttons.tsx",
+        "components/table/close-session-dialog.tsx"
+      ]
+    },
+    "WS6": {
+      "files": [
+        "__tests__/services/table-context/table-session.int.test.ts"
+      ]
+    }
+  },
+  "gates_passed": ["type-check", "lint", "schema-validation", "build"],
+  "gates_pending": [],
+  "timestamp": "2026-01-15T04:45:00Z",
+  "execution_spec_path": "docs/20-architecture/specs/PRD-TABLE-SESSION-LIFECYCLE-MVP/EXECUTION-SPEC-TABLE-SESSION-LIFECYCLE_PATCHED_v0.2.0.md"
+}

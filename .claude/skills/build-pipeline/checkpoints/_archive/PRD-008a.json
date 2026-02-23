@@ -1,0 +1,22 @@
+{
+  "prd": "PRD-008a",
+  "prd_title": "Rating Slip Modal Dashboard Integration",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["components/dashboard/pit-dashboard-client.tsx"],
+    "WS2": ["components/dashboard/active-slips-panel.tsx"],
+    "WS3": ["components/modals/rating-slip/use-modal-form-state.ts", "components/modals/rating-slip/rating-slip-modal.tsx", "components/modals/rating-slip/form-section-cash-in.tsx"],
+    "WS4": ["hooks/rating-slip-modal/use-save-with-buyin.ts"],
+    "WS5": ["hooks/rating-slip-modal/use-close-with-financial.ts"],
+    "WS6": ["components/dashboard/pit-dashboard-client.tsx", "hooks/use-auth.ts"],
+    "WS7": ["hooks/rating-slip-modal/__tests__/use-save-with-buyin.test.tsx", "hooks/rating-slip-modal/__tests__/use-close-with-financial.test.tsx"]
+  },
+  "gates_passed": ["type-check-phase1", "type-check-phase2", "type-check-phase3", "test-pass", "build"],
+  "gates_pending": [],
+  "execution_spec_path": "docs/20-architecture/specs/PRD-008a/EXECUTION-SPEC-PRD-008a.md",
+  "timestamp": "2025-12-13T14:00:00Z"
+}

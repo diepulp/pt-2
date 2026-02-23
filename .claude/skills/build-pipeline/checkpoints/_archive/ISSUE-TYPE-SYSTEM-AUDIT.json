@@ -1,0 +1,54 @@
+{
+  "prd": "ISSUE-TYPE-SYSTEM-AUDIT",
+  "prd_title": "Supabase Type System Audit — Staleness Remediation",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "deleted": [
+      "lib/gaming-day/rpc.ts",
+      "utils/supabase/client.ts"
+    ],
+    "created": [
+      "types/navigator.d.ts"
+    ],
+    "modified": [
+      "lib/gaming-day/server.ts",
+      "services/player360-dashboard/crud.ts",
+      "services/loyalty/crud.ts",
+      "services/loyalty/rollups.ts",
+      "services/loyalty/promo/crud.ts",
+      "services/loyalty/promo/dtos.ts",
+      "services/rating-slip/crud.ts",
+      "services/rating-slip-modal/rpc.ts",
+      "services/table-context/shift-cash-obs.ts",
+      "services/table-context/shift-metrics/service.ts",
+      "services/table-context/table-session.ts",
+      "hooks/dashboard/use-dashboard-stats.ts",
+      "services/player360-dashboard/mappers.ts",
+      "services/loyalty/__tests__/points-accrual-calculation.integration.test.ts",
+      "lib/supabase/server.ts",
+      "components/player-360/empty-states.tsx",
+      "components/player-360/header/player-360-header-content.tsx",
+      "hooks/player-360/use-search-keyboard.ts",
+      "lib/server-actions/middleware/__tests__/compositor.test.ts",
+      "lib/server-actions/middleware/__tests__/tracing.test.ts",
+      "lib/server-actions/middleware/__tests__/audit.test.ts",
+      "lib/server-actions/middleware/__tests__/idempotency.test.ts",
+      "lib/server-actions/middleware/__tests__/rls.test.ts",
+      "lib/server-actions/middleware/__tests__/auth.test.ts",
+      "app/api/v1/promo-programs/route.ts"
+    ]
+  },
+  "gates_passed": ["type-check", "lint", "build"],
+  "gates_pending": [],
+  "notes": {
+    "promo_crud_bug": "createProgram was missing required casino_id in insert — pre-existing bug hidden by (supabase as any). Fixed by adding casinoId to CreatePromoProgramInput DTO, sourced from authoritative RLS middleware context.",
+    "rollups_null_undefined": "RPC params typed as string | undefined but code passed string | null. Fixed ?? null to ?? undefined.",
+    "rls_test_failures": "4 pre-existing test failures in rls.test.ts — not caused by this audit. Verified by running tests against original code.",
+    "lint_errors": "680 pre-existing prettier formatting errors in unrelated files. Zero lint errors in files modified by this audit."
+  },
+  "timestamp": "2026-02-04T00:45:00Z"
+}
