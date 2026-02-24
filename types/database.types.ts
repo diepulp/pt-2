@@ -2346,6 +2346,100 @@ export type Database = {
           },
         ]
       }
+      shift_checkpoint: {
+        Row: {
+          cash_out_observed_cents: number
+          casino_id: string
+          checkpoint_scope: string
+          checkpoint_type: string
+          created_at: string
+          created_by: string | null
+          credits_total_cents: number
+          drop_total_cents: number | null
+          fills_total_cents: number
+          gaming_day: string
+          gaming_table_id: string | null
+          grind_buyin_cents: number
+          id: string
+          notes: string | null
+          pit_id: string | null
+          rated_buyin_cents: number
+          tables_active: number
+          tables_with_coverage: number
+          win_loss_cents: number | null
+          window_end: string
+          window_start: string
+        }
+        Insert: {
+          cash_out_observed_cents?: number
+          casino_id: string
+          checkpoint_scope?: string
+          checkpoint_type: string
+          created_at?: string
+          created_by?: string | null
+          credits_total_cents?: number
+          drop_total_cents?: number | null
+          fills_total_cents?: number
+          gaming_day: string
+          gaming_table_id?: string | null
+          grind_buyin_cents?: number
+          id?: string
+          notes?: string | null
+          pit_id?: string | null
+          rated_buyin_cents?: number
+          tables_active?: number
+          tables_with_coverage?: number
+          win_loss_cents?: number | null
+          window_end: string
+          window_start: string
+        }
+        Update: {
+          cash_out_observed_cents?: number
+          casino_id?: string
+          checkpoint_scope?: string
+          checkpoint_type?: string
+          created_at?: string
+          created_by?: string | null
+          credits_total_cents?: number
+          drop_total_cents?: number | null
+          fills_total_cents?: number
+          gaming_day?: string
+          gaming_table_id?: string | null
+          grind_buyin_cents?: number
+          id?: string
+          notes?: string | null
+          pit_id?: string | null
+          rated_buyin_cents?: number
+          tables_active?: number
+          tables_with_coverage?: number
+          win_loss_cents?: number | null
+          window_end?: string
+          window_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_checkpoint_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checkpoint_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_checkpoint_gaming_table_id_fkey"
+            columns: ["gaming_table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           casino_id: string
@@ -2597,6 +2691,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           sent_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string
@@ -2615,6 +2710,7 @@ export type Database = {
           received_by?: string | null
           request_id: string
           sent_by?: string | null
+          session_id?: string | null
           slip_no?: string | null
           status?: string
           table_id: string
@@ -2633,6 +2729,7 @@ export type Database = {
           received_by?: string | null
           request_id?: string
           sent_by?: string | null
+          session_id?: string | null
           slip_no?: string | null
           status?: string
           table_id?: string
@@ -2671,6 +2768,13 @@ export type Database = {
             columns: ["sent_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
           {
@@ -2787,6 +2891,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           requested_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string
@@ -2805,6 +2910,7 @@ export type Database = {
           received_by?: string | null
           request_id: string
           requested_by?: string | null
+          session_id?: string | null
           slip_no?: string | null
           status?: string
           table_id: string
@@ -2823,6 +2929,7 @@ export type Database = {
           received_by?: string | null
           request_id?: string
           requested_by?: string | null
+          session_id?: string | null
           slip_no?: string | null
           status?: string
           table_id?: string
@@ -2861,6 +2968,13 @@ export type Database = {
             columns: ["requested_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_fill_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
           {
@@ -2949,6 +3063,147 @@ export type Database = {
             columns: ["verified_by"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_rundown_report: {
+        Row: {
+          casino_id: string
+          closing_bankroll_cents: number | null
+          closing_snapshot_id: string | null
+          computation_grade: string
+          computed_at: string
+          computed_by: string | null
+          created_at: string
+          credits_total_cents: number
+          drop_event_id: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          finalized_at: string | null
+          finalized_by: string | null
+          gaming_day: string
+          gaming_table_id: string
+          has_late_events: boolean
+          id: string
+          notes: string | null
+          opening_bankroll_cents: number | null
+          opening_snapshot_id: string | null
+          opening_source: string
+          par_target_cents: number | null
+          table_session_id: string
+          table_win_cents: number | null
+          variance_from_par_cents: number | null
+        }
+        Insert: {
+          casino_id: string
+          closing_bankroll_cents?: number | null
+          closing_snapshot_id?: string | null
+          computation_grade?: string
+          computed_at?: string
+          computed_by?: string | null
+          created_at?: string
+          credits_total_cents?: number
+          drop_event_id?: string | null
+          drop_total_cents?: number | null
+          fills_total_cents?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
+          gaming_day: string
+          gaming_table_id: string
+          has_late_events?: boolean
+          id?: string
+          notes?: string | null
+          opening_bankroll_cents?: number | null
+          opening_snapshot_id?: string | null
+          opening_source: string
+          par_target_cents?: number | null
+          table_session_id: string
+          table_win_cents?: number | null
+          variance_from_par_cents?: number | null
+        }
+        Update: {
+          casino_id?: string
+          closing_bankroll_cents?: number | null
+          closing_snapshot_id?: string | null
+          computation_grade?: string
+          computed_at?: string
+          computed_by?: string | null
+          created_at?: string
+          credits_total_cents?: number
+          drop_event_id?: string | null
+          drop_total_cents?: number | null
+          fills_total_cents?: number
+          finalized_at?: string | null
+          finalized_by?: string | null
+          gaming_day?: string
+          gaming_table_id?: string
+          has_late_events?: boolean
+          id?: string
+          notes?: string | null
+          opening_bankroll_cents?: number | null
+          opening_snapshot_id?: string | null
+          opening_source?: string
+          par_target_cents?: number | null
+          table_session_id?: string
+          table_win_cents?: number | null
+          variance_from_par_cents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_rundown_report_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_closing_snapshot_id_fkey"
+            columns: ["closing_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "table_inventory_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_computed_by_fkey"
+            columns: ["computed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_drop_event_id_fkey"
+            columns: ["drop_event_id"]
+            isOneToOne: false
+            referencedRelation: "table_drop_event"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_finalized_by_fkey"
+            columns: ["finalized_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_gaming_table_id_fkey"
+            columns: ["gaming_table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_opening_snapshot_id_fkey"
+            columns: ["opening_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "table_inventory_snapshot"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_table_session_id_fkey"
+            columns: ["table_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
         ]
@@ -3451,6 +3706,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           sent_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string
@@ -3482,6 +3738,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           requested_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string
@@ -3643,6 +3900,38 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_shift_checkpoint: {
+        Args: { p_checkpoint_type: string; p_notes?: string }
+        Returns: {
+          cash_out_observed_cents: number
+          casino_id: string
+          checkpoint_scope: string
+          checkpoint_type: string
+          created_at: string
+          created_by: string | null
+          credits_total_cents: number
+          drop_total_cents: number | null
+          fills_total_cents: number
+          gaming_day: string
+          gaming_table_id: string | null
+          grind_buyin_cents: number
+          id: string
+          notes: string | null
+          pit_id: string | null
+          rated_buyin_cents: number
+          tables_active: number
+          tables_with_coverage: number
+          win_loss_cents: number | null
+          window_end: string
+          window_start: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "shift_checkpoint"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_create_staff: {
         Args: {
           p_employee_id?: string
@@ -3685,6 +3974,42 @@ export type Database = {
           player_id: string
           status: string
         }[]
+      }
+      rpc_finalize_rundown: {
+        Args: { p_report_id: string }
+        Returns: {
+          casino_id: string
+          closing_bankroll_cents: number | null
+          closing_snapshot_id: string | null
+          computation_grade: string
+          computed_at: string
+          computed_by: string | null
+          created_at: string
+          credits_total_cents: number
+          drop_event_id: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          finalized_at: string | null
+          finalized_by: string | null
+          gaming_day: string
+          gaming_table_id: string
+          has_late_events: boolean
+          id: string
+          notes: string | null
+          opening_bankroll_cents: number | null
+          opening_snapshot_id: string | null
+          opening_source: string
+          par_target_cents: number | null
+          table_session_id: string
+          table_win_cents: number | null
+          variance_from_par_cents: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_rundown_report"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_gaming_day_range: {
         Args: { p_end_timestamp?: string; p_weeks?: number }
@@ -4171,6 +4496,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_persist_table_rundown: {
+        Args: { p_table_session_id: string }
+        Returns: {
+          casino_id: string
+          closing_bankroll_cents: number | null
+          closing_snapshot_id: string | null
+          computation_grade: string
+          computed_at: string
+          computed_by: string | null
+          created_at: string
+          credits_total_cents: number
+          drop_event_id: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          finalized_at: string | null
+          finalized_by: string | null
+          gaming_day: string
+          gaming_table_id: string
+          has_late_events: boolean
+          id: string
+          notes: string | null
+          opening_bankroll_cents: number | null
+          opening_snapshot_id: string | null
+          opening_source: string
+          par_target_cents: number | null
+          table_session_id: string
+          table_win_cents: number | null
+          variance_from_par_cents: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_rundown_report"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_post_table_drop_total: {
         Args: { p_drop_total_cents: number; p_session_id: string }
         Returns: {
@@ -4292,6 +4653,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           sent_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string
@@ -4328,6 +4690,7 @@ export type Database = {
           received_by: string | null
           request_id: string
           requested_by: string | null
+          session_id: string | null
           slip_no: string | null
           status: string
           table_id: string

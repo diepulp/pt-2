@@ -150,6 +150,7 @@ export interface TableFillDTO {
   id: string;
   casino_id: string;
   table_id: string;
+  session_id: string | null;
   request_id: string;
   chipset: ChipsetPayload;
   amount_cents: number;
@@ -183,6 +184,7 @@ export interface TableCreditDTO {
   id: string;
   casino_id: string;
   table_id: string;
+  session_id: string | null;
   request_id: string;
   chipset: ChipsetPayload;
   amount_cents: number;
