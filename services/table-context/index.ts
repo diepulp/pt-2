@@ -81,11 +81,35 @@ import type {
 } from './dtos';
 import { computeTableRundown, postTableDropTotal } from './rundown';
 import {
+  persistRundown,
+  finalizeRundown,
+  getRundownBySession,
+  getRundownById,
+  listRundownsByDay,
+} from './rundown-report/crud';
+import type {
+  TableRundownReportDTO,
+  TableRundownReportSummaryDTO,
+  PersistRundownInput,
+  FinalizeRundownInput,
+} from './rundown-report/dtos';
+import {
   getShiftCashObsAlerts,
   getShiftCashObsCasino,
   getShiftCashObsPit,
   getShiftCashObsTable,
 } from './shift-cash-obs';
+import {
+  createCheckpoint,
+  getLatestCheckpoint,
+  computeDelta,
+  listCheckpointsByDay,
+} from './shift-checkpoint/crud';
+import type {
+  ShiftCheckpointDTO,
+  ShiftCheckpointDeltaDTO,
+  CreateCheckpointInput,
+} from './shift-checkpoint/dtos';
 import { activateTable, closeTable, deactivateTable } from './table-lifecycle';
 import {
   openTableSession,
@@ -142,7 +166,23 @@ export type {
   CreditListFilters,
   DropListFilters,
 };
+// PRD-038: Rundown Report DTOs
+export type {
+  TableRundownReportDTO,
+  TableRundownReportSummaryDTO,
+  PersistRundownInput,
+  FinalizeRundownInput,
+};
+// PRD-038: Shift Checkpoint DTOs
+export type {
+  ShiftCheckpointDTO,
+  ShiftCheckpointDeltaDTO,
+  CreateCheckpointInput,
+};
 export { tableContextKeys } from './keys';
+// PRD-038: Re-export sub-module key factories
+export { rundownReportKeys } from './rundown-report/keys';
+export { shiftCheckpointKeys } from './shift-checkpoint/keys';
 
 // Re-export shift cash obs functions (standalone, not part of factory)
 export {
@@ -233,6 +273,23 @@ export interface TableContextServiceInterface {
   listFills(filters?: FillListFilters): Promise<TableFillDTO[]>;
   listCredits(filters?: CreditListFilters): Promise<TableCreditDTO[]>;
   listDropEvents(filters?: DropListFilters): Promise<TableDropEventDTO[]>;
+
+  // Rundown report persistence (PRD-038)
+  rundownReport: {
+    persist(sessionId: string): Promise<TableRundownReportDTO>;
+    finalize(reportId: string): Promise<TableRundownReportDTO>;
+    getBySession(sessionId: string): Promise<TableRundownReportDTO | null>;
+    getById(reportId: string): Promise<TableRundownReportDTO>;
+    listByDay(gamingDay: string): Promise<TableRundownReportSummaryDTO[]>;
+  };
+
+  // Shift checkpoint (PRD-038)
+  shiftCheckpoint: {
+    create(checkpointType: string, notes?: string): Promise<ShiftCheckpointDTO>;
+    getLatest(): Promise<ShiftCheckpointDTO | null>;
+    computeDelta(): Promise<ShiftCheckpointDeltaDTO | null>;
+    listByDay(gamingDay: string): Promise<ShiftCheckpointDTO[]>;
+  };
 }
 
 // === Service Factory ===
@@ -300,5 +357,23 @@ export function createTableContextService(
     listFills: (filters) => listFills(supabase, filters),
     listCredits: (filters) => listCredits(supabase, filters),
     listDropEvents: (filters) => listDropEvents(supabase, filters),
+
+    // Rundown report persistence (PRD-038)
+    rundownReport: {
+      persist: (sessionId) => persistRundown(supabase, sessionId),
+      finalize: (reportId) => finalizeRundown(supabase, reportId),
+      getBySession: (sessionId) => getRundownBySession(supabase, sessionId),
+      getById: (reportId) => getRundownById(supabase, reportId),
+      listByDay: (gamingDay) => listRundownsByDay(supabase, gamingDay),
+    },
+
+    // Shift checkpoint (PRD-038)
+    shiftCheckpoint: {
+      create: (checkpointType, notes) =>
+        createCheckpoint(supabase, checkpointType, notes),
+      getLatest: () => getLatestCheckpoint(supabase),
+      computeDelta: () => computeDelta(supabase),
+      listByDay: (gamingDay) => listCheckpointsByDay(supabase, gamingDay),
+    },
   };
 }

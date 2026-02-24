@@ -166,6 +166,7 @@ export function toTableFillDTO(rpcResult: RpcTableFillReturn): TableFillDTO {
     id: rpcResult.id,
     casino_id: rpcResult.casino_id,
     table_id: rpcResult.table_id,
+    session_id: rpcResult.session_id,
     request_id: rpcResult.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: rpcResult.chipset as ChipsetPayload,
@@ -190,6 +191,7 @@ export function toTableCreditDTO(
     id: rpcResult.id,
     casino_id: rpcResult.casino_id,
     table_id: rpcResult.table_id,
+    session_id: rpcResult.session_id,
     request_id: rpcResult.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: rpcResult.chipset as ChipsetPayload,
@@ -320,6 +322,7 @@ export function toTableFillDTOFromConfirmRpc(
     id: rpcResult.id,
     casino_id: rpcResult.casino_id,
     table_id: rpcResult.table_id,
+    session_id: rpcResult.session_id,
     request_id: rpcResult.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: rpcResult.chipset as ChipsetPayload,
@@ -344,6 +347,7 @@ export function toTableCreditDTOFromConfirmRpc(
     id: rpcResult.id,
     casino_id: rpcResult.casino_id,
     table_id: rpcResult.table_id,
+    session_id: rpcResult.session_id,
     request_id: rpcResult.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: rpcResult.chipset as ChipsetPayload,
@@ -390,6 +394,7 @@ export function toTableFillDTOFromRow(row: TableFillRow): TableFillDTO {
     id: row.id,
     casino_id: row.casino_id,
     table_id: row.table_id,
+    session_id: row.session_id,
     request_id: row.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: row.chipset as ChipsetPayload,
@@ -418,6 +423,7 @@ export function toTableCreditDTOFromRow(row: TableCreditRow): TableCreditDTO {
     id: row.id,
     casino_id: row.casino_id,
     table_id: row.table_id,
+    session_id: row.session_id,
     request_id: row.request_id,
     // eslint-disable-next-line custom-rules/no-dto-type-assertions -- JSONB from Postgres returns Json type
     chipset: row.chipset as ChipsetPayload,
