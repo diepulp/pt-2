@@ -42,6 +42,14 @@ export type TableAvailability = Database['public']['Enums']['table_status'];
  */
 export type SessionPhase = Database['public']['Enums']['table_session_status'];
 
+/**
+ * Close reason enum (PRD-038A Gap B).
+ * Captures why a table session was closed.
+ *
+ * @see PRD-038A-table-lifecycle-audit-patch
+ */
+export type CloseReasonType = Database['public']['Enums']['close_reason_type'];
+
 // Backward compatibility aliases
 export type TableStatus = TableAvailability;
 export type GameType = Database['public']['Enums']['game_type'];
@@ -150,6 +158,7 @@ export interface TableFillDTO {
   id: string;
   casino_id: string;
   table_id: string;
+  session_id: string | null;
   request_id: string;
   chipset: ChipsetPayload;
   amount_cents: number;
@@ -183,6 +192,7 @@ export interface TableCreditDTO {
   id: string;
   casino_id: string;
   table_id: string;
+  session_id: string | null;
   request_id: string;
   chipset: ChipsetPayload;
   amount_cents: number;
@@ -446,6 +456,18 @@ export interface TableSessionDTO {
   credits_total_cents: number;
   drop_total_cents: number | null;
   drop_posted_at: string | null;
+  // PRD-038A: Close governance fields
+  close_reason: CloseReasonType | null;
+  close_note: string | null;
+  has_unresolved_items: boolean;
+  requires_reconciliation: boolean;
+  // PRD-038A: Actor attribution fields
+  activated_by_staff_id: string | null;
+  paused_by_staff_id: string | null;
+  resumed_by_staff_id: string | null;
+  rolled_over_by_staff_id: string | null;
+  // PRD-038A: Gaming day alignment
+  crossed_gaming_day: boolean;
 }
 
 /**
@@ -466,12 +488,28 @@ export interface StartTableRundownInput {
 /**
  * Input for closing a table session.
  * At least one of dropEventId or closingInventorySnapshotId is required.
+ *
+ * PRD-038A: close_reason is required at service layer (Phase A:
+ * DB column is nullable for backward compat, but new close calls must provide it).
  */
 export interface CloseTableSessionInput {
   sessionId: string;
   dropEventId?: string;
   closingInventorySnapshotId?: string;
   notes?: string;
+  closeReason: CloseReasonType;
+  closeNote?: string;
+}
+
+/**
+ * Input for force-closing a table session (PRD-038A Gap A).
+ * Privileged operation for pit_boss/admin.
+ * Skips unresolved liabilities check, sets requires_reconciliation=true.
+ */
+export interface ForceCloseTableSessionInput {
+  sessionId: string;
+  closeReason: CloseReasonType;
+  closeNote?: string;
 }
 
 /**

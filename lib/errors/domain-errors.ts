@@ -213,7 +213,19 @@ export type TableContextErrorCode =
   | 'SESSION_NOT_FOUND'
   | 'SESSION_ALREADY_EXISTS'
   | 'INVALID_STATE_TRANSITION'
-  | 'MISSING_CLOSING_ARTIFACT';
+  | 'MISSING_CLOSING_ARTIFACT'
+  // Close Guardrail Errors (PRD-038A)
+  | 'UNRESOLVED_LIABILITIES'
+  | 'CLOSE_NOTE_REQUIRED'
+  // Rundown Report Errors (PRD-038)
+  | 'TABLE_RUNDOWN_ALREADY_FINALIZED'
+  | 'TABLE_RUNDOWN_NOT_FOUND'
+  | 'TABLE_RUNDOWN_SESSION_NOT_CLOSED'
+  | 'TABLE_RUNDOWN_SESSION_NOT_FOUND'
+  | 'TABLE_SESSION_INVARIANT_VIOLATION'
+  // Shift Checkpoint Errors (PRD-038)
+  | 'TABLE_CHECKPOINT_METRICS_UNAVAILABLE'
+  | 'TABLE_CHECKPOINT_GAMING_DAY_UNRESOLVABLE';
 
 export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   TableContextErrorCode,
@@ -239,6 +251,24 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   INVALID_STATE_TRANSITION: 'Cannot perform operation in current session state',
   MISSING_CLOSING_ARTIFACT:
     'At least one closing artifact (drop_event_id or closing_inventory_snapshot_id) is required',
+  // Close Guardrail Errors (PRD-038A)
+  UNRESOLVED_LIABILITIES:
+    'Session has unresolved items. Use force-close for privileged override.',
+  CLOSE_NOTE_REQUIRED: 'close_reason="other" requires a non-empty close_note',
+  // Rundown Report Errors (PRD-038)
+  TABLE_RUNDOWN_ALREADY_FINALIZED:
+    'Rundown report is finalized and cannot be modified',
+  TABLE_RUNDOWN_NOT_FOUND: 'Rundown report not found',
+  TABLE_RUNDOWN_SESSION_NOT_CLOSED:
+    'Cannot finalize rundown: table session is not closed',
+  TABLE_RUNDOWN_SESSION_NOT_FOUND: 'No active session found for this table',
+  TABLE_SESSION_INVARIANT_VIOLATION:
+    'Unique active session index violated — data integrity error',
+  // Shift Checkpoint Errors (PRD-038)
+  TABLE_CHECKPOINT_METRICS_UNAVAILABLE:
+    'Could not compute shift metrics for checkpoint',
+  TABLE_CHECKPOINT_GAMING_DAY_UNRESOLVABLE:
+    'Could not derive gaming day for checkpoint',
 };
 
 // ============================================================================

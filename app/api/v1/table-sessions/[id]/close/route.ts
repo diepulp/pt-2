@@ -41,7 +41,9 @@ type RouteParams = { params: Promise<{ id: string }> };
  * {
  *   "drop_event_id"?: "uuid",
  *   "closing_inventory_snapshot_id"?: "uuid",
- *   "notes"?: "string"
+ *   "notes"?: "string",
+ *   "close_reason": "close_reason_type" (required),
+ *   "close_note"?: "string" (required when close_reason="other")
  * }
  *
  * Response: TableSessionDTO
@@ -50,6 +52,8 @@ type RouteParams = { params: Promise<{ id: string }> };
  * - 404 SESSION_NOT_FOUND: Session does not exist
  * - 422 INVALID_STATE_TRANSITION: Session not in RUNDOWN/ACTIVE state
  * - 400 MISSING_CLOSING_ARTIFACT: No closing artifact provided
+ * - 400 CLOSE_NOTE_REQUIRED: close_reason='other' without close_note
+ * - 409 UNRESOLVED_LIABILITIES: Session has unresolved items (use force-close)
  * - 403 UNAUTHORIZED: Caller is not pit_boss/admin
  */
 export async function PATCH(request: NextRequest, segmentData: RouteParams) {
@@ -83,6 +87,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
           dropEventId: input.drop_event_id,
           closingInventorySnapshotId: input.closing_inventory_snapshot_id,
           notes: input.notes,
+          closeReason: input.close_reason,
+          closeNote: input.close_note,
         });
 
         return {

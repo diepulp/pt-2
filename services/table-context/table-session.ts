@@ -17,7 +17,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
-import type { TableSessionDTO, CloseTableSessionInput } from './dtos';
+import type {
+  TableSessionDTO,
+  CloseTableSessionInput,
+  ForceCloseTableSessionInput,
+} from './dtos';
 
 // === RPC Return Type ===
 // Note: This type will be auto-generated after migrations are applied.
@@ -49,6 +53,18 @@ type TableSessionRow = {
   credits_total_cents: number;
   drop_total_cents: number | null;
   drop_posted_at: string | null;
+  // PRD-038A: Close governance fields
+  close_reason: string | null;
+  close_note: string | null;
+  has_unresolved_items: boolean;
+  requires_reconciliation: boolean;
+  // PRD-038A: Actor attribution fields
+  activated_by_staff_id: string | null;
+  paused_by_staff_id: string | null;
+  resumed_by_staff_id: string | null;
+  rolled_over_by_staff_id: string | null;
+  // PRD-038A: Gaming day alignment
+  crossed_gaming_day: boolean;
 };
 
 /**
@@ -119,6 +135,18 @@ function toTableSessionDTO(row: TableSessionRow): TableSessionDTO {
     credits_total_cents: row.credits_total_cents,
     drop_total_cents: row.drop_total_cents,
     drop_posted_at: row.drop_posted_at,
+    // PRD-038A: Close governance fields
+    close_reason: row.close_reason as TableSessionDTO['close_reason'],
+    close_note: row.close_note,
+    has_unresolved_items: row.has_unresolved_items,
+    requires_reconciliation: row.requires_reconciliation,
+    // PRD-038A: Actor attribution fields
+    activated_by_staff_id: row.activated_by_staff_id,
+    paused_by_staff_id: row.paused_by_staff_id,
+    resumed_by_staff_id: row.resumed_by_staff_id,
+    rolled_over_by_staff_id: row.rolled_over_by_staff_id,
+    // PRD-038A: Gaming day alignment
+    crossed_gaming_day: row.crossed_gaming_day,
   };
 }
 
@@ -193,6 +221,21 @@ function mapRpcError(
     throw new DomainError(
       'MISSING_CLOSING_ARTIFACT',
       'At least one closing artifact is required',
+    );
+  }
+
+  // PRD-038A: Close guardrail error codes
+  if (error.code === 'P0005' || message.includes('unresolved_liabilities')) {
+    throw new DomainError(
+      'UNRESOLVED_LIABILITIES',
+      'Session has unresolved items. Use force-close for privileged override.',
+    );
+  }
+
+  if (error.code === 'P0006' || message.includes('close_note_required')) {
+    throw new DomainError(
+      'CLOSE_NOTE_REQUIRED',
+      'close_reason="other" requires a non-empty close_note',
     );
   }
 
@@ -296,11 +339,49 @@ export async function closeTableSession(
       p_drop_event_id: input.dropEventId ?? null,
       p_closing_inventory_snapshot_id: input.closingInventorySnapshotId ?? null,
       p_notes: input.notes ?? null,
+      p_close_reason: input.closeReason,
+      p_close_note: input.closeNote ?? null,
     },
   );
 
   if (error || !data) {
     mapRpcError(error, 'Close session');
+  }
+
+  return toTableSessionDTO(data);
+}
+
+/**
+ * Force-closes a table session (PRD-038A Gap A).
+ *
+ * Privileged operation for pit_boss/admin roles.
+ * Skips unresolved liabilities check, sets requires_reconciliation=true.
+ * Emits audit_log entry for compliance.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param input - Force close input with close reason
+ * @returns The closed session DTO
+ * @throws DomainError SESSION_NOT_FOUND if session doesn't exist
+ * @throws DomainError INVALID_STATE_TRANSITION if already closed
+ * @throws DomainError CLOSE_NOTE_REQUIRED if close_reason='other' without note
+ * @throws DomainError UNAUTHORIZED if caller is not pit_boss/admin
+ */
+export async function forceCloseTableSession(
+  supabase: SupabaseClient<Database>,
+  input: ForceCloseTableSessionInput,
+): Promise<TableSessionDTO> {
+  const { data, error } = await callSessionRpc<TableSessionRow>(
+    supabase,
+    'rpc_force_close_table_session',
+    {
+      p_table_session_id: input.sessionId,
+      p_close_reason: input.closeReason,
+      p_close_note: input.closeNote ?? null,
+    },
+  );
+
+  if (error || !data) {
+    mapRpcError(error, 'Force close session');
   }
 
   return toTableSessionDTO(data);
