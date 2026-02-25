@@ -67,6 +67,11 @@ export const createBatchSchema = z.object({
   file_name: z.string().min(1, 'File name is required').max(255),
   vendor_label: z.string().max(255).optional(),
   column_mapping: z.record(z.string(), z.string()).default({}),
+  /**
+   * Server-side flows may pass 'created' to create the record before uploading.
+   * Client-side flows omit this field (defaults to 'staging' in the RPC).
+   */
+  initial_status: z.enum(['staging', 'created']).optional(),
 });
 
 /**
@@ -124,11 +129,26 @@ export const batchIdParamSchema = z.object({
   id: uuidSchema('batch ID'),
 });
 
+/** Schema for upload file route parameter (PRD-039 server ingestion) */
+export const uploadFileParamSchema = z.object({
+  batchId: z.string().uuid(),
+});
+
 // === Query Schemas ===
 
 /** Schema for batch list query parameters */
 export const batchListQuerySchema = z.object({
-  status: z.enum(['staging', 'executing', 'completed', 'failed']).optional(),
+  status: z
+    .enum([
+      'created',
+      'uploaded',
+      'parsing',
+      'staging',
+      'executing',
+      'completed',
+      'failed',
+    ])
+    .optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

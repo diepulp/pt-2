@@ -1,0 +1,21 @@
+Email,Phone,First Name,Last Name,Date of Birth
+valid1@example.com,555-1001,Valid,One,1985-03-15
+valid2@example.com,555-1002,Valid,Two,1990-07-22
+,555-1003,,Three,1978-11-30
+invalid-email,555-1004,Bad,Email,1995-01-10
+valid3@example.com,555-1005,Valid,Three,1988-06-25
+,,,Missing,
+valid4@example.com,555-1006,Valid,Four,1972-09-08
+valid5@example.com,12345,Valid,ShortPhone,1983-12-14
+valid6@example.com,555-1007,Valid,Six,not-a-date
+valid7@example.com,555-1008,Valid,Seven,2000-04-01
+,,NoIdentifiers,Nobody,1991-08-17
+valid8@example.com,555-1009,Valid,Eight,1986-02-28
+valid9@example.com,555-1010,Valid,Nine,1975-05-20
+,555-1011,,NoFirstName,1980-01-01
+valid10@example.com,555-1012,Valid,Ten,1993-10-10
+valid11@example.com,555-1013,Valid,Eleven,1987-04-05
+bad@,555-1014,BadEmail,Format,1992-02-14
+valid12@example.com,555-1015,Valid,Twelve,1984-07-19
+valid13@example.com,555-1016,Valid,Thirteen,1996-12-25
+valid14@example.com,555-1017,Valid,Fourteen,1989-09-30

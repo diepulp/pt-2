@@ -1,0 +1,27 @@
+{
+  "feature_id": "server-csv-ingestion",
+  "source_proposal": "docs/00-vision/csv-import/CSV-IMPORT-INGESTION.md",
+  "unblocks": ["loyalty-tier-reconciliation"],
+  "current_phase": 5,
+  "status": "complete",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/server-csv-ingestion/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-SERVER-CSV-INGESTION.md",
+    "design_brief": "docs/02-design/RFC-SERVER-CSV-INGESTION.md",
+    "sec_note": "docs/30-security/SEC-NOTE-SERVER-CSV-INGESTION.md",
+    "adr": "docs/80-adrs/ADR-037-server-csv-ingestion-worker.md",
+    "adr_parent": "docs/80-adrs/ADR-036-csv-player-import-strategy.md",
+    "prd": "docs/10-prd/PRD-039-server-csv-ingestion-worker.md"
+  },
+  "scaffold_version": "v3.1",
+  "prd_version": "v0.3.1",
+  "review_passes": {
+    "design_brief": "2 rounds (10-point delta patch + 6 fixes)",
+    "sec_note": "1 round (6 fixes + 2 nits)",
+    "adr": "3 rounds (7 devil's advocate patches + 6 ADR-036 alignment patches + 3 final tightening patches)",
+    "prd": "3 rounds (7 devil's advocate pass 1 patches + 10 pass 2 patches + 4 final nits)"
+  },
+  "timestamp": "2026-02-24T04:30:00Z"
+}

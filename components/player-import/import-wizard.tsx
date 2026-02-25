@@ -1,10 +1,13 @@
 /**
  * Import Wizard
  *
- * 6-step state machine for CSV player import:
- * File Selection → Column Mapping → Preview → Staging Upload → Execute → Report
+ * 7-step state machine for CSV player import (server-authoritative flow):
+ * File Selection -> Column Mapping -> Preview -> File Upload -> Worker Processing -> Execute -> Report
+ *
+ * INV-UI-1: Server wizard MUST pass initial_status: 'created' to createBatch().
  *
  * @see PRD-037 CSV Player Import
+ * @see PRD-039 Server-Authoritative CSV Ingestion Worker
  */
 
 'use client';
@@ -12,28 +15,36 @@
 import { useMutation } from '@tanstack/react-query';
 import { useTransition } from 'react';
 
+import { useBatchPolling } from '@/hooks/player-import/use-batch-polling';
 import { useColumnMapping } from '@/hooks/player-import/use-column-mapping';
+import { useFileUpload } from '@/hooks/player-import/use-file-upload';
 import {
   useImportWizard,
   type WizardStep,
 } from '@/hooks/player-import/use-import-wizard';
 import { usePapaParse } from '@/hooks/player-import/use-papa-parse';
-import { useStagingUpload } from '@/hooks/player-import/use-staging-upload';
 import { createBatch } from '@/services/player-import/http';
 
 import { StepColumnMapping } from './step-column-mapping';
 import { StepExecute } from './step-execute';
 import { StepFileSelection } from './step-file-selection';
+import { StepFileUpload } from './step-file-upload';
 import { StepPreview } from './step-preview';
 import { StepReport } from './step-report';
-import { StepStagingUpload } from './step-staging-upload';
+import { StepWorkerProcessing } from './step-worker-processing';
 
 export function ImportWizard() {
   const wizard = useImportWizard();
   const parser = usePapaParse();
   const columnMapping = useColumnMapping();
-  const staging = useStagingUpload(wizard.batchId);
+  const fileUpload = useFileUpload();
   const [, startTransition] = useTransition();
+
+  // Poll batch status while on worker-processing step
+  const polling = useBatchPolling(
+    wizard.batchId,
+    wizard.step === 'worker-processing',
+  );
 
   const createBatchMutation = useMutation({
     mutationFn: (params: {
@@ -48,6 +59,10 @@ export function ImportWizard() {
           file_name: params.fileName,
           vendor_label: params.vendorLabel,
           column_mapping: params.columnMapping,
+          // INV-UI-1: Server wizard MUST always pass 'created' as initial_status.
+          // Omitting this causes the P0-1 failure mode (batch defaults to 'staging',
+          // upload endpoint rejects with 409 on every request).
+          initial_status: 'created',
         },
         params.idempotencyKey,
       ),
@@ -75,7 +90,7 @@ export function ImportWizard() {
   }
 
   function handlePreviewNext() {
-    // Create batch and start staging upload
+    // Create batch with initial_status: 'created' (INV-UI-1) and go to file upload
     startTransition(async () => {
       const idempotencyKey = `batch-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -87,25 +102,20 @@ export function ImportWizard() {
       });
 
       wizard.setBatchId(batch.id);
-
-      // Build normalized rows and start upload
-      const stageRowInputs = staging.buildStageRows(
-        parser.result.rows,
-        columnMapping.mappings,
-        wizard.fileName,
-        wizard.vendorLabel || undefined,
-      );
-
-      wizard.goToStep('staging-upload');
-      staging.startUpload(batch.id, stageRowInputs);
+      wizard.goToStep('file-upload');
     });
+  }
+
+  function handleFileUpload() {
+    if (!wizard.batchId || !wizard.file) return;
+    fileUpload.upload(wizard.batchId, wizard.file);
   }
 
   function handleStartNew() {
     wizard.resetWizard();
     parser.reset();
     columnMapping.resetMappings();
-    staging.reset();
+    fileUpload.reset();
   }
 
   // --- Step indicator ---
@@ -132,7 +142,7 @@ export function ImportWizard() {
                         : 'bg-muted text-muted-foreground'
                   }`}
                 >
-                  {isCompleted ? '✓' : idx + 1}
+                  {isCompleted ? '\u2713' : idx + 1}
                 </div>
                 <span
                   className={`text-xs ${
@@ -204,12 +214,27 @@ export function ImportWizard() {
           />
         );
 
-      case 'staging-upload':
+      case 'file-upload':
         return (
-          <StepStagingUpload
-            progress={staging.progress}
-            onAbort={staging.abort}
+          <StepFileUpload
+            fileName={wizard.fileName}
+            uploadState={fileUpload}
+            isPending={fileUpload.isPending}
+            onUpload={handleFileUpload}
+            onNext={() => wizard.goToStep('worker-processing')}
+            onBack={() => wizard.goToStep('preview')}
+          />
+        );
+
+      case 'worker-processing':
+        return (
+          <StepWorkerProcessing
+            batch={polling.batch}
+            isProcessing={polling.isProcessing}
+            isComplete={polling.isComplete}
+            isFailed={polling.isFailed}
             onNext={() => wizard.goToStep('execute')}
+            onStartNew={handleStartNew}
           />
         );
 
@@ -217,10 +242,10 @@ export function ImportWizard() {
         return wizard.batchId ? (
           <StepExecute
             batchId={wizard.batchId}
-            totalRows={parser.result.totalRows}
+            totalRows={polling.batch?.total_rows ?? parser.result.totalRows}
             fileName={wizard.fileName}
             onComplete={() => wizard.goToStep('report')}
-            onBack={() => wizard.goToStep('staging-upload')}
+            onBack={() => wizard.goToStep('worker-processing')}
           />
         ) : null;
 

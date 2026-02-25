@@ -18,6 +18,11 @@ type ImportRowRow = Database['public']['Tables']['import_row']['Row'];
 
 // === Enum Re-exports ===
 
+/**
+ * Import batch status enum — derived from the Database enum type.
+ * Includes all worker lifecycle states added by PRD-039 migration
+ * 20260224114000_prd039_import_batch_worker_columns.sql.
+ */
 export type ImportBatchStatus =
   Database['public']['Enums']['import_batch_status'];
 export type ImportRowStatus = Database['public']['Enums']['import_row_status'];
@@ -68,6 +73,24 @@ export interface ImportBatchReportV1 {
   failed_at?: string;
 }
 
+/**
+ * Ingestion report produced by the server-side CSV worker (PRD-039).
+ * Returned as part of the batch report_summary once the worker completes.
+ */
+export interface ImportIngestionReportV1 {
+  total_rows: number;
+  valid_rows: number;
+  invalid_rows: number;
+  duplicate_rows: number;
+  parse_errors: number;
+  /** ISO timestamp when ingestion started */
+  started_at: string;
+  /** ISO timestamp when ingestion completed */
+  completed_at: string;
+  /** Duration in milliseconds */
+  duration_ms: number;
+}
+
 // === Pattern B: CRUD DTOs (Pick from Database types) ===
 
 /** Import batch DTO for API responses */
@@ -77,7 +100,6 @@ export type ImportBatchDTO = Pick<
   | 'casino_id'
   | 'created_by_staff_id'
   | 'idempotency_key'
-  | 'status'
   | 'file_name'
   | 'vendor_label'
   | 'column_mapping'
@@ -85,7 +107,17 @@ export type ImportBatchDTO = Pick<
   | 'report_summary'
   | 'created_at'
   | 'updated_at'
->;
+  | 'storage_path'
+  | 'original_file_name'
+  | 'claimed_by'
+  | 'claimed_at'
+  | 'heartbeat_at'
+  | 'attempt_count'
+  | 'last_error_at'
+  | 'last_error_code'
+> & {
+  status: ImportBatchStatus;
+};
 
 /** Import row DTO for API responses */
 export type ImportRowDTO = Pick<
@@ -132,6 +164,13 @@ export type CreateBatchInput = {
   file_name: string;
   vendor_label?: string;
   column_mapping: ColumnMapping;
+  /**
+   * Override the initial status for server-side flows.
+   * - `'created'` — batch record created, file not yet uploaded (server flow).
+   * - `'staging'`  — batch ready for row staging immediately (client flow, default).
+   * Omit to use the RPC default ('staging').
+   */
+  initial_status?: 'staging' | 'created';
 };
 
 /** A single row to stage */

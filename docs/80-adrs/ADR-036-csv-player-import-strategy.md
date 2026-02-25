@@ -1,6 +1,6 @@
 # ADR-036: CSV Player Import Strategy (Parsing, Mapping, Staging, Merge)
 
-**Status:** Accepted
+**Status:** Accepted (D1 partially superseded by ADR-037 — browser parsing demoted from authoritative to advisory/preview; D2 preserved)
 **Date:** 2026-02-23
 **Deciders:** Lead Architect
 **Consulted:** Security, Backend Engineering
@@ -25,7 +25,9 @@ We need an import pipeline that accepts unknown vendor CSV shapes, produces a ca
 
 ## Decisions
 
-### D1: Browser-side parsing with Papa Parse (Lane 1 MVP)
+### D1: Parsing strategy (Lane 1 → Lane 2 evolution)
+
+#### Lane 1 (original MVP): Browser-side parsing with Papa Parse
 
 **Options considered:**
 - A. Browser parsing with Papa Parse + mapping UI
@@ -43,6 +45,27 @@ We need an import pipeline that accepts unknown vendor CSV shapes, produces a ca
 **Configuration:** `header: true`, `skipEmptyLines: true`, `worker: true`, `step` callback for streaming, `dynamicTyping: false`.
 
 > **Backpressure note:** With `worker: true`, Papa Parse does **not** support `parser.pause()` / `parser.resume()` (only `abort()` is always available). Chunk uploads must be decoupled from parsing (queue rows locally and upload asynchronously), or run without a worker if pause/resume is required.
+
+#### Lane 2 (supersedes Lane 1 for ingestion): Server-side worker with csv-parse
+
+**Decision:** ADR-037 exercises the Lane 1 exit ramp. Browser-side Papa Parse is **demoted from authoritative ingestion to advisory preview only**. A standalone Node.js worker using `csv-parse` (streaming) is now the authoritative ingestion pathway.
+
+**Why the exit ramp was exercised:**
+- Client-as-authority trust boundary violation (browser memory, network flakiness, durability)
+- Vercel timeout wall (10-300s) prevents reliable server-side fallback
+- Loyalty & Tier Reconciliation pipeline (paused) requires server-staged data as its input
+
+**What stays from Lane 1:**
+- Papa Parse remains for client-side preview + header extraction (first 50 rows)
+- `ImportPlayerV1` canonical contract (D2) is unchanged — the stable interface boundary
+- Column mapping UI is unchanged
+
+**What changes:**
+- Staging pathway: client uploads raw CSV to Supabase Storage; worker streams, parses, normalizes, and bulk-inserts into `import_row`
+- Worker is the source of truth for validation and normalization; preview is advisory
+- Batch status machine extended with `created`, `uploaded`, `parsing` states
+
+**Full details:** See ADR-037 (Server-Authoritative CSV Ingestion Worker).
 
 ### D2: Canonical import contract (`ImportPlayerV1`) as stable interface boundary
 
@@ -72,7 +95,10 @@ ImportPlayerV1 {
 - Staging tables are transient operational data, not part of the player identity model
 - Cross-context writes to production tables are constrained to a single RPC entry point with full casino scoping
 
-> **SECURITY DEFINER guardrails:** SECURITY DEFINER RPCs must (1) enforce actor authorization + tenant scope in the function body, and (2) set an explicit `search_path` (ideally empty, with schema-qualified references) to prevent object shadowing / search_path abuse.
+> **SECURITY DEFINER guardrails (ADR-018 + ADR-024 + ADR-030):**
+> - SECURITY DEFINER functions must be schema-qualified and set `search_path` explicitly (ideally `pg_catalog` + target schema only) to prevent object shadowing / search_path abuse.
+> - `rpc_import_execute` derives casino scope from trusted context (`set_rls_context_from_staff()` return value / DB session vars), **never** from function parameters. The invoking staff's `casino_id` is authoritative.
+> - `rpc_import_execute` runs as SECURITY DEFINER (bypasses caller's RLS) but enforces casino scoping explicitly in every query via `WHERE casino_id = $derived_casino_id`. RLS remains enabled on the underlying tables as defense-in-depth for any non-RPC access paths, but the RPC itself does not rely on RLS for correctness — it enforces scoping in the function body.
 
 > **Matrix-first prerequisite:** SRM registration/ownership must land **before** schema changes; all schema additions for import staging/execute must mirror SRM to avoid matrix<->schema drift.
 
@@ -93,7 +119,7 @@ ImportPlayerV1 {
 
 **Match rules:**
 - 0 matches: create new `player` + `player_casino` enrollment
-- 1 match: link to existing player (skip or update per policy)
+- 1 match: link to existing player. **MVP policy:** create missing `player_casino` enrollment if absent; do **not** overwrite existing player profile fields (name, DOB, etc.) unless the existing value is null/empty. This prevents silent data loss from vendor CSV overwrites. Post-MVP may add configurable update strategies (overwrite, merge, skip).
 - N matches: mark as conflict — no production writes for this row
 
 **Rationale:** Exact matching is deterministic and verifiable. Fuzzy matching introduces false positives that are harder to undo than to add later. External ID matching requires `player_identity` table maturity (ADR-022).
@@ -117,6 +143,8 @@ ImportPlayerV1 {
 > **`raw_row` definition:** `raw_row` refers to the raw *parsed row object* (header->value map) captured for audit/debug, not the original CSV bytes.
 
 > **Privacy footnote:** Because `raw_row` stores whatever vendors include (potentially tier/points, addresses, SSN fragments, notes), payload redaction is not merely "nice to have" — a redaction policy with a defined deadline must be specified before general availability, even if not implemented on day 1.
+>
+> **Retention posture:** Staged `raw_row` data must be purged on a fixed schedule (e.g., 30/60/90 days post-execute) before GA. MVP may retain indefinitely in dev/staging environments only. Before production rollout with real patron PII, the purge mechanism (admin-initiated or automated) and retention window must be defined. Without a time-bound commitment, "deferred" becomes "never."
 
 **Rationale:** Import must not become the loyalty source of truth. LoyaltyService owns the ledger (SRM). Tier reconciliation requires upgrade-only policy, approval workflows, and ledger audit trail — all out of scope for import.
 
@@ -143,8 +171,8 @@ ImportPlayerV1 {
 
 ### Decision Outcomes (quick scan)
 
-- MVP ingestion = Lane 1 (Papa Parse + internal mapping)
-- Canonical boundary = `ImportPlayerV1`
+- ~~MVP ingestion = Lane 1 (Papa Parse + internal mapping)~~ → **Current: Lane 2 (server-side worker with csv-parse; Papa Parse is preview-only)** — see ADR-037
+- Canonical boundary = `ImportPlayerV1` (unchanged across lanes)
 - Merge authority = stage -> execute RPC with deterministic conflicts + idempotency
 - Loyalty/tier fields = staged-only; reconciliation is separate workflow (no entitlement mutation during import)
 
@@ -166,8 +194,7 @@ ImportPlayerV1 {
 **Excluded (for this ADR):**
 - Loyalty tier reconciliation (separate PRD)
 - Fuzzy matching / identity merge tools
-- Background job orchestration
-- Server-side file parsing
+- ~~Server-side file parsing~~ — Now included via Lane 2 (ADR-037). Server-side worker ingestion with `csv-parse` is the authoritative parsing pathway. Browser-side parsing remains for preview only.
 
 ## Links
 
@@ -180,3 +207,4 @@ ImportPlayerV1 {
 - ADR-022: Player identity enrollment
 - ADR-024: Authoritative context derivation
 - ADR-030: Auth pipeline hardening (write-path session-var enforcement)
+- ADR-037: Server-Authoritative CSV Ingestion Worker (Lane 2 — supersedes D1 for ingestion)
