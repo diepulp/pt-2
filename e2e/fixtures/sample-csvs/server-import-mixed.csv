@@ -1,0 +1,11 @@
+First Name,Last Name,Email,Phone,Date of Birth
+Alice,Johnson,alice.j@example.com,555-2001,1985-03-15
+Bob,Smith,bob.smith@example.com,555-2002,1990-07-22
+,Missing,no-name@example.com,555-2003,1978-11-30
+Carol,Williams,carol.w@example.com,555-2004,1995-01-10
+Dave,,dave.noln@example.com,555-2005,1988-06-25
+Eve,Davis,eve.davis@example.com,555-2006,1972-09-08
+NoIdentifiers,Nobody,,,1983-12-14
+Frank,Miller,frank.m@example.com,555-2007,2000-04-01
+Grace,Wilson,bad-email,555-2008,1991-08-17
+Henry,Moore,henry.m@example.com,555-2009,1986-02-28

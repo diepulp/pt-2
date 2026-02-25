@@ -2,18 +2,18 @@
  * PlayerImportService Mappers
  *
  * Type-safe transformations from Supabase rows to DTOs.
- * No `as` type assertions per SLAD v2.2.0 §327-365.
  *
  * @see PRD-037 CSV Player Import
+ * @see PRD-039 Server-Authoritative CSV Ingestion Worker
  */
 
-import type { Json } from '@/types/database.types';
+import type { Database, Json } from '@/types/database.types';
 
 import type {
   ColumnMapping,
   ImportBatchDTO,
   ImportBatchReportV1,
-  ImportBatchStatus,
+  ImportIngestionReportV1,
   ImportRowDTO,
   ImportRowStatus,
   StageRowInput,
@@ -21,20 +21,7 @@ import type {
 
 // === Selected Row Types (match what DB queries return) ===
 
-type ImportBatchSelectedRow = {
-  id: string;
-  casino_id: string;
-  created_by_staff_id: string;
-  idempotency_key: string;
-  status: ImportBatchStatus;
-  file_name: string;
-  vendor_label: string | null;
-  column_mapping: Json;
-  total_rows: number;
-  report_summary: Json | null;
-  created_at: string;
-  updated_at: string;
-};
+type ImportBatchRow = Database['public']['Tables']['import_batch']['Row'];
 
 type ImportRowSelectedRow = {
   id: string;
@@ -52,7 +39,7 @@ type ImportRowSelectedRow = {
 // === Batch Mappers ===
 
 /** Maps a batch row to ImportBatchDTO */
-export function toImportBatchDTO(row: ImportBatchSelectedRow): ImportBatchDTO {
+export function toImportBatchDTO(row: ImportBatchRow): ImportBatchDTO {
   return {
     id: row.id,
     casino_id: row.casino_id,
@@ -66,19 +53,25 @@ export function toImportBatchDTO(row: ImportBatchSelectedRow): ImportBatchDTO {
     report_summary: row.report_summary,
     created_at: row.created_at,
     updated_at: row.updated_at,
+    storage_path: row.storage_path,
+    original_file_name: row.original_file_name,
+    claimed_by: row.claimed_by,
+    claimed_at: row.claimed_at,
+    heartbeat_at: row.heartbeat_at,
+    attempt_count: row.attempt_count,
+    last_error_at: row.last_error_at,
+    last_error_code: row.last_error_code,
   };
 }
 
 /** Maps an array of batch rows to ImportBatchDTO[] */
-export function toImportBatchDTOList(
-  rows: ImportBatchSelectedRow[],
-): ImportBatchDTO[] {
+export function toImportBatchDTOList(rows: ImportBatchRow[]): ImportBatchDTO[] {
   return rows.map(toImportBatchDTO);
 }
 
 /** Maps a nullable batch row to ImportBatchDTO | null */
 export function toImportBatchDTOOrNull(
-  row: ImportBatchSelectedRow | null,
+  row: ImportBatchRow | null,
 ): ImportBatchDTO | null {
   return row ? toImportBatchDTO(row) : null;
 }
@@ -141,7 +134,28 @@ export function toRpcStageRows(rows: StageRowInput[]): Json {
   );
 }
 
-// === Report Mapper ===
+// === Report Mappers ===
+
+/**
+ * Maps a raw ingestion report JSON object to a typed ImportIngestionReportV1.
+ *
+ * @returns Typed report, or null if input is null/undefined.
+ */
+export function toImportIngestionReportV1(
+  raw: Record<string, unknown> | null,
+): ImportIngestionReportV1 | null {
+  if (!raw) return null;
+  return {
+    total_rows: Number(raw.total_rows ?? 0),
+    valid_rows: Number(raw.valid_rows ?? 0),
+    invalid_rows: Number(raw.invalid_rows ?? 0),
+    duplicate_rows: Number(raw.duplicate_rows ?? 0),
+    parse_errors: Number(raw.parse_errors ?? 0),
+    started_at: String(raw.started_at ?? ''),
+    completed_at: String(raw.completed_at ?? ''),
+    duration_ms: Number(raw.duration_ms ?? 0),
+  };
+}
 
 /** Maps raw report_summary JSON to a typed report DTO */
 export function toImportBatchReportV1(

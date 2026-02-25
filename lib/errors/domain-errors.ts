@@ -356,6 +356,7 @@ export const FLOOR_LAYOUT_ERROR_MESSAGES: Record<FloorLayoutErrorCode, string> =
 
 export type ImportErrorCode =
   | 'IMPORT_BATCH_NOT_FOUND'
+  | 'IMPORT_BATCH_NOT_CREATED'
   | 'IMPORT_BATCH_NOT_STAGING'
   | 'IMPORT_BATCH_ALREADY_EXECUTING'
   | 'IMPORT_ROW_NO_IDENTIFIER'
@@ -365,6 +366,8 @@ export type ImportErrorCode =
 
 export const IMPORT_ERROR_MESSAGES: Record<ImportErrorCode, string> = {
   IMPORT_BATCH_NOT_FOUND: 'Import batch not found or not visible',
+  IMPORT_BATCH_NOT_CREATED:
+    'Import batch is not in created status — upload requires status = created',
   IMPORT_BATCH_NOT_STAGING: 'Import batch is not in staging status',
   IMPORT_BATCH_ALREADY_EXECUTING: 'Import batch is currently executing',
   IMPORT_ROW_NO_IDENTIFIER: 'Row is missing both email and phone identifiers',

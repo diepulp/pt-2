@@ -6,7 +6,7 @@
  * Reads use direct Supabase queries (RLS-protected).
  *
  * @see PRD-037 CSV Player Import
- * @see docs/21-exec-spec/EXEC-037-csv-player-import.md
+ * @see PRD-039 Server-Authoritative CSV Ingestion Worker
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -15,7 +15,7 @@ import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
 import type {
-  ColumnMapping,
+  CreateBatchInput,
   ImportBatchDTO,
   ImportBatchListFilters,
   ImportRowDTO,
@@ -36,22 +36,31 @@ import {
 /**
  * Create a new import batch via RPC (idempotent).
  * Returns existing batch if idempotency_key matches.
+ *
+ * When `input.initial_status` is provided, the 5-parameter RPC overload is
+ * called (added by PRD-039 migration 20260224114002). Omitting the field
+ * falls back to the original 4-parameter signature for backward compatibility.
  */
 export async function createBatch(
   supabase: SupabaseClient<Database>,
-  input: {
-    idempotency_key: string;
-    file_name: string;
-    vendor_label?: string;
-    column_mapping: ColumnMapping;
-  },
+  input: CreateBatchInput,
 ): Promise<ImportBatchDTO> {
-  const { data, error } = await supabase.rpc('rpc_import_create_batch', {
+  const baseParams = {
     p_idempotency_key: input.idempotency_key,
     p_file_name: input.file_name,
-    p_vendor_label: input.vendor_label ?? undefined,
+    p_vendor_label: input.vendor_label ?? '',
     p_column_mapping: toRpcColumnMapping(input.column_mapping),
-  });
+  };
+
+  const rpcCall =
+    input.initial_status !== undefined
+      ? supabase.rpc('rpc_import_create_batch', {
+          ...baseParams,
+          p_initial_status: input.initial_status,
+        })
+      : supabase.rpc('rpc_import_create_batch', baseParams);
+
+  const { data, error } = await rpcCall;
 
   if (error) {
     throw mapRpcError(error);
@@ -112,6 +121,42 @@ export async function executeBatch(
 }
 
 /**
+ * Update the storage path and original file name on a batch and transition its
+ * status to 'uploaded'. Called by the upload route handler (WS4) after a
+ * successful Storage upload.
+ */
+export async function updateBatchStoragePath(
+  supabase: SupabaseClient<Database>,
+  batchId: string,
+  storagePath: string,
+  originalFileName: string,
+): Promise<ImportBatchDTO> {
+  const { data, error } = await supabase
+    .from('import_batch')
+    .update({
+      storage_path: storagePath,
+      original_file_name: originalFileName,
+      status: 'uploaded',
+    })
+    .eq('id', batchId)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw new DomainError('INTERNAL_ERROR', error.message);
+  }
+
+  if (!data) {
+    throw new DomainError(
+      'IMPORT_BATCH_NOT_FOUND',
+      `Batch ${batchId} not found after storage path update`,
+    );
+  }
+
+  return toImportBatchDTO(data);
+}
+
+/**
  * Get a single batch by ID (RLS-protected read).
  */
 export async function getBatch(
@@ -162,7 +207,8 @@ export async function listBatches(
 
   const rows = data ?? [];
   const hasMore = rows.length > limit;
-  const items = toImportBatchDTOList(hasMore ? rows.slice(0, limit) : rows);
+  const sliced = hasMore ? rows.slice(0, limit) : rows;
+  const items = toImportBatchDTOList(sliced);
   const cursor = hasMore ? items[items.length - 1].created_at : null;
 
   return { items, cursor };
@@ -205,6 +251,36 @@ export async function listRows(
   const cursor = hasMore ? String(items[items.length - 1].row_number) : null;
 
   return { items, cursor };
+}
+
+/**
+ * Upload a CSV file to the 'imports' storage bucket using service_role.
+ *
+ * The 'imports' bucket has no user-facing storage policies (SEC-NOTE),
+ * so this operation requires service_role access. Callers (route handlers)
+ * must have already validated auth and RLS context before calling.
+ */
+export async function uploadFileToStorage(
+  storagePath: string,
+  file: File,
+): Promise<void> {
+  // Lazy import to keep service_role usage encapsulated in the service layer
+  const { createServiceClient } = await import('@/lib/supabase/service');
+  const serviceClient = createServiceClient();
+
+  const { error: uploadError } = await serviceClient.storage
+    .from('imports')
+    .upload(storagePath, file, {
+      contentType: 'text/csv',
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      `Storage upload failed: ${uploadError.message}`,
+    );
+  }
 }
 
 // === Error Mapping ===
