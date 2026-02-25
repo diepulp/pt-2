@@ -5,6 +5,7 @@ import { Package, RefreshCw, Calculator, Loader2 } from 'lucide-react';
 import * as React from 'react';
 
 import { ChipCountCaptureDialog } from '@/components/table/chip-count-capture-dialog';
+import { RundownReportCard } from '@/components/table/rundown-report-card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -18,6 +19,7 @@ import {
   useInventorySnapshots,
   type TableInventorySnapshotDTO,
 } from '@/hooks/table-context/use-inventory-snapshots';
+import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
 import { tableContextKeys } from '@/services/table-context/keys';
 
 import { BankSummary } from './bank-summary';
@@ -152,6 +154,14 @@ export function InventoryPanel({
     });
   };
 
+  // Fetch current table session for RundownReportCard
+  const { data: currentSession } = useCurrentTableSession(tableId);
+  const showRundownCard =
+    currentSession &&
+    (currentSession.status === 'ACTIVE' ||
+      currentSession.status === 'RUNDOWN' ||
+      currentSession.status === 'CLOSED');
+
   const isLoading = isLoadingSnapshots || isLoadingDrops;
 
   return (
@@ -202,6 +212,14 @@ export function InventoryPanel({
         {/* Panel Content */}
         <ScrollArea className="flex-1">
           <div className="p-4 space-y-6">
+            {/* Rundown Report (PRD-038) */}
+            {showRundownCard && (
+              <RundownReportCard
+                sessionId={currentSession.id}
+                sessionStatus={currentSession.status}
+              />
+            )}
+
             {/* Bank Summary */}
             <BankSummary
               totalValue={totalBankValue}
