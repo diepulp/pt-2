@@ -131,9 +131,8 @@ let TimelinePageContent: React.ComponentType<{
 }>;
 
 beforeAll(async () => {
-  const mod = await import(
-    '@/app/(dashboard)/players/[playerId]/timeline/_components/timeline-content'
-  );
+  const mod =
+    await import('@/app/(dashboard)/players/[playerId]/timeline/_components/timeline-content');
   TimelinePageContent = mod.TimelinePageContent;
 });
 
