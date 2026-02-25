@@ -188,6 +188,7 @@ for file in $ROUTE_FILES; do
     players) SERVICE_DOMAIN="player" ;;
     visits) SERVICE_DOMAIN="visit" ;;
     rating-slips) SERVICE_DOMAIN="rating-slip" ;;
+    table-sessions) SERVICE_DOMAIN="table-context" ;;
     *) SERVICE_DOMAIN="$DOMAIN" ;;
   esac
 

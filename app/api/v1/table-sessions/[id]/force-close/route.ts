@@ -1,10 +1,14 @@
 /**
- * Table Session Close Route
+ * Table Session Force-Close Route (PRD-038A)
  *
- * PATCH /api/v1/table-sessions/[id]/close - Close a table session
+ * POST /api/v1/table-sessions/[id]/force-close - Force close a table session
+ *
+ * Privileged operation for pit_boss/admin roles.
+ * Skips unresolved liabilities check, sets requires_reconciliation=true.
+ * Emits audit_log entry for compliance.
  *
  * Security: Uses withServerAction middleware for auth, RLS, audit, idempotency.
- * Pattern: PRD-TABLE-SESSION-LIFECYCLE-MVP transport layer
+ * Pattern: PRD-038A close governance transport layer
  */
 
 import type { NextRequest } from 'next/server';
@@ -19,10 +23,10 @@ import {
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import {
-  closeTableSessionSchema,
+  forceCloseTableSessionSchema,
   tableSessionRouteParamsSchema,
 } from '@/services/table-context/schemas';
-import { closeTableSession } from '@/services/table-context/table-session';
+import { forceCloseTableSession } from '@/services/table-context/table-session';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,18 +34,14 @@ export const dynamic = 'force-dynamic';
 type RouteParams = { params: Promise<{ id: string }> };
 
 /**
- * PATCH /api/v1/table-sessions/[id]/close
+ * POST /api/v1/table-sessions/[id]/force-close
  *
- * Closes a table session.
+ * Force-closes a table session (privileged).
  * Requires Idempotency-Key header.
- * Requires at least one closing artifact (drop_event_id or closing_inventory_snapshot_id).
- * Transitions: RUNDOWN/ACTIVE → CLOSED
+ * Requires pit_boss or admin role (enforced by RPC).
  *
  * Request body:
  * {
- *   "drop_event_id"?: "uuid",
- *   "closing_inventory_snapshot_id"?: "uuid",
- *   "notes"?: "string",
  *   "close_reason": "close_reason_type" (required),
  *   "close_note"?: "string" (required when close_reason="other")
  * }
@@ -49,14 +49,13 @@ type RouteParams = { params: Promise<{ id: string }> };
  * Response: TableSessionDTO
  *
  * Errors:
- * - 404 SESSION_NOT_FOUND: Session does not exist
- * - 422 INVALID_STATE_TRANSITION: Session not in RUNDOWN/ACTIVE state
- * - 400 MISSING_CLOSING_ARTIFACT: No closing artifact provided
+ * - 400 VALIDATION_ERROR: Invalid request body
  * - 400 CLOSE_NOTE_REQUIRED: close_reason='other' without close_note
- * - 409 UNRESOLVED_LIABILITIES: Session has unresolved items (use force-close)
  * - 403 UNAUTHORIZED: Caller is not pit_boss/admin
+ * - 404 SESSION_NOT_FOUND: Session does not exist
+ * - 409 INVALID_STATE_TRANSITION: Session is already closed
  */
-export async function PATCH(request: NextRequest, segmentData: RouteParams) {
+export async function POST(request: NextRequest, segmentData: RouteParams) {
   const ctx = createRequestContext(request);
 
   try {
@@ -66,7 +65,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
       tableSessionRouteParamsSchema,
     );
     const body = await request.json();
-    const parsed = closeTableSessionSchema.safeParse(body);
+    const parsed = forceCloseTableSessionSchema.safeParse(body);
     if (!parsed.success) {
       return errorResponse(ctx, {
         ok: false,
@@ -82,11 +81,8 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
     const result = await withServerAction(
       supabase,
       async (mwCtx) => {
-        const session = await closeTableSession(mwCtx.supabase, {
+        const session = await forceCloseTableSession(mwCtx.supabase, {
           sessionId: params.id,
-          dropEventId: input.drop_event_id,
-          closingInventorySnapshotId: input.closing_inventory_snapshot_id,
-          notes: input.notes,
           closeReason: input.close_reason,
           closeNote: input.close_note,
         });
@@ -102,7 +98,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
       },
       {
         domain: 'table-context',
-        action: 'close-session',
+        action: 'force-close-session',
         requireIdempotency: true,
         idempotencyKey,
         correlationId: ctx.requestId,

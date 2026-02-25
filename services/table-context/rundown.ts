@@ -150,5 +150,15 @@ export async function postTableDropTotal(
     credits_total_cents: result.credits_total_cents,
     drop_total_cents: result.drop_total_cents,
     drop_posted_at: result.drop_posted_at,
+    // PRD-038A fields
+    close_reason: result.close_reason,
+    close_note: result.close_note,
+    has_unresolved_items: result.has_unresolved_items,
+    requires_reconciliation: result.requires_reconciliation,
+    activated_by_staff_id: result.activated_by_staff_id,
+    paused_by_staff_id: result.paused_by_staff_id,
+    resumed_by_staff_id: result.resumed_by_staff_id,
+    rolled_over_by_staff_id: result.rolled_over_by_staff_id,
+    crossed_gaming_day: result.crossed_gaming_day,
   };
 }

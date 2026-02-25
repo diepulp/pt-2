@@ -214,6 +214,9 @@ export type TableContextErrorCode =
   | 'SESSION_ALREADY_EXISTS'
   | 'INVALID_STATE_TRANSITION'
   | 'MISSING_CLOSING_ARTIFACT'
+  // Close Guardrail Errors (PRD-038A)
+  | 'UNRESOLVED_LIABILITIES'
+  | 'CLOSE_NOTE_REQUIRED'
   // Rundown Report Errors (PRD-038)
   | 'TABLE_RUNDOWN_ALREADY_FINALIZED'
   | 'TABLE_RUNDOWN_NOT_FOUND'
@@ -248,6 +251,10 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   INVALID_STATE_TRANSITION: 'Cannot perform operation in current session state',
   MISSING_CLOSING_ARTIFACT:
     'At least one closing artifact (drop_event_id or closing_inventory_snapshot_id) is required',
+  // Close Guardrail Errors (PRD-038A)
+  UNRESOLVED_LIABILITIES:
+    'Session has unresolved items. Use force-close for privileged override.',
+  CLOSE_NOTE_REQUIRED: 'close_reason="other" requires a non-empty close_note',
   // Rundown Report Errors (PRD-038)
   TABLE_RUNDOWN_ALREADY_FINALIZED:
     'Rundown report is finalized and cannot be modified',

@@ -67,6 +67,9 @@ import type {
   StartTableRundownInput,
   CloseTableSessionInput,
   GetCurrentTableSessionInput,
+  // PRD-038A: Close governance DTOs
+  CloseReasonType,
+  ForceCloseTableSessionInput,
   // ADR-027: Table Rundown DTOs
   TableBankMode,
   TableRundownDTO,
@@ -115,6 +118,7 @@ import {
   openTableSession,
   startTableRundown,
   closeTableSession,
+  forceCloseTableSession,
   getCurrentTableSession,
   getTableSessionById,
 } from './table-session';
@@ -154,6 +158,9 @@ export type {
   StartTableRundownInput,
   CloseTableSessionInput,
   GetCurrentTableSessionInput,
+  // PRD-038A: Close governance DTOs
+  CloseReasonType,
+  ForceCloseTableSessionInput,
   // ADR-027: Table Rundown DTOs
   TableBankMode,
   TableRundownDTO,
@@ -254,6 +261,9 @@ export interface TableContextServiceInterface {
   openSession(gamingTableId: string): Promise<TableSessionDTO>;
   startRundown(sessionId: string): Promise<TableSessionDTO>;
   closeSession(input: CloseTableSessionInput): Promise<TableSessionDTO>;
+  forceCloseSession(
+    input: ForceCloseTableSessionInput,
+  ): Promise<TableSessionDTO>;
   getCurrentSession(gamingTableId: string): Promise<TableSessionDTO | null>;
   getSessionById(sessionId: string): Promise<TableSessionDTO>;
 
@@ -340,6 +350,7 @@ export function createTableContextService(
     openSession: (gamingTableId) => openTableSession(supabase, gamingTableId),
     startRundown: (sessionId) => startTableRundown(supabase, sessionId),
     closeSession: (input) => closeTableSession(supabase, input),
+    forceCloseSession: (input) => forceCloseTableSession(supabase, input),
     getCurrentSession: (gamingTableId) =>
       getCurrentTableSession(supabase, gamingTableId),
     getSessionById: (sessionId) => getTableSessionById(supabase, sessionId),

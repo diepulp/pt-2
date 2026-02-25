@@ -145,6 +145,7 @@ export function CloseSessionDialog({
             ? closingInventorySnapshotId
             : undefined,
         notes: notes.trim() || undefined,
+        close_reason: 'end_of_shift',
       });
 
       toast.success('Session closed', {
