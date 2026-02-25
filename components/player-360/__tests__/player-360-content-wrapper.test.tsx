@@ -100,9 +100,8 @@ let Player360ContentWrapper: React.ComponentType<{
 }>;
 
 beforeAll(async () => {
-  const mod = await import(
-    '@/app/(dashboard)/players/[[...playerId]]/_components/player-360-content-wrapper'
-  );
+  const mod =
+    await import('@/app/(dashboard)/players/[[...playerId]]/_components/player-360-content-wrapper');
   Player360ContentWrapper = mod.Player360ContentWrapper;
 });
 
