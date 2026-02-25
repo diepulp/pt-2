@@ -14,7 +14,10 @@ const config = {
   setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
 
   // Module path aliases (matching tsconfig.json)
+  // The .js → strip-extension rule supports NodeNext module resolution
+  // used by workers/csv-ingestion/ (import from './foo.js' → './foo.ts')
   moduleNameMapper: {
+    '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@/(.*)$': '<rootDir>/$1',
   },
 

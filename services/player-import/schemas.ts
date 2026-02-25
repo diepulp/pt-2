@@ -67,6 +67,45 @@ export const createBatchSchema = z.object({
   file_name: z.string().min(1, 'File name is required').max(255),
   vendor_label: z.string().max(255).optional(),
   column_mapping: z.record(z.string(), z.string()).default({}),
+  /**
+   * Server-side flows may pass 'created' to create the record before uploading.
+   * Client-side flows omit this field (defaults to 'staging' in the RPC).
+   */
+  initial_status: z.enum(['staging', 'created']).optional(),
+});
+
+/**
+ * Permissive schema for normalized_payload during staging.
+ * Row-level validation (email format, identifier requirement) is enforced
+ * server-side by rpc_import_execute — staging accepts all rows as-is so
+ * the user can see validation outcomes in the report.
+ */
+const stageRowNormalizedPayloadSchema = z.object({
+  contract_version: z.literal('v1'),
+  source: z
+    .object({
+      vendor: z.string().optional(),
+      file_name: z.string().optional(),
+    })
+    .optional()
+    .default({}),
+  row_ref: z.object({
+    row_number: z.number().int().min(1),
+  }),
+  identifiers: z.object({
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    external_id: z.string().optional(),
+  }),
+  profile: z
+    .object({
+      first_name: z.string().optional(),
+      last_name: z.string().optional(),
+      dob: z.string().nullable().optional(),
+    })
+    .optional()
+    .default({}),
+  notes: z.string().optional(),
 });
 
 /** Schema for staging rows into a batch */
@@ -76,7 +115,7 @@ export const stageRowsSchema = z.object({
       z.object({
         row_number: z.number().int().min(1),
         raw_row: z.record(z.string(), z.unknown()),
-        normalized_payload: importPlayerV1Schema,
+        normalized_payload: stageRowNormalizedPayloadSchema,
       }),
     )
     .min(1, 'At least one row is required')
@@ -90,11 +129,26 @@ export const batchIdParamSchema = z.object({
   id: uuidSchema('batch ID'),
 });
 
+/** Schema for upload file route parameter (PRD-039 server ingestion) */
+export const uploadFileParamSchema = z.object({
+  batchId: z.string().uuid(),
+});
+
 // === Query Schemas ===
 
 /** Schema for batch list query parameters */
 export const batchListQuerySchema = z.object({
-  status: z.enum(['staging', 'executing', 'completed', 'failed']).optional(),
+  status: z
+    .enum([
+      'created',
+      'uploaded',
+      'parsing',
+      'staging',
+      'executing',
+      'completed',
+      'failed',
+    ])
+    .optional(),
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });

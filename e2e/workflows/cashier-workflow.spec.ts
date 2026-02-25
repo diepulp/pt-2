@@ -16,17 +16,14 @@ import { test } from '@playwright/test';
 
 test.describe('Cashier Workflow — Operational Confirmations', () => {
   test.describe('Fill Fulfillment', () => {
-    test.fixme(
-      'cashier confirms pending fill with matching amount',
-      async () => {
-        // 1. Login as cashier
-        // 2. Navigate to /cashier/operational-confirmations
-        // 3. Verify pending fill appears in queue
-        // 4. Click confirm, enter matching amount
-        // 5. Verify fill removed from pending queue
-        // 6. Verify fill appears in recent confirmations
-      },
-    );
+    test.fixme('cashier confirms pending fill with matching amount', async () => {
+      // 1. Login as cashier
+      // 2. Navigate to /cashier/operational-confirmations
+      // 3. Verify pending fill appears in queue
+      // 4. Click confirm, enter matching amount
+      // 5. Verify fill removed from pending queue
+      // 6. Verify fill appears in recent confirmations
+    });
 
     test.fixme('cashier confirms fill with discrepancy note', async () => {
       // 1. Login as cashier
@@ -38,14 +35,11 @@ test.describe('Cashier Workflow — Operational Confirmations', () => {
       // 7. Verify confirmation recorded with discrepancy
     });
 
-    test.fixme(
-      're-confirming an already confirmed fill is idempotent',
-      async () => {
-        // 1. Confirm a fill
-        // 2. Attempt to confirm same fill again
-        // 3. Verify no error, returns existing confirmation
-      },
-    );
+    test.fixme('re-confirming an already confirmed fill is idempotent', async () => {
+      // 1. Confirm a fill
+      // 2. Attempt to confirm same fill again
+      // 3. Verify no error, returns existing confirmation
+    });
   });
 
   test.describe('Credit Receipt', () => {

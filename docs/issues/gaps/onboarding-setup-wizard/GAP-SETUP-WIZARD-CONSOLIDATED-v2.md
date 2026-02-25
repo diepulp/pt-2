@@ -1,10 +1,10 @@
 # GAP-SETUP-WIZARD-CONSOLIDATED-v2
 
 **Created:** 2026-02-16
-**Status:** Open (12 items)
+**Status:** Open (13 items)
 **Severity:** P1 (UX gaps — wizard is functional but table creation step has structural problems)
-**Related PRDs:** PRD-024 (Landing Page), PRD-025 (Onboarding), PRD-029 (Game Settings Schema), PRD-030 (Setup Wizard)
-**Bounded Context:** CasinoService, TableContext
+**Related PRDs:** PRD-024 (Landing Page), PRD-025 (Onboarding), PRD-029 (Game Settings Schema), PRD-030 (Setup Wizard), PRD-037 (CSV Player Import)
+**Bounded Context:** CasinoService, TableContext, PlayerImportService
 **Commit Baseline:** `f5a1b12` (Merge PR #1 — `dev-onboarding-wizard`)
 **Supersedes:** GAP-ONBOARDING-SETUP-WIZARD-CONFIG-TAXONOMY.md, GAP-SEEDED-GAME-SETTINGS-ORPHANED.md, GAP-SETUP-WIZARD-CUSTOM-GAME-SETTINGS.md
 
@@ -257,6 +257,41 @@ Each warning/blocker should deep-link back to the fix location via step-jump nav
 2. **Step-level summary** — when multiple issues exist, show a count ("3 issues to fix") with a list.
 3. **Auto-clear** — errors should clear immediately when the user corrects the input, not persist until the next server round-trip.
 
+### OPEN-13: CSV Player Import Not Integrated into Onboarding Wizard (P1)
+
+**Location:** Setup wizard (all steps) + standalone `/player-import` page
+**Problem:** PRD-037 delivered a standalone CSV player import wizard at `/player-import` with full backend (RPCs, RLS, service layer, 6 API endpoints) and frontend (6-step wizard: file selection, column mapping, preview, staging upload, execute, report). However, this functionality exists only as a standalone page with no integration into the onboarding flow. Two gaps:
+
+1. **No onboarding step for player import.** After completing table setup (Step 2) and par targets (Step 3), a natural next action is bulk-importing an existing player roster. The wizard currently goes straight to Review & Complete (Step 4) with no player import option. For casinos migrating from another system, this is the single most valuable onboarding action — importing their existing player database so pit bosses can start rating sessions immediately.
+
+2. **No navigation to ad-hoc import.** After onboarding completes (`setup_status='ready'`), there is no sidebar link, dashboard card, or command palette entry to reach `/player-import`. The page exists but is only accessible via direct URL.
+
+**Impact:** Casinos completing onboarding must discover the import page independently. The onboarding "done" state implies readiness, but without players in the system, pit bosses cannot start any real work (visits, rating slips, rewards all require player records).
+
+**Recommended fix — two workstreams:**
+
+**A. Onboarding integration (optional step between Step 3 and Review):**
+- Add **Step 3.5: Import Players (Optional)** to the setup wizard
+- Display after par targets, before review
+- Two options: "Import from CSV" (opens the existing import wizard inline or as a modal) and "Skip — I'll add players later"
+- If skipped, note it in the Review step as "Players: None imported (you can import later from Settings → Import Players)"
+- If completed, show import report summary in Review step: "Players: 47 imported (3 conflicts skipped)"
+- The underlying API endpoints and wizard components from PRD-037 are already built — this is a UI wiring task
+
+**B. Ad-hoc access (post-onboarding):**
+- Add sidebar nav entry under a "Players" or "Settings" group: "Import Players" → `/player-import`
+- Add dashboard card or quick-action on the main dashboard: "Import Players from CSV"
+- Register in command palette (Ctrl/Cmd+K): "Import Players"
+- All three entry points navigate to the existing `/player-import` page
+
+**Dependencies:** PRD-037 (complete — all 7 workstreams shipped), OPEN-7 (step-jump navigation)
+
+**Files to create/modify:**
+- `app/(onboarding)/setup/setup-wizard.tsx` — add optional player import step
+- `app/(onboarding)/setup/steps/step-import-players.tsx` — new step component (wraps or embeds existing `import-wizard.tsx`)
+- `app/(protected)/layout.tsx` or sidebar component — add nav entry for `/player-import`
+- Dashboard page — add quick-action card
+
 ---
 
 ## 3. Priority Matrix
@@ -275,17 +310,19 @@ Each warning/blocker should deep-link back to the fix location via step-jump nav
 | **P2** | OPEN-9: Poker fee-model schema gap (deferred) | N/A | Medium — blocks poker templates; workaround via custom game + notes |
 | **P3** | OPEN-6: Par targets variant context | Low | Low — consistent variant display |
 | **P3** | OPEN-7: Step-jump navigation + Optional labeling | Medium | Low — review-and-correct workflow |
+| **P1** | OPEN-13: CSV player import integration (onboarding + ad-hoc nav) | Medium | High — bridges onboarding to operational readiness |
 
 **Recommended implementation order:**
 
 ```
 Phase 1 — Table creation overhaul:  OPEN-2 → OPEN-8 → OPEN-4 → OPEN-3 → OPEN-1
 Phase 2 — Wizard hardening:         OPEN-10 → OPEN-11 → OPEN-12 → OPEN-5
-Phase 3 — Polish:                   OPEN-6 → OPEN-7
+Phase 3 — Player import integration: OPEN-13 (onboarding step + sidebar/dashboard/cmd-K)
+Phase 4 — Polish:                   OPEN-6 → OPEN-7
 Deferred:                           OPEN-9 (future PRD — poker fee-model schema)
 ```
 
-Rationale: Phase 1 replaces bulk-add (OPEN-2), which eliminates OPEN-3 and OPEN-4 as side effects, then adds the game→table bridge (OPEN-1). Phase 2 adds the validation and error infrastructure that makes the wizard robust. Phase 3 is cosmetic polish. OPEN-9 is a schema evolution that requires its own PRD.
+Rationale: Phase 1 replaces bulk-add (OPEN-2), which eliminates OPEN-3 and OPEN-4 as side effects, then adds the game→table bridge (OPEN-1). Phase 2 adds the validation and error infrastructure that makes the wizard robust. Phase 3 wires the CSV player import (PRD-037) into the onboarding flow and adds ad-hoc navigation — no new backend work, purely UI integration. Phase 4 is cosmetic polish. OPEN-9 is a schema evolution that requires its own PRD.
 
 ---
 

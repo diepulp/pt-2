@@ -791,6 +791,130 @@ export type Database = {
           },
         ]
       }
+      import_batch: {
+        Row: {
+          casino_id: string
+          column_mapping: Json
+          created_at: string
+          created_by_staff_id: string
+          file_name: string
+          id: string
+          idempotency_key: string
+          report_summary: Json | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+          total_rows: number
+          updated_at: string
+          vendor_label: string | null
+        }
+        Insert: {
+          casino_id: string
+          column_mapping?: Json
+          created_at?: string
+          created_by_staff_id: string
+          file_name: string
+          id?: string
+          idempotency_key: string
+          report_summary?: Json | null
+          status?: Database["public"]["Enums"]["import_batch_status"]
+          total_rows?: number
+          updated_at?: string
+          vendor_label?: string | null
+        }
+        Update: {
+          casino_id?: string
+          column_mapping?: Json
+          created_at?: string
+          created_by_staff_id?: string
+          file_name?: string
+          id?: string
+          idempotency_key?: string
+          report_summary?: Json | null
+          status?: Database["public"]["Enums"]["import_batch_status"]
+          total_rows?: number
+          updated_at?: string
+          vendor_label?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_batch_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_batch_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      import_row: {
+        Row: {
+          batch_id: string
+          casino_id: string
+          created_at: string
+          id: string
+          matched_player_id: string | null
+          normalized_payload: Json
+          raw_row: Json
+          reason_code: string | null
+          reason_detail: string | null
+          row_number: number
+          status: Database["public"]["Enums"]["import_row_status"]
+        }
+        Insert: {
+          batch_id: string
+          casino_id: string
+          created_at?: string
+          id?: string
+          matched_player_id?: string | null
+          normalized_payload: Json
+          raw_row: Json
+          reason_code?: string | null
+          reason_detail?: string | null
+          row_number: number
+          status?: Database["public"]["Enums"]["import_row_status"]
+        }
+        Update: {
+          batch_id?: string
+          casino_id?: string
+          created_at?: string
+          id?: string
+          matched_player_id?: string | null
+          normalized_payload?: Json
+          raw_row?: Json
+          reason_code?: string | null
+          reason_detail?: string | null
+          row_number?: number
+          status?: Database["public"]["Enums"]["import_row_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "import_row_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "import_batch"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_row_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "import_row_matched_player_id_fkey"
+            columns: ["matched_player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_earn_config: {
         Row: {
           casino_id: string
@@ -3705,6 +3829,80 @@ export type Database = {
         Args: { p_visit_id: string }
         Returns: Json
       }
+      rpc_import_create_batch: {
+        Args: {
+          p_column_mapping?: Json
+          p_file_name: string
+          p_idempotency_key: string
+          p_vendor_label?: string
+        }
+        Returns: {
+          casino_id: string
+          column_mapping: Json
+          created_at: string
+          created_by_staff_id: string
+          file_name: string
+          id: string
+          idempotency_key: string
+          report_summary: Json | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+          total_rows: number
+          updated_at: string
+          vendor_label: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_batch"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_import_execute: {
+        Args: { p_batch_id: string }
+        Returns: {
+          casino_id: string
+          column_mapping: Json
+          created_at: string
+          created_by_staff_id: string
+          file_name: string
+          id: string
+          idempotency_key: string
+          report_summary: Json | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+          total_rows: number
+          updated_at: string
+          vendor_label: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_batch"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_import_stage_rows: {
+        Args: { p_batch_id: string; p_rows: Json }
+        Returns: {
+          casino_id: string
+          column_mapping: Json
+          created_at: string
+          created_by_staff_id: string
+          file_name: string
+          id: string
+          idempotency_key: string
+          report_summary: Json | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+          total_rows: number
+          updated_at: string
+          vendor_label: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_batch"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_increment_pin_attempt: {
         Args: never
         Returns: {
@@ -4604,6 +4802,14 @@ export type Database = {
         | "baccarat"
         | "pai_gow"
         | "carnival"
+      import_batch_status: "staging" | "executing" | "completed" | "failed"
+      import_row_status:
+        | "staged"
+        | "created"
+        | "linked"
+        | "skipped"
+        | "conflict"
+        | "error"
       interaction_event_type:
         | "visit_start"
         | "visit_end"
@@ -4813,6 +5019,15 @@ export const Constants = {
         "baccarat",
         "pai_gow",
         "carnival",
+      ],
+      import_batch_status: ["staging", "executing", "completed", "failed"],
+      import_row_status: [
+        "staged",
+        "created",
+        "linked",
+        "skipped",
+        "conflict",
+        "error",
       ],
       interaction_event_type: [
         "visit_start",

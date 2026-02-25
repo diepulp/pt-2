@@ -1,10 +1,14 @@
 /**
  * Import Wizard State Machine Hook
  *
- * Manages the 6-step wizard state: step navigation, file reference,
+ * Manages the 7-step wizard state: step navigation, file reference,
  * batch ID, parse results, and column mappings.
  *
+ * Server-authoritative flow (PRD-039):
+ *   file-selection -> column-mapping -> preview -> file-upload -> worker-processing -> execute -> report
+ *
  * @see PRD-037 CSV Player Import
+ * @see PRD-039 Server-Authoritative CSV Ingestion Worker
  */
 
 'use client';
@@ -17,7 +21,8 @@ export type WizardStep =
   | 'file-selection'
   | 'column-mapping'
   | 'preview'
-  | 'staging-upload'
+  | 'file-upload'
+  | 'worker-processing'
   | 'execute'
   | 'report';
 
@@ -25,7 +30,8 @@ const STEPS: readonly WizardStep[] = [
   'file-selection',
   'column-mapping',
   'preview',
-  'staging-upload',
+  'file-upload',
+  'worker-processing',
   'execute',
   'report',
 ] as const;
@@ -34,7 +40,8 @@ const STEP_LABELS: Record<WizardStep, string> = {
   'file-selection': 'Select File',
   'column-mapping': 'Map Columns',
   preview: 'Preview',
-  'staging-upload': 'Upload',
+  'file-upload': 'Upload',
+  'worker-processing': 'Processing',
   execute: 'Execute',
   report: 'Report',
 };
