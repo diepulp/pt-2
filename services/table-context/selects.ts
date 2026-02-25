@@ -71,7 +71,8 @@ export const TABLE_FILL_SELECT = `
   confirmed_at,
   confirmed_by,
   confirmed_amount_cents,
-  discrepancy_note
+  discrepancy_note,
+  session_id
 ` as const;
 
 // Credit projection
@@ -92,7 +93,8 @@ export const TABLE_CREDIT_SELECT = `
   confirmed_at,
   confirmed_by,
   confirmed_amount_cents,
-  discrepancy_note
+  discrepancy_note,
+  session_id
 ` as const;
 
 // Drop event projection

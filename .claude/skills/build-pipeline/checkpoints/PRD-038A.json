@@ -1,0 +1,28 @@
+{
+  "prd_id": "PRD-038A",
+  "exec_spec": "docs/21-exec-spec/EXEC-038A-table-lifecycle-audit-patch.md",
+  "status": "complete",
+  "gov010_check": "waived:audit-patch-addendum-to-PRD-038",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "ship_with_gates",
+    "override_reason": null,
+    "p0_count": 0,
+    "p1_count": 4,
+    "p2_count": 4,
+    "external_audit": "accepted_and_folded"
+  },
+  "gates_passed": [
+    "schema-validation",
+    "schema-verification",
+    "type-check",
+    "lint",
+    "test-pass",
+    "build"
+  ],
+  "created_at": "2026-02-25T00:00:00Z",
+  "updated_at": "2026-02-25T12:30:00Z"
+}

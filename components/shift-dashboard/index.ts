@@ -32,3 +32,6 @@ export {
   type TimeWindowPreset,
   type TimeWindowSelectorProps,
 } from './time-window-selector';
+export { CheckpointButton } from './checkpoint-button';
+export { DeltaBadge } from './delta-badge';
+export { LateEventBadge } from './late-event-badge';

@@ -4,6 +4,8 @@ import { RefreshCwIcon } from 'lucide-react';
 import React, { lazy, Suspense, useMemo, useState } from 'react';
 
 import { PanelErrorBoundary } from '@/components/error-boundary';
+import { CheckpointButton } from '@/components/shift-dashboard/checkpoint-button';
+import { DeltaBadge } from '@/components/shift-dashboard/delta-badge';
 import { TimeWindowSelector } from '@/components/shift-dashboard/time-window-selector';
 import { AlertsStrip } from '@/components/shift-dashboard-v3/center/alerts-strip';
 import { MetricsTable } from '@/components/shift-dashboard-v3/center/metrics-table';
@@ -147,7 +149,11 @@ export function ShiftDashboardV3() {
               )}
             </div>
           </div>
-          <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
+          <div className="flex items-center gap-3">
+            <DeltaBadge />
+            <CheckpointButton />
+            <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
+          </div>
         </div>
         {/* Coverage bar */}
         {summary?.casino && (

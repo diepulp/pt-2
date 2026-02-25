@@ -23,6 +23,8 @@ import { useShiftDashboardUI } from '@/hooks/ui/use-shift-dashboard-ui';
 import { AlertsPanel } from './alerts-panel';
 import { CashObservationsPanel } from './cash-observations-panel';
 import { CasinoSummaryCard } from './casino-summary-card';
+import { CheckpointButton } from './checkpoint-button';
+import { DeltaBadge } from './delta-badge';
 import { PitMetricsTable } from './pit-metrics-table';
 import { TableMetricsTable } from './table-metrics-table';
 import { TimeWindowSelector } from './time-window-selector';
@@ -144,7 +146,11 @@ export function ShiftDashboardPage({ initialWindow }: ShiftDashboardPageProps) {
             Operational metrics and telemetry for the current shift window
           </p>
         </div>
-        <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
+        <div className="flex items-center gap-3">
+          <DeltaBadge />
+          <CheckpointButton />
+          <TimeWindowSelector value={timeWindow} onChange={setTimeWindow} />
+        </div>
       </div>
 
       {/* Casino summary KPIs */}

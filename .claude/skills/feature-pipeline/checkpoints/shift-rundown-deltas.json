@@ -1,0 +1,74 @@
+{
+  "feature_id": "shift-rundown-deltas",
+  "current_phase": 6,
+  "status": "dod-executable",
+  "gates_passed": ["srm-ownership", "brief-approved", "prd-approved", "sec-approved", "adr-frozen", "dod-executable"],
+  "gates_pending": ["implementation-complete"],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/shift-rundown-deltas/FEATURE_BOUNDARY.md",
+    "feature_brief": "docs/20-architecture/specs/shift-rundown-deltas/FEATURE_BRIEF.md",
+    "investigation": "docs/issues/gaps/table-inventory-lifecycle/INVESTIGATION-CLOSE-TABLE-SHIFT-DELTAS.md",
+    "prd": "docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md",
+    "sec_note": "docs/30-security/SEC-NOTE-SHIFT-RUNDOWN-DELTAS.md",
+    "adr": "docs/80-adrs/ADR-038-rundown-persistence-finalization-contract.md",
+    "exec_spec": "docs/21-exec-spec/EXEC-038-shift-rundown-deltas.md",
+    "dod_gates": "docs/20-architecture/specs/shift-rundown-deltas/DOD-shift-rundown-deltas.md"
+  },
+  "ownership": {
+    "primary_service": "TableContextService",
+    "writes": ["table_rundown_report (new)", "shift_checkpoint (new)", "table_session (totals triggers)"],
+    "reads": ["table_inventory_snapshot", "table_fill", "table_credit", "table_drop_event", "table_buyin_telemetry", "gaming_table.par_total_cents", "casino_settings.gaming_day_start_time"],
+    "cross_context": ["CasinoService.gaming_day_start_time (read-only)"]
+  },
+  "session_context": {
+    "summary": "Feature pipeline for shift-rundown-deltas (PRD-038). Two tightly-coupled features: (A) Persist table_rundown_report at session close for audit accountability, (B) shift_checkpoint table for mid-shift delta comparisons on the shift dashboard. Both owned by TableContextService.",
+    "next_action": "Phase 6: Implementation. Use /build or /prd-execute with EXEC-038-shift-rundown-deltas.md to begin workstream execution. Start with WS1 (Schema & RPCs) as foundation.",
+    "key_decisions": {
+      "ADR-038_D1": "Session totals (fills_total_cents, credits_total_cents) updated atomically inside fill/credit RPCs via INTO STRICT + atomic increment. Session resolved via unique_active_session_per_table partial unique index. session_id persisted on fill/credit rows as FK.",
+      "ADR-038_D2": "table_rundown_report uses UPSERT by (table_session_id). Pre-finalization: all computed fields recalculated deterministically. Post-finalization: all UPDATEs rejected with TBLRUN_ALREADY_FINALIZED (409).",
+      "ADR-038_D3": "finalized_at IS NOT NULL is the sole immutability predicate. Report-level stamp, NOT a session state. Requires session CLOSED. Actor from ADR-024. Role-gated to pit_boss/admin per public.staff_role enum. Late events: audit_log entry + has_late_events flag (monotonic false→true).",
+      "report_lifecycle": "ABSENT → DRAFT → FINALIZED. No backward transitions in MVP.",
+      "error_codes": "TBLRUN_ALREADY_FINALIZED→409, TBLRUN_SESSION_NOT_CLOSED→409, TBLRUN_NOT_FOUND→404, CHKPT_DUPLICATE_WINDOW→409, FORBIDDEN→403, TOO_MANY_ROWS→500",
+      "privilege_posture": "REVOKE UPDATE,DELETE on both tables from authenticated. INSERT/UPDATE only via GRANT EXECUTE on whitelisted RPCs.",
+      "gaming_day": "Server-derived via compute_gaming_day contract using casino_settings.timezone + gaming_day_start. Never client-supplied.",
+      "checkpoint_scope": "Schema future-proofed with checkpoint_scope/pit_id/gaming_table_id columns. UI gated to casino-level only in MVP."
+    },
+    "ship_gates": [
+      "Reconciliation tests: fills/credits totals == SUM raw by session_id",
+      "Finalization guards: CLOSED prerequisite, 409 on mutate, role gate",
+      "Late-event behavior: audit_log + has_late_events flag flip + UI badge + monotonic reset rejection",
+      "Predicate-based schema test for unique_active_session_per_table partial unique index",
+      "Session linkage: every fill/credit has non-null session_id FK",
+      "Cross-casino isolation: RLS Pattern C on both new tables",
+      "Index invariant fail-loud: INTO STRICT raises TOO_MANY_ROWS"
+    ],
+    "artifacts_produced_this_session": [
+      "docs/issues/gaps/table-inventory-lifecycle/INVESTIGATION-CLOSE-TABLE-SHIFT-DELTAS.md",
+      "docs/20-architecture/specs/shift-rundown-deltas/FEATURE_BOUNDARY.md",
+      "docs/20-architecture/specs/shift-rundown-deltas/FEATURE_BRIEF.md",
+      "docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md (v0.3.0 — 2 review rounds, 11 patches)",
+      "docs/30-security/SEC-NOTE-SHIFT-RUNDOWN-DELTAS.md",
+      "docs/80-adrs/ADR-038-rundown-persistence-finalization-contract.md (v0.3.1 — 2 audit passes, 15 patches)",
+      "docs/issues/gaps/table-inventory-lifecycle/ADR-038-AUDIT.md (external review)",
+      "docs/issues/gaps/table-inventory-lifecycle/ADR-038-AUDIT-PASS2.md (external review)",
+      "docs/21-exec-spec/EXEC-038-shift-rundown-deltas.md",
+      "docs/20-architecture/specs/shift-rundown-deltas/DOD-shift-rundown-deltas.md"
+    ],
+    "exec_spec_workstreams": {
+      "WS1": "Schema & RPCs — new tables, RLS, privilege posture, modified fill/credit RPCs, new rundown/finalize/checkpoint RPCs, inline close persistence, late-event detection",
+      "WS2": "Service Layer — rundown-report/ and shift-checkpoint/ submodules (DTOs, schemas, keys, mappers, CRUD, HTTP)",
+      "WS3": "API Routes — 8 endpoints (POST/GET/PATCH for rundown reports + POST/GET for checkpoints)",
+      "WS4": "React Hooks — 7 TanStack Query hooks for rundown and checkpoint operations",
+      "WS5": "UI Integration — RundownSummaryPanel updates, CheckpointButton, DeltaBadge, LateEventBadge, formatCents fix",
+      "WS6": "Unit & Integration Tests — mapper/schema tests + 17 DoD gate RPC integration tests"
+    },
+    "execution_phases": [
+      "Phase 1: Foundation (WS1) → schema-validation gate",
+      "Phase 2: Service Layer (WS2) → type-check gate",
+      "Phase 3: API Routes + Tests (WS3, WS6) → lint + test-pass gates",
+      "Phase 4: Frontend (WS4, WS5) → type-check gate",
+      "Phase 5: Final Build → build gate"
+    ]
+  },
+  "timestamp": "2026-02-24T06:00:00Z"
+}

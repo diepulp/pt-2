@@ -52,6 +52,23 @@ export const gameTypeSchema = z.enum(GAME_TYPES);
 
 export const snapshotTypeSchema = z.enum(['open', 'close', 'rundown']);
 
+/**
+ * Close reason enum schema (PRD-038A Gap B).
+ * Derived from Database Enums to prevent drift.
+ */
+type CloseReasonType = Database['public']['Enums']['close_reason_type'];
+const CLOSE_REASONS = [
+  'end_of_shift',
+  'maintenance',
+  'game_change',
+  'dealer_unavailable',
+  'low_demand',
+  'security_hold',
+  'emergency',
+  'other',
+] as const satisfies readonly CloseReasonType[];
+export const closeReasonSchema = z.enum(CLOSE_REASONS);
+
 // === Chipset Schema ===
 
 /**
@@ -212,6 +229,7 @@ export const startTableRundownSchema = z.object({
  * Schema for closing a table session.
  * PATCH /api/v1/table-sessions/[id]/close
  * At least one of drop_event_id or closing_inventory_snapshot_id required.
+ * PRD-038A: close_reason is required; close_note required when close_reason='other'.
  */
 export const closeTableSessionSchema = z
   .object({
@@ -220,12 +238,43 @@ export const closeTableSessionSchema = z
       'closing inventory snapshot ID',
     ).optional(),
     notes: z.string().max(2000).optional(),
+    close_reason: closeReasonSchema,
+    close_note: z.string().max(2000).optional(),
   })
   .refine((data) => data.drop_event_id || data.closing_inventory_snapshot_id, {
     message:
       'At least one of drop_event_id or closing_inventory_snapshot_id is required',
     path: ['drop_event_id'],
-  });
+  })
+  .refine(
+    (data) =>
+      data.close_reason !== 'other' ||
+      (data.close_note != null && data.close_note.trim().length > 0),
+    {
+      message: 'close_note is required when close_reason is "other"',
+      path: ['close_note'],
+    },
+  );
+
+/**
+ * Schema for force-closing a table session (PRD-038A Gap A).
+ * POST /api/v1/table-sessions/[id]/force-close
+ * Privileged operation: pit_boss/admin only.
+ */
+export const forceCloseTableSessionSchema = z
+  .object({
+    close_reason: closeReasonSchema,
+    close_note: z.string().max(2000).optional(),
+  })
+  .refine(
+    (data) =>
+      data.close_reason !== 'other' ||
+      (data.close_note != null && data.close_note.trim().length > 0),
+    {
+      message: 'close_note is required when close_reason is "other"',
+      path: ['close_note'],
+    },
+  );
 
 /**
  * Route params schema for session ID.
@@ -250,6 +299,9 @@ export type StartTableRundownRequestBody = z.infer<
 >;
 export type CloseTableSessionRequestBody = z.infer<
   typeof closeTableSessionSchema
+>;
+export type ForceCloseTableSessionRequestBody = z.infer<
+  typeof forceCloseTableSessionSchema
 >;
 export type TableSessionRouteParams = z.infer<
   typeof tableSessionRouteParamsSchema

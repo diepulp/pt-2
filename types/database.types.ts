@@ -3234,18 +3234,23 @@ export type Database = {
       }
       table_session: {
         Row: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -3253,6 +3258,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -3261,18 +3270,23 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          activated_by_staff_id?: string | null
           casino_id: string
+          close_note?: string | null
+          close_reason?: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at?: string | null
           closed_by_staff_id?: string | null
           closing_inventory_snapshot_id?: string | null
           created_at?: string
           credits_total_cents?: number
+          crossed_gaming_day?: boolean
           drop_event_id?: string | null
           drop_posted_at?: string | null
           drop_total_cents?: number | null
           fills_total_cents?: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items?: boolean
           id?: string
           metadata?: Json | null
           need_total_cents?: number | null
@@ -3280,6 +3294,10 @@ export type Database = {
           opened_at?: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id?: string | null
+          paused_by_staff_id?: string | null
+          requires_reconciliation?: boolean
+          resumed_by_staff_id?: string | null
+          rolled_over_by_staff_id?: string | null
           rundown_started_at?: string | null
           rundown_started_by_staff_id?: string | null
           shift_id?: string | null
@@ -3290,18 +3308,23 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          activated_by_staff_id?: string | null
           casino_id?: string
+          close_note?: string | null
+          close_reason?: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at?: string | null
           closed_by_staff_id?: string | null
           closing_inventory_snapshot_id?: string | null
           created_at?: string
           credits_total_cents?: number
+          crossed_gaming_day?: boolean
           drop_event_id?: string | null
           drop_posted_at?: string | null
           drop_total_cents?: number | null
           fills_total_cents?: number
           gaming_day?: string
           gaming_table_id?: string
+          has_unresolved_items?: boolean
           id?: string
           metadata?: Json | null
           need_total_cents?: number | null
@@ -3309,6 +3332,10 @@ export type Database = {
           opened_at?: string
           opened_by_staff_id?: string
           opening_inventory_snapshot_id?: string | null
+          paused_by_staff_id?: string | null
+          requires_reconciliation?: boolean
+          resumed_by_staff_id?: string | null
+          rolled_over_by_staff_id?: string | null
           rundown_started_at?: string | null
           rundown_started_by_staff_id?: string | null
           shift_id?: string | null
@@ -3319,6 +3346,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "table_session_activated_by_staff_id_fkey"
+            columns: ["activated_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "table_session_casino_id_fkey"
             columns: ["casino_id"]
@@ -3343,6 +3377,27 @@ export type Database = {
           {
             foreignKeyName: "table_session_opened_by_staff_id_fkey"
             columns: ["opened_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_paused_by_staff_id_fkey"
+            columns: ["paused_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_resumed_by_staff_id_fkey"
+            columns: ["resumed_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_rolled_over_by_staff_id_fkey"
+            columns: ["rolled_over_by_staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
@@ -3484,6 +3539,16 @@ export type Database = {
       }
     }
     Functions: {
+      _persist_inline_rundown: {
+        Args: {
+          p_actor_id: string
+          p_casino_id: string
+          p_override_drop_event_id?: string
+          p_session: Database["public"]["Tables"]["table_session"]["Row"]
+          p_session_id: string
+        }
+        Returns: undefined
+      }
       calculate_theo_from_snapshot: {
         Args: {
           p_loyalty_snapshot: Json
@@ -3655,24 +3720,31 @@ export type Database = {
       }
       rpc_close_table_session: {
         Args: {
+          p_close_note?: string
+          p_close_reason?: Database["public"]["Enums"]["close_reason_type"]
           p_closing_inventory_snapshot_id?: string
           p_drop_event_id?: string
           p_notes?: string
           p_table_session_id: string
         }
         Returns: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -3680,6 +3752,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -4035,6 +4111,55 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_force_close_table_session: {
+        Args: {
+          p_close_note?: string
+          p_close_reason: Database["public"]["Enums"]["close_reason_type"]
+          p_table_session_id: string
+        }
+        Returns: {
+          activated_by_staff_id: string | null
+          casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          credits_total_cents: number
+          crossed_gaming_day: boolean
+          drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          gaming_day: string
+          gaming_table_id: string
+          has_unresolved_items: boolean
+          id: string
+          metadata: Json | null
+          need_total_cents: number | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_gaming_day_range: {
         Args: { p_end_timestamp?: string; p_weeks?: number }
         Returns: {
@@ -4045,18 +4170,23 @@ export type Database = {
       rpc_get_current_table_session: {
         Args: { p_gaming_table_id: string }
         Returns: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -4064,6 +4194,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -4519,18 +4653,23 @@ export type Database = {
       rpc_open_table_session: {
         Args: { p_gaming_table_id: string }
         Returns: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -4538,6 +4677,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -4621,18 +4764,23 @@ export type Database = {
       rpc_post_table_drop_total: {
         Args: { p_drop_total_cents: number; p_session_id: string }
         Returns: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -4640,6 +4788,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -5092,18 +5244,23 @@ export type Database = {
       rpc_start_table_rundown: {
         Args: { p_table_session_id: string }
         Returns: {
+          activated_by_staff_id: string | null
           casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
           closed_at: string | null
           closed_by_staff_id: string | null
           closing_inventory_snapshot_id: string | null
           created_at: string
           credits_total_cents: number
+          crossed_gaming_day: boolean
           drop_event_id: string | null
           drop_posted_at: string | null
           drop_total_cents: number | null
           fills_total_cents: number
           gaming_day: string
           gaming_table_id: string
+          has_unresolved_items: boolean
           id: string
           metadata: Json | null
           need_total_cents: number | null
@@ -5111,6 +5268,10 @@ export type Database = {
           opened_at: string
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
           rundown_started_at: string | null
           rundown_started_by_staff_id: string | null
           shift_id: string | null
@@ -5229,6 +5390,15 @@ export type Database = {
         | "wrong_player"
         | "wrong_amount"
         | "system_bug"
+        | "other"
+      close_reason_type:
+        | "end_of_shift"
+        | "maintenance"
+        | "game_change"
+        | "dealer_unavailable"
+        | "low_demand"
+        | "security_hold"
+        | "emergency"
         | "other"
       financial_direction: "in" | "out"
       financial_source: "pit" | "cage" | "system"
@@ -5451,6 +5621,16 @@ export const Constants = {
         "wrong_player",
         "wrong_amount",
         "system_bug",
+        "other",
+      ],
+      close_reason_type: [
+        "end_of_shift",
+        "maintenance",
+        "game_change",
+        "dealer_unavailable",
+        "low_demand",
+        "security_hold",
+        "emergency",
         "other",
       ],
       financial_direction: ["in", "out"],

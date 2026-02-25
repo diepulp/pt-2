@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.15.0
+nsversion: 4.16.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -26,7 +26,7 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.15.0 (PRD-037: CSV Player Import)
+> **Version**: 4.16.0 (PRD-038: Shift Rundown Persistence & Delta Checkpoints)
 > **Date**: 2026-02-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -53,6 +53,8 @@ source_of_truth:
 
 ## Change Log
 
+- **4.17.0 (2026-02-25)** – **PRD-038A Table Lifecycle Audit Patch**: Added `close_reason_type` enum (8 values). Added 10 columns to `table_session`: `close_reason`, `close_note`, `has_unresolved_items`, `requires_reconciliation`, `activated_by_staff_id`, `paused_by_staff_id`, `resumed_by_staff_id`, `rolled_over_by_staff_id`, `crossed_gaming_day`. CHECK constraint: `close_reason='other'` requires trimmed non-empty `close_note`. Modified `rpc_close_table_session` with close guardrail (`has_unresolved_items` check) and `close_reason`/`close_note` params. New `rpc_force_close_table_session` (SECURITY DEFINER, ADR-024): privileged close for pit_boss/admin, sets `requires_reconciliation=true`, emits `audit_log`. Extracted `_persist_inline_rundown` helper to prevent drift. `has_unresolved_items` write ownership: Finance/MTL RPCs or `service_role` only. See `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`.
+- **4.16.0 (2026-02-24)** – **PRD-038 Shift Rundown Persistence & Delta Checkpoints**: Added `table_rundown_report` and `shift_checkpoint` to TableContextService. `session_id` FK added to `table_fill` and `table_credit`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_persist_table_rundown` (UPSERT), `rpc_finalize_rundown` (immutable stamp), `rpc_create_shift_checkpoint` (metric snapshot). Modified RPCs: `rpc_request_table_fill`, `rpc_request_table_credit` (session linkage, atomic totals, late-event detection), `rpc_close_table_session` (inline rundown persistence). Privilege posture: REVOKE ALL + GRANT SELECT on both new tables; writes via RPCs only. Pattern C hybrid RLS SELECT. See ADR-038 and `docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md`.
 - **4.15.0 (2026-02-23)** – **PRD-037 CSV Player Import**: Added PlayerImportService (Onboarding context) with ownership of `import_batch`, `import_row`. New enums: `import_batch_status`, `import_row_status`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_import_create_batch`, `rpc_import_stage_rows`, `rpc_import_execute`. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via execute RPC only. Identifier resolution indexes on `player(lower(email))`, `player(phone_number)`. See `docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md` and ADR-036.
 - **4.14.0 (2026-02-19)** – **ADR-035 Client State Lifecycle**: Added client-side store lifecycle governance to Platform/Frontend context. New section: Client State Lifecycle (session reset contract, store classification, `resetSessionState()` orchestrator). ADR-035 added to `source_of_truth` references. Cross-references ADR-003 Section 8 (Zustand scope) and ADR-030 (server-side auth hardening counterpart). See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
 - **4.13.0 (2026-02-17)** – **PRD-033 Cashier Workflow MVP**: Added confirmation lifecycle columns to `table_fill` (status, confirmed_at, confirmed_by, confirmed_amount_cents, discrepancy_note), `table_credit` (same 5), `table_drop_event` (cage_received_at, cage_received_by). 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_confirm_table_fill`, `rpc_confirm_table_credit`, `rpc_acknowledge_drop_received`. 6 new API routes (3 PATCH confirmations + 3 GET list endpoints with filters). Immutability enforced via RLS: UPDATE restricted to `status='requested'`. `player_financial_transaction.external_ref` added (PlayerFinancialService). Cashier Console UI at `/cashier` with 3 tab screens.
@@ -108,7 +110,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Foundational** | CasinoService           | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, _staff_pin_attempts_ ⁴       | Root temporal authority, global policy, & player enrollment |
 | **Identity**     | PlayerService           | player, _player_identity_ ², _player_note_ ³, _player_tag_ ³                                                               | Identity management & collaboration artifacts               |
 | **Analytics**    | PlayerTimelineService ³ | (read-only view across all services)                                                                                       | Unified player interaction timeline                         |
-| **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event | Table lifecycle & operational telemetry                     |
+| **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_rundown_report, shift_checkpoint | Table lifecycle & operational telemetry                     |
 | **Operational**  | FloorLayoutService      | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation                                   | Floor design & activation                                   |
 | **Operational**  | VisitService            | visit                                                                                                                      | Session lifecycle (3 archetypes)                            |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
@@ -460,7 +462,7 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ## TableContextService (Operational Telemetry Context)
 
-**Owns**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `table_session`
+**Owns**: `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `table_session`, `table_rundown_report`, `shift_checkpoint`
 
 **Bounded Context**: "What is the operational state and chip custody posture of this gaming table?"
 
@@ -512,6 +514,16 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 | `table_session` | `gaming_table_id` | NOT NULL       | Table reference                               |
 | `table_session` | `status`          | NOT NULL, enum | `table_session_status`                        |
 | `table_session` | `drop_posted_at`  | NULLABLE       | Timestamp when soft count posted (ADR-028 D7) |
+| `table_session` | `close_reason`    | NULLABLE, enum | `close_reason_type` (PRD-038A Gap B)          |
+| `table_session` | `close_note`      | NULLABLE       | Free-text note (required when close_reason='other') |
+| `table_session` | `has_unresolved_items` | NOT NULL DEFAULT false | Write: Finance/MTL only. Read: TableContext (PRD-038A Gap A) |
+| `table_session` | `requires_reconciliation` | NOT NULL DEFAULT false | Set by `rpc_force_close_table_session` only (PRD-038A) |
+| `table_session` | `activated_by_staff_id` | NULLABLE, FK | Deferred until activate RPC exists (PRD-038A Gap C) |
+| `table_session` | `paused_by_staff_id` | NULLABLE, FK | Forward-compatible (PRD-038A Gap C)           |
+| `table_session` | `resumed_by_staff_id` | NULLABLE, FK | Forward-compatible (PRD-038A Gap C)           |
+| `table_session` | `rolled_over_by_staff_id` | NULLABLE, FK | Forward-compatible (PRD-038A Gap C)           |
+| `table_session` | `crossed_gaming_day` | NOT NULL DEFAULT false | Rollover provenance flag (PRD-038A Gap E)     |
+| `table_session` | —                 | CHECK          | `close_reason IS DISTINCT FROM 'other' OR length(trim(close_note)) > 0` |
 | `table_fill`    | `status`          | NOT NULL, CHECK | `'requested'` / `'confirmed'` (PRD-033)       |
 | `table_fill`    | `confirmed_at`    | NULLABLE       | Cashier confirmation timestamp (PRD-033)      |
 | `table_fill`    | `confirmed_by`    | NULLABLE, FK   | Staff who confirmed (PRD-033)                 |
@@ -532,6 +544,14 @@ export type SessionPhase = Database['public']['Enums']['table_session_status'];
 | `rpc_confirm_table_fill` | SECURITY DEFINER, ADR-024 | cashier, admin | Transition fill `requested` → `confirmed` |
 | `rpc_confirm_table_credit` | SECURITY DEFINER, ADR-024 | cashier, admin | Transition credit `requested` → `confirmed` |
 | `rpc_acknowledge_drop_received` | SECURITY DEFINER, ADR-024 | cashier, admin | Stamp drop `cage_received_at` |
+
+### Close Guardrail RPCs (PRD-038A)
+
+| RPC | Security | Role Gate | Description |
+| --- | -------- | --------- | ----------- |
+| `rpc_close_table_session` | SECURITY DEFINER, ADR-024 | pit_boss, admin | Close with guardrail: blocks if `has_unresolved_items=true`. Accepts `close_reason`/`close_note`. |
+| `rpc_force_close_table_session` | SECURITY DEFINER, ADR-024 | pit_boss, admin | Privileged force-close: skips unresolved check, sets `requires_reconciliation=true`, emits `audit_log`. |
+| `_persist_inline_rundown` | SECURITY INVOKER (internal) | N/A | Shared rundown persistence helper. REVOKE'd from public/anon/authenticated. |
 
 ### Cashier Confirmation Routes (PRD-033)
 
