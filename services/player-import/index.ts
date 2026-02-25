@@ -14,7 +14,7 @@ import type { Database } from '@/types/database.types';
 
 import * as crud from './crud';
 import type {
-  ColumnMapping,
+  CreateBatchInput,
   ImportBatchDTO,
   ImportBatchListFilters,
   ImportRowDTO,
@@ -27,6 +27,9 @@ export * from './dtos';
 export * from './keys';
 // Note: HTTP fetchers are NOT re-exported per GOV-PAT-001 - import directly from "./http"
 
+// Re-export toImportIngestionReportV1 for consumers that need to map worker reports
+export { toImportIngestionReportV1 } from './mappers';
+
 // === Service Interface ===
 
 /**
@@ -36,13 +39,11 @@ export interface PlayerImportServiceInterface {
   /**
    * Create a new import batch (idempotent via idempotency_key).
    * Returns existing batch if key matches.
+   *
+   * Pass `initial_status: 'created'` for the server ingestion flow (PRD-039)
+   * where the file upload happens separately after batch creation.
    */
-  createBatch(input: {
-    idempotency_key: string;
-    file_name: string;
-    vendor_label?: string;
-    column_mapping: ColumnMapping;
-  }): Promise<ImportBatchDTO>;
+  createBatch(input: CreateBatchInput): Promise<ImportBatchDTO>;
 
   /**
    * Stage rows into a batch (idempotent per row_number).
@@ -79,6 +80,21 @@ export interface PlayerImportServiceInterface {
     items: ImportRowDTO[];
     cursor: string | null;
   }>;
+
+  /**
+   * Update the storage path and original file name on a batch and transition
+   * its status to 'uploaded'. Called by the upload route handler (WS4) after
+   * a successful Supabase Storage upload.
+   *
+   * @param batchId          - UUID of the batch to update
+   * @param storagePath      - Full storage object path (e.g. imports/casino_id/batch_id.csv)
+   * @param originalFileName - Original file name from the multipart upload
+   */
+  updateBatchStoragePath(
+    batchId: string,
+    storagePath: string,
+    originalFileName: string,
+  ): Promise<ImportBatchDTO>;
 }
 
 // === Service Factory ===
@@ -103,5 +119,13 @@ export function createPlayerImportService(
     listBatches: (filters) => crud.listBatches(supabase, filters),
 
     listRows: (batchId, filters) => crud.listRows(supabase, batchId, filters),
+
+    updateBatchStoragePath: (batchId, storagePath, originalFileName) =>
+      crud.updateBatchStoragePath(
+        supabase,
+        batchId,
+        storagePath,
+        originalFileName,
+      ),
   };
 }
