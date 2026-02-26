@@ -112,9 +112,10 @@ async function main(): Promise<void> {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
-      // Row cap failures are expected and the batch is already failed in DB —
-      // no need to log them as unexpected errors.
-      if (message !== 'BATCH_ROW_LIMIT') {
+      // Row cap and parse failures are expected — the batch is already failed
+      // in DB by ingestBatch. No need to log them as unexpected errors.
+      const expectedFailures = ['BATCH_ROW_LIMIT', 'BATCH_PARSE_ERROR'];
+      if (!expectedFailures.includes(message)) {
         logger.error('Poll loop error', { error: message });
       }
 
