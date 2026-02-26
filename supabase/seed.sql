@@ -1035,7 +1035,7 @@ INSERT INTO auth.users (
   'pitboss@dev.local',
   crypt('devpass123', gen_salt('bf')),
   NOW(),
-  '{"provider": "email", "providers": ["email"]}',
+  '{"provider": "email", "providers": ["email"], "casino_id": "ca000000-0000-0000-0000-000000000001", "staff_id": "5a000000-0000-0000-0000-000000000001", "staff_role": "pit_boss"}',
   '{"name": "Marcus Thompson (Dev)", "role": "pit_boss"}',
   'authenticated',
   'authenticated',

@@ -350,7 +350,7 @@ export async function failBatch(
  *
  * Uses `ON CONFLICT (batch_id, row_number) DO NOTHING` to make re-runs
  * idempotent. The unique constraint `uq_import_row_batch_row` is required;
- * the migration 20260224114000 asserts its existence at deploy time.
+ * the migration 20260225145407 asserts its existence at deploy time.
  *
  * INV-W3: Every row receives `batch_id` and `casino_id` from the caller,
  *         which sources them exclusively from the claimed batch (INV-W5).

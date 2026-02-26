@@ -1,0 +1,31 @@
+{
+  "feature_id": "loyalty-tier-reconciliation",
+  "source_prd": "docs/00-vision/csv-import/PRD-LOYALTY-TIER-RECONCILIATION-v0.1(1).md",
+  "current_phase": 1,
+  "status": "paused-blocked",
+  "blocker": "server-authoritative-ingestion-worker",
+  "blocker_ref": "docs/00-vision/csv-import/CSV-IMPORT-INGESTION.md",
+  "gates_passed": ["srm-ownership"],
+  "gates_pending": ["scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/loyalty-tier-reconciliation/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-LOYALTY-TIER-RECONCILIATION.md",
+    "design_brief": null,
+    "sec_note": null,
+    "adr": null,
+    "prd": null
+  },
+  "patch_applied": {
+    "date": "2026-02-24",
+    "source": "docs/00-vision/csv-import/SCAFFOLD-LOYALTY-PATCH.md",
+    "changes": [
+      "Papa Parse scoped to client preview only; server uses csv-parse streaming",
+      "Option B explicitly rejected (bounded context death)",
+      "Tier mapping elevated to boss-fight open question",
+      "Freshness rules made binary (not vibes)",
+      "SECURITY DEFINER RPC governance notes added (role+casino hard-gate)",
+      "Ingestion worker blocker added as prerequisite"
+    ]
+  },
+  "timestamp": "2026-02-24T00:00:00Z"
+}

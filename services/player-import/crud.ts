@@ -38,7 +38,7 @@ import {
  * Returns existing batch if idempotency_key matches.
  *
  * When `input.initial_status` is provided, the 5-parameter RPC overload is
- * called (added by PRD-039 migration 20260224114002). Omitting the field
+ * called (added by PRD-039 migration 20260225145409). Omitting the field
  * falls back to the original 4-parameter signature for backward compatibility.
  */
 export async function createBatch(

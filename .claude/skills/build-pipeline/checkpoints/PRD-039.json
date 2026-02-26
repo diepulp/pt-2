@@ -10,10 +10,11 @@
   "pending_workstreams": [],
   "artifacts": {
     "WS1": [
-      "supabase/migrations/20260224114000_prd039_import_batch_worker_columns.sql",
-      "supabase/migrations/20260224114001_prd039_storage_bucket_imports.sql",
-      "supabase/migrations/20260224114002_prd039_patch_rpc_create_batch_status.sql",
-      "supabase/migrations/20260224114003_prd039_patch_rpc_execute_reject_failed.sql"
+      "supabase/migrations/20260225145406_add_import_batch_worker_enums.sql",
+      "supabase/migrations/20260225145407_add_import_batch_worker_columns.sql",
+      "supabase/migrations/20260225145408_create_storage_bucket_imports.sql",
+      "supabase/migrations/20260225145409_alter_rpc_create_batch_overload.sql",
+      "supabase/migrations/20260225145410_fix_rpc_execute_reject_failed.sql"
     ],
     "WS2": [
       "lib/csv/header-normalization.ts",

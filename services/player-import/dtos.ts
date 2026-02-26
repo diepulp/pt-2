@@ -21,7 +21,7 @@ type ImportRowRow = Database['public']['Tables']['import_row']['Row'];
 /**
  * Import batch status enum — derived from the Database enum type.
  * Includes all worker lifecycle states added by PRD-039 migration
- * 20260224114000_prd039_import_batch_worker_columns.sql.
+ * 20260225145407_add_import_batch_worker_columns.sql.
  */
 export type ImportBatchStatus =
   Database['public']['Enums']['import_batch_status'];

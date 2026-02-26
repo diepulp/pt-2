@@ -18,10 +18,11 @@ workstreams:
     executor_type: skill
     depends_on: []
     outputs:
-      - supabase/migrations/20260224114000_prd039_import_batch_worker_columns.sql
-      - supabase/migrations/20260224114001_prd039_storage_bucket_imports.sql
-      - supabase/migrations/20260224114002_prd039_patch_rpc_create_batch_status.sql
-      - supabase/migrations/20260224114003_prd039_patch_rpc_execute_reject_failed.sql
+      - supabase/migrations/20260225145406_add_import_batch_worker_enums.sql
+      - supabase/migrations/20260225145407_add_import_batch_worker_columns.sql
+      - supabase/migrations/20260225145408_create_storage_bucket_imports.sql
+      - supabase/migrations/20260225145409_alter_rpc_create_batch_overload.sql
+      - supabase/migrations/20260225145410_fix_rpc_execute_reject_failed.sql
     gate: schema-validation
     estimated_complexity: medium
 
@@ -290,24 +291,26 @@ Worker uses `service_role` (bypasses RLS) with SQL safety invariants:
 **Purpose**: Extend `import_batch` for worker lifecycle. Add Supabase Storage bucket.
 
 **Deliverables**:
-1. Migration `20260224114000_prd039_import_batch_worker_columns.sql`:
+1. Migration `20260225145406_add_import_batch_worker_enums.sql`:
    - `ALTER TYPE import_batch_status ADD VALUE IF NOT EXISTS 'created'`
    - `ALTER TYPE import_batch_status ADD VALUE IF NOT EXISTS 'uploaded'`
    - `ALTER TYPE import_batch_status ADD VALUE IF NOT EXISTS 'parsing'`
+   - Split from column migration — PostgreSQL cannot reference new enum values in same transaction (SQLSTATE 55P04)
+2. Migration `20260225145407_add_import_batch_worker_columns.sql`:
    - Add columns: `storage_path text`, `original_file_name text`, `claimed_by text`, `claimed_at timestamptz`, `heartbeat_at timestamptz`, `attempt_count integer NOT NULL DEFAULT 0`, `last_error_at timestamptz`, `last_error_code text`
    - Partial index `idx_import_batch_status_uploaded` for worker claim query
    - Partial index `idx_import_batch_status_parsing_heartbeat` for reaper query
-2. Migration `20260224114001_prd039_storage_bucket_imports.sql`:
+3. Migration `20260225145408_create_storage_bucket_imports.sql`:
    - Creates `imports` bucket (private, 10MB file size limit, no public access)
    - No `storage.objects` RLS policies created — all access is via `service_role` through API route and worker
-3. Migration `20260224114002_prd039_patch_rpc_create_batch_status.sql` **(DA P0-1 fix)**:
+4. Migration `20260225145409_alter_rpc_create_batch_overload.sql` **(DA P0-1 fix)**:
    - `CREATE OR REPLACE FUNCTION rpc_import_create_batch` — add optional `p_initial_status import_batch_status DEFAULT NULL` parameter
    - When `p_initial_status` is `'created'`, INSERT with `status = 'created'` instead of table default
    - When `p_initial_status` is NULL, use existing default `'staging'` (backward compat for old client flow)
    - Validate: only `NULL`, `'staging'`, or `'created'` accepted; others raise exception
    - Existing function signature (`text, text, text, jsonb`) kept via overload; new 5-param signature added
    - GRANT/REVOKE mirroring existing pattern
-4. Migration `20260224114003_prd039_patch_rpc_execute_reject_failed.sql` **(DA P0-2 fix)**:
+5. Migration `20260225145410_fix_rpc_execute_reject_failed.sql` **(DA P0-2 fix)**:
    - `CREATE OR REPLACE FUNCTION rpc_import_execute` — one-line fix
    - Change `IF v_batch.status IN ('completed', 'failed')` → `IF v_batch.status = 'completed'`
    - Now `failed` batches fall through to `IF v_batch.status != 'staging'` → raises `IMPORT_BATCH_NOT_STAGING`
@@ -316,7 +319,7 @@ Worker uses `service_role` (bypasses RLS) with SQL safety invariants:
 **Notes**:
 - `import_batch.status` DEFAULT stays `'staging'` for backwards compat with the existing 4-param `rpc_import_create_batch` overload
 - New server flow uses 5-param overload with `p_initial_status = 'created'`
-- UNIQUE constraint `uq_import_row_batch_row` already exists (PRD-037). Migration `20260224114000` includes a guard assertion: `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_import_row_batch_row') THEN RAISE EXCEPTION 'FATAL: UNIQUE(batch_id, row_number) constraint missing — ON CONFLICT DO NOTHING is load-bearing'; END IF; END $$;`
+- UNIQUE constraint `uq_import_row_batch_row` already exists (PRD-037). Migration `20260225145407` includes a guard assertion: `DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_import_row_batch_row') THEN RAISE EXCEPTION 'FATAL: UNIQUE(batch_id, row_number) constraint missing — ON CONFLICT DO NOTHING is load-bearing'; END IF; END $$;`
 - Zero `import_row` schema changes
 - `file_name` is the batch-creation-time label (set by user at batch creation). `original_file_name` is the actual uploaded file name (set by upload endpoint). They may differ.
 
@@ -601,8 +604,8 @@ The server wizard batch-creation step MUST pass `initial_status: 'created'` to `
 
 | ID | Finding | Fix |
 |----|---------|-----|
-| P0-1 | No workstream creates batches with `created` status — `rpc_import_create_batch` defaults to `staging`, upload endpoint will 409 every request | Added WS1 migration `20260224114002` to add `p_initial_status` parameter overload to `rpc_import_create_batch`. Updated WS5 to pass `initial_status` through crud/schemas. |
-| P0-2 | `rpc_import_execute` silently returns for `failed` batches instead of rejecting — contradicts PRD-039 §5.1 DoD | Added WS1 migration `20260224114003` to patch execute RPC: `IN ('completed', 'failed')` → `= 'completed'`. Failed batches now raise `IMPORT_BATCH_NOT_STAGING`. |
+| P0-1 | No workstream creates batches with `created` status — `rpc_import_create_batch` defaults to `staging`, upload endpoint will 409 every request | Added WS1 migration `20260225145409` to add `p_initial_status` parameter overload to `rpc_import_create_batch`. Updated WS5 to pass `initial_status` through crud/schemas. |
+| P0-2 | `rpc_import_execute` silently returns for `failed` batches instead of rejecting — contradicts PRD-039 §5.1 DoD | Added WS1 migration `20260225145410` to patch execute RPC: `IN ('completed', 'failed')` → `= 'completed'`. Failed batches now raise `IMPORT_BATCH_NOT_STAGING`. |
 
 ### P1 Clarifications Applied (v1.1.0)
 
@@ -620,7 +623,7 @@ The server wizard batch-creation step MUST pass `initial_status: 'created'` to `
 |----|---------|-----|
 | P1-R1 | Status machine governance trap — no invariant ensures server wizard passes `initial_status='created'` | Added INV-UI-1 invariant in WS5 + WS6: server wizard MUST hardcode `initial_status: 'created'`; unit test asserts. |
 | P1-R2 | INV-W2 incomplete in Security Posture table — missing `attempt_count < max_attempts` clause | Updated INV-W2 to include full condition with `attempt_count >= max_attempts → failed` transition. |
-| P1-R3 | UNIQUE constraint is "trust me bro" — relied on but not migration-guarded | Added `pg_constraint` assertion in migration `20260224114000` — fails loudly if constraint missing. |
+| P1-R3 | UNIQUE constraint is "trust me bro" — relied on but not migration-guarded | Added `pg_constraint` assertion in migration `20260225145407` — fails loudly if constraint missing. |
 | P1-R4 | `IMPORT_BATCH_ROW_LIMIT` implied HTTP 413 but it's state-based | Clarified: error signaling via `last_error_code` in batch DTO, discovered by polling; not an HTTP error. Added UI mapping note in WS6. |
 
 ### Accepted P2 Risks (not blocking)

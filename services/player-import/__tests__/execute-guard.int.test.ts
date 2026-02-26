@@ -11,8 +11,8 @@
  * Type-level assertions verify the RPC contract at compile time.
  * Behavioral tests document expected runtime behavior (require live Supabase).
  *
- * @see supabase/migrations/20260224114003_prd039_patch_rpc_execute_reject_failed.sql
- * @see supabase/migrations/20260224114002_prd039_patch_rpc_create_batch_status.sql
+ * @see supabase/migrations/20260225145410_fix_rpc_execute_reject_failed.sql
+ * @see supabase/migrations/20260225145409_alter_rpc_create_batch_overload.sql
  * @see PRD-039 Server-Authoritative CSV Ingestion Worker
  */
 
@@ -108,7 +108,7 @@ describe('execute guard: DA P0-2 — failed batch rejection', () => {
     //   - No player writes occur
     //   - No import_row status changes
     //
-    // FIX: Migration 20260224114003 changed:
+    // FIX: Migration 20260225145410 changed:
     //   OLD: IF v_batch.status IN ('completed', 'failed') THEN RETURN ...
     //   NEW: IF v_batch.status = 'completed' THEN RETURN ...
     //   So 'failed' batches now fall through to the staging check and raise exception.
@@ -183,7 +183,7 @@ describe('execute guard: DA P0-1 — initial_status parameter', () => {
     //   - New batch inserted with status = 'created' (not 'staging')
     //   - This enables the upload endpoint which requires status = 'created'
     //
-    // FIX: Migration 20260224114002 added optional p_initial_status parameter.
+    // FIX: Migration 20260225145409 added optional p_initial_status parameter.
     //   When 'created' is passed, INSERT uses status = 'created'.
     //   When NULL or omitted, uses existing default ('staging').
     expect(true).toBe(true);

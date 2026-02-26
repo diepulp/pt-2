@@ -5,28 +5,19 @@
 -- ADR References: ADR-036 (CSV import strategy), ADR-037 (server CSV ingestion worker)
 --
 -- Purpose:
---   Extend import_batch_status enum with worker lifecycle states ('created',
---   'uploaded', 'parsing') and add worker lifecycle columns to import_batch
---   (storage_path, claimed_by, heartbeat_at, attempt_count, etc.).
+--   Add worker lifecycle columns to import_batch (storage_path, claimed_by,
+--   heartbeat_at, attempt_count, etc.).
 --   Create partial indexes for worker claim and reaper queries.
 --   Guard assertion: verify uq_import_row_batch_row UNIQUE constraint exists.
+--
+-- NOTE: Enum extensions ('created', 'uploaded', 'parsing') are in the
+--   preceding migration 20260225145406_add_import_batch_worker_enums.sql.
+--   PostgreSQL cannot reference newly-added enum values in the same
+--   transaction (SQLSTATE 55P04), so the split is required.
 -- ============================================================================
 
 -- ============================================================================
--- 1. ENUM EXTENSIONS: Add worker lifecycle states
--- ============================================================================
-
--- 'created' — batch record created, file not yet uploaded
-ALTER TYPE public.import_batch_status ADD VALUE IF NOT EXISTS 'created';
-
--- 'uploaded' — file uploaded to storage, awaiting worker claim
-ALTER TYPE public.import_batch_status ADD VALUE IF NOT EXISTS 'uploaded';
-
--- 'parsing' — worker has claimed the batch and is parsing the CSV
-ALTER TYPE public.import_batch_status ADD VALUE IF NOT EXISTS 'parsing';
-
--- ============================================================================
--- 2. WORKER LIFECYCLE COLUMNS on import_batch
+-- 1. WORKER LIFECYCLE COLUMNS on import_batch
 -- ============================================================================
 
 -- Path in Supabase Storage (e.g., 'imports/<casino_id>/<batch_id>.csv')
@@ -62,7 +53,7 @@ ALTER TABLE public.import_batch
   ADD COLUMN IF NOT EXISTS last_error_code text;
 
 -- ============================================================================
--- 3. PARTIAL INDEXES for worker queries
+-- 2. PARTIAL INDEXES for worker queries
 -- ============================================================================
 
 -- Worker claim query: find batches in 'uploaded' status ready for processing
@@ -76,7 +67,7 @@ CREATE INDEX IF NOT EXISTS idx_import_batch_status_parsing_heartbeat
   WHERE status = 'parsing';
 
 -- ============================================================================
--- 4. GUARD ASSERTION: uq_import_row_batch_row must exist
+-- 3. GUARD ASSERTION: uq_import_row_batch_row must exist
 -- ============================================================================
 
 -- The ON CONFLICT (batch_id, row_number) DO NOTHING pattern in
@@ -91,7 +82,7 @@ DO $$ BEGIN
 END $$;
 
 -- ============================================================================
--- 5. PostgREST schema reload
+-- 4. PostgREST schema reload
 -- ============================================================================
 
 NOTIFY pgrst, 'reload schema';
