@@ -344,10 +344,16 @@ function toShiftTableMetrics(row: unknown): ShiftTableMetricsDTO {
     window_end: r.window_end as string,
     opening_snapshot_id: (r.opening_snapshot_id as string) ?? null,
     opening_snapshot_at: (r.opening_snapshot_at as string) ?? null,
-    opening_bankroll_total_cents: Number(r.opening_bankroll_total_cents ?? 0),
+    opening_bankroll_total_cents:
+      r.opening_bankroll_total_cents != null
+        ? Number(r.opening_bankroll_total_cents)
+        : 0,
     closing_snapshot_id: (r.closing_snapshot_id as string) ?? null,
     closing_snapshot_at: (r.closing_snapshot_at as string) ?? null,
-    closing_bankroll_total_cents: Number(r.closing_bankroll_total_cents ?? 0),
+    closing_bankroll_total_cents:
+      r.closing_bankroll_total_cents != null
+        ? Number(r.closing_bankroll_total_cents)
+        : 0,
     fills_total_cents: Number(r.fills_total_cents ?? 0),
     credits_total_cents: Number(r.credits_total_cents ?? 0),
     drop_custody_present: Boolean(r.drop_custody_present),
