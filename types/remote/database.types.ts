@@ -5144,6 +5144,7 @@ export type Database = {
               closing_bankroll_total_cents: number
               closing_snapshot_at: string
               closing_snapshot_id: string
+              coverage_type: string
               credits_total_cents: number
               drop_custody_present: boolean
               estimated_drop_buyins_cents: number
@@ -5153,9 +5154,12 @@ export type Database = {
               metric_grade: string
               missing_closing_snapshot: boolean
               missing_opening_snapshot: boolean
+              opening_at: string
+              opening_bankroll_cents: number
               opening_bankroll_total_cents: number
               opening_snapshot_at: string
               opening_snapshot_id: string
+              opening_source: string
               pit_id: string
               table_id: string
               table_label: string
@@ -5177,6 +5181,7 @@ export type Database = {
               closing_bankroll_total_cents: number
               closing_snapshot_at: string
               closing_snapshot_id: string
+              coverage_type: string
               credits_total_cents: number
               drop_custody_present: boolean
               estimated_drop_buyins_cents: number
@@ -5186,9 +5191,12 @@ export type Database = {
               metric_grade: string
               missing_closing_snapshot: boolean
               missing_opening_snapshot: boolean
+              opening_at: string
+              opening_bankroll_cents: number
               opening_bankroll_total_cents: number
               opening_snapshot_at: string
               opening_snapshot_id: string
+              opening_source: string
               pit_id: string
               table_id: string
               table_label: string

@@ -40,17 +40,15 @@ type _AssertExecuteNoCasinoId = 'p_casino_id' extends keyof ExecuteArgs
 const _execNoCasinoId: _AssertExecuteNoCasinoId = true;
 
 // --- rpc_import_create_batch contract ---
-// The RPC has two overloads (union type): 4-param (legacy) and 5-param (with p_initial_status).
-// Use a distributive conditional to check if ANY overload has p_initial_status.
-type CreateBatchOverloads = RpcFunctions['rpc_import_create_batch'];
-type _OverloadHasInitialStatus<T> = T extends { Args: infer A }
+// Single canonical function with optional p_initial_status (DA P0-1).
+type CreateBatchType = RpcFunctions['rpc_import_create_batch'];
+type _HasInitialStatus = CreateBatchType extends { Args: infer A }
   ? 'p_initial_status' extends keyof A
     ? true
     : never
   : never;
-type _AssertAnyOverloadHasInitialStatus =
-  _OverloadHasInitialStatus<CreateBatchOverloads> extends never ? never : true;
-const _createHasInitialStatus: _AssertAnyOverloadHasInitialStatus = true;
+type _AssertHasInitialStatus = _HasInitialStatus extends never ? never : true;
+const _createHasInitialStatus: _AssertHasInitialStatus = true;
 
 // --- Status enum includes required values ---
 type _AssertFailed = 'failed' extends ImportBatchStatus ? true : never;

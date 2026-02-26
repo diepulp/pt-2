@@ -4307,80 +4307,43 @@ export type Database = {
         Args: { p_visit_id: string }
         Returns: Json
       }
-      rpc_import_create_batch:
-        | {
-            Args: {
-              p_column_mapping?: Json
-              p_file_name: string
-              p_idempotency_key: string
-              p_vendor_label?: string
-            }
-            Returns: {
-              attempt_count: number
-              casino_id: string
-              claimed_at: string | null
-              claimed_by: string | null
-              column_mapping: Json
-              created_at: string
-              created_by_staff_id: string
-              file_name: string
-              heartbeat_at: string | null
-              id: string
-              idempotency_key: string
-              last_error_at: string | null
-              last_error_code: string | null
-              original_file_name: string | null
-              report_summary: Json | null
-              status: Database["public"]["Enums"]["import_batch_status"]
-              storage_path: string | null
-              total_rows: number
-              updated_at: string
-              vendor_label: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "import_batch"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_column_mapping: Json
-              p_file_name: string
-              p_idempotency_key: string
-              p_initial_status?: Database["public"]["Enums"]["import_batch_status"]
-              p_vendor_label: string
-            }
-            Returns: {
-              attempt_count: number
-              casino_id: string
-              claimed_at: string | null
-              claimed_by: string | null
-              column_mapping: Json
-              created_at: string
-              created_by_staff_id: string
-              file_name: string
-              heartbeat_at: string | null
-              id: string
-              idempotency_key: string
-              last_error_at: string | null
-              last_error_code: string | null
-              original_file_name: string | null
-              report_summary: Json | null
-              status: Database["public"]["Enums"]["import_batch_status"]
-              storage_path: string | null
-              total_rows: number
-              updated_at: string
-              vendor_label: string | null
-            }
-            SetofOptions: {
-              from: "*"
-              to: "import_batch"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_import_create_batch: {
+        Args: {
+          p_column_mapping?: Json
+          p_file_name: string
+          p_idempotency_key: string
+          p_initial_status?: Database["public"]["Enums"]["import_batch_status"]
+          p_vendor_label?: string
+        }
+        Returns: {
+          attempt_count: number
+          casino_id: string
+          claimed_at: string | null
+          claimed_by: string | null
+          column_mapping: Json
+          created_at: string
+          created_by_staff_id: string
+          file_name: string
+          heartbeat_at: string | null
+          id: string
+          idempotency_key: string
+          last_error_at: string | null
+          last_error_code: string | null
+          original_file_name: string | null
+          report_summary: Json | null
+          status: Database["public"]["Enums"]["import_batch_status"]
+          storage_path: string | null
+          total_rows: number
+          updated_at: string
+          vendor_label: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "import_batch"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_import_execute: {
         Args: { p_batch_id: string }
         Returns: {

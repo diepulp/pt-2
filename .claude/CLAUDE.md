@@ -58,7 +58,11 @@ Use `docs/patterns/SDLC_DOCS_TAXONOMY.md` to locate docs by SDLC category.
 3. **DTOs**: Derive from `Database` types using Pick/Omit/Partial. Cross-context consumption via published DTOs only.
 4. **Code Quality**: No `as any`, no `console.*` in production code.
 5. **Complexity**: See Over-Engineering Guardrail before adding abstractions. YAGNI applies.
-6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` (`YYYYMMDDHHMMSS_description.sql`).
+6. **Migrations**: Follow `docs/60-release/MIGRATION_NAMING_STANDARD.md` strictly:
+   - **Format**: `YYYYMMDDHHMMSS_descriptive_name.sql` — generate timestamp with `date +"%Y%m%d%H%M%S"`, never fabricate.
+   - **Temporal integrity**: Must sort after all existing migrations. No backdating, no future-dating.
+   - **Descriptive name**: snake_case, under 50 chars, verb prefix (`add_`, `create_`, `drop_`, `alter_`, `fix_`).
+   - **No overloading PostgreSQL functions** with overlapping DEFAULT signatures — PostgREST cannot disambiguate. Prefer a single function with DEFAULT params over multiple overloads.
 
 ## Agent Shell Safety (MANDATORY)
 
