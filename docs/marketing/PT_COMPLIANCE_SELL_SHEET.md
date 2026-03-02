@@ -4,8 +4,8 @@
 
 ---
 
-## What PT is
-**Player Tracker (PT)** is a casino operations platform that captures **pit + cage activity** as a structured, attributable record—built to support **Title 31 / FinCEN** workflows (CTRC/SAR/MTL) and withstand audits.
+## What PT is: Audit-grade table games system built with deterministic financial lineage and enforceable compliance boundaries.
+**Player Tracker (PT)** is a casino operations platform that captures **pit + cage activity** as a structured, attributable record—built to support **Title 31 / FinCEN** workflows (CTRC/SAR/MTL) and withstand audits. 
 
 ## What PT is not (by default)
 - Not a guaranteed “we make you compliant” product (compliance is program + people + procedures).
