@@ -18,6 +18,25 @@ A full-system audit triggered by the residual `p_actor_id` bypass findings (C-3,
 - **5 P2 MEDIUM findings** (compliance gaps, perf, consistency)
 - **~85% of system fully compliant** (46/54 tables, 75/77 RPCs)
 
+**Consensus read:** Architecture direction is sound; **governance + CI enforcement is not yet strong enough** to prevent regressions — especially via deprecated primitives and overload ambiguity. The remaining non-compliant slice contains **tenant-boundary breakers** (cross-casino PII exposure, log poisoning, actor spoofing). This is the "one bad policy ruins the whole system" category.
+
+---
+
+## Primary Risk Statement
+
+### Catastrophic class (must-fix)
+These are not style issues — they're **cross-tenant / integrity compromises**:
+
+- **Cross-casino staff exposure** (e.g., permissive `staff` SELECT policy patterns like `USING (true)`) → P0-1
+- **Audit log poisoning** (e.g., permissive `audit_log` INSERT `WITH CHECK (true)`) → P0-2
+- **Operational controls mutation** (e.g., overly broad `casino_settings` policies / missing role gates) → P0-3
+- **RPC spoof surfaces** from phantom overloads and identity parameters (e.g., `p_actor_id`) surviving in signatures → P0-4, P0-7
+
+### Systemic failure modes
+- **Deprecated context primitives** still exist → they get copy-pasted → regressions repeat (proven by P0-5).
+- **PostgREST named args + DEFAULT params** → overload candidate sets overlap → ambiguity/bypass risk unless old signatures are dropped.
+- **Pooling TOCTOU** → `current_setting('app.casino_id')` used without reliably setting context at start of RPC.
+
 ---
 
 ## P0 CRITICAL Findings (7)
@@ -224,6 +243,92 @@ The function still exists in the database. New migrations authored by copying ol
 | Overload audit: no `rpc_*` with multiple overloads (except intentional) | Catch phantom overloads |
 | Grep new migrations for `set_rls_context(` without `_from_staff`/`_internal` | Prevent deprecated usage |
 | `REVOKE ALL FROM PUBLIC` required in all new function migrations | Enforce least-privilege |
+| Fail if any tenant table has `USING (true)` / `WITH CHECK (true)` unless allowlisted & documented | Prevent permissive policy regression |
+| Optional: snapshot & diff `pg_proc` + `pg_policies` as part of migration verification | Detect policy/function drift |
+
+---
+
+## Improvement Plan (Consensus Deliverables)
+
+### 1) Close the "catastrophic three" in RLS (first)
+**Goal:** Tenant isolation + integrity restored.
+
+- Replace any `USING (true)` on tenant-scoped tables with casino-scoped predicates.
+- Replace any `WITH CHECK (true)` on write paths with: casino scope + role gate + row ownership checks as needed.
+- Split policies by operation (SELECT vs INSERT vs UPDATE vs DELETE) rather than `FOR ALL` if role gates differ.
+
+**Deliverable:** One migration that fixes `staff` read scoping, `audit_log` insert scoping, and `casino_settings` write scoping (pitboss vs admin vs service paths).
+
+### 2) Delete deprecated `set_rls_context()` for real (DROP, don't "revoke")
+**Goal:** Make future regressions impossible.
+
+- If deprecated function exists, people will use it.
+- **DROP** deprecated context setters so mistakes fail at migration-time instead of prod-time.
+
+**Deliverable:** Migration that `DROP FUNCTION ...` (all overloads) and updates callers to canonical context setter.
+
+### 3) Make "no phantom overloads" a hard gate
+**Goal:** End PostgREST ambiguity and spoof surfaces.
+
+- For `rpc_*` functions:
+  - Avoid overloads unless explicitly allowlisted.
+  - Avoid DEFAULT params that create overlapping call signatures.
+  - **DROP old signatures** during upgrades; don't keep "compat" overloads.
+
+**Deliverable:** Migration that removes residual overloads and a CI rule that fails if multiple overloads exist for `rpc_*` (except allowlist) or any `rpc_*` contains identity args like `p_actor_id` unless explicitly justified + audited.
+
+### 4) Enforce "context set first line" (pooling reality / TOCTOU)
+**Goal:** Eliminate stale session-variable reads on pooled connections.
+
+Rule: every security-relevant RPC must do:
+1. Set context (canonical helper)
+2. Assert required settings exist (fail closed)
+3. Then proceed
+
+**Deliverable:** Patch set to move context set to the top of each flagged RPC.
+
+### 5) Standardize GRANT/REVOKE boilerplate (defense-in-depth)
+Even if RLS protects tables, leaving EXECUTE on PUBLIC is a footgun and violates least privilege.
+
+**Template:**
+- `REVOKE ALL ON FUNCTION ... FROM PUBLIC;`
+- `GRANT EXECUTE ON FUNCTION ... TO authenticated;`
+- `GRANT EXECUTE ON FUNCTION ... TO service_role;` (only if needed)
+
+**Deliverable:** Batch migration applying the template to all `rpc_*`.
+
+---
+
+## Gaps / Blind Spots
+
+### A) "Performance migrations" need a security review protocol
+A single "performance optimization" migration caused broad RLS regressions (P0-1, P0-2, P0-3). That's a process bug.
+
+**Add:** Required checklist for any migration touching RLS/policies:
+- No permissive `true` policies on tenant tables
+- Casino scoping present
+- Writes gated by role
+- PostgREST surface reviewed (RPC grants + signature sanity)
+
+### B) Inconsistent role gating (read vs write)
+Define canonical policy patterns by table class:
+
+- **Tenant core tables** (player/staff/visit/etc.): strict casino scope on all reads.
+- **Operational logs** (audit_log): strict casino scope, inserts constrained, no arbitrary actor attribution.
+- **Settings tables** (casino_settings): role-gated updates; read scope as needed.
+
+### C) Identity attribution rules aren't fully enforced
+Adopt explicit invariants:
+
+- **actor_id** derived from session/JWT only (never passed).
+- **casino_id** derived from session/JWT only (never passed).
+- Any delegated actions (e.g., finance ops) must be **explicitly modeled and audited**, not "free-form staff_id in params."
+
+### D) PostgREST surface inventory is missing
+Add a gate that enumerates:
+- Exposed `rpc_*`
+- Required grant state
+- Signature invariants (no spoof params, no ambiguous overloads)
 
 ---
 
@@ -252,3 +357,27 @@ The function still exists in the database. New migrations authored by copying ol
 | `docs/80-adrs/ADR-024_DECISIONS.md` | Authoritative context (INV-7, INV-8) |
 | `docs/80-adrs/ADR-030-auth-system-hardening.md` | TOCTOU prevention, write-path enforcement |
 | `docs/80-adrs/ADR-018-security-definer-governance.md` | SECURITY DEFINER rules |
+| `docs/30-security/SEC-AUDIT-CONSENSUS-IMPROVEMENTS-2026-03-01.md` | Consensus improvement plan (source of Gaps + Deliverables sections) |
+
+---
+
+## Definition of Done (regression prevention)
+
+**CI gates (must be real):**
+- Fail if any tenant table has `USING (true)` / `WITH CHECK (true)` unless allowlisted & documented.
+- Fail if any `rpc_*` has multiple overloads (except allowlist).
+- Fail if any `rpc_*` includes `p_actor_id` or accepts `p_casino_id` (except allowlist).
+- Fail if any `rpc_*` is executable by PUBLIC.
+- Optional: snapshot & diff `pg_proc` + `pg_policies` as part of migration verification.
+
+---
+
+## Quick Checklist (copy/paste into PR)
+
+- [ ] RLS: no permissive `true` policies on tenant-scoped tables
+- [ ] RLS: writes have role gates + casino scope
+- [ ] RPC: context set first line
+- [ ] RPC: no identity params (actor/casino) passed
+- [ ] RPC: no ambiguous overloads / default overlap
+- [ ] GRANTS: PUBLIC revoked on all `rpc_*`
+- [ ] PostgREST surface reviewed (exposed RPC list matches intent)
