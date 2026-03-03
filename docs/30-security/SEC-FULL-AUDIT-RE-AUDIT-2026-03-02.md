@@ -1,7 +1,7 @@
 # SEC Full Audit Re-Audit (Delta Improvements Proposal)
 
 **Date:** 2026-03-02  
-**Target:** `SEC-FULL-AUDIT-2026-03-01-CONSOLIDATED-FINDINGS.md`  
+**Target:** `SEC-007-tenant-isolation-enforcement-contract.md` (formerly `SEC-FULL-AUDIT-2026-03-01-CONSOLIDATED-FINDINGS.md`)
 **Purpose:** Re-audit the audit artifact itself; identify gaps/inconsistencies; propose concrete doc-level improvements.
 
 ---
