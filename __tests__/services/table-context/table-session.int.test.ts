@@ -231,7 +231,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
 
     it('opens a new session in ACTIVE state', async () => {
       // Set RLS context first (service client bypasses RLS for setup)
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -265,7 +265,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -295,7 +295,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: adminId,
         p_casino_id: casinoId,
         p_staff_role: 'admin',
@@ -329,7 +329,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .neq('status', 'CLOSED');
 
       // Create an active session
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -349,7 +349,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents opening second session for same table', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -371,7 +371,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -405,7 +405,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .neq('status', 'CLOSED');
 
       // Create a fresh session
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -422,7 +422,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('transitions ACTIVE → RUNDOWN', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -443,7 +443,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents RUNDOWN → RUNDOWN (already in rundown)', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -458,7 +458,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('transitions RUNDOWN → CLOSED with drop_event_id', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -494,7 +494,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -519,7 +519,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('rejects close without any artifact', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -535,7 +535,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('accepts close with closing_inventory_snapshot_id', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -567,7 +567,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId1)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -587,7 +587,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('returns current session for table with active session', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -614,7 +614,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -643,7 +643,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -660,7 +660,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('allows closing directly from ACTIVE state (shortcut)', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -695,7 +695,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -727,7 +727,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents rundown on CLOSED session', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -742,7 +742,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('prevents close on already CLOSED session', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -758,7 +758,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
     });
 
     it('rejects non-existent session ID', async () => {
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
@@ -784,7 +784,7 @@ describeIntegration('Table Session Lifecycle Integration Tests', () => {
         .eq('gaming_table_id', tableId2)
         .neq('status', 'CLOSED');
 
-      await serviceClient.rpc('set_rls_context', {
+      await serviceClient.rpc('set_rls_context_internal', {
         p_actor_id: pitBossId,
         p_casino_id: casinoId,
         p_staff_role: 'pit_boss',
