@@ -1,0 +1,81 @@
+{
+  "id": "EXEC-040",
+  "source_spec": "docs/30-security/SEC-007-tenant-isolation-enforcement-contract.md",
+  "exec_spec": "docs/21-exec-spec/EXEC-040-sec007-tenant-isolation-enforcement.md",
+  "status": "complete",
+  "gov010_check": "n/a (security remediation, not PRD)",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS12", "WS13", "WS14"],
+  "pending_workstreams": [],
+  "deferred_workstreams": ["WS11"],
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "attempt": 1,
+    "notes": "DA review + user review + DELTA patch applied. All gaps addressed. User approved for implementation."
+  },
+  "approval": {
+    "approved_at": "2026-03-02",
+    "approved_by": "user",
+    "notes": "Spec declared production-ready after: (1) DA adversarial review, (2) user gap review (5 gaps + 4 improvements), (3) DELTA patch (WS13/WS14/gate expansions), (4) user acceptance test additions for WS7/WS8/WS9. User also updated DoD identity param check to include p_casino_id."
+  },
+  "next_action": "Complete — all phases done. WS11 (P2 backlog) deferred.",
+  "execution_plan": {
+    "phase_1a": {"workstreams": ["WS1", "WS2", "WS3"], "mode": "parallel", "status": "complete"},
+    "phase_1b": {"workstreams": ["WS4", "WS5", "WS13"], "mode": "parallel", "status": "complete"},
+    "phase_1c": {"workstreams": ["WS6"], "mode": "sequential", "status": "complete"},
+    "phase_2a": {"workstreams": ["WS7", "WS8", "WS9"], "mode": "parallel", "status": "complete"},
+    "phase_2b": {"workstreams": ["WS10"], "mode": "sequential", "status": "complete"},
+    "phase_4":  {"workstreams": ["WS12", "WS14"], "mode": "parallel", "status": "complete"},
+    "phase_3":  {"workstreams": ["WS11"], "mode": "sequential", "status": "deferred"}
+  },
+  "working_directory": "/home/diepulp/projects/pt-2/trees/sec/catastrophic-three/",
+  "branch": "sec/catastrophic-three",
+  "migrations_created": [
+    "20260302230018_fix_sec007_p0_rls_policies.sql",
+    "20260302230020_drop_sec007_p0_phantom_overloads.sql",
+    "20260302230022_fix_sec007_p0_rpc_context_grants.sql",
+    "20260302230024_drop_sec007_deprecated_set_rls_context.sql",
+    "20260302230026_fix_sec007_dashboard_rpc_context.sql",
+    "20260302230028_add_sec007_p1_rls_casino_scoping.sql",
+    "20260302230030_fix_sec007_p1_rpc_toctou_context.sql",
+    "20260302230032_fix_sec007_p1_revoke_public_batch.sql"
+  ],
+  "ts_files_modified": [
+    "services/visit/crud.ts",
+    "services/rating-slip/crud.ts",
+    "services/rating-slip/__tests__/rating-slip.service.test.ts",
+    "services/visit/__tests__/visit-continuation.integration.test.ts",
+    "services/loyalty/mid-session-reward.ts",
+    "services/loyalty/__tests__/mid-session-reward.test.ts"
+  ],
+  "ci_security_tests": [
+    "supabase/tests/security/01_permissive_true_check.sql",
+    "supabase/tests/security/02_overload_ambiguity_check.sql",
+    "supabase/tests/security/03_identity_param_check.sql",
+    "supabase/tests/security/04_public_execute_check.sql",
+    "supabase/tests/security/05_deprecated_context_check.sh",
+    "supabase/tests/security/06_context_first_line_check.sh",
+    "supabase/tests/security/07_dashboard_rpc_context_acceptance.sql"
+  ],
+  "governance_artifacts": [
+    "docs/30-security/templates/RLS_RPC_SECURITY_REVIEW_CHECKLIST.md",
+    "docs/30-security/ROLE_GATING_CANON.md",
+    "supabase/scripts/postgrest_surface_inventory.sql",
+    "docs/30-security/postgrest_surface_inventory.md"
+  ],
+  "gates_passed": {
+    "phase_1_schema_validation": "2026-03-02",
+    "phase_1_type_check": "2026-03-02",
+    "phase_1_build": "2026-03-02",
+    "phase_2_schema_validation": "2026-03-02",
+    "phase_2_type_check": "2026-03-02",
+    "phase_2_build": "2026-03-02",
+    "phase_4_ci_security_tests": "2026-03-02",
+    "dod_type_check": "2026-03-02",
+    "dod_build": "2026-03-02",
+    "dod_unit_tests": "2026-03-02"
+  },
+  "latest_migration": "20260302230032_fix_sec007_p1_revoke_public_batch.sql",
+  "completed_at": "2026-03-02T00:00:00Z",
+  "created_at": "2026-03-02T00:00:00Z"
+}
