@@ -1,5 +1,5 @@
 ---
-id: PRD-040
+id: PRD-041
 title: "ADR-024 P2 Validate-to-Derive Remediation"
 owner: Platform / Security
 status: Draft
@@ -8,7 +8,7 @@ created: 2026-03-03
 last_review: 2026-03-03
 phase: "P2 Security Compliance (Post-SEC-007)"
 source: "docs/issues/gaps/sec-007/GAP-SEC007-P2-BACKLOG-ADR024-COMPLIANCE.md"
-exec_spec_parent: "EXEC-040 WS11"
+exec_spec_parent: "EXEC-041 WS11"
 pattern: B
 http_boundary: false
 ---
@@ -19,7 +19,7 @@ http_boundary: false
 
 - **Owner:** Platform / Security
 - **Status:** Draft
-- **Summary:** SEC-007 (EXEC-040) remediated all P0 critical and P1 high tenant isolation findings. Five P2 findings were explicitly deferred to WS11. This PRD covers the deferred P2 remediation work: removing spoofable `p_casino_id` validate-pattern parameters from 12 RPCs and cascading the change to ~16 production TypeScript callsites across 5 bounded contexts, plus 4 low-effort quick wins (grant tightening, policy normalization, WITH CHECK addition, and a business decision on delegation semantics). The target state is full ADR-024 compliance: all client-callable RPCs derive casino and actor identity from authoritative session context, never from user-supplied parameters.
+- **Summary:** SEC-007 (EXEC-040) remediated all P0 critical and P1 high tenant isolation findings. Five P2 findings were explicitly deferred to WS11. This PRD covers the deferred P2 remediation work: removing spoofable `p_casino_id` validate-pattern parameters from 12 RPCs and cascading the change to **11 production TypeScript callsites across 6 files** (RatingSlip, TableContext, Player, FloorLayout). `services/visit/crud.ts` remains untouched because its `p_casino_id` references target **out-of-scope RPCs**. The target state is full ADR-024 compliance: all client-callable RPCs derive casino and actor identity from authoritative session context, never from user-supplied parameters.
 
 ---
 
@@ -44,9 +44,9 @@ Additionally, 4 smaller compliance gaps remain: a spoofable `p_created_by_staff_
 | Goal | Observable Metric |
 |------|-------------------|
 | **G1**: Remove `p_casino_id` from all 12 validate-pattern RPCs | `SELECT proname FROM pg_proc WHERE proname LIKE 'rpc_%' AND 'p_casino_id' = ANY(proargnames);` returns 0 rows |
-| **G2**: Update all TypeScript callsites to stop passing `p_casino_id` | `grep -r 'p_casino_id' services/ app/ hooks/ --include='*.ts' --include='*.tsx'` returns 0 production matches (test files updated separately) |
-| **G3**: SEC-003 CI gate runs zero-tolerance (no allowlist) | SEC-003 `p_casino_id` allowlist is empty; gate hard-fails on any `p_casino_id` param |
-| **G4**: Resolve `p_created_by_staff_id` delegation semantics | Business decision documented; parameter either removed or explicitly justified in ADR-024 addendum |
+| **G2**: Update all in-scope TypeScript callsites to stop passing `p_casino_id` | `grep -r "p_casino_id" services/ app/ hooks/ --include='*.ts' --include='*.tsx'` returns 0 **in-scope** production matches for the 12 P2-1 RPCs (see Appendix A); out-of-scope RPCs may still legitimately reference `p_casino_id` |
+| **G3**: SEC-003 enforcement is ship-safe | **POST-SHIP hardening** (WS6): SEC-003 hard-fails on NEW `p_casino_id` identity params; allowlist permitted for known deferred/out-of-scope RPCs. This release ships the remediation (P2-1) and keeps SEC-003 at its current severity for allowlisted items. |
+| **G4**: `p_created_by_staff_id` delegation decision tracked and owned (deferred) | Decision owner assigned, follow-up vehicle documented in `GAP-SEC007-P2-BACKLOG-ADR024-COMPLIANCE.md`; resolution deferred to post-ship (WS7) |
 | **G5**: Revoke `chipset_total_cents` from anon | `has_function_privilege('anon', 'chipset_total_cents(jsonb)', 'EXECUTE')` returns false |
 | **G6**: Normalize denial policy patterns | All denial policies include `auth.uid() IS NOT NULL` prefix per project convention |
 | **G7**: Add WITH CHECK to `player_tag` UPDATE | `SELECT with_check FROM pg_policies WHERE tablename = 'player_tag' AND cmd = 'UPDATE';` returns non-null WITH CHECK clause |
@@ -96,9 +96,9 @@ Additionally, 4 smaller compliance gaps remain: a spoofable `p_created_by_staff_
 
 Each phase: DROP old signature, CREATE new (sans `p_casino_id`), update TS callers, type regeneration, acceptance tests.
 
-**Sprint 4 --- CI Hardening:**
+**Post-Ship Hardening (WS6 — not part of release gating):**
 
-- Remove `p_casino_id` allowlist from SEC-003 CI gate
+- Upgrade SEC-003 `p_casino_id` detection from NOTICE to hard-fail with allowlist for known deferred/out-of-scope RPCs
 - Update SEC-004 allowlist to remove `chipset_total_cents`
 - Verify all gates pass clean
 
@@ -108,7 +108,11 @@ Each phase: DROP old signature, CREATE new (sans `p_casino_id`), update TS calle
 - `p_casino_id` on `service_role`-only RPCs (ops lane, explicitly permitted by ADR-024)
 - RPC body logic changes (the `set_rls_context_from_staff()` call and derive pattern are already in place; only the parameter and validate-block are removed)
 - New feature work or UI changes
-- `p_casino_id` on RPCs outside the P2-1 list of 12 (e.g., `rpc_get_dashboard_tables_with_counts`, loyalty RPCs, `rpc_current_gaming_day`). These RPCs also accept `p_casino_id` but were not flagged in the SEC-007 P2-1 finding. Their compliance status should be assessed as a follow-up after this PRD ships, informed by the SEC-003 CI gate results at zero-tolerance.
+- `p_casino_id` on RPCs outside the P2-1 list of 12 (e.g., `rpc_get_dashboard_tables_with_counts`, loyalty RPCs, `rpc_current_gaming_day`). These RPCs may retain `p_casino_id` until separately assessed; they are not part of the P2-1 remediation.
+
+> **Note:** This is why **G2** is scoped to *in-scope* callsites for the 12 P2-1 RPCs only.
+
+> **Explicit exclusion:** `services/visit/crud.ts` contains `p_casino_id` references but only for **out-of-scope RPCs**; do not modify it as part of PRD-041.
 
 ---
 
@@ -124,15 +128,14 @@ Each phase: DROP old signature, CREATE new (sans `p_casino_id`), update TS calle
 
 | Bounded Context | File | Callsite Count |
 |----------------|------|----------------|
-| RatingSlip | `services/rating-slip/crud.ts` | 4 |
-| RatingSlip | `services/visit/crud.ts` | 3 |
-| RatingSlip | `services/rating-slip-modal/rpc.ts` | 2 |
+| RatingSlip | `services/rating-slip/crud.ts` | 3 |
+| RatingSlip | `services/rating-slip-modal/rpc.ts` | 1 |
 | TableContext | `services/table-context/chip-custody.ts` | 4 |
 | Player | `services/player/crud.ts` | 1 |
 | FloorLayout | `app/api/v1/floor-layouts/route.ts` | 1 |
 | FloorLayout | `app/api/v1/floor-layout-activations/route.ts` | 1 |
 
-**FR-4 (Test Caller Cascade):** All test files that pass `p_casino_id` to affected RPCs must be updated. Test files include `services/rating-slip/__tests__/`, `services/visit/__tests__/`, `services/security/__tests__/`, `services/loyalty/__tests__/`, `services/casino/__tests__/`, and `services/player-financial/__tests__/`.
+**FR-4 (Test Caller Cascade):** Update every test file that directly calls one of the 12 in-scope RPCs to remove `p_casino_id`. At minimum this includes `services/rating-slip/__tests__/`, `services/visit/__tests__/`, `services/table-context/__tests__/`, `services/player/__tests__/`, `app/api/v1/__tests__/` covering the FloorLayout routes, and `lib/supabase/__tests__/rls-pooling-safety.integration.test.ts`. Additional suites only need changes if ripgrep shows they call the same RPCs.
 
 **FR-5 (P2-2 Delegation Decision):** A business decision must be made on whether `rpc_create_financial_txn`'s `p_created_by_staff_id` parameter represents legitimate delegated attribution ("supervisor records on behalf of staff") or should be replaced with context-derived `app.actor_id`. If delegation is legitimate, document the exception in an ADR-024 addendum. If not, remove the parameter and derive from context.
 
@@ -210,7 +213,7 @@ The release is considered **Done** when:
 **Functionality**
 
 - [ ] All 12 RPCs listed in P2-1 have `p_casino_id` removed from their signatures
-- [ ] All production TypeScript callsites (16 across 7 files) updated to remove `p_casino_id`
+- [ ] All 11 production TypeScript callsites (across 6 files) updated to remove `p_casino_id` for the 12 in-scope RPCs
 - [ ] All test callsites updated and passing
 - [ ] P2-2 business decision documented; parameter either removed or justified
 - [ ] `chipset_total_cents` revoked from anon (P2-3)
@@ -244,7 +247,7 @@ The release is considered **Done** when:
 
 **Documentation**
 
-- [ ] Gap document (`GAP-SEC007-P2-BACKLOG-ADR024-COMPLIANCE.md`) marked as resolved
+- [ ] Gap document (`GAP-SEC007-P2-BACKLOG-ADR024-COMPLIANCE.md`) updated: P2-1/P2-3/P2-4/P2-5 entries marked resolved; P2-2 explicitly marked deferred with owner + target decision date
 - [ ] If P2-2 delegation is justified, ADR-024 addendum documents the exception
 - [ ] Known limitations: none expected (this eliminates the last known ADR-024 deviations)
 
@@ -272,11 +275,11 @@ The release is considered **Done** when:
 
 | # | Function | Bounded Context | Current Arg Count | Target Arg Count | Production TS Callsites |
 |---|----------|----------------|-------------------|------------------|------------------------|
-| 1 | `rpc_pause_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
-| 2 | `rpc_resume_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
-| 3 | `rpc_close_rating_slip` | RatingSlip | 3 | 2 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
+| 1 | `rpc_pause_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts` |
+| 2 | `rpc_resume_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts` |
+| 3 | `rpc_close_rating_slip` | RatingSlip | 3 | 2 | `services/rating-slip/crud.ts` |
 | 4 | `rpc_move_player` | RatingSlip | 5 | 4 | `services/rating-slip/crud.ts` |
-| 5 | `rpc_update_table_status` | TableContext | 3 | 2 | `services/table-context/table-session.ts` |
+| 5 | `rpc_update_table_status` | TableContext | 3 | 2 | *(0 production callsites — migration only)* |
 | 6 | `rpc_log_table_drop` | TableContext | 11 | 10 | `services/table-context/chip-custody.ts` |
 | 7 | `rpc_log_table_inventory_snapshot` | TableContext | 7 | 6 | `services/table-context/chip-custody.ts` |
 | 8 | `rpc_request_table_credit` | TableContext | 8 | 7 | `services/table-context/chip-custody.ts` |
@@ -294,12 +297,11 @@ The release is considered **Done** when:
 **Migration:** DROP + CREATE for `rpc_pause_rating_slip`, `rpc_resume_rating_slip`, `rpc_close_rating_slip`, `rpc_move_player`
 
 **TS Updates:**
-- `services/rating-slip/crud.ts` (4 callsites)
-- `services/visit/crud.ts` (3 callsites)
-- `services/rating-slip-modal/rpc.ts` (2 callsites)
+- `services/rating-slip/crud.ts` (3 callsites)
+- `services/rating-slip-modal/rpc.ts` (1 callsite)
 - Test files: `services/rating-slip/__tests__/*.ts`, `services/visit/__tests__/*.ts`
 
-**Rationale:** RatingSlip has the most callsites (9 production) and is the most frequently exercised flow. Doing it first provides the highest confidence signal.
+**Rationale:** RatingSlip is the most frequently exercised flow. Doing it first provides the highest confidence signal, while keeping the TS blast radius small (4 production callsites across 2 files).
 
 ### Phase B --- TableContext (Sprint 2)
 
@@ -344,7 +346,7 @@ CREATE OR REPLACE FUNCTION rpc_example(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_casino_id UUID;
@@ -370,7 +372,7 @@ CREATE OR REPLACE FUNCTION rpc_example(
 RETURNS void
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public, pg_temp
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
   v_casino_id UUID;

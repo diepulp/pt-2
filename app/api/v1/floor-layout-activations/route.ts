@@ -45,7 +45,6 @@ export async function POST(request: NextRequest) {
         const { data, error } = await mwCtx.supabase.rpc(
           'rpc_activate_floor_layout',
           {
-            p_casino_id: payload.casino_id,
             p_layout_version_id: payload.layout_version_id,
             p_request_id: payload.activation_request_id ?? idempotencyKey,
           },

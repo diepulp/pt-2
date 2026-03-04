@@ -139,7 +139,6 @@ export async function createPlayer(
 ): Promise<PlayerDTO> {
   // Use RPC for transaction-safe creation with RLS context
   const { data, error } = await supabase.rpc('rpc_create_player', {
-    p_casino_id: input.casino_id,
     p_first_name: input.first_name,
     p_last_name: input.last_name,
     p_birth_date: input.birth_date ?? undefined,

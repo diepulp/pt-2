@@ -361,7 +361,7 @@ describe('RatingSlipService Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 2. Pause rating slip
-      const paused = await service.pause(testCasinoId, testActorId, slip.id);
+      const paused = await service.pause(slip.id);
 
       expect(paused.status).toBe('paused');
       expect(paused.id).toBe(slip.id);
@@ -370,7 +370,7 @@ describe('RatingSlipService Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 3. Resume rating slip
-      const resumed = await service.resume(testCasinoId, testActorId, slip.id);
+      const resumed = await service.resume(slip.id);
 
       expect(resumed.status).toBe('open');
       expect(resumed.id).toBe(slip.id);
@@ -379,7 +379,7 @@ describe('RatingSlipService Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 4. Close rating slip with average_bet
-      const closed = await service.close(testCasinoId, testActorId, slip.id, {
+      const closed = await service.close(slip.id, {
         average_bet: 50,
       });
 
@@ -400,7 +400,7 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip.id);
 
-      await service.pause(testCasinoId, testActorId, slip.id);
+      await service.pause(slip.id);
 
       // Get slip with pauses
       const slipWithPauses = await service.getById(slip.id);
@@ -412,13 +412,13 @@ describe('RatingSlipService Integration Tests', () => {
       expect(slipWithPauses.pauses[0].ended_at).toBeNull(); // Still paused
 
       // Resume and verify pause is closed
-      await service.resume(testCasinoId, testActorId, slip.id);
+      await service.resume(slip.id);
 
       const afterResume = await service.getById(slip.id);
       expect(afterResume.pauses[0].ended_at).not.toBeNull();
 
       // Close for cleanup
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
   });
 
@@ -441,15 +441,15 @@ describe('RatingSlipService Integration Tests', () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Pause for 300ms
-      await service.pause(testCasinoId, testActorId, slip.id);
+      await service.pause(slip.id);
       await new Promise((resolve) => setTimeout(resolve, 300));
 
       // Resume and wait 200ms more
-      await service.resume(testCasinoId, testActorId, slip.id);
+      await service.resume(slip.id);
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // Close and check duration
-      const closed = await service.close(testCasinoId, testActorId, slip.id);
+      const closed = await service.close(slip.id);
 
       // Total wall time: ~700ms = 200 + 300 + 200
       // Active time: ~400ms = 200 + 200 (excluding 300ms pause)
@@ -478,7 +478,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(duration).toBeGreaterThanOrEqual(0);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
   });
 
@@ -517,7 +517,7 @@ describe('RatingSlipService Integration Tests', () => {
       }
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip1.id);
+      await service.close(slip1.id);
     });
 
     it('should allow slips at different tables for same visit', async () => {
@@ -541,8 +541,8 @@ describe('RatingSlipService Integration Tests', () => {
       expect(slip1.visit_id).toBe(slip2.visit_id);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip1.id);
-      await service.close(testCasinoId, testActorId, slip2.id);
+      await service.close(slip1.id);
+      await service.close(slip2.id);
     });
 
     it('should allow new slip after previous one is closed', async () => {
@@ -555,7 +555,7 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip1.id);
 
-      await service.close(testCasinoId, testActorId, slip1.id);
+      await service.close(slip1.id);
 
       // Start second slip at same table - should succeed now
       const slip2 = await service.start(testCasinoId, testActorId, {
@@ -567,7 +567,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(slip2.status).toBe('open');
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip2.id);
+      await service.close(slip2.id);
     });
   });
 
@@ -586,22 +586,20 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip.id);
 
-      await service.pause(testCasinoId, testActorId, slip.id);
+      await service.pause(slip.id);
 
       // Try to pause again - should fail
-      await expect(
-        service.pause(testCasinoId, testActorId, slip.id),
-      ).rejects.toThrow();
+      await expect(service.pause(slip.id)).rejects.toThrow();
 
       try {
-        await service.pause(testCasinoId, testActorId, slip.id);
+        await service.pause(slip.id);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
         expect((error as DomainError).code).toBe('RATING_SLIP_NOT_OPEN');
       }
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
 
     it('should reject resume on non-paused slip', async () => {
@@ -615,19 +613,17 @@ describe('RatingSlipService Integration Tests', () => {
       fixture.slipIds.push(slip.id);
 
       // Try to resume open slip - should fail
-      await expect(
-        service.resume(testCasinoId, testActorId, slip.id),
-      ).rejects.toThrow();
+      await expect(service.resume(slip.id)).rejects.toThrow();
 
       try {
-        await service.resume(testCasinoId, testActorId, slip.id);
+        await service.resume(slip.id);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
         expect((error as DomainError).code).toBe('RATING_SLIP_NOT_PAUSED');
       }
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
 
     it('should reject close on already closed slip', async () => {
@@ -640,15 +636,13 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip.id);
 
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
 
       // Try to close again - should fail
-      await expect(
-        service.close(testCasinoId, testActorId, slip.id),
-      ).rejects.toThrow();
+      await expect(service.close(slip.id)).rejects.toThrow();
 
       try {
-        await service.close(testCasinoId, testActorId, slip.id);
+        await service.close(slip.id);
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
         // Could be RATING_SLIP_INVALID_STATE, RATING_SLIP_ALREADY_CLOSED, or INTERNAL_ERROR
@@ -794,7 +788,7 @@ describe('RatingSlipService Integration Tests', () => {
     afterAll(async () => {
       // Close the test slip
       try {
-        await service.close(testCasinoId, testActorId, testSlipId);
+        await service.close(testSlipId);
       } catch {
         // Ignore if already closed
       }
@@ -880,7 +874,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(updated2.average_bet).toBe(150);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
 
     it('should reject average_bet update on closed slip', async () => {
@@ -892,7 +886,7 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip.id);
 
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
 
       // Try to update after close - should fail
       await expect(service.updateAverageBet(slip.id, 200)).rejects.toThrow();
@@ -941,7 +935,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(afterCount).toBe(beforeCount + 1);
 
       // Close and verify
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
 
       const finalCount = await service.countOpenSlipsForTable(
         testTable2Id,
@@ -969,7 +963,7 @@ describe('RatingSlipService Integration Tests', () => {
       // Attempt multiple pause operations concurrently
       const pausePromises = Array(3)
         .fill(null)
-        .map(() => service.pause(testCasinoId, testActorId, slip.id));
+        .map(() => service.pause(slip.id));
 
       const results = await Promise.allSettled(pausePromises);
 
@@ -985,7 +979,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(current.status).toBe('paused');
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
 
     it('should handle concurrent start operations (unique constraint)', async () => {
@@ -1012,7 +1006,7 @@ describe('RatingSlipService Integration Tests', () => {
         const slip = (successes[0] as PromiseFulfilledResult<{ id: string }>)
           .value;
         fixture.slipIds.push(slip.id);
-        await service.close(testCasinoId, testActorId, slip.id);
+        await service.close(slip.id);
       }
     });
   });
@@ -1070,7 +1064,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(slip.game_settings).toBeDefined();
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
     });
 
     it('should close paused slip directly', async () => {
@@ -1082,10 +1076,10 @@ describe('RatingSlipService Integration Tests', () => {
       });
       fixture.slipIds.push(slip.id);
 
-      await service.pause(testCasinoId, testActorId, slip.id);
+      await service.pause(slip.id);
 
       // Close directly from paused state (no resume needed)
-      const closed = await service.close(testCasinoId, testActorId, slip.id, {
+      const closed = await service.close(slip.id, {
         average_bet: 75,
       });
 
