@@ -74,36 +74,32 @@ export interface RatingSlipServiceInterface {
    * Pause an open rating slip.
    * Uses rpc_pause_rating_slip with FOR UPDATE locking.
    *
-   * @param casinoId - Casino UUID
    * @param slipId - Rating slip UUID
    * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
    * @throws RATING_SLIP_NOT_OPEN if slip is not in open state
    */
-  pause(casinoId: string, slipId: string): Promise<RatingSlipDTO>;
+  pause(slipId: string): Promise<RatingSlipDTO>;
 
   /**
    * Resume a paused rating slip.
    * Uses rpc_resume_rating_slip with FOR UPDATE locking.
    *
-   * @param casinoId - Casino UUID
    * @param slipId - Rating slip UUID
    * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
    * @throws RATING_SLIP_NOT_PAUSED if slip is not in paused state
    */
-  resume(casinoId: string, slipId: string): Promise<RatingSlipDTO>;
+  resume(slipId: string): Promise<RatingSlipDTO>;
 
   /**
    * Close a rating slip (terminal state).
    * Uses rpc_close_rating_slip which returns duration and slip.
    *
-   * @param casinoId - Casino UUID
    * @param slipId - Rating slip UUID
    * @param input - Optional CloseRatingSlipInput (average_bet)
    * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
    * @throws RATING_SLIP_INVALID_STATE if slip is already closed
    */
   close(
-    casinoId: string,
     slipId: string,
     input?: CloseRatingSlipInput,
   ): Promise<RatingSlipWithDurationDTO>;
@@ -302,10 +298,9 @@ export function createRatingSlipService(
     // State machine operations (RPC-backed)
     start: (casinoId, actorId, input) =>
       crud.start(supabase, casinoId, actorId, input),
-    pause: (casinoId, slipId) => crud.pause(supabase, casinoId, slipId),
-    resume: (casinoId, slipId) => crud.resume(supabase, casinoId, slipId),
-    close: (casinoId, slipId, input) =>
-      crud.close(supabase, casinoId, slipId, input),
+    pause: (slipId) => crud.pause(supabase, slipId),
+    resume: (slipId) => crud.resume(supabase, slipId),
+    close: (slipId, input) => crud.close(supabase, slipId, input),
 
     // Read operations
     getById: (slipId) => crud.getById(supabase, slipId),

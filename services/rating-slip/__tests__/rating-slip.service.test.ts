@@ -336,11 +336,10 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.pause(mockSupabase, CASINO_ID, SLIP_ID);
+        const result = await crud.pause(mockSupabase, SLIP_ID);
 
         expect(result.status).toBe('paused');
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_pause_rating_slip', {
-          p_casino_id: CASINO_ID,
           p_rating_slip_id: SLIP_ID,
         });
       });
@@ -353,12 +352,12 @@ describe('RatingSlipService', () => {
           },
         });
 
-        await expect(
-          crud.pause(mockSupabase, CASINO_ID, SLIP_ID),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.pause(mockSupabase, SLIP_ID)).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.pause(mockSupabase, CASINO_ID, SLIP_ID);
+          await crud.pause(mockSupabase, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe('RATING_SLIP_NOT_OPEN');
@@ -371,12 +370,12 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        await expect(
-          crud.pause(mockSupabase, CASINO_ID, 'nonexistent'),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.pause(mockSupabase, 'nonexistent')).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.pause(mockSupabase, CASINO_ID, 'nonexistent');
+          await crud.pause(mockSupabase, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
@@ -391,11 +390,10 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.resume(mockSupabase, CASINO_ID, SLIP_ID);
+        const result = await crud.resume(mockSupabase, SLIP_ID);
 
         expect(result.status).toBe('open');
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_resume_rating_slip', {
-          p_casino_id: CASINO_ID,
           p_rating_slip_id: SLIP_ID,
         });
       });
@@ -409,12 +407,12 @@ describe('RatingSlipService', () => {
           },
         });
 
-        await expect(
-          crud.resume(mockSupabase, CASINO_ID, SLIP_ID),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.resume(mockSupabase, SLIP_ID)).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.resume(mockSupabase, CASINO_ID, SLIP_ID);
+          await crud.resume(mockSupabase, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe('RATING_SLIP_NOT_PAUSED');
@@ -427,12 +425,12 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        await expect(
-          crud.resume(mockSupabase, CASINO_ID, 'nonexistent'),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.resume(mockSupabase, 'nonexistent')).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.resume(mockSupabase, CASINO_ID, 'nonexistent');
+          await crud.resume(mockSupabase, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
@@ -452,13 +450,12 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.close(mockSupabase, CASINO_ID, SLIP_ID);
+        const result = await crud.close(mockSupabase, SLIP_ID);
 
         expect(result.status).toBe('closed');
         expect(result.end_time).not.toBeNull();
         expect(result.duration_seconds).toBe(14400);
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_close_rating_slip', {
-          p_casino_id: CASINO_ID,
           p_rating_slip_id: SLIP_ID,
           p_average_bet: undefined,
         });
@@ -475,7 +472,7 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.close(mockSupabase, CASINO_ID, SLIP_ID);
+        const result = await crud.close(mockSupabase, SLIP_ID);
 
         expect(result.status).toBe('closed');
         expect(result.duration_seconds).toBe(10800);
@@ -492,13 +489,12 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.close(mockSupabase, CASINO_ID, SLIP_ID, {
+        const result = await crud.close(mockSupabase, SLIP_ID, {
           average_bet: 250,
         });
 
         expect(result.average_bet).toBe(250);
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_close_rating_slip', {
-          p_casino_id: CASINO_ID,
           p_rating_slip_id: SLIP_ID,
           p_average_bet: 250,
         });
@@ -513,12 +509,12 @@ describe('RatingSlipService', () => {
           },
         });
 
-        await expect(
-          crud.close(mockSupabase, CASINO_ID, SLIP_ID),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.close(mockSupabase, SLIP_ID)).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.close(mockSupabase, CASINO_ID, SLIP_ID);
+          await crud.close(mockSupabase, SLIP_ID);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe(
@@ -533,12 +529,12 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        await expect(
-          crud.close(mockSupabase, CASINO_ID, 'nonexistent'),
-        ).rejects.toThrow(DomainError);
+        await expect(crud.close(mockSupabase, 'nonexistent')).rejects.toThrow(
+          DomainError,
+        );
 
         try {
-          await crud.close(mockSupabase, CASINO_ID, 'nonexistent');
+          await crud.close(mockSupabase, 'nonexistent');
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
           expect((error as DomainError).code).toBe('RATING_SLIP_NOT_FOUND');
@@ -557,7 +553,7 @@ describe('RatingSlipService', () => {
           error: null,
         });
 
-        const result = await crud.close(mockSupabase, CASINO_ID, SLIP_ID);
+        const result = await crud.close(mockSupabase, SLIP_ID);
 
         expect(result.status).toBe('closed');
         expect(result.duration_seconds).toBe(14400);

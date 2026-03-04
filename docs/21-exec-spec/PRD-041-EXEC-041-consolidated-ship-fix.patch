@@ -1,0 +1,51 @@
+diff --git a/docs/10-prd/PRD-041-adr024-p2-validate-to-derive-remediation-v0.md b/docs/10-prd/PRD-041-adr024-p2-validate-to-derive-remediation-v0.md
+--- a/docs/10-prd/PRD-041-adr024-p2-validate-to-derive-remediation-v0.md
++++ b/docs/10-prd/PRD-041-adr024-p2-validate-to-derive-remediation-v0.md
+@@
+-id: PRD-040
++id: PRD-041
+ title: "ADR-024 P2 Validate-to-Derive Remediation"
+ owner: Platform / Security
+ status: Draft
+@@
+-  - **Summary:** SEC-007 (EXEC-040) remediated all P0 critical and P1 high tenant isolation findings. Five P2 findings were explicitly deferred to WS11. This PRD covers the deferred P2 remediation work: removing spoofable `p_casino_id` validate-pattern parameters from 12 RPCs and cascading the change to ~16 production TypeScript callsites across 5 bounded contexts, plus 4 low-effort quick wins (grant tightening, policy normalization, WITH CHECK addition, and a business decision on delegation semantics). The target state is full ADR-024 compliance: all client-callable RPCs derive casino and actor identity from authoritative session context, never from user-supplied parameters.
++  - **Summary:** SEC-007 (EXEC-040) remediated all P0 critical and P1 high tenant isolation findings. Five P2 findings were explicitly deferred to WS11. This PRD covers the deferred P2 remediation work: removing spoofable `p_casino_id` validate-pattern parameters from 12 RPCs and cascading the change to **11 production TypeScript callsites across 6 files** (RatingSlip, TableContext, Player, FloorLayout). `services/visit/crud.ts` remains untouched because its `p_casino_id` references target **out-of-scope RPCs**. The target state is full ADR-024 compliance: all client-callable RPCs derive casino and actor identity from authoritative session context, never from user-supplied parameters.
+@@
+-| **G3**: SEC-003 CI gate runs zero-tolerance | SEC-003 hard-fails on any `p_casino_id` param |
++| **G3**: SEC-003 enforcement is ship-safe | **POST-SHIP hardening** (WS6): SEC-003 hard-fails on NEW `p_casino_id` identity params; allowlist permitted for known deferred/out-of-scope RPCs. This release ships the remediation (P2-1) and keeps SEC-003 at its current severity for allowlisted items. |
+@@
+ ## Appendix A: P2-1 RPC Inventory
+@@
+-| 5 | `rpc_update_table_status` | TableContext | 3 | 2 | `services/table-context/table-session.ts` |
++| 5 | `rpc_update_table_status` | TableContext | 3 | 2 | *(0 production callsites — migration only)* |
+@@
+ > **Note:** This is why **G2** is scoped to *in-scope* callsites for the 12 P2-1 RPCs only.
++
++> **Explicit exclusion:** `services/visit/crud.ts` contains `p_casino_id` references but only for **out-of-scope RPCs**; do not modify it as part of PRD-041.
+diff --git a/docs/21-exec-spec/EXEC-041-adr024-p2-validate-to-derive.md b/docs/21-exec-spec/EXEC-041-adr024-p2-validate-to-derive.md
+--- a/docs/21-exec-spec/EXEC-041-adr024-p2-validate-to-derive.md
++++ b/docs/21-exec-spec/EXEC-041-adr024-p2-validate-to-derive.md
+@@
+   WS6:
+     name: CI Gate Hardening (POST-SHIP)
+     description: "POST-SHIP: Upgrade SEC-003 p_casino_id path from notice-only to hard-fail with allowlist for known-deferred RPCs, add p_created_by_staff_id as NOTICE-level detection, then run the full security gate suite"
+@@
+     estimated_complexity: low
++    deferred: true
+@@
+ execution_phases:
+@@
+-  - name: "Phase 6 — CI Hardening"
+-    parallel: [WS6]
+-    gates: [test-pass]
++  # WS6 is POST-SHIP hardening and intentionally excluded from ship gating.
+@@
+ ## Definition of Done
+@@
+-- [ ] `./supabase/tests/security/run_all_gates.sh` passes on the remediated schema
++- [ ] Build gate passes (`npm run db:types-local`, `npm run type-check`, `npm run build`)
++
++### Post-ship (Recommended Hardening)
++
++- [ ] (WS6) Upgrade SEC-003 identity-param check from NOTICE-only to hard-fail with allowlist for known-deferred/out-of-scope RPCs.
++- [ ] (WS6) `./supabase/tests/security/run_all_gates.sh` passes on the remediated schema after WS6 lands.

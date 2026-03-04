@@ -501,7 +501,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
         // Close the slip
         await supabase.rpc('rpc_close_rating_slip', {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         });
       }
@@ -707,7 +706,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip1!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
         p_average_bet: 50.0,
       });
@@ -737,7 +735,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip2!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip2!.id,
         p_average_bet: 75.0,
       });
@@ -793,7 +790,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip!.id,
       });
 
@@ -839,7 +835,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(sourceSlip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
       });
 
@@ -1121,7 +1116,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(sourceSlip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
       });
 

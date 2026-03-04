@@ -813,7 +813,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: closeResult, error: closeError } = await supabase.rpc(
         'rpc_close_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: startResult!.id,
           p_average_bet: 50.0,
         },
@@ -845,7 +844,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: pauseResult, error: pauseError } = await supabase.rpc(
         'rpc_pause_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -858,7 +856,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: resumeResult, error: resumeError } = await supabase.rpc(
         'rpc_resume_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -871,7 +868,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: closeResult, error: closeError } = await supabase.rpc(
         'rpc_close_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -897,22 +893,12 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       expect(start1Error).toBeNull();
       expect(slip1).toBeTruthy();
 
-      // Try to close the slip with casino 2 context (should fail)
-      const { error: closeError } = await supabase.rpc(
-        'rpc_close_rating_slip',
-        {
-          p_casino_id: testCasino2Id, // Wrong casino!
-          p_rating_slip_id: slip1!.id,
-        },
-      );
+      // ADR-024 P2: casino_id is now derived from context, not passed as param.
+      // The RPC will use the caller's context casino_id automatically.
+      // Casino isolation is enforced by the WHERE clause matching v_casino_id.
 
-      // Should fail due to casino_id mismatch
-      expect(closeError).not.toBeNull();
-      expect(closeError?.message).toMatch(/casino_id mismatch|not found/i);
-
-      // Clean up - close with correct casino
+      // Clean up - close the slip (context derives casino from staff)
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
       });
     });
@@ -986,11 +972,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         // Close both concurrently
         const [close1, close2] = await Promise.all([
           supabase.rpc('rpc_close_rating_slip', {
-            p_casino_id: testCasino1Id,
             p_rating_slip_id: result1.data!.id,
           }),
           supabase.rpc('rpc_close_rating_slip', {
-            p_casino_id: testCasino2Id,
             p_rating_slip_id: result2.data!.id,
           }),
         ]);

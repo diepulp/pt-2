@@ -50,7 +50,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         const service = createRatingSlipService(mwCtx.supabase);
 
         // ADR-024: actor_id now derived internally via set_rls_context_from_staff()
-        const slip = await service.pause(mwCtx.rlsContext!.casinoId, params.id);
+        const slip = await service.pause(params.id);
 
         return {
           ok: true as const,

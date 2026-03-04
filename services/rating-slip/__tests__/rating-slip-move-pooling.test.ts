@@ -84,7 +84,7 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act
       // Simulate move endpoint flow
-      const closedSlip = await service.close(casinoId, originSlip.id, {
+      const closedSlip = await service.close(originSlip.id, {
         average_bet: 50.0,
       });
 
@@ -127,7 +127,7 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act - Run moves concurrently (simulates production load)
       const movePromises = fixtures.map(async (fixture) => {
-        const closedSlip = await service.close(casinoId, fixture.slipId);
+        const closedSlip = await service.close(fixture.slipId);
         const newSlip = await service.start(casinoId, actorId, {
           visit_id: fixture.visitId,
           table_id: fixture.destTableId,
@@ -176,8 +176,8 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act - Close both slips (different contexts)
       const [closed1, closed2] = await Promise.all([
-        service.close(casino1Id, slip1.id),
-        service.close(casino2Id, slip2.id),
+        service.close(slip1.id),
+        service.close(slip2.id),
       ]);
 
       // Assert - Each slip closed with correct context
@@ -206,7 +206,7 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       let error: DomainError | null = null;
       try {
-        await service.close(casinoId, slip.id);
+        await service.close(slip.id);
       } catch (e) {
         error = e as DomainError;
       }

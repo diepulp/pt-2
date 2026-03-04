@@ -285,7 +285,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // 2. Pause slip
-      await service.pause(testCasinoId, testActorId, slip1.id);
+      await service.pause(slip1.id);
 
       // Wait 100ms in paused state
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -311,7 +311,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(moveResult.closed_slip.duration_seconds).toBeDefined();
 
       // Clean up
-      await service.close(testCasinoId, testActorId, moveResult.new_slip.id);
+      await service.close(moveResult.new_slip.id);
     });
 
     it('should handle paused -> closed scenario (normal pause duration subtracted)', async () => {
@@ -328,13 +328,13 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       await new Promise((resolve) => setTimeout(resolve, 200));
 
       // 2. Pause
-      await service.pause(testCasinoId, testActorId, slip.id);
+      await service.pause(slip.id);
 
       // Wait 100ms in paused state
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 3. Close directly from paused state
-      const closed = await service.close(testCasinoId, testActorId, slip.id);
+      const closed = await service.close(slip.id);
 
       // Duration should exclude paused time
       expect(closed.duration_seconds).toBeGreaterThanOrEqual(0);
@@ -432,7 +432,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // 3. Close slip (should handle open pause)
-      const closed = await service.close(testCasinoId, testActorId, slip.id);
+      const closed = await service.close(slip.id);
 
       // Should not crash, should use slip end_time as failsafe
       expect(closed.duration_seconds).toBeGreaterThanOrEqual(0);
@@ -488,7 +488,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(moveResult.new_slip.seat_number).toBe('2');
 
       // Clean up
-      await service.close(testCasinoId, testActorId, moveResult.new_slip.id);
+      await service.close(moveResult.new_slip.id);
     });
 
     it('should propagate move_group_id on subsequent moves', async () => {
@@ -533,7 +533,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       );
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip3.id);
+      await service.close(slip3.id);
     });
 
     it('should build correct chain traversable via previous_slip_id', async () => {
@@ -577,7 +577,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(slip1Retrieved.previous_slip_id).toBeNull();
 
       // Clean up
-      await service.close(testCasinoId, testActorId, move2.new_slip.id);
+      await service.close(move2.new_slip.id);
     });
   });
 
@@ -633,7 +633,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(liveView!.segments!.length).toBe(2);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, move1.new_slip.id);
+      await service.close(move1.new_slip.id);
     });
 
     it('should handle segments array pagination', async () => {
@@ -680,7 +680,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(liveView!.session_segment_count).toBe(3); // Total count
 
       // Clean up
-      await service.close(testCasinoId, testActorId, currentSlipId);
+      await service.close(currentSlipId);
     });
 
     it('should return null for non-existent visit', async () => {
@@ -780,7 +780,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(openSlips.length).toBe(1);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, slip1.id);
+      await service.close(slip1.id);
     });
 
     it('should allow new slip after move operation completes', async () => {
@@ -820,7 +820,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(openSlips[0].id).toBe(moveResult.new_slip.id);
 
       // Clean up
-      await service.close(testCasinoId, testActorId, moveResult.new_slip.id);
+      await service.close(moveResult.new_slip.id);
     });
   });
 
@@ -855,7 +855,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       expect(moveResult.new_slip.game_settings).toEqual({ min_bet: 50 });
 
       // Clean up
-      await service.close(testCasinoId, testActorId, moveResult.new_slip.id);
+      await service.close(moveResult.new_slip.id);
     });
 
     it('should reject move on already closed slip', async () => {
@@ -868,7 +868,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       fixture.slipIds.push(slip.id);
 
       // Close slip
-      await service.close(testCasinoId, testActorId, slip.id);
+      await service.close(slip.id);
 
       // Attempt move on closed slip
       await expect(

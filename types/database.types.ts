@@ -3653,11 +3653,7 @@ export type Database = {
         }
       }
       rpc_activate_floor_layout: {
-        Args: {
-          p_casino_id: string
-          p_layout_version_id: string
-          p_request_id: string
-        }
+        Args: { p_layout_version_id: string; p_request_id: string }
         Returns: {
           activated_at: string
           activated_by: string
@@ -3708,11 +3704,7 @@ export type Database = {
       }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
       rpc_close_rating_slip: {
-        Args: {
-          p_average_bet?: number
-          p_casino_id: string
-          p_rating_slip_id: string
-        }
+        Args: { p_average_bet?: number; p_rating_slip_id: string }
         Returns: {
           duration_seconds: number
           slip: Database["public"]["Tables"]["rating_slip"]["Row"]
@@ -3936,7 +3928,7 @@ export type Database = {
         }
       }
       rpc_create_floor_layout: {
-        Args: { p_casino_id: string; p_description: string; p_name: string }
+        Args: { p_description: string; p_name: string }
         Returns: {
           approved_by: string | null
           casino_id: string
@@ -3994,7 +3986,6 @@ export type Database = {
       rpc_create_player: {
         Args: {
           p_birth_date?: string
-          p_casino_id: string
           p_first_name: string
           p_last_name: string
         }
@@ -4519,7 +4510,6 @@ export type Database = {
       }
       rpc_log_table_drop: {
         Args: {
-          p_casino_id: string
           p_delivered_at?: string
           p_delivered_scan_at?: string
           p_drop_box_id: string
@@ -4557,7 +4547,6 @@ export type Database = {
       }
       rpc_log_table_inventory_snapshot: {
         Args: {
-          p_casino_id: string
           p_chipset: Json
           p_discrepancy_cents?: number
           p_note?: string
@@ -4605,7 +4594,6 @@ export type Database = {
       rpc_move_player: {
         Args: {
           p_average_bet?: number
-          p_casino_id: string
           p_new_seat_number?: string
           p_new_table_id: string
           p_slip_id: string
@@ -4658,7 +4646,7 @@ export type Database = {
         }
       }
       rpc_pause_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -4831,7 +4819,6 @@ export type Database = {
       rpc_request_table_credit: {
         Args: {
           p_amount_cents: number
-          p_casino_id: string
           p_chipset: Json
           p_received_by: string
           p_request_id: string
@@ -4868,7 +4855,6 @@ export type Database = {
       rpc_request_table_fill: {
         Args: {
           p_amount_cents: number
-          p_casino_id: string
           p_chipset: Json
           p_delivered_by: string
           p_received_by: string
@@ -4907,7 +4893,7 @@ export type Database = {
         Returns: Json
       }
       rpc_resume_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -5257,7 +5243,6 @@ export type Database = {
       }
       rpc_update_table_status: {
         Args: {
-          p_casino_id: string
           p_new_status: Database["public"]["Enums"]["table_status"]
           p_table_id: string
         }
