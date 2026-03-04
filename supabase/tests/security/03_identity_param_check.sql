@@ -130,9 +130,10 @@ BEGIN
       v_stale_count, v_stale;
   END IF;
 
-  -- Known deferred p_casino_id (notice)
+  -- Allowlisted p_casino_id → HARD FAIL (WS6 enforcement)
+  -- These RPCs must remove p_casino_id and derive from set_rls_context_from_staff().
   IF v_casino_warning_count > 0 THEN
-    RAISE NOTICE E'INFO [SEC-003]: % rpc_* function(s) with allowlisted p_casino_id (known deferred):\n%',
+    RAISE EXCEPTION E'FAIL [SEC-003]: % rpc_* function(s) still accept p_casino_id (ADR-024 violation):\n%Remove parameter and derive casino_id from set_rls_context_from_staff() session vars.',
       v_casino_warning_count, v_casino_warnings;
   END IF;
 
