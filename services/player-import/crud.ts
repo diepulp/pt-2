@@ -37,30 +37,22 @@ import {
  * Create a new import batch via RPC (idempotent).
  * Returns existing batch if idempotency_key matches.
  *
- * When `input.initial_status` is provided, the 5-parameter RPC overload is
- * called (added by PRD-039 migration 20260225145409). Omitting the field
- * falls back to the original 4-parameter signature for backward compatibility.
+ * Single canonical function with optional p_initial_status (DEFAULT NULL → 'staging').
+ * Server flow (PRD-039) passes 'created'; client flow omits it.
  */
 export async function createBatch(
   supabase: SupabaseClient<Database>,
   input: CreateBatchInput,
 ): Promise<ImportBatchDTO> {
-  const baseParams = {
+  const { data, error } = await supabase.rpc('rpc_import_create_batch', {
     p_idempotency_key: input.idempotency_key,
     p_file_name: input.file_name,
     p_vendor_label: input.vendor_label ?? '',
     p_column_mapping: toRpcColumnMapping(input.column_mapping),
-  };
-
-  const rpcCall =
-    input.initial_status !== undefined
-      ? supabase.rpc('rpc_import_create_batch', {
-          ...baseParams,
-          p_initial_status: input.initial_status,
-        })
-      : supabase.rpc('rpc_import_create_batch', baseParams);
-
-  const { data, error } = await rpcCall;
+    ...(input.initial_status !== undefined && {
+      p_initial_status: input.initial_status,
+    }),
+  });
 
   if (error) {
     throw mapRpcError(error);

@@ -179,7 +179,6 @@ export async function start(
 
   const { data, error } = await supabase.rpc('rpc_start_rating_slip', {
     p_casino_id: casinoId,
-    p_actor_id: actorId,
     p_visit_id: input.visit_id,
     p_table_id: input.table_id,
     p_seat_number: input.seat_number ?? '',

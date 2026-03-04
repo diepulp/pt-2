@@ -692,7 +692,6 @@ export async function startFromPrevious(
     'rpc_start_rating_slip',
     {
       p_casino_id: casinoId,
-      p_actor_id: actorId,
       p_visit_id: newVisit.id,
       p_table_id: request.destination_table_id,
       p_seat_number: String(request.destination_seat_number),

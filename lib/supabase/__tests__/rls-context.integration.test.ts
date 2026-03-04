@@ -9,12 +9,12 @@
  * - Migration 20251209183033_adr015_rls_context_rpc.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
- * - Database must have set_rls_context() RPC function
+ * - Database must have set_rls_context_internal() RPC function (service_role only)
  *
  * MANUAL VERIFICATION:
  * If tests fail with "function not found" error:
  * 1. Verify migration is applied: npx supabase migration list --linked
- * 2. Check database has function: SELECT * FROM pg_proc WHERE proname = 'set_rls_context'
+ * 2. Check database has function: SELECT * FROM pg_proc WHERE proname = 'set_rls_context_internal'
  * 3. Refresh Supabase schema cache or wait for auto-refresh
  *
  * @see docs/80-adrs/ADR-015-rls-context-injection.md
@@ -326,9 +326,9 @@ describe('RLS Context Integration (ADR-015)', () => {
   // 2. set_rls_context RPC Tests
   // ===========================================================================
 
-  describe('set_rls_context RPC', () => {
-    it('should successfully call set_rls_context with valid parameters', async () => {
-      const { error } = await supabase.rpc('set_rls_context', {
+  describe('set_rls_context_internal RPC (service_role ops lane)', () => {
+    it('should successfully call set_rls_context_internal with valid parameters', async () => {
+      const { error } = await supabase.rpc('set_rls_context_internal', {
         p_actor_id: testStaff1Id,
         p_casino_id: testCasino1Id,
         p_staff_role: 'pit_boss',
@@ -338,8 +338,8 @@ describe('RLS Context Integration (ADR-015)', () => {
       expect(error).toBeNull();
     });
 
-    it('should successfully call set_rls_context without correlation_id', async () => {
-      const { error } = await supabase.rpc('set_rls_context', {
+    it('should successfully call set_rls_context_internal without correlation_id', async () => {
+      const { error } = await supabase.rpc('set_rls_context_internal', {
         p_actor_id: testStaff1Id,
         p_casino_id: testCasino1Id,
         p_staff_role: 'pit_boss',
@@ -352,7 +352,7 @@ describe('RLS Context Integration (ADR-015)', () => {
     it('should handle invalid UUID parameters gracefully', async () => {
       const invalidUuid = 'not-a-uuid';
 
-      const { error } = await supabase.rpc('set_rls_context', {
+      const { error } = await supabase.rpc('set_rls_context_internal', {
         // @ts-expect-error - Testing invalid input
         p_actor_id: invalidUuid,
         p_casino_id: testCasino1Id,
@@ -368,7 +368,7 @@ describe('RLS Context Integration (ADR-015)', () => {
       const roles = ['dealer', 'pit_boss', 'admin'];
 
       for (const role of roles) {
-        const { error } = await supabase.rpc('set_rls_context', {
+        const { error } = await supabase.rpc('set_rls_context_internal', {
           p_actor_id: testStaff1Id,
           p_casino_id: testCasino1Id,
           p_staff_role: role,
@@ -387,12 +387,15 @@ describe('RLS Context Integration (ADR-015)', () => {
   describe('Hybrid Policy Fallback', () => {
     it('should work with SET LOCAL context variables', async () => {
       // Set context via RPC
-      const { error: rpcError } = await supabase.rpc('set_rls_context', {
-        p_actor_id: testStaff1Id,
-        p_casino_id: testCasino1Id,
-        p_staff_role: 'pit_boss',
-        p_correlation_id: 'test-correlation-005',
-      });
+      const { error: rpcError } = await supabase.rpc(
+        'set_rls_context_internal',
+        {
+          p_actor_id: testStaff1Id,
+          p_casino_id: testCasino1Id,
+          p_staff_role: 'pit_boss',
+          p_correlation_id: 'test-correlation-005',
+        },
+      );
 
       expect(rpcError).toBeNull();
 

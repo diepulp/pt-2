@@ -85,7 +85,9 @@ export interface IngestionReport {
  * @returns Final ingestion report.
  * @throws Error with code 'BATCH_ROW_LIMIT' if the row cap is exceeded.
  *         The batch is failed in the DB before the error is thrown.
- * @throws Any csv-parse or pg error propagates to the caller (poll loop).
+ * @throws Error with code 'BATCH_PARSE_ERROR' for unrecoverable CSV parse
+ *         errors (malformed quoting, encoding issues, etc.). The batch is
+ *         failed in the DB before the error is thrown.
  */
 export async function ingestBatch(
   pool: pg.Pool,
@@ -129,75 +131,92 @@ export async function ingestBatch(
     }),
   );
 
-  for await (const record of parser) {
-    const fields = record as string[];
+  try {
+    for await (const record of parser) {
+      const fields = record as string[];
 
-    // --- Header row ---
-    if (headerRow === null) {
-      headerRow = fields;
-      normalizedHeaders = normalizeHeaders(headerRow);
-      logger.info('CSV headers normalized', {
-        batch_id: batch.id,
-        header_count: normalizedHeaders.length,
-      });
-      continue;
-    }
-
-    // --- Row cap check (fires at ROW_CAP, i.e. the 10,001st data row) ---
-    rowNumber++;
-    if (rowNumber >= ROW_CAP) {
-      await repo.failBatch(pool, batch.id, 'BATCH_ROW_LIMIT');
-      logger.error('Row cap exceeded — batch failed', {
-        batch_id: batch.id,
-        row_count: rowNumber,
-        cap: ROW_CAP,
-      });
-      // Signal to the poll loop that this was an expected cap failure, not a
-      // transient error — so the poll loop does not retry the same batch.
-      throw new Error('BATCH_ROW_LIMIT');
-    }
-
-    // --- Build raw row object keyed by normalized header names ---
-    const rawRow: Record<string, string | null> = {};
-    for (let i = 0; i < normalizedHeaders.length; i++) {
-      // Fields beyond the header count are discarded (relax_column_count may
-      // produce extra columns for malformed rows — ignore them).
-      rawRow[normalizedHeaders[i]!] =
-        fields[i] !== undefined ? fields[i]! : null;
-    }
-
-    // --- Normalize and validate ---
-    const normalized = normalizeRow(
-      rawRow,
-      normalizedHeaders,
-      batch.column_mapping,
-      rowNumber,
-      sourceMeta,
-    );
-    const result = validateRow(normalized);
-
-    if (result.valid) {
-      validRows++;
-    } else {
-      invalidRows++;
-    }
-
-    chunk.push(result);
-
-    // --- Flush chunk ---
-    if (chunk.length >= config.CHUNK_SIZE) {
-      await flushChunk(pool, batch, chunk, logger);
-      chunk.length = 0;
-
-      // Heartbeat after each flush, but throttled to HEARTBEAT_INTERVAL_MS.
-      const now = Date.now();
-      if (now - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
-        await repo.updateHeartbeat(pool, batch.id);
-        lastHeartbeatMs = now;
+      // --- Header row ---
+      if (headerRow === null) {
+        headerRow = fields;
+        normalizedHeaders = normalizeHeaders(headerRow);
+        logger.info('CSV headers normalized', {
+          batch_id: batch.id,
+          header_count: normalizedHeaders.length,
+        });
+        continue;
       }
 
-      await repo.updateProgress(pool, batch.id, rowNumber);
+      // --- Row cap check (fires at ROW_CAP, i.e. the 10,001st data row) ---
+      rowNumber++;
+      if (rowNumber >= ROW_CAP) {
+        await repo.failBatch(pool, batch.id, 'BATCH_ROW_LIMIT');
+        logger.error('Row cap exceeded — batch failed', {
+          batch_id: batch.id,
+          row_count: rowNumber,
+          cap: ROW_CAP,
+        });
+        // Signal to the poll loop that this was an expected cap failure, not a
+        // transient error — so the poll loop does not retry the same batch.
+        throw new Error('BATCH_ROW_LIMIT');
+      }
+
+      // --- Build raw row object keyed by normalized header names ---
+      const rawRow: Record<string, string | null> = {};
+      for (let i = 0; i < normalizedHeaders.length; i++) {
+        // Fields beyond the header count are discarded (relax_column_count may
+        // produce extra columns for malformed rows — ignore them).
+        rawRow[normalizedHeaders[i]!] =
+          fields[i] !== undefined ? fields[i]! : null;
+      }
+
+      // --- Normalize and validate ---
+      const normalized = normalizeRow(
+        rawRow,
+        normalizedHeaders,
+        batch.column_mapping,
+        rowNumber,
+        sourceMeta,
+      );
+      const result = validateRow(normalized);
+
+      if (result.valid) {
+        validRows++;
+      } else {
+        invalidRows++;
+      }
+
+      chunk.push(result);
+
+      // --- Flush chunk ---
+      if (chunk.length >= config.CHUNK_SIZE) {
+        await flushChunk(pool, batch, chunk, logger);
+        chunk.length = 0;
+
+        // Heartbeat after each flush, but throttled to HEARTBEAT_INTERVAL_MS.
+        const now = Date.now();
+        if (now - lastHeartbeatMs >= HEARTBEAT_INTERVAL_MS) {
+          await repo.updateHeartbeat(pool, batch.id);
+          lastHeartbeatMs = now;
+        }
+
+        await repo.updateProgress(pool, batch.id, rowNumber);
+      }
     }
+  } catch (err) {
+    // BATCH_ROW_LIMIT is already failed in DB above — let it propagate.
+    if (err instanceof Error && err.message === 'BATCH_ROW_LIMIT') {
+      throw err;
+    }
+
+    // Unrecoverable parse error (malformed CSV, encoding issues, etc.).
+    // Fail the batch immediately so the reaper does not reset it for retry.
+    const detail = err instanceof Error ? err.message : String(err);
+    await repo.failBatch(pool, batch.id, 'BATCH_PARSE_ERROR');
+    logger.error('CSV parse error — batch failed', {
+      batch_id: batch.id,
+      error: detail,
+    });
+    throw new Error('BATCH_PARSE_ERROR');
   }
 
   // --- Final flush for the remaining partial chunk ---

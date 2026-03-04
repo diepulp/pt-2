@@ -66,18 +66,18 @@ type _AssertHasLastErrorCode = 'last_error_code' extends keyof ImportBatchRow
   : never;
 const _hasLastErrorCodeCheck: _AssertHasLastErrorCode = true;
 
-// RPC must have the 5-parameter overload with p_initial_status
-// The RPC has two overloads (union type); use distributive conditional
-type CreateBatchOverloads =
+// RPC must have p_initial_status parameter (DA P0-1)
+type CreateBatchType =
   Database['public']['Functions']['rpc_import_create_batch'];
-type _OverloadHasInitialStatus<T> = T extends { Args: infer A }
+type _HasInitialStatus = CreateBatchType extends { Args: infer A }
   ? 'p_initial_status' extends keyof A
     ? true
     : never
   : never;
-type _AssertAnyOverloadHasInitialStatus =
-  _OverloadHasInitialStatus<CreateBatchOverloads> extends never ? never : true;
-const _hasInitialStatusCheck: _AssertAnyOverloadHasInitialStatus = true;
+type _AssertHasInitialStatusCheck = _HasInitialStatus extends never
+  ? never
+  : true;
+const _hasInitialStatusCheck: _AssertHasInitialStatusCheck = true;
 
 // ============================================================================
 // Type Contract Tests
