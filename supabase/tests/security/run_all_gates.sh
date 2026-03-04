@@ -13,7 +13,6 @@ set -uo pipefail
 # Requires:
 #   - Supabase local stack running (supabase start)
 #   - psql on PATH OR docker on PATH (auto-detects)
-#   - docker available on PATH (for bash gates 05, 06)
 #
 # Exit codes:
 #   0 = all gates passed
@@ -54,8 +53,8 @@ GATES=(
   "sql|02_overload_ambiguity_check.sql|SEC-002 Overload ambiguity check"
   "sql|03_identity_param_check.sql|SEC-003 Identity parameter check"
   "sql|04_public_execute_check.sql|SEC-004 Public EXECUTE check"
-  "bash|05_deprecated_context_check.sh|SEC-005 Deprecated context check (rpc_* only)"
-  "bash|06_context_first_line_check.sh|SEC-006 Context first-line check"
+  "sql|05_deprecated_context_check.sql|SEC-005 Deprecated context check (rpc_* only)"
+  "sql|06_context_first_line_check.sql|SEC-006 Context first-line check"
   "sql|07_dashboard_rpc_context_acceptance.sql|SEC-007 Dashboard RPC acceptance"
   "sql|08_deprecated_function_body_check.sql|SEC-008 Deprecated function body check"
 )
@@ -82,18 +81,13 @@ for gate in "${GATES[@]}"; do
     continue
   fi
 
-  # Run the gate and capture output (limit to last 20 lines to keep CI concise)
-  if [[ "$gate_type" == "sql" ]]; then
-    if [[ "$USE_DOCKER" == "true" ]]; then
-      OUTPUT=$(docker exec -i "$CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$gate_path" 2>&1 | tail -20)
-      EXIT_CODE=${PIPESTATUS[0]}
-    else
-      OUTPUT=$(psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "$gate_path" 2>&1 | tail -20)
-      EXIT_CODE=${PIPESTATUS[0]}
-    fi
+  # Run the gate (all gates are SQL; runner handles psql vs docker exec)
+  if [[ "$USE_DOCKER" == "true" ]]; then
+    OUTPUT=$(docker exec -i "$CONTAINER" psql -U postgres -d postgres -v ON_ERROR_STOP=1 < "$gate_path" 2>&1 | tail -20)
+    EXIT_CODE=${PIPESTATUS[0]}
   else
-    OUTPUT=$(bash "$gate_path" 2>&1 | tail -20)
-    EXIT_CODE=$?
+    OUTPUT=$(psql "${DB_URL}" -v ON_ERROR_STOP=1 -f "$gate_path" 2>&1 | tail -20)
+    EXIT_CODE=${PIPESTATUS[0]}
   fi
 
   if [[ $EXIT_CODE -eq 0 ]]; then
