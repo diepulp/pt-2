@@ -2,26 +2,27 @@
 # ==============================================================================
 # RPC Self-Injection Pattern Lint
 # ==============================================================================
-# Version: 2.0.0
-# Date: 2025-12-29
+# Version: 3.0.0
+# Date: 2026-03-04
 # References:
-#   - ADR-024: RLS Context Self-Injection Remediation (PREFERRED)
-#   - PRD-015: ADR-015 Phase 1A Remediation (legacy)
+#   - ADR-024: Authoritative context derivation (set_rls_context_from_staff)
+#   - ADR-030: Auth pipeline hardening
+#   - SEC-007: Tenant isolation enforcement
 #   - ADR-015: RLS Connection Pooling Strategy (Hybrid Pattern C)
 #   - ADR-018: SEC-006 Security Hardening (casino_id validation)
-#   - ISSUE-5FE4A689: RPC self-injection systematic gap
 #
 # Enforces that all RPC functions include the self-injection pattern to
 # prevent context loss in Supabase's transaction mode connection pooling.
 #
 # RULES:
 # 1. If a migration creates/modifies an RPC function (CREATE OR REPLACE FUNCTION rpc_*),
-#    it MUST call EITHER:
-#    - set_rls_context_from_staff() (ADR-024 PREFERRED - no spoofable params)
-#    - set_rls_context() (ADR-015 legacy - accepts params)
+#    it MUST call set_rls_context_from_staff() (ADR-024).
+#    NOTE: set_rls_context() was DROPPED in SEC-007. It no longer exists.
 # 2. SECURITY DEFINER RPCs with p_casino_id parameter MUST include
 #    casino_id mismatch validation (ADR-018 Template 5) - UNLESS using ADR-024 pattern
 #    which derives casino_id authoritatively.
+# 3. New RPCs must NOT accept p_actor_id (spoofable identity, ADR-024 violation)
+#    or p_casino_id (must derive from context, WS6 SEC-003 enforcement).
 #
 # This prevents future regressions where RPCs are created without the
 # self-injection pattern, causing context loss across pooled connections.
@@ -58,14 +59,26 @@ for FILE in $MIGRATION_FILES; do
 
   if [ "$RPC_COUNT" -gt 0 ]; then
     # RPC function(s) found - verify context injection call exists
-    # ADR-024 pattern (PREFERRED): set_rls_context_from_staff()
+    # ADR-024: set_rls_context_from_staff() is the ONLY accepted pattern
+    # NOTE: set_rls_context() was DROPPED in SEC-007 and no longer exists.
     CONTEXT_CALL_ADR024=$(grep -icE 'PERFORM\s+set_rls_context_from_staff\s*\(' "$FILE" || true)
-    # ADR-015 legacy pattern: set_rls_context(actor_id, casino_id, role)
-    CONTEXT_CALL_LEGACY=$(grep -icE 'PERFORM\s+set_rls_context\s*\(' "$FILE" || true)
 
-    TOTAL_CONTEXT_CALLS=$((CONTEXT_CALL_ADR024 + CONTEXT_CALL_LEGACY))
+    # Detect usage of dropped function (hard fail with clear message)
+    CONTEXT_CALL_DROPPED=$(grep -icE 'PERFORM\s+set_rls_context\s*\(' "$FILE" | grep -v 'set_rls_context_from_staff\|set_rls_context_internal' || true)
+    if [ -z "$CONTEXT_CALL_DROPPED" ]; then
+      CONTEXT_CALL_DROPPED=0
+    fi
 
-    if [ "$TOTAL_CONTEXT_CALLS" -eq 0 ]; then
+    if [ "$CONTEXT_CALL_DROPPED" -gt 0 ]; then
+      echo "❌ DROPPED FUNCTION REFERENCE: $FILE"
+      echo ""
+      echo "   Migration calls set_rls_context() which was DROPPED in SEC-007."
+      echo "   This function no longer exists and will fail at runtime."
+      echo ""
+      echo "   FIX: Replace with set_rls_context_from_staff() (ADR-024)"
+      echo ""
+      VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+    elif [ "$CONTEXT_CALL_ADR024" -eq 0 ]; then
       echo "❌ RPC SELF-INJECTION VIOLATION: $FILE"
       echo ""
       echo "   Found $RPC_COUNT RPC function(s) but NO context injection call"
@@ -75,7 +88,7 @@ for FILE in $MIGRATION_FILES; do
       echo "   • SET LOCAL context is lost between transactions"
       echo "   • RPC must inject context in same transaction as operation"
       echo ""
-      echo "   REQUIRED PATTERN (ADR-024 PREFERRED):"
+      echo "   REQUIRED PATTERN (ADR-024):"
       echo "   ────────────────────────────────────────────────────────────"
       echo "   CREATE OR REPLACE FUNCTION rpc_your_function(...) ..."
       echo "   BEGIN"
@@ -85,22 +98,15 @@ for FILE in $MIGRATION_FILES; do
       echo "   END;"
       echo "   ────────────────────────────────────────────────────────────"
       echo ""
-      echo "   ALTERNATIVE (ADR-015 Legacy - accepts params):"
-      echo "   ────────────────────────────────────────────────────────────"
-      echo "     PERFORM set_rls_context(actor_id, casino_id, staff_role);"
-      echo "   ────────────────────────────────────────────────────────────"
+      echo "   NOTE: set_rls_context() was DROPPED in SEC-007. Do NOT use it."
       echo ""
       echo "   REFERENCE:"
-      echo "   • ADR-024: docs/80-adrs/ADR-024_DECISIONS.md (preferred)"
-      echo "   • ADR-015: supabase/migrations/*_prd015_*_self_injection.sql"
+      echo "   • ADR-024: docs/80-adrs/ADR-024_DECISIONS.md"
+      echo "   • SEC-007: docs/30-security/SEC-007-tenant-isolation-enforcement-contract.md"
       echo ""
       VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
     else
-      if [ "$CONTEXT_CALL_ADR024" -gt 0 ]; then
-        echo "✅ $FILE: $RPC_COUNT RPC function(s) with set_rls_context_from_staff (ADR-024)"
-      else
-        echo "✅ $FILE: $RPC_COUNT RPC function(s) with set_rls_context (ADR-015 legacy)"
-      fi
+      echo "✅ $FILE: $RPC_COUNT RPC function(s) with set_rls_context_from_staff (ADR-024)"
     fi
   fi
 done
@@ -108,7 +114,67 @@ done
 WARNINGS_FOUND=0
 
 # ==============================================================================
-# Check 2: SECURITY DEFINER RPCs with p_casino_id must validate casino scope
+# Check 2a: New RPCs must NOT accept p_actor_id (ADR-024 hard fail)
+# p_actor_id is a spoofable identity parameter — SEC-003 enforces this in CI.
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  if [ ! -f "$FILE" ]; then
+    continue
+  fi
+
+  # Only check files that define RPC functions
+  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+rpc_' "$FILE" || true)
+  if [ "$RPC_DEF_COUNT" -eq 0 ]; then
+    continue
+  fi
+
+  HAS_P_ACTOR_ID=$(grep -icE 'p_actor_id\s+uuid' "$FILE" || true)
+  if [ "$HAS_P_ACTOR_ID" -gt 0 ]; then
+    echo "❌ IDENTITY PARAMETER VIOLATION: $FILE"
+    echo ""
+    echo "   RPC function accepts p_actor_id — spoofable identity (ADR-024 violation)"
+    echo ""
+    echo "   FIX: Remove p_actor_id parameter. Derive actor_id from"
+    echo "   set_rls_context_from_staff() which sets app.actor_id from JWT."
+    echo ""
+    echo "   REFERENCE: ADR-024, SEC-003 (CI gate)"
+    echo ""
+    VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+  fi
+done
+
+# ==============================================================================
+# Check 2b: New RPCs must NOT accept p_casino_id (WS6 SEC-003 enforcement)
+# p_casino_id must be derived from context, not passed as a parameter.
+# ==============================================================================
+for FILE in $MIGRATION_FILES; do
+  if [ ! -f "$FILE" ]; then
+    continue
+  fi
+
+  RPC_DEF_COUNT=$(grep -icE 'CREATE\s+(OR\s+REPLACE\s+)?FUNCTION\s+rpc_' "$FILE" || true)
+  if [ "$RPC_DEF_COUNT" -eq 0 ]; then
+    continue
+  fi
+
+  HAS_P_CASINO_ID=$(grep -icE 'p_casino_id\s+uuid' "$FILE" || true)
+  if [ "$HAS_P_CASINO_ID" -gt 0 ]; then
+    echo "❌ IDENTITY PARAMETER VIOLATION: $FILE"
+    echo ""
+    echo "   RPC function accepts p_casino_id — must derive from context (ADR-024)"
+    echo ""
+    echo "   FIX: Remove p_casino_id parameter. Derive casino_id from"
+    echo "   current_setting('app.casino_id') which is set by"
+    echo "   set_rls_context_from_staff() at the top of the function."
+    echo ""
+    echo "   REFERENCE: ADR-024, SEC-003 (CI gate), WS6 enforcement (PR #14)"
+    echo ""
+    VIOLATIONS_FOUND=$((VIOLATIONS_FOUND + 1))
+  fi
+done
+
+# ==============================================================================
+# Check 3: SECURITY DEFINER RPCs with p_casino_id must validate casino scope
 # ADR-018 Template 5: Prevent caller-provided casino_id bypass attacks
 # NOTE: RPCs using ADR-024 set_rls_context_from_staff() are exempt since
 #       casino_id is derived authoritatively from staff table, not from params.
@@ -195,11 +261,11 @@ if [ "$VIOLATIONS_FOUND" -gt 0 ]; then
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo ""
   echo "REQUIRED ACTION:"
-  echo "  1. Add PERFORM set_rls_context(...) call to each RPC function"
+  echo "  1. Add PERFORM set_rls_context_from_staff() to each RPC function"
   echo "  2. Place call at START of function body (before any other logic)"
-  echo "  3. Follow ADR-015 Phase 1A pattern (see reference migrations)"
+  echo "  3. Do NOT use set_rls_context() — it was DROPPED in SEC-007"
   echo ""
-  echo "WHY: Prevents context loss in Supabase transaction pooling (ISSUE-5FE4A689)"
+  echo "WHY: Prevents context loss in Supabase transaction pooling (ADR-024)"
   echo ""
   exit 1
 fi
