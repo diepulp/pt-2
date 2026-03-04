@@ -2,14 +2,23 @@
 -- Purpose: Populate database with realistic test data for all rating slip workflows
 -- Coverage: 2 casinos, 6 players, 6 tables, all rating slip states
 -- Created: 2025-12-02
--- Updated: 2026-02-10 (PRD-029: game_settings.code column)
+-- Updated: 2026-03-03 (SEC-007/PRD-041: RLS hardening, second dev auth user for Casino 2)
 -- NOTE: All UUIDs use valid hex characters (0-9, a-f) only
 --
 -- ADR Compliance:
---   ADR-024: RLS context derived from staff table (no changes to seed needed)
+--   ADR-024: RLS context derived from staff table via set_rls_context_from_staff()
 --   ADR-026: Visits scoped to gaming day (visit.gaming_day + visit_group_id)
 --   ADR-027: Table bank mode visibility (casino_settings.table_bank_mode, gaming_table.par_total_cents)
 --   ADR-028: Table status standardization (table_session data, inventory snapshots)
+--   ADR-030: Auth pipeline hardening — write-path session-var enforcement, TOCTOU elimination
+--
+-- SEC-007 / PRD-041 Impact on Seed:
+--   - set_rls_context(uuid,uuid,text,text) DROPPED — seed never called it (service_role bypass)
+--   - set_rls_context_from_staff() is the sole authenticated RLS context path
+--   - audit_log INSERT now requires session-var context (no JWT fallback) — seed bypasses via service_role
+--   - casino_settings split into 4 operation-specific RLS policies — seed bypasses via service_role
+--   - 12 RPCs lost p_casino_id param (PRD-041) — seed uses direct INSERTs, not RPCs
+--   - Two dev auth users (one per casino) enable cross-casino RLS isolation testing
 
 -- ============================================================================
 -- SEED SETUP: Temporarily relax constraints for development data
@@ -959,6 +968,11 @@ INSERT INTO table_buyin_telemetry (
 -- ============================================================================
 -- 15. AUDIT LOG ENTRIES (Sample compliance records)
 -- ============================================================================
+-- SEC-007 P0-2: audit_log INSERT policy now enforces session-var-only:
+--   casino_id = current_setting('app.casino_id')
+--   actor_id = current_setting('app.actor_id')
+--   INSERT revoked from authenticated role (RPCs use SECURITY DEFINER)
+-- Seed inserts bypass RLS via service_role.
 
 INSERT INTO audit_log (id, casino_id, domain, actor_id, action, details) VALUES
   -- Rating slip lifecycle events
@@ -1079,6 +1093,86 @@ INSERT INTO auth.identities (
 ) ON CONFLICT (provider, provider_id) DO NOTHING;
 
 -- ============================================================================
+-- 17b. DEVELOPMENT AUTH USER — CASINO 2 (SEC-007: cross-casino isolation testing)
+-- ============================================================================
+-- Second dev user enables testing RLS tenant isolation post-SEC-007.
+-- Linked to David Kim (pit boss) at Casino 2.
+--
+-- Credentials:
+--   Email: pitboss2@dev.local
+--   Password: devpass123
+--
+-- SEC-007 testing scenarios this enables:
+--   - Pattern C hybrid isolation: Casino 2 user cannot see Casino 1 data
+--   - Write-path session-var enforcement: audit_log, casino_settings scoped correctly
+--   - set_rls_context_from_staff() derives Casino 2 context from David Kim's staff record
+-- ============================================================================
+
+-- NOTE: phone/phone_change/phone_change_token omitted (default NULL) to avoid
+-- duplicate key on users_phone_key — first dev user already holds the '' value.
+INSERT INTO auth.users (
+  id,
+  instance_id,
+  email,
+  encrypted_password,
+  email_confirmed_at,
+  raw_app_meta_data,
+  raw_user_meta_data,
+  aud,
+  role,
+  created_at,
+  updated_at,
+  confirmation_token,
+  recovery_token,
+  email_change,
+  email_change_token_new,
+  email_change_token_current
+) VALUES (
+  'a0000000-0000-0000-0000-000000000de1',
+  '00000000-0000-0000-0000-000000000000',
+  'pitboss2@dev.local',
+  crypt('devpass123', gen_salt('bf')),
+  NOW(),
+  '{"provider": "email", "providers": ["email"], "casino_id": "ca000000-0000-0000-0000-000000000002", "staff_id": "5a000000-0000-0000-0000-000000000007", "staff_role": "pit_boss"}',
+  '{"name": "David Kim (Dev)", "role": "pit_boss"}',
+  'authenticated',
+  'authenticated',
+  NOW(),
+  NOW(),
+  '',
+  '',
+  '',
+  '',
+  ''
+) ON CONFLICT (id) DO NOTHING;
+
+-- Link dev auth user to David Kim staff record
+UPDATE staff
+SET user_id = 'a0000000-0000-0000-0000-000000000de1'
+WHERE id = '5a000000-0000-0000-0000-000000000007';
+
+-- Create identity for email login
+INSERT INTO auth.identities (
+  id,
+  user_id,
+  identity_data,
+  provider,
+  provider_id,
+  last_sign_in_at,
+  created_at,
+  updated_at
+) VALUES (
+  'a0000000-0000-0000-0000-000000000de1',
+  'a0000000-0000-0000-0000-000000000de1',
+  '{"sub": "a0000000-0000-0000-0000-000000000de1", "email": "pitboss2@dev.local"}',
+  'email',
+  'pitboss2@dev.local',
+  NOW(),
+  NOW(),
+  NOW()
+) ON CONFLICT (provider, provider_id) DO NOTHING;
+
+-- ============================================================================
 -- SEED TEARDOWN: Re-enable constraints
 -- ============================================================================
 -- Re-enable gaming day guard trigger
@@ -1103,15 +1197,24 @@ END $$;
 -- For local development/testing, we use mock staff without auth integration.
 --
 -- DEV USER CREDENTIALS (for integration testing):
---   Email: pitboss@dev.local
---   Password: devpass123
---   Staff: Marcus Thompson (Pit Boss, Casino 1)
+--   Casino 1: pitboss@dev.local / devpass123  — Marcus Thompson (Pit Boss)
+--   Casino 2: pitboss2@dev.local / devpass123 — David Kim (Pit Boss)
+--
+-- RLS Testing Notes (SEC-007 / PRD-041):
+--   - set_rls_context_from_staff() derives casino_id/staff_role from staff table, not JWT
+--   - JWT app_metadata includes casino_id for Pattern C hybrid fallback on read paths
+--   - Write paths (audit_log INSERT, casino_settings UPDATE) require session vars only
+--   - Two dev users enable cross-casino isolation testing
+--   - 12 RPCs no longer accept p_casino_id (PRD-041) — context derived authoritatively
 --
 -- ADR Compliance Summary:
---   ADR-024: RLS context derived from staff table (no seed changes needed)
+--   ADR-024: RLS context derived from staff table via set_rls_context_from_staff()
 --   ADR-026: Visits include gaming_day (auto-computed) + visit_group_id
 --   ADR-027: casino_settings.table_bank_mode, gaming_table.par_total_cents
 --   ADR-028: Table sessions with status lifecycle (ACTIVE/RUNDOWN/CLOSED)
+--   ADR-030: Auth pipeline hardening — write-path session-var enforcement
+--   SEC-007: P0/P1 RLS policy fixes (staff_read, audit_log, casino_settings)
+--   PRD-041: P2 validate-to-derive remediation (12 RPCs, p_casino_id removed)
 --
 -- Summary:
 -- - 1 Company
@@ -1119,6 +1222,7 @@ END $$;
 --     - Casino 1: INVENTORY_COUNT bank mode (ADR-027)
 --     - Casino 2: IMPREST_TO_PAR bank mode (ADR-027)
 -- - 10 Staff members (pit bosses, dealers, admins)
+--     - 2 staff linked to dev auth users (1 per casino, SEC-007)
 -- - 6 Gaming tables (3 active at Casino 1, 1 inactive, 2 at Casino 2)
 --     - All active tables have par_total_cents set (ADR-027)
 -- - 6 Game settings (per casino, per game type)
@@ -1155,4 +1259,5 @@ END $$;
 -- - 7 Dealer rotations
 -- - 5 Audit log entries
 -- - 4 MTL entries with 2 audit notes
+-- - 2 Dev auth users (1 per casino, for RLS isolation testing)
 -- ============================================================================
