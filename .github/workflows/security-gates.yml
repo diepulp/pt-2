@@ -1,8 +1,8 @@
 name: Security Gates
 
-# SEC-007 regression gates: runs 8 security assertion scripts against an
-# ephemeral Supabase local instance after every migration change.
-# All gates are pure SQL — executed via psql, no docker exec needed.
+# SEC-007 regression gates: runs 8 pure-SQL assertion scripts against an
+# ephemeral Supabase Postgres instance after every migration change.
+# No PostgREST, no Studio, no realtime — DB only.
 
 on:
   pull_request:
@@ -19,23 +19,23 @@ jobs:
   security-gates:
     name: SEC-007 Security Assertion Gates
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # ── Supabase CLI ──────────────────────────────────────────────
+      # ── Supabase CLI (pinned) ───────────────────────────────────
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.76.15
 
-      # ── Ephemeral DB ──────────────────────────────────────────────
-      - name: Start Supabase (ephemeral local instance)
+      # ── DB only — skip all non-DB services ──────────────────────
+      - name: Start Supabase DB
         run: |
-          supabase start 2>&1 | tail -5
-          echo "--- Supabase local stack is up ---"
+          supabase db start 2>&1 | tail -5
+          echo "--- Supabase DB is up ---"
 
       # ── Verify DB is ready ────────────────────────────────────────
       - name: Wait for DB readiness
@@ -51,6 +51,15 @@ jobs:
           done
           echo "ERROR: DB not ready after 30 seconds"
           exit 1
+
+      # ── Apply migrations (db start may not auto-apply) ──────────
+      - name: Apply migrations
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          # db start gives us a bare postgres; push migrations into it
+          supabase db push --local 2>&1 | tail -5
+          echo "--- Migrations applied ---"
 
       # ── Security Gate Tests ───────────────────────────────────────
       - name: Run security gate assertions
