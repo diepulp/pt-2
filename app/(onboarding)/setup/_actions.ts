@@ -225,7 +225,7 @@ export async function updateCasinoSettingsAction(
 
       const { data, error } = await supabase
         .from('casino_settings')
-        .update(validated)
+        .update(validated as Record<string, unknown>)
         .eq('casino_id', ctx.rlsContext!.casinoId)
         .select()
         .single();

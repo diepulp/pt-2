@@ -79,24 +79,33 @@ The Measurement Surface Guidance routes two of four ADR-039 artifacts to the Rep
 - Rating coverage → Shift Dashboard expansion slots + Pit Terminal (operational, shift-actionable)
 - Audit event correlation → Rating Slip Modal collapsible "Audit Trace" panel (investigative drill-down)
 
-### 3.3 Settings: Alert Thresholds — BACKEND READY
+### 3.3 Settings: Alert Thresholds — BACKEND PARTIALLY READY
 
 | Aspect | Detail |
 |---|---|
 | **Current state** | Thresholds hardcoded: $5K per table, $20K per pit (in `SHIFT_SEVERITY_ALLOWLISTS_v1.md`) |
-| **Target** | Configurable via `casino_settings.alert_thresholds` (JSON) |
+| **Target** | Configurable via `casino_settings.alert_thresholds` (JSONB) |
 | **Frontend gap** | No settings UI exists |
+| **Backend gap** | `PATCH /api/v1/casino/settings` exists but its Zod schema (`updateCasinoSettingsSchema`) does **not** accept `alert_thresholds`. The threshold Zod schemas exist (`updateAlertThresholdsSchema` at `services/casino/schemas.ts:276-290`) but are not wired into the route. ~10 lines to connect. |
 | **Future** | Baseline-based thresholds (7-day rolling median ± 3×MAD), per-casino configuration |
-| **Dependencies** | None — `casino_settings` table exists, write path TBD |
+| **Dependencies** | Schema wiring in PATCH route (PRD-042 WS0), `casino_settings` table exists |
 
-### 3.4 Settings: Shift Schedules — BACKEND READY
+### 3.4 Settings: Shift Configuration — BACKEND READY
+
+> **Correction (2026-03-04):** Previous version stated "`gaming_day` and `shift` tables exist."
+> This is incorrect. `gaming_day` is a **computed column** on ~10 tables (e.g., `mtl_entry`,
+> `rating_slip`, `table_session`), derived via `compute_gaming_day()` RPC. No standalone
+> `gaming_day` table exists. `shift` is not a table — `shift_checkpoint` stores per-shift
+> aggregate snapshots. Canonical temporal configuration lives in `casino_settings` alone.
+> See PRD-040 Appendix C and PRD-042 §2.1 for full correction.
 
 | Aspect | Detail |
 |---|---|
-| **Current state** | `gaming_day` and `shift` tables exist |
-| **Frontend gap** | No schedule config UI |
-| **What the page shows** | Gaming day window definitions, shift presets, temporal boundaries |
-| **Dependencies** | None — tables exist |
+| **Current state** | `casino_settings.gaming_day_start_time` (TIME) and `casino_settings.timezone` (TEXT) store temporal config. Set during setup wizard, no post-setup edit UI. |
+| **Frontend gap** | No configuration UI for gaming day boundaries or timezone |
+| **What the page shows** | Gaming day start time editor, timezone selector, visual preview of gaming day window |
+| **Shift presets** | No shift preset infrastructure exists (no tables, RPCs, or DTOs). Shifts are implicit from `gaming_day_start_time` + `shift_checkpoint` windows. Presets require a separate PRD if product determines they are needed. |
+| **Dependencies** | None — `casino_settings` columns exist, PATCH API handles these fields today |
 
 ### 3.5 Financial & Operational Reporting (Future Expansion)
 
@@ -284,9 +293,17 @@ The valid design tokens (accent bars, telemetry treatment, color scheme, typogra
 be cherry-picked. The architectural scaffolding (routes, file structure, layout reference,
 validation checklist) is fictional and will cause regression if followed.
 
-For the admin route build: follow the existing `app/(protected)/` and
-`components/shift-dashboard-v3/` patterns, not the doc's proposed `app/(dashboard)/admin/`
-and `components/admin/` structure.
+For the admin route build: follow the existing `app/(dashboard)/cashier/` pattern for
+role-scoped nested layouts. The cashier layout (`app/(dashboard)/cashier/layout.tsx`)
+provides the correct precedent — a sub-layout with role-specific chrome inside the main
+`(dashboard)` route group. The `(dashboard)` group includes `LockScreenProvider`, which
+benefits long-lived admin configuration surfaces. Place admin routes at
+`app/(dashboard)/admin/`, not `app/(protected)/admin/`.
+
+> **Correction (2026-03-04):** Previous version recommended `app/(protected)/` patterns.
+> This was incorrect. The `(protected)` group was used for the Shift Dashboard's layout
+> isolation needs (three-rail sticky layout), not as a role-gating precedent. The cashier
+> layout in `(dashboard)` is the correct architectural precedent for admin routes.
 
 ---
 

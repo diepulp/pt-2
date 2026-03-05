@@ -19,7 +19,7 @@ import type {
   BootstrapCasinoResult,
   CasinoDTO,
   CasinoListFilters,
-  CasinoSettingsDTO,
+  CasinoSettingsWithAlertsDTO,
   CasinoStaffFilters,
   CreateCasinoDTO,
   CreateInviteInput,
@@ -132,8 +132,8 @@ export async function deleteCasino(id: string): Promise<void> {
  * Fetches settings for the authenticated user's casino.
  * RLS automatically scopes to the user's casino.
  */
-export async function getCasinoSettings(): Promise<CasinoSettingsDTO> {
-  return fetchJSON<CasinoSettingsDTO>(`${BASE}/settings`);
+export async function getCasinoSettings(): Promise<CasinoSettingsWithAlertsDTO> {
+  return fetchJSON<CasinoSettingsWithAlertsDTO>(`${BASE}/settings`);
 }
 
 /**
@@ -145,8 +145,8 @@ export async function getCasinoSettings(): Promise<CasinoSettingsDTO> {
  */
 export async function updateCasinoSettings(
   input: UpdateCasinoSettingsDTO,
-): Promise<CasinoSettingsDTO> {
-  return fetchJSON<CasinoSettingsDTO>(`${BASE}/settings`, {
+): Promise<CasinoSettingsWithAlertsDTO> {
+  return fetchJSON<CasinoSettingsWithAlertsDTO>(`${BASE}/settings`, {
     method: 'PATCH',
     headers: {
       'content-type': 'application/json',

@@ -88,7 +88,7 @@ export async function updateCasinoSettingsAction(
   };
 
   const validated = setupCasinoSettingsSchema.parse(raw);
-  return devResult(mockCasinoSettingsRow(validated));
+  return devResult(mockCasinoSettingsRow(validated as Record<string, unknown>));
 }
 
 // ---------------------------------------------------------------------------
