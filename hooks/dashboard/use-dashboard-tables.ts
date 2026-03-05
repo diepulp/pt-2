@@ -57,7 +57,6 @@ export function useDashboardTables(
       // casinoId is guaranteed to be defined here due to enabled: !!casinoId
       const { data, error } = await supabase.rpc(
         'rpc_get_dashboard_tables_with_counts',
-        { p_casino_id: casinoId! },
       );
 
       if (error) {

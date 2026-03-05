@@ -51,7 +51,6 @@ export function buildMidSessionRewardRpcInput(
   assertIdempotencyKey(input.idempotencyKey);
 
   return {
-    p_casino_id: input.casinoId,
     p_player_id: input.playerId,
     p_rating_slip_id: input.ratingSlipId,
     p_points: input.points,

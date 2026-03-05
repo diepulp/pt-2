@@ -315,7 +315,6 @@ export interface MidSessionRewardInput {
  * RPC parameter shape for rpc_issue_mid_session_reward.
  */
 export interface MidSessionRewardRpcInput {
-  p_casino_id: string;
   p_player_id: string;
   p_rating_slip_id: string;
   p_points: number;

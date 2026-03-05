@@ -77,7 +77,6 @@ describe('Visit Continuation Service - Unit Tests', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith(
         'rpc_get_player_recent_sessions',
         {
-          p_casino_id: TEST_CASINO_ID,
           p_player_id: TEST_PLAYER_ID,
           p_limit: 5,
           p_cursor: undefined,
@@ -148,7 +147,6 @@ describe('Visit Continuation Service - Unit Tests', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith(
         'rpc_get_player_recent_sessions',
         {
-          p_casino_id: TEST_CASINO_ID,
           p_player_id: TEST_PLAYER_ID,
           p_limit: 10,
           p_cursor: undefined,
@@ -176,7 +174,6 @@ describe('Visit Continuation Service - Unit Tests', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith(
         'rpc_get_player_recent_sessions',
         {
-          p_casino_id: TEST_CASINO_ID,
           p_player_id: TEST_PLAYER_ID,
           p_limit: 5,
           p_cursor: cursor,
@@ -322,7 +319,6 @@ describe('Visit Continuation Service - Unit Tests', () => {
       expect(mockSupabase.rpc).toHaveBeenCalledWith(
         'rpc_get_player_last_session_context',
         {
-          p_casino_id: TEST_CASINO_ID,
           p_player_id: TEST_PLAYER_ID,
         },
       );

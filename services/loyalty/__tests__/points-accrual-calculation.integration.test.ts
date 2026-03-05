@@ -288,7 +288,6 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         'rpc_accrue_on_close',
         {
           p_rating_slip_id: slip.id,
-          p_casino_id: fixture.casinoId,
           p_idempotency_key: randomUUID(),
         },
       );
@@ -473,7 +472,6 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           'rpc_accrue_on_close',
           {
             p_rating_slip_id: slip.id,
-            p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
           },
         );
@@ -586,7 +584,6 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           'rpc_accrue_on_close',
           {
             p_rating_slip_id: slip.id,
-            p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
           },
         );
