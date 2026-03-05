@@ -23,13 +23,13 @@ import {
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import type {
-  CasinoSettingsDTO,
+  CasinoSettingsWithAlertsDTO,
   UpdateCasinoSettingsDTO,
 } from '@/services/casino/dtos';
 import { updateCasinoSettingsSchema } from '@/services/casino/schemas';
 
 const SETTINGS_SELECT =
-  'id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold';
+  'id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, alert_thresholds, updated_at, promo_require_exact_match, promo_allow_anonymous_issuance';
 
 /**
  * GET /api/v1/casino/settings
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: data as CasinoSettingsDTO,
+          data: data as CasinoSettingsWithAlertsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -160,7 +160,7 @@ export async function PATCH(request: NextRequest) {
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: data as CasinoSettingsDTO,
+          data: data as CasinoSettingsWithAlertsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),

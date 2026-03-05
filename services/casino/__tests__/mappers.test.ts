@@ -43,6 +43,7 @@ describe('CasinoService Mappers', () => {
     timezone: 'America/Los_Angeles',
     watchlist_floor: 5000,
     ctr_threshold: 10000,
+    updated_at: '2026-01-01T00:00:00Z',
   };
 
   const mockStaffRow = {
@@ -157,6 +158,7 @@ describe('CasinoService Mappers', () => {
         timezone: 'America/Los_Angeles',
         watchlist_floor: 5000,
         ctr_threshold: 10000,
+        updated_at: '2026-01-01T00:00:00Z',
       });
     });
 

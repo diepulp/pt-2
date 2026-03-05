@@ -23,9 +23,9 @@ export const CASINO_SELECT_FULL =
 
 // === Casino Settings Selects ===
 
-/** Public casino settings (excludes audit timestamps) */
+/** Public casino settings */
 export const CASINO_SETTINGS_SELECT =
-  'id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold' as const;
+  'id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, updated_at' as const;
 
 /** Full casino settings (includes audit fields) */
 export const CASINO_SETTINGS_SELECT_FULL =

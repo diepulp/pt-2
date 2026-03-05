@@ -54,6 +54,7 @@ export type CasinoSettingsDTO = Pick<
   | 'timezone'
   | 'watchlist_floor'
   | 'ctr_threshold'
+  | 'updated_at'
 >;
 
 /** Settings update input */
@@ -62,7 +63,9 @@ export type UpdateCasinoSettingsDTO = Partial<
     CasinoSettingsUpdate,
     'gaming_day_start_time' | 'timezone' | 'watchlist_floor' | 'ctr_threshold'
   >
->;
+> & {
+  alert_thresholds?: AlertThresholdsDTO;
+};
 
 // === Staff DTOs ===
 

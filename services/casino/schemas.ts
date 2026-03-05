@@ -25,135 +25,6 @@ export const createCasinoSchema = z.object({
 /** Schema for updating an existing casino */
 export const updateCasinoSchema = createCasinoSchema.partial();
 
-// === Casino Settings Schemas ===
-
-/** Schema for updating casino settings */
-export const updateCasinoSettingsSchema = z.object({
-  gaming_day_start_time: z
-    .string()
-    .regex(
-      /^\d{2}:\d{2}(:\d{2})?$/,
-      'Must be HH:MM or HH:MM:SS format (e.g., 06:00)',
-    )
-    .optional(),
-  timezone: z
-    .string()
-    .min(1)
-    .max(64, 'Timezone must be at most 64 characters')
-    .optional(),
-  watchlist_floor: z
-    .number()
-    .positive('Watchlist floor must be positive')
-    .optional(),
-  ctr_threshold: z
-    .number()
-    .positive('CTR threshold must be positive')
-    .optional(),
-});
-
-// === Staff Schemas ===
-
-/** Staff roles enum */
-export const staffRoleSchema = z.enum([
-  'dealer',
-  'pit_boss',
-  'cashier',
-  'admin',
-]);
-
-/**
- * Schema for creating a staff member with role constraint refinement.
- *
- * Role constraint (PRD-000 section 3.3):
- * - Dealer: Must NOT have user_id (non-authenticated role)
- * - Pit Boss/Admin: MUST have user_id (authenticated roles)
- */
-export const createStaffSchema = z
-  .object({
-    first_name: z.string().min(1, 'First name is required').max(100),
-    last_name: z.string().min(1, 'Last name is required').max(100),
-    role: staffRoleSchema,
-    employee_id: z.string().max(50).nullable().optional(),
-    email: z.string().email('Invalid email format').nullable().optional(),
-    casino_id: uuidSchema('casino ID'),
-    user_id: uuidSchemaNullable('user ID').optional(),
-  })
-  .refine(
-    (data) => {
-      // Dealer must NOT have user_id; pit_boss/admin MUST have user_id
-      if (data.role === 'dealer') {
-        return data.user_id === null || data.user_id === undefined;
-      }
-      return data.user_id !== null && data.user_id !== undefined;
-    },
-    {
-      message:
-        'Dealer role cannot have user_id; pit_boss and admin roles must have user_id',
-      path: ['user_id'],
-    },
-  );
-
-// === Query Parameter Schemas ===
-
-/** Schema for gaming day query parameters */
-export const gamingDayQuerySchema = z.object({
-  timestamp: z
-    .string()
-    .datetime({ message: 'Must be a valid ISO 8601 datetime' })
-    .optional(),
-});
-
-/** Schema for casino list query parameters */
-export const casinoListQuerySchema = z.object({
-  status: z.enum(['active', 'inactive']).optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(100, 'Limit cannot exceed 100')
-    .default(20),
-});
-
-/** Schema for staff list query parameters */
-export const staffListQuerySchema = z.object({
-  status: z.enum(['active', 'inactive']).optional(),
-  role: staffRoleSchema.optional(),
-  cursor: z.string().optional(),
-  limit: z.coerce
-    .number()
-    .int()
-    .positive()
-    .max(100, 'Limit cannot exceed 100')
-    .default(20),
-});
-
-// === Onboarding Schemas (PRD-025) ===
-
-/** Bootstrap casino input (called from /bootstrap form) */
-export const bootstrapCasinoSchema = z.object({
-  casino_name: z.string().min(1, 'Casino name is required').max(100),
-  timezone: z.string().min(1).max(64).optional(),
-  gaming_day_start: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format')
-    .optional(),
-});
-
-/** Staff invite creation input (admin-only) */
-export const createInviteSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  role: z.enum(['dealer', 'pit_boss', 'cashier', 'admin']),
-});
-
-/** Invite acceptance input (token from URL) */
-export const acceptInviteSchema = z.object({
-  token: z
-    .string()
-    .length(64, 'Token must be 64-character hex string')
-    .regex(/^[0-9a-f]{64}$/, 'Token must be lowercase hexadecimal'),
-});
-
 // === Alert Threshold Schemas (PRD-LOYALTY-PROMO WS6) ===
 
 /** Base schema for enabled thresholds */
@@ -311,6 +182,136 @@ export const updateAlertThresholdsSchema = z
   })
   .loose()
   .partial();
+
+// === Casino Settings Schemas ===
+
+/** Schema for updating casino settings */
+export const updateCasinoSettingsSchema = z.object({
+  gaming_day_start_time: z
+    .string()
+    .regex(
+      /^\d{2}:\d{2}(:\d{2})?$/,
+      'Must be HH:MM or HH:MM:SS format (e.g., 06:00)',
+    )
+    .optional(),
+  timezone: z
+    .string()
+    .min(1)
+    .max(64, 'Timezone must be at most 64 characters')
+    .optional(),
+  watchlist_floor: z
+    .number()
+    .positive('Watchlist floor must be positive')
+    .optional(),
+  ctr_threshold: z
+    .number()
+    .positive('CTR threshold must be positive')
+    .optional(),
+  alert_thresholds: updateAlertThresholdsSchema.optional(),
+});
+
+// === Staff Schemas ===
+
+/** Staff roles enum */
+export const staffRoleSchema = z.enum([
+  'dealer',
+  'pit_boss',
+  'cashier',
+  'admin',
+]);
+
+/**
+ * Schema for creating a staff member with role constraint refinement.
+ *
+ * Role constraint (PRD-000 section 3.3):
+ * - Dealer: Must NOT have user_id (non-authenticated role)
+ * - Pit Boss/Admin: MUST have user_id (authenticated roles)
+ */
+export const createStaffSchema = z
+  .object({
+    first_name: z.string().min(1, 'First name is required').max(100),
+    last_name: z.string().min(1, 'Last name is required').max(100),
+    role: staffRoleSchema,
+    employee_id: z.string().max(50).nullable().optional(),
+    email: z.string().email('Invalid email format').nullable().optional(),
+    casino_id: uuidSchema('casino ID'),
+    user_id: uuidSchemaNullable('user ID').optional(),
+  })
+  .refine(
+    (data) => {
+      // Dealer must NOT have user_id; pit_boss/admin MUST have user_id
+      if (data.role === 'dealer') {
+        return data.user_id === null || data.user_id === undefined;
+      }
+      return data.user_id !== null && data.user_id !== undefined;
+    },
+    {
+      message:
+        'Dealer role cannot have user_id; pit_boss and admin roles must have user_id',
+      path: ['user_id'],
+    },
+  );
+
+// === Query Parameter Schemas ===
+
+/** Schema for gaming day query parameters */
+export const gamingDayQuerySchema = z.object({
+  timestamp: z
+    .string()
+    .datetime({ message: 'Must be a valid ISO 8601 datetime' })
+    .optional(),
+});
+
+/** Schema for casino list query parameters */
+export const casinoListQuerySchema = z.object({
+  status: z.enum(['active', 'inactive']).optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(100, 'Limit cannot exceed 100')
+    .default(20),
+});
+
+/** Schema for staff list query parameters */
+export const staffListQuerySchema = z.object({
+  status: z.enum(['active', 'inactive']).optional(),
+  role: staffRoleSchema.optional(),
+  cursor: z.string().optional(),
+  limit: z.coerce
+    .number()
+    .int()
+    .positive()
+    .max(100, 'Limit cannot exceed 100')
+    .default(20),
+});
+
+// === Onboarding Schemas (PRD-025) ===
+
+/** Bootstrap casino input (called from /bootstrap form) */
+export const bootstrapCasinoSchema = z.object({
+  casino_name: z.string().min(1, 'Casino name is required').max(100),
+  timezone: z.string().min(1).max(64).optional(),
+  gaming_day_start: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, 'Must be HH:MM format')
+    .optional(),
+});
+
+/** Staff invite creation input (admin-only) */
+export const createInviteSchema = z.object({
+  email: z.string().email('Invalid email format'),
+  role: z.enum(['dealer', 'pit_boss', 'cashier', 'admin']),
+});
+
+/** Invite acceptance input (token from URL) */
+export const acceptInviteSchema = z.object({
+  token: z
+    .string()
+    .length(64, 'Token must be 64-character hex string')
+    .regex(/^[0-9a-f]{64}$/, 'Token must be lowercase hexadecimal'),
+});
 
 // === Setup Wizard Schemas (PRD-030) ===
 
