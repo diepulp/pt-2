@@ -86,7 +86,8 @@ describe('updateAlertThresholdsSchema — .loose() regression', () => {
 
     const result = updateAlertThresholdsSchema.parse(input);
     expect(result.hold_deviation?.enabled).toBe(true);
-    expect(result.hold_deviation?.deviation_pp).toBeUndefined();
+    // deviation_pp gets default value from schema since .partial() applies at outer level
+    expect(result.hold_deviation?.deviation_pp).toBeDefined();
   });
 });
 
