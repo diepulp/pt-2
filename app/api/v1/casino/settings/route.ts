@@ -118,6 +118,26 @@ export async function PATCH(request: NextRequest) {
       async (mwCtx) => {
         const casinoId = mwCtx.rlsContext!.casinoId;
 
+        // Defense-in-depth: application-level role check (RLS is primary enforcement)
+        const role = mwCtx.rlsContext!.staffRole;
+        if (!['admin', 'pit_boss'].includes(role)) {
+          throw new DomainError(
+            'FORBIDDEN',
+            'Admin or pit_boss role required to update casino settings',
+          );
+        }
+
+        // Temporal fields (gaming_day_start_time, timezone) restricted to admin only
+        // due to high downstream impact on compute_gaming_day() across ~10 tables
+        const hasTemporalFields =
+          'gaming_day_start_time' in input || 'timezone' in input;
+        if (hasTemporalFields && role !== 'admin') {
+          throw new DomainError(
+            'FORBIDDEN',
+            'Only admin role can modify gaming day boundaries and timezone',
+          );
+        }
+
         const { data, error } = await mwCtx.supabase
           .from('casino_settings')
           .update(input)

@@ -59,7 +59,7 @@ No route-level role enforcement exists anywhere in the application. Both `(dashb
 
 - As a **shift supervisor**, I need to review all cash observation alerts for the current shift so that I can investigate anomalies that the dashboard strip flagged.
 - As a **shift supervisor**, I need to see alert details (entity, observed value, threshold, severity, downgrade indicators) so that I can assess whether floor action is needed.
-- As a **casino manager**, I need to dismiss or acknowledge alerts so that the active alert count reflects unreviewed items only.
+- As a **casino manager**, I need to hide reviewed alerts from my current view so that I can focus on unreviewed items during my session. *(Note: dismiss is session-scoped — alerts reappear on page refresh or new session. Server-side persistent acknowledgment requires a future `alert_acknowledgment` table; see §7.2.)*
 - As a **casino manager**, I need to access admin pages knowing that dealers and cashiers cannot reach them so that configuration and alert management remain supervisor-controlled.
 
 ---
@@ -108,6 +108,8 @@ No route-level role enforcement exists anywhere in the application. Both `(dashb
 - The severity filter MUST allow selecting one or more severity levels without page reload.
 - The dismiss action MUST remove the alert from the visible list and decrement the sidebar badge count for the session duration.
 - The sidebar badge count MUST query alert data and display the count of unacknowledged `warn` + `critical` alerts. `info` alerts do not count toward the badge.
+- If no active shift window exists, the alerts page MUST fall back to the most recent completed shift window and display a banner indicating the time range shown.
+- The admin layout MUST be a server component (not `'use client'`) to guarantee the no-flash redirect via `redirect()` before any HTML is sent.
 
 ### 5.2 Non-Functional Requirements
 
@@ -147,17 +149,17 @@ No route-level role enforcement exists anywhere in the application. Both `(dashb
 
 ### 7.1 Dependencies
 
-- **`rpc_shift_cash_obs_alerts`** — Fully implemented (migration `20260107020746`). No changes needed.
+- **`rpc_shift_cash_obs_alerts`** — Fully implemented (migration `20260107020746`). No changes needed. **Note:** The RPC returns base alert fields (`alert_type`, `severity`, `entity_type`, `entity_id`, `entity_label`, `observed_value`, `threshold`, `message`, `is_telemetry`). It does NOT return `downgraded`, `downgrade_reason`, or `original_severity` — these are enriched client-side by the severity guardrail mapping in `services/table-context/shift-cash-obs/severity.ts`. The alerts page MUST wire the same severity enrichment step used by the Shift Dashboard.
 - **`casino_settings.alert_thresholds`** — JSONB column exists (migration `20260106235906`). Read-only for this PRD.
 - **`useAuth()` hook** — Returns `staffRole` from `app_metadata`. Exists at `hooks/use-auth.ts`.
-- **`CashObsSpikeAlertDTO`** — Fully typed at `services/table-context/dtos.ts`.
-- **`useShiftAlerts()` hook** — Exists at `hooks/shift-dashboard/use-shift-alerts.ts` (30s stale, 60s refetch). Can be reused or adapted.
+- **`CashObsSpikeAlertDTO`** — Fully typed at `services/table-context/dtos.ts`. The `downgraded?`, `downgrade_reason?`, and `original_severity?` fields are optional because they are populated by the client-side severity enrichment step, not the RPC.
+- **`useShiftAlerts()` hook** — Exists at `hooks/shift-dashboard/use-shift-alerts.ts` (30s stale, 60s refetch). Can be reused or adapted. Note: this hook already wires severity enrichment.
 - **`AlertsPanel` component** — Exists at `components/shift-dashboard/alerts-panel.tsx`. Can inform the admin alerts page design but is not reused directly (different layout, more detail).
 
 ### 7.2 Risks & Open Questions
 
-- **Client-side dismiss is lossy** — Dismissed alerts reappear on page refresh. Acceptable for P1; server-side persistence is a future concern. If demand is high, a follow-up PRD adds an `alert_acknowledgment` table.
-- **Shift window coupling** — The alerts page uses the same shift time window as the Shift Dashboard. If the user navigates to `/admin/alerts` outside a shift window, the query may return empty. Consider showing the most recent completed shift window as fallback.
+- **Client-side dismiss is session-scoped** — Dismissed alerts are stored in React component state (or localStorage for refresh persistence). They reappear in new browser sessions. This is intentional for P1: the page's primary value is alert review and investigation, not acknowledgment workflow. A second supervisor will see all alerts independently — there is no shared dismiss state. If persistent cross-user acknowledgment becomes a requirement, a follow-up PRD adds an `alert_acknowledgment` table with server-side state. **FAQ: "Why do dismissed alerts come back?"** Answer: "Dismiss hides alerts from your current view. Persistent acknowledgment is planned for a future release."
+- **Shift window coupling** — The alerts page uses the same shift time window as the Shift Dashboard. If no active shift window exists (outside operating hours, between shifts), the alerts page MUST display the most recent completed shift's alerts with a banner: "Showing alerts from [date] [shift window]". The fallback window is derived from the most recent `shift_checkpoint` record.
 - **Badge query duplication** — The sidebar badge and the alerts page both query `rpc_shift_cash_obs_alerts`. React Query deduplication (same query key) prevents double-fetching if both are mounted simultaneously.
 
 ---
@@ -169,7 +171,7 @@ The release is considered **Done** when:
 **Functionality**
 - [ ] `/admin/alerts` renders alert list from `rpc_shift_cash_obs_alerts` for current shift window
 - [ ] Severity filter (all/critical/warn/info) works without page reload
-- [ ] Dismiss action hides alert from list and decrements sidebar badge for session duration
+- [ ] Dismiss action hides alert from current view and decrements sidebar badge (session-scoped; reappears on refresh unless localStorage persistence is used)
 - [ ] Sidebar "Alerts" badge shows live count of `warn` + `critical` alerts (not hardcoded `0`)
 
 **Security & Access**
@@ -182,8 +184,9 @@ The release is considered **Done** when:
 - [ ] Downgrade indicators display correctly when `downgraded === true`
 
 **Testing**
-- [ ] At least one unit test for the role guard logic (authorized vs. unauthorized roles)
+- [ ] Unit tests for role guard logic: (1) authorized role (`admin`) renders, (2) unauthorized role (`dealer`) redirects, (3) missing/malformed `staff_role` redirects
 - [ ] At least one happy-path E2E test: navigate to `/admin/alerts`, verify alert list renders
+- [ ] At least one negative E2E test: unauthorized user navigating to `/admin/alerts` is redirected without flash
 
 **Operational Readiness**
 - [ ] Ghost nav items (`/admin/alerts`, `/admin/reports`) no longer 404 — alerts resolves, reports can show "Coming Soon" or redirect to alerts
@@ -276,10 +279,13 @@ staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
 ### WS2: Alerts Page (P1)
 
 - [ ] Create `app/(dashboard)/admin/alerts/page.tsx` — server component shell
-- [ ] Create `components/admin-alerts/` directory with alert list, alert card, severity filter components
+- [ ] Create alert components colocated at `app/(dashboard)/admin/alerts/_components/` (alert list, alert card, severity filter)
 - [ ] Create or adapt React Query hook for alerts page context (may differ from `useShiftAlerts` in stale time / refetch behavior)
-- [ ] Implement dismiss action with Zustand or React state (session-scoped)
+- [ ] Wire severity enrichment step from `services/table-context/shift-cash-obs/severity.ts` — RPC output MUST pass through guardrail mapping before rendering to populate `downgraded`, `downgrade_reason`, `original_severity`
+- [ ] Implement off-shift fallback: if no active shift window, query most recent `shift_checkpoint` window and show banner
+- [ ] Implement dismiss action with React state or localStorage (session-scoped, not Zustand — avoids ADR-035 `resetSessionState` requirement)
 - [ ] Handle empty state and loading state (skeleton)
+- [ ] Handle error state (RPC failure → error boundary, not crash)
 
 ### WS3: Sidebar Badge Wiring (P1)
 
@@ -310,3 +316,4 @@ This correction is relevant for the future Settings: Shift Schedules PRD (P3) �
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-03-03 | Engineering | Initial draft — P0 + P1 scope from context map |
+| 0.2.0 | 2026-03-04 | Engineering | P1 review fixes: (1) documented severity enrichment step for downgrade fields in §7.1; (2) reworded dismiss user story — session-scoped view hiding, not persistent acknowledgment; (3) added off-shift fallback requirement (most recent completed shift window); (4) added server component constraint for no-flash guarantee; (5) expanded testing requirements (3 role guard unit tests + negative E2E); (6) colocated components pattern (`_components/`) replacing `components/admin-alerts/`; (7) added error state handling to WS2 |
