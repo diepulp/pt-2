@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: data as CasinoSettingsWithAlertsDTO,
+          data: data as unknown as CasinoSettingsWithAlertsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),
@@ -140,7 +140,9 @@ export async function PATCH(request: NextRequest) {
 
         const { data, error } = await mwCtx.supabase
           .from('casino_settings')
-          .update(input)
+          // Zod-parsed alert_thresholds is a structured type;
+          // Supabase expects Json for JSONB columns — safe cast
+          .update(input as Record<string, unknown>)
           .eq('casino_id', casinoId)
           .select(SETTINGS_SELECT)
           .single();
@@ -160,7 +162,7 @@ export async function PATCH(request: NextRequest) {
         return {
           ok: true as const,
           code: 'OK' as const,
-          data: data as CasinoSettingsWithAlertsDTO,
+          data: data as unknown as CasinoSettingsWithAlertsDTO,
           requestId: mwCtx.correlationId,
           durationMs: 0,
           timestamp: new Date().toISOString(),

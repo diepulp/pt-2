@@ -170,7 +170,9 @@ export function ThresholdSettingsForm() {
     setFormState((prev) => {
       const base = prev ?? { ...displayDefaults };
       const category =
-        (base as Record<string, Record<string, unknown>>)[categoryKey] ?? {};
+        (base as unknown as Record<string, Record<string, unknown>>)[
+          categoryKey
+        ] ?? {};
       return {
         ...base,
         [categoryKey]: { ...category, [fieldKey]: value },
@@ -182,7 +184,9 @@ export function ThresholdSettingsForm() {
     setFormState((prev) => {
       const base = prev ?? { ...displayDefaults };
       const category =
-        (base as Record<string, Record<string, unknown>>)[categoryKey] ?? {};
+        (base as unknown as Record<string, Record<string, unknown>>)[
+          categoryKey
+        ] ?? {};
       return {
         ...base,
         [categoryKey]: { ...category, enabled },
@@ -255,9 +259,12 @@ export function ThresholdSettingsForm() {
       <div className="grid gap-4">
         {CATEGORIES.map((cat) => {
           const catValues =
-            (currentValues as Record<string, Record<string, unknown>>)[
-              cat.key
-            ] ?? {};
+            (
+              currentValues as unknown as Record<
+                string,
+                Record<string, unknown>
+              >
+            )[cat.key] ?? {};
 
           return (
             <ThresholdCategoryCard

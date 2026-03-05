@@ -87,9 +87,7 @@ function computeEndTime(startTime: string): string {
 
 function useStaffRole(): string | null {
   if (typeof document === 'undefined') return null;
-  const el = document.closest
-    ? document.querySelector('[data-staff-role]')
-    : null;
+  const el = document.querySelector('[data-staff-role]');
   return el?.getAttribute('data-staff-role') ?? null;
 }
 
