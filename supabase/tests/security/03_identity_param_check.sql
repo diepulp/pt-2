@@ -16,25 +16,15 @@
 
 DO $$
 DECLARE
-  -- ── Corrected allowlist (14 entries, catalog-verified) ──────────
-  -- These RPCs still carry p_casino_id and are known-deferred.
-  -- Phantoms removed: rpc_compute_gaming_day, rpc_apply_mid_session_reward
+  -- ── Allowlist (4 entries, D3/D4 deferred — blocked on OQ-1/OQ-2) ──
+  -- D1+D2 RPCs remediated by PRD-043 Phases 1-3.
+  -- Remaining RPCs still carry p_casino_id pending business decisions.
   v_casino_id_allowlist text[] := ARRAY[
-    -- Original EXEC-041 entries (8 verified)
+    -- Financial context (OQ-1 blocked)
     'rpc_create_financial_txn',
     'rpc_create_financial_adjustment',
-    'rpc_issue_mid_session_reward',
-    'rpc_start_rating_slip',
-    'rpc_get_player_recent_sessions',
-    'rpc_get_player_last_session_context',
-    'rpc_get_rating_slip_modal_data',
-    'rpc_get_dashboard_tables_with_counts',
-    -- Loyalty context (deferred; still carries p_casino_id)
-    'rpc_accrue_on_close',
-    'rpc_apply_promotion',
-    'rpc_get_player_ledger',
+    -- Loyalty write context (OQ-2 blocked)
     'rpc_manual_credit',
-    'rpc_reconcile_loyalty_balance',
     'rpc_redeem'
   ];
 
@@ -130,10 +120,11 @@ BEGIN
       v_stale_count, v_stale;
   END IF;
 
-  -- Allowlisted p_casino_id → HARD FAIL (WS6 enforcement)
-  -- These RPCs must remove p_casino_id and derive from set_rls_context_from_staff().
+  -- Allowlisted p_casino_id → NOTICE (D3/D4 deferred, blocked on OQ-1/OQ-2)
+  -- These 4 RPCs are awaiting business decisions before remediation.
+  -- Flip to EXCEPTION once OQ-1/OQ-2 are resolved and D3/D4 RPCs are remediated.
   IF v_casino_warning_count > 0 THEN
-    RAISE EXCEPTION E'FAIL [SEC-003]: % rpc_* function(s) still accept p_casino_id (ADR-024 violation):\n%Remove parameter and derive casino_id from set_rls_context_from_staff() session vars.',
+    RAISE NOTICE E'INFO [SEC-003]: % rpc_* function(s) with allowlisted p_casino_id (deferred D3/D4):\n%',
       v_casino_warning_count, v_casino_warnings;
   END IF;
 

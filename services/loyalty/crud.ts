@@ -210,7 +210,6 @@ export async function accrueOnClose(
   try {
     const { data, error } = await supabase.rpc('rpc_accrue_on_close', {
       p_rating_slip_id: input.ratingSlipId,
-      p_casino_id: input.casinoId,
       p_idempotency_key: input.idempotencyKey,
     });
 
@@ -358,7 +357,6 @@ export async function applyPromotion(
 ): Promise<ApplyPromotionOutput> {
   try {
     const { data, error } = await supabase.rpc('rpc_apply_promotion', {
-      p_casino_id: input.casinoId,
       p_rating_slip_id: input.ratingSlipId,
       p_campaign_id: input.campaignId,
       p_promo_multiplier: input.promoMultiplier ?? undefined,
@@ -530,7 +528,6 @@ export async function getLedger(
     const limit = Math.min(query.limit ?? 20, 100);
 
     const { data, error } = await supabase.rpc('rpc_get_player_ledger', {
-      p_casino_id: query.casinoId,
       p_player_id: query.playerId,
       p_cursor_created_at: cursorCreatedAt,
       p_cursor_id: cursorId,
@@ -582,7 +579,6 @@ export async function reconcileBalance(
       'rpc_reconcile_loyalty_balance',
       {
         p_player_id: playerId,
-        p_casino_id: casinoId,
       },
     );
 

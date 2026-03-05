@@ -172,7 +172,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         'rpc_accrue_on_close',
         {
           p_rating_slip_id: slip.id,
-          p_casino_id: fixture.casinoId,
           p_idempotency_key: idempotencyKey,
         },
       );
@@ -215,7 +214,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         'rpc_accrue_on_close',
         {
           p_rating_slip_id: slip.id,
-          p_casino_id: fixture.casinoId,
           p_idempotency_key: randomUUID(),
         },
       );
@@ -353,7 +351,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
           'rpc_accrue_on_close',
           {
             p_rating_slip_id: slip.id,
-            p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
           },
         );
@@ -423,14 +420,12 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       const idempotencyKey = randomUUID();
       const { data: first } = await supabase.rpc('rpc_accrue_on_close', {
         p_rating_slip_id: slip.id,
-        p_casino_id: fixture.casinoId,
         p_idempotency_key: idempotencyKey,
       });
 
       // Second accrual with different idempotency key (but same slip)
       const { data: second } = await supabase.rpc('rpc_accrue_on_close', {
         p_rating_slip_id: slip.id,
-        p_casino_id: fixture.casinoId,
         p_idempotency_key: randomUUID(), // Different key
       });
 

@@ -3613,11 +3613,7 @@ export type Database = {
         }[]
       }
       rpc_accrue_on_close: {
-        Args: {
-          p_casino_id: string
-          p_idempotency_key: string
-          p_rating_slip_id: string
-        }
+        Args: { p_idempotency_key: string; p_rating_slip_id: string }
         Returns: {
           balance_after: number
           is_existing: boolean
@@ -3674,7 +3670,6 @@ export type Database = {
         Args: {
           p_bonus_points?: number
           p_campaign_id: string
-          p_casino_id: string
           p_idempotency_key?: string
           p_promo_multiplier?: number
           p_rating_slip_id: string
@@ -4204,17 +4199,13 @@ export type Database = {
         }
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
-      rpc_get_dashboard_tables_with_counts: {
-        Args: { p_casino_id: string }
-        Returns: Json
-      }
+      rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
       rpc_get_player_last_session_context: {
-        Args: { p_casino_id: string; p_player_id: string }
+        Args: { p_player_id: string }
         Returns: Json
       }
       rpc_get_player_ledger: {
         Args: {
-          p_casino_id: string
           p_cursor_created_at?: string
           p_cursor_id?: string
           p_limit?: number
@@ -4240,12 +4231,7 @@ export type Database = {
         }[]
       }
       rpc_get_player_recent_sessions: {
-        Args: {
-          p_casino_id: string
-          p_cursor?: string
-          p_limit?: number
-          p_player_id: string
-        }
+        Args: { p_cursor?: string; p_limit?: number; p_player_id: string }
         Returns: Json
       }
       rpc_get_player_timeline: {
@@ -4279,7 +4265,7 @@ export type Database = {
         Returns: number
       }
       rpc_get_rating_slip_modal_data: {
-        Args: { p_casino_id: string; p_slip_id: string }
+        Args: { p_slip_id: string }
         Returns: Json
       }
       rpc_get_visit_last_segment: {
@@ -4406,7 +4392,6 @@ export type Database = {
       }
       rpc_issue_mid_session_reward: {
         Args: {
-          p_casino_id: string
           p_idempotency_key?: string
           p_player_id: string
           p_points: number
@@ -4778,7 +4763,7 @@ export type Database = {
         Returns: Json
       }
       rpc_reconcile_loyalty_balance: {
-        Args: { p_casino_id: string; p_player_id: string }
+        Args: { p_player_id: string }
         Returns: {
           drift_detected: boolean
           new_balance: number
@@ -5162,7 +5147,6 @@ export type Database = {
       }
       rpc_start_rating_slip: {
         Args: {
-          p_casino_id: string
           p_game_settings: Json
           p_seat_number: string
           p_table_id: string
