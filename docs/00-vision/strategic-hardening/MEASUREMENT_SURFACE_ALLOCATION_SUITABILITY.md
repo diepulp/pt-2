@@ -1,7 +1,7 @@
 ---
 title: Measurement Surface Allocation — Suitability Findings Report
 date: 2026-03-02
-status: Findings (v2 — revised per PT2_Measurement_Surface_Guidance.md)
+status: Findings (v2 — revised per PT2_Measurement_Surface_Guidance.md) — PARTIALLY STALE (see addendum below)
 references:
   - ADR-039-measurement-layer.md
   - ADR_0XX_B_Measurement_Surface_Allocation.md
@@ -10,6 +10,24 @@ scope: UI surface gap analysis for ADR-039 artifact placement
 ---
 
 # Measurement Surface Allocation — Suitability Findings Report
+
+> ### Staleness Addendum (2026-03-06)
+>
+> This report was written on 2026-03-02, **before** PRD-040/042 shipped. The admin route group was implemented and merged to `main` on 2026-03-06 (commit `373de2f`). Several infrastructure findings are now incorrect:
+>
+> | Section | Original Claim | Current Reality |
+> |---|---|---|
+> | §3.3 Reports Route | "GHOST NAV ONLY... No route directory... No page component... No layout... Everything must be built" | Route exists at `app/(dashboard)/admin/reports/page.tsx` (placeholder). Admin layout with role guard at `app/(dashboard)/admin/layout.tsx`. Sidebar nav wired. |
+> | §5 Tier 3 | "Largest effort... requires most new infrastructure (route, components, hooks, role gating)" | Route scaffolding + role guard + admin layout already exist. Remaining effort: loyalty liability data layer, KPI components, trend chart. **Medium effort, not large.** |
+> | §6.1 Role Gating | "No route-level role gating middleware or layout guard exists today" | Admin layout guard implemented: RSC-based staff table lookup, checks `admin`/`pit_boss` roles, redirects unauthorized users. |
+> | §8.1 Core Finding | "The `/admin` Route Was Never Built... this route tree does not exist" | Route tree exists: `/admin/alerts` (shipped), `/admin/reports` (placeholder), `/admin/settings/thresholds` (shipped), `/admin/settings/shifts` (shipped). |
+> | §8.4 Regression Risk | "Developer creates `app/(dashboard)/admin/reports/page.tsx` — but no admin route group or layout exists" | Admin route group and layout exist. This risk is eliminated. |
+> | §9 Q1 Reports route path | "Should it live at `/admin/reports`... no `/admin` route group exists" | **Resolved.** Reports page lives at `/admin/reports` within the existing admin route group. |
+> | §9 Q3 Role gating scope | "Build admin layout guard as part of Reports work, or separate prerequisite?" | **Resolved.** Built as reusable infrastructure in PRD-040. |
+>
+> **Sections that remain valid:** §3.1 (Shift Dashboard slots), §3.2 (Pit Terminal insertion points), §3.4 (Rating Slip Modal audit trace gap), §3.5 (Compliance Dashboard — not suitable for audit trace), §4 (infrastructure matrix — needs column updates), §7 (priority ordering — rationale still sound, effort estimates reduced for P3).
+>
+> **Impact on implementation planning:** The Reports page (P3) drops from "new route" to "populate existing shell." Role gating is no longer a cross-cutting gap — it's shipped infrastructure. Shift Dashboard and Pit Terminal findings are unaffected.
 
 ## 1. Purpose
 

@@ -101,7 +101,7 @@ VALUES (
 INSERT INTO rating_slip (
   id, casino_id, visit_id, table_id, seat_number,
   start_time, end_time, status, average_bet, final_duration_seconds, final_average_bet, accrual_kind,
-  game_settings, policy_snapshot
+  game_settings, policy_snapshot, computed_theo_cents
 )
 VALUES (
   'd1000000-0000-0000-0000-000000000098',
@@ -117,7 +117,8 @@ VALUES (
   100.00,
   'loyalty',
   '{"game": "blackjack", "variant": "6deck"}',
-  '{"base_rate": 0.1, "tier_multiplier": 1.5}'
+  '{"base_rate": 0.1, "tier_multiplier": 1.5}',
+  600
 ) ON CONFLICT (id) DO NOTHING;
 
 -- ============================================================================

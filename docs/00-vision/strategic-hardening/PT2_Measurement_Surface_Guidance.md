@@ -2,6 +2,20 @@
 
 ## Practical UI Allocation Without Overbuilding
 
+> ### Implementation Status (2026-03-06)
+>
+> PRD-040/042 shipped the admin infrastructure this guidance anticipated. Current state:
+>
+> | Guidance Prescription | Implementation Status |
+> |---|---|
+> | "Reports (single lightweight route)" for loyalty liability | Route exists at `/admin/reports` (placeholder shell). Loyalty liability components **not yet built**. |
+> | Admin layout guard needed for Reports page | **Shipped.** `app/(dashboard)/admin/layout.tsx` with RSC role guard (`admin`/`pit_boss`). |
+> | "Slip Detail → Audit Trace panel" | **Not yet built.** Rating Slip Modal unchanged. |
+> | "Shift Dashboard — add small Coverage widget" | **Not yet built.** Expansion slots still available. |
+> | "Pit Terminal — table-level coverage" | **Not yet built.** Under-construction section still available. |
+>
+> **This document remains the operative guidance for measurement surface placement.** ADR-0XX-B (4-surface model) is superseded.
+
 ------------------------------------------------------------------------
 
 # Purpose

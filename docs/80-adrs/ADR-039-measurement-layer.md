@@ -106,9 +106,20 @@ WHERE  legacy_theo_cents IS NOT NULL
 
 **Prerequisite:** `audit_log` must be append-only (immutable after insert). The Strategic Hardening Report identifies audit-log immutability as an open gap — this must be resolved before deploying the *audit-enriched* variant of the view. Until then, deploy the view **without** the `audit_log` join and amend it once the append-only invariant is enforced.
 
-**Correlation key:** `rating_slip.id` is the FK held by downstream tables (`player_financial_transaction.rating_slip_id`, `mtl_entry.rating_slip_id`, `loyalty_ledger.rating_slip_id`). `audit_log` correlates via `entity_id = rating_slip.id` (or equivalent FK). LEFT JOINs ensure slips with partial lineage are still visible.
+**Correlation key:** `rating_slip.id` is the FK held by downstream tables (`player_financial_transaction.rating_slip_id`, `mtl_entry.rating_slip_id`, `loyalty_ledger.rating_slip_id`). `audit_log` has no first-class FK to `rating_slip` — correlation uses `audit_log.details->>'rating_slip_id'` (JSONB text extraction, cast to `uuid` in the view). This is the established pattern: RPCs write `jsonb_build_object('rating_slip_id', v_result.id, ...)` into `audit_log.details`. Filter: `audit_log.domain = 'rating-slip'`. LEFT JOINs ensure slips with partial lineage are still visible.
 
-**Migration implementation note:** The exact `audit_log` correlation columns and types must be finalized in the migration SQL and documented in inline SQL comments. The "(or equivalent FK)" phrasing above is ADR-level flexibility — the migration must pick concrete column names/types and commit to them.
+**Concrete correlation columns (binding for migration):**
+```sql
+-- Base lineage (ships immediately):
+LEFT JOIN player_financial_transaction pft ON pft.rating_slip_id = rs.id
+LEFT JOIN mtl_entry me ON me.rating_slip_id = rs.id
+LEFT JOIN loyalty_ledger ll ON ll.rating_slip_id = rs.id
+
+-- Audit enrichment (blocked until audit_log append-only):
+LEFT JOIN audit_log al
+  ON (al.details->>'rating_slip_id')::uuid = rs.id
+  AND al.domain = 'rating-slip'
+```
 
 **Schema note:** View is created in `public` schema (no separate `measurement` schema for MVP). Name prefix `measurement_` distinguishes from domain views.
 
@@ -252,7 +263,7 @@ Per gaming day, per casino. A `table_session` with `status IN ('ACTIVE','RUNDOWN
 
 1. **PostgreSQL version requirement:** `security_invoker` is a PG15+ feature (`CREATE VIEW ... WITH (security_invoker = true)`). Verify with `SELECT version()` before migration.
 2. **GRANTs still required:** `security_invoker` changes *whose* RLS policies are evaluated (caller, not view owner), but the caller must still hold `SELECT` on the view itself. Ensure `GRANT SELECT ON measurement_*_v TO authenticated;` (or role-specific grants) is included in migration scripts.
-3. **PostgREST / Supabase exposure:** Views with `security_invoker = true` are auto-exposed by PostgREST like any other relation. If the view should only be accessible via route-level gating (not direct PostgREST query), apply RLS on the view itself or restrict grants to service roles only. **Decision required at migration time:** each measurement view migration must explicitly choose one enforcement strategy (grant discipline or view-level RLS) and document the choice in inline SQL comments.
+3. **PostgREST / Supabase exposure — DECIDED:** Views with `security_invoker = true` are auto-exposed by PostgREST like any other relation. Measurement views use **grant discipline** (not view-level RLS): `GRANT SELECT ON measurement_*_v TO authenticated;` combined with `security_invoker = true` ensures underlying table RLS applies. Direct PostgREST queries are permitted — the caller's RLS context (casino scoping, role) already constrains results. Route-level gating (pit_boss/admin) is enforced at the API layer as defense-in-depth but is not the sole access control mechanism. This follows the existing pattern used by all other views in PT-2 (e.g., `mtl_gaming_day_summary`, `visit_financial_summary`).
 4. **Pre-PG15 fallback (not expected for PT-2):** On older Postgres, the equivalent effect requires the view to be owned by a non-superuser role that does not bypass RLS. This is not needed for PT-2's Supabase deployment but is documented for completeness.
 
 ---
@@ -268,7 +279,8 @@ Per gaming day, per casino. A `table_session` with `status IN ('ACTIVE','RUNDOWN
 | `measurement_audit_event_correlation_v` (base) | `CREATE VIEW ... WITH (security_invoker = true)` — **without** `audit_log` join | Platform | Phase 1 columns |
 | `measurement_audit_event_correlation_v` (audit-enriched) | `CREATE OR REPLACE VIEW` adding `audit_log` LEFT JOIN | Platform | **Blocked until** `audit_log` append-only invariant is enforced (see Artifact 2 prerequisite) |
 | `measurement_rating_coverage_v` | `CREATE VIEW ... WITH (security_invoker = true)` | Platform | Depends on finalized table-lifecycle contract (ADR-038) for the authoritative "active table-hours" source |
-| `loyalty_liability_snapshot` | `CREATE TABLE` + RLS policies + `rpc_snapshot_loyalty_liability` | LoyaltyService | None |
+| `loyalty_valuation_policy` | `CREATE TABLE` + RLS policies + EXCLUDE constraint (one active per casino) | LoyaltyService | None |
+| `loyalty_liability_snapshot` | `CREATE TABLE` + RLS policies + `rpc_snapshot_loyalty_liability` | LoyaltyService | `loyalty_valuation_policy` must exist |
 
 ### Phase 2 (Service Integration)
 
@@ -277,12 +289,15 @@ Per gaming day, per casino. A `table_session` with `status IN ('ACTIVE','RUNDOWN
 - CSV import pipeline to populate `legacy_theo_cents` during data migration
 - Read endpoints for measurement artifacts (route-level role gating)
 
-### Phase 3 (SRM Update — Required Gate)
+### Phase 3 (SRM Update — Definition of Done)
 
-Phase 3 is a **shipping gate**, not optional follow-up. ADR-039 status must not advance from "Proposed" to "Accepted" until SRM registration is complete.
+Phase 3 is part of **Definition of Done**, not optional follow-up. ADR-039 status must not advance from "Approved" to "Accepted" until SRM registration is complete. No PR merges to main without SRM version bump in the same changeset.
 
 - Add "Measurement Layer (Cross-Cutting Read Models)" section to SRM
+- Register `measurement_audit_event_correlation_v` with source tables: `rating_slip`, `player_financial_transaction`, `mtl_entry`, `loyalty_ledger`, [`audit_log` — conditional]
+- Register `measurement_rating_coverage_v` with source tables: `table_session`, `rating_slip`
 - Register `loyalty_liability_snapshot` under LoyaltyService ownership
+- Register `loyalty_valuation_policy` under LoyaltyService ownership
 - Register `computed_theo_cents`, `legacy_theo_cents` as RatingSlipService schema invariants
 - Bump SRM version
 
@@ -331,9 +346,11 @@ Enforcement: PRD review checklist must include "Measurement Layer artifact refer
 
 The following must hold for implementation to proceed:
 
-1. **Artifact 2 audit enrichment is conditional.** The base correlation view ships without the `audit_log` join. The audit-enriched variant is blocked until `audit_log` append-only immutability is enforced (Strategic Hardening Report gap).
-2. **Artifact 3 must bind to the ADR-038 lifecycle surface.** Do not implement against whatever table happens to exist today — the view must use the authoritative "active table-hours" surface declared by ADR-038's finalized contract.
-3. **SRM update (Phase 3) is a shipping gate.** ADR-039 status must not advance to "Accepted" until SRM registration is complete.
+1. **Artifact 2 audit enrichment is conditional.** The base correlation view ships without the `audit_log` join. The audit-enriched variant is blocked until `audit_log` append-only immutability is enforced (Strategic Hardening Report gap). Correlation key is concrete: `(audit_log.details->>'rating_slip_id')::uuid` filtered by `domain = 'rating-slip'`.
+2. **Artifact 3 must bind to the ADR-038 lifecycle surface.** Do not implement against whatever table happens to exist today — the view must use the authoritative "active table-hours" surface declared by ADR-038's finalized contract (`table_session` with `status IN ('OPEN','ACTIVE','RUNDOWN')`).
+3. **SRM update (Phase 3) is Definition of Done.** ADR-039 status must not advance to "Accepted" until SRM registration is complete. SRM version bump ships in the same changeset as the artifacts.
+4. **PostgREST exposure uses grant discipline.** Measurement views are granted to `authenticated` role; underlying table RLS via `security_invoker = true` is the access control mechanism. Route-level role gating is defense-in-depth, not sole enforcement.
+5. **Valuation policy is a separate table.** `loyalty_valuation_policy` (not a `casino_settings` field) stores `cents_per_point` with effective dating, version history, and admin-only writes. Prerequisite for Artifact 4.
 
 ---
 

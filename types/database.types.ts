@@ -274,6 +274,13 @@ export type Database = {
             foreignKeyName: "finance_outbox_ledger_id_fkey"
             columns: ["ledger_id"]
             isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["pft_id"]
+          },
+          {
+            foreignKeyName: "finance_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
             referencedRelation: "player_financial_transaction"
             referencedColumns: ["id"]
           },
@@ -1046,6 +1053,13 @@ export type Database = {
             foreignKeyName: "loyalty_ledger_rating_slip_id_fkey"
             columns: ["rating_slip_id"]
             isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
+          },
+          {
+            foreignKeyName: "loyalty_ledger_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
             referencedRelation: "rating_slip"
             referencedColumns: ["id"]
           },
@@ -1061,6 +1075,50 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_liability_snapshot: {
+        Row: {
+          casino_id: string
+          created_at: string
+          estimated_monetary_value_cents: number
+          id: string
+          player_count: number
+          snapshot_date: string
+          total_outstanding_points: number
+          valuation_effective_date: string
+          valuation_policy_version: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          estimated_monetary_value_cents: number
+          id?: string
+          player_count: number
+          snapshot_date: string
+          total_outstanding_points: number
+          valuation_effective_date: string
+          valuation_policy_version: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          estimated_monetary_value_cents?: number
+          id?: string
+          player_count?: number
+          snapshot_date?: string
+          total_outstanding_points?: number
+          valuation_effective_date?: string
+          valuation_policy_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_liability_snapshot_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
             referencedColumns: ["id"]
           },
         ]
@@ -1111,6 +1169,61 @@ export type Database = {
             referencedRelation: "loyalty_ledger"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "loyalty_outbox_ledger_id_fkey"
+            columns: ["ledger_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["loyalty_ledger_id"]
+          },
+        ]
+      }
+      loyalty_valuation_policy: {
+        Row: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        Insert: {
+          casino_id: string
+          cents_per_point: number
+          created_at?: string
+          created_by_staff_id?: string | null
+          effective_date: string
+          id?: string
+          is_active?: boolean
+          version_identifier: string
+        }
+        Update: {
+          casino_id?: string
+          cents_per_point?: number
+          created_at?: string
+          created_by_staff_id?: string | null
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          version_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_valuation_policy_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_valuation_policy_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
         ]
       }
       mtl_audit_note: {
@@ -1136,6 +1249,13 @@ export type Database = {
           staff_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey"
+            columns: ["mtl_entry_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["mtl_entry_id"]
+          },
           {
             foreignKeyName: "mtl_audit_note_mtl_entry_id_fkey"
             columns: ["mtl_entry_id"]
@@ -1218,6 +1338,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mtl_entry_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
           },
           {
             foreignKeyName: "mtl_entry_rating_slip_id_fkey"
@@ -1315,6 +1442,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pit_cash_observation_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
           },
           {
             foreignKeyName: "pit_cash_observation_rating_slip_id_fkey"
@@ -1492,6 +1626,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "player"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_financial_transaction_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
           },
           {
             foreignKeyName: "player_financial_transaction_rating_slip_id_fkey"
@@ -1982,12 +2123,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -2003,12 +2146,14 @@ export type Database = {
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id: string
+          computed_theo_cents?: number | null
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
           final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          legacy_theo_cents?: number | null
           move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
@@ -2024,12 +2169,14 @@ export type Database = {
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id?: string
+          computed_theo_cents?: number | null
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
           final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          legacy_theo_cents?: number | null
           move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
@@ -2047,6 +2194,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "casino"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_slip_previous_slip_id_fkey"
+            columns: ["previous_slip_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
           },
           {
             foreignKeyName: "rating_slip_previous_slip_id_fkey"
@@ -2110,6 +2264,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_slip_pause_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
           },
           {
             foreignKeyName: "rating_slip_pause_rating_slip_id_fkey"
@@ -2681,6 +2842,13 @@ export type Database = {
             foreignKeyName: "table_buyin_telemetry_rating_slip_id_fkey"
             columns: ["rating_slip_id"]
             isOneToOne: false
+            referencedRelation: "measurement_audit_event_correlation_v"
+            referencedColumns: ["rating_slip_id"]
+          },
+          {
+            foreignKeyName: "table_buyin_telemetry_rating_slip_id_fkey"
+            columns: ["rating_slip_id"]
+            isOneToOne: false
             referencedRelation: "rating_slip"
             referencedColumns: ["id"]
           },
@@ -2793,6 +2961,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_credit_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
           },
           {
             foreignKeyName: "table_credit_session_id_fkey"
@@ -2998,6 +3173,13 @@ export type Database = {
             foreignKeyName: "table_fill_session_id_fkey"
             columns: ["session_id"]
             isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
+          },
+          {
+            foreignKeyName: "table_fill_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
             referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
@@ -3067,6 +3249,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "staff"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
           },
           {
             foreignKeyName: "table_inventory_snapshot_session_id_fkey"
@@ -3222,6 +3411,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "table_inventory_snapshot"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_rundown_report_table_session_id_fkey"
+            columns: ["table_session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
           },
           {
             foreignKeyName: "table_rundown_report_table_session_id_fkey"
@@ -3461,6 +3657,87 @@ export type Database = {
       }
     }
     Views: {
+      measurement_audit_event_correlation_v: {
+        Row: {
+          casino_id: string | null
+          computed_theo_cents: number | null
+          duration_seconds: number | null
+          end_time: string | null
+          legacy_theo_cents: number | null
+          loyalty_created_at: string | null
+          loyalty_ledger_id: string | null
+          loyalty_points_delta: number | null
+          loyalty_reason: Database["public"]["Enums"]["loyalty_reason"] | null
+          mtl_amount: number | null
+          mtl_direction: string | null
+          mtl_entry_id: string | null
+          mtl_occurred_at: string | null
+          mtl_txn_type: Database["public"]["Enums"]["mtl_txn_type"] | null
+          pft_amount: number | null
+          pft_created_at: string | null
+          pft_direction:
+            | Database["public"]["Enums"]["financial_direction"]
+            | null
+          pft_id: string | null
+          pft_txn_kind: Database["public"]["Enums"]["financial_txn_kind"] | null
+          rating_slip_id: string | null
+          slip_status: Database["public"]["Enums"]["rating_slip_status"] | null
+          start_time: string | null
+          visit_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rating_slip_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rating_slip_visit_id_fkey"
+            columns: ["visit_id"]
+            isOneToOne: false
+            referencedRelation: "visit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      measurement_rating_coverage_v: {
+        Row: {
+          casino_id: string | null
+          closed_at: string | null
+          gaming_day: string | null
+          gaming_table_id: string | null
+          ghost_seconds: number | null
+          idle_seconds: number | null
+          open_seconds: number | null
+          opened_at: string | null
+          rated_ratio: number | null
+          rated_seconds: number | null
+          session_status:
+            | Database["public"]["Enums"]["table_session_status"]
+            | null
+          slip_count: number | null
+          table_session_id: string | null
+          untracked_seconds: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_session_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_gaming_table_id_fkey"
+            columns: ["gaming_table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mtl_gaming_day_summary: {
         Row: {
           casino_id: string | null
@@ -4560,7 +4837,6 @@ export type Database = {
       }
       rpc_manual_credit: {
         Args: {
-          p_awarded_by_staff_id: string
           p_idempotency_key: string
           p_note: string
           p_player_id: string
@@ -4634,12 +4910,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -4771,7 +5049,6 @@ export type Database = {
         Args: {
           p_allow_overdraw?: boolean
           p_idempotency_key: string
-          p_issued_by_staff_id: string
           p_note: string
           p_player_id: string
           p_points: number
@@ -4880,12 +5157,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -5132,6 +5411,26 @@ export type Database = {
               window_start: string
             }[]
           }
+      rpc_snapshot_loyalty_liability: {
+        Args: { p_snapshot_date?: string }
+        Returns: {
+          casino_id: string
+          created_at: string
+          estimated_monetary_value_cents: number
+          id: string
+          player_count: number
+          snapshot_date: string
+          total_outstanding_points: number
+          valuation_effective_date: string
+          valuation_policy_version: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_liability_snapshot"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_start_or_resume_visit: {
         Args: { p_player_id: string }
         Returns: {
@@ -5153,12 +5452,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null

@@ -376,7 +376,7 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
 -- --------------------------------
 
 -- Player 1: Yesterday's blackjack session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, computed_theo_cents) VALUES
   (
     'd1000000-0000-0000-0000-000000000005',
     'ca000000-0000-0000-0000-000000000001',
@@ -389,12 +389,13 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     175.00,
     NOW() - INTERVAL '1 day' - INTERVAL '4 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
-    'closed'
+    'closed',
+    1050
   );
 
 -- Player 5: Yesterday's long session with pauses (closed)
 -- pause_intervals contains two completed pause ranges (both have end times)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, pause_intervals) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, pause_intervals, computed_theo_cents) VALUES
   (
     'd1000000-0000-0000-0000-000000000006',
     'ca000000-0000-0000-0000-000000000001',
@@ -411,11 +412,12 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     ARRAY[
       tstzrange(NOW() - INTERVAL '1 day' - INTERVAL '6 hours', NOW() - INTERVAL '1 day' - INTERVAL '5 hours' - INTERVAL '30 minutes'),
       tstzrange(NOW() - INTERVAL '1 day' - INTERVAL '4 hours' - INTERVAL '30 minutes', NOW() - INTERVAL '1 day' - INTERVAL '4 hours')
-    ]  -- Two completed pauses
+    ],  -- Two completed pauses
+    3000
   );
 
 -- Player 6: Yesterday's roulette session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, computed_theo_cents) VALUES
   (
     'd1000000-0000-0000-0000-000000000007',
     'ca000000-0000-0000-0000-000000000001',
@@ -428,11 +430,12 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     50.00,
     NOW() - INTERVAL '1 day' - INTERVAL '2 hours',
     NOW() - INTERVAL '1 day' - INTERVAL '1 hour',
-    'closed'
+    'closed',
+    353
   );
 
 -- Player 2: Last week's session at Casino 1 (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, computed_theo_cents) VALUES
   (
     'd1000000-0000-0000-0000-000000000008',
     'ca000000-0000-0000-0000-000000000001',
@@ -445,11 +448,12 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     750.00,
     NOW() - INTERVAL '3 days' - INTERVAL '5 hours',
     NOW() - INTERVAL '3 days' - INTERVAL '1 hour',
-    'closed'
+    'closed',
+    7500
   );
 
 -- Player 5: Historical high-roller session (closed)
-INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status) VALUES
+INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_settings, policy_snapshot, accrual_kind, average_bet, start_time, end_time, status, computed_theo_cents) VALUES
   (
     'd1000000-0000-0000-0000-000000000009',
     'ca000000-0000-0000-0000-000000000001',
@@ -462,7 +466,8 @@ INSERT INTO rating_slip (id, casino_id, visit_id, table_id, seat_number, game_se
     2500.00,
     NOW() - INTERVAL '5 days' - INTERVAL '8 hours',
     NOW() - INTERVAL '5 days' - INTERVAL '3 hours',
-    'closed'
+    'closed',
+    7500
   );
 
 -- --------------------------------
