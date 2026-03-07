@@ -256,7 +256,6 @@ export async function redeem(
 ): Promise<RedeemOutput> {
   try {
     const { data, error } = await supabase.rpc('rpc_redeem', {
-      p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
       p_issued_by_staff_id: input.issuedByStaffId,
@@ -308,7 +307,6 @@ export async function manualCredit(
 ): Promise<ManualCreditOutput> {
   try {
     const { data, error } = await supabase.rpc('rpc_manual_credit', {
-      p_casino_id: input.casinoId,
       p_player_id: input.playerId,
       p_points: input.points,
       p_awarded_by_staff_id: input.awardedByStaffId,

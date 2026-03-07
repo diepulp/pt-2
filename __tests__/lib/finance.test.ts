@@ -11,7 +11,6 @@ describe('Finance RPC helper', () => {
     >[0];
 
     const result = await createFinancialTransaction(supabase, {
-      casinoId: 'casino-1',
       playerId: 'player-1',
       amount: 250,
       tenderType: 'cash',
@@ -21,7 +20,6 @@ describe('Finance RPC helper', () => {
     });
 
     expect(rpc).toHaveBeenCalledWith('rpc_create_financial_txn', {
-      p_casino_id: 'casino-1',
       p_player_id: 'player-1',
       p_amount: 250,
       p_tender_type: 'cash',
@@ -40,7 +38,6 @@ describe('Finance RPC helper', () => {
 
     await expect(
       createFinancialTransaction(supabase, {
-        casinoId: 'casino-1',
         playerId: 'player-1',
         amount: 100,
       }),

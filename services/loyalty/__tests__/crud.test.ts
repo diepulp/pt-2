@@ -161,7 +161,6 @@ describe('loyalty crud', () => {
       await crud.redeem(supabase, input);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_redeem', {
-        p_casino_id: input.casinoId,
         p_player_id: input.playerId,
         p_points: input.points,
         p_issued_by_staff_id: input.issuedByStaffId,
@@ -186,7 +185,6 @@ describe('loyalty crud', () => {
       await crud.redeem(supabase, inputWithOptionals);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_redeem', {
-        p_casino_id: inputWithOptionals.casinoId,
         p_player_id: inputWithOptionals.playerId,
         p_points: inputWithOptionals.points,
         p_issued_by_staff_id: inputWithOptionals.issuedByStaffId,
@@ -245,7 +243,6 @@ describe('loyalty crud', () => {
       await crud.manualCredit(supabase, input);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_manual_credit', {
-        p_casino_id: input.casinoId,
         p_player_id: input.playerId,
         p_points: input.points,
         p_awarded_by_staff_id: input.awardedByStaffId,

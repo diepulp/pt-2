@@ -63,7 +63,6 @@ describe('player-financial crud.createTransaction', () => {
     );
 
     expect(supabase.rpc).toHaveBeenCalledWith('rpc_create_financial_txn', {
-      p_casino_id: input.casino_id,
       p_player_id: input.player_id,
       p_visit_id: input.visit_id,
       p_amount: input.amount,

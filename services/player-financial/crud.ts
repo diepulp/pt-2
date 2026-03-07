@@ -149,7 +149,6 @@ export async function createTransaction(
     // via `as any` needed until db:types-local is run against the updated local DB.
     /* eslint-disable @typescript-eslint/no-explicit-any, custom-rules/no-dto-type-assertions -- RPC overload + pending types regen */
     const { data, error } = (await supabase.rpc('rpc_create_financial_txn', {
-      p_casino_id: input.casino_id,
       p_player_id: input.player_id,
       p_visit_id: input.visit_id,
       p_amount: input.amount,
