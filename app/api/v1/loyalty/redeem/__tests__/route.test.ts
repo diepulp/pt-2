@@ -43,7 +43,6 @@ jest.mock('@/services/loyalty', () => ({
 
 const VALID_PLAYER_ID = '123e4567-e89b-12d3-a456-426614174000';
 const VALID_CASINO_ID = '123e4567-e89b-12d3-a456-426614174001';
-const VALID_STAFF_ID = '123e4567-e89b-12d3-a456-426614174002';
 const VALID_IDEMPOTENCY_KEY = '123e4567-e89b-12d3-a456-426614174003';
 
 describe('POST /api/v1/loyalty/redeem', () => {
@@ -57,7 +56,7 @@ describe('POST /api/v1/loyalty/redeem', () => {
         playerId: VALID_PLAYER_ID,
         casinoId: VALID_CASINO_ID,
         points: 50,
-        issuedByStaffId: VALID_STAFF_ID,
+
         note: 'Test redemption',
         idempotencyKey: VALID_IDEMPOTENCY_KEY,
       },
@@ -77,7 +76,7 @@ describe('POST /api/v1/loyalty/redeem', () => {
         playerId: VALID_PLAYER_ID,
         casinoId: VALID_CASINO_ID,
         points: 50,
-        issuedByStaffId: VALID_STAFF_ID,
+
         note: 'Test redemption',
         idempotencyKey: VALID_IDEMPOTENCY_KEY,
       },
@@ -121,7 +120,7 @@ describe('POST /api/v1/loyalty/redeem', () => {
         playerId: VALID_PLAYER_ID,
         casinoId: VALID_CASINO_ID,
         points: 50,
-        issuedByStaffId: VALID_STAFF_ID,
+
         note: 'Test redemption',
         idempotencyKey: VALID_IDEMPOTENCY_KEY,
       },

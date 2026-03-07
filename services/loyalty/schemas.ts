@@ -48,7 +48,6 @@ export const redeemInputSchema = z.object({
     .number()
     .int('Points must be an integer')
     .positive('Points must be positive'),
-  issuedByStaffId: uuidSchema('staff ID'),
   note: z.string().min(1, 'Note is required for redemptions'),
   idempotencyKey: uuidSchema('idempotency key'),
   allowOverdraw: z.boolean().default(false).optional(),
@@ -68,7 +67,6 @@ export const manualCreditInputSchema = z.object({
     .number()
     .int('Points must be an integer')
     .positive('Points must be positive'),
-  awardedByStaffId: uuidSchema('staff ID'),
   note: z.string().min(1, 'Note is required for manual credits'),
   idempotencyKey: uuidSchema('idempotency key'),
 });

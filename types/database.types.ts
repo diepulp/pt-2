@@ -1065,6 +1065,50 @@ export type Database = {
           },
         ]
       }
+      loyalty_liability_snapshot: {
+        Row: {
+          casino_id: string
+          created_at: string
+          estimated_monetary_value_cents: number
+          id: string
+          player_count: number
+          snapshot_date: string
+          total_outstanding_points: number
+          valuation_effective_date: string
+          valuation_policy_version: string
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          estimated_monetary_value_cents: number
+          id?: string
+          player_count: number
+          snapshot_date: string
+          total_outstanding_points: number
+          valuation_effective_date: string
+          valuation_policy_version: string
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          estimated_monetary_value_cents?: number
+          id?: string
+          player_count?: number
+          snapshot_date?: string
+          total_outstanding_points?: number
+          valuation_effective_date?: string
+          valuation_policy_version?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_liability_snapshot_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_outbox: {
         Row: {
           attempt_count: number
@@ -1109,6 +1153,54 @@ export type Database = {
             columns: ["ledger_id"]
             isOneToOne: false
             referencedRelation: "loyalty_ledger"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_valuation_policy: {
+        Row: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        Insert: {
+          casino_id: string
+          cents_per_point: number
+          created_at?: string
+          created_by_staff_id?: string | null
+          effective_date: string
+          id?: string
+          is_active?: boolean
+          version_identifier: string
+        }
+        Update: {
+          casino_id?: string
+          cents_per_point?: number
+          created_at?: string
+          created_by_staff_id?: string | null
+          effective_date?: string
+          id?: string
+          is_active?: boolean
+          version_identifier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loyalty_valuation_policy_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loyalty_valuation_policy_created_by_staff_id_fkey"
+            columns: ["created_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
         ]
@@ -1982,12 +2074,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -2003,12 +2097,14 @@ export type Database = {
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id: string
+          computed_theo_cents?: number | null
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
           final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          legacy_theo_cents?: number | null
           move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
@@ -2024,12 +2120,14 @@ export type Database = {
           accumulated_seconds?: number
           average_bet?: number | null
           casino_id?: string
+          computed_theo_cents?: number | null
           duration_seconds?: number | null
           end_time?: string | null
           final_average_bet?: number | null
           final_duration_seconds?: number | null
           game_settings?: Json | null
           id?: string
+          legacy_theo_cents?: number | null
           move_group_id?: string | null
           pause_intervals?: unknown[] | null
           policy_snapshot?: Json | null
@@ -4560,7 +4658,6 @@ export type Database = {
       }
       rpc_manual_credit: {
         Args: {
-          p_awarded_by_staff_id: string
           p_idempotency_key: string
           p_note: string
           p_player_id: string
@@ -4634,12 +4731,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -4771,7 +4870,6 @@ export type Database = {
         Args: {
           p_allow_overdraw?: boolean
           p_idempotency_key: string
-          p_issued_by_staff_id: string
           p_note: string
           p_player_id: string
           p_points: number
@@ -4880,12 +4978,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null
@@ -5153,12 +5253,14 @@ export type Database = {
           accumulated_seconds: number
           average_bet: number | null
           casino_id: string
+          computed_theo_cents: number | null
           duration_seconds: number | null
           end_time: string | null
           final_average_bet: number | null
           final_duration_seconds: number | null
           game_settings: Json | null
           id: string
+          legacy_theo_cents: number | null
           move_group_id: string | null
           pause_intervals: unknown[] | null
           policy_snapshot: Json | null

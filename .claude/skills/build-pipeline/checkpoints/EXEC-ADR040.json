@@ -1,0 +1,17 @@
+{
+  "spec_id": "EXEC-ADR040",
+  "source": "docs/21-exec-spec/EXEC-ADR040-identity-provenance-implementation.md",
+  "status": "complete",
+  "current_phase": 3,
+  "gov010_check": "n/a",
+  "adversarial_review": "skipped",
+  "completed_workstreams": ["WS1", "WS2", "WS5", "WS3", "WS6", "WS7"],
+  "pending_workstreams": [],
+  "execution_phases": [
+    { "name": "Database Migrations", "parallel": ["WS1", "WS2", "WS5"], "gate": "schema-validation", "status": "complete" },
+    { "name": "Service Layer Cleanup", "parallel": ["WS3"], "gate": "type-check", "status": "complete" },
+    { "name": "Integration Tests & Documentation", "parallel": ["WS6", "WS7"], "gate": "test-pass", "status": "complete" }
+  ],
+  "created": "2026-03-07",
+  "updated": "2026-03-07"
+}

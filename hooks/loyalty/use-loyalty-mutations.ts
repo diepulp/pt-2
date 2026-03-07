@@ -97,7 +97,6 @@ export function useAccrueOnClose() {
  *   casinoId,
  *   playerId,
  *   points: 5000,
- *   issuedByStaffId: staffId,
  *   note: 'Dinner for 2 at steakhouse',
  *   idempotencyKey: `redeem-${playerId}-${Date.now()}`,
  *   rewardId: 'reward-123',
@@ -108,7 +107,6 @@ export function useAccrueOnClose() {
  *   casinoId,
  *   playerId,
  *   points: 10000,
- *   issuedByStaffId: pitBossId,
  *   note: 'High roller suite comp',
  *   allowOverdraw: true,
  *   idempotencyKey: `redeem-${playerId}-${Date.now()}`,
@@ -153,7 +151,6 @@ export function useRedeem() {
  *   casinoId,
  *   playerId,
  *   points: 2500,
- *   awardedByStaffId: pitBossId,
  *   note: 'Service recovery for slot malfunction',
  *   idempotencyKey: `manual-${playerId}-${Date.now()}`,
  * });

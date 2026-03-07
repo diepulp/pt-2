@@ -159,9 +159,6 @@ export interface RedeemInput {
   /** Points to redeem (POSITIVE cost, will be negated internally) */
   points: number;
 
-  /** Staff member issuing the comp */
-  issuedByStaffId: string;
-
   /** Comp description (REQUIRED, e.g., "Dinner for 2 at steakhouse") */
   note: string;
 
@@ -215,9 +212,6 @@ export interface ManualCreditInput {
 
   /** Points to award (POSITIVE only) */
   points: number;
-
-  /** Staff member awarding points */
-  awardedByStaffId: string;
 
   /** Justification (REQUIRED, e.g., "Service recovery for slot malfunction") */
   note: string;

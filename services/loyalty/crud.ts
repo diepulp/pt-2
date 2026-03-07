@@ -258,7 +258,6 @@ export async function redeem(
     const { data, error } = await supabase.rpc('rpc_redeem', {
       p_player_id: input.playerId,
       p_points: input.points,
-      p_issued_by_staff_id: input.issuedByStaffId,
       p_note: input.note,
       p_idempotency_key: input.idempotencyKey,
       p_allow_overdraw: input.allowOverdraw ?? false,
@@ -309,7 +308,6 @@ export async function manualCredit(
     const { data, error } = await supabase.rpc('rpc_manual_credit', {
       p_player_id: input.playerId,
       p_points: input.points,
-      p_awarded_by_staff_id: input.awardedByStaffId,
       p_note: input.note,
       p_idempotency_key: input.idempotencyKey,
     });

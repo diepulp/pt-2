@@ -136,7 +136,6 @@ describe('loyalty crud', () => {
       casinoId: 'casino-uuid-1',
       playerId: 'player-uuid-1',
       points: 50,
-      issuedByStaffId: 'staff-uuid-1',
       note: 'Dinner for 2 at steakhouse',
       idempotencyKey: 'idem-uuid-2',
       allowOverdraw: false,
@@ -163,12 +162,11 @@ describe('loyalty crud', () => {
       expect(mockRpc).toHaveBeenCalledWith('rpc_redeem', {
         p_player_id: input.playerId,
         p_points: input.points,
-        p_issued_by_staff_id: input.issuedByStaffId,
         p_note: input.note,
         p_idempotency_key: input.idempotencyKey,
         p_allow_overdraw: false,
-        p_reward_id: null,
-        p_reference: null,
+        p_reward_id: undefined,
+        p_reference: undefined,
       });
     });
 
@@ -187,7 +185,6 @@ describe('loyalty crud', () => {
       expect(mockRpc).toHaveBeenCalledWith('rpc_redeem', {
         p_player_id: inputWithOptionals.playerId,
         p_points: inputWithOptionals.points,
-        p_issued_by_staff_id: inputWithOptionals.issuedByStaffId,
         p_note: inputWithOptionals.note,
         p_idempotency_key: inputWithOptionals.idempotencyKey,
         p_allow_overdraw: false,
@@ -224,7 +221,6 @@ describe('loyalty crud', () => {
       casinoId: 'casino-uuid-1',
       playerId: 'player-uuid-1',
       points: 25,
-      awardedByStaffId: 'staff-uuid-1',
       note: 'Service recovery for slot malfunction',
       idempotencyKey: 'idem-uuid-3',
     };
@@ -245,7 +241,6 @@ describe('loyalty crud', () => {
       expect(mockRpc).toHaveBeenCalledWith('rpc_manual_credit', {
         p_player_id: input.playerId,
         p_points: input.points,
-        p_awarded_by_staff_id: input.awardedByStaffId,
         p_note: input.note,
         p_idempotency_key: input.idempotencyKey,
       });
@@ -601,7 +596,6 @@ describe('loyalty crud', () => {
           casinoId: 'x',
           playerId: 'y',
           points: 10,
-          issuedByStaffId: 's',
           note: 'n',
           idempotencyKey: 'z',
         }),
