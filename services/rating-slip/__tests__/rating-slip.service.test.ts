@@ -185,7 +185,6 @@ describe('RatingSlipService', () => {
         expect(result.table_id).toBe(TABLE_ID);
         // Note: p_player_id removed per ADR-015 Phase 1A - RPC derives from visit internally
         expect(mockChain.rpc).toHaveBeenCalledWith('rpc_start_rating_slip', {
-          p_casino_id: CASINO_ID,
           p_visit_id: VISIT_ID,
           p_table_id: TABLE_ID,
           p_seat_number: '3',

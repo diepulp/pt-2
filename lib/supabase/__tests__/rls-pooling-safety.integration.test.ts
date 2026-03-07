@@ -795,7 +795,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: startResult, error: startError } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '1',
@@ -829,7 +828,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: slip, error: startError } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '2',
@@ -882,7 +880,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: slip1, error: start1Error } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '3',
@@ -945,14 +942,12 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         // Start slips concurrently in both casinos
         const [result1, result2] = await Promise.all([
           supabase.rpc('rpc_start_rating_slip', {
-            p_casino_id: testCasino1Id,
             p_visit_id: testVisitId,
             p_table_id: testTableId,
             p_seat_number: '4',
             p_game_settings: { game_type: 'blackjack' },
           }),
           supabase.rpc('rpc_start_rating_slip', {
-            p_casino_id: testCasino2Id,
             p_visit_id: visit2!.id,
             p_table_id: table2!.id,
             p_seat_number: '1',

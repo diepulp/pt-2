@@ -145,7 +145,6 @@ export async function getModalDataViaRPC(
 ): Promise<RatingSlipModalDTO> {
   const { data, error } = await supabase.rpc('rpc_get_rating_slip_modal_data', {
     p_slip_id: slipId,
-    p_casino_id: casinoId,
   });
 
   if (error) {

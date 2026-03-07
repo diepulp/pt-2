@@ -82,7 +82,6 @@ describe('loyalty crud', () => {
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_accrue_on_close', {
         p_rating_slip_id: input.ratingSlipId,
-        p_casino_id: input.casinoId,
         p_idempotency_key: input.idempotencyKey,
       });
       expect(mappers.toAccrueOnCloseOutput).toHaveBeenCalledWith(rpcResponse);
@@ -289,7 +288,6 @@ describe('loyalty crud', () => {
       await crud.applyPromotion(supabase, input);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_apply_promotion', {
-        p_casino_id: input.casinoId,
         p_rating_slip_id: input.ratingSlipId,
         p_campaign_id: input.campaignId,
         p_promo_multiplier: null,
@@ -461,7 +459,6 @@ describe('loyalty crud', () => {
       await crud.getLedger(supabase, query);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_get_player_ledger', {
-        p_casino_id: query.casinoId,
         p_player_id: query.playerId,
         p_cursor_created_at: null,
         p_cursor_id: null,
@@ -481,7 +478,6 @@ describe('loyalty crud', () => {
       await crud.getLedger(supabase, queryWithCursor);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_get_player_ledger', {
-        p_casino_id: query.casinoId,
         p_player_id: query.playerId,
         p_cursor_created_at: '2025-01-15T10:00:00Z',
         p_cursor_id: 'cursor-uuid',
@@ -538,7 +534,6 @@ describe('loyalty crud', () => {
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_reconcile_loyalty_balance', {
         p_player_id: playerId,
-        p_casino_id: casinoId,
       });
       expect(result).toEqual(rpcResponse);
     });
