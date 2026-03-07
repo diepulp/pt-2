@@ -212,7 +212,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow, error: financeError } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: 500, // $500 (dollars)
@@ -256,7 +255,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow, error: financeError } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: 200, // $200
@@ -290,7 +288,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow, error: financeError } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: 300, // $300
@@ -328,7 +325,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow1 } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: 100,
@@ -348,7 +344,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow2 } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: 100,
@@ -500,7 +495,6 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
       const { data: financeRow } = await serviceClient.rpc(
         'rpc_create_financial_txn',
         {
-          p_casino_id: casinoId,
           p_player_id: playerId,
           p_visit_id: visitId,
           p_amount: testAmountDollars,

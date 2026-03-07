@@ -10,23 +10,15 @@
 -- Per ADR-024, identity must be derived from JWT via set_rls_context_from_staff(),
 -- never passed as a user-supplied parameter.
 --
--- Allowlist: RPCs with known-deferred p_casino_id that are outside EXEC-041
--- WS1-WS5 scope. Generated from catalog on 2026-03-04.
+-- Allowlist: EMPTY (all p_casino_id params removed by PRD-043 + PRD-044).
+-- Zero-tolerance enforcement active since 2026-03-06.
 -- ============================================================================
 
 DO $$
 DECLARE
-  -- ── Allowlist (4 entries, D3/D4 deferred — blocked on OQ-1/OQ-2) ──
-  -- D1+D2 RPCs remediated by PRD-043 Phases 1-3.
-  -- Remaining RPCs still carry p_casino_id pending business decisions.
-  v_casino_id_allowlist text[] := ARRAY[
-    -- Financial context (OQ-1 blocked)
-    'rpc_create_financial_txn',
-    'rpc_create_financial_adjustment',
-    -- Loyalty write context (OQ-2 blocked)
-    'rpc_manual_credit',
-    'rpc_redeem'
-  ];
+  -- ── Allowlist (EMPTY — all p_casino_id params removed by PRD-043 + PRD-044) ──
+  -- D1+D2: PRD-043 (10 RPCs), D3+D4: PRD-044 (4 RPCs). Zero tolerance enforced.
+  v_casino_id_allowlist text[] := ARRAY[]::text[];
 
   v_violations text := '';
   v_violation_count int := 0;
@@ -120,11 +112,10 @@ BEGIN
       v_stale_count, v_stale;
   END IF;
 
-  -- Allowlisted p_casino_id → NOTICE (D3/D4 deferred, blocked on OQ-1/OQ-2)
-  -- These 4 RPCs are awaiting business decisions before remediation.
-  -- Flip to EXCEPTION once OQ-1/OQ-2 are resolved and D3/D4 RPCs are remediated.
+  -- Zero tolerance: any p_casino_id on allowlisted RPCs is now a hard fail.
+  -- PRD-044 completed D3/D4 remediation. No allowlisted entries should remain.
   IF v_casino_warning_count > 0 THEN
-    RAISE NOTICE E'INFO [SEC-003]: % rpc_* function(s) with allowlisted p_casino_id (deferred D3/D4):\n%',
+    RAISE EXCEPTION E'FAIL [SEC-003]: % rpc_* function(s) with allowlisted p_casino_id (zero-tolerance enforced):\n%',
       v_casino_warning_count, v_casino_warnings;
   END IF;
 

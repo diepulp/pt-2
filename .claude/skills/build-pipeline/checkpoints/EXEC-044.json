@@ -1,0 +1,76 @@
+{
+  "spec_id": "EXEC-044",
+  "prd_ref": "PRD-044",
+  "title": "D3/D4 p_casino_id Decoupling — Final 4 RPCs",
+  "status": "complete",
+  "started_at": "2026-03-06T22:38:00Z",
+  "completed_at": "2026-03-06T22:45:00Z",
+  "gov010_check": "n/a",
+  "adversarial_review": "n/a",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "workstream_results": {
+    "WS1": {
+      "name": "Phase 1 SQL Migration — Remove p_casino_id + Hardening",
+      "executor": "rls-expert",
+      "status": "complete",
+      "artifacts": [
+        "supabase/migrations/20260306223803_prd044_d3d4_remove_p_casino_id.sql"
+      ],
+      "gate": "schema-validation",
+      "gate_result": "pass"
+    },
+    "WS2": {
+      "name": "Type Regeneration + TypeScript Cascade",
+      "executor": "backend-service-builder",
+      "status": "complete",
+      "artifacts": [
+        "types/database.types.ts",
+        "services/player-financial/crud.ts",
+        "services/player-financial/http.ts",
+        "services/loyalty/crud.ts",
+        "lib/finance.ts",
+        "lib/supabase/__tests__/pit-boss-financial-txn.test.ts",
+        "__tests__/services/table-context/finance-telemetry-bridge.int.test.ts",
+        "services/loyalty/__tests__/crud.test.ts",
+        "services/player-financial/__tests__/crud.test.ts",
+        "__tests__/lib/finance.test.ts"
+      ],
+      "gate": "type-check",
+      "gate_result": "pass"
+    },
+    "WS3": {
+      "name": "Phase 3 Cleanup Migration + SEC-003 Enforcement Flip",
+      "executor": "rls-expert",
+      "status": "complete",
+      "artifacts": [
+        "supabase/migrations/20260306224345_prd044_cleanup_adjustment_compat.sql",
+        "supabase/tests/security/03_identity_param_check.sql"
+      ],
+      "gate": "schema-validation",
+      "gate_result": "pass"
+    },
+    "WS4": {
+      "name": "DoD Validation Gate",
+      "executor": "backend-service-builder",
+      "status": "complete",
+      "gate": "build",
+      "gate_result": "pass",
+      "dod_results": {
+        "catalog_zero_tolerance": "0 rows",
+        "positional_args_check": "0 rows",
+        "anon_revoke_manual_credit": false,
+        "anon_revoke_redeem": false,
+        "search_path_all_four": true,
+        "security_gates": "8/8 pass",
+        "type_check": "exit 0",
+        "lint": "exit 0",
+        "build": "exit 0",
+        "sec003_allowlist_empty": true,
+        "sec003_enforcement_exception": true,
+        "grep_in_scope_rpcs": "0 matches"
+      }
+    }
+  }
+}

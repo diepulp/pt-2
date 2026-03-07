@@ -3839,7 +3839,6 @@ export type Database = {
       }
       rpc_create_financial_adjustment: {
         Args: {
-          p_casino_id: string
           p_delta_amount: number
           p_idempotency_key?: string
           p_note: string
@@ -3880,7 +3879,6 @@ export type Database = {
       rpc_create_financial_txn: {
         Args: {
           p_amount: number
-          p_casino_id: string
           p_created_at?: string
           p_created_by_staff_id: string
           p_direction: Database["public"]["Enums"]["financial_direction"]
@@ -4563,7 +4561,6 @@ export type Database = {
       rpc_manual_credit: {
         Args: {
           p_awarded_by_staff_id: string
-          p_casino_id: string
           p_idempotency_key: string
           p_note: string
           p_player_id: string
@@ -4773,7 +4770,6 @@ export type Database = {
       rpc_redeem: {
         Args: {
           p_allow_overdraw?: boolean
-          p_casino_id: string
           p_idempotency_key: string
           p_issued_by_staff_id: string
           p_note: string
