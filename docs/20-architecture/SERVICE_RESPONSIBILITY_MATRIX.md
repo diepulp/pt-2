@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.16.0
+nsversion: 4.18.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -20,13 +20,14 @@ source_of_truth:
   - docs/80-adrs/ADR-030-auth-system-hardening.md
   - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
   - docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md
+  - docs/80-adrs/ADR-039-measurement-layer.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.16.0 (PRD-038: Shift Rundown Persistence & Delta Checkpoints)
+> **Version**: 4.18.0 (ADR-039: Measurement Layer — Cross-Cutting Read Models)
 > **Date**: 2026-02-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -53,6 +54,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.18.0 (2026-03-07)** – **ADR-039 Measurement Layer**: Added Measurement Layer (Cross-Cutting Read Models) section. New columns on `rating_slip`: `legacy_theo_cents`, `computed_theo_cents` (ADR-031 cents, materialized at close by 3 RPCs). New tables in LoyaltyService: `loyalty_valuation_policy`, `loyalty_liability_snapshot`. New SECURITY DEFINER RPC: `rpc_snapshot_loyalty_liability` (ADR-024, idempotent UPSERT). 2 cross-context views: `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` (security_invoker=true, Pattern C RLS). CHECK constraint `chk_closed_slip_has_theo` (NOT VALID). See `docs/80-adrs/ADR-039-measurement-layer.md`.
 - **4.17.0 (2026-02-25)** – **PRD-038A Table Lifecycle Audit Patch**: Added `close_reason_type` enum (8 values). Added 10 columns to `table_session`: `close_reason`, `close_note`, `has_unresolved_items`, `requires_reconciliation`, `activated_by_staff_id`, `paused_by_staff_id`, `resumed_by_staff_id`, `rolled_over_by_staff_id`, `crossed_gaming_day`. CHECK constraint: `close_reason='other'` requires trimmed non-empty `close_note`. Modified `rpc_close_table_session` with close guardrail (`has_unresolved_items` check) and `close_reason`/`close_note` params. New `rpc_force_close_table_session` (SECURITY DEFINER, ADR-024): privileged close for pit_boss/admin, sets `requires_reconciliation=true`, emits `audit_log`. Extracted `_persist_inline_rundown` helper to prevent drift. `has_unresolved_items` write ownership: Finance/MTL RPCs or `service_role` only. See `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`.
 - **4.16.0 (2026-02-24)** – **PRD-038 Shift Rundown Persistence & Delta Checkpoints**: Added `table_rundown_report` and `shift_checkpoint` to TableContextService. `session_id` FK added to `table_fill` and `table_credit`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_persist_table_rundown` (UPSERT), `rpc_finalize_rundown` (immutable stamp), `rpc_create_shift_checkpoint` (metric snapshot). Modified RPCs: `rpc_request_table_fill`, `rpc_request_table_credit` (session linkage, atomic totals, late-event detection), `rpc_close_table_session` (inline rundown persistence). Privilege posture: REVOKE ALL + GRANT SELECT on both new tables; writes via RPCs only. Pattern C hybrid RLS SELECT. See ADR-038 and `docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md`.
 - **4.15.0 (2026-02-23)** – **PRD-037 CSV Player Import**: Added PlayerImportService (Onboarding context) with ownership of `import_batch`, `import_row`. New enums: `import_batch_status`, `import_row_status`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_import_create_batch`, `rpc_import_stage_rows`, `rpc_import_execute`. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via execute RPC only. Identifier resolution indexes on `player(lower(email))`, `player(phone_number)`. See `docs/10-prd/PRD-CSV-PLAYER-IMPORT-MVP.md` and ADR-036.
@@ -380,6 +382,9 @@ Identity: `player_enrolled`, `identity_verified`
 | `pit_cash_observation` | `observed_at`         | NOT NULL                 | Observation timestamp                       |
 | `pit_cash_observation` | `amount`              | CHECK constraint         | `amount > 0`                                |
 | `pit_cash_observation` | `created_by_staff_id` | FK to staff              | Actor tracking                              |
+| `rating_slip`          | `legacy_theo_cents`   | NULLABLE bigint          | ADR-039: Legacy-reported theo in cents. Set once at import, immutable. Transitional. |
+| `rating_slip`          | `computed_theo_cents`  | NULLABLE bigint          | ADR-039 D3: Deterministic theo in cents via `calculate_theo_from_snapshot`. Set once at close, immutable. |
+| `rating_slip`          | —                     | CHECK (NOT VALID)        | `chk_closed_slip_has_theo`: `status != 'closed' OR computed_theo_cents IS NOT NULL` |
 
 **Key Invariant**: Player identity derived from `visit.player_id`. RatingSlip does NOT have its own `player_id` column.
 
@@ -425,7 +430,7 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ## LoyaltyService (Reward Context)
 
-**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon`
+**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon`, `loyalty_valuation_policy`, `loyalty_liability_snapshot`
 
 **Bounded Context**: "What is this gameplay worth in rewards, and what promotional instruments have been issued?"
 
@@ -442,10 +447,19 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 | `loyalty_ledger` | `idempotency_key` | UNIQUE (partial)           | Prevents double-spend |
 | `loyalty_ledger` | `points_earned`   | NOT NULL                   | Amount issued         |
 | `loyalty_ledger` | `reason`          | NOT NULL, enum             | `loyalty_reason` type |
+| `loyalty_valuation_policy` | `casino_id`   | NOT NULL, FK          | Casino scoping        |
+| `loyalty_valuation_policy` | `cents_per_point` | NOT NULL, CHECK > 0 | Valuation rate        |
+| `loyalty_valuation_policy` | `effective_date` | NOT NULL             | Policy effective date |
+| `loyalty_valuation_policy` | `is_active`   | NOT NULL, default false    | One active per casino (partial unique index) |
+| `loyalty_liability_snapshot` | `casino_id` | NOT NULL, FK           | Casino scoping        |
+| `loyalty_liability_snapshot` | `snapshot_date` | NOT NULL            | UNIQUE with casino_id |
+| `loyalty_liability_snapshot` | `total_outstanding_points` | NOT NULL bigint | Aggregate points |
+| `loyalty_liability_snapshot` | `estimated_monetary_value_cents` | NOT NULL bigint | ADR-031 cents |
 
 ### Contracts
 
 - **RPC**: `rpc_issue_mid_session_reward` - atomic ledger + balance update
+- **RPC**: `rpc_snapshot_loyalty_liability` - SECURITY DEFINER (ADR-024), idempotent UPSERT per (casino_id, snapshot_date)
 - **Outbox**: `loyalty_outbox` for downstream side effects
 - **Visit Kind Filter**: Only `gaming_identified_rated` visits eligible for accrual
 
@@ -820,6 +834,38 @@ ADR-035 establishes a formal **Session Reset Contract** for Zustand stores and b
 
 ---
 
+## Measurement Layer (Cross-Cutting Read Models — ADR-039)
+
+**Governance**: ADR-039 — Cross-cutting read models that span bounded context boundaries.
+
+**Artifacts are NOT owned by any single service.** They are governed by the Measurement Layer section of the SRM and must be registered here with source table provenance.
+
+### Views (security_invoker=true)
+
+| View | Source Tables | Purpose |
+| ---- | ------------- | ------- |
+| `measurement_audit_event_correlation_v` | `rating_slip`, `player_financial_transaction`, `mtl_entry`, `loyalty_ledger` | End-to-end lineage: slip → PFT → MTL → loyalty for a single rating slip |
+| `measurement_rating_coverage_v` | `table_session`, `rating_slip` | Rating coverage accounting: rated vs untracked time per table session |
+
+**Security**: `security_invoker=true` — caller's Pattern C RLS applies to all source tables. GRANT SELECT to `authenticated`.
+
+### Registered Invariants
+
+| Artifact | Context | Invariant |
+| -------- | ------- | --------- |
+| `rating_slip.computed_theo_cents` | RatingSlipService | Materialized at close by `rpc_close_rating_slip`, `rpc_move_player`, `rpc_start_or_resume_visit`. Immutable post-close. |
+| `rating_slip.legacy_theo_cents` | RatingSlipService | Set once at import. Immutable. Transitional (legacy comparison). |
+| `loyalty_valuation_policy` | LoyaltyService | One active policy per casino (partial unique index). |
+| `loyalty_liability_snapshot` | LoyaltyService | Idempotent UPSERT per (casino_id, snapshot_date) via `rpc_snapshot_loyalty_liability`. |
+
+### Blocked Artifacts
+
+| Artifact | Reason | Unblock Condition |
+| -------- | ------ | ----------------- |
+| Audit-enriched correlation view (`audit_log` LEFT JOIN variant) | `audit_log` append-only immutability not yet enforced | Enforce append-only invariant (deny UPDATE/DELETE) |
+
+---
+
 ## Centralized Enum Catalog
 
 ```sql
@@ -858,6 +904,11 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | TableContextService | FloorLayoutService | `floor_layout.activated` events                              |
 | PlayerImportService | PlayerService      | `player` reads for identifier resolution, INSERTs via SECURITY DEFINER RPC |
 | PlayerImportService | CasinoService      | `player_casino` reads for enrollment lookup, INSERTs via SECURITY DEFINER RPC |
+| Measurement Layer   | RatingSlipService  | `rating_slip` columns via `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` |
+| Measurement Layer   | FinanceService     | `player_financial_transaction` via `measurement_audit_event_correlation_v` |
+| Measurement Layer   | MTLService         | `mtl_entry` via `measurement_audit_event_correlation_v` |
+| Measurement Layer   | LoyaltyService     | `loyalty_ledger` via `measurement_audit_event_correlation_v` |
+| Measurement Layer   | TableContextService | `table_session` via `measurement_rating_coverage_v` |
 
 **Rule**: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs—never by reaching into another service's tables directly.
 
@@ -887,6 +938,7 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md`              | Frontend error boundary three-tier hierarchy (extends ADR-012)   |
 | `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`           | Client state session reset contract (extends ADR-003, complements ADR-030) |
 | `docs/25-api-data/PLAYER_360_EVENT_TAXONOMY.md`                             | Event taxonomy quick reference                                   |
+| `docs/80-adrs/ADR-039-measurement-layer.md`                                 | Measurement Layer governance — cross-cutting read models         |
 
 ---
 
@@ -904,8 +956,8 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 
 ---
 
-**Document Version**: 4.15.0
+**Document Version**: 4.18.0
 **Created**: 2025-10-21
 **Reduced**: 2025-12-06
-**Updated**: 2026-02-23 (PRD-037: CSV Player Import — PlayerImportService)
+**Updated**: 2026-03-07 (ADR-039: Measurement Layer — Cross-Cutting Read Models)
 **Status**: CANONICAL - Registry + Invariants Only

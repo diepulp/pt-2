@@ -1,11 +1,28 @@
 ---
 adr: ADR-0XX-B
 date: 2026-03-01
-status: Proposed
+status: Superseded by PT2_Measurement_Surface_Guidance.md
 supersedes: ADR-0XX-A (Measurement Clarifications)
+superseded_by: PT2_Measurement_Surface_Guidance.md
 title: Measurement Surface Allocation --- UI Placement of Measurement
   Layer Artifacts
 ---
+
+> ### Superseded (2026-03-06)
+>
+> This document's **4-surface allocation model** (Pit Terminal, Shift Dashboard, Executive/Finance View, Audit Console) was evaluated and partially rejected by `PT2_Measurement_Surface_Guidance.md`, which is the **operative guidance**.
+>
+> | This Document Proposes | Guidance Decision |
+> |---|---|
+> | Separate "Executive / Finance View" for loyalty liability | Collapsed to single lightweight Reports page at `/admin/reports` |
+> | Separate "Audit Console" for event correlation | Collapsed to Slip Detail drill-down panel (collapsible section in Rating Slip Modal) |
+> | Pit Terminal + Shift Dashboard for telemetry completeness | **Retained** — no change |
+>
+> The Guidance document's core principle — *"Do not create new pages unless they pay rent"* — rejected the Executive Console and Audit Console as overbuilding.
+>
+> **Additionally**, PRD-040/042 (merged 2026-03-06) shipped the admin route group with role guard, alerts page, and reports placeholder — establishing the actual infrastructure that the Guidance doc's "Reports page" maps to.
+>
+> **For implementation, reference `PT2_Measurement_Surface_Guidance.md` and `MEASUREMENT_SURFACE_ALLOCATION_SUITABILITY.md` (with its staleness addendum).** This document is retained for historical context on the allocation decision process.
 
 # Purpose
 

@@ -6,6 +6,26 @@
 
 ---
 
+> ### Post-Audit Update (2026-03-06)
+>
+> **Several infrastructure claims in this report are now stale.** PRD-040 (admin alerts page, role guard, sidebar badge) and PRD-042 (admin settings) were implemented and merged to `main` on 2026-03-06 (commit `373de2f`). The following findings no longer hold:
+>
+> | Original Claim | Current Reality |
+> |---|---|
+> | "No route-level role gating middleware or layout guard exists" (§V) | `app/(dashboard)/admin/layout.tsx` implements RSC role guard for `admin`/`pit_boss` roles with staff table lookup |
+> | "Alert persistence + state machine missing" (§III Q3) | `/admin/alerts` page shipped with `AlertsPageClient`, severity filtering, dismiss state, and sidebar badge with live count |
+> | "Threshold write path not implemented" (§III Q1) | `/admin/settings/thresholds` page shipped with admin-gated threshold configuration UI |
+> | "No `/admin` route tree exists" (implicit) | Full admin route group: `/admin/alerts`, `/admin/reports` (placeholder), `/admin/settings/thresholds`, `/admin/settings/shifts` |
+> | Reports route is "ghost nav only" | Route + placeholder page exist at `app/(dashboard)/admin/reports/page.tsx`; loyalty liability components still needed |
+>
+> **Wedge C (Shift Intelligence) rating should be revised upward** — alert persistence, threshold write path, and admin infrastructure are no longer blockers. Baseline service remains the primary gap.
+>
+> **Security findings (§V C-1/C-2)** were remediated by SEC-007 / EXEC-040 (merged separately).
+>
+> Treat this report as the pre-implementation baseline. Cross-reference with PRD-040/042 implementation for current state.
+
+---
+
 ## Executive Summary
 
 PT-2 has built a **substantially more mature foundation** than a surface-level read suggests. The compliance infrastructure is near production-ready, the loyalty system implements an exemplary append-only ledger, theo baseline classification is fully operational (PRD-036), and shift intelligence has configurable thresholds with active cash observation alerts. However, **critical blockers remain** in each wedge that prevent the full "operational + compliance overlay" claim.
