@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
-import { useDismissedAlerts } from '@/hooks/admin/dismissed-alerts-context';
+import { useDismissedAlertsSafe } from '@/hooks/admin/dismissed-alerts-context';
 import { useAlertTimeWindow } from '@/hooks/admin/use-alert-time-window';
 import { fetchCashObsAlerts } from '@/hooks/shift-dashboard/http';
 import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
@@ -20,7 +20,7 @@ const BADGE_ROLES = new Set(['admin', 'pit_boss']);
  */
 export function useAdminAlertBadge() {
   const { staffRole, isLoading: authLoading } = useAuth();
-  const { isDismissed } = useDismissedAlerts();
+  const { isDismissed } = useDismissedAlertsSafe();
   const timeWindow = useAlertTimeWindow();
 
   const isAuthorized =

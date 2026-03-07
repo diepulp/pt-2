@@ -57,3 +57,18 @@ export function useDismissedAlerts(): DismissedAlertsContextValue {
   }
   return context;
 }
+
+const NOOP_DISMISSED: DismissedAlertsContextValue = {
+  dismissedKeys: new Set<string>(),
+  dismissAlert: () => {},
+  isDismissed: () => false,
+};
+
+/**
+ * Safe variant for components that may render before the provider mounts
+ * (e.g., sidebar badge during server-side redirects).
+ */
+export function useDismissedAlertsSafe(): DismissedAlertsContextValue {
+  const context = useContext(DismissedAlertsContext);
+  return context ?? NOOP_DISMISSED;
+}
