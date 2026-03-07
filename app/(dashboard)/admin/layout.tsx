@@ -2,8 +2,19 @@ import { redirect } from 'next/navigation';
 
 import { createClient } from '@/lib/supabase/server';
 
-const ADMIN_ROLES = new Set(['admin', 'pit_boss']);
+export type AdminRole = 'admin' | 'pit_boss';
 
+const ADMIN_ROLES = new Set<string>(['admin', 'pit_boss']);
+
+/**
+ * Admin layout — role guard for admin and pit_boss only.
+ *
+ * Derives role from direct `staff` table lookup (NOT JWT claims
+ * or session variables, which are unavailable during RSC rendering).
+ *
+ * Passes staff role to children via data attribute on wrapper div.
+ * Child client components can read this via closest('[data-staff-role]').
+ */
 export default async function AdminLayout({
   children,
 }: {
@@ -18,16 +29,17 @@ export default async function AdminLayout({
     redirect('/signin');
   }
 
-  // Canonical auth mapping (Option B): staff.user_id = auth.user.id
+  // Direct DB lookup — authoritative role source
   const { data: staff } = await supabase
     .from('staff')
     .select('role')
     .eq('user_id', user.id)
+    .eq('status', 'active')
     .single();
 
   if (!staff || !ADMIN_ROLES.has(staff.role)) {
     redirect('/shift-dashboard?toast=admin_required');
   }
 
-  return <>{children}</>;
+  return <div data-staff-role={staff.role}>{children}</div>;
 }
