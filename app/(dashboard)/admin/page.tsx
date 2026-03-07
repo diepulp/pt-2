@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
-export default function AdminPage() {
-  redirect('/admin/settings/thresholds');
+export default function AdminIndexPage() {
+  redirect('/admin/alerts');
 }
