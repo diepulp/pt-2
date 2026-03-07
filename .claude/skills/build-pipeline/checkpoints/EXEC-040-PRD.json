@@ -1,0 +1,69 @@
+{
+  "id": "EXEC-040-PRD",
+  "source_spec": "docs/10-prd/PRD-040-adr024-p2-validate-to-derive-remediation-v0.md",
+  "exec_spec": "docs/21-exec-spec/EXEC-040-PRD-admin-route-alerts.md",
+  "status": "complete",
+  "gov010_check": "n/a (EXEC-SPEC provided directly)",
+  "current_phase": 4,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "deferred_workstreams": [],
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "attempt": 1,
+    "notes": "DA review completed pre-pipeline. AUDIT-DELTA-PATCH + POSTPATCH-AUDIT-NITS folded into main spec. All 5 nits addressed."
+  },
+  "approval": {
+    "approved_at": "2026-03-06",
+    "approved_by": "user",
+    "notes": "User approved execution plan. All 4 phases executed successfully."
+  },
+  "next_action": "Complete — all phases done.",
+  "execution_plan": {
+    "phase_1": {"workstreams": ["WS1"], "mode": "sequential", "status": "complete"},
+    "phase_2": {"workstreams": ["WS2", "WS4"], "mode": "parallel", "status": "complete"},
+    "phase_3": {"workstreams": ["WS3"], "mode": "sequential", "status": "complete"},
+    "phase_4": {"workstreams": ["WS5", "WS6"], "mode": "parallel", "status": "complete"}
+  },
+  "working_directory": "/home/diepulp/projects/pt-2/trees/feat/prd-040/",
+  "branch": "feat/prd-040",
+  "files_created": [
+    "app/(dashboard)/admin/layout.tsx",
+    "app/(dashboard)/admin/page.tsx",
+    "app/(dashboard)/admin/alerts/page.tsx",
+    "app/(dashboard)/admin/reports/page.tsx",
+    "hooks/admin/dismissed-alerts-context.tsx",
+    "hooks/admin/use-admin-guard.ts",
+    "hooks/admin/use-admin-toast.ts",
+    "hooks/admin/use-admin-alerts.ts",
+    "hooks/admin/use-alert-time-window.ts",
+    "hooks/admin/use-admin-alert-badge.ts",
+    "lib/admin/alert-key.ts",
+    "components/admin-alerts/alerts-page-client.tsx",
+    "components/admin-alerts/alert-detail-card.tsx",
+    "components/admin-alerts/severity-filter.tsx",
+    "components/admin-alerts/alert-empty-state.tsx",
+    "components/admin-alerts/fallback-banner.tsx",
+    "components/layout/admin-alert-badge.tsx",
+    "lib/admin/__tests__/alert-key.test.ts",
+    "hooks/admin/__tests__/use-admin-guard.test.ts",
+    "components/admin-alerts/__tests__/severity-filter.test.tsx",
+    "e2e/fixtures/admin-helpers.ts",
+    "e2e/workflows/admin-alerts.spec.ts"
+  ],
+  "files_modified": [
+    "app/(dashboard)/layout.tsx",
+    "components/layout/app-sidebar.tsx",
+    "components/layout/nav-main.tsx"
+  ],
+  "gates_passed": {
+    "phase_1_type_check": "2026-03-06",
+    "phase_2_type_check": "2026-03-06",
+    "phase_3_type_check": "2026-03-06",
+    "phase_3_build": "2026-03-06",
+    "phase_4_unit_tests": "2026-03-06",
+    "phase_4_build": "2026-03-06"
+  },
+  "created_at": "2026-03-06T00:00:00Z",
+  "completed_at": "2026-03-06T00:00:00Z"
+}

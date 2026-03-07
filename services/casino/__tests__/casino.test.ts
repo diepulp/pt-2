@@ -260,6 +260,7 @@ describe('Casino HTTP Fetchers', () => {
       timezone: 'America/Los_Angeles',
       watchlist_floor: 3000,
       ctr_threshold: 10000,
+      updated_at: '2026-01-01T00:00:00Z',
     };
 
     it('fetches casino settings', async () => {
@@ -282,6 +283,7 @@ describe('Casino HTTP Fetchers', () => {
       timezone: 'America/Los_Angeles',
       watchlist_floor: 5000,
       ctr_threshold: 10000,
+      updated_at: '2026-01-01T00:00:00Z',
     };
 
     it('updates casino settings with PATCH request', async () => {

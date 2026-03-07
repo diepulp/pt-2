@@ -33,7 +33,7 @@ type CasinoSelectedRow = {
 
 /**
  * Type for casino_settings rows returned by CASINO_SETTINGS_SELECT query.
- * Must match: "id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold"
+ * Must match: "id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, updated_at"
  */
 type CasinoSettingsSelectedRow = {
   id: string;
@@ -42,6 +42,7 @@ type CasinoSettingsSelectedRow = {
   timezone: string;
   watchlist_floor: number;
   ctr_threshold: number;
+  updated_at: string;
 };
 
 /**
@@ -116,6 +117,7 @@ export function toCasinoSettingsDTO(
     timezone: row.timezone,
     watchlist_floor: row.watchlist_floor,
     ctr_threshold: row.ctr_threshold,
+    updated_at: row.updated_at,
   };
 }
 
