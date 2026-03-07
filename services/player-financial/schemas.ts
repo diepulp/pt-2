@@ -75,8 +75,6 @@ const createFinancialTxnBaseSchema = z.object({
   source: financialSourceSchema,
   /** Required: tender type */
   tender_type: tenderTypeSchema,
-  /** Required: staff member creating transaction */
-  created_by_staff_id: uuidFormat('created_by_staff_id'),
   /** Optional: associated rating slip */
   rating_slip_id: uuidFormat('rating slip ID').optional(),
   /** Optional: related transaction (for reversals) */

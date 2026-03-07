@@ -63,7 +63,6 @@ export interface CashOutCreateParams {
   player_id: string;
   visit_id: string;
   amount_cents: number;
-  created_by_staff_id: string;
   external_ref?: string;
 }
 
@@ -85,7 +84,6 @@ export function useCashOutCreate(gamingDay?: string) {
         direction: 'out',
         source: 'cage',
         tender_type: 'cash',
-        created_by_staff_id: params.created_by_staff_id,
         idempotency_key: crypto.randomUUID(),
         external_ref: params.external_ref,
       }),

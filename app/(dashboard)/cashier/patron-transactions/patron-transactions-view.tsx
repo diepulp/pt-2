@@ -63,7 +63,6 @@ export function PatronTransactionsView() {
         player_id: visitContext.player_id,
         visit_id: visitContext.visit_id,
         amount_cents: params.amountCents,
-        created_by_staff_id: staffId,
         external_ref: params.externalRef,
       });
     },

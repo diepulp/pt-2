@@ -195,7 +195,6 @@ describe('POST /api/v1/financial-transactions', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
         },
       },
     );
@@ -231,7 +230,6 @@ describe('POST /api/v1/financial-transactions', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
         },
       },
     );
@@ -258,7 +256,6 @@ describe('POST /api/v1/financial-transactions', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: '123e4567-e89b-12d3-a456-426614174011',
         },
       },
     );

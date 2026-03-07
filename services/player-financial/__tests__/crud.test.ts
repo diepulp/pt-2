@@ -53,7 +53,6 @@ describe('player-financial crud.createTransaction', () => {
       direction: 'in' as const,
       source: 'pit' as const,
       tender_type: 'cash',
-      created_by_staff_id: 'staff-uuid-1',
       // optional fields omitted to ensure undefined is sent
     };
 
@@ -69,7 +68,6 @@ describe('player-financial crud.createTransaction', () => {
       p_direction: input.direction,
       p_source: input.source,
       p_tender_type: input.tender_type,
-      p_created_by_staff_id: input.created_by_staff_id,
       p_rating_slip_id: undefined,
       p_related_transaction_id: undefined,
       p_idempotency_key: undefined,
@@ -89,7 +87,6 @@ describe('player-financial crud.createTransaction', () => {
       direction: 'in' as const,
       source: 'pit' as const,
       tender_type: 'cash',
-      created_by_staff_id: 'staff-uuid-1',
     };
 
     await expect(

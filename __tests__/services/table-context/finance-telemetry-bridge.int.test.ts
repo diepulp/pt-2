@@ -217,7 +217,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: 500, // $500 (dollars)
           p_direction: 'in',
           p_source: 'pit',
-          p_created_by_staff_id: pitBossId,
+
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-test-1-${Date.now()}`,
@@ -260,7 +260,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: 200, // $200
           p_direction: 'in',
           p_source: 'cage',
-          p_created_by_staff_id: cashierId,
+
           p_tender_type: 'cash',
           // No rating_slip_id
           p_idempotency_key: `bridge-test-unrated-${Date.now()}`,
@@ -293,7 +293,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: 300, // $300
           p_direction: 'out', // Cash-out
           p_source: 'cage',
-          p_created_by_staff_id: cashierId,
+
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-test-cashout-${Date.now()}`,
@@ -330,7 +330,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: 100,
           p_direction: 'in',
           p_source: 'pit',
-          p_created_by_staff_id: pitBossId,
+
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: idempotencyKey,
@@ -349,7 +349,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: 100,
           p_direction: 'in',
           p_source: 'pit',
-          p_created_by_staff_id: pitBossId,
+
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: idempotencyKey,
@@ -500,7 +500,7 @@ describeIntegration('Finance-to-Telemetry Bridge Integration Tests', () => {
           p_amount: testAmountDollars,
           p_direction: 'in',
           p_source: 'pit',
-          p_created_by_staff_id: pitBossId,
+
           p_tender_type: 'cash',
           p_rating_slip_id: ratingSlipId,
           p_idempotency_key: `bridge-amount-${Date.now()}`,
