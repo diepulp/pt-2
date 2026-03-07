@@ -316,6 +316,7 @@
 | ADR-031 | Financial Amount Convention (Cents/Dollars) | Proposed | 2026-02-02 | - |
 | ADR-032 | Frontend Error Boundary Architecture | Proposed | 2026-02-02 | Extends ADR-012 |
 | ADR-035 | Client State Lifecycle Across Auth Transitions | Accepted | 2026-02-18 | Extends ADR-003 §8 |
+| ADR-040 | Identity Provenance Rule | Accepted | 2026-03-06 | Amends ADR-024 INV-8 |
 
 **Location**: `80-adrs/`
 

@@ -141,7 +141,6 @@ export async function POST(request: NextRequest) {
         const transaction = await service.create({
           ...input,
           casino_id: mwCtx.rlsContext!.casinoId,
-          created_by_staff_id: mwCtx.rlsContext!.actorId,
           idempotency_key: idempotencyKey,
         });
 

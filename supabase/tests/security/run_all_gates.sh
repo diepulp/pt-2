@@ -3,7 +3,7 @@ set -uo pipefail
 
 # ============================================================================
 # SEC-007 Security Gate Runner
-# Executes all 8 security assertion scripts and reports a summary.
+# Executes all 9 security assertion scripts and reports a summary.
 #
 # Usage:
 #   ./run_all_gates.sh                  # defaults: psql via localhost:54322
@@ -57,6 +57,7 @@ GATES=(
   "sql|06_context_first_line_check.sql|SEC-006 Context first-line check"
   "sql|07_dashboard_rpc_context_acceptance.sql|SEC-007 Dashboard RPC acceptance"
   "sql|08_deprecated_function_body_check.sql|SEC-008 Deprecated function body check"
+  "sql|adr040_identity_provenance.test.sql|ADR-040 Identity provenance enforcement"
 )
 
 PASS_COUNT=0

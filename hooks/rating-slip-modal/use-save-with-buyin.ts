@@ -128,7 +128,6 @@ export function useSaveWithBuyIn() {
             direction: 'in',
             source: 'pit',
             tender_type: 'cash',
-            created_by_staff_id: staffId,
           });
         } catch (txnError) {
           // Check for STALE_GAMING_DAY_CONTEXT error

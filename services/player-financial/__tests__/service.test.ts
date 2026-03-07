@@ -120,7 +120,6 @@ describe('PlayerFinancialService Factory', () => {
         direction: 'in' as const,
         source: 'pit' as const,
         tender_type: 'cash',
-        created_by_staff_id: 'staff-uuid-1',
       };
 
       const result = await service.create(input);
@@ -140,7 +139,6 @@ describe('PlayerFinancialService Factory', () => {
         direction: 'in' as const,
         source: 'pit' as const,
         tender_type: 'cash',
-        created_by_staff_id: 'staff-uuid-1',
         rating_slip_id: 'slip-uuid-1',
         related_transaction_id: 'related-uuid-1',
         idempotency_key: 'idem-456',
@@ -320,7 +318,6 @@ describe('PlayerFinancialService Factory', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: 'staff-uuid-1',
         }),
       ).rejects.toMatchObject({
         code: 'TRANSACTION_AMOUNT_INVALID',
@@ -340,7 +337,6 @@ describe('PlayerFinancialService Factory', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: 'staff-uuid-1',
         }),
       ).rejects.toMatchObject({
         code: 'VISIT_NOT_FOUND',
@@ -363,7 +359,6 @@ describe('PlayerFinancialService Factory', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: 'staff-uuid-1',
         }),
       ).rejects.toMatchObject({
         code: 'VISIT_NOT_OPEN',
@@ -386,7 +381,6 @@ describe('PlayerFinancialService Factory', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: 'staff-uuid-1',
           idempotency_key: 'existing-key',
         }),
       ).rejects.toMatchObject({
@@ -407,7 +401,6 @@ describe('PlayerFinancialService Factory', () => {
           direction: 'in',
           source: 'pit',
           tender_type: 'cash',
-          created_by_staff_id: 'staff-uuid-1',
         }),
       ).rejects.toMatchObject({
         code: 'PLAYER_NOT_FOUND',
@@ -462,7 +455,6 @@ describe('Service Interface Contract', () => {
       direction: 'in',
       source: 'pit',
       tender_type: 'cash',
-      created_by_staff_id: 'staff-uuid-1',
     });
 
     expect(result).toBeDefined();

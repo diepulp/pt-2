@@ -9,7 +9,7 @@ last_review: 2025-12-25
 updated: 2025-12-25
 superseded_by: null
 canonical_reference: docs/30-security/SECURITY_TENANCY_UPGRADE.md
-related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023, ADR-024, ADR-030]
+related_adrs: [ADR-015, ADR-017, ADR-018, ADR-020, ADR-023, ADR-024, ADR-030, ADR-040]
 version: 1.7.0
 ---
 
@@ -65,7 +65,7 @@ This matrix extracts the canonical Row-Level Security (RLS) expectations from th
 | --- | --- | --- | --- | --- |
 | CasinoService (Foundational) | `casino`, `staff`, `casino_settings`, `report` | Authenticated staff in same `casino_id` (role-gated) | Admin (`staff_role = 'admin'`) only; `casino` table is read-only (service_role for setup) | `casino_settings` is the sole temporal authority; policies block cross-casino visibility. Dealers excluded (non-authenticated). **PRD-010**: `casino` table now has RLS (Pattern C hybrid). |
 | Player & Visit (Identity & Session) | `player_casino`, `visit` | Authenticated staff in same `casino_id` | Enrollment/Visit services; admin override only | Membership writes funnel through enrollment workflows; prevents cross-property session leakage. **Ghost visits**: `player_id` is NULL but `casino_id` scoping still applies. |
-| LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. |
+| LoyaltyService (Reward) | `player_loyalty`, `loyalty_ledger` | Authenticated staff in same `casino_id` | `rpc_issue_mid_session_reward`, `rpc_redeem`, `rpc_manual_credit` (append-only) | RLS blocks direct ledger updates; idempotency enforced via `idempotency_key`. Only `gaming_identified_rated` visits eligible for accrual. **ADR-040**: `rpc_redeem` and `rpc_manual_credit` derive `staff_id` from context (Category A — no client-supplied identity params). |
 | LoyaltyService (Promo Instruments) | `promo_program`, `promo_coupon` | Authenticated staff in same `casino_id` | `rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`, `rpc_promo_coupon_inventory` | **ADR-024**: RPCs MUST call `set_rls_context_from_staff()` (no spoofable inputs). Nullable `player_id`/`visit_id` (Pattern C hybrid). `promo_coupon` is append-only for issuance; status transitions via RPCs. Idempotency via `validation_number` + `idempotency_key`. |
 | TableContextService (Operational) | `game_settings`, `gaming_table`, `gaming_table_settings`, `dealer_rotation` | Authenticated operations staff for same `casino_id` | Admin + `pit_boss` roles | Trigger `assert_table_context_casino` enforces table/casino alignment. |
 | RatingSlipService (Telemetry) | `rating_slip` | Authenticated staff in same `casino_id` | Authorized telemetry service roles | Policy snapshot and status updates limited to service-managed RPCs. **Updated**: `visit_id` and `table_id` are NOT NULL. |
@@ -119,7 +119,7 @@ Consolidated invariants governing the auth/RLS security model. Each invariant is
 | **INV-5** | Context MUST be set via `SET LOCAL` and MUST NOT leak across transactions (pooling safety) | `set_config(..., true)` third arg |
 | **INV-6** | Staff lookup MUST be deterministic (unique `staff.user_id` constraint, no `LIMIT 1` ambiguity) | Partial unique index on `staff.user_id` |
 | **INV-7** | All client-callable RPCs MUST call `set_rls_context_from_staff()` as first statement | ADR-015 scanner, PRD-015 remediation |
-| **INV-8** | No client-callable RPC may accept `casino_id`/`actor_id` as user input (ops-only exceptions allowed) | Code review, ADR-024 compliance |
+| **INV-8** | No client-callable RPC may accept `casino_id`/`actor_id` as user input (ops-only exceptions allowed). **Amended by ADR-040**: scope expanded to cover ALL identity attribution parameters (e.g., `*_by_staff_id`). Category A params (execution identity) must be derived from context. Category B params (multi-party attestation) require same-casino validation and allowlist governance. | Code review, ADR-024/ADR-040 compliance, SEC-003 Checks 4-6 |
 
 ### ADR-030 Invariants (Auth Pipeline Hardening)
 
@@ -482,7 +482,7 @@ $$;
 
 **Security Invariants (ADR-024)**:
 - **INV-7**: All client-callable RPCs MUST call `set_rls_context_from_staff()` as first statement
-- **INV-8**: No client-callable RPC may accept `casino_id`/`actor_id` as user input
+- **INV-8**: No client-callable RPC may accept `casino_id`/`actor_id` or any identity attribution parameter as user input (**ADR-040 expanded scope**: Category A execution identity must be derived from context; Category B multi-party attribution requires same-casino validation)
 - Context derived from `auth.uid()` → `staff` table lookup (authoritative)
 - Only `correlation_id` allowed as optional input parameter
 
@@ -798,6 +798,7 @@ See `docs/30-security/SECURITY_TENANCY_UPGRADE.md` lines 659-676 for complete te
 - **ADR-015**: `docs/80-adrs/ADR-015-rls-connection-pooling-strategy.md` (Connection pooling strategy, Pattern C)
 - **ADR-020**: `docs/80-adrs/ADR-020-rls-track-a-mvp-strategy.md` (MVP strategy - Track A Hybrid)
 - **ADR-024**: `docs/80-adrs/ADR-024_DECISIONS.md` (Context self-injection remediation - CRITICAL)
+- **ADR-040**: `docs/80-adrs/ADR-040-identity-provenance-rule.md` (Identity Provenance Rule — expands INV-8 to all identity attribution params)
 - **SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (v3.1.0)
 - **Migration Analysis**: `docs/audits/RLS_DOCUMENTATION_DRIFT_ANALYSIS_2025-11-13.md`
 - **RLS Middleware**: `lib/server-actions/middleware/rls.ts` (ADR-024 compliant)
@@ -845,6 +846,7 @@ ADR-034 defines two RLS write postures with CI enforcement. This section maps ea
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 2.1.0 | 2026-03-07 | **ADR-040 Identity Provenance**: Expanded INV-8 scope to cover all identity attribution parameters (Category A/B classification). Updated LoyaltyService row with `rpc_redeem`/`rpc_manual_credit` (identity derived from context). Added ADR-040 to references. SEC-003 expanded to 6 checks. |
 | 2.0.0 | 2026-02-11 | **ADR-034 Ratification**: Added Category A/B Write Posture Cross-Reference section. Updated Template 2b applies-to list (added `staff_pin_attempts`, `staff_invite`, `player_casino`). Category A table registry sourced from ADR-030. |
 | 1.9.0 | 2026-02-10 | **ADR-030 D5**: Added INV-030-7 transport constraint to Template 2b — direct PostgREST DML prohibited, SECURITY DEFINER RPCs required. Triggered by ISSUE-SET-PIN-SILENT-RLS-FAILURE. |
 | 1.8.0 | 2026-01-31 | **PRD-025 Onboarding**: Added `staff_invite` (admin-only, Template 2b session-var-only for ALL ops — PII tightening) and `company` (deny-by-default, no permissive policies) to Policy Matrix. Column-level privilege restriction on `token_hash`. |

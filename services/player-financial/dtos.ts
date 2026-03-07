@@ -146,8 +146,6 @@ export interface CreateFinancialTxnInput {
   source: FinancialSource;
   /** Tender type */
   tender_type: TenderType;
-  /** Staff member creating this transaction (must match RLS context) */
-  created_by_staff_id: string;
   /** Optional: Associated rating slip */
   rating_slip_id?: string;
   /** Optional: Related transaction (for reversals) */

@@ -155,7 +155,6 @@ export async function createTransaction(
       p_direction: input.direction,
       p_source: input.source,
       p_tender_type: input.tender_type,
-      p_created_by_staff_id: input.created_by_staff_id,
       p_rating_slip_id: input.rating_slip_id ?? undefined,
       p_related_transaction_id: input.related_transaction_id ?? undefined,
       p_idempotency_key: input.idempotency_key ?? undefined,

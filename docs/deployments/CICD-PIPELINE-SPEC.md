@@ -5,7 +5,7 @@
 > **Owner:** DevOps / Lead Architect
 > **Created:** 2026-02-13
 > **Governs:** `.github/workflows/ci.yml`, `.github/workflows/migration-lint.yml`, `.github/workflows/check-srm-links.yml`
-> **References:** INV-CICD-ENVIRONMENT-FLOW-FINDINGS, PT-2-INITIAL-CICD-SETUP, ADR-015, ADR-024, ADR-030, ADR-034
+> **References:** INV-CICD-ENVIRONMENT-FLOW-FINDINGS, PT-2-INITIAL-CICD-SETUP, ADR-015, ADR-024, ADR-030, ADR-034, ADR-040
 
 ---
 
@@ -30,6 +30,7 @@ Feature Branch ──Push──▶ PR to main ──Merge──▶ Push to main 
 | **CI** | `.github/workflows/ci.yml` | PR to `main`, `workflow_dispatch` | 1A | Active |
 | **Migration Lint** | `.github/workflows/migration-lint.yml` | PR with `supabase/migrations/**/*.sql` | 1A | Active |
 | **SRM Links** | `.github/workflows/check-srm-links.yml` | Push/PR with `docs/**/*.md` | 1A | Active |
+| **Security Gates** | `.github/workflows/security-gates.yml` | PR with `supabase/migrations/**/*.sql` | 1A | Active |
 | **Deploy Staging** | `.github/workflows/deploy-staging.yml` | Push to `main` | 1C | Planned |
 | **Deploy Production** | `.github/workflows/deploy-production.yml` | Tag `v*` | 2 | Planned |
 
@@ -135,6 +136,28 @@ Validates that cross-references in documentation are not broken.
 - Runs `npm run check:srm-links` (TypeScript script)
 - Fails if SRM-referenced file paths or line numbers are invalid
 - On failure, runs verbose output for debugging
+
+---
+
+## 5. Security Gates (`security-gates.yml`)
+
+Triggered when migration files change. Runs 9 SQL assertion scripts against a local Supabase database via `supabase/tests/security/run_all_gates.sh`.
+
+| # | Gate | Script | What It Catches | ADR/Ref |
+|---|------|--------|-----------------|---------|
+| 1 | Permissive TRUE | `01_permissive_true_check.sql` | `USING (true)` policies on tenant tables | SEC-001 |
+| 2 | Overload Ambiguity | `02_overload_ambiguity_check.sql` | PostgREST-incompatible function overloads | SEC-002 |
+| 3 | Identity Params | `03_identity_param_check.sql` | Spoofable identity params in RPCs (6 checks: Category A FAIL, Category B allowlist-gated FAIL) | ADR-024, ADR-040 |
+| 4 | Public EXECUTE | `04_public_execute_check.sql` | Functions callable by `PUBLIC` role | SEC-004 |
+| 5 | Deprecated Context | `05_deprecated_context_check.sql` | RPCs using deprecated `set_rls_context()` | SEC-005 |
+| 6 | Context First-Line | `06_context_first_line_check.sql` | RPCs missing `set_rls_context_from_staff()` as first statement | SEC-006 |
+| 7 | Dashboard RPC | `07_dashboard_rpc_context_acceptance.sql` | Dashboard RPCs missing context injection | SEC-007 |
+| 8 | Deprecated Body | `08_deprecated_function_body_check.sql` | Deprecated patterns in function bodies | SEC-008 |
+| 9 | Identity Provenance | `adr040_identity_provenance.test.sql` | Category A/B signature + context derivation catalog proofs | ADR-040 |
+
+**Key ADR-040 enforcement (Gate 3 + Gate 9):**
+- Gate 3 scans all RPC signatures for identity attribution patterns (`p_%_staff_id`, `p_actor_id`, `p_created_by_%`, etc.). Category A matches are FAIL; Category B matches must appear in a governed allowlist.
+- Gate 9 validates catalog-level proofs: old signatures removed, `current_setting('app.actor_id')` present in loyalty RPCs, same-casino validation present in chip custody RPCs.
 
 ---
 

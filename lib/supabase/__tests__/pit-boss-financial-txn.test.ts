@@ -179,7 +179,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 500.0,
         p_direction: 'in',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'cash',
       });
 
@@ -198,7 +198,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 1000.0,
         p_direction: 'in',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'chips',
       });
 
@@ -217,7 +217,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: (i + 1) * 100.0,
         p_direction: 'in' as const,
         p_source: 'table' as const,
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: i % 2 === 0 ? ('cash' as const) : ('chips' as const),
       }));
 
@@ -249,7 +249,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 500.0,
         p_direction: 'out',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'cash',
       });
 
@@ -267,7 +267,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 1000.0,
         p_direction: 'out',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'chips',
       });
 
@@ -291,7 +291,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 5000.0,
         p_direction: 'in',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'marker',
       });
 
@@ -309,7 +309,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 2000.0,
         p_direction: 'in',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'check',
       });
 
@@ -333,7 +333,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 500.0,
         p_direction: 'out',
         p_source: 'cage',
-        p_created_by_staff_id: testCashierStaffId,
+
         p_tender_type: 'cash',
       });
 
@@ -350,7 +350,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 5000.0,
         p_direction: 'in',
         p_source: 'cage',
-        p_created_by_staff_id: testCashierStaffId,
+
         p_tender_type: 'marker',
       });
 
@@ -376,7 +376,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
           p_amount: (i + 1) * 50.0,
           p_direction: 'in' as const,
           p_source: 'table' as const,
-          p_created_by_staff_id: testPitBossStaffId,
+
           p_tender_type: 'cash' as const,
         },
       }));
@@ -389,7 +389,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
           p_amount: (i + 1) * 50.0,
           p_direction: i % 2 === 0 ? ('out' as const) : ('in' as const),
           p_source: 'table' as const,
-          p_created_by_staff_id: testPitBossStaffId,
+
           p_tender_type: i % 2 === 0 ? ('cash' as const) : ('marker' as const),
         },
       }));
@@ -487,7 +487,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
             p_amount: 100.0,
             p_direction: 'in',
             p_source: 'table',
-            p_created_by_staff_id: testPitBossStaffId,
+
             p_tender_type: 'cash',
           }),
           supabase.rpc('rpc_create_financial_txn', {
@@ -496,7 +496,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
             p_amount: 200.0,
             p_direction: 'in',
             p_source: 'table',
-            p_created_by_staff_id: staff2!.id,
+
             p_tender_type: 'chips',
           }),
         ]);
@@ -542,7 +542,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 500.0,
         p_direction: 'out',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'cash',
       });
 
@@ -559,7 +559,7 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         p_amount: 5000.0,
         p_direction: 'in',
         p_source: 'table',
-        p_created_by_staff_id: testPitBossStaffId,
+
         p_tender_type: 'marker',
       });
 
