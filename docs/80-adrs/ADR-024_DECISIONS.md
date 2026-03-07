@@ -5,7 +5,7 @@
 **Owner:** Security/Platform
 **Decision Scope:** RLS context injection across all client-callable RPCs
 **Supersedes:** Partially supersedes ADR-015 Phase 1A "self-injection" pattern
-**Related:** ADR-015, ADR-020, SEC-001, SEC-002
+**Related:** ADR-015, ADR-020, ADR-040, SEC-001, SEC-002
 
 ---
 
@@ -66,7 +66,7 @@ Create a separate internal setter `set_rls_context_internal()` callable only by 
 
 **INV-7:** All client-callable RPCs that depend on session vars MUST call `set_rls_context_from_staff()`.
 
-**INV-8:** No client-callable RPC may accept `casino_id`/`actor_id` as user input (ops-only exceptions allowed).
+**INV-8:** No client-callable RPC may accept `casino_id`/`actor_id` as user input (ops-only exceptions allowed). **Amended by ADR-040** — scope expanded to cover all identity attribution parameters (Category A: execution identity must derive from context; Category B: multi-party attribution requires same-casino validation).
 
 ---
 

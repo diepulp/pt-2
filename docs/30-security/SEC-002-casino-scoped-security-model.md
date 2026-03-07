@@ -7,7 +7,7 @@ affects: [SEC-001]
 created: 2025-11-02
 last_review: 2025-12-25
 updated: 2025-12-25
-related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024, ADR-030, ADR-035]
+related_adrs: [ADR-015, ADR-020, ADR-023, ADR-024, ADR-030, ADR-035, ADR-040]
 ---
 
 ## Purpose
@@ -43,7 +43,7 @@ PT-2 adopts a **Pool-based multi-tenancy model** as the default, with **Silo dep
 - **Casino Identity (`casino`)** is the root authority; every operational table includes a `casino_id` foreign key.
 - **Casino Settings (`casino_settings`)** is the single temporal authority for thresholds, timezone, and gaming-day windows; only the Casino service writes to it.
 - **Player Enrollment (`player_casino`)** binds patrons to properties; session, telemetry, finance, and loyalty data inherit this linkage.
-- **Service RPCs** (e.g., `rpc_issue_mid_session_reward`, `rpc_create_financial_txn`, `rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`) act as the only approved mutation interfaces across casino boundaries. **ADR-024**: All client-callable RPCs must call `set_rls_context_from_staff()` and derive context authoritatively (no spoofable `casino_id`/`actor_id` inputs).
+- **Service RPCs** (e.g., `rpc_issue_mid_session_reward`, `rpc_create_financial_txn`, `rpc_issue_promo_coupon`, `rpc_void_promo_coupon`, `rpc_replace_promo_coupon`) act as the only approved mutation interfaces across casino boundaries. **ADR-024/ADR-040**: All client-callable RPCs must call `set_rls_context_from_staff()` and derive context authoritatively. No spoofable identity inputs — this includes `casino_id`, `actor_id`, and all identity attribution parameters (Category A: `*_by_staff_id` execution identity must be derived from context; Category B: multi-party attribution like `witnessed_by`, `delivered_by` requires same-casino validation).
 
 ## Role Model
 
@@ -73,7 +73,8 @@ PT-2 uses a hybrid context injection strategy for RLS policies, ensuring compati
 
 **ADR-024 Security Requirements (client-callable RPCs)**:
 - All RPCs MUST call `set_rls_context_from_staff()` as the first statement.
-- RPCs MUST NOT accept `casino_id` or `actor_id` as input parameters.
+- RPCs MUST NOT accept `casino_id`, `actor_id`, or any Category A identity attribution parameter as input (ADR-040 Identity Provenance Rule).
+- Category B multi-party attribution params (e.g., `witnessed_by`, `delivered_by`) are allowed with same-casino staff validation and SEC-003 allowlist governance.
 - Context is derived from JWT + `staff` table lookup; only optional input is `correlation_id`.
 
 **ADR-030 Auth Pipeline Hardening (implemented — 2026-01-29)**:
@@ -149,6 +150,7 @@ Capture answers as ADRs or follow-up SEC docs as they are resolved.
 
 ## Changelog
 
+- **2026-03-07**: **ADR-040 Identity Provenance**: Expanded Scope Anchors and ADR-024 Security Requirements to cover ADR-040 Category A/B identity attribution classification. Category A execution identity must be derived from context; Category B multi-party params require same-casino validation.
 - **2026-02-19**: **ADR-035 Cross-Reference**: Added ADR-035 to related ADRs. ADR-035 establishes client-side session reset contract — the client-side counterpart to ADR-030's server-side auth pipeline hardening. Ensures Zustand stores and browser storage (PII) are cleaned across auth boundaries.
 - **2026-01-31**: **PRD-025 Onboarding**: Added "Company-as-Metadata Posture" section. Codified decision that `company` is metadata (not security boundary), no `app.company_id`, deny-by-default RLS. Staff invites scoped to `casino_id`.
 - **2026-01-29**: **ADR-030 Alignment**: Added guardrails #5–7 (single source of truth, authoritative claims lifecycle, bypass lockdown). Updated RLS Context Injection section with ADR-030 D1–D4 hardening decisions. Added ADR-030 to related ADRs.

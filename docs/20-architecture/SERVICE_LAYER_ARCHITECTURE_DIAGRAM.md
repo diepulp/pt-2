@@ -1,17 +1,17 @@
 ---
 id: ARCH-012
-title: Service Layer Architecture Diagram (v3.3.0)
+title: Service Layer Architecture Diagram (v3.5.0)
 owner: Architecture
 status: Accepted
 last_review: 2026-02-02
-affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015, ADR-028, ADR-029, ADR-030, ADR-031, ADR-032, ADR-035]
+affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015, ADR-028, ADR-029, ADR-030, ADR-031, ADR-032, ADR-035, ADR-040]
 ---
 
 # Service Layer Architecture Diagram
 
-**Version**: 3.4.0
-**Date**: 2026-02-19
-**Status**: Accepted (Aligned with SRM v4.14.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032 + ADR-035)
+**Version**: 3.5.0
+**Date**: 2026-03-07
+**Status**: Accepted (Aligned with SRM v4.14.0 + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032 + ADR-035 + ADR-040)
 **Purpose**: Visual reference for PT-2 service layer architecture patterns
 
 > **Alignment Note**: This document cross-references the canonical contracts defined in SDLC taxonomy peers. Do not duplicate content—reference authoritative sources.
@@ -33,6 +33,7 @@ affects: [SEC-001, ADR-003, ADR-004, ADR-008, ADR-012, ADR-013, ADR-014, ADR-015
 - **Service ADR**: `docs/80-adrs/ADR-008-service-layer-architecture.md` (Architecture decisions)
 - **Error Boundaries**: `docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md` (Render-layer error handling, extends ADR-012)
 - **Auth Hardening**: `docs/80-adrs/ADR-030-auth-system-hardening.md` (TOCTOU elimination, claims lifecycle)
+- **Identity Provenance**: `docs/80-adrs/ADR-040-identity-provenance-rule.md` (Category A/B identity attribution, amends ADR-024 INV-8)
 - **Client State Lifecycle**: `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md` (Session reset contract, store classification)
 - **Event Catalog**: `docs/25-api-data/REAL_TIME_EVENTS_MAP.md` (Event contracts)
 - **Temporal Patterns**: `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` (Gaming day authority)
@@ -1572,12 +1573,16 @@ This pattern ensures:
 
 ## Document History
 
-**Version**: 3.4.0
-**Date**: 2026-02-19
+**Version**: 3.5.0
+**Date**: 2026-03-07
 **Status**: Accepted (Aligned with SRM v4.14.0 + DTO_CANONICAL_STANDARD.md + SEC-001 + ADR-013 + ADR-014 + ADR-015 + ADR-028 + ADR-030 + ADR-032 + ADR-035)
 **Maintained By**: Architecture Team
 
 ### Change Log
+
+**v3.5.0 (2026-03-07)** - ADR-040 Identity Provenance Rule:
+- ✅ Added ADR-040 to affects list and canonical references
+- ✅ Added alignment status entry for ADR-040
 
 **v3.4.0 (2026-02-19)** - ADR-035 Client State Lifecycle:
 - ✅ Added "Client State Lifecycle" section — session reset contract, store classification, orchestrator pattern
@@ -1700,6 +1705,7 @@ This pattern ensures:
 | ADR-031 | ✅ ALIGNED | Financial Amount Convention — affects list |
 | ADR-032 | ✅ ALIGNED | Frontend Error Boundary Architecture — canonical reference + error mapping note |
 | ADR-035 | ✅ ALIGNED | Client State Lifecycle — session reset contract, store classification, orchestrator |
+| ADR-040 | ✅ ALIGNED | Identity Provenance Rule — canonical reference added, amends ADR-024 INV-8 |
 | EDGE_TRANSPORT_POLICY.md | ✅ ALIGNED | Middleware/headers externalized, diagram retained |
 | ERROR_TAXONOMY_AND_RESILIENCE.md | ✅ ALIGNED | Error mapping externalized, render-layer note added |
 | REAL_TIME_EVENTS_MAP.md | ✅ ALIGNED | Event contracts externalized |

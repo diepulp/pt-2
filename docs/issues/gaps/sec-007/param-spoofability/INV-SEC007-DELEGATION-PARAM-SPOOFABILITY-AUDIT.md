@@ -3,7 +3,7 @@
 **Filed**: 2026-03-06
 **Severity**: P1 (broader than original gap doc scope)
 **Source**: 5-agent parallel investigation of GAP-SEC007-D3D4-UNBLOCK-CASINO-ID-FROM-DELEGATION.md
-**Status**: OPEN
+**Status**: RESOLVED (ADR-040 + EXEC-ADR040, 2026-03-07)
 **Supersedes**: Findings extend GAP-SEC007-D3D4 with full-stack spoofability analysis
 
 ## Executive Summary
