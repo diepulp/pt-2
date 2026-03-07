@@ -59,7 +59,6 @@ export async function logInventorySnapshot(
   const { data, error } = await supabase.rpc(
     'rpc_log_table_inventory_snapshot',
     {
-      p_casino_id: input.casinoId,
       p_table_id: input.tableId,
       p_snapshot_type: input.snapshotType,
       p_chipset: input.chipset,
@@ -83,7 +82,6 @@ export async function requestTableFill(
   input: RequestTableFillInput,
 ): Promise<TableFillDTO> {
   const { data, error } = await supabase.rpc('rpc_request_table_fill', {
-    p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_request_id: input.requestId,
     p_chipset: input.chipset,
@@ -122,7 +120,6 @@ export async function requestTableCredit(
   input: RequestTableCreditInput,
 ): Promise<TableCreditDTO> {
   const { data, error } = await supabase.rpc('rpc_request_table_credit', {
-    p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_request_id: input.requestId,
     p_chipset: input.chipset,
@@ -164,7 +161,6 @@ export async function logDropEvent(
   input: LogDropEventInput,
 ): Promise<TableDropEventDTO> {
   const { data, error } = await supabase.rpc('rpc_log_table_drop', {
-    p_casino_id: input.casinoId,
     p_table_id: input.tableId,
     p_drop_box_id: input.dropBoxId,
     p_seal_no: input.sealNo,

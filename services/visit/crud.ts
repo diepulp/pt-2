@@ -487,7 +487,6 @@ export async function getPlayerRecentSessions(
   const cursor = options.cursor;
 
   const { data, error } = await supabase.rpc('rpc_get_player_recent_sessions', {
-    p_casino_id: casinoId,
     p_player_id: playerId,
     p_limit: limit,
     p_cursor: cursor,
@@ -547,7 +546,6 @@ export async function getPlayerLastSessionContext(
   const { data, error } = await supabase.rpc(
     'rpc_get_player_last_session_context',
     {
-      p_casino_id: casinoId,
       p_player_id: playerId,
     },
   );
@@ -691,8 +689,6 @@ export async function startFromPrevious(
   const { data: newSlip, error: slipError } = await supabase.rpc(
     'rpc_start_rating_slip',
     {
-      p_casino_id: casinoId,
-      p_actor_id: actorId,
       p_visit_id: newVisit.id,
       p_table_id: request.destination_table_id,
       p_seat_number: String(request.destination_seat_number),

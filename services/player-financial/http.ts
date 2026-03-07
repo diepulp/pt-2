@@ -183,7 +183,6 @@ export async function createFinancialAdjustment(
   const { data, error } = await supabase.rpc(
     'rpc_create_financial_adjustment',
     {
-      p_casino_id: input.casino_id,
       p_player_id: input.player_id,
       p_visit_id: input.visit_id,
       p_delta_amount: input.delta_amount,

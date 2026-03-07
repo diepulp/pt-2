@@ -145,7 +145,6 @@ export async function getModalDataViaRPC(
 ): Promise<RatingSlipModalDTO> {
   const { data, error } = await supabase.rpc('rpc_get_rating_slip_modal_data', {
     p_slip_id: slipId,
-    p_casino_id: casinoId,
   });
 
   if (error) {
@@ -356,13 +355,11 @@ function isValidRpcMovePlayerResponse(
  */
 export async function movePlayerViaRPC(
   supabase: SupabaseClient<Database>,
-  casinoId: string,
   slipId: string,
   input: MovePlayerInput,
 ): Promise<MovePlayerResponse> {
   // Call the consolidated RPC
   const { data, error } = await supabase.rpc('rpc_move_player', {
-    p_casino_id: casinoId,
     p_slip_id: slipId,
     p_new_table_id: input.destinationTableId,
     p_new_seat_number: input.destinationSeatNumber ?? undefined,

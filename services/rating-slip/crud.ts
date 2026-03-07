@@ -178,8 +178,6 @@ export async function start(
   // Note: Ghost visits (player_id = null) CAN have rating slips per ADR-014.
 
   const { data, error } = await supabase.rpc('rpc_start_rating_slip', {
-    p_casino_id: casinoId,
-    p_actor_id: actorId,
     p_visit_id: input.visit_id,
     p_table_id: input.table_id,
     p_seat_number: input.seat_number ?? '',
@@ -206,7 +204,6 @@ export async function start(
  * Uses rpc_pause_rating_slip which has FOR UPDATE locking.
  *
  * @param supabase - Supabase client with RLS context
- * @param casinoId - Casino UUID
  * @param slipId - Rating slip UUID
  * @returns RatingSlipDTO with status 'paused'
  * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
@@ -214,11 +211,9 @@ export async function start(
  */
 export async function pause(
   supabase: SupabaseClient<Database>,
-  casinoId: string,
   slipId: string,
 ): Promise<RatingSlipDTO> {
   const { data, error } = await supabase.rpc('rpc_pause_rating_slip', {
-    p_casino_id: casinoId,
     p_rating_slip_id: slipId,
   });
 
@@ -239,7 +234,6 @@ export async function pause(
  * Uses rpc_resume_rating_slip which has FOR UPDATE locking.
  *
  * @param supabase - Supabase client with RLS context
- * @param casinoId - Casino UUID
  * @param slipId - Rating slip UUID
  * @returns RatingSlipDTO with status 'open'
  * @throws RATING_SLIP_NOT_FOUND if slip doesn't exist
@@ -247,11 +241,9 @@ export async function pause(
  */
 export async function resume(
   supabase: SupabaseClient<Database>,
-  casinoId: string,
   slipId: string,
 ): Promise<RatingSlipDTO> {
   const { data, error } = await supabase.rpc('rpc_resume_rating_slip', {
-    p_casino_id: casinoId,
     p_rating_slip_id: slipId,
   });
 
@@ -273,7 +265,6 @@ export async function resume(
  * PRD-016: Updates final_duration_seconds on the closed slip for continuity tracking.
  *
  * @param supabase - Supabase client with RLS context
- * @param casinoId - Casino UUID
  * @param slipId - Rating slip UUID
  * @param input - Optional CloseRatingSlipInput (average_bet)
  * @returns RatingSlipWithDurationDTO with calculated duration_seconds
@@ -282,12 +273,10 @@ export async function resume(
  */
 export async function close(
   supabase: SupabaseClient<Database>,
-  casinoId: string,
   slipId: string,
   input: CloseRatingSlipInput = {},
 ): Promise<RatingSlipWithDurationDTO> {
   const { data, error } = await supabase.rpc('rpc_close_rating_slip', {
-    p_casino_id: casinoId,
     p_rating_slip_id: slipId,
     p_average_bet: input.average_bet,
   });
@@ -649,7 +638,7 @@ export async function move(
   const currentSlip = await getById(supabase, slipId);
 
   // 2. Close the current slip (this sets final_duration_seconds)
-  const closedResult = await close(supabase, casinoId, slipId);
+  const closedResult = await close(supabase, slipId);
 
   // 3. Calculate continuity metadata for new slip
   // If move_group_id is null, this is the first move - use current slip ID as group ID

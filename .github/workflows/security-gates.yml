@@ -1,0 +1,75 @@
+name: Security Gates
+
+# SEC-007 regression gates: runs 8 pure-SQL assertion scripts against an
+# ephemeral Supabase Postgres instance after every migration change.
+# No PostgREST, no Studio, no realtime — DB only.
+
+on:
+  pull_request:
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/tests/security/**'
+  workflow_dispatch:
+
+concurrency:
+  group: security-gates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-gates:
+    name: SEC-007 Security Assertion Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Supabase CLI (pinned) ───────────────────────────────────
+      - name: Install Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: 2.76.15
+
+      # ── DB only — skip all non-DB services ──────────────────────
+      - name: Start Supabase DB
+        run: |
+          supabase db start 2>&1 | tail -5
+          echo "--- Supabase DB is up ---"
+
+      # ── Verify DB is ready ────────────────────────────────────────
+      - name: Wait for DB readiness
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          for i in $(seq 1 15); do
+            if psql "${DB_URL}" -c "SELECT 1" > /dev/null 2>&1; then
+              echo "DB is ready (attempt ${i})"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "ERROR: DB not ready after 30 seconds"
+          exit 1
+
+      # ── Apply migrations (db start may not auto-apply) ──────────
+      - name: Apply migrations
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          # db start gives us a bare postgres; push migrations into it
+          supabase db push --local 2>&1 | tail -5
+          echo "--- Migrations applied ---"
+
+      # ── Security Gate Tests ───────────────────────────────────────
+      - name: Run security gate assertions
+        env:
+          DB_URL: postgresql://postgres:postgres@127.0.0.1:54322/postgres
+        run: |
+          bash supabase/tests/security/run_all_gates.sh \
+            --db-url "${DB_URL}"
+
+      # ── Cleanup (always) ──────────────────────────────────────────
+      - name: Stop Supabase
+        if: always()
+        run: supabase stop --no-backup 2>&1 | tail -3

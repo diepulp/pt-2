@@ -282,6 +282,46 @@ export interface ApplyPromotionOutput {
   isExisting: boolean;
 }
 
+// === Mid-Session Reward DTOs ===
+
+/**
+ * Reason codes accepted by the mid-session reward RPC.
+ * Distinct from the canonical LoyaltyReason (ledger entry reasons).
+ */
+export type MidSessionRewardReason =
+  | 'mid_session'
+  | 'session_end'
+  | 'manual_adjustment'
+  | 'promotion'
+  | 'correction';
+
+export type RatingSlipStatusForReward = 'open' | 'paused';
+
+/**
+ * Domain input for mid-session reward issuance.
+ */
+export interface MidSessionRewardInput {
+  casinoId: string;
+  playerId: string;
+  ratingSlipId: string;
+  staffId: string;
+  points: number;
+  idempotencyKey: string;
+  reason?: MidSessionRewardReason;
+  slipStatus: string;
+}
+
+/**
+ * RPC parameter shape for rpc_issue_mid_session_reward.
+ */
+export interface MidSessionRewardRpcInput {
+  p_player_id: string;
+  p_rating_slip_id: string;
+  p_points: number;
+  p_idempotency_key: string;
+  p_reason: MidSessionRewardReason;
+}
+
 // === Session Reward Suggestion DTOs ===
 
 /**

@@ -1,0 +1,87 @@
+--- PRD-041-adr024-p2-validate-to-derive-remediation-v0.md+++ PRD-041-adr024-p2-validate-to-derive-remediation-v0.md@@ -44,7 +44,7 @@ | Goal | Observable Metric |
+ |------|-------------------|
+ | **G1**: Remove `p_casino_id` from all 12 validate-pattern RPCs | `SELECT proname FROM pg_proc WHERE proname LIKE 'rpc_%' AND 'p_casino_id' = ANY(proargnames);` returns 0 rows |
+-| **G2**: Update all TypeScript callsites to stop passing `p_casino_id` | `grep -r 'p_casino_id' services/ app/ hooks/ --include='*.ts' --include='*.tsx'` returns 0 production matches (test files updated separately) |
++| **G2**: Update all in-scope TypeScript callsites to stop passing `p_casino_id` | `grep -r "p_casino_id" services/ app/ hooks/ --include='*.ts' --include='*.tsx'` returns 0 **in-scope** production matches for the 12 P2-1 RPCs (see Appendix A); out-of-scope RPCs may still legitimately reference `p_casino_id` |
+ | **G3**: SEC-003 CI gate runs zero-tolerance | SEC-003 hard-fails on any `p_casino_id` param |
+ | **G4**: P2-2 is explicitly tracked as post-ship follow-up | PRD/EXEC scope and DoD mark `rpc_create_financial_txn.p_created_by_staff_id` as deferred with owner assigned |
+ | **G5**: Revoke `chipset_total_cents` from anon | `has_function_privilege('anon', 'chipset_total_cents(jsonb)', 'EXECUTE')` returns false |
+@@ -108,7 +108,9 @@ - RPC body logic changes (the `set_rls_context_from_staff()` call and derive pattern are already in place; only the parameter and validate-block are removed)
+ - New feature work or UI changes
+ - P2-2 decisioning/remediation for `rpc_create_financial_txn.p_created_by_staff_id` (tracked as a post-ship follow-up once business input is available)
+-- `p_casino_id` on RPCs outside the P2-1 list of 12 (e.g., `rpc_get_dashboard_tables_with_counts`, loyalty RPCs, `rpc_current_gaming_day`). These RPCs also accept `p_casino_id` but were not flagged in the SEC-007 P2-1 finding. Their compliance status should be assessed as a follow-up after this PRD ships, informed by the SEC-003 CI gate results at zero-tolerance.
++- `p_casino_id` on RPCs outside the P2-1 list of 12 (e.g., `rpc_get_dashboard_tables_with_counts`, loyalty RPCs, `rpc_current_gaming_day`). These RPCs may retain `p_casino_id` until separately assessed; they are not part of the P2-1 remediation.
++
++> **Note:** This is why **G2** is scoped to *in-scope* callsites for the 12 P2-1 RPCs only.
+ 
+ ---
+ 
+@@ -272,9 +274,9 @@ 
+ | # | Function | Bounded Context | Current Arg Count | Target Arg Count | Production TS Callsites |
+ |---|----------|----------------|-------------------|------------------|------------------------|
+-| 1 | `rpc_pause_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
+-| 2 | `rpc_resume_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
+-| 3 | `rpc_close_rating_slip` | RatingSlip | 3 | 2 | `services/rating-slip/crud.ts`, `services/visit/crud.ts` |
++| 1 | `rpc_pause_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts` |
++| 2 | `rpc_resume_rating_slip` | RatingSlip | 2 | 1 | `services/rating-slip/crud.ts` |
++| 3 | `rpc_close_rating_slip` | RatingSlip | 3 | 2 | `services/rating-slip/crud.ts` |
+ | 4 | `rpc_move_player` | RatingSlip | 5 | 4 | `services/rating-slip/crud.ts` |
+ | 5 | `rpc_update_table_status` | TableContext | 3 | 2 | `services/table-context/table-session.ts` |
+ | 6 | `rpc_log_table_drop` | TableContext | 11 | 10 | `services/table-context/chip-custody.ts` |
+@@ -294,12 +296,11 @@ **Migration:** DROP + CREATE for `rpc_pause_rating_slip`, `rpc_resume_rating_slip`, `rpc_close_rating_slip`, `rpc_move_player`
+ 
+ **TS Updates:**
+-- `services/rating-slip/crud.ts` (4 callsites)
+-- `services/visit/crud.ts` (3 callsites)
+-- `services/rating-slip-modal/rpc.ts` (2 callsites)
++- `services/rating-slip/crud.ts` (3 callsites)
++- `services/rating-slip-modal/rpc.ts` (1 callsite)
+ - Test files: `services/rating-slip/__tests__/*.ts`, `services/visit/__tests__/*.ts`
+ 
+-**Rationale:** RatingSlip has the most callsites (9 production) and is the most frequently exercised flow. Doing it first provides the highest confidence signal.
++**Rationale:** RatingSlip is the most frequently exercised flow. Doing it first provides the highest confidence signal, while keeping the TS blast radius small (4 production callsites across 2 files).
+ 
+ ### Phase B --- TableContext (Sprint 2)
+ 
+@@ -344,7 +345,7 @@ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+-SET search_path = public, pg_temp
++SET search_path = pg_catalog, public
+ AS $$
+ DECLARE
+   v_casino_id UUID;
+@@ -370,7 +371,7 @@ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+-SET search_path = public, pg_temp
++SET search_path = pg_catalog, public
+ AS $$
+ DECLARE
+   v_casino_id UUID;
+
+--- EXEC-041-adr024-p2-validate-to-derive.md+++ EXEC-041-adr024-p2-validate-to-derive.md@@ -67,8 +67,8 @@     estimated_complexity: low
+ 
+   WS6:
+-    name: CI Gate Hardening
+-    description: "Upgrade SEC-003 p_casino_id path from notice-only to hard-fail with allowlist for known-deferred RPCs, add p_created_by_staff_id as NOTICE-level detection, then run the full security gate suite"
++    name: CI Gate Hardening (POST-SHIP)
++    description: "POST-SHIP: Upgrade SEC-003 p_casino_id path from notice-only to hard-fail with allowlist for known-deferred RPCs, add p_created_by_staff_id as NOTICE-level detection, then run the full security gate suite"
+     executor: backend-service-builder
+     executor_type: skill
+     depends_on: [WS2, WS3, WS4, WS5]
+@@ -595,9 +595,13 @@ - [ ] All 12 RPCs lack `p_casino_id` in `pg_proc.proargnames` (G1)
+ - [ ] Zero `p_casino_id` matches in production TS files **for the 12 in-scope RPCs** (G2). Out-of-scope RPCs (`rpc_start_rating_slip`, `rpc_get_player_recent_sessions`, `rpc_get_player_last_session_context`, `rpc_get_rating_slip_modal_data`, `rpc_compute_gaming_day`, `rpc_create_financial_txn`, loyalty RPCs, `rpc_get_dashboard_tables_with_counts`) retain `p_casino_id` — do NOT remove.
+ - [ ] Zero `p_casino_id` matches in test files **for the 12 in-scope RPCs only**. Test callsites for out-of-scope RPCs (e.g., `rpc_start_rating_slip` in `services/visit/__tests__/*`) must NOT be modified.
+-- [ ] SEC-003 gate hard-fails on `p_casino_id` for any NEW `rpc_*` not in the allowlist (G3)
+-- [ ] SEC-003 gate emits NOTICE for allowlisted known-deferred RPCs
+ - [ ] `./supabase/tests/security/run_all_gates.sh` passes on the remediated schema
++
++### Post-ship (Recommended Hardening)
++
++- [ ] (WS6) Upgrade SEC-003 identity-param check from NOTICE-only to hard-fail with allowlist for known-deferred RPCs.
++- [ ] (WS6) Add NOTICE detection for `p_created_by_staff_id` on `rpc_create_financial_txn` as an audit breadcrumb until ownership decision lands.
++
+ - [ ] `chipset_total_cents` revoked from anon (G5)
+ - [ ] 8 denial policies normalized with `auth.uid() IS NOT NULL` (G6)
+ - [ ] `player_tag` UPDATE has WITH CHECK clause (G7)

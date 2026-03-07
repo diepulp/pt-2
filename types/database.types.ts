@@ -3613,11 +3613,7 @@ export type Database = {
         }[]
       }
       rpc_accrue_on_close: {
-        Args: {
-          p_casino_id: string
-          p_idempotency_key: string
-          p_rating_slip_id: string
-        }
+        Args: { p_idempotency_key: string; p_rating_slip_id: string }
         Returns: {
           balance_after: number
           is_existing: boolean
@@ -3653,11 +3649,7 @@ export type Database = {
         }
       }
       rpc_activate_floor_layout: {
-        Args: {
-          p_casino_id: string
-          p_layout_version_id: string
-          p_request_id: string
-        }
+        Args: { p_layout_version_id: string; p_request_id: string }
         Returns: {
           activated_at: string
           activated_by: string
@@ -3678,7 +3670,6 @@ export type Database = {
         Args: {
           p_bonus_points?: number
           p_campaign_id: string
-          p_casino_id: string
           p_idempotency_key?: string
           p_promo_multiplier?: number
           p_rating_slip_id: string
@@ -3708,11 +3699,7 @@ export type Database = {
       }
       rpc_clear_pin_attempts: { Args: never; Returns: undefined }
       rpc_close_rating_slip: {
-        Args: {
-          p_average_bet?: number
-          p_casino_id: string
-          p_rating_slip_id: string
-        }
+        Args: { p_average_bet?: number; p_rating_slip_id: string }
         Returns: {
           duration_seconds: number
           slip: Database["public"]["Tables"]["rating_slip"]["Row"]
@@ -3852,7 +3839,6 @@ export type Database = {
       }
       rpc_create_financial_adjustment: {
         Args: {
-          p_casino_id: string
           p_delta_amount: number
           p_idempotency_key?: string
           p_note: string
@@ -3893,7 +3879,6 @@ export type Database = {
       rpc_create_financial_txn: {
         Args: {
           p_amount: number
-          p_casino_id: string
           p_created_at?: string
           p_created_by_staff_id: string
           p_direction: Database["public"]["Enums"]["financial_direction"]
@@ -3936,7 +3921,7 @@ export type Database = {
         }
       }
       rpc_create_floor_layout: {
-        Args: { p_casino_id: string; p_description: string; p_name: string }
+        Args: { p_description: string; p_name: string }
         Returns: {
           approved_by: string | null
           casino_id: string
@@ -3994,7 +3979,6 @@ export type Database = {
       rpc_create_player: {
         Args: {
           p_birth_date?: string
-          p_casino_id: string
           p_first_name: string
           p_last_name: string
         }
@@ -4213,17 +4197,13 @@ export type Database = {
         }
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
-      rpc_get_dashboard_tables_with_counts: {
-        Args: { p_casino_id: string }
-        Returns: Json
-      }
+      rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
       rpc_get_player_last_session_context: {
-        Args: { p_casino_id: string; p_player_id: string }
+        Args: { p_player_id: string }
         Returns: Json
       }
       rpc_get_player_ledger: {
         Args: {
-          p_casino_id: string
           p_cursor_created_at?: string
           p_cursor_id?: string
           p_limit?: number
@@ -4249,12 +4229,7 @@ export type Database = {
         }[]
       }
       rpc_get_player_recent_sessions: {
-        Args: {
-          p_casino_id: string
-          p_cursor?: string
-          p_limit?: number
-          p_player_id: string
-        }
+        Args: { p_cursor?: string; p_limit?: number; p_player_id: string }
         Returns: Json
       }
       rpc_get_player_timeline: {
@@ -4288,7 +4263,7 @@ export type Database = {
         Returns: number
       }
       rpc_get_rating_slip_modal_data: {
-        Args: { p_casino_id: string; p_slip_id: string }
+        Args: { p_slip_id: string }
         Returns: Json
       }
       rpc_get_visit_last_segment: {
@@ -4415,13 +4390,11 @@ export type Database = {
       }
       rpc_issue_mid_session_reward: {
         Args: {
-          p_casino_id: string
           p_idempotency_key?: string
           p_player_id: string
           p_points: number
           p_rating_slip_id: string
           p_reason?: Database["public"]["Enums"]["loyalty_reason"]
-          p_staff_id: string
         }
         Returns: {
           balance_after: number
@@ -4520,7 +4493,6 @@ export type Database = {
       }
       rpc_log_table_drop: {
         Args: {
-          p_casino_id: string
           p_delivered_at?: string
           p_delivered_scan_at?: string
           p_drop_box_id: string
@@ -4558,7 +4530,6 @@ export type Database = {
       }
       rpc_log_table_inventory_snapshot: {
         Args: {
-          p_casino_id: string
           p_chipset: Json
           p_discrepancy_cents?: number
           p_note?: string
@@ -4590,7 +4561,6 @@ export type Database = {
       rpc_manual_credit: {
         Args: {
           p_awarded_by_staff_id: string
-          p_casino_id: string
           p_idempotency_key: string
           p_note: string
           p_player_id: string
@@ -4606,7 +4576,6 @@ export type Database = {
       rpc_move_player: {
         Args: {
           p_average_bet?: number
-          p_casino_id: string
           p_new_seat_number?: string
           p_new_table_id: string
           p_slip_id: string
@@ -4659,7 +4628,7 @@ export type Database = {
         }
       }
       rpc_pause_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -4791,7 +4760,7 @@ export type Database = {
         Returns: Json
       }
       rpc_reconcile_loyalty_balance: {
-        Args: { p_casino_id: string; p_player_id: string }
+        Args: { p_player_id: string }
         Returns: {
           drift_detected: boolean
           new_balance: number
@@ -4801,7 +4770,6 @@ export type Database = {
       rpc_redeem: {
         Args: {
           p_allow_overdraw?: boolean
-          p_casino_id: string
           p_idempotency_key: string
           p_issued_by_staff_id: string
           p_note: string
@@ -4832,7 +4800,6 @@ export type Database = {
       rpc_request_table_credit: {
         Args: {
           p_amount_cents: number
-          p_casino_id: string
           p_chipset: Json
           p_received_by: string
           p_request_id: string
@@ -4869,7 +4836,6 @@ export type Database = {
       rpc_request_table_fill: {
         Args: {
           p_amount_cents: number
-          p_casino_id: string
           p_chipset: Json
           p_delivered_by: string
           p_received_by: string
@@ -4908,7 +4874,7 @@ export type Database = {
         Returns: Json
       }
       rpc_resume_rating_slip: {
-        Args: { p_casino_id: string; p_rating_slip_id: string }
+        Args: { p_rating_slip_id: string }
         Returns: {
           accrual_kind: string
           accumulated_seconds: number
@@ -5177,8 +5143,6 @@ export type Database = {
       }
       rpc_start_rating_slip: {
         Args: {
-          p_actor_id?: string
-          p_casino_id: string
           p_game_settings: Json
           p_seat_number: string
           p_table_id: string
@@ -5257,62 +5221,32 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      rpc_update_table_status:
-        | {
-            Args: {
-              p_casino_id: string
-              p_new_status: Database["public"]["Enums"]["table_status"]
-              p_table_id: string
-            }
-            Returns: {
-              casino_id: string
-              created_at: string
-              game_settings_id: string | null
-              id: string
-              label: string
-              label_normalized: string | null
-              par_total_cents: number | null
-              par_updated_at: string | null
-              par_updated_by: string | null
-              pit: string | null
-              status: Database["public"]["Enums"]["table_status"]
-              type: Database["public"]["Enums"]["game_type"]
-            }
-            SetofOptions: {
-              from: "*"
-              to: "gaming_table"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_actor_id: string
-              p_casino_id: string
-              p_new_status: Database["public"]["Enums"]["table_status"]
-              p_table_id: string
-            }
-            Returns: {
-              casino_id: string
-              created_at: string
-              game_settings_id: string | null
-              id: string
-              label: string
-              label_normalized: string | null
-              par_total_cents: number | null
-              par_updated_at: string | null
-              par_updated_by: string | null
-              pit: string | null
-              status: Database["public"]["Enums"]["table_status"]
-              type: Database["public"]["Enums"]["game_type"]
-            }
-            SetofOptions: {
-              from: "*"
-              to: "gaming_table"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_update_table_status: {
+        Args: {
+          p_new_status: Database["public"]["Enums"]["table_status"]
+          p_table_id: string
+        }
+        Returns: {
+          casino_id: string
+          created_at: string
+          game_settings_id: string | null
+          id: string
+          label: string
+          label_normalized: string | null
+          par_total_cents: number | null
+          par_updated_at: string | null
+          par_updated_by: string | null
+          pit: string | null
+          status: Database["public"]["Enums"]["table_status"]
+          type: Database["public"]["Enums"]["game_type"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "gaming_table"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_void_promo_coupon: {
         Args: {
           p_correlation_id?: string
@@ -5320,15 +5254,6 @@ export type Database = {
           p_idempotency_key: string
         }
         Returns: Json
-      }
-      set_rls_context: {
-        Args: {
-          p_actor_id: string
-          p_casino_id: string
-          p_correlation_id?: string
-          p_staff_role: string
-        }
-        Returns: undefined
       }
       set_rls_context_from_staff: {
         Args: { p_correlation_id?: string }

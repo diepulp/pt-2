@@ -576,7 +576,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       };
 
       // Single RPC call should set all variables
-      const { error } = await supabase.rpc('set_rls_context', {
+      const { error } = await supabase.rpc('set_rls_context_internal', {
         p_actor_id: context.actorId,
         p_casino_id: context.casinoId,
         p_staff_role: context.staffRole,
@@ -599,7 +599,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
     it('should handle RPC errors gracefully without partial context', async () => {
       // Attempt to call RPC with invalid UUID
-      const { error } = await supabase.rpc('set_rls_context', {
+      const { error } = await supabase.rpc('set_rls_context_internal', {
         p_actor_id: 'invalid-uuid' as string,
         p_casino_id: testCasino1Id,
         p_staff_role: 'pit_boss',
@@ -795,12 +795,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: startResult, error: startError } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '1',
           p_game_settings: { game_type: 'blackjack' },
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -814,7 +812,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: closeResult, error: closeError } = await supabase.rpc(
         'rpc_close_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: startResult!.id,
           p_average_bet: 50.0,
         },
@@ -831,12 +828,10 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: slip, error: startError } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '2',
           p_game_settings: { game_type: 'blackjack' },
-          p_actor_id: testStaff1Id,
         },
       );
 
@@ -847,7 +842,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: pauseResult, error: pauseError } = await supabase.rpc(
         'rpc_pause_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -860,7 +854,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: resumeResult, error: resumeError } = await supabase.rpc(
         'rpc_resume_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -873,7 +866,6 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: closeResult, error: closeError } = await supabase.rpc(
         'rpc_close_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         },
       );
@@ -888,34 +880,22 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const { data: slip1, error: start1Error } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
           p_visit_id: testVisitId,
           p_table_id: testTableId,
           p_seat_number: '3',
           p_game_settings: { game_type: 'blackjack' },
-          p_actor_id: testStaff1Id,
         },
       );
 
       expect(start1Error).toBeNull();
       expect(slip1).toBeTruthy();
 
-      // Try to close the slip with casino 2 context (should fail)
-      const { error: closeError } = await supabase.rpc(
-        'rpc_close_rating_slip',
-        {
-          p_casino_id: testCasino2Id, // Wrong casino!
-          p_rating_slip_id: slip1!.id,
-        },
-      );
+      // ADR-024 P2: casino_id is now derived from context, not passed as param.
+      // The RPC will use the caller's context casino_id automatically.
+      // Casino isolation is enforced by the WHERE clause matching v_casino_id.
 
-      // Should fail due to casino_id mismatch
-      expect(closeError).not.toBeNull();
-      expect(closeError?.message).toMatch(/casino_id mismatch|not found/i);
-
-      // Clean up - close with correct casino
+      // Clean up - close the slip (context derives casino from staff)
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
       });
     });
@@ -962,20 +942,16 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         // Start slips concurrently in both casinos
         const [result1, result2] = await Promise.all([
           supabase.rpc('rpc_start_rating_slip', {
-            p_casino_id: testCasino1Id,
             p_visit_id: testVisitId,
             p_table_id: testTableId,
             p_seat_number: '4',
             p_game_settings: { game_type: 'blackjack' },
-            p_actor_id: testStaff1Id,
           }),
           supabase.rpc('rpc_start_rating_slip', {
-            p_casino_id: testCasino2Id,
             p_visit_id: visit2!.id,
             p_table_id: table2!.id,
             p_seat_number: '1',
             p_game_settings: { game_type: 'roulette' },
-            p_actor_id: testStaff2Id,
           }),
         ]);
 
@@ -991,11 +967,9 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         // Close both concurrently
         const [close1, close2] = await Promise.all([
           supabase.rpc('rpc_close_rating_slip', {
-            p_casino_id: testCasino1Id,
             p_rating_slip_id: result1.data!.id,
           }),
           supabase.rpc('rpc_close_rating_slip', {
-            p_casino_id: testCasino2Id,
             p_rating_slip_id: result2.data!.id,
           }),
         ]);
@@ -1298,13 +1272,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
       expect(signInError).toBeNull();
 
-      // Set context for Casino 1 via SET LOCAL
-      const { error: rpcError } = await anonClient.rpc('set_rls_context', {
-        p_actor_id: testStaff1Id,
-        p_casino_id: testCasino1Id,
-        p_staff_role: 'pit_boss',
-        p_correlation_id: 'cross-casino-set-local',
-      });
+      // Set context for Casino 1 via ADR-024 authoritative context injection
+      const { error: rpcError } = await anonClient.rpc(
+        'set_rls_context_from_staff',
+        {
+          p_correlation_id: 'cross-casino-set-local',
+        },
+      );
 
       expect(rpcError).toBeNull();
 

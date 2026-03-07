@@ -14,6 +14,10 @@ import {
 import Link from 'next/link';
 import * as React from 'react';
 
+import {
+  AdminAlertBadge,
+  AdminAlertBadgeCollapsed,
+} from '@/components/layout/admin-alert-badge';
 import { NavMain, type NavGroup } from '@/components/layout/nav-main';
 import { NavUser } from '@/components/layout/nav-user';
 import {
@@ -101,7 +105,7 @@ const navGroups: NavGroup[] = [
         title: 'Alerts',
         url: '/admin/alerts',
         icon: Bell,
-        badge: 0, // TODO: Connect to real alert count
+        badgeElement: <AdminAlertBadge />,
       },
       {
         title: 'Reports',
@@ -241,10 +245,15 @@ export function AppSidebar() {
                       >
                         <Icon className="w-4 h-4" />
                         {/* Badge indicator for collapsed view */}
-                        {item.badge !== undefined && item.badge > 0 && (
-                          <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-[9px] font-medium text-sidebar-primary-foreground">
-                            {item.badge > 9 ? '9+' : item.badge}
-                          </span>
+                        {item.badgeElement ? (
+                          <AdminAlertBadgeCollapsed />
+                        ) : (
+                          item.badge !== undefined &&
+                          item.badge > 0 && (
+                            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-sidebar-primary px-1 text-[9px] font-medium text-sidebar-primary-foreground">
+                              {item.badge > 9 ? '9+' : item.badge}
+                            </span>
+                          )
                         )}
                       </Link>
                     </TooltipTrigger>

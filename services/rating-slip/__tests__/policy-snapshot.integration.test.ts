@@ -53,7 +53,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
     // Close any open slips before cleanup
     for (const slipId of fixture?.slipIds ?? []) {
       try {
-        await service.close(fixture.casinoId, fixture.actorId, slipId);
+        await service.close(slipId);
       } catch {
         // Ignore if already closed
       }
@@ -99,7 +99,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       expect(loyaltySnapshot.policy_version).toBe('loyalty_points_v1');
 
       // Cleanup
-      await service.close(fixture.casinoId, fixture.actorId, slip.id);
+      await service.close(slip.id);
       await supabase.from('rating_slip').delete().eq('id', slip.id);
       await cleanupIsolatedVisit(supabase, testVisit.id, testVisit.playerId);
     });
@@ -127,7 +127,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       expect(['game_settings', 'default']).toContain(source.point_multiplier);
 
       // Cleanup
-      await service.close(fixture.casinoId, fixture.actorId, slip.id);
+      await service.close(slip.id);
       await supabase.from('rating_slip').delete().eq('id', slip.id);
       await cleanupIsolatedVisit(supabase, testVisit.id, testVisit.playerId);
     });
@@ -172,7 +172,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         'rpc_accrue_on_close',
         {
           p_rating_slip_id: slip.id,
-          p_casino_id: fixture.casinoId,
           p_idempotency_key: idempotencyKey,
         },
       );
@@ -207,7 +206,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       // Wait for measurable duration
       await new Promise((resolve) => setTimeout(resolve, 200));
 
-      await service.close(fixture.casinoId, fixture.actorId, slip.id, {
+      await service.close(slip.id, {
         average_bet: 100,
       });
 
@@ -215,7 +214,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         'rpc_accrue_on_close',
         {
           p_rating_slip_id: slip.id,
-          p_casino_id: fixture.casinoId,
           p_idempotency_key: randomUUID(),
         },
       );
@@ -353,7 +351,6 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
           'rpc_accrue_on_close',
           {
             p_rating_slip_id: slip.id,
-            p_casino_id: fixture.casinoId,
             p_idempotency_key: randomUUID(),
           },
         );
@@ -415,7 +412,7 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
 
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      await service.close(fixture.casinoId, fixture.actorId, slip.id, {
+      await service.close(slip.id, {
         average_bet: 50,
       });
 
@@ -423,14 +420,12 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       const idempotencyKey = randomUUID();
       const { data: first } = await supabase.rpc('rpc_accrue_on_close', {
         p_rating_slip_id: slip.id,
-        p_casino_id: fixture.casinoId,
         p_idempotency_key: idempotencyKey,
       });
 
       // Second accrual with different idempotency key (but same slip)
       const { data: second } = await supabase.rpc('rpc_accrue_on_close', {
         p_rating_slip_id: slip.id,
-        p_casino_id: fixture.casinoId,
         p_idempotency_key: randomUUID(), // Different key
       });
 

@@ -18,10 +18,8 @@ describe('Mid-session reward payload builder', () => {
     });
 
     expect(payload).toEqual({
-      p_casino_id: baseInput.casinoId,
       p_player_id: baseInput.playerId,
       p_rating_slip_id: baseInput.ratingSlipId,
-      p_staff_id: baseInput.staffId,
       p_points: baseInput.points,
       p_idempotency_key: baseInput.idempotencyKey,
       p_reason: 'promotion',

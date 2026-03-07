@@ -174,7 +174,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
   describe('Pit Boss Buy-In (Allowed Transactions)', () => {
     it('should allow pit_boss to create buy-in with cash', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 500.0,
@@ -194,7 +193,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should allow pit_boss to create buy-in with chips', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 1000.0,
@@ -214,7 +212,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should allow multiple concurrent pit_boss buy-ins without race conditions', async () => {
       const buyInRequests = Array.from({ length: 5 }, (_, i) => ({
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: (i + 1) * 100.0,
@@ -247,7 +244,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
   describe('Pit Boss Cash-Out (Forbidden Transactions)', () => {
     it('should reject pit_boss attempt to create cash-out', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 500.0,
@@ -266,7 +262,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should reject pit_boss attempt to create chip cash-out', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 1000.0,
@@ -291,7 +286,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
   describe('Pit Boss Marker Transactions (Forbidden)', () => {
     it('should reject pit_boss attempt to create marker transaction', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 5000.0,
@@ -310,7 +304,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should reject pit_boss attempt to create check transaction', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 2000.0,
@@ -335,7 +328,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
   describe('Cashier Transactions (Baseline Comparison)', () => {
     it('should allow cashier to create cash-out (for comparison)', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 500.0,
@@ -353,7 +345,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should allow cashier to create marker transaction (for comparison)', async () => {
       const { data, error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 5000.0,
@@ -380,7 +371,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
       const validRequests = Array.from({ length: 10 }, (_, i) => ({
         valid: true,
         params: {
-          p_casino_id: testCasinoId,
           p_player_id: testPlayerId,
           p_visit_id: testVisitId,
           p_amount: (i + 1) * 50.0,
@@ -394,7 +384,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
       const invalidRequests = Array.from({ length: 10 }, (_, i) => ({
         valid: false,
         params: {
-          p_casino_id: testCasinoId,
           p_player_id: testPlayerId,
           p_visit_id: testVisitId,
           p_amount: (i + 1) * 50.0,
@@ -493,7 +482,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
         // Execute concurrent transactions from both pit bosses
         const [result1, result2] = await Promise.all([
           supabase.rpc('rpc_create_financial_txn', {
-            p_casino_id: testCasinoId,
             p_player_id: testPlayerId,
             p_visit_id: testVisitId,
             p_amount: 100.0,
@@ -503,7 +491,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
             p_tender_type: 'cash',
           }),
           supabase.rpc('rpc_create_financial_txn', {
-            p_casino_id: casino2!.id,
             p_player_id: player2!.id,
             p_visit_id: visit2!.id,
             p_amount: 200.0,
@@ -550,7 +537,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
   describe('Error Message Clarity', () => {
     it('should provide clear error message for direction constraint', async () => {
       const { error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 500.0,
@@ -568,7 +554,6 @@ describe('Pit Boss Financial Transaction Constraints (PRD-015 WS5)', () => {
 
     it('should provide clear error message for tender_type constraint', async () => {
       const { error } = await supabase.rpc('rpc_create_financial_txn', {
-        p_casino_id: testCasinoId,
         p_player_id: testPlayerId,
         p_visit_id: testVisitId,
         p_amount: 5000.0,

@@ -65,11 +65,7 @@ export async function POST(request: NextRequest, segmentData: RouteParams) {
         const service = createRatingSlipService(mwCtx.supabase);
 
         // ADR-024: actor_id now derived internally via set_rls_context_from_staff()
-        const slipWithDuration = await service.close(
-          mwCtx.rlsContext!.casinoId,
-          params.id,
-          input,
-        );
+        const slipWithDuration = await service.close(params.id, input);
 
         return {
           ok: true as const,

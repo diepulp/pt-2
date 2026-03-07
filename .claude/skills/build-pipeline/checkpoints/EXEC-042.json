@@ -1,0 +1,21 @@
+{
+  "spec_id": "EXEC-042",
+  "prd": "PRD-042",
+  "prd_title": "Admin Settings Pages — Alert Thresholds & Shift Configuration",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-042-admin-settings-pages.md",
+  "status": "initialized",
+  "gov010_check": "waived:adr_refs_in_affects_field",
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "attempt": 1,
+    "p0_count": 0,
+    "p1_count": 5,
+    "p2_count": 3,
+    "patches_applied": true
+  },
+  "current_phase": 0,
+  "completed_workstreams": [],
+  "pending_workstreams": ["WS0", "WS1", "WS2", "WS3", "WS4"],
+  "created_at": "2026-03-04T00:00:00Z",
+  "updated_at": "2026-03-04T00:00:00Z"
+}

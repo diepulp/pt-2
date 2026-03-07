@@ -491,8 +491,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
         // Create a rating slip for each visit to have segments
         const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-          p_casino_id: testCasino1Id,
-          p_actor_id: testActor1Id,
           p_visit_id: visit!.id,
           p_table_id: testTable1Id,
           p_seat_number: '1',
@@ -502,7 +500,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
         // Close the slip
         await supabase.rpc('rpc_close_rating_slip', {
-          p_casino_id: testCasino1Id,
           p_rating_slip_id: slip!.id,
         });
       }
@@ -626,8 +623,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
 
       // Create a rating slip for the open visit
       const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: openVisit!.id,
         p_table_id: testTable1Id,
         p_seat_number: '1',
@@ -698,8 +693,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.visitIds.push(visit1!.id);
 
       const { data: slip1 } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: visit1!.id,
         p_table_id: testTable1Id,
         p_seat_number: '3',
@@ -708,7 +701,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip1!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip1!.id,
         p_average_bet: 50.0,
       });
@@ -728,8 +720,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.visitIds.push(visit2!.id);
 
       const { data: slip2 } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: visit2!.id,
         p_table_id: testTable2Id,
         p_seat_number: '5',
@@ -738,7 +728,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip2!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip2!.id,
         p_average_bet: 75.0,
       });
@@ -784,8 +773,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.visitIds.push(visit!.id);
 
       const { data: slip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: visit!.id,
         p_table_id: testTable1Id,
         p_seat_number: '1',
@@ -794,7 +781,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(slip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: slip!.id,
       });
 
@@ -830,8 +816,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.visitIds.push(sourceVisit!.id);
 
       const { data: sourceSlip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: sourceVisit!.id,
         p_table_id: testTable1Id,
         p_seat_number: '2',
@@ -840,7 +824,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(sourceSlip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
       });
 
@@ -1068,8 +1051,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       const { data: occupiedSlip } = await supabase.rpc(
         'rpc_start_rating_slip',
         {
-          p_casino_id: testCasino1Id,
-          p_actor_id: testActor1Id,
           p_visit_id: visit2!.id,
           p_table_id: testTable2Id,
           p_seat_number: '8',
@@ -1112,8 +1093,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.visitIds.push(sourceVisit!.id);
 
       const { data: sourceSlip } = await supabase.rpc('rpc_start_rating_slip', {
-        p_casino_id: testCasino1Id,
-        p_actor_id: testActor1Id,
         p_visit_id: sourceVisit!.id,
         p_table_id: testTable1Id,
         p_seat_number: '1',
@@ -1122,7 +1101,6 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       fixture.slipIds.push(sourceSlip!.id);
 
       await supabase.rpc('rpc_close_rating_slip', {
-        p_casino_id: testCasino1Id,
         p_rating_slip_id: sourceSlip!.id,
       });
 
