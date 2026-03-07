@@ -1226,54 +1226,6 @@ export type Database = {
           },
         ]
       }
-      loyalty_valuation_policy: {
-        Row: {
-          casino_id: string
-          cents_per_point: number
-          created_at: string
-          created_by_staff_id: string | null
-          effective_date: string
-          id: string
-          is_active: boolean
-          version_identifier: string
-        }
-        Insert: {
-          casino_id: string
-          cents_per_point: number
-          created_at?: string
-          created_by_staff_id?: string | null
-          effective_date: string
-          id?: string
-          is_active?: boolean
-          version_identifier: string
-        }
-        Update: {
-          casino_id?: string
-          cents_per_point?: number
-          created_at?: string
-          created_by_staff_id?: string | null
-          effective_date?: string
-          id?: string
-          is_active?: boolean
-          version_identifier?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "loyalty_valuation_policy_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "loyalty_valuation_policy_created_by_staff_id_fkey"
-            columns: ["created_by_staff_id"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       mtl_audit_note: {
         Row: {
           created_at: string
