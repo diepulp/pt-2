@@ -864,6 +864,17 @@ ADR-035 establishes a formal **Session Reset Contract** for Zustand stores and b
 | -------- | ------ | ----------------- |
 | Audit-enriched correlation view (`audit_log` LEFT JOIN variant) | `audit_log` append-only immutability not yet enforced | Enforce append-only invariant (deny UPDATE/DELETE) |
 
+### Governance Cross-References
+
+The following governance artifacts constrain how measurement surfaces are built and what truth semantics they declare:
+
+| Artifact | Path | Governs |
+| -------- | ---- | ------- |
+| Surface Classification Standard | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` | Rendering delivery + data aggregation pattern selection for surfaces consuming measurement metrics |
+| Metric Provenance Matrix | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` | Truth class, freshness, source tables, reconciliation for MEAS-001 through MEAS-004 |
+
+New surface EXEC-SPECs that consume measurement layer data must comply with both documents. See ADR-041 for the governing decisions.
+
 ---
 
 ## Centralized Enum Catalog
