@@ -11,9 +11,9 @@ Domain-specific expert skills should be consulted during EXECUTION-SPEC workstre
 Before routing to any expert, load these context files:
 
 ```
-context/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
-context/governance.context.md    # Service template, migration standards, test locations
-context/quality.context.md       # Test strategy, coverage targets, quality gates
+references/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
+references/governance.context.md    # Service template, migration standards, test locations
+references/quality.context.md       # Test strategy, coverage targets, quality gates
 ```
 
 ### Context Extraction by Domain
@@ -290,9 +290,9 @@ Each skill receives:
 ## Related Documents
 
 - `executor-registry.md` - Complete executor mapping
-- `context/architecture.context.md` - SRM ownership, DTO patterns
-- `context/governance.context.md` - Test locations, migration standards
-- `context/quality.context.md` - Coverage targets, quality gates
+- `references/architecture.context.md` - SRM ownership, DTO patterns
+- `references/governance.context.md` - Test locations, migration standards
+- `references/quality.context.md` - Coverage targets, quality gates
 - `../lead-architect/SKILL.md` - Architectural scaffolding role
 - `../backend-service-builder/SKILL.md` - Backend domain expertise
 - `../api-builder/SKILL.md` - API domain expertise
