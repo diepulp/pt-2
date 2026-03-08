@@ -1,6 +1,6 @@
 ---
 name: build-pipeline
-description: This skill should be used when the user asks to "build", "run /build", "implement", "execute spec", "implement PRD-XXX", "resume pipeline execution", "generate an EXECUTION-SPEC", "execute investigation findings","implement investigation doc", or provides a file path to any specification document (PRD, investigation, EXEC-SPEC, or issue doc). Also triggers when user mentions "build-pipeline" or asks to implement findings from docs/issues/ or similar specification paths. Orchestrates specification-to-production implementation with phased workstream execution, validation gates, and checkpoint-based resume capability.
+description: Orchestrate specification-to-production implementation with phased workstream execution, validation gates, and checkpoint-based resume. This skill should be used when building from PRDs, EXEC-SPECs, investigation docs, or issue specs.
 ---
 
 # Build Pipeline Orchestrator
@@ -119,9 +119,9 @@ See `references/expert-routing.md` for full expert consultation protocol.
 Before any generation, load context files for validation:
 
 ```
-context/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
-context/governance.context.md    # Service template, migration standards, test locations
-context/quality.context.md       # Test strategy, coverage targets, quality gates
+references/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
+references/governance.context.md    # Service template, migration standards, test locations
+references/quality.context.md       # Test strategy, coverage targets, quality gates
 ```
 
 These files contain deterministic rules that MUST be validated against during spec generation.
@@ -169,17 +169,7 @@ These files contain deterministic rules that MUST be validated against during sp
    > (ADR-015 RLS, DTO canonical, React 19 useTransition) and will produce
    > non-compliant specifications if it does this inline.
 
-   **Domain -> Expert Skill routing table:**
-
-   | Workstream Type | Expert Skill (exact Skill tool name) |
-   |-----------------|--------------------------------------|
-   | `database`, `service-layer` | `backend-service-builder` |
-   | `rls` | `rls-expert` |
-   | `route-handlers` | `api-builder` |
-   | `react-components`, `zustand-stores`, `react-query-hooks`, `modal-integration` | `frontend-design-pt-2` |
-   | `unit-tests` (service) | `backend-service-builder` |
-   | `unit-tests` (component) | `frontend-design-pt-2` |
-   | `e2e-tests` | `e2e-testing` |
+   Consult `references/executor-registry.md` for the domain-to-expert skill routing table.
 
    **Required tool call per workstream:**
    ```
@@ -193,9 +183,9 @@ These files contain deterministic rules that MUST be validated against during sp
      {skeleton_yaml}
 
      GOVERNANCE CONTEXT (MUST COMPLY):
-     {Inject relevant sections from context/architecture.context.md}
-     {Inject relevant sections from context/governance.context.md}
-     {Inject relevant sections from context/quality.context.md}
+     {Inject relevant sections from references/architecture.context.md}
+     {Inject relevant sections from references/governance.context.md}
+     {Inject relevant sections from references/quality.context.md}
 
      Task: Refine this workstream with domain-specific details (outputs, patterns, validation).
      Return enriched workstream YAML.")
@@ -236,45 +226,108 @@ These files contain deterministic rules that MUST be validated against during sp
 
 9. Initialize checkpoint file immediately (see `references/checkpoint-format.md`)
 
-### Stage 4: Adversarial Review
+### Stage 4: Adversarial Review (DA Team)
 
-10. **BLOCKING REQUIREMENT -- Invoke devils-advocate for EXEC-SPEC review:**
+10. **BLOCKING REQUIREMENT -- Deploy DA review team for EXEC-SPEC review:**
 
     > **DO NOT skip adversarial review.**
     > The EXEC-SPEC is the implementation blueprint. Catching P0 flaws here costs ~0 code rework.
     > Catching them after Phase 3 execution costs significant rework.
+    >
+    > **DO NOT use a single DA reviewer.** Deploy the full 5-reviewer team for coverage depth.
 
-    **Required tool call:**
+    #### Step 4a: Parallel DA Team Dispatch
+
+    Send a **SINGLE message** with **5 parallel** `Skill` calls. Each reviewer attacks
+    the EXEC-SPEC from a different angle using the `devils-advocate` Focused Review Mode:
+
     ```
-    Skill(skill="devils-advocate", args="Full adversarial review of EXEC-SPEC for {PRD_ID}:
+    +-----------------------------------------------------------------------+
+    | SINGLE MESSAGE — 5 parallel Skill calls:                              |
+    +-----------------------------------------------------------------------+
+    | Skill(skill="devils-advocate", args="R1: SECURITY & TENANCY ...")      |
+    | Skill(skill="devils-advocate", args="R2: ARCHITECTURE & BOUNDARIES...")|
+    | Skill(skill="devils-advocate", args="R3: IMPLEMENTATION COMPLETE...")   |
+    | Skill(skill="devils-advocate", args="R4: TEST & QUALITY ...")          |
+    | Skill(skill="devils-advocate", args="R5: PERFORMANCE & OPERABILITY...")|
+    +-----------------------------------------------------------------------+
+    ```
+
+    **Required prompt template for each reviewer:**
+
+    ```
+    Adversarial review of EXEC-SPEC for {PRD_ID}:
       Specification: {exec_spec_path}
       Workstreams: {workstream_summary}
       Bounded Contexts: {bounded_contexts}
 
-      Review the complete EXEC-SPEC. Use full review mode (all 11 sections).
-      Focus on: bounded context violations, missing RLS workstreams,
-      implementation gaps, over-engineering, and test plan holes.")
+    FOCUS: {REVIEWER_ROLE}
+    SECTIONS: {assigned_section_numbers}
+    CONTEXT FILES: {domain_context_files}
+
+    Use Focused Review Mode. Attack ONLY your assigned sections with full depth.
+    Flag cross-domain issues as one-liners in Cross-Domain Flags section.
     ```
 
-    **Gate logic:**
-    - Verdict "Ship": **PASS**. Include verdict in Phase 2 display.
-    - Verdict "Ship w/ gates": **WARN**. Present findings in Phase 2 approval gate. Human decides.
-    - Verdict "Do not ship" with P0 findings: **BLOCK**. Enter retry protocol (see below).
+    **DA Team Roster:**
 
-    Record the DA verdict in the checkpoint `adversarial_review` field (see `references/checkpoint-format.md`).
+    | Reviewer | Role Constant | Sections | Extra Context to Inject |
+    |----------|---------------|----------|-------------------------|
+    | R1 | `SECURITY_TENANCY` | 1, 4 | SEC-002 guardrails, ADR-015/020/024/030/040 |
+    | R2 | `ARCHITECTURE_BOUNDARIES` | 5, 8 | SRM, `architecture.context.md`, Over-Engineering Guardrail |
+    | R3 | `IMPLEMENTATION_COMPLETENESS` | 2, 3 | `governance.context.md`, EXEC-SPEC template |
+    | R4 | `TEST_QUALITY` | 7 | `quality.context.md`, test patterns, critical workflows |
+    | R5 | `PERFORMANCE_OPERABILITY` | 6 | SLO definitions, query patterns, RLS performance |
 
-    **Retry protocol (on BLOCK):**
+    #### Step 4b: Synthesis
 
-    Present P0 findings to the human:
+    After all 5 reviewers return, the orchestrator (build-pipeline) synthesizes inline:
+
+    1. **Collect** all findings with severity labels (P0-P3) from all 5 reviewers
+    2. **Deduplicate** — same root cause found by multiple reviewers gets merged, severity = max of reporters
+    3. **Promote cross-domain flags** — if a reviewer flagged something in another reviewer's domain, check if that reviewer caught it. If not, add it as a new finding.
+    4. **Resolve conflicts** — if reviewers contradict (e.g., R2 says "add X" vs R5 says "X is over-engineering"), flag as `conflict` for human decision. Do NOT auto-resolve.
+    5. **Compute consolidated verdict**:
+       - All 5 "Ship" → **PASS**
+       - Any "Ship w/ gates" (no P0) → **WARN**
+       - Any "Do not ship" (P0 found) → **BLOCK**
+    6. **Produce consolidated report** (displayed in Phase 2 gate):
+       - Consolidated Verdict + per-reviewer verdicts
+       - Merged P0/P1 findings (deduplicated, max 15 items)
+       - Conflict flags (if any)
+       - Unified Patch Delta (15 bullets max, merged from all reviewer patch deltas)
+       - Per-reviewer summary (1-2 lines each)
+
+    Record the DA team results in the checkpoint `adversarial_review` field (see `references/checkpoint-format.md`).
+
+    #### Step 4c: Gate Logic
+
+    - Consolidated verdict "Ship" (all 5 agree): **PASS**. Include verdict in Phase 2 display.
+    - Consolidated verdict "Ship w/ gates": **WARN**. Present findings in Phase 2 approval gate. Human decides.
+    - Consolidated verdict "Do not ship" (any P0): **BLOCK**. Enter retry protocol (see below).
+
+    #### Retry Protocol (on BLOCK)
+
+    Present consolidated P0 findings to the human:
 
     ```
     ---------------------------------------------
-    [BLOCK] Adversarial Review Failed (Attempt {N}/2)
+    [BLOCK] DA Team Review Failed (Attempt {N}/2)
     ---------------------------------------------
 
-    P0 Findings ({count}):
-      1. {P0 finding summary}
-      2. {P0 finding summary}
+    Reviewers:
+      R1 Security & Tenancy:          {verdict} ({p0_count} P0, {p1_count} P1)
+      R2 Architecture & Boundaries:   {verdict} ({p0_count} P0, {p1_count} P1)
+      R3 Implementation Completeness: {verdict} ({p0_count} P0, {p1_count} P1)
+      R4 Test & Quality:              {verdict} ({p0_count} P0, {p1_count} P1)
+      R5 Performance & Operability:   {verdict} ({p0_count} P0, {p1_count} P1)
+
+    Consolidated P0 Findings ({total_count}):
+      1. [{source_reviewer}] {P0 finding summary}
+      2. [{source_reviewer}] {P0 finding summary}
+
+    Conflicts ({conflict_count}):
+      - {R2 vs R5}: {description}
 
     Options:
       1. Revise EXEC-SPEC (delegate to lead-architect + experts with DA findings)
@@ -283,14 +336,14 @@ These files contain deterministic rules that MUST be validated against during sp
     ---------------------------------------------
     ```
 
-    - **Option 1 (Revise):** Delegate back to `lead-architect` with DA findings as revision context.
+    - **Option 1 (Revise):** Delegate back to `lead-architect` with consolidated DA findings as revision context.
       Re-run expert consultation (Stage 2) for affected workstreams, then Stage 3 (validate),
-      then Stage 4 (DA review). Update checkpoint `adversarial_review.attempt` count.
+      then Stage 4 (full DA team review). Update checkpoint `adversarial_review.attempt` count.
     - **Option 2 (Override):** Record `adversarial_review.verdict` as `"overridden"` with
       `override_reason` in checkpoint. Proceed to Phase 2 with override noted in display.
     - **Option 3 (Abort):** Set checkpoint `status` to `"failed"`, record DA findings. Stop.
 
-    **Max 2 DA attempts.** After 2 consecutive "Do not ship" verdicts, the pipeline forces
+    **Max 2 DA team attempts.** After 2 consecutive "Do not ship" verdicts, the pipeline forces
     a human decision: override-with-reason or abort. No further automatic revision loops.
 
 ---
@@ -315,8 +368,16 @@ Execution Order:
   ...
 
 Validation: [PASS] EXECUTION-SPEC Valid
-Adversarial Review: [{VERDICT}] {P0_count} critical, {P1_count} high
-{If P0 > 0: list P0 findings with one-line summaries}
+
+DA Team Review: [{CONSOLIDATED_VERDICT}]
+  R1 Security & Tenancy:          {verdict} ({p0} P0, {p1} P1)
+  R2 Architecture & Boundaries:   {verdict} ({p0} P0, {p1} P1)
+  R3 Implementation Completeness: {verdict} ({p0} P0, {p1} P1)
+  R4 Test & Quality:              {verdict} ({p0} P0, {p1} P1)
+  R5 Performance & Operability:   {verdict} ({p0} P0, {p1} P1)
+  Consolidated: {total_p0} P0, {total_p1} P1 (deduplicated)
+{If P0 > 0: list P0 findings with source reviewer}
+{If conflicts > 0: list cross-reviewer conflicts}
 
 Approve execution plan? [y/n/edit]
 ---------------------------------------------
@@ -364,18 +425,8 @@ Message 2: Skill(WS3) -> wait
 
 ### Executor Selection (Skills Only)
 
-Consult `references/executor-registry.md` for the complete mapping.
-
-**All workstreams use Skills. Task agents are deprecated.**
-
-| Workstream Domain | Skill (exact `skill=` value) |
-|-------------------|------------------------------|
-| Database/Service Layer | `backend-service-builder` |
-| Route Handlers | `api-builder` |
-| RLS Policies | `rls-expert` |
-| Frontend (components, stores, hooks) | `frontend-design-pt-2` |
-| E2E Tests | `e2e-testing` |
-| Quality Gates | `qa-specialist` |
+Consult `references/executor-registry.md` for the complete workstream-to-skill mapping.
+All workstreams use Skills. Task agents are deprecated.
 
 ### Workstream Prompt Template
 
@@ -411,15 +462,7 @@ After all phases complete:
 
 ## Gate Validation
 
-See `references/gate-protocol.md` for full specification.
-
-| Gate | Command | Success |
-|------|---------|---------|
-| `schema-validation` | `npm run db:types` | Exit 0, no errors |
-| `type-check` | `npm run type-check` | Exit 0 |
-| `lint` | `npm run lint` | Exit 0 (warnings OK) |
-| `test-pass` | `npm test {path}` | All tests pass |
-| `build` | `npm run build` | Exit 0 |
+See `references/gate-protocol.md` for gate types, commands, approval UX, and failure displays.
 
 ---
 
@@ -449,34 +492,9 @@ Pipeline Completes       -> Update checkpoint (status: "complete")
 
 ## Error Handling
 
-On workstream failure:
-
-1. Log error details in checkpoint (`status: "failed"`, `error: {...}`)
-2. Preserve completed artifacts
-3. Display actionable error with suggested fix
-4. Pause for human intervention
-
-```
----------------------------------------------
-[FAIL] Phase {N} Failed: {Workstream Name}
----------------------------------------------
-
-Error in {WS_ID}:
-  {Error message with file:line if available}
-
-Completed:
-  - WS1: {name} [PASS]
-
-Preserved artifacts:
-  - {file1}
-  - {file2}
-
-Suggested fix:
-  {Actionable suggestion based on error type}
-
-Resume after fix: /build --resume
----------------------------------------------
-```
+On workstream failure: log error in checkpoint, preserve completed artifacts, display actionable
+error with suggested fix, pause for human intervention. See `references/gate-protocol.md` for
+the failure display format and error categorization.
 
 ---
 

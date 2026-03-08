@@ -58,6 +58,17 @@ External Dependencies:
 
 Estimated Complexity: {low/medium/high}
 
+DA Team Review: [{CONSOLIDATED_VERDICT}]
+  R1 Security & Tenancy:          {verdict} ({p0} P0, {p1} P1)
+  R2 Architecture & Boundaries:   {verdict} ({p0} P0, {p1} P1)
+  R3 Implementation Completeness: {verdict} ({p0} P0, {p1} P1)
+  R4 Test & Quality:              {verdict} ({p0} P0, {p1} P1)
+  R5 Performance & Operability:   {verdict} ({p0} P0, {p1} P1)
+  ─────────────────────────────────────────────────
+  Consolidated: {total_p0} P0, {total_p1} P1 (deduplicated)
+  {If P0 > 0: list P0 findings with source reviewer}
+  {If conflicts > 0: list conflicts}
+
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Approve execution plan? [y/n/edit]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
