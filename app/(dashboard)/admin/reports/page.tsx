@@ -1,15 +1,46 @@
-import { FileTextIcon } from 'lucide-react';
+/**
+ * Measurement Reports Page
+ *
+ * Server component with RSC data prefetching via TanStack Query dehydrate.
+ * Prefetches unfiltered measurement summary server-side to eliminate
+ * client loading waterfall.
+ *
+ * @see PRD-046 ADR-039 Measurement UI
+ * @see EXEC-046 WS4 — RSC Page + Governance Declarations
+ */
 
-export default function AdminReportsPage() {
+import {
+  dehydrate,
+  HydrationBoundary,
+  QueryClient,
+} from '@tanstack/react-query';
+import type { Metadata } from 'next';
+
+import { MeasurementReportsDashboard } from '@/components/measurement/measurement-reports-dashboard';
+import { fetchMeasurementSummary } from '@/hooks/measurement/http';
+import { measurementKeys } from '@/hooks/measurement/keys';
+
+export const metadata: Metadata = {
+  title: 'Measurement Reports | PT-2',
+};
+
+export default async function MeasurementReportsPage() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { staleTime: 30_000 },
+    },
+  });
+
+  // Single prefetch for unfiltered summary.
+  // No Promise.allSettled needed — single BFF call handles all 4 metrics internally.
+  await queryClient.prefetchQuery({
+    queryKey: measurementKeys.summary(),
+    queryFn: () => fetchMeasurementSummary(),
+  });
+
   return (
-    <div className="flex flex-col items-center justify-center py-24 text-center">
-      <div className="rounded-full bg-muted/50 p-5 mb-5">
-        <FileTextIcon className="h-10 w-10 text-muted-foreground/50" />
-      </div>
-      <h1 className="text-lg font-semibold">Reports</h1>
-      <p className="text-sm text-muted-foreground mt-1 max-w-[280px]">
-        Shift reports and analytics are coming soon.
-      </p>
-    </div>
+    <HydrationBoundary state={dehydrate(queryClient)}>
+      <MeasurementReportsDashboard />
+    </HydrationBoundary>
   );
 }
