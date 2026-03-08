@@ -1,0 +1,34 @@
+{
+  "prd": "ADR-039",
+  "prd_title": "Measurement Layer — Cross-Cutting Read Models for Structural Measurability",
+  "current_phase": 3,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": ["supabase/migrations/20260307114435_adr039_rating_slip_theo_columns.sql"],
+    "WS2": ["supabase/migrations/20260307114918_adr039_close_slip_materialize_theo.sql"],
+    "WS3": ["supabase/migrations/20260307114452_adr039_loyalty_measurement_schema.sql"],
+    "WS4": ["supabase/migrations/20260307115101_adr039_rpc_snapshot_loyalty_liability.sql"],
+    "WS5": ["supabase/migrations/20260307115131_adr039_measurement_views.sql"],
+    "WS6": ["docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"]
+  },
+  "gates_passed": [
+    "schema-validation (Phase 1)",
+    "schema-validation (Phase 2)",
+    "build (Phase 3)",
+    "type-check (DoD)",
+    "lint (DoD)"
+  ],
+  "gates_pending": [],
+  "timestamp": "2026-03-07T12:05:00Z",
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "p0_count": 2,
+    "p1_count": 1,
+    "attempt": 1,
+    "findings_path": null,
+    "override_reason": null
+  }
+}
