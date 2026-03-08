@@ -55,14 +55,28 @@ interface PipelineCheckpoint {
     line?: number;
   };
 
-  // Optional: Adversarial Review Result
+  // Optional: Adversarial Review Result (DA Team)
   adversarial_review?: {
     verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden";
-    p0_count: number;
-    p1_count: number;
-    attempt: number;            // 1-based attempt count (max 2)
-    findings_path?: string;     // path to full DA report if saved
-    override_reason?: string;   // required when verdict is "overridden"
+    p0_count: number;             // consolidated across all reviewers (deduplicated)
+    p1_count: number;             // consolidated across all reviewers (deduplicated)
+    attempt: number;              // 1-based attempt count (max 2)
+    findings_path?: string;       // path to full consolidated DA report if saved
+    override_reason?: string;     // required when verdict is "overridden"
+
+    // DA Team results (5 reviewers)
+    team_results?: Array<{
+      reviewer: "security_tenancy" | "architecture_boundaries"
+             | "implementation_completeness" | "test_quality"
+             | "performance_operability";
+      verdict: "ship" | "ship_with_gates" | "do_not_ship";
+      p0_count: number;
+      p1_count: number;
+      key_findings: string[];     // top 3 finding summaries from this reviewer
+    }>;
+
+    // Cross-reviewer disagreements requiring human resolution
+    conflicts?: string[];
   };
 
   // Optional: Execution Notes

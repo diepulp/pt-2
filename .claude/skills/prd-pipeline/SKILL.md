@@ -77,9 +77,9 @@ See `references/expert-routing.md` for full expert consultation protocol.
 Before any generation, load context files for validation:
 
 ```
-context/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
-context/governance.context.md    # Service template, migration standards, test locations
-context/quality.context.md       # Test strategy, coverage targets, quality gates
+references/architecture.context.md  # SRM ownership, DTO patterns, bounded context rules
+references/governance.context.md    # Service template, migration standards, test locations
+references/quality.context.md       # Test strategy, coverage targets, quality gates
 ```
 
 These files contain deterministic rules that MUST be validated against during spec generation.
@@ -151,9 +151,9 @@ These files contain deterministic rules that MUST be validated against during sp
      {skeleton_yaml}
 
      GOVERNANCE CONTEXT (MUST COMPLY):
-     {Inject relevant sections from context/architecture.context.md}
-     {Inject relevant sections from context/governance.context.md}
-     {Inject relevant sections from context/quality.context.md}
+     {Inject relevant sections from references/architecture.context.md}
+     {Inject relevant sections from references/governance.context.md}
+     {Inject relevant sections from references/quality.context.md}
 
      Task: Refine this workstream with domain-specific details (outputs, patterns, validation).
      Return enriched workstream YAML.")

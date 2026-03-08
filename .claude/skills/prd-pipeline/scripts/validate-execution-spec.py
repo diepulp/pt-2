@@ -708,9 +708,9 @@ def main() -> int:
         print("Fix these issues before proceeding with pipeline execution.")
         print()
         print("Reference:")
-        print("  - context/architecture.context.md (SRM ownership)")
-        print("  - context/governance.context.md (test locations, migrations)")
-        print("  - context/quality.context.md (coverage, gates)")
+        print("  - references/architecture.context.md (SRM ownership)")
+        print("  - references/governance.context.md (test locations, migrations)")
+        print("  - references/quality.context.md (coverage, gates)")
         return 1
 
     print("=" * 60)

@@ -170,6 +170,47 @@ When the user requests a **lightweight pass** or **quick review**, produce only:
 - 2) Missing decisions
 - 9) Patch delta
 
+## Focused Review Mode (DA Team)
+
+When invoked by the build pipeline as part of a **DA review team**, the skill receives a **scope directive** that restricts the review to specific sections. This mode is used for parallel adversarial review where multiple DA instances each attack from a different angle.
+
+### Activation
+
+Focused mode activates when the `args` contain a `FOCUS:` directive block:
+
+```
+FOCUS: {reviewer_role}
+SECTIONS: {comma-separated section numbers}
+CONTEXT FILES: {domain-specific references to load}
+```
+
+### Reviewer Roles & Section Assignments
+
+| Role | Sections | Attack Surface |
+|------|----------|----------------|
+| `SECURITY_TENANCY` | 1 (P0 breaks), 4 (Threat Model) | RLS gaps, tenant boundary violations, auth bypass, SECURITY DEFINER governance, identity provenance |
+| `ARCHITECTURE_BOUNDARIES` | 5 (Data Model & Invariants), 8 (Scope Creep) | SRM violations, cross-context coupling, over-engineering, invariant enforcement, bounded context drift |
+| `IMPLEMENTATION_COMPLETENESS` | 2 (Ambiguities), 3 (Implementation Gaps) | Missing decisions, undefined behavior, migration gaps, error handling holes, idempotency, concurrency |
+| `TEST_QUALITY` | 7 (Test Plan Holes) | Missing acceptance tests, RLS test matrix, edge cases, coverage targets, contract tests |
+| `PERFORMANCE_OPERABILITY` | 6 (Performance & Operability) | N+1 risks, missing indexes, migration safety, failure modes, observability, query behavior under load |
+
+### Focused Review Output Format
+
+In focused mode, produce **only** these sections:
+
+1. **Focused Verdict** — One of: `Ship` / `Ship w/ gates` / `Do not ship` — scoped to your assigned sections only.
+2. **Assigned Sections** — Full depth analysis of your assigned sections per the standard format (Step 3 above). Go **deeper** than full-mode review — you own fewer sections, so invest more rigor per section.
+3. **Patch Delta (Scoped)** — 3-5 bullets max, actionable fixes within your assigned domain only.
+4. **Cross-Domain Flags** — Issues you spotted that fall outside your assigned sections. List as one-liners for the synthesis step. Do NOT analyze them in depth — another reviewer owns that angle.
+
+### Focused Mode Rules
+
+- **Go deeper, not wider.** You own 1-3 sections. Exhaust them.
+- **Do NOT produce sections outside your assignment.** If you spot a security issue but your role is `PERFORMANCE_OPERABILITY`, list it as a Cross-Domain Flag — do not analyze it.
+- **Still load PT-2 system posture** (`references/pt2-system-posture.md`) — you need baseline context regardless of focus.
+- **Severity rubric is unchanged** — P0-P3 labels apply the same way.
+- **"No issues found" is a valid output** — if your sections survive attack, state why they survive.
+
 ## Cross-Skill Delegation
 
 When findings require deep domain expertise beyond review:

@@ -59,9 +59,9 @@ Manual review (not automated):
 Before generating an EXECUTION-SPEC:
 
 1. Load context files:
-   - `context/architecture.context.md`
-   - `context/governance.context.md`
-   - `context/quality.context.md`
+   - `references/architecture.context.md`
+   - `references/governance.context.md`
+   - `references/quality.context.md`
 
 2. Verify PRD alignment:
    - PRD has valid YAML frontmatter
@@ -122,6 +122,6 @@ The script returns:
 ## References
 
 - **Validation Script**: `.claude/skills/prd-pipeline/scripts/validate-execution-spec.py`
-- **SRM Ownership**: `context/architecture.context.md`
-- **Test Standards**: `context/governance.context.md`, `context/quality.context.md`
+- **SRM Ownership**: `references/architecture.context.md`
+- **Test Standards**: `references/governance.context.md`, `references/quality.context.md`
 - **Full SRM**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`

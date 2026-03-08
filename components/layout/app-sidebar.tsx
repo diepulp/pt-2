@@ -2,12 +2,11 @@
 
 import {
   Banknote,
-  Bell,
-  FileText,
   Gift,
   LayoutDashboard,
   Settings,
   Shield,
+  ShieldCheck,
   Table2,
   Users,
 } from 'lucide-react';
@@ -102,15 +101,15 @@ const navGroups: NavGroup[] = [
         ],
       },
       {
-        title: 'Alerts',
-        url: '/admin/alerts',
-        icon: Bell,
+        title: 'Admin',
+        url: '/admin',
+        icon: ShieldCheck,
         badgeElement: <AdminAlertBadge />,
-      },
-      {
-        title: 'Reports',
-        url: '/admin/reports',
-        icon: FileText,
+        children: [
+          { title: 'Alerts', url: '/admin/alerts' },
+          { title: 'Reports', url: '/admin/reports' },
+          { title: 'Settings', url: '/admin/settings' },
+        ],
       },
     ],
   },
@@ -125,8 +124,6 @@ const navGroups: NavGroup[] = [
           { title: 'General', url: '/settings' },
           { title: 'Casino', url: '/settings/casino' },
           { title: 'Staff', url: '/settings/staff' },
-          { title: 'Thresholds', url: '/admin/settings/thresholds' },
-          { title: 'Shifts', url: '/admin/settings/shifts' },
         ],
       },
     ],

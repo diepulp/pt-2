@@ -133,6 +133,14 @@ function NavItemComponent({
         >
           <Icon className="h-4 w-4 shrink-0" />
           <span className="truncate flex-1 text-left">{item.title}</span>
+          {item.badgeElement
+            ? item.badgeElement
+            : item.badge !== undefined &&
+              item.badge > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-md bg-sidebar-primary/10 px-1.5 text-[10px] font-medium text-sidebar-primary tabular-nums">
+                  {item.badge}
+                </span>
+              )}
           <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200 [[data-state=open]>&]:rotate-90" />
         </button>
       </CollapsibleTrigger>

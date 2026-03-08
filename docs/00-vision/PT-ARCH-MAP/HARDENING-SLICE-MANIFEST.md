@@ -10,7 +10,7 @@
 
 | Slice | Feature ID | Worktree | Status | Branch |
 |---|---|---|---|---|
-| 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Pending | — |
+| 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
 | 1 | `hardening-slice-1-measurement-ui` | `trees/hardening/slice-1` | Pending | — |
 | 2 | `hardening-slice-2-shift-provenance` | `trees/hardening/slice-2` | Pending | — |
 | 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Pending | — |
@@ -20,9 +20,13 @@
 _Updated as each slice merges._
 
 ### Slice 0 — Standards Foundation
-- Status: Pending
-- Artifacts: —
+- Status: Complete
+- Artifacts:
+  - `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` — Two-axis decision matrix (Rendering Delivery × Data Aggregation) with proven patterns, selection criteria, and hard rejection gate
+  - `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` — 12-column × 4-row provenance matrix for ADR-039 measurement artifacts (MEAS-001 through MEAS-004)
+  - `docs/70-governance/examples/SLICE-1-MEASUREMENT-UI-DECLARATION.md` — Mock Slice 1 surface classification declaration (readiness validation)
 - Amendments: —
+- Cross-references: SRM §Measurement Layer updated with Governance Cross-References subsection
 
 ### Slice 1 — ADR-039 Measurement UI
 - Status: Pending
