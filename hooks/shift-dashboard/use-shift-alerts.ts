@@ -27,6 +27,10 @@ export interface UseShiftAlertsOptions {
  * Fetches cash observation spike alerts.
  * Alerts trigger when observed totals exceed configured thresholds.
  *
+ * @deprecated Prefer `useCashObsSummary` which consolidates alerts with other
+ * cash observation data in a single request, avoiding duplicate fetches.
+ * Extract alerts via `summary.data?.alerts`.
+ *
  * @example
  * ```tsx
  * const { data: alerts } = useShiftAlerts({

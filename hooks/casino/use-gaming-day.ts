@@ -26,7 +26,7 @@ export function useGamingDay(
   return useQuery({
     queryKey: casinoKeys.gamingDay(timestamp),
     queryFn: () => getGamingDay(timestamp),
-    staleTime: 1000 * 60 * 5, // 5 minutes - gaming day doesn't change often
+    staleTime: 30_000, // pit-dashboard prefetch contract: operational queries default 30s
     enabled: options?.enabled ?? true,
   });
 }

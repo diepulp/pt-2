@@ -1,33 +1,27 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-
-import { fetchCashObsAlerts } from '@/hooks/shift-dashboard/http';
-import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
-import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
+import { useCashObsSummary } from '@/hooks/shift-dashboard/use-cash-obs-summary';
 
 import { useAlertTimeWindow } from './use-alert-time-window';
 
+// Cash observations summary is the canonical client read contract.
+// Do not call /alerts endpoint directly — use useCashObsSummary.
+
 /**
  * Fetches cash observation spike alerts for the admin alerts page.
- * Reuses the same React Query key as shift dashboard alerts for dedup.
+ * Uses cashObsSummary (BFF endpoint) for dedup with shift dashboard.
  */
 export function useAdminAlerts() {
   const timeWindow = useAlertTimeWindow();
 
-  const query = useQuery<CashObsSpikeAlertDTO[]>({
-    queryKey: shiftDashboardKeys.alerts({
-      start: timeWindow.start,
-      end: timeWindow.end,
-    }),
-    queryFn: () => fetchCashObsAlerts(timeWindow.start, timeWindow.end),
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
+  const query = useCashObsSummary({
+    window: { start: timeWindow.start, end: timeWindow.end },
   });
 
   return {
     ...query,
+    /** Alerts extracted from the consolidated cash-obs summary. */
+    data: query.data?.alerts,
     timeWindow,
   };
 }

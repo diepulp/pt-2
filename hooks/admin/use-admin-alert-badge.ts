@@ -1,22 +1,22 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 
 import { useDismissedAlertsSafe } from '@/hooks/admin/dismissed-alerts-context';
 import { useAlertTimeWindow } from '@/hooks/admin/use-alert-time-window';
-import { fetchCashObsAlerts } from '@/hooks/shift-dashboard/http';
-import { shiftDashboardKeys } from '@/hooks/shift-dashboard/keys';
+import { useCashObsSummary } from '@/hooks/shift-dashboard/use-cash-obs-summary';
 import { useAuth } from '@/hooks/use-auth';
 import { computeAlertKey } from '@/lib/admin/alert-key';
-import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
+
+// Cash observations summary is the canonical client read contract.
+// Do not call /alerts endpoint directly — use useCashObsSummary.
 
 const BADGE_ROLES = new Set(['admin', 'pit_boss']);
 
 /**
  * Badge count for sidebar: undismissed warn + critical alerts.
  * Role-gated: only fires query for admin/pit_boss.
- * Shares React Query key with useAdminAlerts for dedup.
+ * Shares cashObsSummary query key with useCashObsSummary for dedup.
  */
 export function useAdminAlertBadge() {
   const { staffRole, isLoading: authLoading } = useAuth();
@@ -26,19 +26,12 @@ export function useAdminAlertBadge() {
   const isAuthorized =
     !authLoading && staffRole !== null && BADGE_ROLES.has(staffRole);
 
-  const { data: alerts, isLoading: alertsLoading } = useQuery<
-    CashObsSpikeAlertDTO[]
-  >({
-    queryKey: shiftDashboardKeys.alerts({
-      start: timeWindow.start,
-      end: timeWindow.end,
-    }),
-    queryFn: () => fetchCashObsAlerts(timeWindow.start, timeWindow.end),
+  const { data: summary, isLoading: summaryLoading } = useCashObsSummary({
+    window: { start: timeWindow.start, end: timeWindow.end },
     enabled: isAuthorized,
-    staleTime: 30_000,
-    refetchInterval: 60_000,
-    refetchOnWindowFocus: true,
   });
+
+  const alerts = summary?.alerts;
 
   const count = useMemo(() => {
     if (!alerts) return 0;
@@ -51,7 +44,7 @@ export function useAdminAlertBadge() {
 
   return {
     count,
-    isLoading: authLoading || (isAuthorized && alertsLoading),
+    isLoading: authLoading || (isAuthorized && summaryLoading),
     isAuthorized,
   };
 }
