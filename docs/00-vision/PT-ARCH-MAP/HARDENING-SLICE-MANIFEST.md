@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
 | 1 | `hardening-slice-1-measurement-ui` | `trees/hardening/slice-1` | Pending | — |
-| 2 | `hardening-slice-2-shift-provenance` | `trees/hardening/slice-2` | Pending | — |
+| 2 | `hardening-slice-2-shift-provenance` | `trees/hardening-slice-0` | Complete | `hardening-slice-2` |
 | 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Pending | — |
 
 ## Artifacts Produced
@@ -34,9 +34,24 @@ _Updated as each slice merges._
 - Amendments to Slice 0: —
 
 ### Slice 2 — Shift Dashboard Provenance Alignment
-- Status: Pending
-- Artifacts: —
-- Amendments to prior slices: —
+- Status: Complete
+- PRD: `docs/10-prd/PRD-047-shift-provenance-alignment-v0.md`
+- EXEC-SPEC: `docs/21-exec-spec/EXEC-047-shift-provenance-alignment.md`
+- Design Brief: `docs/02-design/RFC-002-shift-provenance-alignment.md`
+- Artifacts:
+  - `docs/70-governance/audits/SLICE-2-SHIFT-METRIC-INVENTORY.md` — Component-level trace of 8 truth-bearing metric families (MEAS-005–012) across full derivation chain
+  - `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` v2.0.0 — Expanded from 4 rows to 12 rows (MEAS-005–012 added with all 12 columns)
+  - `docs/70-governance/examples/SLICE-2-SHIFT-DASHBOARD-DECLARATION.md` — Surface Classification Declaration (§5 compliant: 4 mandatory fields)
+  - `docs/70-governance/audits/SLICE-2-CONSISTENCY-AUDIT.md` — 6-check consistency audit (6/6 PASS, zero unresolved duplicated derivation paths)
+  - `docs/70-governance/audits/GOVERNANCE-AUDIT-TEMPLATE.md` — Reusable audit methodology template for Slice 3
+- Amendments to prior slices:
+  - `METRIC_PROVENANCE_MATRIX.md`: v1.0.0 → v2.0.0 (8 new rows, expanded SRM cross-reference table, updated expansion protocol next-available)
+  - SRM §Measurement Layer Governance Cross-References: updated to reference MEAS-001–012 and link Slice 2 audit artifacts
+- Key findings:
+  - 8 MEAS rows (not 7 as planned) — Cash Obs Alerts split from Rollups due to materially different derivation path
+  - Estimated drop source corrected: `table_buyin_telemetry`, not `pit_cash_observation` (PRD/RFC error corrected)
+  - Active Visitors included as MEAS-012 (governed fact, not header chrome)
+  - All existing shift governance docs complement, not conflict with, matrix rows
 
 ### Slice 3 — Pit Dashboard Refactor
 - Status: Pending
