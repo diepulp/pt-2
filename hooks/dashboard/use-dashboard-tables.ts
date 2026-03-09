@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 
+import { fetchDashboardTables } from './http';
 import { dashboardKeys } from './keys';
 import type { DashboardTableDTO, DashboardTablesFilters } from './types';
 
@@ -53,18 +54,8 @@ export function useDashboardTables(
     queryFn: async (): Promise<DashboardTableDTO[]> => {
       const supabase = createBrowserComponentClient();
 
-      // Single RPC call replaces N×2 HTTP pattern
-      // casinoId is guaranteed to be defined here due to enabled: !!casinoId
-      const { data, error } = await supabase.rpc(
-        'rpc_get_dashboard_tables_with_counts',
-      );
-
-      if (error) {
-        throw new Error(error.message);
-      }
-
-      // RPC returns jsonb array matching DashboardTableDTO structure
-      let tables = (data as unknown as DashboardTableDTO[]) ?? [];
+      // Extracted to http.ts for RSC prefetch reuse (PRD-048 WS1)
+      let tables = await fetchDashboardTables(supabase);
 
       // Apply client-side filters if needed
       if (filters.status) {

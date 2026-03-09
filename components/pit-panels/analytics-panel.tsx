@@ -7,20 +7,82 @@ import {
   Users,
   DollarSign,
   Activity,
+  ShieldCheck,
+  AlertCircle,
 } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useTableCoverage } from '@/hooks/dashboard/use-table-coverage';
 import { cn } from '@/lib/utils';
 
 interface AnalyticsPanelProps {
   tableName: string;
+  casinoId: string;
+  selectedTableId?: string;
+  gamingDay?: string | null;
+}
+
+/**
+ * Format seconds into a human-readable duration string.
+ */
+function formatDuration(seconds: number | null): string {
+  if (seconds === null || seconds === 0) return '0s';
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/**
+ * Format ratio as percentage string.
+ */
+function formatPercent(ratio: number | null): string {
+  if (ratio === null) return '0%';
+  return `${(ratio * 100).toFixed(1)}%`;
+}
+
+/**
+ * Color class for coverage tier badge.
+ */
+function tierColor(tier: string): string {
+  switch (tier) {
+    case 'HIGH':
+      return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    case 'MEDIUM':
+      return 'bg-amber-500/10 text-amber-400 border-amber-500/20';
+    case 'LOW':
+      return 'bg-orange-500/10 text-orange-400 border-orange-500/20';
+    default:
+      return 'bg-red-500/10 text-red-400 border-red-500/20';
+  }
 }
 
 /**
  * Analytics Panel - Table performance metrics and insights
- * Static UI for review, displaying mock analytics data
+ *
+ * Renders live coverage data from measurement_rating_coverage_v (MEAS-003)
+ * and labels non-coverage mock metrics as Placeholder.
+ *
+ * @see PRD-048 WS3 — Coverage Data Wiring
  */
-export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
-  // Mock metrics data
+export function AnalyticsPanel({
+  tableName,
+  casinoId,
+  selectedTableId,
+  gamingDay,
+}: AnalyticsPanelProps) {
+  const { data: coverageData, isLoading: coverageLoading } = useTableCoverage(
+    casinoId,
+    gamingDay,
+  );
+
+  // Filter coverage for selected table
+  const tableCoverage = selectedTableId
+    ? coverageData?.find((c) => c.gaming_table_id === selectedTableId)
+    : undefined;
+
+  // Mock metrics data — labeled as Placeholder
   const metrics = [
     {
       label: 'Win/Loss',
@@ -63,72 +125,169 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Analytics</h2>
             <p className="text-sm text-muted-foreground">
-              {tableName} • Today's Performance
+              {tableName} &bull; Today&apos;s Performance
             </p>
           </div>
         </div>
       </div>
 
       {/* Panel Content */}
-      <div className="flex-1 p-4 space-y-6">
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-4">
-          {metrics.map((metric) => {
-            const Icon = metric.icon;
-            return (
-              <div
-                key={metric.label}
-                className={cn(
-                  'relative overflow-hidden p-4 rounded-lg',
-                  'border border-border/40 bg-card/50',
-                  'backdrop-blur-sm',
-                )}
-              >
-                {/* Accent strip */}
-                <div
-                  className={cn(
-                    'absolute top-0 left-0 right-0 h-0.5',
-                    metric.positive
-                      ? 'bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent'
-                      : 'bg-gradient-to-r from-transparent via-amber-500/50 to-transparent',
-                  )}
-                />
+      <div className="flex-1 p-4 space-y-6 overflow-y-auto">
+        {/* Coverage Metrics (Live — MEAS-003) */}
+        <div className="rounded-lg border border-border/40 bg-card/50 p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck className="h-4 w-4 text-accent" />
+            <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Rating Coverage
+            </span>
+            <Badge
+              variant="outline"
+              className="text-[10px] ml-auto border-accent/30 text-accent"
+            >
+              MEAS-003
+            </Badge>
+          </div>
 
-                <div className="flex items-start justify-between">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Icon className="h-4 w-4" />
-                      <span className="text-xs uppercase tracking-wide">
-                        {metric.label}
-                      </span>
-                    </div>
-                    <div className="font-mono text-xl font-bold text-foreground">
-                      {metric.value}
-                    </div>
+          {coverageLoading ? (
+            <div className="space-y-3">
+              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-2 gap-3">
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+              </div>
+            </div>
+          ) : tableCoverage ? (
+            <div className="space-y-3">
+              {/* Coverage Tier */}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">
+                  Coverage Tier
+                </span>
+                <Badge
+                  variant="outline"
+                  className={cn(
+                    'font-mono text-xs',
+                    tierColor(tableCoverage.coverage_tier),
+                  )}
+                >
+                  {tableCoverage.coverage_tier}
+                </Badge>
+              </div>
+
+              {/* Metrics Grid */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg border border-border/30 bg-background/50">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Rated Ratio
                   </div>
-                  <div
-                    className={cn(
-                      'px-2 py-0.5 rounded text-xs font-mono',
-                      metric.positive
-                        ? 'bg-emerald-500/10 text-emerald-400'
-                        : 'bg-amber-500/10 text-amber-400',
-                    )}
-                  >
-                    {metric.change}
+                  <div className="font-mono text-lg font-bold text-foreground">
+                    {formatPercent(tableCoverage.rated_ratio)}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg border border-border/30 bg-background/50">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Untracked
+                  </div>
+                  <div className="font-mono text-lg font-bold text-foreground">
+                    {formatDuration(tableCoverage.untracked_seconds)}
                   </div>
                 </div>
               </div>
-            );
-          })}
+
+              {/* Additional stats */}
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Slips: {tableCoverage.slip_count ?? 0}</span>
+                <span>
+                  Rated: {formatDuration(tableCoverage.rated_seconds)}
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+              <AlertCircle className="h-4 w-4" />
+              <span>No coverage data for this table</span>
+            </div>
+          )}
+        </div>
+
+        {/* Placeholder Metrics Grid */}
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Activity className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Table Metrics
+            </span>
+            <Badge
+              variant="outline"
+              className="text-[10px] ml-auto text-muted-foreground"
+            >
+              Placeholder
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {metrics.map((metric) => {
+              const Icon = metric.icon;
+              return (
+                <div
+                  key={metric.label}
+                  className={cn(
+                    'relative overflow-hidden p-4 rounded-lg',
+                    'border border-border/40 bg-card/50',
+                    'backdrop-blur-sm opacity-60',
+                  )}
+                >
+                  {/* Accent strip */}
+                  <div
+                    className={cn(
+                      'absolute top-0 left-0 right-0 h-0.5',
+                      metric.positive
+                        ? 'bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent'
+                        : 'bg-gradient-to-r from-transparent via-amber-500/50 to-transparent',
+                    )}
+                  />
+
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Icon className="h-4 w-4" />
+                        <span className="text-xs uppercase tracking-wide">
+                          {metric.label}
+                        </span>
+                      </div>
+                      <div className="font-mono text-xl font-bold text-foreground">
+                        {metric.value}
+                      </div>
+                    </div>
+                    <div
+                      className={cn(
+                        'px-2 py-0.5 rounded text-xs font-mono',
+                        metric.positive
+                          ? 'bg-emerald-500/10 text-emerald-400'
+                          : 'bg-amber-500/10 text-amber-400',
+                      )}
+                    >
+                      {metric.change}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Activity Graph Placeholder */}
-        <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/50 p-4">
+        <div className="relative overflow-hidden rounded-lg border border-border/40 bg-card/50 p-4 opacity-60">
           <div className="flex items-center gap-2 mb-4">
             <Activity className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
               Hourly Activity
             </span>
+            <Badge
+              variant="outline"
+              className="text-[10px] ml-auto text-muted-foreground"
+            >
+              Placeholder
+            </Badge>
           </div>
 
           {/* Mock bar chart */}
@@ -163,11 +322,19 @@ export function AnalyticsPanel({ tableName }: AnalyticsPanelProps) {
           />
         </div>
 
-        {/* Quick Stats */}
-        <div className="rounded-lg border border-border/40 bg-card/50 p-4">
-          <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground mb-3">
-            Session Breakdown
-          </h3>
+        {/* Session Breakdown Placeholder */}
+        <div className="rounded-lg border border-border/40 bg-card/50 p-4 opacity-60">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+              Session Breakdown
+            </h3>
+            <Badge
+              variant="outline"
+              className="text-[10px] text-muted-foreground"
+            >
+              Placeholder
+            </Badge>
+          </div>
           <div className="space-y-3">
             {[
               {

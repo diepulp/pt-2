@@ -26,6 +26,7 @@ export type FilterDimension = 'pit' | 'table';
 export interface MeasurementFilters {
   pitId?: string;
   tableId?: string;
+  gamingDay?: string;
 }
 
 // === Error Types ===

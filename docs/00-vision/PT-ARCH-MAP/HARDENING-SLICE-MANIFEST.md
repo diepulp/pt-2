@@ -13,7 +13,7 @@
 | 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
 | 1 | `hardening-slice-1-measurement-ui` | `trees/hardening-slice-0` | Complete | `hardening-slice-1` (PR #21, `324de01`) |
 | 2 | `hardening-slice-2-shift-provenance` | `trees/hardening-slice-0` | Complete | `hardening-slice-2` |
-| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Pending | — |
+| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | PR Review | `hardening-slice-3` (`7355567`) |
 
 ## Artifacts Produced
 
@@ -62,10 +62,26 @@ _Updated as each slice merges._
   - Active Visitors included as MEAS-012 (governed fact, not header chrome)
   - All existing shift governance docs complement, not conflict with, matrix rows
 
-### Slice 3 — Pit Dashboard Refactor
-- Status: Pending
-- Artifacts: —
-- Amendments to prior slices: —
+### Slice 3 — Pit Dashboard RSC Refactor
+- Status: PR Review (commit `7355567`, branch `hardening-slice-3`)
+- PRD: `docs/10-prd/PRD-048-pit-dashboard-rsc-refactor.md`
+- EXEC-SPEC: `docs/21-exec-spec/EXEC-048-pit-dashboard-rsc-refactor.md`
+- Design Brief: `docs/02-design/RFC-003-pit-dashboard-rsc-refactor.md`
+- Feature Scaffold: `docs/01-scaffolds/SCAFFOLD-003-hardening-slice-3-pit-refactor.md`
+- Artifacts:
+  - `app/(dashboard)/pit/page.tsx` — RSC refactor: server-side prefetch + HydrationBoundary (converted from client-only shell)
+  - `components/pit-panels/analytics-panel.tsx` — Live measurement coverage integration with table coverage metrics
+  - `hooks/dashboard/` — Dashboard hook module: HTTP fetcher, key factory, types, `useTableCoverage` hook, refactored `useDashboardStats` and `useDashboardTables`
+  - `hooks/dashboard/__tests__/http.test.ts` — HTTP fetcher unit tests
+  - `hooks/dashboard/__tests__/use-table-coverage.test.ts` — Table coverage hook tests
+  - `services/measurement/dtos.ts` + `queries.ts` — Extended measurement service with coverage query support
+  - `docs/00-vision/PT-ARCH-MAP/SLICE-3-CONTEXT-SUMMARY.md` — Slice 3 context summary
+  - `docs/01-scaffolds/specs/hardening-slice-3/FEATURE_BOUNDARY.md` — Feature boundary specification
+  - `docs/01-scaffolds/specs/hardening-slice-3/SEC_NOTE.md` — Security note for Slice 3
+  - `docs/70-governance/examples/SLICE-3-PIT-DASHBOARD-DECLARATION.md` — Surface Classification + Provenance declaration (§5 compliant)
+- Amendments to prior slices:
+  - `docs/70-governance/METRIC_PROVENANCE_MATRIX.md`: minor update
+  - `components/pit-panels/panel-container.tsx`: minor refactor for RSC compatibility
 
 ---
 

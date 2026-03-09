@@ -20,30 +20,15 @@ import { useQuery } from '@tanstack/react-query';
 
 import { createBrowserComponentClient } from '@/lib/supabase/client';
 
+import { fetchDashboardStats } from './http';
 import { dashboardKeys } from './keys';
 import type { DashboardStats } from './types';
-
-/**
- * Response shape from rpc_get_dashboard_stats RPC.
- * @internal
- */
-interface DashboardStatsRpcResponse {
-  activeTablesCount: number;
-  openSlipsCount: number;
-  checkedInPlayersCount: number;
-}
 
 /**
  * Fetches aggregate dashboard statistics for a casino.
  *
  * PERF-002: Uses single RPC call instead of 4 HTTP requests.
  * The RPC derives casino_id from set_rls_context_from_staff() per ADR-024.
- *
- * Aggregates:
- * - activeTablesCount: Tables with status = 'active'
- * - openSlipsCount: Rating slips with status = 'open' or 'paused'
- * - checkedInPlayersCount: Unique players with active visits (ended_at = null)
- * - gamingDay: Current gaming day (fetched separately via useGamingDay)
  *
  * @param casinoId - Casino UUID (required, undefined disables query)
  *
@@ -66,28 +51,8 @@ export function useDashboardStats(casinoId: string | undefined) {
     queryFn: async (): Promise<DashboardStats> => {
       const supabase = createBrowserComponentClient();
 
-      // PERF-002: Single RPC call replaces 4 HTTP requests
-      // ADR-024 compliant: RPC derives casino_id from set_rls_context_from_staff()
-      const { data, error } = await supabase.rpc('rpc_get_dashboard_stats');
-
-      if (error) {
-        throw new Error(`Failed to fetch dashboard stats: ${error.message}`);
-      }
-
-      if (!data) {
-        throw new Error('No stats data returned from RPC');
-      }
-
-      // Type assertion for JSONB response (RPC returns unknown when not in types)
-      const stats = data as unknown as DashboardStatsRpcResponse;
-
-      return {
-        activeTablesCount: stats.activeTablesCount,
-        openSlipsCount: stats.openSlipsCount,
-        checkedInPlayersCount: stats.checkedInPlayersCount,
-        // Gaming day fetched separately via useGamingDay hook
-        gamingDay: null,
-      };
+      // Extracted to http.ts for RSC prefetch reuse (PRD-048 WS1)
+      return fetchDashboardStats(supabase);
     },
     enabled: !!casinoId,
     staleTime: 30_000, // 30 seconds - stats are aggregates, don't need instant updates
