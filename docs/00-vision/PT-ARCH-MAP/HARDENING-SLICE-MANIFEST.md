@@ -13,7 +13,7 @@
 | 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
 | 1 | `hardening-slice-1-measurement-ui` | `trees/hardening-slice-0` | Complete | `hardening-slice-1` (PR #21, `324de01`) |
 | 2 | `hardening-slice-2-shift-provenance` | `trees/hardening-slice-0` | Complete | `hardening-slice-2` |
-| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | PR Review | `hardening-slice-3` (`7355567`) |
+| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Complete | `hardening-slice-3` (PR #22, `7355567`) |
 
 ## Artifacts Produced
 
@@ -63,7 +63,7 @@ _Updated as each slice merges._
   - All existing shift governance docs complement, not conflict with, matrix rows
 
 ### Slice 3 — Pit Dashboard RSC Refactor
-- Status: PR Review (commit `7355567`, branch `hardening-slice-3`)
+- Status: Complete (merged 2026-03-09, PR #22, commit `7355567`)
 - PRD: `docs/10-prd/PRD-048-pit-dashboard-rsc-refactor.md`
 - EXEC-SPEC: `docs/21-exec-spec/EXEC-048-pit-dashboard-rsc-refactor.md`
 - Design Brief: `docs/02-design/RFC-003-pit-dashboard-rsc-refactor.md`
@@ -82,6 +82,11 @@ _Updated as each slice merges._
 - Amendments to prior slices:
   - `docs/70-governance/METRIC_PROVENANCE_MATRIX.md`: minor update
   - `components/pit-panels/panel-container.tsx`: minor refactor for RSC compatibility
+- Validation (Chrome DevTools network waterfall, 2026-03-09):
+  - **Waterfall eliminated**: Pre-refactor 5-6 sequential client round trips reduced to 3 server-prefetched queries (tables, stats, gaming-day) + 3-4 parallel client fetches (table settings, alerts, rating slips)
+  - **HydrationBoundary confirmed**: Tables and stats queries served from dehydrated server cache — zero client-side refetch observed
+  - **Surface Classification Standard efficacy**: Standard proven for refactoring existing surfaces (not just new builds). Two-axis classification correctly identified RSC + HydrationBoundary pattern. Zero schema changes required.
+  - **Minor findings**: Gaming-day query refetched client-side despite server prefetch (query key mismatch under investigation); duplicate cash-observations/alerts request observed
 
 ---
 
