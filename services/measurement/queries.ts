@@ -167,6 +167,10 @@ export async function queryRatingCoverage(
     .select('*')
     .eq('casino_id', casinoId);
 
+  if (filters?.gamingDay) {
+    query = query.eq('gaming_day', filters.gamingDay);
+  }
+
   if (filters?.tableId) {
     query = query.eq('gaming_table_id', filters.tableId);
   } else if (filters?.pitId) {

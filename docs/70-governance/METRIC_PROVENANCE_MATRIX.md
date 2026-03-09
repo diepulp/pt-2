@@ -115,7 +115,7 @@ This matrix declares the truth semantics for ADR-039's four measurement artifact
 | **Truth Class** | Derived Operational |
 | **Metric Name** | Rating Coverage |
 | **Business Meaning** | Percentage of table-session time with active rating slips. Quantifies untracked gaps where players were at tables but not being rated. |
-| **Surface(s)** | `/admin/reports`, shift dashboard (future) |
+| **Surface(s)** | `/admin/reports`, pit dashboard, shift dashboard (future) |
 | **Formula / Rule** | `rated_seconds / open_seconds` per table session; aggregate as `AVG(rated_ratio)` |
 | **Source Tables** | `measurement_rating_coverage_v` (ratified SECURITY INVOKER view — ADR-039 D4) |
 | **Computation Layer** | SQL view (live, caller's RLS applies) |

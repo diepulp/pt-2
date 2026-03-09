@@ -34,6 +34,19 @@ export {
   RealtimeStatusIndicator,
 } from './use-dashboard-realtime';
 
+// Fetch functions (PRD-048 WS1 — RSC-compatible)
+export {
+  fetchDashboardTables,
+  fetchDashboardStats,
+  fetchGamingDayServer,
+} from './http';
+
+// Coverage hooks (PRD-048 WS3)
+export {
+  useTableCoverage,
+  type TableCoverageResult,
+} from './use-table-coverage';
+
 // Promo exposure hooks (PRD-LOYALTY-PROMO)
 export {
   useDashboardPromoExposure,
@@ -59,4 +72,7 @@ export type {
   TableStatus,
   GameType,
   RatingSlipDTO,
+  // Coverage types (PRD-048 WS3)
+  TableCoverageDTO,
+  CoverageTier,
 } from './types';

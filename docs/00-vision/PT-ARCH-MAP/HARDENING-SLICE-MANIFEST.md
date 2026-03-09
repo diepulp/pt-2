@@ -13,7 +13,7 @@
 | 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
 | 1 | `hardening-slice-1-measurement-ui` | `trees/hardening/slice-1` | Pending | — |
 | 2 | `hardening-slice-2-shift-provenance` | `trees/hardening/slice-2` | Pending | — |
-| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Pending | — |
+| 3 | `hardening-slice-3-pit-refactor` | `trees/hardening-slice-3` | Complete | `hardening-slice-3` |
 
 ## Artifacts Produced
 
@@ -38,10 +38,20 @@ _Updated as each slice merges._
 - Artifacts: —
 - Amendments to prior slices: —
 
-### Slice 3 — Pit Dashboard Refactor
-- Status: Pending
-- Artifacts: —
-- Amendments to prior slices: —
+### Slice 3 — Pit Dashboard RSC Refactor
+- Status: Complete
+- Branch: `hardening-slice-3`
+- PRD: PRD-048
+- Artifacts:
+  - `hooks/dashboard/http.ts` — Extracted fetch functions (RSC-compatible, no HTTP loopback)
+  - `hooks/dashboard/use-table-coverage.ts` — Coverage data hook (MEAS-003, client-fetched)
+  - `app/(dashboard)/pit/page.tsx` — RSC prefetch + HydrationBoundary (3 queries via Promise.allSettled)
+  - `components/pit-panels/analytics-panel.tsx` — Live coverage metrics + placeholder labeling
+  - `services/measurement/dtos.ts` — Extended MeasurementFilters with gamingDay
+  - `services/measurement/queries.ts` — Added gamingDay filter to queryRatingCoverage
+  - `docs/70-governance/examples/SLICE-3-PIT-DASHBOARD-DECLARATION.md` — Surface Classification Declaration
+- Amendments to prior slices:
+  - `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` — MEAS-003 Surface(s) updated to include pit dashboard
 
 ---
 

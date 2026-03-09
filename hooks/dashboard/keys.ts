@@ -52,6 +52,14 @@ export const dashboardKeys = {
   /** Active slips for a specific table (shorthand without filters) */
   activeSlips: (tableId: string) => [...ROOT, 'active-slips', tableId] as const,
 
+  // === Coverage Queries (PRD-048 WS3) ===
+
+  /**
+   * Per-table coverage data from measurement_rating_coverage_v.
+   * Client-fetched only — NOT part of RSC prefetch set.
+   */
+  coverage: (casinoId: string) => [...ROOT, 'coverage', casinoId] as const,
+
   // === Stats Queries ===
 
   /**

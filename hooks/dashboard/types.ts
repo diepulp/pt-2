@@ -14,6 +14,7 @@ import type {
   TableStatus,
   GameType,
 } from '@/services/table-context/dtos';
+import type { Database } from '@/types/database.types';
 
 // === Filter Types ===
 
@@ -60,6 +61,35 @@ export interface DashboardStats {
   /** Current gaming day date string (YYYY-MM-DD) */
   gamingDay: string | null;
 }
+
+// === Coverage Types (PRD-048 WS3) ===
+
+/**
+ * Per-table coverage data from measurement_rating_coverage_v.
+ * Derived from Database view type per Pattern B.
+ */
+export type TableCoverageRow =
+  Database['public']['Views']['measurement_rating_coverage_v']['Row'];
+
+/**
+ * Coverage DTO for dashboard display — picks fields needed by the analytics panel.
+ */
+export type TableCoverageDTO = Pick<
+  TableCoverageRow,
+  | 'gaming_table_id'
+  | 'rated_ratio'
+  | 'untracked_seconds'
+  | 'rated_seconds'
+  | 'open_seconds'
+  | 'slip_count'
+  | 'gaming_day'
+>;
+
+/**
+ * Coverage tier classification.
+ * Aligned to canonical type from services/table-context/shift-metrics/snapshot-rules.ts.
+ */
+export type CoverageTier = 'HIGH' | 'MEDIUM' | 'LOW' | 'NONE';
 
 // Re-export service types for convenience
 export type {

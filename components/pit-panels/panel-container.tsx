@@ -289,7 +289,14 @@ export function PanelContainer({
           />
         );
       case 'analytics':
-        return <AnalyticsPanel tableName={tableName} />;
+        return (
+          <AnalyticsPanel
+            tableName={tableName}
+            casinoId={casinoId}
+            selectedTableId={selectedTable?.id}
+            gamingDay={gamingDay?.date}
+          />
+        );
       case 'closed-sessions':
         return (
           <ClosedSessionsPanel
