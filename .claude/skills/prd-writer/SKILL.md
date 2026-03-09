@@ -112,6 +112,11 @@ The release is considered **Done** when:
 **Documentation**
 - [ ] User-facing snippets or runbooks updated
 - [ ] Known limitations documented
+
+**Surface Governance (if PRD introduces a new UI surface)**
+- [ ] Surface classification identified (rendering delivery + data aggregation)
+- [ ] Truth-bearing metrics identified with preliminary MEAS-IDs
+- [ ] Surface Classification Standard compliance noted as DoD requirement
 ```
 
 ---
@@ -130,6 +135,8 @@ PRDs link to (not duplicate) other document categories:
 | **OPS/SRE** | Observability, runbooks | `docs/50-ops/` |
 | **ADR** | Architecture decisions | `docs/80-adrs/` |
 | **GOV** | Standards, guardrails | `docs/70-governance/` |
+| **GOV/SURF** | Surface Classification Standard (ADR-041) | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` |
+| **GOV/PROV** | Metric Provenance Matrix (MEAS-001–012) | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` |
 
 **For full taxonomy details, read:** `references/sdlc-taxonomy.md`
 

@@ -384,6 +384,21 @@ The existing `GET /api/v1/casino/gaming-day` route handler correctly calls Layer
 
 ---
 
+## Surface Classification Awareness (ADR-041)
+
+When building API endpoints that serve UI surfaces, the route's **Data Aggregation pattern** must match the surface's classification per `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`:
+
+| Data Aggregation Pattern | Route Handler Implication |
+|-------------------------|--------------------------|
+| **BFF Summary Endpoint** | Single route consolidating multi-level rollups (casino/pit/table). Reduces N client calls to 1. Example: `GET /api/v1/shift-dashboards/summary` |
+| **BFF RPC Aggregation** (GOV-PAT-003) | SECURITY DEFINER DB function collapsing cross-context reads. Route calls single RPC. Example: `rpc_get_rating_slip_modal_data` |
+| **Simple Query / View** | Direct PostgREST or service `.select()`. 1-2 tables, single bounded context. |
+| **Client-side Fetch** | Minimal route, single entity. No server aggregation needed. |
+
+If the route serves truth-bearing metrics, those metrics must be registered in `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` (MEAS-001–012). New metrics require governed matrix amendment before implementation.
+
+---
+
 ## Final Checklist
 
 Before marking API implementation complete:
@@ -402,6 +417,7 @@ Before marking API implementation complete:
 - [ ] React Query hook created
 - [ ] Tests written and passing
 - [ ] All validation scripts pass
+- [ ] **Surface Classification**: If route serves a classified surface, data aggregation pattern matches declaration
 
 ---
 

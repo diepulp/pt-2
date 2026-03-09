@@ -1,0 +1,36 @@
+{
+  "id": "PRD-045",
+  "prd": "PRD-045",
+  "prd_title": "Hardening Slice 0 — Standards Foundation",
+  "exec_spec": "trees/hardening-slice-0/docs/21-exec-spec/EXEC-045-standards-foundation.md",
+  "working_directory": "/home/diepulp/projects/pt-2/trees/hardening-slice-0",
+  "status": "complete",
+  "gov010_check": "passed",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4"],
+  "pending_workstreams": [],
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "Ship w/ gates",
+    "p0_count": 0,
+    "p1_count": 2,
+    "p2_count": 1,
+    "reviewers": {
+      "R1_SECURITY_TENANCY": "Ship",
+      "R2_ARCHITECTURE_BOUNDARIES": "Ship w/ gates",
+      "R3_IMPLEMENTATION_COMPLETENESS": "Ship w/ gates",
+      "R4_TEST_QUALITY": "Ship w/ gates",
+      "R5_PERFORMANCE_OPERABILITY": "Ship"
+    },
+    "patches_applied": true,
+    "findings_resolved": [
+      "Hardening Slice Manifest added to WS3 outputs",
+      "SRM cross-ref updated to link both governance docs",
+      "Zero-code verification gate added to DoD",
+      "Gates annotated as regression-only with human review note"
+    ]
+  },
+  "created_at": "2026-03-07",
+  "updated_at": "2026-03-07"
+}

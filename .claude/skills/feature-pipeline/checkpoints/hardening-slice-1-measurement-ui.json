@@ -1,0 +1,18 @@
+{
+  "feature_id": "hardening-slice-1-measurement-ui",
+  "current_phase": 6,
+  "status": "design-complete",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/hardening-slice-1-measurement-ui/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-002-hardening-slice-1-measurement-ui.md",
+    "design_brief": "docs/02-design/RFC-002-measurement-ui.md",
+    "sec_note": "docs/20-architecture/specs/hardening-slice-1-measurement-ui/SEC_NOTE.md",
+    "adr": "pass-through (ADR-039 + ADR-041 cover all decisions)",
+    "prd": "docs/10-prd/PRD-046-measurement-ui.md"
+  },
+  "working_directory": "/home/diepulp/projects/pt-2/trees/hardening-slice-0",
+  "branch": "hardening-slice-1",
+  "timestamp": "2026-03-08T00:00:00Z"
+}

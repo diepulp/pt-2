@@ -202,6 +202,7 @@ Before marking service implementation complete, verify:
 - [ ] RLS write policies on critical tables use session vars only — no JWT fallback (ADR-030)
 - [ ] **SECURITY DEFINER RPCs self-inject context before data access** (ADR-015)
 - [ ] Claims sync/clear errors surfaced, not silently caught (ADR-030 D2)
+- [ ] **Metric Provenance**: If service exposes truth-bearing metrics to surfaces, metrics are registered in `METRIC_PROVENANCE_MATRIX.md` (MEAS-001–012). New metrics require governed amendment.
 
 ### RPC Self-Injection Requirement (ADR-015)
 

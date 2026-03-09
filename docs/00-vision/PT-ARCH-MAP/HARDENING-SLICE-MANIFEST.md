@@ -11,7 +11,7 @@
 | Slice | Feature ID | Worktree | Status | Branch |
 |---|---|---|---|---|
 | 0 | `hardening-slice-0-standards-foundation` | `trees/hardening/slice-0` | Complete | `hardening-slice-0` |
-| 1 | `hardening-slice-1-measurement-ui` | `trees/hardening/slice-1` | Pending | — |
+| 1 | `hardening-slice-1-measurement-ui` | `trees/hardening-slice-0` | Complete | `hardening-slice-1` (PR #21, `324de01`) |
 | 2 | `hardening-slice-2-shift-provenance` | `trees/hardening-slice-0` | Complete | `hardening-slice-2` |
 | 3 | `hardening-slice-3-pit-refactor` | `trees/hardening/slice-3` | Pending | — |
 
@@ -29,9 +29,18 @@ _Updated as each slice merges._
 - Cross-references: SRM §Measurement Layer updated with Governance Cross-References subsection
 
 ### Slice 1 — ADR-039 Measurement UI
-- Status: Pending
-- Artifacts: —
-- Amendments to Slice 0: —
+- Status: Complete (merged 2026-03-08, PR #21, commit `324de01`)
+- EXEC-SPEC: `docs/21-exec-spec/EXEC-046-measurement-ui.md`
+- Artifacts:
+  - `services/measurement/` — MeasurementService (cross-cutting aggregator): DTOs, queries, mappers, service factory with `Promise.allSettled` partial-success
+  - `app/api/v1/measurement/summary/route.ts` — BFF Summary Endpoint with dual-layer role guard (admin layout + handler-level)
+  - `hooks/measurement/` — React Query integration: key factory, HTTP fetcher, `useMeasurementSummary` hook
+  - `app/(dashboard)/admin/reports/page.tsx` — RSC page with server-side prefetch + HydrationBoundary (replaces placeholder stub)
+  - `components/measurement/` — 4 metric widgets (theo discrepancy, audit correlation, rating coverage, loyalty liability), filter bar, freshness badge, dashboard layout
+  - `e2e/measurement-reports.spec.ts` — E2E test for admin reports page
+  - `docs/70-governance/examples/SLICE-1-MEASUREMENT-UI-DECLARATION.md` — Surface Classification + Provenance declaration (promoted from Slice 0 mock to real declaration)
+  - `docs/50-ops/benchmarks/PRD-046-measurement-benchmark.md` — Benchmark methodology (EXPLAIN ANALYZE deferred to live DB)
+- Amendments to Slice 0: Slice 0 mock declaration (`SLICE-1-MEASUREMENT-UI-DECLARATION.md`) replaced with real implementation declaration
 
 ### Slice 2 — Shift Dashboard Provenance Alignment
 - Status: Complete
