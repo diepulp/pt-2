@@ -10,6 +10,7 @@ import { TimeWindowSelector } from '@/components/shift-dashboard/time-window-sel
 import { AlertsStrip } from '@/components/shift-dashboard-v3/center/alerts-strip';
 import { MetricsTable } from '@/components/shift-dashboard-v3/center/metrics-table';
 import { FloorActivityRadar } from '@/components/shift-dashboard-v3/charts';
+import { CoverageWidget } from '@/components/shift-dashboard-v3/coverage-widget';
 import {
   ShiftDashboardLayout,
   ShiftDashboardHeader,
@@ -31,12 +32,14 @@ import {
 import { CoverageBar } from '@/components/shift-dashboard-v3/trust';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useActiveVisitorsSummary,
   useCashObsSummary,
   useShiftDashboardSummary,
   type ShiftTimeWindow,
 } from '@/hooks/shift-dashboard';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
 
 // Code-split Recharts (WS2: ~200KB deferred until chart panel visible)
@@ -83,6 +86,11 @@ function getTimeSinceUpdate(updatedAt: number): string {
 export function ShiftDashboardV3() {
   const [timeWindow, setTimeWindow] =
     useState<ShiftTimeWindow>(getDefaultWindow);
+
+  // === Auth & Gaming Day (for coverage widget) ===
+  const { casinoId } = useAuth();
+  const { data: gamingDayData } = useGamingDay();
+  const gamingDay = gamingDayData?.gaming_day;
 
   // === Data Queries ===
   const {
@@ -218,8 +226,10 @@ export function ShiftDashboardV3() {
               </Suspense>
             </div>
 
-            {/* Expansion slot for Phase 2 */}
-            <div data-slot="utilization-timeline" />
+            {/* Coverage Widget (PRD-049 WS1) */}
+            {casinoId && (
+              <CoverageWidget casinoId={casinoId} gamingDay={gamingDay} />
+            )}
 
             {/* Alerts */}
             <MemoAlertsStrip

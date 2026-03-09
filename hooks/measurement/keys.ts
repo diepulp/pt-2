@@ -41,6 +41,20 @@ export const measurementKeys = {
   ),
 
   /**
+   * Rating coverage per-table rows for coverage widget.
+   * @see PRD-049 WS1 — Coverage Widget
+   */
+  coverage: (casinoId: string, gamingDay?: string) =>
+    [...ROOT, 'coverage', casinoId, gamingDay ?? 'current'] as const,
+
+  /**
+   * Audit event correlation for a single rating slip.
+   * @see PRD-049 WS2 — Audit Trace Panel
+   */
+  auditTrace: (slipId: string | null) =>
+    [...ROOT, 'auditTrace', slipId ?? 'none'] as const,
+
+  /**
    * Invalidate all measurement queries.
    */
   all: () => ROOT,
