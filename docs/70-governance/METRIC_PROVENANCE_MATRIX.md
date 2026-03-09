@@ -1,8 +1,8 @@
 # ADR-039 Metric Provenance Matrix
 
 **Status:** Accepted
-**Version:** 1.0.0
-**Date:** 2026-03-07
+**Version:** 2.0.0
+**Date:** 2026-03-09
 **Owner:** Platform/Governance + Measurement Layer
 **Implements:** ADR-041 D3 (Pragmatic Column Subset)
 
@@ -12,7 +12,7 @@
 
 This matrix declares the truth semantics for ADR-039's four measurement artifacts. It is the authoritative source for truth class, freshness, computation constraints, and reconciliation paths for each metric that surfaces display.
 
-**Scope:** ADR-039 measurement artifacts only — 4 rows. This is not a comprehensive provenance registry for all PT-2 metrics. Slices 2-3 add their own rows through the expansion protocol (§5).
+**Scope:** ADR-039 measurement artifacts (4 rows, MEAS-001–004) plus Slice 2 shift dashboard metrics (8 rows, MEAS-005–012). 12 total rows. Slices 3+ add their own rows through the expansion protocol (§5).
 
 **What this matrix governs:**
 - Truth class classification for each metric
@@ -141,6 +141,147 @@ This matrix declares the truth semantics for ADR-039's four measurement artifact
 | **Reconciliation Path** | `total_points` vs `SUM(player_loyalty.current_balance)` for snapshot date |
 | **Owner** | LoyaltyService |
 
+### Slice 2 — Shift Dashboard Metrics
+
+> Added by PRD-047 / EXEC-047 (Hardening Slice 2). 8 rows (MEAS-005–012) via §5.1 expansion protocol.
+> Audit source: `docs/70-governance/audits/SLICE-2-SHIFT-METRIC-INVENTORY.md`
+
+### MEAS-005: Shift Win/Loss (Estimated)
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-005 |
+| **Truth Class** | Derived Operational |
+| **Metric Name** | Shift Win/Loss (Estimated) |
+| **Business Meaning** | Casino-level estimated win/loss combining inventory snapshot deltas with telemetry-derived drop. The hero metric of the shift dashboard — enables pit bosses to assess shift-level financial performance in near-real-time, even when snapshot coverage is incomplete. |
+| **Surface(s)** | Shift Dashboard V3 (hero card, metrics table, pit table, trend chart) |
+| **Formula / Rule** | Per-table: `win_loss_estimated = win_loss_inventory + estimated_drop_buyins`. Casino/pit: null-aware `SUM()` across tables (PRD-036 null-aware aggregation). |
+| **Source Tables** | `table_inventory_snapshot` (opening/closing bankroll), `table_fill`, `table_credit`, `table_buyin_telemetry` (estimated drop), `gaming_table` (table identity) |
+| **Computation Layer** | RPC (`rpc_shift_table_metrics`, SECURITY INVOKER) + service-side aggregation (`aggregatePitMetrics()`, `aggregateCasinoMetrics()`) |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s via `useShiftDashboardSummary`) |
+| **Invalidation Trigger** | Snapshot insert/update, fill/credit insert, buyin telemetry insert |
+| **Reconciliation Path** | Recalculate per-table: verify `win_loss_estimated = win_loss_inventory + estimated_drop_buyins`. Verify casino total = `nullAwareSum(table.win_loss_estimated)`. |
+| **Owner** | TableContextService |
+
+### MEAS-006: Shift Win/Loss (Inventory)
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-006 |
+| **Truth Class** | Derived Operational |
+| **Metric Name** | Shift Win/Loss (Inventory) |
+| **Business Meaning** | Per-table win/loss calculated purely from inventory snapshot deltas plus fills and credits. The authoritative win/loss path when both opening and closing snapshots exist. Null when snapshots are missing — separate row from MEAS-005 due to different source inputs and null semantics. |
+| **Surface(s)** | Shift Dashboard V3 (metrics table, pit table) |
+| **Formula / Rule** | `win_loss_inventory = (closing_bankroll - opening_bankroll) + fills - credits`. Null if opening or closing snapshot is missing. |
+| **Source Tables** | `table_inventory_snapshot` (opening/closing bankroll), `table_fill`, `table_credit`, `gaming_table` |
+| **Computation Layer** | RPC (`rpc_shift_table_metrics`, SECURITY INVOKER) + service-side aggregation (`nullAwareSum()`) |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s) |
+| **Invalidation Trigger** | Snapshot insert/update, fill/credit insert |
+| **Reconciliation Path** | Recalculate per-table: verify `(closing - opening) + fills - credits = win_loss_inventory`. Verify null when either snapshot is missing. |
+| **Owner** | TableContextService |
+
+### MEAS-007: Shift Estimated Drop
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-007 |
+| **Truth Class** | Derived Operational |
+| **Metric Name** | Shift Estimated Drop |
+| **Business Meaning** | Total estimated table drop from buy-in telemetry (rated + grind). Enables revenue estimation when cash counting is incomplete or unavailable. Explicitly tagged as ESTIMATE grade in the UI. |
+| **Surface(s)** | Shift Dashboard V3 (secondary KPI stack: "Est. Drop") |
+| **Formula / Rule** | Per-table: `SUM(amount_cents) FROM table_buyin_telemetry` filtered by telemetry_kind (rated + grind). Casino/pit: `SUM()` across tables. Sub-values (rated, grind) share identical provenance, differing only by `telemetry_kind` filter. |
+| **Source Tables** | `table_buyin_telemetry` (via `telemetry_agg` CTE in RPC), `gaming_table` |
+| **Computation Layer** | RPC (`rpc_shift_table_metrics`, SECURITY INVOKER) + service-side aggregation |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s) |
+| **Invalidation Trigger** | Buyin telemetry insert |
+| **Reconciliation Path** | Recalculate: `SUM(amount_cents) FROM table_buyin_telemetry` for shift window = reported total. Verify rated + grind = buyins_total. |
+| **Owner** | TableContextService |
+
+### MEAS-008: Shift Fills & Credits
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-008 |
+| **Truth Class** | Raw Record (aggregated) |
+| **Metric Name** | Shift Fills & Credits |
+| **Business Meaning** | Total fills (chips added to table) and credits (chips removed from table) during shift. Direct financial record of chip movement — serves as input to win/loss calculations and as standalone KPI for floor activity. Grouped because fills and credits share identical provenance. |
+| **Surface(s)** | Shift Dashboard V3 (secondary KPI stack: "Fills", "Credits"; metrics table; pit table) |
+| **Formula / Rule** | Fills: `SUM(amount_cents) FROM table_fill` within shift window. Credits: `SUM(amount_cents) FROM table_credit` within shift window. |
+| **Source Tables** | `table_fill`, `table_credit`, `gaming_table` |
+| **Computation Layer** | RPC (`rpc_shift_table_metrics`, SECURITY INVOKER; fills_agg/credits_agg CTEs) + service-side aggregation |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s) |
+| **Invalidation Trigger** | Fill insert, credit insert |
+| **Reconciliation Path** | Recalculate: `SUM(amount_cents) FROM table_fill/table_credit` for shift window = reported totals. Verify casino total = SUM(table totals). |
+| **Owner** | TableContextService |
+
+### MEAS-009: Snapshot Coverage & Metric Grade
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-009 |
+| **Truth Class** | Derived Operational |
+| **Metric Name** | Snapshot Coverage & Metric Grade |
+| **Business Meaning** | Trust assessment for shift metrics. Coverage ratio measures what fraction of tables have opening+closing inventory snapshots. Metric grade (AUTHORITATIVE/ESTIMATE) is the worst-of across tables. Quality tier (GOOD/LOW/NONE) classifies telemetry quality. Together these signal how much confidence operators should place in reported win/loss values. |
+| **Surface(s)** | Shift Dashboard V3 (coverage bar, metric grade badge, quality summary card, telemetry quality indicator, quality detail card) |
+| **Formula / Rule** | Coverage ratio: `min(withOpening, withClosing) / totalTables`. Tier thresholds: HIGH ≥80%, MEDIUM ≥50%, LOW >0%, NONE =0%. Grade: worst-of across tables via `rollupCasinoProvenance()`. Quality counts: component-side `computeQualityCounts()` (display-only counting, not trust recomputation). |
+| **Source Tables** | `table_inventory_snapshot` (snapshot presence), `table_buyin_telemetry` (telemetry quality), `gaming_table` |
+| **Computation Layer** | RPC (`rpc_shift_table_metrics`, SECURITY INVOKER) + service-side derivation (`deriveTableProvenance()`, `rollupPitProvenance()`, `rollupCasinoProvenance()`, `computeAggregatedCoverageRatio()`, `getCoverageTier()`) |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s) |
+| **Invalidation Trigger** | Snapshot insert/update, buyin telemetry insert |
+| **Reconciliation Path** | Recalculate coverage ratio from snapshot presence flags. Verify grade = worst-of(table grades). Verify quality counts = count per tier from table quality flags. |
+| **Owner** | TableContextService |
+
+### MEAS-010: Cash Observation Rollups
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-010 |
+| **Truth Class** | Derived Operational (telemetry-only) |
+| **Metric Name** | Cash Observation Rollups |
+| **Business Meaning** | Aggregated cash-out observations at casino, pit, and table levels. Estimated and confirmed totals plus observation counts. Telemetry-only — observational estimates of chip movement, not authoritative custody records. Displayed with TELEMETRY badge in UI. |
+| **Surface(s)** | Shift Dashboard V3 (telemetry rail panel) |
+| **Formula / Rule** | Estimated: `SUM(amount) WHERE direction='out' AND amount_kind='estimate'`. Confirmed: `SUM(amount) WHERE direction='out' AND amount_kind='cage_confirmed'`. Count: `COUNT(*) WHERE direction='out'`. Grouped at casino/pit/table level. |
+| **Source Tables** | `pit_cash_observation` (via join: `pit_cash_observation → rating_slip → gaming_table`) |
+| **Computation Layer** | RPCs (`rpc_shift_cash_obs_casino`, `rpc_shift_cash_obs_pit`, `rpc_shift_cash_obs_table` — all SECURITY INVOKER, parallel execution) |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s via `useCashObsSummary`) |
+| **Invalidation Trigger** | Cash observation insert, rating slip status change |
+| **Reconciliation Path** | Recalculate: `SUM(amount)` with direction/kind filters from `pit_cash_observation` for shift window. Verify casino total = SUM(pit totals) = SUM(table totals). |
+| **Owner** | TableContextService |
+
+### MEAS-011: Cash Observation Alerts
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-011 |
+| **Truth Class** | Derived Operational (telemetry-only) |
+| **Metric Name** | Cash Observation Alerts |
+| **Business Meaning** | Spike alerts triggered when cash observation totals exceed configurable thresholds. Severity is computed by RPC then enriched with guardrails: critical severity is downgraded when telemetry quality is insufficient (no-false-critical invariant). Telemetry-only — observational, not authoritative. |
+| **Surface(s)** | Shift Dashboard V3 (alerts strip) |
+| **Formula / Rule** | Threshold comparison: `observed_value > threshold` triggers alert. Severity from RPC. Post-RPC enrichment: `computeAlertSeverity()` applies no-false-critical invariant (critical requires GOOD_COVERAGE). Allowed kinds filtered by `isAllowedAlertKind()`. |
+| **Source Tables** | `pit_cash_observation` (via join to `gaming_table`), `casino_settings` (alert thresholds) |
+| **Computation Layer** | RPC (`rpc_shift_cash_obs_alerts`, SECURITY INVOKER) + service-side severity guardrail enrichment (`computeAlertSeverity()`, `isAllowedAlertKind()`, `getWorstQuality()`) |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s via `useCashObsSummary`) |
+| **Invalidation Trigger** | Cash observation insert, casino settings threshold update |
+| **Reconciliation Path** | Verify each alert: `observed_value > threshold` from source data. Verify severity: if telemetry quality < GOOD_COVERAGE, severity must not be CRITICAL. Verify allowed kinds list matches `isAllowedAlertKind()` filter. |
+| **Owner** | TableContextService |
+
+### MEAS-012: Active Visitors Summary
+
+| Column | Value |
+|--------|-------|
+| **Truth ID** | MEAS-012 |
+| **Truth Class** | Derived Operational |
+| **Metric Name** | Active Visitors Summary |
+| **Business Meaning** | Count of active visitors on the gaming floor: rated (identified players with open rating slips) vs. unrated (ghost/walk-up). Rated percentage indicates what share of floor activity is generating tracked value. Cross-context read from VisitService. |
+| **Surface(s)** | Shift Dashboard V3 (floor activity radar) |
+| **Formula / Rule** | `rated_count = COUNT(*) WHERE visit_kind='gaming_identified_rated' AND status IN ('open','paused')`. `unrated_count = COUNT(*) WHERE visit_kind='gaming_ghost_unrated' AND status IN ('open','paused')`. `rated_percentage = rated / total * 100`. |
+| **Source Tables** | `rating_slip` (TableContextService), `visit` (VisitService — cross-context read) |
+| **Computation Layer** | RPC (`rpc_shift_active_visitors_summary`, SECURITY INVOKER) — inline call in API route handler |
+| **Freshness Category** | Cached (staleTime: 30s, refetchInterval: 30s via `useActiveVisitorsSummary`) |
+| **Invalidation Trigger** | Rating slip open/close/pause, visit status change |
+| **Reconciliation Path** | Recalculate: `COUNT(*)` with visit_kind/status filters from `rating_slip` JOIN `visit` for shift window. Verify total = rated + unrated. Verify percentage = rated/total * 100. |
+| **Owner** | VisitService (cross-context read via TableContextService) |
+
 ### Summary View
 
 | Truth ID | Truth Class | Metric | Freshness | Owner |
@@ -149,6 +290,14 @@ This matrix declares the truth semantics for ADR-039's four measurement artifact
 | MEAS-002 | Compliance-Interpreted | Audit Event Correlation | Request-time | Measurement Layer |
 | MEAS-003 | Derived Operational | Rating Coverage | Request-time | Measurement Layer |
 | MEAS-004 | Snapshot-Historical | Loyalty Liability | Periodic (daily) | LoyaltyService |
+| MEAS-005 | Derived Operational | Shift Win/Loss (Estimated) | Cached (30s) | TableContextService |
+| MEAS-006 | Derived Operational | Shift Win/Loss (Inventory) | Cached (30s) | TableContextService |
+| MEAS-007 | Derived Operational | Shift Estimated Drop | Cached (30s) | TableContextService |
+| MEAS-008 | Raw Record (aggregated) | Shift Fills & Credits | Cached (30s) | TableContextService |
+| MEAS-009 | Derived Operational | Snapshot Coverage & Metric Grade | Cached (30s) | TableContextService |
+| MEAS-010 | Derived Operational (telemetry-only) | Cash Observation Rollups | Cached (30s) | TableContextService |
+| MEAS-011 | Derived Operational (telemetry-only) | Cash Observation Alerts | Cached (30s) | TableContextService |
+| MEAS-012 | Derived Operational | Active Visitors Summary | Cached (30s) | VisitService (cross-context) |
 
 ---
 
@@ -176,7 +325,7 @@ MEAS-002 is classified **Compliance-Interpreted**, which is the most governance-
 
 When future slices introduce new measurement artifacts:
 
-1. Assign a new Truth ID following the `MEAS-XXX` pattern (next available: MEAS-005)
+1. Assign a new Truth ID following the `MEAS-XXX` pattern (next available: MEAS-013)
 2. Populate all 12 columns per the definitions in §2
 3. Validate source tables against SRM §Measurement Layer registered artifacts
 4. Submit as a governed amendment to this document via PR
@@ -219,15 +368,24 @@ The following 10 columns from the Cross-Surface Provenance framework are deferre
 
 Source tables referenced in this matrix are validated against SRM §Measurement Layer (`docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`, line 837):
 
-| Source Table / View | SRM Registration | Security Mode |
-|--------------------|-----------------|---------------|
-| `rating_slip` | RatingSlipService owned table | Row-level (RLS) |
-| `measurement_audit_event_correlation_v` | Measurement Layer registered view | SECURITY INVOKER |
-| `measurement_rating_coverage_v` | Measurement Layer registered view | SECURITY INVOKER |
-| `loyalty_liability_snapshot` | LoyaltyService owned table | Row-level (RLS) |
-| `loyalty_valuation_policy` | LoyaltyService owned table | Row-level (RLS) |
+| Source Table / View | SRM Registration | Security Mode | MEAS Rows |
+|--------------------|-----------------|---------------|-----------|
+| `rating_slip` | RatingSlipService owned table | Row-level (RLS) | MEAS-002, MEAS-010, MEAS-011, MEAS-012 |
+| `measurement_audit_event_correlation_v` | Measurement Layer registered view | SECURITY INVOKER | MEAS-002 |
+| `measurement_rating_coverage_v` | Measurement Layer registered view | SECURITY INVOKER | MEAS-003 |
+| `loyalty_liability_snapshot` | LoyaltyService owned table | Row-level (RLS) | MEAS-004 |
+| `loyalty_valuation_policy` | LoyaltyService owned table | Row-level (RLS) | MEAS-004 |
+| `gaming_table` | TableContextService owned table | Row-level (RLS) | MEAS-005–012 |
+| `table_inventory_snapshot` | TableContextService owned table | Row-level (RLS) | MEAS-005, MEAS-006, MEAS-009 |
+| `table_fill` | TableContextService owned table | Row-level (RLS) | MEAS-005, MEAS-006, MEAS-008 |
+| `table_credit` | TableContextService owned table | Row-level (RLS) | MEAS-005, MEAS-006, MEAS-008 |
+| `table_drop_event` | TableContextService owned table | Row-level (RLS) | MEAS-005 |
+| `table_buyin_telemetry` | TableContextService owned table | Row-level (RLS) | MEAS-005, MEAS-007, MEAS-009 |
+| `pit_cash_observation` | TableContextService owned table | Row-level (RLS) | MEAS-010, MEAS-011 |
+| `visit` | VisitService owned table | Row-level (RLS) | MEAS-012 |
+| `casino_settings` | CasinoService owned table | Row-level (RLS) | MEAS-011 |
 
-All source tables are registered in the SRM as owned artifacts. SECURITY INVOKER views apply caller's RLS — no privilege escalation. The `loyalty_liability_snapshot` RPC uses SECURITY DEFINER, governed by ADR-018.
+All source tables are registered in the SRM as owned artifacts. Slice 0 SECURITY INVOKER views apply caller's RLS — no privilege escalation. The `loyalty_liability_snapshot` RPC uses SECURITY DEFINER, governed by ADR-018. All Slice 2 shift RPCs (`rpc_shift_table_metrics`, `rpc_shift_cash_obs_*`, `rpc_shift_active_visitors_summary`) are SECURITY INVOKER with `set_rls_context_from_staff()` per ADR-024.
 
 ---
 
@@ -243,3 +401,8 @@ All source tables are registered in the SRM as owned artifacts. SECURITY INVOKER
 | SRM §Measurement Layer | `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (line 837) |
 | Over-Engineering Guardrail | `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` |
 | ADR-039 Precis | `docs/00-vision/strategic-hardening/ADR-039 Measurement Layer — Overview Précis.md` |
+| PRD-047 (Slice 2) | `docs/10-prd/PRD-047-shift-provenance-alignment-v0.md` |
+| RFC-002 (Slice 2 Design Brief) | `docs/02-design/RFC-002-shift-provenance-alignment.md` |
+| Slice 2 Metric Inventory | `docs/70-governance/audits/SLICE-2-SHIFT-METRIC-INVENTORY.md` |
+| Shift Metrics Contract v1 | `docs/25-api-data/SHIFT_METRICS_CONTRACT_v1.md` |
+| Shift Provenance Rollup Algo v1 | `docs/25-api-data/SHIFT_PROVENANCE_ROLLUP_ALGO_v1.md` |

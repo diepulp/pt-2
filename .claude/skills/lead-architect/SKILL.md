@@ -123,6 +123,14 @@ Run validation checklist from `references/validation-checklist.md`:
 - Check DTO compliance per `DTO_CANONICAL_STANDARD.md`
 - Verify Zod schema requirements per ADR-013
 - Confirm RLS implications
+- **Surface Classification (ADR-041)** — if designing a new UI surface or EXEC-SPEC:
+  - Verify all 4 mandatory §5 fields are present (hard rejection gate):
+    1. **Rendering Delivery** — RSC Prefetch | Client Shell | Hybrid (cite §4 Q1 criteria)
+    2. **Data Aggregation** — BFF RPC | BFF Summary | Simple Query | Client-side Fetch (cite §4 Q2 criteria)
+    3. **Rejected Patterns** — at least 1 alternative per axis with clause citation
+    4. **Metric Provenance** — every truth-bearing metric cited from `METRIC_PROVENANCE_MATRIX.md` with Truth ID + truth class + freshness
+  - New metrics require governed matrix amendment (new MEAS row per §5.1, next available: MEAS-013)
+  - Reference: `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`, exemplars at `docs/70-governance/examples/`
 
 ### Step 5: Document
 
@@ -304,6 +312,9 @@ When designing or reviewing architecture that touches `gaming_day`, date ranges,
 | `docs/25-api-data/DTO_CANONICAL_STANDARD.md` | DTO rules (v2.1.0) |
 | `docs/80-adrs/ADR-013-zod-validation-schemas.md` | Zod requirements |
 | `docs/70-governance/OVER_ENGINEERING_GUARDRAIL.md` | OE checks |
+| `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` | Surface rendering + data aggregation classification (ADR-041) |
+| `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` | Truth semantics for MEAS-001–012 (v2.0.0) |
+| `docs/70-governance/audits/GOVERNANCE-AUDIT-TEMPLATE.md` | Reusable surface provenance audit methodology |
 | `docs/20-architecture/temporal-patterns/INDEX.md` | Temporal patterns registry |
 | `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` | Gaming day computation (3-layer contract) |
 | `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | CasinoService temporal authority |

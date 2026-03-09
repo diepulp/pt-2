@@ -1,0 +1,38 @@
+{
+  "prd_id": "PRD-048",
+  "prd_title": "Pit Dashboard RSC Refactor (Hardening Slice 3)",
+  "exec_spec": "docs/21-exec-spec/EXEC-048-pit-dashboard-rsc-refactor.md",
+  "status": "in_progress",
+  "current_phase": 1,
+  "gov010_check": "passed",
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "Ship w/ gates",
+    "consolidated": {
+      "p0": 0,
+      "p1": 0,
+      "p2": 0,
+      "note": "All findings folded into EXEC-SPEC revision"
+    },
+    "reviewers": {
+      "R1_SECURITY_TENANCY": "Ship w/ gates",
+      "R2_ARCHITECTURE_BOUNDARIES": "Ship w/ gates",
+      "R3_IMPLEMENTATION_COMPLETENESS": "Ship w/ gates",
+      "R4_TEST_QUALITY": "Ship w/ gates",
+      "R5_PERFORMANCE_OPERABILITY": "Ship w/ gates"
+    }
+  },
+  "workstreams": {
+    "WS1": { "name": "Fetch Function Extraction", "status": "complete", "executor": "frontend-design-pt-2" },
+    "WS2": { "name": "RSC Prefetch + HydrationBoundary", "status": "pending", "executor": "frontend-design-pt-2" },
+    "WS3": { "name": "Coverage Data Wiring", "status": "complete", "executor": "frontend-design-pt-2" },
+    "WS4": { "name": "Surface Classification Declaration + Manifest", "status": "pending", "executor": "lead-architect" }
+  },
+  "completed_workstreams": ["WS1", "WS3"],
+  "phases": [
+    { "name": "Phase 1 — Extraction + Coverage", "parallel": ["WS1", "WS3"], "status": "complete", "gate_results": { "type-check": "pass", "test": "pass" } },
+    { "name": "Phase 2 — RSC Prefetch", "parallel": ["WS2"], "status": "pending" },
+    { "name": "Phase 3 — Governance", "parallel": ["WS4"], "status": "pending" }
+  ],
+  "timestamp": "2026-03-09T17:00:00Z"
+}

@@ -1,0 +1,33 @@
+{
+  "prd_id": "PRD-046",
+  "prd_title": "ADR-039 Measurement UI",
+  "exec_spec_path": "docs/21-exec-spec/EXEC-046-measurement-ui.md",
+  "status": "complete",
+  "gov010_check": "passed",
+  "current_phase": 4,
+  "workstreams": {
+    "WS1": { "name": "Service Layer", "executor": "backend-service-builder", "status": "complete" },
+    "WS2": { "name": "Route Handler", "executor": "api-builder", "status": "complete" },
+    "WS3": { "name": "React Query Integration", "executor": "frontend-design-pt-2", "status": "complete" },
+    "WS4": { "name": "RSC Page + Governance Declarations", "executor": "frontend-design-pt-2", "status": "complete" },
+    "WS5": { "name": "Widget Components", "executor": "frontend-design-pt-2", "status": "complete" },
+    "WS6": { "name": "Benchmark Gate", "executor": "performance-engineer", "status": "complete_pending_live_db" }
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "warn",
+    "consolidated_p0": 5,
+    "consolidated_p1": 8,
+    "conflicts": 1,
+    "reviewers": {
+      "R1_SECURITY_TENANCY": { "verdict": "ship_with_gates", "p0": 2, "p1": 0 },
+      "R2_ARCHITECTURE_BOUNDARIES": { "verdict": "ship_with_gates", "p0": 1, "p1": 1 },
+      "R3_IMPLEMENTATION_COMPLETENESS": { "verdict": "ship_with_gates", "p0": 2, "p1": 4 },
+      "R4_TEST_QUALITY": { "verdict": "ship_with_gates", "p0": 2, "p1": 3 },
+      "R5_PERFORMANCE_OPERABILITY": { "verdict": "ship_with_gates", "p0": 0, "p1": 3 }
+    }
+  },
+  "created_at": "2026-03-08T00:00:00Z",
+  "updated_at": "2026-03-08T12:00:00Z"
+}

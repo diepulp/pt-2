@@ -139,6 +139,42 @@ $$;
 
 ---
 
+## Surface Classification & Metric Provenance (ADR-041)
+
+**Document**: `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` v1.0.0
+**Matrix**: `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` v2.0.0
+
+### EXEC-SPEC Surface Compliance (Hard Rejection Gate)
+
+If an EXEC-SPEC builds a **new UI surface**, it MUST include all 4 mandatory Surface Classification fields (§5):
+
+1. **Rendering Delivery** — RSC Prefetch + Hydration | Client Shell | Hybrid (cite §4 Q1 measurable criteria)
+2. **Data Aggregation** — BFF RPC | BFF Summary | Simple Query | Client-side Fetch (cite §4 Q2 measurable criteria)
+3. **Rejected Patterns** — at least 1 rejected alternative per axis with clause citation
+4. **Metric Provenance** — every truth-bearing metric cited from Metric Provenance Matrix with Truth ID + truth class + freshness
+
+If ANY field is missing, the EXEC-SPEC is non-compliant and must be returned for amendment.
+
+### Metric Provenance Rules
+
+- Existing metrics: MEAS-001 through MEAS-012 (see matrix for truth class, freshness, source tables)
+- New metrics: Require governed matrix amendment (new MEAS row per §5.1, next available: MEAS-013)
+- All source tables must be SRM-registered
+- Components display trust metadata but MUST NOT recompute trust
+
+### Exemplar Declarations
+
+| Surface | Declaration Path |
+|---------|-----------------|
+| Measurement Reports (Slice 1) | `docs/70-governance/examples/SLICE-1-MEASUREMENT-UI-DECLARATION.md` |
+| Shift Dashboard V3 (Slice 2) | `docs/70-governance/examples/SLICE-2-SHIFT-DASHBOARD-DECLARATION.md` |
+
+### Audit Template
+
+For retroactive surface certification (Slice 3+): `docs/70-governance/audits/GOVERNANCE-AUDIT-TEMPLATE.md`
+
+---
+
 ## Code Quality Gates
 
 | Gate | Command | Required For |

@@ -111,6 +111,10 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 - **Scope & Goals:** In/out scope, success criteria
 - **Proposed Direction:** Overview
 - **Detailed Design:** Data model, service layer, API, UI, security
+- **Surface Classification** (if feature introduces a new UI surface):
+  - Rendering Delivery axis selection + rationale (per `SURFACE_CLASSIFICATION_STANDARD.md` §4 Q1)
+  - Data Aggregation axis selection + rationale (per §4 Q2)
+  - Preliminary truth-bearing metrics list with proposed MEAS-IDs
 - **Cross-Cutting Concerns:** Performance, migration, observability
 - **Alternatives Considered**
 - **Decisions Required:** Each decision that needs an ADR
@@ -374,5 +378,7 @@ A feature design is "Done" when all gates are green and handoff is ready:
 - [ ] SEC Note covers assets, threats, controls, deferred risks
 - [ ] ADR(s) contain only durable decisions (no implementation SQL/code)
 - [ ] PRD references ADR IDs, defines testable acceptance criteria
+- [ ] If new UI surface: Surface Classification declared (rendering delivery + data aggregation per ADR-041)
+- [ ] If new UI surface: Truth-bearing metrics identified with preliminary MEAS-IDs
 - [ ] Adversarial review passed (no P0 findings)
 - [ ] Handoff instruction displayed with all artifact paths

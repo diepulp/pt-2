@@ -463,6 +463,39 @@ npx shadcn@latest add @aceternity/background-beams
 
 ---
 
+## Surface Classification Policy (ADR-041)
+
+**Every new PT-2 surface must declare its classification before implementation.**
+
+Two orthogonal decisions (per `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`):
+
+### Rendering Delivery Axis
+| Pattern | When to Use |
+|---------|-------------|
+| **RSC Prefetch + Hydration** | Read-heavy dashboards, ≥2 independent queries above the fold |
+| **Client Shell** | Form-driven, low-frequency admin flows |
+| **Hybrid** | Both server paint AND client interaction — must name composed patterns |
+
+### Data Aggregation Axis
+| Pattern | When to Use |
+|---------|-------------|
+| **BFF Summary Endpoint** | Multi-level rollups (casino/pit/table), >100 calls/day |
+| **BFF RPC Aggregation** | ≥3 bounded contexts, single DB round-trip (SECURITY DEFINER) |
+| **Simple Query / View** | 1-2 tables, single bounded context |
+| **Client-side Fetch** | Single entity, low frequency, no cross-context join |
+
+### Metric Provenance
+Any truth-bearing metric displayed on a surface **MUST** be registered in `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` (currently MEAS-001–012). Each metric has declared:
+- **Truth Class** (Raw Record / Derived Operational / Compliance-Interpreted / Snapshot-Historical)
+- **Freshness** — constrains caching and refresh strategy (e.g., Cached 30s → staleTime: 30_000)
+- **Reconciliation Path** — how the value is verified against source truth
+
+**Exemplars:** `docs/70-governance/examples/SLICE-1-MEASUREMENT-UI-DECLARATION.md`, `docs/70-governance/examples/SLICE-2-SHIFT-DASHBOARD-DECLARATION.md`
+
+**Component rule:** Components display trust metadata (grade badges, coverage bars, quality indicators) but MUST NOT recompute trust. Display-only counting is acceptable; recomputing grades or scores is not.
+
+---
+
 ## PT-2 Layout Patterns
 
 **CRITICAL**: Before building PT-2 interfaces, read `references/pt2-layout-strategy.md`.
