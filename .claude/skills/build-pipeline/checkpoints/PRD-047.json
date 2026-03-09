@@ -1,0 +1,25 @@
+{
+  "prd_id": "PRD-047",
+  "prd_title": "Hardening Slice 2 — Shift Dashboard Provenance Alignment",
+  "exec_spec": "docs/21-exec-spec/EXEC-047-shift-provenance-alignment.md",
+  "status": "complete",
+  "current_phase": 4,
+  "gov010_check": "waived:governance-only-prd-no-scaffold-or-adr-refs",
+  "adversarial_review": {
+    "verdict": "Ship w/ gates",
+    "attempt": 1,
+    "p0_count": 0,
+    "p1_count": 2,
+    "patch_applied": true
+  },
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "pending_workstreams": [],
+  "phases": [
+    { "name": "Phase 1 — Metric Inventory", "workstreams": ["WS1"], "status": "complete" },
+    { "name": "Phase 2 — Provenance Matrix", "workstreams": ["WS2"], "status": "complete" },
+    { "name": "Phase 3 — Declaration + Audit + SRM", "workstreams": ["WS3", "WS4", "WS5"], "status": "complete" },
+    { "name": "Phase 4 — Manifest + Template", "workstreams": ["WS6"], "status": "complete" }
+  ],
+  "created_at": "2026-03-09T00:00:00Z",
+  "updated_at": "2026-03-09T00:00:00Z"
+}

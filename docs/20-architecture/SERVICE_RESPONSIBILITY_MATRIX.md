@@ -871,9 +871,12 @@ The following governance artifacts constrain how measurement surfaces are built 
 | Artifact | Path | Governs |
 | -------- | ---- | ------- |
 | Surface Classification Standard | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` | Rendering delivery + data aggregation pattern selection for surfaces consuming measurement metrics |
-| Metric Provenance Matrix | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` | Truth class, freshness, source tables, reconciliation for MEAS-001 through MEAS-004 |
+| Metric Provenance Matrix v2.0.0 | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` | Truth class, freshness, source tables, reconciliation for MEAS-001 through MEAS-012 |
+| Slice 2 Shift Dashboard Declaration | `docs/70-governance/examples/SLICE-2-SHIFT-DASHBOARD-DECLARATION.md` | Surface classification certification for Shift Dashboard V3 (MEAS-005–012) |
+| Slice 2 Metric Inventory | `docs/70-governance/audits/SLICE-2-SHIFT-METRIC-INVENTORY.md` | Component-level trace of every truth-bearing value on the shift dashboard |
+| Slice 2 Consistency Audit | `docs/70-governance/audits/SLICE-2-CONSISTENCY-AUDIT.md` | Single-derivation-path verification and 6-check audit for shift dashboard metrics |
 
-New surface EXEC-SPECs that consume measurement layer data must comply with both documents. See ADR-041 for the governing decisions.
+New surface EXEC-SPECs that consume measurement layer data must comply with the Surface Classification Standard and Metric Provenance Matrix. See ADR-041 for the governing decisions. Shift dashboard metrics (MEAS-005–012) are governed by the Slice 2 audit artifacts listed above.
 
 ---
 

@@ -1,0 +1,16 @@
+{
+  "feature_id": "hardening-slice-2-shift-provenance",
+  "current_phase": 6,
+  "status": "complete",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/hardening-slice-2-shift-provenance/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-001-shift-provenance-alignment.md",
+    "design_brief": "docs/02-design/RFC-002-shift-provenance-alignment.md",
+    "sec_note": "docs/30-security/SEC-NOTE-hardening-slice-2-shift-provenance.md",
+    "adr": "docs/80-adrs/ADR-041-surface-governance-standard.md (existing, no new ADR)",
+    "prd": "docs/10-prd/PRD-047-shift-provenance-alignment-v0.md"
+  },
+  "timestamp": "2026-03-09T12:05:00Z"
+}
