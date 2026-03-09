@@ -34,6 +34,7 @@ import { useAuth } from '@/hooks/use-auth';
 import type { AdjustmentReasonCode } from '@/services/player-financial/dtos';
 
 import { AdjustmentModal } from './adjustment-modal';
+import { AuditTraceSection } from './audit-trace-section';
 import { FormSectionAverageBet } from './form-section-average-bet';
 import { FormSectionCashIn } from './form-section-cash-in';
 import { FormSectionChipsTaken } from './form-section-chips-taken';
@@ -761,6 +762,15 @@ export function RatingSlipModal({
               )}
             </div>
           </div>
+
+          {/* Audit Trace — closed slips only (PRD-049 WS2) */}
+          {modalData?.slip.status === 'closed' && (
+            <AuditTraceSection
+              slipId={slipId!}
+              casinoId={modalData.slip.casinoId}
+              slipStatus={modalData.slip.status}
+            />
+          )}
 
           {/* Action Buttons - Fixed at bottom */}
           <div className="flex gap-2 flex-shrink-0 pt-4 border-t border-border">

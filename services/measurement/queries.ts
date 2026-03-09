@@ -148,6 +148,35 @@ export async function queryAuditCorrelation(
   return { rows: data ?? [] };
 }
 
+// === MEAS-002b: Audit Correlation — Single Slip ===
+
+/**
+ * Query measurement_audit_event_correlation_v for a single rating slip.
+ *
+ * Filters on casino_id (defense-in-depth) + rating_slip_id.
+ * LIMIT 50 safety: typical slip has 1 PFT, 1 MTL, 1-2 ledger entries.
+ *
+ * @see PRD-049 WS2 — Audit Trace Panel
+ */
+export async function queryAuditCorrelationForSlip(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+  slipId: string,
+): Promise<AuditCorrelationQueryResult> {
+  const { data, error } = await supabase
+    .from('measurement_audit_event_correlation_v')
+    .select('*')
+    .eq('casino_id', casinoId)
+    .eq('rating_slip_id', slipId)
+    .limit(50);
+
+  if (error) {
+    throw createWidgetError('query_failed');
+  }
+
+  return { rows: data ?? [] };
+}
+
 // === MEAS-003: Rating Coverage ===
 
 /**
