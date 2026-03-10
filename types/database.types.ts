@@ -1565,9 +1565,9 @@ export type Database = {
           review_date: string | null
         }
         Insert: {
-          casino_id: string
+          casino_id?: string
           created_at?: string
-          created_by: string
+          created_by?: string
           effective_from?: string
           effective_until?: string | null
           enforcement: string

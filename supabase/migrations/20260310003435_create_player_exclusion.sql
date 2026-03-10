@@ -18,7 +18,8 @@
 
 CREATE TABLE IF NOT EXISTS public.player_exclusion (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  casino_id UUID NOT NULL REFERENCES casino(id) ON DELETE CASCADE,
+  casino_id UUID NOT NULL DEFAULT (NULLIF(current_setting('app.casino_id', true), '')::uuid)
+    REFERENCES casino(id) ON DELETE CASCADE,
   player_id UUID NOT NULL REFERENCES player(id) ON DELETE CASCADE,
 
   -- Classification (WHY)
@@ -44,7 +45,8 @@ CREATE TABLE IF NOT EXISTS public.player_exclusion (
   jurisdiction TEXT,
 
   -- Creation audit
-  created_by UUID NOT NULL REFERENCES staff(id) ON DELETE RESTRICT,
+  created_by UUID NOT NULL DEFAULT (NULLIF(current_setting('app.actor_id', true), '')::uuid)
+    REFERENCES staff(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
 
   -- Lift audit (soft-delete pattern — preserves compliance history)
