@@ -83,7 +83,5 @@ export async function liftExclusion(
 export async function getExclusionStatus(
   playerId: string,
 ): Promise<ExclusionStatusDTO> {
-  return fetchJSON<ExclusionStatusDTO>(
-    `${BASE}/${playerId}/exclusions/status`,
-  );
+  return fetchJSON<ExclusionStatusDTO>(`${BASE}/${playerId}/exclusions/status`);
 }

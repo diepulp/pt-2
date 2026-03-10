@@ -41,9 +41,7 @@ function mapDatabaseError(error: {
       'Referenced player or staff not found',
     );
   }
-  if (
-    error.message?.includes('EXCLUSION_IMMUTABLE')
-  ) {
+  if (error.message?.includes('EXCLUSION_IMMUTABLE')) {
     return new DomainError(
       'PLAYER_EXCLUSION_NOT_FOUND',
       'Exclusion records are immutable after creation (lift-only updates allowed)',

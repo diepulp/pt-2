@@ -58,6 +58,7 @@ export type LiftExclusionInput = {
 };
 
 /** Collapsed exclusion status (from SQL function — AUDIT-C3) */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- SQL function return, not in codegen
 export type ExclusionStatusDTO = {
   player_id: string;
   status: 'blocked' | 'alert' | 'watchlist' | 'clear';

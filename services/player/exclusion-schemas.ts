@@ -21,11 +21,7 @@ export const exclusionTypeEnum = z.enum([
   'watchlist',
 ]);
 
-export const enforcementEnum = z.enum([
-  'hard_block',
-  'soft_alert',
-  'monitor',
-]);
+export const enforcementEnum = z.enum(['hard_block', 'soft_alert', 'monitor']);
 
 // === Create Exclusion Schema ===
 
