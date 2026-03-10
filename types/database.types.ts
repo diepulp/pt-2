@@ -1545,6 +1545,92 @@ export type Database = {
           },
         ]
       }
+      player_exclusion: {
+        Row: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }
+        Insert: {
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id: string
+          reason: string
+          review_date?: string | null
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement?: string
+          exclusion_type?: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id?: string
+          reason?: string
+          review_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_exclusion_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_lifted_by_fkey"
+            columns: ["lifted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_financial_transaction: {
         Row: {
           amount: number
@@ -3872,6 +3958,10 @@ export type Database = {
           suggested_theo: number
         }[]
       }
+      get_player_exclusion_status: {
+        Args: { p_casino_id: string; p_player_id: string }
+        Returns: string
+      }
       get_visit_cash_in_with_adjustments: {
         Args: { p_visit_id: string }
         Returns: {
@@ -3880,6 +3970,10 @@ export type Database = {
           net_total: number
           original_total: number
         }[]
+      }
+      is_exclusion_active: {
+        Args: { excl: Database["public"]["Tables"]["player_exclusion"]["Row"] }
+        Returns: boolean
       }
       rpc_accept_staff_invite: {
         Args: { p_token: string }
@@ -4157,7 +4251,6 @@ export type Database = {
         Args: {
           p_amount: number
           p_created_at?: string
-          p_created_by_staff_id: string
           p_direction: Database["public"]["Enums"]["financial_direction"]
           p_external_ref?: string
           p_idempotency_key?: string
@@ -4475,6 +4568,10 @@ export type Database = {
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
+      rpc_get_player_exclusion_status: {
+        Args: { p_player_id: string }
+        Returns: string
+      }
       rpc_get_player_last_session_context: {
         Args: { p_player_id: string }
         Returns: Json
@@ -5434,6 +5531,7 @@ export type Database = {
       rpc_start_or_resume_visit: {
         Args: { p_player_id: string }
         Returns: {
+          exclusion_warning: string
           gaming_day: string
           is_new: boolean
           resumed: boolean

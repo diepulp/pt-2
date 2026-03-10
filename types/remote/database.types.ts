@@ -1655,6 +1655,92 @@ export type Database = {
           },
         ]
       }
+      player_exclusion: {
+        Row: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }
+        Insert: {
+          casino_id: string
+          created_at?: string
+          created_by: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id: string
+          reason: string
+          review_date?: string | null
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement?: string
+          exclusion_type?: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id?: string
+          reason?: string
+          review_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_exclusion_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_lifted_by_fkey"
+            columns: ["lifted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_identity: {
         Row: {
           address: Json | null
@@ -3885,6 +3971,10 @@ export type Database = {
           net_total: number
           original_total: number
         }[]
+      }
+      get_player_exclusion_status: {
+        Args: { p_player_id: string; p_casino_id: string }
+        Returns: string
       }
       rpc_accept_staff_invite: {
         Args: { p_token: string }
