@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-03-10
-**Owner:** PlayerService / Security
+**Owner:** PlayerService (security-reviewed per ADR-030)
 **Related:** ADR-015 (RLS Connection Pooling), ADR-020 (Track A Hybrid), ADR-024 (Authoritative Context), ADR-030 (Auth Hardening), ADR-040 (Identity Provenance)
 **Triggered by:** GAP-PLAYER-EXCLUSION-WATCHLIST (regulatory compliance gap)
 
@@ -68,7 +68,7 @@ AND effective_from <= now()
 AND (effective_until IS NULL OR effective_until > now())
 ```
 
-This predicate is implemented as a SQL function `is_exclusion_active(player_exclusion) RETURNS boolean` and must be used **consistently** across all surfaces: RPC enforcement guards, service-layer queries, search/lookup joins, partial indexes, and reporting.
+This predicate is implemented as a SQL function `is_exclusion_active(player_exclusion) RETURNS boolean` and is the canonical source of truth for enforcement guards, service-layer queries, search/lookup joins, and reporting. Indexes may support these queries but must not embed time-relative logic beyond safe static predicates such as `lifted_at IS NULL`.
 
 **Rationale:** Without a single canonical predicate, different surfaces invent their own "active" logic and produce contradictory exclusion states. The SQL function is the single source of truth.
 
