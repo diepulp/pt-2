@@ -231,6 +231,7 @@ export async function startVisit(
     isNew: row.is_new,
     resumed: row.resumed,
     gamingDay: row.gaming_day,
+    exclusionWarning: row.exclusion_warning ?? null,
   };
 }
 
