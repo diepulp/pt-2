@@ -20,6 +20,7 @@ export interface RLSContext {
   actorId: string; // UUID from auth.uid()
   casinoId: string; // UUID from staff.casino_id
   staffRole: string; // From staff.role
+  companyId: string; // UUID from casino.company_id via company JOIN (ADR-043)
 }
 
 /**
@@ -42,7 +43,6 @@ export async function getAuthContext(
   }
 
   // Lookup staff record by user_id
-  // NOTE: staff table must have a user_id column linking to auth.users
   const { data: staff, error: staffError } = await supabase
     .from('staff')
     .select('id, casino_id, role')
@@ -58,10 +58,22 @@ export async function getAuthContext(
     throw new Error('FORBIDDEN: Staff member has no casino assignment');
   }
 
+  // Derive companyId from casino→company FK (ADR-043, PK lookup)
+  const { data: casinoRow, error: casinoError } = await supabase
+    .from('casino')
+    .select('company_id')
+    .eq('id', staff.casino_id)
+    .single();
+
+  if (casinoError || !casinoRow) {
+    throw new Error('FORBIDDEN: Casino not found for staff assignment');
+  }
+
   return {
     actorId: staff.id,
     casinoId: staff.casino_id,
     staffRole: staff.role,
+    companyId: casinoRow.company_id,
   };
 }
 
@@ -76,7 +88,7 @@ export async function getAuthContext(
  * - Context derived from auth.uid() binding to staff.user_id
  * - No spoofable parameters accepted from client
  * - Staff must be active with valid casino assignment
- * - RPC RETURNS TABLE (actor_id, casino_id, staff_role)
+ * - RPC RETURNS TABLE (actor_id, casino_id, staff_role, company_id)
  *
  * @param supabase - Authenticated Supabase client
  * @param correlationId - Optional trace ID for observability
@@ -112,16 +124,18 @@ export async function injectRLSContext(
     actorId: row.actor_id,
     casinoId: row.casino_id,
     staffRole: row.staff_role,
+    companyId: row.company_id,
   };
 
   // AUTH-HARDENING v0.1 WS6: Mark RPC context as injected for canary assertion
   markRpcContextInjected();
 
   console.info(
-    '[RLS] context set: actor=%s casino=%s role=%s (correlationId=%s)',
+    '[RLS] context set: actor=%s casino=%s role=%s company=%s (correlationId=%s)',
     context.actorId,
     context.casinoId,
     context.staffRole,
+    context.companyId,
     correlationId,
   );
 

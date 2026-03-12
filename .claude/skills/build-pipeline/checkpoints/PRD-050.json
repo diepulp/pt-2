@@ -1,0 +1,131 @@
+{
+  "prd_id": "PRD-050",
+  "prd_title": "Dual-Boundary Tenancy Phase 1 — Company Foundation",
+  "exec_spec": "trees/feat/dual-bondary-tenancy/docs/21-exec-spec/EXEC-050-dual-boundary-tenancy-p1.md",
+  "status": "complete",
+  "gov010_check": "passed",
+  "current_phase": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "WS1": [
+      "supabase/migrations/20260312155427_adr043_company_foundation.sql"
+    ],
+    "WS2": [
+      "lib/supabase/rls-context.ts",
+      "lib/supabase/dev-context.ts",
+      "types/database.types.ts",
+      "app/api/v1/casino/route.ts",
+      "app/api/v1/casino/[id]/route.ts",
+      "e2e/fixtures/admin-helpers.ts",
+      "e2e/fixtures/import-test-data.ts",
+      "e2e/fixtures/mtl-fixtures.ts",
+      "e2e/fixtures/rating-slip-fixtures.ts",
+      "e2e/fixtures/setup-wizard-fixtures.ts",
+      "e2e/fixtures/shift-dashboard-helpers.ts",
+      "e2e/fixtures/test-data.ts"
+    ],
+    "WS3": [
+      "lib/supabase/__tests__/rls-context.integration.test.ts",
+      "lib/supabase/__tests__/rls-financial.integration.test.ts",
+      "lib/supabase/__tests__/rls-mtl.integration.test.ts",
+      "lib/supabase/__tests__/rls-policy-enforcement.integration.test.ts",
+      "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts",
+      "lib/supabase/__tests__/rls-jwt-claims.integration.test.ts",
+      "lib/supabase/__tests__/pit-boss-financial-txn.test.ts",
+      "services/visit/__tests__/gaming-day-boundary.int.test.ts",
+      "services/visit/__tests__/visit-continuation.integration.test.ts",
+      "services/security/__tests__/rls-context.integration.test.ts",
+      "services/rating-slip/__tests__/policy-snapshot.integration.test.ts",
+      "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts",
+      "services/rating-slip/__tests__/rating-slip.integration.test.ts",
+      "services/loyalty/__tests__/loyalty-accrual-lifecycle.integration.test.ts",
+      "services/loyalty/__tests__/points-accrual-calculation.integration.test.ts",
+      "services/loyalty/__tests__/promo-outbox-contract.int.test.ts",
+      "services/casino/__tests__/casino.integration.test.ts"
+    ]
+  },
+  "gates_passed": ["schema-validation (WS1)", "type-check (WS2)", "type-check (WS3)"],
+  "gates_pending": [],
+  "ws3_context": {
+    "description": "Integration Tests & Full Fixture Sweep — 19+ files",
+    "executor": "backend-service-builder",
+    "gate": "test-pass",
+    "scope": {
+      "tier1_rls_tests": {
+        "description": "New test cases + fixture updates for company_id NOT NULL",
+        "files": [
+          "lib/supabase/__tests__/rls-context.integration.test.ts",
+          "lib/supabase/__tests__/rls-financial.integration.test.ts",
+          "lib/supabase/__tests__/rls-mtl.integration.test.ts",
+          "lib/supabase/__tests__/rls-policy-enforcement.integration.test.ts",
+          "lib/supabase/__tests__/rls-pooling-safety.integration.test.ts",
+          "lib/supabase/__tests__/rls-jwt-claims.integration.test.ts",
+          "lib/supabase/__tests__/pit-boss-financial-txn.test.ts"
+        ],
+        "new_test_scenarios": [
+          "set_rls_context_from_staff() returns non-null company_id",
+          "injectRLSContext() returns RLSContext with valid companyId",
+          "app.company_id session variable set after RPC",
+          "Fail-closed: structural proof (constraint assertions) + behavioral (inactive casino JOIN-miss)",
+          "SEC_NOTE M7: no RLS policy references app.company_id (pg_policies query)"
+        ]
+      },
+      "tier2_service_tests": {
+        "description": "Fixture-only updates — mechanical company row insertion before casino INSERT",
+        "files": [
+          "services/visit/__tests__/gaming-day-boundary.int.test.ts",
+          "services/visit/__tests__/visit-continuation.integration.test.ts",
+          "services/security/__tests__/rls-context.integration.test.ts",
+          "services/rating-slip/__tests__/policy-snapshot.integration.test.ts",
+          "services/rating-slip/__tests__/rating-slip-continuity.integration.test.ts",
+          "services/rating-slip/__tests__/rating-slip.integration.test.ts",
+          "services/loyalty/__tests__/loyalty-accrual-lifecycle.integration.test.ts",
+          "services/loyalty/__tests__/points-accrual-calculation.integration.test.ts",
+          "services/loyalty/__tests__/promo-outbox-contract.int.test.ts",
+          "services/casino/__tests__/casino.integration.test.ts"
+        ],
+        "pattern": "Create company row BEFORE casino INSERT, add company_id to casino INSERT"
+      },
+      "tier3_e2e_fixtures": {
+        "description": "E2E fixture updates — already DONE in WS2 cascade fixes",
+        "files_already_fixed": [
+          "e2e/fixtures/mtl-fixtures.ts",
+          "e2e/fixtures/test-data.ts",
+          "e2e/fixtures/admin-helpers.ts",
+          "e2e/fixtures/import-test-data.ts",
+          "e2e/fixtures/rating-slip-fixtures.ts",
+          "e2e/fixtures/setup-wizard-fixtures.ts",
+          "e2e/fixtures/shift-dashboard-helpers.ts"
+        ],
+        "status": "COMPLETE — fixed during WS2 type-check cascade"
+      },
+      "rls_context_literal_updates": "Tests constructing RLSContext objects must add companyId field",
+      "signature_alignment": "rls-context.integration.test.ts may use old 3-param injectRLSContext() — align to current 2-param signature"
+    },
+    "key_implementation_facts": {
+      "migration_file": "supabase/migrations/20260312155427_adr043_company_foundation.sql",
+      "rpc_signature": "RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role text, company_id uuid)",
+      "rls_context_interface": "RLSContext { actorId, casinoId, staffRole, companyId }",
+      "dev_context_company_id": "c0000000-0000-0000-0000-000000000001",
+      "seed_company_id": "c0000000-0000-0000-0000-000000000001",
+      "seed_company_name": "Lucky Star Gaming Group",
+      "casino_company_id_constraint": "NOT NULL, FK ON DELETE RESTRICT",
+      "fail_closed_error": "FORBIDDEN: staff not active, not casino-scoped, or casino deactivated",
+      "injectRLSContext_signature": "injectRLSContext(supabase, correlationId?) — 2 params, derives context from RPC"
+    }
+  },
+  "audit_notes": {
+    "d4_provisional_naming": "Migration comments updated with CAVEAT: company.name is PROVISIONAL PLACEHOLDER copied from casino.name (CA-1, CA-2 applied)",
+    "api_route_fix": "app/api/v1/casino/route.ts POST auto-creates company when company_id not provided (ADR-043 D4 pattern)",
+    "e2e_fixtures_done_early": "7 E2E fixture files fixed during WS2 for type-check gate — reduces WS3 scope to Tier 1 + Tier 2 only"
+  },
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "ship_with_gates",
+    "consolidated": "Ship w/ gates — all patches applied, then external audit corrections incorporated"
+  },
+  "created_at": "2026-03-09T00:00:00Z",
+  "updated_at": "2026-03-12T00:00:00Z"
+}

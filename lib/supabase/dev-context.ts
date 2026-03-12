@@ -26,6 +26,9 @@ export const DEV_RLS_CONTEXT: RLSContext = {
   actorId: '5a000000-0000-0000-0000-000000000001',
   casinoId: 'ca000000-0000-0000-0000-000000000001',
   staffRole: 'admin',
+  // Matches seed company UUID. Dev bypass skips RPC derivation — this value
+  // satisfies the required RLSContext type but is never validated against DB.
+  companyId: 'c0000000-0000-0000-0000-000000000001',
 };
 
 /**

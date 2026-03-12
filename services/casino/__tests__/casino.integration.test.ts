@@ -18,6 +18,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 describe('Casino Service Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
+  let testCompanyId: string;
   let testCasinoId: string;
   let testUserId: string;
 
@@ -49,10 +50,24 @@ describe('Casino Service Integration Tests', () => {
       testUserId = authUser.user.id;
     }
 
+    // Create test company (ADR-043: company before casino)
+    const { data: company, error: companyError } = await supabase
+      .from('company')
+      .insert({ name: 'Integration Test Company - PRD000' })
+      .select()
+      .single();
+
+    if (companyError) throw companyError;
+    testCompanyId = company.id;
+
     // Create test casino
     const { data: casino, error: casinoError } = await supabase
       .from('casino')
-      .insert({ name: 'Integration Test Casino - PRD000', status: 'active' })
+      .insert({
+        name: 'Integration Test Casino - PRD000',
+        status: 'active',
+        company_id: testCompanyId,
+      })
       .select()
       .single();
 
@@ -82,6 +97,7 @@ describe('Casino Service Integration Tests', () => {
       .delete()
       .eq('casino_id', testCasinoId);
     await supabase.from('casino').delete().eq('id', testCasinoId);
+    await supabase.from('company').delete().eq('id', testCompanyId);
 
     // Clean up test user
     if (testUserId) {
@@ -207,13 +223,27 @@ describe('Casino Service Integration Tests', () => {
     });
 
     describe('Gaming day with different timezones', () => {
+      let eastCoastCompanyId: string;
       let eastCoastCasinoId: string;
 
       beforeAll(async () => {
-        // Create a casino with Eastern timezone
+        // Create a company + casino with Eastern timezone (ADR-043)
+        const { data: company, error: companyError } = await supabase
+          .from('company')
+          .insert({ name: 'East Coast Test Company' })
+          .select()
+          .single();
+
+        if (companyError) throw companyError;
+        eastCoastCompanyId = company.id;
+
         const { data: casino, error: casinoError } = await supabase
           .from('casino')
-          .insert({ name: 'East Coast Test Casino', status: 'active' })
+          .insert({
+            name: 'East Coast Test Casino',
+            status: 'active',
+            company_id: eastCoastCompanyId,
+          })
           .select()
           .single();
 
@@ -240,6 +270,7 @@ describe('Casino Service Integration Tests', () => {
           .delete()
           .eq('casino_id', eastCoastCasinoId);
         await supabase.from('casino').delete().eq('id', eastCoastCasinoId);
+        await supabase.from('company').delete().eq('id', eastCoastCompanyId);
       });
 
       it('handles Eastern timezone correctly', async () => {

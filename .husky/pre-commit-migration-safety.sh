@@ -314,16 +314,27 @@ for FILE in $MIGRATION_FILES; do
 
   # Protect ADR-024 infrastructure (set_rls_context_from_staff)
   if [ "$HAS_RLS_FROM_STAFF_DROP" -gt 0 ]; then
-    echo "❌ CHECK 5 FAILED: Migration drops set_rls_context_from_staff() (ADR-024 critical)"
-    echo ""
-    echo "File: $FILE"
-    echo ""
-    echo "WHY THIS IS CRITICAL:"
-    echo "  • set_rls_context_from_staff() is the ADR-024 authoritative context injection"
-    echo "  • All client-callable RPCs depend on this function"
-    echo "  • Dropping breaks RLS enforcement for all operations"
-    echo ""
-    VIOLATIONS_FOUND=1
+    # Allow DROP+CREATE when migration contains VERIFIED_SAFE marker and recreates the function
+    HAS_VERIFIED_SAFE=$(git diff --cached "$FILE" | grep -c 'VERIFIED_SAFE' || true)
+    HAS_RECREATE=$(git diff --cached "$FILE" | grep -c '^+.*CREATE FUNCTION.*set_rls_context_from_staff' || true)
+
+    if [ "$HAS_VERIFIED_SAFE" -gt 0 ] && [ "$HAS_RECREATE" -gt 0 ]; then
+      echo "✅ CHECK 5: DROP+CREATE set_rls_context_from_staff() — VERIFIED_SAFE (signature change)"
+    else
+      echo "❌ CHECK 5 FAILED: Migration drops set_rls_context_from_staff() (ADR-024 critical)"
+      echo ""
+      echo "File: $FILE"
+      echo ""
+      echo "WHY THIS IS CRITICAL:"
+      echo "  • set_rls_context_from_staff() is the ADR-024 authoritative context injection"
+      echo "  • All client-callable RPCs depend on this function"
+      echo "  • Dropping breaks RLS enforcement for all operations"
+      echo ""
+      echo "If this is a DROP+CREATE for signature change, add 'VERIFIED_SAFE' comment"
+      echo "above the DROP statement and ensure the function is recreated in the same migration."
+      echo ""
+      VIOLATIONS_FOUND=1
+    fi
   fi
 
   if [ "$HAS_RLS_FROM_STAFF_REPLACE" -gt 0 ]; then

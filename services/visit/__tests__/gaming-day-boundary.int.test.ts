@@ -37,6 +37,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
   let supabase: SupabaseClient<Database>;
 
   // Shared test resources
+  let testCompanyId: string;
   let testCasinoId: string;
   let testTableId: string;
   let testActorId: string;
@@ -50,10 +51,23 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
     // Use service role client for setup (bypasses RLS)
     supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
+    // Create test company (ADR-043: company before casino)
+    const { data: company } = await supabase
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company` })
+      .select()
+      .single();
+    if (!company) throw new Error('Failed to create test company');
+    testCompanyId = company.id;
+
     // Create test casino
     const { data: casino } = await supabase
       .from('casino')
-      .insert({ name: `${TEST_PREFIX} Casino`, status: 'active' })
+      .insert({
+        name: `${TEST_PREFIX} Casino`,
+        status: 'active',
+        company_id: testCompanyId,
+      })
       .select()
       .single();
     testCasinoId = casino!.id;
@@ -145,6 +159,7 @@ describe('Gaming Day Boundary - Integration Tests (ADR-026)', () => {
       .delete()
       .eq('casino_id', testCasinoId);
     await supabase.from('casino').delete().eq('id', testCasinoId);
+    await supabase.from('company').delete().eq('id', testCompanyId);
     // Delete auth user
     if (testActorUserId) {
       await supabase.auth.admin.deleteUser(testActorUserId);

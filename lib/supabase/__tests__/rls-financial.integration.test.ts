@@ -19,8 +19,27 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
-import { injectRLSContext } from '../rls-context';
-import type { RLSContext } from '../rls-context';
+
+/**
+ * Service-role helper: injects RLS context via set_rls_context_internal RPC.
+ * Tests use service_role clients (no auth.uid()), so they cannot call
+ * set_rls_context_from_staff which requires an authenticated session.
+ */
+async function setTestRLSContext(
+  client: SupabaseClient<Database>,
+  actorId: string,
+  casinoId: string,
+  staffRole: string,
+  correlationId?: string,
+): Promise<void> {
+  const { error } = await client.rpc('set_rls_context_internal', {
+    p_actor_id: actorId,
+    p_casino_id: casinoId,
+    p_staff_role: staffRole,
+    p_correlation_id: correlationId,
+  });
+  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
+}
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -31,6 +50,8 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
   let authClient1: SupabaseClient<Database>; // Authenticated as Casino 1 staff
   let authClient2: SupabaseClient<Database>; // Authenticated as Casino 2 staff
 
+  let testCompany1Id: string;
+  let testCompany2Id: string;
   let testCasino1Id: string;
   let testCasino2Id: string;
   let testStaff1Id: string;
@@ -97,6 +118,26 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     }
 
     // =========================================================================
+    // Create Test Companies (ADR-043: casino.company_id NOT NULL)
+    // =========================================================================
+
+    const { data: company1 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS Financial Test Company 1' })
+      .select()
+      .single();
+    if (!company1) throw new Error('Failed to create test company 1');
+    testCompany1Id = company1.id;
+
+    const { data: company2 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS Financial Test Company 2' })
+      .select()
+      .single();
+    if (!company2) throw new Error('Failed to create test company 2');
+    testCompany2Id = company2.id;
+
+    // =========================================================================
     // Create Test Casinos
     // =========================================================================
 
@@ -105,6 +146,7 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
       .insert({
         name: 'RLS Financial Test Casino 1',
         status: 'active',
+        company_id: testCompany1Id,
       })
       .select()
       .single();
@@ -117,6 +159,7 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
       .insert({
         name: 'RLS Financial Test Casino 2',
         status: 'active',
+        company_id: testCompany2Id,
       })
       .select()
       .single();
@@ -339,6 +382,10 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     await serviceClient.from('casino').delete().eq('id', testCasino1Id);
     await serviceClient.from('casino').delete().eq('id', testCasino2Id);
 
+    // Clean up companies (ADR-043)
+    await serviceClient.from('company').delete().eq('id', testCompany1Id);
+    await serviceClient.from('company').delete().eq('id', testCompany2Id);
+
     // Clean up test users
     if (testUser1Id) {
       await serviceClient.auth.admin.deleteUser(testUser1Id);
@@ -354,13 +401,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
 
   describe('Financial Transaction READ Policies', () => {
     it('should allow staff to read transactions from their own casino', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-read-own');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-read-own',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -378,13 +425,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should filter transactions by visit_id within casino context', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-filter-visit');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-filter-visit',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -402,13 +449,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should filter transactions by player_id within casino context', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-filter-player');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-filter-player',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -425,15 +472,11 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should filter transactions by direction', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         authClient1,
-        context1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'test-fin-filter-direction',
       );
 
@@ -452,15 +495,11 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should filter transactions by gaming_day', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         authClient1,
-        context1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'test-fin-filter-gaming-day',
       );
 
@@ -486,22 +525,22 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
   describe('Casino Isolation', () => {
     it('should enforce casino isolation for concurrent requests', async () => {
       // Request 1: Casino 1 context
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-concurrent-1');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-concurrent-1',
+      );
 
       // Request 2: Casino 2 context
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient2, context2, 'test-fin-concurrent-2');
+      await setTestRLSContext(
+        authClient2,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'test-fin-concurrent-2',
+      );
 
       // Both queries should execute successfully
       const { data: casino1Txns } = await authClient1
@@ -522,13 +561,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should return correct transaction amounts per casino', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-amounts');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-amounts',
+      );
 
       const { data } = await authClient1
         .from('player_financial_transaction')
@@ -547,13 +586,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
 
   describe('Financial Transaction Immutability', () => {
     it('should prevent direct inserts (must use RPC)', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-direct-insert');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-direct-insert',
+      );
 
       // Note: With service role key, direct inserts work. In production with
       // authenticated clients and proper RLS policies, direct inserts would
@@ -591,13 +630,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
 
   describe('Visit Financial Summary View', () => {
     it('should aggregate transactions correctly for a visit', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-summary');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-summary',
+      );
 
       const { data, error } = await authClient1
         .from('visit_financial_summary')
@@ -617,13 +656,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should scope summary view by casino_id', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-summary-scope');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-summary-scope',
+      );
 
       // Query with explicit casino_id filter (as would be done in production)
       // With service role key, we must filter explicitly since RLS is bypassed
@@ -687,13 +726,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
 
   describe('Staff Role Access', () => {
     it('should allow pit_boss to read financial transactions', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context, 'test-fin-pitboss-read');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-pitboss-read',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -706,13 +745,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should verify staff can only see transactions they created', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context, 'test-fin-staff-created');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-staff-created',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -734,13 +773,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
 
   describe('Multi-Table Queries', () => {
     it('should join transactions with visits correctly', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-join-visit');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-join-visit',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
@@ -765,13 +804,13 @@ describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
     });
 
     it('should join transactions with players correctly', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-fin-join-player');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-fin-join-player',
+      );
 
       const { data, error } = await authClient1
         .from('player_financial_transaction')
