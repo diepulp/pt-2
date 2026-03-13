@@ -1,8 +1,15 @@
+/** @jest-environment node */
+
 /**
  * Setup Wizard RPC Contract Tests (PRD-030 WS4)
  *
  * Tests for rpc_complete_casino_setup and related schema validations.
  * Combines compile-time type assertions with runtime contract tests.
+ *
+ * Environment: node (server-side schemas, no DOM dependencies).
+ * Gating: Integration tests that require Supabase use describe.skip
+ * when RUN_INTEGRATION_TESTS is unset. This file's tests are pure
+ * schema/algorithm validation and run unconditionally.
  *
  * Test groups:
  * 1. RPC type contract (compile-time)

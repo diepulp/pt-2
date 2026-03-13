@@ -1,16 +1,22 @@
-// Learn more: https://github.com/testing-library/jest-dom
-import '@testing-library/jest-dom';
+/**
+ * jest.setup.node.ts — Minimal setup for node-runtime Jest configs.
+ *
+ * Loads .env.test variables and sets Supabase fallbacks.
+ * Does NOT import @testing-library/jest-dom (node environment only).
+ */
 
-// Load test environment variables from .env.test
+// Signal to jest.setup.js that a runtime-correct config is active
+process.env.JEST_CONFIG_OVERRIDE = '1';
+
+// Load .env.test file for test environment
 const fs = require('fs');
 const path = require('path');
 
-// Load .env.test file for test environment
 try {
   const envTestPath = path.resolve(process.cwd(), '.env.test');
   if (fs.existsSync(envTestPath)) {
     const envConfig = fs.readFileSync(envTestPath, 'utf8');
-    envConfig.split('\n').forEach((line) => {
+    envConfig.split('\n').forEach((line: string) => {
       const match = line.match(/^([^=:#]+)=(.*)$/);
       if (match) {
         const key = match[1].trim();
@@ -21,11 +27,12 @@ try {
       }
     });
   }
-} catch (error) {
-  console.warn('Could not load .env.test file:', error.message);
+} catch (error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  console.warn('Could not load .env.test file:', message);
 }
 
-// Mock environment variables for tests (fallback if .env.test not found)
+// Fallback Supabase env vars
 process.env.NEXT_PUBLIC_SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
@@ -34,10 +41,3 @@ process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =
 process.env.SUPABASE_SERVICE_ROLE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ||
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU';
-
-// Deprecation advisory for legacy jsdom config (Slice One)
-if (!process.env.JEST_CONFIG_OVERRIDE) {
-  console.warn(
-    '[ADVISORY] Running under legacy jsdom config. For runtime-correct execution, use: test:unit:node / test:integration:canary / test:verify'
-  );
-}
