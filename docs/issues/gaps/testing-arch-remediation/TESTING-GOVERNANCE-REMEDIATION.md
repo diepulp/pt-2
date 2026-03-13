@@ -104,6 +104,32 @@ Write one exemplar route handler test that uses real request/response objects (n
 
 **Total estimated effort**: 19-27 hours across moves 1-8.
 
+### Execution Segmentation
+
+Remediation work splits into two phases with different scoping rules.
+
+**Phase A — Shared infrastructure (global, repo-wide)**
+Moves 1–3 affect shared configuration and CI plumbing. These are executed once, globally:
+- Branch protection (Move 1)
+- Split Jest config (Move 2)
+- CI test step (Move 3)
+
+After Phase A, the shared harness is correct and trusted.
+
+**Phase B — Domain restoration (bounded-context slices)**
+Moves 4–8 touch runtime test content — server-unit fixes, integration wiring, route-handler replacement, hook triage. This work proceeds **one bounded context at a time**, not as a repo-wide big-bang rewrite.
+
+Execution rule for Phase B:
+1. Pick one bounded context (e.g., `services/player/`, `services/visit/`)
+2. Restore its server-unit tests to correct environment and honest assertions
+3. Restore or wire its integration tests if applicable
+4. Replace any shallow route-handler tests for its routes using the Move 8 exemplar
+5. Confirm a trusted local green baseline for that context
+6. Promote the restored slice into the CI-enforced baseline
+7. Move to the next bounded context
+
+Do not attempt to restore the entire test posture as one undifferentiated blob. Each slice must produce a trusted green baseline before expansion. This prevents partial restoration from creating a new form of ambiguity — where some contexts are honest and others are still theatre, but CI treats them identically.
+
 ---
 
 ## 4. Move 1 Reference: Branch Protection CLI Steps
@@ -113,6 +139,12 @@ Steps for executing Move 1 (branch protection activation).
 ```bash
 # Require CI checks to pass and 1 approval before merge to main.
 # Block direct pushes and force pushes.
+#
+# NOTE: The contexts list below is provisional. It names only the
+# existing "checks" job. After Move 3 adds the "test" job, update
+# this rule to include it:
+#   "contexts":["checks","test"]
+# Until then, the test job will run but will not block merge.
 gh api repos/{owner}/{repo}/branches/main/protection \
   --method PUT \
   --field required_status_checks='{"strict":true,"contexts":["checks"]}' \
