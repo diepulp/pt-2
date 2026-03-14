@@ -1,7 +1,8 @@
   -- PT-2 Seed Data
 -- Purpose: Populate database with realistic test data for all rating slip workflows
--- Coverage: 2 casinos, 6 players, 6 tables, all rating slip states
+-- Coverage: 2 companies, 3 casinos, 8 players, 6 tables, all rating slip states
 -- Created: 2025-12-02
+-- Updated: 2026-03-13 (PRD-051: Second company + casino for cross-tenancy isolation testing)
 -- Updated: 2026-03-03 (SEC-007/PRD-041: RLS hardening, second dev auth user for Casino 2)
 -- NOTE: All UUIDs use valid hex characters (0-9, a-f) only
 --
@@ -252,6 +253,72 @@ WHERE player_id = 'a1000000-0000-0000-0000-000000000002' AND casino_id = 'ca0000
 
 UPDATE player_loyalty SET current_balance = 75000, tier = 'Diamond', preferences = '{"comps": true, "vip_lounge": true}'
 WHERE player_id = 'a1000000-0000-0000-0000-000000000005' AND casino_id = 'ca000000-0000-0000-0000-000000000002';
+
+-- ============================================================================
+-- 9B. CROSS-TENANCY TEST DATA (PRD-051: Company boundary isolation)
+-- ============================================================================
+-- Second company with its own casino, staff, and players.
+-- Used to verify cross-company isolation: Lucky Star staff must see
+-- zero Rival data, and vice versa.
+-- ============================================================================
+
+INSERT INTO company (id, name, legal_name) VALUES
+  ('c0000000-0000-0000-0000-000000000002', 'Rival Entertainment Corp', 'Rival Entertainment Corp, Inc.');
+
+INSERT INTO casino (id, company_id, name, location, address, status) VALUES
+  (
+    'ca000000-0000-0000-0000-000000000003',
+    'c0000000-0000-0000-0000-000000000002',
+    'Rival Grand Casino',
+    'Reno, NV',
+    '{"street": "789 Grand Ave", "city": "Reno", "state": "NV", "zip": "89501"}',
+    'active'
+  );
+
+INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, watchlist_floor, ctr_threshold, table_bank_mode, setup_status, setup_completed_at) VALUES
+  (
+    'c5000000-0000-0000-0000-000000000003',
+    'ca000000-0000-0000-0000-000000000003',
+    '06:00:00',
+    'America/Los_Angeles',
+    4000.00,
+    10000.00,
+    'INVENTORY_COUNT',
+    'ready',
+    now()
+  );
+
+-- Rival staff
+INSERT INTO staff (id, casino_id, employee_id, first_name, last_name, email, role, status) VALUES
+  ('5a000000-0000-0000-0000-000000000011', 'ca000000-0000-0000-0000-000000000003', 'RPB01', 'Carlos', 'Rivera', 'carlos.rivera@rivalcasino.com', 'pit_boss', 'active'),
+  ('5a000000-0000-0000-0000-000000000012', 'ca000000-0000-0000-0000-000000000003', 'RAD01', 'Priya', 'Patel', 'priya.patel@rivalcasino.com', 'admin', 'active');
+
+-- Rival-only players (should NEVER appear in Lucky Star lookups)
+INSERT INTO player (id, first_name, last_name, birth_date) VALUES
+  ('a1000000-0000-0000-0000-000000000007', 'Elena', 'Volkov', '1983-09-12'),
+  ('a1000000-0000-0000-0000-000000000008', 'Derek', 'Chang', '1990-02-28');
+
+INSERT INTO player_casino (player_id, casino_id, status) VALUES
+  ('a1000000-0000-0000-0000-000000000007', 'ca000000-0000-0000-0000-000000000003', 'active'),
+  ('a1000000-0000-0000-0000-000000000008', 'ca000000-0000-0000-0000-000000000003', 'active');
+
+-- Rival loyalty (auto-create then update, same pattern as above)
+INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier, preferences, updated_at)
+SELECT pc.player_id, pc.casino_id, 0, NULL, '{}'::jsonb, NOW()
+FROM player_casino pc
+WHERE pc.casino_id = 'ca000000-0000-0000-0000-000000000003'
+ON CONFLICT (player_id, casino_id) DO NOTHING;
+
+UPDATE player_loyalty SET current_balance = 32000, tier = 'Platinum'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000007' AND casino_id = 'ca000000-0000-0000-0000-000000000003';
+
+UPDATE player_loyalty SET current_balance = 5500, tier = 'Silver'
+WHERE player_id = 'a1000000-0000-0000-0000-000000000008' AND casino_id = 'ca000000-0000-0000-0000-000000000003';
+
+-- Rival game settings (needed for table operations)
+INSERT INTO game_settings (id, casino_id, game_type, code, name, min_bet, max_bet, house_edge, decisions_per_hour, seats_available, rotation_interval_minutes, points_conversion_rate, point_multiplier) VALUES
+  ('65000000-0000-0000-0000-000000000007', 'ca000000-0000-0000-0000-000000000003', 'blackjack', 'blackjack', 'Standard Blackjack', 25.00, 5000.00, 0.5, 60, 7, 30, 10.0, 1.0),
+  ('65000000-0000-0000-0000-000000000008', 'ca000000-0000-0000-0000-000000000003', 'roulette', 'roulette', 'European Roulette', 10.00, 2000.00, 2.7, 40, 8, 30, 12.0, 1.0);
 
 -- ============================================================================
 -- 10. VISITS (ADR-026: gaming_day-scoped with visit_group_id)

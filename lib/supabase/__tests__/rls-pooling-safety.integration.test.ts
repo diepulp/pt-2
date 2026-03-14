@@ -22,8 +22,25 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
-import { injectRLSContext } from '../rls-context';
-import type { RLSContext } from '../rls-context';
+
+/**
+ * Service-role helper: injects RLS context via set_rls_context_internal RPC.
+ */
+async function setTestRLSContext(
+  client: SupabaseClient<Database>,
+  actorId: string,
+  casinoId: string,
+  staffRole: string,
+  correlationId?: string,
+): Promise<void> {
+  const { error } = await client.rpc('set_rls_context_internal', {
+    p_actor_id: actorId,
+    p_casino_id: casinoId,
+    p_staff_role: staffRole,
+    p_correlation_id: correlationId,
+  });
+  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
+}
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -32,6 +49,9 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
   let supabase: SupabaseClient<Database>;
+  let testCompany1Id: string;
+  let testCompany2Id: string;
+  let testCompany3Id: string;
   let testCasino1Id: string;
   let testCasino2Id: string;
   let testCasino3Id: string;
@@ -68,21 +88,59 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
     testUser2Id = users[1].data?.user?.id || '';
     testUser3Id = users[2].data?.user?.id || '';
 
+    // Create test companies (ADR-043: casino.company_id NOT NULL)
+    const companies = await Promise.all([
+      supabase
+        .from('company')
+        .insert({ name: 'Pooling Test Company 1' })
+        .select()
+        .single(),
+      supabase
+        .from('company')
+        .insert({ name: 'Pooling Test Company 2' })
+        .select()
+        .single(),
+      supabase
+        .from('company')
+        .insert({ name: 'Pooling Test Company 3' })
+        .select()
+        .single(),
+    ]);
+
+    if (!companies[0].data) throw new Error('Failed to create test company 1');
+    if (!companies[1].data) throw new Error('Failed to create test company 2');
+    if (!companies[2].data) throw new Error('Failed to create test company 3');
+    testCompany1Id = companies[0].data.id;
+    testCompany2Id = companies[1].data.id;
+    testCompany3Id = companies[2].data.id;
+
     // Create test casinos
     const casinos = await Promise.all([
       supabase
         .from('casino')
-        .insert({ name: 'Pooling Test Casino 1', status: 'active' })
+        .insert({
+          name: 'Pooling Test Casino 1',
+          status: 'active',
+          company_id: testCompany1Id,
+        })
         .select()
         .single(),
       supabase
         .from('casino')
-        .insert({ name: 'Pooling Test Casino 2', status: 'active' })
+        .insert({
+          name: 'Pooling Test Casino 2',
+          status: 'active',
+          company_id: testCompany2Id,
+        })
         .select()
         .single(),
       supabase
         .from('casino')
-        .insert({ name: 'Pooling Test Casino 3', status: 'active' })
+        .insert({
+          name: 'Pooling Test Casino 3',
+          status: 'active',
+          company_id: testCompany3Id,
+        })
         .select()
         .single(),
     ]);
@@ -179,6 +237,12 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       .delete()
       .in('id', [testCasino1Id, testCasino2Id, testCasino3Id]);
 
+    // Clean up companies (ADR-043)
+    await supabase
+      .from('company')
+      .delete()
+      .in('id', [testCompany1Id, testCompany2Id, testCompany3Id]);
+
     // Clean up users
     await Promise.all([
       supabase.auth.admin.deleteUser(testUser1Id),
@@ -193,14 +257,14 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
   describe('Transaction-Local Context Persistence', () => {
     it('should set context variables via RPC and persist within transaction', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Set context via RPC (transaction-wrapped)
-      await injectRLSContext(supabase, context, 'test-txn-persist-001');
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-txn-persist-001',
+      );
 
       // Immediately query - context should still be set
       const { data, error } = await supabase
@@ -215,13 +279,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
     it('should handle multiple RPC calls in sequence without context leakage', async () => {
       // Context 1
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(supabase, context1, 'test-seq-001');
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-seq-001',
+      );
 
       const { data: data1 } = await supabase
         .from('casino_settings')
@@ -232,13 +296,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       expect(data1?.casino_id).toBe(testCasino1Id);
 
       // Context 2 (different casino)
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(supabase, context2, 'test-seq-002');
+      await setTestRLSContext(
+        supabase,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'test-seq-002',
+      );
 
       const { data: data2 } = await supabase
         .from('casino_settings')
@@ -253,7 +317,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
     });
 
     it('should handle rapid context switching between three casinos', async () => {
-      const contexts: RLSContext[] = [
+      const contexts = [
         {
           actorId: testStaff1Id,
           casinoId: testCasino1Id,
@@ -275,7 +339,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
       // Rapidly switch contexts and query
       for (let i = 0; i < contexts.length; i++) {
-        await injectRLSContext(supabase, contexts[i], `test-rapid-${i}`);
+        await setTestRLSContext(
+          supabase,
+          contexts[i].actorId,
+          contexts[i].casinoId,
+          contexts[i].staffRole,
+          `test-rapid-${i}`,
+        );
 
         const { data } = await supabase
           .from('casino_settings')
@@ -309,23 +379,26 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       // Each client alternates between Casino 1 and Casino 2
       const requests = clients.map(async (client, index) => {
         const isEven = index % 2 === 0;
-        const context: RLSContext = {
-          actorId: isEven ? testStaff1Id : testStaff2Id,
-          casinoId: isEven ? testCasino1Id : testCasino2Id,
-          staffRole: 'pit_boss',
-        };
+        const actorId = isEven ? testStaff1Id : testStaff2Id;
+        const casinoId = isEven ? testCasino1Id : testCasino2Id;
 
-        await injectRLSContext(client, context, `test-concurrent-${index}`);
+        await setTestRLSContext(
+          client,
+          actorId,
+          casinoId,
+          'pit_boss',
+          `test-concurrent-${index}`,
+        );
 
         const { data } = await client
           .from('casino_settings')
           .select('casino_id')
-          .eq('casino_id', context.casinoId)
+          .eq('casino_id', casinoId)
           .single();
 
         return {
           index,
-          expectedCasinoId: context.casinoId,
+          expectedCasinoId: casinoId,
           actualCasinoId: data?.casino_id,
         };
       });
@@ -341,52 +414,54 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
     it('should handle concurrent requests with different staff roles', async () => {
       const requests = [
         {
-          context: {
-            actorId: testStaff1Id,
-            casinoId: testCasino1Id,
-            staffRole: 'pit_boss',
-          },
+          actorId: testStaff1Id,
+          casinoId: testCasino1Id,
+          staffRole: 'pit_boss',
           correlationId: 'concurrent-role-1',
         },
         {
-          context: {
-            actorId: testStaff2Id,
-            casinoId: testCasino2Id,
-            staffRole: 'admin',
-          },
+          actorId: testStaff2Id,
+          casinoId: testCasino2Id,
+          staffRole: 'admin',
           correlationId: 'concurrent-role-2',
         },
         {
-          context: {
-            actorId: testStaff3Id,
-            casinoId: testCasino3Id,
-            staffRole: 'pit_boss',
-          },
+          actorId: testStaff3Id,
+          casinoId: testCasino3Id,
+          staffRole: 'pit_boss',
           correlationId: 'concurrent-role-3',
         },
       ];
 
       // Execute all requests concurrently
       const results = await Promise.all(
-        requests.map(async ({ context, correlationId }) => {
-          const client = createClient<Database>(
-            supabaseUrl,
-            supabaseServiceKey,
-          );
-          await injectRLSContext(client, context, correlationId);
+        requests.map(
+          async ({ actorId, casinoId, staffRole, correlationId }) => {
+            const client = createClient<Database>(
+              supabaseUrl,
+              supabaseServiceKey,
+            );
+            await setTestRLSContext(
+              client,
+              actorId,
+              casinoId,
+              staffRole,
+              correlationId,
+            );
 
-          const { data } = await client
-            .from('casino_settings')
-            .select('casino_id')
-            .eq('casino_id', context.casinoId)
-            .single();
+            const { data } = await client
+              .from('casino_settings')
+              .select('casino_id')
+              .eq('casino_id', casinoId)
+              .single();
 
-          return {
-            expectedCasinoId: context.casinoId,
-            actualCasinoId: data?.casino_id,
-            staffRole: context.staffRole,
-          };
-        }),
+            return {
+              expectedCasinoId: casinoId,
+              actualCasinoId: data?.casino_id,
+              staffRole,
+            };
+          },
+        ),
       );
 
       // Verify each request maintained correct context
@@ -418,7 +493,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
             supabaseUrl,
             supabaseServiceKey,
           );
-          await injectRLSContext(client, context, `burst-${index}`);
+          await setTestRLSContext(
+            client,
+            context.actorId,
+            context.casinoId,
+            context.staffRole,
+            `burst-${index}`,
+          );
 
           const { data, error } = await client
             .from('casino_settings')
@@ -453,22 +534,22 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       const client2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // Set Casino 1 context on client1
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(client1, context1, 'isolation-client1');
+      await setTestRLSContext(
+        client1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'isolation-client1',
+      );
 
       // Set Casino 2 context on client2
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(client2, context2, 'isolation-client2');
+      await setTestRLSContext(
+        client2,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'isolation-client2',
+      );
 
       // Query both clients
       const [result1, result2] = await Promise.all([
@@ -495,24 +576,20 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
       // Interleaved operations:
       // 1. Set context on client1
-      await injectRLSContext(
+      await setTestRLSContext(
         client1,
-        {
-          actorId: testStaff1Id,
-          casinoId: testCasino1Id,
-          staffRole: 'pit_boss',
-        },
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'interleave-1a',
       );
 
       // 2. Set context on client2
-      await injectRLSContext(
+      await setTestRLSContext(
         client2,
-        {
-          actorId: testStaff2Id,
-          casinoId: testCasino2Id,
-          staffRole: 'pit_boss',
-        },
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
         'interleave-2a',
       );
 
@@ -531,13 +608,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         .single();
 
       // 5. Switch context on client1 to Casino 3
-      await injectRLSContext(
+      await setTestRLSContext(
         client1,
-        {
-          actorId: testStaff3Id,
-          casinoId: testCasino3Id,
-          staffRole: 'pit_boss',
-        },
+        testStaff3Id,
+        testCasino3Id,
+        'pit_boss',
         'interleave-1b',
       );
 
@@ -569,17 +644,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
   describe('RPC Function Atomicity', () => {
     it('should set all context variables atomically', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Single RPC call should set all variables
       const { error } = await supabase.rpc('set_rls_context_internal', {
-        p_actor_id: context.actorId,
-        p_casino_id: context.casinoId,
-        p_staff_role: context.staffRole,
+        p_actor_id: testStaff1Id,
+        p_casino_id: testCasino1Id,
+        p_staff_role: 'pit_boss',
         p_correlation_id: 'atomic-test-001',
       });
 
@@ -628,15 +697,15 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
   describe('Correlation ID Tracking', () => {
     it('should accept and set correlation_id in application_name', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       const correlationId = 'test-correlation-xyz-123';
 
-      await injectRLSContext(supabase, context, correlationId);
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        correlationId,
+      );
 
       // Subsequent query should execute successfully
       const { data, error } = await supabase
@@ -650,14 +719,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
     });
 
     it('should handle NULL correlation_id', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Don't pass correlation_id (undefined)
-      await injectRLSContext(supabase, context);
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+      );
 
       const { data, error } = await supabase
         .from('casino_settings')
@@ -681,18 +749,18 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         const casinos = [testCasino1Id, testCasino2Id, testCasino3Id];
         const staff = [testStaff1Id, testStaff2Id, testStaff3Id];
 
-        const context: RLSContext = {
-          actorId: staff[casinoIndex],
-          casinoId: casinos[casinoIndex],
-          staffRole: 'pit_boss',
-        };
-
-        await injectRLSContext(client, context, cid);
+        await setTestRLSContext(
+          client,
+          staff[casinoIndex],
+          casinos[casinoIndex],
+          'pit_boss',
+          cid,
+        );
 
         const { data } = await client
           .from('casino_settings')
           .select('casino_id')
-          .eq('casino_id', context.casinoId)
+          .eq('casino_id', casinos[casinoIndex])
           .single();
 
         return {
@@ -1089,13 +1157,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'cross-casino-visit-read');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'cross-casino-visit-read',
+      );
 
       // Act: Query all visits (RLS should filter to Casino 1 only)
       const { data, error } = await anonClient
@@ -1133,13 +1201,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'cross-casino-player-read');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'cross-casino-player-read',
+      );
 
       // Act: Query all players via player_casino junction
       // (player table has no casino_id, so we test via relationship)
@@ -1181,13 +1249,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'cross-casino-table-read');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'cross-casino-table-read',
+      );
 
       // Act: Query all casinos (should only see own casino)
       const { data, error } = await anonClient
@@ -1227,13 +1295,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'cross-casino-insert-deny');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'cross-casino-insert-deny',
+      );
 
       // Act: Attempt to insert visit for Casino 2 (should fail)
       const { data, error } = await anonClient
@@ -1351,9 +1419,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
               password: 'test-password-12345',
             });
 
-            await injectRLSContext(
+            await setTestRLSContext(
               client,
-              context,
+              context.actorId,
+              context.casinoId,
+              context.staffRole,
               `concurrent-denial-${context.casinoId}`,
             );
 
@@ -1400,13 +1470,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(client1, context1, 'settings-isolation-1');
+      await setTestRLSContext(
+        client1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'settings-isolation-1',
+      );
 
       const { data: settings1 } = await client1
         .from('casino_settings')
@@ -1428,13 +1498,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(client2, context2, 'settings-isolation-2');
+      await setTestRLSContext(
+        client2,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'settings-isolation-2',
+      );
 
       const { data: settings2 } = await client2
         .from('casino_settings')
@@ -1480,7 +1550,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           );
 
           try {
-            await injectRLSContext(client, context, `pool-exhaust-${index}`);
+            await setTestRLSContext(
+              client,
+              context.actorId,
+              context.casinoId,
+              context.staffRole,
+              `pool-exhaust-${index}`,
+            );
 
             const { data, error } = await client
               .from('casino_settings')
@@ -1572,9 +1648,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
               );
 
               try {
-                await injectRLSContext(
+                await setTestRLSContext(
                   client,
-                  context,
+                  context.actorId,
+                  context.casinoId,
+                  context.staffRole,
                   `load-test-${batch}-${requestId}`,
                 );
 
@@ -1642,6 +1720,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
       // Create 10 test casinos with dedicated staff
       const testCasinos: {
         casinoId: string;
+        companyId: string;
         staffId: string;
         userId: string;
       }[] = [];
@@ -1654,12 +1733,22 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           email_confirm: true,
         });
 
+        // Create company (ADR-043: casino.company_id NOT NULL)
+        const { data: company } = await supabase
+          .from('company')
+          .insert({ name: `Isolation Test Company ${i}` })
+          .select()
+          .single();
+        if (!company)
+          throw new Error(`Failed to create isolation test company ${i}`);
+
         // Create casino
         const { data: casino } = await supabase
           .from('casino')
           .insert({
             name: `Isolation Test Casino ${i}`,
             status: 'active',
+            company_id: company.id,
           })
           .select()
           .single();
@@ -1690,6 +1779,7 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
 
         testCasinos.push({
           casinoId: casino!.id,
+          companyId: company.id,
           staffId: staff!.id,
           userId: user!.user!.id,
         });
@@ -1725,9 +1815,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
               );
 
               try {
-                await injectRLSContext(
+                await setTestRLSContext(
                   client,
-                  context,
+                  context.actorId,
+                  context.casinoId,
+                  context.staffRole,
                   `isolation-${casinoIndex}-${requestIndex}`,
                 );
 
@@ -1822,6 +1914,15 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
           .in(
             'id',
             testCasinos.map((c) => c.casinoId),
+          );
+
+        // Clean up companies (ADR-043)
+        await supabase
+          .from('company')
+          .delete()
+          .in(
+            'id',
+            testCasinos.map((c) => c.companyId),
           );
 
         await Promise.all(
@@ -1957,15 +2058,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         anonClient,
-        context,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'pit-cash-obs-read-own-casino',
       );
 
@@ -1993,15 +2090,11 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         anonClient,
-        context,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
         'pit-cash-obs-cross-casino-deny',
       );
 
@@ -2028,13 +2121,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'pit-cash-obs-direct-insert');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'pit-cash-obs-direct-insert',
+      );
 
       // Act: Try to insert directly (should fail - INSERT is REVOKED)
       const { data, error } = await anonClient
@@ -2073,13 +2166,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'pit-cash-obs-update-deny');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'pit-cash-obs-update-deny',
+      );
 
       // First, get an existing observation
       const { data: existing } = await anonClient
@@ -2121,13 +2214,13 @@ describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
         password: 'test-password-12345',
       });
 
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(anonClient, context, 'pit-cash-obs-delete-deny');
+      await setTestRLSContext(
+        anonClient,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'pit-cash-obs-delete-deny',
+      );
 
       // First, get an existing observation
       const { data: existing } = await anonClient

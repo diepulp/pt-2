@@ -662,10 +662,25 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 async function createTestFixture(
   supabase: SupabaseClient<Database>,
 ): Promise<TestFixture> {
-  // 1. Create casino
+  // 1. Create company (ADR-043: company before casino)
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `${TEST_PREFIX} Company` })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create company: ${companyError?.message}`);
+  }
+
+  // 2. Create casino
   const { data: casino, error: casinoError } = await supabase
     .from('casino')
-    .insert({ name: `${TEST_PREFIX} Casino`, status: 'active' })
+    .insert({
+      name: `${TEST_PREFIX} Casino`,
+      status: 'active',
+      company_id: company.id,
+    })
     .select()
     .single();
 
@@ -673,7 +688,7 @@ async function createTestFixture(
     throw new Error(`Failed to create casino: ${casinoError?.message}`);
   }
 
-  // 2. Create casino settings
+  // 3. Create casino settings
   await supabase.from('casino_settings').insert({
     casino_id: casino.id,
     gaming_day_start_time: '06:00:00',
@@ -682,7 +697,7 @@ async function createTestFixture(
     ctr_threshold: 10000,
   });
 
-  // 3. Create gaming table
+  // 4. Create gaming table
   const { data: table, error: tableError } = await supabase
     .from('gaming_table')
     .insert({
@@ -699,7 +714,7 @@ async function createTestFixture(
     throw new Error(`Failed to create table: ${tableError?.message}`);
   }
 
-  // 4. Create game_settings for blackjack with known policy values
+  // 5. Create game_settings for blackjack with known policy values
   await supabase.from('game_settings').upsert({
     casino_id: casino.id,
     game_type: 'blackjack',
@@ -709,7 +724,7 @@ async function createTestFixture(
     point_multiplier: 1.0,
   });
 
-  // 5. Create staff actor
+  // 6. Create staff actor
   const { data: actor, error: actorError } = await supabase
     .from('staff')
     .insert({
@@ -741,6 +756,7 @@ async function createTestFixture(
     await supabase.from('gaming_table').delete().eq('id', table.id);
     await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
     await supabase.from('casino').delete().eq('id', casino.id);
+    await supabase.from('company').delete().eq('id', company.id);
   };
 
   return {

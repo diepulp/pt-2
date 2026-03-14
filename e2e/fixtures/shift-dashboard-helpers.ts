@@ -52,12 +52,24 @@ export async function createShiftDashboardScenario(): Promise<ShiftDashboardTest
   const timestamp = Date.now();
   const testPrefix = `e2e_shift_${timestamp}`;
 
+  // ADR-043: create company before casino (company_id NOT NULL)
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `${testPrefix}_company` })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create test company: ${companyError?.message}`);
+  }
+
   // Create test casino
   const { data: casino, error: casinoError } = await supabase
     .from('casino')
     .insert({
       name: `${testPrefix}_casino`,
       status: 'active',
+      company_id: company.id,
     })
     .select()
     .single();

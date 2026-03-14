@@ -47,6 +47,8 @@ const skipIfNoEnv = () => {
 
 describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
   let serviceClient: SupabaseClient<Database>;
+  let testCompany1Id: string;
+  let testCompany2Id: string;
   let testCasinoId: string;
   let testCasino2Id: string;
   let testUserId1: string;
@@ -64,12 +66,30 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
     // Use service role client for setup (bypasses RLS)
     serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
+    // Create test companies (ADR-043: company_id NOT NULL on casino)
+    const { data: company1 } = await serviceClient
+      .from('company')
+      .insert({ name: 'JWT Claims Test Company 1' })
+      .select()
+      .single();
+    if (!company1) throw new Error('Failed to create test company 1');
+    testCompany1Id = company1.id;
+
+    const { data: company2 } = await serviceClient
+      .from('company')
+      .insert({ name: 'JWT Claims Test Company 2' })
+      .select()
+      .single();
+    if (!company2) throw new Error('Failed to create test company 2');
+    testCompany2Id = company2.id;
+
     // Create test casino
     const { data: casino, error: casinoError } = await serviceClient
       .from('casino')
       .insert({
         name: 'JWT Claims Test Casino',
         status: 'active',
+        company_id: testCompany1Id,
       })
       .select()
       .single();
@@ -83,6 +103,7 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
       .insert({
         name: 'JWT Claims Test Casino 2',
         status: 'active',
+        company_id: testCompany2Id,
       })
       .select()
       .single();
@@ -210,6 +231,14 @@ describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
         .delete()
         .eq('casino_id', testCasino2Id);
       await serviceClient.from('casino').delete().eq('id', testCasino2Id);
+    }
+
+    // Clean up test companies (after casinos are deleted)
+    if (testCompany1Id) {
+      await serviceClient.from('company').delete().eq('id', testCompany1Id);
+    }
+    if (testCompany2Id) {
+      await serviceClient.from('company').delete().eq('id', testCompany2Id);
     }
 
     // Clean up test users

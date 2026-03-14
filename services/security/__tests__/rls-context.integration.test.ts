@@ -37,6 +37,8 @@ const supabaseServiceKey =
 // === Test Data ===
 
 interface TestScenario {
+  companyAId: string;
+  companyBId: string;
   casinoAId: string;
   casinoBId: string;
   staffAId: string;
@@ -525,10 +527,31 @@ async function createTestScenario(
   const userAId = userA?.user?.id ?? `fallback-user-a-${timestamp}`;
   const userBId = userB?.user?.id ?? `fallback-user-b-${timestamp}`;
 
+  // Create test companies (ADR-043: company before casino)
+  const { data: companyA, error: companyAError } = await supabase
+    .from('company')
+    .insert({ name: `RLS Test Company A - ${timestamp}` })
+    .select()
+    .single();
+
+  if (companyAError) throw companyAError;
+
+  const { data: companyB, error: companyBError } = await supabase
+    .from('company')
+    .insert({ name: `RLS Test Company B - ${timestamp}` })
+    .select()
+    .single();
+
+  if (companyBError) throw companyBError;
+
   // Create test casinos
   const { data: casinoA, error: casinoAError } = await supabase
     .from('casino')
-    .insert({ name: `RLS Test Casino A - ${timestamp}`, status: 'active' })
+    .insert({
+      name: `RLS Test Casino A - ${timestamp}`,
+      status: 'active',
+      company_id: companyA.id,
+    })
     .select()
     .single();
 
@@ -536,7 +559,11 @@ async function createTestScenario(
 
   const { data: casinoB, error: casinoBError } = await supabase
     .from('casino')
-    .insert({ name: `RLS Test Casino B - ${timestamp}`, status: 'active' })
+    .insert({
+      name: `RLS Test Casino B - ${timestamp}`,
+      status: 'active',
+      company_id: companyB.id,
+    })
     .select()
     .single();
 
@@ -631,6 +658,8 @@ async function createTestScenario(
   }
 
   return {
+    companyAId: companyA.id,
+    companyBId: companyB.id,
     casinoAId: casinoA.id,
     casinoBId: casinoB.id,
     staffAId: staffA.id,
@@ -652,6 +681,8 @@ async function createTestScenario(
         .eq('casino_id', casinoB.id);
       await supabase.from('casino').delete().eq('id', casinoA.id);
       await supabase.from('casino').delete().eq('id', casinoB.id);
+      await supabase.from('company').delete().eq('id', companyA.id);
+      await supabase.from('company').delete().eq('id', companyB.id);
 
       // Clean up test users
       if (userA?.user?.id) {
