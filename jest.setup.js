@@ -38,6 +38,6 @@ process.env.SUPABASE_SERVICE_ROLE_KEY =
 // Deprecation advisory for legacy jsdom config (Slice One)
 if (!process.env.JEST_CONFIG_OVERRIDE) {
   console.warn(
-    '[ADVISORY] Running under legacy jsdom config. For runtime-correct execution, use: test:unit:node / test:integration:canary / test:verify'
+    '[ADVISORY] Running under legacy jsdom config. For runtime-correct execution, use: test:unit:node / test:integration:canary / test:verify',
   );
 }
