@@ -26,7 +26,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
       - name: Install
-        run: npm ci
+        run: npm install
       - name: Env drift guard
         run: |
           # Fail if the old (wrong) env var name reappears in runtime code or templates.
@@ -64,7 +64,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
       - name: Install
-        run: npm ci
+        run: npm install
       - name: Unit Tests (node runtime)
         run: npx jest --ci --config jest.node.config.js --maxWorkers=2
         env:
