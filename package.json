@@ -163,5 +163,8 @@
     "*.{js,jsx,ts,tsx}": [
       "eslint --fix"
     ]
+  },
+  "optionalDependencies": {
+    "tree-sitter": "0.22.4"
   }
 }
