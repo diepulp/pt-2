@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * rpc_create_staff Integration Tests (PRD-034 WS1)
  *

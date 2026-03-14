@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Casino Service Integration Tests
  *
@@ -12,11 +14,16 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 
+// Integration gate: skip when RUN_INTEGRATION_TESTS is unset
+const describeIntegration = process.env.RUN_INTEGRATION_TESTS
+  ? describe
+  : describe.skip;
+
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-describe('Casino Service Integration Tests', () => {
+describeIntegration('Casino Service Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
   let testCasinoId: string;
   let testUserId: string;

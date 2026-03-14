@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Gaming Day Boundary & DST Integration Tests
  *
