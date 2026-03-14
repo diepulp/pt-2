@@ -1,9 +1,13 @@
 /**
  * @jest-environment node
  *
- * Exclusion HTTP Client ↔ Route Handler Contract Tests
+ * Exclusion HTTP Client ↔ Route Handler Contract Tests — Smoke (S3.7)
  *
  * Validates that every function in exclusion-http.ts has a corresponding route export.
+ *
+ * Classification: Smoke (S3.7) per TESTING_GOVERNANCE_STANDARD §9.2.
+ * Verifies import resolution only — no behavioral assertions.
+ * Does NOT count toward verification status.
  *
  * @see ADR-042 Player Exclusion Architecture
  * @see EXEC-050 WS7
