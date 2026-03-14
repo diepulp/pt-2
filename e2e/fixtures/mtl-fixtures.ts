@@ -99,12 +99,24 @@ export async function createMtlTestScenario(): Promise<MtlTestScenario> {
   const testPrefix = `e2e_mtl_${timestamp}`;
   const gamingDay = new Date().toISOString().split('T')[0];
 
+  // ADR-043: create company before casino (company_id NOT NULL)
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `${testPrefix}_company` })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create company: ${companyError?.message}`);
+  }
+
   // Create casino
   const { data: casino, error: casinoError } = await supabase
     .from('casino')
     .insert({
       name: `${testPrefix}_casino`,
       status: 'active',
+      company_id: company.id,
     })
     .select()
     .single();

@@ -26,8 +26,28 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
-import { injectRLSContext, getAuthContext } from '../rls-context';
-import type { RLSContext } from '../rls-context';
+import { injectRLSContext } from '../rls-context';
+
+/**
+ * Test helper: injects RLS context via service_role ops lane (set_rls_context_internal).
+ * Production code uses set_rls_context_from_staff (2-param, derives from auth.uid()).
+ * Tests use service_role clients, so we call set_rls_context_internal directly.
+ */
+async function setTestRLSContext(
+  client: SupabaseClient<Database>,
+  actorId: string,
+  casinoId: string,
+  staffRole: string,
+  correlationId?: string,
+) {
+  const { error } = await client.rpc('set_rls_context_internal', {
+    p_actor_id: actorId,
+    p_casino_id: casinoId,
+    p_staff_role: staffRole,
+    p_correlation_id: correlationId,
+  });
+  if (error) throw error;
+}
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -46,6 +66,8 @@ const skipIfNoEnv = () => {
 
 describe('RLS Context Integration (ADR-015)', () => {
   let supabase: SupabaseClient<Database>;
+  let testCompany1Id: string;
+  let testCompany2Id: string;
   let testCasino1Id: string;
   let testCasino2Id: string;
   let testStaff1Id: string;
@@ -101,12 +123,32 @@ describe('RLS Context Integration (ADR-015)', () => {
       testUserId2 = authUser2.user.id;
     }
 
+    // Create test companies (ADR-043: company before casino)
+    const { data: company1, error: company1Error } = await supabase
+      .from('company')
+      .insert({ name: 'RLS Integration Test Company 1' })
+      .select()
+      .single();
+
+    if (company1Error) throw company1Error;
+    testCompany1Id = company1.id;
+
+    const { data: company2, error: company2Error } = await supabase
+      .from('company')
+      .insert({ name: 'RLS Integration Test Company 2' })
+      .select()
+      .single();
+
+    if (company2Error) throw company2Error;
+    testCompany2Id = company2.id;
+
     // Create test casinos
     const { data: casino1, error: casino1Error } = await supabase
       .from('casino')
       .insert({
         name: 'RLS Integration Test Casino 1',
         status: 'active',
+        company_id: testCompany1Id,
       })
       .select()
       .single();
@@ -119,6 +161,7 @@ describe('RLS Context Integration (ADR-015)', () => {
       .insert({
         name: 'RLS Integration Test Casino 2',
         status: 'active',
+        company_id: testCompany2Id,
       })
       .select()
       .single();
@@ -194,6 +237,8 @@ describe('RLS Context Integration (ADR-015)', () => {
       .eq('casino_id', testCasino2Id);
     await supabase.from('casino').delete().eq('id', testCasino1Id);
     await supabase.from('casino').delete().eq('id', testCasino2Id);
+    await supabase.from('company').delete().eq('id', testCompany1Id);
+    await supabase.from('company').delete().eq('id', testCompany2Id);
 
     // Clean up test users
     if (testUserId1) {
@@ -210,14 +255,14 @@ describe('RLS Context Integration (ADR-015)', () => {
 
   describe('Transaction-Wrapped Injection', () => {
     it('should persist context across multiple queries in same request', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      // Inject RLS context
-      await injectRLSContext(supabase, context, 'test-correlation-001');
+      // Inject RLS context via service_role ops lane
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-correlation-001',
+      );
 
       // Verify context was set by calling the RPC that reads it
       // Note: We can't directly read current_setting() via Supabase client,
@@ -252,14 +297,14 @@ describe('RLS Context Integration (ADR-015)', () => {
     });
 
     it('should reject cross-tenant access attempts', async () => {
-      // Inject context for Casino 1
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(supabase, context, 'test-correlation-002');
+      // Inject context for Casino 1 via service_role ops lane
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-correlation-002',
+      );
 
       // Attempt to query Casino 2 data - RLS should block or return empty
       const { data: casino2Settings } = await supabase
@@ -280,21 +325,14 @@ describe('RLS Context Integration (ADR-015)', () => {
     });
 
     it('should handle rapid sequential requests correctly', async () => {
-      // Simulate multiple concurrent contexts being set
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
       // Set context 1
-      await injectRLSContext(supabase, context1, 'test-correlation-003-a');
+      await setTestRLSContext(
+        supabase,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-correlation-003-a',
+      );
 
       // Query with context 1
       const { data: data1 } = await supabase
@@ -306,7 +344,13 @@ describe('RLS Context Integration (ADR-015)', () => {
       expect(data1?.casino_id).toBe(testCasino1Id);
 
       // Set context 2
-      await injectRLSContext(supabase, context2, 'test-correlation-003-b');
+      await setTestRLSContext(
+        supabase,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'test-correlation-003-b',
+      );
 
       // Query with context 2
       const { data: data2 } = await supabase
@@ -343,7 +387,7 @@ describe('RLS Context Integration (ADR-015)', () => {
         p_actor_id: testStaff1Id,
         p_casino_id: testCasino1Id,
         p_staff_role: 'pit_boss',
-        p_correlation_id: null,
+        p_correlation_id: undefined,
       });
 
       expect(error).toBeNull();
@@ -353,11 +397,10 @@ describe('RLS Context Integration (ADR-015)', () => {
       const invalidUuid = 'not-a-uuid';
 
       const { error } = await supabase.rpc('set_rls_context_internal', {
-        // @ts-expect-error - Testing invalid input
         p_actor_id: invalidUuid,
         p_casino_id: testCasino1Id,
         p_staff_role: 'pit_boss',
-        p_correlation_id: null,
+        p_correlation_id: undefined,
       });
 
       // Should return an error for invalid UUID
@@ -418,13 +461,11 @@ describe('RLS Context Integration (ADR-015)', () => {
       // could cause context leakage if not properly handled
 
       // Request 1: Casino 1 context
-      await injectRLSContext(
+      await setTestRLSContext(
         supabase,
-        {
-          actorId: testStaff1Id,
-          casinoId: testCasino1Id,
-          staffRole: 'pit_boss',
-        },
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'test-correlation-006-a',
       );
 
@@ -437,13 +478,11 @@ describe('RLS Context Integration (ADR-015)', () => {
       expect(result1?.casino_id).toBe(testCasino1Id);
 
       // Request 2: Casino 2 context (simulating different request)
-      await injectRLSContext(
+      await setTestRLSContext(
         supabase,
-        {
-          actorId: testStaff2Id,
-          casinoId: testCasino2Id,
-          staffRole: 'pit_boss',
-        },
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
         'test-correlation-006-b',
       );
 
@@ -466,40 +505,227 @@ describe('RLS Context Integration (ADR-015)', () => {
 
   describe('Context Parameter Validation', () => {
     it('should inject context with all required parameters', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Should not throw
       await expect(
-        injectRLSContext(supabase, context, 'test-correlation-007'),
+        setTestRLSContext(
+          supabase,
+          testStaff1Id,
+          testCasino1Id,
+          'pit_boss',
+          'test-correlation-007',
+        ),
       ).resolves.not.toThrow();
     });
 
     it('should inject context without correlation_id', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Should not throw when correlation_id is undefined
-      await expect(injectRLSContext(supabase, context)).resolves.not.toThrow();
+      await expect(
+        setTestRLSContext(supabase, testStaff1Id, testCasino1Id, 'pit_boss'),
+      ).resolves.not.toThrow();
     });
 
     it('should validate UUIDs are properly formatted', async () => {
-      const context: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
       // Valid UUIDs should work
       await expect(
-        injectRLSContext(supabase, context, 'test-correlation-008'),
+        setTestRLSContext(
+          supabase,
+          testStaff1Id,
+          testCasino1Id,
+          'pit_boss',
+          'test-correlation-008',
+        ),
       ).resolves.not.toThrow();
+    });
+  });
+
+  // ===========================================================================
+  // 5. Company ID Derivation (ADR-043)
+  // ===========================================================================
+
+  describe('Company ID Derivation (ADR-043)', () => {
+    it('set_rls_context_from_staff returns company_id', async () => {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!anonKey) {
+        console.warn('Skipping: NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+        return;
+      }
+
+      const authedClient = createClient<Database>(supabaseUrl, anonKey);
+      const { error: signInError } = await authedClient.auth.signInWithPassword(
+        {
+          email: 'test-rls-integration-1@example.com',
+          password: 'test-password-12345',
+        },
+      );
+      if (signInError) throw signInError;
+
+      try {
+        const { data, error } = await authedClient.rpc(
+          'set_rls_context_from_staff',
+          {},
+        );
+        expect(error).toBeNull();
+        expect(data).not.toBeNull();
+        const row = data?.[0];
+        expect(row?.company_id).toBeTruthy();
+        expect(row?.actor_id).toBe(testStaff1Id);
+        expect(row?.casino_id).toBe(testCasino1Id);
+      } finally {
+        await authedClient.auth.signOut();
+      }
+    });
+
+    it('injectRLSContext returns RLSContext with valid companyId', async () => {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!anonKey) {
+        console.warn('Skipping: NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+        return;
+      }
+
+      const authedClient = createClient<Database>(supabaseUrl, anonKey);
+      const { error: signInError } = await authedClient.auth.signInWithPassword(
+        {
+          email: 'test-rls-integration-1@example.com',
+          password: 'test-password-12345',
+        },
+      );
+      if (signInError) throw signInError;
+
+      try {
+        const context = await injectRLSContext(
+          authedClient,
+          'test-company-inject',
+        );
+        expect(context.companyId).toBeTruthy();
+        expect(context.actorId).toBe(testStaff1Id);
+        expect(context.casinoId).toBe(testCasino1Id);
+        expect(context.staffRole).toBe('pit_boss');
+      } finally {
+        await authedClient.auth.signOut();
+      }
+    });
+
+    it('Fail-closed: casino.company_id is NOT NULL (structural proof)', async () => {
+      // Attempt to INSERT casino without company_id — should fail
+      const { error } = await supabase
+        .from('casino')
+        .insert({ name: 'No Company Casino', status: 'active' } as never)
+        .select()
+        .single();
+
+      expect(error).not.toBeNull();
+    });
+
+    it('Fail-closed: company FK is ON DELETE RESTRICT', async () => {
+      // Attempt to DELETE a company that has casinos — should fail
+      const { error } = await supabase
+        .from('company')
+        .delete()
+        .eq('id', testCompany1Id);
+
+      expect(error).not.toBeNull();
+    });
+
+    it('Fail-closed: RPC fails for staff at inactive casino', async () => {
+      const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+      if (!anonKey) {
+        console.warn('Skipping: NEXT_PUBLIC_SUPABASE_ANON_KEY not set');
+        return;
+      }
+
+      // Create inactive casino + company + staff + user
+      const { data: inactiveCo } = await supabase
+        .from('company')
+        .insert({ name: 'Inactive Test Co' })
+        .select()
+        .single();
+
+      const { data: inactiveCasino } = await supabase
+        .from('casino')
+        .insert({
+          name: 'Inactive Casino',
+          status: 'inactive',
+          company_id: inactiveCo!.id,
+        })
+        .select()
+        .single();
+
+      await supabase.from('casino_settings').insert({
+        casino_id: inactiveCasino!.id,
+        gaming_day_start_time: '06:00:00',
+        timezone: 'America/Los_Angeles',
+        watchlist_floor: 3000,
+        ctr_threshold: 10000,
+      });
+
+      const { data: inactiveUser } = await supabase.auth.admin.createUser({
+        email: 'test-rls-inactive@example.com',
+        password: 'test-password-12345',
+        email_confirm: true,
+      });
+
+      await supabase
+        .from('staff')
+        .insert({
+          casino_id: inactiveCasino!.id,
+          user_id: inactiveUser!.user!.id,
+          employee_id: 'RLS-INACTIVE',
+          first_name: 'Inactive',
+          last_name: 'Test',
+          role: 'pit_boss',
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      // Sign in as the inactive casino staff
+      const inactiveClient = createClient<Database>(supabaseUrl, anonKey);
+      await inactiveClient.auth.signInWithPassword({
+        email: 'test-rls-inactive@example.com',
+        password: 'test-password-12345',
+      });
+
+      try {
+        // Call RPC — should fail because casino is inactive (JOIN-miss)
+        const { error } = await inactiveClient.rpc(
+          'set_rls_context_from_staff',
+          {},
+        );
+        expect(error).not.toBeNull();
+      } finally {
+        // Cleanup
+        await inactiveClient.auth.signOut();
+        await supabase
+          .from('staff')
+          .delete()
+          .eq('casino_id', inactiveCasino!.id);
+        await supabase
+          .from('casino_settings')
+          .delete()
+          .eq('casino_id', inactiveCasino!.id);
+        await supabase.from('casino').delete().eq('id', inactiveCasino!.id);
+        await supabase.from('company').delete().eq('id', inactiveCo!.id);
+        await supabase.auth.admin.deleteUser(inactiveUser!.user!.id);
+      }
+    });
+
+    it('SEC_NOTE M7: no RLS policy references app.company_id', async () => {
+      // Query pg_policies via SQL to verify no policy contains 'app.company_id'
+      const { data, error } = await supabase.rpc(
+        'exec_sql' as never,
+        {
+          sql: "SELECT policyname FROM pg_policies WHERE qual::text LIKE '%app.company_id%' OR with_check::text LIKE '%app.company_id%'",
+        } as never,
+      );
+
+      if (error) {
+        // exec_sql RPC may not exist in all environments — skip gracefully
+        console.warn('SEC_NOTE M7 test skipped: exec_sql RPC not available');
+        return;
+      }
+
+      // No policies should reference app.company_id
+      expect(data).toEqual([]);
     });
   });
 });

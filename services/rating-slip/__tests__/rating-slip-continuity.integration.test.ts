@@ -44,6 +44,8 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
   let service: RatingSlipServiceInterface;
 
   // Shared test fixture IDs
+  let testCompanyId: string;
+  let testCompany2Id: string;
   let testCasinoId: string;
   let testCasino2Id: string;
   let testTableId: string;
@@ -64,12 +66,32 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     // Create shared test fixtures
     // =========================================================================
 
+    // 0. Create test companies (ADR-043: company before casino)
+    const { data: company, error: companyError } = await supabase
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company 1` })
+      .select()
+      .single();
+
+    if (companyError) throw companyError;
+    testCompanyId = company.id;
+
+    const { data: company2, error: company2Error } = await supabase
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company 2` })
+      .select()
+      .single();
+
+    if (company2Error) throw company2Error;
+    testCompany2Id = company2.id;
+
     // 1. Create test casino
     const { data: casino, error: casinoError } = await supabase
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
         status: 'active',
+        company_id: testCompanyId,
       })
       .select()
       .single();
@@ -78,16 +100,17 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     testCasinoId = casino.id;
 
     // 2. Create second casino for RLS tests
-    const { data: casino2, error: casino2Error } = await supabase
+    const { data: casino2, error: casino2Error2 } = await supabase
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
         status: 'active',
+        company_id: testCompany2Id,
       })
       .select()
       .single();
 
-    if (casino2Error) throw casino2Error;
+    if (casino2Error2) throw casino2Error2;
     testCasino2Id = casino2.id;
 
     // 3. Create casino settings (required for compute_gaming_day)
@@ -221,6 +244,8 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       .eq('casino_id', testCasino2Id);
     await supabase.from('casino').delete().eq('id', testCasinoId);
     await supabase.from('casino').delete().eq('id', testCasino2Id);
+    await supabase.from('company').delete().eq('id', testCompanyId);
+    await supabase.from('company').delete().eq('id', testCompany2Id);
   }, 30000); // Increase timeout for cleanup
 
   // =========================================================================

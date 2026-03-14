@@ -251,10 +251,25 @@ describe('loyalty_outbox promo RPC contract (PRD-028)', () => {
 async function createTestFixture(
   supabase: SupabaseClient<Database>,
 ): Promise<TestFixture> {
+  // Create company (ADR-043: company before casino)
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `${TEST_PREFIX} Company ${Date.now()}` })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create company: ${companyError?.message}`);
+  }
+
   // Create casino (minimal — we only need a valid casino_id for FK)
   const { data: casino, error: casinoError } = await supabase
     .from('casino')
-    .insert({ name: `${TEST_PREFIX} Casino ${Date.now()}`, status: 'active' })
+    .insert({
+      name: `${TEST_PREFIX} Casino ${Date.now()}`,
+      status: 'active',
+      company_id: company.id,
+    })
     .select()
     .single();
 
@@ -268,6 +283,9 @@ async function createTestFixture(
 
     // Clean casino (CASCADE handles settings etc.)
     await supabase.from('casino').delete().eq('id', casino.id);
+
+    // Clean company (ADR-043)
+    await supabase.from('company').delete().eq('id', company.id);
   };
 
   return {

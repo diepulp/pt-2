@@ -4,7 +4,7 @@
 **Status:** Investigation Complete (with Operational Addendum)
 **Triggered by:** Business requirement — club members registered at Casino A should be visible across all properties under the same company umbrella
 **Investigation Team:** 4 domain experts (RLS/Security, Data Model, Service Layer, Migration Feasibility)
-**Addendum:** [`cross-property-player-sharing-addendum(2).md`](cross-property-player-sharing-addendum(2).md) — Operational scope, enrollment policy (Option B), scanner deferral, UX states
+**Addendum:** [`cross-property-player-sharing-operational-addendum.md`](cross-property-player-sharing-operational-addendum.md) — Operational scope, enrollment policy (Option B), scanner deferral, UX states
 
 ---
 
