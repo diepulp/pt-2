@@ -4037,6 +4037,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_activate_player_locally: {
+        Args: { p_player_id: string }
+        Returns: Json
+      }
       rpc_apply_promotion: {
         Args: {
           p_bonus_points?: number
@@ -4932,6 +4936,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_lookup_player_company: {
+        Args: { p_search_term: string }
+        Returns: {
+          active_locally: boolean
+          birth_date: string
+          enrolled_casinos: Json
+          full_name: string
+          has_sister_exclusions: boolean
+          last_company_visit: string
+          loyalty_entitlement: Json
+          max_exclusion_severity: string
+          player_id: string
+        }[]
+      }
       rpc_manual_credit: {
         Args: {
           p_idempotency_key: string
@@ -5160,6 +5178,10 @@ export type Database = {
           overdraw_applied: boolean
           points_delta: number
         }[]
+      }
+      rpc_redeem_loyalty_locally: {
+        Args: { p_amount: number; p_player_id: string; p_reason: string }
+        Returns: Json
       }
       rpc_replace_promo_coupon: {
         Args: {
@@ -5757,6 +5779,7 @@ export type Database = {
         | "manual_reward"
         | "adjustment"
         | "reversal"
+        | "redemption"
       mtl_source: "table" | "cage" | "kiosk" | "other"
       mtl_txn_type:
         | "buy_in"
@@ -5995,6 +6018,7 @@ export const Constants = {
         "manual_reward",
         "adjustment",
         "reversal",
+        "redemption",
       ],
       mtl_source: ["table", "cage", "kiosk", "other"],
       mtl_txn_type: [
