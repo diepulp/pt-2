@@ -520,7 +520,7 @@ BEGIN
     casino_id,
     player_id,
     staff_id,
-    points_earned,
+    points_delta,
     reason,
     idempotency_key
   )
@@ -530,7 +530,7 @@ BEGIN
     v_actor_id,
     -p_amount,          -- negative for redemption
     'redemption',       -- new enum value
-    gen_random_uuid()::text  -- unique per redemption
+    gen_random_uuid()  -- unique per redemption (uuid type)
   )
   RETURNING id INTO v_ledger_id;
 
