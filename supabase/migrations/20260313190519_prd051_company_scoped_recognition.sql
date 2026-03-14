@@ -206,19 +206,19 @@ BEGIN
       SELECT
         pl.player_id AS p_id,
         -- Portfolio total: SUM across all company properties
-        SUM(pl.balance) AS portfolio_total,
+        SUM(pl.current_balance) AS portfolio_total,
         -- Per-property breakdown
         jsonb_agg(
           jsonb_build_object(
             'casino_id', pl.casino_id,
             'casino_name', c.name,
-            'balance', pl.balance,
+            'balance', pl.current_balance,
             'tier', pl.tier
           )
           ORDER BY c.name
         ) AS properties_json,
         -- Local balance (at caller's casino, may be NULL if not enrolled locally)
-        MAX(CASE WHEN pl.casino_id = v_casino_id THEN pl.balance END) AS local_balance,
+        MAX(CASE WHEN pl.casino_id = v_casino_id THEN pl.current_balance END) AS local_balance,
         MAX(CASE WHEN pl.casino_id = v_casino_id THEN pl.tier END) AS local_tier
       FROM player_loyalty pl
       JOIN casino c ON c.id = pl.casino_id
@@ -380,7 +380,7 @@ BEGIN
     VALUES (p_player_id, v_casino_id, 'active', now())
     ON CONFLICT (player_id, casino_id) DO NOTHING;
 
-    INSERT INTO player_loyalty (player_id, casino_id, balance, tier)
+    INSERT INTO player_loyalty (player_id, casino_id, current_balance, tier)
     VALUES (p_player_id, v_casino_id, 0, NULL)
     ON CONFLICT (player_id, casino_id) DO NOTHING;
 
@@ -494,11 +494,11 @@ BEGIN
   -- ═══════════════════════════════════════════════════════════════════
   UPDATE player_loyalty
   SET
-    balance = balance - p_amount,
+    current_balance = current_balance - p_amount,
     updated_at = now()
   WHERE player_id = p_player_id
     AND casino_id = v_casino_id
-    AND balance >= p_amount;
+    AND current_balance >= p_amount;
 
   GET DIAGNOSTICS v_rows = ROW_COUNT;
 
@@ -507,7 +507,7 @@ BEGIN
   END IF;
 
   -- Read updated local balance
-  SELECT balance INTO v_new_balance
+  SELECT current_balance INTO v_new_balance
   FROM player_loyalty
   WHERE player_id = p_player_id AND casino_id = v_casino_id;
 
@@ -537,7 +537,7 @@ BEGIN
   -- ═══════════════════════════════════════════════════════════════════
   -- STEP 6: Compute portfolio total (SUM across company properties)
   -- ═══════════════════════════════════════════════════════════════════
-  SELECT COALESCE(SUM(pl.balance), 0) INTO v_portfolio
+  SELECT COALESCE(SUM(pl.current_balance), 0) INTO v_portfolio
   FROM player_loyalty pl
   JOIN casino c ON c.id = pl.casino_id
   WHERE pl.player_id = p_player_id
