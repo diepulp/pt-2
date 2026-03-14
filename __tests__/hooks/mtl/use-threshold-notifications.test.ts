@@ -68,7 +68,7 @@ describe('useThresholdNotifications', () => {
         expect(result.level).toBe('warning');
         expect(result.shouldCreateMtl).toBe(false);
         expect(result.requiresCtr).toBe(false);
-        expect(result.message).toContain('Approaching watchlist threshold');
+        expect(result.message).toContain('Approaching $3,000 MTL threshold');
       });
 
       it('returns warning for $2,750', () => {
@@ -90,7 +90,7 @@ describe('useThresholdNotifications', () => {
         expect(result.level).toBe('watchlist_met');
         expect(result.shouldCreateMtl).toBe(true);
         expect(result.requiresCtr).toBe(false);
-        expect(result.message).toContain('Watchlist threshold met');
+        expect(result.message).toContain('MTL entry created');
       });
 
       it('returns watchlist_met for $5,000', () => {

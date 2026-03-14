@@ -15,6 +15,10 @@ import { type ReactNode } from 'react';
 // Mock dependencies
 jest.mock('@/services/player-financial/http');
 jest.mock('@/services/rating-slip/http');
+jest.mock('@/hooks/mtl/use-threshold-notifications', () => ({
+  checkCumulativeThreshold: jest.fn(),
+  notifyThreshold: jest.fn(),
+}));
 
 import { createFinancialTransaction } from '@/services/player-financial/http';
 import { updateAverageBet } from '@/services/rating-slip/http';
@@ -65,9 +69,11 @@ describe('useSaveWithBuyIn', () => {
       visitId: 'visit-1',
       playerId: 'player-1',
       casinoId: 'casino-1',
+      tableId: 'table-1',
       staffId: 'staff-1',
       averageBet: 25,
       newBuyIn: 0,
+      chipsTaken: 0,
     });
 
     expect(updateAverageBet).toHaveBeenCalledWith('slip-1', {
@@ -86,9 +92,11 @@ describe('useSaveWithBuyIn', () => {
       visitId: 'visit-1',
       playerId: 'player-1',
       casinoId: 'casino-1',
+      tableId: 'table-1',
       staffId: 'staff-1',
       averageBet: 25,
       newBuyIn: 100,
+      chipsTaken: 0,
     });
 
     expect(createFinancialTransaction).toHaveBeenCalledWith({
@@ -100,7 +108,6 @@ describe('useSaveWithBuyIn', () => {
       direction: 'in',
       source: 'pit',
       tender_type: 'cash',
-      created_by_staff_id: 'staff-1',
     });
     expect(updateAverageBet).toHaveBeenCalledWith('slip-1', {
       average_bet: 25,
@@ -117,9 +124,11 @@ describe('useSaveWithBuyIn', () => {
       visitId: 'visit-1',
       playerId: 'player-1',
       casinoId: 'casino-1',
+      tableId: 'table-1',
       staffId: 'staff-1',
       averageBet: 50,
       newBuyIn: 250.5, // Test fractional dollars
+      chipsTaken: 0,
     });
 
     expect(createFinancialTransaction).toHaveBeenCalledWith(
@@ -139,9 +148,11 @@ describe('useSaveWithBuyIn', () => {
       visitId: 'visit-1',
       playerId: null, // Ghost visit
       casinoId: 'casino-1',
+      tableId: 'table-1',
       staffId: 'staff-1',
       averageBet: 25,
       newBuyIn: 100,
+      chipsTaken: 0,
     });
 
     expect(createFinancialTransaction).not.toHaveBeenCalled();
@@ -167,9 +178,11 @@ describe('useSaveWithBuyIn', () => {
       visitId: 'visit-1',
       playerId: 'player-1',
       casinoId: 'casino-1',
+      tableId: 'table-1',
       staffId: 'staff-1',
       averageBet: 25,
       newBuyIn: 100,
+      chipsTaken: 0,
     });
 
     await waitFor(() => {
@@ -191,7 +204,7 @@ describe('useSaveWithBuyIn', () => {
     await waitFor(() => {
       expect(invalidateSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          queryKey: ['dashboard', 'slips'],
+          queryKey: ['dashboard', 'active-slips', 'table-1'],
         }),
       );
     });
