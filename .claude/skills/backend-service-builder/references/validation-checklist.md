@@ -189,9 +189,18 @@ Pattern A/B/C (explain why)
 
 ## 7. Testing
 
+### Testing Governance (ADR-044)
+
+Service tests are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`):
+
+- **§3.3 Server-Unit Layer**: Verify server-side logic under `node` — business logic, data transforms, mapper correctness, schema validation. Must test behavior, not merely that exports exist.
+- **§4 Environment Contract**: Server-unit tests MUST run under `node`, not `jsdom`. A global `testEnvironment: 'jsdom'` misclassifying server tests is a governance defect.
+- **§9 Shallow Test Policy**: Tests that only prove exports exist without verifying behavior are classified as smoke, not server-unit. Net-new shallow tests are prohibited.
+
 **Pattern A (Contract-First) - REQUIRED**:
 
 - [ ] `{feature}.test.ts` exists
+- [ ] Tests run under `node` environment (use `/** @jest-environment node */` or split config)
 - [ ] Tests cover happy path
 - [ ] Tests cover error cases
 - [ ] Tests cover input validation

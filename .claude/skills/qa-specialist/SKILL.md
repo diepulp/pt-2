@@ -17,6 +17,21 @@ End-to-end testing specialist for PT-2 casino pit management system. Orchestrate
 - **Workflow validation**: Verify specific user flows work end-to-end
 - **Flaky test investigation**: Debug intermittent test failures
 
+## Testing Governance (ADR-044)
+
+All QA activities are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`), established by ADR-044. Key rules for QA:
+
+- **§2 Governing Principle**: A test layer counts as verification only when it runs in the correct environment, executes in CI, and is enforced via branch protection. All three conditions required.
+- **§3 Canonical Taxonomy**: 7 layers — static, unit-browser, server-unit, route-handler, integration, E2E, smoke. Every test file must belong to one.
+- **§4 Environment Contract**: E2E requires real browser + app + Supabase. Server-unit/route-handler require `node`. Unit-browser requires `jsdom`. Misclassification is a governance defect.
+- **§5 Enforcement Tiers**: Required (merge-blocking), Advisory (useful but non-governing), Quarantined (known degraded, documented owner + exit criteria), Deprecated.
+- **§9 Shallow Test Policy**: Net-new mock-everything/existence-only tests are prohibited. Existing shallow tests reclassified as smoke. Replace incrementally.
+- **§11 Skip/Quarantine Policy**: Every skip must have a written reason, scope, and resolution plan. Quarantines need owner, exit criteria, and explicit non-governing statement.
+
+**Note**: QA-001 defines aspirational coverage targets. The governance standard defines what "verified" means. They serve different purposes.
+
+---
+
 ## Critical Workflows (QA-001)
 
 Per `docs/40-quality/QA-001-service-testing-strategy.md`, E2E tests cover **10% of total tests** focused on these critical flows:

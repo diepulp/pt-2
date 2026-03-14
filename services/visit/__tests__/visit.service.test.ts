@@ -274,7 +274,7 @@ describe('Visit HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify({ player_id: 'p1' }),
       });
@@ -287,7 +287,7 @@ describe('Visit HTTP Fetchers', () => {
       await startVisit('p1');
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
 
     it('returns existing active visit for idempotent call', async () => {
@@ -324,7 +324,7 @@ describe('Visit HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify({}),
       });
@@ -344,7 +344,7 @@ describe('Visit HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -356,7 +356,7 @@ describe('Visit HTTP Fetchers', () => {
       await closeVisit('v1');
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
 
     it('returns already closed visit for idempotent call', async () => {

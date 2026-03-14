@@ -6,8 +6,8 @@ on:
       - main
   workflow_dispatch:
 
-# Merge-safety gates only. Clean-room verification that code compiles,
-# lints clean, and builds. Tests run locally (require Supabase).
+# Merge-safety gates: compile, lint, build, and unit tests.
+# Integration tests require Supabase and run locally (gated by RUN_INTEGRATION_TESTS).
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -26,7 +26,7 @@ jobs:
           node-version-file: '.nvmrc'
           cache: 'npm'
       - name: Install
-        run: npm ci
+        run: npm install
       - name: Env drift guard
         run: |
           # Fail if the old (wrong) env var name reappears in runtime code or templates.
@@ -43,6 +43,30 @@ jobs:
         run: npm run type-check
       - name: Build
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
+
+  # Move 7 (ADR-044): Unit tests under correct node runtime.
+  # Advisory — continue-on-error until remaining 102 known failures
+  # are resolved through bounded-context rollout.
+  # See: docs/issues/gaps/testing-arch-remediation/slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+      - name: Install
+        run: npm install
+      - name: Unit Tests (node runtime)
+        run: npx jest --ci --config jest.node.config.js --maxWorkers=2
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder

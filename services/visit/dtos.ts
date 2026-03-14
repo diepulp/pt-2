@@ -148,6 +148,8 @@ export interface StartVisitResultDTO {
   resumed: boolean;
   /** Gaming day for this visit (YYYY-MM-DD) (ADR-026) */
   gamingDay: string;
+  /** Exclusion warning message for soft_alert players (ADR-042, AUDIT-C5). Null if clear. */
+  exclusionWarning: string | null;
 }
 
 // === Visit with Player Info ===

@@ -108,6 +108,17 @@ Have a subagent review the implementation for correctness beyond test cases
 
 ---
 
+## Testing Governance (ADR-044)
+
+E2E tests are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`), established by ADR-044:
+
+- **§3.6 E2E Layer**: Verify user-visible flows through a real running application. Required environment: real browser (Playwright) + running app + running Supabase.
+- **§4 Environment Contract**: E2E tests must not run under `jsdom` or `node`-only configs. Browser-driven execution is mandatory.
+- **§5 Enforcement Tier**: E2E is currently **advisory** — it does not block merge until it is CI-executed and branch-protection-required. Do not cite E2E coverage as governance-grade proof until promoted to Required tier.
+- **§2 Verification Litmus Test**: Correct environment + CI execution + branch protection enforcement. All three required.
+
+---
+
 ## PT-2 Testing Pyramid
 
 Per QA-001, E2E tests cover **10% of total tests** (critical flows only):

@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.18.0
+nsversion: 4.19.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -21,13 +21,14 @@ source_of_truth:
   - docs/80-adrs/ADR-032-frontend-error-boundary-architecture.md
   - docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md
   - docs/80-adrs/ADR-039-measurement-layer.md
+  - docs/80-adrs/ADR-042-player-exclusion-architecture.md
   - docs/archive/player-enrollment-specs/ADR-022_Player_Identity_Enrollment_ARCH_v7.md
   - docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md
 ---
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.18.0 (ADR-039: Measurement Layer — Cross-Cutting Read Models)
+> **Version**: 4.19.0 (ADR-042: Player Exclusion Architecture — Property-Scoped MVP)
 > **Date**: 2026-02-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -54,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.19.0 (2026-03-10)** – **ADR-042 Player Exclusion Architecture**: Added `player_exclusion` table to PlayerService. Source-of-truth for exclusion/ban/watchlist records. Enforcement delegated to downstream consumers (VisitService for visit creation, CasinoService for enrollment). Canonical SQL functions: `is_exclusion_active()` (active predicate), `get_player_exclusion_status()` (precedence collapse). New RPC: `rpc_get_player_exclusion_status` (SECURITY DEFINER, ADR-024). Cross-context consumption: VisitService consumes exclusion status for visit creation enforcement. Critical table designation per ADR-030 D4 (session-var-only writes). See `docs/80-adrs/ADR-042-player-exclusion-architecture.md` and `docs/21-exec-spec/EXEC-050-player-exclusion-watchlist.md`.
 - **4.18.0 (2026-03-07)** – **ADR-039 Measurement Layer**: Added Measurement Layer (Cross-Cutting Read Models) section. New columns on `rating_slip`: `legacy_theo_cents`, `computed_theo_cents` (ADR-031 cents, materialized at close by 3 RPCs). New tables in LoyaltyService: `loyalty_valuation_policy`, `loyalty_liability_snapshot`. New SECURITY DEFINER RPC: `rpc_snapshot_loyalty_liability` (ADR-024, idempotent UPSERT). 2 cross-context views: `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` (security_invoker=true, Pattern C RLS). CHECK constraint `chk_closed_slip_has_theo` (NOT VALID). See `docs/80-adrs/ADR-039-measurement-layer.md`.
 - **4.17.0 (2026-02-25)** – **PRD-038A Table Lifecycle Audit Patch**: Added `close_reason_type` enum (8 values). Added 10 columns to `table_session`: `close_reason`, `close_note`, `has_unresolved_items`, `requires_reconciliation`, `activated_by_staff_id`, `paused_by_staff_id`, `resumed_by_staff_id`, `rolled_over_by_staff_id`, `crossed_gaming_day`. CHECK constraint: `close_reason='other'` requires trimmed non-empty `close_note`. Modified `rpc_close_table_session` with close guardrail (`has_unresolved_items` check) and `close_reason`/`close_note` params. New `rpc_force_close_table_session` (SECURITY DEFINER, ADR-024): privileged close for pit_boss/admin, sets `requires_reconciliation=true`, emits `audit_log`. Extracted `_persist_inline_rundown` helper to prevent drift. `has_unresolved_items` write ownership: Finance/MTL RPCs or `service_role` only. See `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`.
 - **4.16.0 (2026-02-24)** – **PRD-038 Shift Rundown Persistence & Delta Checkpoints**: Added `table_rundown_report` and `shift_checkpoint` to TableContextService. `session_id` FK added to `table_fill` and `table_credit`. 3 new SECURITY DEFINER RPCs (ADR-024): `rpc_persist_table_rundown` (UPSERT), `rpc_finalize_rundown` (immutable stamp), `rpc_create_shift_checkpoint` (metric snapshot). Modified RPCs: `rpc_request_table_fill`, `rpc_request_table_credit` (session linkage, atomic totals, late-event detection), `rpc_close_table_session` (inline rundown persistence). Privilege posture: REVOKE ALL + GRANT SELECT on both new tables; writes via RPCs only. Pattern C hybrid RLS SELECT. See ADR-038 and `docs/10-prd/PRD-038-shift-rundown-persistence-deltas-v0.1.md`.
@@ -110,7 +112,7 @@ Approved JSON blobs (all others require first-class columns):
 | Domain           | Service                 | Owns Tables                                                                                                                | Bounded Context                                             |
 | ---------------- | ----------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
 | **Foundational** | CasinoService           | casino, casino_settings, company, staff, game_settings, audit_log, report, **player_casino**, _staff_pin_attempts_ ⁴       | Root temporal authority, global policy, & player enrollment |
-| **Identity**     | PlayerService           | player, _player_identity_ ², _player_note_ ³, _player_tag_ ³                                                               | Identity management & collaboration artifacts               |
+| **Identity**     | PlayerService           | player, **player_exclusion** ⁶, _player_identity_ ², _player_note_ ³, _player_tag_ ³                                       | Identity management & collaboration artifacts               |
 | **Analytics**    | PlayerTimelineService ³ | (read-only view across all services)                                                                                       | Unified player interaction timeline                         |
 | **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_rundown_report, shift_checkpoint | Table lifecycle & operational telemetry                     |
 | **Operational**  | FloorLayoutService      | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation                                   | Floor design & activation                                   |
@@ -126,6 +128,7 @@ Approved JSON blobs (all others require first-class columns):
 > ³ `player_note`, `player_tag`, and `PlayerTimelineService` are **planned (MVP)** per ADR-029. These enable the Player 360° Dashboard CRM timeline.
 > ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).
 > ⁵ PlayerImportService owns staging tables only. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via `rpc_import_execute` SECURITY DEFINER RPC. See ADR-036.
+> ⁶ `player_exclusion` — Source-of-truth for exclusion/ban/watchlist records (ADR-042). Critical table per ADR-030 D4 (session-var-only writes). Enforcement delegated to downstream consumers. Property-scoped MVP; company-wide deferred.
 
 ---
 
@@ -177,7 +180,7 @@ Approved JSON blobs (all others require first-class columns):
 
 ## PlayerService (Identity Context)
 
-**Owns**: `player`
+**Owns**: `player`, `player_exclusion` ⁶
 
 **Planned (MVP)** per ADR-022 v7.1: `player_identity`
 
@@ -185,7 +188,7 @@ Approved JSON blobs (all others require first-class columns):
 
 **Deferred (Post-MVP)**: `player_tax_identity`, `player_identity_scan`
 
-**Bounded Context**: "Who is this player, where are they enrolled, and what is their verified identity?"
+**Bounded Context**: "Who is this player, where are they enrolled, what is their verified identity, and are they excluded or restricted?"
 
 ### Schema Invariants (Implemented)
 
@@ -238,6 +241,13 @@ Approved JSON blobs (all others require first-class columns):
 - Standard CRUD operations via PlayerService for `player_identity`
 - Enrollment flow: player → player_casino → player_identity
 
+**MVP (ADR-042):**
+
+- Source-of-truth for exclusion/ban/watchlist records via `player_exclusion`
+- Canonical SQL functions: `is_exclusion_active()`, `get_player_exclusion_status()`
+- RPC: `rpc_get_player_exclusion_status(p_player_id)` — SECURITY DEFINER, derives casino_id from context (ADR-024)
+- Enforcement delegated to downstream consumers at their write boundaries
+
 **Deferred (Post-MVP — Tax Identity):**
 
 - `player_has_tax_id_on_file(player_id)` — Boolean contract for Finance/MTL
@@ -246,17 +256,17 @@ Approved JSON blobs (all others require first-class columns):
 
 ### Cross-Context Consumption
 
-| Consumer       | Consumes Via                                        |
-| -------------- | --------------------------------------------------- |
-| VisitService   | Player DTOs for session creation                    |
-| LoyaltyService | Player identity for rewards                         |
-| FinanceService | Player identity for transactions                    |
-| MTLService     | `player_has_tax_id_on_file` contract (**post-MVP**) |
+| Consumer       | Consumes Via                                                   |
+| -------------- | -------------------------------------------------------------- |
+| VisitService   | Player DTOs for session creation; exclusion status for visit enforcement (ADR-042) |
+| LoyaltyService | Player identity for rewards                                    |
+| FinanceService | Player identity for transactions                               |
+| MTLService     | `player_has_tax_id_on_file` contract (**post-MVP**)            |
 
 **Full Schema**: `supabase/migrations/` (search: `create table player`)
 **RLS Reference**: `docs/30-security/SEC-001-rls-policy-matrix.md#player-visit`
-**ADR**: `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md`
-**Exec Spec**: `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md`
+**ADR**: `docs/80-adrs/ADR-022_Player_Identity_Enrollment_DECISIONS.md`, `docs/80-adrs/ADR-042-player-exclusion-architecture.md`
+**Exec Spec**: `docs/20-architecture/specs/ADR-022/EXEC-SPEC-022.md`, `docs/21-exec-spec/EXEC-050-player-exclusion-watchlist.md`
 **DoD Gates**: `docs/20-architecture/specs/ADR-022/DOD-022.md`
 
 ---

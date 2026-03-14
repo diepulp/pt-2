@@ -122,6 +122,19 @@ Governance standard preventing premature abstractions. Key rules:
 - `docs/30-security/SEC-001-rls-policy-matrix.md` — RLS policy expectations per table
 - `docs/30-security/SEC-002-casino-scoped-security-model.md` — Security boundaries and guardrails
 
+## Testing Governance (ADR-044)
+
+The **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`) defines what "verified" means. Key attack surfaces for adversarial review:
+
+| ADR-044 §Reference | Challenge Pattern |
+|---------------------|-------------------|
+| §6 Green CI Semantics | Is "green CI" claimed when only static checks pass? Challenge: compile-green ≠ functionally verified. |
+| §9 Shallow Test Policy | Are route-handler tests mock-everything/existence-only? Challenge: these are smoke at best, not verification. |
+| §10 Script Truthfulness | Does `test:ci` silently exclude test categories? Challenge: hidden exclusions are prohibited. |
+| §5 Enforcement Tiers | Is a test layer presented as Required but not in branch protection? Challenge: advisory ≠ governance. |
+| §8 Minimum Merge Gate | Are only static checks required? Challenge: governance-deficient posture. |
+| §12 Change-Control | Does a PR touch test infra without 6-point disclosure? Challenge: silent amputation. |
+
 ## Error Taxonomy
 
 - `docs/70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` — Standard error codes and resilience patterns

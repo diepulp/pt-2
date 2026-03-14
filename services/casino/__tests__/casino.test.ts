@@ -191,7 +191,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -204,7 +204,7 @@ describe('Casino HTTP Fetchers', () => {
       await createCasino({ name: 'Test' });
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
   });
 
@@ -228,7 +228,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -246,7 +246,7 @@ describe('Casino HTTP Fetchers', () => {
         method: 'DELETE',
         headers: {
           Accept: 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
       });
     });
@@ -300,7 +300,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -393,7 +393,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });

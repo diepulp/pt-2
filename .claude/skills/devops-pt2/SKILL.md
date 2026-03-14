@@ -18,6 +18,19 @@ DevOps and infrastructure specialist for the PT-2 casino pit management system.
 | CI/CD | GitHub Actions | v4 |
 | Package Manager | npm | 10.x |
 
+## Testing Governance (ADR-044)
+
+CI/CD and branch protection are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`), established by ADR-044:
+
+- **§7 Branch Protection**: `main` must be protected — all changes via PR, required status checks, 1+ review, up-to-date branch, force push/deletion blocked. Non-negotiable.
+- **§8 Minimum Merge Gate**: Must include static checks (lint + type-check + build) AND at least one functional test layer. Compile-only gates are governance-deficient.
+- **§6 Green CI Semantics**: "Green CI" means all required checks passed. "Compile green" means lint/type-check/build only. Never claim runtime verification from static-only gates.
+- **§5 Enforcement Tiers**: A CI job is Required only when listed in branch-protection required checks. Otherwise it is Advisory — useful but non-governing.
+- **§7 Ordering Rule**: Enable branch protection FIRST, then add CI test jobs, then mark as required. Reversing this creates governance illusion.
+- **§12 Change-Control**: PRs modifying CI workflows, test scripts, or branch protection must include a 6-point disclosure (what changed, why, layers affected, confidence impact, compensating control, exit criteria).
+
+---
+
 ## Task Workflows
 
 Select the appropriate workflow based on the task at hand.

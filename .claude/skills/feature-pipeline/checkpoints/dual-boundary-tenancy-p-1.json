@@ -1,0 +1,16 @@
+{
+  "feature_id": "dual-boundary-tenancy-p-1",
+  "current_phase": 0,
+  "status": "initialized",
+  "gates_passed": [],
+  "gates_pending": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "artifacts": {
+    "feature_boundary": null,
+    "scaffold": null,
+    "design_brief": null,
+    "sec_note": null,
+    "adr": null,
+    "prd": null
+  },
+  "timestamp": "2026-03-09T00:00:00Z"
+}

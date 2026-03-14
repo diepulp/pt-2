@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * rpc_bootstrap_casino Abuse-Case Tests (PRD-034 WS6)
  *

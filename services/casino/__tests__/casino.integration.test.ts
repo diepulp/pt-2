@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Casino Service Integration Tests
  *
@@ -12,11 +14,16 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@/types/database.types';
 
+// Integration gate: skip when RUN_INTEGRATION_TESTS is unset
+const describeIntegration = process.env.RUN_INTEGRATION_TESTS
+  ? describe
+  : describe.skip;
+
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-describe('Casino Service Integration Tests', () => {
+describeIntegration('Casino Service Integration Tests', () => {
   let supabase: SupabaseClient<Database>;
   let testCompanyId: string;
   let testCasinoId: string;
@@ -145,7 +152,7 @@ describe('Casino Service Integration Tests', () => {
 
     it('handles non-existent casino (CASINO_SETTINGS_NOT_FOUND error)', async () => {
       const fakeUUID = '00000000-0000-0000-0000-000000000000';
-      const { data, error } = await supabase.rpc('compute_gaming_day', {
+      const { error } = await supabase.rpc('compute_gaming_day', {
         p_casino_id: fakeUUID,
         p_timestamp: '2025-01-15T14:00:00Z',
       });
@@ -361,7 +368,7 @@ describe('Casino Service Integration Tests', () => {
     });
 
     it('rejects dealer with user_id (23514 check constraint)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'Dealer',
         role: 'dealer',
@@ -375,7 +382,7 @@ describe('Casino Service Integration Tests', () => {
     });
 
     it('rejects pit_boss without user_id (23514)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'PitBoss',
         role: 'pit_boss',
@@ -389,7 +396,7 @@ describe('Casino Service Integration Tests', () => {
     });
 
     it('rejects admin without user_id (23514)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'Admin',
         role: 'admin',

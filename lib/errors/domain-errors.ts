@@ -281,7 +281,10 @@ export type PlayerErrorCode =
   | 'PLAYER_NOT_ENROLLED'
   | 'PLAYER_ENROLLMENT_DUPLICATE'
   | 'PLAYER_SUSPENDED'
-  | 'PLAYER_SELF_EXCLUDED';
+  | 'PLAYER_SELF_EXCLUDED'
+  | 'PLAYER_EXCLUDED'
+  | 'PLAYER_EXCLUSION_NOT_FOUND'
+  | 'PLAYER_EXCLUSION_ALREADY_LIFTED';
 
 export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_NOT_FOUND: 'Player not found',
@@ -290,6 +293,9 @@ export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_ENROLLMENT_DUPLICATE: 'Player is already enrolled at this casino',
   PLAYER_SUSPENDED: 'Player account is suspended',
   PLAYER_SELF_EXCLUDED: 'Player is self-excluded',
+  PLAYER_EXCLUDED: 'Player has an active exclusion',
+  PLAYER_EXCLUSION_NOT_FOUND: 'Exclusion record not found',
+  PLAYER_EXCLUSION_ALREADY_LIFTED: 'Exclusion has already been lifted',
 };
 
 // ============================================================================

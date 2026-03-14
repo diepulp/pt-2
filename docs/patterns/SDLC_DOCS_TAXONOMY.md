@@ -52,9 +52,9 @@ This guide defines **what belongs where**, **why it exists**, and **who owns it*
 **Docs:** Release Notes, Rollout Plan, Backout Plan.
 
 ### Governance & Process (GOV)
-**What:** SDLC policy, coding standards, anti‑patterns, contribution guide.  
-**Why:** Consistency and maintainability.  
-**Docs:** SDLC Policy, Over‑engineering Guardrails, FE Standards, Contribution Guide.
+**What:** SDLC policy, coding standards, anti‑patterns, contribution guide, testing governance.
+**Why:** Consistency, maintainability, and enforceable quality posture.
+**Docs:** SDLC Policy, Over‑engineering Guardrails, FE Standards, Testing Governance Standard (ADR-044), Contribution Guide.
 
 ---
 
@@ -85,8 +85,9 @@ Legend: ✅ primary; ◻️ optional/supporting.
 - **SRM (canonical)** → **ARCH** (matrix-first contract; mirrored by schema & RLS).  
 - **Edge transport & middleware contract (`withServerAction`, header policy)** → **ARCH** (policy) + **API/DATA** (DTO/zod catalog).  
 - **Service layer isolation & CQRS light (DTO-only APIs, projections)** → **ARCH** (policy) with supporting ADR references; API consumers reference service DTO catalogs.
-- **Front-end standards, Over-engineering guardrails** → **GOV**.  
-- **`database.types.ts`, OpenAPI** → **API/DATA**.  
+- **Front-end standards, Over-engineering guardrails** → **GOV**.
+- **Testing Governance Standard (ADR-044)** → **GOV** (dual-artifact: ADR-044 records the decision, `TESTING_GOVERNANCE_STANDARD.md` defines operational rules for test taxonomy, enforcement tiers, CI semantics, and branch protection).
+- **`database.types.ts`, OpenAPI** → **API/DATA**.
 - **RLS/RBAC matrix** → **SEC/RBAC**.  
 - **Observability spec, runbooks** → **OPS/SRE**.
 
@@ -159,7 +160,8 @@ last_review: 2025-11-15
 - “How should bounded contexts talk?” → **ARCH → SRM**.  
 - “What are the endpoints/contracts?” → **API/DATA**.  
 - “Who can read/write this table?” → **SEC/RBAC**.  
-- “What tests must pass before merge?” → **DEL/QA**.  
+- “What tests must pass before merge?” → **DEL/QA**.
+- “What counts as governance-grade verification?” → **GOV → Testing Governance Standard** (ADR-044).
 - “How do we debug this in prod?” → **OPS/SRE Runbooks**.  
 - “How do we ship safely?” → **REL/CHANGE**.  
 - “Stop over‑engineering!” → **GOV → Guardrails**.
