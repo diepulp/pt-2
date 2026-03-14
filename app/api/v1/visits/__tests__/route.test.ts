@@ -158,8 +158,11 @@ describe('POST /api/v1/visits', () => {
       ok: true,
       code: 'OK',
       data: expect.objectContaining({
-        id: expect.any(String),
-        player_id: expect.any(String),
+        isNew: true,
+        visit: expect.objectContaining({
+          id: expect.any(String),
+          player_id: expect.any(String),
+        }),
       }),
     });
   });

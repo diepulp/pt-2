@@ -53,6 +53,7 @@ const mockSecurityTestResponse = {
   slip: {
     id: SLIP_ID,
     visitId: 'visit-uuid',
+    casinoId: CASINO_A_ID,
     tableId: 'table-uuid',
     tableLabel: 'Table 1',
     tableType: 'blackjack',
@@ -115,7 +116,6 @@ describe('RPC Security - Cross-Casino Isolation', () => {
       'rpc_get_rating_slip_modal_data',
       {
         p_slip_id: SLIP_ID,
-        p_casino_id: CASINO_A_ID,
       },
     );
   });

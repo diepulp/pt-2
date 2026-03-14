@@ -43,6 +43,9 @@ const AUTH_CHAIN_ALLOWLIST: Record<string, string> = {
     'Legacy route — RLS-only, no compositor (v0.2 migration)',
   'app/api/v1/loyalty/mid-session-reward/route.ts':
     'Legacy route — RLS-only, no compositor (v0.2 migration)',
+  // Dev-only stubbed server actions — no auth, no RLS, no Supabase calls
+  'app/dev/setup/_dev-actions.ts':
+    'Dev wizard stubs — mock data only, no real DB or auth',
 };
 
 /** Patterns indicating the file uses the auth middleware chain */

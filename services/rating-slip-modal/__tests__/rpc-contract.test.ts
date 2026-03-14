@@ -63,6 +63,7 @@ const mockCompleteRpcResponse = {
   slip: {
     id: SLIP_ID,
     visitId: VISIT_ID,
+    casinoId: CASINO_ID,
     tableId: TABLE_ID,
     tableLabel: 'Table 5',
     tableType: 'blackjack',
@@ -101,6 +102,7 @@ const mockCompleteRpcResponse = {
       type: 'blackjack',
       status: 'active',
       occupiedSeats: ['2', '5'],
+      seatsAvailable: 7,
     },
     {
       id: 'table-2-uuid',
@@ -108,6 +110,7 @@ const mockCompleteRpcResponse = {
       type: 'roulette',
       status: 'active',
       occupiedSeats: ['1', '3', '7'],
+      seatsAvailable: 8,
     },
     {
       id: 'table-3-uuid',
@@ -115,6 +118,7 @@ const mockCompleteRpcResponse = {
       type: 'baccarat',
       status: 'active',
       occupiedSeats: [],
+      seatsAvailable: 7,
     },
   ],
 };
@@ -130,6 +134,7 @@ describe('RPC Contract - SlipSectionDTO', () => {
     const expectedSlip: SlipSectionDTO = {
       id: SLIP_ID,
       visitId: VISIT_ID,
+      casinoId: CASINO_ID,
       tableId: TABLE_ID,
       tableLabel: 'Table 5',
       tableType: 'blackjack',
@@ -488,6 +493,7 @@ describe('RPC Contract - TableOptionDTO Array', () => {
         type: 'blackjack',
         status: 'active',
         occupiedSeats: ['2', '5'],
+        seatsAvailable: 7,
       },
       {
         id: 'table-2-uuid',
@@ -495,6 +501,7 @@ describe('RPC Contract - TableOptionDTO Array', () => {
         type: 'roulette',
         status: 'active',
         occupiedSeats: ['1', '3', '7'],
+        seatsAvailable: 8,
       },
       {
         id: 'table-3-uuid',
@@ -502,6 +509,7 @@ describe('RPC Contract - TableOptionDTO Array', () => {
         type: 'baccarat',
         status: 'active',
         occupiedSeats: [],
+        seatsAvailable: 7,
       },
     ];
 
@@ -521,6 +529,7 @@ describe('RPC Contract - TableOptionDTO Array', () => {
       expect(typeof table.type).toBe('string');
       expect(typeof table.status).toBe('string');
       expect(Array.isArray(table.occupiedSeats)).toBe(true);
+      expect(typeof table.seatsAvailable).toBe('number');
       table.occupiedSeats.forEach((seat) => {
         expect(typeof seat).toBe('string');
       });
@@ -560,6 +569,7 @@ describe('RPC Contract - TableOptionDTO Array', () => {
           type: 'blackjack',
           status: 'active',
           occupiedSeats: ['1', '2', '3', '4', '5', '6', '7'],
+          seatsAvailable: 7,
         },
       ],
     };
@@ -688,6 +698,7 @@ describe('RPC Contract - Edge Cases', () => {
       slip: {
         id: SLIP_ID,
         visitId: VISIT_ID,
+        casinoId: CASINO_ID,
         tableId: TABLE_ID,
         tableLabel: 'Table 1',
         tableType: 'blackjack',
@@ -732,6 +743,7 @@ describe('RPC Contract - Edge Cases', () => {
           occupiedSeats: Array(7)
             .fill(null)
             .map((_, s) => String(s + 1)),
+          seatsAvailable: 7,
         })),
     };
     const supabase = createMockSupabaseWithRpc(maximalResponse);

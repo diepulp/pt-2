@@ -42,7 +42,7 @@ jest.mock('@/lib/server-actions/middleware', () => ({
           select: jest.fn(() => ({
             limit: jest.fn(() => ({
               single: jest.fn().mockResolvedValue({
-                data: { casino_id: 'casino-1' },
+                data: { id: 'staff-1', casino_id: 'casino-1' },
                 error: null,
               }),
             })),
@@ -71,6 +71,17 @@ jest.mock('@/services/player', () => ({
       enrolledAt: new Date().toISOString(),
     }),
   })),
+}));
+
+// Mock casino CRUD (enrollPlayer uses RPC call)
+jest.mock('@/services/casino/crud', () => ({
+  enrollPlayer: jest.fn().mockResolvedValue({
+    player_id: '123e4567-e89b-12d3-a456-426614174000',
+    casino_id: 'casino-1',
+    status: 'active',
+    enrolled_at: new Date().toISOString(),
+    enrolled_by: 'staff-1',
+  }),
 }));
 
 const VALID_PLAYER_ID = '123e4567-e89b-12d3-a456-426614174000';
@@ -115,8 +126,8 @@ describe('POST /api/v1/players/[playerId]/enroll', () => {
       ok: true,
       code: 'OK',
       data: expect.objectContaining({
-        playerId: VALID_PLAYER_ID,
-        casinoId: expect.any(String),
+        player_id: VALID_PLAYER_ID,
+        casino_id: expect.any(String),
       }),
     });
   });

@@ -27,9 +27,25 @@ jest.mock('@/lib/server-actions/middleware', () => ({
     handler({
       supabase: {},
       correlationId: 'test-correlation-id',
-      rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
+      rlsContext: {
+        casinoId: 'casino-1',
+        actorId: 'actor-1',
+        staffRole: 'pit_boss',
+      },
     }),
   ),
+}));
+
+// Mock MTL service to avoid real Supabase calls inside handler
+jest.mock('@/services/mtl', () => ({
+  createMtlService: jest.fn(() => ({
+    createAuditNote: jest.fn().mockResolvedValue({
+      id: 'note-1',
+      mtl_entry_id: '123e4567-e89b-12d3-a456-426614174000',
+      staff_id: '123e4567-e89b-12d3-a456-426614174001',
+      note: 'Test audit note',
+    }),
+  })),
 }));
 
 describe('POST /api/v1/mtl/entries/[entryId]/audit-notes', () => {
@@ -56,7 +72,7 @@ describe('POST /api/v1/mtl/entries/[entryId]/audit-notes', () => {
     expect(response.status).toBe(400);
   });
 
-  it('returns 200 on successful creation', async () => {
+  it('returns 201 on successful creation', async () => {
     const entryId = '123e4567-e89b-12d3-a456-426614174000';
     const request = createMockRequest(
       'POST',
@@ -77,7 +93,7 @@ describe('POST /api/v1/mtl/entries/[entryId]/audit-notes', () => {
     const response = await POST(request, routeParams);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(body).toMatchObject({
       ok: true,
       code: 'OK',
@@ -106,7 +122,7 @@ describe('POST /api/v1/mtl/entries/[entryId]/audit-notes', () => {
 
     const response = await POST(request, routeParams);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 
   it('validates note is non-empty', async () => {
@@ -129,6 +145,6 @@ describe('POST /api/v1/mtl/entries/[entryId]/audit-notes', () => {
 
     const response = await POST(request, routeParams);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 });

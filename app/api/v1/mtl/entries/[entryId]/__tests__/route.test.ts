@@ -27,9 +27,26 @@ jest.mock('@/lib/server-actions/middleware', () => ({
     handler({
       supabase: {},
       correlationId: 'test-correlation-id',
-      rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
+      rlsContext: {
+        casinoId: 'casino-1',
+        actorId: 'actor-1',
+        staffRole: 'pit_boss',
+      },
     }),
   ),
+}));
+
+// Mock MTL service to avoid real Supabase calls inside handler
+jest.mock('@/services/mtl', () => ({
+  createMtlService: jest.fn(() => ({
+    getEntryById: jest.fn().mockResolvedValue({
+      id: '123e4567-e89b-12d3-a456-426614174000',
+      casino_id: 'casino-1',
+      amount: 5000,
+      direction: 'in',
+      audit_notes: [],
+    }),
+  })),
 }));
 
 describe('GET /api/v1/mtl/entries/[entryId]', () => {

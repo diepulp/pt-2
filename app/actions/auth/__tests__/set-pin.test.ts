@@ -23,20 +23,18 @@ jest.mock('bcryptjs', () => ({
 const { setPinAction } = require('../set-pin');
 
 describe('setPinAction', () => {
-  const mockUpdate = jest.fn();
+  const mockRpc = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockUpdate.mockReturnValue({
-      eq: jest.fn().mockResolvedValue({ error: null }),
-    });
+    mockRpc.mockResolvedValue({ error: null });
 
     mockWithServerAction.mockImplementation(
       async (_supabase: unknown, handler: (...args: unknown[]) => unknown) => {
         const mwCtx = {
           supabase: {
-            from: () => ({ update: mockUpdate }),
+            rpc: mockRpc,
           },
           correlationId: 'test-corr-id',
           startedAt: Date.now(),
@@ -94,20 +92,13 @@ describe('setPinAction', () => {
     expect(bcrypt.hash).toHaveBeenCalledWith('5739', 10);
   });
 
-  it('returns UNAUTHORIZED when no staff context', async () => {
-    mockWithServerAction.mockImplementation(
-      async (_supabase: unknown, handler: (...args: unknown[]) => unknown) => {
-        return handler({
-          supabase: {},
-          correlationId: 'test',
-          startedAt: Date.now(),
-          rlsContext: undefined,
-        });
-      },
-    );
+  it('returns PIN_SET_FAILED when RPC fails (e.g. no staff context)', async () => {
+    mockRpc.mockResolvedValue({
+      error: { message: 'UNAUTHORIZED: RLS context not set' },
+    });
 
     const result = await setPinAction('5739');
     expect(result.ok).toBe(false);
-    expect(result.code).toBe('UNAUTHORIZED');
+    expect(result.code).toBe('PIN_SET_FAILED');
   });
 });
