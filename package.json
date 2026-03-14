@@ -166,5 +166,8 @@
   },
   "optionalDependencies": {
     "tree-sitter": "0.22.4"
+  },
+  "overrides": {
+    "tree-sitter": "0.22.4"
   }
 }
