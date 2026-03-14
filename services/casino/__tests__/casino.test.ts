@@ -180,13 +180,7 @@ describe('Casino HTTP Fetchers', () => {
       created_at: '2025-01-01T00:00:00Z',
     };
 
-    // SKIP: Pre-existing failure — http.ts changed header casing from
-    // 'idempotency-key' to 'Idempotency-Key'. Test expectations are stale.
-    // Scope: This test case only.
-    // Exit criteria: Update expected header casing to 'Idempotency-Key' in all
-    // affected test expectations.
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('creates casino with POST request', async () => {
+    it('creates casino with POST request', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
 
       const input = { name: 'New Casino', location: 'Atlantic City' };
@@ -197,22 +191,20 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
       expect(result).toEqual(mockCasino);
     });
 
-    // SKIP: Pre-existing failure — stale header casing (see createCasino skip above).
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('includes idempotency key header', async () => {
+    it('includes idempotency key header', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
 
       await createCasino({ name: 'Test' });
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
   });
 
@@ -225,10 +217,7 @@ describe('Casino HTTP Fetchers', () => {
       created_at: '2025-01-01T00:00:00Z',
     };
 
-    // SKIP: Pre-existing failure — stale header casing 'idempotency-key' vs 'Idempotency-Key'.
-    // Exit criteria: Update expected header to 'Idempotency-Key'.
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('updates casino with PATCH request', async () => {
+    it('updates casino with PATCH request', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(mockCasino));
 
       const input = { name: 'Updated Casino' };
@@ -239,7 +228,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -248,10 +237,7 @@ describe('Casino HTTP Fetchers', () => {
   });
 
   describe('deleteCasino', () => {
-    // SKIP: Pre-existing failure — stale header casing 'idempotency-key' vs 'Idempotency-Key'.
-    // Exit criteria: Update expected header to 'Idempotency-Key'.
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('deletes casino with DELETE request', async () => {
+    it('deletes casino with DELETE request', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(undefined));
 
       await deleteCasino('1');
@@ -260,7 +246,7 @@ describe('Casino HTTP Fetchers', () => {
         method: 'DELETE',
         headers: {
           Accept: 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
       });
     });
@@ -300,10 +286,7 @@ describe('Casino HTTP Fetchers', () => {
       updated_at: '2026-01-01T00:00:00Z',
     };
 
-    // SKIP: Pre-existing failure — stale header casing 'idempotency-key' vs 'Idempotency-Key'.
-    // Exit criteria: Update expected header to 'Idempotency-Key'.
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('updates casino settings with PATCH request', async () => {
+    it('updates casino settings with PATCH request', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(mockSettings));
 
       const input = {
@@ -317,7 +300,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -392,10 +375,7 @@ describe('Casino HTTP Fetchers', () => {
       casino_id: 'casino-1',
     };
 
-    // SKIP: Pre-existing failure — stale header casing 'idempotency-key' vs 'Idempotency-Key'.
-    // Exit criteria: Update expected header to 'Idempotency-Key'.
-    // Ref: TESTING_GOVERNANCE_STANDARD §11
-    it.skip('creates staff with POST request', async () => {
+    it('creates staff with POST request', async () => {
       mockFetch.mockResolvedValue(createSuccessResponse(mockStaff));
 
       const input = {
@@ -413,7 +393,7 @@ describe('Casino HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });

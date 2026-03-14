@@ -136,7 +136,7 @@ describeIntegration('Casino Service Integration Tests', () => {
 
     it('handles non-existent casino (CASINO_SETTINGS_NOT_FOUND error)', async () => {
       const fakeUUID = '00000000-0000-0000-0000-000000000000';
-      const { data, error } = await supabase.rpc('compute_gaming_day', {
+      const { error } = await supabase.rpc('compute_gaming_day', {
         p_casino_id: fakeUUID,
         p_timestamp: '2025-01-15T14:00:00Z',
       });
@@ -337,7 +337,7 @@ describeIntegration('Casino Service Integration Tests', () => {
     });
 
     it('rejects dealer with user_id (23514 check constraint)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'Dealer',
         role: 'dealer',
@@ -351,7 +351,7 @@ describeIntegration('Casino Service Integration Tests', () => {
     });
 
     it('rejects pit_boss without user_id (23514)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'PitBoss',
         role: 'pit_boss',
@@ -365,7 +365,7 @@ describeIntegration('Casino Service Integration Tests', () => {
     });
 
     it('rejects admin without user_id (23514)', async () => {
-      const { data, error } = await supabase.from('staff').insert({
+      const { error } = await supabase.from('staff').insert({
         first_name: 'Test',
         last_name: 'Admin',
         role: 'admin',

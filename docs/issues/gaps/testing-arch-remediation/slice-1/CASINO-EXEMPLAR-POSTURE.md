@@ -2,6 +2,7 @@
 
 **Verification Tier:** Trusted-Local (S5)
 **Achieved:** 2026-03-13
+**Validated:** 2026-03-14
 **Governance:** ADR-044, TESTING_GOVERNANCE_STANDARD.md
 **Issue:** ISSUE-C4D2AA48
 
@@ -23,8 +24,8 @@
 | `service.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Healthy | Service factory delegation. Interface contract, error propagation. |
 | `settings-route.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Healthy | Schema + DTO type checks for alert_thresholds, `.loose()` regression guard. |
 | `onboarding-rpc-contract.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Healthy | Compile-time type assertions: RPC args/returns vs Database types. |
-| `crud.unit.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Degraded | 1 test skipped (see Skip Registry). 31/32 tests passing. |
-| `casino.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Degraded | 6 tests skipped (see Skip Registry). HTTP fetcher URL/header assertions. |
+| `crud.unit.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Healthy | 32/32 tests passing. Error code mapping, role constraints, claims mock applied. |
+| `casino.test.ts` | Server-Unit (S3.3) | node | Trusted-Local | Healthy | 28/28 tests passing. HTTP fetcher URL construction, header contract (Idempotency-Key), error handling. |
 | `gaming-day-boundary.int.test.ts` | Server-Unit (S3.3) | integration | Trusted-Local | Healthy | Misnamed as `.int.test.ts` but uses mocked RPCs. Temporal contract edge cases. |
 | `rpc-create-staff.int.test.ts` | Server-Unit (S3.3) | integration | Trusted-Local | Healthy | Misnamed as `.int.test.ts`. Compile-time RPC type contract, ADR-024 compliance. |
 | `rpc-bootstrap-casino-abuse.int.test.ts` | Server-Unit (S3.3) | integration | Trusted-Local | Healthy | Misnamed as `.int.test.ts`. Compile-time type + abuse-case documentation. |
@@ -42,26 +43,35 @@
 | Node config files | 14 |
 | Integration config files | 6 |
 | Config overlap | 0 |
-| Healthy files | 17 |
-| Degraded files | 2 (7 skipped tests total) |
+| Healthy files | 19 |
+| Degraded files | 0 |
 | Compromised/Advisory files | 1 (http-contract.test.ts, reclassified as smoke) |
-| Total tests | 451 (348 node + 96 integration + 7 skipped) |
+| Total tests passing | 355 (node) + 96 (integration without Supabase) |
+| Skipped tests | 0 |
 
 ---
 
 ## Skip Registry (S11)
 
-| File | Test | Reason | Exit Criteria |
-|------|------|--------|---------------|
-| `crud.unit.test.ts` | `creates pit_boss with user_id` | `createStaff` now calls `reconcileStaffClaims` internally, which invokes `syncUserRLSClaims` -> `auth.admin.updateUserById` with non-UUID mock value. Missing mock. | Add `jest.mock('@/lib/supabase/claims-reconcile')` to this file (matching `bootstrap.test.ts` pattern). |
-| `casino.test.ts` | `creates casino with POST request` | `http.ts` changed header casing from `idempotency-key` to `Idempotency-Key`. Stale test expectations. | Update expected header casing to `Idempotency-Key` in all 6 affected assertions. |
-| `casino.test.ts` | `includes idempotency key header` | Same header casing issue. | Same fix as above. |
-| `casino.test.ts` | `updates casino with PATCH request` | Same header casing issue. | Same fix as above. |
-| `casino.test.ts` | `deletes casino with DELETE request` | Same header casing issue. | Same fix as above. |
-| `casino.test.ts` | `updates casino settings with PATCH request` | Same header casing issue. | Same fix as above. |
-| `casino.test.ts` | `creates staff with POST request` | Same header casing issue. | Same fix as above. |
+**Empty.** All 7 previously-skipped tests were resolved during validation (2026-03-14):
 
-All 7 skipped tests are **pre-existing failures** that existed before Slice One. None were introduced by the testing governance remediation.
+| File | Tests Resolved | Root Cause | Fix Applied |
+|------|---------------|------------|-------------|
+| `crud.unit.test.ts` | 1 | Missing `reconcileStaffClaims` mock (ADR-030 WS3) | Added `jest.mock('@/lib/supabase/claims-reconcile')` |
+| `casino.test.ts` | 6 | Header casing drift: `'idempotency-key'` → `'Idempotency-Key'` (IETF title case, `lib/http/headers.ts:14`) | Updated 6 test expectations to `'Idempotency-Key'` |
+
+---
+
+## Effectiveness Classification
+
+Validation report (`CASINO-EXEMPLAR-VALIDATION-REPORT.md`) classified all 20 files:
+
+| Classification | Count | Files |
+|---------------|-------|-------|
+| **Effective** | 15 | schemas, mappers, keys, crud.unit, bootstrap, gaming-day, gaming-day-boundary.int, game-settings, invite, settings-route, onboarding-rpc-contract, rpc-create-staff.int, rpc-bootstrap-casino-abuse.int, rpc-accept-staff-invite-abuse.int, settings-route-boundary |
+| **Partially Effective** | 3 | casino (URL/header real, pass-through theatre), service (delegation theatre, error propagation real), casino.integration (real Supabase, no cross-tenant isolation) |
+| **Theatre** | 1 | http-contract (correctly reclassified as Smoke §9.2) |
+| **Exemplar** | 1 | setup-wizard-rpc.int (frozen canary) |
 
 ---
 
@@ -88,17 +98,16 @@ across tenants.
 
 ---
 
-## Pre-Existing TypeScript Diagnostics
+## TypeScript Diagnostics
 
-The following IDE-reported diagnostics exist in Casino test files. All are pre-existing — none were introduced by the remediation (which only added `/** @jest-environment node */` comment directives).
+**Corrected 2026-03-14.** The original posture doc incorrectly characterized TS2322 errors as
+"schema drift" detected by type-contract tests. Investigation proved this was wrong:
 
-| Diagnostic | Files | Root Cause |
-|------------|-------|------------|
-| TS2307: Cannot find module `@/types/database.types` | `casino.integration`, `gaming-day-boundary.int`, `rpc-*.int` | `@/` path alias not resolved by IDE in test files. Jest resolves via `moduleNameMapper`. Runtime-correct. |
-| TS2322: Type `true` not assignable to type `never` | `rpc-accept-staff-invite-abuse.int`, `rpc-bootstrap-casino-abuse.int`, `rpc-create-staff.int` | Stale type assertions against regenerated `database.types.ts`. Tests compile-check RPC signatures that have drifted. |
-| TS6133: `data` declared but never read | `casino.integration` (lines 139, 340, 354, 368) | Unused destructured variables in test setup. |
-
-These are **not governance defects** — they are pre-existing type drift in test fixtures. The TS2322 errors in the RPC abuse files indicate the type contracts have drifted from the current schema, which is useful signal (the tests are correctly detecting drift, even if they don't compile cleanly).
+| Diagnostic | Files | Root Cause | Status |
+|------------|-------|------------|--------|
+| TS2307: Cannot find module `@/types/database.types` | `casino.integration`, `gaming-day-boundary.int`, `rpc-*.int` | `@/` path alias resolved by Jest `moduleNameMapper` but not by standalone `tsc`. Runtime-correct. | **Not a defect** |
+| TS2322: Type `true` not assignable to `never` | `rpc-accept-staff-invite-abuse.int`, `rpc-bootstrap-casino-abuse.int`, `rpc-create-staff.int` | **Cascading artifact of TS2307.** When module is unresolvable, `Database` type is opaque, all conditional types evaluate to `never`. Under `tsconfig.json` (`tsc --noEmit -p tsconfig.json`): **zero errors.** RPC signatures match `database.types.ts` exactly. **No schema drift exists.** | **False positive — no action needed** |
+| TS6133: `data` declared but never read | `casino.integration` (4 instances) | Unused destructured variables in negative-path tests. | **Fixed** (removed unused bindings) |
 
 ---
 
@@ -127,19 +136,23 @@ Casino meets S7 criterion 2: "At least one bounded context has achieved Trusted-
 | S7 Criterion | Status |
 |-------------|--------|
 | 1. Jest environments correctly split | Met (Slice One) |
-| 2. At least one context Trusted-Local | **Met (Casino)** |
+| 2. At least one context Trusted-Local | **Met (Casino — 355/355, 0 skips)** |
 | 3. Unit test execution in CI (advisory) | Not yet |
 | 4. Stable signal observation period | Not yet |
+| 5. Governance effectiveness validated | **Met (see Validation Report)** |
 
 ---
 
 ## Verification Commands
 
 ```bash
-# Node-config unit tests (14 files, 348 passing, 7 skipped)
+# Node-config unit tests (14 files, 355 passing, 0 skipped)
 npx jest --config jest.node.config.js --testPathPatterns='services/casino/__tests__/.*\.test\.ts$'
 
-# Integration tests without live Supabase (5 files pass, 1 skipped)
+# Full casino slice (convenience script)
+npm run test:slice:casino
+
+# Integration tests without live Supabase (5 files pass, 1 gated)
 npx jest --config jest.integration.config.js --testPathPatterns='services/casino/'
 
 # Integration tests with live Supabase (requires running instance)

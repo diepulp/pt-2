@@ -269,7 +269,7 @@ describe('Player HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -282,7 +282,7 @@ describe('Player HTTP Fetchers', () => {
       await createPlayer({ first_name: 'Test', last_name: 'User' });
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
   });
 
@@ -310,7 +310,7 @@ describe('Player HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify(input),
       });
@@ -323,7 +323,7 @@ describe('Player HTTP Fetchers', () => {
       await updatePlayer('p1', { last_name: 'Smith' });
 
       const callArgs = mockFetch.mock.calls[0];
-      expect(callArgs[1].headers['idempotency-key']).toBe('test-uuid-12345');
+      expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
     });
   });
 
@@ -349,7 +349,7 @@ describe('Player HTTP Fetchers', () => {
         headers: {
           Accept: 'application/json',
           'content-type': 'application/json',
-          'idempotency-key': 'test-uuid-12345',
+          'Idempotency-Key': 'test-uuid-12345',
         },
         body: JSON.stringify({}),
       });

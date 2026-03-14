@@ -54,9 +54,11 @@
 
 | Config | Files | Tests Passing | Tests Skipped | Exit Code |
 |--------|-------|---------------|---------------|-----------|
-| Node (`test:slice:casino`) | 14 | 348 | 7 | 0 |
+| Node (`test:slice:casino`) | 14 | 355 | 0 | 0 |
 | Integration (without Supabase) | 5 + 1 skipped | 75 | 21 | 0 |
 | Config overlap | 0 | — | — | — |
+
+*Updated 2026-03-14: 7 previously-skipped tests resolved (header casing + claims mock fixes).*
 
 ---
 
@@ -84,15 +86,15 @@ All 7 skipped tests are **pre-existing failures**. None introduced by this remed
 
 ---
 
-## Pre-Existing TypeScript Diagnostics
+## Pre-Existing TypeScript Diagnostics (Corrected 2026-03-14)
 
-| Diagnostic | Files | Root Cause |
-|------------|-------|------------|
-| TS2307: Cannot find module `@/types/database.types` | `casino.integration`, `gaming-day-boundary.int`, `rpc-*.int` | `@/` path alias resolved by Jest `moduleNameMapper`, not IDE. Runtime-correct. |
-| TS2322: Type `true` not assignable to `never` | `rpc-accept-staff-invite-abuse.int`, `rpc-bootstrap-casino-abuse.int`, `rpc-create-staff.int` | Stale type assertions against regenerated `database.types.ts`. Tests detecting real drift. |
-| TS6133: `data` declared but never read | `casino.integration` (4 instances) | Unused destructured variables in test setup. |
+| Diagnostic | Files | Root Cause | Status |
+|------------|-------|------------|--------|
+| TS2307: Cannot find module `@/types/database.types` | `casino.integration`, `gaming-day-boundary.int`, `rpc-*.int` | `@/` path alias resolved by Jest `moduleNameMapper`, not IDE. Runtime-correct. | Not a defect |
+| TS2322: Type `true` not assignable to `never` | `rpc-accept-staff-invite-abuse.int`, `rpc-bootstrap-casino-abuse.int`, `rpc-create-staff.int` | **False positive.** Cascades from TS2307 — when module is unresolvable, `Database` is opaque and all conditional types evaluate to `never`. Under `tsconfig.json`: zero errors. RPC signatures match `database.types.ts` exactly. No schema drift exists. | No action needed |
+| TS6133: `data` declared but never read | `casino.integration` (4 instances) | Unused destructured variables in negative-path tests. | **Fixed** (bindings removed) |
 
-Not governance defects. The TS2322 errors are the type-contract tests doing their job — detecting schema drift.
+**Correction:** The original summary characterized TS2322 as "type-contract tests detecting real drift." Investigation (2026-03-14) proved this wrong — all TS2322 errors are cascading artifacts of the TS2307 path alias issue, not actual schema drift.
 
 ---
 

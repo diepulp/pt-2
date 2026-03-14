@@ -56,7 +56,9 @@ These are evidence documents. They inform the remediation but are not the remedi
 | # | Document | Purpose |
 |---|----------|---------|
 | 4a | [CONTEXT-ROLLOUT-TEMPLATE.md](CONTEXT-ROLLOUT-TEMPLATE.md) | **Reusable rollout checklist.** Standard-aligned (ADR-044 / TESTING_GOVERNANCE_STANDARD §3-§12) template for promoting any bounded context to Trusted-Local verification tier. Derived from Casino exemplar (Slice One). |
-| 4b | [slice-1/SLICE-ONE-POSTURE.md](slice-1/SLICE-ONE-POSTURE.md) | Casino posture (Slice One — complete) |
+| 4b | [slice-1/CASINO-EXEMPLAR-POSTURE.md](slice-1/CASINO-EXEMPLAR-POSTURE.md) | Casino layer health, verification tier, effectiveness classification (validated 2026-03-14) |
+| 4c | [slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md](slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md) | **Pre-rollout validation.** Governance effectiveness audit, emergent error matrix (182 failures across 7 categories in 25 files), updated system posture. Answers three questions before bounded-context propagation. |
+| 4d | [slice-1/CASINO-EXEMPLAR-COMPLETION-SUMMARY.md](slice-1/CASINO-EXEMPLAR-COMPLETION-SUMMARY.md) | Slice One delivery record |
 
 ---
 
@@ -132,8 +134,12 @@ docs/issues/gaps/testing-arch-remediation/
   ├── migration-stabilization-parallel-artifact.md ← Parallel track
   ├── INTEGRATION-TEST-REMEDIATION-PLAN.md         ← Superseded (historical)
   └── slice-1/                                     ← Casino exemplar (Slice One)
-      ├── SLICE-ONE-POSTURE.md
-      ├── SLICE-ONE-RUNBOOK.md
+      ├── CASINO-EXEMPLAR-POSTURE.md               ← Layer health + verification tier
+      ├── CASINO-EXEMPLAR-COMPLETION-SUMMARY.md     ← Delivery record
+      ├── CASINO-EXEMPLAR-VALIDATION-REPORT.md      ← Pre-rollout validation + error matrix
+      ├── COMPLETE-CASINO-EXEMPLAR-REVIEW.md         ← DA review
+      ├── SLICE-ONE-POSTURE.md                       ← Initial posture (historical)
+      ├── SLICE-ONE-RUNBOOK.md                       ← Local verification runbook
       └── slice-one-rollout-plan-solo-dev-testing-posture.md
 
 docs/20-architecture/specs/TESTING-GOV-REMEDIATION/
