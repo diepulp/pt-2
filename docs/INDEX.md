@@ -273,6 +273,7 @@
 | GOV-008 | Error Taxonomy & Resilience | Active | `70-governance/ERROR_TAXONOMY_AND_RESILIENCE.md` |
 | GOV-PAT-001 | Service Factory Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-001-service-factory-pattern.md` |
 | GOV-PAT-002 | Mapper Pattern | Active | `70-governance/patterns/domain-modeling/GOV-PAT-002-mapper-pattern.md` |
+| GOV-009 | Testing Governance Standard | Proposed | `70-governance/TESTING_GOVERNANCE_STANDARD.md` |
 
 **Purpose**: SDLC policy, coding standards, anti-patterns, contribution guide, domain modeling patterns
 
@@ -317,6 +318,7 @@
 | ADR-032 | Frontend Error Boundary Architecture | Proposed | 2026-02-02 | Extends ADR-012 |
 | ADR-035 | Client State Lifecycle Across Auth Transitions | Accepted | 2026-02-18 | Extends ADR-003 §8 |
 | ADR-040 | Identity Provenance Rule | Accepted | 2026-03-06 | Amends ADR-024 INV-8 |
+| ADR-044 | Testing Governance Posture | Proposed | 2026-03-12 | Implements TESTING_GOVERNANCE_STANDARD |
 
 **Location**: `80-adrs/`
 
@@ -334,6 +336,7 @@
 | "Who can read/write this table?" | SEC/RBAC | [RLS Policy Matrix](30-security/SEC-001-rls-policy-matrix.md) |
 | "What are the roles/capabilities?" | SEC/RBAC | [Role Taxonomy](30-security/SEC-005-role-taxonomy.md) |
 | "What tests must pass?" | QA | [40-quality/](40-quality/) |
+| "What counts as governance-grade verification?" | GOV | [Testing Governance Standard](70-governance/TESTING_GOVERNANCE_STANDARD.md) |
 | "How do I run a migration?" | MIGRATIONS | [Migration Runbook](50-ops/runbooks/RUN-003-schema-migration-runbook.md) |
 | "How do we debug in prod?" | OPS | [50-ops/runbooks/](50-ops/runbooks/) |
 | "How do we ship safely?" | REL | [60-release/](60-release/) |

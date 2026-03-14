@@ -13,6 +13,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
+jest.mock('@/lib/supabase/claims-reconcile', () => ({
+  reconcileStaffClaims: jest.fn().mockResolvedValue(undefined),
+}));
+
 import {
   listCasinos,
   getCasinoById,

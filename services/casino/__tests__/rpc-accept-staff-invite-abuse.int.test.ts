@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * rpc_accept_staff_invite Abuse-Case Tests (PRD-034 WS6)
  *

@@ -2,7 +2,7 @@
 
 **Issue**: ISSUE-C4D2AA48
 **Date opened**: 2026-03-12
-**Status**: Governance proposed, remediation pending
+**Status**: EXEC-SPECs approved, ready for `/build` execution
 
 ---
 
@@ -35,6 +35,30 @@ These are evidence documents. They inform the remediation but are not the remedi
 | # | Document | Purpose |
 |---|----------|---------|
 | 2a | [TESTING-GOVERNANCE-REMEDIATION.md](TESTING-GOVERNANCE-REMEDIATION.md) | **The action document.** Truth table, 5 policy decisions, 8 ordered moves (17-25h), immediate enforcement action, anti-patterns to kill. Subject to delta corrections in 0b. |
+
+---
+
+### Step 3 — Execution (build-pipeline handoffs)
+
+| # | Document | Purpose |
+|---|----------|---------|
+| 3a | [ROLLOUT-EXECUTION-STRATEGY.md](ROLLOUT-EXECUTION-STRATEGY.md) | **Rollout strategy.** Segments 8 moves into 3 EXEC-SPECs with dependency graph, parallelism map, file-conflict analysis, and build-pipeline command sequence. |
+| 3b | [EXEC-SPEC-GOV-051](../../20-architecture/specs/TESTING-GOV-REMEDIATION/EXEC-SPEC-GOV-051.md) | **Segment 1: Testing Infrastructure Foundation.** Governance + branch protection + Jest split + CI test step. Must complete first. |
+| 3c | [EXEC-SPEC-GOV-052](../../20-architecture/specs/TESTING-GOV-REMEDIATION/EXEC-SPEC-GOV-052.md) | **Segment 2: Test Honesty Restoration.** Hook triage + Cypress removal + route handler reclassification + exemplar. Parallel with 3d. |
+| 3d | [EXEC-SPEC-GOV-053](../../20-architecture/specs/TESTING-GOV-REMEDIATION/EXEC-SPEC-GOV-053.md) | **Segment 3: CI Layer Expansion.** Playwright CI + integration CI + Supabase-in-CI + migration stabilization. Parallel with 3c. |
+
+**Execution**: `/build EXEC-SPEC-GOV-051` → then `/build EXEC-SPEC-GOV-052` + `/build EXEC-SPEC-GOV-053` in parallel.
+
+---
+
+### Step 4 — Context-by-Context Rollout
+
+| # | Document | Purpose |
+|---|----------|---------|
+| 4a | [CONTEXT-ROLLOUT-TEMPLATE.md](CONTEXT-ROLLOUT-TEMPLATE.md) | **Reusable rollout checklist.** Standard-aligned (ADR-044 / TESTING_GOVERNANCE_STANDARD §3-§12) template for promoting any bounded context to Trusted-Local verification tier. Derived from Casino exemplar (Slice One). |
+| 4b | [slice-1/CASINO-EXEMPLAR-POSTURE.md](slice-1/CASINO-EXEMPLAR-POSTURE.md) | Casino layer health, verification tier, effectiveness classification (validated 2026-03-14) |
+| 4c | [slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md](slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md) | **Pre-rollout validation.** Governance effectiveness audit, emergent error matrix (182 failures across 7 categories in 25 files), updated system posture. Answers three questions before bounded-context propagation. |
+| 4d | [slice-1/CASINO-EXEMPLAR-COMPLETION-SUMMARY.md](slice-1/CASINO-EXEMPLAR-COMPLETION-SUMMARY.md) | Slice One delivery record |
 
 ---
 
@@ -99,12 +123,27 @@ This remediation does NOT cover:
 
 ## N.B
 docs/issues/gaps/testing-arch-remediation/
-  ├── INDEX.md                                    ← Start here                                                                                                                                                      
+  ├── INDEX.md                                    ← Start here
   ├── testing-governance-posture-proposal.md       ← Step 0: Constitution
-  ├── testing-governance-remediation-delta.md      ← Step 0: Amendments                                                                                                                                             
+  ├── testing-governance-remediation-delta.md      ← Step 0: Amendments (referenced, not yet created)
   ├── INVESTIGATION-REPORT.md                      ← Step 1: Integration findings
   ├── FULL-SYSTEM-TEST-POSTURE.md                  ← Step 1: Full-system findings
   ├── TESTING-GOVERNANCE-REMEDIATION.md            ← Step 2: Action plan (8 moves)
+  ├── ROLLOUT-EXECUTION-STRATEGY.md                ← Step 3: Execution strategy
+  ├── CONTEXT-ROLLOUT-TEMPLATE.md                  ← Step 4: Reusable context rollout checklist
   ├── migration-stabilization-parallel-artifact.md ← Parallel track
-  └── INTEGRATION-TEST-REMEDIATION-PLAN.md         ← Superseded (historical)
+  ├── INTEGRATION-TEST-REMEDIATION-PLAN.md         ← Superseded (historical)
+  └── slice-1/                                     ← Casino exemplar (Slice One)
+      ├── CASINO-EXEMPLAR-POSTURE.md               ← Layer health + verification tier
+      ├── CASINO-EXEMPLAR-COMPLETION-SUMMARY.md     ← Delivery record
+      ├── CASINO-EXEMPLAR-VALIDATION-REPORT.md      ← Pre-rollout validation + error matrix
+      ├── COMPLETE-CASINO-EXEMPLAR-REVIEW.md         ← DA review
+      ├── SLICE-ONE-POSTURE.md                       ← Initial posture (historical)
+      ├── SLICE-ONE-RUNBOOK.md                       ← Local verification runbook
+      └── slice-one-rollout-plan-solo-dev-testing-posture.md
+
+docs/20-architecture/specs/TESTING-GOV-REMEDIATION/
+  ├── EXEC-SPEC-GOV-051.md                         ← Segment 1: Infrastructure Foundation
+  ├── EXEC-SPEC-GOV-052.md                         ← Segment 2: Test Honesty Restoration
+  └── EXEC-SPEC-GOV-053.md                         ← Segment 3: CI Layer Expansion
 

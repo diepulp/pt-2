@@ -288,6 +288,24 @@ When patterns are insufficient:
 
 ---
 
+## 14. Testing Governance Compliance (ADR-044)
+
+**Reference**: `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`, `docs/80-adrs/ADR-044-testing-governance-posture.md`
+
+When reviewing architecture that affects testing:
+
+- [ ] **§2 Governing Principle**: Verify test layers meet all three conditions — correct environment, CI execution, branch-protection enforcement
+- [ ] **§5 Health-State Vocabulary**: Classify test layers as Healthy/Degraded/Compromised and enforcement tier as Required/Advisory/Quarantined
+- [ ] **§8 Minimum Merge Gate**: Verify at least one functional test layer beyond static checks is required
+- [ ] **§14 Non-Conformance Rule**: Flag drift between this standard and actual CI/branch-protection state as a governance defect
+
+**Red Flags**:
+- Architecture review that claims "tests pass" without verifying enforcement tier
+- New service added without specifying which test layers apply
+- CI changes that reduce enforcement without §12 disclosure
+
+---
+
 ## Doc Locations Reference
 
 | Need | Location |

@@ -1,21 +1,31 @@
-# Testing Governance Standard
+# Testing Governance Standard — Solo-Repo Transitional Profile
 
 **Status:** Proposed
-**Version:** 1.0.0
-**Date:** 2026-03-12
-**Owner:** Engineering Lead
+**Version:** 2.0.0
+**Date:** 2026-03-13
+**Owner:** Solo Steward
 **Implements:** ADR-044 (Testing Governance Posture)
 **Issue:** ISSUE-C4D2AA48
+**Supersedes:** v1.0.0 (enterprise-first posture)
 
 ---
 
 ## §1 Purpose and Scope
 
-This standard formalizes the standing testing governance posture for the project.
+This standard formalizes the standing testing governance posture for the project under a **solo-repo transitional profile**.
 
-It defines the permanent rules by which the project classifies test layers, assigns runtime environments, determines merge-blocking enforcement, governs exclusions and quarantines, and interprets what "green CI" is allowed to mean.
+It defines the rules by which the project classifies test layers, assigns runtime environments, determines verification status, governs exclusions and quarantines, and interprets what "green" is allowed to mean.
 
-This artifact is not the remediation plan. Remediation documents define how the project recovers from current deficiencies. This standard defines the durable rules that persist after remediation and prevent recurrence.
+This is not the remediation plan. Remediation documents define recovery work. This standard defines the durable rules that persist after remediation and prevent recurrence.
+
+### Solo-Repo Transitional Profile
+
+This standard recognizes that the repository is maintained by a single developer. Enterprise-grade ceremony — mandatory peer review, immediate branch protection, required-status-check enforcement — is deferred, not abandoned. The standard operates at two levels:
+
+1. **Durable rules** that apply now regardless of team size (runtime correctness, script truthfulness, anti-theatre policy)
+2. **Enforcement mechanisms** that are promoted when earned, not imposed as prerequisites
+
+This distinction prevents governance pageantry from blocking the first-order correction: restoring honest local verification.
 
 ### Scope
 
@@ -23,33 +33,54 @@ This standard governs:
 
 - test taxonomy and canonical layer definitions
 - runtime environment contracts
-- CI enforcement tiers and health-state vocabulary
-- branch protection requirements
-- green CI semantics and minimum merge gate
+- verification tiers and health-state vocabulary
+- green CI / green local semantics
 - route-handler and shallow test policy
 - exclusion, skip, and quarantine policy
 - change-control requirements for testing infrastructure
 - periodic posture review triggers
+- promotion criteria for enforcement mechanisms
 
 It applies to all code in the repository and all test-related commands, configurations, CI jobs, and merge gates.
 
 ### Enforceability
 
-Violations of this standard are governance defects. Any PR that introduces a violation — or any existing configuration that violates a rule — must be corrected or documented with an explicit exception and exit criteria.
+Violations of durable rules are governance defects. Any configuration that violates a durable rule must be corrected or documented with an explicit exception and exit criteria.
+
+Deferred enforcement mechanisms are not violations — they are promotion targets with documented criteria.
 
 ---
 
 ## §2 Governing Principle
 
-A test layer counts as **project verification** only when all three conditions are met:
+Verification is a two-tier concept. The tiers are not interchangeable.
+
+### Tier 1 — Trusted Local Verification
+
+A test layer counts as **trusted local verification** when all three conditions are met:
 
 1. It runs in its **correct runtime environment**
-2. It is executed **automatically in CI**
-3. It is enforced through **required branch-protection checks**
+2. It is invoked by a **truthful command**
+3. It produces **behaviorally meaningful assertions**
 
-If any condition is missing, the layer does not constitute governance-grade evidence of system quality. It may still be useful to developers. It does not count as proof.
+This is the minimum standard for honest testing. A layer that meets these conditions can be trusted by the developer who runs it. It is not governance-grade, but it is not theatre.
 
-This is the litmus test. Every claim about test coverage, CI confidence, or release readiness must be evaluated against it.
+### Tier 2 — Governance-Grade Merge Protection
+
+A test layer counts as **governance-grade merge protection** only when it additionally:
+
+4. Is executed **automatically in CI**
+5. Is enforced through **required branch-protection checks**
+
+If conditions 4–5 are missing, the layer does not constitute formal release evidence. It may still be useful and trusted locally. It does not count as proof to stakeholders.
+
+### Relationship Between Tiers
+
+Tier 1 is required now. It is the first-order correction.
+
+Tier 2 is a promotion target. Layers earn governance status by demonstrating stability and trust at Tier 1, then being wired into CI and enforcement.
+
+No layer may be promoted to Tier 2 that has not first achieved Tier 1. Automating a broken or dishonest test layer creates the illusion of governance, not governance itself.
 
 ---
 
@@ -135,7 +166,7 @@ Each test layer must run in the environment appropriate to what it is proving.
 
 ### Environment Governance Rule
 
-No test suite may run under an environment that materially distorts the runtime it claims to verify.
+No test suite may run under an environment that materially distorts the runtime it claims to verify. This is a **durable rule** — it applies immediately, regardless of enforcement tier.
 
 **Prohibited postures:**
 
@@ -160,33 +191,48 @@ A single global `testEnvironment` applying to all test files is prohibited.
 
 ---
 
-## §5 Enforcement Tiers and Health-State Vocabulary
+## §5 Verification Tiers and Health-State Vocabulary
 
-### Enforcement Tiers
+### Verification Tiers
 
-Every test layer must be assigned one of the following governance states. No layer may exist in an ambiguous or undeclared state.
+Every test layer must be assigned one of the following verification states. No layer may exist in an ambiguous or undeclared state.
 
-**Required:**
-- Executed automatically in CI on every PR
+**Trusted-Local:**
+- Runs in the correct runtime environment
+- Invoked by a truthful command
+- Produces behaviorally meaningful assertions
+- Trusted by the developer who runs it
+- Does **not** block merge automatically
+- Does **not** count as governance-grade release evidence
+- **Does** count as honest verification for the developer's own confidence
+
+Trusted-local is the first verification tier a restored layer should achieve. It is not a lesser form of "advisory" — it is a meaningful status that says: "this test is honest, runs correctly, and can be trusted locally."
+
+**Required** (promotion target):
+- Meets all trusted-local conditions
+- Additionally executed automatically in CI on every PR
 - Enforced through required branch-protection checks
 - Must pass for merge
-- Counts as formal project verification
+- Counts as governance-grade release evidence
+
+Promotion to required is earned, not assumed. A layer must demonstrate stability at trusted-local before promotion.
 
 **Advisory:**
 - Useful to developers for feedback
 - May run locally or in optional CI jobs
+- Has **not** yet met trusted-local conditions (wrong runtime, stale assertions, or other gaps)
 - Does **not** block merge
-- Does **not** count as governance-grade release evidence
+- Does **not** count as any form of verification evidence
 
-Advisory does not mean "kind of covered." It means "helpful, but non-governing." A layer remains advisory until it is executed in CI **and** enforced through required branch-protection checks. No advisory layer may be cited as proof that the repository is functionally protected.
+Advisory means "exists but is not yet honest enough to be trusted." It is the default state for layers that have not been restored.
 
 **Quarantined:**
 - Known to be degraded or misleading
-- Not accepted as project verification
+- Not accepted as any verification
 - Explicitly labeled and documented
 - Must have: named owner, reason, exit criteria, explicit non-governing statement
 
-Quarantined layers are not neutral. They are known liabilities under management.
+Quarantined layers are known liabilities under management.
 
 **Deprecated:**
 - Scheduled for removal or replacement
@@ -195,88 +241,120 @@ Quarantined layers are not neutral. They are known liabilities under management.
 
 ### Health-State Vocabulary
 
-**Disambiguation:** Enforcement tiers (above) describe a layer's **governance status** — whether it blocks merge. Health states (below) describe a layer's **condition and reliability** — whether it can be trusted. A layer may be Required (enforcement tier) yet Degraded (health state). The two dimensions are orthogonal.
+**Disambiguation:** Verification tiers (above) describe a layer's **governance status** — what it is allowed to claim. Health states (below) describe a layer's **condition and reliability** — whether it can be trusted. A layer may be Trusted-Local (verification tier) yet Degraded (health state). The two dimensions are orthogonal.
 
 Every major test layer must be describable using one of the following health states:
 
 | State | Meaning |
 |-------|---------|
-| **Healthy** | Correct environment, CI-executed if required, reliable as evidence |
+| **Healthy** | Correct environment, reliable assertions, stable signal |
 | **Degraded** | Provides some value but has known gaps or instability |
 | **Compromised** | Structurally unsound (wrong environment, wrong assumptions); cannot be trusted even if passing |
-| **Advisory** | Useful to developers, not governance-enforced |
+| **Advisory** | Not yet restored to trusted-local status |
 | **Quarantined** | Known unreliable/misleading, under active management with exit criteria |
 | **Deprecated** | Transitional, being removed/replaced |
 
-This vocabulary exists so the project can describe reality honestly instead of pretending every test layer is either fine or irrelevant.
-
 ---
 
-## §6 Green CI Semantics
+## §6 Green Semantics
 
-The project must use precise language about CI status.
+The project must use precise language about verification status.
 
 ### Allowed Meanings
 
-**"Green CI"** may only be used to mean: all **required** checks passed.
+**"Local green"** may be used to mean: all trusted-local layers pass in the correct runtime on the developer's machine.
+
+**"CI green"** may only be used to mean: all **required** checks passed in CI.
 
 **"Compile green"** (or "static gates pass") may describe: lint + type-check + build passing, without implying functional verification.
 
-### Prohibited Implication
+### Prohibited Implications
 
-The following claim is prohibited unless it is actually true:
+The following claims are prohibited unless actually true:
+
+> "Tests pass, therefore runtime behavior is verified."
+
+Passing under the wrong runtime is false comfort, not verification.
 
 > "CI is green, therefore runtime behavior is verified."
 
 Passing static checks does **not** imply functional correctness, server-runtime correctness, DB/RLS correctness, workflow integrity, or integration health.
 
+### Honest Status Reporting
+
+When reporting test posture, always distinguish:
+- What is **static green** (compiles, lints, type-checks)
+- What is **local functional green** (trusted-local layers pass)
+- What is **CI green** (required layers pass in CI)
+
+No silent conflation of these categories.
+
 ---
 
 ## §7 Branch Protection Policy
 
-`main` must be protected. This is non-negotiable.
+### Target State
 
-### Minimum Requirements
+When the project's testing posture earns it, `main` should be protected with:
 
 - All changes via pull request (direct push blocked)
 - Required status checks (CI jobs designated as required)
-- At least 1 approving review
 - Up-to-date branch before merge
 - Force push blocked
 - Deletion blocked
 
+### Transitional Posture
+
+Branch protection is a **promotion target**, not an immediate prerequisite.
+
+Promoting branch protection before the test harness is honest creates the illusion of governance without substance — a CI that enforces wrong-runtime tests or theatre assertions is worse than no enforcement, because it produces false confidence.
+
+**Promotion criteria for branch protection:**
+
+1. Jest environments are correctly split (node / jsdom / integration)
+2. At least one bounded context has achieved trusted-local status
+3. Unit test execution exists in CI (even as advisory)
+4. The CI test signal has been stable for a reasonable observation period
+
+Once these criteria are met, branch protection should be enabled and CI jobs promoted to required status checks.
+
 ### Governance Consequence
 
-No test layer is governance-effective until branch protection makes it merge-blocking. A CI job without branch protection is advisory machinery, not enforcement.
-
-Branch protection must be activated **before** new CI test jobs are treated as effective gates. The ordering is:
-
-1. Enable branch protection
-2. Add CI test jobs
-3. Mark those jobs as required status checks
-4. Expand scope of required checks over time
-
-Reversing this order creates the illusion of governance without enforcement.
+No test layer achieves governance-grade merge protection until branch protection makes it merge-blocking. A CI job without branch protection is advisory machinery, not enforcement. This remains true — the change is in sequencing, not in principle.
 
 ### Admin Bypass Policy
 
-Any admin bypass of required checks must be exceptional, documented with reason and scope, and followed by a remediation or retrospective note. Standing admin bypass for convenience is prohibited. If a bypass pattern becomes recurring, the underlying check or process must be fixed rather than routinely overridden.
+Any admin bypass of required checks must be exceptional, documented with reason and scope, and followed by a remediation or retrospective note. Standing admin bypass for convenience is prohibited.
 
 ---
 
-## §8 Minimum Merge Gate
+## §8 Minimum Verification Floor
 
-The project must never have **zero meaningful functional blockers** on merge.
+The project operates under a two-tier floor that corresponds to the verification tiers in §2.
 
-### Governance Floor
+### Local Verification Floor (applies now)
 
-The required set may evolve, but the minimum merge gate must include:
+The minimum local verification floor must include:
+
+1. Static checks passing (lint + type-check + build)
+2. At least one bounded context with trusted-local functional tests in the correct runtime
+3. At least one behavioral canary (not shallow mock-everything theatre)
+
+A repository posture in which only static checks run is **verification-deficient** even at the local level.
+
+### Governance Merge Floor (applies after promotion)
+
+Once branch protection is active (§7), the minimum merge gate must include:
 
 1. Static checks required (lint + type-check + build)
 2. At least one required functional test layer beyond static checks
 3. At least one runtime canary or behavioral gate
 
 A repository posture in which merge is blocked only by compile-time checks is **governance-deficient** and must be corrected.
+
+### Promotion Path
+
+The local verification floor is achieved first. The governance merge floor is achieved by promoting trusted-local layers into CI and enforcing through branch protection. One does not skip to the governance floor without first establishing the local floor.
 
 ---
 
@@ -304,7 +382,7 @@ Net-new shallow coverage-theatre tests are prohibited.
 
 ## §10 Test Configuration and Script Truthfulness
 
-All test scripts, configuration files, and CI jobs must truthfully describe what they run.
+All test scripts, configuration files, and CI jobs must truthfully describe what they run. This is a **durable rule** — it applies immediately.
 
 ### Rules
 
@@ -326,7 +404,7 @@ All test scripts, configuration files, and CI jobs must truthfully describe what
 
 ## §11 Exclusion, Skip, and Quarantine Policy
 
-Tests may not silently disappear from governance.
+Tests may not silently disappear from verification.
 
 ### Skip Policy
 
@@ -340,7 +418,7 @@ A skipped test or suite must have:
 
 A quarantined suite or test layer must include:
 - Reason for quarantine
-- Named owner
+- Named owner (solo steward in single-developer repos)
 - Date or milestone context
 - Exit criteria
 - Explicit statement that it is non-governing
@@ -370,36 +448,36 @@ Any change that affects testing posture must be treated as governance-relevant.
 - Exclusion/ignore patterns and skip markers
 - Quarantine status changes
 - Framework migration decisions
-- Branch-protection-relevant behavior
+- Verification-tier changes (advisory → trusted-local → required)
 
-### Required PR Disclosure
+### Required Disclosure
 
-A PR making testing-posture changes must state:
+A change to testing posture must state:
 
 1. What changed
 2. Why it changed
-3. Which test layers gained or lost enforcement
+3. Which test layers gained or lost verification status
 4. Whether confidence increased, decreased, or stayed neutral
 5. Any compensating control if confidence decreased
 6. Exit criteria if the change introduces advisory or quarantined posture
 
-No silent amputations.
+In a solo-repo workflow, this disclosure lives in the commit message or PR description. No silent amputations.
 
 ---
 
-## §13 Ownership, Review, and Local-Only Suites
+## §13 Stewardship, Review, and Local-Only Suites
 
-### Ownership
+### Stewardship
 
-Testing posture must have explicit stewardship. At minimum, the project must maintain ownership for:
+Testing posture must have explicit stewardship. In a solo-developer repository, the sole maintainer is the steward. Stewardship responsibility includes:
 
 - CI test enforcement configuration
 - Test taxonomy and config integrity
 - Quarantine registry maintenance
-- Branch-protection configuration
+- Verification-tier promotion decisions
 - Periodic posture review
 
-Ownership may be assigned to one person or a small set of maintainers, but it must be explicit. Unowned governance becomes decorative text.
+Stewardship may be assigned to one person or a small set of maintainers. It must be explicit. Unowned governance becomes decorative text.
 
 ### Review Triggers
 
@@ -410,28 +488,26 @@ A testing posture review is required when any of the following occur:
 - Branch protection changes
 - Major environment changes (Node version, Jest version, config restructure)
 - Significant use of skips or ignore patterns added
-- Advisory layer proposed for promotion to required
-- Required layer degraded or quarantined
+- Advisory or trusted-local layer proposed for promotion
+- Trusted-local or required layer degraded or quarantined
 - Test taxonomy changed
 
 ### Periodic Review
 
 Even without triggers, the project should review testing posture at major milestones:
 
-- Are required layers still meaningful?
-- Are advisory layers being mistaken for governance?
+- Are trusted-local layers still honest?
+- Are advisory layers being mistaken for verification?
 - Are quarantines still justified, or have they become permanent?
 - Are test environments still correctly split?
-- Does green CI still mean what this standard says it means?
-- Is the minimum merge gate still above compile-only posture?
+- Does "local green" still mean what this standard says it means?
+- Is the verification floor still above compile-only posture?
 
 ### Local-Only Suite Policy
 
-Local-only suites can be valuable. They are not governance.
+Local-only suites can be valuable. At the trusted-local tier, they are honest verification. They are not governance-grade.
 
-A local-only suite may aid development and debugging, but until it is run automatically in CI and required by branch protection, it must be described as **advisory**.
-
-No local-only suite may be cited as proof that the repository is functionally protected.
+A local-only suite that meets trusted-local conditions is meaningful to the developer. Until it is run automatically in CI and enforced through branch protection, it must not be cited as formal release evidence.
 
 Pre-commit hooks are developer conveniences, not controls. They are bypassable via `--no-verify` and must not be listed as governance in any security or compliance context.
 
@@ -439,7 +515,11 @@ Pre-commit hooks are developer conveniences, not controls. They are bypassable v
 
 ## §14 Non-Conformance Rule
 
-If CI configuration, test scripts, or branch-protection settings do not match this standard, the implementation is non-conformant and must be corrected or explicitly excepted with documented reason and exit criteria. Drift between this standard and actual enforcement is itself a governance defect.
+If test configurations, scripts, or runtime environments do not match the durable rules in this standard, the implementation is non-conformant and must be corrected or explicitly excepted with documented reason and exit criteria.
+
+Deferred enforcement mechanisms (branch protection, required status checks) are not non-conformances — they are promotion targets with defined criteria in §7 and §8.
+
+Drift between durable rules and actual implementation is a governance defect. Drift between promotion targets and current posture is expected during the transitional period.
 
 ---
 
@@ -447,11 +527,32 @@ If CI configuration, test scripts, or branch-protection settings do not match th
 
 The project may no longer rely on the existence of tests, local habit, or optimistic interpretation of CI to claim verification.
 
-Verification is a governed status, not a vibe.
+Verification is an earned status, not a vibe.
 
-A test layer counts only when:
+### What is required now
+
+A test layer is **trusted local verification** when:
 1. it runs in the correct environment,
-2. it executes automatically,
-3. and it is enforced through required merge controls.
+2. it is invoked by a truthful command,
+3. and it produces behaviorally meaningful assertions.
 
-Everything else may still be useful. It is not proof.
+Prefer one honest slice over broad fake coverage. A single trusted bounded-context exemplar is worth more than dozens of misleading tests.
+
+### What is required after promotion
+
+A test layer is **governance-grade merge protection** only when it additionally:
+4. executes automatically in CI,
+5. and is enforced through required merge controls.
+
+### What is explicitly deferred
+
+The following enforcement mechanisms are promotion targets, not immediate requirements:
+
+- Branch protection on `main`
+- Required status checks
+- Mandatory PR approvals
+- Formal multi-reviewer process
+
+These are added when the test posture has earned them — when local truth is established, CI signal is stable, and enforcement would protect real verification rather than automate theatre.
+
+Everything that is not yet trusted-local may still be useful. It is not verification.

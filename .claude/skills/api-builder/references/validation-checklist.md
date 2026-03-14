@@ -277,24 +277,35 @@ npm run type-check
 
 ## 9. Testing Requirements
 
+### Testing Governance (ADR-044)
+
+Route handler tests are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`):
+
+- **§3.4 Route-Handler Layer**: Canonical layer — verify HTTP boundary (status codes, body shape, error paths). Required environment: `node`.
+- **§9 Shallow Test Policy**: Net-new mock-everything/existence-only route tests are **prohibited**. New tests must assert on response status, body shape, and error paths with minimal mocking.
+- **§4 Environment Contract**: Route handler tests must run under `node`, not `jsdom`. Use `/** @jest-environment node */` docblock or split Jest config.
+
 ### Unit Tests
 
 - [ ] Service method tested in isolation
 - [ ] Zod schema validation tested
 - [ ] Error mapping tested
 
-### Integration Tests
+### Route Handler Tests (§9 Compliant)
 
 - [ ] Route handler returns correct status codes
 - [ ] Idempotency key enforced
 - [ ] Auth required/rejected appropriately
 - [ ] Response matches contract
+- [ ] Uses real or minimally-mocked request objects (not mock-everything)
+- [ ] Asserts on observable HTTP behavior (status, body, errors)
+- [ ] Runs under `node` environment (not `jsdom`)
 
 ### Test File Location
 
 ```
-services/{domain}/{feature}.test.ts    # Service tests
-app/api/v1/{domain}/__tests__/         # Route handler tests
+services/{domain}/{feature}.test.ts    # Service tests (SERVER-UNIT layer)
+app/api/v1/{domain}/__tests__/         # Route handler tests (ROUTE-HANDLER layer)
 ```
 
 ---
