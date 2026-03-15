@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Player Exclusion Mapper Tests
  *

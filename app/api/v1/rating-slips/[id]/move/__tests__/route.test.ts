@@ -15,7 +15,7 @@ import {
 import { POST } from '../route';
 
 jest.mock('@/lib/supabase/server', () => ({
-  createClient: jest.fn(),
+  createClient: jest.fn().mockResolvedValue({}),
 }));
 
 jest.mock('@/lib/server-actions/middleware', () => ({
@@ -28,22 +28,35 @@ jest.mock('@/lib/server-actions/middleware', () => ({
   ),
 }));
 
-jest.mock('@/services/rating-slip', () => ({
-  createRatingSlipService: jest.fn(() => ({
-    getById: jest.fn().mockResolvedValue({
-      id: '123e4567-e89b-12d3-a456-426614174000',
+jest.mock('@/services/rating-slip-modal/rpc', () => ({
+  movePlayerViaRPC: jest.fn().mockResolvedValue({
+    newSlipId: '123e4567-e89b-12d3-a456-426614174003',
+    closedSlipId: '123e4567-e89b-12d3-a456-426614174000',
+    moveGroupId: '123e4567-e89b-12d3-a456-426614174004',
+    accumulatedSeconds: 3600,
+    sourceTableId: '123e4567-e89b-12d3-a456-426614174005',
+    sourceTableSeats: [],
+    destinationTableSeats: ['1'],
+    newSlip: {
+      id: '123e4567-e89b-12d3-a456-426614174003',
+      tableId: '123e4567-e89b-12d3-a456-426614174001',
+      seatNumber: null,
       status: 'open',
-      visit_id: '123e4567-e89b-12d3-a456-426614174002',
-      game_settings: null,
-    }),
-    getActiveForTable: jest.fn().mockResolvedValue([]),
-    close: jest
-      .fn()
-      .mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174000' }),
-    start: jest
-      .fn()
-      .mockResolvedValue({ id: '123e4567-e89b-12d3-a456-426614174003' }),
-  })),
+      startTime: new Date().toISOString(),
+    },
+  }),
+}));
+
+jest.mock('@/services/rating-slip/schemas', () => ({
+  ratingSlipRouteParamsSchema: {
+    parse: jest.fn((params: Record<string, string>) => params),
+  },
+}));
+
+jest.mock('@/services/rating-slip-modal/schemas', () => ({
+  movePlayerSchema: {
+    parse: jest.fn((input: unknown) => input),
+  },
 }));
 
 describe('POST /api/v1/rating-slips/[id]/move', () => {

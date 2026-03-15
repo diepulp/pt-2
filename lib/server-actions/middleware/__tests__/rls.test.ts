@@ -2,9 +2,14 @@ jest.mock('@/lib/supabase/rls-context', () => ({
   injectRLSContext: jest.fn(),
 }));
 
+jest.mock('@/lib/supabase/dev-context', () => ({
+  isDevAuthBypassEnabled: jest.fn().mockReturnValue(false),
+}));
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+import { isDevAuthBypassEnabled } from '@/lib/supabase/dev-context';
 import { injectRLSContext } from '@/lib/supabase/rls-context';
 import type { Database } from '@/types/database.types';
 
@@ -31,45 +36,50 @@ describe('withRLS middleware', () => {
     };
   }
 
-  it('should inject RLS context and call next', async () => {
-    (injectRLSContext as jest.Mock).mockResolvedValue(undefined);
-
-    const rlsContext = {
+  it('should inject RLS context via RPC and call next', async () => {
+    const rpcContext = {
       actorId: 'actor-uuid',
       casinoId: 'casino-uuid',
       staffRole: 'admin',
     };
-    const ctx = createContext({ rlsContext });
+    (injectRLSContext as jest.Mock).mockResolvedValue(rpcContext);
+
+    const ctx = createContext();
     const middleware = withRLS();
 
     const result = await middleware(ctx, mockNext);
 
     expect(injectRLSContext).toHaveBeenCalledWith(
       mockSupabase,
-      rlsContext,
       'test-correlation-id',
     );
+    expect(ctx.rlsContext).toEqual(rpcContext);
     expect(mockNext).toHaveBeenCalled();
     expect(result).toEqual({ ok: true, code: 'OK', data: 'test' });
   });
 
-  it('should throw INTERNAL_ERROR when rlsContext missing', async () => {
-    const ctx = createContext(); // No rlsContext
+  it('should skip RPC and use existing rlsContext when dev bypass enabled', async () => {
+    (isDevAuthBypassEnabled as jest.Mock).mockReturnValue(true);
+
+    const devContext = {
+      actorId: 'dev-a',
+      casinoId: 'dev-c',
+      staffRole: 'dev-r',
+    };
+    const ctx = createContext({ rlsContext: devContext });
     const middleware = withRLS();
 
-    await expect(middleware(ctx, mockNext)).rejects.toThrow(DomainError);
-    await expect(middleware(ctx, mockNext)).rejects.toMatchObject({
-      code: 'INTERNAL_ERROR',
-      message: 'RLS context not available - withAuth must run first',
-    });
+    const result = await middleware(ctx, mockNext);
+
+    expect(injectRLSContext).not.toHaveBeenCalled();
+    expect(mockNext).toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, code: 'OK', data: 'test' });
   });
 
   it('should throw INTERNAL_ERROR on injection failure', async () => {
     (injectRLSContext as jest.Mock).mockRejectedValue(new Error('RPC failed'));
 
-    const ctx = createContext({
-      rlsContext: { actorId: 'a', casinoId: 'c', staffRole: 'r' },
-    });
+    const ctx = createContext();
     const middleware = withRLS();
 
     await expect(middleware(ctx, mockNext)).rejects.toMatchObject({

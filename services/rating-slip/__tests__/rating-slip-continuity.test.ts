@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RatingSlipService PRD-016 Continuity Tests (Unit)
  *

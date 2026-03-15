@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RatingSlipService Published Queries Unit Tests
  *
