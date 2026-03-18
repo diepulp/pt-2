@@ -358,7 +358,8 @@ export function toPromoProgramDTO(row: PromoProgramRow): PromoProgramDTO {
     promoType: row.promo_type,
     faceValueAmount: Number(row.face_value_amount),
     requiredMatchWagerAmount: Number(row.required_match_wager_amount),
-    status: row.status,
+    // CHECK constraint guarantees 'active' | 'inactive' | 'archived'
+    status: row.status as PromoProgramDTO['status'],
     startAt: row.start_at,
     endAt: row.end_at,
     createdByStaffId: row.created_by_staff_id,
