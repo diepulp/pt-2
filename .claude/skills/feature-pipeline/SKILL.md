@@ -1,13 +1,6 @@
 ---
 name: feature-pipeline
-description: >
-  Linear feature development pipeline (design-time only) with explicit boundaries
-  and executable gates. Prevents scope creep by enforcing SRM-first ownership,
-  Feature Scaffold, Design Brief/RFC, SEC notes, ADR freeze, and PRD discipline.
-  Produces *what* and *why*; delegates *how* to build-pipeline.
-  Orchestrates prd-writer and lead-architect skills.
-version: 2.0.0
-supersedes: feature-pipeline v1.0.0 (7-phase with EXEC-SPEC/Execute)
+description: Linear feature development pipeline (design-time only) with explicit phase gates. Use this skill whenever the user wants to design a new feature, define feature scope, create a feature boundary, write a scaffold, author an RFC/design brief, produce a SEC note, freeze ADRs, or write a PRD. Also triggers on "new feature", "feature design", "scope this feature", "what should we build", "define requirements". Orchestrates prd-writer, lead-architect, and devils-advocate skills. Produces *what* and *why* artifacts; delegates *how* to build-pipeline. Do NOT trigger for implementation, building, executing specs, running workstreams, or coding — those belong to build-pipeline.
 ---
 
 # Feature Development Pipeline
@@ -26,7 +19,7 @@ Design doesn't build. **Build-pipeline does.**
 ## Quick Start
 
 ```
-/feature csv-player-import
+/feature-start player-identity-enrollment
 ```
 
 This starts (or resumes) the 6-phase design pipeline with gates at each transition.
@@ -53,18 +46,18 @@ This starts (or resumes) the 6-phase design pipeline with gates at each transiti
 +---------------------------------------------------------------+
 ```
 
-Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and instructs user to run `/build PRD-###`. No EXEC-SPEC generation, no workstream execution -- that's build-pipeline's domain.
+Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and instructs user to run `/build PRD-###`. No EXEC-SPEC generation, no workstream execution — that's build-pipeline's domain.
 
 ---
 
 ## Phase 0: SRM-First Ownership Contract
 
 **Input:** Feature name/description
-**Output:** Single ownership sentence
+**Output:** Ownership sentence + bounded context table
 
 > "This feature belongs to **{OwnerService}** and may only touch **{Writes}**; cross-context needs go through **{Contracts}**."
 
-**Gate:** `srm-ownership` -- If you can't write this sentence, you're not ready to design.
+**Gate:** `srm-ownership` — If you can't write this sentence, you're not ready to design.
 
 **Workflow:**
 1. Load SRM (`docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`)
@@ -73,6 +66,8 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 4. Identify cross-context contracts (DTOs/RPCs)
 5. Write ownership sentence
 6. Create `docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md` using `references/feature-boundary-template.md`
+
+Phase 0 is intentionally lean — ownership sentence and write/read/contract table only. Narrative fields (goal, actor, scenario, metric, non-goals) belong in Phase 1.
 
 ---
 
@@ -86,22 +81,25 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 
 **Must Include:**
 - **Intent:** What outcome changes after shipping
-- **Constraints:** Hard walls (budget, compliance, existing contracts)
-- **Non-goals:** What we refuse to do
+- **Primary Actor:** Specific role that triggers the feature
+- **Success Metric:** One measurable outcome
+- **Constraints:** Hard walls (security, compliance, domain, operational)
+- **Non-goals:** 5+ explicit exclusions with justification
 - **Options:** 2-4 max with tradeoffs
 - **Decision to make:** Explicit statement of what needs deciding
-- **Open questions / unknowns**
+- **Dependencies:** What must exist before this ships
+- **Risks / Open questions:** Known unknowns with mitigation or learning plan
 
-**Gate:** `scaffold-approved` -- If you can't list 2+ options with tradeoffs, you haven't thought enough.
+**Gate:** `scaffold-approved` — If you can't list 2+ options with tradeoffs and 5+ non-goals, you haven't thought enough.
 
-**Delegates to:** Inline (orchestrator can do this -- it's a framing doc, not domain-specific)
+**Delegates to:** Inline (orchestrator can do this — it's a framing doc, not domain-specific)
 
 ---
 
 ## Phase 2: Design Brief / RFC
 
 **Goal:** Propose direction with enough detail to identify ADR-worthy decisions.
-**Rule:** Funnel style -- context -> scope -> overview -> details -> alternatives.
+**Rule:** Funnel style — context -> scope -> overview -> details -> alternatives.
 
 **Template:** `docs/02-design/TEMPLATE.md`
 **Output:** `docs/02-design/RFC-###-{feature}.md`
@@ -119,7 +117,9 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 - **Alternatives Considered**
 - **Decisions Required:** Each decision that needs an ADR
 
-**Gate:** `design-approved` -- If you can't name the decisions that need ADRs, the design is incomplete.
+Surface Classification is conditional — only required when the feature introduces a genuinely new UI surface (new page, new panel type, new data visualization). Enhancements to existing surfaces or backend-only features skip this.
+
+**Gate:** `design-approved` — If you can't name the decisions that need ADRs, the design is incomplete.
 
 **Delegates to:** `lead-architect` skill
 
@@ -138,7 +138,7 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 - **Controls:** RLS rules, actor binding, hashing/encryption stance, rate limits
 - **Deferred Risks:** Explicitly allowed risks for MVP (and why)
 
-**Gate:** `sec-approved` -- If you store sensitive values, you must justify storage form.
+**Gate:** `sec-approved` — If you store sensitive values, you must justify storage form.
 
 ---
 
@@ -162,12 +162,12 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 - Alternatives considered
 
 **What Does NOT Go in ADR:**
-- RLS policy SQL (-> EXEC-SPEC)
+- RLS policy SQL (-> EXEC-SPEC, owned by build-pipeline)
 - Trigger bodies (-> EXEC-SPEC)
 - Index definitions (-> EXEC-SPEC)
 - Migration steps (-> EXEC-SPEC)
 
-**Gate:** `adr-frozen` -- ADR contains only context/decision/consequences, no SQL/code. Implementation detail goes to EXEC-SPEC (enforced by gate).
+**Gate:** `adr-frozen` — ADR contains only context/decision/consequences, no SQL/code. Implementation detail goes to EXEC-SPEC via build-pipeline.
 
 ---
 
@@ -235,7 +235,7 @@ Options:
 **Max 2 DA attempts.** After 2 consecutive P0 verdicts, the pipeline forces
 a human decision: override-with-reason or abort. No further automatic revision loops.
 
-**Gate:** `prd-approved` -- If it can't be proven by a test, it's not a criterion. No unresolved P0 findings from adversarial review.
+**Gate:** `prd-approved` — If it can't be proven by a test, it's not a criterion. No unresolved P0 findings from adversarial review.
 
 **Terminal phase**: On approval, output handoff instruction.
 
@@ -251,11 +251,12 @@ Feature Design Complete: {feature-name}
 ---------------------------------------------
 
 Artifacts:
-  [PASS] Scaffold: docs/01-scaffolds/SCAFFOLD-###-{slug}.md
-  [PASS] RFC:      docs/02-design/RFC-###-{slug}.md
-  [PASS] SEC Note: docs/20-architecture/specs/{feature}/SEC_NOTE.md
-  [PASS] ADR(s):   docs/80-adrs/ADR-###-{slug}.md
-  [PASS] PRD:      docs/10-prd/PRD-###-{slug}.md
+  [PASS] Boundary:  docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md
+  [PASS] Scaffold:  docs/01-scaffolds/SCAFFOLD-###-{slug}.md
+  [PASS] RFC:       docs/02-design/RFC-###-{slug}.md
+  [PASS] SEC Note:  docs/30-security/SEC-NOTE-{slug}.md (or specs/{feature}/SEC_NOTE.md)
+  [PASS] ADR(s):    docs/80-adrs/ADR-###-{slug}.md
+  [PASS] PRD:       docs/10-prd/PRD-###-{slug}.md
   [PASS] DA Review: {verdict} ({P0_count} P0, {P1_count} P1)
 
 Next: /build PRD-###
@@ -268,18 +269,17 @@ Next: /build PRD-###
 
 | Command | Purpose |
 |---------|---------|
-| `/feature <name>` | Start new or resume existing feature pipeline |
-| `/feature-status` | Show current phase, gates passed/pending |
+| `/feature-start <name>` | Start new pipeline at Phase 0 |
+| `/feature-resume [name]` | Resume from last checkpoint |
+| `/feature-status [name]` | Show current phase, gates passed/pending |
+| `/feature-gate <gate>` | Run validation for a specific gate |
 
 ---
 
 ## Smart Detection Logic
 
 ```
-/feature <argument>
-
-If argument == "status":
-  -> display status (read-only)
+/feature-start <argument>
 
 If checkpoint exists for <argument>:
   -> resume from last phase
@@ -288,34 +288,57 @@ If checkpoint exists for <argument>:
 If no checkpoint exists:
   -> start new pipeline at Phase 0
   -> create checkpoint
+
+/feature-status [argument]
+  -> display status (read-only)
+  -> if no argument, show most recent feature
 ```
 
 ---
 
 ## State Management
 
-### Checkpoint Structure
+### Checkpoint Structure (v2)
 
 ```json
 {
+  "schema_version": 2,
   "feature_id": "csv-player-import",
   "current_phase": 3,
   "status": "in_progress",
-  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved"],
-  "gates_pending": ["sec-approved", "adr-frozen", "prd-approved"],
+  "gates": {
+    "srm-ownership":    { "passed": true,  "timestamp": "2026-02-22T10:00:00Z" },
+    "scaffold-approved": { "passed": true,  "timestamp": "2026-02-22T11:00:00Z" },
+    "design-approved":   { "passed": true,  "timestamp": "2026-02-22T14:00:00Z" },
+    "sec-approved":      { "passed": false, "timestamp": null },
+    "adr-frozen":        { "passed": false, "timestamp": null },
+    "prd-approved":      { "passed": false, "timestamp": null }
+  },
   "artifacts": {
     "feature_boundary": "docs/20-architecture/specs/csv-player-import/FEATURE_BOUNDARY.md",
     "scaffold": "docs/01-scaffolds/SCAFFOLD-001-csv-player-import.md",
-    "design_brief": "docs/02-design/RFC-001-csv-player-import.md",
+    "rfc": "docs/02-design/RFC-001-csv-player-import.md",
     "sec_note": null,
     "adr": null,
     "prd": null
   },
-  "timestamp": "2026-02-22T10:00:00Z"
+  "da_review": {
+    "ran": false,
+    "verdict": null,
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0,
+    "override_reason": null
+  },
+  "branch": null,
+  "working_directory": null,
+  "timestamp": "2026-02-22T14:00:00Z"
 }
 ```
 
 **Location:** `.claude/skills/feature-pipeline/checkpoints/{feature-id}.json`
+
+**Migration:** Checkpoints with no `schema_version` field are v1. Agents should read v1 checkpoints gracefully — map `gates_passed`/`gates_pending` arrays to the v2 `gates` object, and treat missing `da_review` as not-yet-run.
 
 ---
 
@@ -326,7 +349,7 @@ If no checkpoint exists:
 | Phase 2 (RFC) | `lead-architect` | Skill invocation with Feature Scaffold context |
 | Phase 4 (ADR) | `lead-architect` | Skill invocation, then freeze operation |
 | Phase 5 (PRD) | `prd-writer` | Skill invocation with Scaffold + RFC + SEC + ADR context |
-| Phase 5 (PRD Review) | `devils-advocate` | Skill invocation, Mini One-Pager mode |
+| Phase 5 (DA Review) | `devils-advocate` | Skill invocation, Mini One-Pager mode |
 
 ---
 
@@ -340,8 +363,10 @@ If no checkpoint exists:
 | What decisions are locked | feature-pipeline | ADR(s) (`docs/80-adrs/`) |
 | What must be true | feature-pipeline | PRD (`docs/10-prd/`) |
 | How to build it | build-pipeline | EXEC-SPEC (`docs/21-exec-spec/`) |
+| How to prove it's done | build-pipeline | DoD gates |
 | Building it | build-pipeline | Code, migrations, tests |
-| Proving it's done | build-pipeline | DoD gates, CI validation |
+
+Feature-pipeline produces no implementation artifacts. If you find yourself writing SQL, DoD checklists, or EXEC-SPECs, you've crossed into build-pipeline territory. Stop and hand off.
 
 ---
 
@@ -361,10 +386,10 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 
 | File | Purpose |
 |------|---------|
-| `references/feature-boundary-template.md` | Phase 0 template |
+| `references/feature-boundary-template.md` | Phase 0 template (ownership + contracts) |
+| `references/sec-note-template.md` | Phase 3 template |
 | `docs/01-scaffolds/TEMPLATE.md` | Phase 1 template |
 | `docs/02-design/TEMPLATE.md` | Phase 2 template |
-| `references/sec-note-template.md` | Phase 3 template |
 
 ---
 
@@ -373,12 +398,12 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 A feature design is "Done" when all gates are green and handoff is ready:
 
 - [ ] SRM ownership sentence written and boundary declared
-- [ ] Scaffold pins intent, constraints, 2+ options with tradeoffs
+- [ ] Scaffold pins intent, constraints, 5+ non-goals, 2+ options with tradeoffs
 - [ ] RFC proposes direction, identifies ADR-worthy decisions
+- [ ] If new UI surface: Surface Classification declared (rendering delivery + data aggregation)
+- [ ] If new UI surface: Truth-bearing metrics identified with preliminary MEAS-IDs
 - [ ] SEC Note covers assets, threats, controls, deferred risks
 - [ ] ADR(s) contain only durable decisions (no implementation SQL/code)
 - [ ] PRD references ADR IDs, defines testable acceptance criteria
-- [ ] If new UI surface: Surface Classification declared (rendering delivery + data aggregation per ADR-041)
-- [ ] If new UI surface: Truth-bearing metrics identified with preliminary MEAS-IDs
-- [ ] Adversarial review passed (no P0 findings)
+- [ ] Adversarial review passed (no P0 findings, or override-with-reason recorded)
 - [ ] Handoff instruction displayed with all artifact paths

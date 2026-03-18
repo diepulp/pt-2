@@ -13,7 +13,7 @@ It contains test strategy and quality gate requirements.
 
 | Layer | Target | Tool |
 |-------|--------|------|
-| Service layer | 80%+ | Jest |
+| Service layer | 80%+ (governance target) | Jest |
 | Mappers | 100% | Jest |
 | Route handlers | Happy path + error cases | Jest (integration) |
 | E2E critical paths | All user journeys | Playwright |

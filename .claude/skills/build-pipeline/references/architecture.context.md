@@ -8,9 +8,7 @@ It contains canonical patterns and rules that MUST be validated against.
 ## SRM Reference
 
 **Canonical Document**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md`
-**Current Version**: 4.9.0 (2025-12-25)
-
-Always check the actual SRM file for the current version. Do not hard-code version numbers.
+Always check the actual SRM file for the current version — do not rely on hard-coded version numbers here.
 
 ### SRM Ownership Rules
 

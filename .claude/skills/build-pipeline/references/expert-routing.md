@@ -166,7 +166,7 @@ From architecture.context.md:
 - Cross-context: Only consume published DTOs/views, no direct table access
 
 From governance.context.md:
-- Test Location: __tests__/services/{domain}/ (NOT services/{domain}/__tests__/)
+- Test Location: services/{domain}/__tests__/ (co-located with services)
 - Test Naming: *.int.test.ts (NOT *.integration.test.ts)
 - Migration Standard: RLS policies in SAME migration as schema changes
 - Lint Gate: max-warnings=0 (no warnings allowed)
@@ -287,12 +287,64 @@ Each skill receives:
 
 ---
 
+## Executor Registry
+
+All workstreams use Skills as executors. Task agents are deprecated for pipeline execution.
+
+### Skill Registry
+
+| Skill Name | Domain | Use For |
+|------------|--------|---------|
+| `backend-service-builder` | Backend | DTOs, migrations, service factories, CRUD |
+| `api-builder` | API | OpenAPI contracts, route handlers, middleware |
+| `rls-expert` | Security | RLS policies, ADR-015/020 patterns, SECURITY DEFINER |
+| `frontend-design-pt-2` | Frontend | React 19 components, Zustand stores, hooks |
+| `e2e-testing` | Testing | Playwright E2E tests, TDD workflow |
+| `qa-specialist` | Quality | Test coverage validation, quality gates |
+| `performance-engineer` | Performance | Query optimization, SLOs, benchmarks |
+| `lead-architect` | Architecture | EXECUTION-SPEC scaffolding, ADRs, SRM updates |
+| `devils-advocate` | Review | Adversarial EXEC-SPEC review, P0-P3 findings |
+
+### Expert Skills: Design vs Execution
+
+Expert skills serve two roles in the pipeline:
+
+| Role | When | Purpose |
+|------|------|---------|
+| **Design Consultation** | Phase 1 (Stage 2) | Refine workstream specifications with domain expertise |
+| **Execution** | Phase 3 | Implement the workstream |
+
+### Deprecated: Task Agents
+
+DO NOT USE task agents (`typescript-pro`, `general-purpose`, `Explore`, `Plan`) as workstream executors.
+
+| Old (Deprecated) | New (Required) |
+|------------------|----------------|
+| `typescript-pro` for Zustand | `frontend-design-pt-2` |
+| `typescript-pro` for unit tests | `backend-service-builder` or `frontend-design-pt-2` |
+| `typescript-pro` for React Query | `frontend-design-pt-2` |
+| `Plan` for architecture | `lead-architect` |
+
+Task agents remain available for ad-hoc exploration outside the pipeline.
+
+### Validation
+
+Run the validation script before execution:
+
+```bash
+python .claude/skills/build-pipeline/scripts/validate-execution-spec.py \
+    docs/21-exec-spec/EXEC-###-{slug}.md
+```
+
+The script validates `executor_type` is "skill", `executor` name is a valid skill, dependencies reference existing workstreams, and no circular dependencies exist.
+
+---
+
 ## Related Documents
 
-- `executor-registry.md` - Complete executor mapping
-- `references/architecture.context.md` - SRM ownership, DTO patterns
-- `references/governance.context.md` - Test locations, migration standards
-- `references/quality.context.md` - Coverage targets, quality gates
+- `architecture.context.md` - SRM ownership, DTO patterns
+- `governance.context.md` - Test locations, migration standards
+- `quality.context.md` - Coverage targets, quality gates
 - `../lead-architect/SKILL.md` - Architectural scaffolding role
 - `../backend-service-builder/SKILL.md` - Backend domain expertise
 - `../api-builder/SKILL.md` - API domain expertise
