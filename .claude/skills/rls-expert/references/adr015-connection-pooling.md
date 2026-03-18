@@ -52,7 +52,7 @@ All context injection MUST be wrapped in a single transaction with the queries t
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Supavisor (Transaction Mode)                 │
 ├─────────────────────────────────────────────────────────────────┤
-│  Single RPC Call: set_rls_context(...)                          │
+│  Single RPC Call: set_rls_context_from_staff(...)                │
 │  ┌─────────────────────────────────────────────────────────┐    │
 │  │ BEGIN;                                                  │    │
 │  │ SET LOCAL app.casino_id = 'uuid-a';                     │    │
@@ -126,28 +126,63 @@ CREATE POLICY "table_read_hybrid"
 
 ## Implementation
 
-### Database RPC
+### Database RPC (ADR-024 Authoritative Pattern)
+
+> **Note:** The old `set_rls_context(p_actor_id, p_casino_id, p_staff_role)` is **DEPRECATED** (ADR-024).
+> The current RPC is `set_rls_context_from_staff()` which derives context authoritatively from JWT + staff table.
 
 ```sql
-CREATE OR REPLACE FUNCTION set_rls_context(
-  p_actor_id uuid,
-  p_casino_id uuid,
-  p_staff_role text,
+CREATE OR REPLACE FUNCTION set_rls_context_from_staff(
   p_correlation_id text DEFAULT NULL
-) RETURNS void
+) RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
+DECLARE
+  v_user_id uuid;
+  v_staff_id uuid;
+  v_jwt_staff_id uuid;
+  v_casino_id uuid;
+  v_staff_role text;
 BEGIN
-  -- SET LOCAL ensures context persists for entire transaction
-  -- The 'true' parameter makes it LOCAL (transaction-scoped)
-  PERFORM set_config('app.actor_id', p_actor_id::text, true);
-  PERFORM set_config('app.casino_id', p_casino_id::text, true);
-  PERFORM set_config('app.staff_role', p_staff_role, true);
-
-  IF p_correlation_id IS NOT NULL THEN
-    PERFORM set_config('application_name', p_correlation_id, true);
+  -- Get authenticated user
+  v_user_id := auth.uid();
+  IF v_user_id IS NULL THEN
+    RAISE EXCEPTION 'Authentication required: auth.uid() is null';
   END IF;
+
+  -- Get staff_id from JWT (authoritative source)
+  v_jwt_staff_id := (auth.jwt() -> 'app_metadata' ->> 'staff_id')::uuid;
+  IF v_jwt_staff_id IS NULL THEN
+    RAISE EXCEPTION 'JWT missing staff_id claim in app_metadata';
+  END IF;
+
+  -- Lookup staff record and validate user_id binding (INV-3)
+  SELECT s.id, s.casino_id, s.role INTO v_staff_id, v_casino_id, v_staff_role
+  FROM staff s
+  WHERE s.id = v_jwt_staff_id
+    AND s.user_id = v_user_id  -- Bind to auth.uid() (prevents mis-issued tokens)
+    AND s.status = 'active';   -- INV-4: Block inactive staff
+
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Staff not found or inactive for user %', v_user_id;
+  END IF;
+
+  -- Set transaction-local context (INV-5: pooler-safe)
+  PERFORM set_config('app.actor_id', v_staff_id::text, true);
+  PERFORM set_config('app.casino_id', v_casino_id::text, true);
+  PERFORM set_config('app.staff_role', v_staff_role, true);
+
+  -- Correlation ID for tracing (capped length)
+  IF p_correlation_id IS NOT NULL THEN
+    PERFORM set_config('application_name',
+      left(regexp_replace(p_correlation_id, '[^a-zA-Z0-9_-]', '', 'g'), 63),
+      true);
+  END IF;
+
+  -- Return authoritative context (ADR-030 D1)
+  RETURN QUERY SELECT v_staff_id, v_casino_id, v_staff_role::staff_role;
 END;
 $$;
 ```
@@ -164,26 +199,35 @@ export interface RLSContext {
 }
 
 /**
- * Inject RLS context via set_rls_context() RPC (ADR-015)
+ * Inject RLS context via set_rls_context_from_staff() RPC (ADR-024)
  *
- * Single RPC call - all SET LOCAL statements execute atomically
- * in the same transaction. Connection pooling safe.
+ * Uses authoritative derivation — NO spoofable parameters.
+ * RPC derives context from JWT + staff table lookup, then
+ * RETURNS TABLE with the authoritative values.
+ * Middleware populates ctx.rlsContext from the return value (ADR-030 D1).
  */
 export async function injectRLSContext(
   supabase: SupabaseClient<Database>,
-  context: RLSContext,
   correlationId?: string,
-): Promise<void> {
-  const { error } = await supabase.rpc('set_rls_context', {
-    p_actor_id: context.actorId,
-    p_casino_id: context.casinoId,
-    p_staff_role: context.staffRole,
-    p_correlation_id: correlationId || null,
+): Promise<RLSContext> {
+  const { data, error } = await supabase.rpc('set_rls_context_from_staff', {
+    p_correlation_id: correlationId,
   });
 
   if (error) {
     throw new Error(`Failed to inject RLS context: ${error.message}`);
   }
+
+  const row = data?.[0];
+  if (!row) {
+    throw new Error('Failed to inject RLS context: RPC returned no data');
+  }
+
+  return {
+    actorId: row.actor_id,
+    casinoId: row.casino_id,
+    staffRole: row.staff_role,
+  };
 }
 ```
 
@@ -200,17 +244,14 @@ export async function withServerAction<T>(
     action: string;
   },
 ): Promise<T> {
-  // 1. Get authenticated user's context
-  const rlsContext = await getAuthContext(options.supabase);
-
-  // 2. Inject context via ADR-015 RPC
-  await injectRLSContext(
+  // 1. Inject context via ADR-024 RPC (derives from JWT + staff table)
+  // No spoofable parameters — context is authoritative
+  const rlsContext = await injectRLSContext(
     options.supabase,
-    rlsContext,
     `${options.endpoint}:${Date.now()}`
   );
 
-  // 3. Execute action (RLS now enforced)
+  // 2. Execute action (RLS now enforced, ctx.rlsContext populated from return value)
   return await action();
 }
 ```
@@ -304,11 +345,11 @@ COALESCE(
 
 ## Migration Steps
 
-### Phase 1: Transaction-Wrapped RPC (Immediate)
+### Phase 1: Transaction-Wrapped RPC (Implemented)
 
-1. Create `set_rls_context()` RPC
-2. Update `injectRLSContext()` to use new RPC
-3. Update `withServerAction` wrapper
+1. Create `set_rls_context_from_staff()` RPC (ADR-024) — **DONE**
+2. Update `injectRLSContext()` to use authoritative RPC — **DONE**
+3. Update `withServerAction` wrapper — **DONE**
 4. Test context persistence across queries
 
 ### Phase 2: JWT Claims Integration
@@ -330,15 +371,12 @@ COALESCE(
 ## Verification
 
 ```sql
--- Test 1: Context persists within transaction
+-- Test 1: Context persists within transaction (ADR-024 compliant)
 BEGIN;
-SELECT set_rls_context(
-  p_actor_id := 'staff-uuid',
-  p_casino_id := 'casino-uuid',
-  p_staff_role := 'pit_boss'
-);
+-- Derives context from JWT + staff table — no spoofable parameters
+SELECT * FROM set_rls_context_from_staff(p_correlation_id := 'test-verification');
 
--- Should show values
+-- Should show values derived authoritatively
 SELECT
   current_setting('app.actor_id', true) as actor,
   current_setting('app.casino_id', true) as casino,
@@ -348,11 +386,11 @@ SELECT
 SELECT count(*) FROM visit;
 COMMIT;
 
--- Test 2: JWT fallback works
+-- Test 2: JWT fallback works (SELECT only — Pattern C)
 RESET ALL;
 -- (Query as authenticated user with app_metadata)
 SELECT count(*) FROM visit;
--- Should still return casino-scoped results via JWT
+-- Should still return casino-scoped results via JWT fallback
 ```
 
 ---

@@ -19,14 +19,23 @@ End-to-end testing specialist for PT-2 casino pit management system. Orchestrate
 
 ## Testing Governance (ADR-044)
 
-All QA activities are governed by the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`), established by ADR-044. Key rules for QA:
+All QA activities are governed by the **Testing Governance Standard**, established by ADR-044.
 
-- **§2 Governing Principle**: A test layer counts as verification only when it runs in the correct environment, executes in CI, and is enforced via branch protection. All three conditions required.
-- **§3 Canonical Taxonomy**: 7 layers — static, unit-browser, server-unit, route-handler, integration, E2E, smoke. Every test file must belong to one.
-- **§4 Environment Contract**: E2E requires real browser + app + Supabase. Server-unit/route-handler require `node`. Unit-browser requires `jsdom`. Misclassification is a governance defect.
-- **§5 Enforcement Tiers**: Required (merge-blocking), Advisory (useful but non-governing), Quarantined (known degraded, documented owner + exit criteria), Deprecated.
-- **§9 Shallow Test Policy**: Net-new mock-everything/existence-only tests are prohibited. Existing shallow tests reclassified as smoke. Replace incrementally.
-- **§11 Skip/Quarantine Policy**: Every skip must have a written reason, scope, and resolution plan. Quarantines need owner, exit criteria, and explicit non-governing statement.
+**Source documents:**
+- **ADR-044** — `docs/80-adrs/ADR-044-testing-governance-posture.md` (durable decision record)
+- **TESTING_GOVERNANCE_STANDARD** — `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md` (operational rulebook, v2.0.0)
+
+Key rules for QA:
+
+- **§2 Governing Principle — Two-Tier Verification**: Verification is earned in two stages. **Tier 1 (Trusted-Local)**: runs in correct environment, invoked by truthful command, produces behaviorally meaningful assertions. **Tier 2 (Governance-Grade Merge Protection)**: additionally executes automatically in CI and is enforced via required branch-protection checks. Tier 1 is required before promotion to Tier 2.
+- **§3 Canonical Taxonomy**: 7 layers — static, unit-browser, server-unit, route-handler, integration, E2E, smoke. Every test file must declare one primary canonical layer.
+- **§4 Environment Contract**: E2E requires real browser + app + Supabase. Server-unit/route-handler require `node`. Unit-browser requires `jsdom`. Integration requires `node` + running Supabase. Misclassification is a governance defect (durable rule — applies immediately).
+- **§5 Verification Tiers**: **Trusted-Local** (honest local verification, correct runtime, does not block merge), **Required** (promotion target — all trusted-local conditions plus CI execution and branch-protection enforcement, blocks merge), **Advisory** (exists but not yet honest enough to be trusted), **Quarantined** (known degraded, documented owner + exit criteria + non-governing statement), **Deprecated** (scheduled for removal).
+- **§6 Green Semantics**: "Local green" = trusted-local layers pass in correct runtime. "CI green" = all required checks passed in CI. "Compile green" = lint + type-check + build only. No silent conflation of these categories.
+- **§9 Route-Handler and Shallow Test Policy (QA-005)**: Net-new mock-everything/existence-only tests are prohibited. Existing shallow tests reclassified as smoke coverage. Replace incrementally as routes are touched. At least one exemplar test demonstrating correct pattern required.
+- **§10 Script Truthfulness**: All test scripts, configs, and CI jobs must truthfully describe what they run. No silent exclusions. Durable rule — applies immediately.
+- **§11 Skip/Quarantine Policy**: Every skip must have a written reason, scope, and resolution plan. Quarantines need owner, exit criteria, and explicit non-governing statement. Hidden exclusions are prohibited.
+- **§12 Test Change-Control**: Any change affecting testing posture (configs, scripts, CI workflows, exclusion patterns, tier changes) must disclose what changed, why, and confidence impact.
 
 **Note**: QA-001 defines aspirational coverage targets. The governance standard defines what "verified" means. They serve different purposes.
 
@@ -39,73 +48,81 @@ Per `docs/40-quality/QA-001-service-testing-strategy.md`, E2E tests cover **10% 
 ### 1. Player Management Workflow
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Search | Fuzzy player name search | `e2e/workflows/player-management.spec.ts` |
-| Create | Register new player profile | `e2e/workflows/player-management.spec.ts` |
-| Enroll | Casino-specific enrollment | `e2e/workflows/player-management.spec.ts` |
-| Update | Modify player information | `e2e/workflows/player-management.spec.ts` |
+| Search | Fuzzy player name search | TODO: `e2e/workflows/player-management.spec.ts` (not yet implemented) |
+| Create | Register new player profile | TODO: `e2e/workflows/player-management.spec.ts` (not yet implemented) |
+| Enroll | Casino-specific enrollment | TODO: `e2e/workflows/player-management.spec.ts` (not yet implemented) |
+| Update | Modify player information | TODO: `e2e/workflows/player-management.spec.ts` (not yet implemented) |
+
+> **Note**: Player management E2E tests do not exist yet. Related coverage exists in `e2e/workflows/player-360-panels.spec.ts` (PRD-023) and `e2e/workflows/player-360-navigation.spec.ts` (PRD-022), which cover player search/navigation but not CRUD operations.
 
 ### 2. Visit Lifecycle Workflow
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Check-in | Start player visit (idempotent) | `e2e/workflows/visit-lifecycle.spec.ts` |
-| Active session | Verify single active visit constraint | `e2e/workflows/visit-lifecycle.spec.ts` |
-| Check-out | End visit with timestamp | `e2e/workflows/visit-lifecycle.spec.ts` |
-| Ghost visit | Unidentified player gaming session | `e2e/workflows/visit-lifecycle.spec.ts` |
+| Check-in | Start player visit (idempotent) | `e2e/workflows/visit-continuation.spec.ts` |
+| Active session | Verify single active visit constraint | `e2e/workflows/visit-continuation.spec.ts` |
+| Check-out | End visit with timestamp | `e2e/workflows/visit-continuation.spec.ts` |
+| Ghost visit | Unidentified player gaming session | `e2e/workflows/visit-continuation.spec.ts` |
+
+> **Note**: `visit-continuation.spec.ts` covers PRD-017 (Start From Previous Session) — recent sessions API, visit continuation, `visit_group_id` tracking, and max-1-open-visit constraint. General check-in/check-out/ghost-visit E2E tests are not yet separated into a dedicated file.
 
 ### 3. Rating Slip Workflow
+
+> **Coverage gap**: A dedicated `rating-slip-lifecycle.spec.ts` does not exist. State machine operations (start/pause/resume/close), update operations, and constraint tests are partially covered by `rating-slip-modal.spec.ts` (PRD-008 modal integration) and `move-player.spec.ts` (PRD-020). A standalone lifecycle spec should be created to close this gap.
 
 #### 3.1 State Machine Operations
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Start | Begin rating slip at table/seat | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Pause | Pause session timer (open → paused) | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Resume | Resume paused session (paused → open) | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Close | End session with duration calculation | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Duration | Verify pause intervals excluded | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
+| Start | Begin rating slip at table/seat | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Pause | Pause session timer (open → paused) | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Resume | Resume paused session (paused → open) | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Close | End session with duration calculation | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Duration | Verify pause intervals excluded | `e2e/workflows/rating-slip-modal.spec.ts` |
 
 #### 3.2 Move Player Operation (PRD-008)
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Move to new table | Close current slip + start new at destination | `e2e/workflows/rating-slip-move.spec.ts` |
-| Move to new seat | Same table, different seat | `e2e/workflows/rating-slip-move.spec.ts` |
-| Preserve visit | Verify visit_id continuity after move | `e2e/workflows/rating-slip-move.spec.ts` |
-| Move with avg bet | Transfer average bet to new slip | `e2e/workflows/rating-slip-move.spec.ts` |
+| Move to new table | Close current slip + start new at destination | `e2e/workflows/move-player.spec.ts` |
+| Move to new seat | Same table, different seat | `e2e/workflows/move-player.spec.ts` |
+| Preserve visit | Verify visit_id continuity after move | `e2e/workflows/move-player.spec.ts` |
+| Move with avg bet | Transfer average bet to new slip | `e2e/workflows/move-player.spec.ts` |
 
 #### 3.3 Update Operations
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Update average bet | Modify bet amount on open/paused slip | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Multiple bet updates | Verify multiple updates before close | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Close with financial | Record chips-taken on close (player exists) | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
+| Update average bet | Modify bet amount on open/paused slip | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Multiple bet updates | Verify multiple updates before close | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Close with financial | Record chips-taken on close (player exists) | `e2e/workflows/rating-slip-modal.spec.ts` |
 
 #### 3.4 Constraints & Invariants
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Seat uniqueness | Only one active slip per seat | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| State transitions | Invalid transitions rejected (422) | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Idempotency | All mutations require Idempotency-Key | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
-| Ghost visit slips | Rating slips for unidentified players | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
+| Seat uniqueness | Only one active slip per seat | `e2e/workflows/rating-slip-modal.spec.ts` |
+| State transitions | Invalid transitions rejected (422) | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Idempotency | All mutations require Idempotency-Key | `e2e/workflows/rating-slip-modal.spec.ts` |
+| Ghost visit slips | Rating slips for unidentified players | `e2e/workflows/rating-slip-modal.spec.ts` |
 
 #### 3.5 Cross-Context Queries
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Block table close | Cannot close table with open slips | `e2e/workflows/rating-slip-lifecycle.spec.ts` |
+| Block table close | Cannot close table with open slips | `e2e/workflows/rating-slip-modal.spec.ts` |
 | Modal data | BFF aggregates 5 contexts (slip, visit, player, loyalty, financial) | `e2e/workflows/rating-slip-modal.spec.ts` |
 
 ### 4. Loyalty Rewards Workflow
 | Step | Description | Test File |
 |------|-------------|-----------|
-| Balance query | Get current loyalty points | `e2e/workflows/loyalty-rewards.spec.ts` |
-| Mid-session reward | Issue reward during active visit | `e2e/workflows/loyalty-rewards.spec.ts` |
-| Accrual on close | Points earned at slip close | `e2e/workflows/loyalty-rewards.spec.ts` |
-| Redemption | Spend loyalty points | `e2e/workflows/loyalty-rewards.spec.ts` |
-| Idempotency | Verify no duplicate rewards | `e2e/workflows/loyalty-rewards.spec.ts` |
+| Balance query | Get current loyalty points | `e2e/workflows/loyalty-accrual-lifecycle.spec.ts` |
+| Mid-session reward | Issue reward during active visit | `e2e/workflows/loyalty-accrual-lifecycle.spec.ts` |
+| Accrual on close | Points earned at slip close | `e2e/workflows/loyalty-accrual-lifecycle.spec.ts` |
+| Redemption | Spend loyalty points | `e2e/workflows/loyalty-accrual-lifecycle.spec.ts` |
+| Idempotency | Verify no duplicate rewards | `e2e/workflows/loyalty-accrual-lifecycle.spec.ts` |
 
 ---
 
-## Route Handler Testing (QA-005)
+## Route Handler Testing (QA-005 / ADR-044 §9)
 
-Route handler unit tests fill the gap between service layer unit tests (business logic) and E2E tests (full user flows). They verify the HTTP boundary layer: route exports exist, request/response shapes match contracts, and error responses are properly formatted.
+Route handler tests are a canonical test layer (ADR-044 §3.4) that verify the HTTP boundary layer: request validation, parameter handling, response status codes, response body shape, and error paths. They require `node` environment (ADR-044 §4).
+
+**Governance**: ADR-044 §9 prohibits net-new shallow mock-everything tests. Existing shallow tests are reclassified as smoke coverage. New route-handler tests must assert on observable HTTP behavior with minimal mocking.
 
 **Reference**: `docs/40-quality/QA-005-route-handler-testing.md`
 
@@ -169,10 +186,11 @@ npm test -- services/rating-slip/__tests__/http-contract
 
 ### Key Testing Patterns
 
-1. **Jest Environment Directive** (Required)
+1. **Jest Environment Directive** (Required per ADR-044 §4)
    ```typescript
    /** @jest-environment node */
    ```
+   Route-handler tests MUST run under `node` environment. A global `jsdom` default silently misclassifies server-side tests — this is a governance defect per ADR-044 §4.
 
 2. **Mock withServerAction Middleware**
    ```typescript
@@ -216,6 +234,8 @@ npm test -- services/rating-slip/__tests__/http-contract
 - [ ] HTTP contract tests validate http.ts ↔ route.ts parity
 - [ ] All tests pass: `npm test -- app/api/v1/rating-slips`
 - [ ] No missing route exports (ISSUE-607F9CCB regression prevention)
+- [ ] All route-handler tests use `/** @jest-environment node */` directive (ADR-044 §4)
+- [ ] No net-new shallow/existence-only tests — must assert on HTTP behavior (ADR-044 §9)
 
 ---
 
@@ -238,26 +258,24 @@ npx playwright show-report
 Target specific workflow for faster feedback:
 
 ```bash
-# Player management only
-npx playwright test e2e/workflows/player-management.spec.ts
-
-# Rating slip lifecycle (state machine, updates, constraints)
-npx playwright test e2e/workflows/rating-slip-lifecycle.spec.ts
-
-# Rating slip move player operation
-npx playwright test e2e/workflows/rating-slip-move.spec.ts
-
-# Rating slip modal (BFF aggregation)
+# Rating slip modal (BFF aggregation, state machine via UI)
 npx playwright test e2e/workflows/rating-slip-modal.spec.ts
 
-# Visit lifecycle only
-npx playwright test e2e/workflows/visit-lifecycle.spec.ts
+# Move player operation (PRD-020)
+npx playwright test e2e/workflows/move-player.spec.ts
 
-# Loyalty rewards only
-npx playwright test e2e/workflows/loyalty-rewards.spec.ts
+# Visit continuation (PRD-017)
+npx playwright test e2e/workflows/visit-continuation.spec.ts
 
-# All rating slip tests
-npx playwright test e2e/workflows/rating-slip*.spec.ts
+# Loyalty accrual lifecycle
+npx playwright test e2e/workflows/loyalty-accrual-lifecycle.spec.ts
+
+# Player 360 panels (PRD-023) and navigation (PRD-022)
+npx playwright test e2e/workflows/player-360-panels.spec.ts
+npx playwright test e2e/workflows/player-360-navigation.spec.ts
+
+# All rating slip tests (modal + move)
+npx playwright test e2e/workflows/rating-slip-modal.spec.ts e2e/workflows/move-player.spec.ts
 ```
 
 ### Debug Mode
@@ -272,14 +290,20 @@ npx playwright test --ui
 npx playwright test --headed
 
 # Debug specific test
-npx playwright test rating-slip-lifecycle.spec.ts --debug
+npx playwright test rating-slip-modal.spec.ts --debug
 ```
 
 ---
 
 ## Quality Gate Checklist
 
-Before approving a release, verify all gates pass:
+Before approving a release, verify all gates pass. Per ADR-044, distinguish between verification tiers: gates relying on **trusted-local** layers are honest developer verification but not governance-grade. Gates relying on **required** layers (CI + branch protection enforced) are governance-grade merge evidence. Report each gate's verification tier honestly (ADR-044 §6 green semantics).
+
+### GATE-0: Verification Posture Check (ADR-044 §5/§8)
+- [ ] All test layers have a declared verification tier (trusted-local, required, advisory, quarantined, or deprecated)
+- [ ] No layers exist in an ambiguous or undeclared state
+- [ ] Local verification floor met: static checks pass + at least one trusted-local functional layer in correct runtime
+- [ ] "Green" claims use correct semantics: "local green" vs "CI green" vs "compile green" (ADR-044 §6)
 
 ### GATE-1: Critical Workflow Coverage
 - [ ] Player management: search, create, enroll, update
@@ -314,11 +338,13 @@ Before approving a release, verify all gates pass:
 - [ ] Graceful degradation on network failure
 - [ ] Idempotency prevents duplicate mutations
 
-### GATE-5: Route Handler Tests (QA-005)
+### GATE-5: Route Handler Tests (QA-005 / ADR-044 §9)
 - [ ] Route handler tests pass: `npm test -- app/api/v1/rating-slips`
 - [ ] HTTP contract tests pass: `npm test -- services/rating-slip/__tests__/http-contract`
 - [ ] All route exports validated (prevents 404 regressions)
 - [ ] ServiceHttpResult envelope format verified
+- [ ] No net-new shallow mock-everything tests (ADR-044 §9 prohibition)
+- [ ] Route-handler tests run under `node` environment, not `jsdom` (ADR-044 §4)
 
 ---
 
@@ -368,10 +394,18 @@ npx playwright show-trace test-results/*/trace.zip
 
 ### Step 4: Report Quality Gate Status
 
-Summarize results for stakeholders:
+Summarize results for stakeholders. Per ADR-044 §6, use precise green semantics — distinguish compile green, local functional green, and CI green.
 
 ```markdown
 ## Quality Gate Report - [Date]
+
+### Verification Posture (ADR-044)
+- Green type: [compile green | local functional green | CI green]
+- Verification floor: [met | not met] (ADR-044 §8)
+- Layers at trusted-local: [list]
+- Layers at required (CI-enforced): [list]
+- Layers at advisory: [list]
+- Quarantined layers: [list with exit criteria]
 
 ### Test Execution Summary
 - Total tests: [X]
@@ -380,22 +414,22 @@ Summarize results for stakeholders:
 - Flaky: [W]
 
 ### Critical Workflow Status
-| Workflow | Status | Notes |
-|----------|--------|-------|
-| Player Management | ✅/❌ | [details] |
-| Visit Lifecycle | ✅/❌ | [details] |
-| Rating Slip State Machine | ✅/❌ | [details] |
-| Rating Slip Move Player | ✅/❌ | [details] |
-| Rating Slip Modal/BFF | ✅/❌ | [details] |
-| Loyalty Rewards | ✅/❌ | [details] |
-| Route Handler Tests | ✅/❌ | [38 tests, 10 suites] |
-| HTTP Contract Tests | ✅/❌ | [8 contracts validated] |
+| Workflow | Status | Verification Tier | Notes |
+|----------|--------|-------------------|-------|
+| Player Management | PASS/FAIL | trusted-local/required | [details] |
+| Visit Lifecycle | PASS/FAIL | trusted-local/required | [details] |
+| Rating Slip State Machine | PASS/FAIL | trusted-local/required | [details] |
+| Rating Slip Move Player | PASS/FAIL | trusted-local/required | [details] |
+| Rating Slip Modal/BFF | PASS/FAIL | trusted-local/required | [details] |
+| Loyalty Rewards | PASS/FAIL | trusted-local/required | [details] |
+| Route Handler Tests | PASS/FAIL | trusted-local/required | [38 tests, 10 suites] |
+| HTTP Contract Tests | PASS/FAIL | trusted-local/required | [8 contracts validated] |
 
 ### Blockers
 [List any blocking issues]
 
 ### Recommendation
-[PASS/FAIL with rationale]
+[PASS/FAIL with rationale — state which green type this represents]
 ```
 
 ---
@@ -607,13 +641,18 @@ if past_runs:
 
 ## Resources
 
+### Governing Documents
+- `docs/80-adrs/ADR-044-testing-governance-posture.md` — Testing governance decision record
+- `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md` — Operational rulebook (v2.0.0)
+- `docs/40-quality/QA-001-service-testing-strategy.md` — Aspirational coverage targets (not enforced)
+- `docs/40-quality/QA-005-route-handler-testing.md` — Route handler testing policy
+
 ### references/
 - `critical-workflows.md` - Detailed workflow specifications with acceptance criteria
 - `test-patterns.md` - PT-2 specific testing patterns and anti-patterns
 
 ### scripts/
 - `run-quality-gate.sh` - Automated quality gate execution script
-- `generate-coverage-report.py` - Coverage analysis and reporting
 
 ---
 

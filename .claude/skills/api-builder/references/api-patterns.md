@@ -53,12 +53,13 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
+  readJsonBody,
   requireIdempotencyKey,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { create{Domain}Service } from '@/services/{domain}';
-import { {Action}Schema } from '@/services/{domain}/dto';
+import { {Action}Schema } from '@/services/{domain}/dtos';
 import { createClient } from '@/lib/supabase/server';
 
 export async function POST(request: NextRequest) {
@@ -66,23 +67,27 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const idempotencyKey = requireIdempotencyKey(request);
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const input = {Action}Schema.parse(body);
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.{action}(input);
       },
       {
-        supabase,
-        action: '{domain}.{action}',
-        entity: '{domain}',
+        domain: '{domain}',
+        action: '{action}',
+        requireIdempotency: true,
         idempotencyKey,
-        requestId: ctx.requestId
+        correlationId: ctx.requestId,
       },
     );
 
+    if (!result.ok) {
+      return errorResponse(ctx, result);
+    }
     return successResponse(ctx, result.data, result.code);
   } catch (err) {
     return errorResponse(ctx, err);
@@ -207,7 +212,7 @@ export function buildMidSessionRewardRpcInput(
 DTOs derived from Database types via Pick/Omit:
 
 ```typescript
-// services/{domain}/dto.ts
+// services/{domain}/dtos.ts
 import type { Database } from '@/types/database.types';
 
 export type PlayerDTO = Pick<
@@ -235,7 +240,7 @@ export const PlayerCreateSchema = z.object({
 All API inputs MUST be validated using Zod schemas:
 
 ```typescript
-// services/{domain}/dto.ts
+// services/{domain}/dtos.ts
 import { z } from 'zod';
 
 // Schema matches DTO interface exactly
@@ -252,7 +257,7 @@ export type VisitCreateDTO = z.infer<typeof VisitCreateSchema>;
 
 ```typescript
 try {
-  const body = await request.json();
+  const body = await readJsonBody(request);
   const input = VisitCreateSchema.parse(body); // Throws ZodError on invalid
   // ... proceed with validated input
 } catch (err) {
@@ -357,9 +362,9 @@ type PlayerCreate =
 | `docs/25-api-data/API_SURFACE_MVP.md` | Human-readable API catalogue |
 | `types/api-schema.d.ts` | Generated TypeScript types |
 | `lib/http/service-response.ts` | Response helpers and contracts |
-| `lib/server-actions/with-server-action-wrapper.ts` | Action wrapper with audit |
+| `lib/server-actions/middleware/index.ts` | Middleware compositor (withServerAction) |
 | `app/api/v1/**` | Route handlers |
-| `services/{domain}/dto.ts` | DTOs and Zod schemas |
+| `services/{domain}/dtos.ts` | DTOs and Zod schemas |
 | `services/{domain}/keys.ts` | React Query key factories |
 
 ---

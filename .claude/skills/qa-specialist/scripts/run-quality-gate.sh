@@ -55,29 +55,29 @@ RATING_SLIP_MODAL_RESULT="pending"
 LOYALTY_RESULT="pending"
 
 # Run tests with detailed output
-echo "Running Player Management tests..."
-if npx playwright test e2e/workflows/player-management.spec.ts --reporter=line 2>/dev/null; then
+echo "Running Player 360 tests (nearest coverage for player management)..."
+if npx playwright test e2e/workflows/player-360-panels.spec.ts e2e/workflows/player-360-navigation.spec.ts --reporter=line 2>/dev/null; then
     PLAYER_RESULT="${GREEN}PASSED${NC}"
 else
     PLAYER_RESULT="${RED}FAILED${NC}"
 fi
 
-echo "Running Visit Lifecycle tests..."
-if npx playwright test e2e/workflows/visit-lifecycle.spec.ts --reporter=line 2>/dev/null; then
+echo "Running Visit Continuation tests..."
+if npx playwright test e2e/workflows/visit-continuation.spec.ts --reporter=line 2>/dev/null; then
     VISIT_RESULT="${GREEN}PASSED${NC}"
 else
     VISIT_RESULT="${RED}FAILED${NC}"
 fi
 
-echo "Running Rating Slip Lifecycle tests..."
-if npx playwright test e2e/workflows/rating-slip-lifecycle.spec.ts --reporter=line 2>/dev/null; then
+echo "Running Rating Slip Modal tests (covers lifecycle via UI)..."
+if npx playwright test e2e/workflows/rating-slip-modal.spec.ts --reporter=line 2>/dev/null; then
     RATING_SLIP_LIFECYCLE_RESULT="${GREEN}PASSED${NC}"
 else
     RATING_SLIP_LIFECYCLE_RESULT="${RED}FAILED${NC}"
 fi
 
-echo "Running Rating Slip Move Player tests..."
-if npx playwright test e2e/workflows/rating-slip-move.spec.ts --reporter=line 2>/dev/null; then
+echo "Running Move Player tests..."
+if npx playwright test e2e/workflows/move-player.spec.ts --reporter=line 2>/dev/null; then
     RATING_SLIP_MOVE_RESULT="${GREEN}PASSED${NC}"
 else
     RATING_SLIP_MOVE_RESULT="${RED}FAILED${NC}"
@@ -90,8 +90,8 @@ else
     RATING_SLIP_MODAL_RESULT="${RED}FAILED${NC}"
 fi
 
-echo "Running Loyalty Rewards tests..."
-if npx playwright test e2e/workflows/loyalty-rewards.spec.ts --reporter=line 2>/dev/null; then
+echo "Running Loyalty Accrual Lifecycle tests..."
+if npx playwright test e2e/workflows/loyalty-accrual-lifecycle.spec.ts --reporter=line 2>/dev/null; then
     LOYALTY_RESULT="${GREEN}PASSED${NC}"
 else
     LOYALTY_RESULT="${RED}FAILED${NC}"

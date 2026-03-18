@@ -57,6 +57,8 @@ Regardless of artifact type, always evaluate these dimensions:
 | **Migration safety** | Backfill strategy and rollback plan? |
 | **Observability** | How to detect and diagnose failure? |
 | **Over-engineering** | Does it violate the Over-Engineering Guardrail (PT-OE-01)? |
+| **Surface classification** | If surface EXEC-SPEC: are all 4 mandatory fields declared (ADR-041)? Patterns from proven palette? |
+| **Testing governance** | Does the test plan meet ADR-044 enforcement tiers? Is "green CI" precisely defined? |
 
 ### Step 3: Produce Review Output
 

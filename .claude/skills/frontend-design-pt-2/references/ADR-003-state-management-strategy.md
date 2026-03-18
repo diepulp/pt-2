@@ -1,11 +1,11 @@
 
 # ADR-003: State Management Strategy 
 
-**Status**: ACCEPTED  
-**Date Drafted**: 2025-10-10  
-**Date Accepted**: 2025-10-10  
-**Redacted/Updated**: 2025-10-23  
-**Decision Makers**: Development Team  
+**Status**: ACCEPTED
+**Date Drafted**: 2025-10-10
+**Date Accepted**: 2025-10-10
+**Redacted/Updated**: 2025-12-21
+**Decision Makers**: Development Team
 **Validation**: Phase 3 Waves 1-3 (32 integration tests passing)
 
 > This version folds in review feedback: query-key factories & stability, TanStack Query v5 pagination (`placeholderData` / Infinite Query), refined mutation retry guidance, realtime invalidation hygiene, cache structural sharing notes, and Zustand slices/selectors ergonomics.
@@ -208,6 +208,8 @@ usePlayerRealtime((evt) => {
 
 ### 8) Zustand for **Ephemeral UI State** (Only)
 
+> **Extended by ADR-035** — ADR-035 formalizes a Session Reset Contract for Zustand stores across auth transitions. It classifies stores as **session-scoped** (reset on sign-out) or **app-scoped** (persist across sessions), and introduces a `resetSessionState()` orchestrator. See `docs/80-adrs/ADR-035-client-state-lifecycle-auth-transitions.md`.
+
 **Scope**
 - Modals, navigation, transient filters (that don’t need sharing), wizard drafts, bulk selections, view prefs.
 
@@ -314,13 +316,27 @@ const updateVisit = useServiceMutation(updateVisitAction, {
 ---
 
 ## Implementation Evidence
-(unchanged; update docs & tests to reflect v5 pagination and key factories)
 
-- Query Client: `lib/query-client.ts`  
-- Hook templates: `hooks/shared/use-service-query.ts`, `use-service-mutation.ts`  
-- Domain key factories: **NEW** `services/*/keys.ts` (add per domain)  
-- Hook Guidelines: `hooks/shared/README.md` (add v5 pagination & placeholder section)  
-- UI Stores: `store/ui-store.ts`, `store/player-store.ts`
+- Query Client: `lib/query-client.ts`
+- Hook templates: `hooks/shared/use-service-query.ts`, `use-service-mutation.ts`
+- Domain key factories: `services/*/keys.ts` (per domain)
+- Hook Guidelines: `hooks/shared/README.md`
+- **UI Stores** (PRD-013 implemented 2025-12-21):
+  - `store/ui-store.ts` — Modal state, sidebar collapse
+  - `store/pit-dashboard-store.ts` — Table/slip selection, panel navigation
+  - `store/index.ts` — Barrel exports
+- **UI Hooks** (PRD-013 implemented 2025-12-21):
+  - `hooks/ui/use-modal.ts` — Modal state selector with `useShallow`
+  - `hooks/ui/use-pit-dashboard-ui.ts` — Dashboard UI selector with `useShallow`
+  - `hooks/ui/index.ts` — Barrel exports
+- **UI Stores** (PRD-014 implemented 2025-12-21):
+  - `store/player-dashboard-store.ts` — Player selection state (eliminates prop drilling)
+  - `store/index.ts` — Updated barrel exports with player-dashboard-store
+- **UI Hooks** (PRD-014 implemented 2025-12-21):
+  - `hooks/ui/use-player-dashboard.ts` — Player dashboard selector with `useShallow`
+  - `hooks/ui/index.ts` — Updated barrel exports with usePlayerDashboard
+
+The PRD-014 implementation successfully eliminates prop drilling for `selectedPlayerId` across 7 child components, following the patterns established in PRD-013.
 
 ---
 
@@ -357,4 +373,4 @@ const updateVisit = useServiceMutation(updateVisitAction, {
 
 **Status**: ACCEPTED
 **Approved By**: Development Team
-**Date**: 2025-10-10 (Redacted/Updated 2025-10-23, 2025-11-09)
+**Date**: 2025-10-10 (Redacted/Updated 2025-10-23, 2025-11-09, 2025-12-21)

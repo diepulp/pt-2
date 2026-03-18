@@ -1,6 +1,6 @@
 # Architecture Rules
 
-**Source**: SLAD v3.2.0, SRM v4.10.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013, ADR-023, ADR-028
+**Source**: SLAD v3.2.0, SRM v4.10.0, BALANCED_ARCHITECTURE_QUICK.md, ADR-013, ADR-023, ADR-028, ADR-041, ADR-044
 **Stack**: **Next.js 15** (App Router) + React 19 + Supabase + TypeScript
 
 This document provides condensed patterns and anti-patterns. For the full workflow, see `QUICK_START.md`.
@@ -321,6 +321,8 @@ done
 - [ ] Update API contracts if routes change
 - [ ] Schema migration follows `YYYYMMDDHHMMSS_description.sql`
 - [ ] Run `npm run db:types` after migrations
+- [ ] New bounded contexts declare testing tier per ADR-044 (`TESTING_GOVERNANCE_STANDARD.md` §5)
+- [ ] New surfaces include Surface Classification per ADR-041 (4 mandatory fields)
 
 ### DTO Compliance (MANDATORY)
 - [ ] Pattern B services have `dtos.ts` with Pick/Omit types

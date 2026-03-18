@@ -131,6 +131,11 @@ Run validation checklist from `references/validation-checklist.md`:
     4. **Metric Provenance** — every truth-bearing metric cited from `METRIC_PROVENANCE_MATRIX.md` with Truth ID + truth class + freshness
   - New metrics require governed matrix amendment (new MEAS row per §5.1, next available: MEAS-013)
   - Reference: `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`, exemplars at `docs/70-governance/examples/`
+- **Testing Governance (ADR-044)** — if introducing new bounded contexts, services, or surfaces:
+  - Verify testing tier declarations exist per `TESTING_GOVERNANCE_STANDARD.md` §5 health-state vocabulary
+  - New services must specify which test layers apply (unit, integration, E2E) and their enforcement tier (Required/Advisory/Quarantined)
+  - CI changes that reduce enforcement require §12 disclosure
+  - Reference: `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`, `docs/80-adrs/ADR-044-testing-governance-posture.md`
 
 ### Step 5: Document
 
@@ -315,6 +320,9 @@ When designing or reviewing architecture that touches `gaming_day`, date ranges,
 | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` | Surface rendering + data aggregation classification (ADR-041) |
 | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` | Truth semantics for MEAS-001–012 (v2.0.0) |
 | `docs/70-governance/audits/GOVERNANCE-AUDIT-TEMPLATE.md` | Reusable surface provenance audit methodology |
+| `docs/80-adrs/ADR-041-surface-governance-standard.md` | Surface Classification + Metric Provenance requirements |
+| `docs/80-adrs/ADR-044-testing-governance-posture.md` | Testing governance dual-artifact model |
+| `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md` | Test-layer taxonomy, enforcement tiers, green CI semantics |
 | `docs/20-architecture/temporal-patterns/INDEX.md` | Temporal patterns registry |
 | `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` | Gaming day computation (3-layer contract) |
 | `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | CasinoService temporal authority |

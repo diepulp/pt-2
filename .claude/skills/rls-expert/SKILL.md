@@ -134,7 +134,7 @@ Casino scope enforced in DB   →   Casino-scoped IDs cleared from memory/storag
 | What | Decision |
 |------|----------|
 | MVP Pattern | Pattern C (Hybrid): `COALESCE(current_setting, jwt)` |
-| Context Injection | `set_rls_context()` RPC per request |
+| Context Injection | `set_rls_context_from_staff()` RPC per request (ADR-024) |
 | Auth Guard | `auth.uid() IS NOT NULL` on all policies |
 | Track B Migration | Not scheduled - requires real users, stable RLS, automation |
 
@@ -155,7 +155,7 @@ Invoke this skill when:
 
 1. **Casino scope is non-negotiable** - Every casino-scoped table MUST enforce `casino_id` in RLS policies
 2. **Pattern C (Hybrid) is canonical for MVP** - Transaction context with JWT fallback (ADR-020); **write-path on critical tables uses session vars only** (ADR-030)
-3. **Connection pooling safe** - Use `set_rls_context()` RPC, never legacy SET LOCAL loops
+3. **Connection pooling safe** - Use `set_rls_context_from_staff()` RPC (ADR-024), never legacy SET LOCAL loops
 4. **Dealers are excluded** - Dealers have `user_id = NULL` and ZERO application permissions
 5. **No service keys in runtime** - All operations use anon key + user authentication
 6. **Don't rewrite RLS again** - Fix issues incrementally, don't wholesale replace 116 policies
