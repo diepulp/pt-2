@@ -41,6 +41,7 @@ describeIntegration(
   'Pit Boss Financial Transaction Constraints (PRD-015 WS5)',
   () => {
     let supabase: SupabaseClient<Database>;
+    let testCompanyId: string;
     let testCasinoId: string;
     let testPitBossStaffId: string;
     let testCashierStaffId: string;
@@ -68,10 +69,23 @@ describeIntegration(
       testPitBossUserId = pitBossUser.data?.user?.id || '';
       testCashierUserId = cashierUser.data?.user?.id || '';
 
+      // Create test company (ADR-043: company_id NOT NULL on casino)
+      const { data: company } = await supabase
+        .from('company')
+        .insert({ name: 'Financial Test Company' })
+        .select()
+        .single();
+      if (!company) throw new Error('Failed to create test company');
+      testCompanyId = company.id;
+
       // Create test casino
       const { data: casino } = await supabase
         .from('casino')
-        .insert({ name: 'Financial Test Casino', status: 'active' })
+        .insert({
+          name: 'Financial Test Casino',
+          status: 'active',
+          company_id: testCompanyId,
+        })
         .select()
         .single();
 
@@ -171,6 +185,11 @@ describeIntegration(
         .delete()
         .eq('casino_id', testCasinoId);
       await supabase.from('casino').delete().eq('id', testCasinoId);
+
+      // Clean up test company (after casino is deleted)
+      if (testCompanyId) {
+        await supabase.from('company').delete().eq('id', testCompanyId);
+      }
 
       // Clean up users
       await Promise.all([
@@ -445,9 +464,21 @@ describeIntegration(
           email_confirm: true,
         });
 
+        // Create company for casino2 (ADR-043: company_id NOT NULL on casino)
+        const { data: company2 } = await supabase
+          .from('company')
+          .insert({ name: 'Financial Test Company 2' })
+          .select()
+          .single();
+        if (!company2) throw new Error('Failed to create test company 2');
+
         const { data: casino2 } = await supabase
           .from('casino')
-          .insert({ name: 'Financial Test Casino 2', status: 'active' })
+          .insert({
+            name: 'Financial Test Casino 2',
+            status: 'active',
+            company_id: company2.id,
+          })
           .select()
           .single();
 
@@ -541,6 +572,7 @@ describeIntegration(
             .delete()
             .eq('casino_id', casino2!.id);
           await supabase.from('casino').delete().eq('id', casino2!.id);
+          await supabase.from('company').delete().eq('id', company2!.id);
           await supabase.auth.admin.deleteUser(user2!.user!.id);
         }
       });

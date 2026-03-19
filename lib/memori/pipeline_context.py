@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Self-Improving Intelligence for prd-pipeline skill.
+Self-Improving Intelligence for build-pipeline skill.
 
 Tracks pipeline execution outcomes and provides adaptive recommendations
 based on historical success rates.
@@ -54,7 +54,7 @@ class PipelineRegressionAlert:
 
 class PipelineContext(ValidationContext):
     """
-    Self-improving context for prd-pipeline skill.
+    Self-improving context for build-pipeline skill.
 
     Extends ValidationContext with learning mechanisms for:
     - Pipeline execution outcome tracking
@@ -64,7 +64,7 @@ class PipelineContext(ValidationContext):
     - Regression detection
     """
 
-    SKILL_NAMESPACE = "skill:prd-pipeline"
+    SKILL_NAMESPACE = "skill:build-pipeline"
 
     # Thresholds
     REGRESSION_THRESHOLD = 0.15  # 15% decline triggers alert

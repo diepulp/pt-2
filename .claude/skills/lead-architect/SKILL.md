@@ -1,6 +1,6 @@
 ---
 name: lead-architect
-description: Design and validate PT-2 system architecture. This skill should be used for bounded context design, service decomposition, SRM updates, ADR creation, technical debt evaluation, and architecture compliance validation. Produces canonical documentation (SRM, ADR, API specs). Delegates to prd-writer skill for PRD creation and prd-pipeline skill for EXECUTION-SPEC generation.
+description: Design and validate PT-2 system architecture. This skill should be used for bounded context design, service decomposition, SRM updates, ADR creation, technical debt evaluation, and architecture compliance validation. Produces canonical documentation (SRM, ADR, API specs). Delegates to prd-writer skill for PRD creation and build-pipeline skill for EXECUTION-SPEC generation.
 ---
 
 # Lead Systems Architect
@@ -42,7 +42,7 @@ python .claude/skills/lead-architect/scripts/check_primitive_freshness.py
 
 ### EXECUTION-SPEC Scaffolding Role
 
-When invoked by `prd-pipeline` for EXECUTION-SPEC generation:
+When invoked by `build-pipeline` for EXECUTION-SPEC generation:
 
 **DO provide (architectural scaffolding):**
 - Vertical slice identification
@@ -74,7 +74,7 @@ workstreams:
     # Details: Consult rls-expert
 ```
 
-The `prd-pipeline` will invoke domain experts to refine each workstream with granular specifications.
+The `build-pipeline` will invoke domain experts to refine each workstream with granular specifications.
 
 ## Extended Thinking Triggers
 
@@ -334,7 +334,7 @@ When designing or reviewing architecture that touches `gaming_day`, date ranges,
 | Skill | Use When |
 |-------|----------|
 | `prd-writer` | Creating or validating PRDs |
-| `prd-pipeline` | Generating EXECUTION-SPECs |
+| `build-pipeline` | Generating EXECUTION-SPECs |
 | `backend-service-builder` | Implementing services |
 | `api-builder` | Implementing Route Handlers |
 
@@ -356,5 +356,5 @@ Architecture task is complete when:
 This skill does NOT:
 - Write implementation code (use implementation skills)
 - Create PRDs (use `prd-writer` skill)
-- Generate EXECUTION-SPECs (use `prd-pipeline` skill)
+- Generate EXECUTION-SPECs (use `build-pipeline` skill)
 - Decide business priorities

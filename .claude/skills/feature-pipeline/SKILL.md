@@ -241,9 +241,19 @@ a human decision: override-with-reason or abort. No further automatic revision l
 
 ---
 
-## Handoff
+## Handoff (TERMINAL — Phase 5 is the last phase)
 
-On `prd-approved`, display:
+On `prd-approved`, the feature-pipeline is **DONE**. There is no Phase 6.
+
+**STOP HERE.** Do not generate EXEC-SPECs, DOD gates, workstream definitions, execution phases,
+or any implementation artifact. These belong exclusively to build-pipeline, which the user
+invokes separately via `/build PRD-###`. The feature-pipeline's job ends the moment it
+displays the handoff block below.
+
+If you find yourself writing SQL, DOD checklists, workstream YAML, or EXEC-SPECs, you have
+crossed the boundary. Stop immediately and display the handoff instead.
+
+Display:
 
 ```
 ---------------------------------------------
@@ -262,6 +272,10 @@ Artifacts:
 Next: /build PRD-###
 ---------------------------------------------
 ```
+
+Set checkpoint `status` to `"design-complete"` and `current_phase` to `5`. Do not increment
+the phase beyond 5. Do not add `exec_spec`, `dod_gates`, `exec_spec_workstreams`, or
+`execution_phases` fields to the checkpoint — those are build-pipeline state.
 
 ---
 
@@ -334,6 +348,17 @@ If no checkpoint exists:
   "working_directory": null,
   "timestamp": "2026-02-22T14:00:00Z"
 }
+```
+
+### Checkpoint Invariants
+
+These rules are non-negotiable. Violating them means the pipeline has crossed into build-pipeline territory.
+
+- **`current_phase`** must be 0-5. There is no Phase 6.
+- **`status`** must be one of: `"initialized"`, `"in_progress"`, `"design-complete"`, `"failed"`.
+- **`gates`** keys must be from this set only: `srm-ownership`, `scaffold-approved`, `design-approved`, `sec-approved`, `adr-frozen`, `prd-approved`.
+- **`artifacts`** keys must be from this set only: `feature_boundary`, `scaffold`, `rfc`, `sec_note`, `adr`, `prd`.
+- **Forbidden fields**: `exec_spec`, `dod_gates`, `exec_spec_workstreams`, `execution_phases`. These are build-pipeline state. If you are about to write one of these fields, you have overrun the boundary — stop and display the handoff instead.
 ```
 
 **Location:** `.claude/skills/feature-pipeline/checkpoints/{feature-id}.json`

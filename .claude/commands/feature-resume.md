@@ -72,7 +72,7 @@ Based on `current_phase`, execute the appropriate phase workflow:
 | 3 | Continue SEC Note creation (use template from `references/sec-note-template.md`) |
 | 4 | Continue ADR creation (delegate to `lead-architect` skill) |
 | 5 | Continue EXEC-SPEC + DoD creation (use template from `references/dod-gate-template.md`) |
-| 6 | Continue execution (delegate to `prd-pipeline` skill via `/prd-execute`) |
+| 6 | Continue execution (delegate to `build-pipeline` skill via `/build`) |
 
 ### Step 4: Gate Handling
 

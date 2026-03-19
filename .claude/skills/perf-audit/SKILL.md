@@ -155,5 +155,5 @@ PERF AUDIT COMPLETE: PERF-{NNN}
  Report: docs/issues/perf/PERF-{NNN}-{SLUG}-COMPREHENSIVE-AUDIT.md
 
  Next steps:
-   /prd-execute docs/issues/perf/PERF-{NNN}-{SLUG}-COMPREHENSIVE-AUDIT.md
+   /build docs/issues/perf/PERF-{NNN}-{SLUG}-COMPREHENSIVE-AUDIT.md
 ```
