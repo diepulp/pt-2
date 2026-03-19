@@ -28,14 +28,7 @@ const config = {
   ],
 
   // Ignore patterns
-<<<<<<< admin-catalog-vector-b
-  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/cypress/'],
-=======
-  testPathIgnorePatterns: [
-    '<rootDir>/.next/',
-    '<rootDir>/node_modules/',
-  ],
->>>>>>> main
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
 
   // Coverage configuration
   collectCoverageFrom: [
