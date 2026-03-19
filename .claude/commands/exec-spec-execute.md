@@ -278,5 +278,5 @@ Resume after fix: /exec-spec-execute --resume
 ## References
 
 - Feature pipeline skill: `.claude/skills/feature-pipeline/SKILL.md`
-- PRD pipeline (parallel execution pattern): `.claude/skills/prd-pipeline/SKILL.md`
+- Build pipeline (parallel execution pattern): `.claude/skills/build-pipeline/SKILL.md`
 - DoD template: `.claude/skills/feature-pipeline/references/dod-gate-template.md`
