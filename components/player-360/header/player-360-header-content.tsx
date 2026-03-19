@@ -512,8 +512,16 @@ export function Player360HeaderContent({
         {/* Add Note */}
         <AddNoteButton onClick={() => setNoteComposerOpen(true)} compact />
 
-        {/* Issue Reward (stub) */}
-        <IssueRewardButton compact />
+        {/* Issue Reward */}
+        <IssueRewardButton
+          playerId={playerId}
+          playerName={
+            player?.first_name && player?.last_name
+              ? `${player.first_name} ${player.last_name}`
+              : 'Player'
+          }
+          compact
+        />
 
         {/* Edit Profile */}
         <PlayerEditButton

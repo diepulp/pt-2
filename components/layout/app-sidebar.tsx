@@ -68,12 +68,11 @@ const navGroups: NavGroup[] = [
       },
       {
         title: 'Loyalty',
-        url: '/loyalty',
+        url: '/admin/loyalty/rewards',
         icon: Gift,
         children: [
-          { title: 'Promo Programs', url: '/loyalty/promo' },
-          { title: 'Rewards Catalog', url: '/loyalty/rewards' },
-          { title: 'Player Tiers', url: '/loyalty/tiers' },
+          { title: 'Rewards Catalog', url: '/admin/loyalty/rewards' },
+          { title: 'Promo Programs', url: '/admin/loyalty/promo-programs' },
         ],
       },
       {
