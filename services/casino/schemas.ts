@@ -12,6 +12,12 @@ import { z } from 'zod';
 import { uuidSchema, uuidSchemaNullable } from '@/lib/validation';
 import type { Database } from '@/types/database.types';
 
+// === Route Param Schemas ===
+
+export const casinoRouteParamsSchema = z.object({
+  id: z.string().uuid('Invalid casino ID format'),
+});
+
 // === Casino Schemas ===
 
 /** Schema for creating a new casino */

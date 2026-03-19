@@ -10,7 +10,6 @@
  */
 
 import type { NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import { DomainError } from '@/lib/errors/domain-errors';
 import {
@@ -24,16 +23,14 @@ import {
 import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 import type { CasinoDTO, UpdateCasinoDTO } from '@/services/casino/dtos';
-import { updateCasinoSchema } from '@/services/casino/schemas';
+import {
+  casinoRouteParamsSchema,
+  updateCasinoSchema,
+} from '@/services/casino/schemas';
 import type { Json } from '@/types/database.types';
 
 /** Route params type for Next.js 15 */
 type RouteParams = { params: Promise<{ id: string }> };
-
-/** Schema for route params validation */
-const routeParamsSchema = z.object({
-  id: z.string().uuid('Invalid casino ID format'),
-});
 
 /** Select fields for CasinoDTO projection */
 const CASINO_SELECT = 'id, name, location, status, created_at';
@@ -48,7 +45,10 @@ export async function GET(request: NextRequest, segmentData: RouteParams) {
   const ctx = createRequestContext(request);
 
   try {
-    const params = parseParams(await segmentData.params, routeParamsSchema);
+    const params = parseParams(
+      await segmentData.params,
+      casinoRouteParamsSchema,
+    );
     const supabase = await createClient();
 
     const result = await withServerAction(
@@ -108,7 +108,10 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
 
   try {
     const idempotencyKey = requireIdempotencyKey(request);
-    const params = parseParams(await segmentData.params, routeParamsSchema);
+    const params = parseParams(
+      await segmentData.params,
+      casinoRouteParamsSchema,
+    );
     const supabase = await createClient();
     const body = await readJsonBody<UpdateCasinoDTO>(request);
 
@@ -174,7 +177,7 @@ export async function PATCH(request: NextRequest, segmentData: RouteParams) {
               address: input.address as Json,
             }),
             ...(input.company_id !== undefined && {
-              company_id: input.company_id,
+              company_id: input.company_id ?? undefined,
             }),
           })
           .eq('id', params.id)
@@ -224,7 +227,10 @@ export async function DELETE(request: NextRequest, segmentData: RouteParams) {
 
   try {
     const idempotencyKey = requireIdempotencyKey(request);
-    const params = parseParams(await segmentData.params, routeParamsSchema);
+    const params = parseParams(
+      await segmentData.params,
+      casinoRouteParamsSchema,
+    );
     const supabase = await createClient();
 
     const result = await withServerAction(
