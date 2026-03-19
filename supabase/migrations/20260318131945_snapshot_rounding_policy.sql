@@ -14,7 +14,7 @@
 --   2. rpc_accrue_on_close: honor rounding_policy from snapshot
 --
 -- Baselines:
---   rpc_start_rating_slip: 20260302230020 (5-param, ADR-024)
+--   rpc_start_rating_slip: 20260304172335 (4-param, p_casino_id removed per PRD-043)
 --   rpc_accrue_on_close:   20260304172336 (2-param, p_casino_id removed per PRD-043)
 --
 -- Backward compatibility:
@@ -25,13 +25,12 @@
 
 -- ============================================================================
 -- 1. rpc_start_rating_slip — add rounding_policy to snapshot
--- Baseline: 20260302230020_drop_sec007_p0_phantom_overloads.sql
--- Signature: (uuid, uuid, uuid, text, jsonb) — UNCHANGED
+-- Baseline: 20260304172335_prd043_d1_remove_p_casino_id.sql
+-- Signature: (uuid, uuid, text, jsonb) — 4-param, no p_casino_id (ADR-024)
 -- Change: add 'rounding_policy' to loyalty object + _source, bump to v2
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION rpc_start_rating_slip(
-  p_casino_id UUID,
   p_visit_id UUID,
   p_table_id UUID,
   p_seat_number TEXT,
@@ -39,10 +38,10 @@ CREATE OR REPLACE FUNCTION rpc_start_rating_slip(
 ) RETURNS rating_slip
 LANGUAGE plpgsql
 SECURITY DEFINER
-SET search_path = public
+SET search_path = pg_catalog, public
 AS $$
 DECLARE
-  v_context_casino_id uuid;
+  v_casino_id uuid;
   v_context_actor_id uuid;
   v_result rating_slip;
   v_player_id UUID;
@@ -51,26 +50,13 @@ DECLARE
   v_policy_snapshot JSONB;
   v_game_settings_lookup RECORD;
 BEGIN
-  -- =======================================================================
   -- ADR-024: Authoritative RLS Context Injection
-  -- =======================================================================
   PERFORM set_rls_context_from_staff();
 
-  -- =====================================================================
-  -- CASINO SCOPE VALIDATION (SEC-001 Template 5, SEC-007)
-  -- =====================================================================
-  v_context_casino_id := COALESCE(
-    NULLIF(current_setting('app.casino_id', true), '')::uuid,
-    (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid
-  );
-
-  IF v_context_casino_id IS NULL THEN
-    RAISE EXCEPTION 'RLS context not set: app.casino_id is required';
-  END IF;
-
-  IF p_casino_id IS DISTINCT FROM v_context_casino_id THEN
-    RAISE EXCEPTION 'casino_id mismatch: caller provided % but context is %',
-      p_casino_id, v_context_casino_id;
+  -- Derive casino_id from authoritative context (no parameter — ADR-024)
+  v_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
+  IF v_casino_id IS NULL THEN
+    RAISE EXCEPTION 'UNAUTHORIZED: casino_id not set in RLS context';
   END IF;
 
   -- Derive actor_id from authoritative context (ADR-024)
@@ -79,13 +65,12 @@ BEGIN
     RAISE EXCEPTION 'actor_id missing from context'
       USING ERRCODE = 'P0001';
   END IF;
-  -- =====================================================================
 
-  -- Validate visit is open and get player_id + visit_kind for processing
+  -- Validate visit is open and get player_id + visit_kind
   SELECT player_id, visit_kind INTO v_player_id, v_visit_kind
   FROM visit
   WHERE id = p_visit_id
-    AND casino_id = p_casino_id
+    AND casino_id = v_casino_id
     AND ended_at IS NULL;
 
   IF NOT FOUND THEN
@@ -104,7 +89,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM gaming_table
     WHERE id = p_table_id
-      AND casino_id = p_casino_id
+      AND casino_id = v_casino_id
       AND status = 'active'
   ) THEN
     RAISE EXCEPTION 'TABLE_NOT_ACTIVE: Table % is not active', p_table_id;
@@ -122,7 +107,7 @@ BEGIN
     ON gs.game_type = gt.type
     AND gs.casino_id = gt.casino_id
   WHERE gt.id = p_table_id
-    AND gt.casino_id = p_casino_id;
+    AND gt.casino_id = v_casino_id;
 
   v_policy_snapshot := jsonb_build_object(
     'loyalty', jsonb_build_object(
@@ -149,7 +134,7 @@ BEGIN
     seat_number, game_settings, policy_snapshot, accrual_kind, status, start_time
   )
   VALUES (
-    p_casino_id, p_visit_id, p_table_id,
+    v_casino_id, p_visit_id, p_table_id,
     p_seat_number, p_game_settings, v_policy_snapshot, v_accrual_kind, 'open', now()
   )
   RETURNING * INTO v_result;
@@ -157,7 +142,7 @@ BEGIN
   -- Audit log: uses v_context_actor_id (authoritative, context-derived)
   INSERT INTO audit_log (casino_id, domain, actor_id, action, details)
   VALUES (
-    p_casino_id,
+    v_casino_id,
     'rating-slip',
     v_context_actor_id,
     'start_rating_slip',
@@ -178,10 +163,14 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION rpc_start_rating_slip(UUID, UUID, UUID, TEXT, JSONB) IS
-  'ADR-024: set_rls_context_from_staff(). ADR-019 D2: policy_snapshot.loyalty from game_settings. '
-  'ADR-014: accrual_kind from visit_kind. SEC-007 P0-7: no p_actor_id param. '
+COMMENT ON FUNCTION rpc_start_rating_slip(UUID, UUID, TEXT, JSONB) IS
+  'ADR-024: set_rls_context_from_staff(), no p_casino_id/p_actor_id params. '
+  'ADR-019 D2: policy_snapshot.loyalty from game_settings. '
+  'ADR-014: accrual_kind from visit_kind. '
   'v2: adds rounding_policy=floor to snapshot (pilot decision D3).';
+
+REVOKE ALL ON FUNCTION rpc_start_rating_slip(UUID, UUID, TEXT, JSONB) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION rpc_start_rating_slip(UUID, UUID, TEXT, JSONB) TO authenticated, service_role;
 
 -- ============================================================================
 -- 2. rpc_accrue_on_close — honor rounding_policy from snapshot
