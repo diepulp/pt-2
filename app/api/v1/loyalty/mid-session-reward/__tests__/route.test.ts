@@ -14,6 +14,22 @@ import { createMockRequest } from '@/lib/testing/route-test-helpers';
 
 import { POST } from '../route';
 
+// Mock Supabase client (route calls createClient for withServerAction)
+jest.mock('@/lib/supabase/server', () => ({
+  createClient: jest.fn().mockResolvedValue({}),
+}));
+
+// Mock middleware to bypass auth/RLS — 501 route still runs through withServerAction
+jest.mock('@/lib/server-actions/middleware', () => ({
+  withServerAction: jest.fn((_, handler) =>
+    handler({
+      supabase: {},
+      correlationId: 'test-correlation-id',
+      rlsContext: { casinoId: 'c1', actorId: 'a1', staffRole: 'pit_boss' },
+    }),
+  ),
+}));
+
 describe('POST /api/v1/loyalty/mid-session-reward', () => {
   it('exports POST handler', () => {
     expect(typeof POST).toBe('function');
