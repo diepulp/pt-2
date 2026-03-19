@@ -85,7 +85,10 @@ describe('POST /api/v1/players/lookup-company', () => {
       '/api/v1/players/lookup-company',
       {
         body: { search_term: 'john' },
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': 'test-key-lookup',
+        },
       },
     );
 

@@ -13,7 +13,14 @@
 'use client';
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, User, AlertCircle, Loader2, Info } from 'lucide-react';
+import {
+  Search,
+  User,
+  AlertCircle,
+  AlertTriangle,
+  Loader2,
+  Info,
+} from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -217,6 +224,15 @@ export function NewSlipModal({
           });
         }
 
+        // PRD-052 GAP-3: Display exclusion warning for soft_alert players
+        if (visitResult.exclusionWarning) {
+          toast.warning('Exclusion Alert', {
+            description: visitResult.exclusionWarning,
+            icon: <AlertTriangle className="h-4 w-4" />,
+            duration: 10_000,
+          });
+        }
+
         if (process.env.NODE_ENV === 'development') {
           console.log('[NewSlipModal] Visit result:', {
             visitId,
@@ -247,8 +263,11 @@ export function NewSlipModal({
       // Structured logging (development only, properly serialized)
       logError(err, { component: 'NewSlipModal', action: 'visitSetup' });
 
-      // Handle validation errors with detailed messages
-      if (isValidationError(err)) {
+      // PRD-052 GAP-3: Detect hard_block rejection from startVisit
+      if (isFetchError(err) && err.code === 'PLAYER_EXCLUDED') {
+        setError('This player has an active exclusion and cannot be seated.');
+      } else if (isValidationError(err)) {
+        // Handle validation errors with detailed messages
         setError(formatValidationError(err));
       } else {
         setError(getErrorMessage(err));

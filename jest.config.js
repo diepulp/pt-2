@@ -28,10 +28,7 @@ const config = {
   ],
 
   // Ignore patterns
-  testPathIgnorePatterns: [
-    '<rootDir>/.next/',
-    '<rootDir>/node_modules/',
-  ],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
 
   // Coverage configuration
   collectCoverageFrom: [

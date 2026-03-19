@@ -24,20 +24,16 @@ const BASE = '/api/v1/players';
 export async function listExclusions(
   playerId: string,
 ): Promise<PlayerExclusionDTO[]> {
-  const response = await fetchJSON<{ data: PlayerExclusionDTO[] }>(
-    `${BASE}/${playerId}/exclusions`,
-  );
-  return response.data;
+  return fetchJSON<PlayerExclusionDTO[]>(`${BASE}/${playerId}/exclusions`);
 }
 
 /** List active exclusions for a player. */
 export async function getActiveExclusions(
   playerId: string,
 ): Promise<PlayerExclusionDTO[]> {
-  const response = await fetchJSON<{ data: PlayerExclusionDTO[] }>(
+  return fetchJSON<PlayerExclusionDTO[]>(
     `${BASE}/${playerId}/exclusions/active`,
   );
-  return response.data;
 }
 
 /** Create a new exclusion. */
@@ -45,18 +41,14 @@ export async function createExclusion(
   playerId: string,
   input: Omit<CreateExclusionInput, 'player_id'>,
 ): Promise<PlayerExclusionDTO> {
-  const response = await fetchJSON<{ data: PlayerExclusionDTO }>(
-    `${BASE}/${playerId}/exclusions`,
-    {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        [IDEMPOTENCY_HEADER]: crypto.randomUUID(),
-      },
-      body: JSON.stringify({ ...input, player_id: playerId }),
+  return fetchJSON<PlayerExclusionDTO>(`${BASE}/${playerId}/exclusions`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      [IDEMPOTENCY_HEADER]: crypto.randomUUID(),
     },
-  );
-  return response.data;
+    body: JSON.stringify({ ...input, player_id: playerId }),
+  });
 }
 
 /** Lift (soft-delete) an exclusion. */
@@ -65,7 +57,7 @@ export async function liftExclusion(
   exclusionId: string,
   input: LiftExclusionInput,
 ): Promise<PlayerExclusionDTO> {
-  const response = await fetchJSON<{ data: PlayerExclusionDTO }>(
+  return fetchJSON<PlayerExclusionDTO>(
     `${BASE}/${playerId}/exclusions/${exclusionId}/lift`,
     {
       method: 'POST',
@@ -76,7 +68,6 @@ export async function liftExclusion(
       body: JSON.stringify(input),
     },
   );
-  return response.data;
 }
 
 /** Get collapsed exclusion status. */
