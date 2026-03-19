@@ -430,7 +430,7 @@ export function mapToRewardHistoryItem(ledgerEntry: {
 }): RewardHistoryItemDTO {
   // Map entry_type to reward type
   let rewardType: RewardHistoryItemDTO['rewardType'] = 'other';
-  if (ledgerEntry.entry_type === 'redemption') {
+  if (ledgerEntry.entry_type === 'redeem') {
     rewardType = 'comp';
   } else if (ledgerEntry.entry_type.includes('promo')) {
     rewardType = 'matchplay';
@@ -448,6 +448,36 @@ export function mapToRewardHistoryItem(ledgerEntry: {
       name: ledgerEntry.staff_name ?? 'System',
     },
     visitId: ledgerEntry.visit_id,
+  };
+}
+
+/**
+ * Map promo_coupon row (with joined promo_program.promo_type) to RewardHistoryItemDTO.
+ *
+ * @param coupon - Promo coupon row with promo_type from parent program
+ * @returns RewardHistoryItemDTO
+ */
+export function mapPromoCouponToRewardHistoryItem(coupon: {
+  id: string;
+  issued_at: string;
+  face_value_amount: number;
+  issued_by_staff_id: string;
+  visit_id: string | null;
+  promo_type: 'match_play' | 'free_play';
+}): RewardHistoryItemDTO {
+  const rewardType: RewardHistoryItemDTO['rewardType'] =
+    coupon.promo_type === 'match_play' ? 'matchplay' : 'freeplay';
+
+  return {
+    id: coupon.id,
+    issuedAt: coupon.issued_at,
+    rewardType,
+    amount: coupon.face_value_amount,
+    issuedBy: {
+      id: coupon.issued_by_staff_id,
+      name: 'Staff', // TODO: Join with staff table if needed
+    },
+    visitId: coupon.visit_id,
   };
 }
 

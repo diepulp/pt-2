@@ -9,7 +9,7 @@
  * Issue: PRD-011 (Route Handler Test Coverage)
  * Workstream: WS5 (LoyaltyService Route Handler Tests)
  *
- * Note: This route is a stub - TODO implementation pending.
+ * Wired to LoyaltyService.getBalance() per PRD-052 FR-11.
  */
 
 import { createMockRequest } from '@/lib/testing/route-test-helpers';
@@ -21,6 +21,26 @@ jest.mock('@/lib/supabase/server', () => ({
   createClient: jest.fn().mockResolvedValue({}),
 }));
 
+// Mock middleware to bypass auth/RLS in unit tests
+const mockGetBalance = jest
+  .fn()
+  .mockResolvedValue({ balance: 1000, tier: 'gold' });
+jest.mock('@/services/loyalty', () => ({
+  createLoyaltyService: jest.fn(() => ({
+    getBalance: mockGetBalance,
+  })),
+}));
+
+jest.mock('@/lib/server-actions/middleware', () => ({
+  withServerAction: jest.fn((_, handler) =>
+    handler({
+      supabase: {},
+      correlationId: 'test-correlation-id',
+      rlsContext: { casinoId: 'c1', actorId: 'a1', staffRole: 'pit_boss' },
+    }),
+  ),
+}));
+
 const VALID_PLAYER_ID = '123e4567-e89b-12d3-a456-426614174000';
 const VALID_CASINO_ID = '123e4567-e89b-12d3-a456-426614174001';
 
@@ -29,7 +49,7 @@ describe('GET /api/v1/loyalty/balances', () => {
     expect(typeof GET).toBe('function');
   });
 
-  it('returns 200 response (stub)', async () => {
+  it('returns 200 with balance data', async () => {
     const request = createMockRequest('GET', '/api/v1/loyalty/balances', {
       searchParams: {
         player_id: VALID_PLAYER_ID,

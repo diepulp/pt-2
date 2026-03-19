@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.19.0
+nsversion: 4.20.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -28,7 +28,7 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.19.0 (ADR-042: Player Exclusion Architecture — Property-Scoped MVP)
+> **Version**: 4.20.0 (PRD-052: Loyalty Operator Issuance — Reward Catalog Tables + Player360DashboardService)
 > **Date**: 2026-02-23
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
@@ -55,6 +55,7 @@ source_of_truth:
 
 ## Change Log
 
+- **4.20.0 (2026-03-19)** – **PRD-052 Loyalty Operator Issuance**: Added `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config` to LoyaltyService `Owns:` row. Registered `Player360DashboardService` as read-only aggregation service (follows `PlayerTimelineService` precedent). New service methods: `LoyaltyService.issueComp()`, `PromoService.issueEntitlement()`. New DTOs: `IssueCompParams`, `CompIssuanceResult`, `IssueEntitlementParams`, `EntitlementIssuanceResult`, `FulfillmentPayload` (frozen Vector C contract). New Zod schema: `issueRewardSchema`. See `docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md` and `docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md`.
 - **4.19.0 (2026-03-10)** – **ADR-042 Player Exclusion Architecture**: Added `player_exclusion` table to PlayerService. Source-of-truth for exclusion/ban/watchlist records. Enforcement delegated to downstream consumers (VisitService for visit creation, CasinoService for enrollment). Canonical SQL functions: `is_exclusion_active()` (active predicate), `get_player_exclusion_status()` (precedence collapse). New RPC: `rpc_get_player_exclusion_status` (SECURITY DEFINER, ADR-024). Cross-context consumption: VisitService consumes exclusion status for visit creation enforcement. Critical table designation per ADR-030 D4 (session-var-only writes). See `docs/80-adrs/ADR-042-player-exclusion-architecture.md` and `docs/21-exec-spec/EXEC-050-player-exclusion-watchlist.md`.
 - **4.18.0 (2026-03-07)** – **ADR-039 Measurement Layer**: Added Measurement Layer (Cross-Cutting Read Models) section. New columns on `rating_slip`: `legacy_theo_cents`, `computed_theo_cents` (ADR-031 cents, materialized at close by 3 RPCs). New tables in LoyaltyService: `loyalty_valuation_policy`, `loyalty_liability_snapshot`. New SECURITY DEFINER RPC: `rpc_snapshot_loyalty_liability` (ADR-024, idempotent UPSERT). 2 cross-context views: `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` (security_invoker=true, Pattern C RLS). CHECK constraint `chk_closed_slip_has_theo` (NOT VALID). See `docs/80-adrs/ADR-039-measurement-layer.md`.
 - **4.17.0 (2026-02-25)** – **PRD-038A Table Lifecycle Audit Patch**: Added `close_reason_type` enum (8 values). Added 10 columns to `table_session`: `close_reason`, `close_note`, `has_unresolved_items`, `requires_reconciliation`, `activated_by_staff_id`, `paused_by_staff_id`, `resumed_by_staff_id`, `rolled_over_by_staff_id`, `crossed_gaming_day`. CHECK constraint: `close_reason='other'` requires trimmed non-empty `close_note`. Modified `rpc_close_table_session` with close guardrail (`has_unresolved_items` check) and `close_reason`/`close_note` params. New `rpc_force_close_table_session` (SECURITY DEFINER, ADR-024): privileged close for pit_boss/admin, sets `requires_reconciliation=true`, emits `audit_log`. Extracted `_persist_inline_rundown` helper to prevent drift. `has_unresolved_items` write ownership: Finance/MTL RPCs or `service_role` only. See `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`.
@@ -118,10 +119,11 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | FloorLayoutService      | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation                                   | Floor design & activation                                   |
 | **Operational**  | VisitService            | visit                                                                                                                      | Session lifecycle (3 archetypes)                            |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
-| **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon                                                | Reward policy & assignment                                  |
+| **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon, reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility, loyalty_earn_config | Reward policy & assignment                                  |
 | **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
 | **Compliance**   | MTLService              | mtl_entry, mtl_audit_note                                                                                                  | AML/CTR compliance                                          |
 | **Onboarding**   | PlayerImportService     | import_batch, import_row                                                                                                   | CSV player import & staging ⁵                               |
+| **Analytics**    | Player360DashboardService ⁷ | (read-only aggregation across LoyaltyService + PromoService)                                                          | Player 360 dashboard data aggregation                       |
 
 > ¹ `finance_outbox` is **post-MVP** (ADR-016 planned for payment gateway integration). MVP uses synchronous processing only.
 > ² `player_identity` is **planned (MVP)** per ADR-022 v7.1. `player_tax_identity` and scanner integration (`player_identity_scan`) are **deferred post-MVP**.
@@ -129,6 +131,7 @@ Approved JSON blobs (all others require first-class columns):
 > ⁴ `staff_pin_attempts` is **planned (MVP)** per GAP-SIGN-OUT. Operational rate-limit state for staff PIN verification. Follows `audit_log` precedent: cross-cutting operational data owned by foundational context. Both FKs reference CasinoService tables (`staff`, `casino`).
 > ⁵ PlayerImportService owns staging tables only. Cross-context writes to `player` (PlayerService) and `player_casino` (CasinoService) via `rpc_import_execute` SECURITY DEFINER RPC. See ADR-036.
 > ⁶ `player_exclusion` — Source-of-truth for exclusion/ban/watchlist records (ADR-042). Critical table per ADR-030 D4 (session-var-only writes). Enforcement delegated to downstream consumers. Property-scoped MVP; company-wide deferred.
+> ⁷ `Player360DashboardService` is a read-only aggregation service (follows `PlayerTimelineService` precedent). Owns no tables; reads from LoyaltyService (`loyalty_ledger`, `promo_coupon`) for reward history display. See PRD-052.
 
 ---
 
@@ -440,7 +443,7 @@ Server-authoritative calculation via `rpc_get_rating_slip_duration` and `rpc_clo
 
 ## LoyaltyService (Reward Context)
 
-**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon`, `loyalty_valuation_policy`, `loyalty_liability_snapshot`
+**Owns**: `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon`, `loyalty_valuation_policy`, `loyalty_liability_snapshot`, `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config`
 
 **Bounded Context**: "What is this gameplay worth in rewards, and what promotional instruments have been issued?"
 

@@ -497,3 +497,73 @@ export interface PromoExposureRollupDTO {
   /** Number of issued coupons expiring within 24 hours */
   expiringSoonCount: number;
 }
+
+// === Issuance DTOs (PRD-052 WS2) ===
+
+/**
+ * Input for catalog-backed entitlement issuance via `issueEntitlement()`.
+ * NO tier derivation — reads frozen commercial values from reward.metadata JSONB.
+ *
+ * @see PRD-052 §7.3 (Entitlement Scope Constraint)
+ * @see EXEC-052 WS2
+ */
+
+export interface IssueEntitlementParams {
+  /** Player to issue entitlement to */
+  playerId: string;
+
+  /** Reward catalog item ID (must be `entitlement` family) */
+  rewardId: string;
+
+  /** Associated visit (optional) */
+  visitId?: string;
+
+  /** Idempotency key for request deduplication */
+  idempotencyKey: string;
+}
+
+/**
+ * Result of a catalog-backed entitlement issuance.
+ * Extends rpc_issue_promo_coupon output with catalog context.
+ *
+ * @see PRD-052 §8.1
+ * @see EXEC-052 WS2
+ */
+
+export interface EntitlementIssuanceResult {
+  /** Discriminator field for IssuanceResultDTO union */
+  family: 'entitlement';
+
+  /** Coupon ID created by rpc_issue_promo_coupon */
+  couponId: string;
+
+  /** Unique validation number (printed on physical coupon) */
+  validationNumber: string;
+
+  /** Face value in cents from catalog config */
+  faceValueCents: number;
+
+  /** Required matching wager in cents (null for free play) */
+  matchWagerCents: number | null;
+
+  /** Coupon lifecycle status */
+  status: PromoCouponStatus;
+
+  /** Expiration timestamp (ISO 8601, null = no expiration) */
+  expiresAt: string | null;
+
+  /** Reward catalog item ID */
+  rewardId: string;
+
+  /** Reward code from catalog */
+  rewardCode: string;
+
+  /** Reward name from catalog */
+  rewardName: string;
+
+  /** True if this was an idempotent replay (existing coupon returned) */
+  isExisting: boolean;
+
+  /** Issuance timestamp (ISO 8601) */
+  issuedAt: string;
+}

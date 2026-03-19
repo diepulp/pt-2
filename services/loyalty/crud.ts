@@ -21,6 +21,8 @@ import type {
   AccrueOnCloseOutput,
   ApplyPromotionInput,
   ApplyPromotionOutput,
+  CompIssuanceResult,
+  IssueCompParams,
   LedgerListQuery,
   LedgerPageResponse,
   ManualCreditInput,
@@ -609,6 +611,143 @@ export async function reconcileBalance(
       old_balance: row.old_balance,
       new_balance: row.new_balance,
       drift_detected: row.drift_detected,
+    };
+  } catch (error) {
+    if (error instanceof DomainError) {
+      throw error;
+    }
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Error type narrowing
+    throw mapDatabaseError(error as { code?: string; message: string });
+  }
+}
+
+// === Catalog-Backed Issuance Operations (PRD-052 WS2) ===
+
+/**
+ * Issues a catalog-backed comp (points debit) via rpc_redeem.
+ *
+ * This is the catalog-backed orchestration for comp issuance.
+ * Calls rpc_redeem DIRECTLY (not via redeem()). The existing redeem()
+ * remains for non-catalog ad-hoc redemptions (manual adjustments).
+ *
+ * Invariant: catalog-backed issuance always uses issueComp(), never redeem().
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param params - Comp issuance parameters (playerId, rewardId, idempotencyKey, note?)
+ * @param casinoId - Casino ID for balance lookup (derived from RLS context)
+ * @returns CompIssuanceResult with catalog context
+ * @throws REWARD_NOT_FOUND if reward does not exist
+ * @throws REWARD_INACTIVE if reward is not active
+ * @throws REWARD_FAMILY_MISMATCH if reward family is not points_comp
+ * @throws INSUFFICIENT_BALANCE if balance is insufficient (advisory pre-check)
+ *
+ * @see PRD-052 §5.1 FR-5
+ * @see EXEC-052 WS2
+ */
+export async function issueComp(
+  supabase: SupabaseClient<Database>,
+  params: IssueCompParams,
+  casinoId: string,
+): Promise<CompIssuanceResult> {
+  // Lazy import to avoid circular dependency (reward is a sub-module of loyalty)
+  const { getReward } = await import('./reward/crud');
+
+  try {
+    // 1. Parallel pre-flight: fetch reward catalog + player balance
+    const [reward, balance] = await Promise.all([
+      getReward(supabase, params.rewardId),
+      getBalance(supabase, params.playerId, casinoId),
+    ]);
+
+    // 2. Validate reward exists
+    if (!reward) {
+      throw new DomainError(
+        'REWARD_NOT_FOUND',
+        `Reward ${params.rewardId} not found`,
+      );
+    }
+
+    // 3. Validate reward is active
+    if (!reward.isActive) {
+      throw new DomainError(
+        'REWARD_INACTIVE',
+        `Reward "${reward.name}" is not active`,
+      );
+    }
+
+    // 4. Validate reward family
+    if (reward.family !== 'points_comp') {
+      throw new DomainError(
+        'REWARD_FAMILY_MISMATCH',
+        `Expected points_comp family, got ${reward.family}`,
+      );
+    }
+
+    // 5. Extract points cost from price points
+    const pointsCost = reward.pricePoints?.pointsCost;
+    if (!pointsCost || pointsCost <= 0) {
+      throw new DomainError(
+        'CATALOG_CONFIG_INVALID',
+        `Reward "${reward.name}" has no valid points cost configured`,
+      );
+    }
+
+    // 6. Advisory balance pre-check (UX only — RPC is authoritative. See PRD §5.3.)
+    const currentBalance = balance?.currentBalance ?? 0;
+    if (currentBalance < pointsCost) {
+      throw new DomainError(
+        'INSUFFICIENT_BALANCE',
+        `Insufficient balance: need ${pointsCost} pts, have ${currentBalance} pts`,
+      );
+    }
+
+    // 7. Default note
+    const note = params.note ?? `Comp: ${reward.name}`;
+
+    // 8. Extract face value from metadata for result enrichment
+    const faceValueCents =
+      typeof reward.metadata?.face_value_cents === 'number'
+        ? reward.metadata.face_value_cents
+        : 0;
+
+    // 9. Call rpc_redeem DIRECTLY (not via redeem())
+    const { data, error } = await supabase.rpc('rpc_redeem', {
+      p_player_id: params.playerId,
+      p_points: pointsCost,
+      p_note: note,
+      p_idempotency_key: params.idempotencyKey,
+      p_allow_overdraw: false,
+      p_reward_id: params.rewardId,
+      p_reference: `reward_catalog:${params.rewardId}:${reward.code}`,
+    });
+
+    if (error) {
+      throw mapDatabaseError(error);
+    }
+
+    if (!data || (Array.isArray(data) && data.length === 0)) {
+      throw new DomainError(
+        'INTERNAL_ERROR',
+        'RPC returned no data for comp issuance',
+      );
+    }
+
+    const row = Array.isArray(data) ? data[0] : data;
+    const parsed = parseRedeemResponse(row);
+
+    // 10. Map result with catalog context → CompIssuanceResult
+    return {
+      family: 'points_comp',
+      ledgerId: parsed.ledgerId,
+      pointsDebited: Math.abs(parsed.pointsDelta),
+      balanceBefore: parsed.balanceBefore,
+      balanceAfter: parsed.balanceAfter,
+      rewardId: reward.id,
+      rewardCode: reward.code,
+      rewardName: reward.name,
+      faceValueCents,
+      isExisting: parsed.isExisting,
+      issuedAt: new Date().toISOString(),
     };
   } catch (error) {
     if (error instanceof DomainError) {

@@ -17,8 +17,10 @@ import type {
   CouponInventoryOutput,
   CouponInventoryQuery,
   CreatePromoProgramInput,
+  EntitlementIssuanceResult,
   IssueCouponInput,
   IssueCouponOutput,
+  IssueEntitlementParams,
   PromoCouponDTO,
   PromoCouponListQuery,
   PromoProgramDTO,
@@ -151,6 +153,23 @@ export interface PromoService {
   getCouponByValidationNumber(
     validationNumber: string,
   ): Promise<PromoCouponDTO | null>;
+
+  /**
+   * Issues a catalog-backed entitlement via rpc_issue_promo_coupon.
+   * NO tier derivation — reads frozen commercial values from reward.metadata.
+   *
+   * @param params - Entitlement issuance parameters
+   * @returns EntitlementIssuanceResult with catalog context
+   * @throws REWARD_NOT_FOUND if reward does not exist
+   * @throws REWARD_INACTIVE if reward is not active
+   * @throws REWARD_FAMILY_MISMATCH if family is not entitlement
+   * @throws CATALOG_CONFIG_INVALID if required commercial values missing
+   *
+   * @see PRD-052 §7.3 (Entitlement Scope Constraint)
+   */
+  issueEntitlement(
+    params: IssueEntitlementParams,
+  ): Promise<EntitlementIssuanceResult>;
 }
 
 // === Service Factory ===
@@ -179,5 +198,6 @@ export function createPromoService(
     getCoupon: (couponId) => crud.getCoupon(supabase, couponId),
     getCouponByValidationNumber: (validationNumber) =>
       crud.getCouponByValidationNumber(supabase, validationNumber),
+    issueEntitlement: (params) => crud.issueEntitlement(supabase, params),
   };
 }
