@@ -109,7 +109,7 @@ Project skills (`.claude/skills/`) provide specialized agent workflows:
 - `/lead-architect` - System design, SRM updates, ADR creation
 - `/backend-service-builder` - Service layer implementation
 - `/api-builder` - Route handlers and API endpoints
-- `/prd-pipeline` - PRD execution with gate approvals
+- `/build` - PRD/spec execution with gate approvals
 - `/rls-expert` - RLS policy implementation
 - `/e2e-testing` - Playwright test workflows
 - `/qa-specialist` - Quality gates and test coverage

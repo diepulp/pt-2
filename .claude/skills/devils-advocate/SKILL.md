@@ -43,6 +43,20 @@ Read `references/pt2-system-posture.md` from this skill directory for the canoni
 **Load target document(s):**
 Read the artifact(s) under review. For PRDs, also check cross-referenced ADRs and the SRM entry for the affected bounded context.
 
+### Step 1b: Ground-Truth Verification
+
+Before filing any finding, verify claims against the actual codebase. Spec-only review produces false positives when implementation has already diverged from or advanced beyond the spec text — a reviewer that only reads the spec treats it as the universe, when in reality the code is the source of truth.
+
+**Required verification actions:**
+- For any "missing implementation" finding: `Grep` for the function/route/table name in the codebase. If it exists, the finding is invalid or needs reframing as a spec-staleness issue, not an implementation gap.
+- For any "missing migration" finding: Check `supabase/migrations/` for relevant files.
+- For any claim about what code does or doesn't do: `Read` the actual file.
+- For any claim about recent changes or history: Run `git log --oneline -20 -- <relevant-path>` via Bash.
+
+**Rule: Never file a "missing X" finding without first searching for X in the codebase.**
+
+This step requires tool access (Read, Grep, Glob, Bash). When dispatched as an Agent by the build pipeline, you have these tools. When invoked inline via Skill(), you still have the parent session's tools — use them.
+
 ### Step 2: Run Default Checks
 
 Regardless of artifact type, always evaluate these dimensions:
@@ -205,11 +219,18 @@ In focused mode, produce **only** these sections:
 3. **Patch Delta (Scoped)** — 3-5 bullets max, actionable fixes within your assigned domain only.
 4. **Cross-Domain Flags** — Issues you spotted that fall outside your assigned sections. List as one-liners for the synthesis step. Do NOT analyze them in depth — another reviewer owns that angle.
 
+### Focused Mode Execution Context
+
+When dispatched by the build pipeline, each focused reviewer runs as an **independent Agent with full tool access** (Read, Grep, Glob, Bash). Use these tools to verify spec claims against the actual codebase. Do not treat the spec as the sole source of truth — cross-reference against code, migrations, and git history.
+
+This matters because spec-only review produces false positives. If the spec says "route X is needed" but `git log` shows it was implemented in a recent commit, that's not a finding — it's a stale spec. Step 1b (Ground-Truth Verification) applies with extra force in focused mode: you own fewer sections, so you have the budget to verify every claim you make.
+
 ### Focused Mode Rules
 
 - **Go deeper, not wider.** You own 1-3 sections. Exhaust them.
 - **Do NOT produce sections outside your assignment.** If you spot a security issue but your role is `PERFORMANCE_OPERABILITY`, list it as a Cross-Domain Flag — do not analyze it.
 - **Still load PT-2 system posture** (`references/pt2-system-posture.md`) — you need baseline context regardless of focus.
+- **Verify before filing.** Every "missing X" finding must be preceded by a codebase search confirming X is actually missing. See Step 1b.
 - **Severity rubric is unchanged** — P0-P3 labels apply the same way.
 - **"No issues found" is a valid output** — if your sections survive attack, state why they survive.
 

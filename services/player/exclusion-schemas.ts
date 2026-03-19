@@ -30,17 +30,14 @@ export const createExclusionSchema = z.object({
   exclusion_type: exclusionTypeEnum,
   enforcement: enforcementEnum,
   reason: z.string().min(1, 'Reason is required').max(1000, 'Reason too long'),
-  effective_from: z
-    .string()
+  effective_from: z.iso
     .datetime({ message: 'effective_from must be ISO 8601' })
     .optional(),
-  effective_until: z
-    .string()
+  effective_until: z.iso
     .datetime({ message: 'effective_until must be ISO 8601' })
     .nullable()
     .optional(),
-  review_date: z
-    .string()
+  review_date: z.iso
     .datetime({ message: 'review_date must be ISO 8601' })
     .nullable()
     .optional(),

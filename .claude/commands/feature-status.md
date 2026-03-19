@@ -91,7 +91,7 @@ Next Action: {description of what to do next based on current phase}
 | 3 | Complete SEC Note covering assets/threats/controls |
 | 4 | Freeze ADR with durable decisions only |
 | 5 | Create EXEC-SPEC + DoD with CI-executable gates |
-| 6 | Execute workstreams via prd-pipeline |
+| 6 | Execute workstreams via build-pipeline (`/build`) |
 
 ## References
 

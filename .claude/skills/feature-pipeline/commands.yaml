@@ -152,3 +152,6 @@ phases:
     artifact: "PRD-###-{slug}.md"
     delegate_to: "prd-writer"
     terminal: true
+    # HARD STOP: Phase 5 is the last phase. There is no Phase 6.
+    # On prd-approved, set status to "design-complete" and display handoff.
+    # Do NOT generate EXEC-SPECs, DOD gates, workstreams, or any build artifact.

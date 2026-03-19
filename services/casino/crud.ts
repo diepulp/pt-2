@@ -124,7 +124,7 @@ export async function createCasino(
       name: input.name,
       location: input.location ?? null,
       address: input.address ?? null,
-      company_id: input.company_id ?? null,
+      company_id: input.company_id,
     })
     .select(CASINO_SELECT_PUBLIC)
     .single();

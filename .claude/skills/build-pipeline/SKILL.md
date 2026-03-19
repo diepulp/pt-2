@@ -174,24 +174,36 @@ These files contain deterministic rules that MUST be validated against during sp
 
     #### Step 4a: Parallel DA Team Dispatch
 
-    Send a **SINGLE message** with **5 parallel** `Skill` calls. Each reviewer attacks
-    the EXEC-SPEC from a different angle using the `devils-advocate` Focused Review Mode:
+    Send a **SINGLE message** with **5 parallel** `Agent` calls. Each reviewer runs as an
+    **independent agent with full tool access** (Read, Grep, Glob, Bash) so it can verify
+    spec claims against the actual codebase, git history, and file system. This prevents
+    false positives from spec-only review where implementation has already diverged from
+    or advanced beyond the spec text.
+
+    > **Why Agent, not Skill?** `Skill()` loads instructions into the current conversation —
+    > all 5 "reviewers" would share one context, compete for tool-call budget, and in practice
+    > review only the spec text without verifying against code. `Agent()` spawns independent
+    > subprocesses, each with its own context window and tool access. This is what makes the
+    > "5 independent reviewers" design actually work.
 
     ```
-    +-----------------------------------------------------------------------+
-    | SINGLE MESSAGE — 5 parallel Skill calls:                              |
-    +-----------------------------------------------------------------------+
-    | Skill(skill="devils-advocate", args="R1: SECURITY & TENANCY ...")      |
-    | Skill(skill="devils-advocate", args="R2: ARCHITECTURE & BOUNDARIES...")|
-    | Skill(skill="devils-advocate", args="R3: IMPLEMENTATION COMPLETE...")   |
-    | Skill(skill="devils-advocate", args="R4: TEST & QUALITY ...")          |
-    | Skill(skill="devils-advocate", args="R5: PERFORMANCE & OPERABILITY...")|
-    +-----------------------------------------------------------------------+
+    +---------------------------------------------------------------------------------+
+    | SINGLE MESSAGE — 5 parallel Agent calls:                                        |
+    +---------------------------------------------------------------------------------+
+    | Agent(description="DA R1 Security",    prompt="...", run_in_background=true)     |
+    | Agent(description="DA R2 Architecture", prompt="...", run_in_background=true)    |
+    | Agent(description="DA R3 Implementation", prompt="...", run_in_background=true)  |
+    | Agent(description="DA R4 Test Quality", prompt="...", run_in_background=true)    |
+    | Agent(description="DA R5 Performance",  prompt="...", run_in_background=true)    |
+    +---------------------------------------------------------------------------------+
     ```
 
     **Required prompt template for each reviewer:**
 
     ```
+    You are an adversarial reviewer for PT-2. Read the devils-advocate skill at
+    .claude/skills/devils-advocate/SKILL.md and follow its Focused Review Mode.
+
     Adversarial review of EXEC-SPEC for {PRD_ID}:
       Specification: {exec_spec_path}
       Workstreams: {workstream_summary}
@@ -203,6 +215,13 @@ These files contain deterministic rules that MUST be validated against during sp
 
     Use Focused Review Mode. Attack ONLY your assigned sections with full depth.
     Flag cross-domain issues as one-liners in Cross-Domain Flags section.
+
+    CRITICAL — Ground-truth verification:
+    You have full tool access (Read, Grep, Glob, Bash). Before filing any
+    "missing implementation" or "missing migration" finding, SEARCH the codebase
+    to confirm it is actually missing. Use `git log --oneline -20 -- <path>` to
+    check recent changes on relevant files. Never file a "missing X" finding
+    without first searching for X.
     ```
 
     **DA Team Roster:**

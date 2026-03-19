@@ -19,7 +19,8 @@ date: YYYY-MM-DD
 ## 1) Intent (what outcome changes?)
 
 - **User story:**
-- **Success looks like:** (observable outcome)
+- **Primary actor:** {Specific role, e.g., "Pit Boss — floor supervisor with enrollment authority"}
+- **Success looks like:** (one measurable outcome that proves the feature works)
 
 ## 2) Constraints (hard walls)
 
@@ -63,12 +64,19 @@ date: YYYY-MM-DD
 - Decision drivers: (why this matters)
 - Decision deadline: (if applicable)
 
-## 7) Open questions / unknowns
+## 7) Dependencies
 
-- Unknown vendor schema? file size? data quality?
-- "We will learn this by ..." (prototype / sample file / stakeholder interview)
+| Dependency | Type | Status |
+|------------|------|--------|
+| {PRD/Service/ADR} | Required / Optional | Implemented / Planned |
 
-## 8) Definition of Done (thin)
+## 8) Risks / Open questions
+
+| Risk / Question | Impact | Mitigation / Learning Plan |
+|-----------------|--------|---------------------------|
+| {risk_or_unknown} | High/Med/Low | {mitigation or "We will learn this by ..."} |
+
+## 9) Definition of Done (thin)
 
 - [ ] Decision recorded in ADR(s)
 - [ ] Acceptance criteria agreed

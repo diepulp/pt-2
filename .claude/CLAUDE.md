@@ -86,6 +86,7 @@ The agent runner buffers all stdout/stderr in memory. Large output WILL crash VS
    # Then grep/read the file for results
    ```
 5. **General rule**: If a command might produce large output, **write to /tmp first, then read selectively**. No exceptions.
+6. **Before removing a worktree with `--force`**, always run `git status` inside the worktree first to inventory untracked files. Untracked files are NOT in git — `--force` deletes them permanently with no recovery path. If untracked files exist, either commit them, `git stash -u`, or copy them out before removal.
 
 ## Service Layer Pattern
 
