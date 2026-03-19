@@ -7,8 +7,6 @@
  * @see ADR-044 D4 (lookup), D3 (activate), D6 (redeem), D7 (hybrid surface)
  */
 
-import type { Database } from '@/types/database.types';
-
 import type {
   ActivationResultDTO,
   EnrolledCasinoDTO,
@@ -28,9 +26,19 @@ export function toRecord(value: unknown): Record<string, unknown> {
 }
 
 // === RPC Row Types ===
+// ADR-044 Phase 2: RPC not yet in locally-generated types. Manual type until db:types catches up.
 
-type LookupRow =
-  Database['public']['Functions']['rpc_lookup_player_company']['Returns'][number];
+interface LookupRow {
+  player_id: string;
+  full_name: string;
+  birth_date: string | null;
+  enrolled_casinos: unknown[];
+  loyalty_entitlement: unknown;
+  active_locally: boolean;
+  last_company_visit: string | null;
+  has_sister_exclusions: boolean | null;
+  max_exclusion_severity: string | null;
+}
 
 // === Enrolled Casino Mapper ===
 

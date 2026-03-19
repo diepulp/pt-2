@@ -25,20 +25,32 @@ import {
   toRecord,
 } from './mappers';
 
+// ADR-044 Phase 2: These RPCs exist on the remote DB but are not yet in locally-generated types.
+// Using untyped RPC caller until `npm run db:types` catches up after the company-scoped migrations land locally.
+function callRpc(
+  supabase: SupabaseClient<Database>,
+  name: string,
+  params?: Record<string, unknown>,
+) {
+  // @ts-expect-error — RPC name not in generated types; exists on remote DB (ADR-044 Phase 2)
+  return supabase.rpc(name, params);
+}
+
 // === Lookup ===
 
 export async function lookupCompany(
   supabase: SupabaseClient<Database>,
   searchTerm: string,
 ): Promise<RecognitionResultDTO[]> {
-  const { data, error } = await supabase.rpc('rpc_lookup_player_company', {
+  const { data, error } = await callRpc(supabase, 'rpc_lookup_player_company', {
     p_search_term: searchTerm,
   });
 
   if (error) throw error;
   if (!data) return [];
 
-  return data.map(mapRecognitionResult);
+  const rows = Array.isArray(data) ? data : [];
+  return rows.map((row: never) => mapRecognitionResult(row));
 }
 
 // === Activate ===
@@ -47,9 +59,13 @@ export async function activateLocally(
   supabase: SupabaseClient<Database>,
   playerId: string,
 ): Promise<ActivationResultDTO> {
-  const { data, error } = await supabase.rpc('rpc_activate_player_locally', {
-    p_player_id: playerId,
-  });
+  const { data, error } = await callRpc(
+    supabase,
+    'rpc_activate_player_locally',
+    {
+      p_player_id: playerId,
+    },
+  );
 
   if (error) throw error;
 
@@ -64,11 +80,15 @@ export async function redeemLocally(
   amount: number,
   reason: string,
 ): Promise<RedemptionResultDTO> {
-  const { data, error } = await supabase.rpc('rpc_redeem_loyalty_locally', {
-    p_player_id: playerId,
-    p_amount: amount,
-    p_reason: reason,
-  });
+  const { data, error } = await callRpc(
+    supabase,
+    'rpc_redeem_loyalty_locally',
+    {
+      p_player_id: playerId,
+      p_amount: amount,
+      p_reason: reason,
+    },
+  );
 
   if (error) throw error;
 

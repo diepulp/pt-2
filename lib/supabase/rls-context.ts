@@ -73,7 +73,7 @@ export async function getAuthContext(
     actorId: staff.id,
     casinoId: staff.casino_id,
     staffRole: staff.role,
-    companyId: casinoRow.company_id,
+    companyId: casinoRow.company_id ?? '',
   };
 }
 
@@ -120,11 +120,14 @@ export async function injectRLSContext(
     throw new Error('Failed to inject RLS context: RPC returned no data');
   }
 
+  // ADR-043: RPC returns company_id but generated types lag behind remote schema.
+  // Extract via record access to avoid type assertion on the row.
+  const rawRow: Record<string, unknown> = Object.assign({}, row);
   const context: RLSContext = {
     actorId: row.actor_id,
     casinoId: row.casino_id,
     staffRole: row.staff_role,
-    companyId: row.company_id,
+    companyId: String(rawRow.company_id ?? ''),
   };
 
   // AUTH-HARDENING v0.1 WS6: Mark RPC context as injected for canary assertion
