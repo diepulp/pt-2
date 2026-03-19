@@ -110,6 +110,14 @@ export const balanceQuerySchema = z.object({
 
 export type BalanceQuery = z.infer<typeof balanceQuerySchema>;
 
+/** Query schema for GET /api/v1/loyalty/balances (snake_case query params) */
+export const loyaltyBalanceQuerySchema = z.object({
+  player_id: z.string().uuid(),
+  casino_id: z.string().uuid(),
+});
+
+export type LoyaltyBalanceQuery = z.infer<typeof loyaltyBalanceQuerySchema>;
+
 // === Ledger Pagination Schemas ===
 
 /**
@@ -166,6 +174,22 @@ export const ledgerListQuerySchema = z.object({
 });
 
 export type LedgerListQuery = z.infer<typeof ledgerListQuerySchema>;
+
+// === Issuance Schemas (PRD-052 WS2) ===
+
+/**
+ * Schema for unified reward issuance (POST /api/v1/loyalty/issue).
+ * Validates the caller-neutral selection inputs per PRD §5.1 FR-5A.
+ * Reward family and commercial values resolved server-side.
+ */
+export const issueRewardSchema = z.object({
+  player_id: uuidSchema('player ID'),
+  reward_id: uuidSchema('reward ID'),
+  visit_id: uuidSchemaOptional('visit ID'),
+  idempotency_key: uuidSchema('idempotency key'),
+});
+
+export type IssueRewardInput = z.infer<typeof issueRewardSchema>;
 
 // === Cursor Encoding/Decoding Helpers ===
 

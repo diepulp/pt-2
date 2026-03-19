@@ -407,3 +407,144 @@ export interface LedgerPageResponse {
   /** Indicates if more pages exist (redundant with cursor !== null) */
   hasMore: boolean;
 }
+
+// === Issuance DTOs (PRD-052 WS2) ===
+
+import type { EntitlementIssuanceResult } from './promo/dtos';
+
+/**
+ * Input for catalog-backed comp issuance via `issueComp()`.
+ * Calls `rpc_redeem` directly (not via `redeem()`).
+ *
+ * @see PRD-052 §5.1 FR-5
+ */
+
+export interface IssueCompParams {
+  /** Player to issue comp to */
+  playerId: string;
+
+  /** Reward catalog item ID (must be `points_comp` family) */
+  rewardId: string;
+
+  /** Associated visit (optional) */
+  visitId?: string;
+
+  /** Idempotency key for request deduplication */
+  idempotencyKey: string;
+
+  /** Human-readable note. Defaults to `"Comp: {rewardName}"` in issueComp if omitted. */
+  note?: string;
+}
+
+/**
+ * Result of a catalog-backed comp issuance.
+ * Extends rpc_redeem output with catalog context.
+ *
+ * @see PRD-052 §8.1
+ */
+
+export interface CompIssuanceResult {
+  /** Discriminator field for IssuanceResultDTO union */
+  family: 'points_comp';
+
+  /** Ledger entry ID created by rpc_redeem */
+  ledgerId: string;
+
+  /** Points debited (positive, represents cost) */
+  pointsDebited: number;
+
+  /** Player balance before debit */
+  balanceBefore: number;
+
+  /** Player balance after debit */
+  balanceAfter: number;
+
+  /** Reward catalog item ID */
+  rewardId: string;
+
+  /** Reward code from catalog */
+  rewardCode: string;
+
+  /** Reward name from catalog */
+  rewardName: string;
+
+  /** Face value in cents from catalog */
+  faceValueCents: number;
+
+  /** True if this was an idempotent replay (no additional debit) */
+  isExisting: boolean;
+
+  /** Issuance timestamp (ISO 8601) */
+  issuedAt: string;
+}
+
+/**
+ * Frozen fulfillment payload for Vector C comp slip print.
+ * Contract surface per PRD §8.1 — snake_case for cross-boundary consumption.
+ *
+ * @see PRD-052 §8.1 CompFulfillmentPayload
+ */
+
+export interface CompFulfillmentPayload {
+  family: 'points_comp';
+  ledger_id: string;
+  reward_id: string;
+  reward_code: string;
+  reward_name: string;
+  face_value_cents: number;
+  points_redeemed: number;
+  balance_after: number;
+  // Context for print template
+  player_name: string;
+  player_id: string;
+  casino_name: string;
+  staff_name: string;
+  issued_at: string; // ISO 8601
+}
+
+/**
+ * Frozen fulfillment payload for Vector C entitlement coupon print.
+ * Contract surface per PRD §8.1 — snake_case for cross-boundary consumption.
+ *
+ * @see PRD-052 §8.1 EntitlementFulfillmentPayload
+ */
+
+export interface EntitlementFulfillmentPayload {
+  family: 'entitlement';
+  coupon_id: string;
+  validation_number: string;
+  reward_id: string;
+  reward_code: string;
+  reward_name: string;
+  face_value_cents: number;
+  required_match_wager_cents: number | null; // null for free play
+  expires_at: string | null; // ISO 8601
+  // Context for print template
+  player_name: string;
+  player_id: string;
+  player_tier: string;
+  casino_name: string;
+  staff_name: string;
+  issued_at: string; // ISO 8601
+}
+
+/**
+ * Discriminated union of fulfillment payloads — frozen for Vector C.
+ *
+ * @see PRD-052 §8.1
+ */
+export type FulfillmentPayload =
+  | CompFulfillmentPayload
+  | EntitlementFulfillmentPayload;
+
+/**
+ * Discriminated union of issuance results.
+ * The `family` field discriminates between comp and entitlement results.
+ *
+ * @see EXEC-052 WS2
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First discriminated union type per EXEC-052 WS2
+export type IssuanceResultDTO = CompIssuanceResult | EntitlementIssuanceResult;
+
+// Note: EntitlementIssuanceResult is available via '@/services/loyalty' barrel (from promo sub-module).
+// It is NOT re-exported here to avoid duplicate export with index.ts `export * from './promo'`.

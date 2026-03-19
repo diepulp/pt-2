@@ -15,3 +15,4 @@ export * from './use-loyalty-mutations';
 export * from './promo-instruments';
 export * from './use-reward-catalog';
 export * from './use-reward-mutations';
+export * from './use-issue-reward';

@@ -15,6 +15,8 @@ import {
   mapToRecentEvents,
   toMetadataRecord,
   parseLoyaltyData,
+  mapToRewardHistoryItem,
+  mapPromoCouponToRewardHistoryItem,
 } from '../mappers';
 
 // === Helpers ===
@@ -351,5 +353,110 @@ describe('parseLoyaltyData', () => {
   it('defaults balance to 0 when both fields are missing', () => {
     const result = parseLoyaltyData({ tier: 'silver' });
     expect(result).toEqual({ balance: 0, tier: 'silver' });
+  });
+});
+
+// ──────────────────────────────────────────────────────────
+// mapToRewardHistoryItem (PRD-052 WS5 bug fix validation)
+// ──────────────────────────────────────────────────────────
+
+describe('mapToRewardHistoryItem', () => {
+  it('maps entry_type="redeem" to rewardType="comp" (WS5 bug fix)', () => {
+    const result = mapToRewardHistoryItem({
+      id: 'ledger-1',
+      created_at: '2026-03-19T10:00:00Z',
+      entry_type: 'redeem',
+      points: -100,
+      staff_id: 'staff-1',
+      staff_name: 'Jane Doe',
+      visit_id: 'visit-1',
+    });
+
+    expect(result.rewardType).toBe('comp');
+    expect(result.amount).toBe(100);
+    expect(result.issuedAt).toBe('2026-03-19T10:00:00Z');
+    expect(result.issuedBy).toEqual({ id: 'staff-1', name: 'Jane Doe' });
+    expect(result.visitId).toBe('visit-1');
+  });
+
+  it('maps promo-related entry_type to rewardType="matchplay"', () => {
+    const result = mapToRewardHistoryItem({
+      id: 'ledger-2',
+      created_at: '2026-03-19T11:00:00Z',
+      entry_type: 'promo_issued',
+      points: 0,
+      staff_id: null,
+      staff_name: null,
+      visit_id: null,
+    });
+
+    expect(result.rewardType).toBe('matchplay');
+    expect(result.issuedBy).toEqual({ id: 'system', name: 'System' });
+  });
+
+  it('maps free-related entry_type to rewardType="freeplay"', () => {
+    const result = mapToRewardHistoryItem({
+      id: 'ledger-3',
+      created_at: '2026-03-19T12:00:00Z',
+      entry_type: 'free_play_issued',
+      points: 0,
+      staff_id: null,
+      staff_name: null,
+      visit_id: null,
+    });
+
+    expect(result.rewardType).toBe('freeplay');
+  });
+
+  it('maps unknown entry_type to rewardType="other"', () => {
+    const result = mapToRewardHistoryItem({
+      id: 'ledger-4',
+      created_at: '2026-03-19T13:00:00Z',
+      entry_type: 'base_accrual',
+      points: 50,
+      staff_id: null,
+      staff_name: null,
+      visit_id: null,
+    });
+
+    expect(result.rewardType).toBe('other');
+  });
+});
+
+// ──────────────────────────────────────────────────────────
+// mapPromoCouponToRewardHistoryItem (PRD-052 WS5 promo_coupon source)
+// ──────────────────────────────────────────────────────────
+
+describe('mapPromoCouponToRewardHistoryItem', () => {
+  it('maps match_play promo_type to rewardType="matchplay"', () => {
+    const result = mapPromoCouponToRewardHistoryItem({
+      id: 'coupon-1',
+      issued_at: '2026-03-19T10:00:00Z',
+      face_value_amount: 25,
+      issued_by_staff_id: 'staff-1',
+      visit_id: 'visit-1',
+      promo_type: 'match_play',
+    });
+
+    expect(result.rewardType).toBe('matchplay');
+    expect(result.amount).toBe(25);
+    expect(result.issuedAt).toBe('2026-03-19T10:00:00Z');
+    expect(result.issuedBy.id).toBe('staff-1');
+    expect(result.visitId).toBe('visit-1');
+  });
+
+  it('maps free_play promo_type to rewardType="freeplay"', () => {
+    const result = mapPromoCouponToRewardHistoryItem({
+      id: 'coupon-2',
+      issued_at: '2026-03-19T11:00:00Z',
+      face_value_amount: 50,
+      issued_by_staff_id: 'staff-2',
+      visit_id: null,
+      promo_type: 'free_play',
+    });
+
+    expect(result.rewardType).toBe('freeplay');
+    expect(result.amount).toBe(50);
+    expect(result.visitId).toBeNull();
   });
 });

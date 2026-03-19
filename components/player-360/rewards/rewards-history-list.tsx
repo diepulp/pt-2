@@ -17,7 +17,7 @@ import { RewardsHistoryItem } from './rewards-history-item';
 
 // === Types ===
 
-type FilterType = 'all' | 'matchplay' | 'freeplay';
+type FilterType = 'all' | 'matchplay' | 'freeplay' | 'comp';
 
 // === Props ===
 
@@ -38,6 +38,7 @@ const filterOptions: { value: FilterType; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'matchplay', label: 'Match Play' },
   { value: 'freeplay', label: 'Free Play' },
+  { value: 'comp', label: 'Comp' },
 ];
 
 // === Component ===

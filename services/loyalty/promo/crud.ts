@@ -18,8 +18,10 @@ import type {
   CouponInventoryOutput,
   CouponInventoryQuery,
   CreatePromoProgramInput,
+  EntitlementIssuanceResult,
   IssueCouponInput,
   IssueCouponOutput,
+  IssueEntitlementParams,
   PromoCouponDTO,
   PromoCouponListQuery,
   PromoProgramDTO,
@@ -269,8 +271,7 @@ export async function createProgram(
       .insert({
         casino_id: input.casinoId,
         name: input.name,
-        // Cast: PromoType is wider than generated enum until db:types-local runs after migration
-        promo_type: (input.promoType ?? 'match_play') as 'match_play',
+        promo_type: input.promoType ?? 'match_play',
         face_value_amount: input.faceValueAmount,
         required_match_wager_amount: input.requiredMatchWagerAmount,
         start_at: input.startAt ?? null,
@@ -621,6 +622,159 @@ export async function getCouponByValidationNumber(
     }
 
     return parsePromoCouponRow(data);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      throw error;
+    }
+    throw mapPromoError(toErrorShape(error));
+  }
+}
+
+// === Catalog-Backed Entitlement Issuance (PRD-052 WS2) ===
+
+/**
+ * Issues a catalog-backed entitlement via rpc_issue_promo_coupon.
+ *
+ * NO TIER DERIVATION. Per PRD §7.3: "Vector B does not implement entitlement
+ * derivation logic. It only issues entitlements whose required issue-time
+ * commercial values (face value, match wager) are already resolvable from
+ * frozen active catalog/config inputs."
+ *
+ * Reads face_value_cents, instrument_type from reward.metadata JSONB.
+ * Resolves promo_program_id by querying promo_program for matching casino + type.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param params - Entitlement issuance parameters
+ * @returns EntitlementIssuanceResult with catalog context
+ * @throws REWARD_NOT_FOUND if reward does not exist
+ * @throws REWARD_INACTIVE if reward is not active
+ * @throws REWARD_FAMILY_MISMATCH if reward family is not entitlement
+ * @throws CATALOG_CONFIG_INVALID if required commercial values missing in metadata
+ *
+ * @see PRD-052 §7.3 (Entitlement Scope Constraint)
+ * @see EXEC-052 WS2
+ */
+export async function issueEntitlement(
+  supabase: SupabaseClient<Database>,
+  params: IssueEntitlementParams,
+): Promise<EntitlementIssuanceResult> {
+  // Lazy import to avoid circular dependency (reward is a sub-module of loyalty)
+  const { getReward } = await import('../reward/crud');
+
+  try {
+    // 1. Use existing getReward() for single-call fetch with children (R5 waterfall fix)
+    const reward = await getReward(supabase, params.rewardId);
+
+    // 2. Validate reward exists
+    if (!reward) {
+      throw new DomainError(
+        'REWARD_NOT_FOUND',
+        `Reward ${params.rewardId} not found`,
+      );
+    }
+
+    // 3. Validate reward is active
+    if (!reward.isActive) {
+      throw new DomainError(
+        'REWARD_INACTIVE',
+        `Reward "${reward.name}" is not active`,
+      );
+    }
+
+    // 4. Validate reward family
+    if (reward.family !== 'entitlement') {
+      throw new DomainError(
+        'REWARD_FAMILY_MISMATCH',
+        `Expected entitlement family, got ${reward.family}`,
+      );
+    }
+
+    // 5. Read frozen commercial values from reward.metadata (JSONB)
+    //    These are catalog-authored values, NOT derived from player tier.
+    const metadata = reward.metadata ?? {};
+    const faceValueCents =
+      typeof metadata.face_value_cents === 'number'
+        ? metadata.face_value_cents
+        : undefined;
+    const instrumentType =
+      typeof metadata.instrument_type === 'string'
+        ? metadata.instrument_type
+        : undefined;
+    const matchWagerCents =
+      typeof metadata.match_wager_cents === 'number'
+        ? metadata.match_wager_cents
+        : null;
+
+    if (faceValueCents === undefined || !instrumentType) {
+      throw new DomainError(
+        'CATALOG_CONFIG_INVALID',
+        `Reward "${reward.name}" is missing required commercial values in metadata (face_value_cents, instrument_type)`,
+      );
+    }
+
+    // 6. Resolve promo_program_id: query promo_program by casino + instrument_type + active
+    const promoType =
+      instrumentType === 'free_play' ? 'free_play' : 'match_play';
+
+    const { data: programData, error: programError } = await supabase
+      .from('promo_program')
+      .select('id')
+      .eq('status', 'active')
+      .eq('promo_type', promoType)
+      .limit(1)
+      .maybeSingle();
+
+    if (programError) {
+      throw mapPromoError(programError);
+    }
+
+    if (!programData) {
+      throw new DomainError(
+        'CATALOG_CONFIG_INVALID',
+        `No active promo program found for instrument type "${instrumentType}"`,
+      );
+    }
+
+    // 7. Generate validation_number — UUID v4 (NFR-5: non-predictable)
+    const validationNumber = crypto.randomUUID();
+
+    // 8. Call rpc_issue_promo_coupon with resolved params
+    const { data, error } = await supabase.rpc('rpc_issue_promo_coupon', {
+      p_promo_program_id: programData.id,
+      p_validation_number: validationNumber,
+      p_idempotency_key: params.idempotencyKey,
+      p_player_id: params.playerId,
+      p_visit_id: params.visitId ?? undefined,
+    });
+
+    if (error) {
+      throw mapPromoError(error);
+    }
+
+    if (!data) {
+      throw new DomainError(
+        'INTERNAL_ERROR',
+        'RPC returned no data for entitlement issuance',
+      );
+    }
+
+    const parsed = parseIssueCouponResponse(data);
+
+    // 9. Map result with catalog context → EntitlementIssuanceResult
+    return {
+      family: 'entitlement',
+      couponId: parsed.coupon.id,
+      validationNumber: parsed.coupon.validationNumber,
+      faceValueCents,
+      matchWagerCents,
+      status: parsed.coupon.status,
+      expiresAt: parsed.coupon.expiresAt,
+      rewardId: reward.id,
+      rewardCode: reward.code,
+      rewardName: reward.name,
+      isExisting: parsed.isExisting,
+      issuedAt: parsed.coupon.issuedAt,
+    };
   } catch (error) {
     if (error instanceof DomainError) {
       throw error;

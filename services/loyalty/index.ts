@@ -26,6 +26,8 @@ import type {
   AccrueOnCloseOutput,
   ApplyPromotionInput,
   ApplyPromotionOutput,
+  CompIssuanceResult,
+  IssueCompParams,
   LedgerListQuery,
   LedgerPageResponse,
   ManualCreditInput,
@@ -65,6 +67,7 @@ export {
   ledgerListQuerySchema,
   encodeLedgerCursor,
   decodeLedgerCursor,
+  issueRewardSchema,
 } from './schemas';
 
 // === Service Interface ===
@@ -175,6 +178,26 @@ export interface LoyaltyService {
     playerId: string,
     casinoId: string,
   ): Promise<ReconcileBalanceRpcResponse>;
+
+  /**
+   * Issues a catalog-backed comp via rpc_redeem.
+   * Calls rpc_redeem DIRECTLY (not via redeem()). Uses Promise.all
+   * for parallel pre-flight (getReward + getBalance).
+   *
+   * @param params - Comp issuance parameters
+   * @param casinoId - Casino ID for balance lookup
+   * @returns CompIssuanceResult with catalog context
+   * @throws REWARD_NOT_FOUND if reward does not exist
+   * @throws REWARD_INACTIVE if reward is not active
+   * @throws REWARD_FAMILY_MISMATCH if family is not points_comp
+   * @throws INSUFFICIENT_BALANCE if balance is insufficient
+   *
+   * @see PRD-052 §5.1 FR-5
+   */
+  issueComp(
+    params: IssueCompParams,
+    casinoId: string,
+  ): Promise<CompIssuanceResult>;
 }
 
 // === Service Factory ===
@@ -199,5 +222,6 @@ export function createLoyaltyService(
     getLedger: (query) => crud.getLedger(supabase, query),
     reconcileBalance: (playerId, casinoId) =>
       crud.reconcileBalance(supabase, playerId, casinoId),
+    issueComp: (params, casinoId) => crud.issueComp(supabase, params, casinoId),
   };
 }

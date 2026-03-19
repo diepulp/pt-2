@@ -30,6 +30,7 @@ import {
   extractTheoSettings,
   mapToCashVelocity,
   mapToEngagement,
+  mapPromoCouponToRewardHistoryItem,
   mapToRecentEvents,
   mapToRewardHistoryItem,
   mapToRewardsEligibility,
@@ -399,42 +400,94 @@ export async function getRewardHistory(
   playerId: string,
   limit = 5,
 ): Promise<RewardHistoryItemDTO[]> {
+  // MVP: over-fetch-and-merge. Cursor pagination across sources deferred.
   try {
-    // Get recent redemptions from loyalty ledger
-    // Using 'reason' and 'points_delta' which are the actual column names
-    const { data, error } = await supabase
-      .from('loyalty_ledger')
-      .select(
-        `
-        id,
-        created_at,
-        reason,
-        points_delta,
-        staff_id,
-        visit_id
-      `,
-      )
-      .eq('player_id', playerId)
-      .eq('reason', 'redeem')
-      .order('created_at', { ascending: false })
-      .limit(limit);
+    // Fetch `limit` items from EACH source in parallel, then merge + sort + truncate
+    const [ledgerResult, couponResult] = await Promise.all([
+      // Source 1: Comp entries from loyalty_ledger (reason='redeem')
+      supabase
+        .from('loyalty_ledger')
+        .select(
+          `
+          id,
+          created_at,
+          reason,
+          points_delta,
+          staff_id,
+          visit_id
+        `,
+        )
+        .eq('player_id', playerId)
+        .eq('reason', 'redeem')
+        .order('created_at', { ascending: false })
+        .limit(limit),
 
-    if (error) {
-      throw mapDatabaseError(error);
+      // Source 2: Entitlement entries from promo_coupon (joined with promo_program for promo_type)
+      supabase
+        .from('promo_coupon')
+        .select(
+          `
+          id,
+          issued_at,
+          face_value_amount,
+          issued_by_staff_id,
+          visit_id,
+          promo_program:promo_program_id ( promo_type )
+        `,
+        )
+        .eq('player_id', playerId)
+        .order('issued_at', { ascending: false })
+        .limit(limit),
+    ]);
+
+    if (ledgerResult.error) {
+      throw mapDatabaseError(ledgerResult.error);
+    }
+    if (couponResult.error) {
+      throw mapDatabaseError(couponResult.error);
     }
 
-    // Map to DTOs
-    return (data ?? []).map((entry) =>
-      mapToRewardHistoryItem({
-        id: entry.id,
-        created_at: entry.created_at,
-        entry_type: entry.reason, // Map reason to entry_type for the mapper
-        points: entry.points_delta, // Map points_delta to points for the mapper
-        staff_id: entry.staff_id,
-        staff_name: null, // TODO: Join with staff table if needed
-        visit_id: entry.visit_id,
-      }),
+    // Map ledger entries to DTOs
+    const ledgerItems: RewardHistoryItemDTO[] = (ledgerResult.data ?? []).map(
+      (entry) =>
+        mapToRewardHistoryItem({
+          id: entry.id,
+          created_at: entry.created_at,
+          entry_type: entry.reason, // Map reason to entry_type for the mapper
+          points: entry.points_delta, // Map points_delta to points for the mapper
+          staff_id: entry.staff_id,
+          staff_name: null, // TODO: Join with staff table if needed
+          visit_id: entry.visit_id,
+        }),
     );
+
+    // Map promo_coupon entries to DTOs
+    const couponItems: RewardHistoryItemDTO[] = (couponResult.data ?? []).map(
+      (coupon) => {
+        // promo_program is a joined object with promo_type
+        const program = coupon.promo_program as unknown as {
+          promo_type: 'match_play' | 'free_play';
+        } | null;
+        return mapPromoCouponToRewardHistoryItem({
+          id: coupon.id,
+          issued_at: coupon.issued_at,
+          face_value_amount: coupon.face_value_amount,
+          issued_by_staff_id: coupon.issued_by_staff_id,
+          visit_id: coupon.visit_id,
+          promo_type: program?.promo_type ?? 'match_play',
+        });
+      },
+    );
+
+    // Merge, sort by issuedAt DESC, truncate to limit
+    const merged = [...ledgerItems, ...couponItems]
+      .sort(
+        (a, b) =>
+          new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime(),
+      )
+      .slice(0, limit);
+
+    return merged;
   } catch (error) {
     if (error instanceof DomainError) {
       throw error;
