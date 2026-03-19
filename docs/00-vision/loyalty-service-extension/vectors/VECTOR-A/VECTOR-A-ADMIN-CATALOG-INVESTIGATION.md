@@ -15,7 +15,9 @@
 
 This vector covers everything required for an admin to configure, activate, and manage the pilot reward catalog — without touching issuance flows or print fulfillment.
 
-**Scope:** reward catalog CRUD, activation/deactivation, pricing configuration (`reward_price_points`), tier-entitlement mapping (`reward_entitlement_tier`), earn rate configuration (`loyalty_earn_config`), and promo program management.
+**Scope:** reward catalog CRUD, activation/deactivation, pricing configuration (`reward_price_points`), tier-entitlement mapping (`reward_entitlement_tier`), and promo program management.
+
+**Explicitly excluded (frozen pilot decision):** `loyalty_earn_config` admin UI — earn rates remain on `game_settings` for pilot. See `LOYALTY-EARN-CONFIG-WIRING-CONTEXT.md` D1/D2.
 
 **Not in scope:** operator issuance UX, print templates, fulfillment rendering, one-click RPC.
 
@@ -29,7 +31,7 @@ This vector covers everything required for an admin to configure, activate, and 
 |-------|-------|--------|----------|
 | **DB: reward_catalog** | 6 ADR-033 tables deployed | Operational | `20260206005751_adr033_reward_catalog_schema.sql` |
 | **DB: promo_program** | Table + promo_coupon | Operational | `20260106235611_loyalty_promo_instruments.sql` |
-| **DB: loyalty_earn_config** | Table deployed | Operational | Same ADR-033 migration |
+| **DB: loyalty_earn_config** | Table deployed | **DEFERRED** — inert for pilot (frozen decision D2) | Same ADR-033 migration |
 | **DB: reward_entitlement_tier** | Table deployed | Operational | Same ADR-033 migration |
 | **DB: reward_price_points** | Table deployed | Operational | Same ADR-033 migration |
 | **DB: reward_limits** | Table deployed | Populated but **unenforced** | Same ADR-033 migration |
@@ -38,15 +40,17 @@ This vector covers everything required for an admin to configure, activate, and 
 | **Service: PromoService** | 11 methods (100%) | Operational | `services/loyalty/promo/` |
 | **API: promo-programs** | GET, POST, GET/:id, PATCH/:id | Operational | `app/api/v1/promo-programs/` |
 | **API: promo-coupons** | GET, POST, GET/:id, void, replace | Operational | `app/api/v1/promo-coupons/` |
-| **API: loyalty_earn_config** | **No routes** | GAP | — |
-| **API: reward_catalog CRUD** | **No routes** | GAP | — |
+| **API: loyalty_earn_config** | GET/PUT exist | **DEFERRED** — routes operational but inert (frozen decision D2) | `app/api/v1/rewards/earn-config/` |
+| **API: reward_catalog** | GET, POST, GET/:id, PATCH/:id | Operational (base CRUD present) | `app/api/v1/rewards/` |
 | **Hooks: promo CRUD** | useCreatePromoProgram, useUpdatePromoProgram | Operational | `hooks/loyalty/promo-instruments/` |
 | **Hooks: reward CRUD** | useRewardList, useRewardDetail, useEligibleRewards, useEarnConfig | Operational | `hooks/loyalty/reward/` |
 | **UI: Admin loyalty page** | Placeholder stub | GAP | `app/(dashboard)/loyalty/page.tsx` — "Phase 3 pending" |
 | **UI: Reward Catalog Manager** | 0% | GAP | — |
 | **UI: Promo Program Manager** | 0% | GAP | — |
-| **UI: Earn Config Editor** | 0% | GAP | — |
+| **UI: Earn Config Editor** | 0% | **DEFERRED** — excluded from pilot (frozen decision D2) | — |
 | **Seed data** | 3 comps + 2 entitlements | Operational | ADR-033 seed migration |
+
+**Clarification:** reward catalog base CRUD routes exist. The gap is **not** absence of reward routes; the gap is absence of **granular child-record mutation routes** and missing admin UI exposure.
 
 ### Schema reality (two axes, not four types)
 
@@ -87,17 +91,18 @@ The `reward_catalog` uses two axes:
 - No reward catalog list/create/edit page
 - No promo program list/create/edit page
 - No tier entitlement mapping editor
-- No earn config editor
+- ~~No earn config editor~~ — **DEFERRED** (frozen decision D2: earn rates stay on `game_settings`)
 - No activation/deactivation toggles
 - No policy toggles (`promo_require_exact_match`, `promo_allow_anonymous_issuance`)
 
 **What already supports it:**
-- API routes for promo programs exist (GET/POST/PATCH)
+- API routes for reward catalog base CRUD exist (GET, POST, GET/:id, PATCH/:id)
+- API routes for promo programs exist (GET, POST, GET/:id, PATCH/:id)
 - Service layer is 100% for both RewardService and PromoService
-- React hooks for CRUD mutations exist
+- React query hooks exist for reads; mutation hooks need to be exposed or implemented
 - Database schema is deployed and seeded
 
-**Estimated delta:** ~730 lines frontend. Backend is complete.
+**Estimated delta:** ~730 lines frontend plus small contract-stabilization work (inventory route, mutation hooks, validation tightening). Core backend services and most API surfaces are present, but backend is **not fully complete** for this slice.
 
 ### GAP-A2: Reward catalog API routes exist but child record routes are missing (P1)
 
@@ -133,11 +138,6 @@ The `reward_catalog` uses two axes:
 | Cross-field | No validation | `points_comp` must require `pricePoints`; `entitlement` must require `entitlementTiers` |
 
 ### GAP-A3: Missing inventory API route (P2 — Bug #1)
-- `app/api/v1/rewards/` — GET list, POST create
-- `app/api/v1/rewards/[id]/` — GET detail, PATCH update
-- `app/api/v1/loyalty-earn-config/` — GET, PUT/PATCH
-
-### GAP-A3: Missing inventory API route (P2 — Bug #1)
 
 `services/loyalty/promo/http.ts:178-196` calls `GET /api/v1/promo-coupons/inventory` but no route handler exists. Full supporting stack (RPC, service, DTO, hook) is operational.
 
@@ -162,6 +162,22 @@ Only `match_play` value exists. Missing: `nonnegotiable`, `free_bet`, `other`. S
 
 ---
 
+## Decision posture
+
+### Frozen
+- **Earn config admin UI is excluded from pilot** (`loyalty_earn_config` remains inert for pilot; earn rates stay on `game_settings`)
+- Vector A remains admin configuration only; no issuance UX, no print fulfillment
+
+### Frozen for this artifact pair
+- Reward catalog base CRUD exists and should be treated as present
+- The current slice includes small backend/API completion work; it is not frontend-only
+
+### Still open / must be explicitly resolved or deferred
+- **D1: Tier-to-entitlement mapping mechanism on `promo_program`**
+- **D2: Tier enum policy** unless explicitly frozen in the PRD as a product decision
+
+---
+
 ## Known bugs affecting this vector
 
 | # | Issue | Severity | Status |
@@ -180,7 +196,7 @@ Before operator issuance (Vector B) can bind to admin config:
 3. **Pricing/entitlement fields** — what admin-configured data issuance depends on:
    - For `points_comp`: `reward_price_points` (points cost per face value)
    - For `entitlement`: tier-to-entitlement mapping (face value + match wager per tier)
-4. **Catalog-to-program relationship** — `reward_catalog` defines "what exists"; `promo_program` handles "what was issued" for entitlements. No FK between them. This boundary must be explicit.
+4. **Catalog-to-program relationship** — `reward_catalog` and `promo_program` are adjacent admin surfaces in the loyalty bounded context, **not a single unified domain object**. `reward_catalog` defines configurable reward offerings; `promo_program` governs issuance-side program configuration for entitlement instruments. There is currently no FK between them, and future documents must not imply stronger coupling than exists.
 
 ---
 
@@ -193,7 +209,7 @@ Before operator issuance (Vector B) can bind to admin config:
 - [ ] Configuration persists and is retrievable
 - [ ] Promo program CRUD works through UI (no direct API calls required)
 - [ ] Tier-entitlement mapping is editable for entitlement-family rewards
-- [ ] Earn config is viewable and editable
+- ~~Earn config is viewable and editable~~ — **DEFERRED** (frozen decision D2)
 
 ---
 
@@ -206,11 +222,9 @@ app/(dashboard)/admin/loyalty/
 │   └── [id]/page.tsx         # Reward detail + edit + pricing config
 ├── promo-programs/
 │   ├── page.tsx              # Promo program list + create
-│   └── [id]/page.tsx         # Program detail + edit + tier entitlements + inventory
-├── earn-config/
-│   └── page.tsx              # Earn rate configuration
-└── policies/
-    └── page.tsx              # Coupon policy toggles
+│   └── [id]/page.tsx         # Program detail + edit + inventory (NO tier-ladder UX until D1 is frozen)
+├── # earn-config/ — DEFERRED (frozen decision D2: earn rates stay on game_settings)
+└── # policies/ — DEFERRED (backing contract for promo_require_exact_match / promo_allow_anonymous_issuance unverified)
 ```
 
 ---
@@ -231,7 +245,8 @@ This artifact is ready for `/feature-start "Loyalty Admin Catalog Slice"`.
 
 **Key input for Phase 0 (SRM-First Ownership):**
 - Owner: loyalty bounded context
-- Tables: `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config`, `promo_program`
+- Tables: `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `promo_program`
+- Deferred: `loyalty_earn_config` (frozen decision D2)
 - Services: `RewardService`, `PromoService` (both 100% implemented)
 
 **Key input for Phase 2 (RFC/Design Brief):**
