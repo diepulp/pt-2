@@ -19,7 +19,7 @@ export const createCasinoSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   location: z.string().max(255).nullable().optional(),
   address: z.record(z.string(), z.unknown()).nullable().optional(),
-  company_id: uuidSchemaNullable('company ID').optional(),
+  company_id: uuidSchema('company ID'),
 });
 
 /** Schema for updating an existing casino */

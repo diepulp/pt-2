@@ -20,8 +20,25 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
-import { injectRLSContext } from '../rls-context';
-import type { RLSContext } from '../rls-context';
+
+/**
+ * Service-role helper: injects RLS context via set_rls_context_internal RPC.
+ */
+async function setTestRLSContext(
+  client: SupabaseClient<Database>,
+  actorId: string,
+  casinoId: string,
+  staffRole: string,
+  correlationId?: string,
+): Promise<void> {
+  const { error } = await client.rpc('set_rls_context_internal', {
+    p_actor_id: actorId,
+    p_casino_id: casinoId,
+    p_staff_role: staffRole,
+    p_correlation_id: correlationId,
+  });
+  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
+}
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -44,6 +61,8 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
   let testVisit2Id: string;
   let testTable1Id: string;
   let testTable2Id: string;
+  let testCompany1Id: string;
+  let testCompany2Id: string;
 
   beforeAll(async () => {
     // Service client for setup (bypasses RLS)
@@ -98,6 +117,26 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
     }
 
     // =========================================================================
+    // Create Test Companies (ADR-043: casino.company_id NOT NULL)
+    // =========================================================================
+
+    const { data: company1 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS Policy Test Company 1' })
+      .select()
+      .single();
+    if (!company1) throw new Error('Failed to create test company 1');
+    testCompany1Id = company1.id;
+
+    const { data: company2 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS Policy Test Company 2' })
+      .select()
+      .single();
+    if (!company2) throw new Error('Failed to create test company 2');
+    testCompany2Id = company2.id;
+
+    // =========================================================================
     // Create Test Casinos
     // =========================================================================
 
@@ -106,6 +145,7 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       .insert({
         name: 'RLS Policy Test Casino 1',
         status: 'active',
+        company_id: testCompany1Id,
       })
       .select()
       .single();
@@ -118,6 +158,7 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       .insert({
         name: 'RLS Policy Test Casino 2',
         status: 'active',
+        company_id: testCompany2Id,
       })
       .select()
       .single();
@@ -323,6 +364,10 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
     await serviceClient.from('casino').delete().eq('id', testCasino1Id);
     await serviceClient.from('casino').delete().eq('id', testCasino2Id);
 
+    // Clean up companies (ADR-043)
+    await serviceClient.from('company').delete().eq('id', testCompany1Id);
+    await serviceClient.from('company').delete().eq('id', testCompany2Id);
+
     // Clean up test users
     if (testUser1Id) {
       await serviceClient.auth.admin.deleteUser(testUser1Id);
@@ -339,13 +384,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
   describe('Visit Table RLS Policies', () => {
     it('should allow staff to read visits from their own casino', async () => {
       // Inject Casino 1 context
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-visit-read-own');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-visit-read-own',
+      );
 
       // Query visits - should see only Casino 1 visits
       const { data, error } = await authClient1
@@ -365,13 +410,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
     it('should prevent staff from reading visits from other casinos', async () => {
       // Inject Casino 1 context
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-visit-read-cross');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-visit-read-cross',
+      );
 
       // Attempt to query Casino 2 visits - should return empty
       // NOTE: With service role key, RLS is bypassed. This test demonstrates
@@ -388,22 +433,22 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
     it('should enforce casino isolation between concurrent requests', async () => {
       // Request 1: Casino 1 context
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-visit-concurrent-1');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-visit-concurrent-1',
+      );
 
       // Request 2: Casino 2 context
-      const context2: RLSContext = {
-        actorId: testStaff2Id,
-        casinoId: testCasino2Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient2, context2, 'test-visit-concurrent-2');
+      await setTestRLSContext(
+        authClient2,
+        testStaff2Id,
+        testCasino2Id,
+        'pit_boss',
+        'test-visit-concurrent-2',
+      );
 
       // Both queries should only see their own casino's visits
       const { data: casino1Visits } = await authClient1
@@ -431,13 +476,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
   describe('Gaming Table RLS Policies', () => {
     it('should filter gaming tables by casino_id', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-table-filter');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-table-filter',
+      );
 
       const { data, error } = await authClient1
         .from('gaming_table')
@@ -509,15 +554,11 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
   describe('Player Table RLS Policies', () => {
     it('should allow staff to read players enrolled in their casino', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         authClient1,
-        context1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'test-player-read-enrolled',
       );
 
@@ -541,15 +582,11 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
     });
 
     it('should prevent staff from seeing players not enrolled in their casino', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(
+      await setTestRLSContext(
         authClient1,
-        context1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
         'test-player-read-not-enrolled',
       );
 
@@ -577,13 +614,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
   describe('Casino Settings RLS Policies', () => {
     it('should allow staff to read their own casino settings', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-settings-read-own');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-settings-read-own',
+      );
 
       const { data, error } = await authClient1
         .from('casino_settings')
@@ -617,13 +654,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
   describe('Staff Table RLS Policies', () => {
     it('should filter staff members by casino_id', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-staff-filter');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-staff-filter',
+      );
 
       const { data, error } = await authClient1
         .from('staff')
@@ -666,13 +703,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
 
   describe('Multi-Table Queries with RLS', () => {
     it('should enforce RLS across joined tables', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-join-rls');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-join-rls',
+      );
 
       // Query visits with related data
       const { data, error } = await authClient1
@@ -695,13 +732,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
     });
 
     it('should handle complex queries with multiple casino-scoped tables', async () => {
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-complex-query');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-complex-query',
+      );
 
       // Complex query: visits with player data
       const { data, error } = await authClient1
@@ -754,13 +791,13 @@ describe('RLS Policy Enforcement (ADR-015 WS6)', () => {
       // handles both NULL and empty string cases
 
       // Inject context then query
-      const context1: RLSContext = {
-        actorId: testStaff1Id,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(authClient1, context1, 'test-nullif-pattern');
+      await setTestRLSContext(
+        authClient1,
+        testStaff1Id,
+        testCasino1Id,
+        'pit_boss',
+        'test-nullif-pattern',
+      );
 
       const { data, error } = await authClient1
         .from('casino_settings')

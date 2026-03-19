@@ -224,14 +224,17 @@ describe('Casino CRUD Operations', () => {
       const queryBuilder = createMockQueryBuilder(mockCasino);
       const supabase = createMockSupabase(queryBuilder);
 
-      const result = await createCasino(supabase, { name: 'Test Casino' });
+      const result = await createCasino(supabase, {
+        name: 'Test Casino',
+        company_id: 'company-uuid',
+      });
 
       expect(supabase.from).toHaveBeenCalledWith('casino');
       expect(queryBuilder.insert).toHaveBeenCalledWith({
         name: 'Test Casino',
         location: null,
         address: null,
-        company_id: null,
+        company_id: 'company-uuid',
       });
       expect(queryBuilder.single).toHaveBeenCalled();
       expect(result).toEqual(mockCasino);

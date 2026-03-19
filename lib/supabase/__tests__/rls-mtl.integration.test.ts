@@ -30,8 +30,25 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
-import { injectRLSContext } from '../rls-context';
-import type { RLSContext } from '../rls-context';
+
+/**
+ * Service-role helper: injects RLS context via set_rls_context_internal RPC.
+ */
+async function setTestRLSContext(
+  client: SupabaseClient<Database>,
+  actorId: string,
+  casinoId: string,
+  staffRole: string,
+  correlationId?: string,
+): Promise<void> {
+  const { error } = await client.rpc('set_rls_context_internal', {
+    p_actor_id: actorId,
+    p_casino_id: casinoId,
+    p_staff_role: staffRole,
+    p_correlation_id: correlationId,
+  });
+  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
+}
 
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -52,6 +69,8 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
   let crossCasinoClient: SupabaseClient<Database>; // Different casino context
 
   // Test data IDs
+  let testCompany1Id: string;
+  let testCompany2Id: string;
   let testCasino1Id: string;
   let testCasino2Id: string;
   let testPitBossId: string;
@@ -103,6 +122,26 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     testUser5Id = await createOrGetUser('test-rls-mtl-crosscasino@example.com');
 
     // =========================================================================
+    // Create Test Companies (ADR-043: casino.company_id NOT NULL)
+    // =========================================================================
+
+    const { data: company1 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS MTL Test Company 1' })
+      .select()
+      .single();
+    if (!company1) throw new Error('Failed to create test company 1');
+    testCompany1Id = company1.id;
+
+    const { data: company2 } = await serviceClient
+      .from('company')
+      .insert({ name: 'RLS MTL Test Company 2' })
+      .select()
+      .single();
+    if (!company2) throw new Error('Failed to create test company 2');
+    testCompany2Id = company2.id;
+
+    // =========================================================================
     // Create Test Casinos
     // =========================================================================
 
@@ -110,6 +149,7 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
       .from('casino')
       .insert({
         name: 'RLS MTL Test Casino 1',
+        company_id: testCompany1Id,
         status: 'active',
       })
       .select()
@@ -122,6 +162,7 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
       .from('casino')
       .insert({
         name: 'RLS MTL Test Casino 2',
+        company_id: testCompany2Id,
         status: 'active',
       })
       .select()
@@ -423,6 +464,10 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     await serviceClient.from('casino').delete().eq('id', testCasino1Id);
     await serviceClient.from('casino').delete().eq('id', testCasino2Id);
 
+    // Clean up companies (ADR-043)
+    await serviceClient.from('company').delete().eq('id', testCompany1Id);
+    await serviceClient.from('company').delete().eq('id', testCompany2Id);
+
     // Clean up test users
     for (const userId of [
       testUser1Id,
@@ -447,13 +492,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_entry SELECT Policies', () => {
     it('pit_boss can SELECT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-pitboss-select');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-pitboss-select',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_entry')
@@ -467,13 +512,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('cashier can SELECT mtl_entry (form UX per ADR-025 v1.1.0)', async () => {
-      const context: RLSContext = {
-        actorId: testCashierId,
-        casinoId: testCasino1Id,
-        staffRole: 'cashier',
-      };
-
-      await injectRLSContext(cashierClient, context, 'mtl-cashier-select');
+      await setTestRLSContext(
+        cashierClient,
+        testCashierId,
+        testCasino1Id,
+        'cashier',
+        'mtl-cashier-select',
+      );
 
       const { data, error } = await cashierClient
         .from('mtl_entry')
@@ -486,13 +531,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin can SELECT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-admin-select');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-admin-select',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_entry')
@@ -505,13 +550,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('dealer CANNOT SELECT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testDealerId,
-        casinoId: testCasino1Id,
-        staffRole: 'dealer',
-      };
-
-      await injectRLSContext(dealerClient, context, 'mtl-dealer-select');
+      await setTestRLSContext(
+        dealerClient,
+        testDealerId,
+        testCasino1Id,
+        'dealer',
+        'mtl-dealer-select',
+      );
 
       const { data, error } = await dealerClient
         .from('mtl_entry')
@@ -530,13 +575,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_entry INSERT Policies', () => {
     it('pit_boss can INSERT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-pitboss-insert');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-pitboss-insert',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_entry')
@@ -559,13 +604,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('cashier can INSERT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testCashierId,
-        casinoId: testCasino1Id,
-        staffRole: 'cashier',
-      };
-
-      await injectRLSContext(cashierClient, context, 'mtl-cashier-insert');
+      await setTestRLSContext(
+        cashierClient,
+        testCashierId,
+        testCasino1Id,
+        'cashier',
+        'mtl-cashier-insert',
+      );
 
       const { data, error } = await cashierClient
         .from('mtl_entry')
@@ -588,13 +633,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin can INSERT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-admin-insert');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-admin-insert',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_entry')
@@ -617,13 +662,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('dealer CANNOT INSERT mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testDealerId,
-        casinoId: testCasino1Id,
-        staffRole: 'dealer',
-      };
-
-      await injectRLSContext(dealerClient, context, 'mtl-dealer-insert');
+      await setTestRLSContext(
+        dealerClient,
+        testDealerId,
+        testCasino1Id,
+        'dealer',
+        'mtl-dealer-insert',
+      );
 
       const { error } = await dealerClient.from('mtl_entry').insert({
         casino_id: testCasino1Id,
@@ -647,13 +692,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_entry Append-Only Enforcement', () => {
     it('pit_boss CANNOT UPDATE mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-pitboss-update');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-pitboss-update',
+      );
 
       const { error } = await pitBossClient
         .from('mtl_entry')
@@ -665,13 +710,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin CANNOT UPDATE mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-admin-update');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-admin-update',
+      );
 
       const { error } = await adminClient
         .from('mtl_entry')
@@ -683,13 +728,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('pit_boss CANNOT DELETE mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-pitboss-delete');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-pitboss-delete',
+      );
 
       const { error } = await pitBossClient
         .from('mtl_entry')
@@ -701,13 +746,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin CANNOT DELETE mtl_entry', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-admin-delete');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-admin-delete',
+      );
 
       const { error } = await adminClient
         .from('mtl_entry')
@@ -749,13 +794,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_audit_note SELECT Policies', () => {
     it('pit_boss can SELECT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-note-pitboss-select');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-note-pitboss-select',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_audit_note')
@@ -768,13 +813,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin can SELECT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-note-admin-select');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-note-admin-select',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_audit_note')
@@ -787,13 +832,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('cashier CANNOT SELECT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testCashierId,
-        casinoId: testCasino1Id,
-        staffRole: 'cashier',
-      };
-
-      await injectRLSContext(cashierClient, context, 'mtl-note-cashier-select');
+      await setTestRLSContext(
+        cashierClient,
+        testCashierId,
+        testCasino1Id,
+        'cashier',
+        'mtl-note-cashier-select',
+      );
 
       const { data, error } = await cashierClient
         .from('mtl_audit_note')
@@ -812,13 +857,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_audit_note INSERT Policies', () => {
     it('pit_boss can INSERT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-note-pitboss-insert');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-note-pitboss-insert',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_audit_note')
@@ -836,13 +881,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin can INSERT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-note-admin-insert');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-note-admin-insert',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_audit_note')
@@ -860,13 +905,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('cashier CANNOT INSERT mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testCashierId,
-        casinoId: testCasino1Id,
-        staffRole: 'cashier',
-      };
-
-      await injectRLSContext(cashierClient, context, 'mtl-note-cashier-insert');
+      await setTestRLSContext(
+        cashierClient,
+        testCashierId,
+        testCasino1Id,
+        'cashier',
+        'mtl-note-cashier-insert',
+      );
 
       const { error } = await cashierClient.from('mtl_audit_note').insert({
         mtl_entry_id: testEntry1Id,
@@ -885,13 +930,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_audit_note Append-Only Enforcement', () => {
     it('pit_boss CANNOT UPDATE mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-note-pitboss-update');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-note-pitboss-update',
+      );
 
       const { error } = await pitBossClient
         .from('mtl_audit_note')
@@ -903,13 +948,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin CANNOT UPDATE mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-note-admin-update');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-note-admin-update',
+      );
 
       const { error } = await adminClient
         .from('mtl_audit_note')
@@ -921,13 +966,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('pit_boss CANNOT DELETE mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-note-pitboss-delete');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-note-pitboss-delete',
+      );
 
       const { error } = await pitBossClient
         .from('mtl_audit_note')
@@ -939,13 +984,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin CANNOT DELETE mtl_audit_note', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-note-admin-delete');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-note-admin-delete',
+      );
 
       const { error } = await adminClient
         .from('mtl_audit_note')
@@ -985,13 +1030,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('Cross-Casino Isolation', () => {
     it('pit_boss CANNOT SELECT mtl_entry from another casino', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-cross-select');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-cross-select',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_entry')
@@ -1004,13 +1049,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('pit_boss CANNOT INSERT mtl_entry to another casino', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-cross-insert');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-cross-insert',
+      );
 
       const { error } = await pitBossClient.from('mtl_entry').insert({
         casino_id: testCasino2Id, // Different casino!
@@ -1028,13 +1073,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('pit_boss CANNOT add audit_note to entry from another casino', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-cross-note-insert');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-cross-note-insert',
+      );
 
       const { error } = await pitBossClient.from('mtl_audit_note').insert({
         mtl_entry_id: testEntry2Id, // Entry from Casino 2!
@@ -1047,13 +1092,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin CANNOT access data from another casino', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-admin-cross');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-admin-cross',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_entry')
@@ -1072,13 +1117,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
 
   describe('mtl_gaming_day_summary View Access', () => {
     it('pit_boss can SELECT from mtl_gaming_day_summary', async () => {
-      const context: RLSContext = {
-        actorId: testPitBossId,
-        casinoId: testCasino1Id,
-        staffRole: 'pit_boss',
-      };
-
-      await injectRLSContext(pitBossClient, context, 'mtl-summary-pitboss');
+      await setTestRLSContext(
+        pitBossClient,
+        testPitBossId,
+        testCasino1Id,
+        'pit_boss',
+        'mtl-summary-pitboss',
+      );
 
       const { data, error } = await pitBossClient
         .from('mtl_gaming_day_summary')
@@ -1092,13 +1137,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('admin can SELECT from mtl_gaming_day_summary', async () => {
-      const context: RLSContext = {
-        actorId: testAdminId,
-        casinoId: testCasino1Id,
-        staffRole: 'admin',
-      };
-
-      await injectRLSContext(adminClient, context, 'mtl-summary-admin');
+      await setTestRLSContext(
+        adminClient,
+        testAdminId,
+        testCasino1Id,
+        'admin',
+        'mtl-summary-admin',
+      );
 
       const { data, error } = await adminClient
         .from('mtl_gaming_day_summary')
@@ -1111,13 +1156,13 @@ describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
     });
 
     it('cashier can SELECT from mtl_gaming_day_summary (inherits mtl_entry access)', async () => {
-      const context: RLSContext = {
-        actorId: testCashierId,
-        casinoId: testCasino1Id,
-        staffRole: 'cashier',
-      };
-
-      await injectRLSContext(cashierClient, context, 'mtl-summary-cashier');
+      await setTestRLSContext(
+        cashierClient,
+        testCashierId,
+        testCasino1Id,
+        'cashier',
+        'mtl-summary-cashier',
+      );
 
       const { data, error } = await cashierClient
         .from('mtl_gaming_day_summary')

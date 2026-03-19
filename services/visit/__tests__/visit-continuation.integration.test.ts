@@ -48,6 +48,8 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
   let service: VisitServiceInterface;
 
   // Shared test resources
+  let testCompany1Id: string;
+  let testCompany2Id: string;
   let testCasino1Id: string;
   let testCasino2Id: string;
   let testTable1Id: string;
@@ -65,17 +67,42 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
     supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
     service = createVisitService(supabase);
 
+    // Create test companies (ADR-043: company before casino)
+    const { data: company1 } = await supabase
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company 1` })
+      .select()
+      .single();
+    if (!company1) throw new Error('Failed to create test company 1');
+    testCompany1Id = company1.id;
+
+    const { data: company2 } = await supabase
+      .from('company')
+      .insert({ name: `${TEST_PREFIX} Company 2` })
+      .select()
+      .single();
+    if (!company2) throw new Error('Failed to create test company 2');
+    testCompany2Id = company2.id;
+
     // Create test casinos
     const { data: casino1 } = await supabase
       .from('casino')
-      .insert({ name: `${TEST_PREFIX} Casino 1`, status: 'active' })
+      .insert({
+        name: `${TEST_PREFIX} Casino 1`,
+        status: 'active',
+        company_id: testCompany1Id,
+      })
       .select()
       .single();
     testCasino1Id = casino1!.id;
 
     const { data: casino2 } = await supabase
       .from('casino')
-      .insert({ name: `${TEST_PREFIX} Casino 2`, status: 'active' })
+      .insert({
+        name: `${TEST_PREFIX} Casino 2`,
+        status: 'active',
+        company_id: testCompany2Id,
+      })
       .select()
       .single();
     testCasino2Id = casino2!.id;
@@ -213,6 +240,8 @@ describe('Visit Continuation - Integration Tests (PRD-017)', () => {
       .eq('casino_id', testCasino2Id);
     await supabase.from('casino').delete().eq('id', testCasino1Id);
     await supabase.from('casino').delete().eq('id', testCasino2Id);
+    await supabase.from('company').delete().eq('id', testCompany1Id);
+    await supabase.from('company').delete().eq('id', testCompany2Id);
   }, 30000);
 
   // Helper: Create isolated test fixture

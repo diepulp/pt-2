@@ -57,7 +57,7 @@ export type Database = {
       casino: {
         Row: {
           address: Json | null
-          company_id: string | null
+          company_id: string
           created_at: string
           id: string
           location: string | null
@@ -66,7 +66,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
-          company_id?: string | null
+          company_id: string
           created_at?: string
           id?: string
           location?: string | null
@@ -75,7 +75,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
-          company_id?: string | null
+          company_id?: string
           created_at?: string
           id?: string
           location?: string | null
@@ -5659,6 +5659,7 @@ export type Database = {
         Returns: {
           actor_id: string
           casino_id: string
+          company_id: string
           staff_role: string
         }[]
       }

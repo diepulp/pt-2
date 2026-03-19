@@ -36,8 +36,11 @@ describe('createCasinoSchema', () => {
       }
     });
 
-    it('accepts input with only required name field', () => {
-      const input = { name: 'Minimal Casino' };
+    it('accepts input with only required fields (name + company_id)', () => {
+      const input = {
+        name: 'Minimal Casino',
+        company_id: '550e8400-e29b-41d4-a716-446655440000',
+      };
 
       const result = createCasinoSchema.safeParse(input);
 
@@ -53,7 +56,7 @@ describe('createCasinoSchema', () => {
         name: 'Test Casino',
         location: null,
         address: null,
-        company_id: null,
+        company_id: '550e8400-e29b-41d4-a716-446655440000',
       };
 
       const result = createCasinoSchema.safeParse(input);
@@ -62,7 +65,6 @@ describe('createCasinoSchema', () => {
       if (result.success) {
         expect(result.data.location).toBeNull();
         expect(result.data.address).toBeNull();
-        expect(result.data.company_id).toBeNull();
       }
     });
   });
