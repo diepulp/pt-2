@@ -29,12 +29,14 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useExclusionStatus } from '@/hooks/player/use-exclusions';
 import { cn } from '@/lib/utils';
 import type { PlayerDTO, PlayerSearchResultDTO } from '@/services/player/dtos';
 import { getPlayerEnrollment, searchPlayers } from '@/services/player/http';
 import { playerKeys } from '@/services/player/keys';
 
 import { AddNoteButton } from './add-note-button';
+import { ExclusionStatusBadge } from './exclusion-status-badge';
 import { IssueRewardButton } from './issue-reward-button';
 import { PlayerEditButton } from './player-edit-button';
 
@@ -88,6 +90,9 @@ export function Player360HeaderContent({
   // Use props from parent (single usePlayer subscription in ContentWrapper)
   const isLoading = playerLoading;
   const error = playerError;
+
+  // Fetch exclusion status (PRD-052 GAP-1)
+  const { data: exclusionStatus } = useExclusionStatus(playerId);
 
   // Fetch enrollment status separately
   const { data: enrollment } = useQuery({
@@ -287,6 +292,9 @@ export function Player360HeaderContent({
                     ? 'Enrolled'
                     : 'Not Enrolled'}
                 </Badge>
+                {exclusionStatus && (
+                  <ExclusionStatusBadge status={exclusionStatus.status} />
+                )}
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {player.birth_date && (

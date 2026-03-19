@@ -28,6 +28,8 @@ import { cn } from '@/lib/utils';
 import { Panel, PanelContent, PanelHeader } from '../layout';
 import { MetricTileSkeleton } from '../skeletons';
 
+import { ExclusionTile } from './exclusion-tile';
+
 // === Types ===
 
 /**
@@ -72,6 +74,8 @@ export interface MtlEntry {
  * Compliance panel props.
  */
 interface CompliancePanelProps {
+  /** Player ID for exclusion tile (PRD-052) */
+  playerId?: string;
   /** CTR status for current gaming day */
   ctrStatus: CtrStatus | null;
   /** MTL entries for current gaming day */
@@ -89,6 +93,7 @@ interface CompliancePanelProps {
  * Compliance panel with CTR progress and MTL list.
  */
 export const CompliancePanel = memo(function CompliancePanel({
+  playerId,
   ctrStatus,
   mtlEntries,
   isLoading = false,
@@ -134,6 +139,9 @@ export const CompliancePanel = memo(function CompliancePanel({
       />
 
       <PanelContent className="space-y-4">
+        {/* Exclusion Status (PRD-052 GAP-2) */}
+        {playerId && <ExclusionTile playerId={playerId} />}
+
         {/* CTR Progress */}
         {ctrStatus && <CtrProgressTile status={ctrStatus} />}
 

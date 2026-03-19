@@ -10,4 +10,5 @@ export {
   MtlEntryRow,
   MtlSummary,
 } from './panel';
+export { ExclusionTile } from './exclusion-tile';
 export type { CtrStatus, MtlEntry } from './panel';

@@ -52,6 +52,7 @@ export function CompliancePanelWrapper({
 
   return (
     <CompliancePanel
+      playerId={playerId}
       ctrStatus={ctrStatus}
       mtlEntries={[]}
       isLoading={isComplianceLoading}
