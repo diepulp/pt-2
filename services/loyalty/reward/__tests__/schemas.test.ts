@@ -59,11 +59,16 @@ describe('reward schemas', () => {
     it('accepts input with all optional fields', () => {
       const result = createRewardSchema.safeParse({
         ...validInput,
-        fulfillment: 'restaurant',
+        fulfillment: 'comp_slip',
         metadata: { category: 'dining' },
         uiTags: ['popular'],
         pricePoints: { pointsCost: 250, allowOverdraw: false },
-        entitlementTiers: [{ tier: 'gold', benefit: { match_play: 50 } }],
+        entitlementTiers: [
+          {
+            tier: 'gold',
+            benefit: { face_value_cents: 5000, instrument_type: 'match_play' },
+          },
+        ],
         limits: [
           {
             maxIssues: 3,
