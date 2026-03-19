@@ -28,11 +28,7 @@ const config = {
   ],
 
   // Ignore patterns
-  testPathIgnorePatterns: [
-    '<rootDir>/.next/',
-    '<rootDir>/node_modules/',
-    '<rootDir>/cypress/',
-  ],
+  testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/', '<rootDir>/cypress/'],
 
   // Coverage configuration
   collectCoverageFrom: [
