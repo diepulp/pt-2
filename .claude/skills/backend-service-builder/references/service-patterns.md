@@ -416,6 +416,37 @@ catch (error) {
 
 ---
 
+## Data Aggregation Patterns (ADR-041)
+
+**Source**: `docs/80-adrs/ADR-041-surface-governance-standard.md`
+**Companion**: `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`
+
+When a service powers a UI surface, the consuming EXEC-SPEC must declare which **Data Aggregation** pattern from the Proven Pattern Palette is used. Backend services may need to support one or more of these patterns:
+
+| Pattern | When to Use | Service Implication |
+|---------|-------------|---------------------|
+| **BFF RPC Aggregation** (GOV-PAT-003) | Multi-table joins for a single UI view (e.g., Rating Slip Modal) | Service exposes a SECURITY DEFINER RPC that aggregates data server-side. RPC must self-inject context (ADR-015). |
+| **BFF Summary Endpoint** | Pre-computed summaries for dashboards (e.g., Shift Dashboard) | Service backs a `/api/v1/` route handler returning `ServiceHttpResult`. |
+| **Simple Query / View** | Single-table reads or database views | Service exposes standard CRUD or read-only queries via Supabase client. |
+| **Client-side Fetch** | Client-led data loading with explicit contracts (e.g., Admin Settings) | Service provides typed DTOs consumed by React Query hooks. |
+
+### Pattern Selection Rules (ADR-041 D2)
+
+- New surfaces **must** select from the Proven Pattern Palette above.
+- If no pattern fits, the EXEC-SPEC must **stop and raise an ADR amendment** -- no local pattern invention.
+- The palette grows only through governed amendment (new ADR or ADR-041 amendment).
+
+### Service Builder Implications
+
+When building a service that will power a surface:
+
+1. **Know the aggregation pattern first.** The EXEC-SPEC Surface Classification declaration determines whether you build an RPC, a route handler, a view, or just typed queries.
+2. **BFF RPC services** follow Pattern A (Contract-First) with SECURITY DEFINER RPCs.
+3. **BFF Summary Endpoint services** follow the route handler pattern in `api-builder` skill, returning `ServiceHttpResult`.
+4. **Metric provenance**: If the service exposes truth-bearing metrics, they must be registered in `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` before implementation.
+
+---
+
 ## Shared Infrastructure Types (DO NOT REDEFINE)
 
 **Canonical Reference**: V3 violation - duplicate type definitions

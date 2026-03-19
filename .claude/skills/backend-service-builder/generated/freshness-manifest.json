@@ -1,15 +1,15 @@
 {
   "$schema": "./freshness-manifest.schema.json",
   "version": "1.0.0",
-  "generated_at": "2025-11-27T00:00:00Z",
+  "generated_at": "2026-03-17T00:00:00Z",
   "description": "Tracks source document hashes to detect when primitives become stale",
 
   "source_documents": {
     "SLAD": {
       "path": "docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md",
-      "version": "2.1.2",
-      "sha256": "39c5d8d519961e89ce8900ecf5d951537420af397045ba748ecbe81dae155ea6",
-      "last_verified": "2025-11-27",
+      "version": "3.5.0",
+      "sha256": "070490af961d1f33cf62215cde8a5f3d9040896975f1bd1146ebae42ea60f97d",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/service-patterns.md",
         "references/bounded-contexts.md"
@@ -18,17 +18,17 @@
     "DTO_CANONICAL_STANDARD": {
       "path": "docs/25-api-data/DTO_CANONICAL_STANDARD.md",
       "version": "2.1.0",
-      "sha256": "c6129a5006d6ce4f95ee2c3f14c27781ccf023720fe34d3225ec7df1558bf70c",
-      "last_verified": "2025-11-27",
+      "sha256": "ff814651ddf2fc36f3b8fa98efcb389c41df4957f40cd778cd83af11c0c8f212",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/dto-rules.md"
       ]
     },
     "SRM": {
       "path": "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md",
-      "version": "3.1.0",
-      "sha256": "b18cdcb35f8c7ce2a83f9355d42957044f0d95532eda3eaaea9746e51ffb9ebc",
-      "last_verified": "2025-11-27",
+      "version": "4.19.0",
+      "sha256": "fe2b26a3d12469f8b0ea586bfb5753e004c0c9b32d3074b262535901e825e04e",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/bounded-contexts.md"
       ]
@@ -36,20 +36,41 @@
     "ADR-012": {
       "path": "docs/80-adrs/ADR-012-error-handling-layers.md",
       "version": "1.0.0",
-      "sha256": "manual-tracking",
-      "last_verified": "2025-12-03",
+      "sha256": "49184d71e2dfe4c185657bf17d526abed045800cfbdd2b3168f5ed8967d187a3",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/service-patterns.md"
       ],
       "notes": "ADR-012 Addendum selective adoption (PRD-003A §9.2, PRD-003B §10.3): ADOPT §2 cross-context, §5 assertOk, §8 observability. DEFER §1 InfrastructureError, §4 withEntrypoint, §7 test matchers."
+    },
+    "ADR-041": {
+      "path": "docs/80-adrs/ADR-041-surface-governance-standard.md",
+      "version": "1.0.0",
+      "sha256": "de49fd62e4341544321bc2d642e74c1ae364bf037220e2ab4de33c726f697301",
+      "last_verified": "2026-03-17",
+      "derived_primitives": [
+        "references/service-patterns.md"
+      ],
+      "notes": "Surface classification + Proven Pattern Palette for data aggregation. Companion: docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md, docs/70-governance/METRIC_PROVENANCE_MATRIX.md"
+    },
+    "ADR-044": {
+      "path": "docs/80-adrs/ADR-044-testing-governance-posture.md",
+      "version": "1.0.0",
+      "sha256": "11e52b3ecf694a41e750e3669c583076e57ec5af69b416cb2785f3109ffe9db0",
+      "last_verified": "2026-03-17",
+      "derived_primitives": [
+        "references/validation-checklist.md"
+      ],
+      "notes": "Testing governance posture. Server-side tests MUST use node environment. Companion: docs/70-governance/TESTING_GOVERNANCE_STANDARD.md"
     }
   },
 
   "primitives": {
     "references/QUICK_START.md": {
-      "sources": ["SLAD"],
+      "sources": ["SLAD", "SRM"],
       "purpose": "Single entry point for sub-agent",
-      "created": "2025-11-27"
+      "created": "2025-11-27",
+      "updated": "2026-03-17"
     },
     "references/dto-rules.md": {
       "sources": ["DTO_CANONICAL_STANDARD"],
@@ -57,19 +78,19 @@
       "created": "2025-11-27"
     },
     "references/service-patterns.md": {
-      "sources": ["SLAD", "ADR-012"],
-      "purpose": "Pattern A/B/C implementation details + ADR-012 error handling + Addendum selective adoption",
-      "updated": "2025-12-03"
+      "sources": ["SLAD", "ADR-012", "ADR-041"],
+      "purpose": "Pattern A/B/C implementation details + ADR-012 error handling + Addendum selective adoption + ADR-041 data aggregation pattern palette",
+      "updated": "2026-03-17"
     },
     "references/bounded-contexts.md": {
       "sources": ["SRM", "SLAD"],
       "purpose": "Table ownership matrix and cross-context rules",
-      "updated": "2025-11-27"
+      "updated": "2026-03-17"
     },
     "references/validation-checklist.md": {
-      "sources": ["SLAD"],
-      "purpose": "Pre-merge validation checklist",
-      "updated": "2025-12-03"
+      "sources": ["SLAD", "ADR-044"],
+      "purpose": "Pre-merge validation checklist + ADR-044 test environment contracts",
+      "updated": "2026-03-17"
     },
     "references/migration-workflow.md": {
       "sources": ["SLAD"],

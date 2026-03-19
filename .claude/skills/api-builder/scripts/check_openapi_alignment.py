@@ -148,7 +148,7 @@ def check_dto_alignment(spec: Dict, domain: str) -> List[AlignmentIssue]:
     }
 
     # Check if service has corresponding DTOs
-    dto_file = Path(f'services/{domain}/dto.ts')
+    dto_file = Path(f'services/{domain}/dtos.ts')
     if dto_file.exists():
         dto_content = dto_file.read_text()
 

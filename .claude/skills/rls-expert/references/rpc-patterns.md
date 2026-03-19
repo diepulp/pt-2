@@ -98,7 +98,7 @@ The authoritative context injection RPC that derives context from JWT + staff ta
 ```sql
 CREATE OR REPLACE FUNCTION set_rls_context_from_staff(
   p_correlation_id text DEFAULT NULL
-) RETURNS void
+) RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
@@ -123,11 +123,11 @@ BEGIN
   END IF;
 
   -- Lookup staff record and validate user_id binding (INV-3)
-  SELECT id, casino_id, role INTO v_staff_id, v_casino_id, v_staff_role
-  FROM staff
-  WHERE id = v_jwt_staff_id
-    AND user_id = v_user_id  -- Bind to auth.uid() (prevents mis-issued tokens)
-    AND status = 'active';   -- INV-4: Block inactive staff
+  SELECT s.id, s.casino_id, s.role INTO v_staff_id, v_casino_id, v_staff_role
+  FROM staff s
+  WHERE s.id = v_jwt_staff_id
+    AND s.user_id = v_user_id  -- Bind to auth.uid() (prevents mis-issued tokens)
+    AND s.status = 'active';   -- INV-4: Block inactive staff
 
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Staff not found or inactive for user %', v_user_id;
@@ -144,17 +144,22 @@ BEGIN
       left(regexp_replace(p_correlation_id, '[^a-zA-Z0-9_-]', '', 'g'), 63),
       true);
   END IF;
+
+  -- Return authoritative context (ADR-030 D1)
+  RETURN QUERY SELECT v_staff_id, v_casino_id, v_staff_role::staff_role;
 END;
 $$;
 ```
 
 **Key Points:**
 - NO spoofable parameters (only optional `p_correlation_id` for tracing)
+- `RETURNS TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)` per ADR-030 D1
 - Derives `staff_id` from JWT `app_metadata.staff_id` (authoritative)
 - Binds `staff_id` to `auth.uid()` (prevents mis-issued token escalation)
 - Lookups `casino_id` and `role` from `staff` table
 - Validates staff is `active` (inactive staff blocked)
 - Uses `SET LOCAL` via `set_config(..., true)` (transaction-scoped, pooler-safe)
+- Returns the authoritative context so middleware can populate `ctx.rlsContext` (ADR-030 INV-030-1)
 - Correlation ID sanitized and length-capped
 
 ---

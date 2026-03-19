@@ -9,8 +9,8 @@ Comprehensive checklist for validating RLS policy implementations.
 - [ ] Table has `casino_id uuid NOT NULL REFERENCES casino(id)`
 - [ ] Table has RLS enabled: `ALTER TABLE {table} ENABLE ROW LEVEL SECURITY`
 - [ ] `staff.user_id uuid REFERENCES auth.users(id)` exists
-- [ ] `set_rls_context()` RPC exists (Migration `20251209183033`)
-- [ ] JWT `app_metadata` includes `casino_id` for fallback
+- [ ] `set_rls_context_from_staff()` RPC exists (ADR-024 authoritative derivation)
+- [ ] JWT `app_metadata` includes `casino_id`, `staff_id`, `staff_role` for fallback
 
 ### Policy Pattern Requirements
 
@@ -35,12 +35,12 @@ Comprehensive checklist for validating RLS policy implementations.
 - [ ] RPCs use `SECURITY DEFINER` where needed
 - [ ] RPCs set `search_path = public`
 - [ ] RPCs enforce idempotency via `idempotency_key`
-- [ ] All context injection uses `set_rls_context()` (not legacy `exec_sql`)
+- [ ] All context injection uses `set_rls_context_from_staff()` (ADR-024, no spoofable params)
 
 ### Application Requirements
 
 - [ ] Server Actions use `withServerAction` wrapper
-- [ ] `injectRLSContext()` calls `set_rls_context()` RPC
+- [ ] `injectRLSContext()` calls `set_rls_context_from_staff()` RPC (ADR-024)
 - [ ] No `SERVICE_ROLE_KEY` in runtime code (grep codebase)
 - [ ] All mutations include `x-idempotency-key` header
 - [ ] All requests include `x-correlation-id` header
@@ -58,13 +58,13 @@ Comprehensive checklist for validating RLS policy implementations.
 ### Step 1: Set RLS Context
 
 ```sql
--- Set context using the ADR-015 RPC
-SELECT set_rls_context(
-  p_actor_id := '00000000-0000-0000-0000-000000000001',
-  p_casino_id := 'your-casino-uuid',
-  p_staff_role := 'pit_boss',
+-- Set context using the ADR-024 authoritative RPC
+-- Derives actor_id, casino_id, staff_role from JWT + staff table lookup
+-- No spoofable parameters — context is authoritative
+SELECT * FROM set_rls_context_from_staff(
   p_correlation_id := 'test-verification'
 );
+-- Returns TABLE(actor_id uuid, casino_id uuid, staff_role staff_role)
 ```
 
 ### Step 2: Verify Read Access
@@ -94,14 +94,14 @@ VALUES ('your-casino-uuid', ...);
 ### Step 4: Test Role Restrictions
 
 ```sql
--- Switch to restricted role
-SELECT set_rls_context(
-  p_actor_id := '...',
-  p_casino_id := 'your-casino-uuid',
-  p_staff_role := 'cashier'  -- or other role with restrictions
+-- Sign in as a user with a restricted staff role (e.g., cashier)
+-- Then inject context via the authoritative RPC
+SELECT * FROM set_rls_context_from_staff(
+  p_correlation_id := 'test-role-restriction'
 );
+-- The returned staff_role reflects the authenticated user's actual role
 
--- Test operation that should be denied
+-- Test operation that should be denied for this role
 -- Should FAIL based on role
 UPDATE your_table SET ... WHERE ...;
 ```
@@ -135,12 +135,10 @@ describe('RLS Policy: your_table', () => {
     await createTestRecord(casinoA.id);
     await createTestRecord(casinoB.id);
 
-    // Query as staff from casino A
+    // Query as staff from casino A — context derived authoritatively (ADR-024)
     const client = await createAuthenticatedClient(staffA.userId);
-    await client.rpc('set_rls_context', {
-      p_actor_id: staffA.id,
-      p_casino_id: casinoA.id,
-      p_staff_role: 'pit_boss'
+    await client.rpc('set_rls_context_from_staff', {
+      p_correlation_id: 'test-restrict-access'
     });
 
     const { data, error } = await client
@@ -157,11 +155,10 @@ describe('RLS Policy: your_table', () => {
     const casinoB = await createTestCasino();
     const staffA = await createTestStaff(casinoA.id, 'pit_boss');
 
+    // Context derived authoritatively from staffA's JWT + staff record (ADR-024)
     const client = await createAuthenticatedClient(staffA.userId);
-    await client.rpc('set_rls_context', {
-      p_actor_id: staffA.id,
-      p_casino_id: casinoA.id,
-      p_staff_role: 'pit_boss'
+    await client.rpc('set_rls_context_from_staff', {
+      p_correlation_id: 'test-cross-casino-insert'
     });
 
     // Attempt cross-casino insert
@@ -246,7 +243,7 @@ WHERE tablename = 'your_table'
 
 **Cause**: Context not injected properly
 
-**Fix**: Ensure `set_rls_context()` is called before queries
+**Fix**: Ensure `set_rls_context_from_staff()` is called before queries
 
 ### 2. Cross-Tenant Data Visible
 

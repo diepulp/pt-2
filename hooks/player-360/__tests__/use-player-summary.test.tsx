@@ -93,9 +93,12 @@ describe('usePlayerSummary', () => {
 
   describe('query execution', () => {
     it('fetches player summary on mount', async () => {
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -104,14 +107,17 @@ describe('usePlayerSummary', () => {
       expect(mockGetPlayerSummary).toHaveBeenCalledWith(
         mockSupabase,
         'player-123',
-        undefined,
+        '2026-01-26',
       );
     });
 
     it('returns player summary data', async () => {
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.data).toBeDefined();
@@ -166,9 +172,16 @@ describe('usePlayerSummary', () => {
     });
 
     it('fetches when enabled is true and playerId is valid', async () => {
-      renderHook(() => usePlayerSummary('player-123', { enabled: true }), {
-        wrapper: createWrapper(),
-      });
+      renderHook(
+        () =>
+          usePlayerSummary('player-123', {
+            enabled: true,
+            gamingDay: '2026-01-26',
+          }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(mockGetPlayerSummary).toHaveBeenCalled();
@@ -178,9 +191,12 @@ describe('usePlayerSummary', () => {
 
   describe('stale time option', () => {
     it('uses default stale time of 30 seconds', async () => {
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.isSuccess).toBe(true);
@@ -193,7 +209,11 @@ describe('usePlayerSummary', () => {
 
     it('accepts custom stale time', async () => {
       const { result } = renderHook(
-        () => usePlayerSummary('player-123', { staleTime: 60_000 }),
+        () =>
+          usePlayerSummary('player-123', {
+            staleTime: 60_000,
+            gamingDay: '2026-01-26',
+          }),
         { wrapper: createWrapper() },
       );
 
@@ -243,9 +263,12 @@ describe('usePlayerSummary', () => {
           ),
       );
 
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       // Initially loading
       expect(result.current.isPending).toBe(true);
@@ -262,9 +285,12 @@ describe('usePlayerSummary', () => {
       const error = new Error('Failed to fetch summary');
       mockGetPlayerSummary.mockRejectedValue(error);
 
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.isError).toBe(true);
@@ -276,9 +302,12 @@ describe('usePlayerSummary', () => {
 
   describe('data shape', () => {
     it('returns all expected DTO properties', async () => {
-      const { result } = renderHook(() => usePlayerSummary('player-123'), {
-        wrapper: createWrapper(),
-      });
+      const { result } = renderHook(
+        () => usePlayerSummary('player-123', { gamingDay: '2026-01-26' }),
+        {
+          wrapper: createWrapper(),
+        },
+      );
 
       await waitFor(() => {
         expect(result.current.data).toBeDefined();

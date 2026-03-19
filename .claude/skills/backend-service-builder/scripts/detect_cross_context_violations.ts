@@ -8,7 +8,7 @@
 import * as fs from "fs";
 import * as path from "path";
 
-// SRM Ownership Matrix
+// SRM Ownership Matrix (SRM v4.19.0)
 const SRM_OWNERSHIP: Record<string, string[]> = {
   casino: [
     "casino",
@@ -18,12 +18,26 @@ const SRM_OWNERSHIP: Record<string, string[]> = {
     "game_settings",
     "audit_log",
     "report",
+    "player_casino",
+    "staff_pin_attempts",
   ],
-  player: ["player", "player_casino"],
+  player: [
+    "player",
+    "player_exclusion",
+    "player_identity",
+    "player_note",
+    "player_tag",
+  ],
   visit: ["visit"],
-  loyalty: ["player_loyalty", "loyalty_ledger", "loyalty_outbox"],
-  "rating-slip": ["rating_slip"],
-  finance: ["player_financial_transaction", "finance_outbox"],
+  loyalty: [
+    "player_loyalty",
+    "loyalty_ledger",
+    "loyalty_outbox",
+    "promo_program",
+    "promo_coupon",
+  ],
+  "rating-slip": ["rating_slip", "rating_slip_pause", "pit_cash_observation"],
+  finance: ["player_financial_transaction"],
   mtl: ["mtl_entry", "mtl_audit_note"],
   "table-context": [
     "gaming_table",
@@ -33,6 +47,9 @@ const SRM_OWNERSHIP: Record<string, string[]> = {
     "table_fill",
     "table_credit",
     "table_drop_event",
+    "table_session",
+    "table_rundown_report",
+    "shift_checkpoint",
   ],
   "floor-layout": [
     "floor_layout",
@@ -41,6 +58,7 @@ const SRM_OWNERSHIP: Record<string, string[]> = {
     "floor_table_slot",
     "floor_layout_activation",
   ],
+  "player-import": ["import_batch", "import_row"],
 };
 
 interface Violation {

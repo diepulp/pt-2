@@ -21,13 +21,31 @@ jest.mock('@/lib/supabase/server', () => ({
   }),
 }));
 
+// Mock MTL service to avoid real Supabase calls inside handler
+jest.mock('@/services/mtl', () => ({
+  createMtlService: jest.fn(() => ({
+    listEntries: jest.fn().mockResolvedValue({ items: [], next_cursor: null }),
+    createEntry: jest.fn().mockResolvedValue({
+      id: 'entry-1',
+      casino_id: 'casino-1',
+      patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
+      amount: 5000,
+      direction: 'in',
+    }),
+  })),
+}));
+
 // Mock middleware to bypass auth/RLS in unit tests
 jest.mock('@/lib/server-actions/middleware', () => ({
   withServerAction: jest.fn((_, handler) =>
     handler({
       supabase: {},
       correlationId: 'test-correlation-id',
-      rlsContext: { casinoId: 'casino-1', actorId: 'actor-1' },
+      rlsContext: {
+        casinoId: 'casino-1',
+        actorId: 'actor-1',
+        staffRole: 'pit_boss',
+      },
     }),
   ),
 }));
@@ -127,7 +145,7 @@ describe('POST /api/v1/mtl/entries', () => {
     expect(response.status).toBe(400);
   });
 
-  it('returns 200 on successful creation', async () => {
+  it('returns 201 on successful creation', async () => {
     const request = createMockRequest('POST', '/api/v1/mtl/entries', {
       headers: {
         'Idempotency-Key': 'test-key-123',
@@ -138,13 +156,15 @@ describe('POST /api/v1/mtl/entries', () => {
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
         amount: 5000,
         direction: 'in',
+        txn_type: 'buy_in',
+        idempotency_key: 'test-key-123',
         area: 'Table Games',
       },
     });
     const response = await POST(request);
     const body = await response.json();
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
     expect(body).toMatchObject({
       ok: true,
       code: 'OK',
@@ -163,11 +183,13 @@ describe('POST /api/v1/mtl/entries', () => {
         staff_id: '123e4567-e89b-12d3-a456-426614174002',
         amount: 5000,
         direction: 'in',
+        txn_type: 'buy_in',
+        idempotency_key: 'test-key-124',
       },
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 
   it('accepts optional rating_slip_id', async () => {
@@ -182,11 +204,13 @@ describe('POST /api/v1/mtl/entries', () => {
         rating_slip_id: '123e4567-e89b-12d3-a456-426614174003',
         amount: 5000,
         direction: 'in',
+        txn_type: 'buy_in',
+        idempotency_key: 'test-key-125',
       },
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 
   it('accepts optional visit_id', async () => {
@@ -201,11 +225,13 @@ describe('POST /api/v1/mtl/entries', () => {
         visit_id: '123e4567-e89b-12d3-a456-426614174004',
         amount: 5000,
         direction: 'in',
+        txn_type: 'buy_in',
+        idempotency_key: 'test-key-126',
       },
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 
   it('accepts direction "out"', async () => {
@@ -219,10 +245,12 @@ describe('POST /api/v1/mtl/entries', () => {
         patron_uuid: '123e4567-e89b-12d3-a456-426614174001',
         amount: 3000,
         direction: 'out',
+        txn_type: 'cash_out',
+        idempotency_key: 'test-key-127',
       },
     });
     const response = await POST(request);
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(201);
   });
 });

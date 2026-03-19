@@ -15,13 +15,13 @@ import * as mappers from '../mappers';
 
 // Mock mappers
 jest.mock('../mappers', () => ({
-  toAccrueOnCloseOutput: jest.fn(),
-  toRedeemOutput: jest.fn(),
-  toManualCreditOutput: jest.fn(),
-  toApplyPromotionOutput: jest.fn(),
-  toSessionSuggestionOutput: jest.fn(),
+  parseAccrueOnCloseResponse: jest.fn(),
+  parseRedeemResponse: jest.fn(),
+  parseManualCreditResponse: jest.fn(),
+  parseApplyPromotionResponse: jest.fn(),
+  parseSessionSuggestionResponse: jest.fn(),
   toPlayerLoyaltyDTOOrNull: jest.fn(),
-  toLedgerPageResponse: jest.fn(),
+  parseLedgerPageResponse: jest.fn(),
 }));
 
 // Mock schema decoder
@@ -70,7 +70,7 @@ describe('loyalty crud', () => {
 
     it('calls rpc_accrue_on_close with correct params', async () => {
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toAccrueOnCloseOutput as jest.Mock).mockReturnValue({
+      (mappers.parseAccrueOnCloseResponse as jest.Mock).mockReturnValue({
         ledgerId: 'ledger-uuid-1',
         pointsDelta: 100,
         theo: 5000,
@@ -84,18 +84,22 @@ describe('loyalty crud', () => {
         p_rating_slip_id: input.ratingSlipId,
         p_idempotency_key: input.idempotencyKey,
       });
-      expect(mappers.toAccrueOnCloseOutput).toHaveBeenCalledWith(rpcResponse);
+      expect(mappers.parseAccrueOnCloseResponse).toHaveBeenCalledWith(
+        rpcResponse,
+      );
     });
 
     it('handles single object response (not array)', async () => {
       mockRpc.mockResolvedValue({ data: rpcResponse, error: null });
-      (mappers.toAccrueOnCloseOutput as jest.Mock).mockReturnValue({
+      (mappers.parseAccrueOnCloseResponse as jest.Mock).mockReturnValue({
         ledgerId: 'ledger-uuid-1',
       });
 
       await crud.accrueOnClose(supabase, input);
 
-      expect(mappers.toAccrueOnCloseOutput).toHaveBeenCalledWith(rpcResponse);
+      expect(mappers.parseAccrueOnCloseResponse).toHaveBeenCalledWith(
+        rpcResponse,
+      );
     });
 
     it('throws DomainError when RPC returns empty data', async () => {
@@ -152,7 +156,7 @@ describe('loyalty crud', () => {
 
     it('calls rpc_redeem with correct params', async () => {
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toRedeemOutput as jest.Mock).mockReturnValue({
+      (mappers.parseRedeemResponse as jest.Mock).mockReturnValue({
         ledgerId: 'ledger-uuid-2',
         pointsDelta: -50,
       });
@@ -178,7 +182,7 @@ describe('loyalty crud', () => {
       };
 
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toRedeemOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseRedeemResponse as jest.Mock).mockReturnValue({});
 
       await crud.redeem(supabase, inputWithOptionals);
 
@@ -234,7 +238,7 @@ describe('loyalty crud', () => {
 
     it('calls rpc_manual_credit with correct params', async () => {
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toManualCreditOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseManualCreditResponse as jest.Mock).mockReturnValue({});
 
       await crud.manualCredit(supabase, input);
 
@@ -275,14 +279,14 @@ describe('loyalty crud', () => {
 
     it('calls rpc_apply_promotion with correct params', async () => {
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toApplyPromotionOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseApplyPromotionResponse as jest.Mock).mockReturnValue({});
 
       await crud.applyPromotion(supabase, input);
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_apply_promotion', {
         p_rating_slip_id: input.ratingSlipId,
         p_campaign_id: input.campaignId,
-        p_promo_multiplier: null,
+        p_promo_multiplier: undefined,
         p_bonus_points: input.bonusPoints,
         p_idempotency_key: input.idempotencyKey,
       });
@@ -291,7 +295,7 @@ describe('loyalty crud', () => {
     it('passes promo_multiplier when provided', async () => {
       const inputWithMultiplier = { ...input, promoMultiplier: 1.5 };
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toApplyPromotionOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseApplyPromotionResponse as jest.Mock).mockReturnValue({});
 
       await crud.applyPromotion(supabase, inputWithMultiplier);
 
@@ -317,7 +321,7 @@ describe('loyalty crud', () => {
 
     it('calls evaluate_session_reward_suggestion with correct params', async () => {
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toSessionSuggestionOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseSessionSuggestionResponse as jest.Mock).mockReturnValue({});
 
       await crud.evaluateSuggestion(supabase, slipId);
 
@@ -325,7 +329,7 @@ describe('loyalty crud', () => {
         'evaluate_session_reward_suggestion',
         {
           p_rating_slip_id: slipId,
-          p_as_of_ts: null,
+          p_as_of_ts: undefined,
         },
       );
     });
@@ -333,7 +337,7 @@ describe('loyalty crud', () => {
     it('passes asOfTs when provided', async () => {
       const asOfTs = '2025-01-15T14:00:00Z';
       mockRpc.mockResolvedValue({ data: [rpcResponse], error: null });
-      (mappers.toSessionSuggestionOutput as jest.Mock).mockReturnValue({});
+      (mappers.parseSessionSuggestionResponse as jest.Mock).mockReturnValue({});
 
       await crud.evaluateSuggestion(supabase, slipId, asOfTs);
 
@@ -374,6 +378,13 @@ describe('loyalty crud', () => {
       expect(mockSelect).toHaveBeenCalledWith('*');
       expect(mockEq).toHaveBeenCalledWith('player_id', playerId);
       expect(mockEq).toHaveBeenCalledWith('casino_id', casinoId);
+      expect(mappers.toPlayerLoyaltyDTOOrNull).toHaveBeenCalledWith(
+        expect.objectContaining({
+          player_id: playerId,
+          casino_id: casinoId,
+          current_balance: 1000,
+        }),
+      );
     });
 
     it('returns null when no record exists', async () => {
@@ -388,7 +399,8 @@ describe('loyalty crud', () => {
       const oldSchemaRow = {
         player_id: playerId,
         casino_id: casinoId,
-        balance: 500, // old schema field
+        balance: 500, // old schema field (no current_balance)
+        current_balance: undefined,
         tier: null,
         preferences: {},
         updated_at: '2025-01-15T10:00:00Z',
@@ -403,10 +415,10 @@ describe('loyalty crud', () => {
 
       await crud.getBalance(supabase, playerId, casinoId);
 
-      // Mapper should receive normalized row with current_balance
+      // When current_balance is undefined, code falls back to 0 via ?? operator
       expect(mappers.toPlayerLoyaltyDTOOrNull).toHaveBeenCalledWith(
         expect.objectContaining({
-          current_balance: 500,
+          current_balance: 0,
         }),
       );
     });
@@ -442,7 +454,7 @@ describe('loyalty crud', () => {
 
     it('calls rpc_get_player_ledger with correct params (no cursor)', async () => {
       mockRpc.mockResolvedValue({ data: rpcRows, error: null });
-      (mappers.toLedgerPageResponse as jest.Mock).mockReturnValue({
+      (mappers.parseLedgerPageResponse as jest.Mock).mockReturnValue({
         entries: [],
         cursor: null,
         hasMore: false,
@@ -452,8 +464,8 @@ describe('loyalty crud', () => {
 
       expect(mockRpc).toHaveBeenCalledWith('rpc_get_player_ledger', {
         p_player_id: query.playerId,
-        p_cursor_created_at: null,
-        p_cursor_id: null,
+        p_cursor_created_at: undefined,
+        p_cursor_id: undefined,
         p_limit: 20,
       });
     });
@@ -461,7 +473,7 @@ describe('loyalty crud', () => {
     it('decodes cursor when provided', async () => {
       const queryWithCursor = { ...query, cursor: 'base64cursor' };
       mockRpc.mockResolvedValue({ data: rpcRows, error: null });
-      (mappers.toLedgerPageResponse as jest.Mock).mockReturnValue({
+      (mappers.parseLedgerPageResponse as jest.Mock).mockReturnValue({
         entries: [],
         cursor: null,
         hasMore: false,
@@ -480,7 +492,7 @@ describe('loyalty crud', () => {
     it('enforces max limit of 100', async () => {
       const queryWithLargeLimit = { ...query, limit: 500 };
       mockRpc.mockResolvedValue({ data: rpcRows, error: null });
-      (mappers.toLedgerPageResponse as jest.Mock).mockReturnValue({
+      (mappers.parseLedgerPageResponse as jest.Mock).mockReturnValue({
         entries: [],
         cursor: null,
         hasMore: false,

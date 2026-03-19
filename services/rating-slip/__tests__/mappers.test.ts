@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RatingSlipService Mappers Unit Tests
  *

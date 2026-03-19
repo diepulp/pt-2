@@ -1,7 +1,7 @@
 # Bounded Context Rules
 
-**Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.0.0)
-**Architecture**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v3.0.0)
+**Source**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.19.0)
+**Architecture**: `docs/20-architecture/SERVICE_LAYER_ARCHITECTURE_DIAGRAM.md` (SLAD v3.5.0)
 
 ---
 
@@ -15,15 +15,18 @@
 
 | Service | Owned Tables |
 |---------|--------------|
-| **casino** | `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report` |
-| **player** | `player`, `player_casino` |
+| **casino** | `casino`, `casino_settings`, `company`, `staff`, `game_settings`, `audit_log`, `report`, `player_casino`, `staff_pin_attempts` _(planned)_ |
+| **player** | `player`, `player_exclusion`, `player_identity` _(planned)_, `player_note` _(planned)_, `player_tag` _(planned)_ |
 | **visit** | `visit` |
-| **loyalty** | `player_loyalty`, `loyalty_ledger`, `loyalty_outbox` |
-| **rating-slip** | `rating_slip`, `rating_slip_pause` |
-| **finance** | `player_financial_transaction`, `finance_outbox` |
+| **loyalty** | `player_loyalty`, `loyalty_ledger`, `loyalty_outbox`, `promo_program`, `promo_coupon` |
+| **rating-slip** | `rating_slip`, `rating_slip_pause`, `pit_cash_observation` |
+| **finance** | `player_financial_transaction` |
 | **mtl** | `mtl_entry`, `mtl_audit_note` |
-| **table-context** | `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event` |
+| **table-context** | `gaming_table`, `gaming_table_settings`, `dealer_rotation`, `table_inventory_snapshot`, `table_fill`, `table_credit`, `table_drop_event`, `table_session`, `table_rundown_report`, `shift_checkpoint` |
 | **floor-layout** | `floor_layout`, `floor_layout_version`, `floor_pit`, `floor_table_slot`, `floor_layout_activation` |
+| **player-import** | `import_batch`, `import_row` |
+
+> **Notes**: `player_casino` moved to CasinoService per ADR-022 D5. `finance_outbox` is post-MVP (ADR-016). Italic _(planned)_ tables are MVP-planned but not yet migrated. PlayerTimelineService is read-only (no owned tables).
 
 ---
 
@@ -83,7 +86,7 @@ export interface RatingSlipTelemetryDTO {
 }
 ```
 
-> **Key Invariant**: RatingSlip does NOT have its own `player_id` column. Player identity is derived from `visit.player_id`. See SRM v4.0.0 §220.
+> **Key Invariant**: RatingSlip does NOT have its own `player_id` column. Player identity is derived from `visit.player_id`. See SRM v4.19.0 §220.
 
 ---
 

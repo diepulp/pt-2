@@ -272,8 +272,8 @@ def format_issues(pattern: str, issues: List[ValidationIssue]) -> str:
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: validate_dto_patterns.py <path/to/dto.ts>")
-        print("Example: validate_dto_patterns.py services/player/dto.ts")
+        print("Usage: validate_dto_patterns.py <path/to/dtos.ts>")
+        print("Example: validate_dto_patterns.py services/player/dtos.ts")
         sys.exit(1)
 
     file_path = sys.argv[1]

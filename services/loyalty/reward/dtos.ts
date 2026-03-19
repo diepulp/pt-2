@@ -17,6 +17,32 @@
  */
 export type RewardFamily = 'points_comp' | 'entitlement';
 
+/** Frozen tier enum per PRD §4.1 tier policy */
+export type TierLevel = 'bronze' | 'silver' | 'gold' | 'platinum' | 'diamond';
+export const TIER_LEVELS: TierLevel[] = [
+  'bronze',
+  'silver',
+  'gold',
+  'platinum',
+  'diamond',
+];
+
+/** Fulfillment instrument type — aligned with pilot fulfillment policy */
+export type FulfillmentType = 'comp_slip' | 'coupon' | 'none';
+
+/** Limit scope — mirrors ADR-033 DB CHECK constraint */
+export type LimitScope =
+  | 'per_visit'
+  | 'per_gaming_day'
+  | 'per_week'
+  | 'per_month';
+
+/** Entitlement tier benefit structure — aligned with ADR-033 seed data */
+export type EntitlementBenefit = {
+  face_value_cents: number;
+  instrument_type: 'match_play' | 'free_play';
+};
+
 // === Reward Catalog DTOs ===
 
 /**
@@ -31,7 +57,7 @@ export interface RewardCatalogDTO {
   kind: string;
   name: string;
   isActive: boolean;
-  fulfillment: string | null;
+  fulfillment: FulfillmentType | null;
   metadata: Record<string, unknown>;
   uiTags: string[] | null;
   createdAt: string;
@@ -57,8 +83,8 @@ export interface RewardEntitlementTierDTO {
   id: string;
   rewardId: string;
   casinoId: string;
-  tier: string;
-  benefit: Record<string, unknown>;
+  tier: TierLevel;
+  benefit: EntitlementBenefit;
 }
 
 /**
@@ -70,7 +96,7 @@ export interface RewardLimitDTO {
   rewardId: string;
   casinoId: string;
   maxIssues: number;
-  scope: string;
+  scope: LimitScope;
   cooldownMinutes: number | null;
   requiresNote: boolean;
 }
@@ -126,7 +152,7 @@ export interface EligibleRewardDTO {
   family: RewardFamily;
   kind: string;
   name: string;
-  fulfillment: string | null;
+  fulfillment: FulfillmentType | null;
   uiTags: string[] | null;
   pricePoints: RewardPricePointsDTO | null;
   entitlementTiers: RewardEntitlementTierDTO[];
@@ -145,31 +171,31 @@ export interface CreateRewardInput {
   family: RewardFamily;
   kind: string;
   name: string;
-  fulfillment?: string;
+  fulfillment?: FulfillmentType;
   metadata?: Record<string, unknown>;
   uiTags?: string[];
-  /** Price points config (required for points_comp family) */
+  /** Price points config (optional at create, configurable on detail page) */
   pricePoints?: {
     pointsCost: number;
     allowOverdraw?: boolean;
   };
-  /** Entitlement tier configs (for entitlement family) */
+  /** Entitlement tier configs (optional at create, configurable on detail page) */
   entitlementTiers?: Array<{
-    tier: string;
-    benefit: Record<string, unknown>;
+    tier: TierLevel;
+    benefit: EntitlementBenefit;
   }>;
   /** Limits config */
   limits?: Array<{
     maxIssues: number;
-    scope: string;
+    scope: LimitScope;
     cooldownMinutes?: number;
     requiresNote?: boolean;
   }>;
   /** Eligibility config */
   eligibility?: {
     minPointsBalance?: number;
-    minTier?: string;
-    maxTier?: string;
+    minTier?: TierLevel;
+    maxTier?: TierLevel;
     visitKinds?: string[];
   };
 }
@@ -182,9 +208,16 @@ export interface UpdateRewardInput {
   name?: string;
   kind?: string;
   isActive?: boolean;
-  fulfillment?: string | null;
+  fulfillment?: FulfillmentType | null;
   metadata?: Record<string, unknown>;
   uiTags?: string[] | null;
+  /** Nested child update: upsert price points (null = delete, undefined = skip) */
+  pricePoints?: { pointsCost: number; allowOverdraw?: boolean } | null;
+  /** Nested child update: replace-all tiers (null = delete all, undefined = skip) */
+  entitlementTiers?: Array<{
+    tier: TierLevel;
+    benefit: EntitlementBenefit;
+  }> | null;
 }
 
 /**

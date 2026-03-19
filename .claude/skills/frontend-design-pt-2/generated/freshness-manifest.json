@@ -1,15 +1,14 @@
 {
-  "$schema": "./freshness-manifest.schema.json",
   "version": "1.0.0",
-  "generated_at": "2025-11-27T09:30:00Z",
+  "generated_at": "2026-03-17T00:00:00Z",
   "description": "Tracks source document hashes to detect primitive drift for frontend-design skill",
 
   "source_documents": {
     "ADR_003": {
       "path": "docs/80-adrs/ADR-003-state-management-strategy.md",
-      "version": "2025-10-23",
-      "sha256": "28cf9f295ff8b42455ae5e81fc39ad90ea195d7619102956b3d4d56ad1c9a065",
-      "last_verified": "2025-11-27",
+      "version": "2025-12-21",
+      "sha256": "7ea1b5a9070fec02820a24babc2384455200adc06774dbbf4304f693b4809616",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/QUICK_START.md",
         "references/frontend-rules.md",
@@ -20,7 +19,7 @@
       "path": "docs/70-governance/FRONT_END_CANONICAL_STANDARD.md",
       "version": "2.1",
       "sha256": "b308dfc4fc974fe5dc52b02ed8a6f89316c7710f8e0fffcb97718f0307b241e5",
-      "last_verified": "2025-11-27",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/QUICK_START.md",
         "references/frontend-rules.md",
@@ -30,10 +29,20 @@
     "HOOKS_STANDARD": {
       "path": "docs/70-governance/HOOKS_STANDARD.md",
       "version": "1.0.0",
-      "sha256": "8293008cf93392001e8764bcbc1508cfaf259e67c29fc600830934557c22cf76",
-      "last_verified": "2025-11-27",
+      "sha256": "014db04930b8e44a23aadc8fbe37943a825d4173b5d49a723bb1ef2c4b1a0bfc",
+      "last_verified": "2026-03-17",
       "derived_primitives": [
         "references/frontend-rules.md"
+      ]
+    },
+    "ADR_041": {
+      "path": "docs/80-adrs/ADR-041-surface-governance-standard.md",
+      "version": "Accepted",
+      "sha256": "de49fd62e4341544321bc2d642e74c1ae364bf037220e2ab4de33c726f697301",
+      "last_verified": "2026-03-17",
+      "derived_primitives": [
+        "SKILL.md",
+        "references/QUICK_START.md"
       ]
     }
   },

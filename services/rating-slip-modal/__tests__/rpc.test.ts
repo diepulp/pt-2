@@ -58,6 +58,7 @@ const mockValidRpcResponse = {
   slip: {
     id: SLIP_ID,
     visitId: VISIT_ID,
+    casinoId: CASINO_ID,
     tableId: TABLE_ID,
     tableLabel: 'Table 1',
     tableType: 'blackjack',
@@ -96,6 +97,7 @@ const mockValidRpcResponse = {
       type: 'blackjack',
       status: 'active',
       occupiedSeats: ['3'],
+      seatsAvailable: 7,
     },
     {
       id: 'table-uuid-other',
@@ -103,6 +105,7 @@ const mockValidRpcResponse = {
       type: 'roulette',
       status: 'active',
       occupiedSeats: ['1', '4'],
+      seatsAvailable: 8,
     },
   ],
 };
@@ -114,6 +117,7 @@ const mockGhostVisitRpcResponse = {
   slip: {
     id: SLIP_ID,
     visitId: VISIT_ID,
+    casinoId: CASINO_ID,
     tableId: TABLE_ID,
     tableLabel: 'Table 1',
     tableType: 'blackjack',
@@ -139,6 +143,7 @@ const mockGhostVisitRpcResponse = {
       type: 'blackjack',
       status: 'active',
       occupiedSeats: [],
+      seatsAvailable: 7,
     },
   ],
 };
@@ -150,6 +155,7 @@ const mockClosedSlipRpcResponse = {
   slip: {
     id: SLIP_ID,
     visitId: VISIT_ID,
+    casinoId: CASINO_ID,
     tableId: TABLE_ID,
     tableLabel: 'Table 1',
     tableType: 'blackjack',
@@ -193,7 +199,6 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
       'rpc_get_rating_slip_modal_data',
       {
         p_slip_id: SLIP_ID,
-        p_casino_id: CASINO_ID,
       },
     );
 
@@ -202,6 +207,7 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
       slip: {
         id: SLIP_ID,
         visitId: VISIT_ID,
+        casinoId: CASINO_ID,
         tableId: TABLE_ID,
         tableLabel: 'Table 1',
         tableType: 'blackjack',
@@ -240,6 +246,7 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
           type: 'blackjack',
           status: 'active',
           occupiedSeats: ['3'],
+          seatsAvailable: 7,
         },
         {
           id: 'table-uuid-other',
@@ -247,6 +254,7 @@ describe('getModalDataViaRPC - Successful Data Mapping', () => {
           type: 'roulette',
           status: 'active',
           occupiedSeats: ['1', '4'],
+          seatsAvailable: 8,
         },
       ],
     });
@@ -668,6 +676,7 @@ describe('getModalDataViaRPC - Edge Cases', () => {
           type: 'blackjack',
           status: 'active',
           occupiedSeats: ['1', '2', '3', '4', '5', '6', '7'], // 7-seat table
+          seatsAvailable: 7,
         },
       ],
     };

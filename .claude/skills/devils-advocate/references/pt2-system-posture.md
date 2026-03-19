@@ -114,6 +114,8 @@ Governance standard preventing premature abstractions. Key rules:
 | ADR-025 | MTL authorization | Loyalty/MTL reviews |
 | ADR-030 | Auth pipeline hardening | Security posture validation |
 | ADR-035 | Client state lifecycle | Frontend auth reviews |
+| ADR-041 | Surface governance standard | Surface EXEC-SPEC reviews (classification + provenance) |
+| ADR-044 | Testing governance posture | Test plan reviews, CI gate validation |
 
 **ADR location:** `docs/80-adrs/`
 
@@ -121,6 +123,21 @@ Governance standard preventing premature abstractions. Key rules:
 
 - `docs/30-security/SEC-001-rls-policy-matrix.md` — RLS policy expectations per table
 - `docs/30-security/SEC-002-casino-scoped-security-model.md` — Security boundaries and guardrails
+
+## Surface Classification (ADR-041)
+
+The **Surface Governance Standard** (`docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`) requires every new surface EXEC-SPEC to declare four mandatory fields. Missing any field is a **hard rejection gate**. Key attack surfaces for adversarial review:
+
+| ADR-041 Requirement | Challenge Pattern |
+|----------------------|-------------------|
+| Rendering Delivery pattern | Is a delivery pattern declared? Is it from the Proven Pattern Palette (RSC Prefetch+Hydration, Client Shell, Hybrid)? Challenge: unnamed or invented patterns are non-compliant. |
+| Data Aggregation pattern | Is an aggregation pattern declared? Is it from the palette (BFF RPC, BFF Summary, Simple Query/View, Client-side Fetch)? Challenge: missing declaration = reject. |
+| Rejected Patterns | Were alternative patterns considered and rejection reasons documented? Challenge: no rejected-patterns section = rubber-stamp selection. |
+| Metric Provenance | For each truth-bearing metric, are truth class and freshness class declared? Challenge: displaying values without truth semantics is ungoverned. |
+
+**Palette evolution rule:** If no proven pattern fits, the spec must escalate via ADR amendment — not invent a local exception.
+
+**Canonical reference:** `docs/80-adrs/ADR-041-surface-governance-standard.md`
 
 ## Testing Governance (ADR-044)
 

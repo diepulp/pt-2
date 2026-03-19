@@ -1,10 +1,14 @@
 /**
  * @jest-environment node
  *
- * HTTP Client ↔ Route Handler Contract Tests
+ * HTTP Client ↔ Route Handler Contract Tests — Smoke (S3.7)
  *
  * Validates that every function in http.ts has a corresponding route export.
  * This prevents the bug where an HTTP client calls a non-existent route.
+ *
+ * Classification: Smoke (S3.7) — shallow typeof checks only.
+ * Reclassified per TESTING_GOVERNANCE_STANDARD.md §9.2.
+ * Does NOT count toward Trusted-Local verification status.
  *
  * Issue: PRD-011 (Route Handler Test Coverage)
  * Workstream: WS2 (VisitService Route Handler Tests)

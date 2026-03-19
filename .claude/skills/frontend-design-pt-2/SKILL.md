@@ -32,6 +32,8 @@ Read these files **when needed** based on your task:
 
 | When You Need | Read This |
 |---------------|-----------|
+| **Surface Classification (ADR-041) — new pages/surfaces** | `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` |
+| **Metric Provenance Matrix — truth class + freshness** | `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` |
 | **Shift Dashboards UI (cash obs telemetry)** | `references/shift-dashboards-context.md` |
 | Implementation workflow, code templates | `references/QUICK_START.md` |
 | **React 19 anti-patterns to AVOID** | `references/frontend-rules.md` → React 19 Anti-Patterns |
@@ -465,22 +467,39 @@ npx shadcn@latest add @aceternity/background-beams
 
 ## Surface Classification Policy (ADR-041)
 
-**Every new PT-2 surface must declare its classification before implementation.**
+**Every new PT-2 surface must declare its classification before implementation.** This is a hard rejection gate (ADR-041 D1). If building a new page or surface, produce or prompt for the 4-field declaration below before writing component code.
 
-Two orthogonal decisions (per `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`):
+**Source:** `docs/80-adrs/ADR-041-surface-governance-standard.md`
+**Companion standards:** `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md`, `docs/70-governance/METRIC_PROVENANCE_MATRIX.md`
 
-### Rendering Delivery Axis
+### 4-Field Declaration (MANDATORY for new surfaces)
+
+Every new surface EXEC-SPEC must include all four fields. Missing fields = non-compliant:
+
+```yaml
+Surface Classification:
+  Rendering Delivery: [RSC Prefetch + Hydration | Client Shell | Hybrid]
+  Data Aggregation:   [BFF RPC | BFF Summary | Simple Query | Client Fetch]
+  Rejected Patterns:  [Which proven patterns were considered and why rejected]
+  Metric Provenance:  [For each metric: Truth ID, truth class, freshness class]
+```
+
+### Proven Pattern Palette (ADR-041 D2)
+
+Select from this palette only. If no pattern fits, escalate via ADR amendment -- do not invent ad-hoc patterns.
+
+**Rendering Delivery:**
 | Pattern | When to Use |
 |---------|-------------|
 | **RSC Prefetch + Hydration** | Read-heavy dashboards, ≥2 independent queries above the fold |
 | **Client Shell** | Form-driven, low-frequency admin flows |
-| **Hybrid** | Both server paint AND client interaction — must name composed patterns |
+| **Hybrid** | Both server paint AND client interaction — must name composed patterns and why |
 
-### Data Aggregation Axis
+**Data Aggregation:**
 | Pattern | When to Use |
 |---------|-------------|
+| **BFF RPC Aggregation** (GOV-PAT-003) | ≥3 bounded contexts, single DB round-trip (SECURITY DEFINER) |
 | **BFF Summary Endpoint** | Multi-level rollups (casino/pit/table), >100 calls/day |
-| **BFF RPC Aggregation** | ≥3 bounded contexts, single DB round-trip (SECURITY DEFINER) |
 | **Simple Query / View** | 1-2 tables, single bounded context |
 | **Client-side Fetch** | Single entity, low frequency, no cross-context join |
 
@@ -525,18 +544,19 @@ Before coding, commit to a BOLD aesthetic direction:
 
 ### Focus On
 
-- **Typography**: Distinctive, characterful fonts. Avoid Inter/Roboto/Arial. Pair display font with refined body font.
+- **Typography**: Inter is the project's primary UI font (per design system and Tailwind v4 config). For display/hero/marketing surfaces, consider distinctive typeface pairings to add character. The baseline font is a deliberate choice, not a default.
 - **Color**: Commit to a cohesive palette. Dominant colors with sharp accents outperform timid distributions.
 - **Motion**: High-impact moments — orchestrated page load with staggered reveals, scroll-triggering, surprising hover states. CSS-first, Motion library for React when needed.
 - **Spatial Composition**: Asymmetry, overlap, diagonal flow, grid-breaking elements, generous negative space OR controlled density.
 - **Atmosphere**: Gradient meshes, noise textures, geometric patterns, layered transparencies, dramatic shadows, grain overlays.
 
-### Avoid AI Slop
+### Avoid Generic Output
 
-- Generic fonts (Inter, Roboto, Arial, system fonts)
 - Purple gradients on white backgrounds
-- Predictable card layouts
+- Predictable card layouts with no contextual variation
 - Cookie-cutter components lacking context-specific character
+- Identical visual treatment across surfaces that serve different workflows
+- Decoration without purpose -- every visual element should earn its place
 
 ### Match Complexity to Vision
 

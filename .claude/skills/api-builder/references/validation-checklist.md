@@ -12,11 +12,12 @@ Comprehensive checklist for validating API implementations against SDLC taxonomy
 - [ ] **OpenAPI Spec** - Route defined in `docs/25-api-data/api-surface.openapi.yaml`
 - [ ] **SRM Ownership** - Endpoint belongs to correct bounded context per SRM
 - [ ] **ADR Reference** - Any architectural decisions recorded in `docs/80-adrs/`
+- [ ] **Surface Classification (ADR-041)** - If route serves a UI surface, the owning EXEC-SPEC declares its Data Aggregation pattern from the Proven Pattern Palette (BFF Summary Endpoint, BFF RPC Aggregation, Simple Query/View, Client-side Fetch). Routes acting as BFF Summary Endpoints must be classified explicitly.
 
 ### Service Layer Prerequisites
 
 - [ ] **Service Exists** - Owning service in `services/{domain}/` implements required method
-- [ ] **DTO Defined** - Request/response DTOs in `services/{domain}/dto.ts`
+- [ ] **DTO Defined** - Request/response DTOs in `services/{domain}/dtos.ts`
 - [ ] **Zod Schema** - Validation schema matches DTO interface
 - [ ] **Keys Defined** - React Query keys in `services/{domain}/keys.ts`
 
@@ -49,7 +50,7 @@ import {
   requireIdempotencyKey,  // For POST/PATCH/DELETE
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { createClient } from '@/lib/supabase/server';
 ```
 
@@ -75,7 +76,7 @@ export const dynamic = 'force-dynamic';
 
 ### Input Validation
 
-- [ ] JSON body parsed with `await request.json()`
+- [ ] JSON body parsed with `readJsonBody(request)` helper
 - [ ] Zod schema validates input before service call
 - [ ] Validation errors return 400 with `VALIDATION_ERROR` code
 - [ ] Search params parsed for GET requests
@@ -189,23 +190,23 @@ export async function GET(
 ### withServerAction Usage
 
 - [ ] All service calls wrapped with `withServerAction`
-- [ ] Context includes: `supabase`, `action`, `entity`, `requestId`
-- [ ] Write operations include `idempotencyKey`
-- [ ] Entity operations include `entityId`
+- [ ] First arg is `supabase` client, second arg is handler receiving `mwCtx`, third arg is options
+- [ ] Options include: `domain`, `action`, `correlationId`
+- [ ] Write operations include `requireIdempotency: true` and `idempotencyKey`
 
 ```typescript
 const result = await withServerAction(
-  async () => {
-    const service = createPlayerService(supabase);
+  supabase,                  // ✅ Required: Supabase client
+  async (mwCtx) => {         // ✅ Required: handler receives MiddlewareContext
+    const service = createPlayerService(mwCtx.supabase);
     return service.create(input);
   },
   {
-    supabase,              // ✅ Required
-    action: 'player.create', // ✅ Required: {domain}.{method}
-    entity: 'player',      // ✅ Required: table name
-    entityId: id,          // For update/delete
-    idempotencyKey,        // For writes
-    requestId: ctx.requestId, // ✅ Required
+    domain: 'player',          // ✅ Required: bounded context
+    action: 'create',          // ✅ Required: operation name
+    correlationId: ctx.requestId, // ✅ Required: trace ID
+    requireIdempotency: true,  // For writes
+    idempotencyKey,            // For writes
   },
 );
 ```
@@ -373,7 +374,7 @@ Run this checklist against an endpoint:
 .claude/skills/api-builder/scripts/check_openapi_alignment.py {domain}
 
 # Verify DTO patterns
-.claude/skills/api-builder/scripts/validate_dto_patterns.py services/{domain}/dto.ts
+.claude/skills/api-builder/scripts/validate_dto_patterns.py services/{domain}/dtos.ts
 ```
 
 ---
@@ -397,6 +398,7 @@ Run this checklist against an endpoint:
 ### After Coding
 - [ ] Types regenerated
 - [ ] Type check passes
-- [ ] Tests written
+- [ ] Tests written (under `node` env, no mock-everything — ADR-044)
 - [ ] Response contract validated
 - [ ] Documentation updated
+- [ ] Surface classification declared if route serves a UI surface (ADR-041)

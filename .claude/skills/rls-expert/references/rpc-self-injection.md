@@ -47,9 +47,9 @@ BEGIN
   -- ═══════════════════════════════════════════════════════════════════════════
   v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
 
-  -- JWT fallback for edge cases
+  -- JWT fallback for edge cases (canonical pattern per ADR-024)
   IF v_context_casino_id IS NULL THEN
-    v_context_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+    v_context_casino_id := (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid;
   END IF;
 
   IF v_context_casino_id IS NULL THEN
@@ -100,8 +100,9 @@ BEGIN
   -- ═══════════════════════════════════════════════════════════════════════════
   v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
 
+  -- JWT fallback (canonical pattern per ADR-024)
   IF v_context_casino_id IS NULL THEN
-    v_context_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+    v_context_casino_id := (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid;
   END IF;
 
   IF v_context_casino_id IS NULL THEN
@@ -175,15 +176,17 @@ Copy this block to the start of every SECURITY DEFINER RPC:
 
 ```sql
 -- ═══════════════════════════════════════════════════════════════════════════
--- ADR-015 SELF-INJECTION BLOCK
+-- ADR-015/ADR-024 SELF-INJECTION BLOCK
+-- Uses canonical JWT fallback: auth.jwt() -> 'app_metadata' ->> 'casino_id'
 -- ═══════════════════════════════════════════════════════════════════════════
 DECLARE
   v_context_casino_id uuid;
 BEGIN
   v_context_casino_id := NULLIF(current_setting('app.casino_id', true), '')::uuid;
 
+  -- JWT fallback (canonical pattern per ADR-024)
   IF v_context_casino_id IS NULL THEN
-    v_context_casino_id := (current_setting('request.jwt.claims', true)::jsonb ->> 'casino_id')::uuid;
+    v_context_casino_id := (auth.jwt() -> 'app_metadata' ->> 'casino_id')::uuid;
   END IF;
 
   IF v_context_casino_id IS NULL THEN
@@ -226,8 +229,10 @@ The `check_rpc_context_injection.py` hook validates all SECURITY DEFINER functio
 
 - [ ] Function uses `SECURITY DEFINER`? → MUST self-inject
 - [ ] Extracts `app.casino_id` from session config
-- [ ] Falls back to JWT claim if session config is null
+- [ ] Falls back to JWT via `auth.jwt() -> 'app_metadata' ->> 'casino_id'` (canonical pattern per ADR-024)
 - [ ] Raises exception if context is null
 - [ ] If `p_casino_id` param exists → validates it matches context
 - [ ] Calls `set_config('app.casino_id', ..., true)` before any data access
 - [ ] Uses `true` (transaction-local) not `false` (session-wide)
+- [ ] ADR-024 compliant: no spoofable parameters accepted for context derivation
+- [ ] ADR-024 INV-8: no `casino_id`/`actor_id` accepted as user input in client-callable RPCs

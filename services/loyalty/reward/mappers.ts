@@ -14,6 +14,9 @@ import type { Json } from '@/types/database.types';
 
 import type {
   EligibleRewardDTO,
+  EntitlementBenefit,
+  FulfillmentType,
+  LimitScope,
   LoyaltyEarnConfigDTO,
   RewardCatalogDTO,
   RewardDetailDTO,
@@ -22,6 +25,7 @@ import type {
   RewardFamily,
   RewardLimitDTO,
   RewardPricePointsDTO,
+  TierLevel,
 } from './dtos';
 
 // === Row Types (matching database columns) ===
@@ -166,7 +170,7 @@ export function toRewardCatalogDTO(row: RewardCatalogRow): RewardCatalogDTO {
     kind: row.kind,
     name: row.name,
     isActive: row.is_active,
-    fulfillment: row.fulfillment,
+    fulfillment: row.fulfillment as FulfillmentType | null,
     metadata: narrowJsonRecord(row.metadata),
     uiTags: row.ui_tags,
     createdAt: row.created_at,
@@ -206,12 +210,17 @@ export function parseRewardPricePointsRow(data: unknown): RewardPricePointsDTO {
 export function toRewardEntitlementTierDTO(
   row: RewardEntitlementTierRow,
 ): RewardEntitlementTierDTO {
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- DB→DTO boundary: Zod-validated at route handler, frozen enum per PRD §4.1
+  const benefit = narrowJsonRecord(
+    row.benefit,
+  ) as unknown as EntitlementBenefit;
   return {
     id: row.id,
     rewardId: row.reward_id,
     casinoId: row.casino_id,
-    tier: row.tier,
-    benefit: narrowJsonRecord(row.benefit),
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- DB→DTO boundary: frozen tier enum validated by Zod at route handler
+    tier: row.tier as TierLevel,
+    benefit,
   };
 }
 
@@ -232,7 +241,8 @@ export function toRewardLimitDTO(row: RewardLimitsRow): RewardLimitDTO {
     rewardId: row.reward_id,
     casinoId: row.casino_id,
     maxIssues: Number(row.max_issues),
-    scope: row.scope,
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- DB→DTO boundary: scope enum mirrors DB CHECK constraint
+    scope: row.scope as LimitScope,
     cooldownMinutes: row.cooldown_minutes,
     requiresNote: row.requires_note,
   };
@@ -329,7 +339,7 @@ export function toEligibleRewardDTO(
     family: catalog.family,
     kind: catalog.kind,
     name: catalog.name,
-    fulfillment: catalog.fulfillment,
+    fulfillment: catalog.fulfillment as FulfillmentType | null,
     uiTags: catalog.ui_tags,
     pricePoints: pricePoints ? toRewardPricePointsDTO(pricePoints) : null,
     entitlementTiers: entitlementTiers.map(toRewardEntitlementTierDTO),

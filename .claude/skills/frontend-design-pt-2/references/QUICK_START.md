@@ -5,6 +5,24 @@
 
 ---
 
+## Step 0: Surface Classification (New Pages/Surfaces Only)
+
+**If building a new page or surface**, declare the 4-field Surface Classification (ADR-041) before writing code. This is a hard gate -- missing fields = non-compliant EXEC-SPEC.
+
+```yaml
+Surface Classification:
+  Rendering Delivery: [RSC Prefetch + Hydration | Client Shell | Hybrid]
+  Data Aggregation:   [BFF RPC | BFF Summary | Simple Query | Client Fetch]
+  Rejected Patterns:  [Which proven patterns were considered and why rejected]
+  Metric Provenance:  [For each metric: Truth ID + truth class + freshness from Provenance Matrix]
+```
+
+**References:** `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` (selection criteria), `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` (MEAS-001–012)
+
+Skip this step for component-only work (no new surface/page).
+
+---
+
 ## Step 1: Choose Pattern
 
 | Scenario | Pattern | Key Files |

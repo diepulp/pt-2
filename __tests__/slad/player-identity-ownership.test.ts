@@ -94,13 +94,13 @@ describe('Bounded Context Ownership', () => {
       expect(typeof playerCrudModule.getPlayerEnrollment).toBe('function');
     });
 
-    it('PlayerService HTTP layer can call enrollment API endpoint', async () => {
-      // HTTP layer (client-side) can have enrollPlayer as API wrapper
-      // This is different from CRUD layer (server-side database operations)
+    it('PlayerService HTTP layer does not export enrollPlayer (moved to CasinoService per ADR-022 D5)', async () => {
+      // enrollPlayer HTTP wrapper moved to services/casino/http.ts per ADR-022 D5
+      // PlayerService HTTP layer should NOT have enrollment write operations
       const playerHttpModule = await import('@/services/player/http');
 
-      // HTTP fetcher is allowed - it calls API endpoints, not database directly
-      expect(typeof playerHttpModule.enrollPlayer).toBe('function');
+      // @ts-expect-error - enrollPlayer should not exist in player/http.ts
+      expect(playerHttpModule.enrollPlayer).toBeUndefined();
     });
 
     it('CasinoService does not write to player_identity directly', async () => {

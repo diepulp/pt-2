@@ -28,7 +28,7 @@ Automated checks against `context/*.context.md` files:
 
 ### Test Standards (governance.context.md, quality.context.md)
 
-- [ ] Test files in `__tests__/services/{domain}/` (NOT `services/{domain}/__tests__/`)
+- [ ] Test files in `services/{domain}/__tests__/` (co-located with services)
 - [ ] Integration tests use `*.int.test.ts` naming (NOT `*.integration.test.ts`)
 - [ ] Coverage target ≥90% for service modules
 - [ ] Lint gate uses `max-warnings=0`

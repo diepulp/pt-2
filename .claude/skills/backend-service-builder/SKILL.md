@@ -46,8 +46,10 @@ Load references based on the task at hand. Avoid loading all references at once.
 | Zod validation schemas | `zod-schemas.md` |
 | Database migrations | `migration-workflow.md` |
 | Authentication / casino context | `security-patterns.md` |
+| Test environment / governance | `validation-checklist.md` § 7 (ADR-044) |
 | Table ownership validation | `bounded-contexts.md` |
 | Pre-merge validation | `validation-checklist.md` |
+| Data aggregation pattern selection | `service-patterns.md` § Data Aggregation Patterns |
 
 ### Optional (Self-Improving Intelligence)
 
@@ -103,7 +105,9 @@ Authoritative governance documents referenced by this skill:
 | TEMP-001 | `docs/20-architecture/temporal-patterns/TEMP-001-gaming-day-specification.md` | Gaming day computation spec |
 | TEMP-002 | `docs/20-architecture/temporal-patterns/TEMP-002-temporal-authority-pattern.md` | Temporal authority pattern |
 | TEMP-003 | `docs/20-architecture/temporal-patterns/TEMP-003-temporal-governance-enforcement.md` | Banned patterns, enforcement |
-| PRD-027 | `docs/10-prd/PRD-027-temporal-standardization-v0.1.md` | System time standardization |
+| PRD-027 | `docs/10-prd/_archive/PRD-027-temporal-standardization-v0.1.md` | System time standardization |
+| ADR-041 | `docs/80-adrs/ADR-041-surface-governance-standard.md` | Surface classification, data aggregation pattern palette |
+| ADR-044 | `docs/80-adrs/ADR-044-testing-governance-posture.md` | Testing governance posture, environment contracts |
 
 ---
 
@@ -195,6 +199,7 @@ Before marking service implementation complete, verify:
 - [ ] `keys.ts` created with React Query key factories
 - [ ] DTOs follow pattern-appropriate standards
 - [ ] Tests in `__tests__/` subdirectory (ADR-002)
+- [ ] Server-side tests run under `node` environment, not `jsdom` (ADR-044 §4)
 - [ ] All validation scripts pass
 - [ ] Documentation consistency check run
 - [ ] Migration follows `YYYYMMDDHHMMSS_description.sql` naming
@@ -202,7 +207,8 @@ Before marking service implementation complete, verify:
 - [ ] RLS write policies on critical tables use session vars only — no JWT fallback (ADR-030)
 - [ ] **SECURITY DEFINER RPCs self-inject context before data access** (ADR-015)
 - [ ] Claims sync/clear errors surfaced, not silently caught (ADR-030 D2)
-- [ ] **Metric Provenance**: If service exposes truth-bearing metrics to surfaces, metrics are registered in `METRIC_PROVENANCE_MATRIX.md` (MEAS-001–012). New metrics require governed amendment.
+- [ ] **Metric Provenance**: If service exposes truth-bearing metrics to surfaces, metrics are registered in `METRIC_PROVENANCE_MATRIX.md` (MEAS-001-012). New metrics require governed amendment.
+- [ ] **Data Aggregation Pattern**: If service powers a UI surface, the consuming EXEC-SPEC declares a Data Aggregation pattern from the Proven Pattern Palette (ADR-041 D2): BFF RPC Aggregation (GOV-PAT-003), BFF Summary Endpoint, Simple Query/View, or Client-side Fetch.
 
 ### RPC Self-Injection Requirement (ADR-015)
 

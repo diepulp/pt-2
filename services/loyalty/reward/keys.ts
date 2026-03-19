@@ -49,6 +49,9 @@ export const rewardKeys = {
   /** Key for update reward mutation */
   updateReward: () => [...ROOT, 'update'] as const,
 
+  /** Key for toggle reward active mutation */
+  toggleActive: () => [...ROOT, 'toggle-active'] as const,
+
   /** Key for upsert earn config mutation */
   upsertEarnConfig: () => [...ROOT, 'upsert-earn-config'] as const,
 };

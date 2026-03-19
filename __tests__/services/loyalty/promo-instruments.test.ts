@@ -379,8 +379,8 @@ describe('Promo Instruments Service Layer', () => {
             p_idempotency_key: 'issue:VAL-001',
             p_player_id: 'player-uuid-abc',
             p_visit_id: 'visit-uuid-def',
-            p_expires_at: null,
-            p_correlation_id: null,
+            p_expires_at: undefined,
+            p_correlation_id: undefined,
           },
         );
       });

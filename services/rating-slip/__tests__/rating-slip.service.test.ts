@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RatingSlipService Unit Tests
  *
@@ -193,9 +195,14 @@ describe('RatingSlipService', () => {
       });
 
       it('should throw VISIT_NOT_FOUND for non-existent visit', async () => {
-        mockChain.maybeSingle.mockResolvedValue({
+        // PERF-005 WS6: Pre-validation removed — RPC returns FK violation
+        mockChain.rpc.mockResolvedValue({
           data: null,
-          error: null,
+          error: {
+            code: '23503',
+            message:
+              'insert or update on table "rating_slip" violates foreign key constraint "rating_slip_visit_id_fkey"',
+          },
         });
 
         const input: CreateRatingSlipInput = {
@@ -216,9 +223,12 @@ describe('RatingSlipService', () => {
       });
 
       it('should throw VISIT_NOT_OPEN for closed visit', async () => {
-        mockChain.maybeSingle.mockResolvedValue({
-          data: { ...mockVisitRow, ended_at: '2025-01-15T12:00:00Z' },
-          error: null,
+        // PERF-005 WS6: Pre-validation removed — RPC returns domain error
+        mockChain.rpc.mockResolvedValue({
+          data: null,
+          error: {
+            message: 'VISIT_NOT_OPEN: Visit is not active',
+          },
         });
 
         const input: CreateRatingSlipInput = {
@@ -273,10 +283,15 @@ describe('RatingSlipService', () => {
         expect(result).toBeDefined();
       });
 
-      it('should throw VISIT_CASINO_MISMATCH for wrong casino', async () => {
-        mockChain.maybeSingle.mockResolvedValue({
-          data: { ...mockVisitRow, casino_id: 'other-casino' },
-          error: null,
+      it('should throw VISIT_NOT_OPEN for wrong casino (RPC handles mismatch)', async () => {
+        // PERF-005 WS6: Pre-validation removed — RPC returns VISIT_NOT_OPEN
+        // for casino mismatch (visit missing, ended, or wrong casino).
+        // The old VISIT_CASINO_MISMATCH code was a pre-validation artifact.
+        mockChain.rpc.mockResolvedValue({
+          data: null,
+          error: {
+            message: 'VISIT_NOT_OPEN: Visit is not active',
+          },
         });
 
         const input: CreateRatingSlipInput = {
@@ -292,7 +307,7 @@ describe('RatingSlipService', () => {
           await crud.start(mockSupabase, CASINO_ID, ACTOR_ID, input);
         } catch (error) {
           expect(error).toBeInstanceOf(DomainError);
-          expect((error as DomainError).code).toBe('VISIT_CASINO_MISMATCH');
+          expect((error as DomainError).code).toBe('VISIT_NOT_OPEN');
         }
       });
 

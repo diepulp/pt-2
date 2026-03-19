@@ -110,7 +110,7 @@ npm run openapi:sync
 - Pattern B: MUST use `type` with Pick/Omit (NO interfaces)
 - Pattern B: Create DTOs derive from `Insert` not `Row`
 - Zod schemas MUST mirror DTO structure exactly
-- Location: `services/{domain}/dto.ts`
+- Location: `services/{domain}/dtos.ts`
 
 ---
 
@@ -268,7 +268,7 @@ Checks: routes in spec exist as handlers, method coverage, undocumented routes
 
 **7c. DTO Pattern Validation**
 ```bash
-.claude/skills/api-builder/scripts/validate_dto_patterns.py services/{domain}/dto.ts
+.claude/skills/api-builder/scripts/validate_dto_patterns.py services/{domain}/dtos.ts
 ```
 Checks: Pattern A/B compliance, Zod alignment, anti-patterns
 
@@ -307,6 +307,14 @@ npm run type-check
 - **ADR-007** - API Surface Catalogue & OpenAPI Contract
 - **ADR-003** - State Management (React Query integration)
 - **ADR-030** - Auth System Hardening (write-path tightening, context single source of truth)
+- **ADR-041** - Surface Governance Standard — classification and data aggregation pattern palette for route handlers serving UI surfaces
+- **ADR-044** - Testing Governance Posture — test-layer taxonomy, route-handler test policy (QA-005), environment contracts
+
+### Governance Standards
+| Standard | Purpose |
+|----------|---------|
+| `docs/70-governance/SURFACE_CLASSIFICATION_STANDARD.md` | Surface pattern palette and EXEC-SPEC declaration requirements (ADR-041) |
+| `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md` | Test-layer taxonomy, environment contracts, route-handler test policy (ADR-044) |
 
 ### Skill Resources
 | Resource | Purpose |
@@ -394,6 +402,8 @@ When building API endpoints that serve UI surfaces, the route's **Data Aggregati
 | **BFF RPC Aggregation** (GOV-PAT-003) | SECURITY DEFINER DB function collapsing cross-context reads. Route calls single RPC. Example: `rpc_get_rating_slip_modal_data` |
 | **Simple Query / View** | Direct PostgREST or service `.select()`. 1-2 tables, single bounded context. |
 | **Client-side Fetch** | Minimal route, single entity. No server aggregation needed. |
+
+**Route handlers as BFF Summary Endpoints:** When a route handler aggregates data from multiple service calls or bounded contexts into a single response (e.g., a dashboard summary), it is functioning as a **BFF Summary Endpoint**. The owning EXEC-SPEC must declare this classification per ADR-041 D1. If no EXEC-SPEC exists yet, the route must document its pattern classification in the API Surface Catalogue entry or an inline code comment referencing the applicable pattern.
 
 If the route serves truth-bearing metrics, those metrics must be registered in `docs/70-governance/METRIC_PROVENANCE_MATRIX.md` (MEAS-001–012). New metrics require governed matrix amendment before implementation.
 

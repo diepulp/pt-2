@@ -44,6 +44,8 @@ const { data } = useQuery({
 
 ### Zustand (UI State Only)
 
+> **Session Reset Contract (ADR-035):** Stores are classified as **session-scoped** (reset on sign-out) or **app-scoped** (persist across sessions). A `resetSessionState()` orchestrator handles auth transitions.
+
 ```typescript
 // ✅ GOOD: Ephemeral UI state
 const useUIStore = create<UIStore>()((set) => ({
@@ -57,6 +59,35 @@ const usePlayerStore = create()((set) => ({
   players: [],  // This should be in TanStack Query
 }))
 ```
+
+### UI Hooks (Zustand Selectors — HOOKS_STANDARD)
+
+UI hooks live in `hooks/ui/` and consume Zustand stores with focused selectors. They MUST:
+- Use `useShallow` from `zustand/react/shallow` to prevent unnecessary re-renders
+- Include `'use client'` directive
+- Never make server calls
+
+```typescript
+// hooks/ui/use-modal.ts
+'use client';
+
+import { useUIStore } from '@/store/ui-store';
+import { useShallow } from 'zustand/react/shallow';
+
+export function useModal() {
+  return useUIStore(
+    useShallow((s) => ({
+      isOpen: s.modal.isOpen,
+      type: s.modal.type,
+      data: s.modal.data,
+      open: s.openModal,
+      close: s.closeModal,
+    }))
+  );
+}
+```
+
+**Separation rule:** `/hooks/ui/**` = Zustand/selectors only; `/hooks/<domain>/**` = React Query (fetch/mutate) only.
 
 ---
 
@@ -414,9 +445,10 @@ export default async function Page() {
 
 ## Aesthetic Guardrails
 
-### Fonts to Avoid
-- Inter, Roboto, Arial, system fonts
-- Generic "safe" choices
+### Typography
+- **Primary UI font:** Inter (project standard per Tailwind v4 config and design system style guide)
+- **Display/accent fonts:** Consider distinctive typeface pairings for headings, hero sections, or marketing surfaces where differentiation matters
+- Avoid defaulting to multiple generic sans-serif alternatives when Inter already provides the baseline
 
 ### Colors to Avoid
 - Purple gradients on white backgrounds
@@ -424,12 +456,12 @@ export default async function Page() {
 - "Corporate blue" defaults
 
 ### Layouts to Avoid
-- Predictable card grids
-- Cookie-cutter dashboards
-- Same layout every time
+- Predictable card grids without contextual variation
+- Cookie-cutter dashboards that ignore the specific workflow
+- Identical layout patterns across unrelated surfaces
 
 ### Instead Do
-- Choose distinctive display fonts
-- Commit to a bold color palette
-- Use unexpected layouts (asymmetry, overlap, diagonal flow)
-- Add texture (noise, gradients, patterns)
+- Commit to a bold, cohesive color palette
+- Use unexpected layouts where appropriate (asymmetry, overlap, diagonal flow)
+- Add texture and atmosphere (noise, gradients, patterns, layered transparencies)
+- Make deliberate composition choices -- intentionality matters more than any specific font or style

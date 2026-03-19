@@ -13,7 +13,7 @@
 /**
  * Promo program types (extensible for future promo types).
  */
-export type PromoType = 'match_play';
+export type PromoType = 'match_play' | 'free_play';
 
 /**
  * Promo coupon lifecycle states.
@@ -52,7 +52,7 @@ export interface PromoProgramDTO {
   requiredMatchWagerAmount: number;
 
   /** Program status (active, inactive, archived) */
-  status: string;
+  status: 'active' | 'inactive' | 'archived';
 
   /** Program start date (null = always valid) */
   startAt: string | null;

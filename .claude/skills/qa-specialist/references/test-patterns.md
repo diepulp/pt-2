@@ -1,6 +1,21 @@
-# PT-2 E2E Testing Patterns
+# PT-2 Testing Patterns
 
-Testing patterns and anti-patterns specific to the PT-2 casino pit management system.
+Testing patterns and anti-patterns specific to the PT-2 casino pit management system. All patterns conform to **ADR-044 Testing Governance Posture** and the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`).
+
+## ADR-044 Environment Contract Quick Reference
+
+Per ADR-044 §4, each test layer must run in the environment appropriate to what it is proving:
+
+| Layer | Required Environment | Jest Directive |
+|-------|---------------------|----------------|
+| Unit (browser) | `jsdom` | `/** @jest-environment jsdom */` |
+| Server-unit | `node` | `/** @jest-environment node */` |
+| Route-handler | `node` | `/** @jest-environment node */` |
+| Integration | `node` + Supabase | `/** @jest-environment node */` |
+| E2E | Browser + app + Supabase | Playwright (not Jest) |
+| Smoke | `node` | `/** @jest-environment node */` |
+
+A single global `testEnvironment` applying to all test files is prohibited (ADR-044 §4). Misclassification of environment is a governance defect.
 
 ## Test Structure Patterns
 
@@ -223,7 +238,37 @@ const { data } = await supabase.from('rating_slip').select('*');
 expect(data).toHaveLength(1); // Only sees casino-scoped data
 ```
 
-### Anti-Pattern 5: Incomplete Cleanup
+### Anti-Pattern 5: Shallow Mock-Everything Tests (ADR-044 §9 Prohibited)
+
+```typescript
+// BAD: Only proves handler exists — no behavioral assertion
+jest.mock('@/services/player/crud', () => ({
+  getPlayer: jest.fn().mockResolvedValue({ ok: true, data: {} }),
+}));
+
+test('GET handler is defined', async () => {
+  const { GET } = await import('./route');
+  expect(GET).toBeDefined(); // Theatre — proves nothing about HTTP behavior
+});
+```
+
+```typescript
+// GOOD: Asserts on observable HTTP behavior with minimal mocking
+test('GET returns 400 for invalid UUID', async () => {
+  const request = createMockRequest('GET', '/api/v1/players/not-a-uuid');
+  const params = createMockRouteParams({ id: 'not-a-uuid' });
+  const response = await GET(request, { params });
+
+  expect(response.status).toBe(400);
+  const body = await response.json();
+  expect(body.ok).toBe(false);
+  expect(body.code).toBe('VALIDATION_ERROR');
+});
+```
+
+Net-new shallow tests are prohibited. Existing shallow tests are reclassified as smoke coverage and replaced incrementally as routes are touched.
+
+### Anti-Pattern 6: Incomplete Cleanup
 
 ```typescript
 // BAD: Missing cleanup on failure
@@ -438,37 +483,39 @@ export async function deleteTestData(
 
 ```typescript
 // playwright.config.ts
+import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
+import dotenv from 'dotenv';
+
+dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
   testDir: './e2e',
-  timeout: 30000,
-  expect: { timeout: 5000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
-  reporter: [
-    ['html', { outputFolder: 'playwright-report' }],
-    ['junit', { outputFile: 'test-results/junit.xml' }],
-  ],
+  reporter: 'html',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: process.env.BASE_URL || 'http://localhost:3000',
     trace: 'on-first-retry',
-    video: 'retain-on-failure',
-    screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['iPhone 13'] } },
+    {
+      name: 'api',
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: {
     command: 'npm run dev',
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
+    timeout: 120000,
   },
 });
 ```
+
+> **Note**: The actual config uses a single `api` project (not separate chromium/mobile) since E2E tests are primarily API-level. The `baseURL` is configurable via `BASE_URL` env var. No `timeout`, `expect.timeout`, `video`, or `screenshot` settings are configured at the top level.
 
 ### Environment Variables
 

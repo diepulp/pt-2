@@ -23,22 +23,31 @@ const pricePointsSchema = z.object({
   allowOverdraw: z.boolean().optional(),
 });
 
+const benefitSchema = z.object({
+  face_value_cents: z.number().int().positive('Face value must be > 0'),
+  instrument_type: z.enum(['match_play', 'free_play']),
+});
+
 const entitlementTierSchema = z.object({
-  tier: z.string().min(1, 'Tier is required'),
-  benefit: z.record(z.string(), z.unknown()),
+  tier: z.enum(['bronze', 'silver', 'gold', 'platinum', 'diamond']),
+  benefit: benefitSchema,
 });
 
 const limitSchema = z.object({
   maxIssues: z.number().int().positive('Max issues must be > 0'),
-  scope: z.string().min(1, 'Scope is required'),
+  scope: z.enum(['per_visit', 'per_gaming_day', 'per_week', 'per_month']),
   cooldownMinutes: z.number().int().nonnegative().optional(),
   requiresNote: z.boolean().optional(),
 });
 
 const eligibilitySchema = z.object({
   minPointsBalance: z.number().int().nonnegative().optional(),
-  minTier: z.string().optional(),
-  maxTier: z.string().optional(),
+  minTier: z
+    .enum(['bronze', 'silver', 'gold', 'platinum', 'diamond'])
+    .optional(),
+  maxTier: z
+    .enum(['bronze', 'silver', 'gold', 'platinum', 'diamond'])
+    .optional(),
   visitKinds: z.array(z.string()).optional(),
 });
 
@@ -47,7 +56,7 @@ export const createRewardSchema = z.object({
   family: z.enum(['points_comp', 'entitlement']),
   kind: z.string().min(1, 'Kind is required').max(100),
   name: z.string().min(1, 'Name is required').max(200),
-  fulfillment: z.string().max(200).optional(),
+  fulfillment: z.enum(['comp_slip', 'coupon', 'none']).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   uiTags: z.array(z.string()).optional(),
   pricePoints: pricePointsSchema.optional(),
@@ -60,9 +69,11 @@ export const updateRewardSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   kind: z.string().min(1).max(100).optional(),
   isActive: z.boolean().optional(),
-  fulfillment: z.string().max(200).nullable().optional(),
+  fulfillment: z.enum(['comp_slip', 'coupon', 'none']).nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   uiTags: z.array(z.string()).nullable().optional(),
+  pricePoints: pricePointsSchema.nullable().optional(),
+  entitlementTiers: z.array(entitlementTierSchema).nullable().optional(),
 });
 
 export const rewardListQuerySchema = z.object({

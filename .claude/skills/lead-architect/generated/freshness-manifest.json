@@ -37,6 +37,26 @@
         "references/QUICK_START.md",
         "references/validation-checklist.md"
       ]
+    },
+    "ADR-041": {
+      "path": "docs/80-adrs/ADR-041-surface-governance-standard.md",
+      "version": "1.0.0",
+      "sha256": "de49fd62e4341544321bc2d642e74c1ae364bf037220e2ab4de33c726f697301",
+      "last_verified": "2026-03-17",
+      "derived_primitives": [
+        "references/architecture-rules.md",
+        "references/validation-checklist.md"
+      ]
+    },
+    "ADR-044": {
+      "path": "docs/80-adrs/ADR-044-testing-governance-posture.md",
+      "version": "1.0.0",
+      "sha256": "11e52b3ecf694a41e750e3669c583076e57ec5af69b416cb2785f3109ffe9db0",
+      "last_verified": "2026-03-17",
+      "derived_primitives": [
+        "references/architecture-rules.md",
+        "references/validation-checklist.md"
+      ]
     }
   },
 
@@ -48,16 +68,16 @@
       "change_note": "Updated SRM v4.10.0, SLAD v3.2.0 refs; added ADR-028 labels.ts; PlayerFinancialService IMPLEMENTED; player_casino moved to CasinoService"
     },
     "references/architecture-rules.md": {
-      "sources": ["SLAD", "SRM"],
+      "sources": ["SLAD", "SRM", "ADR-041", "ADR-044"],
       "purpose": "Condensed patterns and anti-patterns",
-      "updated": "2026-01-21",
-      "change_note": "Updated to SLAD v3.2.0, SRM v4.10.0; added labels.ts to Pattern C structure; finance IMPLEMENTED; ADR-028 reference"
+      "updated": "2026-03-17",
+      "change_note": "Added ADR-041 and ADR-044 to source header; added post-architecture checks for testing tier declarations and surface classification"
     },
     "references/validation-checklist.md": {
-      "sources": ["SRM", "SDLC_TAXONOMY"],
+      "sources": ["SRM", "SDLC_TAXONOMY", "ADR-041", "ADR-044"],
       "purpose": "Pre/post architecture validation checklist",
-      "updated": "2026-01-21",
-      "change_note": "Added ADR-028 labels.ts check for TableContextService; updated SRM contract quick reference; added Doc Locations"
+      "updated": "2026-03-17",
+      "change_note": "ADR-041 surface classification and ADR-044 testing governance sections present; added as tracked sources"
     },
     "references/dto-compliance.md": {
       "sources": ["SLAD", "SRM"],

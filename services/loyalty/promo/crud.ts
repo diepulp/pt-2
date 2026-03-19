@@ -269,7 +269,8 @@ export async function createProgram(
       .insert({
         casino_id: input.casinoId,
         name: input.name,
-        promo_type: input.promoType ?? 'match_play',
+        // Cast: PromoType is wider than generated enum until db:types-local runs after migration
+        promo_type: (input.promoType ?? 'match_play') as 'match_play',
         face_value_amount: input.faceValueAmount,
         required_match_wager_amount: input.requiredMatchWagerAmount,
         start_at: input.startAt ?? null,

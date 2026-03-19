@@ -376,7 +376,11 @@ export async function createReward(
 }
 
 /**
- * Updates a reward catalog entry.
+ * Updates a reward catalog entry with optional nested child record updates.
+ *
+ * Child record semantics:
+ * - pricePoints: non-null = upsert (INSERT ON CONFLICT UPDATE), null = delete, undefined = skip
+ * - entitlementTiers: non-null array = replace-all (delete + insert), null = delete all, undefined = skip
  *
  * @throws NOT_FOUND if reward doesn't exist
  * @throws FORBIDDEN if caller lacks pit_boss/admin role
@@ -396,9 +400,14 @@ export async function updateReward(
     if (input.metadata !== undefined) updates.metadata = input.metadata;
     if (input.uiTags !== undefined) updates.ui_tags = input.uiTags;
 
+    // Update catalog entry (always — even if only child records changed, updated_at should bump)
     const { data, error } = await supabase
       .from('reward_catalog')
-      .update(updates)
+      .update(
+        Object.keys(updates).length > 0
+          ? updates
+          : { updated_at: new Date().toISOString() },
+      )
       .eq('id', input.id)
       .select(REWARD_CATALOG_SELECT)
       .single();
@@ -413,6 +422,81 @@ export async function updateReward(
         'Invalid reward catalog row returned',
       );
     }
+
+    const rewardId = data.id;
+    const casinoId = data.casino_id;
+
+    // Handle nested child record updates
+    const childOps: Array<Promise<void>> = [];
+
+    // pricePoints: upsert or delete
+    if (input.pricePoints !== undefined) {
+      if (input.pricePoints === null) {
+        // Delete existing price points
+        childOps.push(
+          (async () => {
+            const { error: delErr } = await supabase
+              .from('reward_price_points')
+              .delete()
+              .eq('reward_id', rewardId);
+            if (delErr) throw mapRewardError(delErr);
+          })(),
+        );
+      } else {
+        // Upsert: delete then insert (PostgREST lacks ON CONFLICT UPDATE for composite keys)
+        const pp = input.pricePoints;
+        childOps.push(
+          (async () => {
+            const { error: delErr } = await supabase
+              .from('reward_price_points')
+              .delete()
+              .eq('reward_id', rewardId);
+            if (delErr) throw mapRewardError(delErr);
+
+            const { error: insErr } = await supabase
+              .from('reward_price_points')
+              .insert({
+                reward_id: rewardId,
+                casino_id: casinoId,
+                points_cost: pp.pointsCost,
+                allow_overdraw: pp.allowOverdraw ?? false,
+              });
+            if (insErr) throw mapRewardError(insErr);
+          })(),
+        );
+      }
+    }
+
+    // entitlementTiers: replace-all or delete all
+    if (input.entitlementTiers !== undefined) {
+      childOps.push(
+        (async () => {
+          // Always delete existing tiers first
+          const { error: delErr } = await supabase
+            .from('reward_entitlement_tier')
+            .delete()
+            .eq('reward_id', rewardId);
+          if (delErr) throw mapRewardError(delErr);
+
+          // Insert new set if non-null and non-empty
+          if (input.entitlementTiers && input.entitlementTiers.length > 0) {
+            const { error: insErr } = await supabase
+              .from('reward_entitlement_tier')
+              .insert(
+                input.entitlementTiers.map((t) => ({
+                  reward_id: rewardId,
+                  casino_id: casinoId,
+                  tier: t.tier,
+                  benefit: toJson(t.benefit),
+                })),
+              );
+            if (insErr) throw mapRewardError(insErr);
+          }
+        })(),
+      );
+    }
+
+    await Promise.all(childOps);
 
     return toRewardCatalogDTO(data);
   } catch (error) {

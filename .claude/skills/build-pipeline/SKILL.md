@@ -1,6 +1,6 @@
 ---
 name: build-pipeline
-description: Orchestrate specification-to-production implementation with phased workstream execution, validation gates, and checkpoint-based resume. This skill should be used when building from PRDs, EXEC-SPECs, investigation docs, or issue specs.
+description: Orchestrate specification-to-production implementation with phased workstream execution, validation gates, and checkpoint-based resume. This skill should be used when the user asks to "build from a PRD", "execute a spec", "implement PRD-XXX", "run the build pipeline", "resume the build", "build this", "execute this EXEC-SPEC", or provides a path to any specification document (PRD, EXEC-SPEC, investigation doc, issue spec). Also triggers on requests to implement from a design document, execute findings, or run workstreams from an existing plan.
 ---
 
 # Build Pipeline Orchestrator
@@ -34,8 +34,7 @@ description: Orchestrate specification-to-production implementation with phased 
 
 | Reference | Purpose |
 |-----------|---------|
-| `references/expert-routing.md` | **Two-stage generation: domain->expert skill mapping** |
-| `references/executor-registry.md` | Complete executor mapping (skills vs task-agents) |
+| `references/expert-routing.md` | **Two-stage generation: domain->expert skill mapping + executor registry** |
 | `references/execution-spec-template.md` | YAML + markdown template for workstreams |
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
@@ -128,85 +127,22 @@ These files contain deterministic rules that MUST be validated against during sp
 
 ### Stage 1: Architectural Scaffolding
 
-1. **Locate specification document** using input resolution:
-   - If input is a file path (contains `/` or ends with `.md`): use directly
-   - If input matches `PRD-XXX` pattern: resolve to `docs/10-prd/PRD-XXX*.md`
-   - If input matches `EXEC-###` pattern: resolve to `docs/21-exec-spec/EXEC-###*.md` (skip to Phase 2)
-   - If input matches `ISSUE-XXX` pattern: resolve to `docs/issues/ISSUE-XXX*.md`
-   - Extract spec ID from filename for checkpoint naming
+1. **Locate specification document** using input resolution (see Input Resolution above)
 2. **Load context files** (architecture, governance, quality)
-3. **BLOCKING REQUIREMENT -- Delegate to lead-architect via Skill tool:**
-
-   > **DO NOT perform architectural scaffolding inline.**
-   > MUST invoke the `Skill` tool to delegate scaffolding to `lead-architect`.
-   > The general agent lacks bounded context ownership knowledge and will produce
-   > incorrect phase ordering and workstream boundaries if it does this inline.
-
-   **Required tool call:**
-   ```
-   Skill(skill="lead-architect", args="EXECUTION-SPEC scaffolding for {PRD_ID}:
-     Specification: {spec_file_path}
-     Task: Produce workstream SKELETON only (ID, name, type, bounded_context, dependencies).
-     DO NOT produce granular outputs, patterns, or implementation hints.
-     Output format: YAML workstream skeleton per SKILL.md EXECUTION-SPEC Scaffolding Role.")
-   ```
-
-   **Expected output from lead-architect** (skeleton only):
-   - Vertical slice boundaries
-   - Bounded context ownership per workstream
-   - Phase ordering and dependencies
-   - Workstream SKELETON (ID, name, type, dependencies)
-
-   **lead-architect does NOT design granular workstream details.**
+3. **Delegate to `lead-architect` via Skill tool** — the general agent lacks bounded context ownership knowledge and produces incorrect phase ordering if it does this inline. lead-architect produces a workstream SKELETON only (ID, name, type, bounded_context, dependencies). It does NOT design granular workstream details.
 
 ### Stage 2: Expert Consultation (with Context Injection)
 
-4. **BLOCKING REQUIREMENT -- Delegate to domain experts via Skill tool:**
+4. **Delegate to domain experts via Skill tool** — each workstream is routed to the correct domain expert because the general agent lacks domain-specific pattern knowledge (ADR-015 RLS, DTO canonical, React 19 useTransition). Each expert consultation MUST include governance context injection.
 
-   > **DO NOT refine workstream specifications inline.**
-   > MUST invoke the `Skill` tool for EACH workstream, routing to the correct
-   > domain expert. The general agent lacks domain-specific pattern knowledge
-   > (ADR-015 RLS, DTO canonical, React 19 useTransition) and will produce
-   > non-compliant specifications if it does this inline.
+   See `references/expert-routing.md` for:
+   - Full two-stage generation protocol and rationale
+   - Domain-to-expert skill routing table
+   - Context injection protocol (which context sections to inject per domain)
+   - Expert consultation prompt template and response format
+   - Parallel consultation dispatch pattern
 
-   Consult `references/executor-registry.md` for the domain-to-expert skill routing table.
-
-   **Required tool call per workstream:**
-   ```
-   Skill(skill="{expert_skill_name}", args="Expert consultation for {PRD_ID} {WS_ID}:
-     Workstream: {WS_NAME}
-     Type: {workstream_type}
-     Bounded Context: {bounded_context}
-     Dependencies: {dependencies}
-
-     Architectural Skeleton from lead-architect:
-     {skeleton_yaml}
-
-     GOVERNANCE CONTEXT (MUST COMPLY):
-     {Inject relevant sections from references/architecture.context.md}
-     {Inject relevant sections from references/governance.context.md}
-     {Inject relevant sections from references/quality.context.md}
-
-     Task: Refine this workstream with domain-specific details (outputs, patterns, validation).
-     Return enriched workstream YAML.")
-   ```
-
-   **CRITICAL**: Each expert consultation MUST include governance context injection.
-   See `references/expert-routing.md` for full context extraction rules per domain.
-
-   **All executors are Skills. Task agents are deprecated for pipeline execution.**
-
-5. **Invoke experts IN PARALLEL** when workstreams have no design dependencies.
-   Send a SINGLE message with MULTIPLE `Skill` tool calls:
-   ```
-   +-------------------------------------------------------------+
-   | SINGLE MESSAGE -- multiple Skill tool calls:                 |
-   +-------------------------------------------------------------+
-   | Skill(skill="backend-service-builder", args="refine WS1...") |
-   | Skill(skill="rls-expert", args="refine WS2...")              |
-   | Skill(skill="api-builder", args="refine WS4...")             |
-   +-------------------------------------------------------------+
-   ```
+5. **Invoke experts IN PARALLEL** when workstreams have no design dependencies — send a SINGLE message with MULTIPLE `Skill` tool calls.
 
 ### Stage 3: Assemble & Validate
 
@@ -425,7 +361,7 @@ Message 2: Skill(WS3) -> wait
 
 ### Executor Selection (Skills Only)
 
-Consult `references/executor-registry.md` for the complete workstream-to-skill mapping.
+Consult `references/expert-routing.md` for the complete workstream-to-skill mapping.
 All workstreams use Skills. Task agents are deprecated.
 
 ### Workstream Prompt Template
@@ -453,10 +389,9 @@ Validate against gate: {GATE_TYPE}
 After all phases complete:
 
 1. Run DoD gate validation (type-check, lint, test, build)
-2. Update `docs/MVP-ROADMAP.md` - Mark PRD as complete
-3. Record to Memori via MVPProgressContext
-4. Generate summary of files created, tests passing, gates passed
-5. Display final status via `/mvp-status`
+2. Update `docs/MVP-ROADMAP.md` — mark PRD as complete
+3. Generate summary of files created, tests passing, gates passed
+4. Display final status via `/mvp-status`
 
 ---
 
@@ -485,7 +420,7 @@ Pipeline Completes       -> Update checkpoint (status: "complete")
 2. Display completed vs pending workstreams
 3. Continue from first incomplete phase
 
-**Additional Fields** (vs prd-pipeline):
+**Additional Fields**:
 - `gov010_check`: `"passed"` | `"waived:{reason}"` | `"pending"`
 
 ---

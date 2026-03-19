@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * PlayerService HTTP Fetchers Unit Tests
  *
@@ -16,7 +18,6 @@ import type {
 } from '../dtos';
 import {
   createPlayer,
-  enrollPlayer,
   getPlayer,
   getPlayerEnrollment,
   getPlayers,
@@ -29,11 +30,11 @@ const mockFetch = jest.fn();
 global.fetch = mockFetch;
 
 // Mock crypto.randomUUID for idempotency key generation
-Object.defineProperty(globalThis, 'crypto', {
-  value: {
-    randomUUID: () => 'test-uuid-12345',
-  },
-});
+jest
+  .spyOn(globalThis.crypto, 'randomUUID')
+  .mockReturnValue(
+    'test-uuid-12345' as `${string}-${string}-${string}-${string}-${string}`,
+  );
 
 // Helper to create a successful response
 function createSuccessResponse<T>(data: T) {
@@ -324,44 +325,6 @@ describe('Player HTTP Fetchers', () => {
 
       const callArgs = mockFetch.mock.calls[0];
       expect(callArgs[1].headers['Idempotency-Key']).toBe('test-uuid-12345');
-    });
-  });
-
-  // ===========================================================================
-  // Enroll Player
-  // ===========================================================================
-
-  describe('enrollPlayer', () => {
-    const mockEnrollment: PlayerEnrollmentDTO = {
-      player_id: 'p1',
-      casino_id: 'casino-1',
-      status: 'active',
-      enrolled_at: '2025-01-01T00:00:00Z',
-    };
-
-    it('enrolls player with POST request', async () => {
-      mockFetch.mockResolvedValue(createSuccessResponse(mockEnrollment));
-
-      const result = await enrollPlayer('p1');
-
-      expect(mockFetch).toHaveBeenCalledWith('/api/v1/players/p1/enroll', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'content-type': 'application/json',
-          'Idempotency-Key': 'test-uuid-12345',
-        },
-        body: JSON.stringify({}),
-      });
-      expect(result).toEqual(mockEnrollment);
-    });
-
-    it('returns existing enrollment for idempotent call', async () => {
-      mockFetch.mockResolvedValue(createSuccessResponse(mockEnrollment));
-
-      const result = await enrollPlayer('p1');
-
-      expect(result).toEqual(mockEnrollment);
     });
   });
 

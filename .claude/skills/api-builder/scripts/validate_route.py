@@ -56,7 +56,7 @@ def validate_route_handler(file_path: str) -> List[ValidationIssue]:
         'createRequestContext': "import { createRequestContext } from '@/lib/http/service-response'",
         'errorResponse': "import { errorResponse } from '@/lib/http/service-response'",
         'successResponse': "import { successResponse } from '@/lib/http/service-response'",
-        'withServerAction': "import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper'",
+        'withServerAction': "import { withServerAction } from '@/lib/server-actions/middleware'",
         'createClient': "import { createClient } from '@/lib/supabase/server'",
     }
 
@@ -91,11 +91,11 @@ def validate_route_handler(file_path: str) -> List[ValidationIssue]:
     # 5. withServerAction usage
     if 'withServerAction' in content:
         # Check for proper context fields
-        if 'requestId: ctx.requestId' not in content:
+        if 'correlationId: ctx.requestId' not in content:
             issues.append(ValidationIssue(
                 "WARNING", "CONTEXT",
-                "withServerAction should include requestId from context",
-                suggestion="requestId: ctx.requestId"
+                "withServerAction should include correlationId from context",
+                suggestion="correlationId: ctx.requestId"
             ))
         if has_post and 'idempotencyKey' not in content:
             issues.append(ValidationIssue(
@@ -106,7 +106,7 @@ def validate_route_handler(file_path: str) -> List[ValidationIssue]:
         issues.append(ValidationIssue(
             "ERROR", "WRAPPER",
             "Service calls should be wrapped with withServerAction",
-            suggestion="const result = await withServerAction(async () => { ... }, { supabase, action, entity, requestId });"
+            suggestion="const result = await withServerAction(supabase, async (mwCtx) => { ... }, { domain, action, correlationId });"
         ))
 
     # 6. Response handling

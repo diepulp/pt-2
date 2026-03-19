@@ -24,7 +24,7 @@ export const promoCouponRouteParamsSchema = z.object({
 
 export const createPromoProgramSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
-  promoType: z.enum(['match_play']).optional(),
+  promoType: z.enum(['match_play', 'free_play']).optional(),
   faceValueAmount: z.number().positive('Face value must be positive'),
   requiredMatchWagerAmount: z.number().positive('Match wager must be positive'),
   startAt: z.string().datetime().optional(),

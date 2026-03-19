@@ -27,7 +27,7 @@ CREATE POLICY "{table_name}_read_hybrid"
 **How it works:**
 1. `auth.uid() IS NOT NULL` - Ensures user is authenticated via Supabase auth
 2. `COALESCE(...)` - Tries transaction context first, falls back to JWT
-3. `current_setting('app.casino_id', true)` - Injected by `set_rls_context()` RPC
+3. `current_setting('app.casino_id', true)` - Injected by `set_rls_context_from_staff()` RPC (ADR-024)
 4. `NULLIF(..., '')` - Treats empty string as NULL (connection pooling edge case)
 5. `auth.jwt() -> 'app_metadata' ->> 'casino_id'` - JWT fallback for direct client queries
 

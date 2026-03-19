@@ -12,12 +12,13 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
+  readJsonBody,
   requireIdempotencyKey,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { create{Domain}Service } from '@/services/{domain}';
-import { {Domain}CreateSchema } from '@/services/{domain}/dto';
+import { {Domain}CreateSchema } from '@/services/{domain}/dtos';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -28,20 +29,21 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const idempotencyKey = requireIdempotencyKey(request);
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const input = {Domain}CreateSchema.parse(body);
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.create(input);
       },
       {
-        supabase,
-        action: '{domain}.create',
-        entity: '{domain}',
+        domain: '{domain}',
+        action: 'create',
+        requireIdempotency: true,
         idempotencyKey,
-        requestId: ctx.requestId,
+        correlationId: ctx.requestId,
       },
     );
 
@@ -68,7 +70,7 @@ import {
   errorResponse,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { create{Domain}Service } from '@/services/{domain}';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -92,16 +94,15 @@ export async function GET(
     const supabase = await createClient();
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.getById(id);
       },
       {
-        supabase,
-        action: '{domain}.getById',
-        entity: '{domain}',
-        entityId: id,
-        requestId: ctx.requestId,
+        domain: '{domain}',
+        action: 'getById',
+        correlationId: ctx.requestId,
       },
     );
 
@@ -122,7 +123,7 @@ export async function GET(
 
 ```typescript
 // app/api/v1/{domain}/[id]/route.ts (add to existing file)
-import { {Domain}UpdateSchema } from '@/services/{domain}/dto';
+import { {Domain}UpdateSchema } from '@/services/{domain}/dtos';
 
 export async function PATCH(
   request: NextRequest,
@@ -136,21 +137,21 @@ export async function PATCH(
 
     const supabase = await createClient();
     const idempotencyKey = requireIdempotencyKey(request);
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const input = {Domain}UpdateSchema.parse(body);
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.update(id, input);
       },
       {
-        supabase,
-        action: '{domain}.update',
-        entity: '{domain}',
-        entityId: id,
+        domain: '{domain}',
+        action: 'update',
+        requireIdempotency: true,
         idempotencyKey,
-        requestId: ctx.requestId,
+        correlationId: ctx.requestId,
       },
     );
 
@@ -171,26 +172,25 @@ export async function PATCH(
 
 ```typescript
 // app/api/v1/{domain}/route.ts (add to existing file)
-import { {Domain}ListSchema } from '@/services/{domain}/dto';
+import { {Domain}ListSchema } from '@/services/{domain}/dtos';
 
 export async function GET(request: NextRequest) {
   const ctx = createRequestContext(request);
 
   try {
     const supabase = await createClient();
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const filters = {Domain}ListSchema.parse(searchParams);
+    const filters = parseQuery(request, {Domain}ListSchema);
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.list(filters);
       },
       {
-        supabase,
-        action: '{domain}.list',
-        entity: '{domain}',
-        requestId: ctx.requestId,
+        domain: '{domain}',
+        action: 'list',
+        correlationId: ctx.requestId,
       },
     );
 
@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
 ### Pagination Schema
 
 ```typescript
-// services/{domain}/dto.ts
+// services/{domain}/dtos.ts
 export const {Domain}ListSchema = z.object({
   casino_id: z.string().uuid().optional(),
   cursor: z.string().optional(),
@@ -242,10 +242,11 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
+  readJsonBody,
   requireIdempotencyKey,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { createLoyaltyService } from '@/services/loyalty';
 import { MidSessionRewardSchema } from '@/services/loyalty/mid-session-reward';
 import { createClient } from '@/lib/supabase/server';
@@ -258,23 +259,24 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient();
     const idempotencyKey = requireIdempotencyKey(request);
-    const body = await request.json();
+    const body = await readJsonBody(request);
     const input = MidSessionRewardSchema.parse(body);
 
     const result = await withServerAction(
-      async () => {
-        const service = createLoyaltyService(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = createLoyaltyService(mwCtx.supabase);
         return service.issueMidSessionReward({
           ...input,
           idempotencyKey,
         });
       },
       {
-        supabase,
-        action: 'loyalty.midSessionReward',
-        entity: 'loyalty_ledger',
+        domain: 'loyalty',
+        action: 'midSessionReward',
+        requireIdempotency: true,
         idempotencyKey,
-        requestId: ctx.requestId,
+        correlationId: ctx.requestId,
       },
     );
 
@@ -299,11 +301,12 @@ import type { NextRequest } from 'next/server';
 import {
   createRequestContext,
   errorResponse,
+  parseQuery,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { create{Domain}Service } from '@/services/{domain}';
-import { {Domain}SearchSchema } from '@/services/{domain}/dto';
+import { {Domain}SearchSchema } from '@/services/{domain}/dtos';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
@@ -313,19 +316,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const supabase = await createClient();
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams);
-    const query = {Domain}SearchSchema.parse(searchParams);
+    const query = parseQuery(request, {Domain}SearchSchema);
 
     const result = await withServerAction(
-      async () => {
-        const service = create{Domain}Service(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = create{Domain}Service(mwCtx.supabase);
         return service.search(query);
       },
       {
-        supabase,
-        action: '{domain}.search',
-        entity: '{domain}',
-        requestId: ctx.requestId,
+        domain: '{domain}',
+        action: 'search',
+        correlationId: ctx.requestId,
       },
     );
 
@@ -343,7 +345,7 @@ export async function GET(request: NextRequest) {
 ### Search Schema
 
 ```typescript
-// services/{domain}/dto.ts
+// services/{domain}/dtos.ts
 export const {Domain}SearchSchema = z.object({
   q: z.string().min(1).max(100),
   casino_id: z.string().uuid(),
@@ -364,7 +366,7 @@ import {
   errorResponse,
   successResponse
 } from '@/lib/http/service-response';
-import { withServerAction } from '@/lib/server-actions/with-server-action-wrapper';
+import { withServerAction } from '@/lib/server-actions/middleware';
 import { createRatingSlipService } from '@/services/rating-slip';
 import { createClient } from '@/lib/supabase/server';
 import { z } from 'zod';
@@ -388,16 +390,15 @@ export async function GET(
     const supabase = await createClient();
 
     const result = await withServerAction(
-      async () => {
-        const service = createRatingSlipService(supabase);
+      supabase,
+      async (mwCtx) => {
+        const service = createRatingSlipService(mwCtx.supabase);
         return service.getByVisit(visitId);
       },
       {
-        supabase,
-        action: 'rating-slip.getByVisit',
-        entity: 'rating_slip',
-        parentId: visitId,
-        requestId: ctx.requestId,
+        domain: 'rating-slip',
+        action: 'getByVisit',
+        correlationId: ctx.requestId,
       },
     );
 
@@ -421,7 +422,7 @@ Before creating a new route handler:
 - [ ] Route defined in `docs/25-api-data/API_SURFACE_MVP.md`
 - [ ] OpenAPI spec updated in `api-surface.openapi.yaml`
 - [ ] Service method exists in `services/{domain}/`
-- [ ] DTO and Zod schema defined in `services/{domain}/dto.ts`
+- [ ] DTO and Zod schema defined in `services/{domain}/dtos.ts`
 - [ ] React Query key defined in `services/{domain}/keys.ts`
 
 After creating:
@@ -432,3 +433,5 @@ After creating:
 - [ ] Idempotency key required for write operations
 - [ ] Error handling returns proper status codes
 - [ ] Tests cover happy path and error cases
+- [ ] **Surface classification (ADR-041):** If the route aggregates data for a UI surface (e.g., BFF Summary Endpoint), the pattern is declared in the EXEC-SPEC or API Surface Catalogue
+- [ ] **Test environment (ADR-044):** Route handler tests use `node` runtime (`/** @jest-environment node */`), not `jsdom`. New mock-everything tests are prohibited per Shallow Test Policy (TESTING_GOVERNANCE_STANDARD.md §9)

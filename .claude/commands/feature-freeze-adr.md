@@ -1,5 +1,5 @@
 ---
-description: Freeze ADR as decision-only document, extract EXEC-SPEC and DoD
+description: Freeze ADR as decision-only document (Phase 4 gate)
 arguments:
   - name: adr-id
     description: ADR identifier (e.g., ADR-022)
@@ -7,10 +7,9 @@ arguments:
 
 # Feature Freeze ADR
 
-Refactor an ADR into its canonical three-part structure:
-1. **ADR-{id}_DECISIONS.md** - Frozen durable decisions only
-2. **EXEC-SPEC-{id}.md** - Mutable implementation details
-3. **DOD-{id}.md** - Executable gate checklist
+Separate durable decisions from implementation details in an ADR. This is feature-pipeline's Phase 4 gate (`adr-frozen`).
+
+EXEC-SPEC and DoD generation happen later via `/build` — this command does NOT produce those artifacts.
 
 ## Invocation
 
@@ -27,10 +26,9 @@ Refactor an ADR into its canonical three-part structure:
 ADRs that contain implementation details become "living documents" that never close. By separating:
 
 - **Durable decisions** (hard to reverse, reused widely) → ADR (frozen)
-- **Implementation details** (mutable, sprint-level) → EXEC-SPEC
-- **Closure criteria** (CI-executable) → DoD
+- **Implementation details** (mutable, sprint-level) → flagged for build-pipeline extraction
 
-The ADR becomes a stable reference while implementation can evolve.
+The ADR becomes a stable reference while implementation can evolve independently.
 
 ## Action
 
@@ -48,7 +46,7 @@ docs/20-architecture/specs/$ARGUMENTS/**/*.md
 
 Categorize each section of the existing ADR(s):
 
-**ADR-Worthy (Durable Decisions):**
+**ADR-Worthy (Keep — Durable Decisions):**
 - Context and problem statement
 - Decision rationale
 - Alternatives considered and rejected
@@ -57,7 +55,7 @@ Categorize each section of the existing ADR(s):
 - Access control matrices
 - Consequences and trade-offs
 
-**EXEC-SPEC (Implementation Details):**
+**Implementation Details (Flag for build-pipeline):**
 - Schema definitions (CREATE TABLE, indexes)
 - RLS policy SQL (USING/WITH CHECK clauses)
 - Trigger and function bodies
@@ -66,27 +64,19 @@ Categorize each section of the existing ADR(s):
 - UI component specifications
 - Test file paths
 
-**DoD (Closure Gates):**
-- Acceptance criteria (convert to assertions)
-- Test requirements (convert to CI commands)
-- Validation rules (convert to gate checks)
+### Step 3: Rewrite ADR as Decision-Only
 
-### Step 3: Create Three Documents
+Produce `docs/80-adrs/$ARGUMENTS_DECISIONS.md` (or update in-place if the ADR is already well-structured):
 
-#### 3a. ADR-{id}_DECISIONS.md
-
-Location: `docs/80-adrs/$ARGUMENTS_DECISIONS.md`
-
-Structure:
 ```markdown
-# ADR-{id}: {Title} - Decisions
+# ADR-{id}: {Title}
 
 **Status:** Accepted (Frozen)
 **Date:** {date}
 **Decision Scope:** {feature boundary reference}
 
 ## Context
-{Problem statement - why this decision was needed}
+{Problem statement — why this decision was needed}
 
 ## Decision
 {Clear statement of what was decided}
@@ -95,111 +85,33 @@ Structure:
 {Trade-offs accepted}
 
 ## Security Invariants
-{INV-1, INV-2, etc. - durable security rules}
+{INV-1, INV-2, etc. — durable security rules}
 
 ## Alternatives Considered
 {What was rejected and why}
 
+## Implementation Notes
+> The following implementation details were identified during freeze
+> and should be extracted into an EXEC-SPEC by build-pipeline:
+>
+> - {brief list of implementation sections removed}
+
 ## References
 - Feature Boundary: {path}
-- EXEC-SPEC: {path}
-- DoD Gates: {path}
 ```
 
-#### 3b. EXEC-SPEC-{id}.md
-
-Location: `docs/20-architecture/specs/{feature-name}/EXEC-SPEC-{id}.md`
-
-Structure:
-```markdown
-# EXEC-SPEC-{id}: {Title}
-
-**ADR Reference:** ADR-{id}_DECISIONS.md
-**Status:** Draft | In Progress | Complete
-
-## Schema
-
-{CREATE TABLE statements, indexes, constraints}
-
-## RLS Policies
-
-{Policy SQL with role matrix}
-
-## RPCs/Functions
-
-{Function signatures and bodies}
-
-## API Endpoints
-
-{Route handlers, DTOs, error codes}
-
-## UI Changes
-
-{Component specs, form states, error mapping}
-
-## Migration Plan
-
-{Steps, rollback strategy, data backfill}
-```
-
-#### 3c. DOD-{id}.md
-
-Location: `docs/20-architecture/specs/{feature-name}/DOD-{id}.md`
-
-Structure:
-```markdown
-# DOD-{id}: {Title} - Definition of Done
-
-**EXEC-SPEC:** EXEC-SPEC-{id}.md
-**ADR:** ADR-{id}_DECISIONS.md
-
-## Gates
-
-### A) Functional Gates
-
-| ID | Assertion | Test File | CI Command |
-|----|-----------|-----------|------------|
-| A1 | {assertion} | {path} | {command} |
-
-### B) Security Gates
-
-| ID | Assertion | Test File | CI Command | Critical |
-|----|-----------|-----------|------------|----------|
-| B1 | {assertion} | {path} | {command} | Yes |
-
-### C) Data Integrity Gates
-
-| ID | Assertion | Test File | CI Command |
-|----|-----------|-----------|------------|
-| C1 | {assertion} | {path} | {command} |
-
-### D) Operability Gates
-
-| ID | Assertion | Test File | CI Command |
-|----|-----------|-----------|------------|
-| D1 | {assertion} | {path} | {command} |
-
-## CI Integration
-
-\`\`\`bash
-# Run all DoD gates
-npm test -- -t "ADR-{id}"
-\`\`\`
-```
+If the ADR already contains only durable decisions (no SQL, no triggers, no migration steps), mark it as frozen without rewriting.
 
 ### Step 4: Update References
 
 1. Update SRM references if ADR path changed
 2. Update any documents that reference the old ADR structure
-3. Archive or delete superseded ADR versions
 
 ### Step 5: Update Feature Checkpoint
 
 If a feature checkpoint exists for this ADR:
-1. Add `adr-frozen` to `gates_passed`
+1. Set `gates.adr-frozen.passed` to `true` with current timestamp
 2. Update `artifacts.adr` path
-3. Update `artifacts.exec_spec` path
-4. Update `artifacts.dod_gates` path
 
 ### Step 6: Present Summary
 
@@ -208,20 +120,19 @@ If a feature checkpoint exists for this ADR:
 ADR Freeze Complete: $ARGUMENTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Created:
+Created/Updated:
   ✅ ADR-{id}_DECISIONS.md (frozen, durable decisions only)
-  ✅ EXEC-SPEC-{id}.md (implementation details, mutable)
-  ✅ DOD-{id}.md (executable gate checklist)
 
-Archived:
-  📦 {list of superseded files}
+Implementation details flagged for build-pipeline extraction.
 
-Gate: adr-frozen
+Gate: adr-frozen ✅
 ADR now contains only durable decisions.
+
+Next: Complete Phase 5 (PRD) or hand off via /build PRD-###
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ## References
 
 - Main skill: `.claude/skills/feature-pipeline/SKILL.md`
-- DoD template: `.claude/skills/feature-pipeline/references/dod-gate-template.md`
+- Build pipeline (for EXEC-SPEC + DoD): `.claude/skills/build-pipeline/SKILL.md`

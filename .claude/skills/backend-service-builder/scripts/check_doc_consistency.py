@@ -309,17 +309,25 @@ class DocConsistencyChecker:
         """Verify service README ownership claims match SRM."""
         print(f"{CYAN}[2/5] Checking SRM ownership alignment...{RESET}")
 
-        # Hard-coded SRM ownership (from bounded-contexts.md reference)
+        # Hard-coded SRM ownership (SRM v4.19.0)
         SRM_OWNERSHIP = {
-            'casino': ['casino', 'casino_settings', 'company', 'staff', 'game_settings', 'audit_log', 'report'],
-            'player': ['player', 'player_casino'],
+            'casino': ['casino', 'casino_settings', 'company', 'staff', 'game_settings',
+                        'audit_log', 'report', 'player_casino', 'staff_pin_attempts'],
+            'player': ['player', 'player_exclusion', 'player_identity',
+                        'player_note', 'player_tag'],
             'visit': ['visit'],
-            'loyalty': ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox'],
-            'rating-slip': ['rating_slip'],
-            'finance': ['player_financial_transaction', 'finance_outbox'],
+            'loyalty': ['player_loyalty', 'loyalty_ledger', 'loyalty_outbox',
+                        'promo_program', 'promo_coupon'],
+            'rating-slip': ['rating_slip', 'rating_slip_pause', 'pit_cash_observation'],
+            'finance': ['player_financial_transaction'],
             'mtl': ['mtl_entry', 'mtl_audit_note'],
+            'table-context': ['gaming_table', 'gaming_table_settings', 'dealer_rotation',
+                              'table_inventory_snapshot', 'table_fill', 'table_credit',
+                              'table_drop_event', 'table_session', 'table_rundown_report',
+                              'shift_checkpoint'],
             'floor-layout': ['floor_layout', 'floor_layout_version', 'floor_pit',
                               'floor_table_slot', 'floor_layout_activation'],
+            'player-import': ['import_batch', 'import_row'],
         }
 
         services_dir = self.project_root / 'services'
