@@ -1,0 +1,18 @@
+{
+  "feature_id": "loyalty-operator-issuance",
+  "current_phase": 5,
+  "status": "prd-approved-pending",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen"],
+  "gates_pending": ["prd-approved"],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/loyalty-operator-issuance/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-LOYALTY-OPERATOR-ISSUANCE.md",
+    "design_brief": "docs/02-design/RFC-LOYALTY-OPERATOR-ISSUANCE.md",
+    "sec_note": "docs/20-architecture/specs/loyalty-operator-issuance/SEC_NOTE.md",
+    "adr": "NONE — decisions are feature-slice scope, frozen in RFC D1-D6.",
+    "prd": "docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md"
+  },
+  "source_investigation": "docs/00-vision/loyalty-service-extension/vectors/vector-B/VECTOR-B-OPERATOR-ISSUANCE-INVESTIGATION.md",
+  "worktree": "trees/admin-catalog",
+  "timestamp": "2026-03-19T07:15:00Z"
+}

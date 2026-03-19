@@ -2,7 +2,7 @@
  * Route Handler Integration Tests
  *
  * Tests the HTTP layer contract validation without browser automation.
- * True E2E tests use Cypress per QA-001.
+ * True E2E tests use Playwright per QA-001.
  *
  * These tests validate:
  * 1. Response envelope structure (ServiceHttpResult)

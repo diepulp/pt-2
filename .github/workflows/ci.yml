@@ -48,9 +48,9 @@ jobs:
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder
 
   # Move 7 (ADR-044): Unit tests under correct node runtime.
-  # Advisory — continue-on-error until remaining 102 known failures
-  # are resolved through bounded-context rollout.
-  # See: docs/issues/gaps/testing-arch-remediation/slice-1/CASINO-EXEMPLAR-VALIDATION-REPORT.md
+  # Advisory — continue-on-error while stabilizing.
+  # Node suite: 2,627 tests, 0 failures (bounded-context rollout complete).
+  # See: docs/issues/gaps/testing-arch-remediation/TESTING-GOVERNANCE-REMEDIATION.md
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
