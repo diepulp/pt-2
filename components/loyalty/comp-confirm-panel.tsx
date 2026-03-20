@@ -2,18 +2,31 @@
  * Comp Confirm Panel
  *
  * Confirmation panel for points_comp reward issuance.
- * Shows reward details, points cost, and balance preview.
+ * Supports variable-amount comps with dollar input, auto-conversion display,
+ * balance preview, and conditional overdraw toggle.
+ *
+ * Amount contract: Input displays DOLLARS, state stores INTEGER CENTS.
+ * Example: user enters 35.00 → stores 3500 → service receives faceValueCents=3500
  *
  * @see PRD-052 WS4 — Issuance UI
+ * @see EXEC-053 WS2 — Variable-Amount Comp Enhancement
  */
 
 'use client';
 
 import { AlertTriangle, ArrowLeft } from 'lucide-react';
+import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import type { RewardCatalogDTO } from '@/services/loyalty/reward/dtos';
+
+// === Constants ===
+
+/** Pilot conversion rate. Post-pilot: source from loyalty_valuation_policy.cents_per_point */
+const CENTS_PER_POINT = 10;
 
 // === Types ===
 
@@ -24,14 +37,14 @@ export interface CompConfirmPanelProps {
   /** Player's current points balance */
   currentBalance: number;
 
-  /** Points cost for this comp (from price_points config) */
-  pointsCost: number;
+  /** Default points cost from catalog (pre-fills dollar input) */
+  defaultPointsCost: number;
 
   /** Whether the issuance mutation is in progress */
   isPending: boolean;
 
-  /** Callback to confirm issuance */
-  onConfirm: () => void;
+  /** Callback to confirm issuance with resolved amount and overdraw flag */
+  onConfirm: (faceValueCents: number, allowOverdraw: boolean) => void;
 
   /** Callback to go back to reward selection */
   onBack: () => void;
@@ -39,7 +52,7 @@ export interface CompConfirmPanelProps {
 
 // === Helpers ===
 
-function formatCents(cents: number): string {
+function formatDollars(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
 
@@ -49,27 +62,39 @@ function formatCents(cents: number): string {
  * Confirmation panel for comp (points_comp) reward issuance.
  *
  * Displays:
- * - Reward name and face value
- * - Points cost
+ * - Dollar amount input (primary interaction — pit boss thinks in dollars)
+ * - Auto-converted points display
  * - Current balance and post-debit balance preview
- * - Insufficient balance warning (advisory only, non-blocking)
+ * - Overdraw toggle (visible when debit exceeds balance, role-governed)
  */
 export function CompConfirmPanel({
   reward,
   currentBalance,
-  pointsCost,
+  defaultPointsCost,
   isPending,
   onConfirm,
   onBack,
 }: CompConfirmPanelProps) {
+  // State: amount in integer cents, pre-filled from catalog default
+  const [amountCents, setAmountCents] = useState(
+    defaultPointsCost * CENTS_PER_POINT,
+  );
+  const [allowOverdraw, setAllowOverdraw] = useState(false);
+
+  // Derived values — computed during render, no useEffect
+  const pointsCost = Math.ceil(amountCents / CENTS_PER_POINT);
   const postDebitBalance = currentBalance - pointsCost;
   const isInsufficientBalance = postDebitBalance < 0;
 
-  const metadata = reward.metadata as Record<string, unknown>;
-  const faceValueCents =
-    typeof metadata?.face_value_cents === 'number'
-      ? metadata.face_value_cents
-      : null;
+  // Dollar input change handler: normalize to integer cents
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const parsed = parseFloat(e.target.value);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      setAmountCents(0);
+      return;
+    }
+    setAmountCents(Math.round(parsed * 100));
+  };
 
   return (
     <div className="space-y-4">
@@ -85,35 +110,69 @@ export function CompConfirmPanel({
       </button>
 
       {/* Reward details */}
-      <div className="rounded-lg border bg-card p-4 space-y-3">
+      <div className="rounded-lg border-2 border-border/50 bg-card p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-base font-semibold">{reward.name}</h3>
+          <h3
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            {reward.name}
+          </h3>
           <Badge variant="secondary">Comp</Badge>
         </div>
 
-        {faceValueCents !== null && (
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Face value</span>
-            <span className="font-medium">{formatCents(faceValueCents)}</span>
+        {/* Dollar amount input */}
+        <div className="space-y-1.5">
+          <label
+            className="text-xs font-bold uppercase tracking-widest text-muted-foreground"
+            style={{ fontFamily: 'monospace' }}
+            htmlFor="comp-amount"
+          >
+            Comp Amount
+          </label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+              $
+            </span>
+            <Input
+              id="comp-amount"
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={(amountCents / 100).toFixed(2)}
+              onChange={handleAmountChange}
+              disabled={isPending}
+              className="pl-7 tabular-nums"
+              style={{ fontFamily: 'monospace' }}
+            />
           </div>
-        )}
-
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Points cost</span>
-          <span className="font-medium">{pointsCost.toLocaleString()} pts</span>
         </div>
 
+        {/* Auto-conversion display */}
+        <div
+          className="text-xs text-muted-foreground tabular-nums"
+          style={{ fontFamily: 'monospace' }}
+        >
+          {formatDollars(amountCents)} = {pointsCost.toLocaleString()} points
+          (at $0.10/pt)
+        </div>
+
+        {/* Balance preview */}
         <div className="border-t pt-3 space-y-2">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Current balance</span>
-            <span className="font-medium">
+            <span
+              className="font-medium tabular-nums"
+              style={{ fontFamily: 'monospace' }}
+            >
               {currentBalance.toLocaleString()} pts
             </span>
           </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">After issuance</span>
             <span
-              className={`font-medium ${isInsufficientBalance ? 'text-destructive' : 'text-emerald-500'}`}
+              className={`font-medium tabular-nums ${isInsufficientBalance ? 'text-destructive' : 'text-emerald-500'}`}
+              style={{ fontFamily: 'monospace' }}
             >
               {postDebitBalance.toLocaleString()} pts
             </span>
@@ -121,20 +180,48 @@ export function CompConfirmPanel({
         </div>
       </div>
 
-      {/* Insufficient balance warning — advisory only per PRD §5.3 */}
+      {/* Insufficient balance warning + overdraw toggle */}
       {isInsufficientBalance && (
-        <div className="flex items-start gap-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
-          <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-          <p className="text-xs text-amber-600 dark:text-amber-400">
-            Player has insufficient points balance. The comp may still be issued
-            if overdraw is permitted.
-          </p>
+        <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 space-y-3">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Player has insufficient points balance (
+              {currentBalance.toLocaleString()} pts available,{' '}
+              {pointsCost.toLocaleString()} pts needed).
+            </p>
+          </div>
+          <div className="flex items-center justify-between">
+            <label
+              htmlFor="allow-overdraw"
+              className="text-xs font-bold uppercase tracking-widest text-amber-600 dark:text-amber-400"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Allow Overdraw
+            </label>
+            <Switch
+              id="allow-overdraw"
+              checked={allowOverdraw}
+              onCheckedChange={setAllowOverdraw}
+              disabled={isPending}
+            />
+          </div>
         </div>
       )}
 
       {/* Confirm button */}
-      <Button className="w-full" onClick={onConfirm} disabled={isPending}>
-        {isPending ? 'Issuing...' : 'Confirm Comp Issuance'}
+      <Button
+        className="w-full"
+        onClick={() => onConfirm(amountCents, allowOverdraw)}
+        disabled={
+          isPending ||
+          amountCents <= 0 ||
+          (isInsufficientBalance && !allowOverdraw)
+        }
+      >
+        {isPending
+          ? 'Issuing...'
+          : `Confirm ${formatDollars(amountCents)} Comp`}
       </Button>
     </div>
   );

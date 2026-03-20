@@ -187,6 +187,8 @@ export const issueRewardSchema = z.object({
   reward_id: uuidSchema('reward ID'),
   visit_id: uuidSchemaOptional('visit ID'),
   idempotency_key: uuidSchema('idempotency key'),
+  face_value_cents: z.number().int().positive().max(10_000_000).optional(),
+  allow_overdraw: z.boolean().optional(),
 });
 
 export type IssueRewardInput = z.infer<typeof issueRewardSchema>;

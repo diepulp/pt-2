@@ -128,6 +128,8 @@ export async function POST(request: NextRequest) {
               rewardId: input.reward_id,
               visitId: input.visit_id,
               idempotencyKey: input.idempotency_key,
+              faceValueCents: input.face_value_cents,
+              allowOverdraw: input.allow_overdraw,
             },
             casinoId,
           );

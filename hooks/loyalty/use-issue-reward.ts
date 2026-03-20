@@ -33,6 +33,12 @@ export interface IssueRewardInput {
 
   /** Associated visit (optional) */
   visitId?: string;
+
+  /** Dollar amount in cents for variable-amount comps */
+  faceValueCents?: number;
+
+  /** Allow overdraw (pit_boss/admin only, enforced server-side) */
+  allowOverdraw?: boolean;
 }
 
 /** Return value from useIssueReward hook */
@@ -97,6 +103,8 @@ export function useIssueReward(): UseIssueRewardReturn {
               reward_id: string;
               visit_id?: string;
               idempotency_key: string;
+              face_value_cents?: number;
+              allow_overdraw?: boolean;
             }
           >(
             ISSUE_ENDPOINT,
@@ -105,6 +113,8 @@ export function useIssueReward(): UseIssueRewardReturn {
               reward_id: input.rewardId,
               visit_id: input.visitId,
               idempotency_key: idempotencyKey,
+              face_value_cents: input.faceValueCents,
+              allow_overdraw: input.allowOverdraw,
             },
             idempotencyKey,
           );
