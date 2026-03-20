@@ -446,22 +446,19 @@ export default async function Page() {
 ## Aesthetic Guardrails
 
 ### Typography
-- **Primary UI font:** Inter (project standard per Tailwind v4 config and design system style guide)
-- **Display/accent fonts:** Consider distinctive typeface pairings for headings, hero sections, or marketing surfaces where differentiation matters
-- Avoid defaulting to multiple generic sans-serif alternatives when Inter already provides the baseline
+- **Primary UI font:** Geist Sans (configured in Tailwind v4 as `--font-sans: var(--font-geist-sans)`)
+- **Signature pattern:** Section headers and stat labels use `fontFamily: 'monospace'` + `font-bold uppercase tracking-widest` — this is PT-2's brutalist identity, not a suggestion
+- **Stat values:** Large monospace numbers (`text-3xl sm:text-4xl font-bold tabular-nums`) with `fontVariantNumeric: 'tabular-nums'`
 
-### Colors to Avoid
-- Purple gradients on white backgrounds
-- Overused pastels without intention
-- "Corporate blue" defaults
+### PT-2 Visual Conventions (MATCH THESE)
+- **Cards:** Always use `<Card>` component with `border-2` (thick brutalist border)
+- **Status colors:** `bg-{color}-500/10 text-{color}-400 border-{color}-500/30` (10%/30% opacity convention)
+- **Accent:** Teal/cyan only (`--accent: hsl(189 94% 37%)`) — no secondary accent colors
+- **Action buttons:** `text-xs font-semibold uppercase tracking-wider`
+- **Empty states:** Dashed `border-2 border-dashed border-border/50` with monospace label
+- **Loading skeletons:** Must mirror the component's Card/header/content structure
 
-### Layouts to Avoid
-- Predictable card grids without contextual variation
-- Cookie-cutter dashboards that ignore the specific workflow
-- Identical layout patterns across unrelated surfaces
-
-### Instead Do
-- Commit to a bold, cohesive color palette
-- Use unexpected layouts where appropriate (asymmetry, overlap, diagonal flow)
-- Add texture and atmosphere (noise, gradients, patterns, layered transparencies)
-- Make deliberate composition choices -- intentionality matters more than any specific font or style
+### When Extending Existing Surfaces
+- Read 2-3 adjacent components before writing — match their patterns exactly
+- Do NOT introduce new visual patterns that diverge from siblings
+- Use the same Card structure, border width, typography, and spacing as existing components

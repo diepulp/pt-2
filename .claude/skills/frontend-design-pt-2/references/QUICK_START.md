@@ -35,25 +35,31 @@ Skip this step for component-only work (no new surface/page).
 
 ---
 
-## Step 2: Pick Aesthetic Direction
+## Step 2: Surface Discovery + Design Mode
 
-**CRITICAL**: Choose ONE bold direction, not a safe blend.
+### Mode A: Extending an Existing Surface (DEFAULT)
 
-**Reference**: `.claude/skills/frontend-design-pt-2/references/pt2-ui-design-system-prototype-style-guide.md` for UI/UX design system
+Before writing any component that lives inside an existing page/panel:
 
-| Direction | Characteristics |
-|-----------|-----------------|
-| Brutalist | Raw, exposed structure, monospace, harsh contrasts |
-| Minimalist | Generous whitespace, typography-focused, subtle details |
-| Maximalist | Dense information, layered textures, bold colors |
-| Editorial | Magazine-inspired, strong typography hierarchy, grids |
-| Retro-futuristic | Sci-fi inspired, neon accents, geometric shapes |
+1. **Read 2-3 adjacent sibling components** in the same directory
+2. **Extract the visual patterns**: Card vs div, border width, typography (monospace? tracking-widest?), spacing tokens, color conventions
+3. **Match exactly** — your new component must look like it was written alongside its siblings
 
-**Avoid AI Slop**:
-- ❌ Inter/Roboto/Arial fonts
-- ❌ Purple gradients on white
-- ❌ Predictable card layouts
-- ❌ Cookie-cutter components
+### Mode B: New Page / New Surface (GREENFIELD)
+
+The PT-2 established direction is **brutalist-industrial**:
+- Monospace headers (`fontFamily: 'monospace'`, `font-bold uppercase tracking-widest`)
+- Thick-bordered cards (`border-2`)
+- Teal/cyan accent on dark neutrals
+- Data-dense, calm, no decorative animation
+
+**Reference**: SKILL.md → "PT-2 Visual DNA" section for concrete code exemplars
+
+**Avoid**:
+- Purple gradients on white
+- Thin borders (`border` instead of `border-2`)
+- Raw divs instead of Card components
+- Plain text headers without monospace identity
 
 ---
 

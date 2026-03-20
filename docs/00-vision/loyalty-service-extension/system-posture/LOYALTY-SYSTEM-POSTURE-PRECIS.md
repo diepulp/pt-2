@@ -1,14 +1,15 @@
 # Loyalty System Posture Precis
 
-**Date:** 2026-03-17
+**Date:** 2026-03-19
+**Revision:** 2 (post-Vector B / PRD-052)
 **Scope:** Full-stack inventory of what exists, what's planned, what's blocked
-**Method:** 3-agent parallel investigation (database, service layer, documentation)
+**Method:** 4-agent parallel investigation (service layer, API routes, UI components, database/migrations)
 
 ---
 
 ## Executive Summary
 
-The PT-2 loyalty system has **deep plumbing and shallow surfaces**. Database, RPCs, service layer, and hooks are 85-95% complete. Operator-facing workflows and admin configuration UIs are 0-20% complete. Three downstream features (match play print, comp issuance UI, ghost gaming conversion) converge on a single upstream gap: **the reward domain model is scaffolded but not operationalized**.
+The PT-2 loyalty system has **deep plumbing and operational issuance surfaces**. Database, RPCs, service layer, hooks, and **operator issuance workflows** are 95-100% complete. Vector B (PRD-052, merged 2026-03-19) delivered the unified issuance drawer, catalog-backed comp/entitlement service methods, role-gated unified API endpoint, and comprehensive test coverage. The remaining gaps are **admin configuration UI** (program CRUD, tier editor, earn config), **one-click tier-aware auto-derivation**, and **print infrastructure**.
 
 ---
 
@@ -16,18 +17,31 @@ The PT-2 loyalty system has **deep plumbing and shallow surfaces**. Database, RP
 
 ```mermaid
 graph TB
-    subgraph "UI Layer (Shallow)"
+    subgraph "UI Layer"
         direction TB
         LP["LoyaltyPanel<br/><small>tier + points display</small>"]
-        MRD["ManualRewardDialog<br/><small>pit boss points award</small>"]
         PEP["PromoExposurePanel<br/><small>shift dashboard metrics</small>"]
         REC["RewardsEligibilityCard<br/><small>Player 360 eligibility</small>"]
-        RHL["RewardsHistoryList<br/><small>ledger + coupon history</small>"]
+        RHL["RewardsHistoryList<br/><small>ledger + coupon history<br/>comp/matchplay/freeplay filters</small>"]
         LLW["LoyaltyLiabilityWidget<br/><small>shift liability snapshot</small>"]
+
+        subgraph "Issuance Workflow (NEW — PRD-052)"
+            IRB["IssueRewardButton<br/><small>enabled — opens drawer</small>"]:::done
+            IRD["IssueRewardDrawer<br/><small>3-step: select→confirm→result</small>"]:::done
+            RS_UI["RewardSelector<br/><small>catalog grouped by family</small>"]:::done
+            CCP["CompConfirmPanel<br/><small>balance preview</small>"]:::done
+            ECP["EntitlementConfirmPanel<br/><small>catalog-derived values</small>"]:::done
+            IRP["IssuanceResultPanel<br/><small>success/failure/duplicate<br/>fulfillment callback</small>"]:::done
+        end
+
+        subgraph "Exclusion UI (NEW — PRD-052)"
+            ESB["ExclusionStatusBadge<br/><small>header severity indicator</small>"]:::done
+            ET["ExclusionTile<br/><small>create/lift role-gated</small>"]:::done
+        end
 
         STUB_ADMIN["<b>STUB</b>: Loyalty Admin Page<br/><small>Phase 3 placeholder</small>"]:::stub
         STUB_PRINT["<b>GAP</b>: Print Match Play Button<br/><small>0% — no print infra</small>"]:::gap
-        STUB_CATALOG_UI["<b>GAP</b>: Reward Catalog Manager<br/><small>0% — no CRUD surface</small>"]:::gap
+        STUB_CATALOG_UI["<b>GAP</b>: Promo Program Manager<br/><small>0% — no CRUD surface</small>"]:::gap
     end
 
     subgraph "API Routes"
@@ -38,8 +52,10 @@ graph TB
         R_PROMO["POST /loyalty/promotion"]:::done
         R_LEDGER["GET /loyalty/ledger"]:::done
         R_SUGGEST["GET /loyalty/suggestion"]:::done
-        R_BAL["GET /loyalty/balances"]:::stub
-        R_MSR["POST /loyalty/mid-session-reward"]:::stub
+        R_BAL["GET /loyalty/balances"]:::done
+        R_ISSUE["POST /loyalty/issue<br/><small>unified issuance — NEW</small>"]:::done
+        R_MSR["POST /loyalty/mid-session-reward<br/><small>501 Not Implemented</small>"]:::stub
+        R_PLOY["GET /players/:id/loyalty"]:::done
     end
 
     subgraph "Hooks Layer"
@@ -47,14 +63,16 @@ graph TB
         HQ["Query Hooks<br/><small>usePlayerLoyalty, useLoyaltyLedger,<br/>useLoyaltySuggestion, useLedgerInfinite</small>"]:::done
         HM["Mutation Hooks<br/><small>useAccrueOnClose, useRedeem,<br/>useManualCredit, useApplyPromotion</small>"]:::done
         HP["Promo Hooks<br/><small>useIssueCoupon, useVoidCoupon,<br/>useReplaceCoupon, usePromoPrograms</small>"]:::done
-        HR["Reward Hooks<br/><small>useRewardList, useRewardDetail,<br/>useEligibleRewards, useEarnConfig</small>"]:::done
+        HR["Reward Hooks<br/><small>useRewards, useRewardDetail,<br/>useEligibleRewards, useEarnConfig</small>"]:::done
+        HI["Issuance Hook<br/><small>useIssueReward — NEW<br/>useTransition + UUID idempotency</small>"]:::done
     end
 
     subgraph "Service Layer"
         direction TB
-        LS["LoyaltyService<br/><small>8 methods — 100% impl</small>"]:::done
-        RS["RewardService<br/><small>8 methods — 100% impl</small>"]:::done
-        PS["PromoService<br/><small>11 methods — 100% impl</small>"]:::done
+        LS["LoyaltyService<br/><small>9 methods — 100% impl<br/>+issueComp (NEW)</small>"]:::done
+        RS_SVC["RewardService<br/><small>8 methods — 100% impl</small>"]:::done
+        PS["PromoService<br/><small>12 methods — 100% impl<br/>+issueEntitlement (NEW)</small>"]:::done
+        P360["Player360DashboardService<br/><small>read-only aggregation — NEW</small>"]:::done
         MSR["mid-session-reward.ts<br/><small>validator only — DIVERGENT</small>"]:::warn
     end
 
@@ -62,7 +80,7 @@ graph TB
         direction TB
         subgraph "Points Ledger (9)"
             RPC_ACC["rpc_accrue_on_close"]:::done
-            RPC_RED["rpc_redeem"]:::done
+            RPC_RED["rpc_redeem<br/><small>role gate: pb/cashier/admin</small>"]:::done
             RPC_MC["rpc_manual_credit"]:::done
             RPC_AP["rpc_apply_promotion"]:::done
             RPC_REC["rpc_reconcile_loyalty_balance"]:::done
@@ -72,7 +90,7 @@ graph TB
             RPC_VLS["rpc_get_visit_loyalty_summary"]:::done
         end
         subgraph "Promo Coupons (5)"
-            RPC_IC["rpc_issue_promo_coupon"]:::done
+            RPC_IC["rpc_issue_promo_coupon<br/><small>role gate: pb/admin ONLY</small>"]:::done
             RPC_VC["rpc_void_promo_coupon"]:::done
             RPC_RC["rpc_replace_promo_coupon"]:::done
             RPC_INV["rpc_promo_coupon_inventory"]:::done
@@ -114,28 +132,37 @@ graph TB
         end
     end
 
-    %% Connections
+    %% UI → Hooks
     LP --> HQ
-    MRD --> HM
     PEP --> HP
     REC --> HR
     RHL --> HQ
     LLW --> HQ
+    IRD --> HI
+    IRD --> HR
 
+    %% Hooks → Routes
     HQ --> R_LEDGER
     HQ --> R_SUGGEST
     HM --> R_ACCRUE
     HM --> R_REDEEM
     HM --> R_CREDIT
     HM --> R_PROMO
+    HI --> R_ISSUE
 
+    %% Routes → Services
     R_ACCRUE --> LS
     R_REDEEM --> LS
     R_CREDIT --> LS
     R_LEDGER --> LS
     R_SUGGEST --> LS
     R_PROMO --> LS
+    R_BAL --> LS
+    R_PLOY --> LS
+    R_ISSUE --> LS
+    R_ISSUE --> PS
 
+    %% Services → RPCs
     LS --> RPC_ACC
     LS --> RPC_RED
     LS --> RPC_MC
@@ -144,18 +171,22 @@ graph TB
     LS --> RPC_ESR
     LS --> RPC_REC
 
-    RS --> T_RC
-    RS --> T_RPP
-    RS --> T_RET
-    RS --> T_RL
-    RS --> T_RE
-    RS --> T_LEC
+    RS_SVC --> T_RC
+    RS_SVC --> T_RPP
+    RS_SVC --> T_RET
+    RS_SVC --> T_RL
+    RS_SVC --> T_RE
+    RS_SVC --> T_LEC
 
     PS --> RPC_IC
     PS --> RPC_VC
     PS --> RPC_RC
     PS --> RPC_INV
 
+    P360 --> T_LL
+    P360 --> T_PC
+
+    %% RPCs → Tables
     RPC_ACC --> T_LL
     RPC_ACC --> T_PL
     RPC_RED --> T_LL
@@ -184,22 +215,23 @@ graph TB
 | ADR-033 reward catalog tables | 6 | **Deployed** (seed: 3 comps, 2 entitlements) |
 | ADR-039 measurement tables | 2 | **Deployed** |
 | Materialized views | 1 | **Deployed** (never refreshed) |
-| Enums | 4 | `loyalty_reason` (6), `reward_family` (2), `promo_type_enum` (1 of 4), `promo_coupon_status` (5) |
-| Points ledger RPCs | 9 | **All operational** (ADR-024 hardened) |
-| Promo coupon RPCs | 5 | **All operational** (SECURITY DEFINER) |
+| Enums | 4 | `loyalty_reason` (6), `reward_family` (2), `promo_type_enum` (2 of 4: match_play, free_play), `promo_coupon_status` (5) |
+| Points ledger RPCs | 9 | **All operational** (ADR-024 hardened, ADR-040 role-gated) |
+| Promo coupon RPCs | 5 | **All operational** (SECURITY DEFINER, `rpc_issue_promo_coupon` role-gated pit_boss/admin) |
 | Measurement RPCs | 1 | **Operational** (daily idempotent snapshot) |
 | Missing RPCs | 1 | `rpc_issue_current_match_play` (one-click tier-aware issuance) |
 
-### Service Layer — 27 methods across 3 services
+### Service Layer — 30 methods across 4 services
 
 | Service | Methods | Impl | Notes |
 |---------|---------|------|-------|
-| **LoyaltyService** | 8 | 8/8 (100%) | accrue, redeem, credit, promo, suggestion, balance, ledger, reconcile |
+| **LoyaltyService** | 9 | 9/9 (100%) | accrue, redeem, credit, promo, suggestion, balance, ledger, reconcile, **issueComp** |
 | **RewardService** | 8 | 8/8 (100%) | list, get, create, update, toggle, earnConfig, upsertConfig, eligible |
-| **PromoService** | 11 | 11/11 (100%) | programs CRUD, coupon issue/void/replace, inventory, lookup |
+| **PromoService** | 12 | 12/12 (100%) | programs CRUD, coupon issue/void/replace, inventory, lookup, **issueEntitlement** |
+| **Player360DashboardService** | 1+ | read-only | **NEW** — aggregates loyalty_ledger + promo_coupon for reward history (SRM v4.20.0) |
 | **mid-session-reward** | 1 validator | partial | Divergent `MidSessionRewardReason` enum conflicts with canonical `LoyaltyReason` |
 
-### API Routes — 6 live, 3 stubbed
+### API Routes — 9 live, 1 explicit 501
 
 | Route | Status |
 |-------|--------|
@@ -209,63 +241,71 @@ graph TB
 | `POST /loyalty/promotion` | Live |
 | `GET /loyalty/ledger` | Live |
 | `GET /loyalty/suggestion` | Live |
-| `GET /loyalty/balances` | **Stubbed** (returns null) |
-| `POST /loyalty/mid-session-reward` | **Stubbed** (3 TODOs, no service method) |
-| `GET /players/[id]/loyalty` | **Stubbed** |
+| `GET /loyalty/balances` | **Live** (wired to LoyaltyService.getBalance — was stub) |
+| **`POST /loyalty/issue`** | **Live — unified issuance (NEW, PRD-052)** |
+| `GET /players/[id]/loyalty` | **Live** (wired to LoyaltyService.getBalance — was stub) |
+| `POST /loyalty/mid-session-reward` | **501 Not Implemented** (explicit scope change per PRD §7.4) |
 
-### UI Components — 6 live, 3 gaps
+### UI Components — 12 live, 2 gaps
 
 | Component | Status |
 |-----------|--------|
 | LoyaltyPanel (tier + points) | Live |
-| ManualRewardDialog (pit boss credit) | Live |
 | PromoExposurePanel (shift dashboard) | Live |
 | RewardsEligibilityCard (Player 360) | Live |
-| RewardsHistoryList (ledger display) | Live |
+| RewardsHistoryList (ledger + coupon, comp/matchplay/freeplay filters) | Live |
 | LoyaltyLiabilityWidget (measurement) | Live |
+| **IssueRewardButton** (enabled, opens drawer) | **Live (NEW)** |
+| **IssueRewardDrawer** (3-step state machine) | **Live (NEW)** |
+| **RewardSelector** (catalog grouped by family) | **Live (NEW)** |
+| **CompConfirmPanel** (balance preview) | **Live (NEW)** |
+| **EntitlementConfirmPanel** (catalog-derived values) | **Live (NEW)** |
+| **IssuanceResultPanel** (success/failure/duplicate + fulfillment callback) | **Live (NEW)** |
+| **ExclusionStatusBadge** (header severity indicator) | **Live (NEW)** |
 | Loyalty Admin Page | **Stub** ("Phase 3 pending") |
 | Print Match Play Button | **Gap** (0%) |
-| Reward Catalog Manager | **Gap** (0%) |
 
 ---
 
 ## Implementation Gaps (Prioritized)
 
-### P0 — Blocks operator workflows
+### P0 — Blocks operator self-service
 
 | Gap | Impact | Evidence |
 |-----|--------|----------|
 | **No admin UI for loyalty config** | Operators cannot create/manage programs, rewards, earn config, tier mappings | `app/(dashboard)/loyalty/page.tsx` is placeholder |
-| **No one-click match play RPC** | Cannot auto-derive tier-aware coupons; blocks print feature | MATCHPLAY-PRINT-READINESS-REPORT: 0% |
-| **Tier-to-entitlement design decision pending** | Blocks match play issuance; three options proposed but not chosen | LOYALTY-INSTRUMENTS-SYSTEM-POSTURE-AUDIT |
 
-### P1 — Correctness & consistency
+### P1 — Blocks automated workflows
 
 | Gap | Impact | Evidence |
 |-----|--------|----------|
-| **Divergent mid-session module** | Conflicting `MidSessionRewardReason` vs canonical `LoyaltyReason`; API route stubbed | ADR-033 flagged; `mid-session-reward.ts` |
-| **`rpc_accrue_on_close` idempotency not atomic** | Double-insert possible under concurrency | B5894ED8 migration audit |
-| **Inconsistent lazy-create** | `rpc_manual_credit` / `rpc_apply_promotion` still lazy-create `player_loyalty` | Should match `rpc_accrue_on_close` hard-fail pattern |
-| **3 stubbed API routes** | `balances`, `mid-session-reward`, `players/[id]/loyalty` return null | ~1 day to complete |
-| **`promo_type_enum` incomplete** | Only `match_play`; missing `nonnegotiable`, `free_bet`, `other` | Confirmed in bug triage |
+| **No one-click match play RPC** | Cannot auto-derive tier-aware coupons; blocks print feature | MATCHPLAY-PRINT-READINESS-REPORT: 0% |
+| **Tier-to-entitlement design decision pending** | Blocks automated issuance; three options proposed but not chosen | LOYALTY-INSTRUMENTS-SYSTEM-POSTURE-AUDIT |
+| **Divergent mid-session module** | Conflicting `MidSessionRewardReason` vs canonical `LoyaltyReason`; API returns 501 | ADR-033 flagged; `mid-session-reward.ts` |
 
 ### P2 — Technical debt
 
 | Gap | Impact | Evidence |
 |-----|--------|----------|
 | **Materialized view never refreshed** | `mv_loyalty_balance_reconciliation` stale after first entry | No refresh trigger |
-| **`player_loyalty` INSERT RLS relaxed** | More permissive than original design | Migration `20260129193824` |
-| **No print infrastructure** | `lib/print/` does not exist | MATCHPLAY-PRINT-v0.1 spec waiting |
-| **ADR-024 production hardening** | 7 audit items remain (staff identity bind, rollout gap, etc.) | ADR-024_PROD_READINESS_AUDIT |
+| **No print infrastructure** | `lib/print/` does not exist (binding point exists in IssuanceResultPanel) | MATCHPLAY-PRINT-v0.1 spec waiting |
+| **`promo_type_enum` incomplete** | Has `match_play` + `free_play`; missing `nonnegotiable`, `free_bet`, `other` | Confirmed in bug triage |
 | **Reward limits not enforced** | `reward_limits` table populated but no RPC checks frequency constraints | ADR-033 post-MVP |
 | **Reward eligibility not enforced** | `reward_eligibility` table exists but no RPC validates tier/balance guards | ADR-033 post-MVP |
 
 ---
 
-## Resolved Issues
+## Resolved Issues (Since Rev 1)
 
-| Issue | Resolution | Migration |
-|-------|------------|-----------|
+| Issue | Resolution | When |
+|-------|------------|------|
+| **No operator issuance workflow** (P0) | IssueRewardDrawer + issueComp/issueEntitlement + unified /issue API | PRD-052, 2026-03-19 |
+| **`rpc_issue_promo_coupon` no role gate** (P0) | Migration adds pit_boss/admin gate | PRD-052 WS1, `20260319010843` |
+| **`ManualRewardDialog` disconnected** (P3) | Deleted, replaced by unified IssueRewardDrawer | PRD-052 WS4 |
+| **3 stubbed API routes** (P1) | `balances` + `players/[id]/loyalty` wired; `mid-session-reward` explicit 501 | PRD-052 WS3 |
+| **Inventory API route missing** (P2) | `GET /api/v1/promo-coupons/inventory` now exists | PRD-052 era |
+| **Rewards history mapper bug** (P1) | `'redemption'` → `'redeem'` fixed in mappers.ts | PRD-052 WS5 |
+| **`promo_type_enum` only `match_play`** (partial) | `free_play` added | Migration `20260318153722` |
 | `loyalty_outbox` table missing (P0) | Restored with full schema + RLS | `20260206005335` (PRD-028) |
 | `player_loyalty` not created at enrollment (P0) | `rpc_create_player` now creates both records atomically | `20251229020455` |
 | RLS self-injection antipattern | Replaced with `set_rls_context_from_staff()` (ADR-024) | `20251229154020` |
@@ -287,7 +327,21 @@ Player Enrollment ──→ rpc_create_player ──→ player_casino + player_l
 
 Visit Close ──→ (app layer triggers accrual) ──→ LoyaltyService.accrueOnClose()
 
-Promo Issuance ──→ rpc_issue_promo_coupon ──→ promo_coupon + loyalty_outbox + audit_log
+Comp Issuance ──→ LoyaltyService.issueComp() ──→ rpc_redeem ──→ loyalty_ledger + player_loyalty
+(NEW — PRD-052)     │
+                    ├── catalog validation (reward active, family match)
+                    ├── advisory balance pre-check (UX only)
+                    ├── role gate: pit_boss/admin (route + RPC)
+                    └── idempotency via p_idempotency_key
+
+Entitlement Issuance ──→ PromoService.issueEntitlement() ──→ rpc_issue_promo_coupon ──→ promo_coupon + loyalty_outbox
+(NEW — PRD-052)           │
+                          ├── catalog validation (reward active, family match)
+                          ├── commercial values from catalog metadata (no tier derivation)
+                          ├── role gate: pit_boss/admin (route + RPC)
+                          └── idempotency via p_idempotency_key
+
+Promo Issuance (legacy) ──→ rpc_issue_promo_coupon ──→ promo_coupon + loyalty_outbox + audit_log
 
 Liability Snapshot ──→ rpc_snapshot_loyalty_liability ──→ loyalty_liability_snapshot
                         │
@@ -299,12 +353,12 @@ Liability Snapshot ──→ rpc_snapshot_loyalty_liability ──→ loyalty_li
 
 ## Recommended Development Sequence
 
-| Phase | Scope | Effort | Unblocks |
-|-------|-------|--------|----------|
-| **Phase 1** | Admin config UI (program CRUD, tier editor, earn config, reward catalog) | 1-2 weeks | All operator workflows |
-| **Phase 2** | `rpc_issue_current_match_play` + tier mapping + service/hooks/API wiring | 3-5 days | Match play print |
-| **Phase 3** | `lib/print/` iframe utilities + coupon template + print buttons | 3-5 days | Printable coupons |
-| **Phase 4** | Resolve mid-session module, enforce limits/eligibility, refresh MV, complete stubbed routes | 1 week | Debt cleanup |
+| Phase | Scope | Unblocks |
+|-------|-------|----------|
+| **Phase 1** | Admin config UI (program CRUD, tier editor, earn config) | Operator self-service |
+| **Phase 2** | `rpc_issue_current_match_play` + tier mapping + service/hooks/API wiring | One-click match play print |
+| **Phase 3** | `lib/print/` iframe utilities + coupon template + wire `onFulfillmentReady` callback | Printable coupons (Vector C) |
+| **Phase 4** | Resolve mid-session module, enforce limits/eligibility, refresh MV | Debt cleanup |
 
 ---
 
@@ -315,3 +369,6 @@ Liability Snapshot ──→ rpc_snapshot_loyalty_liability ──→ loyalty_li
 3. **Casino-Scoped**: All 17 objects use Pattern C hybrid RLS (`app.casino_id` with JWT fallback)
 4. **Idempotent**: All mutation RPCs have idempotency contracts (per-slip, per-campaign, per-key)
 5. **Definition vs Issuance**: `reward_catalog` = what exists; `loyalty_ledger` + `promo_coupon` = what happened
+6. **Dual Role Gates** (NEW): Operator issuance enforces role checks at both route handler (`ctx.rlsContext.staffRole`) and RPC (`app.staff_role`) layers — defense-in-depth
+7. **Catalog-Backed Issuance** (NEW): `issueComp()` and `issueEntitlement()` resolve all parameters from catalog; no client-supplied amounts or commercial values
+8. **Frozen Contract** (NEW): `FulfillmentPayload` discriminated union frozen for Vector C print pipeline consumption

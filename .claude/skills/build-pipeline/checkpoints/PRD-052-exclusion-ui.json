@@ -1,0 +1,30 @@
+{
+  "prd": "PRD-052",
+  "prd_title": "Player Exclusion UI Surface",
+  "exec_spec": "docs/21-exec-spec/EXEC-052-player-exclusion-ui-surface.md",
+  "status": "initialized",
+  "gov010_check": "waived:UI-only PRD, no new bounded context or schema",
+  "current_phase": 0,
+  "total_phases": 4,
+  "workstreams": {
+    "WS1": { "name": "Status Route Handler", "status": "pending", "executor": "api-builder" },
+    "WS2": { "name": "React Query Exclusion Hooks", "status": "pending", "executor": "frontend-design-pt-2" },
+    "WS3": { "name": "NewSlipModal Exclusion Warning", "status": "pending", "executor": "frontend-design-pt-2" },
+    "WS4": { "name": "Header Badge + Compliance Panel", "status": "pending", "executor": "frontend-design-pt-2" },
+    "WS5": { "name": "Create + Lift Dialogs", "status": "pending", "executor": "frontend-design-pt-2" },
+    "WS6": { "name": "Tests", "status": "pending", "executor": "frontend-design-pt-2" }
+  },
+  "completed_workstreams": [],
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "pending",
+    "reviewers": {
+      "R1": { "role": "SECURITY_TENANCY", "verdict": "pending" },
+      "R2": { "role": "ARCHITECTURE_BOUNDARIES", "verdict": "pending" },
+      "R3": { "role": "IMPLEMENTATION_COMPLETENESS", "verdict": "pending" },
+      "R4": { "role": "TEST_QUALITY", "verdict": "pending" },
+      "R5": { "role": "PERFORMANCE_OPERABILITY", "verdict": "pending" }
+    }
+  },
+  "created_at": "2026-03-19T00:00:00Z"
+}
