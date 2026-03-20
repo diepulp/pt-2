@@ -111,6 +111,20 @@ function mapRewardError(error: {
     return new DomainError('NOT_FOUND', 'Requested reward not found');
   }
 
+  // CHECK constraint violation (e.g., invalid fulfillment type)
+  if (error.code === '23514') {
+    if (message.includes('fulfillment')) {
+      return new DomainError(
+        'VALIDATION_ERROR',
+        'Invalid fulfillment type. Allowed values: comp_slip, coupon, none',
+      );
+    }
+    return new DomainError(
+      'VALIDATION_ERROR',
+      'Value violates a database constraint',
+    );
+  }
+
   // RLS policy violation surfaces as 42501
   if (error.code === '42501') {
     return new DomainError(

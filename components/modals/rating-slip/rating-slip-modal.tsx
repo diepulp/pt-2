@@ -11,6 +11,7 @@ import React, {
 import { toast } from 'sonner';
 
 import { CtrBanner } from '@/components/mtl/ctr-banner';
+import { IssueRewardButton } from '@/components/player-360/header/issue-reward-button';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -719,6 +720,16 @@ export function RatingSlipModal({
                       className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`}
                     />
                   </Button>
+                  {modalData?.player?.id && modalData?.loyalty && (
+                    <IssueRewardButton
+                      playerId={modalData.player.id}
+                      playerName={`${modalData.player.firstName} ${modalData.player.lastName}`}
+                      currentBalance={modalData.loyalty.currentBalance}
+                      currentTier={modalData.loyalty.tier ?? undefined}
+                      visitId={modalData.slip.visitId}
+                      compact
+                    />
+                  )}
                 </div>
               </div>
 

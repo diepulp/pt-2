@@ -32,6 +32,7 @@ import {
 import { useCasino } from '@/hooks/casino';
 import { useExclusionStatus } from '@/hooks/player/use-exclusions';
 import { useAuth } from '@/hooks/use-auth';
+import { useActiveVisit } from '@/hooks/visit/use-active-visit';
 import { cn } from '@/lib/utils';
 import { getCasinoStaff } from '@/services/casino/http';
 import { casinoKeys } from '@/services/casino/keys';
@@ -112,6 +113,9 @@ export function Player360HeaderContent({
 
   // Fetch exclusion status (PRD-052 GAP-1)
   const { data: exclusionStatus } = useExclusionStatus(playerId);
+
+  // Fetch active visit for reward issuance audit trail (P2K-33)
+  const { data: activeVisitData } = useActiveVisit(playerId);
 
   // Fetch enrollment status separately
   const { data: enrollment } = useQuery({
@@ -542,6 +546,7 @@ export function Player360HeaderContent({
           casinoName={casinoName}
           staffName={staffDisplayName}
           currentTier={enrollment?.status === 'active' ? 'enrolled' : ''}
+          visitId={activeVisitData?.visit?.id}
           compact
         />
 

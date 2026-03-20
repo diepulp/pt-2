@@ -64,6 +64,9 @@ export interface IssueRewardDrawerProps {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
 
+  /** Associated visit ID for audit trail linkage */
+  visitId?: string;
+
   /** Callback fired on successful issuance with fulfillment payload */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
 
@@ -83,6 +86,7 @@ function DrawerContent({
   currentBalance,
   currentTier,
   staffName,
+  visitId,
   onOpenChange,
   onFulfillmentReady,
   printState,
@@ -106,12 +110,15 @@ function DrawerContent({
     reset();
   };
 
-  const handleConfirm = () => {
+  const handleConfirm = (faceValueCents?: number, allowOverdraw?: boolean) => {
     if (!selectedReward) return;
 
     issueReward({
       playerId,
       rewardId: selectedReward.id,
+      visitId,
+      faceValueCents,
+      allowOverdraw,
     });
 
     setStep('result');
@@ -121,12 +128,17 @@ function DrawerContent({
     onOpenChange(false);
   };
 
-  // Derive points cost from reward metadata for comps
+  // Derive default points cost for comp pre-fill.
+  // Precedence: 1. contracted pricePoints  2. legacy metadata  3. 0 (user must enter)
   const metadata = selectedReward?.metadata as
     | Record<string, unknown>
     | undefined;
-  const pointsCost =
-    typeof metadata?.points_cost === 'number' ? metadata.points_cost : 0;
+  const defaultPointsCost =
+    (selectedReward as { pricePoints?: { pointsCost?: number } })?.pricePoints
+      ?.pointsCost ??
+    (typeof metadata?.face_value_cents === 'number'
+      ? Math.ceil((metadata.face_value_cents as number) / 10)
+      : 0);
 
   return (
     <>
@@ -146,7 +158,7 @@ function DrawerContent({
             <CompConfirmPanel
               reward={selectedReward}
               currentBalance={currentBalance}
-              pointsCost={pointsCost}
+              defaultPointsCost={defaultPointsCost}
               isPending={isPending}
               onConfirm={handleConfirm}
               onBack={handleBack}

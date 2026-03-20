@@ -683,8 +683,13 @@ export async function issueComp(
       );
     }
 
-    // 5. Extract points cost from price points
-    const pointsCost = reward.pricePoints?.pointsCost;
+    // 5. Resolve points cost: caller-provided variable amount OR catalog default
+    // TODO: Post-pilot, source CENTS_PER_POINT from loyalty_valuation_policy.cents_per_point (per-casino).
+    // ceil() on redeem is house-favorable rounding.
+    const CENTS_PER_POINT = 10;
+    const pointsCost = params.faceValueCents
+      ? Math.ceil(params.faceValueCents / CENTS_PER_POINT)
+      : reward.pricePoints?.pointsCost;
     if (!pointsCost || pointsCost <= 0) {
       throw new DomainError(
         'CATALOG_CONFIG_INVALID',
@@ -694,7 +699,7 @@ export async function issueComp(
 
     // 6. Advisory balance pre-check (UX only — RPC is authoritative. See PRD §5.3.)
     const currentBalance = balance?.currentBalance ?? 0;
-    if (currentBalance < pointsCost) {
+    if (!params.allowOverdraw && currentBalance < pointsCost) {
       throw new DomainError(
         'INSUFFICIENT_BALANCE',
         `Insufficient balance: need ${pointsCost} pts, have ${currentBalance} pts`,
@@ -704,11 +709,12 @@ export async function issueComp(
     // 7. Default note
     const note = params.note ?? `Comp: ${reward.name}`;
 
-    // 8. Extract face value from metadata for result enrichment
+    // 8. Resolve issued face value: caller-provided takes precedence over catalog metadata
     const faceValueCents =
-      typeof reward.metadata?.face_value_cents === 'number'
+      params.faceValueCents ??
+      (typeof reward.metadata?.face_value_cents === 'number'
         ? reward.metadata.face_value_cents
-        : 0;
+        : 0);
 
     // 9. Call rpc_redeem DIRECTLY (not via redeem())
     const { data, error } = await supabase.rpc('rpc_redeem', {
@@ -716,7 +722,7 @@ export async function issueComp(
       p_points: pointsCost,
       p_note: note,
       p_idempotency_key: params.idempotencyKey,
-      p_allow_overdraw: false,
+      p_allow_overdraw: params.allowOverdraw ?? false,
       p_reward_id: params.rewardId,
       p_reference: `reward_catalog:${params.rewardId}:${reward.code}`,
     });

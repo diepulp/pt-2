@@ -434,6 +434,19 @@ export interface IssueCompParams {
 
   /** Human-readable note. Defaults to `"Comp: {rewardName}"` in issueComp if omitted. */
   note?: string;
+
+  /**
+   * Dollar amount in cents for variable-amount comps.
+   * When provided, overrides catalog points_cost: pointsCost = ceil(faceValueCents / CENTS_PER_POINT).
+   * When omitted, falls back to catalog reward_price_points.points_cost.
+   */
+  faceValueCents?: number;
+
+  /**
+   * Allow overdraw (debit exceeds player balance).
+   * Authorization enforced server-side by rpc_redeem (pit_boss/admin only).
+   */
+  allowOverdraw?: boolean;
 }
 
 /**
@@ -468,7 +481,7 @@ export interface CompIssuanceResult {
   /** Reward name from catalog */
   rewardName: string;
 
-  /** Face value in cents from catalog */
+  /** Issued face value in cents. Caller-provided value takes precedence over catalog metadata. */
   faceValueCents: number;
 
   /** True if this was an idempotent replay (no additional debit) */
