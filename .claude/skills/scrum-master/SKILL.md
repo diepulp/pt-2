@@ -1,5 +1,5 @@
 ---
-name: scrum-master
+name: scrum
 description: Agile Scrum Master for PT-2 project management via Atlassian Jira MCP. Use this skill when the user asks about board status, sprint health, creating/moving/grooming Jira issues, standup summaries, backlog prioritization, retrospectives, or any project management task. Also triggers on "what's on the board", "create a ticket", "move SCRUM-X to done", "board health", "what should I work on next", "log time", "link these issues", "sprint planning", "retro", "backlog grooming", or any mention of Jira issues (SCRUM-*, P2K-*). Use proactively when build-pipeline or feature-pipeline complete work that should update Jira.
 ---
 

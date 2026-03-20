@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-5-20250929
+model: claude-sonnet-4-6
 description: Create a git worktree with isolated configuration for parallel PT-2 development
 argument-hint: <new-branch> [--from <base-branch>] [--port <offset>]
 allowed-tools: Bash, Read, Write, Edit, Glob, Grep, AskUserQuestion

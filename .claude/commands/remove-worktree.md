@@ -1,5 +1,5 @@
 ---
-model: claude-sonnet-4-5-20250929
+model: claude-sonnet-4-6
 description: Remove a git worktree and optionally delete its branch
 argument-hint: <branch-name> [--keep-branch]
 allowed-tools: Bash, Read, Glob, Grep
