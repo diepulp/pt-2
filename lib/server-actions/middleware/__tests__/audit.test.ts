@@ -7,15 +7,15 @@ import type { MiddlewareContext } from '../types';
 
 describe('withAudit middleware', () => {
   const originalEnv = process.env.NODE_ENV;
-  const mockInsert = jest.fn();
+  const mockRpc = jest.fn();
   const mockSupabase = {
-    from: jest.fn().mockReturnValue({ insert: mockInsert }),
+    rpc: mockRpc,
   } as unknown as SupabaseClient<Database>;
   const mockNext = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockInsert.mockResolvedValue({ error: null });
+    mockRpc.mockResolvedValue({ error: null });
     mockNext.mockResolvedValue({
       ok: true,
       code: 'OK',
@@ -48,7 +48,7 @@ describe('withAudit middleware', () => {
     };
   }
 
-  it('should write audit log in production', async () => {
+  it('should write audit log in production via append_audit_log RPC', async () => {
     process.env.NODE_ENV = 'production';
 
     const ctx = createContext();
@@ -56,15 +56,15 @@ describe('withAudit middleware', () => {
 
     await middleware(ctx, mockNext);
 
-    expect(mockSupabase.from).toHaveBeenCalledWith('audit_log');
-    expect(mockInsert).toHaveBeenCalledWith(
-      expect.objectContaining({
-        casino_id: 'casino-uuid',
-        actor_id: 'actor-uuid',
-        domain: 'loyalty',
-        action: 'ledger.append',
+    expect(mockRpc).toHaveBeenCalledWith('append_audit_log', {
+      p_domain: 'loyalty',
+      p_action: 'ledger.append',
+      p_details: expect.objectContaining({
+        correlationId: 'test-correlation-id',
+        ok: true,
+        code: 'OK',
       }),
-    );
+    });
   });
 
   it('should skip audit in non-production', async () => {
@@ -75,13 +75,13 @@ describe('withAudit middleware', () => {
 
     const result = await middleware(ctx, mockNext);
 
-    expect(mockSupabase.from).not.toHaveBeenCalled();
+    expect(mockRpc).not.toHaveBeenCalled();
     expect(result.ok).toBe(true);
   });
 
   it('should not fail request on audit error', async () => {
     process.env.NODE_ENV = 'production';
-    mockInsert.mockResolvedValue({ error: new Error('DB error') });
+    mockRpc.mockResolvedValue({ error: new Error('DB error') });
     const consoleSpy = jest
       .spyOn(console, 'error')
       .mockImplementation(() => {});

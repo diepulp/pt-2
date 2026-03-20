@@ -30,6 +30,13 @@ function toJson(value: unknown): Json {
   return String(value);
 }
 
+/**
+ * Write audit log via append_audit_log RPC
+ *
+ * Uses SECURITY DEFINER RPC that derives casino_id/actor_id from
+ * session vars set by set_rls_context_from_staff(). Direct INSERT
+ * on audit_log is revoked from authenticated (SEC-007 P0 hardening).
+ */
 export async function writeAuditLog(
   supabase: SupabaseClient<Database>,
   context: ServerActionContext,
@@ -51,15 +58,11 @@ export async function writeAuditLog(
     metadata: context.metadata ?? {},
   });
 
-  const payload = {
-    casino_id: context.casinoId ?? null,
-    domain: context.entity ?? context.action,
-    actor_id: context.userId ?? null,
-    action: context.action,
-    details,
-  } satisfies Database['public']['Tables']['audit_log']['Insert'];
-
-  const { error } = await supabase.from('audit_log').insert(payload);
+  const { error } = await supabase.rpc('append_audit_log', {
+    p_domain: context.entity ?? context.action,
+    p_action: context.action,
+    p_details: details,
+  });
   if (error) {
     console.error('[audit] Failed to write audit log', error);
   }
