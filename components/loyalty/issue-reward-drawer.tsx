@@ -64,6 +64,9 @@ export interface IssueRewardDrawerProps {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
 
+  /** Associated visit ID for audit trail linkage */
+  visitId?: string;
+
   /** Callback fired on successful issuance with fulfillment payload */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
 
@@ -83,6 +86,7 @@ function DrawerContent({
   currentBalance,
   currentTier,
   staffName,
+  visitId,
   onOpenChange,
   onFulfillmentReady,
   printState,
@@ -112,6 +116,7 @@ function DrawerContent({
     issueReward({
       playerId,
       rewardId: selectedReward.id,
+      visitId,
     });
 
     setStep('result');

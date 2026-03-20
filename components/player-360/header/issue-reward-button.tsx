@@ -48,6 +48,8 @@ export interface IssueRewardButtonProps {
   currentTier?: string;
   /** Staff name for fulfillment context */
   staffName?: string;
+  /** Associated visit ID for audit trail linkage */
+  visitId?: string;
   /** Callback fired on successful issuance with fulfillment payload */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
 }
@@ -64,6 +66,7 @@ export function IssueRewardButton({
   currentBalance = 0,
   currentTier = '',
   staffName = '',
+  visitId,
   onFulfillmentReady,
 }: IssueRewardButtonProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -132,6 +135,7 @@ export function IssueRewardButton({
           currentBalance={currentBalance}
           currentTier={currentTier}
           staffName={staffName}
+          visitId={visitId}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           onFulfillmentReady={handleFulfillmentReady}

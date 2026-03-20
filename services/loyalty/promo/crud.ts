@@ -635,12 +635,11 @@ export async function getCouponByValidationNumber(
 /**
  * Issues a catalog-backed entitlement via rpc_issue_promo_coupon.
  *
- * NO TIER DERIVATION. Per PRD §7.3: "Vector B does not implement entitlement
- * derivation logic. It only issues entitlements whose required issue-time
- * commercial values (face value, match wager) are already resolvable from
- * frozen active catalog/config inputs."
+ * Looks up the player's current loyalty tier via getBalance(), then selects
+ * the matching entitlement tier from reward.entitlementTiers[] to resolve
+ * face_value_cents and instrument_type. Falls back to 'bronze' when no
+ * loyalty record exists.
  *
- * Reads face_value_cents, instrument_type from reward.metadata JSONB.
  * Resolves promo_program_id by querying promo_program for matching casino + type.
  *
  * @param supabase - Supabase client with RLS context
@@ -649,10 +648,11 @@ export async function getCouponByValidationNumber(
  * @throws REWARD_NOT_FOUND if reward does not exist
  * @throws REWARD_INACTIVE if reward is not active
  * @throws REWARD_FAMILY_MISMATCH if reward family is not entitlement
- * @throws CATALOG_CONFIG_INVALID if required commercial values missing in metadata
+ * @throws CATALOG_CONFIG_INVALID if no entitlement tier configured for player's tier
  *
  * @see PRD-052 §7.3 (Entitlement Scope Constraint)
  * @see EXEC-052 WS2
+ * @see P2K-28 fix: read from entitlementTiers instead of metadata
  */
 export async function issueEntitlement(
   supabase: SupabaseClient<Database>,
@@ -689,28 +689,32 @@ export async function issueEntitlement(
       );
     }
 
-    // 5. Read frozen commercial values from reward.metadata (JSONB)
-    //    These are catalog-authored values, NOT derived from player tier.
-    const metadata = reward.metadata ?? {};
-    const faceValueCents =
-      typeof metadata.face_value_cents === 'number'
-        ? metadata.face_value_cents
-        : undefined;
-    const instrumentType =
-      typeof metadata.instrument_type === 'string'
-        ? metadata.instrument_type
-        : undefined;
-    const matchWagerCents =
-      typeof metadata.match_wager_cents === 'number'
-        ? metadata.match_wager_cents
-        : null;
+    // 5. Resolve commercial values from entitlement tiers (P2K-28 fix)
+    //    Look up the player's current tier via getBalance(), then select the
+    //    matching entitlement tier row for face_value_cents / instrument_type.
+    const { getBalance } = await import('../crud');
 
-    if (faceValueCents === undefined || !instrumentType) {
+    const playerLoyalty = await getBalance(
+      supabase,
+      params.playerId,
+      reward.casinoId,
+    );
+    const playerTier = playerLoyalty?.tier ?? 'bronze';
+
+    const tierConfig = reward.entitlementTiers.find(
+      (t) => t.tier === playerTier,
+    );
+
+    if (!tierConfig) {
       throw new DomainError(
         'CATALOG_CONFIG_INVALID',
-        `Reward "${reward.name}" is missing required commercial values in metadata (face_value_cents, instrument_type)`,
+        `Reward "${reward.name}" has no entitlement tier configured for tier "${playerTier}"`,
       );
     }
+
+    const faceValueCents = tierConfig.benefit.face_value_cents;
+    const instrumentType = tierConfig.benefit.instrument_type;
+    const matchWagerCents: number | null = null;
 
     // 6. Resolve promo_program_id: query promo_program by casino + instrument_type + active
     const promoType =
