@@ -1,0 +1,42 @@
+{
+  "id": "EXEC-053",
+  "prd": "PRD-053",
+  "prd_title": "Reward Instrument Fulfillment — Pilot Print Standard",
+  "exec_spec": "docs/21-exec-spec/EXEC-053-reward-instrument-fulfillment.md",
+  "status": "complete",
+  "gov010_check": "passed",
+  "current_phase": 3,
+  "total_phases": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "pending_workstreams": [],
+  "failed_workstreams": [],
+  "adversarial_review": {
+    "attempt": 1,
+    "verdict": "revised_and_passed",
+    "reviewers": {
+      "R1_security": "ship_with_gates",
+      "R2_architecture": "ship_with_gates",
+      "R3_implementation": "ship_with_gates",
+      "R4_test_quality": "ship_with_gates",
+      "R5_performance": "do_not_ship"
+    },
+    "consolidated_pre_revision": "BLOCK",
+    "p0_count": 1,
+    "p1_count": 8,
+    "all_findings_addressed": true
+  },
+  "gates_passed": {
+    "type_check": true,
+    "lint": true,
+    "test_pass": true,
+    "build": true
+  },
+  "test_results": {
+    "suites": 8,
+    "tests": 65,
+    "passed": 65,
+    "failed": 0
+  },
+  "created_at": "2026-03-19T00:00:00Z",
+  "updated_at": "2026-03-20T00:00:00Z"
+}
