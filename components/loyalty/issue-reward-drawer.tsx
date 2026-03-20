@@ -23,6 +23,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { useIssueReward } from '@/hooks/loyalty/use-issue-reward';
+import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type {
   FulfillmentPayload,
   IssuanceResultDTO,
@@ -63,8 +64,14 @@ export interface IssueRewardDrawerProps {
   /** Callback when open state changes */
   onOpenChange: (open: boolean) => void;
 
-  /** Callback fired on successful issuance with fulfillment payload (no-op until Vector C) */
+  /** Callback fired on successful issuance with fulfillment payload */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
+
+  /** Print state from usePrintReward hook (Vector C) */
+  printState?: PrintState;
+
+  /** Manual print callback (Vector C) */
+  onPrint?: (payload: FulfillmentPayload, mode: PrintInvocationMode) => void;
 }
 
 // === Inner Content (reset via key) ===
@@ -78,6 +85,8 @@ function DrawerContent({
   staffName,
   onOpenChange,
   onFulfillmentReady,
+  printState,
+  onPrint,
 }: Omit<IssueRewardDrawerProps, 'open'>) {
   const [step, setStep] = useState<DrawerStep>('select');
   const [selectedReward, setSelectedReward] = useState<RewardCatalogDTO | null>(
@@ -165,6 +174,8 @@ function DrawerContent({
             casinoName={casinoName}
             staffName={staffName}
             onFulfillmentReady={onFulfillmentReady}
+            printState={printState}
+            onPrint={onPrint}
             onClose={handleClose}
           />
         )}

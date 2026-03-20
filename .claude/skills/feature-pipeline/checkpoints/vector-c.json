@@ -1,0 +1,16 @@
+{
+  "feature_id": "vector-c",
+  "current_phase": 6,
+  "status": "complete",
+  "gates_passed": ["srm-ownership", "scaffold-approved", "design-approved", "sec-approved", "adr-frozen", "prd-approved"],
+  "gates_pending": [],
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/vector-c/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-VECTOR-C-INSTRUMENT-FULFILLMENT.md",
+    "design_brief": "docs/02-design/RFC-VECTOR-C-INSTRUMENT-FULFILLMENT.md",
+    "sec_note": "docs/20-architecture/specs/vector-c/SEC_NOTE.md",
+    "adr": "docs/80-adrs/ADR-045-pilot-reward-instrument-fulfillment.md",
+    "prd": "docs/10-prd/PRD-053-reward-instrument-fulfillment-v0.md"
+  },
+  "timestamp": "2026-03-19T12:00:00Z"
+}

@@ -2,16 +2,26 @@
  * Issuance Result Panel
  *
  * Displays success, failure, or duplicate states after reward issuance.
- * Fires onFulfillmentReady on success (no-op until Vector C).
+ * Fires onFulfillmentReady on fresh issuance for auto-print (Vector C).
+ * Print button reflects printState from usePrintReward hook.
  *
  * @see PRD-052 WS4 — Issuance UI
+ * @see PRD-053 — Reward Instrument Fulfillment
  */
 
 'use client';
 
-import { AlertCircle, CheckCircle2, Copy, Printer } from 'lucide-react';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Copy,
+  Loader2,
+  Printer,
+} from 'lucide-react';
+import { useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
+import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type {
   CompIssuanceResult,
   EntitlementIssuanceResult,
@@ -35,8 +45,14 @@ export interface IssuanceResultPanelProps {
   casinoName: string;
   staffName: string;
 
-  /** Callback fired on success with fulfillment payload (no-op until Vector C) */
+  /** Callback fired on success with fulfillment payload (auto-fire on fresh issuance) */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
+
+  /** Print state from usePrintReward hook (Vector C) */
+  printState?: PrintState;
+
+  /** Manual print callback (Vector C) */
+  onPrint?: (payload: FulfillmentPayload, mode: PrintInvocationMode) => void;
 
   /** Callback to close the drawer */
   onClose: () => void;
@@ -104,7 +120,6 @@ function assembleEntitlementFulfillment(
 }
 
 function getErrorMessage(error: Error): string {
-  // FetchError from @/lib/http/fetch-json carries a code field
   const fetchError = error as Error & { code?: string };
   switch (fetchError.code) {
     case 'LOYALTY_INSUFFICIENT_BALANCE':
@@ -124,16 +139,24 @@ function getErrorMessage(error: Error): string {
   }
 }
 
+/** Assemble payload from result + context */
+function assemblePayload(
+  result: IssuanceResultDTO,
+  context: {
+    playerName: string;
+    playerId: string;
+    playerTier: string;
+    casinoName: string;
+    staffName: string;
+  },
+): FulfillmentPayload {
+  return result.family === 'points_comp'
+    ? assembleCompFulfillment(result, context)
+    : assembleEntitlementFulfillment(result, context);
+}
+
 // === Component ===
 
-/**
- * Result panel for reward issuance.
- *
- * States:
- * - Success: details + "Print" button binding point (no-op until Vector C)
- * - Failure: error message with actionable feedback per LOYALTY_-prefixed error codes
- * - Duplicate: "Already issued" with existing details (when isExisting: true)
- */
 export function IssuanceResultPanel({
   result,
   error,
@@ -143,8 +166,13 @@ export function IssuanceResultPanel({
   casinoName,
   staffName,
   onFulfillmentReady,
+  printState,
+  onPrint,
   onClose,
 }: IssuanceResultPanelProps) {
+  // DA P0-1 fix: ref guard ensures auto-fire fires exactly once per result
+  const hasFiredRef = useRef(false);
+
   // Error state
   if (error) {
     return (
@@ -165,37 +193,70 @@ export function IssuanceResultPanel({
     );
   }
 
-  // No result yet (should not happen in this panel, but safe fallback)
+  // No result yet
   if (!result) {
     return null;
   }
 
   const isDuplicate = result.isExisting;
+  const context = { playerName, playerId, playerTier, casinoName, staffName };
 
-  // Assemble and fire fulfillment payload on success
+  // Manual print handler
   const handlePrint = () => {
-    if (!onFulfillmentReady) return;
+    if (!onPrint) {
+      // Fallback: fire legacy onFulfillmentReady if no onPrint provided
+      if (onFulfillmentReady) {
+        onFulfillmentReady(assemblePayload(result, context));
+      }
+      return;
+    }
 
-    const context = { playerName, playerId, playerTier, casinoName, staffName };
-    const payload =
-      result.family === 'points_comp'
-        ? assembleCompFulfillment(result, context)
-        : assembleEntitlementFulfillment(result, context);
-
-    onFulfillmentReady(payload);
+    const payload = assemblePayload(result, context);
+    const mode: PrintInvocationMode =
+      printState === 'success' ? 'manual_reprint' : 'manual_print';
+    onPrint(payload, mode);
   };
 
-  // Fire onFulfillmentReady automatically on mount for fresh issuances
-  // Using a ref to ensure it fires only once per result
-  if (!isDuplicate && onFulfillmentReady) {
-    const context = { playerName, playerId, playerTier, casinoName, staffName };
-    const payload =
-      result.family === 'points_comp'
-        ? assembleCompFulfillment(result, context)
-        : assembleEntitlementFulfillment(result, context);
-    // Schedule to fire after render (no useEffect needed — this is intentional)
+  // Auto-fire onFulfillmentReady once for fresh issuances (DA P0-1 fix)
+  if (!isDuplicate && onFulfillmentReady && !hasFiredRef.current) {
+    hasFiredRef.current = true;
+    const payload = assemblePayload(result, context);
     queueMicrotask(() => onFulfillmentReady(payload));
   }
+
+  // Print button label and state based on printState
+  const getPrintButtonContent = () => {
+    switch (printState) {
+      case 'printing':
+        return (
+          <>
+            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+            Printing...
+          </>
+        );
+      case 'success':
+        return (
+          <>
+            <Printer className="h-4 w-4 mr-1.5" />
+            Print again
+          </>
+        );
+      case 'error':
+        return (
+          <>
+            <Printer className="h-4 w-4 mr-1.5" />
+            Print failed — try again
+          </>
+        );
+      default:
+        return (
+          <>
+            <Printer className="h-4 w-4 mr-1.5" />
+            Print
+          </>
+        );
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -312,9 +373,13 @@ export function IssuanceResultPanel({
 
       {/* Actions */}
       <div className="flex gap-2">
-        <Button variant="outline" className="flex-1" onClick={handlePrint}>
-          <Printer className="h-4 w-4 mr-1.5" />
-          Print
+        <Button
+          variant={printState === 'error' ? 'destructive' : 'outline'}
+          className="flex-1"
+          onClick={handlePrint}
+          disabled={printState === 'printing'}
+        >
+          {getPrintButtonContent()}
         </Button>
         <Button className="flex-1" onClick={onClose}>
           Done

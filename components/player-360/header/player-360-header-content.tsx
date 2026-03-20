@@ -29,8 +29,12 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useCasino } from '@/hooks/casino';
 import { useExclusionStatus } from '@/hooks/player/use-exclusions';
+import { useAuth } from '@/hooks/use-auth';
 import { cn } from '@/lib/utils';
+import { getCasinoStaff } from '@/services/casino/http';
+import { casinoKeys } from '@/services/casino/keys';
 import type { PlayerDTO, PlayerSearchResultDTO } from '@/services/player/dtos';
 import { getPlayerEnrollment, searchPlayers } from '@/services/player/http';
 import { playerKeys } from '@/services/player/keys';
@@ -90,6 +94,21 @@ export function Player360HeaderContent({
   // Use props from parent (single usePlayer subscription in ContentWrapper)
   const isLoading = playerLoading;
   const error = playerError;
+
+  // Auth context for casino name and staff name (Vector C print fulfillment)
+  const { casinoId, staffId } = useAuth();
+  const { data: casino } = useCasino(casinoId ?? '');
+  const { data: staffList } = useQuery({
+    queryKey: [...casinoKeys.staff(), 'self-lookup'],
+    queryFn: () => getCasinoStaff(),
+    enabled: !!staffId,
+    staleTime: 1000 * 60 * 10,
+  });
+  const currentStaff = staffList?.items.find((s) => s.id === staffId);
+  const casinoName = casino?.name ?? '';
+  const staffDisplayName = currentStaff
+    ? `${currentStaff.first_name} ${currentStaff.last_name}`.trim()
+    : '';
 
   // Fetch exclusion status (PRD-052 GAP-1)
   const { data: exclusionStatus } = useExclusionStatus(playerId);
@@ -520,6 +539,9 @@ export function Player360HeaderContent({
               ? `${player.first_name} ${player.last_name}`
               : 'Player'
           }
+          casinoName={casinoName}
+          staffName={staffDisplayName}
+          currentTier={enrollment?.status === 'active' ? 'enrolled' : ''}
           compact
         />
 
