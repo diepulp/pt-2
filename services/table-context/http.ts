@@ -31,6 +31,7 @@ import type {
   AssignDealerRequestBody,
   UpdateTableLimitsRequestBody,
   CloseTableSessionRequestBody,
+  ForceCloseTableSessionRequestBody,
   OpenTableSessionRequestBody,
   ConfirmTableFillRequestBody,
   ConfirmTableCreditRequestBody,
@@ -293,6 +294,30 @@ export async function closeTableSession(
     `${BASE_URL}/table-sessions/${sessionId}/close`,
     {
       method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+/**
+ * Force-closes a table session (privileged roles only).
+ * POST /api/v1/table-sessions/[id]/force-close
+ *
+ * @see PRD-038A Close Guardrails — role-gated server-side (pit_boss, admin)
+ */
+export async function forceCloseTableSession(
+  sessionId: string,
+  input: ForceCloseTableSessionRequestBody,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(
+    `${BASE_URL}/table-sessions/${sessionId}/force-close`,
+    {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),

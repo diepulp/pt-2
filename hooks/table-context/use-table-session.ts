@@ -18,11 +18,15 @@ import type {
 import {
   closeTableSession,
   fetchCurrentTableSession,
+  forceCloseTableSession,
   openTableSession,
   startTableRundown,
 } from '@/services/table-context/http';
 import { tableContextKeys } from '@/services/table-context/keys';
-import type { CloseTableSessionRequestBody } from '@/services/table-context/schemas';
+import type {
+  CloseTableSessionRequestBody,
+  ForceCloseTableSessionRequestBody,
+} from '@/services/table-context/schemas';
 
 // === Query Hooks ===
 
@@ -122,6 +126,35 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
         null,
       );
       // Invalidate to refetch fresh state
+      queryClient.invalidateQueries({
+        queryKey: tableContextKeys.sessions.scope,
+      });
+    },
+  });
+}
+
+/**
+ * Force-closes a table session (privileged roles only).
+ * Bypasses closing artifact requirements.
+ *
+ * @param sessionId - Table session UUID
+ * @param tableId - Gaming table UUID (for cache invalidation)
+ * @see PRD-038A Close Guardrails — role-gated server-side (pit_boss, admin)
+ */
+export function useForceCloseTableSession(sessionId: string, tableId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['force-close-table-session', sessionId],
+    mutationFn: async (input: ForceCloseTableSessionRequestBody) => {
+      const idempotencyKey = crypto.randomUUID();
+      return forceCloseTableSession(sessionId, input, idempotencyKey);
+    },
+    onSuccess: () => {
+      queryClient.setQueryData(
+        tableContextKeys.sessions.current(tableId),
+        null,
+      );
       queryClient.invalidateQueries({
         queryKey: tableContextKeys.sessions.scope,
       });

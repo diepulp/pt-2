@@ -31,6 +31,7 @@ import type {
   DashboardTableDTO,
   DashboardStats,
 } from '@/hooks/dashboard/types';
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import { usePitDashboardUI } from '@/hooks/ui';
 import { useSwipe } from '@/hooks/utilities';
 import { cn } from '@/lib/utils';
@@ -57,6 +58,8 @@ interface PanelContainerProps {
   // Tables data
   tables: DashboardTableDTO[];
   selectedTable: DashboardTableDTO | null;
+  /** Current table session from useCurrentTableSession (PRD-038A) */
+  session?: TableSessionDTO | null;
   seats: (SeatOccupant | null)[];
   activeSlips: RatingSlipWithPlayerDTO[];
   stats: DashboardStats | null;
@@ -99,6 +102,7 @@ export function PanelContainer({
   className,
   tables,
   selectedTable,
+  session,
   seats,
   activeSlips,
   stats,
@@ -265,6 +269,7 @@ export function PanelContainer({
           <TablesPanel
             tableName={tableName}
             selectedTable={selectedTable}
+            session={session ?? null}
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}
@@ -310,6 +315,7 @@ export function PanelContainer({
           <TablesPanel
             tableName={tableName}
             selectedTable={selectedTable}
+            session={session ?? null}
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}

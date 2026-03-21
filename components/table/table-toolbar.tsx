@@ -5,7 +5,6 @@ import {
   ClipboardList,
   Coins,
   MessageSquarePlus,
-  Power,
   Settings2,
   StickyNote,
   UserCog,
@@ -14,6 +13,7 @@ import {
 import * as React from 'react';
 import { toast } from 'sonner';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -22,6 +22,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
+import {
+  getSessionStatusColor,
+  getSessionStatusLabel,
+} from '@/hooks/table-context/use-table-session';
 import { cn } from '@/lib/utils';
 
 import {
@@ -49,6 +54,8 @@ interface ActionGroup {
 interface TableToolbarProps {
   tableId: string;
   tableStatus: 'active' | 'inactive' | 'closed';
+  /** Current table session for status badge (PRD-038A) */
+  session?: TableSessionDTO | null;
   onNewSlip: () => void;
   onEditLimits: () => void;
   onEnrollPlayer?: () => void;
@@ -72,6 +79,7 @@ interface TableToolbarProps {
 export function TableToolbar({
   tableId,
   tableStatus,
+  session,
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
@@ -97,14 +105,6 @@ export function TableToolbar({
         id: 'table',
         label: 'TABLE',
         actions: [
-          {
-            id: 'toggle-status',
-            icon: Power,
-            label: tableStatus === 'active' ? 'Close Table' : 'Open Table',
-            shortcut: '⌘T',
-            onClick: () => handlePlaceholder('Toggle table status'),
-            variant: tableStatus === 'active' ? 'accent' : 'muted',
-          },
           {
             id: 'assign-dealer',
             icon: UserCog,
@@ -177,7 +177,7 @@ export function TableToolbar({
         ],
       },
     ],
-    [tableStatus, onNewSlip, onEditLimits, onEnrollPlayer, handlePlaceholder],
+    [onNewSlip, onEditLimits, onEnrollPlayer, handlePlaceholder],
   );
 
   return (
@@ -195,6 +195,16 @@ export function TableToolbar({
       >
         {/* Industrial LED accent */}
         <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+        {/* Session status badge (PRD-038A) */}
+        <Badge
+          variant={session ? getSessionStatusColor(session.status) : 'outline'}
+          className="text-[10px] font-medium shrink-0"
+        >
+          {session ? getSessionStatusLabel(session.status) : 'No Session'}
+        </Badge>
+
+        <Separator orientation="vertical" className="h-6 mx-1 bg-border/40" />
 
         {actionGroups.map((group, groupIndex) => (
           <React.Fragment key={group.id}>
@@ -303,6 +313,7 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
 export function TableToolbarCompact({
   tableId,
   tableStatus,
+  session,
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
@@ -336,13 +347,6 @@ export function TableToolbarCompact({
       onClick: onEnrollPlayer ?? (() => handlePlaceholder('Enroll player')),
     },
     {
-      id: 'toggle-status',
-      icon: Power,
-      label: tableStatus === 'active' ? 'Close' : 'Open',
-      onClick: () => handlePlaceholder('Toggle status'),
-      variant: tableStatus === 'active' ? 'accent' : 'muted',
-    },
-    {
       id: 'log-fill',
       icon: Coins,
       label: 'Fill',
@@ -374,6 +378,16 @@ export function TableToolbarCompact({
         role="toolbar"
         aria-label={`Table ${tableId} quick actions`}
       >
+        {/* Session status badge (PRD-038A) */}
+        <Badge
+          variant={session ? getSessionStatusColor(session.status) : 'outline'}
+          className="text-[9px] font-medium shrink-0"
+        >
+          {session ? getSessionStatusLabel(session.status) : 'No Session'}
+        </Badge>
+
+        <Separator orientation="vertical" className="h-5 mx-0.5 bg-border/40" />
+
         {priorityActions.map((action) => (
           <ToolbarButton key={action.id} action={action} />
         ))}

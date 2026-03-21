@@ -37,6 +37,7 @@ import {
   useMovePlayer,
   useRatingSlipModalData,
 } from '@/hooks/rating-slip-modal';
+import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
 import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -119,6 +120,12 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     enabled: !!casinoId,
   });
   const gamingDayString = gamingDayData?.gaming_day;
+
+  // Query: Current table session (PRD-038A session wiring)
+  // Hook has `enabled: !!tableId` guard — safe to pass empty string when no table selected
+  const { data: currentSession } = useCurrentTableSession(
+    selectedTableId ?? '',
+  );
 
   // Query: Active slips for selected table
   const { data: activeSlips = [] } = useActiveSlipsForDashboard(
@@ -465,6 +472,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     tableName: selectedTable?.label ?? 'No Table',
     tables,
     selectedTable: selectedTable ?? null,
+    session: selectedTableId ? (currentSession ?? null) : null,
     seats,
     activeSlips,
     stats: stats ?? null,

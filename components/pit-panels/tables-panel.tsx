@@ -6,17 +6,22 @@ import { toast } from 'sonner';
 
 import { EnrollPlayerModal } from '@/components/enrollment/enroll-player-modal';
 import { TableLayoutTerminal } from '@/components/table';
+import { CloseSessionDialog } from '@/components/table/close-session-dialog';
 import type { PitMapPit } from '@/components/table/pit-map-selector';
+import { ReconciliationBadge } from '@/components/table/reconciliation-badge';
+import { SessionActionButtons } from '@/components/table/session-action-buttons';
 import { TableLimitsDialog } from '@/components/table/table-limits-dialog';
 import {
   TableToolbar,
   TableToolbarCompact,
 } from '@/components/table/table-toolbar';
 import type { DashboardTableDTO } from '@/hooks/dashboard/types';
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import {
   useTableSettings,
   useUpdateTableLimits,
 } from '@/hooks/table-context/use-table-settings';
+import { useAuth } from '@/hooks/use-auth';
 import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 
 interface SeatOccupant {
@@ -29,6 +34,8 @@ interface TablesPanelProps {
   // Data
   tableName: string;
   selectedTable: DashboardTableDTO | null;
+  /** Current table session (PRD-038A session wiring) */
+  session: TableSessionDTO | null;
   seats: (SeatOccupant | null)[];
   activeSlips: RatingSlipWithPlayerDTO[];
   isLoading: boolean;
@@ -53,6 +60,7 @@ interface TablesPanelProps {
 export function TablesPanel({
   tableName,
   selectedTable,
+  session,
   seats,
   activeSlips,
   isLoading,
@@ -81,10 +89,15 @@ export function TablesPanel({
     });
   }, [activeSlips]);
 
+  // Auth context for close dialog (PRD-038A)
+  const { staffId, casinoId: authCasinoId } = useAuth();
+
   // Table limits state and hooks
   const [limitsDialogOpen, setLimitsDialogOpen] = React.useState(false);
   // Enroll player modal state
   const [enrollModalOpen, setEnrollModalOpen] = React.useState(false);
+  // Close session dialog state (PRD-038A)
+  const [closeDialogOpen, setCloseDialogOpen] = React.useState(false);
   const tableId = selectedTable?.id ?? '';
   const { data: tableSettings } = useTableSettings(tableId);
   const { mutateAsync: updateLimits, isPending: isUpdatingLimits } =
@@ -164,6 +177,7 @@ export function TablesPanel({
           <TableToolbar
             tableId={selectedTable.id}
             tableStatus={selectedTable.status}
+            session={session}
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
             onEnrollPlayer={() => setEnrollModalOpen(true)}
@@ -177,6 +191,7 @@ export function TablesPanel({
           <TableToolbarCompact
             tableId={selectedTable.id}
             tableStatus={selectedTable.status}
+            session={session}
             onNewSlip={onNewSlip}
             onEditLimits={() => setLimitsDialogOpen(true)}
             onEnrollPlayer={() => setEnrollModalOpen(true)}
@@ -187,6 +202,17 @@ export function TablesPanel({
             onSelectPit={onSelectPit}
             className="flex sm:hidden"
           />
+        </div>
+
+        {/* Session Action Buttons — single owner of lifecycle actions (PRD-038A) */}
+        <div className="shrink-0 flex items-center gap-2">
+          <SessionActionButtons
+            tableId={selectedTable.id}
+            session={session}
+            onCloseRequest={() => setCloseDialogOpen(true)}
+            variant="compact"
+          />
+          {session?.requires_reconciliation && <ReconciliationBadge />}
         </div>
 
         {/* Table Layout - Fills remaining space */}
@@ -228,6 +254,16 @@ export function TablesPanel({
         onOpenChange={setEnrollModalOpen}
         casinoId={casinoId}
         tableId={selectedTable.id}
+      />
+
+      {/* Close Session Dialog (PRD-038A) */}
+      <CloseSessionDialog
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+        session={session}
+        tableId={selectedTable.id}
+        casinoId={authCasinoId ?? casinoId}
+        currentStaffId={staffId ?? ''}
       />
     </div>
   );

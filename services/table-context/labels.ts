@@ -9,7 +9,12 @@
  * @see services/table-context/dtos.ts - Type aliases
  */
 
-import type { TableAvailability, SessionPhase, TableBankMode } from './dtos';
+import type {
+  TableAvailability,
+  SessionPhase,
+  TableBankMode,
+  CloseReasonType,
+} from './dtos';
 
 // === Table Availability Labels (gaming_table.status) ===
 
@@ -77,3 +82,42 @@ export const TABLE_BANK_MODE_DESCRIPTIONS: Record<TableBankMode, string> = {
   INVENTORY_COUNT: 'Count and record tray as-is at shift close',
   IMPREST_TO_PAR: 'Restore tray to par via final fill/credit before close',
 };
+
+// === Close Reason Labels (PRD-038A) ===
+
+/**
+ * UI labels for table session close reason enum.
+ * Maps database enum values to user-friendly display text.
+ *
+ * @see PRD-038A Table Lifecycle Audit Patch
+ */
+export const CLOSE_REASON_LABELS: Record<CloseReasonType, string> = {
+  end_of_shift: 'End of Shift',
+  maintenance: 'Maintenance',
+  game_change: 'Game Change',
+  dealer_unavailable: 'Dealer Unavailable',
+  low_demand: 'Low Demand',
+  security_hold: 'Security Hold',
+  emergency: 'Emergency',
+  other: 'Other',
+};
+
+/**
+ * Close reason options for Select/dropdown components.
+ * Preserves enum ordering from CLOSE_REASON_LABELS.
+ */
+export const CLOSE_REASON_OPTIONS: ReadonlyArray<{
+  value: CloseReasonType;
+  label: string;
+}> = (Object.entries(CLOSE_REASON_LABELS) as [CloseReasonType, string][]).map(
+  ([value, label]) => ({ value, label }),
+);
+
+/**
+ * Roles permitted to force-close a table session.
+ * Matches server-side gate in close_guardrails_rpcs migration.
+ */
+export const FORCE_CLOSE_PRIVILEGED_ROLES: readonly string[] = [
+  'pit_boss',
+  'admin',
+] as const;
