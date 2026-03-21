@@ -46,6 +46,8 @@ export type DashboardSlipsFilters = {
 export interface DashboardTableDTO extends GamingTableWithDealerDTO {
   /** Number of active (open + paused) rating slips at this table */
   activeSlipsCount: number;
+  /** Current session lifecycle status (null = no active session). EXEC-038A Bug 3. */
+  current_session_status?: 'OPEN' | 'ACTIVE' | 'RUNDOWN' | null;
 }
 
 /**

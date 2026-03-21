@@ -27,6 +27,8 @@ interface TableLayoutTerminalProps {
   tableId?: string;
   gameType?: string;
   tableStatus?: 'active' | 'inactive' | 'closed';
+  /** Session lifecycle status — overrides tableStatus badge when present. EXEC-038A Bug 3. */
+  sessionStatus?: 'OPEN' | 'ACTIVE' | 'RUNDOWN' | null;
   activeSlipsCount?: number;
   variant?: 'full' | 'compact';
   isSelected?: boolean;
@@ -49,6 +51,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     tableId,
     gameType,
     tableStatus = 'active',
+    sessionStatus,
     activeSlipsCount,
     variant = 'full',
     isSelected = false,
@@ -61,6 +64,20 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
 
     const isCompact = variant === 'compact';
 
+    // EXEC-038A Bug 3: Derive effective badge status from session lifecycle
+    // When sessionStatus is present, it takes precedence over tableStatus (availability)
+    const effectiveStatus: 'active' | 'inactive' | 'closed' = sessionStatus
+      ? sessionStatus === 'RUNDOWN'
+        ? 'inactive'
+        : 'active'
+      : tableStatus;
+
+    const effectiveLabel = sessionStatus
+      ? ({ OPEN: 'Opening', ACTIVE: 'In Play', RUNDOWN: 'Rundown' } as const)[
+          sessionStatus
+        ]
+      : tableStatus;
+
     // Compact variant: Render thumbnail with metadata overlay
     if (isCompact) {
       return (
@@ -71,8 +88,8 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             isSelected
               ? 'border-accent/80 ring-2 ring-accent/40 shadow-lg'
               : 'border-border/50 hover:border-accent/50',
-            tableStatus === 'inactive' && 'opacity-60',
-            tableStatus === 'closed' && 'opacity-40 grayscale',
+            effectiveStatus === 'inactive' && 'opacity-60',
+            effectiveStatus === 'closed' && 'opacity-40 grayscale',
           )}
         >
           {/* Table ID Badge */}
@@ -105,10 +122,10 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             <div
               className={cn(
                 'w-2 h-2 rounded-full',
-                tableStatus === 'active' &&
+                effectiveStatus === 'active' &&
                   'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]',
-                tableStatus === 'inactive' && 'bg-yellow-500',
-                tableStatus === 'closed' && 'bg-gray-500',
+                effectiveStatus === 'inactive' && 'bg-yellow-500',
+                effectiveStatus === 'closed' && 'bg-gray-500',
               )}
             />
           </div>
@@ -211,16 +228,16 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                       'bg-gradient-to-b from-card/90 to-card/70',
                       'border backdrop-blur-md',
                       'shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]',
-                      tableStatus === 'active' && [
+                      effectiveStatus === 'active' && [
                         'border-emerald-500/40',
                         'shadow-[0_0_20px_rgba(16,185,129,0.2),0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]',
                       ],
-                      tableStatus === 'inactive' && 'border-amber-500/40',
-                      tableStatus === 'closed' && 'border-border/40',
+                      effectiveStatus === 'inactive' && 'border-amber-500/40',
+                      effectiveStatus === 'closed' && 'border-border/40',
                     )}
                   >
                     {/* Status pulse ring for active tables */}
-                    {tableStatus === 'active' && (
+                    {effectiveStatus === 'active' && (
                       <div className="absolute inset-0 rounded-xl border border-emerald-500/30 animate-pulse" />
                     )}
 
@@ -236,13 +253,13 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                           <div
                             className={cn(
                               'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
-                              tableStatus === 'active' && [
+                              effectiveStatus === 'active' && [
                                 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
                               ],
-                              tableStatus === 'inactive' && [
+                              effectiveStatus === 'inactive' && [
                                 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
                               ],
-                              tableStatus === 'closed' && [
+                              effectiveStatus === 'closed' && [
                                 'bg-muted text-muted-foreground border border-border/50',
                               ],
                             )}
@@ -250,24 +267,30 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                             <span
                               className={cn(
                                 'w-1.5 h-1.5 rounded-full',
-                                tableStatus === 'active' &&
+                                effectiveStatus === 'active' &&
                                   'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
-                                tableStatus === 'inactive' && 'bg-amber-400',
-                                tableStatus === 'closed' &&
+                                effectiveStatus === 'inactive' &&
+                                  'bg-amber-400',
+                                effectiveStatus === 'closed' &&
                                   'bg-muted-foreground',
                               )}
                             />
-                            {tableStatus}
+                            {effectiveLabel}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <span>
-                            Table is{' '}
-                            {tableStatus === 'active'
-                              ? 'open and accepting players'
-                              : tableStatus === 'inactive'
-                                ? 'temporarily paused'
-                                : 'closed for the day'}
+                            {sessionStatus
+                              ? sessionStatus === 'ACTIVE'
+                                ? 'Session in play'
+                                : sessionStatus === 'RUNDOWN'
+                                  ? 'Session in rundown'
+                                  : 'Session opening'
+                              : effectiveStatus === 'active'
+                                ? 'Table available — no active session'
+                                : effectiveStatus === 'inactive'
+                                  ? 'Table temporarily paused'
+                                  : 'Table closed for the day'}
                           </span>
                         </TooltipContent>
                       </Tooltip>

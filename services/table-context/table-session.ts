@@ -15,6 +15,8 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '@/lib/errors/domain-errors';
+// Cross-context query import (bounded context compliant — SRM allowlisted)
+import { hasOpenSlipsForTable } from '@/services/rating-slip/queries';
 import type { Database } from '@/types/database.types';
 
 import type {
@@ -331,6 +333,26 @@ export async function closeTableSession(
   supabase: SupabaseClient<Database>,
   input: CloseTableSessionInput,
 ): Promise<TableSessionDTO> {
+  // EXEC-038A Bug 2: Check for open rating slips before standard close.
+  // Mirrors deactivateTable pattern (table-lifecycle.ts:145-149).
+  // Cross-context read via RatingSlipService published query (SRM allowlisted).
+  const { data: currentSession, error: lookupError } = await queryTableSession(
+    supabase,
+    input.sessionId,
+  );
+  if (lookupError || !currentSession) {
+    throw new DomainError('SESSION_NOT_FOUND', 'Table session not found');
+  }
+
+  const hasOpenSlips = await hasOpenSlipsForTable(
+    supabase,
+    currentSession.gaming_table_id,
+    currentSession.casino_id,
+  );
+  if (hasOpenSlips) {
+    throw new DomainError('TABLE_HAS_OPEN_SLIPS');
+  }
+
   const { data, error } = await callSessionRpc<TableSessionRow>(
     supabase,
     'rpc_close_table_session',

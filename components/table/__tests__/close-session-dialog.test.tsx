@@ -8,12 +8,11 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import {
   CLOSE_REASON_OPTIONS,
   FORCE_CLOSE_PRIVILEGED_ROLES,
 } from '@/services/table-context/labels';
-
-import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 
 // Radix polyfills for jsdom (hasPointerCapture, scrollIntoView)
 beforeAll(() => {

@@ -116,6 +116,7 @@ export function TableGrid({
               tableId={table.label}
               gameType={table.type}
               tableStatus={table.status}
+              sessionStatus={table.current_session_status}
               activeSlipsCount={table.activeSlipsCount}
               isSelected={selectedTableId === table.id}
             />

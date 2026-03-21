@@ -11,6 +11,7 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { dashboardKeys } from '@/hooks/dashboard/keys';
 import type {
   TableSessionDTO,
   TableSessionStatus,
@@ -42,6 +43,7 @@ export function useCurrentTableSession(tableId: string) {
     queryFn: () => fetchCurrentTableSession(tableId),
     enabled: !!tableId,
     staleTime: 30_000, // 30 seconds - sessions don't change frequently
+    refetchOnMount: 'always', // EXEC-038A Bug 1: prevent stale cache after close
   });
 }
 
@@ -71,6 +73,8 @@ export function useOpenTableSession(tableId: string) {
       );
       // Also cache by ID
       queryClient.setQueryData(tableContextKeys.sessions.byId(data.id), data);
+      // EXEC-038A Bug 3: Invalidate dashboard so grid badge shows session active
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
     },
   });
 }
@@ -119,16 +123,17 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
       const idempotencyKey = crypto.randomUUID();
       return closeTableSession(sessionId, input, idempotencyKey);
     },
-    onSuccess: () => {
-      // Session is closed - clear current session cache (returns null)
-      queryClient.setQueryData(
-        tableContextKeys.sessions.current(tableId),
-        null,
-      );
-      // Invalidate to refetch fresh state
-      queryClient.invalidateQueries({
-        queryKey: tableContextKeys.sessions.scope,
-      });
+    onSuccess: async () => {
+      const queryKey = tableContextKeys.sessions.current(tableId);
+      // EXEC-038A Bug 1: cancel→set→invalidate pattern prevents stale refetch race
+      // 1. Cancel in-flight fetches that could overwrite our optimistic cache write
+      await queryClient.cancelQueries({ queryKey });
+      // 2. Optimistic set to null — immediate UI feedback
+      queryClient.setQueryData(queryKey, null);
+      // 3. Background refetch for consistency
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+      // 4. EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
     },
   });
 }
@@ -150,14 +155,14 @@ export function useForceCloseTableSession(sessionId: string, tableId: string) {
       const idempotencyKey = crypto.randomUUID();
       return forceCloseTableSession(sessionId, input, idempotencyKey);
     },
-    onSuccess: () => {
-      queryClient.setQueryData(
-        tableContextKeys.sessions.current(tableId),
-        null,
-      );
-      queryClient.invalidateQueries({
-        queryKey: tableContextKeys.sessions.scope,
-      });
+    onSuccess: async () => {
+      const queryKey = tableContextKeys.sessions.current(tableId);
+      // EXEC-038A Bug 1: same cancel→set→invalidate pattern as standard close
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData(queryKey, null);
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+      // EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
     },
   });
 }

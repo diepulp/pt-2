@@ -60,6 +60,8 @@ import { DropEventDialog } from './drop-event-dialog';
 const ERROR_MESSAGES: Record<string, string> = {
   UNRESOLVED_LIABILITIES:
     'Unresolved items must be reconciled before standard close.',
+  TABLE_HAS_OPEN_SLIPS:
+    'Open or paused rating slips must be closed before standard close.',
   FORBIDDEN: "You don't have permission to force close.",
   ALREADY_CLOSED: 'Session already closed.',
   CLOSE_NOTE_REQUIRED: "Please add a note when selecting 'Other'.",
