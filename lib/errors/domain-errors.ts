@@ -91,7 +91,9 @@ export type LoyaltyErrorCode =
   // Issuance Errors (PRD-052)
   | 'REWARD_INACTIVE'
   | 'REWARD_FAMILY_MISMATCH'
-  | 'CATALOG_CONFIG_INVALID';
+  | 'CATALOG_CONFIG_INVALID'
+  // Valuation Policy Errors (PRD-053)
+  | 'VALUATION_POLICY_MISSING';
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: 'Insufficient loyalty points balance',
@@ -123,6 +125,9 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
     'Reward family does not match expected issuance family',
   CATALOG_CONFIG_INVALID:
     'Reward catalog configuration is missing required commercial values',
+  // Valuation Policy Errors (PRD-053)
+  VALUATION_POLICY_MISSING:
+    'No active valuation policy found for this casino. Configure a valuation rate before issuing comps.',
 };
 
 // ============================================================================

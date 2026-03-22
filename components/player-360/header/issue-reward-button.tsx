@@ -23,6 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useValuationRate } from '@/hooks/loyalty/use-loyalty-queries';
+import { useAuth } from '@/hooks/use-auth';
 import { usePrintReward } from '@/lib/print/hooks/use-print-reward';
 import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type { FulfillmentPayload } from '@/services/loyalty/dtos';
@@ -70,6 +72,10 @@ export function IssueRewardButton({
   onFulfillmentReady,
 }: IssueRewardButtonProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { casinoId } = useAuth();
+  const { centsPerPoint, policyMissing } = useValuationRate(
+    casinoId ?? undefined,
+  );
   const {
     print,
     state: printState,
@@ -141,6 +147,8 @@ export function IssueRewardButton({
           onFulfillmentReady={handleFulfillmentReady}
           printState={printState}
           onPrint={handleManualPrint}
+          centsPerPoint={centsPerPoint}
+          policyMissing={policyMissing}
         />
       )}
     </>

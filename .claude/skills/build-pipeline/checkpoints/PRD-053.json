@@ -1,0 +1,39 @@
+{
+  "prd": "PRD-053",
+  "prd_title": "Point Conversion Canonicalization",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS5a", "WS4", "WS5b", "WS3b", "WS5c", "WS5d", "WS5e", "WS5f"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "exec_spec": ["docs/21-exec-spec/EXEC-054-point-conversion-canonicalization.md"],
+    "migrations": [
+      "supabase/migrations/20260320173524_seed_valuation_policy_bootstrap.sql",
+      "supabase/migrations/20260320173525_add_rpc_update_valuation_policy.sql",
+      "supabase/migrations/20260320175515_add_valuation_seed_to_casino_setup.sql"
+    ],
+    "routes": [
+      "app/api/v1/loyalty/valuation-policy/route.ts"
+    ],
+    "components": [
+      "components/admin/valuation-settings-form.tsx",
+      "app/(dashboard)/admin/settings/valuation/page.tsx"
+    ],
+    "tests": [
+      "app/api/v1/loyalty/valuation-policy/__tests__/route.test.ts",
+      "services/loyalty/__tests__/valuation-policy.test.ts",
+      "services/loyalty/__tests__/valuation-policy-roundtrip.int.test.ts"
+    ]
+  },
+  "gates_passed": ["type-check", "test-pass", "lint", "build"],
+  "gates_pending": [],
+  "gov010_check": "waived:remediation-prd-bounded-fix",
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "p0_count": 1,
+    "p1_count": 8,
+    "attempt": 1
+  },
+  "timestamp": "2026-03-21T05:35:00Z"
+}

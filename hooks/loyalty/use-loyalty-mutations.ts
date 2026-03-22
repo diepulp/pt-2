@@ -22,12 +22,14 @@ import type {
   ManualCreditOutput,
   RedeemInput,
   RedeemOutput,
+  UpdateValuationPolicyInput,
 } from '@/services/loyalty/dtos';
 import {
   accrueOnClose,
   redeem,
   manualCredit,
   applyPromotion,
+  updateValuationRate,
 } from '@/services/loyalty/http';
 import { loyaltyKeys } from '@/services/loyalty/keys';
 
@@ -231,6 +233,44 @@ export function useApplyPromotion() {
           query.queryKey[0] === 'loyalty' &&
           query.queryKey[1] === 'balance' &&
           query.queryKey[2] === variables.casinoId,
+      });
+    },
+  });
+}
+
+// === Valuation Policy Mutations (PRD-053) ===
+
+/**
+ * Updates the valuation policy (admin-only).
+ * Atomic rotate: deactivates current active row and inserts new one.
+ *
+ * Invalidates:
+ * - valuationRate (comp issuance hot path)
+ * - valuationPolicy (admin settings form)
+ *
+ * @param casinoId - Casino UUID for targeted cache invalidation
+ *
+ * @see PRD-053 WS5d
+ */
+export function useUpdateValuationPolicy(casinoId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: loyaltyKeys.updateValuationPolicy(),
+    mutationFn: ({
+      input,
+      idempotencyKey,
+    }: {
+      input: UpdateValuationPolicyInput;
+      idempotencyKey: string;
+    }) => updateValuationRate(input, idempotencyKey),
+    onSuccess: () => {
+      // Invalidate both query keys — separate data shapes, both need refresh
+      queryClient.invalidateQueries({
+        queryKey: loyaltyKeys.valuationRate(casinoId),
+      });
+      queryClient.invalidateQueries({
+        queryKey: loyaltyKeys.valuationPolicy(casinoId),
       });
     },
   });
