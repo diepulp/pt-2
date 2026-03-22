@@ -175,4 +175,17 @@ export const loyaltyKeys = {
   /** Eligible rewards for a player */
   eligibleRewards: (playerId: string) =>
     [...ROOT, 'eligible-rewards', playerId] as const,
+
+  // === Valuation Policy Keys (PRD-053) ===
+
+  /** Lightweight rate-only query for comp issuance hot path (useValuationRate) */
+  valuationRate: (casinoId: string) =>
+    [...ROOT, 'valuation-rate', casinoId] as const,
+
+  /** Full DTO query for admin settings form (useActiveValuationPolicy) */
+  valuationPolicy: (casinoId: string) =>
+    [...ROOT, 'valuation-policy', casinoId] as const,
+
+  /** Mutation key for admin valuation policy update */
+  updateValuationPolicy: () => [...ROOT, 'update-valuation-policy'] as const,
 };

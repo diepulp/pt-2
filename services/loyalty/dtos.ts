@@ -434,6 +434,19 @@ export interface IssueCompParams {
 
   /** Human-readable note. Defaults to `"Comp: {rewardName}"` in issueComp if omitted. */
   note?: string;
+
+  /**
+   * Dollar amount in cents for variable-amount comps.
+   * When provided, overrides catalog points_cost: pointsCost = ceil(faceValueCents / CENTS_PER_POINT).
+   * When omitted, falls back to catalog reward_price_points.points_cost.
+   */
+  faceValueCents?: number;
+
+  /**
+   * Allow overdraw (debit exceeds player balance).
+   * Authorization enforced server-side by rpc_redeem (pit_boss/admin only).
+   */
+  allowOverdraw?: boolean;
 }
 
 /**
@@ -468,7 +481,7 @@ export interface CompIssuanceResult {
   /** Reward name from catalog */
   rewardName: string;
 
-  /** Face value in cents from catalog */
+  /** Issued face value in cents. Caller-provided value takes precedence over catalog metadata. */
   faceValueCents: number;
 
   /** True if this was an idempotent replay (no additional debit) */
@@ -548,3 +561,34 @@ export type IssuanceResultDTO = CompIssuanceResult | EntitlementIssuanceResult;
 
 // Note: EntitlementIssuanceResult is available via '@/services/loyalty' barrel (from promo sub-module).
 // It is NOT re-exported here to avoid duplicate export with index.ts `export * from './promo'`.
+
+// === Valuation Policy DTOs (PRD-053) ===
+
+/**
+ * Full valuation policy DTO for admin settings form.
+ * Pattern A Contract-First manual DTO.
+ *
+ * @see PRD-053 WS5b — Admin Service Layer
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First manual DTO per PRD-053
+export interface ValuationPolicyDTO {
+  id: string;
+  casinoId: string;
+  centsPerPoint: number;
+  effectiveDate: string;
+  versionIdentifier: string;
+  isActive: boolean;
+  createdByStaffId: string | null;
+  createdAt: string;
+}
+
+/**
+ * Input for updating valuation policy (admin write).
+ * NO casinoId — derived from RLS context (ADR-024 INV-8).
+ */
+
+export interface UpdateValuationPolicyInput {
+  centsPerPoint: number;
+  effectiveDate: string;
+  versionIdentifier: string;
+}

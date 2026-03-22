@@ -114,7 +114,7 @@ INSERT INTO casino_settings (id, casino_id, gaming_day_start_time, timezone, wat
 -- Casino 1 Staff
 INSERT INTO staff (id, casino_id, employee_id, first_name, last_name, email, role, status) VALUES
   -- Pit Bosses
-  ('5a000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'PB001', 'Marcus', 'Thompson', 'marcus.thompson@luckystar.com', 'pit_boss', 'active'),
+  ('5a000000-0000-0000-0000-000000000001', 'ca000000-0000-0000-0000-000000000001', 'PB001', 'Marcus', 'Thompson', 'marcus.thompson@luckystar.com', 'admin', 'active'),
   ('5a000000-0000-0000-0000-000000000002', 'ca000000-0000-0000-0000-000000000001', 'PB002', 'Sarah', 'Chen', 'sarah.chen@luckystar.com', 'pit_boss', 'active'),
   -- Dealers
   ('5a000000-0000-0000-0000-000000000003', 'ca000000-0000-0000-0000-000000000001', 'DL001', 'James', 'Rodriguez', 'james.rodriguez@luckystar.com', 'dealer', 'active'),
@@ -1081,11 +1081,12 @@ INSERT INTO mtl_audit_note (id, mtl_entry_id, staff_id, note) VALUES
 -- 17. DEVELOPMENT AUTH USER
 -- ============================================================================
 -- Creates a test auth user for local development and integration testing.
--- This user is linked to Marcus Thompson (pit boss) at Casino 1.
+-- This user is linked to Marcus Thompson (admin) at Casino 1.
 --
 -- Credentials:
 --   Email: pitboss@dev.local
 --   Password: devpass123
+--   Role: admin (enables admin settings testing)
 --
 -- WARNING: This user should ONLY exist in development/test databases.
 -- ============================================================================
@@ -1121,8 +1122,8 @@ INSERT INTO auth.users (
   'pitboss@dev.local',
   crypt('devpass123', gen_salt('bf')),
   NOW(),
-  '{"provider": "email", "providers": ["email"], "casino_id": "ca000000-0000-0000-0000-000000000001", "staff_id": "5a000000-0000-0000-0000-000000000001", "staff_role": "pit_boss"}',
-  '{"name": "Marcus Thompson (Dev)", "role": "pit_boss"}',
+  '{"provider": "email", "providers": ["email"], "casino_id": "ca000000-0000-0000-0000-000000000001", "staff_id": "5a000000-0000-0000-0000-000000000001", "staff_role": "admin"}',
+  '{"name": "Marcus Thompson (Dev)", "role": "admin"}',
   'authenticated',
   'authenticated',
   NOW(),
@@ -1261,6 +1262,21 @@ EXCEPTION WHEN undefined_object THEN NULL;
 END $$;
 
 -- ============================================================================
+-- 19. LOYALTY VALUATION POLICY (PRD-053)
+-- ============================================================================
+-- Default redemption rate for each casino. ADR-045 baseline: cents_per_point=2
+-- yields ~20% implied reinvestment at earn rate of 10 pts/$1 theo.
+-- Every casino ships with this default; admins tailor via Settings > Valuation.
+-- ============================================================================
+
+INSERT INTO loyalty_valuation_policy (casino_id, cents_per_point, effective_date, version_identifier, is_active, created_by_staff_id)
+VALUES
+  ('ca000000-0000-0000-0000-000000000001', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000001'),
+  ('ca000000-0000-0000-0000-000000000002', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000007'),
+  ('ca000000-0000-0000-0000-000000000003', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000012')
+ON CONFLICT (casino_id) WHERE (is_active = true) DO NOTHING;
+
+-- ============================================================================
 -- SEED COMPLETE
 -- ============================================================================
 --
@@ -1269,7 +1285,7 @@ END $$;
 -- For local development/testing, we use mock staff without auth integration.
 --
 -- DEV USER CREDENTIALS (for integration testing):
---   Casino 1: pitboss@dev.local / devpass123  — Marcus Thompson (Pit Boss)
+--   Casino 1: pitboss@dev.local / devpass123  — Marcus Thompson (Admin)
 --   Casino 2: pitboss2@dev.local / devpass123 — David Kim (Pit Boss)
 --
 -- RLS Testing Notes (SEC-007 / PRD-041):

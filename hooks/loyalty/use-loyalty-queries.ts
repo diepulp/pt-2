@@ -13,6 +13,7 @@
 
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import type {
   LedgerListQuery,
   LedgerPageResponse,
@@ -23,6 +24,7 @@ import {
   getPlayerLoyalty,
   getLedger,
   evaluateSuggestion,
+  getValuationRate,
 } from '@/services/loyalty/http';
 import { loyaltyKeys } from '@/services/loyalty/keys';
 
@@ -172,5 +174,65 @@ export function useLoyaltySuggestion(
     enabled: !!ratingSlipId,
     staleTime: 10_000, // 10 seconds - live preview during session
     refetchOnWindowFocus: true,
+  });
+}
+
+// === Valuation Policy Hooks (PRD-053) ===
+
+/**
+ * Fetches the active valuation rate (cents_per_point) for comp issuance.
+ *
+ * Direct Supabase client query against loyalty_valuation_policy
+ * using existing Pattern C RLS SELECT policy.
+ *
+ * @param casinoId - Casino UUID (required, undefined disables query)
+ * @returns { centsPerPoint, policyMissing, isLoading, error }
+ *
+ * @see PRD-053 — Point Conversion Canonicalization
+ */
+export function useValuationRate(casinoId: string | undefined) {
+  const supabase = createBrowserComponentClient();
+
+  const { data, isLoading, error } = useQuery({
+    queryKey: loyaltyKeys.valuationRate(casinoId!),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('loyalty_valuation_policy')
+        .select('cents_per_point')
+        .eq('casino_id', casinoId!)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      return data ? Number(data.cents_per_point) : null;
+    },
+    enabled: !!casinoId,
+    staleTime: 300_000, // 5 min cache — valuation rate changes rarely
+  });
+
+  return {
+    centsPerPoint: typeof data === 'number' ? data : null,
+    policyMissing: data === null,
+    isLoading,
+    error: error ?? null,
+  };
+}
+
+/**
+ * Fetches the full active valuation policy DTO for admin settings form.
+ * Uses the GET /api/v1/loyalty/valuation-policy route (server-side RLS context).
+ *
+ * @param casinoId - Casino UUID (required, undefined disables query)
+ * @returns TanStack Query result with ValuationPolicyDTO | null
+ *
+ * @see PRD-053 WS5e — Admin Settings UI
+ */
+export function useActiveValuationPolicy(casinoId: string | undefined) {
+  return useQuery({
+    queryKey: loyaltyKeys.valuationPolicy(casinoId!),
+    queryFn: () => getValuationRate(),
+    enabled: !!casinoId,
+    staleTime: 60_000, // 1 min — admin form should show recent data
   });
 }

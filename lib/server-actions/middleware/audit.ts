@@ -68,7 +68,11 @@ export function withAudit<T>(): Middleware<T> {
 }
 
 /**
- * Write audit log entry to database
+ * Write audit log entry via append_audit_log RPC
+ *
+ * Uses SECURITY DEFINER RPC that derives casino_id/actor_id from
+ * session vars set by set_rls_context_from_staff(). Direct INSERT
+ * on audit_log is revoked from authenticated (SEC-007 P0 hardening).
  */
 async function writeAuditEntry<T>(
   ctx: MiddlewareContext,
@@ -83,15 +87,11 @@ async function writeAuditEntry<T>(
     error: result.error ?? null,
   });
 
-  const payload = {
-    casino_id: ctx.rlsContext?.casinoId ?? null,
-    domain: ctx.domain ?? ctx.endpoint ?? 'unknown',
-    actor_id: ctx.rlsContext?.actorId ?? null,
-    action: ctx.action ?? 'unknown',
-    details,
-  } satisfies Database['public']['Tables']['audit_log']['Insert'];
-
-  const { error } = await ctx.supabase.from('audit_log').insert(payload);
+  const { error } = await ctx.supabase.rpc('append_audit_log', {
+    p_domain: ctx.domain ?? ctx.endpoint ?? 'unknown',
+    p_action: ctx.action ?? 'unknown',
+    p_details: details,
+  });
   if (error) {
     throw error;
   }

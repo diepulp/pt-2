@@ -31,6 +31,8 @@ import type {
   RedeemInput,
   RedeemOutput,
   SessionRewardSuggestionOutput,
+  UpdateValuationPolicyInput,
+  ValuationPolicyDTO,
 } from './dtos';
 import type { PlayerLoyaltyRow, ReconcileBalanceRpcResponse } from './mappers';
 import {
@@ -621,6 +623,146 @@ export async function reconcileBalance(
   }
 }
 
+// === Valuation Policy Lookup (PRD-053) ===
+
+/**
+ * Fetch the active valuation rate (cents_per_point) for a casino.
+ * Fail-closed: throws VALUATION_POLICY_MISSING if no active policy row exists.
+ *
+ * @see PRD-053 — Point Conversion Canonicalization
+ * @see loyalty_valuation_policy table (ADR-039)
+ */
+export async function getActiveValuationCentsPerPoint(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+): Promise<number> {
+  try {
+    const { data, error } = await supabase
+      .from('loyalty_valuation_policy')
+      .select('cents_per_point')
+      .eq('casino_id', casinoId)
+      .eq('is_active', true)
+      .maybeSingle();
+
+    if (error) {
+      throw mapDatabaseError(error);
+    }
+
+    if (!data) {
+      throw new DomainError(
+        'VALUATION_POLICY_MISSING',
+        'No active valuation policy found for this casino. Configure a valuation rate before issuing comps.',
+        { httpStatus: 422 },
+      );
+    }
+
+    return Number(data.cents_per_point);
+  } catch (error) {
+    if (error instanceof DomainError) {
+      throw error;
+    }
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- Error type narrowing
+    throw mapDatabaseError(error as { code?: string; message: string });
+  }
+}
+
+/**
+ * Fetch the full active valuation policy DTO for admin settings form.
+ * Returns null if no active policy exists (admin sees "not configured" state).
+ *
+ * @see PRD-053 WS5b — Admin Service Layer
+ */
+export async function getActiveValuationPolicy(
+  supabase: SupabaseClient<Database>,
+  casinoId: string,
+): Promise<ValuationPolicyDTO | null> {
+  const { data, error } = await supabase
+    .from('loyalty_valuation_policy')
+    .select('*')
+    .eq('casino_id', casinoId)
+    .eq('is_active', true)
+    .maybeSingle();
+
+  if (error) {
+    throw mapDatabaseError(error);
+  }
+
+  if (!data) return null;
+
+  return {
+    id: data.id,
+    casinoId: data.casino_id,
+    centsPerPoint: Number(data.cents_per_point),
+    effectiveDate: data.effective_date,
+    versionIdentifier: data.version_identifier,
+    isActive: data.is_active,
+    createdByStaffId: data.created_by_staff_id,
+    createdAt: data.created_at,
+  };
+}
+
+/**
+ * Update valuation policy via SECURITY DEFINER RPC.
+ * Atomically deactivates current row and inserts new active row.
+ * Casino ID derived from RLS context (ADR-024 INV-8).
+ *
+ * @see PRD-053 WS5b — Admin Service Layer
+ */
+export async function updateValuationPolicy(
+  supabase: SupabaseClient<Database>,
+  input: UpdateValuationPolicyInput,
+): Promise<ValuationPolicyDTO> {
+  // RPC not yet in generated types — cast supabase to call untyped RPC.
+  // Regenerate with `npm run db:types-local` after migration lands on remote.
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- untyped RPC call
+  const rpcClient = supabase as unknown as {
+    rpc: (
+      fn: string,
+      params: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: unknown }>;
+  };
+  const { data, error } = await rpcClient.rpc('rpc_update_valuation_policy', {
+    p_cents_per_point: input.centsPerPoint,
+    p_effective_date: input.effectiveDate,
+    p_version_identifier: input.versionIdentifier,
+  });
+
+  if (error) {
+    // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC error type from untyped call
+    throw mapDatabaseError(error as { code?: string; message: string });
+  }
+
+  if (!data) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'RPC returned no data for valuation policy update',
+    );
+  }
+
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- RPC response mapping (types pending db:types-local)
+  const row = data as {
+    id: string;
+    casino_id: string;
+    cents_per_point: number;
+    effective_date: string;
+    version_identifier: string;
+    is_active: boolean;
+    created_by_staff_id: string | null;
+    created_at: string;
+  };
+
+  return {
+    id: row.id,
+    casinoId: row.casino_id,
+    centsPerPoint: Number(row.cents_per_point),
+    effectiveDate: row.effective_date,
+    versionIdentifier: row.version_identifier,
+    isActive: row.is_active,
+    createdByStaffId: row.created_by_staff_id,
+    createdAt: row.created_at,
+  };
+}
+
 // === Catalog-Backed Issuance Operations (PRD-052 WS2) ===
 
 /**
@@ -653,10 +795,11 @@ export async function issueComp(
   const { getReward } = await import('./reward/crud');
 
   try {
-    // 1. Parallel pre-flight: fetch reward catalog + player balance
-    const [reward, balance] = await Promise.all([
+    // 1. Parallel pre-flight: fetch reward catalog + player balance + valuation rate
+    const [reward, balance, centsPerPoint] = await Promise.all([
       getReward(supabase, params.rewardId),
       getBalance(supabase, params.playerId, casinoId),
+      getActiveValuationCentsPerPoint(supabase, casinoId),
     ]);
 
     // 2. Validate reward exists
@@ -683,8 +826,11 @@ export async function issueComp(
       );
     }
 
-    // 5. Extract points cost from price points
-    const pointsCost = reward.pricePoints?.pointsCost;
+    // 5. Resolve points cost: caller-provided variable amount OR catalog default
+    // ceil() on redeem is house-favorable rounding.
+    const pointsCost = params.faceValueCents
+      ? Math.ceil(params.faceValueCents / centsPerPoint)
+      : reward.pricePoints?.pointsCost;
     if (!pointsCost || pointsCost <= 0) {
       throw new DomainError(
         'CATALOG_CONFIG_INVALID',
@@ -694,7 +840,7 @@ export async function issueComp(
 
     // 6. Advisory balance pre-check (UX only — RPC is authoritative. See PRD §5.3.)
     const currentBalance = balance?.currentBalance ?? 0;
-    if (currentBalance < pointsCost) {
+    if (!params.allowOverdraw && currentBalance < pointsCost) {
       throw new DomainError(
         'INSUFFICIENT_BALANCE',
         `Insufficient balance: need ${pointsCost} pts, have ${currentBalance} pts`,
@@ -704,11 +850,12 @@ export async function issueComp(
     // 7. Default note
     const note = params.note ?? `Comp: ${reward.name}`;
 
-    // 8. Extract face value from metadata for result enrichment
+    // 8. Resolve issued face value: caller-provided takes precedence over catalog metadata
     const faceValueCents =
-      typeof reward.metadata?.face_value_cents === 'number'
+      params.faceValueCents ??
+      (typeof reward.metadata?.face_value_cents === 'number'
         ? reward.metadata.face_value_cents
-        : 0;
+        : 0);
 
     // 9. Call rpc_redeem DIRECTLY (not via redeem())
     const { data, error } = await supabase.rpc('rpc_redeem', {
@@ -716,7 +863,7 @@ export async function issueComp(
       p_points: pointsCost,
       p_note: note,
       p_idempotency_key: params.idempotencyKey,
-      p_allow_overdraw: false,
+      p_allow_overdraw: params.allowOverdraw ?? false,
       p_reward_id: params.rewardId,
       p_reference: `reward_catalog:${params.rewardId}:${reward.code}`,
     });

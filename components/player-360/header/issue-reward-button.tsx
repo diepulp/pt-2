@@ -23,6 +23,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useValuationRate } from '@/hooks/loyalty/use-loyalty-queries';
+import { useAuth } from '@/hooks/use-auth';
 import { usePrintReward } from '@/lib/print/hooks/use-print-reward';
 import type { PrintInvocationMode, PrintState } from '@/lib/print/types';
 import type { FulfillmentPayload } from '@/services/loyalty/dtos';
@@ -48,6 +50,8 @@ export interface IssueRewardButtonProps {
   currentTier?: string;
   /** Staff name for fulfillment context */
   staffName?: string;
+  /** Associated visit ID for audit trail linkage */
+  visitId?: string;
   /** Callback fired on successful issuance with fulfillment payload */
   onFulfillmentReady?: (payload: FulfillmentPayload) => void;
 }
@@ -64,9 +68,14 @@ export function IssueRewardButton({
   currentBalance = 0,
   currentTier = '',
   staffName = '',
+  visitId,
   onFulfillmentReady,
 }: IssueRewardButtonProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const { casinoId } = useAuth();
+  const { centsPerPoint, policyMissing } = useValuationRate(
+    casinoId ?? undefined,
+  );
   const {
     print,
     state: printState,
@@ -132,11 +141,14 @@ export function IssueRewardButton({
           currentBalance={currentBalance}
           currentTier={currentTier}
           staffName={staffName}
+          visitId={visitId}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}
           onFulfillmentReady={handleFulfillmentReady}
           printState={printState}
           onPrint={handleManualPrint}
+          centsPerPoint={centsPerPoint}
+          policyMissing={policyMissing}
         />
       )}
     </>
