@@ -158,14 +158,19 @@ export function ValuationSettingsForm() {
         </Alert>
       )}
 
-      {/* No policy configured state */}
-      {!policy && (
-        <Alert variant="default" className="border-blue-500/50 bg-blue-500/10">
-          <AlertDescription className="text-sm text-blue-700 dark:text-blue-400">
-            No active valuation policy configured for this casino.
+      {/* No policy — system error, not expected onboarding state */}
+      {!policy && !policyLoading && (
+        <Alert
+          variant="default"
+          className="border-destructive/50 bg-destructive/10"
+        >
+          <AlertDescription className="text-sm text-destructive">
+            Valuation policy could not be loaded for this casino. This is a
+            system configuration error — comp issuance will be blocked until
+            resolved.
             {isAdmin
-              ? ' Set a rate below to enable comp issuance.'
-              : ' Contact an administrator to configure.'}
+              ? ' Use the form below to set a rate, or contact support.'
+              : ' Contact an administrator.'}
           </AlertDescription>
         </Alert>
       )}

@@ -1262,6 +1262,21 @@ EXCEPTION WHEN undefined_object THEN NULL;
 END $$;
 
 -- ============================================================================
+-- 19. LOYALTY VALUATION POLICY (PRD-053)
+-- ============================================================================
+-- Default redemption rate for each casino. ADR-045 baseline: cents_per_point=2
+-- yields ~20% implied reinvestment at earn rate of 10 pts/$1 theo.
+-- Every casino ships with this default; admins tailor via Settings > Valuation.
+-- ============================================================================
+
+INSERT INTO loyalty_valuation_policy (casino_id, cents_per_point, effective_date, version_identifier, is_active, created_by_staff_id)
+VALUES
+  ('ca000000-0000-0000-0000-000000000001', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000001'),
+  ('ca000000-0000-0000-0000-000000000002', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000007'),
+  ('ca000000-0000-0000-0000-000000000003', 2, CURRENT_DATE, 'seed-bootstrap', true, '5a000000-0000-0000-0000-000000000012')
+ON CONFLICT (casino_id) WHERE (is_active = true) DO NOTHING;
+
+-- ============================================================================
 -- SEED COMPLETE
 -- ============================================================================
 --

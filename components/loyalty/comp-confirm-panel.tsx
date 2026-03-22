@@ -119,12 +119,12 @@ export function CompConfirmPanel({
             <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
             <div>
               <p className="text-sm font-medium text-destructive">
-                Valuation policy not configured
+                Valuation policy unavailable
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                No active valuation policy found for this casino. Contact your
-                system administrator to configure a redemption rate before
-                issuing comps.
+                The valuation policy for this casino could not be loaded. This
+                is a system configuration error — please contact your system
+                administrator.
               </p>
             </div>
           </div>
