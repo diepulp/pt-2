@@ -10,7 +10,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { datetimeSchema, uuidSchema } from '@/lib/validation';
 
 // === Rating Slip Status Schema ===
 
@@ -142,7 +142,7 @@ export const closedTodayQuerySchema = z.object({
   /** Results per page (default 50, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(50),
   /** Keyset cursor: end_time timestamp (ISO 8601) */
-  cursor_end_time: z.string().datetime().optional(),
+  cursor_end_time: datetimeSchema('cursor_end_time').optional(),
   /** Keyset cursor: rating slip UUID */
   cursor_id: z.string().uuid().optional(),
 });

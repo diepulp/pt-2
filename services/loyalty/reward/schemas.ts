@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { datetimeSchema } from '@/lib/validation';
+
 // === Route Param Schemas ===
 
 export const rewardRouteParamsSchema = z.object({
@@ -98,7 +100,7 @@ export const upsertEarnConfigSchema = z.object({
     .optional(),
   roundingPolicy: z.enum(['floor', 'ceil', 'round']).optional(),
   isActive: z.boolean().optional(),
-  effectiveFrom: z.string().datetime().nullable().optional(),
+  effectiveFrom: datetimeSchema('effectiveFrom').nullable().optional(),
 });
 
 // === Eligible Rewards Schema ===

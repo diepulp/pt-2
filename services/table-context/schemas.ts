@@ -12,7 +12,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, datetimeSchema, uuidSchema } from '@/lib/validation';
 import type { Database } from '@/types/database.types';
 
 // === UUID Format Schema ===
@@ -140,13 +140,10 @@ export const logDropEventSchema = z.object({
   drop_box_id: z.string().min(1, 'Drop box ID is required'),
   seal_no: z.string().min(1, 'Seal number is required'),
   witnessed_by: uuidFormat('staff ID'),
-  removed_at: z.string().datetime().optional(),
-  delivered_at: z.string().datetime().optional(),
-  delivered_scan_at: z.string().datetime().optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  removed_at: datetimeSchema('removed_at').optional(),
+  delivered_at: datetimeSchema('delivered_at').optional(),
+  delivered_scan_at: datetimeSchema('delivered_scan_at').optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
   seq_no: z.number().int().positive().optional(),
   note: z.string().max(500).optional(),
 });
@@ -355,26 +352,17 @@ export const confirmTableCreditSchema = z.object({
 
 export const fillListQuerySchema = z.object({
   status: z.enum(['requested', 'confirmed']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 export const creditListQuerySchema = z.object({
   status: z.enum(['requested', 'confirmed']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 export const dropListQuerySchema = z.object({
   cage_received: z.enum(['true', 'false']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 // Cashier confirmation transport type exports (PRD-033)

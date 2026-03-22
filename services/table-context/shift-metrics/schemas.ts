@@ -10,13 +10,13 @@
 
 import { z } from 'zod';
 
+import { datetimeSchema } from '@/lib/validation';
+
 /**
  * ISO timestamp string validation.
  * Accepts ISO 8601 format timestamps.
  */
-const isoTimestamp = z
-  .string()
-  .datetime({ message: 'Must be a valid ISO 8601 timestamp' });
+const isoTimestamp = datetimeSchema('timestamp');
 
 /**
  * Base time window object schema (without refinement for extension).

@@ -10,7 +10,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, uuidSchema } from '@/lib/validation';
 
 // === ImportPlayerV1 Schema ===
 
@@ -37,11 +37,7 @@ export const importPlayerV1Schema = z
       .object({
         first_name: z.string().max(100).optional(),
         last_name: z.string().max(100).optional(),
-        dob: z
-          .string()
-          .regex(/^\d{4}-\d{2}-\d{2}$/, 'DOB must be YYYY-MM-DD format')
-          .nullable()
-          .optional(),
+        dob: dateSchema('dob').nullable().optional(),
       })
       .optional()
       .default({}),

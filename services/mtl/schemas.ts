@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { dateSchema, datetimeSchema } from '@/lib/validation';
+
 // === UUID Format Schema ===
 
 /**
@@ -79,7 +81,7 @@ export const createMtlEntrySchema = z
     txn_type: mtlTxnTypeSchema,
     source: mtlSourceSchema.default('table'),
     area: z.string().max(255).optional(),
-    occurred_at: z.string().datetime().optional(),
+    occurred_at: datetimeSchema('occurred_at').optional(),
     idempotency_key: z
       .string()
       .min(1, 'Idempotency key is required')
@@ -129,10 +131,7 @@ export type CreateMtlAuditNoteInput = z.infer<typeof createMtlAuditNoteSchema>;
 export const mtlEntryListQuerySchema = z.object({
   casino_id: uuidFormat('casino UUID'),
   patron_uuid: uuidFormat('patron UUID').optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)')
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
   min_amount: z.coerce.number().positive().optional(),
   txn_type: mtlTxnTypeSchema.optional(),
   source: mtlSourceSchema.optional(),
@@ -148,9 +147,7 @@ export type MtlEntryListQuery = z.infer<typeof mtlEntryListQuerySchema>;
  */
 export const mtlGamingDaySummaryQuerySchema = z.object({
   casino_id: uuidFormat('casino UUID'),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  gaming_day: dateSchema('gaming_day'),
   patron_uuid: uuidFormat('patron UUID').optional(),
   agg_badge_in: aggBadgeSchema.optional(),
   agg_badge_out: aggBadgeSchema.optional(),

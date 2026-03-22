@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { dateSchema, datetimeSchema } from '@/lib/validation';
+
 // === UUID Format Schema ===
 
 /**
@@ -85,7 +87,7 @@ const createFinancialTxnBaseSchema = z.object({
     .max(255, 'Idempotency key must be 255 characters or fewer')
     .optional(),
   /** Optional: custom timestamp (ISO 8601 format) */
-  created_at: z.string().datetime().optional(),
+  created_at: datetimeSchema('created_at').optional(),
   /** Optional: receipt/ticket reference for cage transactions (PRD-033) */
   external_ref: z
     .string()
@@ -159,10 +161,7 @@ export const financialTxnListQuerySchema = z.object({
   /** Filter by tender type */
   tender_type: tenderTypeSchema.optional(),
   /** Filter by gaming day (ISO date format YYYY-MM-DD) */
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format')
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
   /** Results per page (default 20, max 100) */
   limit: z.coerce.number().int().min(1).max(100).default(20),
   /** Cursor for pagination (transaction ID) */
