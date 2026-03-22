@@ -561,3 +561,34 @@ export type IssuanceResultDTO = CompIssuanceResult | EntitlementIssuanceResult;
 
 // Note: EntitlementIssuanceResult is available via '@/services/loyalty' barrel (from promo sub-module).
 // It is NOT re-exported here to avoid duplicate export with index.ts `export * from './promo'`.
+
+// === Valuation Policy DTOs (PRD-053) ===
+
+/**
+ * Full valuation policy DTO for admin settings form.
+ * Pattern A Contract-First manual DTO.
+ *
+ * @see PRD-053 WS5b — Admin Service Layer
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: Contract-First manual DTO per PRD-053
+export interface ValuationPolicyDTO {
+  id: string;
+  casinoId: string;
+  centsPerPoint: number;
+  effectiveDate: string;
+  versionIdentifier: string;
+  isActive: boolean;
+  createdByStaffId: string | null;
+  createdAt: string;
+}
+
+/**
+ * Input for updating valuation policy (admin write).
+ * NO casinoId — derived from RLS context (ADR-024 INV-8).
+ */
+
+export interface UpdateValuationPolicyInput {
+  centsPerPoint: number;
+  effectiveDate: string;
+  versionIdentifier: string;
+}

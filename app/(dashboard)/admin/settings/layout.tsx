@@ -12,10 +12,16 @@ const SETTINGS_TABS = [
     href: '/admin/settings/thresholds',
   },
   { value: 'shifts', label: 'Shifts', href: '/admin/settings/shifts' },
+  {
+    value: 'valuation',
+    label: 'Valuation',
+    href: '/admin/settings/valuation',
+  },
 ] as const;
 
 function getActiveTab(pathname: string): string {
   if (pathname.includes('/shifts')) return 'shifts';
+  if (pathname.includes('/valuation')) return 'valuation';
   return 'thresholds';
 }
 

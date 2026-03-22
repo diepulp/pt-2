@@ -23,11 +23,6 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import type { RewardCatalogDTO } from '@/services/loyalty/reward/dtos';
 
-// === Constants ===
-
-/** Pilot conversion rate. Post-pilot: source from loyalty_valuation_policy.cents_per_point */
-const CENTS_PER_POINT = 10;
-
 // === Types ===
 
 export interface CompConfirmPanelProps {
@@ -48,6 +43,12 @@ export interface CompConfirmPanelProps {
 
   /** Callback to go back to reward selection */
   onBack: () => void;
+
+  /** DB-sourced valuation rate (cents per loyalty point) — PRD-053 */
+  centsPerPoint: number;
+
+  /** True when no active valuation policy exists for the casino */
+  policyMissing?: boolean;
 }
 
 // === Helpers ===
@@ -74,15 +75,17 @@ export function CompConfirmPanel({
   isPending,
   onConfirm,
   onBack,
+  centsPerPoint,
+  policyMissing = false,
 }: CompConfirmPanelProps) {
   // State: amount in integer cents, pre-filled from catalog default
   const [amountCents, setAmountCents] = useState(
-    defaultPointsCost * CENTS_PER_POINT,
+    defaultPointsCost * centsPerPoint,
   );
   const [allowOverdraw, setAllowOverdraw] = useState(false);
 
   // Derived values — computed during render, no useEffect
-  const pointsCost = Math.ceil(amountCents / CENTS_PER_POINT);
+  const pointsCost = Math.ceil(amountCents / centsPerPoint);
   const postDebitBalance = currentBalance - pointsCost;
   const isInsufficientBalance = postDebitBalance < 0;
 
@@ -108,6 +111,25 @@ export function CompConfirmPanel({
         <ArrowLeft className="h-4 w-4" />
         Back to rewards
       </button>
+
+      {/* Policy missing error state (PRD-053 Flow 2) */}
+      {policyMissing && (
+        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 space-y-2">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-destructive">
+                Valuation policy not configured
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                No active valuation policy found for this casino. Contact your
+                system administrator to configure a redemption rate before
+                issuing comps.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Reward details */}
       <div className="rounded-lg border-2 border-border/50 bg-card p-4 space-y-3">
@@ -154,7 +176,7 @@ export function CompConfirmPanel({
           style={{ fontFamily: 'monospace' }}
         >
           {formatDollars(amountCents)} = {pointsCost.toLocaleString()} points
-          (at $0.10/pt)
+          (at ${(centsPerPoint / 100).toFixed(2)}/pt)
         </div>
 
         {/* Balance preview */}
@@ -215,6 +237,7 @@ export function CompConfirmPanel({
         onClick={() => onConfirm(amountCents, allowOverdraw)}
         disabled={
           isPending ||
+          policyMissing ||
           amountCents <= 0 ||
           (isInsufficientBalance && !allowOverdraw)
         }
