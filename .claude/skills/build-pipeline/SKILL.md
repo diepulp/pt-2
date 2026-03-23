@@ -39,6 +39,7 @@ description: Orchestrate specification-to-production implementation with phased 
 | `references/gate-protocol.md` | Gate approval UX and validation commands |
 | `references/checkpoint-format.md` | Checkpoint schema and state management |
 | `references/critic-checklist.md` | EXECUTION-SPEC quality validation criteria |
+| `references/da-team-protocol.md` | **DA team protocol: prompt templates, two-phase review, synthesis-lead** |
 | `scripts/validate-execution-spec.py` | Validate EXECUTION-SPEC (structural + governance) |
 | `devils-advocate` skill | Adversarial EXEC-SPEC review (Stage 4) |
 
@@ -170,96 +171,137 @@ These files contain deterministic rules that MUST be validated against during sp
     > The EXEC-SPEC is the implementation blueprint. Catching P0 flaws here costs ~0 code rework.
     > Catching them after Phase 3 execution costs significant rework.
     >
-    > **DO NOT use a single DA reviewer.** Deploy the full 5-reviewer team for coverage depth.
+    > **DO NOT use a single DA reviewer.** Deploy the full 6-agent team (5 reviewers + synthesis-lead).
 
-    #### Step 4a: Parallel DA Team Dispatch
+    See `references/da-team-protocol.md` for the complete team protocol, prompt templates, and phase timing.
 
-    Send a **SINGLE message** with **5 parallel** `Agent` calls. Each reviewer runs as an
-    **independent agent with full tool access** (Read, Grep, Glob, Bash) so it can verify
-    spec claims against the actual codebase, git history, and file system. This prevents
-    false positives from spec-only review where implementation has already diverged from
-    or advanced beyond the spec text.
+    #### Step 4a: Team Setup & Dispatch
 
-    > **Why Agent, not Skill?** `Skill()` loads instructions into the current conversation —
-    > all 5 "reviewers" would share one context, compete for tool-call budget, and in practice
-    > review only the spec text without verifying against code. `Agent()` spawns independent
-    > subprocesses, each with its own context window and tool access. This is what makes the
-    > "5 independent reviewers" design actually work.
+    **1. Create the DA review team:**
 
     ```
-    +---------------------------------------------------------------------------------+
-    | SINGLE MESSAGE — 5 parallel Agent calls:                                        |
-    +---------------------------------------------------------------------------------+
-    | Agent(description="DA R1 Security",    prompt="...", run_in_background=true)     |
-    | Agent(description="DA R2 Architecture", prompt="...", run_in_background=true)    |
-    | Agent(description="DA R3 Implementation", prompt="...", run_in_background=true)  |
-    | Agent(description="DA R4 Test Quality", prompt="...", run_in_background=true)    |
-    | Agent(description="DA R5 Performance",  prompt="...", run_in_background=true)    |
-    +---------------------------------------------------------------------------------+
+    TeamCreate(team_name="da-review-{PRD-ID}", description="DA review for {PRD-ID}")
     ```
 
-    **Required prompt template for each reviewer:**
+    **2. Create tasks for each reviewer + synthesis:**
 
     ```
-    You are an adversarial reviewer for PT-2. Read the devils-advocate skill at
-    .claude/skills/devils-advocate/SKILL.md and follow its Focused Review Mode.
+    TaskCreate: "R1: Security & Tenancy review of {PRD-ID}"
+    TaskCreate: "R2: Architecture & Boundaries review of {PRD-ID}"
+    TaskCreate: "R3: Implementation Completeness review of {PRD-ID}"
+    TaskCreate: "R4: Test Quality review of {PRD-ID}"
+    TaskCreate: "R5: Performance & Operability review of {PRD-ID}"
+    TaskCreate: "Synthesis: Consolidate DA findings for {PRD-ID}"
+    ```
 
-    Adversarial review of EXEC-SPEC for {PRD_ID}:
-      Specification: {exec_spec_path}
-      Workstreams: {workstream_summary}
-      Bounded Contexts: {bounded_contexts}
+    **3. Spawn 6 named agents in a SINGLE message:**
 
-    FOCUS: {REVIEWER_ROLE}
-    SECTIONS: {assigned_section_numbers}
-    CONTEXT FILES: {domain_context_files}
+    Each reviewer runs as an **independent agent with full tool access** (Read, Grep, Glob, Bash)
+    AND **team messaging** (SendMessage) so reviewers can route cross-domain findings to the
+    owning reviewer and resolve conflicts through direct negotiation.
 
-    Use Focused Review Mode. Attack ONLY your assigned sections with full depth.
-    Flag cross-domain issues as one-liners in Cross-Domain Flags section.
+    > **Why Agent teams, not isolated Agents?** The previous design spawned 5 independent agents
+    > with no communication channel. Cross-domain findings became dead-drop one-liners that the
+    > generalist orchestrator had to interpret. Conflicts were punted to the human. With team
+    > messaging, reviewers verify cross-domain flags with the owning expert, negotiate conflict
+    > resolution directly, and the synthesis-lead can ask targeted follow-up questions. This
+    > produces higher-fidelity findings and pre-resolved conflicts.
 
-    CRITICAL — Ground-truth verification:
-    You have full tool access (Read, Grep, Glob, Bash). Before filing any
-    "missing implementation" or "missing migration" finding, SEARCH the codebase
-    to confirm it is actually missing. Use `git log --oneline -20 -- <path>` to
-    check recent changes on relevant files. Never file a "missing X" finding
-    without first searching for X.
+    ```
+    +-------------------------------------------------------------------------------------+
+    | SINGLE MESSAGE — 6 parallel Agent calls (all with team_name="da-review-{PRD-ID}"):  |
+    +-------------------------------------------------------------------------------------+
+    | Agent(name="r1-security",      team_name="da-review-{PRD-ID}", prompt="...")         |
+    | Agent(name="r2-architecture",  team_name="da-review-{PRD-ID}", prompt="...")         |
+    | Agent(name="r3-implementation",team_name="da-review-{PRD-ID}", prompt="...")         |
+    | Agent(name="r4-test-quality",  team_name="da-review-{PRD-ID}", prompt="...")         |
+    | Agent(name="r5-performance",   team_name="da-review-{PRD-ID}", prompt="...")         |
+    | Agent(name="synthesis-lead",   team_name="da-review-{PRD-ID}", prompt="...")         |
+    +-------------------------------------------------------------------------------------+
     ```
 
     **DA Team Roster:**
 
-    | Reviewer | Role Constant | Sections | Extra Context to Inject |
-    |----------|---------------|----------|-------------------------|
-    | R1 | `SECURITY_TENANCY` | 1, 4 | SEC-002 guardrails, ADR-015/020/024/030/040 |
-    | R2 | `ARCHITECTURE_BOUNDARIES` | 5, 8 | SRM, `architecture.context.md`, Over-Engineering Guardrail |
-    | R3 | `IMPLEMENTATION_COMPLETENESS` | 2, 3 | `governance.context.md`, EXEC-SPEC template |
-    | R4 | `TEST_QUALITY` | 7 | `quality.context.md`, test patterns, critical workflows |
-    | R5 | `PERFORMANCE_OPERABILITY` | 6 | SLO definitions, query patterns, RLS performance |
+    | Agent Name | Role Constant | Sections | Extra Context to Inject |
+    |------------|---------------|----------|-------------------------|
+    | `r1-security` | `SECURITY_TENANCY` | 1, 4 | SEC-002 guardrails, ADR-015/020/024/030/040 |
+    | `r2-architecture` | `ARCHITECTURE_BOUNDARIES` | 5, 8 | SRM, `architecture.context.md`, Over-Engineering Guardrail |
+    | `r3-implementation` | `IMPLEMENTATION_COMPLETENESS` | 2, 3 | `governance.context.md`, EXEC-SPEC template |
+    | `r4-test-quality` | `TEST_QUALITY` | 7 | `quality.context.md`, test patterns, critical workflows |
+    | `r5-performance` | `PERFORMANCE_OPERABILITY` | 6 | SLO definitions, query patterns, RLS performance |
+    | `synthesis-lead` | `SYNTHESIS` | — | All context files (reads findings, does not review spec) |
 
-    #### Step 4b: Synthesis
+    **Reviewer prompt template** — see `references/da-team-protocol.md` § Reviewer Prompt Template.
 
-    After all 5 reviewers return, the orchestrator (build-pipeline) synthesizes inline:
+    **Synthesis-lead prompt template** — see `references/da-team-protocol.md` § Synthesis-Lead Prompt Template.
 
-    1. **Collect** all findings with severity labels (P0-P3) from all 5 reviewers
-    2. **Deduplicate** — same root cause found by multiple reviewers gets merged, severity = max of reporters
-    3. **Promote cross-domain flags** — if a reviewer flagged something in another reviewer's domain, check if that reviewer caught it. If not, add it as a new finding.
-    4. **Resolve conflicts** — if reviewers contradict (e.g., R2 says "add X" vs R5 says "X is over-engineering"), flag as `conflict` for human decision. Do NOT auto-resolve.
-    5. **Compute consolidated verdict**:
+    #### Step 4b: Two-Phase Review Protocol
+
+    The DA team executes a two-phase review coordinated by the synthesis-lead:
+
+    **Phase 1 — Independent Deep-Dive:**
+    Each reviewer completes their assigned sections independently with full ground-truth
+    verification. When they find issues outside their domain, they send a **targeted message**
+    to the owning reviewer via `SendMessage` — not a one-liner flag, but a substantive
+    finding with file paths, line numbers, and what they need investigated.
+
+    **Phase 2 — Cross-Pollination:**
+    After completing their independent review, each reviewer:
+    1. Reads incoming messages from other reviewers
+    2. Investigates cross-domain flags that land in their domain
+    3. Sends responses confirming or refuting findings
+    4. If conflicts arise (e.g., R2 says "add X", R5 says "X violates PT-OE-01"),
+       the involved reviewers negotiate directly via messaging and produce a joint recommendation
+
+    The synthesis-lead monitors task completion, triggers Phase 2 when all reviewers
+    report Phase 1 complete, and routes conflict resolution requests when needed.
+
+    See `references/da-team-protocol.md` § Two-Phase Protocol for the full messaging sequence.
+
+    #### Step 4c: Team-Driven Synthesis
+
+    The `synthesis-lead` agent handles consolidation within the team:
+
+    1. **Collects** all findings with severity labels (P0-P3) from all 5 reviewers
+    2. **Deduplicates** — same root cause found by multiple reviewers gets merged, severity = max
+    3. **Incorporates cross-domain verifications** — Phase 2 messages confirmed or refuted
+       cross-domain flags; only verified findings survive
+    4. **Reports conflict resolutions** — joint recommendations from reviewer negotiations
+       replace raw contradictions. Unresolved conflicts (if any) are flagged for human decision
+    5. **Computes consolidated verdict**:
        - All 5 "Ship" → **PASS**
        - Any "Ship w/ gates" (no P0) → **WARN**
        - Any "Do not ship" (P0 found) → **BLOCK**
-    6. **Produce consolidated report** (displayed in Phase 2 gate):
+    6. **Produces consolidated report** sent to the orchestrator via final task completion:
        - Consolidated Verdict + per-reviewer verdicts
-       - Merged P0/P1 findings (deduplicated, max 15 items)
-       - Conflict flags (if any)
+       - Merged P0/P1 findings (deduplicated + cross-verified, max 15 items)
+       - Resolved conflicts (with joint recommendations)
+       - Unresolved conflicts (for human decision, if any)
        - Unified Patch Delta (15 bullets max, merged from all reviewer patch deltas)
        - Per-reviewer summary (1-2 lines each)
 
-    Record the DA team results in the checkpoint `adversarial_review` field (see `references/checkpoint-format.md`).
+    The orchestrator extracts the consolidated report and records the DA team results
+    in the checkpoint `adversarial_review` field (see `references/checkpoint-format.md`).
 
-    #### Step 4c: Gate Logic
+    #### Step 4d: Gate Logic
 
     - Consolidated verdict "Ship" (all 5 agree): **PASS**. Include verdict in Phase 2 display.
     - Consolidated verdict "Ship w/ gates": **WARN**. Present findings in Phase 2 approval gate. Human decides.
     - Consolidated verdict "Do not ship" (any P0): **BLOCK**. Enter retry protocol (see below).
+
+    #### Step 4e: Team Cleanup
+
+    After recording results:
+
+    ```
+    1. SendMessage(to="r1-security",      message={type: "shutdown_request"})
+    2. SendMessage(to="r2-architecture",   message={type: "shutdown_request"})
+    3. SendMessage(to="r3-implementation", message={type: "shutdown_request"})
+    4. SendMessage(to="r4-test-quality",   message={type: "shutdown_request"})
+    5. SendMessage(to="r5-performance",    message={type: "shutdown_request"})
+    6. SendMessage(to="synthesis-lead",    message={type: "shutdown_request"})
+    7. TeamDelete()
+    ```
 
     #### Retry Protocol (on BLOCK)
 
@@ -281,8 +323,11 @@ These files contain deterministic rules that MUST be validated against during sp
       1. [{source_reviewer}] {P0 finding summary}
       2. [{source_reviewer}] {P0 finding summary}
 
-    Conflicts ({conflict_count}):
-      - {R2 vs R5}: {description}
+    Resolved Conflicts ({resolved_count}):
+      - {R2 + R5}: {joint recommendation}
+
+    Unresolved Conflicts ({unresolved_count}):
+      - {R2 vs R5}: {description} — requires human decision
 
     Options:
       1. Revise EXEC-SPEC (delegate to lead-architect + experts with DA findings)

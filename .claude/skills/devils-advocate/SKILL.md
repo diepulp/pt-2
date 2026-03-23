@@ -217,22 +217,69 @@ In focused mode, produce **only** these sections:
 1. **Focused Verdict** — One of: `Ship` / `Ship w/ gates` / `Do not ship` — scoped to your assigned sections only.
 2. **Assigned Sections** — Full depth analysis of your assigned sections per the standard format (Step 3 above). Go **deeper** than full-mode review — you own fewer sections, so invest more rigor per section.
 3. **Patch Delta (Scoped)** — 3-5 bullets max, actionable fixes within your assigned domain only.
-4. **Cross-Domain Flags** — Issues you spotted that fall outside your assigned sections. List as one-liners for the synthesis step. Do NOT analyze them in depth — another reviewer owns that angle.
+4. **Cross-Domain Flags** — Issues you spotted that fall outside your assigned sections (see Team Messaging Protocol below for how to route these).
 
 ### Focused Mode Execution Context
 
-When dispatched by the build pipeline, each focused reviewer runs as an **independent Agent with full tool access** (Read, Grep, Glob, Bash). Use these tools to verify spec claims against the actual codebase. Do not treat the spec as the sole source of truth — cross-reference against code, migrations, and git history.
+When dispatched by the build pipeline, each focused reviewer runs as a **named team member** with full tool access (Read, Grep, Glob, Bash) AND team messaging (SendMessage). Use tools to verify spec claims against the actual codebase. Do not treat the spec as the sole source of truth — cross-reference against code, migrations, and git history.
 
 This matters because spec-only review produces false positives. If the spec says "route X is needed" but `git log` shows it was implemented in a recent commit, that's not a finding — it's a stale spec. Step 1b (Ground-Truth Verification) applies with extra force in focused mode: you own fewer sections, so you have the budget to verify every claim you make.
+
+### Team Messaging Protocol
+
+Focused reviewers operate in a two-phase protocol coordinated by a `synthesis-lead` agent:
+
+**Phase 1 — Independent Deep-Dive:**
+
+Complete your assigned sections. When you find issues **outside** your assigned sections,
+send a targeted message to the owning reviewer via `SendMessage` — not a one-liner flag,
+but a substantive finding with evidence:
+
+```
+SendMessage(
+  to="{owning_reviewer_name}",
+  message="Found {specific issue} at {file_path}:{line_number}.
+    {ADR/SEC reference if applicable}. Needs your {domain} assessment.
+    Verification done: {what you already checked}.",
+  summary="Cross-domain: {brief description}"
+)
+```
+
+**Cross-domain routing table:**
+
+| If you find issues in... | Send to |
+|--------------------------|---------|
+| Sections 1, 4 (security/threats) | `r1-security` |
+| Sections 5, 8 (data model/scope) | `r2-architecture` |
+| Sections 2, 3 (ambiguities/gaps) | `r3-implementation` |
+| Section 7 (test holes) | `r4-test-quality` |
+| Section 6 (perf/operability) | `r5-performance` |
+
+When Phase 1 is complete, mark your task as completed via TaskUpdate. Include your full
+review output in the task description.
+
+**Phase 2 — Cross-Pollination:**
+
+After `synthesis-lead` announces Phase 2, check your inbox:
+
+1. **Investigate** each incoming cross-domain finding with the same rigor as your own
+2. **Confirm or refute** with evidence — send response to the originating reviewer
+3. **Negotiate conflicts** directly if you and another reviewer disagree:
+   - Message each other to discuss the trade-off
+   - Produce a joint recommendation
+   - Send the resolution to `synthesis-lead`
+
+After responding to all inbox items, go idle. The synthesis-lead will proceed.
 
 ### Focused Mode Rules
 
 - **Go deeper, not wider.** You own 1-3 sections. Exhaust them.
-- **Do NOT produce sections outside your assignment.** If you spot a security issue but your role is `PERFORMANCE_OPERABILITY`, list it as a Cross-Domain Flag — do not analyze it.
+- **Do NOT produce sections outside your assignment.** If you spot a security issue but your role is `PERFORMANCE_OPERABILITY`, route it via SendMessage to the owning reviewer — do not analyze it yourself.
 - **Still load PT-2 system posture** (`references/pt2-system-posture.md`) — you need baseline context regardless of focus.
 - **Verify before filing.** Every "missing X" finding must be preceded by a codebase search confirming X is actually missing. See Step 1b.
 - **Severity rubric is unchanged** — P0-P3 labels apply the same way.
 - **"No issues found" is a valid output** — if your sections survive attack, state why they survive.
+- **Route, don't hoard.** Cross-domain findings sent via message are more valuable than one-liner flags — include file paths, line numbers, and verification already done.
 
 ## Cross-Skill Delegation
 
