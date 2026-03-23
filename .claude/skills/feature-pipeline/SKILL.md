@@ -226,10 +226,94 @@ Skill(skill="rls-expert", args="Generate SEC Note for feature '{feature_name}':
 
 **Adversarial Review (DA Team):**
 
-After `prd-writer` produces the PRD, deploy a **DA review team** to attack the PRD
-against all preceding artifacts. This catches scope creep between phases, security
-controls that weren't carried forward, untestable acceptance criteria, and
-cross-artifact incoherence.
+After `prd-writer` produces the PRD, run the **temporal integrity check** and then
+deploy a **DA review team** to attack the PRD against all preceding artifacts.
+
+**Temporal Integrity Check (pre-DA gate):**
+
+Before deploying the DA team, compare the modified timestamps of all Phase 0-4
+artifacts against the PRD's created timestamp. If any upstream artifact was modified
+after the PRD was written, the PRD may not reflect the current state of its inputs:
+
+```
+For each artifact in [feature_boundary, scaffold, rfc, sec_note, adr]:
+  If artifact.modified > prd.created:
+    Flag: "[TEMPORAL WARNING] {artifact} modified after {PRD-ID} was written.
+           PRD may not reflect current {artifact_type} state.
+           Recommend PRD refresh before DA review."
+```
+
+If temporal warnings are emitted, present them to the user with options:
+1. **Refresh PRD** — delegate back to `prd-writer` to incorporate upstream changes
+2. **Proceed anyway** — acknowledge drift, let DA team catch the delta
+3. **Abort** — investigate the upstream change first
+
+This check saves an entire DA review cycle when upstream artifacts have changed
+since the PRD was written — the DA team will likely find temporal drift issues that
+could have been resolved by a simple PRD refresh.
+
+**Magnitude Assessment (DA tier selection):**
+
+Before deploying reviewers, compute a magnitude score from artifacts already in the
+pipeline. The score determines how much review overhead is justified — a single-table
+CRUD enhancement within an owned context doesn't need 4 adversarial agents.
+
+**Scoring rubric — read these from the checkpoint and artifacts:**
+
+| Signal | Points | Source |
+|--------|--------|--------|
+| Cross-context contracts exist | +3 | `checkpoint.srm_validation.cross_context_contracts.length > 0` |
+| SEC note threat count >= 3 | +2 | Count `## Threat Details` subsections in SEC note |
+| PII or financial data classification | +2 | SEC note `## Data Storage Justification` contains PII/financial |
+| ADR count >= 2 | +2 | Count entries in `checkpoint.artifacts.adr` or PRD `adr_refs` |
+| New SECURITY DEFINER RPCs declared | +2 | SEC note `## Controls` mentions SECURITY DEFINER |
+| SEC note deferred risks > 0 | +1 | SEC note `## Deferred Risks` has entries |
+| New UI surface (Surface Classification) | +1 | RFC contains Surface Classification section |
+| Write tables > 3 | +1 | `checkpoint.srm_validation.write_tables.length > 3` |
+
+**Tier thresholds:**
+
+| Score | Tier | Action |
+|-------|------|--------|
+| 0-2 | **Tier 0: Self-Certified** | No DA team. Phase gates provide sufficient coverage. |
+| 3-5 | **Tier 1: Focused Review** | 1-2 targeted reviewers, no synthesis-lead. See `references/da-team-protocol.md` § Focused Review Protocol. |
+| 6+ | **Tier 2: Full DA Team** | Current 4-agent team with two-phase protocol. |
+
+**Display the assessment before acting:**
+
+```
+---------------------------------------------
+DA Review Magnitude Assessment: {feature-name}
+---------------------------------------------
+
+Signal Breakdown:
+  [+N] {signal description}: {evidence}
+  [+N] {signal description}: {evidence}
+  ...
+  ────
+  Score: {total} → Tier {N} ({tier_name})
+
+{tier-specific message}
+Override: reply "tier 0", "tier 1", or "tier 2" to change.
+---------------------------------------------
+```
+
+**Tier-specific behavior:**
+
+**Tier 0 (Self-Certified):** Record `da_review.magnitude_tier = "self_certified"` in
+checkpoint. Display: "Phase gates (SRM, scaffold, SEC, ADR) provide sufficient coverage.
+Skipping DA team review." Proceed directly to `prd-approved` gate. The 5 preceding phase
+gates already validated each artifact independently — the cross-artifact contradiction
+surface is too small to justify a team.
+
+**Tier 1 (Focused Review):** Select 1-2 reviewers based on which signal categories fired.
+No synthesis-lead — the focused reviewer(s) produce an inline verdict. See
+`references/da-team-protocol.md` § Focused Review Protocol for reviewer selection logic
+and the lightweight protocol.
+
+**Tier 2 (Full DA Team):** The DA team catches scope creep between phases, security
+controls that weren't carried forward, untestable acceptance criteria, and cross-artifact
+incoherence. Deploy the full 4-agent team per the protocol below.
 
 See `references/da-team-protocol.md` for the complete team protocol, prompt templates,
 and phase timing.
@@ -438,6 +522,11 @@ If no checkpoint exists:
     "prd": null
   },
   "da_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": null,
+    "magnitude_signals": [],
+    "tier_override": null,
+    "tier_override_reason": null,
     "ran": false,
     "verdict": null,
     "p0_count": 0,

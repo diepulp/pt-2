@@ -63,6 +63,7 @@ TeamCreate("da-prd-{PRD-ID}")
 - Missing decisions: RFC identified decisions needed but no ADR exists for them
 - Undefined behavior: PRD acceptance criteria that depend on behavior not specified in any artifact
 - Non-functional requirements: missing error handling, performance, observability criteria
+- Self-consistency: PRD overview/problem/non-goals contradicting the PRD body (acceptance criteria, authority table, out-of-scope list)
 
 **Artifacts to cross-reference:** All 5 (Scaffold, RFC, SEC Note, ADR(s), PRD)
 
@@ -123,6 +124,23 @@ not just the PRD. Cross-reference claims between artifacts. Check that ADR IDs
 referenced in PRD frontmatter actually exist. Verify SRM ownership claims against
 the actual SERVICE_RESPONSIBILITY_MATRIX.md.
 
+HARD RULE — Reviewers may not amend ADR requirements:
+If a PRD contradicts an ADR, the finding is: "PRD contradicts ADR-{ID} §{section} —
+{requirement} required but absent." The remedy is: "restore the requirement or amend
+the ADR." Choosing which option is the human's decision, not the reviewer's. Patch
+deltas may suggest implementation approaches but must not reduce the requirement
+surface. Collapsing, downgrading, or waiving an ADR requirement during review is
+the exact failure mode adversarial review exists to prevent — when reviewers become
+co-authors of the fix, they lose objectivity and the requirement disappears without
+human authorization.
+
+Framing language is in scope:
+The PRD overview, problem statement, and goals table are contractual — they set
+stakeholder expectations. If these sections claim the PRD delivers X but the
+authority table, out-of-scope list, or acceptance criteria say X is deferred, that
+is a P1 finding (overclaim). A PRD that sells more than it specifies will cause
+implementation scope creep because teams build to the headline, not the spec.
+
 ## Review Scope
 
 Produce these sections:
@@ -180,6 +198,12 @@ Attack these angles:
 3. Read FEATURE_BOUNDARY.md and SRM. Verify PRD doesn't require writes to
    tables owned by another bounded context.
 4. If new UI surface: verify Surface Classification fields (ADR-041).
+5. Formula/computation precision: For each metric type with a distinct evaluation
+   rule, verify that the PRD specifies exactly one unambiguous formula. If an
+   appendix defines a general method and a functional requirement defines per-metric
+   overrides, verify they don't contradict. Flag any metric type where a developer
+   would have to guess which formula to implement — two different formulas for the
+   same computation means the spec is untestable.
 ```
 
 **For R3 (CROSS_ARTIFACT_COHERENCE):**
@@ -195,6 +219,13 @@ Attack these angles:
 4. Check non-functional requirements: performance, observability, migration
    safety. If RFC mentioned these concerns but PRD has no criteria for them,
    flag as gap.
+5. Self-consistency check: Read the PRD's overview, problem statement, and
+   non-goals. For each claim in these framing sections, verify it is consistent
+   with the body (acceptance criteria, authority table, out-of-scope list). Flag
+   where the headline sells more than the body specifies, or where the out-of-scope
+   list contradicts the UX flows. Internal contradictions — like "UI changes out
+   of scope" while the body describes UI-visible flows — are P1 findings that
+   cross-artifact review alone cannot catch.
 ```
 
 ---
@@ -232,6 +263,57 @@ Your responsibilities:
 
 Team roster: r1-scope-security, r2-testability-arch, r3-cross-artifact
 ```
+
+---
+
+## Focused Review Protocol (Tier 1)
+
+When the magnitude assessment selects Tier 1, deploy 1-2 targeted reviewers instead
+of the full 4-agent team. No synthesis-lead — the reviewer(s) produce an inline verdict
+directly to the orchestrator.
+
+### Reviewer Selection Logic
+
+Select reviewers based on which signal categories contributed to the magnitude score:
+
+| Signals that fired | Reviewer(s) | Rationale |
+|-------------------|-------------|-----------|
+| Security signals only (PII, DEFINER, threats, deferred risks) | R1 (`r1-scope-security`) | Security surface is the primary complexity |
+| Architecture signals only (ADRs >= 2, cross-context, write tables) | R2 (`r2-testability-arch`) | ADR alignment and bounded context are the primary concerns |
+| Both security + architecture signals | R1 + R2 | Two-domain complexity warrants two reviewers |
+| Complexity signals only (UI surface, no security/architecture) | R3 (`r3-cross-artifact`) | Internal consistency is the primary risk |
+| Mixed signals (no clear category dominance) | R1 + R3 | Scope discipline + coherence cover the broadest surface |
+
+### Focused Review Dispatch
+
+No team creation needed — spawn 1-2 independent agents:
+
+```
+Agent(name="focused-r1", prompt="<reviewer prompt with SCOPE_SECURITY role>")
+// and optionally:
+Agent(name="focused-r2", prompt="<reviewer prompt with TESTABILITY_ARCHITECTURE role>")
+```
+
+Use the same reviewer prompt template as the full team (including the hard rules on ADR
+amendment, framing language, self-consistency, and computation precision). The only
+differences:
+
+1. **No team_name** — agents don't need SendMessage since there are at most 2 reviewers
+2. **No Phase 2** — with 1-2 reviewers, cross-pollination is unnecessary
+3. **No synthesis-lead** — the orchestrator reads the verdict directly from TaskGet
+4. **Inline verdict** — reviewer completes via TaskUpdate, orchestrator extracts verdict
+
+### Focused Review Gate Logic
+
+Same as full team but simpler:
+- All reviewers "Ship" → **PASS**
+- Any "Ship w/ gates" (no P0) → **WARN** — present findings, human decides
+- Any "Do not ship" (P0 found) → **BLOCK** — enter retry protocol (same as full team)
+
+### Checkpoint Recording
+
+Record `da_review.magnitude_tier = "focused_review"` and `da_review.team_results` with
+only the reviewers that ran. The `team_name` field is null for focused reviews.
 
 ---
 

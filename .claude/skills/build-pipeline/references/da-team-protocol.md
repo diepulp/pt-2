@@ -160,6 +160,39 @@ to confirm it is actually missing. Use `git log --oneline -20 -- <path>` to
 check recent changes on relevant files. Never file a "missing X" finding
 without first searching for X.
 
+HARD RULE — Reviewers may not amend ADR requirements:
+If an EXEC-SPEC workstream contradicts or omits an ADR requirement, the finding
+is: "EXEC-SPEC contradicts ADR-{ID} §{section} — {requirement} required but
+absent from workstream {WS-ID}." The remedy is: "restore the requirement in the
+workstream or amend the ADR." Choosing which option is the human's decision, not
+the reviewer's. Patch deltas may suggest implementation approaches but must not
+reduce the requirement surface. Collapsing, downgrading, or waiving an ADR
+requirement during review is the exact failure mode adversarial review exists to
+prevent — when reviewers become co-authors of the fix, they lose objectivity and
+the requirement disappears without human authorization.
+
+Framing language is in scope:
+The EXEC-SPEC overview and scope sections set implementation expectations. If
+these sections claim the spec delivers X but the workstream details, acceptance
+criteria, or DoD omit X, that is a P1 finding (overclaim). An EXEC-SPEC that
+promises more than its workstreams specify will cause implementation teams to
+build to the overview framing rather than the workstream-level spec.
+
+Self-consistency check:
+Read the EXEC-SPEC overview, scope, and architecture context sections. For each
+claim in these framing sections, verify it is consistent with the workstream
+details, acceptance criteria, and DoD gates. Flag where the overview promises
+capabilities that no workstream delivers, or where workstream ACs contradict
+each other. Internal contradictions cannot be caught by cross-artifact review
+alone.
+
+Computation precision:
+When workstreams reference algorithms, formulas, or computation rules, verify
+that the EXEC-SPEC specifies exactly one unambiguous approach. If the overview
+defines a general method and a workstream AC defines a different approach for
+the same computation, flag the ambiguity — two different formulas for the same
+thing means the spec is untestable and implementers must guess.
+
 ## Team Protocol
 
 You are a named member of team "da-review-{PRD-ID}". You can message other
@@ -280,13 +313,78 @@ Team roster:
 
 ---
 
+## Focused Review Protocol (Tier 1)
+
+When the magnitude assessment selects Tier 1, deploy 1-2 targeted reviewers instead
+of the full 6-agent team. No synthesis-lead — the reviewer(s) produce an inline verdict
+directly to the orchestrator.
+
+### Reviewer Selection Logic
+
+Select reviewers based on which signal categories contributed to the magnitude score:
+
+| Signals that fired | Reviewer(s) | Rationale |
+|-------------------|-------------|-----------|
+| Security signals only (DEFINER, RLS migrations) | R1 (`r1-security`) | Security/tenancy is the primary complexity |
+| Architecture signals only (ADRs >= 2, cross-context, executor diversity) | R2 (`r2-architecture`) | Bounded context alignment is the primary concern |
+| Both security + architecture signals | R1 + R2 | Two-domain complexity warrants two reviewers |
+| Implementation signals only (workstreams > 4, phases > 2, DAG depth) | R3 (`r3-implementation`) | Completeness and ambiguity are the primary risks |
+| Test/quality signals (test workstreams, coverage concerns) | R4 (`r4-test-quality`) | Test quality is the primary concern |
+| Performance signals (perf workstreams, SLO concerns) | R5 (`r5-performance`) | Operability is the primary concern |
+| Mixed signals (no clear category dominance) | R1 + R3 | Security + completeness cover the broadest surface |
+
+### Focused Review Dispatch
+
+No team creation needed — spawn 1-2 independent agents:
+
+```
+Agent(name="focused-r1", prompt="<reviewer prompt with SECURITY_TENANCY role>")
+// and optionally:
+Agent(name="focused-r3", prompt="<reviewer prompt with IMPLEMENTATION_COMPLETENESS role>")
+```
+
+Use the same reviewer prompt template as the full team (including the hard rules on ADR
+amendment, framing language, self-consistency, and computation precision). The only
+differences:
+
+1. **No team_name** — agents don't need SendMessage since there are at most 2 reviewers
+2. **No Phase 2** — with 1-2 reviewers, cross-pollination is unnecessary
+3. **No synthesis-lead** — the orchestrator reads the verdict directly from TaskGet
+4. **Inline verdict** — reviewer completes via TaskUpdate, orchestrator extracts verdict
+
+### Focused Review Gate Logic
+
+Same as full team but simpler:
+- All reviewers "Ship" → **PASS**
+- Any "Ship w/ gates" (no P0) → **WARN** — present findings, human decides
+- Any "Do not ship" (P0 found) → **BLOCK** — enter retry protocol (same as full team)
+
+### Checkpoint Recording
+
+Record `adversarial_review.magnitude_tier = "focused_review"` and
+`adversarial_review.team_results` with only the reviewers that ran.
+The `team_name` field is null for focused reviews.
+
+---
+
 ## Checkpoint Schema Additions
 
 The `adversarial_review` field in the checkpoint gains these team-specific fields:
 
 ```typescript
 adversarial_review?: {
-  // ... existing fields ...
+  // Magnitude assessment (computed before DA deployment)
+  magnitude_score: number;                    // 0-14+ total from scoring rubric
+  magnitude_tier: "self_certified" | "focused_review" | "full_team" | null;
+  magnitude_signals: Array<{
+    signal: string;                           // e.g., "cross_context_writes"
+    points: number;                           // e.g., 3
+    evidence: string;                         // e.g., "player_casino (RecognitionService)"
+  }>;
+  tier_override?: "tier_0" | "tier_1" | "tier_2" | null;
+  tier_override_reason?: string;
+
+  // Review results (populated only if DA ran — Tier 1 or Tier 2)
   verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden";
   p0_count: number;
   p1_count: number;

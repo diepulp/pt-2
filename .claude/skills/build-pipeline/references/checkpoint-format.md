@@ -57,6 +57,18 @@ interface PipelineCheckpoint {
 
   // Optional: Adversarial Review Result (DA Team)
   adversarial_review?: {
+    // Magnitude assessment (computed before DA deployment)
+    magnitude_score: number;                    // 0-14+ total from scoring rubric
+    magnitude_tier: "self_certified" | "focused_review" | "full_team" | null;
+    magnitude_signals: Array<{
+      signal: string;                           // e.g., "cross_context_writes"
+      points: number;                           // e.g., 3
+      evidence: string;                         // e.g., "player_casino (RecognitionService)"
+    }>;
+    tier_override?: "tier_0" | "tier_1" | "tier_2" | null;  // if user overrode
+    tier_override_reason?: string;                           // why they overrode
+
+    // Review results (populated only if DA ran — Tier 1 or Tier 2)
     verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden";
     p0_count: number;             // consolidated across all reviewers (deduplicated)
     p1_count: number;             // consolidated across all reviewers (deduplicated)

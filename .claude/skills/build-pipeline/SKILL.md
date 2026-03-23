@@ -165,13 +165,107 @@ These files contain deterministic rules that MUST be validated against during sp
 
 ### Stage 4: Adversarial Review (DA Team)
 
-10. **BLOCKING REQUIREMENT -- Deploy DA review team for EXEC-SPEC review:**
+10. **Temporal Integrity Check (pre-DA gate):**
 
-    > **DO NOT skip adversarial review.**
+    Before deploying the DA team, compare the PRD's modified timestamp against the
+    EXEC-SPEC's creation timestamp. If the PRD was modified after the EXEC-SPEC was
+    generated, the spec may not reflect the current requirements:
+
+    ```
+    If prd.modified > exec_spec.created:
+      Flag: "[TEMPORAL WARNING] {PRD-ID} modified after EXEC-SPEC was generated.
+             EXEC-SPEC may not reflect current PRD state.
+             Recommend EXEC-SPEC regeneration before DA review."
+    ```
+
+    Also check ADRs referenced in the PRD frontmatter:
+    ```
+    For each ADR in prd.adr_refs:
+      If adr.modified > exec_spec.created:
+        Flag: "[TEMPORAL WARNING] {ADR-ID} modified after EXEC-SPEC was generated.
+               EXEC-SPEC workstreams may reference stale ADR decisions."
+    ```
+
+    If temporal warnings are emitted, present them to the user with options:
+    1. **Regenerate EXEC-SPEC** — re-run Stages 1-3 with current upstream artifacts
+    2. **Proceed anyway** — acknowledge drift, let DA team catch the delta
+    3. **Abort** — investigate the upstream change first
+
+    This check saves an entire DA review cycle when upstream artifacts have changed
+    since the EXEC-SPEC was generated.
+
+11. **Magnitude Assessment (DA tier selection):**
+
+    Before deploying reviewers, compute a magnitude score from the EXEC-SPEC and its
+    upstream artifacts. The score determines how much review overhead is justified.
+
+    **Scoring rubric — read these from the EXEC-SPEC YAML and PRD:**
+
+    | Signal | Points | Source |
+    |--------|--------|--------|
+    | Cross-context bounded contexts > 1 | +3 | EXEC-SPEC YAML `bounded_contexts` or PRD scope |
+    | Migration workstreams with RLS policies | +2 | EXEC-SPEC workstream descriptions mention RLS/migration |
+    | SECURITY DEFINER workstreams present | +2 | EXEC-SPEC workstream descriptions |
+    | ADR refs >= 2 | +2 | PRD frontmatter `adr_refs` |
+    | Workstream count > 4 | +2 | EXEC-SPEC YAML workstream array length |
+    | Execution phases > 2 | +1 | EXEC-SPEC YAML execution_phases length |
+    | Dependency graph depth > 3 | +1 | Max chain length in EXEC-SPEC DAG |
+    | Executor diversity > 3 distinct skills | +1 | Count unique executors in EXEC-SPEC |
+
+    **Tier thresholds:**
+
+    | Score | Tier | Action |
+    |-------|------|--------|
+    | 0-2 | **Tier 0: Self-Certified** | No DA team. Structural + governance validation (Stage 3) provides sufficient coverage. |
+    | 3-5 | **Tier 1: Focused Review** | 1-2 targeted reviewers, no synthesis-lead. See `references/da-team-protocol.md` § Focused Review Protocol. |
+    | 6+ | **Tier 2: Full DA Team** | Full 6-agent team with two-phase protocol. |
+
+    **Display the assessment before acting:**
+
+    ```
+    ---------------------------------------------
+    DA Review Magnitude Assessment: {PRD-ID}
+    ---------------------------------------------
+
+    Signal Breakdown:
+      [+N] {signal description}: {evidence}
+      [+N] {signal description}: {evidence}
+      ...
+      ────
+      Score: {total} → Tier {N} ({tier_name})
+
+    {tier-specific message}
+    Override: reply "tier 0", "tier 1", or "tier 2" to change.
+    ---------------------------------------------
+    ```
+
+    Record magnitude in checkpoint: `adversarial_review.magnitude_score`,
+    `adversarial_review.magnitude_tier`, `adversarial_review.magnitude_signals[]`.
+    If the user overrides: `adversarial_review.tier_override`, `adversarial_review.tier_override_reason`.
+
+    **Tier-specific behavior:**
+
+    **Tier 0 (Self-Certified):** Record `adversarial_review.magnitude_tier = "self_certified"`.
+    Display: "Structural + governance validation (Stage 3) provides sufficient coverage.
+    Skipping DA team review." Proceed directly to Phase 2 approval gate. The EXEC-SPEC
+    validation script already checked structural integrity, SRM ownership, test locations,
+    and migration standards — the cross-workstream contradiction surface is too small to
+    justify a team.
+
+    **Tier 1 (Focused Review):** Select 1-2 reviewers based on which signal categories fired.
+    No synthesis-lead — the focused reviewer(s) produce an inline verdict. See
+    `references/da-team-protocol.md` § Focused Review Protocol for reviewer selection logic.
+
+    **Tier 2 (Full DA Team):** Proceed with full team deployment below.
+
+12. **Deploy DA review team for EXEC-SPEC review (Tier 2 only, or Tier 1 focused):**
+
+    > For **Tier 2**: Deploy the full 6-agent team (5 reviewers + synthesis-lead).
     > The EXEC-SPEC is the implementation blueprint. Catching P0 flaws here costs ~0 code rework.
     > Catching them after Phase 3 execution costs significant rework.
     >
-    > **DO NOT use a single DA reviewer.** Deploy the full 6-agent team (5 reviewers + synthesis-lead).
+    > For **Tier 1**: Deploy only the selected reviewer(s) per focused review protocol.
+    > For **Tier 0**: Skip — proceed to Phase 2 approval gate.
 
     See `references/da-team-protocol.md` for the complete team protocol, prompt templates, and phase timing.
 
