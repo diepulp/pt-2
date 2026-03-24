@@ -3366,6 +3366,76 @@ export type Database = {
           },
         ]
       }
+      table_metric_baseline: {
+        Row: {
+          casino_id: string
+          computed_at: string
+          computed_by: string | null
+          gaming_day: string
+          id: string
+          mad_value: number
+          max_value: number | null
+          median_value: number
+          metric_type: string
+          min_value: number | null
+          sample_count: number
+          table_id: string
+          window_days: number
+        }
+        Insert: {
+          casino_id: string
+          computed_at?: string
+          computed_by?: string | null
+          gaming_day: string
+          id?: string
+          mad_value: number
+          max_value?: number | null
+          median_value: number
+          metric_type: string
+          min_value?: number | null
+          sample_count: number
+          table_id: string
+          window_days: number
+        }
+        Update: {
+          casino_id?: string
+          computed_at?: string
+          computed_by?: string | null
+          gaming_day?: string
+          id?: string
+          mad_value?: number
+          max_value?: number | null
+          median_value?: number
+          metric_type?: string
+          min_value?: number | null
+          sample_count?: number
+          table_id?: string
+          window_days?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_metric_baseline_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_metric_baseline_computed_by_fkey"
+            columns: ["computed_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_metric_baseline_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_rundown_report: {
         Row: {
           casino_id: string
@@ -4137,6 +4207,14 @@ export type Database = {
         }
       }
       rpc_complete_casino_setup: { Args: { p_skip?: boolean }; Returns: Json }
+      rpc_compute_rolling_baseline: {
+        Args: { p_gaming_day?: string; p_table_id?: string }
+        Returns: {
+          gaming_day: string
+          metrics_computed: number
+          tables_processed: number
+        }[]
+      }
       rpc_compute_table_rundown: {
         Args: { p_session_id: string }
         Returns: {
@@ -4527,6 +4605,26 @@ export type Database = {
         Returns: {
           end_gd: string
           start_gd: string
+        }[]
+      }
+      rpc_get_anomaly_alerts: {
+        Args: { p_window_end: string; p_window_start: string }
+        Returns: {
+          baseline_gaming_day: string
+          baseline_mad: number
+          baseline_median: number
+          baseline_sample_count: number
+          deviation_score: number
+          direction: string
+          is_anomaly: boolean
+          message: string
+          metric_type: string
+          observed_value: number
+          readiness_state: string
+          severity: string
+          table_id: string
+          table_label: string
+          threshold_value: number
         }[]
       }
       rpc_get_current_table_session: {
@@ -5564,82 +5662,43 @@ export type Database = {
           visit: Database["public"]["Tables"]["visit"]["Row"]
         }[]
       }
-      rpc_start_rating_slip:
-        | {
-            Args: {
-              p_casino_id: string
-              p_game_settings: Json
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              accrual_kind: string
-              accumulated_seconds: number
-              average_bet: number | null
-              casino_id: string
-              computed_theo_cents: number | null
-              duration_seconds: number | null
-              end_time: string | null
-              final_average_bet: number | null
-              final_duration_seconds: number | null
-              game_settings: Json | null
-              id: string
-              legacy_theo_cents: number | null
-              move_group_id: string | null
-              pause_intervals: unknown[] | null
-              policy_snapshot: Json | null
-              previous_slip_id: string | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_game_settings: Json
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              accrual_kind: string
-              accumulated_seconds: number
-              average_bet: number | null
-              casino_id: string
-              computed_theo_cents: number | null
-              duration_seconds: number | null
-              end_time: string | null
-              final_average_bet: number | null
-              final_duration_seconds: number | null
-              game_settings: Json | null
-              id: string
-              legacy_theo_cents: number | null
-              move_group_id: string | null
-              pause_intervals: unknown[] | null
-              policy_snapshot: Json | null
-              previous_slip_id: string | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_start_rating_slip: {
+        Args: {
+          p_game_settings: Json
+          p_seat_number: string
+          p_table_id: string
+          p_visit_id: string
+        }
+        Returns: {
+          accrual_kind: string
+          accumulated_seconds: number
+          average_bet: number | null
+          casino_id: string
+          computed_theo_cents: number | null
+          duration_seconds: number | null
+          end_time: string | null
+          final_average_bet: number | null
+          final_duration_seconds: number | null
+          game_settings: Json | null
+          id: string
+          legacy_theo_cents: number | null
+          move_group_id: string | null
+          pause_intervals: unknown[] | null
+          policy_snapshot: Json | null
+          previous_slip_id: string | null
+          seat_number: string | null
+          start_time: string
+          status: Database["public"]["Enums"]["rating_slip_status"]
+          table_id: string
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rating_slip"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_start_table_rundown: {
         Args: { p_table_session_id: string }
         Returns: {
@@ -5707,6 +5766,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "gaming_table"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_update_valuation_policy: {
+        Args: {
+          p_cents_per_point: number
+          p_effective_date: string
+          p_version_identifier: string
+        }
+        Returns: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_valuation_policy"
           isOneToOne: true
           isSetofReturn: false
         }
