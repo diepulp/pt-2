@@ -227,6 +227,8 @@ export type TableContextErrorCode =
   // Close Guardrail Errors (PRD-038A)
   | 'UNRESOLVED_LIABILITIES'
   | 'CLOSE_NOTE_REQUIRED'
+  // Session-Gated Seating (PRD-057)
+  | 'NO_ACTIVE_SESSION'
   // Rundown Report Errors (PRD-038)
   | 'TABLE_RUNDOWN_ALREADY_FINALIZED'
   | 'TABLE_RUNDOWN_NOT_FOUND'
@@ -265,6 +267,9 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   UNRESOLVED_LIABILITIES:
     'Session has unresolved items. Use force-close for privileged override.',
   CLOSE_NOTE_REQUIRED: 'close_reason="other" requires a non-empty close_note',
+  // Session-Gated Seating (PRD-057)
+  NO_ACTIVE_SESSION:
+    'Table has no active session. Open a session before seating players.',
   // Rundown Report Errors (PRD-038)
   TABLE_RUNDOWN_ALREADY_FINALIZED:
     'Rundown report is finalized and cannot be modified',

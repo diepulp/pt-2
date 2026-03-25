@@ -12,6 +12,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
 import type {
   TableSessionDTO,
   TableSessionStatus,
@@ -28,6 +29,7 @@ import type {
   CloseTableSessionRequestBody,
   ForceCloseTableSessionRequestBody,
 } from '@/services/table-context/schemas';
+import { visitKeys } from '@/services/visit/keys';
 
 // === Query Hooks ===
 
@@ -134,6 +136,12 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
       queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
       // 4. EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
       queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // 5. PRD-057: Invalidate rating-slip and visit caches (stale after session close)
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipKeys.forTable.scope,
+      });
+      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
+      queryClient.invalidateQueries({ queryKey: visitKeys.root });
     },
   });
 }
@@ -163,6 +171,12 @@ export function useForceCloseTableSession(sessionId: string, tableId: string) {
       queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
       // EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
       queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // PRD-057: Invalidate rating-slip and visit caches (consistency with standard close)
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipKeys.forTable.scope,
+      });
+      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
+      queryClient.invalidateQueries({ queryKey: visitKeys.root });
     },
   });
 }
