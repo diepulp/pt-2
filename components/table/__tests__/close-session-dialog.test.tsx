@@ -1,18 +1,15 @@
 /**
  * Close Session Dialog Tests (PRD-038A WS4)
  *
- * Validates close reason UI, force close privilege gating,
- * unresolved items guardrail, and form reset behavior.
+ * Validates close reason UI, form reset behavior,
+ * and artifact selection requirements.
  */
 
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
-import {
-  CLOSE_REASON_OPTIONS,
-  FORCE_CLOSE_PRIVILEGED_ROLES,
-} from '@/services/table-context/labels';
+import { CLOSE_REASON_OPTIONS } from '@/services/table-context/labels';
 
 // Radix polyfills for jsdom (hasPointerCapture, scrollIntoView)
 beforeAll(() => {
@@ -22,22 +19,9 @@ beforeAll(() => {
 
 // Mock hooks
 const mockCloseTableSession = { mutateAsync: jest.fn(), isPending: false };
-const mockForceCloseTableSession = { mutateAsync: jest.fn(), isPending: false };
-let mockStaffRole: string | null = 'dealer';
 
 jest.mock('@/hooks/table-context/use-table-session', () => ({
   useCloseTableSession: () => mockCloseTableSession,
-  useForceCloseTableSession: () => mockForceCloseTableSession,
-}));
-
-jest.mock('@/hooks/use-auth', () => ({
-  useAuth: () => ({
-    staffRole: mockStaffRole,
-    staffId: 'staff-001',
-    casinoId: 'casino-001',
-    user: null,
-    isLoading: false,
-  }),
 }));
 
 jest.mock('@/hooks/table-context/use-drop-events', () => ({
@@ -102,7 +86,6 @@ const defaultProps = {
 describe('CloseSessionDialog', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockStaffRole = 'dealer';
   });
 
   it('renders close reason select with exactly CLOSE_REASON_OPTIONS', async () => {
@@ -144,62 +127,13 @@ describe('CloseSessionDialog', () => {
     expect(closeNoteTextarea).toBeInTheDocument();
   });
 
-  it('disables standard close button when has_unresolved_items', () => {
-    const sessionWithUnresolved = {
-      ...baseSession,
-      has_unresolved_items: true,
-    };
-
-    render(
-      <CloseSessionDialog {...defaultProps} session={sessionWithUnresolved} />,
-    );
-
-    const closeButton = screen.getByRole('button', { name: /close session/i });
-    expect(closeButton).toBeDisabled();
-  });
-
-  it('hides force close button for non-privileged role', () => {
-    mockStaffRole = 'dealer';
-
+  it('does not render force close button', () => {
     render(<CloseSessionDialog {...defaultProps} />);
 
     const forceCloseButton = screen.queryByRole('button', {
       name: /force close/i,
     });
     expect(forceCloseButton).not.toBeInTheDocument();
-  });
-
-  it('shows force close button for each privileged role', () => {
-    for (const role of FORCE_CLOSE_PRIVILEGED_ROLES) {
-      mockStaffRole = role;
-
-      const { unmount } = render(<CloseSessionDialog {...defaultProps} />);
-
-      const forceCloseButton = screen.getByRole('button', {
-        name: /force close/i,
-      });
-      expect(forceCloseButton).toBeInTheDocument();
-
-      unmount();
-    }
-  });
-
-  it('enables force close even when no artifacts are selected', async () => {
-    mockStaffRole = 'pit_boss';
-
-    render(<CloseSessionDialog {...defaultProps} />);
-
-    // Select a close reason (required for force close validation)
-    const trigger = screen.getByRole('combobox');
-    await userEvent.click(trigger);
-    const endOfShift = screen.getByRole('option', { name: 'End of Shift' });
-    await userEvent.click(endOfShift);
-
-    // Force close should be enabled even without artifacts
-    const forceCloseButton = screen.getByRole('button', {
-      name: /force close/i,
-    });
-    expect(forceCloseButton).not.toBeDisabled();
   });
 
   it('resets form state when dialog is closed and reopened', async () => {

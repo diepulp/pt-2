@@ -1,16 +1,10 @@
 'use client';
 
-import {
-  AlertTriangle,
-  Loader2,
-  Package,
-  Receipt,
-  ShieldAlert,
-} from 'lucide-react';
+import { AlertTriangle, Loader2, Package, Receipt } from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -42,15 +36,10 @@ import {
 import {
   type TableSessionDTO,
   useCloseTableSession,
-  useForceCloseTableSession,
 } from '@/hooks/table-context/use-table-session';
-import { useAuth } from '@/hooks/use-auth';
 import { isFetchError } from '@/lib/errors/error-utils';
 import type { CloseReasonType } from '@/services/table-context/dtos';
-import {
-  CLOSE_REASON_OPTIONS,
-  FORCE_CLOSE_PRIVILEGED_ROLES,
-} from '@/services/table-context/labels';
+import { CLOSE_REASON_OPTIONS } from '@/services/table-context/labels';
 
 import { ArtifactPicker } from './artifact-picker';
 import { ChipCountCaptureDialog } from './chip-count-capture-dialog';
@@ -59,10 +48,9 @@ import { DropEventDialog } from './drop-event-dialog';
 /** Error code → user-legible message mapping (EXEC-038A error matrix) */
 const ERROR_MESSAGES: Record<string, string> = {
   UNRESOLVED_LIABILITIES:
-    'Unresolved items must be reconciled before standard close.',
+    'Session has unresolved items that must be reconciled before closing.',
   TABLE_HAS_OPEN_SLIPS:
-    'Open or paused rating slips must be closed before standard close.',
-  FORBIDDEN: "You don't have permission to force close.",
+    'Open or paused rating slips must be closed before closing the session.',
   ALREADY_CLOSED: 'Session already closed.',
   CLOSE_NOTE_REQUIRED: "Please add a note when selecting 'Other'.",
   VALIDATION_ERROR: 'Invalid request. Check your inputs.',
@@ -87,8 +75,7 @@ interface CloseSessionDialogProps {
 /**
  * Close Session Dialog
  *
- * Modal for closing a table session with required artifacts.
- * Enhanced with close reason selection, force close, and unresolved items guardrails.
+ * Modal for closing a table session with required artifacts and close reason.
  *
  * @see PRD-038A Table Lifecycle Audit Patch
  * @see EXEC-038A Close Guardrails
@@ -104,9 +91,6 @@ export function CloseSessionDialog({
   dropEventId: preselectedDropEventId,
   closingInventorySnapshotId: preselectedSnapshotId,
 }: CloseSessionDialogProps) {
-  // Auth: get staff role for force close privilege check
-  const { staffRole } = useAuth();
-
   // Form state — artifacts
   const [useDropEvent, setUseDropEvent] = React.useState(
     !!preselectedDropEventId,
@@ -142,30 +126,17 @@ export function CloseSessionDialog({
 
   // Mutations
   const closeMutation = useCloseTableSession(session?.id ?? '', tableId);
-  const forceCloseMutation = useForceCloseTableSession(
-    session?.id ?? '',
-    tableId,
-  );
 
   // Derived state
-  const isPrivileged = FORCE_CLOSE_PRIVILEGED_ROLES.includes(staffRole ?? '');
-  const hasUnresolvedItems = session?.has_unresolved_items ?? false;
   const hasAtLeastOneArtifact =
     (useDropEvent && dropEventId) ||
     (useInventorySnapshot && closingInventorySnapshotId);
   const closeNoteValid = closeReason !== 'other' || closeNote.trim().length > 0;
-  const isPending = closeMutation.isPending || forceCloseMutation.isPending;
+  const isPending = closeMutation.isPending;
 
   // Standard close validation
   const isStandardCloseValid =
-    !!closeReason &&
-    closeNoteValid &&
-    hasAtLeastOneArtifact &&
-    session &&
-    !hasUnresolvedItems;
-
-  // Force close validation (no artifacts required)
-  const isForceCloseValid = !!closeReason && closeNoteValid && !!session;
+    !!closeReason && closeNoteValid && hasAtLeastOneArtifact && session;
 
   // Reset form when dialog opens/closes
   React.useEffect(() => {
@@ -194,7 +165,7 @@ export function CloseSessionDialog({
     setShowDropEventDialog(false);
   }, []);
 
-  /** Shared error handler for both close and force-close (EXEC-038A error matrix) */
+  /** Error handler for close mutation (EXEC-038A error matrix) */
   const handleMutationError = React.useCallback(
     (error: unknown) => {
       if (isFetchError(error)) {
@@ -250,32 +221,6 @@ export function CloseSessionDialog({
     handleMutationError,
   ]);
 
-  const handleForceClose = React.useCallback(async () => {
-    if (!isForceCloseValid) return;
-
-    try {
-      await forceCloseMutation.mutateAsync({
-        close_reason: closeReason!,
-        close_note: closeNote.trim() || undefined,
-      });
-
-      toast.success('Session force-closed', {
-        description: 'Table session has been force-closed with audit trail',
-      });
-
-      onOpenChange(false);
-    } catch (error) {
-      handleMutationError(error);
-    }
-  }, [
-    isForceCloseValid,
-    forceCloseMutation,
-    closeReason,
-    closeNote,
-    onOpenChange,
-    handleMutationError,
-  ]);
-
   // Render functions for artifact pickers
   const renderSnapshotItem = React.useCallback(
     (snapshot: TableInventorySnapshotDTO) => {
@@ -324,18 +269,6 @@ export function CloseSessionDialog({
                 <AlertDescription>
                   Session is in ACTIVE state. Consider starting rundown first
                   for proper closing procedures.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {/* Unresolved items guardrail (PRD-038A) */}
-            {hasUnresolvedItems && (
-              <Alert variant="destructive">
-                <AlertTriangle className="h-4 w-4" />
-                <AlertTitle>Unresolved Items</AlertTitle>
-                <AlertDescription>
-                  This table has outstanding items that must be reconciled.
-                  Standard close is blocked. Use Force Close if authorized.
                 </AlertDescription>
               </Alert>
             )}
@@ -456,29 +389,7 @@ export function CloseSessionDialog({
               Cancel
             </Button>
 
-            {/* Force Close — privileged roles only (PRD-038A) */}
-            {isPrivileged && (
-              <Button
-                variant="destructive"
-                onClick={handleForceClose}
-                disabled={!isForceCloseValid || isPending}
-                className="gap-1.5"
-              >
-                {forceCloseMutation.isPending ? (
-                  <>
-                    <Loader2 className="size-4 animate-spin" />
-                    Force Closing...
-                  </>
-                ) : (
-                  <>
-                    <ShieldAlert className="size-4" />
-                    Force Close
-                  </>
-                )}
-              </Button>
-            )}
-
-            {/* Standard Close */}
+            {/* Close Session */}
             <Button
               variant="destructive"
               onClick={handleClose}
