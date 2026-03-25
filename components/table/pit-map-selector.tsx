@@ -19,6 +19,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import { deriveOperatorDisplayBadge } from '@/services/table-context/labels';
 import type { Database } from '@/types/database.types';
 
 type TableStatus = Database['public']['Enums']['table_status'];
@@ -29,6 +30,8 @@ export interface PitMapTable {
   label: string;
   status: TableStatus;
   gameType: GameType;
+  /** Session lifecycle phase (D6.1). Present when an active session exists. */
+  sessionStatus?: 'OPEN' | 'ACTIVE' | 'RUNDOWN' | null;
 }
 
 export interface PitMapPit {
@@ -74,6 +77,44 @@ const STATUS_CONFIG: Record<
     bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
     ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
     label: 'Decommissioned',
+  },
+};
+
+/**
+ * Tailwind class groups keyed by the color token returned from
+ * deriveOperatorDisplayBadge (ADR-028 D6.1).
+ *
+ * `gray` is only reachable for inactive tables, which are handled by
+ * STATUS_CONFIG before this map is consulted.
+ */
+const BADGE_COLOR_CLASSES: Record<
+  'emerald' | 'amber' | 'blue' | 'zinc' | 'gray',
+  { color: string; bg: string; ring: string }
+> = {
+  emerald: {
+    color: 'text-emerald-600 dark:text-emerald-400',
+    bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+    ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
+  },
+  amber: {
+    color: 'text-amber-600 dark:text-amber-400',
+    bg: 'bg-amber-500/15 dark:bg-amber-500/20',
+    ring: 'ring-amber-500/50 dark:ring-amber-500/40',
+  },
+  blue: {
+    color: 'text-blue-600 dark:text-blue-400',
+    bg: 'bg-blue-500/15 dark:bg-blue-500/20',
+    ring: 'ring-blue-500/50 dark:ring-blue-500/40',
+  },
+  zinc: {
+    color: 'text-zinc-500 dark:text-zinc-500',
+    bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
+    ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
+  },
+  gray: {
+    color: 'text-gray-500 dark:text-gray-500',
+    bg: 'bg-gray-500/15 dark:bg-gray-500/20',
+    ring: 'ring-gray-500/50 dark:ring-gray-500/40',
   },
 };
 
@@ -289,7 +330,21 @@ export function PitMapSelector({
                   >
                     {pit.tables.map((table) => {
                       const isSelected = table.id === selectedTableId;
-                      const statusConfig = STATUS_CONFIG[table.status];
+                      // D6.1: derive badge from session phase when available on
+                      // an active table; fall back to STATUS_CONFIG otherwise.
+                      const statusConfig =
+                        table.status === 'active' && table.sessionStatus != null
+                          ? (() => {
+                              const badge = deriveOperatorDisplayBadge(
+                                table.status,
+                                table.sessionStatus,
+                              );
+                              return {
+                                ...BADGE_COLOR_CLASSES[badge.color],
+                                label: badge.label,
+                              };
+                            })()
+                          : STATUS_CONFIG[table.status];
 
                       return (
                         <CommandItem

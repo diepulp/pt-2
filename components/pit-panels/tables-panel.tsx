@@ -227,6 +227,7 @@ export function TablesPanel({
               tableId={selectedTable.label}
               gameType={selectedTable.type}
               tableStatus={selectedTable.status}
+              sessionStatus={session?.status ?? null}
               activeSlipsCount={selectedTable.activeSlipsCount}
               minBet={tableSettings?.min_bet}
               maxBet={tableSettings?.max_bet}

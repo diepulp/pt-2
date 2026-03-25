@@ -203,7 +203,7 @@ export function canCloseSession(session: TableSessionDTO | null): boolean {
  */
 export function getSessionStatusLabel(status: TableSessionStatus): string {
   const labels: Record<TableSessionStatus, string> = {
-    OPEN: 'Opening',
+    OPEN: 'Open',
     ACTIVE: 'In Play',
     RUNDOWN: 'Rundown',
     CLOSED: 'Closed',
