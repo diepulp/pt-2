@@ -1,7 +1,7 @@
 ---
 id: ARCH-SRM
 title: Service Responsibility Matrix - Bounded Context Registry
-nsversion: 4.20.0
+nsversion: 4.21.0
 status: CANONICAL
 effective: 2026-02-23
 schema_sha: efd5cd6d079a9a794e72bcf1348e9ef6cb1753e6
@@ -28,8 +28,8 @@ source_of_truth:
 
 # Service Responsibility Matrix - Bounded Context Registry (CANONICAL)
 
-> **Version**: 4.20.0 (PRD-052: Loyalty Operator Issuance — Reward Catalog Tables + Player360DashboardService)
-> **Date**: 2026-02-23
+> **Version**: 4.22.0 (ShiftIntelligenceService — Alert maturity: persistent alerts, acknowledgment, quality)
+> **Date**: 2026-03-25
 > **Status**: CANONICAL - Contract-First, snake_case, UUID-based
 > **Purpose**: Bounded context registry with schema invariants. Implementation patterns live in SLAD.
 
@@ -55,6 +55,8 @@ source_of_truth:
 
 ## Change Log
 
+- **4.22.0 (2026-03-25)** – **ShiftIntelligenceService Alert Maturity (PRD-056)**: Added `shift_alert`, `alert_acknowledgment` to Owns. 2 new RPCs: `rpc_persist_anomaly_alerts` (SECURITY DEFINER), `rpc_acknowledge_alert` (SECURITY DEFINER). 1 new RPC: `rpc_get_alert_quality` (SECURITY INVOKER). 3 new API routes: `POST /api/v1/shift-intelligence/persist-alerts`, `POST /api/v1/shift-intelligence/acknowledge-alert`, `GET /api/v1/shift-intelligence/alerts`. ALTER `table_metric_baseline` add `last_error`. Pattern C RLS + DELETE denial on new tables. RPC-only mutation posture.
+- **4.21.0 (2026-03-23)** – **ShiftIntelligenceService**: Registered `ShiftIntelligenceService` (Operational context) for shift anomaly detection. New table: `table_metric_baseline`. 2 new RPCs: `rpc_compute_rolling_baseline` (SECURITY DEFINER, ADR-024), `rpc_get_anomaly_alerts` (SECURITY INVOKER). 2 API routes: `POST /api/shift-intelligence/compute-baselines`, `GET /api/shift-intelligence/anomaly-alerts`. Dependencies: TableContextService (source metric RPCs), CasinoService (casino_settings), TemporalAuthority (compute_gaming_day). Cross-context reads only; writes confined to owned `table_metric_baseline`.
 - **4.20.0 (2026-03-19)** – **PRD-052 Loyalty Operator Issuance**: Added `reward_catalog`, `reward_price_points`, `reward_entitlement_tier`, `reward_limits`, `reward_eligibility`, `loyalty_earn_config` to LoyaltyService `Owns:` row. Registered `Player360DashboardService` as read-only aggregation service (follows `PlayerTimelineService` precedent). New service methods: `LoyaltyService.issueComp()`, `PromoService.issueEntitlement()`. New DTOs: `IssueCompParams`, `CompIssuanceResult`, `IssueEntitlementParams`, `EntitlementIssuanceResult`, `FulfillmentPayload` (frozen Vector C contract). New Zod schema: `issueRewardSchema`. See `docs/10-prd/PRD-052-loyalty-operator-issuance-v0.md` and `docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md`.
 - **4.19.0 (2026-03-10)** – **ADR-042 Player Exclusion Architecture**: Added `player_exclusion` table to PlayerService. Source-of-truth for exclusion/ban/watchlist records. Enforcement delegated to downstream consumers (VisitService for visit creation, CasinoService for enrollment). Canonical SQL functions: `is_exclusion_active()` (active predicate), `get_player_exclusion_status()` (precedence collapse). New RPC: `rpc_get_player_exclusion_status` (SECURITY DEFINER, ADR-024). Cross-context consumption: VisitService consumes exclusion status for visit creation enforcement. Critical table designation per ADR-030 D4 (session-var-only writes). See `docs/80-adrs/ADR-042-player-exclusion-architecture.md` and `docs/21-exec-spec/EXEC-050-player-exclusion-watchlist.md`.
 - **4.18.0 (2026-03-07)** – **ADR-039 Measurement Layer**: Added Measurement Layer (Cross-Cutting Read Models) section. New columns on `rating_slip`: `legacy_theo_cents`, `computed_theo_cents` (ADR-031 cents, materialized at close by 3 RPCs). New tables in LoyaltyService: `loyalty_valuation_policy`, `loyalty_liability_snapshot`. New SECURITY DEFINER RPC: `rpc_snapshot_loyalty_liability` (ADR-024, idempotent UPSERT). 2 cross-context views: `measurement_audit_event_correlation_v`, `measurement_rating_coverage_v` (security_invoker=true, Pattern C RLS). CHECK constraint `chk_closed_slip_has_theo` (NOT VALID). See `docs/80-adrs/ADR-039-measurement-layer.md`.
@@ -118,6 +120,7 @@ Approved JSON blobs (all others require first-class columns):
 | **Operational**  | TableContextService     | gaming_table, gaming_table_settings, dealer_rotation, table_inventory_snapshot, table_fill, table_credit, table_drop_event, table_session, table_rundown_report, shift_checkpoint | Table lifecycle & operational telemetry                     |
 | **Operational**  | FloorLayoutService      | floor_layout, floor_layout_version, floor_pit, floor_table_slot, floor_layout_activation                                   | Floor design & activation                                   |
 | **Operational**  | VisitService            | visit                                                                                                                      | Session lifecycle (3 archetypes)                            |
+| **Operational**  | ShiftIntelligenceService | table_metric_baseline, shift_alert, alert_acknowledgment                                                                  | Shift anomaly detection, rolling baselines & alert maturity |
 | **Telemetry**    | RatingSlipService       | rating_slip, rating_slip_pause, pit_cash_observation                                                                       | Gameplay measurement                                        |
 | **Reward**       | LoyaltyService          | player_loyalty, loyalty_ledger, loyalty_outbox, promo_program, promo_coupon, reward_catalog, reward_price_points, reward_entitlement_tier, reward_limits, reward_eligibility, loyalty_earn_config | Reward policy & assignment                                  |
 | **Finance**      | PlayerFinancialService  | player_financial_transaction                                                                                               | Financial ledger (SoT) ¹                                    |
@@ -810,6 +813,70 @@ These are the only cross-context writes, performed within a SECURITY DEFINER RPC
 
 ---
 
+## ShiftIntelligenceService (Operational Context)
+
+**Owns**: `table_metric_baseline`, `shift_alert`, `alert_acknowledgment`
+
+**Bounded Context**: "Are current shift metrics anomalous relative to historical baselines? Are alerts persisted, deduplicated, and acknowledged?"
+
+**Responsibility**: Shift anomaly detection — rolling baselines, persistent alerts, acknowledgment audit trail, alert quality telemetry.
+
+### Schema Invariants
+
+| Table                   | Column      | Constraint | Notes                          |
+| ----------------------- | ----------- | ---------- | ------------------------------ |
+| `table_metric_baseline` | `casino_id` | NOT NULL   | Casino scoping                 |
+| `shift_alert`           | `casino_id` | NOT NULL   | Casino scoping                 |
+| `shift_alert`           | `status`    | NOT NULL, CHECK | `open`, `acknowledged`, `resolved` |
+| `alert_acknowledgment`  | `casino_id` | NOT NULL   | Casino scoping                 |
+| `alert_acknowledgment`  | `alert_id`  | NOT NULL, FK | References shift_alert(id)    |
+
+### RPCs
+
+| RPC                            | Security                     | Description                                           |
+| ------------------------------ | ---------------------------- | ----------------------------------------------------- |
+| `rpc_compute_rolling_baseline` | SECURITY DEFINER, ADR-024    | Compute rolling baselines from source metric RPCs     |
+| `rpc_get_anomaly_alerts`       | SECURITY INVOKER             | Evaluate current metrics against baselines for alerts |
+| `rpc_persist_anomaly_alerts`   | SECURITY DEFINER, ADR-024    | UPSERT anomaly alerts with dedup + cooldown           |
+| `rpc_acknowledge_alert`        | SECURITY DEFINER, ADR-024    | Role-gated atomic alert acknowledgment                |
+| `rpc_get_alert_quality`        | SECURITY INVOKER             | Alert quality telemetry (aggregate stats)             |
+
+### API Surface
+
+| Method | Path                                                | Description                         |
+| ------ | --------------------------------------------------- | ----------------------------------- |
+| POST   | `/api/v1/shift-intelligence/compute-baselines`      | Trigger baseline computation        |
+| GET    | `/api/v1/shift-intelligence/anomaly-alerts`         | Retrieve current anomaly alerts     |
+| POST   | `/api/v1/shift-intelligence/persist-alerts`         | Persist anomaly alerts to DB        |
+| POST   | `/api/v1/shift-intelligence/acknowledge-alert`      | Acknowledge an alert                |
+| GET    | `/api/v1/shift-intelligence/alerts`                 | Retrieve persistent alerts          |
+
+### Business Rules
+
+- **Baseline computation lifecycle**: Rolling baseline windows computed from historical source metrics
+- **Anomaly evaluation**: Adaptive alerting against computed baselines
+- **Alert persistence**: Forward-only state machine (open → acknowledged → resolved). Dedup via UPSERT on (casino, table, metric, gaming_day). Cooldown suppression (configurable, 5-min floor)
+- **Acknowledgment**: Role-gated (pit_boss/admin). Append-only audit trail with actor attribution (ADR-024 INV-8). Idempotent re-ack
+- **Alert quality**: Aggregate telemetry (total, acknowledged, false positive, median ack latency)
+
+### Dependencies
+
+| Dependency        | Consumes Via                                                     |
+| ----------------- | ---------------------------------------------------------------- |
+| TableContextService | `rpc_shift_table_metrics`, `rpc_shift_cash_obs_table` (source metric RPCs) |
+| CasinoService     | `casino_settings` (operational config)                           |
+| TemporalAuthority | `compute_gaming_day` (gaming day derivation)                     |
+
+### Cross-Context Consumption
+
+| Direction | Context            | Access                                                          |
+| --------- | ------------------ | --------------------------------------------------------------- |
+| **Reads** | TableContextService | Source metric RPCs (`rpc_shift_table_metrics`, `rpc_shift_cash_obs_table`) |
+| **Reads** | CasinoService      | `casino_settings` config                                        |
+| **Writes** | (own tables only) | `table_metric_baseline`                                         |
+
+---
+
 ## Client State Lifecycle (Platform / Frontend — ADR-035)
 
 **Bounded Context**: "What client-side state persists across auth transitions, and how is it governed?"
@@ -936,6 +1003,8 @@ create type import_row_status as enum ('staged','created','linked','skipped','co
 | Measurement Layer   | MTLService         | `mtl_entry` via `measurement_audit_event_correlation_v` |
 | Measurement Layer   | LoyaltyService     | `loyalty_ledger` via `measurement_audit_event_correlation_v` |
 | Measurement Layer   | TableContextService | `table_session` via `measurement_rating_coverage_v` |
+| ShiftIntelligenceService | TableContextService | `rpc_shift_table_metrics`, `rpc_shift_cash_obs_table` (source metric RPCs) |
+| ShiftIntelligenceService | CasinoService      | `casino_settings` (operational config)               |
 
 **Rule**: Cross-context consumers interact via DTO-level APIs, service factories, or RPCs—never by reaching into another service's tables directly.
 

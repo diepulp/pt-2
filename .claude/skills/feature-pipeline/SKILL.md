@@ -66,6 +66,14 @@ Terminal phase is 5. On `prd-approved`, feature-pipeline records handoff and ins
 4. Identify cross-context contracts (DTOs/RPCs)
 5. Write ownership sentence
 6. Create `docs/20-architecture/specs/{feature}/FEATURE_BOUNDARY.md` using `references/feature-boundary-template.md`
+7. **Validate ownership** — verify declared tables against SRM using Grep:
+   ```
+   For each table in the boundary's "Writes" column:
+     Grep the SRM for the table name
+     Confirm it's owned by the declared service
+     If owned by another service → gate fails (cross-context write violation)
+   ```
+   Record validated tables in checkpoint `srm_validation` field.
 
 Phase 0 is intentionally lean — ownership sentence and write/read/contract table only. Narrative fields (goal, actor, scenario, metric, non-goals) belong in Phase 1.
 
@@ -91,6 +99,8 @@ Phase 0 is intentionally lean — ownership sentence and write/read/contract tab
 - **Risks / Open questions:** Known unknowns with mitigation or learning plan
 
 **Gate:** `scaffold-approved` — If you can't list 2+ options with tradeoffs and 5+ non-goals, you haven't thought enough.
+
+**Coherence checkpoint:** On gate pass, extract non-goals as a list and store in checkpoint `coherence.non_goals[]`. These are the scope boundaries that all subsequent phases must respect.
 
 **Delegates to:** Inline (orchestrator can do this — it's a framing doc, not domain-specific)
 
@@ -121,6 +131,10 @@ Surface Classification is conditional — only required when the feature introdu
 
 **Gate:** `design-approved` — If you can't name the decisions that need ADRs, the design is incomplete.
 
+**Coherence check:** Before passing the gate, verify the RFC scope does not violate any stored `coherence.non_goals[]` from the scaffold. For each non-goal, confirm the RFC does not include it in scope. If a violation is detected, the gate fails with a coherence error — either revise the RFC or amend the scaffold non-goals with justification.
+
+**Surface classification check:** If the RFC detailed design section mentions "page", "panel", "dashboard", "form", or "component", prompt the user to confirm whether Surface Classification (ADR-041) is required. If yes and not present, gate fails.
+
 **Delegates to:** `lead-architect` skill
 
 ---
@@ -131,6 +145,28 @@ Surface Classification is conditional — only required when the feature introdu
 **Rule:** Small and explicit beats broad and vague.
 
 **Template:** See `references/sec-note-template.md`
+
+**Delegation:** Invoke `rls-expert` skill with security context:
+
+```
+Skill(skill="rls-expert", args="Generate SEC Note for feature '{feature_name}':
+  Feature Boundary: {boundary_path}
+  Scaffold: {scaffold_path}
+  RFC: {rfc_path}
+  Owning Service: {owner_service}
+  Tables: {write_tables}
+
+  Use the SEC Note template at .claude/skills/feature-pipeline/references/sec-note-template.md.
+  Focus on: RLS policy requirements, SECURITY DEFINER governance (ADR-018),
+  actor binding (ADR-024 INV-8), tenant boundary analysis (SEC-002),
+  and data classification for any PII or financial data.")
+```
+
+> **Why delegate?** The orchestrator lacks security domain expertise — it produces
+> generic threat models that miss PT-2-specific attack vectors (casino-scoped tenant
+> escape, spoofed audit trails, SECURITY DEFINER privilege escalation). The `rls-expert`
+> skill knows ADR-015/018/020/024/030 patterns and produces SEC notes that map directly
+> to implementation controls.
 
 **Must Include:**
 - **Assets:** What must be protected (PII, identity docs, player list, etc.)
@@ -169,6 +205,8 @@ Surface Classification is conditional — only required when the feature introdu
 
 **Gate:** `adr-frozen` — ADR contains only context/decision/consequences, no SQL/code. Implementation detail goes to EXEC-SPEC via build-pipeline.
 
+**Coherence check:** Verify ADR decisions do not require capabilities listed in `coherence.non_goals[]`. If an ADR decision's consequences depend on a scaffolded non-goal, the gate fails — either revise the ADR or formally amend the scaffold non-goals with justification and update `coherence.non_goals[]`.
+
 ---
 
 ## Phase 5: PRD
@@ -186,38 +224,92 @@ Surface Classification is conditional — only required when the feature introdu
 - `scaffold_ref:` frontmatter field pointing to scaffold
 - `adr_refs:` frontmatter field listing ADR IDs
 
-**Adversarial Review (Mini One-Pager):**
+**Adversarial Review (DA Team):**
 
-After `prd-writer` produces the PRD, invoke `devils-advocate` in lightweight mode:
+After `prd-writer` produces the PRD, deploy a **DA review team** to attack the PRD
+against all preceding artifacts. This catches scope creep between phases, security
+controls that weren't carried forward, untestable acceptance criteria, and
+cross-artifact incoherence.
+
+See `references/da-team-protocol.md` for the complete team protocol, prompt templates,
+and phase timing.
+
+> **Why a team, not a single reviewer?** A single `Skill()` invocation reviews only
+> the PRD text. A team of independent `Agent()` reviewers can verify the PRD against
+> the scaffold, RFC, SEC note, and ADR(s) simultaneously, cross-reference claims
+> against the codebase, and flag contradictions between artifacts. Cross-domain
+> findings are routed to the owning reviewer via `SendMessage` for verification.
+
+**Step 1: Team Setup & Dispatch**
 
 ```
-Skill(skill="devils-advocate", args="Mini One-Pager review of {PRD_ID}:
-  PRD: {prd_path}
-  Scaffold: {scaffold_path}
-  RFC: {rfc_path}
-  SEC Note: {sec_note_path}
-  ADR(s): {adr_paths}
-
-  Use Mini One-Pager mode (Verdict, P0 breaks, Missing decisions, Patch delta).
-  Focus on: coherence across artifacts, testable acceptance criteria,
-  scope creep, and missing non-functional requirements.")
+TeamCreate(team_name="da-prd-{PRD-ID}", description="DA review of {PRD-ID}")
 ```
 
-- P0 findings: `prd-approved` gate **FAILS**. Enter retry protocol (see below).
-- P1-P3 findings: Advisory. Noted in handoff display for build-pipeline awareness.
+Create tasks and spawn **4 agents** (3 reviewers + synthesis-lead) in a SINGLE message:
 
-**Retry protocol (on P0 FAIL):**
+```
++------------------------------------------------------------------------------------+
+| SINGLE MESSAGE — 4 parallel Agent calls (all with team_name="da-prd-{PRD-ID}"):   |
++------------------------------------------------------------------------------------+
+| Agent(name="r1-scope-security",   team_name="da-prd-{PRD-ID}", prompt="...")       |
+| Agent(name="r2-testability-arch", team_name="da-prd-{PRD-ID}", prompt="...")       |
+| Agent(name="r3-cross-artifact",   team_name="da-prd-{PRD-ID}", prompt="...")       |
+| Agent(name="synthesis-lead",      team_name="da-prd-{PRD-ID}", prompt="...")       |
++------------------------------------------------------------------------------------+
+```
 
-Present P0 findings to the human:
+**DA Team Roster:**
+
+| Agent Name | Role | Focus |
+|------------|------|-------|
+| `r1-scope-security` | SCOPE_SECURITY | Scope creep vs scaffold non-goals, SEC note controls carried forward, threat model gaps |
+| `r2-testability-arch` | TESTABILITY_ARCHITECTURE | Acceptance criteria testability, ADR alignment, bounded context ownership, SRM compliance |
+| `r3-cross-artifact` | CROSS_ARTIFACT_COHERENCE | Contradictions between scaffold/RFC/SEC/ADR/PRD, missing decisions, undefined behavior |
+| `synthesis-lead` | SYNTHESIS | Coordinator — monitors completion, routes conflicts, produces consolidated report |
+
+**Step 2: Two-Phase Review Protocol**
+
+Same protocol as build-pipeline DA team (see `references/da-team-protocol.md`):
+- **Phase 1**: Independent review. Cross-domain findings routed via `SendMessage`.
+- **Phase 2**: Cross-pollination. Reviewers investigate inbox, confirm/refute, negotiate conflicts.
+
+**Step 3: Team-Driven Synthesis**
+
+Synthesis-lead produces consolidated report. Orchestrator extracts verdict.
+
+**Step 4: Gate Logic**
+
+- All 3 "Ship" → **PASS**. Proceed to `prd-approved`.
+- Any "Ship w/ gates" (no P0) → **WARN**. Present findings, human decides.
+- Any "Do not ship" (P0 found) → **BLOCK**. Enter retry protocol.
+
+**Step 5: Team Cleanup**
+
+```
+SendMessage shutdown_request to all 4 agents → TeamDelete()
+```
+
+**Retry protocol (on BLOCK):**
+
+Present consolidated P0 findings to the human:
 
 ```
 ---------------------------------------------
-[FAIL] PRD Adversarial Review (Attempt {N}/2)
+[BLOCK] PRD DA Review Failed (Attempt {N}/2)
 ---------------------------------------------
 
-P0 Findings ({count}):
-  1. {P0 finding summary}
-  2. {P0 finding summary}
+Reviewers:
+  R1 Scope & Security:             {verdict} ({p0_count} P0, {p1_count} P1)
+  R2 Testability & Architecture:   {verdict} ({p0_count} P0, {p1_count} P1)
+  R3 Cross-Artifact Coherence:     {verdict} ({p0_count} P0, {p1_count} P1)
+
+Consolidated P0 Findings ({total_count}):
+  1. [{source_reviewer}] {P0 finding summary}
+  2. [{source_reviewer}] {P0 finding summary}
+
+Resolved Conflicts ({resolved_count}):
+  - {joint recommendation}
 
 Options:
   1. Revise PRD (delegate to prd-writer with DA findings)
@@ -227,12 +319,12 @@ Options:
 ```
 
 - **Option 1 (Revise):** Delegate back to `prd-writer` with DA findings as revision context.
-  Re-run DA Mini One-Pager after revision. Update attempt count.
+  Re-run DA team after revision. Update attempt count.
 - **Option 2 (Override):** Record override reason in checkpoint. Proceed to `prd-approved` gate
   with override noted in handoff display.
 - **Option 3 (Abort):** Mark checkpoint `status` as `"failed"`, record DA findings. Stop.
 
-**Max 2 DA attempts.** After 2 consecutive P0 verdicts, the pipeline forces
+**Max 2 DA team attempts.** After 2 consecutive "Do not ship" verdicts, the pipeline forces
 a human decision: override-with-reason or abort. No further automatic revision loops.
 
 **Gate:** `prd-approved` — If it can't be proven by a test, it's not a criterion. No unresolved P0 findings from adversarial review.
@@ -276,6 +368,15 @@ Next: /build PRD-###
 Set checkpoint `status` to `"design-complete"` and `current_phase` to `5`. Do not increment
 the phase beyond 5. Do not add `exec_spec`, `dod_gates`, `exec_spec_workstreams`, or
 `execution_phases` fields to the checkpoint — those are build-pipeline state.
+
+**Handoff boundary enforcement:** After setting status to `"design-complete"`, verify the
+checkpoint does not contain forbidden fields. If any of `exec_spec`, `dod_gates`,
+`exec_spec_workstreams`, or `execution_phases` exist, strip them and warn:
+
+```
+[BOUNDARY VIOLATION] Checkpoint contained build-pipeline fields: {field_names}
+These have been removed. Feature-pipeline produces design artifacts only.
+```
 
 ---
 
@@ -342,7 +443,22 @@ If no checkpoint exists:
     "p0_count": 0,
     "p1_count": 0,
     "attempt": 0,
-    "override_reason": null
+    "override_reason": null,
+    "team_name": null,
+    "team_results": null,
+    "cross_artifact_findings": 0,
+    "resolved_conflicts": [],
+    "unresolved_conflicts": []
+  },
+  "coherence": {
+    "non_goals": [],
+    "violations": []
+  },
+  "srm_validation": {
+    "ran": false,
+    "owner_service": null,
+    "write_tables": [],
+    "cross_context_contracts": []
   },
   "branch": null,
   "working_directory": null,
@@ -363,7 +479,20 @@ These rules are non-negotiable. Violating them means the pipeline has crossed in
 
 **Location:** `.claude/skills/feature-pipeline/checkpoints/{feature-id}.json`
 
-**Migration:** Checkpoints with no `schema_version` field are v1. Agents should read v1 checkpoints gracefully — map `gates_passed`/`gates_pending` arrays to the v2 `gates` object, and treat missing `da_review` as not-yet-run.
+**Migration (v1 → v2):** When loading a checkpoint without `schema_version`:
+
+1. Set `schema_version: 2`
+2. Map `gates_passed`/`gates_pending` arrays to the v2 `gates` object:
+   ```
+   For each gate in gates_passed: gates[gate] = { passed: true, timestamp: checkpoint.timestamp }
+   For each gate in gates_pending: gates[gate] = { passed: false, timestamp: null }
+   ```
+3. Initialize missing fields with defaults:
+   - `da_review`: `{ ran: false, verdict: null, p0_count: 0, p1_count: 0, attempt: 0 }`
+   - `coherence`: `{ non_goals: [], violations: [] }`
+   - `srm_validation`: `{ ran: false, owner_service: null, write_tables: [], cross_context_contracts: [] }`
+4. Remove old fields: `gates_passed`, `gates_pending`
+5. Save migrated checkpoint back to disk
 
 ---
 
@@ -372,9 +501,10 @@ These rules are non-negotiable. Violating them means the pipeline has crossed in
 | Phase | Delegates To | How |
 |-------|--------------|-----|
 | Phase 2 (RFC) | `lead-architect` | Skill invocation with Feature Scaffold context |
+| Phase 3 (SEC Note) | `rls-expert` | Skill invocation with security context (boundary + tables + ADRs) |
 | Phase 4 (ADR) | `lead-architect` | Skill invocation, then freeze operation |
 | Phase 5 (PRD) | `prd-writer` | Skill invocation with Scaffold + RFC + SEC + ADR context |
-| Phase 5 (DA Review) | `devils-advocate` | Skill invocation, Mini One-Pager mode |
+| Phase 5 (DA Review) | `devils-advocate` | 4-agent team (3 reviewers + synthesis-lead) via Agent + TeamCreate |
 
 ---
 
@@ -413,6 +543,7 @@ Edge cases don't stop existing. You stop letting them expand the scope.
 |------|---------|
 | `references/feature-boundary-template.md` | Phase 0 template (ownership + contracts) |
 | `references/sec-note-template.md` | Phase 3 template |
+| `references/da-team-protocol.md` | **Phase 5 DA team: reviewer roles, prompt templates, two-phase protocol** |
 | `docs/01-scaffolds/TEMPLATE.md` | Phase 1 template |
 | `docs/02-design/TEMPLATE.md` | Phase 2 template |
 

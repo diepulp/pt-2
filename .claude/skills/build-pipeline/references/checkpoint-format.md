@@ -75,8 +75,21 @@ interface PipelineCheckpoint {
       key_findings: string[];     // top 3 finding summaries from this reviewer
     }>;
 
-    // Cross-reviewer disagreements requiring human resolution
-    conflicts?: string[];
+    // Team coordination metadata
+    team_name?: string;                    // e.g., "da-review-PRD-053"
+    cross_domain_findings?: number;        // count of cross-domain messages sent in Phase 1
+    cross_domain_verified?: number;        // count confirmed by owning reviewer in Phase 2
+    cross_domain_refuted?: number;         // count refuted by owning reviewer in Phase 2
+
+    // Conflict resolution tracking
+    resolved_conflicts?: Array<{
+      between: [string, string];           // e.g., ["r2-architecture", "r5-performance"]
+      subject: string;                     // what they disagreed about
+      resolution: string;                  // joint recommendation from reviewer negotiation
+    }>;
+
+    // Unresolved conflicts requiring human decision
+    unresolved_conflicts?: string[];
   };
 
   // Optional: Execution Notes
