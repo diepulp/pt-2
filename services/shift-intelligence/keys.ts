@@ -17,4 +17,16 @@ export const shiftIntelligenceKeys = {
     (gamingDay?: string) => [...ROOT, 'baselines', { gamingDay }] as const,
     { scope: [...ROOT, 'baselines'] as const },
   ),
+
+  shiftAlerts: Object.assign(
+    (gamingDay: string, status?: string) =>
+      [...ROOT, 'shift-alerts', { gamingDay, status }] as const,
+    { scope: [...ROOT, 'shift-alerts'] as const },
+  ),
+
+  alertQuality: Object.assign(
+    (startDate: string, endDate: string) =>
+      [...ROOT, 'alert-quality', { startDate, endDate }] as const,
+    { scope: [...ROOT, 'alert-quality'] as const },
+  ),
 };

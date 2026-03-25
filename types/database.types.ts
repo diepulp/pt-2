@@ -9,6 +9,58 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      alert_acknowledgment: {
+        Row: {
+          acknowledged_by: string
+          alert_id: string
+          casino_id: string
+          created_at: string
+          id: string
+          is_false_positive: boolean
+          notes: string | null
+        }
+        Insert: {
+          acknowledged_by: string
+          alert_id: string
+          casino_id: string
+          created_at?: string
+          id?: string
+          is_false_positive?: boolean
+          notes?: string | null
+        }
+        Update: {
+          acknowledged_by?: string
+          alert_id?: string
+          casino_id?: string
+          created_at?: string
+          id?: string
+          is_false_positive?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_acknowledgment_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_acknowledgment_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "shift_alert"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_acknowledgment_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -2617,6 +2669,75 @@ export type Database = {
           },
         ]
       }
+      shift_alert: {
+        Row: {
+          baseline_mad: number | null
+          baseline_median: number | null
+          casino_id: string
+          created_at: string
+          deviation_score: number | null
+          direction: string | null
+          gaming_day: string
+          id: string
+          message: string | null
+          metric_type: string
+          observed_value: number
+          severity: string
+          status: string
+          table_id: string
+          updated_at: string
+        }
+        Insert: {
+          baseline_mad?: number | null
+          baseline_median?: number | null
+          casino_id: string
+          created_at?: string
+          deviation_score?: number | null
+          direction?: string | null
+          gaming_day: string
+          id?: string
+          message?: string | null
+          metric_type: string
+          observed_value: number
+          severity: string
+          status?: string
+          table_id: string
+          updated_at?: string
+        }
+        Update: {
+          baseline_mad?: number | null
+          baseline_median?: number | null
+          casino_id?: string
+          created_at?: string
+          deviation_score?: number | null
+          direction?: string | null
+          gaming_day?: string
+          id?: string
+          message?: string | null
+          metric_type?: string
+          observed_value?: number
+          severity?: string
+          status?: string
+          table_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_alert_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_alert_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_checkpoint: {
         Row: {
           cash_out_observed_cents: number
@@ -3373,6 +3494,7 @@ export type Database = {
           computed_by: string | null
           gaming_day: string
           id: string
+          last_error: string | null
           mad_value: number
           max_value: number | null
           median_value: number
@@ -3388,6 +3510,7 @@ export type Database = {
           computed_by?: string | null
           gaming_day: string
           id?: string
+          last_error?: string | null
           mad_value: number
           max_value?: number | null
           median_value: number
@@ -3403,6 +3526,7 @@ export type Database = {
           computed_by?: string | null
           gaming_day?: string
           id?: string
+          last_error?: string | null
           mad_value?: number
           max_value?: number | null
           median_value?: number
@@ -4067,6 +4191,14 @@ export type Database = {
           theo: number
         }[]
       }
+      rpc_acknowledge_alert: {
+        Args: {
+          p_alert_id: string
+          p_is_false_positive?: boolean
+          p_notes?: string
+        }
+        Returns: Json
+      }
       rpc_acknowledge_drop_received: {
         Args: { p_drop_event_id: string }
         Returns: {
@@ -4607,6 +4739,10 @@ export type Database = {
           start_gd: string
         }[]
       }
+      rpc_get_alert_quality: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
       rpc_get_anomaly_alerts: {
         Args: { p_window_end: string; p_window_start: string }
         Returns: {
@@ -4620,7 +4756,10 @@ export type Database = {
           message: string
           metric_type: string
           observed_value: number
+          peak_deviation: number
           readiness_state: string
+          recommended_action: string
+          session_count: number
           severity: string
           table_id: string
           table_label: string
@@ -5151,6 +5290,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_persist_anomaly_alerts: {
+        Args: { p_gaming_day?: string }
+        Returns: Json
       }
       rpc_persist_table_rundown: {
         Args: { p_table_session_id: string }

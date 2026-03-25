@@ -54,6 +54,9 @@ describe('ShiftIntelligence Mappers', () => {
       baseline_gaming_day: '2026-03-22',
       baseline_sample_count: 7,
       message: 'Within normal range',
+      session_count: 3,
+      peak_deviation: 2.5,
+      recommended_action: null as string | null,
     };
 
     it('maps snake_case alert row to camelCase DTO', () => {
@@ -75,6 +78,9 @@ describe('ShiftIntelligence Mappers', () => {
         baselineGamingDay: '2026-03-22',
         baselineSampleCount: 7,
         message: 'Within normal range',
+        sessionCount: 3,
+        peakDeviation: 2.5,
+        recommendedAction: null,
       });
     });
 
