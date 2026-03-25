@@ -47,7 +47,8 @@ Without statistical baselines, the system cannot distinguish between "normal for
 - **Out of scope:**
   - Alert persistence (Phase C-2)
   - Alert deduplication/throttling (Phase C-2)
-  - External notifications (Phase C-3)
+  - External notifications — separate post-C3 effort, not part of Wedge C completion claim
+  - Automated baseline scheduling (pg_cron) — manual trigger for pilot; scheduling deferred
   - UI changes (existing `/admin/alerts` page already renders alert RPCs)
   - Per-table baseline overrides
   - ML-based anomaly detection
@@ -149,7 +150,7 @@ interface AnomalyAlertDTO {
   isAnomaly: boolean;
   severity: 'info' | 'warn' | 'critical';
   direction: 'above' | 'below';
-  readinessState: 'ready' | 'stale' | 'missing' | 'insufficient_data' | 'compute_failed'; // ADR-046 §8
+  readinessState: 'ready' | 'stale' | 'missing' | 'insufficient_data'; // ADR-046 §8 — 4-state model for MVP; compute_failed deferred to Phase C-2
   threshold: number;         // mad_multiplier from config (for context)
   message: string;
 }

@@ -34,7 +34,7 @@ date: 2026-03-23
 
 1. **Alert persistence / state machine** — alerts remain ephemeral (computed per RPC call). Persistent `shift_alerts` table is Phase C-2 scope.
 2. **Alert deduplication / throttling** — same alert may fire on every dashboard refetch. Cooldown windows are Phase C-2 scope.
-3. **External notifications** (Slack, email, webhook) — alerts visible only on admin dashboard. Notification routing is Phase C-3 scope.
+3. **External notifications** — alerts visible only on admin dashboard. Notification channels are a separate post-C3 effort, not part of Wedge C completion claim (see Hardening Report §III Pilot Containment Rule).
 4. **Real-time streaming computation** — baselines are computed on-demand or batch-materialized, not via event stream / change data capture.
 5. **ML-based anomaly detection** — median+MAD is the chosen statistical method. No regression models, no clustering, no seasonal decomposition.
 6. **Historical baseline trend analysis UI** — no UI for viewing how baselines evolved over time. Dashboard shows current alerts only.
@@ -45,7 +45,7 @@ date: 2026-03-23
 
 - **Inputs:**
   - Shift time window (`p_window_start`, `p_window_end`)
-  - Metric type(s): `drop_total`, `hold_percent`, `cash_obs_total`, `promo_issuance_total`
+  - Metric type(s): `drop_total`, `hold_percent`, `cash_obs_total`, `win_loss_cents` (note: `promo_issuance_total` deferred — source RPC does not yet exist; `win_loss_cents` substituted per PRD-055 Appendix A)
   - Configuration from `casino_settings.alert_thresholds.baseline`
   - Historical metric values from prior gaming days (via existing shift RPCs or direct table reads)
 

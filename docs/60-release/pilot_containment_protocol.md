@@ -419,16 +419,26 @@ Score each area from 0 to 2.
 Use this section to quarantine ideas so they stop poisoning current execution.
 
 ### Deferred Until After Pilot
-- 
-- 
-- 
-- 
+- **Notification foundation** (C-3A) — channel-neutral delivery policy, outbox, delivery log, retry, templates, audit trail. Ships as separate post-C3 effort after alert quality validated.
+- **Email adapter** (C-3B) — SMTP config, critical-alert-only. First external channel candidate, but only after notification foundation.
+- **pg_cron baseline scheduler** — admin clicks "Recompute Baselines" each morning for pilot. Manual workaround exists for 4+ weeks.
+- **`compute_failed` readiness state** — 5th baseline state deferred from PRD-055 to Phase C-2 (requires error persistence column). MVP uses 4-state model.
+- **Loyalty reversal RPC** — Wedge D item; corrections require manual ledger entries during pilot.
+- **Loyalty snapshot automation** — manual RPC invocation during pilot.
+- **Liability snapshot read endpoint + trend API** — RPC writes snapshots; no read surface during pilot.
+- **Exclusion safety signal wiring** — `has_sister_exclusions` / `max_exclusion_severity` return NULL (stubs) during pilot.
+- **Slip Detail audit trace panel** — Wedge A/B item; not pilot-critical.
+- **Historical baseline trend analysis UI** — baselines stored but no evolution chart.
+- **Per-table baseline configuration overrides** — casino-wide config only during pilot.
 
 ### Explicitly Banned Until After Pilot
-- 
-- 
-- 
-- 
+- **Slack integration** — assumes casino uses Slack; speculative architecture vanity. Only on explicit operator demand post-pilot.
+- **Cash obs baseline cutover** — static threshold authority is functional. Cutover flag introduces new axis of variability for something that works today.
+- **ML-based anomaly detection** — median+MAD only. No models, no clustering, no seasonal decomposition.
+- **Cross-property (company-scoped) baselines** — casino-scoped only. Portfolio anomaly detection is a different product.
+- **Alert escalation chains** — single-tier only. No manager escalation workflows.
+- **Mobile push notifications** — out of scope entirely.
+- **Generalized notification platform** — channel adapters only, no platform.
 
 ---
 

@@ -132,15 +132,21 @@ This was the single largest remaining gap in the strategic hardening effort. Bef
 | Alert deduplication / cooldown windows per (table_id, alert_type) | 2-3 days | Eliminates 30s refetch alert fatigue |
 | **Expected outcome:** AMBER (80%) -> **GREEN (85%)** | | |
 
-### Phase C-3: Alert Quality + Automation (P2)
+### Phase C-3: Alert Quality (P2)
 
 | Deliverable | Effort | Impact |
 |-------------|--------|--------|
-| pg_cron baseline scheduler (automatic daily recomputation) | 1-2 days | Eliminates manual trigger dependency |
-| Slack/email notification producer for critical alerts | 3-4 days | Alerts visible beyond admin page |
 | Context enrichment (activity breakdown, recommended actions) | 2-3 days | Reduces investigation time |
-| Cash observation baseline cutover (replace static threshold authority) | 1-2 days | Unified adaptive detection for all 4 metrics |
+| Alert quality telemetry (false-positive rate, acknowledge latency) | 1 day | Validates alert quality before any external notification channel |
 | **Expected outcome:** GREEN (85%) -> **GREEN (92%+)** | | |
+
+### Deferred (Pilot Containment Protocol)
+
+| Deliverable | Reason |
+|-------------|--------|
+| pg_cron baseline scheduler | Manual workaround exists (admin clicks button each morning) |
+| External notifications (Slack, email) | Separate post-C3 effort; not part of Wedge C completion claim |
+| Cash obs baseline cutover | Static thresholds are functional; new config flag adds axis of variability |
 
 ### Integration Points Ready for Wiring
 

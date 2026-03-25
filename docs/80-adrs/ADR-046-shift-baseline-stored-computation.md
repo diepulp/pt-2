@@ -5,6 +5,8 @@
 **Supersedes:** None
 **Feature:** shift-baseline-service (Wedge C Phase C-1)
 **Patch:** 2026-03-23 — applied corrections from patch delta review (4 findings + 3 structural)
+**Amendment:** 2026-03-24 — Phase C-2/C-3 alert maturity (§8 compute_failed readiness state, §10 alert persistence lifecycle)
+**Amendment Artifacts:** RFC-005, SCAFFOLD-005, SEC Note (alert-maturity)
 
 ## Context
 
@@ -42,7 +44,23 @@ The system needs rolling statistical baselines (median + MAD) computed over a co
 
 7. **Sparse data produces an explicit flag, not a false alert.** When `sample_count < min_history_days`, the baseline is stored with the available data but consumers receive an `insufficient_data` signal.
 
-8. **Explicit baseline readiness states.** Consumers must distinguish among `ready`, `stale`, `missing`, and `insufficient_data`. Adaptive anomaly evaluation only runs for `ready` baselines. No silent substitution or fallback to a different gaming day's baseline without explicit consumer awareness. (Note: `compute_failed` was considered as a 5th state but deferred — it requires error persistence infrastructure (status column or error table) that is out of scope for Phase C-1. Phase C-2 may introduce it when alert persistence demands operational error surfacing.)
+8. **Explicit baseline readiness states.** Consumers must distinguish among `ready`, `stale`, `missing`, `insufficient_data`, and `compute_failed`. Adaptive anomaly evaluation only runs for `ready` baselines. No silent substitution or fallback to a different gaming day's baseline without explicit consumer awareness.
+
+   **`compute_failed` (Amendment — Phase C-2):** The 5th readiness state signals that baseline computation was attempted but produced an error. Implementation: a nullable `last_error text` column on `table_metric_baseline`. When `last_error IS NOT NULL`, the readiness state is `compute_failed` regardless of other column values. Cleared on next successful computation for the same `(table_id, metric_type)`. The read path (`rpc_get_anomaly_alerts`) adds one CASE branch to the readiness derivation:
+
+   ```
+   CASE
+     WHEN b.last_error IS NOT NULL THEN 'compute_failed'
+     WHEN b.id IS NULL THEN 'missing'
+     WHEN b.gaming_day < current_gaming_day THEN 'stale'
+     WHEN b.sample_count < min_history_days THEN 'insufficient_data'
+     ELSE 'ready'
+   END
+   ```
+
+   **Distinction from `missing`:** `missing` means no baseline row exists (computation never attempted). `compute_failed` means a row exists but the last computation produced an error — the operator can see *what* failed and trigger recomputation. This distinction is durable: it informs operator action (recompute vs. wait for first computation).
+
+   **`last_error` constraints:** Truncated to 500 chars. Staff-visible only through approved operational/admin read paths. Not exposed on customer-facing surfaces. Sanitization deferred for pilot — exposure scope is constrained now.
 
 9. **Fail-closed read semantics for MVP.** When no current-gaming-day baseline is available, the adaptive anomaly path does not silently substitute another day's baseline. The read model surfaces the readiness state so operators can see that baseline-backed anomaly detection is unavailable or degraded for specific tables or metrics.
 
@@ -94,6 +112,38 @@ During Phase C-1, both alert systems coexist with explicit authority boundaries:
 
 The existing `rpc_shift_cash_obs_alerts` is not modified. When baseline coverage for cash observations is established and validated, the static-threshold RPC can be deprecated in a future phase.
 
+10. **Alert Persistence Lifecycle (Amendment — Phase C-2/C-3).** Anomaly alerts are persisted in a `shift_alert` table with a forward-only state machine. Acknowledgment is recorded in a separate `alert_acknowledgment` audit table. Both tables are casino-scoped with Pattern C hybrid RLS and DELETE denied.
+
+    **Tables:**
+    - `shift_alert` — persistent alert store. Key columns: `casino_id`, `table_id`, `metric_type`, `gaming_day`, `status`, `severity`, `observed_value`, `baseline_median`, `baseline_mad`, `deviation_score`, `direction`, `message`. Composite UNIQUE on `(casino_id, table_id, metric_type, gaming_day)`.
+    - `alert_acknowledgment` — append-only audit trail. Key columns: `casino_id`, `alert_id` (FK to `shift_alert`), `acknowledged_by` (derived from `app.actor_id`, not parameter), `notes`, `is_false_positive`.
+
+    **State Machine (MVP — 2 active states):**
+    ```
+    open → acknowledged    (via rpc_acknowledge_alert, role-gated: pit_boss/admin)
+    ```
+    CHECK constraint allows `'open' | 'acknowledged' | 'resolved'`. `resolved` is dormant in MVP — included in CHECK to avoid future ALTER TYPE migration. No backward transitions. Forward-only enforcement is in RPC body logic, not CHECK (CHECK validates legal enum values only).
+
+    **Deduplication:**
+    - Key-based: composite UNIQUE `(casino_id, table_id, metric_type, gaming_day)` — one alert per anomaly per gaming day. `rpc_persist_anomaly_alerts` uses `ON CONFLICT ... DO UPDATE` to update severity/deviation if magnitude changes.
+    - Time-based cooldown: if `shift_alert.updated_at` is within `cooldown_minutes` of `now()`, skip UPSERT. Config: `casino_settings.alert_thresholds.cooldown_minutes` (default 60). Reduces write load from ~120 UPSERTs/hour to ~1/hour per anomalous table.
+
+    **RPCs:**
+    - `rpc_persist_anomaly_alerts()` — SECURITY DEFINER. Calls `set_rls_context_from_staff()`, internally evaluates anomalies, then UPSERTs into `shift_alert` with explicit `WHERE casino_id = v_casino_id`. Persist trigger is explicit (page load + manual action), not piggybacked on 30s refetch.
+    - `rpc_acknowledge_alert(p_alert_id, p_notes, p_is_false_positive)` — SECURITY DEFINER. Role gate: `v_role IN ('pit_boss', 'admin')`. `acknowledged_by` derived from `app.actor_id` (ADR-024 INV-8). Atomic transition: `UPDATE ... WHERE status = 'open'` — concurrent acknowledgment produces one transition + one audit record.
+
+    **Grant Posture:**
+    - No direct `INSERT`, `UPDATE`, or `DELETE` grants on `shift_alert` or `alert_acknowledgment` for non-owner roles.
+    - `REVOKE EXECUTE FROM PUBLIC` on both new RPCs; grant to `authenticated` and `service_role` only.
+    - Mutations available only through approved RPC entrypoints.
+
+    **Explicit Deferrals:**
+    - `resolved` transition (auto-resolve on new gaming day, explicit `rpc_resolve_alert`) — post-MVP.
+    - Alert data retention/archival — volume is low at pilot scale (~6K rows/month); address when >100K rows.
+    - `last_error` content sanitization — acceptable for staff-only visibility during pilot.
+
+    **Relationship to §3 (UPSERT idempotency):** Phase C-1 noted that "Phase C-2 will introduce baseline immutability." This amendment does **not** change baseline immutability — baselines remain UPSERT for now. Alert persistence is a separate concern: `shift_alert` rows are UPSERTed (severity updates), while `alert_acknowledgment` rows are append-only and immutable. Baseline versioning remains a future additive migration if provenance tracking requires it.
+
 ## Alternatives Considered
 
 ### On-Demand Computation (No Storage)
@@ -132,7 +182,8 @@ Use `CREATE MATERIALIZED VIEW` with `REFRESH CONCURRENTLY`. Native PostgreSQL, n
 - Manual recomputation trigger (MVP) requires operator action or a future scheduler to keep baselines current
 - Missing or stale baselines must surface as explicit system state; silent fallback would create false operator confidence in anomaly coverage
 - New bounded context registration required in SRM
-- Phase C-2 will require an additive schema migration (versioning or `baseline_run` table) to provide immutable baseline provenance for persisted alerts
+- (Amendment) Two new tables (`shift_alert`, `alert_acknowledgment`) and two new SECURITY DEFINER RPCs add write surfaces requiring RLS policies, grant posture management, and security review
+- (Amendment) `last_error` exposes internal computation diagnostics — must be constrained to staff-visible paths only
 
 ### Neutral
 
@@ -149,3 +200,7 @@ Use `CREATE MATERIALIZED VIEW` with `REFRESH CONCURRENTLY`. Native PostgreSQL, n
 - ADR-024: Authoritative Context Derivation
 - ADR-039: Measurement Layer (cross-cutting read model precedent)
 - Patch Delta: `ADR-046_patch_delta_2026-03-23.md` (external review)
+- RFC-005: `docs/02-design/RFC-005-alert-maturity.md` (C-2/C-3 design brief)
+- SCAFFOLD-005: `docs/01-scaffolds/SCAFFOLD-005-alert-maturity.md` (C-2/C-3 scaffold)
+- SEC Note (alert-maturity): `docs/20-architecture/specs/alert-maturity/SEC_NOTE.md`
+- Feature Boundary (alert-maturity): `docs/20-architecture/specs/alert-maturity/FEATURE_BOUNDARY.md`

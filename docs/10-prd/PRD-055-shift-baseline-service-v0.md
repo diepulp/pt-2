@@ -46,7 +46,8 @@ The baseline config (`casino_settings.alert_thresholds.baseline`) is already dep
 
 - Alert persistence / state machine (Phase C-2 — `shift_alerts` table)
 - Alert deduplication / throttling / cooldown windows (Phase C-2)
-- External notifications — Slack, email, webhook (Phase C-3)
+- External notifications — separate post-C3 effort, not part of Wedge C completion claim (see Hardening Report §III Pilot Containment Rule)
+- Automated baseline scheduling (pg_cron) — manual trigger is the pilot workaround; scheduling deferred to post-pilot
 - Real-time streaming computation — baselines are batch/on-demand
 - ML-based anomaly detection — median+MAD statistical method only
 - Historical baseline trend analysis UI — no baseline evolution display
@@ -143,8 +144,8 @@ The existing `rpc_shift_cash_obs_alerts` is not modified. When baseline coverage
 
 - Alert persistence / state machine table (Phase C-2)
 - Alert deduplication or cooldown windows (Phase C-2)
-- Slack / email / webhook notifications (Phase C-3)
-- Automatic scheduled recomputation (pg_cron — Phase C-3)
+- External notifications — separate post-C3 effort, not part of Wedge C completion claim (see Hardening Report §III Pilot Containment Rule)
+- Automatic scheduled recomputation (pg_cron) — manual trigger is the pilot workaround; scheduling deferred to post-pilot
 - New top-level UI surfaces or pages (limited augmentation of existing `/admin/alerts` and `/admin/settings` pages IS in scope — see §6 UX flows for readiness state indicators, degraded-coverage display, and recompute trigger)
 - Per-table baseline configuration overrides
 - ML/regression anomaly models
