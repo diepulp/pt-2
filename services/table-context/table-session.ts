@@ -432,8 +432,9 @@ export async function getCurrentTableSession(
     mapRpcError(error, 'Get current session');
   }
 
-  // RPC returns null if no active session
-  if (!data) {
+  // RPC RETURNS table_session (row type) — PostgreSQL returns an all-null row
+  // instead of SQL NULL when no match. Check data.id (primary key) to detect this.
+  if (!data || !data.id) {
     return null;
   }
 
