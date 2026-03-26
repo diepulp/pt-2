@@ -129,6 +129,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   );
 
   // PRD-059: Activation drawer state — auto-opens when session is OPEN
+  // Tracks both status changes AND table selection changes so switching
+  // to an OPEN table (or re-selecting the same one) reopens the drawer.
   const [activationDrawerOpen, setActivationDrawerOpen] = React.useState(false);
   React.useEffect(() => {
     if (currentSession?.status === 'OPEN') {
@@ -136,7 +138,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     } else {
       setActivationDrawerOpen(false);
     }
-  }, [currentSession?.status]);
+  }, [currentSession?.status, selectedTableId]);
 
   // Query: Active slips for selected table
   const { data: activeSlips = [] } = useActiveSlipsForDashboard(
@@ -504,6 +506,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
     onSlipClick: handleSlipClick,
+    // PRD-059: Reopen activation drawer from session action buttons
+    onActivateRequest: () => setActivationDrawerOpen(true),
   };
 
   return (

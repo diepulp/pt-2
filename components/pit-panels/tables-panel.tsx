@@ -51,6 +51,8 @@ interface TablesPanelProps {
   // Callbacks
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
+  /** PRD-059: Callback to open activation drawer for OPEN sessions */
+  onActivateRequest?: () => void;
 }
 
 /**
@@ -71,6 +73,7 @@ export function TablesPanel({
   onSelectPit,
   onSeatClick,
   onNewSlip,
+  onActivateRequest,
 }: TablesPanelProps) {
   // Get last activity time for header context
   const lastActivity = React.useMemo(() => {
@@ -210,6 +213,7 @@ export function TablesPanel({
             tableId={selectedTable.id}
             session={session}
             onCloseRequest={() => setCloseDialogOpen(true)}
+            onActivateRequest={onActivateRequest}
             variant="compact"
           />
           {session?.requires_reconciliation && <ReconciliationBadge />}

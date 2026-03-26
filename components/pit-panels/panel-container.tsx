@@ -78,6 +78,8 @@ interface PanelContainerProps {
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
   onSlipClick: (slipId: string) => void;
+  /** PRD-059: Callback to open activation drawer for OPEN sessions */
+  onActivateRequest?: () => void;
 
   /**
    * Mobile mode: Hides the vertical tab navigation sidebar.
@@ -117,6 +119,7 @@ export function PanelContainer({
   onSeatClick,
   onNewSlip,
   onSlipClick,
+  onActivateRequest,
   mobileMode = false,
   reviewMode = false,
 }: PanelContainerProps) {
@@ -276,6 +279,7 @@ export function PanelContainer({
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            onActivateRequest={onActivateRequest}
             pits={pits}
             selectedPitId={selectedPitId}
             onSelectTable={onSelectTable}
@@ -322,6 +326,7 @@ export function PanelContainer({
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            onActivateRequest={onActivateRequest}
             pits={pits}
             selectedPitId={selectedPitId}
             onSelectTable={onSelectTable}

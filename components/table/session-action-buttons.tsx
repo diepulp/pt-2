@@ -1,6 +1,13 @@
 'use client';
 
-import { AlertTriangle, Loader2, Play, Square, StopCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Play,
+  Square,
+  StopCircle,
+} from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -25,6 +32,8 @@ interface SessionActionButtonsProps {
   tableId: string;
   session: TableSessionDTO | null;
   onCloseRequest: () => void;
+  /** PRD-059: Callback to open activation drawer for OPEN sessions */
+  onActivateRequest?: () => void;
   className?: string;
   variant?: 'default' | 'compact';
 }
@@ -43,6 +52,7 @@ export function SessionActionButtons({
   tableId,
   session,
   onCloseRequest,
+  onActivateRequest,
   className,
   variant = 'default',
 }: SessionActionButtonsProps) {
@@ -52,6 +62,7 @@ export function SessionActionButtons({
   const canOpen = canOpenSession(session);
   const canRundown = canStartRundown(session);
   const canClose = canCloseSession(session);
+  const isOpen = session?.status === 'OPEN';
 
   const handleOpenSession = React.useCallback(async () => {
     try {
@@ -108,6 +119,23 @@ export function SessionActionButtons({
             </TooltipTrigger>
             <TooltipContent>Open Session</TooltipContent>
           </Tooltip>
+
+          {/* PRD-059: Activate Session — visible when OPEN, opens activation drawer */}
+          {isOpen && onActivateRequest && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onActivateRequest}
+                  className="h-8 w-8 text-blue-500 hover:text-blue-400 animate-pulse"
+                >
+                  <CheckCircle2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Activate Table for Play</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Start Rundown */}
           <Tooltip>
@@ -175,6 +203,19 @@ export function SessionActionButtons({
         )}
         Open Session
       </Button>
+
+      {/* PRD-059: Activate Session — visible when OPEN, opens activation drawer */}
+      {isOpen && onActivateRequest && (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={onActivateRequest}
+          className="gap-1.5 bg-blue-600 hover:bg-blue-700 animate-pulse"
+        >
+          <CheckCircle2 className="size-4" />
+          Activate Table
+        </Button>
+      )}
 
       {/* Start Rundown */}
       <Button

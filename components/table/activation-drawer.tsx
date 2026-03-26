@@ -14,6 +14,7 @@
 
 'use client';
 
+import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, CheckCircle2, Link2, ShieldAlert } from 'lucide-react';
 import { useState, useTransition, useMemo } from 'react';
 
@@ -38,6 +39,7 @@ import {
   isFetchError,
   logError,
 } from '@/lib/errors/error-utils';
+import { createBrowserComponentClient } from '@/lib/supabase/client';
 import type { TableSessionDTO } from '@/services/table-context/dtos';
 
 // === Types ===
@@ -85,10 +87,46 @@ function ActivationDrawerContent({
 }: Omit<ActivationDrawerProps, 'open'>) {
   // --- Predecessor provenance ---
   const hasPredecessor = session.predecessor_session_id !== null;
-  const predecessorCloseTotalCents = session.opening_inventory_snapshot_id
-    ? (session.need_total_cents ?? null)
-    : null;
-  const requiresReconciliation = session.requires_reconciliation;
+  const snapshotId = session.opening_inventory_snapshot_id;
+
+  // Fetch the predecessor close total from the linked inventory snapshot.
+  // The snapshot's total_cents is the authoritative predecessor close amount —
+  // session.need_total_cents is a bank-mode column unrelated to predecessor close.
+  const { data: snapshotData } = useQuery({
+    queryKey: ['snapshot-close-total', snapshotId],
+    queryFn: async () => {
+      const supabase = createBrowserComponentClient();
+      const { data } = await supabase
+        .from('table_inventory_snapshot')
+        .select('total_cents')
+        .eq('id', snapshotId!)
+        .single();
+      return data;
+    },
+    enabled: !!snapshotId,
+    staleTime: Infinity, // Snapshot is immutable once written
+  });
+
+  const predecessorCloseTotalCents = snapshotData?.total_cents ?? null;
+
+  // Fetch requires_reconciliation from the predecessor session
+  const { data: predecessorData } = useQuery({
+    queryKey: ['predecessor-recon', session.predecessor_session_id],
+    queryFn: async () => {
+      const supabase = createBrowserComponentClient();
+      const { data } = await supabase
+        .from('table_session')
+        .select('requires_reconciliation')
+        .eq('id', session.predecessor_session_id!)
+        .single();
+      return data;
+    },
+    enabled: !!session.predecessor_session_id,
+    staleTime: Infinity,
+  });
+
+  const requiresReconciliation =
+    predecessorData?.requires_reconciliation ?? false;
 
   // --- Form state ---
   const defaultDollars =
