@@ -207,6 +207,7 @@ export const CLOSE_REASON_LABELS: Record<CloseReasonType, string> = {
   security_hold: 'Security Hold',
   emergency: 'Emergency',
   other: 'Other',
+  cancelled: 'Cancelled',
 };
 
 /**

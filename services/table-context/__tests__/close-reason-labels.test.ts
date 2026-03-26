@@ -7,9 +7,9 @@
 import { CLOSE_REASON_LABELS, CLOSE_REASON_OPTIONS } from '../labels';
 
 describe('CLOSE_REASON_LABELS', () => {
-  it('has exactly 8 close reason entries with non-empty string labels', () => {
+  it('has exactly 9 close reason entries with non-empty string labels', () => {
     const keys = Object.keys(CLOSE_REASON_LABELS);
-    expect(keys).toHaveLength(8);
+    expect(keys).toHaveLength(9);
 
     for (const key of keys) {
       const label =

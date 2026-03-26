@@ -23,6 +23,7 @@ import {
   RatingSlipModal,
   type FormState,
 } from '@/components/modals/rating-slip/rating-slip-modal';
+import { ActivationDrawer } from '@/components/table/activation-drawer';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useDashboardTables,
@@ -126,6 +127,16 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   const { data: currentSession } = useCurrentTableSession(
     selectedTableId ?? '',
   );
+
+  // PRD-059: Activation drawer state — auto-opens when session is OPEN
+  const [activationDrawerOpen, setActivationDrawerOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (currentSession?.status === 'OPEN') {
+      setActivationDrawerOpen(true);
+    } else {
+      setActivationDrawerOpen(false);
+    }
+  }, [currentSession?.status]);
 
   // Query: Active slips for selected table
   const { data: activeSlips = [] } = useActiveSlipsForDashboard(
@@ -537,6 +548,18 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
       />
+
+      {/* PRD-059: Activation Drawer — OPEN → ACTIVE custody gate */}
+      {currentSession &&
+        currentSession.status === 'OPEN' &&
+        selectedTableId && (
+          <ActivationDrawer
+            open={activationDrawerOpen}
+            onOpenChange={setActivationDrawerOpen}
+            session={currentSession}
+            tableId={selectedTableId}
+          />
+        )}
     </>
   );
 }

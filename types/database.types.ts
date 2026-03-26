@@ -9,58 +9,6 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      alert_acknowledgment: {
-        Row: {
-          acknowledged_by: string
-          alert_id: string
-          casino_id: string
-          created_at: string
-          id: string
-          is_false_positive: boolean
-          notes: string | null
-        }
-        Insert: {
-          acknowledged_by: string
-          alert_id: string
-          casino_id: string
-          created_at?: string
-          id?: string
-          is_false_positive?: boolean
-          notes?: string | null
-        }
-        Update: {
-          acknowledged_by?: string
-          alert_id?: string
-          casino_id?: string
-          created_at?: string
-          id?: string
-          is_false_positive?: boolean
-          notes?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "alert_acknowledgment_acknowledged_by_fkey"
-            columns: ["acknowledged_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "alert_acknowledgment_alert_id_fkey"
-            columns: ["alert_id"]
-            isOneToOne: false
-            referencedRelation: "shift_alert"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "alert_acknowledgment_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       audit_log: {
         Row: {
           action: string
@@ -2669,75 +2617,6 @@ export type Database = {
           },
         ]
       }
-      shift_alert: {
-        Row: {
-          baseline_mad: number | null
-          baseline_median: number | null
-          casino_id: string
-          created_at: string
-          deviation_score: number | null
-          direction: string | null
-          gaming_day: string
-          id: string
-          message: string | null
-          metric_type: string
-          observed_value: number
-          severity: string
-          status: string
-          table_id: string
-          updated_at: string
-        }
-        Insert: {
-          baseline_mad?: number | null
-          baseline_median?: number | null
-          casino_id: string
-          created_at?: string
-          deviation_score?: number | null
-          direction?: string | null
-          gaming_day: string
-          id?: string
-          message?: string | null
-          metric_type: string
-          observed_value: number
-          severity: string
-          status?: string
-          table_id: string
-          updated_at?: string
-        }
-        Update: {
-          baseline_mad?: number | null
-          baseline_median?: number | null
-          casino_id?: string
-          created_at?: string
-          deviation_score?: number | null
-          direction?: string | null
-          gaming_day?: string
-          id?: string
-          message?: string | null
-          metric_type?: string
-          observed_value?: number
-          severity?: string
-          status?: string
-          table_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "shift_alert_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "shift_alert_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       shift_checkpoint: {
         Row: {
           cash_out_observed_cents: number
@@ -3403,6 +3282,8 @@ export type Database = {
         Row: {
           casino_id: string
           chipset: Json
+          consumed_at: string | null
+          consumed_by_session_id: string | null
           counted_by: string | null
           created_at: string
           discrepancy_cents: number | null
@@ -3417,6 +3298,8 @@ export type Database = {
         Insert: {
           casino_id: string
           chipset: Json
+          consumed_at?: string | null
+          consumed_by_session_id?: string | null
           counted_by?: string | null
           created_at?: string
           discrepancy_cents?: number | null
@@ -3431,6 +3314,8 @@ export type Database = {
         Update: {
           casino_id?: string
           chipset?: Json
+          consumed_at?: string | null
+          consumed_by_session_id?: string | null
           counted_by?: string | null
           created_at?: string
           discrepancy_cents?: number | null
@@ -3448,6 +3333,20 @@ export type Database = {
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_consumed_by_session_id_fkey"
+            columns: ["consumed_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
+          },
+          {
+            foreignKeyName: "table_inventory_snapshot_consumed_by_session_id_fkey"
+            columns: ["consumed_by_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
           {
@@ -3487,75 +3386,83 @@ export type Database = {
           },
         ]
       }
-      table_metric_baseline: {
+      table_opening_attestation: {
         Row: {
+          attested_at: string
+          attested_by: string
           casino_id: string
-          computed_at: string
-          computed_by: string | null
-          gaming_day: string
+          created_at: string
+          dealer_confirmed: boolean
           id: string
-          last_error: string | null
-          mad_value: number
-          max_value: number | null
-          median_value: number
-          metric_type: string
-          min_value: number | null
-          sample_count: number
-          table_id: string
-          window_days: number
+          note: string | null
+          opening_total_cents: number
+          predecessor_close_total_cents: number | null
+          predecessor_snapshot_id: string | null
+          provenance_source: string
+          session_id: string
         }
         Insert: {
+          attested_at?: string
+          attested_by: string
           casino_id: string
-          computed_at?: string
-          computed_by?: string | null
-          gaming_day: string
+          created_at?: string
+          dealer_confirmed: boolean
           id?: string
-          last_error?: string | null
-          mad_value: number
-          max_value?: number | null
-          median_value: number
-          metric_type: string
-          min_value?: number | null
-          sample_count: number
-          table_id: string
-          window_days: number
+          note?: string | null
+          opening_total_cents: number
+          predecessor_close_total_cents?: number | null
+          predecessor_snapshot_id?: string | null
+          provenance_source: string
+          session_id: string
         }
         Update: {
+          attested_at?: string
+          attested_by?: string
           casino_id?: string
-          computed_at?: string
-          computed_by?: string | null
-          gaming_day?: string
+          created_at?: string
+          dealer_confirmed?: boolean
           id?: string
-          last_error?: string | null
-          mad_value?: number
-          max_value?: number | null
-          median_value?: number
-          metric_type?: string
-          min_value?: number | null
-          sample_count?: number
-          table_id?: string
-          window_days?: number
+          note?: string | null
+          opening_total_cents?: number
+          predecessor_close_total_cents?: number | null
+          predecessor_snapshot_id?: string | null
+          provenance_source?: string
+          session_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "table_metric_baseline_casino_id_fkey"
+            foreignKeyName: "table_opening_attestation_attested_by_fkey"
+            columns: ["attested_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_opening_attestation_casino_id_fkey"
             columns: ["casino_id"]
             isOneToOne: false
             referencedRelation: "casino"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "table_metric_baseline_computed_by_fkey"
-            columns: ["computed_by"]
+            foreignKeyName: "table_opening_attestation_predecessor_snapshot_id_fkey"
+            columns: ["predecessor_snapshot_id"]
             isOneToOne: false
-            referencedRelation: "staff"
+            referencedRelation: "table_inventory_snapshot"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "table_metric_baseline_table_id_fkey"
-            columns: ["table_id"]
-            isOneToOne: false
-            referencedRelation: "gaming_table"
+            foreignKeyName: "table_opening_attestation_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
+          },
+          {
+            foreignKeyName: "table_opening_attestation_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: true
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
         ]
@@ -3735,6 +3642,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -3771,6 +3679,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id?: string | null
           paused_by_staff_id?: string | null
+          predecessor_session_id?: string | null
           requires_reconciliation?: boolean
           resumed_by_staff_id?: string | null
           rolled_over_by_staff_id?: string | null
@@ -3809,6 +3718,7 @@ export type Database = {
           opened_by_staff_id?: string
           opening_inventory_snapshot_id?: string | null
           paused_by_staff_id?: string | null
+          predecessor_session_id?: string | null
           requires_reconciliation?: boolean
           resumed_by_staff_id?: string | null
           rolled_over_by_staff_id?: string | null
@@ -3862,6 +3772,20 @@ export type Database = {
             columns: ["paused_by_staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_predecessor_session_id_fkey"
+            columns: ["predecessor_session_id"]
+            isOneToOne: false
+            referencedRelation: "measurement_rating_coverage_v"
+            referencedColumns: ["table_session_id"]
+          },
+          {
+            foreignKeyName: "table_session_predecessor_session_id_fkey"
+            columns: ["predecessor_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_session"
             referencedColumns: ["id"]
           },
           {
@@ -4191,14 +4115,6 @@ export type Database = {
           theo: number
         }[]
       }
-      rpc_acknowledge_alert: {
-        Args: {
-          p_alert_id: string
-          p_is_false_positive?: boolean
-          p_notes?: string
-        }
-        Returns: Json
-      }
       rpc_acknowledge_drop_received: {
         Args: { p_drop_event_id: string }
         Returns: {
@@ -4246,6 +4162,57 @@ export type Database = {
       rpc_activate_player_locally: {
         Args: { p_player_id: string }
         Returns: Json
+      }
+      rpc_activate_table_session: {
+        Args: {
+          p_dealer_confirmed: boolean
+          p_opening_note?: string
+          p_opening_total_cents: number
+          p_table_session_id: string
+        }
+        Returns: {
+          activated_by_staff_id: string | null
+          casino_id: string
+          close_note: string | null
+          close_reason: Database["public"]["Enums"]["close_reason_type"] | null
+          closed_at: string | null
+          closed_by_staff_id: string | null
+          closing_inventory_snapshot_id: string | null
+          created_at: string
+          credits_total_cents: number
+          crossed_gaming_day: boolean
+          drop_event_id: string | null
+          drop_posted_at: string | null
+          drop_total_cents: number | null
+          fills_total_cents: number
+          gaming_day: string
+          gaming_table_id: string
+          has_unresolved_items: boolean
+          id: string
+          metadata: Json | null
+          need_total_cents: number | null
+          notes: string | null
+          opened_at: string
+          opened_by_staff_id: string
+          opening_inventory_snapshot_id: string | null
+          paused_by_staff_id: string | null
+          predecessor_session_id: string | null
+          requires_reconciliation: boolean
+          resumed_by_staff_id: string | null
+          rolled_over_by_staff_id: string | null
+          rundown_started_at: string | null
+          rundown_started_by_staff_id: string | null
+          shift_id: string | null
+          status: Database["public"]["Enums"]["table_session_status"]
+          table_bank_mode: Database["public"]["Enums"]["table_bank_mode"] | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "table_session"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       rpc_apply_promotion: {
         Args: {
@@ -4321,6 +4288,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -4339,14 +4307,6 @@ export type Database = {
         }
       }
       rpc_complete_casino_setup: { Args: { p_skip?: boolean }; Returns: Json }
-      rpc_compute_rolling_baseline: {
-        Args: { p_gaming_day?: string; p_table_id?: string }
-        Returns: {
-          gaming_day: string
-          metrics_computed: number
-          tables_processed: number
-        }[]
-      }
       rpc_compute_table_rundown: {
         Args: { p_session_id: string }
         Returns: {
@@ -4715,6 +4675,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -4737,33 +4698,6 @@ export type Database = {
         Returns: {
           end_gd: string
           start_gd: string
-        }[]
-      }
-      rpc_get_alert_quality: {
-        Args: { p_end: string; p_start: string }
-        Returns: Json
-      }
-      rpc_get_anomaly_alerts: {
-        Args: { p_window_end: string; p_window_start: string }
-        Returns: {
-          baseline_gaming_day: string
-          baseline_mad: number
-          baseline_median: number
-          baseline_sample_count: number
-          deviation_score: number
-          direction: string
-          is_anomaly: boolean
-          message: string
-          metric_type: string
-          observed_value: number
-          peak_deviation: number
-          readiness_state: string
-          recommended_action: string
-          session_count: number
-          severity: string
-          table_id: string
-          table_label: string
-          threshold_value: number
         }[]
       }
       rpc_get_current_table_session: {
@@ -4794,6 +4728,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -5159,6 +5094,8 @@ export type Database = {
         Returns: {
           casino_id: string
           chipset: Json
+          consumed_at: string | null
+          consumed_by_session_id: string | null
           counted_by: string | null
           created_at: string
           discrepancy_cents: number | null
@@ -5242,6 +5179,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -5290,10 +5228,6 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
-      }
-      rpc_persist_anomaly_alerts: {
-        Args: { p_gaming_day?: string }
-        Returns: Json
       }
       rpc_persist_table_rundown: {
         Args: { p_table_session_id: string }
@@ -5359,6 +5293,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -5870,6 +5805,7 @@ export type Database = {
           opened_by_staff_id: string
           opening_inventory_snapshot_id: string | null
           paused_by_staff_id: string | null
+          predecessor_session_id: string | null
           requires_reconciliation: boolean
           resumed_by_staff_id: string | null
           rolled_over_by_staff_id: string | null
@@ -5909,29 +5845,6 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "gaming_table"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      rpc_update_valuation_policy: {
-        Args: {
-          p_cents_per_point: number
-          p_effective_date: string
-          p_version_identifier: string
-        }
-        Returns: {
-          casino_id: string
-          cents_per_point: number
-          created_at: string
-          created_by_staff_id: string | null
-          effective_date: string
-          id: string
-          is_active: boolean
-          version_identifier: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "loyalty_valuation_policy"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -5986,6 +5899,7 @@ export type Database = {
         | "security_hold"
         | "emergency"
         | "other"
+        | "cancelled"
       financial_direction: "in" | "out"
       financial_source: "pit" | "cage" | "system"
       financial_txn_kind: "original" | "adjustment" | "reversal"
@@ -6219,6 +6133,7 @@ export const Constants = {
         "security_hold",
         "emergency",
         "other",
+        "cancelled",
       ],
       financial_direction: ["in", "out"],
       financial_source: ["pit", "cage", "system"],

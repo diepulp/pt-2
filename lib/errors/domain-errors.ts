@@ -229,6 +229,11 @@ export type TableContextErrorCode =
   | 'CLOSE_NOTE_REQUIRED'
   // Session-Gated Seating (PRD-057)
   | 'NO_ACTIVE_SESSION'
+  // Custody Gate Activation (PRD-059)
+  | 'DEALER_NOT_CONFIRMED'
+  | 'OPENING_NOTE_REQUIRED'
+  | 'INVALID_OPENING_AMOUNT'
+  | 'PREDECESSOR_ALREADY_CONSUMED'
   // Rundown Report Errors (PRD-038)
   | 'TABLE_RUNDOWN_ALREADY_FINALIZED'
   | 'TABLE_RUNDOWN_NOT_FOUND'
@@ -270,6 +275,13 @@ export const TABLE_CONTEXT_ERROR_MESSAGES: Record<
   // Session-Gated Seating (PRD-057)
   NO_ACTIVE_SESSION:
     'Table has no active session. Open a session before seating players.',
+  // Custody Gate Activation (PRD-059)
+  DEALER_NOT_CONFIRMED:
+    'Dealer confirmation is required to activate the table session.',
+  OPENING_NOTE_REQUIRED: 'An opening note is required for this attestation.',
+  INVALID_OPENING_AMOUNT: 'Opening total cents must be a non-negative integer.',
+  PREDECESSOR_ALREADY_CONSUMED:
+    'The predecessor session has already been consumed by another attestation.',
   // Rundown Report Errors (PRD-038)
   TABLE_RUNDOWN_ALREADY_FINALIZED:
     'Rundown report is finalized and cannot be modified',

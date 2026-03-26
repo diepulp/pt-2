@@ -66,6 +66,7 @@ const CLOSE_REASONS = [
   'security_hold',
   'emergency',
   'other',
+  'cancelled',
 ] as const satisfies readonly CloseReasonType[];
 export const closeReasonSchema = z.enum(CLOSE_REASONS);
 
@@ -225,7 +226,8 @@ export const startTableRundownSchema = z.object({
 /**
  * Schema for closing a table session.
  * PATCH /api/v1/table-sessions/[id]/close
- * At least one of drop_event_id or closing_inventory_snapshot_id required.
+ * At least one of drop_event_id or closing_inventory_snapshot_id required
+ * (except for cancellation of OPEN sessions per PRD-059 ADR-048 D2).
  * PRD-038A: close_reason is required; close_note required when close_reason='other'.
  */
 export const closeTableSessionSchema = z
@@ -238,11 +240,17 @@ export const closeTableSessionSchema = z
     close_reason: closeReasonSchema,
     close_note: z.string().max(2000).optional(),
   })
-  .refine((data) => data.drop_event_id || data.closing_inventory_snapshot_id, {
-    message:
-      'At least one of drop_event_id or closing_inventory_snapshot_id is required',
-    path: ['drop_event_id'],
-  })
+  .refine(
+    (data) =>
+      data.close_reason === 'cancelled' ||
+      data.drop_event_id ||
+      data.closing_inventory_snapshot_id,
+    {
+      message:
+        'At least one of drop_event_id or closing_inventory_snapshot_id is required',
+      path: ['drop_event_id'],
+    },
+  )
   .refine(
     (data) =>
       data.close_reason !== 'other' ||
@@ -274,6 +282,20 @@ export const forceCloseTableSessionSchema = z
   );
 
 /**
+ * Schema for activating a table session via custody gate (PRD-059).
+ * PATCH /api/v1/table-sessions/[id]/activate
+ *
+ * dealerConfirmed must be true (literal) — the UI checkbox must be checked.
+ * openingNote is optional but if provided must be non-empty.
+ */
+export const activateTableSessionSchema = z.object({
+  table_session_id: uuidFormat('table session ID'),
+  opening_total_cents: z.number().int().min(0),
+  dealer_confirmed: z.literal(true),
+  opening_note: z.string().min(1).nullable().optional(),
+});
+
+/**
  * Route params schema for session ID.
  */
 export const tableSessionRouteParamsSchema = z.object({
@@ -299,6 +321,9 @@ export type CloseTableSessionRequestBody = z.infer<
 >;
 export type ForceCloseTableSessionRequestBody = z.infer<
   typeof forceCloseTableSessionSchema
+>;
+export type ActivateTableSessionRequestBody = z.infer<
+  typeof activateTableSessionSchema
 >;
 export type TableSessionRouteParams = z.infer<
   typeof tableSessionRouteParamsSchema
