@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { SessionPhase } from '@/services/table-context/dtos';
-import { deriveOperatorDisplayBadge } from '@/services/table-context/labels';
+import { derivePitDisplayBadge } from '@/services/table-context/pit-display';
 
 import { useSeatPositions } from './use-seat-positions';
 
@@ -66,9 +66,8 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
 
     const isCompact = variant === 'compact';
 
-    // ADR-028 D6.1: Single source of truth for operator badge rendering.
-    // Precedence: terminal availability (closed/inactive) > session phase > AVAILABLE fallback.
-    const badge = deriveOperatorDisplayBadge(tableStatus, sessionStatus);
+    // ADR-047 D5: Pit badge derived from session phase only — no tableAvailability axis.
+    const badge = derivePitDisplayBadge(sessionStatus);
 
     // Compact variant: Render thumbnail with metadata overlay
     if (isCompact) {
@@ -80,8 +79,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             isSelected
               ? 'border-accent/80 ring-2 ring-accent/40 shadow-lg'
               : 'border-border/50 hover:border-accent/50',
-            badge.state === 'IDLE' && 'opacity-60',
-            badge.state === 'DECOMMISSIONED' && 'opacity-40 grayscale',
+            badge.state === 'CLOSED' && 'opacity-70',
           )}
         >
           {/* Table ID Badge */}
@@ -109,18 +107,16 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             </div>
           )}
 
-          {/* Status Indicator — D6.2: IN_PLAY pulses, AVAILABLE dimmed, others static */}
+          {/* Status Indicator — ADR-047 D6: session-derived states only */}
           <div className="absolute bottom-1 right-1 z-10">
             <div
               className={cn(
                 'w-2 h-2 rounded-full',
                 badge.state === 'IN_PLAY' &&
                   'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse',
-                badge.state === 'AVAILABLE' && 'bg-emerald-500/50',
+                badge.state === 'CLOSED' && 'bg-zinc-400/50',
                 badge.state === 'OPEN' && 'bg-blue-500',
                 badge.state === 'RUNDOWN' && 'bg-amber-500',
-                badge.state === 'IDLE' && 'bg-gray-500',
-                badge.state === 'DECOMMISSIONED' && 'bg-zinc-600',
               )}
             />
           </div>
@@ -229,8 +225,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                       ],
                       badge.color === 'amber' && 'border-amber-500/40',
                       badge.color === 'blue' && 'border-blue-500/40',
-                      (badge.color === 'gray' || badge.color === 'zinc') &&
-                        'border-border/40',
+                      badge.color === 'zinc' && 'border-border/40',
                     )}
                   >
                     {/* Status pulse ring — D6.2: only for IN_PLAY (badge.pulse === true) */}
@@ -254,9 +249,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                               badge.state === 'IN_PLAY' && [
                                 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
                               ],
-                              // AVAILABLE: dimmed emerald (D6.2)
-                              badge.state === 'AVAILABLE' && [
-                                'bg-emerald-500/10 text-emerald-500/60 border border-emerald-500/20',
+                              // CLOSED: zinc/gray (ADR-047 D3)
+                              badge.state === 'CLOSED' && [
+                                'bg-zinc-500/20 text-zinc-400 border border-zinc-500/30',
                               ],
                               // OPEN: blue
                               badge.state === 'OPEN' && [
@@ -266,11 +261,6 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                               badge.state === 'RUNDOWN' && [
                                 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
                               ],
-                              // IDLE / DECOMMISSIONED: muted
-                              (badge.state === 'IDLE' ||
-                                badge.state === 'DECOMMISSIONED') && [
-                                'bg-muted text-muted-foreground border border-border/50',
-                              ],
                             )}
                           >
                             <span
@@ -278,13 +268,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                                 'w-1.5 h-1.5 rounded-full',
                                 badge.state === 'IN_PLAY' &&
                                   'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
-                                badge.state === 'AVAILABLE' &&
-                                  'bg-emerald-400/50',
+                                badge.state === 'CLOSED' && 'bg-zinc-400',
                                 badge.state === 'OPEN' && 'bg-blue-400',
                                 badge.state === 'RUNDOWN' && 'bg-amber-400',
-                                (badge.state === 'IDLE' ||
-                                  badge.state === 'DECOMMISSIONED') &&
-                                  'bg-muted-foreground',
                               )}
                             />
                             {badge.label}
@@ -298,11 +284,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                                 : sessionStatus === 'RUNDOWN'
                                   ? 'Session in rundown'
                                   : 'Session opening'
-                              : badge.state === 'AVAILABLE'
-                                ? 'Table available — no active session'
-                                : badge.state === 'IDLE'
-                                  ? 'Table temporarily paused'
-                                  : 'Table closed for the day'}
+                              : 'No current session'}
                           </span>
                         </TooltipContent>
                       </Tooltip>

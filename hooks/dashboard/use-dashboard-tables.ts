@@ -35,7 +35,8 @@ import type { DashboardTableDTO, DashboardTablesFilters } from './types';
  * 3. Returns DashboardTableDTO array
  *
  * @param casinoId - Casino UUID (required)
- * @param filters - Optional filters for status, type, pit
+ * @param filters - Optional filters for status, type, pit.
+ *   Defaults to `{ status: 'active' }` per ADR-047 D2 (active-only dashboard).
  *
  * @example
  * ```tsx
@@ -47,7 +48,7 @@ import type { DashboardTableDTO, DashboardTablesFilters } from './types';
  */
 export function useDashboardTables(
   casinoId: string | undefined,
-  filters: DashboardTablesFilters = {},
+  filters: DashboardTablesFilters = { status: 'active' },
 ) {
   return useQuery({
     queryKey: dashboardKeys.tables(casinoId!, filters),

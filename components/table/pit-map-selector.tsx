@@ -19,7 +19,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { deriveOperatorDisplayBadge } from '@/services/table-context/labels';
+import {
+  derivePitDisplayBadge,
+  type PitDisplayBadge,
+} from '@/services/table-context/pit-display';
 import type { Database } from '@/types/database.types';
 
 type TableStatus = Database['public']['Enums']['table_status'];
@@ -50,73 +53,39 @@ interface PitMapSelectorProps {
   compact?: boolean;
 }
 
-/**
- * Status configuration with ADR-028 D6 labels.
- * - active: "Available" (not "Open" - avoids collision with session status)
- * - inactive: "Idle" (already correct)
- * - closed: "Decommissioned" (not "Closed" - permanent state, not session close)
- */
-const STATUS_CONFIG: Record<
-  TableStatus,
-  { color: string; bg: string; ring: string; label: string }
-> = {
-  active: {
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
-    ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
-    label: 'Available',
-  },
-  inactive: {
-    color: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-500/15 dark:bg-amber-500/20',
-    ring: 'ring-amber-500/50 dark:ring-amber-500/40',
-    label: 'Idle',
-  },
-  closed: {
-    color: 'text-zinc-500 dark:text-zinc-500',
-    bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
-    ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
-    label: 'Decommissioned',
-  },
-};
-
-/**
- * Tailwind class groups keyed by the color token returned from
- * deriveOperatorDisplayBadge (ADR-028 D6.1).
- *
- * `gray` is only reachable for inactive tables, which are handled by
- * STATUS_CONFIG before this map is consulted.
- */
-const BADGE_COLOR_CLASSES: Record<
-  'emerald' | 'amber' | 'blue' | 'zinc' | 'gray',
-  { color: string; bg: string; ring: string }
-> = {
-  emerald: {
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
-    ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
-  },
-  amber: {
-    color: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-500/15 dark:bg-amber-500/20',
-    ring: 'ring-amber-500/50 dark:ring-amber-500/40',
-  },
-  blue: {
-    color: 'text-blue-600 dark:text-blue-400',
-    bg: 'bg-blue-500/15 dark:bg-blue-500/20',
-    ring: 'ring-blue-500/50 dark:ring-blue-500/40',
-  },
-  zinc: {
-    color: 'text-zinc-500 dark:text-zinc-500',
-    bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
-    ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
-  },
-  gray: {
-    color: 'text-gray-500 dark:text-gray-500',
-    bg: 'bg-gray-500/15 dark:bg-gray-500/20',
-    ring: 'ring-gray-500/50 dark:ring-gray-500/40',
-  },
-};
+/** Map pit display badge color token to Tailwind class groups */
+function badgeColorClasses(badge: PitDisplayBadge): {
+  color: string;
+  bg: string;
+  ring: string;
+} {
+  switch (badge.color) {
+    case 'emerald':
+      return {
+        color: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+        ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
+      };
+    case 'amber':
+      return {
+        color: 'text-amber-600 dark:text-amber-400',
+        bg: 'bg-amber-500/15 dark:bg-amber-500/20',
+        ring: 'ring-amber-500/50 dark:ring-amber-500/40',
+      };
+    case 'blue':
+      return {
+        color: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-500/15 dark:bg-blue-500/20',
+        ring: 'ring-blue-500/50 dark:ring-blue-500/40',
+      };
+    case 'zinc':
+      return {
+        color: 'text-zinc-500 dark:text-zinc-500',
+        bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
+        ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
+      };
+  }
+}
 
 const GAME_TYPE_LABELS: Record<GameType, string> = {
   blackjack: 'BJ',
@@ -228,7 +197,9 @@ export function PitMapSelector({
                 'shrink-0',
                 compact ? 'size-3.5' : 'size-4',
                 currentTable
-                  ? STATUS_CONFIG[currentTable.status].color
+                  ? badgeColorClasses(
+                      derivePitDisplayBadge(currentTable.sessionStatus),
+                    ).color
                   : currentPit
                     ? 'text-accent'
                     : 'text-muted-foreground',
@@ -330,21 +301,12 @@ export function PitMapSelector({
                   >
                     {pit.tables.map((table) => {
                       const isSelected = table.id === selectedTableId;
-                      // D6.1: derive badge from session phase when available on
-                      // an active table; fall back to STATUS_CONFIG otherwise.
-                      const statusConfig =
-                        table.status === 'active' && table.sessionStatus != null
-                          ? (() => {
-                              const badge = deriveOperatorDisplayBadge(
-                                table.status,
-                                table.sessionStatus,
-                              );
-                              return {
-                                ...BADGE_COLOR_CLASSES[badge.color],
-                                label: badge.label,
-                              };
-                            })()
-                          : STATUS_CONFIG[table.status];
+                      // ADR-047 D5: derive badge from session phase only
+                      const badge = derivePitDisplayBadge(table.sessionStatus);
+                      const statusConfig = {
+                        ...badgeColorClasses(badge),
+                        label: badge.label,
+                      };
 
                       return (
                         <CommandItem
@@ -416,7 +378,7 @@ export function PitMapSelector({
                 {totalStats.tables} tables
               </span>
               <span className="text-emerald-600 dark:text-emerald-400">
-                {totalStats.active} open
+                {totalStats.active} active
               </span>
             </span>
           </div>

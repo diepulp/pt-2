@@ -207,8 +207,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       const currentValid =
         selectedTableId && tables.some((t) => t.id === selectedTableId);
       if (!currentValid) {
-        const firstActive = tables.find((t) => t.status === 'active');
-        setSelectedTable(firstActive?.id ?? tables[0].id);
+        // ADR-047 D2: all returned tables are active; RPC orders by label deterministically
+        setSelectedTable(tables[0].id);
       }
     }
   }, [tables, selectedTableId, setSelectedTable]);

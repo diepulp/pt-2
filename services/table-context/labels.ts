@@ -21,6 +21,10 @@ import type {
 /**
  * UI labels for table availability status.
  * Maps database enum values to user-friendly display text.
+ *
+ * @deprecated Use {@link import('./admin-display').ADMIN_DISPLAY_LABELS} for admin surfaces
+ * or {@link import('./pit-display').PIT_DISPLAY_LABELS} for pit surfaces.
+ * ADR-047 separates admin and pit vocabularies into surface-specific modules.
  */
 export const TABLE_AVAILABILITY_LABELS: Record<TableAvailability, string> = {
   inactive: 'Idle',
@@ -66,6 +70,10 @@ export const SESSION_PHASE_COLORS: Record<SessionPhase, string> = {
 
 /**
  * Operator display states derived from table availability + session phase.
+ *
+ * @deprecated Use {@link import('./pit-display').PitDisplayState} for pit surfaces
+ * or {@link import('./admin-display').AdminDisplayState} for admin surfaces.
+ * ADR-047 separates these into surface-specific types.
  * @see ADR-028 Amendment D6.1–D6.6
  */
 export type OperatorDisplayState =
@@ -95,6 +103,9 @@ export interface OperatorDisplayBadge {
  * 2. Session phase determines display when table is active and session exists
  * 3. Active table with no session → AVAILABLE
  *
+ * @deprecated Use {@link import('./pit-display').derivePitDisplayBadge} for pit surfaces
+ * or {@link import('./admin-display').deriveAdminDisplayBadge} for admin surfaces.
+ * ADR-047 separates badge derivation into surface-specific functions.
  * @see ADR-028 Amendment D6.2 display state table
  * @see ADR-028 Amendment D6.5 scenarios S1–S10
  */
