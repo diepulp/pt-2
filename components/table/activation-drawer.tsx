@@ -150,7 +150,15 @@ function ActivationDrawerContent({
     openingCents !== predecessorCloseTotalCents &&
     openingDollars !== '';
 
-  const isBootstrap = !hasPredecessor;
+  // ADR-048: Three conditions — not two.
+  // Condition A: predecessor with valid close snapshot → show close total
+  // Condition B (absent): no predecessor → par bootstrap
+  // Condition B (broken): predecessor exists but snapshot missing → par bootstrap + broken chain warning
+  const hasValidPredecessor =
+    hasPredecessor && predecessorCloseTotalCents !== null;
+  const isBrokenPredecessor =
+    hasPredecessor && predecessorCloseTotalCents === null;
+  const isBootstrap = !hasPredecessor || isBrokenPredecessor;
   const hasWarning = isBootstrap || hasVariance || requiresReconciliation;
   const noteRequired = hasWarning;
 
@@ -242,8 +250,9 @@ function ActivationDrawerContent({
 
       {/* Content */}
       <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-        {/* Provenance Section */}
-        {hasPredecessor ? (
+        {/* Provenance Section — ADR-048 three conditions */}
+        {hasValidPredecessor ? (
+          /* Condition A: predecessor with valid close snapshot */
           <div className="rounded-lg border-2 border-accent/30 bg-accent/5 p-4">
             <div className="flex items-center gap-2 mb-3">
               <Link2 className="h-4 w-4 text-accent" />
@@ -254,24 +263,43 @@ function ActivationDrawerContent({
                 Predecessor Close
               </span>
             </div>
-            {predecessorCloseTotalCents !== null && (
-              <div className="flex items-baseline gap-2">
+            <div className="flex items-baseline gap-2">
+              <span
+                className="text-2xl font-bold tabular-nums text-foreground"
+                style={{
+                  fontFamily: 'monospace',
+                  fontVariantNumeric: 'tabular-nums',
+                }}
+              >
+                ${formatCents(predecessorCloseTotalCents!)}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                closing total
+              </span>
+            </div>
+          </div>
+        ) : isBrokenPredecessor ? (
+          /* Condition B (broken): predecessor exists but closing snapshot missing */
+          <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+              <div>
                 <span
-                  className="text-2xl font-bold tabular-nums text-foreground"
-                  style={{
-                    fontFamily: 'monospace',
-                    fontVariantNumeric: 'tabular-nums',
-                  }}
+                  className="text-xs font-bold uppercase tracking-widest text-amber-500"
+                  style={{ fontFamily: 'monospace' }}
                 >
-                  ${formatCents(predecessorCloseTotalCents)}
+                  Broken Custody Chain
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  closing total
-                </span>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Predecessor session exists but closed without an inventory
+                  snapshot. No closing total available for comparison. Enter
+                  opening total manually and provide a note.
+                </p>
               </div>
-            )}
+            </div>
           </div>
         ) : (
+          /* Condition B (absent): no predecessor session at all */
           <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-4">
             <div className="flex items-start gap-3">
               <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
