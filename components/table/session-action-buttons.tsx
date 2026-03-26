@@ -97,31 +97,8 @@ export function SessionActionButtons({
     return (
       <TooltipProvider delayDuration={150}>
         <div className={cn('flex items-center gap-1', className)}>
-          {/* Open Session */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleOpenSession}
-                disabled={!canOpen || openMutation.isPending}
-                className={cn(
-                  'h-8 w-8',
-                  canOpen && 'text-emerald-500 hover:text-emerald-400',
-                )}
-              >
-                {openMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Play className="size-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open Session</TooltipContent>
-          </Tooltip>
-
-          {/* PRD-059: Activate Session — visible when OPEN, opens activation drawer */}
-          {isOpen && onActivateRequest && (
+          {/* PRD-059: When OPEN, replace Play with Activate (reduces button count) */}
+          {isOpen && onActivateRequest ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -134,6 +111,28 @@ export function SessionActionButtons({
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Activate Table for Play</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handleOpenSession}
+                  disabled={!canOpen || openMutation.isPending}
+                  className={cn(
+                    'h-8 w-8',
+                    canOpen && 'text-emerald-500 hover:text-emerald-400',
+                  )}
+                >
+                  {openMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open Session</TooltipContent>
             </Tooltip>
           )}
 
@@ -185,27 +184,8 @@ export function SessionActionButtons({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {/* Open Session */}
-      <Button
-        variant={canOpen ? 'default' : 'outline'}
-        size="sm"
-        onClick={handleOpenSession}
-        disabled={!canOpen || openMutation.isPending}
-        className={cn(
-          'gap-1.5',
-          canOpen && 'bg-emerald-600 hover:bg-emerald-700',
-        )}
-      >
-        {openMutation.isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Play className="size-4" />
-        )}
-        Open Session
-      </Button>
-
-      {/* PRD-059: Activate Session — visible when OPEN, opens activation drawer */}
-      {isOpen && onActivateRequest && (
+      {/* PRD-059: When OPEN, replace Play with Activate (reduces operator fatigue) */}
+      {isOpen && onActivateRequest ? (
         <Button
           variant="default"
           size="sm"
@@ -214,6 +194,24 @@ export function SessionActionButtons({
         >
           <CheckCircle2 className="size-4" />
           Activate Table
+        </Button>
+      ) : (
+        <Button
+          variant={canOpen ? 'default' : 'outline'}
+          size="sm"
+          onClick={handleOpenSession}
+          disabled={!canOpen || openMutation.isPending}
+          className={cn(
+            'gap-1.5',
+            canOpen && 'bg-emerald-600 hover:bg-emerald-700',
+          )}
+        >
+          {openMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play className="size-4" />
+          )}
+          Open Session
         </Button>
       )}
 

@@ -451,6 +451,10 @@ function ActivationDrawerContent({
 /**
  * Activation Drawer — OPEN → ACTIVE Custody Gate
  *
+ * Non-dismissible: the pit boss must either activate or cancel.
+ * Outside clicks and Escape key are blocked. The cancel button
+ * inside the drawer is the only exit path.
+ *
  * Uses key-based reset pattern: content remounts with fresh state on reopen.
  */
 export function ActivationDrawer({
@@ -465,8 +469,10 @@ export function ActivationDrawer({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        className="flex w-full flex-col p-0 sm:max-w-md"
+        className="flex w-full flex-col p-0 sm:max-w-md [&>button:last-child]:hidden"
         key={open ? 'open' : 'closed'}
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
       >
         <ActivationDrawerContent
           session={session}
