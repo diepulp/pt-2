@@ -92,12 +92,12 @@ export function CloseSessionDialog({
   closingInventorySnapshotId: preselectedSnapshotId,
 }: CloseSessionDialogProps) {
   // Form state — artifacts
+  // PRD-059: Inventory snapshot defaults ON — custody chain requires it.
+  // If snapshots exist for this table, auto-enable and auto-select the most recent.
   const [useDropEvent, setUseDropEvent] = React.useState(
     !!preselectedDropEventId,
   );
-  const [useInventorySnapshot, setUseInventorySnapshot] = React.useState(
-    !!preselectedSnapshotId,
-  );
+  const [useInventorySnapshot, setUseInventorySnapshot] = React.useState(true);
   const [dropEventId, setDropEventId] = React.useState<string | null>(
     preselectedDropEventId ?? null,
   );
@@ -139,10 +139,11 @@ export function CloseSessionDialog({
     !!closeReason && closeNoteValid && hasAtLeastOneArtifact && session;
 
   // Reset form when dialog opens/closes
+  // PRD-059: Inventory snapshot defaults ON for custody chain continuity.
   React.useEffect(() => {
     if (open) {
       setUseDropEvent(!!preselectedDropEventId);
-      setUseInventorySnapshot(!!preselectedSnapshotId);
+      setUseInventorySnapshot(true);
       setDropEventId(preselectedDropEventId ?? null);
       setClosingInventorySnapshotId(preselectedSnapshotId ?? null);
       setNotes('');
@@ -150,6 +151,15 @@ export function CloseSessionDialog({
       setCloseNote('');
     }
   }, [open, preselectedDropEventId, preselectedSnapshotId]);
+
+  // PRD-059: Auto-select the most recent inventory snapshot when dialog opens
+  // and no snapshot is preselected. This ensures the custody chain is populated
+  // without requiring the pit boss to manually toggle the picker.
+  React.useEffect(() => {
+    if (open && !closingInventorySnapshotId && inventorySnapshots.length > 0) {
+      setClosingInventorySnapshotId(inventorySnapshots[0].id);
+    }
+  }, [open, closingInventorySnapshotId, inventorySnapshots]);
 
   // Handle chip count creation callback
   const handleChipCountCreated = React.useCallback((snapshotId: string) => {
