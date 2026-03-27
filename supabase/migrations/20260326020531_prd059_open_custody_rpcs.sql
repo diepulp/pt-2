@@ -73,12 +73,15 @@ BEGIN
   END IF;
 
   -- Predecessor lookup: most recent CLOSED session for this table
+  -- Skip cancelled sessions (OPEN-cancellation per ADR-048 D2) — no gameplay occurred,
+  -- no custody artifact to chain. Find the last real gameplay close.
   SELECT id, closing_inventory_snapshot_id
   INTO v_predecessor_session_id, v_predecessor_closing_snapshot_id
   FROM table_session
   WHERE gaming_table_id = p_gaming_table_id
     AND casino_id = v_casino_id
     AND status = 'CLOSED'
+    AND close_reason IS DISTINCT FROM 'cancelled'
   ORDER BY closed_at DESC NULLS LAST
   LIMIT 1;
 

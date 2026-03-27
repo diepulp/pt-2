@@ -212,14 +212,15 @@ export const CLOSE_REASON_LABELS: Record<CloseReasonType, string> = {
 
 /**
  * Close reason options for Select/dropdown components.
- * Preserves enum ordering from CLOSE_REASON_LABELS.
+ * Excludes 'cancelled' — OPEN-cancellation uses the activation drawer's
+ * "Cancel Opening" button, not the close dialog (ADR-048 D2).
  */
 export const CLOSE_REASON_OPTIONS: ReadonlyArray<{
   value: CloseReasonType;
   label: string;
-}> = (Object.entries(CLOSE_REASON_LABELS) as [CloseReasonType, string][]).map(
-  ([value, label]) => ({ value, label }),
-);
+}> = (Object.entries(CLOSE_REASON_LABELS) as [CloseReasonType, string][])
+  .filter(([value]) => value !== 'cancelled')
+  .map(([value, label]) => ({ value, label }));
 
 /**
  * Roles permitted to force-close a table session.

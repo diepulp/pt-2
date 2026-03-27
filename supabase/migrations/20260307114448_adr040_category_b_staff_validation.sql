@@ -189,6 +189,7 @@ BEGIN
     table_id,
     snapshot_type,
     chipset,
+    total_cents,
     counted_by,
     verified_by,
     discrepancy_cents,
@@ -199,6 +200,8 @@ BEGIN
     p_table_id,
     p_snapshot_type,
     p_chipset,
+    (SELECT COALESCE(SUM((key::int) * (value::int)), 0) * 100
+     FROM jsonb_each_text(p_chipset)),
     v_context_actor_id,
     p_verified_by,
     COALESCE(p_discrepancy_cents, 0),
