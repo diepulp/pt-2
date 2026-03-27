@@ -13,7 +13,6 @@ import {
 import * as React from 'react';
 import { toast } from 'sonner';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -23,10 +22,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
-import {
-  getSessionStatusColor,
-  getSessionStatusLabel,
-} from '@/hooks/table-context/use-table-session';
 import { cn } from '@/lib/utils';
 
 import {
@@ -34,6 +29,7 @@ import {
   PitMapSelectorCompact,
   type PitMapPit,
 } from './pit-map-selector';
+import { TablePowerToggle } from './table-power-toggle';
 
 interface ToolbarAction {
   id: string;
@@ -59,6 +55,10 @@ interface TableToolbarProps {
   onNewSlip: () => void;
   onEditLimits: () => void;
   onEnrollPlayer?: () => void;
+  /** Lifecycle: opens the close-session dialog */
+  onCloseRequest?: () => void;
+  /** Lifecycle: opens the activation drawer for OPEN sessions (PRD-059) */
+  onActivateRequest?: () => void;
   className?: string;
   /** Pit navigation props */
   pits?: PitMapPit[];
@@ -83,6 +83,8 @@ export function TableToolbar({
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
+  onCloseRequest,
+  onActivateRequest,
   className,
   pits,
   selectedPitId,
@@ -90,6 +92,7 @@ export function TableToolbar({
   onSelectTable,
   onSelectPit,
 }: TableToolbarProps) {
+  void tableStatus; // consumed by parent interface; power toggle derives state from session
   // Placeholder handlers for pending functionality
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
@@ -196,13 +199,13 @@ export function TableToolbar({
         {/* Industrial LED accent */}
         <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
 
-        {/* Session status badge (PRD-038A) */}
-        <Badge
-          variant={session ? getSessionStatusColor(session.status) : 'outline'}
-          className="text-[10px] font-medium shrink-0"
-        >
-          {session ? getSessionStatusLabel(session.status) : 'No Session'}
-        </Badge>
+        {/* Power Toggle — consolidated lifecycle control */}
+        <TablePowerToggle
+          tableId={tableId}
+          session={session ?? null}
+          onCloseRequest={onCloseRequest ?? (() => {})}
+          onActivateRequest={onActivateRequest}
+        />
 
         <Separator orientation="vertical" className="h-6 mx-1 bg-border/40" />
 
@@ -317,6 +320,8 @@ export function TableToolbarCompact({
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
+  onCloseRequest,
+  onActivateRequest,
   className,
   pits,
   selectedPitId,
@@ -324,6 +329,7 @@ export function TableToolbarCompact({
   onSelectTable,
   onSelectPit,
 }: TableToolbarProps) {
+  void tableStatus; // consumed by parent interface; power toggle derives state from session
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
       description: 'This feature is being developed',
@@ -378,13 +384,13 @@ export function TableToolbarCompact({
         role="toolbar"
         aria-label={`Table ${tableId} quick actions`}
       >
-        {/* Session status badge (PRD-038A) */}
-        <Badge
-          variant={session ? getSessionStatusColor(session.status) : 'outline'}
-          className="text-[9px] font-medium shrink-0"
-        >
-          {session ? getSessionStatusLabel(session.status) : 'No Session'}
-        </Badge>
+        {/* Power Toggle — consolidated lifecycle control */}
+        <TablePowerToggle
+          tableId={tableId}
+          session={session ?? null}
+          onCloseRequest={onCloseRequest ?? (() => {})}
+          onActivateRequest={onActivateRequest}
+        />
 
         <Separator orientation="vertical" className="h-5 mx-0.5 bg-border/40" />
 

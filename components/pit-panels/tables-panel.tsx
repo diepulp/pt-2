@@ -9,19 +9,24 @@ import { TableLayoutTerminal } from '@/components/table';
 import { CloseSessionDialog } from '@/components/table/close-session-dialog';
 import type { PitMapPit } from '@/components/table/pit-map-selector';
 import { ReconciliationBadge } from '@/components/table/reconciliation-badge';
-import { SessionActionButtons } from '@/components/table/session-action-buttons';
 import { TableLimitsDialog } from '@/components/table/table-limits-dialog';
 import {
   TableToolbar,
   TableToolbarCompact,
 } from '@/components/table/table-toolbar';
+import { Badge } from '@/components/ui/badge';
 import type { DashboardTableDTO } from '@/hooks/dashboard/types';
 import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
+import {
+  getSessionStatusColor,
+  getSessionStatusLabel,
+} from '@/hooks/table-context/use-table-session';
 import {
   useTableSettings,
   useUpdateTableLimits,
 } from '@/hooks/table-context/use-table-settings';
 import { useAuth } from '@/hooks/use-auth';
+import { cn } from '@/lib/utils';
 import type { RatingSlipWithPlayerDTO } from '@/services/rating-slip/dtos';
 
 interface SeatOccupant {
@@ -155,16 +160,30 @@ export function TablesPanel({
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* Panel Header - Minimal, table identity only */}
+      {/* Panel Header - Table identity + session status */}
       <div className="flex items-center px-3 py-2 border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shrink-0">
         <div className="flex items-center gap-2">
           <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 border border-accent/20">
             <LayoutGrid className="h-4 w-4 text-accent" />
           </div>
           <div>
-            <h2 className="text-sm font-semibold tracking-tight">
-              {tableName}
-            </h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold tracking-tight">
+                {tableName}
+              </h2>
+              {/* Session status widget — positioned next to table name */}
+              <Badge
+                variant="outline"
+                className={cn(
+                  'text-[10px] font-medium shrink-0',
+                  session
+                    ? getSessionStatusColor(session.status)
+                    : 'border-zinc-500/30 bg-zinc-500/10 text-zinc-400',
+                )}
+              >
+                {session ? getSessionStatusLabel(session.status) : 'No Session'}
+              </Badge>
+            </div>
             <p className="text-xs text-muted-foreground">
               Last: {lastActivity}
             </p>
@@ -174,48 +193,43 @@ export function TablesPanel({
 
       {/* Panel Content - No scroll, flex layout */}
       <div className="flex-1 flex flex-col p-2 sm:p-3 gap-2 sm:gap-3 min-h-0">
-        {/* Loop-Centric Toolbar - Replaces redundant stat badges */}
+        {/* Loop-Centric Toolbar with Power Toggle — consolidated lifecycle control */}
         {/* Responsive: Compact on mobile, full on desktop */}
-        <div className="shrink-0">
-          <TableToolbar
-            tableId={selectedTable.id}
-            tableStatus={selectedTable.status}
-            session={session}
-            onNewSlip={onNewSlip}
-            onEditLimits={() => setLimitsDialogOpen(true)}
-            onEnrollPlayer={() => setEnrollModalOpen(true)}
-            pits={pits}
-            selectedPitId={selectedPitId}
-            selectedTableId={selectedTable.id}
-            onSelectTable={onSelectTable}
-            onSelectPit={onSelectPit}
-            className="hidden sm:flex"
-          />
-          <TableToolbarCompact
-            tableId={selectedTable.id}
-            tableStatus={selectedTable.status}
-            session={session}
-            onNewSlip={onNewSlip}
-            onEditLimits={() => setLimitsDialogOpen(true)}
-            onEnrollPlayer={() => setEnrollModalOpen(true)}
-            pits={pits}
-            selectedPitId={selectedPitId}
-            selectedTableId={selectedTable.id}
-            onSelectTable={onSelectTable}
-            onSelectPit={onSelectPit}
-            className="flex sm:hidden"
-          />
-        </div>
-
-        {/* Session Action Buttons — single owner of lifecycle actions (PRD-038A) */}
         <div className="shrink-0 flex items-center gap-2">
-          <SessionActionButtons
-            tableId={selectedTable.id}
-            session={session}
-            onCloseRequest={() => setCloseDialogOpen(true)}
-            onActivateRequest={onActivateRequest}
-            variant="compact"
-          />
+          <div className="flex-1 min-w-0">
+            <TableToolbar
+              tableId={selectedTable.id}
+              tableStatus={selectedTable.status}
+              session={session}
+              onNewSlip={onNewSlip}
+              onEditLimits={() => setLimitsDialogOpen(true)}
+              onEnrollPlayer={() => setEnrollModalOpen(true)}
+              onCloseRequest={() => setCloseDialogOpen(true)}
+              onActivateRequest={onActivateRequest}
+              pits={pits}
+              selectedPitId={selectedPitId}
+              selectedTableId={selectedTable.id}
+              onSelectTable={onSelectTable}
+              onSelectPit={onSelectPit}
+              className="hidden sm:flex"
+            />
+            <TableToolbarCompact
+              tableId={selectedTable.id}
+              tableStatus={selectedTable.status}
+              session={session}
+              onNewSlip={onNewSlip}
+              onEditLimits={() => setLimitsDialogOpen(true)}
+              onEnrollPlayer={() => setEnrollModalOpen(true)}
+              onCloseRequest={() => setCloseDialogOpen(true)}
+              onActivateRequest={onActivateRequest}
+              pits={pits}
+              selectedPitId={selectedPitId}
+              selectedTableId={selectedTable.id}
+              onSelectTable={onSelectTable}
+              onSelectPit={onSelectPit}
+              className="flex sm:hidden"
+            />
+          </div>
           {session?.requires_reconciliation && <ReconciliationBadge />}
         </div>
 

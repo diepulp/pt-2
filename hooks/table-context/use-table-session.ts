@@ -227,18 +227,20 @@ export function getSessionStatusLabel(status: TableSessionStatus): string {
 
 /**
  * Gets status color for visual indicators.
+ *
+ * Returns a Tailwind className string that colors the Badge to match
+ * the power-toggle colour language:
+ *   OPEN    → blue   (awaiting activation)
+ *   ACTIVE  → emerald (in play)
+ *   RUNDOWN → amber   (winding down)
+ *   CLOSED  → zinc    (dormant)
  */
-export function getSessionStatusColor(
-  status: TableSessionStatus,
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-  const colors: Record<
-    TableSessionStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
-  > = {
-    OPEN: 'outline',
-    ACTIVE: 'default',
-    RUNDOWN: 'secondary',
-    CLOSED: 'destructive',
+export function getSessionStatusColor(status: TableSessionStatus): string {
+  const colors: Record<TableSessionStatus, string> = {
+    OPEN: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+    ACTIVE: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    RUNDOWN: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    CLOSED: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-400',
   };
   return colors[status];
 }
