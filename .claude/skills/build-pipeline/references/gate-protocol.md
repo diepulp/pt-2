@@ -17,6 +17,21 @@ Run automatically after workstream completion:
 | `lint` | `npm run lint -- {paths}` | Exit 0, no errors |
 | `test-pass` | `npm test {paths}` | All tests pass |
 | `build` | `npm run build` | Build succeeds |
+| `e2e-write-path` | `npx playwright test e2e/{domain}/ --reporter=list` | At least 1 spec exists, all pass |
+
+### E2E Write-Path Gate (Test-per-PRD Mandate)
+
+**Ref:** `docs/issues/gaps/testing-arch-remediation/playwright-gate-e2e/workflows-gaps.md` §3
+
+This gate applies only to PRDs classified as write-path during EXEC-SPEC generation
+(checkpoint field `write_path_classification == "detected"`). It verifies that:
+
+1. At least one `*.spec.ts` file exists in `e2e/{domain}/`
+2. All Playwright specs pass against the local Supabase instance
+3. Specs cover the critical write-path user journey (not just smoke rendering)
+
+If the PRD was classified as read-only or the mandate was waived (checkpoint
+`e2e_mandate_waiver` set), this gate is skipped.
 
 ### Approval Gates
 
@@ -180,6 +195,7 @@ Validation Gates:
   ✅ type-check
   ✅ lint
   ✅ test-pass
+  {If write-path: ✅ e2e-write-path}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

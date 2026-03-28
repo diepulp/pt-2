@@ -119,6 +119,11 @@ gates:
     command: npm test services/{domain}/
     success_criteria: "All tests pass"
 
+  # Required for write-path PRDs (Test-per-PRD mandate, workflows-gaps.md §3)
+  e2e-write-path:
+    command: npx playwright test e2e/{domain}/ --reporter=list
+    success_criteria: "At least 1 spec exists, all tests pass"
+
 # Dependencies on other PRDs/Services
 external_dependencies:
   - prd: PRD-000
@@ -223,6 +228,7 @@ Reference relevant SRM sections, ADRs, or architectural decisions.
 
 - [ ] All workstreams complete
 - [ ] All gates pass
+- [ ] E2E specs pass for write-path PRDs (e2e-write-path gate)
 - [ ] MVP-ROADMAP.md updated
 - [ ] MVPProgressContext records completion
 ```

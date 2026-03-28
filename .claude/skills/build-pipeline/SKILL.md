@@ -148,8 +148,66 @@ These files contain deterministic rules that MUST be validated against during sp
 ### Stage 3: Assemble & Validate
 
 6. Merge expert refinements into final EXECUTION-SPEC
-7. Output to `docs/21-exec-spec/EXEC-###-{slug}.md`
-8. **CRITICAL: Run validation before proceeding**:
+
+7. **Write-Path Classification (E2E Mandate):**
+
+   Scan the PRD and assembled EXEC-SPEC for write-path indicators. A PRD "ships writes"
+   if any workstream involves `INSERT`, `UPDATE`, `DELETE`, server actions (`withServerAction`),
+   RPCs that mutate state, or form submissions that persist data.
+
+   ```
+   Write-path signals (any one triggers the mandate):
+     - Migration workstreams with INSERT/UPDATE/DELETE grants
+     - Route handler workstreams using withServerAction
+     - Service workstreams with mutation operations (create, update, delete)
+     - RPC workstreams with SECURITY DEFINER that mutate
+     - Frontend workstreams with form submissions or mutation hooks
+   ```
+
+   **If the PRD ships writes and no `e2e-tests` workstream exists:**
+
+   ```
+   [E2E MANDATE] PRD-{ID} ships write paths but has no E2E workstream.
+   ─────────────────────────────────────────────────────────────────────
+   Per Test-per-PRD mandate (workflows-gaps.md §3), every PRD shipping
+   writes MUST include a Playwright E2E spec in its Definition of Done.
+
+   Write-path signals detected:
+     - {signal_1}: {evidence}
+     - {signal_2}: {evidence}
+
+   Action: Adding E2E workstream (executor: e2e-testing) to EXEC-SPEC.
+   The workstream will depend on all implementation workstreams and
+   produce specs in e2e/{domain}/.
+
+   Override: reply "skip-e2e" with justification to waive.
+   ─────────────────────────────────────────────────────────────────────
+   ```
+
+   Auto-inject an E2E workstream into the EXEC-SPEC:
+   ```yaml
+   WS_E2E:
+     name: E2E Write-Path Tests
+     description: Playwright specs covering write-path user journeys
+     executor: e2e-testing
+     executor_type: skill
+     depends_on: [all implementation workstreams]
+     outputs:
+       - e2e/{domain}/*.spec.ts
+     gate: e2e-write-path
+     estimated_complexity: medium
+   ```
+
+   Add the workstream to the final execution phase, and add `e2e-write-path` to the
+   gates definition. Record the classification in the checkpoint:
+   `write_path_classification: "detected"` or `"none"`, and if waived:
+   `e2e_mandate_waiver: "{reason}"`.
+
+   **If the PRD does NOT ship writes:** No E2E workstream is required (read-only UI
+   rendering is Tier 2 per workflows-gaps.md — desirable but not mandated).
+
+8. Output to `docs/21-exec-spec/EXEC-###-{slug}.md`
+9. **CRITICAL: Run validation before proceeding**:
    ```bash
    python .claude/skills/build-pipeline/scripts/validate-execution-spec.py \
        docs/21-exec-spec/EXEC-###-{slug}.md
@@ -161,11 +219,11 @@ These files contain deterministic rules that MUST be validated against during sp
 
    Both must pass before proceeding.
 
-9. Initialize checkpoint file immediately (see `references/checkpoint-format.md`)
+10. Initialize checkpoint file immediately (see `references/checkpoint-format.md`)
 
 ### Stage 4: Adversarial Review (DA Team)
 
-10. **Temporal Integrity Check (pre-DA gate):**
+12. **Temporal Integrity Check (pre-DA gate):**
 
     Before deploying the DA team, compare the PRD's modified timestamp against the
     EXEC-SPEC's creation timestamp. If the PRD was modified after the EXEC-SPEC was
@@ -194,7 +252,7 @@ These files contain deterministic rules that MUST be validated against during sp
     This check saves an entire DA review cycle when upstream artifacts have changed
     since the EXEC-SPEC was generated.
 
-11. **Magnitude Assessment (DA tier selection):**
+13. **Magnitude Assessment (DA tier selection):**
 
     Before deploying reviewers, compute a magnitude score from the EXEC-SPEC and its
     upstream artifacts. The score determines how much review overhead is justified.
@@ -258,7 +316,7 @@ These files contain deterministic rules that MUST be validated against during sp
 
     **Tier 2 (Full DA Team):** Proceed with full team deployment below.
 
-12. **Deploy DA review team for EXEC-SPEC review (Tier 2 only, or Tier 1 focused):**
+14. **Deploy DA review team for EXEC-SPEC review (Tier 2 only, or Tier 1 focused):**
 
     > For **Tier 2**: Deploy the full 6-agent team (5 reviewers + synthesis-lead).
     > The EXEC-SPEC is the implementation blueprint. Catching P0 flaws here costs ~0 code rework.
@@ -547,9 +605,31 @@ Validate against gate: {GATE_TYPE}
 After all phases complete:
 
 1. Run DoD gate validation (type-check, lint, test, build)
-2. Update `docs/MVP-ROADMAP.md` — mark PRD as complete
-3. Generate summary of files created, tests passing, gates passed
-4. Display final status via `/mvp-status`
+2. **E2E Mandate Gate (write-path PRDs only):**
+
+   If `write_path_classification == "detected"` in checkpoint and no `e2e_mandate_waiver`:
+   - Verify E2E spec files exist in `e2e/{domain}/` (at least one `*.spec.ts`)
+   - Run `npx playwright test e2e/{domain}/ --reporter=list` (redirect to `/tmp`)
+   - If no E2E specs found or all fail:
+
+   ```
+   [E2E MANDATE BLOCK] PRD-{ID} ships writes but has no passing E2E specs.
+   ─────────────────────────────────────────────────────────────────────
+   Ref: workflows-gaps.md §3 — Test-per-PRD mandate
+
+   Expected: e2e/{domain}/*.spec.ts
+   Found:    {count} spec files, {pass}/{total} passing
+
+   Options:
+     1. Write E2E specs now (dispatch e2e-testing skill)
+     2. Waive with justification (record in checkpoint)
+     3. Abort pipeline
+   ─────────────────────────────────────────────────────────────────────
+   ```
+
+3. Update `docs/MVP-ROADMAP.md` — mark PRD as complete
+4. Generate summary of files created, tests passing, gates passed
+5. Display final status via `/mvp-status`
 
 ---
 
