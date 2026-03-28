@@ -36,11 +36,13 @@ export function CompliancePanelWrapper({
     });
 
   // Transform compliance data to panel props
+  // ADR-031 Rule 2: service/wrapper is the single conversion boundary (cents → dollars)
   const ctrStatus: CtrStatus | null = React.useMemo(() => {
     if (!complianceData?.items?.[0]) return null;
     const item = complianceData.items[0];
+    const totalCents = (item.total_in ?? 0) + (item.total_out ?? 0);
     return {
-      todayTotal: (item.total_in ?? 0) + (item.total_out ?? 0),
+      todayTotal: totalCents / 100,
       threshold: 10000,
       isTriggered:
         item.agg_badge_in === 'agg_ctr_met' ||

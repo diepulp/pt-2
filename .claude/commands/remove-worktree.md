@@ -1,5 +1,4 @@
 ---
-model: claude-sonnet-4-6
 description: Remove a git worktree and optionally delete its branch
 argument-hint: <branch-name> [--keep-branch]
 allowed-tools: Bash, Read, Glob, Grep
@@ -65,10 +64,18 @@ WORKTREE_DIR: trees/<BRANCH_NAME>
 
 ### 5. Remove Git Worktree
 
+- **CRITICAL SAFETY CHECK**: Before any removal attempt, run `git -C trees/<BRANCH_NAME> status`
+  to inventory untracked and modified files. Untracked files are NOT in git — `--force` deletes
+  them permanently with no recovery path.
+  - If untracked files exist: **STOP**. Show the user the list of untracked files and ask
+    whether to commit them, `git stash -u`, or copy them out before proceeding. Do NOT
+    auto-force-remove.
+  - If only tracked modifications exist: warn but proceed (these can be recovered from git).
 - Remove worktree using git: `git worktree remove trees/<BRANCH_NAME>`
 - If removal fails with error (e.g., worktree has uncommitted changes):
-  - Try force removal: `git worktree remove trees/<BRANCH_NAME> --force`
-  - Note the force removal in the report
+  - Do NOT immediately force-remove. Show the error and ask the user to confirm.
+  - Only use `git worktree remove trees/<BRANCH_NAME> --force` with explicit user approval.
+  - Note the force removal in the report.
 - Verify worktree was removed: `git worktree list | grep trees/<BRANCH_NAME>`
 - Should return nothing if successfully removed
 
