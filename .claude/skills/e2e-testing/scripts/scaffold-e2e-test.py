@@ -217,7 +217,7 @@ def scaffold_test(test_name: str, test_type: str, output_dir: str) -> str:
 
     if test_type == "workflow":
         template = WORKFLOW_TEMPLATE
-        subdir = ""
+        subdir = "workflows"
         filename = f"{test_name}.spec.ts"
     else:
         template = API_TEMPLATE

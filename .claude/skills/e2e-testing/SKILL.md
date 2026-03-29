@@ -88,10 +88,12 @@ e2e/
 │   ├── shift-dashboard-helpers.ts
 │   ├── setup-wizard-fixtures.ts
 │   └── import-test-data.ts       # CSV import test data
+├── workflows/
+│   └── *.spec.ts                 # Workflow test specs (15 files)
 ├── api/
 │   └── loyalty-accrual.spec.ts   # API-level tests
 ├── sample-csvs/                  # Test CSV data files
-├── *.spec.ts                     # Workflow test specs (flat in e2e/ root)
+├── *.spec.ts                     # Standalone specs (measurement-reports, mtl-threshold)
 └── README.md
 ```
 
@@ -99,8 +101,9 @@ e2e/
 
 | Test Type | Location | Pattern |
 |-----------|----------|---------|
-| Workflow E2E | `e2e/` root | `*.spec.ts` |
+| Workflow E2E | `e2e/workflows/` | `*.spec.ts` |
 | API E2E | `e2e/api/` | `*.spec.ts` |
+| Standalone E2E | `e2e/` root | `*.spec.ts` (rare) |
 
 All E2E test files use the `.spec.ts` extension.
 
