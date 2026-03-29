@@ -66,7 +66,6 @@ certificates
 .memori/session.log
 .tool-usage.log
 .claude/skills.backup/
-.claude/settings.json
 .claude/vercel-deploy-claimable.zip
 
 # Python cache

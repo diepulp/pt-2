@@ -108,17 +108,23 @@ export async function createExclusion(
   supabase: SupabaseClient<Database>,
   input: CreateExclusionInput,
 ): Promise<PlayerExclusionDTO> {
+  // PGRST202 workaround: PostgREST matches functions by the set of param names
+  // in the JSON body. Omitting keys (undefined) drops them from JSON.stringify,
+  // causing a signature mismatch. Send null instead — SQL DEFAULT still applies
+  // since all DEFAULT values are NULL. Generated types use `?: string` which
+  // disallows null, hence the assertion.
+
   const { data, error } = await supabase.rpc('rpc_create_player_exclusion', {
     p_player_id: input.player_id,
     p_exclusion_type: input.exclusion_type,
     p_enforcement: input.enforcement,
     p_reason: input.reason,
-    p_effective_from: input.effective_from ?? undefined,
-    p_effective_until: input.effective_until ?? undefined,
-    p_review_date: input.review_date ?? undefined,
-    p_external_ref: input.external_ref ?? undefined,
-    p_jurisdiction: input.jurisdiction ?? undefined,
-  });
+    p_effective_from: input.effective_from ?? null,
+    p_effective_until: input.effective_until ?? null,
+    p_review_date: input.review_date ?? null,
+    p_external_ref: input.external_ref ?? null,
+    p_jurisdiction: input.jurisdiction ?? null,
+  } as Database['public']['Functions']['rpc_create_player_exclusion']['Args']);
 
   if (error) throw mapExclusionRpcError(error);
   const row = assertSingletonRow(data);
