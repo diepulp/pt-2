@@ -299,7 +299,8 @@ export type PlayerErrorCode =
   | 'PLAYER_SELF_EXCLUDED'
   | 'PLAYER_EXCLUDED'
   | 'PLAYER_EXCLUSION_NOT_FOUND'
-  | 'PLAYER_EXCLUSION_ALREADY_LIFTED';
+  | 'PLAYER_EXCLUSION_ALREADY_LIFTED'
+  | 'EXCLUSION_IMMUTABLE';
 
 export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_NOT_FOUND: 'Player not found',
@@ -311,6 +312,8 @@ export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_EXCLUDED: 'Player has an active exclusion',
   PLAYER_EXCLUSION_NOT_FOUND: 'Exclusion record not found',
   PLAYER_EXCLUSION_ALREADY_LIFTED: 'Exclusion has already been lifted',
+  EXCLUSION_IMMUTABLE:
+    'Exclusion records are immutable after creation (lift-only updates allowed)',
 };
 
 // ============================================================================

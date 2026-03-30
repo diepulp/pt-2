@@ -80,8 +80,10 @@ export function LiftExclusionDialog({
         toast.success('Exclusion lifted');
         setLiftReason('');
         onOpenChange(false);
-      } catch {
-        toast.error('Failed to lift exclusion');
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to lift exclusion';
+        toast.error(message);
       }
     });
   };
