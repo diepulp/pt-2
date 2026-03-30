@@ -1,0 +1,60 @@
+{
+  "prd": "PRD-056",
+  "prd_title": "Alert Maturity — Persistent Alerts, Deduplication & Quality (C-2/C-3)",
+  "current_phase": 7,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6", "WS7", "WS8", "WS9", "WS10", "WS11"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "migrations": [
+      "supabase/migrations/20260325015417_create_alert_maturity_schema.sql",
+      "supabase/migrations/20260325020259_amend_rpcs_alert_maturity.sql",
+      "supabase/migrations/20260325020300_create_alert_rpcs.sql",
+      "supabase/migrations/20260325101146_add_alert_context_enrichment.sql",
+      "supabase/migrations/20260325101147_create_alert_quality_rpc.sql"
+    ],
+    "service_layer": [
+      "services/shift-intelligence/alerts.ts",
+      "services/shift-intelligence/dtos.ts",
+      "services/shift-intelligence/schemas.ts",
+      "services/shift-intelligence/mappers.ts",
+      "services/shift-intelligence/keys.ts",
+      "services/shift-intelligence/http.ts",
+      "services/shift-intelligence/index.ts"
+    ],
+    "route_handlers": [
+      "app/api/v1/shift-intelligence/persist-alerts/route.ts",
+      "app/api/v1/shift-intelligence/acknowledge-alert/route.ts",
+      "app/api/v1/shift-intelligence/alerts/route.ts"
+    ],
+    "ui_components": [
+      "components/admin-alerts/alerts-page-client.tsx",
+      "components/admin-alerts/acknowledge-alert-dialog.tsx",
+      "components/shift-dashboard/alerts-panel.tsx",
+      "hooks/shift-intelligence/use-shift-alerts.ts"
+    ],
+    "tests": [
+      "services/shift-intelligence/__tests__/alerts-mappers.test.ts",
+      "services/shift-intelligence/__tests__/alerts-schemas.test.ts",
+      "services/shift-intelligence/__tests__/grant-posture-audit.test.ts"
+    ],
+    "docs": [
+      "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+    ]
+  },
+  "gates_passed": ["schema-validation", "type-check", "test-pass"],
+  "gates_pending": ["lint", "build"],
+  "timestamp": "2026-03-25T10:20:00Z",
+  "gov010_check": "passed",
+  "adversarial_review": {
+    "magnitude_score": 11,
+    "magnitude_tier": "focused_review",
+    "tier_override": "tier 1",
+    "tier_override_reason": "PRD v0.3.0 with 3 rounds of human review, comprehensive pre-existing RFC + SEC Note",
+    "attempt": 1,
+    "verdict": "ship_with_gates",
+    "patch_applied": true
+  },
+  "exec_spec_path": "docs/21-exec-spec/EXEC-056-alert-maturity.md"
+}

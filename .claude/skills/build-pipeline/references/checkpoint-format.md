@@ -57,6 +57,18 @@ interface PipelineCheckpoint {
 
   // Optional: Adversarial Review Result (DA Team)
   adversarial_review?: {
+    // Magnitude assessment (computed before DA deployment)
+    magnitude_score: number;                    // 0-14+ total from scoring rubric
+    magnitude_tier: "self_certified" | "focused_review" | "full_team" | null;
+    magnitude_signals: Array<{
+      signal: string;                           // e.g., "cross_context_writes"
+      points: number;                           // e.g., 3
+      evidence: string;                         // e.g., "player_casino (RecognitionService)"
+    }>;
+    tier_override?: "tier_0" | "tier_1" | "tier_2" | null;  // if user overrode
+    tier_override_reason?: string;                           // why they overrode
+
+    // Review results (populated only if DA ran — Tier 1 or Tier 2)
     verdict: "ship" | "ship_with_gates" | "do_not_ship" | "overridden";
     p0_count: number;             // consolidated across all reviewers (deduplicated)
     p1_count: number;             // consolidated across all reviewers (deduplicated)
@@ -75,8 +87,21 @@ interface PipelineCheckpoint {
       key_findings: string[];     // top 3 finding summaries from this reviewer
     }>;
 
-    // Cross-reviewer disagreements requiring human resolution
-    conflicts?: string[];
+    // Team coordination metadata
+    team_name?: string;                    // e.g., "da-review-PRD-053"
+    cross_domain_findings?: number;        // count of cross-domain messages sent in Phase 1
+    cross_domain_verified?: number;        // count confirmed by owning reviewer in Phase 2
+    cross_domain_refuted?: number;         // count refuted by owning reviewer in Phase 2
+
+    // Conflict resolution tracking
+    resolved_conflicts?: Array<{
+      between: [string, string];           // e.g., ["r2-architecture", "r5-performance"]
+      subject: string;                     // what they disagreed about
+      resolution: string;                  // joint recommendation from reviewer negotiation
+    }>;
+
+    // Unresolved conflicts requiring human decision
+    unresolved_conflicts?: string[];
   };
 
   // Optional: Execution Notes

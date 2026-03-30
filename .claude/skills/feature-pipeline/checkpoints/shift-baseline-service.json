@@ -1,0 +1,92 @@
+{
+  "schema_version": 2,
+  "feature_id": "shift-baseline-service",
+  "current_phase": 5,
+  "status": "design-complete",
+  "gates": {
+    "srm-ownership":     { "passed": true,  "timestamp": "2026-03-23T12:00:00Z" },
+    "scaffold-approved": { "passed": true,  "timestamp": "2026-03-23T12:15:00Z" },
+    "design-approved":   { "passed": true,  "timestamp": "2026-03-23T12:30:00Z" },
+    "sec-approved":      { "passed": true,  "timestamp": "2026-03-23T12:45:00Z" },
+    "adr-frozen":        { "passed": true,  "timestamp": "2026-03-23T13:00:00Z" },
+    "prd-approved":      { "passed": true,  "timestamp": "2026-03-23T21:57:00Z" }
+  },
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/shift-baseline-service/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-004-shift-baseline-service.md",
+    "rfc": "docs/02-design/RFC-004-shift-baseline-service.md",
+    "sec_note": "docs/20-architecture/specs/shift-baseline-service/SEC_NOTE.md",
+    "adr": "docs/80-adrs/ADR-046-shift-baseline-stored-computation.md",
+    "prd": "docs/10-prd/PRD-055-shift-baseline-service-v0.md"
+  },
+  "da_review": {
+    "ran": true,
+    "verdict": "ship_with_gates",
+    "p0_count": 0,
+    "p1_count": 2,
+    "attempt": 2,
+    "override_reason": null,
+    "team_name": "da-prd-055-r2",
+    "team_results": [
+      {
+        "reviewer": "scope_security",
+        "verdict": "ship_with_gates",
+        "p0_count": 0,
+        "p1_count": 1,
+        "key_findings": ["Appendix A config key paths incorrect (NF-1)"]
+      },
+      {
+        "reviewer": "testability_architecture",
+        "verdict": "ship_with_gates",
+        "p0_count": 0,
+        "p1_count": 1,
+        "key_findings": ["Appendix A config key paths incorrect (NF-1)"]
+      },
+      {
+        "reviewer": "cross_artifact_coherence",
+        "verdict": "ship_with_gates",
+        "p0_count": 0,
+        "p1_count": 1,
+        "key_findings": ["ADR-046 authority table contradicts PRD on promo/cash_obs rows (NF-2)"]
+      }
+    ],
+    "cross_artifact_findings": 2,
+    "resolved_conflicts": [],
+    "unresolved_conflicts": []
+  },
+  "coherence": {
+    "non_goals": [
+      "Alert persistence / state machine (Phase C-2)",
+      "Alert deduplication / throttling (Phase C-2)",
+      "External notifications — Slack, email, webhook (Phase C-3)",
+      "Real-time streaming computation",
+      "ML-based anomaly detection",
+      "Historical baseline trend analysis UI",
+      "Per-table baseline overrides",
+      "Cross-property (company-scoped) baselines"
+    ],
+    "violations": []
+  },
+  "srm_validation": {
+    "ran": true,
+    "owner_service": "ShiftIntelligenceService",
+    "write_tables": ["table_metric_baseline"],
+    "cross_context_contracts": [
+      "rpc_shift_table_metrics (TableContextService/RatingSlipService)",
+      "rpc_shift_rollups (TableContextService)",
+      "rpc_shift_cash_obs_table (RatingSlipService)",
+      "casino_settings.alert_thresholds (CasinoService, read-only)"
+    ]
+  },
+  "adr_patch_delta": {
+    "applied": true,
+    "date": "2026-03-23",
+    "source": "ADR-046_patch_delta_2026-03-23.md",
+    "findings_accepted": ["F1-partial", "F2-partial", "F3-full", "F4-full", "SA-full", "SB-adjusted", "SC-full"],
+    "findings_rejected": ["F1-remedy-scope (baseline_run_id deferred to Phase C-2)", "F2-granularity (full contract table stays in RFC)"]
+  },
+  "resume_notes": "DESIGN COMPLETE. DA review attempt 2: PASS (ship w/ gates). All P0s resolved. P1 gate fixes applied (config keys, authority table alignment). RFC-004 DTO updated (P2). Ready for /build PRD-055.",
+  "branch": "wedge-c",
+  "working_directory": "trees/wedge-c",
+  "timestamp": "2026-03-23T21:57:00Z"
+}

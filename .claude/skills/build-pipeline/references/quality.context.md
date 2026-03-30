@@ -128,12 +128,50 @@ it('should derive casino_id from context, not parameter', async () => {
 
 ---
 
+## E2E Test-per-PRD Mandate
+
+**Ref:** `docs/issues/gaps/testing-arch-remediation/playwright-gate-e2e/workflows-gaps.md` §3
+
+Every PRD that ships write paths (INSERT/UPDATE/DELETE through server actions, RPCs, or
+form submissions) MUST include a Playwright E2E spec in its Definition of Done.
+
+| PRD Type | E2E Required? | Rationale |
+|----------|---------------|-----------|
+| Write-path (mutations, server actions) | **Yes** | Tier 1 critical paths — DB writes need real-DB E2E |
+| Read-only UI rendering | No (recommended) | Tier 2 — rendering validation is desirable but not mandated |
+| Infrastructure/migration-only | No | No user-facing workflow to test |
+
+### E2E Workstream Pattern
+
+```yaml
+WS_E2E:
+  name: E2E Write-Path Tests
+  description: Playwright specs covering write-path user journeys for {domain}
+  executor: e2e-testing
+  executor_type: skill
+  depends_on: [all implementation workstreams]
+  outputs:
+    - e2e/{domain}/*.spec.ts
+  gate: e2e-write-path
+  estimated_complexity: medium
+```
+
+### E2E Gate
+
+```bash
+npx playwright test e2e/{domain}/ --reporter=list
+# Verify: At least 1 spec file exists, all tests pass
+```
+
+---
+
 ## DoD Checklist Template
 
 Every EXECUTION-SPEC should include a Definition of Done with:
 
 - [ ] All workstream outputs created
 - [ ] All gates pass (type-check, lint, test, build)
+- [ ] **E2E specs pass for write-path PRDs** (e2e-write-path gate)
 - [ ] No regressions in existing tests
 - [ ] Security invariants validated (ADR-024 + ADR-030 compliance)
 - [ ] Write-path RLS on critical tables uses session vars only (ADR-030 INV-030-5)

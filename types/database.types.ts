@@ -4362,6 +4362,43 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_player_exclusion: {
+        Args: {
+          p_effective_from?: string
+          p_effective_until?: string
+          p_enforcement: string
+          p_exclusion_type: string
+          p_external_ref?: string
+          p_jurisdiction?: string
+          p_player_id: string
+          p_reason: string
+          p_review_date?: string
+        }
+        Returns: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "player_exclusion"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_create_shift_checkpoint: {
         Args: { p_checkpoint_type: string; p_notes?: string }
         Returns: {
@@ -4794,6 +4831,33 @@ export type Database = {
           p_visit_id?: string
         }
         Returns: Json
+      }
+      rpc_lift_player_exclusion: {
+        Args: { p_exclusion_id: string; p_lift_reason: string }
+        Returns: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "player_exclusion"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       rpc_list_active_players_casino_wide: {
         Args: { p_limit?: number; p_search?: string }
@@ -5564,82 +5628,43 @@ export type Database = {
           visit: Database["public"]["Tables"]["visit"]["Row"]
         }[]
       }
-      rpc_start_rating_slip:
-        | {
-            Args: {
-              p_casino_id: string
-              p_game_settings: Json
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              accrual_kind: string
-              accumulated_seconds: number
-              average_bet: number | null
-              casino_id: string
-              computed_theo_cents: number | null
-              duration_seconds: number | null
-              end_time: string | null
-              final_average_bet: number | null
-              final_duration_seconds: number | null
-              game_settings: Json | null
-              id: string
-              legacy_theo_cents: number | null
-              move_group_id: string | null
-              pause_intervals: unknown[] | null
-              policy_snapshot: Json | null
-              previous_slip_id: string | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_game_settings: Json
-              p_seat_number: string
-              p_table_id: string
-              p_visit_id: string
-            }
-            Returns: {
-              accrual_kind: string
-              accumulated_seconds: number
-              average_bet: number | null
-              casino_id: string
-              computed_theo_cents: number | null
-              duration_seconds: number | null
-              end_time: string | null
-              final_average_bet: number | null
-              final_duration_seconds: number | null
-              game_settings: Json | null
-              id: string
-              legacy_theo_cents: number | null
-              move_group_id: string | null
-              pause_intervals: unknown[] | null
-              policy_snapshot: Json | null
-              previous_slip_id: string | null
-              seat_number: string | null
-              start_time: string
-              status: Database["public"]["Enums"]["rating_slip_status"]
-              table_id: string
-              visit_id: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "rating_slip"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      rpc_start_rating_slip: {
+        Args: {
+          p_game_settings: Json
+          p_seat_number: string
+          p_table_id: string
+          p_visit_id: string
+        }
+        Returns: {
+          accrual_kind: string
+          accumulated_seconds: number
+          average_bet: number | null
+          casino_id: string
+          computed_theo_cents: number | null
+          duration_seconds: number | null
+          end_time: string | null
+          final_average_bet: number | null
+          final_duration_seconds: number | null
+          game_settings: Json | null
+          id: string
+          legacy_theo_cents: number | null
+          move_group_id: string | null
+          pause_intervals: unknown[] | null
+          policy_snapshot: Json | null
+          previous_slip_id: string | null
+          seat_number: string | null
+          start_time: string
+          status: Database["public"]["Enums"]["rating_slip_status"]
+          table_id: string
+          visit_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "rating_slip"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_start_table_rundown: {
         Args: { p_table_session_id: string }
         Returns: {
@@ -5707,6 +5732,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "gaming_table"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_update_valuation_policy: {
+        Args: {
+          p_cents_per_point: number
+          p_effective_date: string
+          p_version_identifier: string
+        }
+        Returns: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_valuation_policy"
           isOneToOne: true
           isSetofReturn: false
         }
