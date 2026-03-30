@@ -97,12 +97,21 @@ The pit dashboard MUST show only tables where `gaming_table.status = 'active'`.
 
 When admin states are filtered, the operator display collapses to **session-derived states only**. All tables on the pit surface have `gaming_table.status = 'active'`, so the badge is determined entirely by session phase:
 
-| Operator State | Session Phase | Label | Color | Badge Style | Status |
-|----------------|--------------|-------|-------|-------------|--------|
-| `IN_PLAY` | `ACTIVE` | "In Play" | Emerald | Solid, pulse ring | **Live** |
-| `RUNDOWN` | `RUNDOWN` | "Rundown" | Amber | Solid, no pulse | **Live** |
-| `CLOSED` | `null` | "Closed" | Zinc/gray | Muted, no pulse | **Live** |
-| `OPEN` | `OPEN` | "Open" | Blue | Solid | **Deferred** — see D3.1 |
+**Normative states** (reachable in MVP runtime):
+
+| Operator State | Session Phase | Label | Color | Badge Style |
+|----------------|--------------|-------|-------|-------------|
+| `IN_PLAY` | `ACTIVE` | "In Play" | Emerald | Solid, pulse ring |
+| `RUNDOWN` | `RUNDOWN` | "Rundown" | Amber | Solid, no pulse |
+| `CLOSED` | `null` | "Closed" | Zinc/gray | Muted, no pulse |
+
+**Defensive compatibility state** (not reachable in MVP — see D3.1):
+
+| Operator State | Session Phase | Label | Color | Badge Style | Gate |
+|----------------|--------------|-------|-------|-------------|------|
+| `OPEN` | `OPEN` | "Open" | Blue | Solid | Requires OPEN workflow PRD + custodial chain |
+
+`OPEN` is included in the `PitDisplayState` type union for forward compatibility only. It MUST NOT appear in normative scenario tests, acceptance criteria, or implementation scope for any execution slice until the gate conditions in D3.1 are met. Any EXEC-SPEC covering this ADR should treat `OPEN` as a non-blocking defensive branch, not a normative contract.
 
 #### D3.1: OPEN State Deferred
 
@@ -229,13 +238,13 @@ Supersedes ADR-028 Amendment §D6.5.
 | S5 | `null` | Gaming day rollover gap | `CLOSED` | "Closed" | Zinc/gray, muted |
 | S6 | `RUNDOWN` | Mid-shift spot check | `RUNDOWN` | "Rundown" | Amber |
 
-**Pit surface scenarios — deferred** (D3.1: OPEN state not reachable in MVP):
+**Pit surface scenarios — defensive compatibility only** (D3.1: OPEN state not reachable in MVP):
 
 | # | `current_session_status` | Scenario | Expected State | Expected Label | Visual | Gate |
 |---|---|---|---|---|---|---|
 | SF1 | `OPEN` | Session created, awaiting opening snapshot + custodial chain validation | `OPEN` | "Open" | Blue | Requires OPEN workflow PRD + custodial chain implementation |
 
-SF1 becomes normative only when a code path writes `table_session.status = 'OPEN'`. Until then, it is a defensive branch in `derivePitDisplayBadge()`, not a testable runtime expectation.
+SF1 is **non-normative** for any execution slice until a code path writes `table_session.status = 'OPEN'`. It is a defensive compatibility branch in `derivePitDisplayBadge()` — included for forward compatibility, excluded from normative acceptance criteria. EXEC-SPECs implementing this ADR MUST classify SF1 as non-blocking defensive coverage, not as a normative contract.
 
 **Admin surface scenarios** (all tables):
 
@@ -395,3 +404,4 @@ WHERE gt.casino_id = v_casino_id
 |---------|------|---------|
 | 0.1.0 | 2026-03-25 | Initial — surface-role separation, vocabulary split, post-PRD-057 alignment |
 | 0.2.0 | 2026-03-25 | Patch: rename axis to "Administrative availability"; defer OPEN state (D3.1) with custodial chain gate; split shared constants into surface-specific modules; clarify null-session CLOSED as derived monitoring state (D3.2) |
+| 0.2.1 | 2026-03-25 | Governance sync: D3 table split into normative vs defensive-compatibility sections; D7 SF1 classification strengthened to explicitly non-normative with EXEC-SPEC binding language; aligns ADR with EXEC-058 execution contract |

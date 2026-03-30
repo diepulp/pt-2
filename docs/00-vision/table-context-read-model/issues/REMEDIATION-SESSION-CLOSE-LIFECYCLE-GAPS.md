@@ -117,31 +117,20 @@ END IF;
 
 ---
 
-### 2.3 Issue 5a — Force-Close Orphans Open Rating Slips (TANGENTIAL)
+### 2.3 Issue 5a — Force-Close Orphans Open Rating Slips (RESOLVED)
 
-#### Standard close vs force-close comparison
+**Status**: Resolved — force-close button removed from UI in commit `f7490f5`.
 
-| Check | Standard Close (`rpc_close_table_session`) | Force Close (`rpc_force_close_table_session`) |
-|-------|---------------------------------------------|----------------------------------------------|
-| Session state validation | RUNDOWN or ACTIVE required | Any non-CLOSED state |
-| `has_unresolved_items` check | Yes (raises P0005) — **but flag is always false** | Skipped by design |
-| Open slips pre-check | Yes — `hasOpenSlipsForTable()` in service layer | **Skipped entirely** |
-| Closing artifact required | Yes (drop event OR inventory snapshot) | No |
-| `requires_reconciliation` flag | Not set | Set to `true` |
-| Audit log entry | No | Yes — logs session_id, reason, has_unresolved_items |
-| Post-close cleanup | None | None |
+**Resolution**: Investigation determined that force-close provides no real operational value today:
+- The `has_unresolved_items` guardrail it bypasses is never populated (Issue 5b) — always `false`
+- The `OPEN` session state it can close is never written — sessions go directly to `ACTIVE`
+- Its only differentiator (closing without artifacts) does not justify a privileged escape hatch
 
-#### Force-close orphan scenario
+The force-close button, privilege gating (`FORCE_CLOSE_PRIVILEGED_ROLES`), `useAuth` hook, `useForceCloseTableSession` mutation, `handleForceClose` callback, and the unresolved-items warning directing users to force-close were all removed from `close-session-dialog.tsx`. The backend RPC, API endpoint, service function, and HTTP wrapper are retained for future reconciliation workflows.
 
-```
-1. Table has active session with 3 open rating slips
-2. Pit boss force-closes session (emergency/low_demand)
-3. table_session.status → CLOSED, requires_reconciliation → true
-4. rating_slips remain status='open' — no cascade
-5. visits remain ended_at=NULL — players appear seated
-6. requires_reconciliation=true — but NO workflow consumes this flag
-7. No audit trail of which specific slips/visits were orphaned
-```
+#### Original issue (preserved for context)
+
+Force-close skipped the open-slips pre-check (`hasOpenSlipsForTable()`) and required no closing artifacts. When used, it orphaned open rating slips and visits with no cascade, no cleanup, and no enumeration of affected records in the audit trail. The `requires_reconciliation` flag was set but no workflow consumed it.
 
 ---
 

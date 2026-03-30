@@ -3,7 +3,7 @@ id: PRD-057
 title: Session Close Lifecycle Hardening
 owner: Engineering
 status: Draft
-affects: [PRD-038A, ADR-028, ARCH-SRM, SEC-001]
+affects: [PRD-038A, ADR-028, ADR-047, ARCH-SRM, SEC-001]
 created: 2026-03-25
 last_review: 2026-03-25
 phase: Phase 3 (Table Lifecycle)
@@ -17,7 +17,7 @@ http_boundary: true
 
 - **Owner:** Engineering
 - **Status:** Draft
-- **Summary:** Session closure is a terminal state change with no downstream side-effects. The `has_unresolved_items` guardrail — designed to block standard close when rating slips remain open — is never populated and always defaults to `false`. Additionally, two seating RPCs (`rpc_start_rating_slip`, `rpc_check_table_seat_availability`) check only `gaming_table.status` and have zero `table_session` awareness, allowing players to be seated at tables with no active session. This PRD hardens the close lifecycle by wiring the `has_unresolved_items` flag to live state and enforcing the seating invariant: no player can be seated without an active session.
+- **Summary:** Session closure is a terminal state change whose enforcement and read-model consequences are currently incomplete. The `has_unresolved_items` guardrail — designed to block standard close when rating slips remain open — is never populated and always defaults to `false`. Additionally, two seating RPCs (`rpc_start_rating_slip`, `rpc_check_table_seat_availability`) check only `gaming_table.status` and have zero `table_session` awareness, allowing players to be seated at tables with no active session. This PRD hardens the close lifecycle by wiring the `has_unresolved_items` flag to live state and enforcing the seating invariant: no player can be seated without a current operational session (`table_session.status IN ('ACTIVE', 'RUNDOWN')`). `RUNDOWN` is included because ADR-028 D6.2.1 explicitly states play continues during rundown — fills, credits, and seating all remain permitted. The reserved `OPEN` state (ADR-028 D4) is excluded from the normative set; when a future PRD activates the OPEN workflow with custodial chain validation, the seating gate will be amended to include it.
 
 ---
 
@@ -36,7 +36,7 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 | Goal | Observable Metric |
 |------|-------------------|
 | **G1**: `has_unresolved_items` reflects live state at close time | Flag is `true` when open/paused rating slips exist at the table; `P0005` blocks standard close |
-| **G2**: Players cannot be seated at a table without an active session | `rpc_start_rating_slip` raises `NO_ACTIVE_SESSION`; `rpc_check_table_seat_availability` returns `{available: false, reason: 'no_active_session'}` |
+| **G2**: Players cannot be seated at a table without a current operational session | `rpc_start_rating_slip` raises `NO_ACTIVE_SESSION`; `rpc_check_table_seat_availability` returns `{available: false, reason: 'no_active_session'}` |
 | **G3**: Force-close audit trail enumerates orphaned artifacts | `audit_log.details` includes `orphaned_rating_slips` array with slip IDs, visit IDs, statuses |
 
 ### 2.3 Non-Goals
@@ -46,7 +46,7 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 - Building a reconciliation workflow for `requires_reconciliation` sessions
 - Populating `has_unresolved_items` from Finance/MTL fills/credits (not yet implemented)
 - Adding `table_session` realtime subscription to dashboard (Issue 6, separate scope)
-- Activating the dormant `OPEN → ACTIVE` session gate
+- Activating the dormant `OPEN → ACTIVE` session gate (ADR-028 D4: reserved, unreachable in MVP; requires custodial chain validation — separate PRD per ADR-047 Phase 4)
 - Gaming day auto-rollover automation
 
 ---
@@ -58,7 +58,7 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 **Top Jobs:**
 
 - As a **pit boss**, I need session close to be blocked when rating slips are still open so that I don't accidentally orphan active play data.
-- As a **pit boss**, I need the system to prevent seating a player at a table with no active session so that every rating slip has session context.
+- As a **pit boss**, I need the system to prevent seating a player at a table with no current operational session so that every rating slip has session context.
 - As a **floor supervisor**, I need force-close audit entries to enumerate which slips were orphaned so that shift reconciliation has a concrete checklist.
 
 ---
@@ -73,16 +73,17 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 - Remove redundant `hasOpenSlipsForTable` pre-check from service layer (now atomic inside RPC)
 
 **Session-Gated Seating (Issue 5c):**
-- Add `table_session` existence check to `rpc_start_rating_slip` — reject with `NO_ACTIVE_SESSION` when no session in `('OPEN', 'ACTIVE', 'RUNDOWN')`
+- Add `table_session` existence check to `rpc_start_rating_slip` — reject with `NO_ACTIVE_SESSION` when no session in `('ACTIVE', 'RUNDOWN')`. Future OPEN support requires a separate PRD (ADR-047 Phase 4).
 - Add `table_session` existence check to `rpc_check_table_seat_availability` — return `{available: false, reason: 'no_active_session'}`
-- Add `NO_ACTIVE_SESSION` error mapping to service layer and UI error messages
+- Add `NO_ACTIVE_SESSION` error mapping to service layer
+- Add `NO_ACTIVE_SESSION` handling to seating/start-slip UI surfaces (`new-slip-modal.tsx`), NOT to the close-session dialog (which handles `UNRESOLVED_LIABILITIES`)
 
 **Force-Close Audit Enrichment:**
 - Enumerate orphaned slips (slip_id, visit_id, status, seat_number) in `rpc_force_close_table_session` audit log payload
 - Include `orphaned_slip_count` in audit details
 
 **Client Cache Invalidation:**
-- Add `rating-slip` and `visit` query key invalidation to `useCloseTableSession` `onSuccess`
+- Add `rating-slip`, `visit`, `dashboard.tables`, and `sessions.current` query key invalidation to `useCloseTableSession` `onSuccess` — session close changes session presence, which the pit terminal badge and pit-map-selector key off of. Without `dashboard.tables` invalidation, the badge remains stale until the next 30s refetch.
 
 ### 4.2 Out of Scope
 
@@ -90,6 +91,21 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 - Cross-context domain event infrastructure (pub/sub, triggers)
 - Finance/MTL fill/credit status workflows
 - Dashboard realtime subscription for `table_session`
+- Pit dashboard table filtering and badge vocabulary changes (ADR-047 / PRD-058)
+
+### 4.3 Downstream Alignment: Pit-Surface Consequences
+
+This PRD hardens the null-session boundary into a hard operational gate. That gate has a direct pit-surface consequence that this PRD does not implement but must acknowledge:
+
+**Before PRD-057:** `sessionPhase = null` was a soft signal — players could still be seated, rating slips created. The pit badge label "Available" was arguably correct because the table was technically available for action.
+
+**After PRD-057:** `sessionPhase = null` means no gameplay is permitted — seating blocked, slips blocked, no revenue possible. The label "Available" now contradicts the system's own enforcement. The correct pit-surface label is "Closed" (derived monitoring state, not a lifecycle claim about `table_session.status`).
+
+ADR-047 formalizes this consequence: pit dashboard filtered to `gaming_table.status = 'active'` only, null session rendered as "Closed" (zinc/gray), and no pit-facing "Available" / "Idle" / "Decommissioned" leakage. **PRD-058** delivers that remediation.
+
+This PRD's responsibility is limited to:
+1. Ensuring cache invalidation after close covers `dashboard.tables` and `sessions.current` query keys (not just `rating-slip` and `visit`) so that pit surfaces have fresh session-presence data
+2. NOT introducing any new pit badge logic — that belongs to PRD-058
 
 ---
 
@@ -101,10 +117,11 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 - `rpc_close_table_session` MUST persist the computed flag on the `table_session` row
 - `rpc_force_close_table_session` MUST compute and persist `has_unresolved_items` (does not block close)
 - `rpc_force_close_table_session` MUST include enumerated orphaned slips in `audit_log.details`
-- `rpc_start_rating_slip` MUST reject with `NO_ACTIVE_SESSION` when no `table_session` exists with `status IN ('OPEN', 'ACTIVE', 'RUNDOWN')` for the given table
-- `rpc_check_table_seat_availability` MUST return `{available: false, reason: 'no_active_session'}` when no active session exists
-- `useCloseTableSession` hook MUST invalidate `rating-slip` and `visit` query caches on success
-- Close dialog error messages MUST handle `UNRESOLVED_LIABILITIES` and `NO_ACTIVE_SESSION` codes
+- `rpc_start_rating_slip` MUST reject with `NO_ACTIVE_SESSION` when no `table_session` exists with `status IN ('ACTIVE', 'RUNDOWN')` for the given table
+- `rpc_check_table_seat_availability` MUST return `{available: false, reason: 'no_active_session'}` when no current operational session (`status IN ('ACTIVE', 'RUNDOWN')`) exists
+- `useCloseTableSession` hook MUST invalidate `rating-slip`, `visit`, `dashboard.tables`, and `sessions.current` query caches on success — session close changes session presence, which the pit terminal badge, session banner, action buttons, and dashboard filter key off of (see §4.3 Downstream Alignment)
+- Close dialog error messages MUST handle `UNRESOLVED_LIABILITIES` (the close-path error)
+- Seating/start-slip UI surfaces (`new-slip-modal.tsx`) MUST handle `NO_ACTIVE_SESSION` (the seating-path error). This error does NOT belong in the close dialog — it is produced by seating flows, not close flows.
 
 ### 5.2 Non-Functional Requirements
 
@@ -128,11 +145,11 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 6. Toast: "Session has unresolved items that must be reconciled before closing."
 7. Pit boss must close rating slips first, then retry
 
-**Flow 2: Seating Rejected Without Active Session**
-1. Pit boss navigates to table with no active session
+**Flow 2: Seating Rejected Without Current Operational Session**
+1. Pit boss navigates to table with no current operational session (`status IN ('ACTIVE', 'RUNDOWN')`)
 2. Attempts to start a rating slip (seat a player)
 3. RPC raises `NO_ACTIVE_SESSION`
-4. Toast: "Table has no active session. Open a session before seating players."
+4. Toast: "No session is open for this table. Open a session before seating players."
 5. Pit boss opens a session, then seats the player
 
 **Flow 3: Force-Close with Orphaned Slips (Backend — No UI Button)**
@@ -155,7 +172,7 @@ These are not edge cases. They are violated invariants in the core table lifecyc
 
 ### 7.2 Risks & Open Questions
 
-- **Session gate blocks existing workflows** — E2E paths that seat players without opening a session will break. Mitigation: verify all test fixtures and seed data open sessions before seating. Add clear error message.
+- **Session gate blocks existing workflows** — E2E paths that seat players without a current operational session will break. Mitigation: verify all test fixtures and seed data open sessions before seating. Add clear error message.
 - **`hasOpenSlipsForTable` removal from service layer** — All close paths go through the RPC; service pre-check is defense-in-depth now redundant. Risk is minimal since RPC is the authoritative gate.
 - **Cross-context read expansion** — `rpc_start_rating_slip` and `rpc_check_table_seat_availability` will now read `table_session`. These are read-only queries consistent with the existing `hasOpenSlipsForTable` pattern (SRM allowlisted).
 
@@ -170,12 +187,12 @@ The release is considered **Done** when:
 - [ ] Standard close is blocked when open/paused rating slips exist (`P0005` fires)
 - [ ] Force-close records `has_unresolved_items = true` when open slips exist (does not block)
 - [ ] Force-close audit log includes `orphaned_rating_slips` array (slip_id, visit_id, status, seat_number)
-- [ ] `rpc_start_rating_slip` rejects with `NO_ACTIVE_SESSION` when no active session
-- [ ] `rpc_check_table_seat_availability` returns `{available: false, reason: 'no_active_session'}` when no active session
-- [ ] `useCloseTableSession` invalidates rating-slip and visit query caches on success
+- [ ] `rpc_start_rating_slip` rejects with `NO_ACTIVE_SESSION` when no current operational session exists
+- [ ] `rpc_check_table_seat_availability` returns `{available: false, reason: 'no_active_session'}` when no current operational session exists
+- [ ] `useCloseTableSession` invalidates `rating-slip`, `visit`, `dashboard.tables`, and `sessions.current` query caches on success
 
 **Data & Integrity**
-- [ ] No orphaned rating slips can be created at tables without active sessions
+- [ ] No orphaned rating slips can be created at tables without a current operational session
 - [ ] `has_unresolved_items` flag reflects truth — never stale `false` when slips are open
 
 **Security & Access**
@@ -196,6 +213,7 @@ The release is considered **Done** when:
 **Documentation**
 - [ ] REMEDIATION-SESSION-CLOSE-LIFECYCLE-GAPS.md updated with implementation status
 - [ ] ISSUE-SESSION-CLOSE-DOWNSTREAM-GAPS.md issues 5b and 5c marked resolved
+- [ ] `table_session.has_unresolved_items` column comment updated in migration to reflect write ownership by close RPCs (replaces stale PRD-038A placeholder comment)
 
 ---
 
@@ -207,6 +225,8 @@ The release is considered **Done** when:
 - **Prior PRD**: `docs/10-prd/PRD-038A-table-lifecycle-audit-patch.md`
 - **Architecture**: `docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md` (SRM v4.20.0)
 - **ADR-028**: `docs/80-adrs/ADR-028-table-status-standardization.md`
+- **ADR-047**: `docs/80-adrs/ADR-047-operator-admin-surface-separation.md` — formalizes the pit-surface consequence of this PRD's session-gating hardening
+- **PRD-058**: `docs/10-prd/PRD-058-adr047-operator-admin-surface-separation-v0.md` — delivers the pit-surface remediation that follows from this PRD
 - **ADR-024**: `docs/80-adrs/ADR-024-rls-context-derivation.md`
 - **Schema**: `types/database.types.ts`
 - **Security**: `docs/30-security/SEC-001-rls-policy-matrix.md`
@@ -215,17 +235,27 @@ The release is considered **Done** when:
 
 ## Appendix A: Schema Reference
 
-**Existing column** (no schema change required):
+**Existing column** (schema comment MUST be updated by this PRD):
 ```sql
 -- table_session.has_unresolved_items (from 20260225110509_prd038a_schema_additions.sql)
 ALTER TABLE table_session
   ADD COLUMN has_unresolved_items boolean NOT NULL DEFAULT false;
 
+-- ORIGINAL comment (PRD-038A — now STALE):
+--   'PRD-038A Gap A: Placeholder for Finance/MTL integration.
+--    Write ownership: Finance/MTL RPCs or service_role only.
+--    TableContextService reads only.'
+--
+-- UPDATED comment (PRD-057 — REQUIRED in migration):
 COMMENT ON COLUMN table_session.has_unresolved_items IS
-  'PRD-038A Gap A: Placeholder for Finance/MTL integration.
-   Write ownership: Finance/MTL RPCs or service_role only.
-   TableContextService reads only.';
+  'PRD-057: Computed at close time by rpc_close_table_session and
+   rpc_force_close_table_session from live rating_slip state
+   (open/paused slips → true). Write ownership: close RPCs
+   (TableContextService). Future: may also be written by
+   Finance/MTL RPCs for fill/credit unresolved items.';
 ```
+
+**Note:** The original PRD-038A comment declares write ownership as "Finance/MTL RPCs or service_role only" and "TableContextService reads only." This PRD's core requirement is that the close RPCs compute and persist the flag, which directly contradicts the original ownership contract. The migration MUST update the column comment to reflect the new reality. Leaving the original comment would hard-code a false contract into the schema documentation.
 
 **Existing guardrail** (already wired, now functional):
 ```sql
@@ -247,15 +277,18 @@ END IF;
 
 ### WS2: Session-Gated Seating (P0)
 
-- [ ] Amend `rpc_start_rating_slip` — add `table_session` existence check after `TABLE_NOT_ACTIVE` gate
+- [ ] Amend `rpc_start_rating_slip` — add `table_session` existence check after `TABLE_NOT_ACTIVE` gate (allowed statuses: `'ACTIVE', 'RUNDOWN'`)
 - [ ] Amend `rpc_check_table_seat_availability` — add `table_session` existence check after table status checks
 - [ ] Add `NO_ACTIVE_SESSION` error mapping in `mapRpcError` (service layer)
-- [ ] Add `NO_ACTIVE_SESSION` to `ERROR_MESSAGES` in close dialog (and any seating UI error handlers)
+- [ ] Add `NO_ACTIVE_SESSION` handling to `new-slip-modal.tsx` (seating UI error handler) — this is a seating-path error, NOT a close-path error
+- [ ] Verify close-session-dialog handles `UNRESOLVED_LIABILITIES` only — `NO_ACTIVE_SESSION` must NOT appear in close dialog error messages
 
 ### WS3: Client Cache Invalidation (P1)
 
 - [ ] Add `rating-slip` query key invalidation to `useCloseTableSession` `onSuccess`
 - [ ] Add `visit` query key invalidation to `useCloseTableSession` `onSuccess`
+- [ ] Add `dashboard.tables` query key invalidation to `useCloseTableSession` `onSuccess` — session close changes `current_session_status` to `null`, which the pit terminal badge and pit-map-selector derive display state from
+- [ ] Add `sessions.current` query key invalidation to `useCloseTableSession` `onSuccess` — ensures session banner and action buttons reflect closed state immediately
 
 ### WS4: Testing (P0)
 
@@ -300,3 +333,5 @@ All reads are read-only. No bounded context writes another context's tables.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1.0 | 2026-03-25 | Engineering | Initial draft from REMEDIATION-SESSION-CLOSE-LIFECYCLE-GAPS investigation |
+| 0.2.0 | 2026-03-25 | Engineering | Patch: rename invariant to "current operational session"; move NO_ACTIVE_SESSION handling from close dialog to seating UI; broaden cache invalidation to include dashboard.tables + sessions.current; update has_unresolved_items ownership comment; add §4.3 downstream alignment note acknowledging ADR-047/PRD-058 pit-surface consequences |
+| 0.3.0 | 2026-03-25 | Engineering | Patch: remove OPEN from normative seating set (normative = ACTIVE, RUNDOWN only; future OPEN requires separate PRD); add sessions.current to FR cache invalidation requirement; rewrite opening summary; replace all remaining "active session" with "current operational session" |
