@@ -1,7 +1,7 @@
 # Player Exclusion E2E Exemplar — Delivery Precis
 
-> **Date:** 2026-03-30
-> **Scope:** E2E test harness, regression coverage, CI advisory, harness stabilization rules
+> **Date:** 2026-03-30 (updated same day)
+> **Scope:** E2E test harness, regression coverage, CI advisory, harness stabilization rules, shared auth extraction
 > **Standard:** QA-006 E2E Testing Standard
 > **Gap:** GAP-EXCL-E2E-001
 
@@ -33,12 +33,19 @@ A credible E2E test harness for the player exclusion workflow, serving as the re
 
 ### Fixture Architecture
 
-`e2e/fixtures/exclusion-fixtures.ts` — Two scenario factories:
+**Shared auth module** (`e2e/fixtures/auth.ts`) — Single canonical source for:
+- `createServiceClient()` — service-role client for setup/teardown (was duplicated 13×)
+- `createAuthenticatedClient(authToken)` — Mode C JWT client
+- `authenticateAndNavigate(page, email, password, targetUrl)` — Mode B browser login with hydration wait (was duplicated 11× under varying names)
+
+**Domain fixtures** (`e2e/fixtures/exclusion-fixtures.ts`) — Two scenario factories:
 
 - **ExclusionPanelScenario** (minimal): company → casino → casino_settings → auth user → staff → player → player_casino. Role-parameterized (`admin`/`pit_boss`/`dealer`). Used for Mode B browser tests.
 - **ExclusionEnforcementScenario** (extended): adds gaming_table → visit → open rating_slip. Used for Mode C auto-close verification.
+- `seedExclusion()` — bypass-RLS pre-population for role-gating tests.
+- Re-exports `authenticateAndNavigate` and `createAuthenticatedClient` from `auth.ts` for backwards compatibility.
 
-Helpers: `seedExclusion()` (bypass-RLS pre-population), `createAuthenticatedClient()` (Mode C), `authenticateAndNavigate()` (Mode B with hydration wait).
+New workflow suites import directly from `auth.ts` for auth plumbing and define only their domain-specific fixture factories. No exclusion coupling.
 
 ### CI Advisory Job
 
@@ -98,15 +105,14 @@ QA-006 §13 — Operational rules extracted from stabilization:
 | `e438ec6` | 03-30 | **Stabilization**: resolve all test failures — 6/6 passing. Hydration waits, scoped selectors, fixture invariants. |
 | `74f1ef8` | 03-30 | Remove `toISO` converters (14e02c5 regression). Add unit regression tests at component + route layers. |
 
-### Phase 4: Hardening (this session, uncommitted)
+### Phase 4: Hardening + Shared Auth Extraction (2026-03-30)
 
-| Change | What |
+| Commit | What |
 |--------|------|
-| E2E date regression test | New serial test fills all 3 date fields, verifies creation through full stack |
-| Fixture date format fix | `seedExclusion()` and enforcement spec: `toISOString()` → `.toISOString().slice(0, 10)` |
-| CI advisory job | `ci.yml` `e2e` job with Supabase + Playwright + artifact upload |
-| QA-006 §13 | Harness stabilization rules (hydration, selectors, invariants, dates, serial/parallel) |
-| Gap status update | ISS-EXCL-001/002/003/005/006 marked RESOLVED. GAP-EXCL-E2E-001 date row → COVERED. |
+| `e2cf138` | Squashed exemplar: E2E suite, CI advisory job, QA-006 §13, date regression test, fixture date fixes, gap status update |
+| `90b8a06` | Remove `toISO` converters + unit regression tests at component + route layers |
+| `7826e5a` | Delivery precis + DATE-MISMATCH analysis |
+| `f21d549` | Extract shared auth helpers to `e2e/fixtures/auth.ts` — eliminates 13× `createServiceClient` and 11× auth login duplication |
 
 ---
 
@@ -140,10 +146,16 @@ The E2E test was absent during the regression window. Had it existed, `14e02c5` 
 |------|---------|----------|
 | Pit-path enforcement (new-slip-modal hard block) | Pit dashboard fixture complexity (floor layout + table sessions) | P1 |
 | Real-Supabase integration test for RLS write path (GAP-EXCL-E2E-002) | None — can be implemented now | P1 |
-| Shared auth helper extraction (`e2e/fixtures/auth.ts`) | None — deferred tech debt | P1 |
-| `createServiceClient()` consolidation (8+ definitions) | None — deferred tech debt | P1 |
+| Migrate remaining 10+ fixture/spec files to import from `e2e/fixtures/auth.ts` | None — incremental, non-breaking | P2 |
 | CI advisory stability observation | Need 14+ days of green runs before promotion to required | — |
 | SEC-001 / ADR-030 documentation alignment | None — doc updates only | P2 |
+
+### Resolved This Session
+
+| Item | Resolution |
+|------|-----------|
+| ~~Shared auth helper extraction~~ | `e2e/fixtures/auth.ts` created (`f21d549`). Exclusion fixtures + enforcement spec rewired. Re-exports preserve backwards compat. |
+| ~~`createServiceClient()` consolidation~~ | Canonical definition in `auth.ts`. Exclusion consumers migrated. Remaining 10+ files can migrate incrementally. |
 
 ---
 
@@ -151,11 +163,13 @@ The E2E test was absent during the regression window. Had it existed, `14e02c5` 
 
 This suite is the exemplar for the next workflow's E2E coverage. The recipe:
 
-1. **Mode B** for canonical browser surface (CRUD, role gating, UI state)
-2. **Mode C** for authenticated RPC/system verification (enforcement, audit trail)
-3. **Role-parameterized fixtures** with minimal scenario (panel) and extended scenario (enforcement)
-4. **Serial for lifecycle**, parallel for gating
-5. **CI advisory first**, blocking after stability observation
-6. **Harness rules** (QA-006 §13) applied from the start — don't rediscover them
+1. **Import auth from `e2e/fixtures/auth.ts`** — `createServiceClient`, `createAuthenticatedClient`, `authenticateAndNavigate`. No copy-paste.
+2. **Create domain fixture** (`e2e/fixtures/{domain}-fixtures.ts`) with minimal + extended scenario factories. Domain setup only — auth plumbing comes from the shared module.
+3. **Mode B** for canonical browser surface (CRUD, role gating, UI state)
+4. **Mode C** for authenticated RPC/system verification (enforcement, audit trail)
+5. **Role-parameterized fixtures** with minimal scenario (panel) and extended scenario (enforcement)
+6. **Serial for lifecycle**, parallel for gating
+7. **CI advisory first**, blocking after stability observation
+8. **Harness rules** (QA-006 §13) applied from the start — don't rediscover them
 
 The next candidate workflow for this pattern is **table session lifecycle** or **chip custody** (see QA-006 §9 uncovered workflows).
