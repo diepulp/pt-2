@@ -224,6 +224,37 @@ const { data } = await supabase.rpc('rpc_accrue_on_close', { ... });
 
 **Pre-existing casts discovered in 2026-02-03 audit:** 37 instances across loyalty, rating-slip, table-context, dashboard contexts. All removed — canonical types are current.
 
+### ❌ NEVER use `never` as a type escape hatch
+
+`never` is the bottom type — assignable TO everything, but nothing is assignable FROM `never`. Using it as a callback parameter annotation creates **environment-dependent TS errors** that pass locally but fail in CI (or vice versa).
+
+```typescript
+// ❌ WRONG — contravariant time bomb
+const rows = Array.isArray(data) ? data : [];
+return rows.map((row: never) => mapResult(row));
+// Breaks with TS2345 when `rows` resolves to `any[]` in a different env
+
+// ❌ WRONG — covariant escape hatch (hides structural mismatch)
+function toRecord(value: unknown): Record<string, unknown> {
+  return value as never;
+}
+
+// ✅ CORRECT — omit annotation, let TS infer from array element type
+return rows.map((row) => mapResult(row));
+
+// ✅ CORRECT — explicit structural cast
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+```
+
+**Why it's environment-dependent:** When `@ts-expect-error` suppresses a failed generic overload (e.g., untyped RPC calls via a `string` name), the inferred return type varies by library version. One Supabase client version may resolve `data` to `null | undefined` (narrowing to `never` after a guard — so `row: never` matches), while another resolves to `any` (where strict `strictFunctionTypes` rejects the `any → never` assignment in callback position). Result: TS2345 appears or disappears based on `node_modules` state.
+
+**In tests:** `as never` in **argument position** (`fn({} as never)`) is tolerated as a mock escape hatch since `never → T` is always valid. Prefer `as unknown as ConcreteType` when practical (see below).
+
 ### ❌ NEVER use `{} as any` for test mocks
 
 ```typescript
@@ -278,6 +309,7 @@ import type { Database } from '@/types/database.types';
 - [ ] No manual type redefinitions in `types/` folder
 - [ ] No `as` casting for RPC/query responses in crud.ts (use `lib/json/narrows.ts`)
 - [ ] No `(supabase.rpc as any)` or `(supabase as any)` casts
+- [ ] No `never` type annotations in callback parameters or `as never` return casts in production code
 - [ ] No `?? null` for optional RPC parameters (use `?? undefined`)
 - [ ] No `{} as any` in test mocks (use `as unknown as SupabaseClient<Database>`)
 - [ ] Types regenerated after migrations (`npm run db:types`)

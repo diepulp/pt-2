@@ -33,6 +33,8 @@ module.exports = {
         'ANTI-PATTERN: RPC response cast with `as {{typeName}}`. Supabase RPC returns `unknown` - validate with type guard before use.',
       noGenericAssertion:
         'Type assertion `as {{typeName}}` in service layer. Consider using type guard for runtime safety.',
+      noNeverEscape:
+        'ANTI-PATTERN: `as never` is a type escape hatch that creates environment-dependent build failures. Use `as Record<string, unknown>` or an explicit type guard. See anti-patterns/04-type-system.md.',
     },
     schema: [],
   },
@@ -111,6 +113,14 @@ module.exports = {
     function getTypeName(typeAnnotation) {
       if (!typeAnnotation) return null;
 
+      // Handle keyword types: as never, as unknown, as string, etc.
+      // These produce TSNeverKeyword, TSUnknownKeyword, TSStringKeyword, etc.
+      if (typeAnnotation.type === 'TSNeverKeyword') return 'never';
+      if (typeAnnotation.type === 'TSUnknownKeyword') return 'unknown';
+      if (typeAnnotation.type === 'TSStringKeyword') return 'string';
+      if (typeAnnotation.type === 'TSNumberKeyword') return 'number';
+      if (typeAnnotation.type === 'TSBooleanKeyword') return 'boolean';
+
       // Handle: as SomeType
       if (typeAnnotation.typeName?.name) {
         return typeAnnotation.typeName.name;
@@ -141,9 +151,23 @@ module.exports = {
 
         if (!typeName) return;
 
-        // Skip primitive types
+        // Catch `as never` — type escape hatch that causes env-dependent
+        // build failures. See anti-patterns/04-type-system.md.
+        if (typeName === 'never') {
+          // Allow in test files — common mock pattern: fn({} as never)
+          if (filename.includes('__tests__') || filename.includes('.test.')) {
+            return;
+          }
+          context.report({
+            node,
+            messageId: 'noNeverEscape',
+          });
+          return;
+        }
+
+        // Skip primitive types and unknown (legitimate narrowing)
         if (
-          ['string', 'number', 'boolean', 'unknown', 'never'].includes(typeName)
+          ['string', 'number', 'boolean', 'unknown'].includes(typeName)
         ) {
           return;
         }

@@ -20,7 +20,7 @@ import type {
 } from './dtos';
 import {
   mapActivationResult,
-  mapRecognitionResult,
+  mapRecognitionRpcResult,
   mapRedemptionResult,
   toRecord,
 } from './mappers';
@@ -50,7 +50,7 @@ export async function lookupCompany(
   if (!data) return [];
 
   const rows = Array.isArray(data) ? data : [];
-  return rows.map((row: never) => mapRecognitionResult(row));
+  return rows.map((row) => mapRecognitionRpcResult(row));
 }
 
 // === Activate ===

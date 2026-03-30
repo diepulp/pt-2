@@ -575,6 +575,55 @@ if [ -n "$STAGED_SERVICE_FILES" ]; then
 fi
 
 # ==============================================================================
+# Check 11b: `never` type escape hatches BANNED in production service code
+# ==============================================================================
+# `as never` casts and `(param: never)` callback annotations create
+# environment-dependent TS errors. See anti-patterns/04-type-system.md.
+# Allowed in test files (common mock pattern: fn({} as never)).
+if [ -n "$STAGED_SERVICE_FILES" ]; then
+  PROD_SERVICE_FILES=$(echo "$STAGED_SERVICE_FILES" | grep -v '__tests__' | grep -v '\.test\.ts$' | grep -v '\.spec\.ts$' || true)
+  NEVER_VIOLATIONS=""
+
+  for file in $PROD_SERVICE_FILES; do
+    # Check for `as never` escape hatches
+    AS_NEVER=$(grep -nE "[[:space:]]as[[:space:]]+never" "$file" 2>/dev/null || true)
+    # Check for `(param: never)` callback parameter annotations
+    PARAM_NEVER=$(grep -nE "\([a-zA-Z_]+:[[:space:]]*never\)" "$file" 2>/dev/null || true)
+
+    COMBINED="${AS_NEVER}${PARAM_NEVER}"
+    if [ -n "$COMBINED" ]; then
+      NEVER_VIOLATIONS="$NEVER_VIOLATIONS
+  - $file"
+      echo "$COMBINED" | head -5 | while read -r line; do
+        NEVER_VIOLATIONS="$NEVER_VIOLATIONS
+    $line"
+      done
+    fi
+  done
+
+  if [ -n "$NEVER_VIOLATIONS" ]; then
+    echo "❌ ANTI-PATTERN: \`never\` type escape hatch in production service code"
+    echo ""
+    echo "  \`as never\` casts and \`(param: never)\` callback annotations"
+    echo "  create environment-dependent TS2345 errors that pass locally"
+    echo "  but fail in CI (or vice versa)."
+    echo ""
+    echo "Files with violations:$NEVER_VIOLATIONS"
+    echo ""
+    echo "Fix:"
+    echo "  ❌ WRONG: rows.map((row: never) => mapResult(row))"
+    echo "  ✅ CORRECT: rows.map((row) => mapResult(row))"
+    echo ""
+    echo "  ❌ WRONG: return value as never;"
+    echo "  ✅ CORRECT: return value as Record<string, unknown>;"
+    echo ""
+    echo "Reference: anti-patterns/04-type-system.md"
+    echo ""
+    VIOLATIONS_FOUND=1
+  fi
+fi
+
+# ==============================================================================
 # Check 12: Deprecated exec_sql RPC BANNED (ADR-015)
 # ==============================================================================
 # The exec_sql() loop pattern fails with connection pooling. All context

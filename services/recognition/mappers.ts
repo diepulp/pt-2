@@ -20,7 +20,7 @@ import type {
 
 export function toRecord(value: unknown): Record<string, unknown> {
   if (typeof value === 'object' && value !== null) {
-    return value as never;
+    return value as Record<string, unknown>;
   }
   return {};
 }
@@ -81,6 +81,11 @@ export function mapLoyaltyEntitlement(
 }
 
 // === Recognition Result Mapper ===
+
+export function mapRecognitionRpcResult(row: unknown): RecognitionResultDTO {
+  // eslint-disable-next-line custom-rules/no-dto-type-assertions -- intentional boundary cast: untyped RPC → internal row type
+  return mapRecognitionResult(row as LookupRow);
+}
 
 export function mapRecognitionResult(row: LookupRow): RecognitionResultDTO {
   const enrolledCasinos = Array.isArray(row.enrolled_casinos)

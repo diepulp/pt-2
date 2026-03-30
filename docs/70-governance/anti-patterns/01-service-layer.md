@@ -50,6 +50,36 @@ export interface PlayerService {
 }
 ```
 
+### ❌ NEVER use `never` as a type escape hatch in production code
+
+`never` is the bottom type — assignable TO everything, but nothing is assignable FROM it. Using it as a callback parameter annotation or return-position cast creates **environment-dependent time bombs**: the code compiles on one machine and fails on another depending on how generic type inference resolves upstream.
+
+```typescript
+// ❌ WRONG — contravariant time bomb (breaks when upstream resolves to `any`)
+const rows = Array.isArray(data) ? data : [];
+return rows.map((row: never) => mapResult(row));
+
+// ❌ WRONG — covariant escape hatch (hides real type mismatch)
+function toRecord(value: unknown): Record<string, unknown> {
+  return value as never; // Bypasses structural check
+}
+
+// ✅ CORRECT — let TypeScript infer, or use the actual expected type
+return rows.map((row) => mapResult(row));
+
+// ✅ CORRECT — explicit structural check
+function toRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'object' && value !== null) {
+    return value as Record<string, unknown>;
+  }
+  return {};
+}
+```
+
+**Why this breaks across environments:** When a function uses `@ts-expect-error` to suppress a generic constraint violation (e.g., untyped RPC calls), the inferred return type depends on how the library resolves the failed overload. Different dependency versions resolve differently — one gives `data: null | undefined` (narrowing to `never` after a guard, so `row: never` matches), another gives `data: any` (where strict `strictFunctionTypes` rejects `any → never` in contravariant callback position). The result: TS2345 in CI but not locally, or vice versa.
+
+**In tests:** `as never` in **argument position** (`fn({} as never)`) is tolerated for mocks since `never` is assignable to any parameter type. But prefer typed mock builders when practical.
+
 ### ❌ NEVER use untyped object spread
 
 ```typescript
@@ -397,6 +427,7 @@ if (!visit) {
 
 - [ ] No `ReturnType` inference in service exports
 - [ ] No `any` typing on supabase parameters
+- [ ] No `never` type annotations in callback parameters or return casts in production code
 - [ ] No class-based services (`export class.*Service`)
 - [ ] No ServiceFactory singletons
 - [ ] No global state in services
