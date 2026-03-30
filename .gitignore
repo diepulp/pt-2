@@ -36,6 +36,7 @@ test-results/
 # env files (can opt-in for committing if needed)
 .env*.local
 .env
+.env.test
 
 # vercel
 .vercel
@@ -66,7 +67,6 @@ certificates
 .memori/session.log
 .tool-usage.log
 .claude/skills.backup/
-.claude/settings.json
 .claude/vercel-deploy-claimable.zip
 
 # Python cache

@@ -1,31 +1,13 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Load test environment variables from .env.test
-const fs = require('fs');
+// Load environment variables (same .env file as Playwright and Next.js)
+const dotenv = require('dotenv');
 const path = require('path');
 
-// Load .env.test file for test environment
-try {
-  const envTestPath = path.resolve(process.cwd(), '.env.test');
-  if (fs.existsSync(envTestPath)) {
-    const envConfig = fs.readFileSync(envTestPath, 'utf8');
-    envConfig.split('\n').forEach((line) => {
-      const match = line.match(/^([^=:#]+)=(.*)$/);
-      if (match) {
-        const key = match[1].trim();
-        const value = match[2].trim();
-        if (!process.env[key]) {
-          process.env[key] = value;
-        }
-      }
-    });
-  }
-} catch (error) {
-  console.warn('Could not load .env.test file:', error.message);
-}
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: false });
 
-// Mock environment variables for tests (fallback if .env.test not found)
+// Fallback Supabase env vars (used if not set in .env)
 process.env.NEXT_PUBLIC_SUPABASE_URL =
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'http://127.0.0.1:54321';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY =

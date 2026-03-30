@@ -6,6 +6,8 @@ status: Proposed
 affects: [QA-001, QA-002, QA-005, ADR-044, ADR-024, ADR-015]
 created: 2026-03-29
 last_review: 2026-03-29
+audit_revision: 2026-03-29
+audit_agents: [lead-architect, rls-expert, devops, devils-advocate, qa-specialist]
 precis: docs/e2e-standard/E2E-TESTING-STANDARD-PRECIS.md
 ---
 
@@ -15,7 +17,7 @@ Codify the rules, patterns, and infrastructure requirements for Playwright E2E t
 
 ## Problem Statement
 
-The E2E layer is active and substantial (17 spec files, 124 tests, 7 fixture files) but grew organically without a governing standard. The first structured E2E effort on Wedge C (PRD-055/056) exposed five structural gaps:
+The E2E layer is active and substantial (17 spec files, ~134 tests, 7 fixture files) but grew organically without a governing standard. The first structured E2E effort on Wedge C (PRD-055/056) exposed five structural gaps:
 
 1. Three auth modes exist with no documented selection criteria
 2. Playwright env loading diverges from Next.js precedence
@@ -106,24 +108,98 @@ Does the test need the full stack (browser → route handler/middleware → API/
 
 ### Minimum Auth Mode for Direct RPC/API Verification
 
-All 12 SECURITY DEFINER RPCs call `set_rls_context_from_staff()` internally, which requires `auth.uid()` to be non-NULL. Mode A **always fails** for these.
+All SECURITY DEFINER RPCs that call `set_rls_context_from_staff()` internally require `auth.uid()` to be non-NULL. Mode A **always fails** for these.
 
 The table below shows the **minimum mode when exercising the RPC path directly** (system/API verification). When the same RPC is reached downstream through a browser workflow, the test is Mode B (canonical E2E) — the RPC still executes correctly because the browser session carries a real JWT. Mode B is not only permitted but preferred when the test objective is full-stack workflow verification.
+
+> **Staleness warning:** This table is a curated subset, not an exhaustive list. As of 2026-03-29 the migration corpus contains ~40+ SECURITY DEFINER RPCs calling `set_rls_context_from_staff()`. When adding E2E coverage for an RPC not listed here, check the migration source to confirm whether it is SECURITY DEFINER — if so, Mode C is the minimum for direct verification. Per §12, this table must be reviewed whenever a new SECURITY DEFINER RPC is added.
+
+#### Floor Layout & Table Context
 
 | RPC | Route | Min Mode (Direct) |
 |---|---|---|
 | `rpc_activate_floor_layout` | `POST /api/v1/floor-layout-activations` | C |
 | `rpc_create_floor_layout` | `POST /api/v1/floor-layouts` | C |
+| `rpc_log_table_drop` | `POST /api/v1/table-context/drop-events` | C |
+| `rpc_request_table_fill` | `POST /api/v1/table-context/fills` | C |
+| `rpc_request_table_credit` | `POST /api/v1/table-context/credits` | C |
+| `rpc_confirm_table_fill` | `POST /api/v1/table-context/fills/[id]/confirm` | C |
+| `rpc_confirm_table_credit` | `POST /api/v1/table-context/credits/[id]/confirm` | C |
+| `rpc_acknowledge_drop_received` | `POST /api/v1/table-context/drop-events/[id]/acknowledge` | C |
+| `rpc_log_table_inventory_snapshot` | `POST /api/v1/table-context/inventory-snapshots` | C |
+| `rpc_update_table_status` | Service layer | C |
+
+#### Table Session Lifecycle
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_open_table_session` | Service layer | C |
+| `rpc_close_table_session` | Service layer | C |
+| `rpc_force_close_table_session` | Service layer | C |
+
+#### Shift & Rundown
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_create_shift_checkpoint` | Service layer | C |
+| `rpc_start_table_rundown` | Service layer | C |
+| `rpc_persist_table_rundown` | Service layer | C |
+| `rpc_finalize_rundown` | Service layer | C |
+
+#### Rating Slip
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_start_rating_slip` | Service layer | C |
 | `rpc_close_rating_slip` | Service layer | C |
 | `rpc_pause_rating_slip` | Service layer | C |
 | `rpc_resume_rating_slip` | Service layer | C |
 | `rpc_move_player` | `POST /api/v1/rating-slips/[id]/move` | C |
+
+#### Player & Visit
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
 | `rpc_create_player` | Service layer | C |
-| `rpc_log_table_drop` | `POST /api/v1/table-context/drop-events` | C |
-| `rpc_request_table_fill` | `POST /api/v1/table-context/fills` | C |
-| `rpc_request_table_credit` | `POST /api/v1/table-context/credits` | C |
-| `rpc_log_table_inventory_snapshot` | `POST /api/v1/table-context/inventory-snapshots` | C |
-| `rpc_update_table_status` | Service layer | C |
+| `rpc_get_player_exclusion_status` | Service layer | C |
+| `rpc_start_or_resume_visit` | Service layer | C |
+
+#### Loyalty & Promo
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_issue_mid_session_reward` | Service layer | C |
+| `rpc_accrue_on_close` | Service layer | C |
+| `rpc_redeem` | Service layer | C |
+| `rpc_manual_credit` | Service layer | C |
+| `rpc_snapshot_loyalty_liability` | Service layer | C |
+| `rpc_issue_promo_coupon` | Service layer | C |
+| `rpc_void_promo_coupon` | Service layer | C |
+| `rpc_replace_promo_coupon` | Service layer | C |
+
+#### Player Import
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_import_create_batch` | Service layer | C |
+| `rpc_import_stage_rows` | Service layer | C |
+| `rpc_import_execute` | Service layer | C |
+
+#### Casino Onboarding
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_bootstrap_casino` | Service layer | C |
+| `rpc_complete_casino_setup` | Service layer | C |
+| `rpc_create_staff` | Service layer | C |
+| `rpc_create_staff_invite` | Service layer | C |
+| `rpc_accept_staff_invite` | Service layer | C |
+
+#### Finance
+
+| RPC | Route | Min Mode (Direct) |
+|---|---|---|
+| `rpc_create_financial_txn` | Service layer | C |
 
 **GET routes** reading tables directly (floor layouts list, drop events list, fills list) can use Mode A.
 
@@ -200,6 +276,17 @@ ENABLE_DEV_AUTH=true
 ```
 
 **Status:** This file does not yet exist. It is a P1 remediation item.
+
+### Deprecation: `.env.test` / `.env.test.example`
+
+The `e2e/README.md` and `.env.test.example` at root reference a `.env.test` file. However, Playwright config does not load `.env.test` — it only loads `.env`. The canonical env file for local E2E execution is `.env.local` (per §2 above).
+
+**Remediation:**
+1. Update `e2e/README.md` to reference `.env.local` instead of `.env.test`
+2. Remove or rename `.env.test.example` once `.env.local.example` is created
+3. Add `.env.test` to `.gitignore` if it is not already covered (`.env*.local` is covered but `.env.test` is not)
+
+**Status:** Not yet remediated. Tracked as a P1 item.
 
 ### API Route Middleware Boundary
 
@@ -279,7 +366,7 @@ The following auth patterns are duplicated across fixtures:
 - `authenticateUser()` used in multiple spec files
 - `getDevAuthToken()` in `loyalty-accrual.spec.ts`
 
-**Mandate:** A single shared auth module must be extracted to `e2e/fixtures/auth.ts` exporting:
+**Mandate:** A single shared auth module must be extracted to `e2e/fixtures/auth.ts` exporting (and the `createServiceClient()` function, which is independently defined in 8+ fixture and spec files, must be consolidated into this module or `e2e/fixtures/test-data.ts` as the single canonical export):
 
 ```typescript
 // Browser-based auth (Mode B)
@@ -453,25 +540,27 @@ test('dealer cannot activate floor layout', async ({ request }) => {
 ```
 e2e/
 ├── fixtures/
-│   ├── auth.ts                    # Shared auth helpers (Mode B + C)
-│   ├── seed-constants.ts          # Seed data IDs and dev credentials
+│   ├── auth.ts                    # Shared auth helpers (Mode B + C) [not yet extracted]
+│   ├── seed-constants.ts          # Seed data IDs and dev credentials [not yet extracted]
 │   ├── test-data.ts               # Base scenario factory
 │   ├── rating-slip-fixtures.ts    # Rating slip domain factory
 │   ├── admin-helpers.ts           # Admin/role-specific factory
 │   ├── mtl-fixtures.ts            # MTL domain factory
 │   ├── import-test-data.ts        # CSV import domain factory
 │   ├── setup-wizard-fixtures.ts   # Setup wizard factory
-│   └── shift-dashboard-helpers.ts # Shift dashboard factory
+│   ├── shift-dashboard-helpers.ts # Shift dashboard factory
+│   └── sample-csvs/              # Test CSV data files
+│       └── ...
 ├── workflows/
 │   ├── [feature-name].spec.ts     # Page-level workflow tests (Mode B)
 │   └── ...
 ├── api/
 │   ├── [domain].spec.ts           # API-level tests (Mode A or C)
 │   └── ...
-├── sample-csvs/                   # Test data files
-│   └── ...
 └── README.md                      # Setup instructions
 ```
+
+**Note:** Two spec files currently live at the `e2e/` root (`mtl-threshold-notifications.spec.ts`, `measurement-reports.spec.ts`) outside the prescribed `workflows/` or `api/` structure. These should be relocated to the appropriate subdirectory as part of organizational remediation.
 
 ### Naming Conventions
 
@@ -509,6 +598,9 @@ Before submitting a new E2E test file:
 | `trace` | `'on-first-retry'` | Capture traces for debugging flaky tests |
 | `retries` | `process.env.CI ? 2 : 0` | Retries in CI only |
 | `workers` | `process.env.CI ? 1 : undefined` | Single worker in CI for stability |
+| `forbidOnly` | `!!process.env.CI` | Prevent `.only` from reaching CI |
+| `webServer.timeout` | `120000` | 2 min startup timeout for Next.js |
+| `webServer.url` | `'http://localhost:3000'` | Readiness check URL |
 
 ### Projects
 
@@ -568,14 +660,21 @@ Per TESTING_GOVERNANCE_STANDARD.md §2, the E2E layer is at **Tier 1 — Trusted
         with:
           node-version-file: '.nvmrc'
           cache: 'npm'
-      - run: npm install
+      - run: npm ci
       - uses: supabase/setup-cli@v1
-      - run: npx supabase start
+      - name: Start Supabase and capture env
+        id: supabase
+        run: |
+          npx supabase start
+          echo "ANON_KEY=$(npx supabase status -o env | grep ANON_KEY | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+          echo "SERVICE_ROLE_KEY=$(npx supabase status -o env | grep SERVICE_ROLE_KEY | cut -d= -f2)" >> "$GITHUB_OUTPUT"
       - run: npx playwright install chromium --with-deps
       - run: npx playwright test --project=smoke
         env:
           BASE_URL: http://localhost:3000
-          # Supabase env from supabase start output
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ steps.supabase.outputs.ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ steps.supabase.outputs.SERVICE_ROLE_KEY }}
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -607,9 +706,17 @@ The exact threshold may be tuned, but it must be **explicit, measurable, and rec
 |---|---|---|
 | `.env.local` override in playwright.config.ts | P1 | Not applied |
 | `.env.local.example` template | P1 | Not created |
-| Shared auth helper extraction | P1 | Not extracted |
+| Shared auth helper extraction (`e2e/fixtures/auth.ts`) | P1 | Not extracted |
+| `createServiceClient()` consolidation (8+ independent definitions) | P1 | Not consolidated |
+| `.env.test` / `.env.test.example` deprecation and README alignment | P1 | Not remediated |
+| Verification taxonomy adoption in describe blocks (§1 labeling) | P1 | Zero of 17 specs compliant |
+| Broad casino-level cleanup remediation (§4 violation in 23+ callsites) | P1 | Not remediated |
+| Orphan specs at `e2e/` root (2 files outside `workflows/`/`api/`) | P2 | Not relocated |
 | Seed constants file | P2 | Not extracted |
 | E2E smoke suite in CI | P2 | Not wired |
+| Branch protection on `main` | P2 | Not enabled |
+| CICD-PIPELINE-SPEC.md update to reference E2E workflow | P2 | Not updated |
+| `e2e/README.md` stale reference to `rating-slip-lifecycle.spec.ts` | P3 | Not fixed |
 
 ### Uncovered Workflows (from gap analysis)
 
@@ -673,13 +780,13 @@ Before running `npm run e2e:playwright`:
 
 | Standard | Relationship |
 |---|---|
-| QA-001 (Testing Strategy) | QA-006 implements the E2E layer (10% of pyramid) defined in QA-001 |
-| QA-002 (Quality Gates) | QA-006 defines the E2E gate that QA-002 will enforce after promotion |
+| QA-001 (Testing Strategy) | QA-006 implements the E2E layer (10% of pyramid) defined in QA-001. **Drift note:** QA-001 still references Cypress; the project has migrated to Playwright. QA-001's aspirational "100% of critical flows" E2E target is superseded by this standard's Coverage Maturity Guardrail (§9), which rejects raw test counts as non-authoritative. |
+| QA-002 (Quality Gates) | QA-006 defines the E2E gate that QA-002 will enforce after promotion. **Status note:** QA-002 is itself in Draft status (created 2025-11-02, not yet operational). Multiple QA-002 gates are aspirational/unimplemented. The "after promotion" enforcement claim is therefore aspirational until QA-002 is itself activated. |
 | QA-003 (Service Testing) | Service patterns (unit/integration) complement E2E; no overlap |
 | QA-005 (Route Handler Testing) | Route handler tests verify HTTP contracts; E2E tests verify full-stack flows. QA-005 is not a substitute for E2E |
 | TESTING_GOVERNANCE_STANDARD | QA-006 operates within the verification tier framework (§2), environment contract (§4), and promotion path (§7–8). The §1 verification taxonomy guardrail extends the governance standard's honesty principle to E2E reporting — preventing Mode A/C from being misreported as canonical browser E2E coverage |
 | ADR-024 (Authoritative Context) | Explains why Mode A fails for RPCs and why Mode C is required |
-| ADR-044 (Testing Governance) | Architectural decision that mandates this standard's existence |
+| ADR-044 (Testing Governance) | Architectural decision that mandates this standard's existence. **Scope note:** QA-006's fixture factory prescriptions (§3) and seed isolation patterns (§4) are operational additions that go beyond ADR-044's stated scope ("Does not specify fixture factories, test data management, or E2E seed strategies"). They are best-practice operational guidance, not ADR-mandated requirements. |
 
 ---
 

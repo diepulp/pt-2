@@ -7,28 +7,25 @@ End-to-end tests using Playwright for API testing of the PT-2 casino management 
 ### Prerequisites
 
 1. Local Supabase instance running (`npx supabase start`)
-2. Environment variables configured (see `.env.test.example`)
+2. Environment variables configured in `.env` (see below)
 
 ### Environment Configuration
 
-Create a `.env.test` file (or use `.env.local`) with the following variables:
+E2E tests read from the root `.env` file — the same file Next.js and Playwright use. Ensure it contains:
 
 ```bash
-# Next.js app URL
-BASE_URL=http://localhost:3000
-
 # Supabase connection (local instance)
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-local-anon-key
-
-# Service role key for test data setup/teardown
-SUPABASE_SERVICE_ROLE_KEY=your-local-service-role-key
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<from npx supabase status>
+SUPABASE_SERVICE_ROLE_KEY=<from npx supabase status>
 ```
 
 Get the keys from `npx supabase status`:
 - Use `API URL` for `NEXT_PUBLIC_SUPABASE_URL`
 - Use `anon key` for `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - Use `service_role key` for `SUPABASE_SERVICE_ROLE_KEY`
+
+> **Note:** `.env` is gitignored. If `.env.local` exists, Playwright loads it with higher priority (matching Next.js precedence). The former `.env.test` convention is deprecated — Playwright and Jest both load `.env` directly.
 
 ## Running Tests
 
@@ -43,7 +40,7 @@ npm run e2e:playwright:ui
 npm run e2e:playwright:debug
 
 # Run specific test file
-npx playwright test e2e/rating-slip-lifecycle.spec.ts
+npx playwright test e2e/workflows/rating-slip-modal.spec.ts
 ```
 
 ## Test Structure
@@ -65,20 +62,11 @@ Each test scenario includes:
 
 ### Test Files
 
-#### `rating-slip-lifecycle.spec.ts`
+Tests are organized by type:
+- `e2e/workflows/` — Page-level workflow tests (browser login, Mode B)
+- `e2e/api/` — API-level tests (Mode A or C)
 
-Tests the complete rating slip lifecycle:
-1. Open table (set status to active)
-2. Start rating slip
-3. Pause rating slip
-4. Resume rating slip
-5. Close rating slip
-
-**Key Verifications:**
-- All state transitions succeed
-- Duration calculation excludes pause time
-- Proper authentication and authorization
-- Clean test data isolation
+See `docs/40-quality/QA-006-e2e-testing-standard.md` for the full E2E standard including auth mode selection, fixture patterns, and test isolation rules.
 
 ## Test Patterns
 
@@ -120,7 +108,7 @@ expect(Math.abs(actual - expected)).toBeLessThan(0.2);
 
 ### "Missing required environment variables"
 
-Ensure `.env.test` or `.env.local` is configured with all required variables.
+Ensure `.env` is configured with all required variables (see Environment Configuration above).
 
 ### "Failed to create test casino"
 
@@ -145,18 +133,19 @@ If duration assertions are failing:
 
 ## Adding New Tests
 
-1. Create new test file in `e2e/` directory
-2. Import test fixtures from `./fixtures/test-data`
+1. Create new test file in `e2e/workflows/` (page-level) or `e2e/api/` (API-level)
+2. Import test fixtures from `../fixtures/test-data`
 3. Use `createTestScenario()` for test data setup
 4. Always clean up in `afterEach` hook
 5. Use authenticated requests with `authHeaders`
+6. See QA-006 §6 New Test File Checklist before submitting
 
 Example:
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createTestScenario } from './fixtures/test-data';
+import { createTestScenario } from '../fixtures/test-data';
 
-test.describe('My Feature E2E', () => {
+test.describe('My Feature — E2E — Mode B (browser login)', () => {
   let scenario;
 
   test.beforeEach(async () => {
