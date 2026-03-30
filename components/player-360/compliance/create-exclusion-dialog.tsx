@@ -98,12 +98,6 @@ export function CreateExclusionDialog({
   });
 
   const handleSubmit = (values: FormValues) => {
-    // HTML <input type="date"> produces YYYY-MM-DD; server schema requires ISO 8601 datetime.
-    const toISO = (v: string | undefined): string | undefined =>
-      v ? new Date(`${v}T00:00:00`).toISOString() : undefined;
-    const toISOOrNull = (v: string | undefined): string | null =>
-      v ? new Date(`${v}T00:00:00`).toISOString() : null;
-
     startTransition(async () => {
       try {
         await createMutation.mutateAsync({
@@ -112,9 +106,9 @@ export function CreateExclusionDialog({
             exclusion_type: values.exclusion_type,
             enforcement: values.enforcement,
             reason: values.reason,
-            effective_from: toISO(values.effective_from),
-            effective_until: toISOOrNull(values.effective_until),
-            review_date: toISOOrNull(values.review_date),
+            effective_from: values.effective_from || undefined,
+            effective_until: values.effective_until || null,
+            review_date: values.review_date || null,
             external_ref: values.external_ref || null,
             jurisdiction: values.jurisdiction || null,
           },
