@@ -192,6 +192,27 @@ export const issueRewardSchema = z.object({
 
 export type IssueRewardInput = z.infer<typeof issueRewardSchema>;
 
+// === Valuation Policy Schemas (PRD-053) ===
+
+/**
+ * Schema for updating valuation policy (POST /api/v1/loyalty/valuation-policy).
+ * Validates admin input for rate changes. NO casinoId (ADR-024 INV-8).
+ */
+export const updateValuationPolicySchema = z.object({
+  cents_per_point: z.number().positive('cents_per_point must be positive'),
+  effective_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'effective_date must be YYYY-MM-DD format'),
+  version_identifier: z
+    .string()
+    .min(1, 'version_identifier is required')
+    .max(100, 'version_identifier too long'),
+});
+
+export type UpdateValuationPolicySchemaInput = z.infer<
+  typeof updateValuationPolicySchema
+>;
+
 // === Cursor Encoding/Decoding Helpers ===
 
 /**

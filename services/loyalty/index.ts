@@ -36,6 +36,8 @@ import type {
   RedeemInput,
   RedeemOutput,
   SessionRewardSuggestionOutput,
+  UpdateValuationPolicyInput,
+  ValuationPolicyDTO,
 } from './dtos';
 import type { ReconcileBalanceRpcResponse } from './mappers';
 
@@ -68,6 +70,7 @@ export {
   encodeLedgerCursor,
   decodeLedgerCursor,
   issueRewardSchema,
+  updateValuationPolicySchema,
 } from './schemas';
 
 // === Service Interface ===
@@ -182,7 +185,7 @@ export interface LoyaltyService {
   /**
    * Issues a catalog-backed comp via rpc_redeem.
    * Calls rpc_redeem DIRECTLY (not via redeem()). Uses Promise.all
-   * for parallel pre-flight (getReward + getBalance).
+   * for parallel pre-flight (getReward + getBalance + getValuationRate).
    *
    * @param params - Comp issuance parameters
    * @param casinoId - Casino ID for balance lookup
@@ -191,6 +194,7 @@ export interface LoyaltyService {
    * @throws REWARD_INACTIVE if reward is not active
    * @throws REWARD_FAMILY_MISMATCH if family is not points_comp
    * @throws INSUFFICIENT_BALANCE if balance is insufficient
+   * @throws VALUATION_POLICY_MISSING if no active valuation policy
    *
    * @see PRD-052 §5.1 FR-5
    */
@@ -198,6 +202,35 @@ export interface LoyaltyService {
     params: IssueCompParams,
     casinoId: string,
   ): Promise<CompIssuanceResult>;
+
+  /**
+   * Fetches the active cents_per_point for a casino.
+   * Fail-closed: throws if no active policy exists.
+   *
+   * @see PRD-053 — Point Conversion Canonicalization
+   */
+  getActiveValuationCentsPerPoint(casinoId: string): Promise<number>;
+
+  /**
+   * Fetches the full active valuation policy DTO for admin form.
+   * Returns null if no active policy exists.
+   *
+   * @see PRD-053 WS5b
+   */
+  getActiveValuationPolicy(
+    casinoId: string,
+  ): Promise<ValuationPolicyDTO | null>;
+
+  /**
+   * Updates valuation policy via RPC (admin-only).
+   * Atomic rotate: deactivate old → insert new.
+   * No casinoId param — derived from RLS context (ADR-024).
+   *
+   * @see PRD-053 WS5b
+   */
+  updateValuationPolicy(
+    input: UpdateValuationPolicyInput,
+  ): Promise<ValuationPolicyDTO>;
 }
 
 // === Service Factory ===
@@ -223,5 +256,11 @@ export function createLoyaltyService(
     reconcileBalance: (playerId, casinoId) =>
       crud.reconcileBalance(supabase, playerId, casinoId),
     issueComp: (params, casinoId) => crud.issueComp(supabase, params, casinoId),
+    getActiveValuationCentsPerPoint: (casinoId) =>
+      crud.getActiveValuationCentsPerPoint(supabase, casinoId),
+    getActiveValuationPolicy: (casinoId) =>
+      crud.getActiveValuationPolicy(supabase, casinoId),
+    updateValuationPolicy: (input) =>
+      crud.updateValuationPolicy(supabase, input),
   };
 }

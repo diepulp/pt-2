@@ -9,6 +9,58 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      alert_acknowledgment: {
+        Row: {
+          acknowledged_by: string
+          alert_id: string
+          casino_id: string
+          created_at: string
+          id: string
+          is_false_positive: boolean
+          notes: string | null
+        }
+        Insert: {
+          acknowledged_by: string
+          alert_id: string
+          casino_id: string
+          created_at?: string
+          id?: string
+          is_false_positive?: boolean
+          notes?: string | null
+        }
+        Update: {
+          acknowledged_by?: string
+          alert_id?: string
+          casino_id?: string
+          created_at?: string
+          id?: string
+          is_false_positive?: boolean
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_acknowledgment_acknowledged_by_fkey"
+            columns: ["acknowledged_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_acknowledgment_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "shift_alert"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alert_acknowledgment_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -2617,6 +2669,75 @@ export type Database = {
           },
         ]
       }
+      shift_alert: {
+        Row: {
+          baseline_mad: number | null
+          baseline_median: number | null
+          casino_id: string
+          created_at: string
+          deviation_score: number | null
+          direction: string | null
+          gaming_day: string
+          id: string
+          message: string | null
+          metric_type: string
+          observed_value: number
+          severity: string
+          status: string
+          table_id: string
+          updated_at: string
+        }
+        Insert: {
+          baseline_mad?: number | null
+          baseline_median?: number | null
+          casino_id: string
+          created_at?: string
+          deviation_score?: number | null
+          direction?: string | null
+          gaming_day: string
+          id?: string
+          message?: string | null
+          metric_type: string
+          observed_value: number
+          severity: string
+          status?: string
+          table_id: string
+          updated_at?: string
+        }
+        Update: {
+          baseline_mad?: number | null
+          baseline_median?: number | null
+          casino_id?: string
+          created_at?: string
+          deviation_score?: number | null
+          direction?: string | null
+          gaming_day?: string
+          id?: string
+          message?: string | null
+          metric_type?: string
+          observed_value?: number
+          severity?: string
+          status?: string
+          table_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "shift_alert_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "shift_alert_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "gaming_table"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shift_checkpoint: {
         Row: {
           cash_out_observed_cents: number
@@ -4115,6 +4236,14 @@ export type Database = {
           theo: number
         }[]
       }
+      rpc_acknowledge_alert: {
+        Args: {
+          p_alert_id: string
+          p_is_false_positive?: boolean
+          p_notes?: string
+        }
+        Returns: Json
+      }
       rpc_acknowledge_drop_received: {
         Args: { p_drop_event_id: string }
         Returns: {
@@ -4307,6 +4436,14 @@ export type Database = {
         }
       }
       rpc_complete_casino_setup: { Args: { p_skip?: boolean }; Returns: Json }
+      rpc_compute_rolling_baseline: {
+        Args: { p_gaming_day?: string; p_table_id?: string }
+        Returns: {
+          gaming_day: string
+          metrics_computed: number
+          tables_processed: number
+        }[]
+      }
       rpc_compute_table_rundown: {
         Args: { p_session_id: string }
         Returns: {
@@ -4532,6 +4669,43 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_create_player_exclusion: {
+        Args: {
+          p_effective_from?: string
+          p_effective_until?: string
+          p_enforcement: string
+          p_exclusion_type: string
+          p_external_ref?: string
+          p_jurisdiction?: string
+          p_player_id: string
+          p_reason: string
+          p_review_date?: string
+        }
+        Returns: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "player_exclusion"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_create_shift_checkpoint: {
         Args: { p_checkpoint_type: string; p_notes?: string }
         Returns: {
@@ -4698,6 +4872,33 @@ export type Database = {
         Returns: {
           end_gd: string
           start_gd: string
+        }[]
+      }
+      rpc_get_alert_quality: {
+        Args: { p_end: string; p_start: string }
+        Returns: Json
+      }
+      rpc_get_anomaly_alerts: {
+        Args: { p_window_end: string; p_window_start: string }
+        Returns: {
+          baseline_gaming_day: string
+          baseline_mad: number
+          baseline_median: number
+          baseline_sample_count: number
+          deviation_score: number
+          direction: string
+          is_anomaly: boolean
+          message: string
+          metric_type: string
+          observed_value: number
+          peak_deviation: number
+          readiness_state: string
+          recommended_action: string
+          session_count: number
+          severity: string
+          table_id: string
+          table_label: string
+          threshold_value: number
         }[]
       }
       rpc_get_current_table_session: {
@@ -4967,6 +5168,33 @@ export type Database = {
         }
         Returns: Json
       }
+      rpc_lift_player_exclusion: {
+        Args: { p_exclusion_id: string; p_lift_reason: string }
+        Returns: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "player_exclusion"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       rpc_list_active_players_casino_wide: {
         Args: { p_limit?: number; p_search?: string }
         Returns: {
@@ -5228,6 +5456,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_persist_anomaly_alerts: {
+        Args: { p_gaming_day?: string }
+        Returns: Json
       }
       rpc_persist_table_rundown: {
         Args: { p_table_session_id: string }
@@ -5845,6 +6077,29 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "gaming_table"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rpc_update_valuation_policy: {
+        Args: {
+          p_cents_per_point: number
+          p_effective_date: string
+          p_version_identifier: string
+        }
+        Returns: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_valuation_policy"
           isOneToOne: true
           isSetofReturn: false
         }

@@ -75,6 +75,12 @@ export interface IssueRewardDrawerProps {
 
   /** Manual print callback (Vector C) */
   onPrint?: (payload: FulfillmentPayload, mode: PrintInvocationMode) => void;
+
+  /** DB-sourced valuation rate (cents per loyalty point) — PRD-053 */
+  centsPerPoint?: number | null;
+
+  /** True when no active valuation policy exists for the casino */
+  policyMissing?: boolean;
 }
 
 // === Inner Content (reset via key) ===
@@ -91,6 +97,8 @@ function DrawerContent({
   onFulfillmentReady,
   printState,
   onPrint,
+  centsPerPoint,
+  policyMissing = false,
 }: Omit<IssueRewardDrawerProps, 'open'>) {
   const [step, setStep] = useState<DrawerStep>('select');
   const [selectedReward, setSelectedReward] = useState<RewardCatalogDTO | null>(
@@ -136,8 +144,8 @@ function DrawerContent({
   const defaultPointsCost =
     (selectedReward as { pricePoints?: { pointsCost?: number } })?.pricePoints
       ?.pointsCost ??
-    (typeof metadata?.face_value_cents === 'number'
-      ? Math.ceil((metadata.face_value_cents as number) / 10)
+    (typeof metadata?.face_value_cents === 'number' && centsPerPoint
+      ? Math.ceil((metadata.face_value_cents as number) / centsPerPoint)
       : 0);
 
   return (
@@ -162,6 +170,8 @@ function DrawerContent({
               isPending={isPending}
               onConfirm={handleConfirm}
               onBack={handleBack}
+              centsPerPoint={centsPerPoint ?? 1}
+              policyMissing={policyMissing}
             />
           )}
 

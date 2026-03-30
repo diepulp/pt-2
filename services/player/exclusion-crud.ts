@@ -4,6 +4,9 @@
  * Database operations using type-safe mappers.
  * No `as` assertions; all transformations via mappers.
  *
+ * ISS-EXCL-001: createExclusion and liftExclusion use SECURITY DEFINER RPCs
+ * that bundle context injection + DML in a single transaction (ADR-024/030).
+ *
  * AUDIT-C3: getExclusionStatus() calls SQL function — TypeScript
  * must not reimplement precedence logic.
  *
@@ -29,93 +32,123 @@ import {
 } from './exclusion-mappers';
 import { EXCLUSION_SELECT } from './exclusion-selects';
 
-// === Error Mapping ===
+// === RPC Error Mapping ===
 
-function mapDatabaseError(error: {
+/**
+ * Maps RPC errors to domain errors.
+ *
+ * All custom RAISE EXCEPTION calls use ERRCODE P0001 with message prefixes:
+ *   UNAUTHORIZED:, FORBIDDEN:, NOT_FOUND:, CONFLICT:, VALIDATION_ERROR:, INTERNAL_ERROR:
+ *
+ * The immutability trigger (trg_player_exclusion_lift_only) also raises P0001
+ * with message starting with 'EXCLUSION_IMMUTABLE:'.
+ */
+function mapExclusionRpcError(error: {
   code?: string;
   message: string;
 }): DomainError {
+  const msg = error.message ?? '';
+
+  // FK violation — player does not exist
   if (error.code === '23503') {
     return new DomainError(
       'PLAYER_NOT_FOUND',
       'Referenced player or staff not found',
     );
   }
-  if (error.message?.includes('EXCLUSION_IMMUTABLE')) {
-    return new DomainError(
-      'PLAYER_EXCLUSION_NOT_FOUND',
-      'Exclusion records are immutable after creation (lift-only updates allowed)',
+
+  // Custom RPC errors (P0001) — discriminate by message prefix
+  if (msg.startsWith('UNAUTHORIZED:')) {
+    return new DomainError('UNAUTHORIZED', msg);
+  }
+  if (msg.startsWith('FORBIDDEN:')) {
+    return new DomainError('FORBIDDEN', msg);
+  }
+  if (msg.startsWith('NOT_FOUND:')) {
+    return new DomainError('PLAYER_EXCLUSION_NOT_FOUND', msg);
+  }
+  if (msg.startsWith('CONFLICT:')) {
+    return new DomainError('PLAYER_EXCLUSION_ALREADY_LIFTED', msg);
+  }
+  if (msg.startsWith('VALIDATION_ERROR:')) {
+    return new DomainError('VALIDATION_ERROR', msg);
+  }
+
+  // Immutability trigger (defense-in-depth — should not fire via RPC path)
+  if (msg.includes('EXCLUSION_IMMUTABLE')) {
+    return new DomainError('EXCLUSION_IMMUTABLE', msg);
+  }
+
+  return new DomainError('INTERNAL_ERROR', msg, { details: error });
+}
+
+// === Singleton Assertion ===
+
+function assertSingletonRow<T>(data: T[] | T | null): T {
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  if (rows.length === 0) {
+    throw new DomainError('INTERNAL_ERROR', 'RPC returned no data');
+  }
+  if (rows.length > 1) {
+    throw new DomainError(
+      'INTERNAL_ERROR',
+      'RPC returned multiple rows — contract violation',
     );
   }
-  return new DomainError('INTERNAL_ERROR', error.message, { details: error });
+  return rows[0];
 }
 
 // === Exclusion CRUD ===
 
 /**
- * Create a new exclusion record.
- * casino_id and created_by are injected via RLS context.
+ * Create a new exclusion record via SECURITY DEFINER RPC.
+ * casino_id and created_by are derived from RLS context inside the RPC.
  */
 export async function createExclusion(
   supabase: SupabaseClient<Database>,
   input: CreateExclusionInput,
 ): Promise<PlayerExclusionDTO> {
-  const { data, error } = await supabase
-    .from('player_exclusion')
-    .insert({
-      player_id: input.player_id,
-      exclusion_type: input.exclusion_type,
-      enforcement: input.enforcement,
-      reason: input.reason,
-      effective_from: input.effective_from ?? new Date().toISOString(),
-      effective_until: input.effective_until ?? null,
-      review_date: input.review_date ?? null,
-      external_ref: input.external_ref ?? null,
-      jurisdiction: input.jurisdiction ?? null,
-    })
-    .select(EXCLUSION_SELECT)
-    .single();
+  // PGRST202 workaround: PostgREST matches functions by the set of param names
+  // in the JSON body. Omitting keys (undefined) drops them from JSON.stringify,
+  // causing a signature mismatch. Send null instead — SQL DEFAULT still applies
+  // since all DEFAULT values are NULL. Generated types use `?: string` which
+  // disallows null, hence the assertion.
 
-  if (error) throw mapDatabaseError(error);
-  return toExclusionDTO(data);
+  const { data, error } = await supabase.rpc('rpc_create_player_exclusion', {
+    p_player_id: input.player_id,
+    p_exclusion_type: input.exclusion_type,
+    p_enforcement: input.enforcement,
+    p_reason: input.reason,
+    p_effective_from: input.effective_from ?? null,
+    p_effective_until: input.effective_until ?? null,
+    p_review_date: input.review_date ?? null,
+    p_external_ref: input.external_ref ?? null,
+    p_jurisdiction: input.jurisdiction ?? null,
+  } as Database['public']['Functions']['rpc_create_player_exclusion']['Args']);
+
+  if (error) throw mapExclusionRpcError(error);
+  const row = assertSingletonRow(data);
+  return toExclusionDTO(row);
 }
 
 /**
- * Lift (soft-delete) an exclusion.
- * Only lifted_at, lifted_by, lift_reason may be updated (AUDIT-C6 trigger enforces).
+ * Lift (soft-delete) an exclusion via SECURITY DEFINER RPC.
+ * lifted_by is derived from RLS context inside the RPC.
+ * Pre-check logic (exists, not already lifted, same casino) is inside the RPC.
  */
 export async function liftExclusion(
   supabase: SupabaseClient<Database>,
   exclusionId: string,
   input: LiftExclusionInput,
 ): Promise<PlayerExclusionDTO> {
-  // First check if the exclusion exists and is not already lifted
-  const { data: existing, error: fetchError } = await supabase
-    .from('player_exclusion')
-    .select('id, lifted_at')
-    .eq('id', exclusionId)
-    .maybeSingle();
+  const { data, error } = await supabase.rpc('rpc_lift_player_exclusion', {
+    p_exclusion_id: exclusionId,
+    p_lift_reason: input.lift_reason,
+  });
 
-  if (fetchError) throw mapDatabaseError(fetchError);
-  if (!existing) {
-    throw new DomainError('PLAYER_EXCLUSION_NOT_FOUND');
-  }
-  if (existing.lifted_at) {
-    throw new DomainError('PLAYER_EXCLUSION_ALREADY_LIFTED');
-  }
-
-  const { data, error } = await supabase
-    .from('player_exclusion')
-    .update({
-      lifted_at: new Date().toISOString(),
-      lift_reason: input.lift_reason,
-    })
-    .eq('id', exclusionId)
-    .select(EXCLUSION_SELECT)
-    .single();
-
-  if (error) throw mapDatabaseError(error);
-  return toExclusionDTO(data);
+  if (error) throw mapExclusionRpcError(error);
+  const row = assertSingletonRow(data);
+  return toExclusionDTO(row);
 }
 
 /**
@@ -131,7 +164,7 @@ export async function listExclusions(
     .eq('player_id', playerId)
     .order('created_at', { ascending: false });
 
-  if (error) throw mapDatabaseError(error);
+  if (error) throw mapExclusionRpcError(error);
   return toExclusionDTOList(data ?? []);
 }
 
@@ -154,7 +187,7 @@ export async function getActiveExclusions(
     .or(`effective_until.is.null,effective_until.gt.${now}`)
     .order('created_at', { ascending: false });
 
-  if (error) throw mapDatabaseError(error);
+  if (error) throw mapExclusionRpcError(error);
   return toExclusionDTOList(data ?? []);
 }
 
@@ -171,6 +204,6 @@ export async function getExclusionStatus(
     { p_player_id: playerId },
   );
 
-  if (error) throw mapDatabaseError(error);
+  if (error) throw mapExclusionRpcError(error);
   return toExclusionStatusDTO(playerId, (data as string) ?? 'clear');
 }

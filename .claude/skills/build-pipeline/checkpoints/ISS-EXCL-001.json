@@ -1,0 +1,49 @@
+{
+  "id": "ISS-EXCL-001",
+  "prd": "ISS-EXCL-001",
+  "prd_title": "Player Exclusion RLS Boundary Repair",
+  "spec_path": "docs/21-exec-spec/EXEC-ISS-EXCL-001-exclusion-rls-boundary-repair.md",
+  "source_spec": "docs/superpowers/specs/2026-03-28-exclusion-rls-boundary-repair-design.md",
+  "status": "complete",
+  "gov010_check": "not_applicable_non_prd",
+  "write_path_classification": "not_applicable_non_prd",
+  "current_phase": 3,
+  "completed_workstreams": ["WS1", "WS2", "WS3"],
+  "pending_workstreams": [],
+  "adversarial_review": {
+    "magnitude_score": 5,
+    "magnitude_tier": "focused_review",
+    "verdict": "ship_with_gates",
+    "reviewer": "R1-Security",
+    "findings": {
+      "p0": 0, "p1": 2, "p2": 2, "p3": 3,
+      "p1_items": [
+        "review_date type date→timestamptz — FIXED",
+        "lifted_by never set by current direct DML — NOTED as bonus fix"
+      ]
+    },
+    "attempt": 1
+  },
+  "errcode_verification": {
+    "status": "passed",
+    "strategy": "P0001 with message prefix discrimination",
+    "prefixes": ["UNAUTHORIZED:", "FORBIDDEN:", "NOT_FOUND:", "CONFLICT:", "VALIDATION_ERROR:", "INTERNAL_ERROR:"]
+  },
+  "gates_passed": {
+    "schema-validation": true,
+    "errcode-verification": true,
+    "type-check": true,
+    "lint": true,
+    "test-pass": true,
+    "build": true
+  },
+  "files_changed": [
+    "supabase/migrations/20260328132317_add_exclusion_write_rpcs.sql",
+    "services/player/exclusion-crud.ts",
+    "types/database.types.ts",
+    "lib/errors/domain-errors.ts",
+    "services/player/__tests__/exclusion-rpc.int.test.ts"
+  ],
+  "created_at": "2026-03-28T00:00:00Z",
+  "completed_at": "2026-03-28T13:30:00Z"
+}

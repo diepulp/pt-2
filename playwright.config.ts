@@ -3,7 +3,9 @@ import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-// Load environment variables from .env file
+// Load environment variables from .env
+// If .env.local exists, it takes precedence (matches Next.js loading order)
+dotenv.config({ path: path.resolve(__dirname, '.env.local'), override: true });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 /**

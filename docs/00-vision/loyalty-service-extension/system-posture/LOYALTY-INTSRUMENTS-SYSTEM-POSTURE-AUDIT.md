@@ -1,8 +1,8 @@
 ---
 title: "Loyalty Instruments — System Posture Audit"
 status: audit-complete
-date: 2026-03-19
-revision: 2
+date: 2026-03-22
+revision: 3
 revision_history:
   - rev: 1
     date: 2026-03-09
@@ -10,6 +10,9 @@ revision_history:
   - rev: 2
     date: 2026-03-19
     scope: "Post-Vector B (PRD-052) — operator issuance workflow implemented"
+  - rev: 3
+    date: 2026-03-22
+    scope: "Post-Vector C (PRD-053) + P2K issuance fixes + point conversion canonicalization"
 references:
   - LOYALTY_PROMO_INSTRUMENTS_EXTENSION_v0.1_REDACTED.md
   - MATCHPLAY-PRINT-READINESS-REPORT.md
@@ -17,30 +20,42 @@ references:
   - SHIFT_DASHBOARDS_V0_ALERT_THRESHOLDS_BASELINES_PATCH.md
   - docs/21-exec-spec/EXEC-052-loyalty-operator-issuance.md
   - docs/10-prd/PRD-052-player-exclusion-ui-surface-v0.md
+  - docs/10-prd/PRD-053-reward-instrument-fulfillment-v0.md
+  - docs/21-exec-spec/EXEC-053-reward-instrument-fulfillment.md
+  - docs/21-exec-spec/EXEC-053-variable-amount-comp.md
+  - docs/21-exec-spec/EXEC-054-point-conversion-canonicalization.md
+  - docs/80-adrs/ADR-045-pilot-reward-instrument-fulfillment.md
 ---
 
 # Loyalty Instruments — System Posture Audit
 
 ## Executive Summary
 
-The PT-2 codebase has **substantial, operational loyalty infrastructure** for promotional instruments. Database schema, RPCs, service layer, API routes, hooks, dashboard rollups, and **operator issuance workflows** are all operational. Vector B (PRD-052, merged 2026-03-19) delivered the unified issuance drawer, catalog-backed `issueComp()`/`issueEntitlement()` service methods, a unified `/issue` API endpoint with role gating, and comprehensive test coverage.
+The PT-2 codebase has **substantial, operational loyalty infrastructure** with a **pilot print pipeline and DB-sourced valuation**. Database schema, RPCs, service layer, API routes, hooks, dashboard rollups, operator issuance workflows, print infrastructure, and valuation admin are all operational.
 
-**Remaining gaps:**
+**Resolved since Rev 2 (three major deliveries):**
 
-1. **No admin configuration UI** — operators cannot create, manage, or configure promo programs, tier entitlements, or coupon policies through the application (API routes exist, no frontend).
-2. **No one-click print pipeline** — the auto-derivation RPC, print infrastructure, and print button are all at 0%.
-3. **No tier-to-entitlement auto-derivation** — `issueEntitlement()` reads frozen catalog values; no tier→entitlement resolution logic.
+1. **Vector C print standard** (PRD-053, `cb0cabc`, 2026-03-20) — `lib/print/` module with iframe utility, comp-slip + coupon HTML templates, `usePrintReward` hook, wired through `IssuanceResultPanel`. 65 tests across 8 suites. ADR-045.
+2. **P2K issuance fixes** (PR #31, `2fd1db7`, 2026-03-20):
+   - P2K-29: Fulfillment CHECK constraint aligned to app values (`comp_slip`, `coupon`, `none`)
+   - P2K-28: Tier-based entitlement value lookup via `getBalance()` → `entitlementTiers[].benefit`
+   - P2K-30: Variable-amount comp with `faceValueCents` + `allowOverdraw` + dollar input UI
+   - P2K-32: IssueRewardButton added to rating slip modal with `visitId` threading
+   - P2K-33: visitId audit trail linkage from `useActiveVisit()` through full issuance chain
+3. **Point conversion canonicalization** (PR #32, `e85382d`, 2026-03-21):
+   - DB-sourced `cents_per_point` via `loyalty_valuation_policy` — all hardcoded constants removed
+   - `rpc_update_valuation_policy` — atomic rotate with SELECT FOR UPDATE concurrency lock
+   - `/admin/settings/valuation` — `ValuationSettingsForm` with role-gated read-only mode
+   - LoyaltyService expanded: `getActiveValuationCentsPerPoint()`, `getActiveValuationPolicy()`, `updateValuationPolicy()`
+   - Bootstrap seed + onboarding enforcement (casinos ship with default `cents_per_point=2`)
+4. **audit_log write path** (`2220be1`, 2026-03-19) — `append_audit_log()` SECURITY DEFINER RPC, direct INSERT revoked (SEC-007 compat)
 
-**Resolved since Rev 1:**
-- Operator issuance workflow (comp + entitlement) — fully operational via Player 360 drawer
-- `rpc_issue_promo_coupon` P0 security gap — role gate deployed (pit_boss/admin only)
-- Inventory API route gap — `GET /api/v1/promo-coupons/inventory` now exists
-- `ManualRewardDialog` — deleted, replaced by unified IssueRewardDrawer
-- `GET /loyalty/balances` — wired to LoyaltyService.getBalance()
-- `GET /players/[id]/loyalty` — wired to LoyaltyService.getBalance()
-- `POST /loyalty/mid-session-reward` — explicitly 501 (scope change per PRD §7.4)
-- Rewards history mapper bug (`'redemption'` → `'redeem'`) — fixed
-- `promo_type_enum` expanded — `free_play` added (migration `20260318153722`)
+**Remaining gaps (minor):**
+
+1. **Coupon policy toggles UI** — `promo_require_exact_match` and `promo_allow_anonymous_issuance` have API support but no frontend surface; admins must call API directly.
+2. **Earn config UI** — `loyalty_earn_config` has no admin surface (intentionally deferred per frozen decision D2).
+3. **No one-click auto-derivation** — `rpc_issue_current_match_play` does not exist. Manual tier-based issuance works end-to-end.
+4. **Print history logging** — `promo_coupon.metadata.print_history[]` not yet implemented (best-effort, deferred).
 
 ---
 
@@ -68,7 +83,7 @@ The PT-2 codebase has **substantial, operational loyalty infrastructure** for pr
 
 **RLS**: Pattern C hybrid (ADR-015/ADR-020), casino-scoped. DELETE denied on both promo tables. INSERT/UPDATE restricted to `pit_boss`/`admin` roles.
 
-### 1.2 RPCs (5 Operational + Role-Gated)
+### 1.2 RPCs (7 Operational + Role-Gated)
 
 | RPC | Security | ADR-024 | Role Gate | Purpose |
 |---|---|---|---|---|
@@ -77,8 +92,10 @@ The PT-2 codebase has **substantial, operational loyalty infrastructure** for pr
 | `rpc_replace_promo_coupon` | DEFINER | `set_rls_context_from_staff()` | — | Atomic void + re-issue, idempotent |
 | `rpc_promo_coupon_inventory` | INVOKER | RLS-based | — | Status breakdown aggregation |
 | `rpc_promo_exposure_rollup` | INVOKER | RLS-based | — | Shift dashboard promo metrics |
+| **`rpc_update_valuation_policy`** | **DEFINER** | **`set_rls_context_from_staff()`** | **admin only** | **Atomic rotate: deactivate old → insert new. SELECT FOR UPDATE lock. NEW (PRD-053)** |
+| **`append_audit_log`** | **DEFINER** | **Session vars** | — | **Append-only audit write. Direct INSERT revoked. NEW (SEC-007)** |
 
-All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
+All 3 promo write RPCs emit to `loyalty_outbox` and write `audit_log` entries (via `append_audit_log()`).
 
 **Role gate on `rpc_issue_promo_coupon`** (PRD-052 WS1, migration `20260319010843`): Only `pit_boss` and `admin` may issue promo coupons. Cashier explicitly excluded per SEC-002. Follows `rpc_redeem` role gate pattern (ADR-040).
 
@@ -88,14 +105,14 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 
 | File | Lines | Content |
 |---|---|---|
-| `dtos.ts` | 550 | DTOs including IssueCompParams, CompIssuanceResult, CompFulfillmentPayload, EntitlementFulfillmentPayload, FulfillmentPayload, IssuanceResultDTO |
-| `crud.ts` | 759 | 9 methods: accrueOnClose, redeem, manualCredit, applyPromotion, evaluateSuggestion, getBalance, getLedger, reconcileBalance, **issueComp** |
-| `schemas.ts` | 244 | Validation schemas including **issueRewardSchema** |
+| `dtos.ts` | 580+ | DTOs including IssueCompParams (faceValueCents, allowOverdraw — NEW), CompIssuanceResult, FulfillmentPayload, ValuationPolicyDTO (NEW), UpdateValuationPolicyInput (NEW) |
+| `crud.ts` | 900+ | 12 methods: accrueOnClose, redeem, manualCredit, applyPromotion, evaluateSuggestion, getBalance, getLedger, reconcileBalance, **issueComp** (variable-amount + overdraw), **getActiveValuationCentsPerPoint** (NEW), **getActiveValuationPolicy** (NEW), **updateValuationPolicy** (NEW) |
+| `schemas.ts` | 260+ | Validation schemas including **issueRewardSchema** (face_value_cents, allow_overdraw — NEW), **updateValuationPolicySchema** (NEW) |
 | `mappers.ts` | — | Response parsers |
-| `http.ts` | — | Client-side HTTP fetchers |
-| `keys.ts` | — | React Query key factory |
+| `http.ts` | — | Client-side HTTP fetchers (+ valuation-policy fetchers — NEW) |
+| `keys.ts` | — | React Query key factory (+ valuationPolicy key — NEW) |
 | `selects.ts` | — | SQL SELECT definitions |
-| `index.ts` | 227 | `createLoyaltyService()` factory with explicit `LoyaltyService` interface (9 methods) |
+| `index.ts` | 267 | `createLoyaltyService()` factory with explicit `LoyaltyService` interface (12 methods) |
 
 #### `services/loyalty/promo/` (Promo Sub-Module)
 
@@ -108,18 +125,19 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 | `http.ts` | 262 | Client-side HTTP fetchers |
 | `index.ts` | 203 | `createPromoService()` factory with explicit `PromoService` interface (12 methods) |
 
-### 1.4 API Routes (8 Promo Endpoints + 1 Unified Issuance)
+### 1.4 API Routes (8 Promo Endpoints + 1 Unified Issuance + 1 Valuation Admin)
 
 | Route | Methods | Status |
 |---|---|---|
-| `/api/v1/loyalty/issue` | POST | **Operational** — unified issuance (PRD-052 WS3) |
+| `/api/v1/loyalty/issue` | POST | **Operational** — unified issuance (supports variable-amount comp + overdraw) |
+| **`/api/v1/loyalty/valuation-policy`** | **GET, PATCH** | **Operational (NEW, PRD-053)** — admin rate read + atomic rotate update |
 | `/api/v1/promo-programs` | GET, POST | Operational |
 | `/api/v1/promo-programs/[id]` | GET, PATCH | Operational |
 | `/api/v1/promo-coupons` | GET, POST | Operational |
 | `/api/v1/promo-coupons/[id]` | GET | Operational |
 | `/api/v1/promo-coupons/[id]/void` | POST | Operational |
 | `/api/v1/promo-coupons/[id]/replace` | POST | Operational |
-| `/api/v1/promo-coupons/inventory` | GET | **Operational** (was missing in Rev 1) |
+| `/api/v1/promo-coupons/inventory` | GET | Operational |
 | `/api/v1/loyalty/promotion` | GET | Operational |
 
 ### 1.5 React Hooks
@@ -131,8 +149,11 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 | `useIssueCoupon`, `useVoidCoupon`, `useReplaceCoupon`, `useCreatePromoProgram`, `useUpdatePromoProgram` | `use-promo-mutations.ts` |
 | `usePromoExposure` | `use-promo-exposure.ts` |
 | `useDashboardPromoExposure` | `hooks/dashboard/use-promo-exposure.ts` (30s auto-refresh) |
-| **`useIssueReward`** | `hooks/loyalty/use-issue-reward.ts` (153 lines — useTransition + UUID v4 idempotency) |
+| **`useIssueReward`** | `hooks/loyalty/use-issue-reward.ts` (163+ lines — useTransition + UUID v4 idempotency, faceValueCents + allowOverdraw threading) |
 | `useRewards` | `hooks/loyalty/use-reward-catalog.ts` (fetches active rewards via RLS context) |
+| **`useValuationRate`** | `hooks/loyalty/use-loyalty-queries.ts` (NEW — fetches active cents_per_point) |
+| **`useUpdateValuationPolicy`** | `hooks/loyalty/use-loyalty-mutations.ts` (NEW — admin policy update mutation) |
+| **`usePrintReward`** | `lib/print/hooks/use-print-reward.ts` (NEW — idle/printing/success/error state machine) |
 
 ### 1.6 UI Components
 
@@ -140,27 +161,44 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 |---|---|---|
 | `PromoExposurePanel` | `components/dashboard/promo-exposure-panel.tsx` | Complete — 6-metric brutalist panel with alerts |
 | `LoyaltyPanel` | `components/player-dashboard/loyalty-panel.tsx` | Complete — tier display + balance |
-| **`IssueRewardButton`** | `components/player-360/header/issue-reward-button.tsx` | **Complete — `enabled=true`, opens IssueRewardDrawer** |
-| **`IssueRewardDrawer`** | `components/loyalty/issue-reward-drawer.tsx` | **Complete — 3-step state machine (select→confirm→result)** |
-| **`RewardSelector`** | `components/loyalty/reward-selector.tsx` | **Complete — catalog grouped by family, uses `useRewards({ isActive: true })`** |
-| **`CompConfirmPanel`** | `components/loyalty/comp-confirm-panel.tsx` | **Complete — balance preview, advisory insufficient-balance warning** |
-| **`EntitlementConfirmPanel`** | `components/loyalty/entitlement-confirm-panel.tsx` | **Complete — catalog-derived face value + match wager, no tier language** |
-| **`IssuanceResultPanel`** | `components/loyalty/issuance-result-panel.tsx` | **Complete — success/failure/duplicate states, `onFulfillmentReady` callback** |
+| **`IssueRewardButton`** (Player 360) | `components/player-360/header/issue-reward-button.tsx` | Complete — opens IssueRewardDrawer, threads casinoName/staffName/currentTier (PRD-053 DA patch) |
+| **`IssueRewardButton`** (Rating Slip Modal) | `components/modals/rating-slip/rating-slip-modal.tsx` | **Complete (NEW, P2K-32) — visitId threaded from modalData.slip.visitId** |
+| **`IssueRewardDrawer`** | `components/loyalty/issue-reward-drawer.tsx` | Complete — 3-step state machine (select→confirm→result), print wiring |
+| **`RewardSelector`** | `components/loyalty/reward-selector.tsx` | Complete — catalog grouped by family |
+| **`CompConfirmPanel`** | `components/loyalty/comp-confirm-panel.tsx` | **Complete (UPDATED, P2K-30) — dollar input, auto-conversion display, overdraw toggle, DB-sourced cents_per_point** |
+| **`EntitlementConfirmPanel`** | `components/loyalty/entitlement-confirm-panel.tsx` | **Complete (UPDATED, P2K-28) — tier-based value lookup via getBalance → entitlementTiers** |
+| **`IssuanceResultPanel`** | `components/loyalty/issuance-result-panel.tsx` | **Complete (UPDATED, PRD-053) — printState + onPrint prop, auto-fire via queueMicrotask with useRef guard** |
 | `RewardsEligibilityCard` | `components/player-360/rewards/` | Complete |
-| `RewardsHistoryList` | `components/player-360/rewards/` | Complete — filter chips for matchplay/freeplay/**comp** |
-| **`ExclusionStatusBadge`** | `components/player-360/header/exclusion-status-badge.tsx` | **Complete — 4 severity levels in Player 360 header** |
-| **`ExclusionTile`** | `components/player-360/compliance/exclusion-tile.tsx` | **Complete — exclusion list, add/lift role-gated** |
+| `RewardsHistoryList` | `components/player-360/rewards/` | Complete — filter chips for matchplay/freeplay/comp |
+| `ExclusionStatusBadge` | `components/player-360/header/exclusion-status-badge.tsx` | Complete — 4 severity levels |
+| `ExclusionTile` | `components/player-360/compliance/exclusion-tile.tsx` | Complete — exclusion list, add/lift role-gated |
+| **`ValuationSettingsForm`** | `components/admin/valuation-settings-form.tsx` | **Complete (PRD-053) — cents_per_point editor, role-gated read-only mode** |
+| **`RewardListClient`** | `components/admin/loyalty/rewards/reward-list-client.tsx` (234 LOC) | **Complete (PRD-LOYALTY-ADMIN-CATALOG) — list + create + status filtering** |
+| **`CreateRewardDialog`** | `components/admin/loyalty/rewards/create-reward-dialog.tsx` (241 LOC) | **Complete — family selection (points_comp / entitlement)** |
+| **`RewardDetailClient`** | `components/admin/loyalty/rewards/reward-detail-client.tsx` (361 LOC) | **Complete — metadata editor, active toggle** |
+| **`PointsPricingForm`** | `components/admin/loyalty/rewards/points-pricing-form.tsx` (136 LOC) | **Complete — points_cost, allow_overdraw** |
+| **`TierEntitlementForm`** | `components/admin/loyalty/rewards/tier-entitlement-form.tsx` (322 LOC) | **Complete — tier → face_value_cents, instrument_type mapping** |
+| **`ProgramListClient`** | `components/admin/loyalty/promo-programs/program-list-client.tsx` (212 LOC) | **Complete (PRD-LOYALTY-ADMIN-CATALOG) — list + create + status badges** |
+| **`CreateProgramDialog`** | `components/admin/loyalty/promo-programs/create-program-dialog.tsx` (264 LOC) | **Complete — program creation** |
+| **`ProgramDetailClient`** | `components/admin/loyalty/promo-programs/program-detail-client.tsx` (444 LOC) | **Complete — inline editing (name, status, dates)** |
+| **`InventorySummary`** | `components/admin/loyalty/promo-programs/inventory-summary.tsx` (130 LOC) | **Complete — read-only coupon inventory per program** |
 | ~~`ManualRewardDialog`~~ | ~~`components/loyalty/manual-reward-dialog.tsx`~~ | **DELETED** — replaced by unified IssueRewardDrawer |
 
 ### 1.7 Admin Route Group
 
-| Route | Content | Loyalty-Relevant |
-|---|---|---|
-| `/admin/alerts` | Live cash observation alerts | No |
-| `/admin/settings/thresholds` | Alert threshold config (includes promo thresholds) | Partial — promo alert thresholds configurable |
-| `/admin/settings/shifts` | Gaming day temporal config | No |
-| `/admin/reports` | Reports page | Stub |
-| `/admin/loyalty/catalog` | Reward catalog admin (PRD-052 Vector A) | **Operational** — CRUD for rewards + price points |
+| Route | Content | Loyalty-Relevant | Status |
+|---|---|---|---|
+| `/admin/alerts` | Live cash observation alerts | No | **Operational** |
+| `/admin/settings/thresholds` | Alert threshold config (includes promo thresholds) | Partial | **Operational** |
+| `/admin/settings/shifts` | Gaming day temporal config | No | **Operational** |
+| `/admin/settings/valuation` | Valuation policy editor (PRD-053 EXEC-054) | **Yes** | **Operational** — cents_per_point read/edit, role-gated |
+| `/admin/reports` | Measurement reports dashboard (4 ADR-039 metrics) | Partial (loyalty liability) | **Operational** (EXEC-046) |
+| `/admin/loyalty/rewards` | Reward catalog list + create dialog | **Yes** | **Operational** (PRD-LOYALTY-ADMIN-CATALOG) |
+| `/admin/loyalty/rewards/[id]` | Reward detail + PointsPricingForm + TierEntitlementForm | **Yes** | **Operational** |
+| `/admin/loyalty/promo-programs` | Promo program list + create dialog | **Yes** | **Operational** (PRD-LOYALTY-ADMIN-CATALOG) |
+| `/admin/loyalty/promo-programs/[id]` | Program detail + inline edit + InventorySummary | **Yes** | **Operational** |
+
+**Sidebar navigation**: Loyalty section appears in OPERATIONAL group → Rewards Catalog + Promo Programs. Admin section in ADMINISTRATIVE group → Alerts, Reports, Settings (tabs: Thresholds, Shifts, Valuation).
 
 ### 1.8 Tests
 
@@ -169,7 +207,7 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 - `__tests__/services/loyalty/promo-instruments.int.test.ts` (735 lines)
 - `__tests__/services/loyalty/promo-instruments-mappers.test.ts` (611 lines)
 
-**PRD-052 issuance tests** (NEW):
+**PRD-052 issuance tests**:
 - `services/loyalty/__tests__/issue-comp.int.test.ts` — happy path, insufficient balance, inactive reward, not found
 - `services/loyalty/__tests__/issue-entitlement.int.test.ts` — happy path, catalog config invalid, role gate (dealer/cashier → FORBIDDEN)
 - `services/loyalty/__tests__/issuance-idempotency.int.test.ts` — comp + entitlement idempotency, `Promise.all` concurrent double-debit prevention (NFR-4)
@@ -177,59 +215,82 @@ All 3 write RPCs emit to `loyalty_outbox` and write `audit_log` entries.
 - `components/loyalty/__tests__/issue-reward-drawer.test.tsx` — drawer state machine (select→confirm→result)
 - `services/player360-dashboard/__tests__/mappers.test.ts` — mapper bug fix validation (`'redeem'` → `'comp'`)
 
+**PRD-053 Vector C print tests** (NEW — 65 tests across 8 suites):
+- `lib/print/__tests__/comp-slip.test.ts` — comp slip HTML template rendering
+- `lib/print/__tests__/coupon.test.ts` — entitlement coupon HTML template rendering
+- `lib/print/__tests__/escape-html.test.ts` — XSS defense (escapeHtml)
+- `lib/print/__tests__/iframe-print-ssr.test.ts` — SSR safety (no DOM access)
+- `lib/print/__tests__/iframe-print.test.ts` — iframe creation, print dialog, cleanup
+- `lib/print/__tests__/print-reward.test.ts` — family-discriminated dispatch
+- `lib/print/__tests__/use-print-reward.test.ts` — hook state machine (idle→printing→success/error)
+- `components/loyalty/__tests__/issuance-result-panel.test.tsx` — print wiring, auto-fire guard, printState threading
+
+**PRD-053 point conversion tests** (NEW — 20 tests):
+- `services/loyalty/__tests__/valuation-policy.test.ts` — getActiveValuationCentsPerPoint, getActiveValuationPolicy
+- `services/loyalty/__tests__/valuation-policy-roundtrip.int.test.ts` — end-to-end read/update/read cycle
+- `services/loyalty/__tests__/issue-comp-variable-amount.test.ts` — variable-amount branching, rounding, schema validation (16 tests)
+- `app/api/v1/loyalty/valuation-policy/__tests__/route.test.ts` — GET/PATCH route handlers, role gating, validation
+
 ---
 
 ## 2. Critical Gaps
 
-### GAP-1: No Admin UI for Loyalty Instrument Management
+### ~~GAP-1: No Admin UI for Loyalty Instrument Management~~ — RESOLVED (~90%)
 
-**Severity**: P0 — blocks operational self-service
+**Original Severity**: P0 — blocks operational self-service
+**Current Status**: **Operational** — core admin catalog UI delivered (PRD-LOYALTY-ADMIN-CATALOG)
 
-Users cannot:
-- Create or manage promo programs (no form, no list view)
-- Configure tier-to-entitlement mappings (no tier ladder editor)
-- Toggle coupon policies (`promo_require_exact_match`, `promo_allow_anonymous_issuance`)
-- Manage coupon inventory (void/replace from admin surface)
-- Configure loyalty earn rates (`loyalty_earn_config` has no API routes or UI)
+Users CAN now:
+- Create and manage rewards (list, create, edit metadata, toggle active) — `/admin/loyalty/rewards`
+- Configure points pricing (points_cost, allow_overdraw) — PointsPricingForm
+- Configure tier-to-entitlement mappings (tier → face_value_cents, instrument_type) — TierEntitlementForm on reward detail page
+- Create and manage promo programs (list, create, edit name/status/dates) — `/admin/loyalty/promo-programs`
+- View coupon inventory per program (read-only) — InventorySummary
+- Configure valuation policy (cents_per_point) — `/admin/settings/valuation`
 
-The API endpoints exist (POST/PATCH `/api/v1/promo-programs`) but there is **zero frontend** to consume them. Programs can only be created via direct API call or mock data.
+**9 components, ~2,344 LOC**, role-gated (admin/pit_boss via route layout guard).
 
-**Note**: Reward catalog admin (Vector A) provides CRUD for `reward_catalog` + `reward_price_points`, but promo program management and policy toggles remain absent.
+**Remaining sub-gaps (~10%):**
+- Coupon policy toggles UI (`promo_require_exact_match`, `promo_allow_anonymous_issuance`) — API at `/api/v1/casino/settings` exists, no frontend
+- Earn config UI (`loyalty_earn_config`) — intentionally deferred per frozen decision D2 (earn rates stay on `game_settings` for pilot)
+- Tier ladder/hierarchy editor — deferred per PRD §7.2; only inline tier entitlement editing exists on individual reward detail pages
 
-### GAP-2: No Tier-to-Entitlement Auto-Derivation
+### GAP-2: No Tier-to-Entitlement Auto-Derivation (Partially Addressed)
 
-**Severity**: P1 — blocks tier-aware automated issuance (downgraded from P0)
+**Severity**: P2 — downgraded from P1; manual tier-based issuance works
 
-`issueEntitlement()` reads frozen commercial values from `reward.metadata` (JSONB). There is no tier→entitlement resolution logic. This is **by design for the pilot** (PRD §7.3: "Vector B does not implement entitlement derivation logic").
+`issueEntitlement()` now uses tier-based lookup via `getBalance()` → `entitlementTiers[].benefit` (P2K-28). The `TierEntitlementForm` admin component allows configuring tier → `face_value_cents` + `instrument_type` mappings per reward.
 
-**Options** (unchanged):
+**What works**: Manual tier-based issuance with catalog-configured values. Admin can set up tier entitlements via reward detail page.
+**What's missing**: One-click auto-derivation RPC (`rpc_issue_current_match_play`) that resolves tier, finds program, computes entitlement in a single call.
+
+**Options** (unchanged for RPC design):
 - **A (JSONB)**: Add `tier_entitlements jsonb` to `promo_program` — simplest, no joins
 - **B (Join table)**: `promo_tier_entitlement (program_id, tier) -> (face_value, match_wager)` — normalized
 - **C (One-program-per-tier)**: Multiple programs per tier with `tier_filter` column
 
-Note: `reward_entitlement_tier` table exists (ADR-033) with service CRUD but is reward-catalog-scoped, not promo-program-scoped.
+Note: `reward_entitlement_tier` table exists (ADR-033) with service CRUD and admin UI (TierEntitlementForm, 322 LOC).
 
 ### GAP-3: `rpc_issue_current_match_play` — 0% Implemented
 
-**Severity**: P1 — blocks one-click print workflow
+**Severity**: P1 — blocks one-click automated issuance
 
 The auto-derivation RPC that resolves tier, finds active program, computes entitlement, enforces idempotency, and returns a ready-to-print coupon does not exist.
 
 Requires: tier mapping mechanism (GAP-2) + scope decision (gaming-day vs visit).
 
-### GAP-4: Print Infrastructure — 0%
+**Note**: Print infrastructure now exists (GAP-4 resolved). This gap only blocks the one-click automated flow; manual issuance with print works end-to-end.
 
-**Severity**: P1 — blocks printable coupons
+### ~~GAP-4: Print Infrastructure — 0%~~ — RESOLVED
 
-- No `lib/print/` directory
-- No iframe print utility
-- No HTML template builder
-- No print history logging (`promo_coupon.metadata.print_history[]`)
-- No "Print Match Play" button in rating slip modal or player dashboard
-
-Rating Slip Modal current actions: Save Changes, Pause/Resume, Close Session — no print action.
-
-**Note**: `IssuanceResultPanel` has a "Print" button binding point (no-op until Vector C connects print infrastructure).
+Resolved by PRD-053 Vector C (`cb0cabc`, 2026-03-20):
+- `lib/print/` directory with iframe utility, templates, hooks
+- `iframePrint()` creates hidden iframe + triggers browser print dialog
+- `compSlipHtml()` and `couponHtml()` HTML template builders
+- `usePrintReward()` hook with idle/printing/success/error state machine
+- `IssuanceResultPanel` wired with `printState` + `onPrint(payload, mode)` props
+- Auto-fire on successful issuance via `queueMicrotask` with `useRef` guard
+- **Remaining**: Print history logging (`promo_coupon.metadata.print_history[]`) not yet implemented (best-effort, deferred)
 
 ### ~~GAP-5: Missing Inventory API Route~~ — RESOLVED
 
@@ -248,37 +309,41 @@ Service CRUD exists in `services/loyalty/reward/crud.ts` (queries `loyalty_earn_
 | Dimension | Readiness | Notes |
 |---|---|---|
 | Data model (core tables) | **95%** | All tables deployed. Missing: tier entitlement on promo_program |
-| RLS / security | **100%** | Pattern C, ADR-024, delete denied, role-gated |
-| Core RPCs (CRUD) | **100%** | 5 RPCs operational, all idempotent, `rpc_issue_promo_coupon` role-gated |
+| RLS / security | **100%** | Pattern C, ADR-024, delete denied, role-gated, audit_log via DEFINER RPC |
+| Core RPCs (CRUD) | **100%** | 7 RPCs operational (+`rpc_update_valuation_policy`, `append_audit_log`), all idempotent |
 | One-click RPC | **0%** | `rpc_issue_current_match_play` does not exist |
-| Service layer | **95%** | 9 loyalty + 12 promo methods. `issueComp()` + `issueEntitlement()` operational. Missing: one-click method |
-| React hooks | **95%** | Full CRUD hooks + `useIssueReward`. Missing: one-click hook |
-| API routes | **95%** | 9 promo/issuance endpoints + inventory. Missing: one-click endpoint |
-| Operator issuance UI | **100%** | IssueRewardDrawer with family-aware confirm panels, comp + entitlement |
-| Admin config UI | **0%** | No promo program, tier, or earn config UI (reward catalog admin exists) |
-| Print infrastructure | **0%** | No iframe, template, or button (binding point exists in IssuanceResultPanel) |
+| Service layer | **97%** | 12 loyalty + 12 promo methods. Variable-amount comp + valuation CRUD operational. Missing: one-click method |
+| React hooks | **97%** | Full CRUD + issuance + valuation + print hooks. Missing: one-click hook |
+| API routes | **97%** | 10 promo/issuance + 1 valuation admin endpoints. Missing: one-click endpoint |
+| Operator issuance UI | **100%** | IssueRewardDrawer + variable-amount comp + rating slip button + print on success |
+| Admin config UI | **90%** | Reward catalog CRUD, promo program CRUD, tier entitlement forms, valuation settings — all operational. Missing: coupon policy toggles, earn config (deferred D2) |
+| Print infrastructure | **90%** | `lib/print/` operational: iframe, templates, hook, auto-fire. Missing: print history logging |
 | Dashboard / rollups | **100%** | PromoExposurePanel + 30s auto-refresh |
 | Alert thresholds | **100%** | Promo thresholds in casino_settings |
-| Tests | **90%** | Legacy (2,231 lines) + issuance (6 new test files covering comp, entitlement, idempotency, route, UI, mappers); no E2E |
+| Tests | **95%** | Legacy (2,231 lines) + issuance (6 files) + print (65 tests, 8 suites) + valuation (20 tests); no E2E |
 
 ---
 
 ## 4. Recommended Implementation Sequence
 
-### Phase 1: Admin Configuration Surface (unblocks self-service)
+### ~~Phase 1: Admin Configuration Surface (unblocks self-service)~~ — ~90% DONE
+
+Delivered by PRD-LOYALTY-ADMIN-CATALOG. Operational routes:
 
 ```
 app/(dashboard)/admin/loyalty/
-├── promo-programs/
-│   ├── page.tsx              # Program list + create button
-│   └── [id]/page.tsx         # Program detail + edit + coupon inventory
-└── policies/
-    └── page.tsx              # Coupon policy toggles + earn config
+├── rewards/
+│   ├── page.tsx              # RewardListClient + CreateRewardDialog ✅
+│   └── [id]/page.tsx         # RewardDetailClient + PointsPricingForm + TierEntitlementForm ✅
+└── promo-programs/
+    ├── page.tsx              # ProgramListClient + CreateProgramDialog ✅
+    └── [id]/page.tsx         # ProgramDetailClient + InventorySummary ✅
 ```
 
-**Components needed**: `PromoProgramList`, `PromoProgramForm`, `TierEntitlementEditor`, `PromoSettingsToggle`
-
-**Note**: API routes already exist. Frontend only.
+**Remaining (~10%)**:
+- `/admin/loyalty/policies` page — coupon policy toggles (`promo_require_exact_match`, `promo_allow_anonymous_issuance`). API exists, no frontend.
+- Earn config UI — intentionally deferred per frozen decision D2.
+- Tier ladder editor — deferred per PRD §7.2; inline TierEntitlementForm exists on reward detail page.
 
 ### Phase 2: Schema + RPC for Tier-Aware Issuance
 
@@ -286,12 +351,11 @@ app/(dashboard)/admin/loyalty/
 2. Migration: `rpc_issue_current_match_play` with idempotency + metadata writes
 3. Service + DTO + API route + hook for one-click method
 
-### Phase 3: Print Pipeline (Vector C)
+### ~~Phase 3: Print Pipeline (Vector C)~~ — DONE
 
-1. `lib/print/` — iframe print utility + HTML template builder
-2. Wire `onFulfillmentReady` callback in `IssuanceResultPanel` to print pipeline
-3. "Print Match Play" button in rating slip modal + player dashboard
-4. Print history logging (best-effort metadata append)
+Delivered by PRD-053 Vector C (`cb0cabc`, 2026-03-20). See GAP-4 resolution above.
+
+Remaining from Phase 3: Print history logging (best-effort metadata append to `promo_coupon.metadata.print_history[]`).
 
 ### Phase 4: Enforcement + Debt Cleanup
 
@@ -323,6 +387,8 @@ app/(dashboard)/admin/loyalty/
 | 3 | `loyalty_outbox` missing from generated types | P3 | Verify with `npm run db:types` | Open |
 | 4 | `promo_type_enum` missing `nonnegotiable`, `free_bet`, `other` | P3 | `20260106235611_loyalty_promo_instruments.sql:26` | Partially resolved (`free_play` added) |
 | 5 | `promo_program.status` uses CHECK constraint (`active`/`inactive`/`archived`) not spec's enum (`draft`/`active`/`paused`/`ended`) | P3 | Same migration, line 54 | Open |
+| ~~6~~ | ~~Fulfillment CHECK constraint / app enum mismatch~~ | ~~P1~~ | — | **RESOLVED** (P2K-29, migration `20260319202632`) |
+| ~~7~~ | ~~Hardcoded CENTS_PER_POINT~~ | ~~P1~~ | — | **RESOLVED** (PRD-053 EXEC-054, DB-sourced via `loyalty_valuation_policy`) |
 
 ---
 
@@ -341,4 +407,59 @@ app/(dashboard)/admin/loyalty/
 
 **Security**: Dual role gates — route handler checks `ctx.rlsContext.staffRole` before dispatch; RPC checks `app.staff_role` after context derivation. Cashier cannot issue comps or entitlements at any layer.
 
-**Contract Surface**: `FulfillmentPayload` (discriminated union) exported from `services/loyalty/dtos.ts` — frozen for Vector C print pipeline consumption. `onFulfillmentReady` callback wired in drawer (no-op until Vector C binds).
+**Contract Surface**: `FulfillmentPayload` (discriminated union) exported from `services/loyalty/dtos.ts` — consumed by Vector C print pipeline (`printReward()` dispatches by family).
+
+---
+
+## 8. Vector C Delivery Summary (PRD-053 — Print Standard)
+
+**Commit**: `cb0cabc` (merged 2026-03-20, PR #30)
+
+| Deliverable | Status |
+|---|---|
+| `lib/print/` module (iframe utility, escapeHtml, templates, dispatch, hook) | **Deployed** |
+| `iframePrint()` — hidden iframe + browser print dialog, PrintJob API | **Deployed** |
+| `compSlipHtml()` + `couponHtml()` — HTML template builders with shared styles | **Deployed** |
+| `printReward()` — family-discriminated dispatch function | **Deployed** |
+| `usePrintReward()` — React hook (idle/printing/success/error state machine) | **Deployed** |
+| `IssuanceResultPanel` — printState + onPrint prop wiring, auto-fire with useRef guard | **Deployed** |
+| `IssueRewardButton` — threads casinoName/staffName/currentTier to drawer for print context | **Deployed** |
+| 65 tests across 8 suites (templates, iframe, dispatch, hook, SSR safety, UI integration) | **Deployed** |
+| ADR-045 — pilot reward instrument fulfillment | **Deployed** |
+
+**Design artifacts**: ADR-045, RFC-VECTOR-C, PRD-053, EXEC-053, SCAFFOLD-VECTOR-C, SEC_NOTE, FEATURE_BOUNDARY.
+
+---
+
+## 9. P2K Issuance Fixes Delivery Summary (PR #31)
+
+**Commit**: `2fd1db7` (merged 2026-03-20, PR #31)
+
+| Ticket | Deliverable | Status |
+|---|---|---|
+| P2K-29 | Fulfillment CHECK constraint aligned to app values (`comp_slip`, `coupon`, `none`) + `23514` error handler | **Deployed** |
+| P2K-28 | Tier-based entitlement value lookup via `getBalance()` → `entitlementTiers[].benefit` | **Deployed** |
+| P2K-30 | Variable-amount comp: `faceValueCents` + `allowOverdraw` params, dollar input UI, auto-conversion, $100K Zod cap | **Deployed** |
+| P2K-32 | IssueRewardButton added to rating slip modal, visitId from `modalData.slip.visitId` | **Deployed** |
+| P2K-33 | visitId threaded from `useActiveVisit()` through button → drawer → mutation for audit trail | **Deployed** |
+
+---
+
+## 10. Point Conversion Canonicalization Delivery Summary (PRD-053 EXEC-054)
+
+**Commit**: `5198535` + `2a764fc` (merged 2026-03-21, PR #32)
+
+| Deliverable | Status |
+|---|---|
+| `getActiveValuationCentsPerPoint()` — fail-closed, returns `VALUATION_POLICY_MISSING` if absent | **Deployed** |
+| `getActiveValuationPolicy()` — full DTO for admin form | **Deployed** |
+| `updateValuationPolicy()` — atomic rotate via `rpc_update_valuation_policy` | **Deployed** |
+| `rpc_update_valuation_policy` — admin-only, SELECT FOR UPDATE concurrency lock | **Deployed** |
+| `ValuationSettingsForm` — `/admin/settings/valuation`, role-gated read-only mode | **Deployed** |
+| `useValuationRate` / `useUpdateValuationPolicy` hooks | **Deployed** |
+| `GET /api/v1/loyalty/valuation-policy` + `PATCH` route handler | **Deployed** |
+| Bootstrap seed: `cents_per_point=2` for all casinos, onboarding enforcement migration | **Deployed** |
+| CompConfirmPanel updated: reads DB-sourced rate, auto-conversion display | **Deployed** |
+| 20 new tests (service layer, route handlers, round-trip) | **Deployed** |
+
+**Key invariant**: No hardcoded `CENTS_PER_POINT` anywhere in codebase. `issueComp()` calls `getActiveValuationCentsPerPoint()` in parallel pre-flight via `Promise.all`.

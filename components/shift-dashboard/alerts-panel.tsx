@@ -1,8 +1,10 @@
 /**
  * Alerts Panel
  *
- * Displays cash observation spike alerts for shift dashboard.
- * TELEMETRY-ONLY: These alerts are observational, NOT authoritative.
+ * Displays cash observation spike alerts AND persistent baseline anomaly
+ * alerts for the shift dashboard.
+ * Cash obs: TELEMETRY-ONLY, observational.
+ * Baseline: Persistent alerts from shift_alert table (PRD-056).
  *
  * @see ADMIN_DASHBOARD_STYLISTIC_DIRECTION.md §3.4
  */
@@ -13,13 +15,22 @@ import {
   AlertTriangleIcon,
   BellIcon,
   InfoIcon,
+  RefreshCw,
   XCircleIcon,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { AcknowledgeAlertDialog } from '@/components/admin-alerts/acknowledge-alert-dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  usePersistAlerts,
+  useShiftAlerts,
+} from '@/hooks/shift-intelligence/use-shift-alerts';
 import { formatCents } from '@/lib/format';
+import type { ShiftAlertDTO } from '@/services/shift-intelligence/dtos';
 import type { CashObsSpikeAlertDTO } from '@/services/table-context/dtos';
 
 export interface AlertsPanelProps {
@@ -133,11 +144,86 @@ function AlertSkeleton() {
   );
 }
 
+/** Baseline alert card (PRD-056) */
+function BaselineAlertItem({
+  alert,
+  onAcknowledge,
+}: {
+  alert: ShiftAlertDTO;
+  onAcknowledge: (alert: ShiftAlertDTO) => void;
+}) {
+  const severityMap: Record<string, ReturnType<typeof getSeverityConfig>> = {
+    high: getSeverityConfig('critical'),
+    medium: getSeverityConfig('warn'),
+    low: getSeverityConfig('info'),
+  };
+  const config = severityMap[alert.severity] ?? getSeverityConfig('info');
+
+  return (
+    <div
+      className={`${config.borderClass} ${config.bgClass} p-3 rounded-r-lg ${alert.status === 'acknowledged' ? 'opacity-50' : ''}`}
+      role="alert"
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2">
+          {config.icon}
+          <Badge
+            variant="outline"
+            className="border-teal-400 text-teal-600 text-[10px]"
+          >
+            Baseline
+          </Badge>
+          <span className="font-mono text-sm">{alert.tableLabel}</span>
+          <span className="text-xs text-muted-foreground">
+            {alert.metricType}
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge className={`${config.badgeClass} text-[10px] uppercase`}>
+            {alert.severity}
+          </Badge>
+          {alert.status === 'open' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px] px-2"
+              onClick={() => onAcknowledge(alert)}
+            >
+              Ack
+            </Button>
+          )}
+        </div>
+      </div>
+      <p className="text-xs text-muted-foreground mt-1">{alert.message}</p>
+      {alert.acknowledgment && (
+        <p className="text-[10px] text-muted-foreground mt-1">
+          Acknowledged by {alert.acknowledgment.acknowledgedByName ?? 'staff'}
+          {alert.acknowledgment.isFalsePositive && ' (false positive)'}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
   const criticalCount =
     data?.filter((a) => a.severity === 'critical').length ?? 0;
   const warnCount = data?.filter((a) => a.severity === 'warn').length ?? 0;
   const totalCount = data?.length ?? 0;
+
+  // PRD-056: Persistent baseline alerts
+  const gamingDay = new Date().toISOString().slice(0, 10);
+  const persistMutation = usePersistAlerts();
+  const { data: shiftAlertsData, isLoading: isLoadingBaseline } =
+    useShiftAlerts(gamingDay);
+  const baselineAlerts = shiftAlertsData?.alerts ?? [];
+  const [ackTarget, setAckTarget] = useState<ShiftAlertDTO | null>(null);
+
+  // Persist alerts on mount (PRD §6 Flow 1)
+  useEffect(() => {
+    persistMutation.mutate(undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fire once on mount
+  }, []);
 
   return (
     <Card className="border-dashed border-amber-500/30 bg-amber-50/5">
@@ -145,15 +231,21 @@ export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BellIcon className="h-4 w-4 text-amber-500" />
-            <CardTitle className="text-sm font-medium">Spike Alerts</CardTitle>
-            <Badge
-              variant="outline"
-              className="border-amber-500/50 text-amber-600 text-[10px]"
-            >
-              TELEMETRY
-            </Badge>
+            <CardTitle className="text-sm font-medium">Alerts</CardTitle>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 text-[10px]"
+              onClick={() => persistMutation.mutate(undefined)}
+              disabled={persistMutation.isPending}
+            >
+              <RefreshCw
+                className={`mr-1 h-3 w-3 ${persistMutation.isPending ? 'animate-spin' : ''}`}
+              />
+              Refresh
+            </Button>
             {criticalCount > 0 && (
               <Badge className="bg-red-500/10 text-red-500 text-[10px]">
                 {criticalCount} critical
@@ -164,35 +256,60 @@ export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
                 {warnCount} warn
               </Badge>
             )}
-            {totalCount === 0 && !isLoading && (
-              <span className="text-xs text-muted-foreground">No alerts</span>
-            )}
+            {totalCount === 0 &&
+              baselineAlerts.length === 0 &&
+              !isLoading &&
+              !isLoadingBaseline && (
+                <span className="text-xs text-muted-foreground">No alerts</span>
+              )}
           </div>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-4">
+        {/* Baseline anomaly alerts (PRD-056) */}
+        {(isLoadingBaseline || baselineAlerts.length > 0) && (
+          <div className="space-y-2">
+            {isLoadingBaseline ? (
+              <>
+                <AlertSkeleton />
+                <AlertSkeleton />
+              </>
+            ) : (
+              baselineAlerts.map((alert) => (
+                <BaselineAlertItem
+                  key={alert.id}
+                  alert={alert}
+                  onAcknowledge={setAckTarget}
+                />
+              ))
+            )}
+          </div>
+        )}
+
+        {/* Cash observation spike alerts */}
         {isLoading ? (
           <div className="space-y-3">
             <AlertSkeleton />
             <AlertSkeleton />
           </div>
         ) : !data || data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-8 text-center">
-            <BellIcon className="h-8 w-8 text-muted-foreground/50 mb-2" />
-            <p className="text-sm text-muted-foreground">
-              No spike alerts in this time window
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Alerts trigger when observed totals exceed thresholds
-            </p>
-          </div>
+          baselineAlerts.length === 0 && !isLoadingBaseline ? (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <BellIcon className="h-8 w-8 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No alerts in this time window
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Alerts trigger when observed totals exceed thresholds
+              </p>
+            </div>
+          ) : null
         ) : (
           <div
             className="space-y-3 max-h-[400px] overflow-y-auto"
             role="log"
             aria-label="Spike alerts list"
           >
-            {/* Sort by severity: critical first, then warn, then info */}
             {[...data]
               .sort((a, b) => {
                 const order = { critical: 0, warn: 1, info: 2 };
@@ -204,6 +321,13 @@ export function AlertsPanel({ data, isLoading }: AlertsPanelProps) {
           </div>
         )}
       </CardContent>
+
+      {/* Acknowledge dialog */}
+      <AcknowledgeAlertDialog
+        alert={ackTarget}
+        open={!!ackTarget}
+        onOpenChange={(open) => !open && setAckTarget(null)}
+      />
     </Card>
   );
 }

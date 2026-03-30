@@ -1,36 +1,19 @@
 /**
  * jest.setup.node.ts — Minimal setup for node-runtime Jest configs.
  *
- * Loads .env.test variables and sets Supabase fallbacks.
+ * Loads .env variables and sets Supabase fallbacks.
  * Does NOT import @testing-library/jest-dom (node environment only).
  */
 
 // Signal to jest.setup.js that a runtime-correct config is active
 process.env.JEST_CONFIG_OVERRIDE = '1';
 
-// Load .env.test file for test environment
-const fs = require('fs');
+// Load environment variables (same .env file as Playwright and Next.js)
 const path = require('path');
 
-try {
-  const envTestPath = path.resolve(process.cwd(), '.env.test');
-  if (fs.existsSync(envTestPath)) {
-    const envConfig = fs.readFileSync(envTestPath, 'utf8');
-    envConfig.split('\n').forEach((line: string) => {
-      const match = line.match(/^([^=:#]+)=(.*)$/);
-      if (match) {
-        const key = match[1].trim();
-        const value = match[2].trim();
-        if (!process.env[key]) {
-          process.env[key] = value;
-        }
-      }
-    });
-  }
-} catch (error: unknown) {
-  const message = error instanceof Error ? error.message : String(error);
-  console.warn('Could not load .env.test file:', message);
-}
+const dotenv = require('dotenv');
+
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: false });
 
 // Fallback Supabase env vars
 process.env.NEXT_PUBLIC_SUPABASE_URL =

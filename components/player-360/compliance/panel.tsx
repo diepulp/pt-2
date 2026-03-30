@@ -23,6 +23,7 @@ import { memo } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { formatDollars } from '@/lib/format';
 import { cn } from '@/lib/utils';
 
 import { Panel, PanelContent, PanelHeader } from '../layout';
@@ -36,9 +37,9 @@ import { ExclusionTile } from './exclusion-tile';
  * Currency Transaction Report (CTR) threshold status.
  */
 export interface CtrStatus {
-  /** Total cash-in + cash-out for gaming day */
+  /** Total cash-in + cash-out for gaming day, in dollars (converted from cents at wrapper boundary per ADR-031) */
   todayTotal: number;
-  /** CTR reporting threshold (typically $10,000) */
+  /** CTR reporting threshold in dollars (typically $10,000) */
   threshold: number;
   /** Whether threshold has been reached */
   isTriggered: boolean;
@@ -271,10 +272,10 @@ function CtrProgressTile({ status, className }: CtrProgressTileProps) {
       {/* Values */}
       <div className="flex items-center justify-between">
         <span className="text-lg font-semibold">
-          ${status.todayTotal.toLocaleString()}
+          {formatDollars(status.todayTotal)}
         </span>
         <span className="text-xs text-muted-foreground">
-          of ${status.threshold.toLocaleString()} threshold
+          of {formatDollars(status.threshold)} threshold
         </span>
       </div>
     </div>
@@ -311,7 +312,7 @@ function MtlSummary({ entries, className }: MtlSummaryProps) {
           <span className="text-[10px] uppercase tracking-wide">Cash In</span>
         </div>
         <p className="text-sm font-semibold text-green-400">
-          ${cashIn.toLocaleString()}
+          {formatDollars(cashIn)}
         </p>
       </div>
 
@@ -322,7 +323,7 @@ function MtlSummary({ entries, className }: MtlSummaryProps) {
           <span className="text-[10px] uppercase tracking-wide">Cash Out</span>
         </div>
         <p className="text-sm font-semibold text-red-400">
-          ${cashOut.toLocaleString()}
+          {formatDollars(cashOut)}
         </p>
       </div>
     </div>
@@ -398,7 +399,8 @@ function MtlEntryRow({ entry, onClick, className }: MtlEntryRowProps) {
           entry.direction === 'in' ? 'text-green-400' : 'text-red-400',
         )}
       >
-        {entry.direction === 'in' ? '+' : '-'}${entry.amount.toLocaleString()}
+        {entry.direction === 'in' ? '+' : '-'}
+        {formatDollars(entry.amount)}
       </span>
 
       {/* Chevron if clickable */}

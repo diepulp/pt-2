@@ -62,7 +62,7 @@ export type Database = {
       casino: {
         Row: {
           address: Json | null
-          company_id: string | null
+          company_id: string
           created_at: string
           id: string
           location: string | null
@@ -71,7 +71,7 @@ export type Database = {
         }
         Insert: {
           address?: Json | null
-          company_id?: string | null
+          company_id: string
           created_at?: string
           id?: string
           location?: string | null
@@ -80,7 +80,7 @@ export type Database = {
         }
         Update: {
           address?: Json | null
-          company_id?: string | null
+          company_id?: string
           created_at?: string
           id?: string
           location?: string | null
@@ -1550,6 +1550,92 @@ export type Database = {
           },
         ]
       }
+      player_exclusion: {
+        Row: {
+          casino_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_until: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref: string | null
+          id: string
+          jurisdiction: string | null
+          lift_reason: string | null
+          lifted_at: string | null
+          lifted_by: string | null
+          player_id: string
+          reason: string
+          review_date: string | null
+        }
+        Insert: {
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement: string
+          exclusion_type: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id: string
+          reason: string
+          review_date?: string | null
+        }
+        Update: {
+          casino_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_until?: string | null
+          enforcement?: string
+          exclusion_type?: string
+          external_ref?: string | null
+          id?: string
+          jurisdiction?: string | null
+          lift_reason?: string | null
+          lifted_at?: string | null
+          lifted_by?: string | null
+          player_id?: string
+          reason?: string
+          review_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_exclusion_casino_id_fkey"
+            columns: ["casino_id"]
+            isOneToOne: false
+            referencedRelation: "casino"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_lifted_by_fkey"
+            columns: ["lifted_by"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_exclusion_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "player"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       player_financial_transaction: {
         Row: {
           amount: number
@@ -1651,92 +1737,6 @@ export type Database = {
             columns: ["visit_id"]
             isOneToOne: false
             referencedRelation: "visit"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      player_exclusion: {
-        Row: {
-          casino_id: string
-          created_at: string
-          created_by: string
-          effective_from: string
-          effective_until: string | null
-          enforcement: string
-          exclusion_type: string
-          external_ref: string | null
-          id: string
-          jurisdiction: string | null
-          lift_reason: string | null
-          lifted_at: string | null
-          lifted_by: string | null
-          player_id: string
-          reason: string
-          review_date: string | null
-        }
-        Insert: {
-          casino_id: string
-          created_at?: string
-          created_by: string
-          effective_from?: string
-          effective_until?: string | null
-          enforcement: string
-          exclusion_type: string
-          external_ref?: string | null
-          id?: string
-          jurisdiction?: string | null
-          lift_reason?: string | null
-          lifted_at?: string | null
-          lifted_by?: string | null
-          player_id: string
-          reason: string
-          review_date?: string | null
-        }
-        Update: {
-          casino_id?: string
-          created_at?: string
-          created_by?: string
-          effective_from?: string
-          effective_until?: string | null
-          enforcement?: string
-          exclusion_type?: string
-          external_ref?: string | null
-          id?: string
-          jurisdiction?: string | null
-          lift_reason?: string | null
-          lifted_at?: string | null
-          lifted_by?: string | null
-          player_id?: string
-          reason?: string
-          review_date?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "player_exclusion_casino_id_fkey"
-            columns: ["casino_id"]
-            isOneToOne: false
-            referencedRelation: "casino"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_exclusion_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_exclusion_lifted_by_fkey"
-            columns: ["lifted_by"]
-            isOneToOne: false
-            referencedRelation: "staff"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "player_exclusion_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "player"
             referencedColumns: ["id"]
           },
         ]
@@ -3917,6 +3917,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      append_audit_log: {
+        Args: { p_action: string; p_details?: Json; p_domain: string }
+        Returns: undefined
+      }
       calculate_theo_from_snapshot: {
         Args: {
           p_loyalty_snapshot: Json
@@ -3963,6 +3967,10 @@ export type Database = {
           suggested_theo: number
         }[]
       }
+      get_player_exclusion_status: {
+        Args: { p_casino_id: string; p_player_id: string }
+        Returns: string
+      }
       get_visit_cash_in_with_adjustments: {
         Args: { p_visit_id: string }
         Returns: {
@@ -3972,9 +3980,9 @@ export type Database = {
           original_total: number
         }[]
       }
-      get_player_exclusion_status: {
-        Args: { p_player_id: string; p_casino_id: string }
-        Returns: string
+      is_exclusion_active: {
+        Args: { excl: Database["public"]["Tables"]["player_exclusion"]["Row"] }
+        Returns: boolean
       }
       rpc_accept_staff_invite: {
         Args: { p_token: string }
@@ -4037,6 +4045,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      rpc_activate_player_locally: {
+        Args: { p_player_id: string }
+        Returns: Json
       }
       rpc_apply_promotion: {
         Args: {
@@ -4252,7 +4264,6 @@ export type Database = {
         Args: {
           p_amount: number
           p_created_at?: string
-          p_created_by_staff_id: string
           p_direction: Database["public"]["Enums"]["financial_direction"]
           p_external_ref?: string
           p_idempotency_key?: string
@@ -4570,6 +4581,10 @@ export type Database = {
       }
       rpc_get_dashboard_stats: { Args: never; Returns: Json }
       rpc_get_dashboard_tables_with_counts: { Args: never; Returns: Json }
+      rpc_get_player_exclusion_status: {
+        Args: { p_player_id: string }
+        Returns: string
+      }
       rpc_get_player_last_session_context: {
         Args: { p_player_id: string }
         Returns: Json
@@ -4930,9 +4945,22 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_lookup_player_company: {
+        Args: { p_search_term: string }
+        Returns: {
+          active_locally: boolean
+          birth_date: string
+          enrolled_casinos: Json
+          full_name: string
+          has_sister_exclusions: boolean
+          last_company_visit: string
+          loyalty_entitlement: Json
+          max_exclusion_severity: string
+          player_id: string
+        }[]
+      }
       rpc_manual_credit: {
         Args: {
-          p_awarded_by_staff_id: string
           p_idempotency_key: string
           p_note: string
           p_player_id: string
@@ -5145,7 +5173,6 @@ export type Database = {
         Args: {
           p_allow_overdraw?: boolean
           p_idempotency_key: string
-          p_issued_by_staff_id: string
           p_note: string
           p_player_id: string
           p_points: number
@@ -5160,6 +5187,10 @@ export type Database = {
           overdraw_applied: boolean
           points_delta: number
         }[]
+      }
+      rpc_redeem_loyalty_locally: {
+        Args: { p_amount: number; p_player_id: string; p_reason: string }
+        Returns: Json
       }
       rpc_replace_promo_coupon: {
         Args: {
@@ -5531,6 +5562,7 @@ export type Database = {
       rpc_start_or_resume_visit: {
         Args: { p_player_id: string }
         Returns: {
+          exclusion_warning: string
           gaming_day: string
           is_new: boolean
           resumed: boolean
@@ -5645,6 +5677,29 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rpc_update_valuation_policy: {
+        Args: {
+          p_cents_per_point: number
+          p_effective_date: string
+          p_version_identifier: string
+        }
+        Returns: {
+          casino_id: string
+          cents_per_point: number
+          created_at: string
+          created_by_staff_id: string | null
+          effective_date: string
+          id: string
+          is_active: boolean
+          version_identifier: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "loyalty_valuation_policy"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       rpc_void_promo_coupon: {
         Args: {
           p_correlation_id?: string
@@ -5658,6 +5713,7 @@ export type Database = {
         Returns: {
           actor_id: string
           casino_id: string
+          company_id: string
           staff_role: string
         }[]
       }
@@ -5755,6 +5811,7 @@ export type Database = {
         | "manual_reward"
         | "adjustment"
         | "reversal"
+        | "redemption"
       mtl_source: "table" | "cage" | "kiosk" | "other"
       mtl_txn_type:
         | "buy_in"
@@ -5770,7 +5827,7 @@ export type Database = {
         | "replaced"
         | "expired"
         | "cleared"
-      promo_type_enum: "match_play"
+      promo_type_enum: "match_play" | "free_play"
       rating_slip_status: "open" | "paused" | "closed" | "archived"
       reward_family: "points_comp" | "entitlement"
       staff_role: "dealer" | "pit_boss" | "cashier" | "admin"
@@ -5993,6 +6050,7 @@ export const Constants = {
         "manual_reward",
         "adjustment",
         "reversal",
+        "redemption",
       ],
       mtl_source: ["table", "cage", "kiosk", "other"],
       mtl_txn_type: [
@@ -6011,7 +6069,7 @@ export const Constants = {
         "expired",
         "cleared",
       ],
-      promo_type_enum: ["match_play"],
+      promo_type_enum: ["match_play", "free_play"],
       rating_slip_status: ["open", "paused", "closed", "archived"],
       reward_family: ["points_comp", "entitlement"],
       staff_role: ["dealer", "pit_boss", "cashier", "admin"],

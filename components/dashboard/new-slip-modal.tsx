@@ -47,6 +47,7 @@ import {
 import { cn } from '@/lib/utils';
 import { validateUUIDs, debugLogUUIDs } from '@/lib/validation';
 import type { PlayerSearchResultDTO } from '@/services/player/dtos';
+import { getExclusionStatus } from '@/services/player/exclusion-http';
 import { searchPlayers } from '@/services/player/http';
 import type { CreateRatingSlipInput } from '@/services/rating-slip/dtos';
 import { startRatingSlip } from '@/services/rating-slip/http';
@@ -212,6 +213,22 @@ export function NewSlipModal({
 
       if (activeVisitResponse.has_active_visit && activeVisitResponse.visit) {
         visitId = activeVisitResponse.visit.id;
+
+        // GAP-EXCL-ENFORCE-001: Check exclusion when reusing existing visit
+        // (New visits are already checked by rpc_start_or_resume_visit)
+        const exclStatus = await getExclusionStatus(selectedPlayer.id);
+        if (exclStatus.status === 'blocked') {
+          setError('This player has an active exclusion and cannot be seated.');
+          return;
+        }
+        if (exclStatus.status === 'alert') {
+          toast.warning('Exclusion Alert', {
+            description: 'Player has an active soft alert exclusion.',
+            icon: <AlertTriangle className="h-4 w-4" />,
+            duration: 10_000,
+          });
+        }
+
         if (process.env.NODE_ENV === 'development') {
           console.log('[NewSlipModal] Using existing visit:', visitId);
         }

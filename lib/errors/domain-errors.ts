@@ -91,7 +91,9 @@ export type LoyaltyErrorCode =
   // Issuance Errors (PRD-052)
   | 'REWARD_INACTIVE'
   | 'REWARD_FAMILY_MISMATCH'
-  | 'CATALOG_CONFIG_INVALID';
+  | 'CATALOG_CONFIG_INVALID'
+  // Valuation Policy Errors (PRD-053)
+  | 'VALUATION_POLICY_MISSING';
 
 export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
   INSUFFICIENT_BALANCE: 'Insufficient loyalty points balance',
@@ -123,6 +125,9 @@ export const LOYALTY_ERROR_MESSAGES: Record<LoyaltyErrorCode, string> = {
     'Reward family does not match expected issuance family',
   CATALOG_CONFIG_INVALID:
     'Reward catalog configuration is missing required commercial values',
+  // Valuation Policy Errors (PRD-053)
+  VALUATION_POLICY_MISSING:
+    'No active valuation policy found for this casino. Configure a valuation rate before issuing comps.',
 };
 
 // ============================================================================
@@ -311,7 +316,8 @@ export type PlayerErrorCode =
   | 'PLAYER_SELF_EXCLUDED'
   | 'PLAYER_EXCLUDED'
   | 'PLAYER_EXCLUSION_NOT_FOUND'
-  | 'PLAYER_EXCLUSION_ALREADY_LIFTED';
+  | 'PLAYER_EXCLUSION_ALREADY_LIFTED'
+  | 'EXCLUSION_IMMUTABLE';
 
 export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_NOT_FOUND: 'Player not found',
@@ -323,6 +329,8 @@ export const PLAYER_ERROR_MESSAGES: Record<PlayerErrorCode, string> = {
   PLAYER_EXCLUDED: 'Player has an active exclusion',
   PLAYER_EXCLUSION_NOT_FOUND: 'Exclusion record not found',
   PLAYER_EXCLUSION_ALREADY_LIFTED: 'Exclusion has already been lifted',
+  EXCLUSION_IMMUTABLE:
+    'Exclusion records are immutable after creation (lift-only updates allowed)',
 };
 
 // ============================================================================

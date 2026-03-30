@@ -24,6 +24,8 @@ import type {
   RedeemInput,
   RedeemOutput,
   SessionRewardSuggestionOutput,
+  UpdateValuationPolicyInput,
+  ValuationPolicyDTO,
 } from './dtos';
 
 const BASE_LOYALTY = '/api/v1/loyalty';
@@ -190,4 +192,34 @@ export async function getLedger(
 
   const url = `${BASE_LOYALTY}/ledger?${params}`;
   return fetchJSON<LedgerPageResponse>(url);
+}
+
+// === Valuation Policy Operations (PRD-053) ===
+
+/**
+ * Gets the active valuation policy for admin settings form.
+ *
+ * GET /api/v1/loyalty/valuation-policy
+ */
+export async function getValuationRate(): Promise<ValuationPolicyDTO | null> {
+  return fetchJSON<ValuationPolicyDTO | null>(
+    `${BASE_LOYALTY}/valuation-policy`,
+  );
+}
+
+/**
+ * Updates the valuation policy (admin-only, idempotency-key required).
+ * Caller must provide x-idempotency-key header via mutateJSON.
+ *
+ * POST /api/v1/loyalty/valuation-policy
+ */
+export async function updateValuationRate(
+  input: UpdateValuationPolicyInput,
+  idempotencyKey: string,
+): Promise<ValuationPolicyDTO> {
+  return mutateJSON<ValuationPolicyDTO, UpdateValuationPolicyInput>(
+    `${BASE_LOYALTY}/valuation-policy`,
+    input,
+    idempotencyKey,
+  );
 }

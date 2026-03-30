@@ -1,0 +1,80 @@
+{
+  "prd": "PRD-055",
+  "prd_title": "Shift Baseline Service — Rolling Median+MAD Anomaly Detection",
+  "current_phase": 4,
+  "status": "complete",
+  "completed_workstreams": ["WS1", "WS2", "WS3", "WS4", "WS5", "WS6"],
+  "in_progress_workstreams": [],
+  "pending_workstreams": [],
+  "artifacts": {
+    "design": [
+      "docs/10-prd/PRD-055-shift-baseline-service-v0.md",
+      "docs/01-scaffolds/SCAFFOLD-004-shift-baseline-service.md",
+      "docs/02-design/RFC-004-shift-baseline-service.md",
+      "docs/80-adrs/ADR-046-shift-baseline-stored-computation.md",
+      "docs/20-architecture/specs/shift-baseline-service/FEATURE_BOUNDARY.md",
+      "docs/20-architecture/specs/shift-baseline-service/SEC_NOTE.md",
+      "docs/21-exec-spec/EXEC-055-shift-baseline-service.md"
+    ],
+    "implementation": [
+      "supabase/migrations/20260323165908_create_shift_baseline_service.sql",
+      "services/shift-intelligence/dtos.ts",
+      "services/shift-intelligence/schemas.ts",
+      "services/shift-intelligence/keys.ts",
+      "services/shift-intelligence/mappers.ts",
+      "services/shift-intelligence/baseline.ts",
+      "services/shift-intelligence/anomaly.ts",
+      "services/shift-intelligence/http.ts",
+      "services/shift-intelligence/index.ts",
+      "app/api/v1/shift-intelligence/compute-baselines/route.ts",
+      "app/api/v1/shift-intelligence/anomaly-alerts/route.ts",
+      "components/shift-intelligence/anomaly-alert-card.tsx",
+      "components/shift-intelligence/baseline-coverage-banner.tsx",
+      "components/shift-intelligence/recompute-baselines-button.tsx",
+      "hooks/shift-intelligence/use-anomaly-alerts.ts",
+      "hooks/shift-intelligence/use-compute-baselines.ts"
+    ],
+    "tests": [
+      "services/shift-intelligence/__tests__/mappers.test.ts",
+      "services/shift-intelligence/__tests__/baseline-computation.test.ts",
+      "services/shift-intelligence/__tests__/anomaly-evaluation.test.ts",
+      "services/shift-intelligence/__tests__/http-contract.test.ts"
+    ],
+    "docs": [
+      "docs/20-architecture/SERVICE_RESPONSIBILITY_MATRIX.md"
+    ]
+  },
+  "gates_passed": ["gov010", "exec-spec-validation", "da-review-lightweight", "human-approval", "schema-validation", "type-check", "lint", "test-pass"],
+  "gates_pending": [],
+  "gov010_check": "passed",
+  "adversarial_review": {
+    "verdict": "ship_with_gates",
+    "p0_count": 0,
+    "p1_count": 3,
+    "attempt": 1
+  },
+  "human_review": {
+    "status": "approved",
+    "corrections_applied": [
+      "compute_failed removed from MVP — 4-state readiness model across ADR-046, PRD-055, EXEC-055",
+      "WS6 UI workstream added (anomaly cards, coverage banner, recompute trigger)",
+      "Hold range-bound exception made explicit in overview",
+      "Source-RPC isolation promoted to hard acceptance criterion + mandatory integration test",
+      "Recompute button role frozen to pit_boss + admin (wording nit resolved)"
+    ]
+  },
+  "session_context": {
+    "worktree": "trees/wedge-c",
+    "branch": "wedge-c",
+    "cwd": "/home/diepulp/projects/pt-2/trees/wedge-c",
+    "pipeline_stage": "Phase 4 complete — all workstreams delivered",
+    "next_action": "Commit and update memory",
+    "validation_results": {
+      "type_check": "pass",
+      "lint": "pass",
+      "tests": "54 passing (4 suites)",
+      "schema_validation": "pass — table_metric_baseline + 2 RPCs in types"
+    }
+  },
+  "timestamp": "2026-03-23T20:40:00Z"
+}

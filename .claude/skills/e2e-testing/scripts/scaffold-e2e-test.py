@@ -113,8 +113,8 @@ API_TEMPLATE = '''/**
 
 import {{ test, expect }} from "@playwright/test";
 
-import {{ createTestScenario }} from "../../fixtures/test-data";
-import type {{ TestScenario }} from "../../fixtures/test-data";
+import {{ createTestScenario }} from "../fixtures/test-data";
+import type {{ TestScenario }} from "../fixtures/test-data";
 
 test.describe("{title} API E2E", () => {{
   let scenario: TestScenario;
@@ -221,7 +221,7 @@ def scaffold_test(test_name: str, test_type: str, output_dir: str) -> str:
         filename = f"{test_name}.spec.ts"
     else:
         template = API_TEMPLATE
-        subdir = "api/endpoints"
+        subdir = "api"
         filename = f"{test_name}.spec.ts"
 
     content = template.format(

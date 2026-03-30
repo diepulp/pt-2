@@ -14,7 +14,7 @@ Automated checks in `validate-execution-spec.py`:
 - [ ] Execution phases correctly sequence dependencies
 - [ ] All workstreams referenced in execution_phases
 - [ ] Executor names are valid skills (task agents deprecated)
-- [ ] Gate types are valid (schema-validation, type-check, lint, test-pass, build)
+- [ ] Gate types are valid (schema-validation, type-check, lint, test-pass, build, e2e-write-path)
 
 ## Governance Validation
 
@@ -37,6 +37,13 @@ Automated checks against `context/*.context.md` files:
 
 - [ ] RLS policies in same migration as schema changes (not separate)
 - [ ] Schema verification gate present for schema changes
+
+### E2E Mandate (quality.context.md)
+
+- [ ] Write-path PRDs include an `e2e-tests` workstream with `executor: e2e-testing`
+- [ ] E2E workstream outputs target `e2e/{domain}/*.spec.ts`
+- [ ] E2E workstream gate is `e2e-write-path`
+- [ ] Read-only PRDs may omit E2E workstream (no false positive)
 
 ### Consistency Checks
 
@@ -118,6 +125,7 @@ The script returns:
 | `lint-warnings-ok` | Gate allows warnings | Set `max-warnings=0` |
 | `separate-rls` | RLS in separate migration | Bundle with schema |
 | `delete-contradiction` | DELETE + soft delete | Clarify policy |
+| `missing-e2e-write-path` | Write-path PRD has no E2E workstream | Add `e2e-testing` workstream |
 
 ## References
 
