@@ -257,7 +257,7 @@ These workflows involve **write operations through the middleware chain** where 
 |------|--------|----------|----------|-------------|-----------|
 | **1** | 001 | **Player Exclusion Lifecycle** | **P0** | 4-6h | `player-exclusion.spec.ts` |
 | **1** | 002 | Table Session Lifecycle | P0 | 3-4h | `table-lifecycle.spec.ts` |
-| **1** | 003 | Chip Custody (Fill/Credit/Drop) | P0 | 3-4h | `cashier-workflow.spec.ts` (existing fixme) |
+| **1** | 003 | Chip Custody (Fill/Credit/Drop) | P0 | 3-4h | `p` (existing fixme) |
 | **1** | 004 | Player Enrollment | P1 | 2-3h | `player-enrollment.spec.ts` |
 | **1** | 005 | Visit Start/End | P1 | 2-3h | `visit-lifecycle.spec.ts` |
 | **1** | 006 | Promo Programs & Coupons | P1 | 3-4h | `promo-lifecycle.spec.ts` |
