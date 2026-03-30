@@ -79,42 +79,20 @@ This was flagged in EXEC-052 adversarial review as "INV-030-7 tension: direct Po
 
 ---
 
-## P1 — Date Format Mismatch (Latent, will surface after P0 fix)
+## ~~P1 — Date Format Mismatch~~ — RESOLVED
 
 ### ISS-EXCL-002: Client sends YYYY-MM-DD, server schema expects ISO 8601 datetime
 
 **Severity:** P1 (blocks date-specific exclusions)
-**State:** Latent — currently masked by P0 RLS failure; will surface when dates are provided
+**Status:** RESOLVED (2026-03-30)
 
-**Root Cause:**
+**Resolution chain:**
+1. **Commit `b90061a` (2026-03-22)** — Server schema migrated from `z.iso.datetime()` to `dateSchema('...')` (YYYY-MM-DD regex). Created canonical `lib/validation/date.ts`.
+2. **Commit `14e02c5` (2026-03-29)** — Regression: re-introduced `toISO` converters, unaware of the schema fix.
+3. **Commit `74f1ef8` (2026-03-30)** — Removed `toISO` converters. Added unit tests: component contract test validates YYYY-MM-DD passthrough, route handler test rejects ISO datetime.
+4. **E2E regression test** (2026-03-30) — `player-exclusion.spec.ts` now fills all three date fields and verifies creation succeeds through the full browser→API→schema→DB path.
 
-The form uses `<input type="date">` which produces `YYYY-MM-DD` format. The submit handler sends this raw to the server:
-
-```tsx
-// create-exclusion-dialog.tsx line 109
-effective_from: values.effective_from || undefined,
-```
-
-The server schema validates with `z.iso.datetime()` which rejects `YYYY-MM-DD`:
-
-```typescript
-// exclusion-schemas.ts line 33
-effective_from: z.iso.datetime({ message: 'effective_from must be ISO 8601' }).optional(),
-```
-
-**Impact:** Creating an exclusion with explicit effective dates (common for regulatory and trespass exclusions) will fail with a validation error.
-
-**Previous fix:** A client-side conversion (`new Date(\`${v}T00:00:00\`).toISOString()`) was applied but appears lost (not in current working tree). The issue doc at `docs/issues/ISSUE-SYSTEM-DATE-CONVERSION-STANDARDIZATION.md` documents this as a systemic problem.
-
-**Fix options:**
-
-| Option | Approach |
-|--------|----------|
-| **A: Client conversion** | Convert dates in submit handler: `new Date(\`${v}T00:00:00\`).toISOString()` |
-| **B: Server schema fix** | Change `z.iso.datetime()` → YYYY-MM-DD regex for calendar-date fields |
-| **C: Canonical dateSchema** | Create `lib/validation/date.ts` with `dateSchema()` and `datetimeSchema()` |
-
-**Recommendation:** Option A as immediate fix, Option C as systemic fix per the standardization issue doc.
+**See:** `DATE-MISMATCH.md` for the full two-commit regression analysis.
 
 ---
 
@@ -179,25 +157,37 @@ Direct `.from('player_exclusion').update()` will fail for the same reason as INS
 ### GAP-EXCL-E2E-001: No E2E tests for exclusion surface
 
 **Priority:** P1
-**Current state:** Only unit tests exist (schemas, mappers, badges, hooks). No Playwright E2E tests cover:
-- Creating an exclusion via the dialog
-- Verifying exclusion badge appears in header after creation
-- Verifying exclusion tile shows active exclusion with enforcement details
-- Lifting an exclusion via admin dialog
-- Role-gating (dealer cannot see Add button)
-- Visit-start enforcement (hard_block prevents seating, soft_alert shows warning)
+**Status:** PARTIALLY RESOLVED (2026-03-30)
 
-**E2E test scenarios needed:**
+**Covered:**
+- `e2e/workflows/player-exclusion.spec.ts` — Mode B (browser login):
+  - Create exclusion via dialog (serial CRUD lifecycle)
+  - Verify exclusion tile shows active exclusion with enforcement details
+  - Lift exclusion via admin dialog
+  - Role-gate: pit_boss sees Add but not Lift
+  - Role-gate: dealer sees neither Add nor Lift
+- `e2e/api/player-exclusion-enforcement.spec.ts` — Mode C (authenticated client):
+  - Auto-close verification: hard_block exclusion auto-closes active visit + open slip via RPC
+  - Audit trail: verifies audit_log entry for auto-close
+- QA-006 exemplar established (fixture pattern, auth mode selection, verification taxonomy)
 
-| Test | Path | Validates |
-|------|------|-----------|
-| Create self-exclusion | Compliance > Add > fill form > submit | POST API, tile refresh, badge update |
-| Lift exclusion (admin) | Compliance > Lift > fill reason > submit | POST lift API, tile/badge refresh |
-| Role-gate: dealer sees no Add | Login as dealer > Compliance tab | Add button hidden |
-| Role-gate: pit_boss sees no Lift | Login as pit_boss > active exclusion | Lift button hidden |
-| Hard block prevents visit start | Create hard_block > New Rating Slip | Error toast, visit blocked |
-| Soft alert warning on visit start | Create soft_alert > New Rating Slip | Warning toast, visit allowed |
-| Date validation | Provide dates > submit | Dates accepted, stored correctly |
+**Still open — pit-path enforcement surface:**
+- Hard block prevents seating (new-slip-modal) — scaffolded in `player-exclusion.spec.ts` (`test.skip`), blocked on pit dashboard fixture complexity (floor layout + table sessions required)
+- Soft alert warning on visit start — same dependency
+- Gap remains open until pit-path enforcement tests are implemented or explicitly de-scoped
+
+**Original E2E test scenarios:**
+
+| Test | Path | Status |
+|------|------|--------|
+| Create self-exclusion | Compliance > Add > fill form > submit | COVERED |
+| Lift exclusion (admin) | Compliance > Lift > fill reason > submit | COVERED |
+| Role-gate: dealer sees no Add | Login as dealer > Compliance tab | COVERED |
+| Role-gate: pit_boss sees no Lift | Login as pit_boss > active exclusion | COVERED |
+| Auto-close on hard_block | RPC create exclusion > verify visit/slip closed | COVERED (Mode C) |
+| Hard block prevents visit start | Create hard_block > New Rating Slip | **OPEN** (scaffolded) |
+| Soft alert warning on visit start | Create soft_alert > New Rating Slip | **OPEN** |
+| Date validation (YYYY-MM-DD regression) | Fill all 3 date fields > submit succeeds | **COVERED** (E2E + unit) |
 
 ### GAP-EXCL-E2E-002: Integration test gap for RLS write path
 
@@ -227,15 +217,19 @@ Direct `.from('player_exclusion').update()` will fail for the same reason as INS
 
 | ID | Severity | Issue | Status |
 |----|----------|-------|--------|
-| ISS-EXCL-001 | **P0** | RLS INSERT policy blocks all creates (session-var-only + REST API) | **OPEN** |
-| ISS-EXCL-002 | P1 | Date format mismatch (YYYY-MM-DD vs ISO datetime) | Latent |
-| ISS-EXCL-003 | P1 | Generic error toast hides actionable details | OPEN |
+| ISS-EXCL-001 | **P0** | RLS INSERT policy blocks all creates (session-var-only + REST API) | **RESOLVED** — `rpc_create_player_exclusion` + `rpc_lift_player_exclusion` via SECURITY DEFINER RPCs |
+| ISS-EXCL-002 | P1 | Date format mismatch (YYYY-MM-DD vs ISO datetime) | **RESOLVED** — `dateSchema()` migration + `toISO` removal + regression tests |
+| ISS-EXCL-003 | P1 | Generic error toast hides actionable details | **RESOLVED** — dialog now extracts `err.message` |
 | ISS-EXCL-004 | P2 | Casino endpoint 400 (unrelated) | OPEN |
-| ISS-EXCL-005 | P2 | `is_exclusion_active()` IMMUTABLE → should be STABLE | OPEN |
-| ISS-EXCL-006 | P2 | Lift operation same RLS failure | OPEN (same fix as 001) |
-| GAP-EXCL-E2E-001 | P1 | No E2E tests for exclusion surface | OPEN |
+| ISS-EXCL-005 | P2 | `is_exclusion_active()` IMMUTABLE → should be STABLE | **RESOLVED** — `20260329125610_fix_exclusion_active_volatility.sql` |
+| ISS-EXCL-006 | P2 | Lift operation same RLS failure | **RESOLVED** — same RPCs as 001 |
+| GAP-EXCL-E2E-001 | P1 | No E2E tests for exclusion surface | **PARTIALLY RESOLVED** — CRUD, role gating, auto-close, date regression covered. Pit-path enforcement still scaffolded (`test.skip`). |
 | GAP-EXCL-E2E-002 | P1 | No integration test for RLS write path | OPEN |
 | GAP-EXCL-DOC-001 | P2 | Missing from SEC-001 matrix | OPEN |
 | GAP-EXCL-DOC-002 | P2 | Missing from ADR-030 registry | OPEN |
 
-**Critical path:** ISS-EXCL-001 must be resolved first. Recommended approach: SECURITY DEFINER RPCs for create + lift operations, matching the established visit/gaming pattern.
+**Remaining work:**
+- GAP-EXCL-E2E-001: pit-path enforcement surface (new-slip-modal hard block) — blocked on pit dashboard fixture complexity
+- GAP-EXCL-E2E-002: real-Supabase integration test for the RLS write path
+- GAP-EXCL-DOC-001/002: documentation alignment (P2)
+- ISS-EXCL-004: casino endpoint 400 (unrelated, P2)

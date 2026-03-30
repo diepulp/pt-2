@@ -713,7 +713,7 @@ The exact threshold may be tuned, but it must be **explicit, measurable, and rec
 | Broad casino-level cleanup remediation (§4 violation in 23+ callsites) | P1 | Not remediated |
 | Orphan specs at `e2e/` root (2 files outside `workflows/`/`api/`) | P2 | Not relocated |
 | Seed constants file | P2 | Not extracted |
-| E2E smoke suite in CI | P2 | Not wired |
+| E2E smoke suite in CI | P2 | Advisory job wired (ci.yml `e2e` job, `continue-on-error: true`) |
 | Branch protection on `main` | P2 | Not enabled |
 | CICD-PIPELINE-SPEC.md update to reference E2E workflow | P2 | Not updated |
 | `e2e/README.md` stale reference to `rating-slip-lifecycle.spec.ts` | P3 | Not fixed |
@@ -800,3 +800,100 @@ A review of this standard is required when:
 - New Playwright project added
 - E2E promoted from advisory to required in CI
 - New bounded context ships without E2E coverage
+
+---
+
+## §13 Harness Stabilization Rules
+
+Operational rules discovered during the exclusion E2E stabilization (2026-03-29). These complement the structural guidance above with concrete failure modes and their fixes.
+
+### Hydration Waits
+
+After `authenticateAndNavigate()` or any `page.goto()` that lands on a React page, wait for hydration before interacting:
+
+```typescript
+await page.waitForFunction(() => document.readyState === 'complete', {
+  timeout: 15_000,
+});
+```
+
+**Why:** React 19 + Next.js App Router defers event handler attachment until hydration completes. Clicking a button before hydration produces no effect — the test proceeds, asserts, and fails with a misleading "element not found" error.
+
+### Scoped Selectors
+
+When the same text appears in multiple places (e.g., "hard block" in both the exclusion tile and the lift dialog), scope assertions to the container:
+
+```typescript
+// BAD — ambiguous, matches tile AND dialog
+await expect(page.getByText('hard block')).toBeVisible();
+
+// GOOD — scoped to dialog
+const liftDialog = page.getByLabel('Lift Exclusion');
+await expect(liftDialog.getByText('hard block', { exact: true })).toBeVisible();
+```
+
+Use `{ exact: true }` on text matchers whenever the substring could match unintended elements.
+
+### Toast Assertions Over waitForResponse
+
+Prefer asserting on the success toast over `page.waitForResponse()` for mutation confirmation:
+
+```typescript
+// Preferred — resilient to route/endpoint changes
+await expect(page.getByText('Exclusion created')).toBeVisible({ timeout: 10_000 });
+
+// Fragile — breaks if URL pattern changes
+await page.waitForResponse(resp => resp.url().includes('/exclusions'));
+```
+
+**Why:** Toast text is part of the user contract. URL patterns are implementation details.
+
+### Fixture Invariants
+
+Required setup that is not obvious from the test but causes cryptic failures if missing:
+
+| Invariant | Why Required | Failure Mode |
+|---|---|---|
+| `casino_settings` with `gaming_day_start_time` + `timezone` | Visit insert trigger computes `gaming_day` | `null value in column "gaming_day" violates not-null constraint` |
+| `app_metadata.staff_id` stamped on auth user | ADR-024 authoritative context derivation | `UNAUTHORIZED: staff identity not found` from any SECURITY DEFINER RPC |
+| `company` created before `casino` | ADR-043 company-first tenancy | FK constraint violation on `casino.company_id` |
+| `player_casino` link after `player` | RLS policies scope by casino | Player not visible to staff in that casino |
+
+### Date Field Format
+
+Calendar date fields (`effective_from`, `effective_until`, `review_date`, `gaming_day`) must use `YYYY-MM-DD` strings. HTML `<input type="date">` produces this format natively. Never convert to ISO datetime.
+
+```typescript
+// CORRECT — matches dateSchema() on server
+effective_from: '2026-04-01'
+
+// WRONG — fails dateSchema regex, the commit 14e02c5 regression
+effective_from: new Date('2026-04-01T00:00:00').toISOString()
+// → "2026-04-01T07:00:00.000Z" (timezone-shifted, contains 'T')
+```
+
+In fixtures and seed helpers, use `.toISOString().slice(0, 10)` when you need today's date as YYYY-MM-DD:
+
+```typescript
+effective_from: new Date().toISOString().slice(0, 10) // "2026-03-30"
+```
+
+### Serial vs Parallel Decision Rule
+
+| Pattern | Mode | Why |
+|---|---|---|
+| Lifecycle (create → verify → modify → verify) | `serial` | Tests share cumulative state |
+| Role gating (each role gets own scenario) | `parallel` | Independent scenarios, no shared state |
+| Enforcement (RPC + DB assertions) | `serial` | Pre-condition → action → post-condition chain |
+
+### Exemplar Test Structure
+
+The exclusion E2E suite is the reference implementation for new workflow tests:
+
+| File | Mode | Pattern |
+|---|---|---|
+| `e2e/workflows/player-exclusion.spec.ts` | B (browser) | CRUD lifecycle (serial) + role gating (parallel) + date regression |
+| `e2e/api/player-exclusion-enforcement.spec.ts` | C (authenticated) | System verification: RPC → auto-close → audit trail |
+| `e2e/fixtures/exclusion-fixtures.ts` | — | Role-parameterized factory, minimal + extended scenarios |
+
+Reuse this pattern — Mode B for canonical browser surface, Mode C for authenticated RPC/system verification, role-parameterized fixtures, serial for lifecycle, parallel for gating.
