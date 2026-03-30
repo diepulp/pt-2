@@ -13,19 +13,7 @@
 
 import { randomUUID } from 'crypto';
 
-import { createClient } from '@supabase/supabase-js';
-
-import type { Database } from '@/types/database.types';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-function createServiceClient() {
-  return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
+import { createServiceClient } from './auth';
 
 // ---------------------------------------------------------------------------
 // Interfaces
@@ -321,51 +309,5 @@ export async function seedExclusion(
   return data.id;
 }
 
-/**
- * Creates an authenticated Supabase client with a real JWT (Mode C).
- * Used for RPC calls in system verification tests.
- */
-export function createAuthenticatedClient(authToken: string) {
-  return createClient<Database>(supabaseUrl, supabaseAnonKey, {
-    global: {
-      headers: { Authorization: `Bearer ${authToken}` },
-    },
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-/**
- * Browser login via /auth/login form (Mode B).
- * Replicates admin-helpers.ts authenticateAdmin pattern.
- */
-export async function authenticateAndNavigate(
-  page: import('@playwright/test').Page,
-  email: string,
-  password: string,
-  targetUrl: string,
-): Promise<void> {
-  await page.goto('/auth/login', { waitUntil: 'networkidle' });
-  await page
-    .locator('button[type="submit"]:has-text("Login")')
-    .waitFor({ state: 'visible', timeout: 15_000 });
-  await page.locator('#email').fill(email);
-  await page.locator('#password').fill(password);
-  await Promise.all([
-    page.waitForResponse(
-      (resp) => resp.url().includes('/auth/v1/token') && resp.status() === 200,
-    ),
-    page.locator('button[type="submit"]').click(),
-  ]);
-  // Hard navigate to target (avoids RSC stream interruption)
-  await page.goto(targetUrl, {
-    waitUntil: 'load',
-    timeout: 30_000,
-  });
-  if (page.url().includes('/auth/login')) {
-    throw new Error('Authentication failed: redirected back to login');
-  }
-  // Wait for React hydration — scripts must finish executing before events work
-  await page.waitForFunction(() => document.readyState === 'complete', {
-    timeout: 15_000,
-  });
-}
+// Re-export shared auth helpers so existing imports from this file don't break
+export { authenticateAndNavigate, createAuthenticatedClient } from './auth';
