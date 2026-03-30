@@ -47,15 +47,23 @@ Load this file when needing detailed coverage targets, service testing patterns,
 
 ## Complete Test Fixture Factory Pattern
 
+> **QA-006 §3 compliance:** Uses UUID-based isolation (not timestamp-only), creates company
+> for dual-boundary tenancy (ADR-043), stamps `app_metadata`, and scopes cleanup by
+> specific IDs (not broad casino sweeps).
+
 ```typescript
 /**
  * E2E Test Data Fixtures
  *
  * Provides utilities for creating and cleaning up test data in Supabase.
  * Uses service role client to bypass RLS for test setup/teardown.
+ *
+ * QA-006 §3: Collision-resistant identifiers (randomUUID), company creation,
+ * app_metadata stamping, scoped cleanup by specific IDs.
  */
 
 import { createClient } from "@supabase/supabase-js";
+import { randomUUID } from "crypto";
 import type { Database } from "@/types/database.types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -81,9 +89,10 @@ export function createServiceClient() {
 }
 
 /**
- * Test data structure for a complete rating slip scenario
+ * Test data structure for a complete test scenario
  */
 export interface TestScenario {
+  companyId: string;
   casinoId: string;
   staffId: string;
   staffUserId: string;
@@ -91,21 +100,40 @@ export interface TestScenario {
   tableId: string;
   visitId: string;
   authToken: string;
+  email: string;
+  password: string;
   cleanup: () => Promise<void>;
 }
 
 /**
- * Creates a complete test scenario with casino, staff, player, table, and visit
+ * Creates a complete test scenario with company, casino, staff, player, table, and visit.
+ *
+ * Uses randomUUID() for collision-resistant isolation (QA-006 §3/§4).
+ * Timestamp-only prefixes (e2e_${Date.now()}) are insufficient for parallel workers.
  */
 export async function createTestScenario(): Promise<TestScenario> {
   const supabase = createServiceClient();
-  const timestamp = Date.now();
-  const testPrefix = `e2e_${timestamp}`;
+  const uniqueId = randomUUID().slice(0, 8);
+  const testPrefix = `e2e_${uniqueId}`;
 
-  // Create test casino
+  // Create test company (required by ADR-043 dual-boundary tenancy)
+  const { data: company, error: companyError } = await supabase
+    .from("company")
+    .insert({
+      name: `${testPrefix}_company`,
+    })
+    .select()
+    .single();
+
+  if (companyError || !company) {
+    throw new Error(`Failed to create test company: ${companyError?.message}`);
+  }
+
+  // Create test casino under company
   const { data: casino, error: casinoError } = await supabase
     .from("casino")
     .insert({
+      company_id: company.id,
       name: `${testPrefix}_casino`,
       status: "active",
     })
@@ -116,7 +144,7 @@ export async function createTestScenario(): Promise<TestScenario> {
     throw new Error(`Failed to create test casino: ${casinoError?.message}`);
   }
 
-  // Create test auth user
+  // Create test auth user with app_metadata for RLS context
   const testEmail = `${testPrefix}_staff@test.com`;
   const testPassword = "TestPassword123!";
 
@@ -125,6 +153,10 @@ export async function createTestScenario(): Promise<TestScenario> {
       email: testEmail,
       password: testPassword,
       email_confirm: true,
+      app_metadata: {
+        casino_id: casino.id,
+        staff_role: "admin",
+      },
     });
 
   if (authCreateError || !authData.user) {
@@ -151,6 +183,15 @@ export async function createTestScenario(): Promise<TestScenario> {
   if (staffError || !staff) {
     throw new Error(`Failed to create test staff: ${staffError?.message}`);
   }
+
+  // Update app_metadata with staff_id (needed by set_rls_context_from_staff)
+  await supabase.auth.admin.updateUserById(authData.user.id, {
+    app_metadata: {
+      casino_id: casino.id,
+      staff_role: "admin",
+      staff_id: staff.id,
+    },
+  });
 
   // Sign in to get auth token
   const { data: signInData, error: signInError } =
@@ -211,20 +252,22 @@ export async function createTestScenario(): Promise<TestScenario> {
     throw new Error(`Failed to create test visit: ${visitError?.message}`);
   }
 
-  // Cleanup function to remove all test data
+  // Cleanup function — scoped by specific IDs (QA-006 §4: no broad casino sweeps)
   const cleanup = async () => {
-    // Delete in reverse dependency order
-    await supabase.from("rating_slip").delete().eq("casino_id", casino.id);
+    // Delete in reverse dependency order by specific IDs
+    await supabase.from("rating_slip").delete().eq("visit_id", visit.id);
     await supabase.from("visit").delete().eq("id", visit.id);
     await supabase.from("gaming_table").delete().eq("id", table.id);
     await supabase.from("player").delete().eq("id", player.id);
     await supabase.from("staff").delete().eq("id", staff.id);
     await supabase.from("casino").delete().eq("id", casino.id);
+    await supabase.from("company").delete().eq("id", company.id);
     // Delete auth user
     await supabase.auth.admin.deleteUser(authData.user.id);
   };
 
   return {
+    companyId: company.id,
     casinoId: casino.id,
     staffId: staff.id,
     staffUserId: authData.user.id,
@@ -232,6 +275,8 @@ export async function createTestScenario(): Promise<TestScenario> {
     tableId: table.id,
     visitId: visit.id,
     authToken: signInData.session.access_token,
+    email: testEmail,
+    password: testPassword,
     cleanup,
   };
 }

@@ -603,10 +603,30 @@ Player Search → Player Select → Visit Check-In
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+## Auth Mode Requirements (QA-006 §1)
+
+Each workflow has a minimum auth mode for honest verification. Choosing a lower mode produces false passes by bypassing the layer under test.
+
+| Workflow | Min Auth Mode | Reason |
+|----------|--------------|--------|
+| Player Search (GET) | A | Read-only, no SECURITY DEFINER RPC |
+| Player Create/Enroll | C | `rpc_create_player` is SECURITY DEFINER |
+| Visit Check-in/Check-out | C | `rpc_start_or_resume_visit` is SECURITY DEFINER |
+| Rating Slip State Machine | C | All slip RPCs are SECURITY DEFINER |
+| Move Player | C | Orchestrated SECURITY DEFINER RPCs |
+| Loyalty Accrual/Redemption | C | All loyalty RPCs are SECURITY DEFINER |
+| Modal Data (BFF GET) | A | Read-only aggregation route |
+| Full UI Workflow (browser) | B | Canonical E2E — exercises route/middleware/session |
+
+**Key rule:** All SECURITY DEFINER RPCs call `set_rls_context_from_staff()` which requires `auth.uid()` to be non-NULL. Mode A (dev bypass) always fails for these — `auth.uid()` returns NULL with service_role client. This is by design (ADR-024), not a bug.
+
+For the complete RPC→Mode table (~40+ RPCs), see the `e2e-testing` skill's `references/qa006-compliance.md`.
+
 ## RLS Considerations
 
 All workflows must enforce:
 - Casino scoping (staff sees only their casino's data)
 - Cross-casino access denied (403 Forbidden)
 - Service role used only for test setup/teardown
-- Authenticated anon client for actual test assertions
+- Authenticated client (Mode C minimum) for actual test assertions involving SECURITY DEFINER RPCs
+- Mode B (browser login) for canonical E2E coverage of UI workflows

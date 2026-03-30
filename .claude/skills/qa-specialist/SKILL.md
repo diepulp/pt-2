@@ -1,11 +1,11 @@
 ---
 name: qa-specialist
-description: Run existing E2E and unit test suites, execute pre-release quality gates, produce quality gate reports, and validate route handler coverage (QA-005) for PT-2. This skill should be used when running test suites before deployment, executing quality gate checklists, producing quality reports with verification tier semantics, or validating route handler test coverage. For writing new E2E tests or debugging flaky tests, use e2e-testing instead. (project)
+description: Run existing E2E and unit test suites, execute pre-release quality gates, produce quality gate reports, validate route handler coverage (QA-005), and enforce QA-006 E2E testing standard for PT-2. This skill should be used when running test suites before deployment, executing quality gate checklists, producing quality reports with verification tier semantics, validating route handler test coverage, or auditing E2E verification taxonomy compliance (Mode A/B/C, E2E vs System Verification vs Local Verification). For writing new E2E tests or debugging flaky tests, use e2e-testing instead. (project)
 ---
 
 # QA Specialist
 
-Orchestrates test execution, quality gate validation, and reporting for PT-2 casino pit management system. Produces actionable quality assessments with ADR-044 verification tier semantics.
+Orchestrates test execution, quality gate validation, and reporting for PT-2 casino pit management system. Produces actionable quality assessments with ADR-044 verification tier semantics and QA-006 E2E testing standard compliance.
 
 ## When to Use This Skill
 
@@ -13,6 +13,7 @@ Orchestrates test execution, quality gate validation, and reporting for PT-2 cas
 - **Quality gate execution**: Execute the quality gate checklist before deployment
 - **Quality reporting**: Produce quality gate reports with correct green semantics
 - **Route handler validation**: Verify QA-005 route handler test coverage
+- **E2E taxonomy audit**: Verify QA-006 verification class and auth mode compliance
 - **Regression detection**: Identify which tests fail after code changes
 
 **Use `e2e-testing` instead for:** writing new E2E tests, creating fixtures, scaffolding test files, debugging flaky tests, closing coverage gaps.
@@ -45,6 +46,27 @@ Key rules for QA:
 - **S11 Skip/Quarantine Policy**: Every skip needs written reason, scope, and resolution plan.
 
 **Note**: QA-001 defines aspirational coverage targets. The governance standard defines what "verified" means. They serve different purposes.
+
+---
+
+## E2E Verification Taxonomy (QA-006)
+
+When reporting E2E coverage, every spec must be classified by its **verification class** and **auth mode**. This prevents cheaper verification layers from inflating coverage claims.
+
+| Class | Auth Mode | What It Proves |
+|-------|-----------|---------------|
+| `E2E` | Mode B (browser login) | Real browser/app surface works end-to-end |
+| `System Verification` | Mode C (authenticated client) | Real JWT/RPC/RLS path works, bypasses browser |
+| `Local Verification` | Mode A (dev bypass) | Read-only regression, no auth fidelity |
+
+### Reporting Rules
+
+- **Coverage counts**: Report E2E (Mode B) tests separately from System/Local verification. Raw test count across all modes is a supporting metric, not the primary coverage signal.
+- **SECURITY DEFINER RPCs**: All mutation RPCs are SECURITY DEFINER (ADR-024). Tests calling them directly must use **minimum Mode C**. Mode A tests hitting these RPCs will get `UNAUTHORIZED` — this is correct behavior, not a flake.
+- **Describe block compliance**: Each spec's top-level describe must follow `'Feature — Class — Mode X (description)'` format. Zero of 17 specs are currently compliant (QA-006 infrastructure gap).
+- **E2E tier status**: E2E tests are currently **advisory** (Trusted-Local only). They do not run in CI and do not block merge. Quality reports must state this tier clearly.
+
+For the full auth mode decision matrix and RPC→Mode table, refer to the `e2e-testing` skill's `references/qa006-compliance.md`.
 
 ---
 
@@ -245,6 +267,13 @@ Before approving a release, verify all gates pass. Per ADR-044, report each gate
 - [ ] Local verification floor met: static checks pass + at least one trusted-local functional layer
 - [ ] "Green" claims use correct semantics (ADR-044 S6)
 
+### GATE-0.5: E2E Verification Taxonomy (QA-006)
+- [ ] E2E test count broken down by verification class (E2E / System / Local)
+- [ ] SECURITY DEFINER mutation paths tested at minimum Mode C
+- [ ] No Mode A tests misreported as canonical E2E coverage
+- [ ] Describe blocks follow `'Feature — Class — Mode X'` format
+- [ ] E2E advisory tier status stated in report (not governance-grade until CI Required)
+
 ### GATE-1: Critical Workflow Coverage
 - [ ] Visit lifecycle: check-in, active constraint, check-out, ghost visits
 - [ ] Rating slip state machine: start, pause, resume, close, duration
@@ -295,6 +324,19 @@ Per ADR-044 S6, use precise green semantics — distinguish compile green, local
 - Layers at advisory: [list]
 - Quarantined layers: [list with exit criteria]
 
+### E2E Verification Taxonomy (QA-006)
+- E2E tier: [advisory (trusted-local only) | CI advisory | CI required]
+- Total E2E specs: [X]
+
+| Verification Class | Auth Mode | Spec Count | Test Count |
+|-------------------|-----------|------------|------------|
+| E2E | Mode B (browser login) | [X] | [Y] |
+| System Verification | Mode C (authenticated client) | [X] | [Y] |
+| Local Verification | Mode A (dev bypass) | [X] | [Y] |
+
+- Describe block QA-006 compliance: [X of Y specs compliant]
+- SECURITY DEFINER mutation paths at Mode C+: [X of Y]
+
 ### Test Execution Summary
 - Total tests: [X]
 - Passed: [Y]
@@ -302,19 +344,20 @@ Per ADR-044 S6, use precise green semantics — distinguish compile green, local
 - Flaky: [W]
 
 ### Critical Workflow Status
-| Workflow | Status | Verification Tier | Notes |
-|----------|--------|-------------------|-------|
-| Visit Lifecycle | PASS/FAIL | trusted-local/required | [details] |
-| Rating Slip State Machine | PASS/FAIL | trusted-local/required | [details] |
-| Rating Slip Move Player | PASS/FAIL | trusted-local/required | [details] |
-| Loyalty Rewards | PASS/FAIL | trusted-local/required | [details] |
-| Route Handler Tests | PASS/FAIL | trusted-local/required | [38 tests, 10 suites] |
+| Workflow | Status | Verification Tier | Auth Mode | Notes |
+|----------|--------|-------------------|-----------|-------|
+| Visit Lifecycle | PASS/FAIL | trusted-local/required | B/C | [details] |
+| Rating Slip State Machine | PASS/FAIL | trusted-local/required | B/C | [details] |
+| Rating Slip Move Player | PASS/FAIL | trusted-local/required | B/C | [details] |
+| Loyalty Rewards | PASS/FAIL | trusted-local/required | C | [details] |
+| Route Handler Tests | PASS/FAIL | trusted-local/required | n/a (Jest) | [38 tests, 10 suites] |
 
 ### Blockers
 [List any blocking issues]
 
 ### Recommendation
 [PASS/FAIL with rationale - state which green type this represents]
+[If E2E is advisory: "E2E tests are trusted-local only — not governance-grade until promoted to CI Required"]
 ```
 
 ---
@@ -335,6 +378,7 @@ Before reporting coverage status, check the gap analysis:
 - `docs/70-governance/TESTING_GOVERNANCE_STANDARD.md` — Operational rulebook (v2.0.0)
 - `docs/40-quality/QA-001-service-testing-strategy.md` — Coverage targets
 - `docs/40-quality/QA-005-route-handler-testing.md` — Route handler testing policy
+- `docs/40-quality/QA-006-e2e-testing-standard.md` — E2E testing standard (auth modes, verification taxonomy, CI promotion)
 
 ### Bundled References
 - `references/critical-workflows.md` — Detailed workflow specs with acceptance criteria

@@ -1,6 +1,6 @@
 # PT-2 Testing Patterns
 
-Testing patterns and anti-patterns specific to the PT-2 casino pit management system. All patterns conform to **ADR-044 Testing Governance Posture** and the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`).
+Testing patterns and anti-patterns specific to the PT-2 casino pit management system. All patterns conform to **ADR-044 Testing Governance Posture**, the **Testing Governance Standard** (`docs/70-governance/TESTING_GOVERNANCE_STANDARD.md`), and **QA-006 E2E Testing Standard** (`docs/40-quality/QA-006-e2e-testing-standard.md`).
 
 ## ADR-044 Environment Contract Quick Reference
 
@@ -19,15 +19,16 @@ A single global `testEnvironment` applying to all test files is prohibited (ADR-
 
 ## Test Structure Patterns
 
-### Pattern 1: Workflow Isolation
+### Pattern 1: Workflow Isolation with Verification Taxonomy (QA-006)
 
-Each test should create its own complete test scenario:
+Each test should create its own complete test scenario. The top-level describe block must declare both the **verification class** and **auth mode** per QA-006 §1:
 
 ```typescript
 import { test, expect } from '@playwright/test';
 import { createTestScenario, TestScenario } from '../fixtures/test-data';
 
-test.describe('Rating Slip Workflow', () => {
+// QA-006 §1: Describe block labeling — 'Feature — Class — Mode X (description)'
+test.describe('Rating Slip — E2E — Mode B (browser login)', () => {
   let scenario: TestScenario;
 
   test.beforeEach(async () => {
@@ -38,11 +39,19 @@ test.describe('Rating Slip Workflow', () => {
     await scenario.cleanup();
   });
 
-  test('can start and close rating slip', async ({ request }) => {
+  test('should start and close rating slip', async ({ page }) => {
+    // Mode B: real browser/app surface under test
     // Test uses scenario.casinoId, scenario.playerId, etc.
   });
 });
 ```
+
+**Verification class reference:**
+| Class | Auth Mode | Use When |
+|-------|-----------|----------|
+| `E2E` | Mode B (browser login) | Testing full browser/app surface |
+| `System Verification` | Mode C (authenticated client) | Testing API/RPC with real JWT, bypassing browser |
+| `Local Verification` | Mode A (dev bypass) | Read-only regression, auth fidelity not under test |
 
 ### Pattern 2: API-First Testing
 
@@ -297,24 +306,41 @@ test('create player', async () => {
 
 ## Test Data Factories
 
-### Casino Factory
+> **QA-006 §3/§4 compliance:** Factories use `randomUUID()` for collision-resistant isolation
+> (not timestamp-only), create company for dual-boundary tenancy (ADR-043), and stamp
+> `app_metadata` for RLS context derivation (ADR-024).
+
+### Company + Casino Factory
 
 ```typescript
+import { randomUUID } from 'crypto';
+
 export async function createTestCasino(
   supabase: SupabaseClient,
-  timestamp: number
-): Promise<Casino> {
-  const { data, error } = await supabase
+): Promise<{ company: Company; casino: Casino }> {
+  const uniqueId = randomUUID().slice(0, 8);
+
+  // Company is required by ADR-043 dual-boundary tenancy
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `e2e_${uniqueId}_company` })
+    .select()
+    .single();
+
+  if (companyError) throw companyError;
+
+  const { data: casino, error: casinoError } = await supabase
     .from('casino')
     .insert({
-      name: `Test Casino ${timestamp}`,
+      company_id: company.id,
+      name: `e2e_${uniqueId}_casino`,
       timezone: 'America/Los_Angeles',
     })
     .select()
     .single();
 
-  if (error) throw error;
-  return data;
+  if (casinoError) throw casinoError;
+  return { company, casino };
 }
 ```
 
@@ -324,33 +350,49 @@ export async function createTestCasino(
 export async function createTestStaff(
   supabase: SupabaseClient,
   casinoId: string,
-  timestamp: number
-): Promise<Staff> {
-  const email = `staff-${timestamp}@test.example.com`;
+): Promise<Staff & { email: string; password: string }> {
+  const uniqueId = randomUUID().slice(0, 8);
+  const email = `e2e_${uniqueId}_staff@test.example.com`;
+  const password = 'TestPassword123!';
 
-  // Create auth user
+  // Create auth user with app_metadata for RLS context (ADR-024)
   const { data: authUser } = await supabase.auth.admin.createUser({
     email,
-    password: 'TestPassword123!',
+    password,
     email_confirm: true,
+    app_metadata: {
+      casino_id: casinoId,
+      staff_role: 'pit_boss',
+    },
   });
 
   // Create staff record
   const { data, error } = await supabase
     .from('staff')
     .insert({
-      id: authUser.user.id,
+      user_id: authUser.user.id,
       casino_id: casinoId,
       email,
       first_name: 'Test',
-      last_name: `Staff ${timestamp}`,
+      last_name: `Staff_${uniqueId}`,
       role: 'pit_boss',
+      status: 'active',
     })
     .select()
     .single();
 
   if (error) throw error;
-  return { ...data, email };
+
+  // Update app_metadata with staff_id (needed by set_rls_context_from_staff)
+  await supabase.auth.admin.updateUserById(authUser.user.id, {
+    app_metadata: {
+      casino_id: casinoId,
+      staff_role: 'pit_boss',
+      staff_id: data.id,
+    },
+  });
+
+  return { ...data, email, password };
 }
 ```
 
@@ -360,30 +402,18 @@ export async function createTestStaff(
 export async function createTestPlayer(
   supabase: SupabaseClient,
   casinoId: string,
-  timestamp: number
 ): Promise<Player> {
-  // Create player
+  const uniqueId = randomUUID().slice(0, 8);
+
   const { data: player } = await supabase
     .from('player')
     .insert({
+      casino_id: casinoId,
       first_name: 'Test',
-      last_name: `Player ${timestamp}`,
+      last_name: `Player_${uniqueId}`,
     })
     .select()
     .single();
-
-  // Create enrollment
-  await supabase.from('player_enrollment').insert({
-    player_id: player.id,
-    casino_id: casinoId,
-  });
-
-  // Create loyalty account
-  await supabase.from('player_loyalty').insert({
-    player_id: player.id,
-    casino_id: casinoId,
-    current_balance: 0,
-  });
 
   return player;
 }
@@ -395,15 +425,15 @@ export async function createTestPlayer(
 export async function createTestTable(
   supabase: SupabaseClient,
   casinoId: string,
-  timestamp: number
 ): Promise<GamingTable> {
+  const uniqueId = randomUUID().slice(0, 8);
+
   const { data, error } = await supabase
     .from('gaming_table')
     .insert({
       casino_id: casinoId,
-      table_number: `T${timestamp}`,
-      game_type: 'blackjack',
-      seat_count: 6,
+      label: `e2e_${uniqueId}_table`,
+      type: 'blackjack',
       status: 'active',
     })
     .select()
@@ -418,60 +448,69 @@ export async function createTestTable(
 
 ## Cleanup Order
 
-Delete in reverse dependency order to avoid FK violations:
+Delete in reverse dependency order to avoid FK violations. **QA-006 §4: scope cleanup by specific IDs — broad casino-level sweeps are prohibited** because parallel workers sharing seed data will destroy each other's test records.
 
 ```typescript
+/**
+ * Cleanup scoped by specific entity IDs created during the test.
+ * Do NOT use broad `.eq('casino_id', casinoId)` sweeps.
+ */
 export async function deleteTestData(
   supabase: SupabaseClient,
-  scenario: TestScenario
+  ids: {
+    ratingSlipIds?: string[];
+    visitIds?: string[];
+    playerIds?: string[];
+    tableIds?: string[];
+    staffId?: string;
+    staffUserId?: string;
+    casinoId: string;
+    companyId: string;
+  }
 ): Promise<void> {
-  const { casinoId } = scenario;
-
   // 1. Rating slip pauses (depends on rating_slip)
-  await supabase
-    .from('rating_slip_pause')
-    .delete()
-    .eq('rating_slip_id', supabase.from('rating_slip').select('id').eq('casino_id', casinoId));
+  if (ids.ratingSlipIds?.length) {
+    await supabase
+      .from('rating_slip_pause')
+      .delete()
+      .in('rating_slip_id', ids.ratingSlipIds);
 
-  // 2. Rating slips (depends on visit, table)
-  await supabase.from('rating_slip').delete().eq('casino_id', casinoId);
-
-  // 3. Loyalty ledger (depends on player_loyalty)
-  await supabase.from('loyalty_ledger').delete().eq('casino_id', casinoId);
-
-  // 4. Player loyalty (depends on player, casino)
-  await supabase.from('player_loyalty').delete().eq('casino_id', casinoId);
-
-  // 5. Financial transactions (depends on visit)
-  await supabase.from('player_financial_transaction').delete().eq('casino_id', casinoId);
-
-  // 6. Visits (depends on player, casino)
-  await supabase.from('visit').delete().eq('casino_id', casinoId);
-
-  // 7. Player enrollments (depends on player, casino)
-  await supabase.from('player_enrollment').delete().eq('casino_id', casinoId);
-
-  // 8. Gaming tables (depends on casino)
-  await supabase.from('gaming_table').delete().eq('casino_id', casinoId);
-
-  // 9. Staff (depends on casino, auth.users)
-  const { data: staff } = await supabase
-    .from('staff')
-    .select('id')
-    .eq('casino_id', casinoId);
-
-  if (staff) {
-    await supabase.from('staff').delete().eq('casino_id', casinoId);
-    for (const s of staff) {
-      await supabase.auth.admin.deleteUser(s.id);
-    }
+    // 2. Rating slips
+    await supabase.from('rating_slip').delete().in('id', ids.ratingSlipIds);
   }
 
-  // 10. Casino settings (depends on casino)
-  await supabase.from('casino_settings').delete().eq('casino_id', casinoId);
+  // 3. Visits (depends on player, casino)
+  if (ids.visitIds?.length) {
+    // Loyalty ledger entries linked to visits
+    await supabase.from('loyalty_ledger').delete().in('visit_id', ids.visitIds);
+    // Financial transactions linked to visits
+    await supabase.from('player_financial_transaction').delete().in('visit_id', ids.visitIds);
+    await supabase.from('visit').delete().in('id', ids.visitIds);
+  }
 
-  // 11. Casino (root entity)
-  await supabase.from('casino').delete().eq('id', casinoId);
+  // 4. Players (depends on casino)
+  if (ids.playerIds?.length) {
+    await supabase.from('player_loyalty').delete().in('player_id', ids.playerIds);
+    await supabase.from('player_enrollment').delete().in('player_id', ids.playerIds);
+    await supabase.from('player').delete().in('id', ids.playerIds);
+  }
+
+  // 5. Gaming tables
+  if (ids.tableIds?.length) {
+    await supabase.from('gaming_table').delete().in('id', ids.tableIds);
+  }
+
+  // 6. Staff + auth user
+  if (ids.staffId) {
+    await supabase.from('staff').delete().eq('id', ids.staffId);
+  }
+  if (ids.staffUserId) {
+    await supabase.auth.admin.deleteUser(ids.staffUserId);
+  }
+
+  // 7. Casino + Company (root entities)
+  await supabase.from('casino').delete().eq('id', ids.casinoId);
+  await supabase.from('company').delete().eq('id', ids.companyId);
 }
 ```
 
@@ -481,12 +520,16 @@ export async function deleteTestData(
 
 ### Playwright Config for PT-2
 
+Per QA-006 §2, Playwright must load `.env.local` with override precedence matching Next.js. `.env.test` is deprecated.
+
 ```typescript
 // playwright.config.ts
 import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
+// QA-006 §2: Match Next.js env precedence — .env.local overrides .env
+dotenv.config({ path: path.resolve(__dirname, '.env.local'), override: true });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 
 export default defineConfig({
@@ -515,13 +558,14 @@ export default defineConfig({
 });
 ```
 
-> **Note**: The actual config uses a single `api` project (not separate chromium/mobile) since E2E tests are primarily API-level. The `baseURL` is configurable via `BASE_URL` env var. No `timeout`, `expect.timeout`, `video`, or `screenshot` settings are configured at the top level.
+> **Note**: The actual config uses a single `api` project (not separate chromium/mobile) since E2E tests are primarily API-level. The `baseURL` is configurable via `BASE_URL` env var.
 
 ### Environment Variables
 
 ```bash
-# .env.test
-NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...  # Only for test setup
+# .env.local (QA-006 §2 — canonical env file, replaces deprecated .env.test)
+# Copy from .env.local.example and fill from: npx supabase status --output json
+NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<from supabase status: PUBLISHABLE_KEY or anon key>
+SUPABASE_SERVICE_ROLE_KEY=<from supabase status: SECRET_KEY or service_role key>
 ```
