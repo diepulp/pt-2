@@ -31,12 +31,12 @@ describe('createExclusionSchema', () => {
     expect(result.success).toBe(true);
   });
 
-  it('accepts valid input with all optional fields', () => {
+  it('accepts valid input with all optional fields (YYYY-MM-DD dates)', () => {
     const result = createExclusionSchema.safeParse({
       ...validInput,
-      effective_from: '2026-03-01T00:00:00Z',
-      effective_until: '2026-12-31T23:59:59Z',
-      review_date: '2026-06-01T00:00:00Z',
+      effective_from: '2026-03-01',
+      effective_until: '2026-12-31',
+      review_date: '2026-06-01',
       external_ref: 'STATE-2026-001',
       jurisdiction: 'Nevada',
     });
@@ -143,10 +143,18 @@ describe('createExclusionSchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects invalid effective_from format', () => {
+  it('rejects ISO datetime for effective_from (calendar dates are YYYY-MM-DD)', () => {
     const result = createExclusionSchema.safeParse({
       ...validInput,
-      effective_from: '2026-03-01', // not ISO 8601 datetime
+      effective_from: '2026-03-01T00:00:00Z',
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects invalid date format for effective_from', () => {
+    const result = createExclusionSchema.safeParse({
+      ...validInput,
+      effective_from: '03/01/2026',
     });
     expect(result.success).toBe(false);
   });

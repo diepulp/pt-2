@@ -11,7 +11,12 @@
 
 import { z } from 'zod';
 
-import { UUID_REGEX, uuidSchema, uuidSchemaOptional } from '@/lib/validation';
+import {
+  UUID_REGEX,
+  dateSchema,
+  uuidSchema,
+  uuidSchemaOptional,
+} from '@/lib/validation';
 
 import type { LedgerCursor } from './dtos';
 
@@ -159,18 +164,12 @@ export const ledgerListQuerySchema = z.object({
   /**
    * Filter by date range start (ISO date: YYYY-MM-DD).
    */
-  fromDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'fromDate must be YYYY-MM-DD format')
-    .optional(),
+  fromDate: dateSchema('fromDate').optional(),
 
   /**
    * Filter by date range end (ISO date: YYYY-MM-DD).
    */
-  toDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'toDate must be YYYY-MM-DD format')
-    .optional(),
+  toDate: dateSchema('toDate').optional(),
 });
 
 export type LedgerListQuery = z.infer<typeof ledgerListQuerySchema>;

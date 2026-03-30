@@ -82,17 +82,32 @@ interface RankedTable {
 }
 
 function rankWorstTables(rows: RatingCoverageRow[], limit = 5): RankedTable[] {
-  return rows
-    .map((row) => {
-      const openSeconds = row.open_seconds ?? 0;
-      return {
-        tableId: row.gaming_table_id ?? 'unknown',
-        untrackedRatio:
-          openSeconds > 0 ? (row.untracked_seconds ?? 0) / openSeconds : 0,
-        ratedRatio: row.rated_ratio ?? 0,
-        untrackedSeconds: row.untracked_seconds ?? 0,
-      };
-    })
+  // Aggregate multiple sessions per table (a table can have >1 session per day)
+  const byTable = new Map<
+    string,
+    { openSeconds: number; ratedSeconds: number; untrackedSeconds: number }
+  >();
+  for (const row of rows) {
+    const id = row.gaming_table_id ?? 'unknown';
+    const existing = byTable.get(id) ?? {
+      openSeconds: 0,
+      ratedSeconds: 0,
+      untrackedSeconds: 0,
+    };
+    existing.openSeconds += row.open_seconds ?? 0;
+    existing.ratedSeconds += row.rated_seconds ?? 0;
+    existing.untrackedSeconds += row.untracked_seconds ?? 0;
+    byTable.set(id, existing);
+  }
+
+  return Array.from(byTable.entries())
+    .map(([tableId, agg]) => ({
+      tableId,
+      untrackedRatio:
+        agg.openSeconds > 0 ? agg.untrackedSeconds / agg.openSeconds : 0,
+      ratedRatio: agg.openSeconds > 0 ? agg.ratedSeconds / agg.openSeconds : 0,
+      untrackedSeconds: agg.untrackedSeconds,
+    }))
     .sort((a, b) => b.untrackedRatio - a.untrackedRatio)
     .slice(0, limit);
 }

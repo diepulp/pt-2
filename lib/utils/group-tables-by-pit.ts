@@ -32,6 +32,7 @@ export function groupTablesByPit(tables: DashboardTableDTO[]): PitMapPit[] {
       label: table.label,
       status: table.status,
       gameType: table.type,
+      sessionStatus: table.current_session_status,
     });
   }
 

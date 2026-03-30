@@ -23,6 +23,7 @@ import {
   RatingSlipModal,
   type FormState,
 } from '@/components/modals/rating-slip/rating-slip-modal';
+import { ActivationDrawer } from '@/components/table/activation-drawer';
 import { useGamingDay } from '@/hooks/casino/use-gaming-day';
 import {
   useDashboardTables,
@@ -37,6 +38,7 @@ import {
   useMovePlayer,
   useRatingSlipModalData,
 } from '@/hooks/rating-slip-modal';
+import { useCurrentTableSession } from '@/hooks/table-context/use-table-session';
 import { toast, useModal, usePitDashboardUI } from '@/hooks/ui';
 import { useAuth } from '@/hooks/use-auth';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -120,6 +122,24 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
   });
   const gamingDayString = gamingDayData?.gaming_day;
 
+  // Query: Current table session (PRD-038A session wiring)
+  // Hook has `enabled: !!tableId` guard — safe to pass empty string when no table selected
+  const { data: currentSession } = useCurrentTableSession(
+    selectedTableId ?? '',
+  );
+
+  // PRD-059: Activation drawer state — auto-opens when session is OPEN
+  // Tracks both status changes AND table selection changes so switching
+  // to an OPEN table (or re-selecting the same one) reopens the drawer.
+  const [activationDrawerOpen, setActivationDrawerOpen] = React.useState(false);
+  React.useEffect(() => {
+    if (currentSession?.status === 'OPEN') {
+      setActivationDrawerOpen(true);
+    } else {
+      setActivationDrawerOpen(false);
+    }
+  }, [currentSession?.status, selectedTableId]);
+
   // Query: Active slips for selected table
   const { data: activeSlips = [] } = useActiveSlipsForDashboard(
     selectedTableId ?? undefined,
@@ -200,8 +220,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
       const currentValid =
         selectedTableId && tables.some((t) => t.id === selectedTableId);
       if (!currentValid) {
-        const firstActive = tables.find((t) => t.status === 'active');
-        setSelectedTable(firstActive?.id ?? tables[0].id);
+        // ADR-047 D2: all returned tables are active; RPC orders by label deterministically
+        setSelectedTable(tables[0].id);
       }
     }
   }, [tables, selectedTableId, setSelectedTable]);
@@ -465,6 +485,7 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     tableName: selectedTable?.label ?? 'No Table',
     tables,
     selectedTable: selectedTable ?? null,
+    session: selectedTableId ? (currentSession ?? null) : null,
     seats,
     activeSlips,
     stats: stats ?? null,
@@ -485,6 +506,8 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
     onSeatClick: handleSeatClick,
     onNewSlip: handleNewSlip,
     onSlipClick: handleSlipClick,
+    // PRD-059: Reopen activation drawer from session action buttons
+    onActivateRequest: () => setActivationDrawerOpen(true),
   };
 
   return (
@@ -529,6 +552,18 @@ export function PitPanelsClient({ casinoId }: PitPanelsClientProps) {
         onMovePlayer={handleMovePlayer}
         isMovePlayerPending={movePlayer.isPending}
       />
+
+      {/* PRD-059: Activation Drawer — OPEN → ACTIVE custody gate */}
+      {currentSession &&
+        currentSession.status === 'OPEN' &&
+        selectedTableId && (
+          <ActivationDrawer
+            open={activationDrawerOpen}
+            onOpenChange={setActivationDrawerOpen}
+            session={currentSession}
+            tableId={selectedTableId}
+          />
+        )}
     </>
   );
 }

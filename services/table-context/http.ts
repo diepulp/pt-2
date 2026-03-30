@@ -24,6 +24,7 @@ import type {
   TableSessionDTO,
 } from './dtos';
 import type {
+  ActivateTableSessionRequestBody,
   LogInventorySnapshotRequestBody,
   RequestTableFillRequestBody,
   RequestTableCreditRequestBody,
@@ -31,6 +32,7 @@ import type {
   AssignDealerRequestBody,
   UpdateTableLimitsRequestBody,
   CloseTableSessionRequestBody,
+  ForceCloseTableSessionRequestBody,
   OpenTableSessionRequestBody,
   ConfirmTableFillRequestBody,
   ConfirmTableCreditRequestBody,
@@ -240,6 +242,32 @@ export async function patchTableLimits(
   });
 }
 
+// === Table Session Activation (PRD-059) ===
+
+/**
+ * Activates an OPEN table session with opening attestation.
+ * POST /api/v1/table-sessions/[id]/activate
+ *
+ * @see PRD-059 Table Lifecycle Recovery — Custody Gate
+ */
+export async function activateTableSession(
+  sessionId: string,
+  input: Omit<ActivateTableSessionRequestBody, 'table_session_id'>,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(
+    `${BASE_URL}/table-sessions/${sessionId}/activate`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
 // === Table Session Operations (PRD-TABLE-SESSION-LIFECYCLE-MVP) ===
 
 /**
@@ -293,6 +321,30 @@ export async function closeTableSession(
     `${BASE_URL}/table-sessions/${sessionId}/close`,
     {
       method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),
+      },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+/**
+ * Force-closes a table session (privileged roles only).
+ * POST /api/v1/table-sessions/[id]/force-close
+ *
+ * @see PRD-038A Close Guardrails — role-gated server-side (pit_boss, admin)
+ */
+export async function forceCloseTableSession(
+  sessionId: string,
+  input: ForceCloseTableSessionRequestBody,
+  idempotencyKey?: string,
+): Promise<TableSessionDTO> {
+  return fetchJSON<TableSessionDTO>(
+    `${BASE_URL}/table-sessions/${sessionId}/force-close`,
+    {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         [IDEMPOTENCY_HEADER]: idempotencyKey ?? generateIdempotencyKey(),

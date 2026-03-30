@@ -11,6 +11,8 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import { dashboardKeys } from '@/hooks/dashboard/keys';
+import { ratingSlipKeys } from '@/services/rating-slip/keys';
 import type {
   TableSessionDTO,
   TableSessionStatus,
@@ -18,11 +20,16 @@ import type {
 import {
   closeTableSession,
   fetchCurrentTableSession,
+  forceCloseTableSession,
   openTableSession,
   startTableRundown,
 } from '@/services/table-context/http';
 import { tableContextKeys } from '@/services/table-context/keys';
-import type { CloseTableSessionRequestBody } from '@/services/table-context/schemas';
+import type {
+  CloseTableSessionRequestBody,
+  ForceCloseTableSessionRequestBody,
+} from '@/services/table-context/schemas';
+import { visitKeys } from '@/services/visit/keys';
 
 // === Query Hooks ===
 
@@ -38,6 +45,7 @@ export function useCurrentTableSession(tableId: string) {
     queryFn: () => fetchCurrentTableSession(tableId),
     enabled: !!tableId,
     staleTime: 30_000, // 30 seconds - sessions don't change frequently
+    refetchOnMount: 'always', // EXEC-038A Bug 1: prevent stale cache after close
   });
 }
 
@@ -67,6 +75,8 @@ export function useOpenTableSession(tableId: string) {
       );
       // Also cache by ID
       queryClient.setQueryData(tableContextKeys.sessions.byId(data.id), data);
+      // EXEC-038A Bug 3: Invalidate dashboard so grid badge shows session active
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
     },
   });
 }
@@ -115,16 +125,58 @@ export function useCloseTableSession(sessionId: string, tableId: string) {
       const idempotencyKey = crypto.randomUUID();
       return closeTableSession(sessionId, input, idempotencyKey);
     },
-    onSuccess: () => {
-      // Session is closed - clear current session cache (returns null)
-      queryClient.setQueryData(
-        tableContextKeys.sessions.current(tableId),
-        null,
-      );
-      // Invalidate to refetch fresh state
+    onSuccess: async () => {
+      const queryKey = tableContextKeys.sessions.current(tableId);
+      // EXEC-038A Bug 1: cancel→set→invalidate pattern prevents stale refetch race
+      // 1. Cancel in-flight fetches that could overwrite our optimistic cache write
+      await queryClient.cancelQueries({ queryKey });
+      // 2. Optimistic set to null — immediate UI feedback
+      queryClient.setQueryData(queryKey, null);
+      // 3. Background refetch for consistency
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+      // 4. EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // 5. PRD-057: Invalidate rating-slip and visit caches (stale after session close)
       queryClient.invalidateQueries({
-        queryKey: tableContextKeys.sessions.scope,
+        queryKey: ratingSlipKeys.forTable.scope,
       });
+      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
+      queryClient.invalidateQueries({ queryKey: visitKeys.root });
+    },
+  });
+}
+
+/**
+ * Force-closes a table session (privileged roles only).
+ * Bypasses closing artifact requirements.
+ *
+ * @param sessionId - Table session UUID
+ * @param tableId - Gaming table UUID (for cache invalidation)
+ * @see PRD-038A Close Guardrails — role-gated server-side (pit_boss, admin)
+ */
+export function useForceCloseTableSession(sessionId: string, tableId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ['force-close-table-session', sessionId],
+    mutationFn: async (input: ForceCloseTableSessionRequestBody) => {
+      const idempotencyKey = crypto.randomUUID();
+      return forceCloseTableSession(sessionId, input, idempotencyKey);
+    },
+    onSuccess: async () => {
+      const queryKey = tableContextKeys.sessions.current(tableId);
+      // EXEC-038A Bug 1: same cancel→set→invalidate pattern as standard close
+      await queryClient.cancelQueries({ queryKey });
+      queryClient.setQueryData(queryKey, null);
+      queryClient.invalidateQueries({ queryKey, refetchType: 'active' });
+      // EXEC-038A Bug 3: Invalidate dashboard tables so grid badge updates
+      queryClient.invalidateQueries({ queryKey: dashboardKeys.tables.scope });
+      // PRD-057: Invalidate rating-slip and visit caches (consistency with standard close)
+      queryClient.invalidateQueries({
+        queryKey: ratingSlipKeys.forTable.scope,
+      });
+      queryClient.invalidateQueries({ queryKey: ratingSlipKeys.list.scope });
+      queryClient.invalidateQueries({ queryKey: visitKeys.root });
     },
   });
 }
@@ -165,7 +217,7 @@ export function canCloseSession(session: TableSessionDTO | null): boolean {
  */
 export function getSessionStatusLabel(status: TableSessionStatus): string {
   const labels: Record<TableSessionStatus, string> = {
-    OPEN: 'Opening',
+    OPEN: 'Open',
     ACTIVE: 'In Play',
     RUNDOWN: 'Rundown',
     CLOSED: 'Closed',
@@ -175,18 +227,20 @@ export function getSessionStatusLabel(status: TableSessionStatus): string {
 
 /**
  * Gets status color for visual indicators.
+ *
+ * Returns a Tailwind className string that colors the Badge to match
+ * the power-toggle colour language:
+ *   OPEN    → blue   (awaiting activation)
+ *   ACTIVE  → emerald (in play)
+ *   RUNDOWN → amber   (winding down)
+ *   CLOSED  → zinc    (dormant)
  */
-export function getSessionStatusColor(
-  status: TableSessionStatus,
-): 'default' | 'secondary' | 'destructive' | 'outline' {
-  const colors: Record<
-    TableSessionStatus,
-    'default' | 'secondary' | 'destructive' | 'outline'
-  > = {
-    OPEN: 'outline',
-    ACTIVE: 'default',
-    RUNDOWN: 'secondary',
-    CLOSED: 'destructive',
+export function getSessionStatusColor(status: TableSessionStatus): string {
+  const colors: Record<TableSessionStatus, string> = {
+    OPEN: 'border-blue-500/30 bg-blue-500/10 text-blue-400',
+    ACTIVE: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400',
+    RUNDOWN: 'border-amber-500/30 bg-amber-500/10 text-amber-400',
+    CLOSED: 'border-zinc-500/30 bg-zinc-500/10 text-zinc-400',
   };
   return colors[status];
 }

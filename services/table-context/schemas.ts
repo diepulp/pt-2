@@ -12,7 +12,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, datetimeSchema, uuidSchema } from '@/lib/validation';
 import type { Database } from '@/types/database.types';
 
 // === UUID Format Schema ===
@@ -66,6 +66,7 @@ const CLOSE_REASONS = [
   'security_hold',
   'emergency',
   'other',
+  'cancelled',
 ] as const satisfies readonly CloseReasonType[];
 export const closeReasonSchema = z.enum(CLOSE_REASONS);
 
@@ -140,13 +141,10 @@ export const logDropEventSchema = z.object({
   drop_box_id: z.string().min(1, 'Drop box ID is required'),
   seal_no: z.string().min(1, 'Seal number is required'),
   witnessed_by: uuidFormat('staff ID'),
-  removed_at: z.string().datetime().optional(),
-  delivered_at: z.string().datetime().optional(),
-  delivered_scan_at: z.string().datetime().optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  removed_at: datetimeSchema('removed_at').optional(),
+  delivered_at: datetimeSchema('delivered_at').optional(),
+  delivered_scan_at: datetimeSchema('delivered_scan_at').optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
   seq_no: z.number().int().positive().optional(),
   note: z.string().max(500).optional(),
 });
@@ -228,7 +226,8 @@ export const startTableRundownSchema = z.object({
 /**
  * Schema for closing a table session.
  * PATCH /api/v1/table-sessions/[id]/close
- * At least one of drop_event_id or closing_inventory_snapshot_id required.
+ * At least one of drop_event_id or closing_inventory_snapshot_id required
+ * (except for cancellation of OPEN sessions per PRD-059 ADR-048 D2).
  * PRD-038A: close_reason is required; close_note required when close_reason='other'.
  */
 export const closeTableSessionSchema = z
@@ -241,11 +240,17 @@ export const closeTableSessionSchema = z
     close_reason: closeReasonSchema,
     close_note: z.string().max(2000).optional(),
   })
-  .refine((data) => data.drop_event_id || data.closing_inventory_snapshot_id, {
-    message:
-      'At least one of drop_event_id or closing_inventory_snapshot_id is required',
-    path: ['drop_event_id'],
-  })
+  .refine(
+    (data) =>
+      data.close_reason === 'cancelled' ||
+      data.drop_event_id ||
+      data.closing_inventory_snapshot_id,
+    {
+      message:
+        'At least one of drop_event_id or closing_inventory_snapshot_id is required',
+      path: ['drop_event_id'],
+    },
+  )
   .refine(
     (data) =>
       data.close_reason !== 'other' ||
@@ -277,6 +282,20 @@ export const forceCloseTableSessionSchema = z
   );
 
 /**
+ * Schema for activating a table session via custody gate (PRD-059).
+ * PATCH /api/v1/table-sessions/[id]/activate
+ *
+ * dealerConfirmed must be true (literal) — the UI checkbox must be checked.
+ * openingNote is optional but if provided must be non-empty.
+ */
+export const activateTableSessionSchema = z.object({
+  table_session_id: uuidFormat('table session ID'),
+  opening_total_cents: z.number().int().min(0),
+  dealer_confirmed: z.literal(true),
+  opening_note: z.string().min(1).nullable().optional(),
+});
+
+/**
  * Route params schema for session ID.
  */
 export const tableSessionRouteParamsSchema = z.object({
@@ -302,6 +321,9 @@ export type CloseTableSessionRequestBody = z.infer<
 >;
 export type ForceCloseTableSessionRequestBody = z.infer<
   typeof forceCloseTableSessionSchema
+>;
+export type ActivateTableSessionRequestBody = z.infer<
+  typeof activateTableSessionSchema
 >;
 export type TableSessionRouteParams = z.infer<
   typeof tableSessionRouteParamsSchema
@@ -355,26 +377,17 @@ export const confirmTableCreditSchema = z.object({
 
 export const fillListQuerySchema = z.object({
   status: z.enum(['requested', 'confirmed']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 export const creditListQuerySchema = z.object({
   status: z.enum(['requested', 'confirmed']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 export const dropListQuerySchema = z.object({
   cage_received: z.enum(['true', 'false']).optional(),
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
 });
 
 // Cashier confirmation transport type exports (PRD-033)

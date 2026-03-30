@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { datetimeSchema } from '@/lib/validation';
+
 // === Route Param Schemas ===
 
 export const promoProgramRouteParamsSchema = z.object({
@@ -27,15 +29,15 @@ export const createPromoProgramSchema = z.object({
   promoType: z.enum(['match_play', 'free_play']).optional(),
   faceValueAmount: z.number().positive('Face value must be positive'),
   requiredMatchWagerAmount: z.number().positive('Match wager must be positive'),
-  startAt: z.string().datetime().optional(),
-  endAt: z.string().datetime().optional(),
+  startAt: datetimeSchema().optional(),
+  endAt: datetimeSchema().optional(),
 });
 
 export const updatePromoProgramSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   status: z.enum(['active', 'inactive', 'archived']).optional(),
-  startAt: z.string().datetime().nullable().optional(),
-  endAt: z.string().datetime().nullable().optional(),
+  startAt: datetimeSchema().nullable().optional(),
+  endAt: datetimeSchema().nullable().optional(),
 });
 
 export const promoProgramListQuerySchema = z.object({
@@ -52,7 +54,7 @@ export const issueCouponSchema = z.object({
   validationNumber: z.string().min(1, 'Validation number is required').max(50),
   playerId: z.string().uuid().optional(),
   visitId: z.string().uuid().optional(),
-  expiresAt: z.string().datetime().optional(),
+  expiresAt: datetimeSchema().optional(),
   correlationId: z.string().uuid().optional(),
 });
 
@@ -65,7 +67,7 @@ export const replaceCouponSchema = z.object({
     .string()
     .min(1, 'New validation number is required')
     .max(50),
-  newExpiresAt: z.string().datetime().optional(),
+  newExpiresAt: datetimeSchema().optional(),
   correlationId: z.string().uuid().optional(),
 });
 
@@ -76,7 +78,7 @@ export const promoCouponListQuerySchema = z.object({
     .optional(),
   playerId: z.string().uuid().optional(),
   visitId: z.string().uuid().optional(),
-  expiringBefore: z.string().datetime().optional(),
+  expiringBefore: datetimeSchema().optional(),
   limit: z.coerce.number().int().positive().max(100).optional(),
   offset: z.coerce.number().int().nonnegative().optional(),
 });

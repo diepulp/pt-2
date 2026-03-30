@@ -140,7 +140,11 @@ export function NewSlipModal({
       logError(err, { component: 'NewSlipModal', action: 'createSlip' });
 
       // Handle specific error cases with user-friendly messages
-      if (isFetchError(err) && err.code === 'SEAT_ALREADY_OCCUPIED') {
+      if (isFetchError(err) && err.code === 'NO_ACTIVE_SESSION') {
+        setError(
+          'Table has no active session. Open a session before seating players.',
+        );
+      } else if (isFetchError(err) && err.code === 'SEAT_ALREADY_OCCUPIED') {
         setError(
           'This seat already has an active rating slip. Please choose a different seat or close the existing slip.',
         );

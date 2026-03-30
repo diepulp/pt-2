@@ -160,5 +160,7 @@ export async function postTableDropTotal(
     resumed_by_staff_id: result.resumed_by_staff_id,
     rolled_over_by_staff_id: result.rolled_over_by_staff_id,
     crossed_gaming_day: result.crossed_gaming_day,
+    // PRD-059: Predecessor chain
+    predecessor_session_id: result.predecessor_session_id,
   };
 }

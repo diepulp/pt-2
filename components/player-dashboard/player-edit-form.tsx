@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { dateSchema } from '@/lib/validation';
 import type {
   PlayerDTO,
   IdentityAddress,
@@ -20,11 +21,7 @@ const playerEditSchema = z.object({
   first_name: z.string().min(1, 'First name is required').max(100),
   middle_name: z.string().max(100).nullable().optional(),
   last_name: z.string().min(1, 'Last name is required').max(100),
-  birth_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD format')
-    .nullable()
-    .optional(),
+  birth_date: dateSchema('birth_date').nullable().optional(),
   email: z
     .string()
     .email('Invalid email')

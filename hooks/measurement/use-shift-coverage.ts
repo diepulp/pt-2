@@ -36,7 +36,7 @@ export function useShiftCoverage(casinoId: string, gamingDay?: string) {
     },
     staleTime: 30_000,
     refetchOnWindowFocus: true,
-    enabled: Boolean(casinoId),
+    enabled: Boolean(casinoId && gamingDay),
     placeholderData: keepPreviousData,
   });
 }

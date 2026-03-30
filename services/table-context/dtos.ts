@@ -468,6 +468,41 @@ export interface TableSessionDTO {
   rolled_over_by_staff_id: string | null;
   // PRD-038A: Gaming day alignment
   crossed_gaming_day: boolean;
+  // PRD-059: Predecessor chain
+  predecessor_session_id: string | null;
+}
+
+/**
+ * Opening attestation DTO for custody gate lifecycle.
+ * Pattern A (Contract-First): Manual interface matching table_opening_attestation row.
+ *
+ * @see PRD-059 Table Lifecycle Recovery
+ */
+// eslint-disable-next-line custom-rules/no-manual-dto-interfaces -- Pattern A: attestation with provenance chain fields
+export interface OpeningAttestationDTO {
+  id: string;
+  sessionId: string;
+  openingTotalCents: number;
+  attestedBy: string;
+  attestedAt: string;
+  dealerConfirmed: boolean;
+  note: string | null;
+  predecessorSnapshotId: string | null;
+  predecessorCloseTotalCents: number | null;
+  provenanceSource: 'predecessor' | 'par_bootstrap';
+}
+
+/**
+ * Input for activating a table session via custody gate.
+ * Transitions session from OPEN → ACTIVE with opening attestation.
+ *
+ * @see PRD-059 Table Lifecycle Recovery
+ */
+export interface ActivateTableSessionParams {
+  tableSessionId: string;
+  openingTotalCents: number;
+  dealerConfirmed: boolean;
+  openingNote?: string | null;
 }
 
 /**

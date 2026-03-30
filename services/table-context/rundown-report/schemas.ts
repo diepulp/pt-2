@@ -10,6 +10,8 @@
 
 import { z } from 'zod';
 
+import { dateSchema } from '@/lib/validation';
+
 // === UUID Format Schema ===
 
 const UUID_REGEX =
@@ -39,10 +41,7 @@ export const finalizeRundownSchema = z.object({
 // === Query Schemas ===
 
 export const rundownQuerySchema = z.object({
-  gaming_day: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
+  gaming_day: dateSchema('gaming_day').optional(),
   gaming_table_id: uuidFormat('table ID').optional(),
 });
 

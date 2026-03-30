@@ -31,6 +31,7 @@ import type {
   DashboardTableDTO,
   DashboardStats,
 } from '@/hooks/dashboard/types';
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import { usePitDashboardUI } from '@/hooks/ui';
 import { useSwipe } from '@/hooks/utilities';
 import { cn } from '@/lib/utils';
@@ -57,6 +58,8 @@ interface PanelContainerProps {
   // Tables data
   tables: DashboardTableDTO[];
   selectedTable: DashboardTableDTO | null;
+  /** Current table session from useCurrentTableSession (PRD-038A) */
+  session?: TableSessionDTO | null;
   seats: (SeatOccupant | null)[];
   activeSlips: RatingSlipWithPlayerDTO[];
   stats: DashboardStats | null;
@@ -75,6 +78,8 @@ interface PanelContainerProps {
   onSeatClick: (index: number, occupant: SeatOccupant | null) => void;
   onNewSlip: () => void;
   onSlipClick: (slipId: string) => void;
+  /** PRD-059: Callback to open activation drawer for OPEN sessions */
+  onActivateRequest?: () => void;
 
   /**
    * Mobile mode: Hides the vertical tab navigation sidebar.
@@ -99,6 +104,7 @@ export function PanelContainer({
   className,
   tables,
   selectedTable,
+  session,
   seats,
   activeSlips,
   stats,
@@ -113,6 +119,7 @@ export function PanelContainer({
   onSeatClick,
   onNewSlip,
   onSlipClick,
+  onActivateRequest,
   mobileMode = false,
   reviewMode = false,
 }: PanelContainerProps) {
@@ -265,12 +272,14 @@ export function PanelContainer({
           <TablesPanel
             tableName={tableName}
             selectedTable={selectedTable}
+            session={session ?? null}
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            onActivateRequest={onActivateRequest}
             pits={pits}
             selectedPitId={selectedPitId}
             onSelectTable={onSelectTable}
@@ -310,12 +319,14 @@ export function PanelContainer({
           <TablesPanel
             tableName={tableName}
             selectedTable={selectedTable}
+            session={session ?? null}
             seats={seats}
             activeSlips={activeSlips}
             isLoading={isLoading}
             casinoId={casinoId}
             onSeatClick={onSeatClick}
             onNewSlip={onNewSlip}
+            onActivateRequest={onActivateRequest}
             pits={pits}
             selectedPitId={selectedPitId}
             onSelectTable={onSelectTable}

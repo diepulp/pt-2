@@ -19,6 +19,10 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
+import {
+  derivePitDisplayBadge,
+  type PitDisplayBadge,
+} from '@/services/table-context/pit-display';
 import type { Database } from '@/types/database.types';
 
 type TableStatus = Database['public']['Enums']['table_status'];
@@ -29,6 +33,8 @@ export interface PitMapTable {
   label: string;
   status: TableStatus;
   gameType: GameType;
+  /** Session lifecycle phase (D6.1). Present when an active session exists. */
+  sessionStatus?: 'OPEN' | 'ACTIVE' | 'RUNDOWN' | null;
 }
 
 export interface PitMapPit {
@@ -47,35 +53,39 @@ interface PitMapSelectorProps {
   compact?: boolean;
 }
 
-/**
- * Status configuration with ADR-028 D6 labels.
- * - active: "Available" (not "Open" - avoids collision with session status)
- * - inactive: "Idle" (already correct)
- * - closed: "Decommissioned" (not "Closed" - permanent state, not session close)
- */
-const STATUS_CONFIG: Record<
-  TableStatus,
-  { color: string; bg: string; ring: string; label: string }
-> = {
-  active: {
-    color: 'text-emerald-600 dark:text-emerald-400',
-    bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
-    ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
-    label: 'Available',
-  },
-  inactive: {
-    color: 'text-amber-600 dark:text-amber-400',
-    bg: 'bg-amber-500/15 dark:bg-amber-500/20',
-    ring: 'ring-amber-500/50 dark:ring-amber-500/40',
-    label: 'Idle',
-  },
-  closed: {
-    color: 'text-zinc-500 dark:text-zinc-500',
-    bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
-    ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
-    label: 'Decommissioned',
-  },
-};
+/** Map pit display badge color token to Tailwind class groups */
+function badgeColorClasses(badge: PitDisplayBadge): {
+  color: string;
+  bg: string;
+  ring: string;
+} {
+  switch (badge.color) {
+    case 'emerald':
+      return {
+        color: 'text-emerald-600 dark:text-emerald-400',
+        bg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+        ring: 'ring-emerald-500/50 dark:ring-emerald-500/40',
+      };
+    case 'amber':
+      return {
+        color: 'text-amber-600 dark:text-amber-400',
+        bg: 'bg-amber-500/15 dark:bg-amber-500/20',
+        ring: 'ring-amber-500/50 dark:ring-amber-500/40',
+      };
+    case 'blue':
+      return {
+        color: 'text-blue-600 dark:text-blue-400',
+        bg: 'bg-blue-500/15 dark:bg-blue-500/20',
+        ring: 'ring-blue-500/50 dark:ring-blue-500/40',
+      };
+    case 'zinc':
+      return {
+        color: 'text-zinc-500 dark:text-zinc-500',
+        bg: 'bg-zinc-500/15 dark:bg-zinc-500/20',
+        ring: 'ring-zinc-500/50 dark:ring-zinc-500/40',
+      };
+  }
+}
 
 const GAME_TYPE_LABELS: Record<GameType, string> = {
   blackjack: 'BJ',
@@ -187,7 +197,9 @@ export function PitMapSelector({
                 'shrink-0',
                 compact ? 'size-3.5' : 'size-4',
                 currentTable
-                  ? STATUS_CONFIG[currentTable.status].color
+                  ? badgeColorClasses(
+                      derivePitDisplayBadge(currentTable.sessionStatus),
+                    ).color
                   : currentPit
                     ? 'text-accent'
                     : 'text-muted-foreground',
@@ -289,7 +301,12 @@ export function PitMapSelector({
                   >
                     {pit.tables.map((table) => {
                       const isSelected = table.id === selectedTableId;
-                      const statusConfig = STATUS_CONFIG[table.status];
+                      // ADR-047 D5: derive badge from session phase only
+                      const badge = derivePitDisplayBadge(table.sessionStatus);
+                      const statusConfig = {
+                        ...badgeColorClasses(badge),
+                        label: badge.label,
+                      };
 
                       return (
                         <CommandItem
@@ -361,7 +378,7 @@ export function PitMapSelector({
                 {totalStats.tables} tables
               </span>
               <span className="text-emerald-600 dark:text-emerald-400">
-                {totalStats.active} open
+                {totalStats.active} active
               </span>
             </span>
           </div>

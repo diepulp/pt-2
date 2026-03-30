@@ -17,11 +17,16 @@ export default async function StartGatewayPage() {
   }
 
   // 2. Check staff binding
-  const { data: staff } = await supabase
+  const { data: staff, error: staffError } = await supabase
     .from('staff')
     .select('id, status, casino_id')
     .eq('user_id', user.id)
     .maybeSingle();
+
+  if (staffError) {
+    // DB/RLS error — don't misroute to bootstrap (causes redirect loop)
+    redirect('/signin?error=service_unavailable');
+  }
 
   if (!staff) {
     // No staff row — needs bootstrap
@@ -34,14 +39,13 @@ export default async function StartGatewayPage() {
   }
 
   // 3. Check casino setup status
-  const { data: settings } = await supabase
+  const { data: settings, error: settingsError } = await supabase
     .from('casino_settings')
     .select('setup_status')
     .eq('casino_id', staff.casino_id)
     .maybeSingle();
 
-  if (!settings) {
-    // Defensive: no settings row
+  if (settingsError || !settings) {
     redirect('/setup');
   }
 

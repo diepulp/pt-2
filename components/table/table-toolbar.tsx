@@ -5,7 +5,6 @@ import {
   ClipboardList,
   Coins,
   MessageSquarePlus,
-  Power,
   Settings2,
   StickyNote,
   UserCog,
@@ -22,6 +21,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import type { TableSessionDTO } from '@/hooks/table-context/use-table-session';
 import { cn } from '@/lib/utils';
 
 import {
@@ -29,6 +29,7 @@ import {
   PitMapSelectorCompact,
   type PitMapPit,
 } from './pit-map-selector';
+import { TablePowerToggle } from './table-power-toggle';
 
 interface ToolbarAction {
   id: string;
@@ -49,9 +50,15 @@ interface ActionGroup {
 interface TableToolbarProps {
   tableId: string;
   tableStatus: 'active' | 'inactive' | 'closed';
+  /** Current table session for status badge (PRD-038A) */
+  session?: TableSessionDTO | null;
   onNewSlip: () => void;
   onEditLimits: () => void;
   onEnrollPlayer?: () => void;
+  /** Lifecycle: opens the close-session dialog */
+  onCloseRequest?: () => void;
+  /** Lifecycle: opens the activation drawer for OPEN sessions (PRD-059) */
+  onActivateRequest?: () => void;
   className?: string;
   /** Pit navigation props */
   pits?: PitMapPit[];
@@ -72,9 +79,12 @@ interface TableToolbarProps {
 export function TableToolbar({
   tableId,
   tableStatus,
+  session,
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
+  onCloseRequest,
+  onActivateRequest,
   className,
   pits,
   selectedPitId,
@@ -82,6 +92,7 @@ export function TableToolbar({
   onSelectTable,
   onSelectPit,
 }: TableToolbarProps) {
+  void tableStatus; // consumed by parent interface; power toggle derives state from session
   // Placeholder handlers for pending functionality
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
@@ -97,14 +108,6 @@ export function TableToolbar({
         id: 'table',
         label: 'TABLE',
         actions: [
-          {
-            id: 'toggle-status',
-            icon: Power,
-            label: tableStatus === 'active' ? 'Close Table' : 'Open Table',
-            shortcut: '⌘T',
-            onClick: () => handlePlaceholder('Toggle table status'),
-            variant: tableStatus === 'active' ? 'accent' : 'muted',
-          },
           {
             id: 'assign-dealer',
             icon: UserCog,
@@ -177,7 +180,7 @@ export function TableToolbar({
         ],
       },
     ],
-    [tableStatus, onNewSlip, onEditLimits, onEnrollPlayer, handlePlaceholder],
+    [onNewSlip, onEditLimits, onEnrollPlayer, handlePlaceholder],
   );
 
   return (
@@ -195,6 +198,16 @@ export function TableToolbar({
       >
         {/* Industrial LED accent */}
         <div className="absolute top-0 left-2 right-2 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
+
+        {/* Power Toggle — consolidated lifecycle control */}
+        <TablePowerToggle
+          tableId={tableId}
+          session={session ?? null}
+          onCloseRequest={onCloseRequest ?? (() => {})}
+          onActivateRequest={onActivateRequest}
+        />
+
+        <Separator orientation="vertical" className="h-6 mx-1 bg-border/40" />
 
         {actionGroups.map((group, groupIndex) => (
           <React.Fragment key={group.id}>
@@ -303,9 +316,12 @@ function ToolbarButton({ action }: { action: ToolbarAction }) {
 export function TableToolbarCompact({
   tableId,
   tableStatus,
+  session,
   onNewSlip,
   onEditLimits,
   onEnrollPlayer,
+  onCloseRequest,
+  onActivateRequest,
   className,
   pits,
   selectedPitId,
@@ -313,6 +329,7 @@ export function TableToolbarCompact({
   onSelectTable,
   onSelectPit,
 }: TableToolbarProps) {
+  void tableStatus; // consumed by parent interface; power toggle derives state from session
   const handlePlaceholder = React.useCallback((action: string) => {
     toast.info(`${action} — pending implementation`, {
       description: 'This feature is being developed',
@@ -334,13 +351,6 @@ export function TableToolbarCompact({
       icon: UserPlus,
       label: 'Enroll',
       onClick: onEnrollPlayer ?? (() => handlePlaceholder('Enroll player')),
-    },
-    {
-      id: 'toggle-status',
-      icon: Power,
-      label: tableStatus === 'active' ? 'Close' : 'Open',
-      onClick: () => handlePlaceholder('Toggle status'),
-      variant: tableStatus === 'active' ? 'accent' : 'muted',
     },
     {
       id: 'log-fill',
@@ -374,6 +384,16 @@ export function TableToolbarCompact({
         role="toolbar"
         aria-label={`Table ${tableId} quick actions`}
       >
+        {/* Power Toggle — consolidated lifecycle control */}
+        <TablePowerToggle
+          tableId={tableId}
+          session={session ?? null}
+          onCloseRequest={onCloseRequest ?? (() => {})}
+          onActivateRequest={onActivateRequest}
+        />
+
+        <Separator orientation="vertical" className="h-5 mx-0.5 bg-border/40" />
+
         {priorityActions.map((action) => (
           <ToolbarButton key={action.id} action={action} />
         ))}

@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, uuidSchema } from '@/lib/validation';
 
 // === Reason Code Schema ===
 
@@ -31,10 +31,7 @@ export const summaryQuerySchema = z.object({
   /** Player ID (UUID) */
   playerId: uuidSchema('player ID'),
   /** Optional gaming day override (ISO date) */
-  gamingDay: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Gaming day must be YYYY-MM-DD format')
-    .optional(),
+  gamingDay: dateSchema('gamingDay').optional(),
 });
 
 // === Activity Query Schema ===

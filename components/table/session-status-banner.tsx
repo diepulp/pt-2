@@ -88,14 +88,14 @@ export function SessionStatusBanner({
     >
       {/* Status indicator with subtle glow */}
       <div className="relative">
-        <Badge variant={statusColor} className="gap-1.5">
+        <Badge variant="outline" className={cn('gap-1.5', statusColor)}>
           <Activity className="size-3" />
           {statusLabel}
         </Badge>
         {session.status === 'ACTIVE' && (
           <span className="absolute -right-0.5 -top-0.5 flex size-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-            <span className="relative inline-flex size-2 rounded-full bg-primary" />
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75" />
+            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
           </span>
         )}
       </div>
@@ -173,7 +173,7 @@ export function SessionStatusBannerCompact({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      <Badge variant={statusColor} className="gap-1">
+      <Badge variant="outline" className={cn('gap-1', statusColor)}>
         <Activity className="size-3" />
         {statusLabel}
       </Badge>

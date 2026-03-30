@@ -10,7 +10,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema, uuidSchemaOptional } from '@/lib/validation';
+import { dateSchema, uuidSchema, uuidSchemaOptional } from '@/lib/validation';
 
 // === Visit Kind Schema ===
 
@@ -121,15 +121,9 @@ export const visitListQuerySchema = z.object({
   /** Filter by visit kind */
   visit_kind: visitKindSchema.optional(),
   /** Filter by date range start (ISO date) */
-  from_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'from_date must be YYYY-MM-DD')
-    .optional(),
+  from_date: dateSchema('from_date').optional(),
   /** Filter by date range end (ISO date) */
-  to_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'to_date must be YYYY-MM-DD')
-    .optional(),
+  to_date: dateSchema('to_date').optional(),
   /** Pagination cursor (ISO timestamp) */
   cursor: z.string().optional(),
   /** Results per page (default 20, max 100) */

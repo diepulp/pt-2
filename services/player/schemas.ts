@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, uuidSchema } from '@/lib/validation';
 
 // === Player CRUD Schemas ===
 
@@ -23,10 +23,7 @@ export const createPlayerSchema = z.object({
     .string()
     .min(1, 'Last name is required')
     .max(100, 'Last name too long'),
-  birth_date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
-    .optional(),
+  birth_date: dateSchema('birth_date').optional(),
 });
 
 /** Schema for updating a player */
@@ -34,11 +31,7 @@ export const updatePlayerSchema = z
   .object({
     first_name: z.string().min(1).max(100).optional(),
     last_name: z.string().min(1).max(100).optional(),
-    birth_date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
-      .nullable()
-      .optional(),
+    birth_date: dateSchema('birth_date').nullable().optional(),
     middle_name: z.string().max(100).nullable().optional(),
     email: z.string().email('Invalid email format').nullable().optional(),
     phone_number: z
@@ -99,10 +92,7 @@ export const identityAddressSchema = z
 /** Schema for creating/updating player identity */
 export const playerIdentitySchema = z.object({
   documentNumber: z.string().min(1, 'Document number is required').optional(),
-  birthDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Birth date must be YYYY-MM-DD format')
-    .optional(),
+  birthDate: dateSchema('birthDate').optional(),
   gender: z.enum(['m', 'f', 'x']).optional(),
   eyeColor: z.string().max(50).optional(),
   height: z
@@ -111,14 +101,8 @@ export const playerIdentitySchema = z.object({
     .optional(),
   weight: z.string().max(10).optional(),
   address: identityAddressSchema,
-  issueDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Issue date must be YYYY-MM-DD format')
-    .optional(),
-  expirationDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expiration date must be YYYY-MM-DD format')
-    .optional(),
+  issueDate: dateSchema('issueDate').optional(),
+  expirationDate: dateSchema('expirationDate').optional(),
   issuingState: z.string().max(50).optional(),
   documentType: z.enum(['drivers_license', 'passport', 'state_id']).optional(),
 });

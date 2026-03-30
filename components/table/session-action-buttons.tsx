@@ -1,6 +1,13 @@
 'use client';
 
-import { AlertTriangle, Loader2, Play, Square, StopCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  Loader2,
+  Play,
+  Square,
+  StopCircle,
+} from 'lucide-react';
 import * as React from 'react';
 import { toast } from 'sonner';
 
@@ -25,6 +32,8 @@ interface SessionActionButtonsProps {
   tableId: string;
   session: TableSessionDTO | null;
   onCloseRequest: () => void;
+  /** PRD-059: Callback to open activation drawer for OPEN sessions */
+  onActivateRequest?: () => void;
   className?: string;
   variant?: 'default' | 'compact';
 }
@@ -43,6 +52,7 @@ export function SessionActionButtons({
   tableId,
   session,
   onCloseRequest,
+  onActivateRequest,
   className,
   variant = 'default',
 }: SessionActionButtonsProps) {
@@ -52,6 +62,7 @@ export function SessionActionButtons({
   const canOpen = canOpenSession(session);
   const canRundown = canStartRundown(session);
   const canClose = canCloseSession(session);
+  const isOpen = session?.status === 'OPEN';
 
   const handleOpenSession = React.useCallback(async () => {
     try {
@@ -86,28 +97,44 @@ export function SessionActionButtons({
     return (
       <TooltipProvider delayDuration={150}>
         <div className={cn('flex items-center gap-1', className)}>
-          {/* Open Session */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                onClick={handleOpenSession}
-                disabled={!canOpen || openMutation.isPending}
-                className={cn(
-                  'h-8 w-8',
-                  canOpen && 'text-emerald-500 hover:text-emerald-400',
-                )}
-              >
-                {openMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Play className="size-4" />
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Open Session</TooltipContent>
-          </Tooltip>
+          {/* PRD-059: When OPEN, replace Play with Activate (reduces button count) */}
+          {isOpen && onActivateRequest ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={onActivateRequest}
+                  className="h-8 w-8 text-blue-500 hover:text-blue-400 animate-pulse"
+                >
+                  <CheckCircle2 className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Activate Table for Play</TooltipContent>
+            </Tooltip>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={handleOpenSession}
+                  disabled={!canOpen || openMutation.isPending}
+                  className={cn(
+                    'h-8 w-8',
+                    canOpen && 'text-emerald-500 hover:text-emerald-400',
+                  )}
+                >
+                  {openMutation.isPending ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <Play className="size-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Open Session</TooltipContent>
+            </Tooltip>
+          )}
 
           {/* Start Rundown */}
           <Tooltip>
@@ -157,24 +184,36 @@ export function SessionActionButtons({
 
   return (
     <div className={cn('flex items-center gap-2', className)}>
-      {/* Open Session */}
-      <Button
-        variant={canOpen ? 'default' : 'outline'}
-        size="sm"
-        onClick={handleOpenSession}
-        disabled={!canOpen || openMutation.isPending}
-        className={cn(
-          'gap-1.5',
-          canOpen && 'bg-emerald-600 hover:bg-emerald-700',
-        )}
-      >
-        {openMutation.isPending ? (
-          <Loader2 className="size-4 animate-spin" />
-        ) : (
-          <Play className="size-4" />
-        )}
-        Open Session
-      </Button>
+      {/* PRD-059: When OPEN, replace Play with Activate (reduces operator fatigue) */}
+      {isOpen && onActivateRequest ? (
+        <Button
+          variant="default"
+          size="sm"
+          onClick={onActivateRequest}
+          className="gap-1.5 bg-blue-600 hover:bg-blue-700 animate-pulse"
+        >
+          <CheckCircle2 className="size-4" />
+          Activate Table
+        </Button>
+      ) : (
+        <Button
+          variant={canOpen ? 'default' : 'outline'}
+          size="sm"
+          onClick={handleOpenSession}
+          disabled={!canOpen || openMutation.isPending}
+          className={cn(
+            'gap-1.5',
+            canOpen && 'bg-emerald-600 hover:bg-emerald-700',
+          )}
+        >
+          {openMutation.isPending ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : (
+            <Play className="size-4" />
+          )}
+          Open Session
+        </Button>
+      )}
 
       {/* Start Rundown */}
       <Button

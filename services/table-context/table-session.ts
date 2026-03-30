@@ -21,6 +21,7 @@ import type {
   TableSessionDTO,
   CloseTableSessionInput,
   ForceCloseTableSessionInput,
+  ActivateTableSessionParams,
 } from './dtos';
 
 // === RPC Return Type ===
@@ -65,6 +66,8 @@ type TableSessionRow = {
   rolled_over_by_staff_id: string | null;
   // PRD-038A: Gaming day alignment
   crossed_gaming_day: boolean;
+  // PRD-059: Predecessor chain
+  predecessor_session_id: string | null;
 };
 
 /**
@@ -147,6 +150,8 @@ function toTableSessionDTO(row: TableSessionRow): TableSessionDTO {
     rolled_over_by_staff_id: row.rolled_over_by_staff_id,
     // PRD-038A: Gaming day alignment
     crossed_gaming_day: row.crossed_gaming_day,
+    // PRD-059: Predecessor chain
+    predecessor_session_id: row.predecessor_session_id,
   };
 }
 
@@ -239,6 +244,46 @@ function mapRpcError(
     );
   }
 
+  // PRD-057: Session-gated seating error
+  if (error.code === 'P0007' || message.includes('NO_ACTIVE_SESSION')) {
+    throw new DomainError(
+      'NO_ACTIVE_SESSION',
+      'Table has no active session. Open a session before seating players.',
+    );
+  }
+
+  // PRD-059: Custody gate activation errors
+  if (error.code === 'P0008' || message.includes('dealer_not_confirmed')) {
+    throw new DomainError(
+      'DEALER_NOT_CONFIRMED',
+      'Dealer confirmation is required to activate the table session.',
+    );
+  }
+
+  if (error.code === 'P0009' || message.includes('note_required')) {
+    throw new DomainError(
+      'OPENING_NOTE_REQUIRED',
+      'An opening note is required for this attestation.',
+    );
+  }
+
+  if (error.code === 'P0010' || message.includes('invalid_opening_amount')) {
+    throw new DomainError(
+      'INVALID_OPENING_AMOUNT',
+      'Opening total cents must be a non-negative integer.',
+    );
+  }
+
+  if (
+    error.code === 'P0011' ||
+    message.includes('predecessor_already_consumed')
+  ) {
+    throw new DomainError(
+      'PREDECESSOR_ALREADY_CONSUMED',
+      'The predecessor session has already been consumed by another attestation.',
+    );
+  }
+
   if (error.code === 'P0001') {
     throw new DomainError(
       'UNAUTHORIZED',
@@ -278,6 +323,46 @@ export async function openTableSession(
 
   if (error || !data) {
     mapRpcError(error, 'Open session');
+  }
+
+  return toTableSessionDTO(data);
+}
+
+/**
+ * Activates a table session via custody gate (PRD-059).
+ *
+ * Transitions session from OPEN → ACTIVE with an opening attestation.
+ * Creates a table_opening_attestation row with chip count, dealer confirmation,
+ * and predecessor provenance chain.
+ *
+ * @param supabase - Supabase client with RLS context
+ * @param params - Activation params with opening total and dealer confirmation
+ * @returns The activated session DTO (status=ACTIVE)
+ * @throws DomainError SESSION_NOT_FOUND if session doesn't exist
+ * @throws DomainError INVALID_STATE_TRANSITION if not in OPEN state
+ * @throws DomainError DEALER_NOT_CONFIRMED if dealerConfirmed is false
+ * @throws DomainError OPENING_NOTE_REQUIRED if note is required but missing
+ * @throws DomainError INVALID_OPENING_AMOUNT if amount is negative
+ * @throws DomainError PREDECESSOR_ALREADY_CONSUMED if predecessor already used
+ * @throws DomainError UNAUTHORIZED if caller is not pit_boss/admin
+ */
+export async function activateTableSession(
+  supabase: SupabaseClient<Database>,
+  params: ActivateTableSessionParams,
+): Promise<TableSessionDTO> {
+  const { data, error } = await callSessionRpc<TableSessionRow>(
+    supabase,
+    'rpc_activate_table_session',
+    {
+      p_table_session_id: params.tableSessionId,
+      p_opening_total_cents: params.openingTotalCents,
+      p_dealer_confirmed: params.dealerConfirmed,
+      p_opening_note: params.openingNote ?? null,
+    },
+  );
+
+  if (error || !data) {
+    mapRpcError(error, 'Activate session');
   }
 
   return toTableSessionDTO(data);
@@ -331,6 +416,9 @@ export async function closeTableSession(
   supabase: SupabaseClient<Database>,
   input: CloseTableSessionInput,
 ): Promise<TableSessionDTO> {
+  // PRD-057: hasOpenSlipsForTable pre-check removed — now atomic inside RPC.
+  // rpc_close_table_session computes has_unresolved_items from live rating_slip
+  // state and raises P0005 (UNRESOLVED_LIABILITIES) if open slips exist.
   const { data, error } = await callSessionRpc<TableSessionRow>(
     supabase,
     'rpc_close_table_session',
@@ -410,8 +498,9 @@ export async function getCurrentTableSession(
     mapRpcError(error, 'Get current session');
   }
 
-  // RPC returns null if no active session
-  if (!data) {
+  // RPC RETURNS table_session (row type) — PostgreSQL returns an all-null row
+  // instead of SQL NULL when no match. Check data.id (primary key) to detect this.
+  if (!data || !data.id) {
     return null;
   }
 

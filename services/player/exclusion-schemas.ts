@@ -9,7 +9,7 @@
 
 import { z } from 'zod';
 
-import { uuidSchema } from '@/lib/validation';
+import { dateSchema, uuidSchema } from '@/lib/validation';
 
 // === Exclusion Type & Enforcement Enums ===
 
@@ -30,17 +30,9 @@ export const createExclusionSchema = z.object({
   exclusion_type: exclusionTypeEnum,
   enforcement: enforcementEnum,
   reason: z.string().min(1, 'Reason is required').max(1000, 'Reason too long'),
-  effective_from: z.iso
-    .datetime({ message: 'effective_from must be ISO 8601' })
-    .optional(),
-  effective_until: z.iso
-    .datetime({ message: 'effective_until must be ISO 8601' })
-    .nullable()
-    .optional(),
-  review_date: z.iso
-    .datetime({ message: 'review_date must be ISO 8601' })
-    .nullable()
-    .optional(),
+  effective_from: dateSchema('effective_from').optional(),
+  effective_until: dateSchema('effective_until').nullable().optional(),
+  review_date: dateSchema('review_date').nullable().optional(),
   external_ref: z.string().max(500).nullable().optional(),
   jurisdiction: z.string().max(200).nullable().optional(),
 });

@@ -15,6 +15,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import {
   formatDropEventLabel,
@@ -30,10 +37,24 @@ import {
   type TableSessionDTO,
   useCloseTableSession,
 } from '@/hooks/table-context/use-table-session';
+import { isFetchError } from '@/lib/errors/error-utils';
+import type { CloseReasonType } from '@/services/table-context/dtos';
+import { CLOSE_REASON_OPTIONS } from '@/services/table-context/labels';
 
 import { ArtifactPicker } from './artifact-picker';
 import { ChipCountCaptureDialog } from './chip-count-capture-dialog';
 import { DropEventDialog } from './drop-event-dialog';
+
+/** Error code → user-legible message mapping (EXEC-038A error matrix) */
+const ERROR_MESSAGES: Record<string, string> = {
+  UNRESOLVED_LIABILITIES:
+    'Session has unresolved items that must be reconciled before closing.',
+  TABLE_HAS_OPEN_SLIPS:
+    'Open or paused rating slips must be closed before closing the session.',
+  ALREADY_CLOSED: 'Session already closed.',
+  CLOSE_NOTE_REQUIRED: "Please add a note when selecting 'Other'.",
+  VALIDATION_ERROR: 'Invalid request. Check your inputs.',
+};
 
 interface CloseSessionDialogProps {
   open: boolean;
@@ -54,13 +75,10 @@ interface CloseSessionDialogProps {
 /**
  * Close Session Dialog
  *
- * Modal for closing a table session with required artifacts.
- * At least one artifact (drop_event_id or closing_inventory_snapshot_id) is required.
+ * Modal for closing a table session with required artifacts and close reason.
  *
- * Enhanced version with artifact pickers instead of manual UUID entry.
- *
- * @see PRD-TABLE-SESSION-LIFECYCLE-MVP
- * @see GAP-TABLE-ROLLOVER-UI WS2
+ * @see PRD-038A Table Lifecycle Audit Patch
+ * @see EXEC-038A Close Guardrails
  */
 export function CloseSessionDialog({
   open,
@@ -73,19 +91,25 @@ export function CloseSessionDialog({
   dropEventId: preselectedDropEventId,
   closingInventorySnapshotId: preselectedSnapshotId,
 }: CloseSessionDialogProps) {
-  // Form state
+  // Form state — artifacts
+  // PRD-059: Inventory snapshot defaults ON — custody chain requires it.
+  // If snapshots exist for this table, auto-enable and auto-select the most recent.
   const [useDropEvent, setUseDropEvent] = React.useState(
     !!preselectedDropEventId,
   );
-  const [useInventorySnapshot, setUseInventorySnapshot] = React.useState(
-    !!preselectedSnapshotId,
-  );
+  const [useInventorySnapshot, setUseInventorySnapshot] = React.useState(true);
   const [dropEventId, setDropEventId] = React.useState<string | null>(
     preselectedDropEventId ?? null,
   );
   const [closingInventorySnapshotId, setClosingInventorySnapshotId] =
     React.useState<string | null>(preselectedSnapshotId ?? null);
   const [notes, setNotes] = React.useState('');
+
+  // Form state — close reason (PRD-038A)
+  const [closeReason, setCloseReason] = React.useState<CloseReasonType | null>(
+    null,
+  );
+  const [closeNote, setCloseNote] = React.useState('');
 
   // Child dialog states
   const [showChipCountDialog, setShowChipCountDialog] = React.useState(false);
@@ -100,25 +124,42 @@ export function CloseSessionDialog({
     gamingDay,
   );
 
-  // Mutation
+  // Mutations
   const closeMutation = useCloseTableSession(session?.id ?? '', tableId);
 
-  // Validation
+  // Derived state
   const hasAtLeastOneArtifact =
     (useDropEvent && dropEventId) ||
     (useInventorySnapshot && closingInventorySnapshotId);
-  const isValid = hasAtLeastOneArtifact && session;
+  const closeNoteValid = closeReason !== 'other' || closeNote.trim().length > 0;
+  const isPending = closeMutation.isPending;
+
+  // Standard close validation
+  const isStandardCloseValid =
+    !!closeReason && closeNoteValid && hasAtLeastOneArtifact && session;
 
   // Reset form when dialog opens/closes
+  // PRD-059: Inventory snapshot defaults ON for custody chain continuity.
   React.useEffect(() => {
     if (open) {
       setUseDropEvent(!!preselectedDropEventId);
-      setUseInventorySnapshot(!!preselectedSnapshotId);
+      setUseInventorySnapshot(true);
       setDropEventId(preselectedDropEventId ?? null);
       setClosingInventorySnapshotId(preselectedSnapshotId ?? null);
       setNotes('');
+      setCloseReason(null);
+      setCloseNote('');
     }
   }, [open, preselectedDropEventId, preselectedSnapshotId]);
+
+  // PRD-059: Auto-select the most recent inventory snapshot when dialog opens
+  // and no snapshot is preselected. This ensures the custody chain is populated
+  // without requiring the pit boss to manually toggle the picker.
+  React.useEffect(() => {
+    if (open && !closingInventorySnapshotId && inventorySnapshots.length > 0) {
+      setClosingInventorySnapshotId(inventorySnapshots[0].id);
+    }
+  }, [open, closingInventorySnapshotId, inventorySnapshots]);
 
   // Handle chip count creation callback
   const handleChipCountCreated = React.useCallback((snapshotId: string) => {
@@ -134,8 +175,27 @@ export function CloseSessionDialog({
     setShowDropEventDialog(false);
   }, []);
 
+  /** Error handler for close mutation (EXEC-038A error matrix) */
+  const handleMutationError = React.useCallback(
+    (error: unknown) => {
+      if (isFetchError(error)) {
+        const message =
+          ERROR_MESSAGES[error.code] ?? error.message ?? 'An error occurred';
+        toast.error('Close failed', { description: message });
+
+        // Close dialog for terminal states
+        if (error.code === 'ALREADY_CLOSED' || error.status === 404) {
+          onOpenChange(false);
+        }
+      } else {
+        toast.error('Network error. Please try again.');
+      }
+    },
+    [onOpenChange],
+  );
+
   const handleClose = React.useCallback(async () => {
-    if (!isValid) return;
+    if (!isStandardCloseValid) return;
 
     try {
       await closeMutation.mutateAsync({
@@ -145,7 +205,8 @@ export function CloseSessionDialog({
             ? closingInventorySnapshotId
             : undefined,
         notes: notes.trim() || undefined,
-        close_reason: 'end_of_shift',
+        close_reason: closeReason!,
+        close_note: closeNote.trim() || undefined,
       });
 
       toast.success('Session closed', {
@@ -154,20 +215,20 @@ export function CloseSessionDialog({
 
       onOpenChange(false);
     } catch (error) {
-      toast.error('Failed to close session', {
-        description:
-          error instanceof Error ? error.message : 'An error occurred',
-      });
+      handleMutationError(error);
     }
   }, [
-    isValid,
+    isStandardCloseValid,
     closeMutation,
     useDropEvent,
     dropEventId,
     useInventorySnapshot,
     closingInventorySnapshotId,
     notes,
+    closeReason,
+    closeNote,
     onOpenChange,
+    handleMutationError,
   ]);
 
   // Render functions for artifact pickers
@@ -205,8 +266,8 @@ export function CloseSessionDialog({
               Close Table Session
             </DialogTitle>
             <DialogDescription>
-              Close the current session for this table. At least one closing
-              artifact is required.
+              Close the current session for this table. Select a close reason
+              and at least one closing artifact.
             </DialogDescription>
           </DialogHeader>
 
@@ -220,6 +281,48 @@ export function CloseSessionDialog({
                   for proper closing procedures.
                 </AlertDescription>
               </Alert>
+            )}
+
+            {/* Close Reason Select (PRD-038A) */}
+            <div className="space-y-2">
+              <Label htmlFor="close-reason">Close Reason</Label>
+              <Select
+                value={closeReason ?? ''}
+                onValueChange={(value) =>
+                  setCloseReason(value as CloseReasonType)
+                }
+              >
+                <SelectTrigger id="close-reason">
+                  <SelectValue placeholder="Select a reason..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {CLOSE_REASON_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Close Note Textarea — visible only for 'other' (PRD-038A) */}
+            {closeReason === 'other' && (
+              <div className="space-y-2">
+                <Label htmlFor="close-note">
+                  Note (required for &apos;Other&apos;)
+                </Label>
+                <Textarea
+                  id="close-note"
+                  placeholder="Describe the reason for closing..."
+                  value={closeNote}
+                  onChange={(e) => setCloseNote(e.target.value)}
+                  rows={2}
+                  maxLength={2000}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {closeNote.length}/2000
+                </p>
+              </div>
             )}
 
             {/* Closing Artifacts Section */}
@@ -270,9 +373,9 @@ export function CloseSessionDialog({
               />
             </div>
 
-            {/* Notes */}
+            {/* Session Notes (freeform — distinct from close_note governance field) */}
             <div className="space-y-2">
-              <Label htmlFor="notes">Notes (optional)</Label>
+              <Label htmlFor="notes">Session Notes (optional)</Label>
               <Textarea
                 id="notes"
                 placeholder="Add any closing notes..."
@@ -287,18 +390,20 @@ export function CloseSessionDialog({
             </div>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:gap-0">
             <Button
               variant="outline"
               onClick={() => onOpenChange(false)}
-              disabled={closeMutation.isPending}
+              disabled={isPending}
             >
               Cancel
             </Button>
+
+            {/* Close Session */}
             <Button
               variant="destructive"
               onClick={handleClose}
-              disabled={!isValid || closeMutation.isPending}
+              disabled={!isStandardCloseValid || isPending}
             >
               {closeMutation.isPending ? (
                 <>

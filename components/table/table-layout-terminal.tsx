@@ -10,6 +10,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import type { SessionPhase } from '@/services/table-context/dtos';
+import { derivePitDisplayBadge } from '@/services/table-context/pit-display';
 
 import { useSeatPositions } from './use-seat-positions';
 
@@ -27,6 +29,8 @@ interface TableLayoutTerminalProps {
   tableId?: string;
   gameType?: string;
   tableStatus?: 'active' | 'inactive' | 'closed';
+  /** Session lifecycle status — overrides tableStatus badge when present. ADR-028 D6. */
+  sessionStatus?: SessionPhase | null;
   activeSlipsCount?: number;
   variant?: 'full' | 'compact';
   isSelected?: boolean;
@@ -49,6 +53,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
     tableId,
     gameType,
     tableStatus = 'active',
+    sessionStatus,
     activeSlipsCount,
     variant = 'full',
     isSelected = false,
@@ -61,6 +66,9 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
 
     const isCompact = variant === 'compact';
 
+    // ADR-047 D5: Pit badge derived from session phase only — no tableAvailability axis.
+    const badge = derivePitDisplayBadge(sessionStatus);
+
     // Compact variant: Render thumbnail with metadata overlay
     if (isCompact) {
       return (
@@ -71,8 +79,7 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             isSelected
               ? 'border-accent/80 ring-2 ring-accent/40 shadow-lg'
               : 'border-border/50 hover:border-accent/50',
-            tableStatus === 'inactive' && 'opacity-60',
-            tableStatus === 'closed' && 'opacity-40 grayscale',
+            badge.state === 'CLOSED' && 'opacity-70',
           )}
         >
           {/* Table ID Badge */}
@@ -100,15 +107,16 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
             </div>
           )}
 
-          {/* Status Indicator */}
+          {/* Status Indicator — ADR-047 D6: session-derived states only */}
           <div className="absolute bottom-1 right-1 z-10">
             <div
               className={cn(
                 'w-2 h-2 rounded-full',
-                tableStatus === 'active' &&
-                  'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]',
-                tableStatus === 'inactive' && 'bg-yellow-500',
-                tableStatus === 'closed' && 'bg-gray-500',
+                badge.state === 'IN_PLAY' &&
+                  'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)] animate-pulse',
+                badge.state === 'CLOSED' && 'bg-zinc-400/50',
+                badge.state === 'OPEN' && 'bg-blue-500',
+                badge.state === 'RUNDOWN' && 'bg-amber-500',
               )}
             />
           </div>
@@ -204,23 +212,24 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
               {/* Table Identity - Centered inside semi-circle */}
               {tableId && (
                 <div className="absolute top-[69%] left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 flex flex-col items-center gap-1.5">
-                  {/* Table name with status glow ring */}
+                  {/* Table name with status glow ring — D6.2: emerald for IN_PLAY/AVAILABLE, amber for RUNDOWN, muted otherwise */}
                   <div
                     className={cn(
                       'relative px-4 py-2 rounded-xl',
                       'bg-gradient-to-b from-card/90 to-card/70',
                       'border backdrop-blur-md',
                       'shadow-[0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]',
-                      tableStatus === 'active' && [
+                      badge.color === 'emerald' && [
                         'border-emerald-500/40',
                         'shadow-[0_0_20px_rgba(16,185,129,0.2),0_4px_20px_rgba(0,0,0,0.3),inset_0_1px_0_rgba(255,255,255,0.1)]',
                       ],
-                      tableStatus === 'inactive' && 'border-amber-500/40',
-                      tableStatus === 'closed' && 'border-border/40',
+                      badge.color === 'amber' && 'border-amber-500/40',
+                      badge.color === 'blue' && 'border-blue-500/40',
+                      badge.color === 'zinc' && 'border-border/40',
                     )}
                   >
-                    {/* Status pulse ring for active tables */}
-                    {tableStatus === 'active' && (
+                    {/* Status pulse ring — D6.2: only for IN_PLAY (badge.pulse === true) */}
+                    {badge.pulse && (
                       <div className="absolute inset-0 rounded-xl border border-emerald-500/30 animate-pulse" />
                     )}
 
@@ -236,38 +245,46 @@ export const TableLayoutTerminal = React.memo<TableLayoutTerminalProps>(
                           <div
                             className={cn(
                               'flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wide',
-                              tableStatus === 'active' && [
+                              // IN_PLAY: full emerald
+                              badge.state === 'IN_PLAY' && [
                                 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30',
                               ],
-                              tableStatus === 'inactive' && [
-                                'bg-amber-500/20 text-amber-400 border border-amber-500/30',
+                              // CLOSED: zinc/gray (ADR-047 D3)
+                              badge.state === 'CLOSED' && [
+                                'bg-zinc-500/20 text-zinc-400 border border-zinc-500/30',
                               ],
-                              tableStatus === 'closed' && [
-                                'bg-muted text-muted-foreground border border-border/50',
+                              // OPEN: blue
+                              badge.state === 'OPEN' && [
+                                'bg-blue-500/20 text-blue-400 border border-blue-500/30',
+                              ],
+                              // RUNDOWN: amber
+                              badge.state === 'RUNDOWN' && [
+                                'bg-amber-500/20 text-amber-400 border border-amber-500/30',
                               ],
                             )}
                           >
                             <span
                               className={cn(
                                 'w-1.5 h-1.5 rounded-full',
-                                tableStatus === 'active' &&
+                                badge.state === 'IN_PLAY' &&
                                   'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]',
-                                tableStatus === 'inactive' && 'bg-amber-400',
-                                tableStatus === 'closed' &&
-                                  'bg-muted-foreground',
+                                badge.state === 'CLOSED' && 'bg-zinc-400',
+                                badge.state === 'OPEN' && 'bg-blue-400',
+                                badge.state === 'RUNDOWN' && 'bg-amber-400',
                               )}
                             />
-                            {tableStatus}
+                            {badge.label}
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top">
                           <span>
-                            Table is{' '}
-                            {tableStatus === 'active'
-                              ? 'open and accepting players'
-                              : tableStatus === 'inactive'
-                                ? 'temporarily paused'
-                                : 'closed for the day'}
+                            {sessionStatus
+                              ? sessionStatus === 'ACTIVE'
+                                ? 'Session in play'
+                                : sessionStatus === 'RUNDOWN'
+                                  ? 'Session in rundown'
+                                  : 'Session opening'
+                              : 'No current session'}
                           </span>
                         </TooltipContent>
                       </Tooltip>
