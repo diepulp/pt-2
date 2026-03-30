@@ -109,15 +109,27 @@ architecture.
 
 PT-2 enables properties to:
 
--   Measure theoretical win discrepancies\
+-   Compute and trace theoretical win with full formula provenance\
 -   Reduce audit trace time from hours to seconds\
 -   Quantify telemetry coverage across tables\
 -   Compute daily loyalty liability exposure\
--   Eliminate actor spoofing and mutation ambiguity
+-   Eliminate actor spoofing and mutation ambiguity\
+-   Detect anomalies against rolling statistical baselines with auditable alerts
 
 This is operational clarity.\
 This is compliance confidence.\
 This is financial transparency.
+
+<!-- Legacy theo comparison: PT-2 provides a supervised intake adapter
+     that accepts legacy theo evidence via CSV, quarantines it in staging,
+     classifies rows by match confidence, and surfaces what needs human
+     judgment. Only admin-approved, uniquely-matched rows touch rating_slip.
+     The system does not validate the legacy vendor's calculation methodology,
+     guarantee export-to-export format consistency, or assert that
+     discrepancies reflect legacy errors rather than methodology differences.
+     The trust assertion belongs to the admin who reviewed the classifier
+     output, not to the system that ingested the CSV.
+     See FIB-P2K-21 (WEDGE-C/) for full substantiation. -->
 
 ------------------------------------------------------------------------
 

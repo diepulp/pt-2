@@ -3,8 +3,8 @@ import path from 'path';
 import { defineConfig, devices } from '@playwright/test';
 import dotenv from 'dotenv';
 
-// Load environment variables from .env
-// If .env.local exists, it takes precedence (matches Next.js loading order)
+// Load environment variables — .env.local overrides .env (matching Next.js precedence)
+// Without this, Playwright tests use remote Supabase while the dev server uses local.
 dotenv.config({ path: path.resolve(__dirname, '.env.local'), override: true });
 dotenv.config({ path: path.resolve(__dirname, '.env') });
 

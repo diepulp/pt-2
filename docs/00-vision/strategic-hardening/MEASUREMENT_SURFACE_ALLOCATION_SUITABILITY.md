@@ -1,7 +1,8 @@
 ---
 title: Measurement Surface Allocation — Suitability Findings Report
 date: 2026-03-02
-status: Findings (v2 — revised per PT2_Measurement_Surface_Guidance.md) — PARTIALLY STALE (see addendum below)
+status: SUPERSEDED (2026-03-25)
+superseded_by: MEASUREMENT_SURFACE_ALLOCATION_2026-03-25.md
 references:
   - ADR-039-measurement-layer.md
   - ADR_0XX_B_Measurement_Surface_Allocation.md
@@ -10,6 +11,14 @@ scope: UI surface gap analysis for ADR-039 artifact placement
 ---
 
 # Measurement Surface Allocation — Suitability Findings Report
+
+> ### SUPERSEDED (2026-03-25)
+>
+> **This document has been superseded by [`MEASUREMENT_SURFACE_ALLOCATION_2026-03-25.md`](MEASUREMENT_SURFACE_ALLOCATION_2026-03-25.md).**
+>
+> Over 80% of the gaps identified here have been implemented. The replacement document reflects verified ground-truth as of March 25, 2026, including: admin route group with role guard, functional reports page (4-widget measurement dashboard), audit trace section in rating slip modal, full measurement service layer + hooks, and PRD-055/056 shift intelligence backend.
+>
+> **Do not reference this document for implementation planning.** Use the replacement.
 
 > ### Staleness Addendum (2026-03-06)
 >

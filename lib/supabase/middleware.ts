@@ -71,6 +71,7 @@ export async function updateSession(request: NextRequest) {
     '/login', // Backwards compat
     '/bootstrap', // Onboarding (internal auth check)
     '/setup', // Setup wizard (internal auth check)
+    '/api', // API routes handle their own auth via withServerAction
   ];
 
   const isPublicPath = publicPaths.some(

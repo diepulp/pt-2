@@ -1,0 +1,82 @@
+{
+  "schema_version": 2,
+  "feature_id": "alert-maturity",
+  "current_phase": 6,
+  "status": "in_progress",
+  "gates": {
+    "srm-ownership": { "passed": true, "timestamp": "2026-03-24T00:00:00Z" },
+    "scaffold-approved": { "passed": true, "timestamp": "2026-03-24T00:00:00Z" },
+    "design-approved": { "passed": true, "timestamp": "2026-03-24T00:00:00Z" },
+    "sec-approved": { "passed": true, "timestamp": "2026-03-24T00:00:00Z" },
+    "adr-frozen": { "passed": true, "timestamp": "2026-03-24T00:00:00Z" },
+    "prd-approved": { "passed": true, "timestamp": "2026-03-25T00:00:00Z" }
+  },
+  "artifacts": {
+    "feature_boundary": "docs/20-architecture/specs/alert-maturity/FEATURE_BOUNDARY.md",
+    "scaffold": "docs/01-scaffolds/SCAFFOLD-005-alert-maturity.md",
+    "rfc": "docs/02-design/RFC-005-alert-maturity.md",
+    "sec_note": "docs/20-architecture/specs/alert-maturity/SEC_NOTE.md",
+    "adr": "docs/80-adrs/ADR-046-shift-baseline-stored-computation.md (amendment §8 + §10)",
+    "prd": "docs/10-prd/PRD-056-alert-maturity-v0.md"
+  },
+  "da_review": {
+    "magnitude_score": 0,
+    "magnitude_tier": null,
+    "magnitude_signals": [],
+    "tier_override": null,
+    "tier_override_reason": null,
+    "ran": false,
+    "verdict": null,
+    "p0_count": 0,
+    "p1_count": 0,
+    "attempt": 0,
+    "override_reason": null,
+    "team_name": null,
+    "team_results": null,
+    "cross_artifact_findings": 0,
+    "resolved_conflicts": [],
+    "unresolved_conflicts": []
+  },
+  "coherence": {
+    "non_goals": [
+      "External notification channels (Slack, email, SMS, push)",
+      "pg_cron baseline scheduler",
+      "Cash obs baseline cutover",
+      "Alert escalation chains",
+      "Historical trend visualization charts",
+      "Multi-casino alert aggregation",
+      "ML-based anomaly detection",
+      "resolved transition automation (auto-resolve on new gaming day, explicit rpc_resolve_alert)"
+    ],
+    "violations": []
+  },
+  "srm_validation": {
+    "ran": true,
+    "owner_service": "ShiftIntelligenceService",
+    "write_tables": ["shift_alert", "alert_acknowledgment", "table_metric_baseline"],
+    "cross_context_contracts": [
+      "TableContextService: rpc_shift_table_metrics, rpc_shift_cash_obs_table",
+      "CasinoService: casino_settings.alert_thresholds"
+    ]
+  },
+  "rfc_decisions": {
+    "D1": "Alert persistence via shift_alert table + forward-only state machine → ADR-046 amendment §10",
+    "D2": "Composite UNIQUE key + time-based cooldown (sub-decision of D1)",
+    "D3": "2-state MVP (open, acknowledged); resolved dormant in CHECK only → deferral in ADR-046 §10",
+    "D4": "compute_failed via last_error column on table_metric_baseline → ADR-046 amendment §8",
+    "D5": "Separate alert_acknowledgment table with is_false_positive flag (sub-decision of D1)"
+  },
+  "rfc_resolved_questions": {
+    "Q1": "Persist trigger is explicit (page load + manual), not piggybacked on 30s refetch",
+    "Q2": "is_false_positive boolean on alert_acknowledgment, no text parsing"
+  },
+  "rfc_open_questions": {
+    "Q3": "Unified alert list display (ephemeral cash obs + persistent baseline) — source indicator badge"
+  },
+  "sec_note_patches": "6 corrections applied from external review (2026-03-24): C1 tenant isolation reworded, C4 CHECK/RPC separation, C6 grant posture, C7 RPC-only mutations added, T7 racing acknowledgment added, RLS Summary replaced with Access/Mutation Summary, last_error access posture added, validation gate expanded",
+  "branch": "wedge-c",
+  "working_directory": "trees/wedge-c",
+  "intake_doc": "docs/00-vision/strategic-hardening/WEDGE-C/INTAKE-C2-C3-ALERT-MATURITY.md",
+  "timestamp": "2026-03-24T00:00:00Z",
+  "resume_notes": "Phase 6: All design artifacts frozen (SCAFFOLD-005, RFC-005, SEC Note, ADR-046 §8+§10, PRD-056 v0.3.0). Ready for EXEC-SPEC generation and build pipeline execution."
+}
