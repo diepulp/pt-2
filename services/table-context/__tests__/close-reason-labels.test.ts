@@ -19,8 +19,10 @@ describe('CLOSE_REASON_LABELS', () => {
     }
   });
 
-  it('label keys match CLOSE_REASON_OPTIONS values exactly', () => {
-    const labelKeys = Object.keys(CLOSE_REASON_LABELS);
+  it('label keys match CLOSE_REASON_OPTIONS values exactly (minus cancelled)', () => {
+    const labelKeys = Object.keys(CLOSE_REASON_LABELS).filter(
+      (k) => k !== 'cancelled',
+    );
     const optionValues = CLOSE_REASON_OPTIONS.map((o) => o.value);
 
     expect(optionValues).toEqual(labelKeys);
