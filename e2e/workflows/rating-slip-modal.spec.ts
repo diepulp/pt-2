@@ -11,8 +11,9 @@
  * @see PRD-008a Dashboard Integration
  */
 
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
+import { authenticateAndNavigate } from '../fixtures/auth';
 import {
   createRatingSlipTestScenario,
   createTestTransaction,
@@ -25,7 +26,7 @@ import {
 // Test scenario shared across tests in this file
 let scenario: RatingSlipTestScenario;
 
-test.describe('Rating Slip Modal Integration (PRD-008)', () => {
+test.describe('Rating Slip Modal — E2E — Mode B (browser login) (PRD-008)', () => {
   // Setup: Create test data before all tests
   test.beforeAll(async () => {
     scenario = await createRatingSlipTestScenario();
@@ -39,24 +40,6 @@ test.describe('Rating Slip Modal Integration (PRD-008)', () => {
   });
 
   /**
-   * Helper: Authenticate via browser
-   */
-  async function authenticateUser(page: Page) {
-    // Navigate to login page
-    await page.goto('/auth/login');
-
-    // Fill in credentials
-    await page.fill('input[name="email"]', scenario.testEmail);
-    await page.fill('input[name="password"]', scenario.testPassword);
-
-    // Submit and wait for redirect
-    await page.click('button[type="submit"]');
-
-    // Wait for dashboard to load (indicates successful auth)
-    await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
-  }
-
-  /**
    * Test 1: Open Modal from Seat Click
    *
    * Scenario: Click an occupied seat on the pit dashboard table view
@@ -66,10 +49,12 @@ test.describe('Rating Slip Modal Integration (PRD-008)', () => {
     page,
   }) => {
     // Authenticate
-    await authenticateUser(page);
-
-    // Navigate to pit dashboard
-    await page.goto('/pit');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/pit',
+    );
 
     // Wait for tables to load
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -118,10 +103,12 @@ test.describe('Rating Slip Modal Integration (PRD-008)', () => {
     page,
   }) => {
     // Authenticate
-    await authenticateUser(page);
-
-    // Navigate to pit dashboard
-    await page.goto('/pit');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/pit',
+    );
 
     // Wait for and click on occupied seat
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -191,10 +178,12 @@ test.describe('Rating Slip Modal Integration (PRD-008)', () => {
     // For this test, we'll use the existing slip but verify the close behavior
 
     // Authenticate
-    await authenticateUser(page);
-
-    // Navigate to pit dashboard
-    await page.goto('/pit');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/pit',
+    );
 
     // Wait for and click on occupied seat
     await page.waitForSelector('[data-testid="table-grid"]', {
@@ -337,7 +326,7 @@ test.describe('Rating Slip Modal Integration (PRD-008)', () => {
  * These tests verify the /api/v1/rating-slips/[id]/modal-data endpoint
  * directly, without browser interaction.
  */
-test.describe('Rating Slip Modal BFF Endpoint', () => {
+test.describe('Rating Slip Modal BFF Endpoint — System Verification — Mode C (authenticated client)', () => {
   let apiScenario: RatingSlipTestScenario;
 
   test.beforeAll(async () => {
@@ -503,7 +492,7 @@ test.describe('Rating Slip Modal BFF Endpoint', () => {
  * @see PRD-019 Rating Slip Modal UX Refinements
  * @see EXECUTION-SPEC-PRD-019.md
  */
-test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
+test.describe('Rating Slip Modal UX Refinements — E2E — Mode B (browser login) (PRD-019)', () => {
   let scenario: RatingSlipTestScenario;
 
   test.beforeAll(async () => {
@@ -515,17 +504,6 @@ test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
       await scenario.cleanup();
     }
   });
-
-  /**
-   * Helper: Authenticate via browser
-   */
-  async function authenticateUser(page: Page) {
-    await page.goto('/auth/login');
-    await page.fill('input[name="email"]', scenario.testEmail);
-    await page.fill('input[name="password"]', scenario.testPassword);
-    await page.click('button[type="submit"]');
-    await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
-  }
 
   /**
    * Test 1: Move player shows optimistic seat update, no modal auto-open
@@ -542,15 +520,12 @@ test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
     const moveScenario = await createRatingSlipTestScenario();
 
     try {
-      // Authenticate
-      await page.goto('/auth/login');
-      await page.fill('input[name="email"]', moveScenario.testEmail);
-      await page.fill('input[name="password"]', moveScenario.testPassword);
-      await page.click('button[type="submit"]');
-      await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
-
-      // Navigate to pit dashboard
-      await page.goto('/pit');
+      await authenticateAndNavigate(
+        page,
+        moveScenario.testEmail,
+        moveScenario.testPassword,
+        '/pit',
+      );
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -670,10 +645,12 @@ test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
    */
   test('points refresh button triggers data refetch', async ({ page }) => {
     // Authenticate
-    await authenticateUser(page);
-
-    // Navigate to pit and open modal
-    await page.goto('/pit');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/pit',
+    );
     await page.waitForSelector('[data-testid="table-grid"]', {
       timeout: 10000,
     });
@@ -794,10 +771,12 @@ test.describe('PRD-019: Rating Slip Modal UX Refinements', () => {
     page,
   }) => {
     // Authenticate
-    await authenticateUser(page);
-
-    // Navigate to pit and open modal
-    await page.goto('/pit');
+    await authenticateAndNavigate(
+      page,
+      scenario.testEmail,
+      scenario.testPassword,
+      '/pit',
+    );
     await page.waitForSelector('[data-testid="table-grid"]', {
       timeout: 10000,
     });

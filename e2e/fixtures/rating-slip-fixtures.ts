@@ -8,34 +8,12 @@
  * @see e2e/workflows/rating-slip-modal.spec.ts
  */
 
-import { createClient } from '@supabase/supabase-js';
-
 import type { Database } from '@/types/database.types';
+
+import { createServiceClient } from './auth';
 
 /** Game type enum from database */
 type GameType = Database['public']['Enums']['game_type'];
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-if (!supabaseUrl || !supabaseServiceRoleKey) {
-  throw new Error(
-    'Missing required environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY',
-  );
-}
-
-/**
- * Creates a service role client for test data setup/teardown
- * WARNING: Bypasses RLS - use only in tests
- */
-function createServiceClient() {
-  return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
 
 /**
  * Extended test scenario with rating slip data for modal testing
@@ -179,16 +157,10 @@ export async function createRatingSlipTestScenario(): Promise<RatingSlipTestScen
     );
   }
 
-  // Sign in to get auth token (use separate client to preserve service role)
-  const authClient = createClient<Database>(
-    supabaseUrl,
-    supabaseServiceRoleKey,
-    {
-      auth: { autoRefreshToken: false, persistSession: false },
-    },
-  );
+  // Sign in to get auth token (separate client to preserve service role state)
+  const signInClient = createServiceClient();
   const { data: signInData, error: signInError } =
-    await authClient.auth.signInWithPassword({
+    await signInClient.auth.signInWithPassword({
       email: testEmail,
       password: testPassword,
     });

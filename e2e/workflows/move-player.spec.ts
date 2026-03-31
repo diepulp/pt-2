@@ -13,23 +13,13 @@
 
 import { test, expect, type Page, type Request } from '@playwright/test';
 
+import { authenticateAndNavigate } from '../fixtures/auth';
 import {
   createRatingSlipTestScenario,
   getRatingSlipStatus,
   getRatingSlipsForVisit,
   type RatingSlipTestScenario,
 } from '../fixtures/rating-slip-fixtures';
-
-/**
- * Helper: Authenticate user via browser login
- */
-async function authenticateUser(page: Page, scenario: RatingSlipTestScenario) {
-  await page.goto('/auth/login');
-  await page.fill('input[name="email"]', scenario.testEmail);
-  await page.fill('input[name="password"]', scenario.testPassword);
-  await page.click('button[type="submit"]');
-  await page.waitForURL(/\/(pit|dashboard)/, { timeout: 10000 });
-}
 
 /**
  * Helper: Open move player modal from occupied seat
@@ -52,7 +42,7 @@ async function openMovePlayerModal(
   return modal;
 }
 
-test.describe('PRD-020: Move Player Performance & UX', () => {
+test.describe('Move Player Performance & UX — E2E — Mode B (browser login) (PRD-020)', () => {
   /**
    * Test 1: Move player closes modal immediately on success (P0)
    *
@@ -66,7 +56,12 @@ test.describe('PRD-020: Move Player Performance & UX', () => {
 
     try {
       // Authenticate
-      await authenticateUser(page, scenario);
+      await authenticateAndNavigate(
+        page,
+        scenario.testEmail,
+        scenario.testPassword,
+        '/pit',
+      );
 
       // Open modal for existing slip
       const modal = await openMovePlayerModal(page, scenario);
@@ -140,7 +135,12 @@ test.describe('PRD-020: Move Player Performance & UX', () => {
 
     try {
       // Authenticate
-      await authenticateUser(page, scenario);
+      await authenticateAndNavigate(
+        page,
+        scenario.testEmail,
+        scenario.testPassword,
+        '/pit',
+      );
 
       // Open modal
       const modal = await openMovePlayerModal(page, scenario);
@@ -199,10 +199,14 @@ test.describe('PRD-020: Move Player Performance & UX', () => {
 
     try {
       // Authenticate first
-      await authenticateUser(page, scenario);
+      await authenticateAndNavigate(
+        page,
+        scenario.testEmail,
+        scenario.testPassword,
+        '/pit',
+      );
 
-      // Navigate to pit and wait for initial load
-      await page.goto('/pit');
+      // Wait for table grid to load
       await page.waitForSelector('[data-testid="table-grid"]', {
         timeout: 10000,
       });
@@ -324,7 +328,12 @@ test.describe('PRD-020: Move Player Performance & UX', () => {
 
     try {
       // Authenticate
-      await authenticateUser(page, scenario);
+      await authenticateAndNavigate(
+        page,
+        scenario.testEmail,
+        scenario.testPassword,
+        '/pit',
+      );
 
       // Open modal
       const modal = await openMovePlayerModal(page, scenario);
@@ -387,7 +396,7 @@ test.describe('PRD-020: Move Player Performance & UX', () => {
  * These tests verify the /api/v1/rating-slips/[id]/move endpoint
  * directly, focusing on PRD-020 enhanced response format.
  */
-test.describe('PRD-020: Move Player API', () => {
+test.describe('Move Player API — System Verification — Mode C (authenticated client) (PRD-020)', () => {
   /**
    * Test: Enhanced response includes seat state arrays
    *
