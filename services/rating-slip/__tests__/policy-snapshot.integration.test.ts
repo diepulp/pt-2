@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Policy Snapshot Integration Tests (ISSUE-752833A6)
  *

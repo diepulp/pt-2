@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RPC Service Unit Tests
  *

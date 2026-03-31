@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Rating Slip Move Endpoint - Connection Pooling Test
  *

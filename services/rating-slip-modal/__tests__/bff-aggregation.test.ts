@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * BFF Aggregation Tests
  *
