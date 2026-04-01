@@ -6,6 +6,9 @@
  * Tests RPC functions, state machine, constraints, and duration calculations
  * with a real Supabase database.
  *
+ * Auth: Mode C — service-role client for fixture setup/teardown,
+ * authenticated anon client (with JWT staff_id via ADR-024) for service RPCs.
+ *
  * Test Coverage:
  * - Full lifecycle (start -> pause -> resume -> close)
  * - Duration calculation (excludes paused time)
@@ -16,6 +19,7 @@
  *
  * Note: Each test uses isolated fixtures to avoid the
  * `uq_visit_single_active_per_player_casino` constraint.
+ * Each fixture gets a unique seat number to avoid SEAT_OCCUPIED constraints.
  *
  * @see PRD-002 Rating Slip Service
  * @see EXECUTION-SPEC-PRD-002.md
@@ -33,22 +37,30 @@ import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Shared test fixtures UUIDs (deterministic for cleanup)
 const TEST_PREFIX = 'test-rs-int'; // rating-slip integration
 
+// Mode C auth credentials
+const TEST_EMAIL = `${TEST_PREFIX}-pitboss@test.local`;
+const TEST_PASSWORD = 'TestPitBoss123!';
+
 /**
  * Creates a unique player and visit for each test to avoid the
  * `uq_visit_single_active_per_player_casino` constraint.
+ * Each fixture gets a unique seat number to avoid SEAT_OCCUPIED constraint.
  */
 interface TestFixture {
   playerId: string;
   visitId: string;
   slipIds: string[];
+  seatNumber: string;
 }
 
 describe('RatingSlipService Integration Tests', () => {
-  let supabase: SupabaseClient<Database>;
+  let setupClient: SupabaseClient<Database>; // service-role for fixtures
+  let supabase: SupabaseClient<Database>; // authenticated for service RPCs
   let service: RatingSlipServiceInterface;
 
   // Shared test fixture IDs
@@ -60,22 +72,22 @@ describe('RatingSlipService Integration Tests', () => {
   let testTable2Id: string;
   let testInactiveTableId: string;
   let testActorId: string;
+  let testUserId: string;
 
   // Track all created fixtures for cleanup
   const allFixtures: TestFixture[] = [];
   let fixtureCounter = 0;
 
   beforeAll(async () => {
-    // Use service role client for setup (bypasses RLS)
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    service = createRatingSlipService(supabase);
+    // Service-role client for fixture setup/teardown (bypasses RLS)
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // =========================================================================
-    // Create shared test fixtures
+    // Create shared test fixtures (using service-role client)
     // =========================================================================
 
     // 0. Create test companies (ADR-043: company before casino)
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 1` })
       .select()
@@ -84,7 +96,7 @@ describe('RatingSlipService Integration Tests', () => {
     if (companyError) throw companyError;
     testCompanyId = company.id;
 
-    const { data: company2, error: company2Error } = await supabase
+    const { data: company2, error: company2Error } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 2` })
       .select()
@@ -94,7 +106,7 @@ describe('RatingSlipService Integration Tests', () => {
     testCompany2Id = company2.id;
 
     // 1. Create test casino
-    const { data: casino, error: casinoError } = await supabase
+    const { data: casino, error: casinoError } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
@@ -108,7 +120,7 @@ describe('RatingSlipService Integration Tests', () => {
     testCasinoId = casino.id;
 
     // 2. Create second casino for RLS tests
-    const { data: casino2, error: casino2Error2 } = await supabase
+    const { data: casino2, error: casino2Error2 } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
@@ -121,8 +133,8 @@ describe('RatingSlipService Integration Tests', () => {
     if (casino2Error2) throw casino2Error2;
     testCasino2Id = casino2.id;
 
-    // 3. Create casino settings (required for compute_gaming_day)
-    await supabase.from('casino_settings').insert([
+    // 3. Create casino settings (required for compute_gaming_day trigger)
+    await setupClient.from('casino_settings').insert([
       {
         casino_id: testCasinoId,
         gaming_day_start_time: '06:00:00',
@@ -140,7 +152,7 @@ describe('RatingSlipService Integration Tests', () => {
     ]);
 
     // 4. Create active gaming table
-    const { data: table, error: tableError } = await supabase
+    const { data: table, error: tableError } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -156,7 +168,7 @@ describe('RatingSlipService Integration Tests', () => {
     testTableId = table.id;
 
     // 5. Create second active table (for multi-table tests)
-    const { data: table2, error: table2Error } = await supabase
+    const { data: table2, error: table2Error } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -172,7 +184,7 @@ describe('RatingSlipService Integration Tests', () => {
     testTable2Id = table2.id;
 
     // 6. Create inactive table (for validation tests)
-    const { data: inactiveTable, error: inactiveTableError } = await supabase
+    const { data: inactiveTable, error: inactiveTableError } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -187,16 +199,29 @@ describe('RatingSlipService Integration Tests', () => {
     if (inactiveTableError) throw inactiveTableError;
     testInactiveTableId = inactiveTable.id;
 
-    // 7. Create test actor (staff - dealer)
-    const { data: actor, error: actorError } = await supabase
+    // 7. Create auth user for Mode C authentication
+    const { data: authData, error: authError } =
+      await setupClient.auth.admin.createUser({
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD,
+        email_confirm: true,
+      });
+
+    if (authError) throw authError;
+    testUserId = authData.user.id;
+
+    // 8. Create test actor (staff - pit_boss for full permissions)
+    //    Bound to auth user via user_id (Mode C requirement)
+    const { data: actor, error: actorError } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasinoId,
+        user_id: testUserId,
         employee_id: `${TEST_PREFIX}-001`,
         first_name: 'Test',
-        last_name: 'Actor',
-        email: `${TEST_PREFIX}-actor@test.com`,
-        role: 'dealer', // Dealers don't require user_id
+        last_name: 'PitBoss',
+        email: TEST_EMAIL,
+        role: 'pit_boss',
         status: 'active',
       })
       .select()
@@ -204,66 +229,97 @@ describe('RatingSlipService Integration Tests', () => {
 
     if (actorError) throw actorError;
     testActorId = actor.id;
-  });
+
+    // 9. ADR-024: Two-phase staff_id stamping into app_metadata
+    await setupClient.auth.admin.updateUserById(testUserId, {
+      app_metadata: {
+        staff_id: testActorId,
+        casino_id: testCasinoId,
+      },
+    });
+
+    // 10. Sign in via anon client to obtain JWT with staff_id claim
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey);
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: TEST_EMAIL,
+      password: TEST_PASSWORD,
+    });
+    if (signInError) throw signInError;
+
+    // Create service with authenticated client (RPCs use JWT for RLS context)
+    service = createRatingSlipService(supabase);
+  }, 30_000);
 
   afterAll(async () => {
-    // Clean up all created fixtures in reverse order
+    // Clean up all created fixtures in reverse order (using service-role client)
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from('rating_slip').delete().eq('id', slipId);
+        await setupClient.from('rating_slip').delete().eq('id', slipId);
       }
       // Delete visit
-      await supabase
+      await setupClient
         .from('rating_slip')
         .delete()
         .eq('visit_id', fixture.visitId);
-      await supabase.from('visit').delete().eq('id', fixture.visitId);
+      await setupClient.from('visit').delete().eq('id', fixture.visitId);
       // Delete player enrollment and player
-      await supabase
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', fixture.playerId);
-      await supabase
+      await setupClient
         .from('player_loyalty')
         .delete()
         .eq('player_id', fixture.playerId);
-      await supabase.from('player').delete().eq('id', fixture.playerId);
+      await setupClient.from('player').delete().eq('id', fixture.playerId);
     }
 
     // Delete staff
-    await supabase.from('staff').delete().eq('casino_id', testCasinoId);
-    await supabase.from('staff').delete().eq('casino_id', testCasino2Id);
+    await setupClient.from('staff').delete().eq('casino_id', testCasinoId);
+    await setupClient.from('staff').delete().eq('casino_id', testCasino2Id);
 
     // Delete tables
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasinoId);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasino2Id);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasino2Id);
 
     // Delete casino settings and casinos
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasinoId);
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasino2Id);
-    await supabase.from('casino').delete().eq('id', testCasinoId);
-    await supabase.from('casino').delete().eq('id', testCasino2Id);
-    await supabase.from('company').delete().eq('id', testCompanyId);
-    await supabase.from('company').delete().eq('id', testCompany2Id);
+    await setupClient.from('casino').delete().eq('id', testCasinoId);
+    await setupClient.from('casino').delete().eq('id', testCasino2Id);
+    await setupClient.from('company').delete().eq('id', testCompanyId);
+    await setupClient.from('company').delete().eq('id', testCompany2Id);
+
+    // Delete auth user
+    if (testUserId) {
+      await setupClient.auth.admin.deleteUser(testUserId);
+    }
   });
 
   // =========================================================================
   // Helper: Create isolated test fixture (player + visit)
-  // Each test gets its own player to avoid visit uniqueness constraint
+  // Each test gets its own player and unique seat to avoid constraints
   // =========================================================================
   async function createTestFixture(casinoId?: string): Promise<TestFixture> {
     const casino = casinoId || testCasinoId;
     fixtureCounter++;
+    const seatNumber = `seat-${fixtureCounter}`;
 
     // Create unique player
-    const { data: player, error: playerError } = await supabase
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -276,14 +332,14 @@ describe('RatingSlipService Integration Tests', () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: casino,
       status: 'active',
     });
 
-    // Create visit
-    const { data: visit, error: visitError } = await supabase
+    // Create visit (gaming_day + visit_group_id computed by DB triggers)
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
         player_id: player.id,
@@ -300,6 +356,7 @@ describe('RatingSlipService Integration Tests', () => {
       playerId: player.id,
       visitId: visit.id,
       slipIds: [],
+      seatNumber,
     };
 
     allFixtures.push(fixture);
@@ -316,7 +373,7 @@ describe('RatingSlipService Integration Tests', () => {
     fixtureCounter++;
 
     // Create unique player
-    const { data: player, error: playerError } = await supabase
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -329,14 +386,14 @@ describe('RatingSlipService Integration Tests', () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: testCasinoId,
       status: 'active',
     });
 
     // Create closed visit
-    const { data: visit, error: visitError } = await supabase
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
         player_id: player.id,
@@ -353,6 +410,7 @@ describe('RatingSlipService Integration Tests', () => {
       playerId: player.id,
       visitId: visit.id,
       slipIds: [],
+      seatNumber: `seat-closed-${fixtureCounter}`,
     });
 
     return { visitId: visit.id, playerId: player.id };
@@ -370,7 +428,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
-        seat_number: '1',
+        seat_number: fixture.seatNumber,
       });
 
       fixture.slipIds.push(slip.id);
@@ -380,7 +438,7 @@ describe('RatingSlipService Integration Tests', () => {
       expect(slip.visit_id).toBe(fixture.visitId);
       expect(slip.table_id).toBe(testTableId);
       expect(slip.casino_id).toBe(testCasinoId);
-      expect(slip.seat_number).toBe('1');
+      expect(slip.seat_number).toBe(fixture.seatNumber);
       expect(slip.start_time).toBeDefined();
       expect(slip.end_time).toBeNull();
 
@@ -424,25 +482,45 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
       await service.pause(slip.id);
 
-      // Get slip with pauses
-      const slipWithPauses = await service.getById(slip.id);
+      // Pause tracking uses pause_intervals (tstzrange[]) on rating_slip row.
+      // The rpc_pause_rating_slip appends tstzrange(now(), NULL) to the array.
+      // Verify via setupClient (service-role) for direct column access.
+      const { data: pausedSlip } = await setupClient
+        .from('rating_slip')
+        .select('pause_intervals, status')
+        .eq('id', slip.id)
+        .single();
 
-      expect(slipWithPauses.pauses).toBeDefined();
-      expect(slipWithPauses.pauses.length).toBe(1);
-      expect(slipWithPauses.pauses[0].rating_slip_id).toBe(slip.id);
-      expect(slipWithPauses.pauses[0].started_at).toBeDefined();
-      expect(slipWithPauses.pauses[0].ended_at).toBeNull(); // Still paused
+      expect(pausedSlip).toBeDefined();
+      expect(pausedSlip!.status).toBe('paused');
+      expect(pausedSlip!.pause_intervals).toBeDefined();
+      expect(
+        Array.isArray(pausedSlip!.pause_intervals) &&
+          pausedSlip!.pause_intervals.length,
+      ).toBe(1);
 
-      // Resume and verify pause is closed
+      // Resume and verify the open-ended range is closed
       await service.resume(slip.id);
 
-      const afterResume = await service.getById(slip.id);
-      expect(afterResume.pauses[0].ended_at).not.toBeNull();
+      const { data: resumedSlip } = await setupClient
+        .from('rating_slip')
+        .select('pause_intervals, status')
+        .eq('id', slip.id)
+        .single();
+
+      expect(resumedSlip!.status).toBe('open');
+      expect(resumedSlip!.pause_intervals).toBeDefined();
+      // After resume, the range should have an upper bound (closed interval)
+      const interval = (resumedSlip!.pause_intervals as string[])[0];
+      expect(interval).toBeDefined();
+      // tstzrange format: ["start","end") — verify upper bound is not empty/infinity
+      expect(interval).not.toContain(',)');
 
       // Close for cleanup
       await service.close(slip.id);
@@ -461,6 +539,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -493,15 +572,24 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
       // Wait a bit
       await new Promise((resolve) => setTimeout(resolve, 100));
 
-      // Get duration while open
-      const duration = await service.getDuration(slip.id);
+      // getDuration RPC is restricted to service_role per SEC-007.
+      // Use setupClient (service-role) to call the RPC directly.
+      const { data: duration, error: durationError } = await setupClient.rpc(
+        'rpc_get_rating_slip_duration',
+        {
+          p_rating_slip_id: slip.id,
+          p_as_of: new Date().toISOString(),
+        },
+      );
 
+      expect(durationError).toBeNull();
       expect(duration).toBeGreaterThanOrEqual(0);
 
       // Clean up
@@ -521,6 +609,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip1 = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip1.id);
 
@@ -529,6 +618,7 @@ describe('RatingSlipService Integration Tests', () => {
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
+          seat_number: `${fixture.seatNumber}-dup`,
         }),
       ).rejects.toThrow();
 
@@ -537,6 +627,7 @@ describe('RatingSlipService Integration Tests', () => {
         await service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
+          seat_number: `${fixture.seatNumber}-dup2`,
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
@@ -547,29 +638,29 @@ describe('RatingSlipService Integration Tests', () => {
       await service.close(slip1.id);
     });
 
-    it('should allow slips at different tables for same visit', async () => {
+    it('should enforce one active slip per visit (idx_rating_slip_one_active_per_visit)', async () => {
       const fixture = await createTestFixture();
 
       // Start slip at table 1
       const slip1 = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip1.id);
 
-      // Start slip at table 2 - should succeed
-      const slip2 = await service.start(testCasinoId, testActorId, {
-        visit_id: fixture.visitId,
-        table_id: testTable2Id,
-      });
-      fixture.slipIds.push(slip2.id);
-
-      expect(slip1.table_id).not.toBe(slip2.table_id);
-      expect(slip1.visit_id).toBe(slip2.visit_id);
+      // Attempt slip at table 2 for same visit — should fail
+      // Schema enforces one active slip per visit (PRD-016 continuity constraint)
+      await expect(
+        service.start(testCasinoId, testActorId, {
+          visit_id: fixture.visitId,
+          table_id: testTable2Id,
+          seat_number: `${fixture.seatNumber}-t2`,
+        }),
+      ).rejects.toThrow();
 
       // Clean up
       await service.close(slip1.id);
-      await service.close(slip2.id);
     });
 
     it('should allow new slip after previous one is closed', async () => {
@@ -579,6 +670,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip1 = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip1.id);
 
@@ -588,6 +680,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip2 = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: `${fixture.seatNumber}-reuse`,
       });
       fixture.slipIds.push(slip2.id);
 
@@ -610,6 +703,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -636,6 +730,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -660,6 +755,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -688,6 +784,7 @@ describe('RatingSlipService Integration Tests', () => {
         service.start(testCasinoId, testActorId, {
           visit_id: visitId,
           table_id: testTableId,
+          seat_number: `seat-closed-test-${fixtureCounter}`,
         }),
       ).rejects.toThrow();
 
@@ -695,6 +792,7 @@ describe('RatingSlipService Integration Tests', () => {
         await service.start(testCasinoId, testActorId, {
           visit_id: visitId,
           table_id: testTableId,
+          seat_number: `seat-closed-test2-${fixtureCounter}`,
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
@@ -710,6 +808,7 @@ describe('RatingSlipService Integration Tests', () => {
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testInactiveTableId,
+          seat_number: fixture.seatNumber,
         }),
       ).rejects.toThrow();
 
@@ -717,6 +816,7 @@ describe('RatingSlipService Integration Tests', () => {
         await service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testInactiveTableId,
+          seat_number: `${fixture.seatNumber}-retry`,
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
@@ -734,8 +834,8 @@ describe('RatingSlipService Integration Tests', () => {
       // ADR-014: Ghost gaming visits CAN have rating slips for compliance/finance/MTL
       // The ghost visit check is done at loyalty accrual time, not at creation time
 
-      // Create a ghost visit (no player_id) directly in db
-      const { data: ghostVisit, error: ghostError } = await supabase
+      // Create a ghost visit (no player_id) directly in db via service-role
+      const { data: ghostVisit, error: ghostError } = await setupClient
         .from('visit')
         .insert({
           player_id: null, // Ghost visit
@@ -762,6 +862,7 @@ describe('RatingSlipService Integration Tests', () => {
         playerId: '', // No player
         visitId: ghostVisit.id,
         slipIds: [],
+        seatNumber: 'ghost-seat',
       });
 
       // Ghost visits should now be allowed for rating slip creation
@@ -781,11 +882,7 @@ describe('RatingSlipService Integration Tests', () => {
       allFixtures[allFixtures.length - 1].slipIds.push(slip.id);
 
       // Verify slip can be closed (full lifecycle)
-      const closedSlip = await service.close(
-        testCasinoId,
-        testActorId,
-        slip.id,
-      );
+      const closedSlip = await service.close(slip.id);
       expect(closedSlip.status).toBe('closed');
       expect(closedSlip.duration_seconds).toBeGreaterThanOrEqual(0);
     });
@@ -805,7 +902,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: readTestFixture.visitId,
         table_id: testTableId,
-        seat_number: '5',
+        seat_number: readTestFixture.seatNumber,
         game_settings: { game_type: 'blackjack', min_bet: 25 },
       });
       testSlipId = slip.id;
@@ -888,6 +985,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -910,6 +1008,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -945,6 +1044,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTable2Id,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -984,6 +1084,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -1019,6 +1120,7 @@ describe('RatingSlipService Integration Tests', () => {
           service.start(testCasinoId, testActorId, {
             visit_id: fixture.visitId,
             table_id: testTable2Id,
+            seat_number: fixture.seatNumber,
           }),
         );
 
@@ -1044,8 +1146,8 @@ describe('RatingSlipService Integration Tests', () => {
 
   describe('RLS Casino Isolation', () => {
     it('should not find slips from different casino via listForTable', async () => {
-      // Create table and slip in casino 2
-      const { data: casino2Table } = await supabase
+      // Create table in casino 2 via service-role (bypasses RLS)
+      const { data: casino2Table } = await setupClient
         .from('gaming_table')
         .insert({
           casino_id: testCasino2Id,
@@ -1069,7 +1171,7 @@ describe('RatingSlipService Integration Tests', () => {
       }
 
       // Clean up
-      await supabase.from('gaming_table').delete().eq('id', casino2Table.id);
+      await setupClient.from('gaming_table').delete().eq('id', casino2Table.id);
     });
   });
 
@@ -1084,6 +1186,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
         // No game_settings provided
       });
       fixture.slipIds.push(slip.id);
@@ -1100,6 +1203,7 @@ describe('RatingSlipService Integration Tests', () => {
       const slip = await service.start(testCasinoId, testActorId, {
         visit_id: fixture.visitId,
         table_id: testTableId,
+        seat_number: fixture.seatNumber,
       });
       fixture.slipIds.push(slip.id);
 
@@ -1119,10 +1223,13 @@ describe('RatingSlipService Integration Tests', () => {
       const fixture = await createTestFixture(testCasino2Id);
 
       // Try to start slip with casino 1 context for casino 2 visit
+      // Under RLS, the visit from casino 2 is invisible to the authenticated
+      // user (casino 1), so the RPC sees "visit not found/not open"
       await expect(
         service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
+          seat_number: fixture.seatNumber,
         }),
       ).rejects.toThrow();
 
@@ -1130,10 +1237,12 @@ describe('RatingSlipService Integration Tests', () => {
         await service.start(testCasinoId, testActorId, {
           visit_id: fixture.visitId,
           table_id: testTableId,
+          seat_number: `${fixture.seatNumber}-retry`,
         });
       } catch (error) {
         expect(error).toBeInstanceOf(DomainError);
-        expect((error as DomainError).code).toBe('VISIT_CASINO_MISMATCH');
+        // Under RLS, visit from different casino is invisible → VISIT_NOT_OPEN
+        expect((error as DomainError).code).toBe('VISIT_NOT_OPEN');
       }
     });
   });
