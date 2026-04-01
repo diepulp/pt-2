@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import { createFinancialTransaction } from '@/lib/finance';
 
 describe('Finance RPC helper', () => {

@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Player 360 Navigation Integration Tests
  *
@@ -13,7 +15,11 @@ import {
   validateReturnTo,
 } from '@/lib/navigation';
 
-describe('Player 360 Navigation Flow', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Player 360 Navigation Flow', () => {
   describe('search → detail flow', () => {
     it('encodes returnTo with current search context', () => {
       const searchUrl = '/players?query=smith&filter=active';

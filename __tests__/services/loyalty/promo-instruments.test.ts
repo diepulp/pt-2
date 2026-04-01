@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * LoyaltyService Promo Instruments Service Layer Unit Tests
  *

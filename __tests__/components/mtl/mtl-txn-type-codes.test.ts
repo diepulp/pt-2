@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * MTL Transaction Type Codes Unit Tests
  *
