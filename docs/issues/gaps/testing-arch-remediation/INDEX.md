@@ -70,6 +70,14 @@ These are evidence documents. They inform the remediation but are not the remedi
 
 ---
 
+### Step 5 — Remaining Services Remediation
+
+| # | Document | Purpose |
+|---|----------|---------|
+| 5a | [REMAINING-SERVICES-REMEDIATION-PLAN.md](REMAINING-SERVICES-REMEDIATION-PLAN.md) | **Full-scope remediation plan.** Maps all 118 un-remediated test files across 13 service contexts + 3 infrastructure surfaces. Three-tier execution (Slice 3 completion → remaining services → infrastructure). Two-phase model per context: Phase A (rollout template) + Phase B (Mode C auth rewrite). Triggered by runtime FetchError exposing untested HTTP contract boundary in loyalty context. |
+
+---
+
 ### Superseded
 
 | # | Document | Status |
