@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Middleware Chain Integration Tests
  *
@@ -15,7 +16,11 @@ import {
   cleanupTestData,
 } from './helpers';
 
-describe('Middleware Chain Integration', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Middleware Chain Integration', () => {
   beforeAll(async () => {
     await setupTestData();
   });

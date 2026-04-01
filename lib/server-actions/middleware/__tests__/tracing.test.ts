@@ -1,3 +1,4 @@
+/** @jest-environment node */
 jest.mock('@/lib/server-actions/error-map', () => ({
   mapDatabaseError: jest.fn(),
 }));

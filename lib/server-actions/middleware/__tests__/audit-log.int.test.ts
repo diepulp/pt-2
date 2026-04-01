@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Audit Log Integration Tests
  *
@@ -15,7 +16,11 @@ import {
   cleanupTestData,
 } from './helpers';
 
-describe('Audit Log Integration', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Audit Log Integration', () => {
   const testCorrelationIds: string[] = [];
   let originalNodeEnv: string | undefined;
 

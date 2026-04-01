@@ -1,3 +1,4 @@
+/** @jest-environment node */
 /**
  * Route Handler Integration Tests
  *
@@ -15,7 +16,11 @@
 
 import { setupTestData, cleanupTestData } from './helpers';
 
-describe('Wrapped Route Handler Integration', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Wrapped Route Handler Integration', () => {
   beforeAll(async () => {
     await setupTestData();
   });

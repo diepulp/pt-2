@@ -1,3 +1,4 @@
+/** @jest-environment node */
 // Mock getAuthContext
 jest.mock('@/lib/supabase/rls-context', () => ({
   getAuthContext: jest.fn(),

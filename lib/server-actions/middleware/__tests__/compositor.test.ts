@@ -1,3 +1,4 @@
+/** @jest-environment node */
 // Mock all middleware dependencies
 jest.mock('@/lib/supabase/rls-context', () => ({
   getAuthContext: jest.fn().mockResolvedValue({
