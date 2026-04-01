@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RLS Financial Transaction Integration Tests (PRD-009 WS5)
  *
@@ -45,7 +47,11 @@ async function setTestRLSContext(
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-describe('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('RLS Financial Transaction Policies (PRD-009 WS5)', () => {
   let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS
   let authClient1: SupabaseClient<Database>; // Authenticated as Casino 1 staff
   let authClient2: SupabaseClient<Database>; // Authenticated as Casino 2 staff

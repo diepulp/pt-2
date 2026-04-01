@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RLS Context Integration Tests (ADR-015)
  *
@@ -64,7 +66,11 @@ const skipIfNoEnv = () => {
   return false;
 };
 
-describe('RLS Context Integration (ADR-015)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('RLS Context Integration (ADR-015)', () => {
   let supabase: SupabaseClient<Database>;
   let testCompany1Id: string;
   let testCompany2Id: string;
