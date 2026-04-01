@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RLS Connection Pooling Safety Tests (ADR-015 WS6)
  *
@@ -47,7 +49,11 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-describe('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('RLS Connection Pooling Safety (ADR-015 WS6)', () => {
   let supabase: SupabaseClient<Database>;
   let testCompany1Id: string;
   let testCompany2Id: string;

@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * JWT Claims Integration Tests (ADR-015 Phase 2)
  *
@@ -45,7 +47,11 @@ const skipIfNoEnv = () => {
   return false;
 };
 
-describe('JWT Claims Integration (ADR-015 Phase 2)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('JWT Claims Integration (ADR-015 Phase 2)', () => {
   let serviceClient: SupabaseClient<Database>;
   let testCompany1Id: string;
   let testCompany2Id: string;

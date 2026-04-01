@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * RLS MTL Integration Tests (PRD-005 WS7)
  *
@@ -54,13 +56,11 @@ async function setTestRLSContext(
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Skip integration tests if database credentials not available
-const shouldSkip = !supabaseUrl || !supabaseServiceKey;
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
 
-// Conditionally run describe block
-const describeOrSkip = shouldSkip ? describe.skip : describe;
-
-describeOrSkip('RLS MTL Policies (PRD-005 WS7)', () => {
+(RUN_INTEGRATION ? describe : describe.skip)('RLS MTL Policies (PRD-005 WS7)', () => {
   let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS
   let pitBossClient: SupabaseClient<Database>; // Authenticated as pit_boss
   let cashierClient: SupabaseClient<Database>; // Authenticated as cashier

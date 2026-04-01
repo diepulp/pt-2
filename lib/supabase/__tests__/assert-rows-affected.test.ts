@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import { RlsWriteDeniedError } from '@/lib/errors/rls-write-denied-error';
 import { assertRowsAffected } from '@/lib/supabase/assert-rows-affected';
 

@@ -32,12 +32,11 @@ import type { Database } from '../../../types/database.types';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Integration gate: skip when RUN_INTEGRATION_TESTS is unset
-const describeIntegration = process.env.RUN_INTEGRATION_TESTS
-  ? describe
-  : describe.skip;
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
 
-describeIntegration(
+(RUN_INTEGRATION ? describe : describe.skip)(
   'Pit Boss Financial Transaction Constraints (PRD-015 WS5)',
   () => {
     let supabase: SupabaseClient<Database>;
