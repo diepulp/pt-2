@@ -1,6 +1,8 @@
 /**
  * PRD-059: rpc_close_table_session OPEN-Cancellation — Integration Tests
  *
+ * Mode C JWT auth (ADR-024): authenticated anon client with staff_id claim.
+ *
  * Tests:
  * AC-19: rpc_close_table_session accepts OPEN with close_reason='cancelled'
  * AC-20: Skips artifact requirement for OPEN-cancellation
@@ -11,6 +13,7 @@
  * - Local Supabase running: `npx supabase start`
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  * - RUN_INTEGRATION_TESTS=true
  *
  * @see docs/10-prd/PRD-059-open-table-custody-gate-pilot-lite-v0.md
@@ -24,10 +27,12 @@ import type { Database } from '../../../types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const isIntegrationEnvironment =
   supabaseUrl &&
   supabaseServiceKey &&
+  supabaseAnonKey &&
   process.env.RUN_INTEGRATION_TESTS === 'true';
 
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
@@ -35,7 +40,10 @@ const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 describeIntegration(
   'PRD-059: rpc_close_table_session — OPEN-Cancellation',
   () => {
-    let svc: SupabaseClient<Database>;
+    // setupClient: service-role, for fixture creation/teardown/verification
+    let setupClient: SupabaseClient<Database>;
+    // pitBossClient: authenticated anon client with JWT staff_id claim
+    let pitBossClient: SupabaseClient<Database>;
 
     // Shared test entities
     let companyId: string;
@@ -44,75 +52,77 @@ describeIntegration(
     let pitBossUserId: string;
     let tableId: string;
 
-    /** Set RLS context as pit_boss */
-    async function asPitBoss() {
-      await svc.rpc('set_rls_context_internal', {
-        p_actor_id: pitBossId,
-        p_casino_id: casinoId,
-        p_staff_role: 'pit_boss',
-      });
-    }
+    const TEST_EMAIL = `test-tc-mode-c-cancel-pb-${Date.now()}@test.com`;
+    const TEST_PASSWORD = 'TestPassword123!';
 
     /** Open an OPEN session, return session ID */
     async function openSession(): Promise<string> {
-      await asPitBoss();
-      const { data, error } = await svc.rpc('rpc_open_table_session', {
-        p_gaming_table_id: tableId,
-      });
+      const { data, error } = await pitBossClient.rpc(
+        'rpc_open_table_session',
+        {
+          p_gaming_table_id: tableId,
+        },
+      );
       if (error) throw new Error(`openSession failed: ${error.message}`);
       return data!.id;
     }
 
-    /** Clean up all sessions + attestations */
+    /** Clean up all sessions + attestations (via setupClient) */
     async function cleanAll() {
-      await svc
+      await setupClient
         .from('table_opening_attestation')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_rundown_report').delete().eq('casino_id', casinoId);
-      await svc.from('table_session').delete().eq('gaming_table_id', tableId);
+      await setupClient
+        .from('table_rundown_report')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
+        .from('table_session')
+        .delete()
+        .eq('gaming_table_id', tableId);
       // Reset consumed_by on snapshots
-      await svc
+      await setupClient
         .from('table_inventory_snapshot')
         .update({ consumed_by_session_id: null, consumed_at: null })
         .eq('casino_id', casinoId);
     }
 
     beforeAll(async () => {
-      svc = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
+      setupClient = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
 
-      // Create test user
-      const { data: user } = await svc.auth.admin.createUser({
-        email: `test-prd059-cancel-${Date.now()}@example.com`,
-        password: 'test-password',
+      // 1. Create auth user
+      const { data: user } = await setupClient.auth.admin.createUser({
+        email: TEST_EMAIL,
+        password: TEST_PASSWORD,
         email_confirm: true,
       });
       pitBossUserId = user!.user!.id;
 
-      // Company
-      const { data: company } = await svc
+      // 2. Company
+      const { data: company } = await setupClient
         .from('company')
         .insert({ name: 'PRD-059 Cancel Test Company' })
         .select('id')
         .single();
       companyId = company!.id;
 
-      // Casino + settings
-      const { data: casino } = await svc
+      // 3. Casino + settings
+      const { data: casino } = await setupClient
         .from('casino')
         .insert({ name: 'PRD-059 Cancel Test Casino', company_id: company!.id })
         .select('id')
         .single();
       casinoId = casino!.id;
 
-      await svc.from('casino_settings').insert({
+      await setupClient.from('casino_settings').insert({
         casino_id: casinoId,
         gaming_day_start_time: '06:00',
         timezone: 'America/Los_Angeles',
       });
 
-      // Staff (pit_boss)
-      const { data: staff } = await svc
+      // 4. Staff (pit_boss)
+      const { data: staff } = await setupClient
         .from('staff')
         .insert({
           user_id: pitBossUserId,
@@ -126,8 +136,17 @@ describeIntegration(
         .single();
       pitBossId = staff!.id;
 
-      // Gaming table
-      const { data: table } = await svc
+      // 5. Two-phase ADR-024: stamp staff_id into app_metadata
+      await setupClient.auth.admin.updateUserById(pitBossUserId, {
+        app_metadata: {
+          casino_id: casinoId,
+          staff_id: pitBossId,
+          staff_role: 'pit_boss',
+        },
+      });
+
+      // 6. Gaming table
+      const { data: table } = await setupClient
         .from('gaming_table')
         .insert({
           casino_id: casinoId,
@@ -139,27 +158,52 @@ describeIntegration(
         .select('id')
         .single();
       tableId = table!.id;
+
+      // 7. Sign in and create authenticated anon client
+      pitBossClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+      const { error: signInError } =
+        await pitBossClient.auth.signInWithPassword({
+          email: TEST_EMAIL,
+          password: TEST_PASSWORD,
+        });
+      if (signInError)
+        throw new Error(`Sign-in failed: ${signInError.message}`);
     });
 
     afterAll(async () => {
-      await svc.from('audit_log').delete().eq('casino_id', casinoId);
-      await svc
+      await setupClient.from('audit_log').delete().eq('casino_id', casinoId);
+      await setupClient
         .from('table_opening_attestation')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_rundown_report').delete().eq('casino_id', casinoId);
-      await svc.from('table_session').delete().eq('casino_id', casinoId);
-      await svc
+      await setupClient
+        .from('table_rundown_report')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
+        .from('table_session')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
         .from('table_inventory_snapshot')
         .delete()
         .eq('casino_id', casinoId);
-      await svc.from('table_drop_event').delete().eq('casino_id', casinoId);
-      await svc.from('gaming_table').delete().eq('casino_id', casinoId);
-      await svc.from('staff').delete().eq('casino_id', casinoId);
-      await svc.from('casino_settings').delete().eq('casino_id', casinoId);
-      await svc.from('casino').delete().eq('id', casinoId);
-      await svc.from('company').delete().eq('id', companyId);
-      await svc.auth.admin.deleteUser(pitBossUserId);
+      await setupClient
+        .from('table_drop_event')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient
+        .from('gaming_table')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient.from('staff').delete().eq('casino_id', casinoId);
+      await setupClient
+        .from('casino_settings')
+        .delete()
+        .eq('casino_id', casinoId);
+      await setupClient.from('casino').delete().eq('id', casinoId);
+      await setupClient.from('company').delete().eq('id', companyId);
+      await setupClient.auth.admin.deleteUser(pitBossUserId);
     });
 
     // =========================================================================
@@ -178,13 +222,15 @@ describeIntegration(
       });
 
       it('closes OPEN session with close_reason=cancelled', async () => {
-        await asPitBoss();
-        const { data, error } = await svc.rpc('rpc_close_table_session', {
-          p_table_session_id: sessionId,
-          p_close_reason:
-            'cancelled' as Database['public']['Enums']['close_reason_type'],
-          p_close_note: 'Wrong table opened',
-        });
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_close_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_close_reason:
+              'cancelled' as Database['public']['Enums']['close_reason_type'],
+            p_close_note: 'Wrong table opened',
+          },
+        );
 
         expect(error).toBeNull();
         expect(data!.status).toBe('CLOSED');
@@ -195,8 +241,7 @@ describeIntegration(
         await cleanAll();
         const sid = await openSession();
 
-        await asPitBoss();
-        const { error } = await svc.rpc('rpc_close_table_session', {
+        const { error } = await pitBossClient.rpc('rpc_close_table_session', {
           p_table_session_id: sid,
           // No close_reason or close_reason != 'cancelled'
           p_close_reason:
@@ -224,13 +269,15 @@ describeIntegration(
       });
 
       it('succeeds without drop_event_id or closing_inventory_snapshot_id', async () => {
-        await asPitBoss();
-        const { data, error } = await svc.rpc('rpc_close_table_session', {
-          p_table_session_id: sessionId,
-          p_close_reason:
-            'cancelled' as Database['public']['Enums']['close_reason_type'],
-          // No p_drop_event_id, no p_closing_inventory_snapshot_id
-        });
+        const { data, error } = await pitBossClient.rpc(
+          'rpc_close_table_session',
+          {
+            p_table_session_id: sessionId,
+            p_close_reason:
+              'cancelled' as Database['public']['Enums']['close_reason_type'],
+            // No p_drop_event_id, no p_closing_inventory_snapshot_id
+          },
+        );
 
         expect(error).toBeNull();
         expect(data!.status).toBe('CLOSED');
@@ -249,7 +296,8 @@ describeIntegration(
         await cleanAll();
 
         // Create a predecessor with a snapshot (to verify no consumption)
-        const { data: snapshot } = await svc
+        // Use setupClient for fixture creation
+        const { data: snapshot } = await setupClient
           .from('table_inventory_snapshot')
           .insert({
             casino_id: casinoId,
@@ -263,27 +311,22 @@ describeIntegration(
           .single();
         snapshotId = snapshot!.id;
 
-        const { data: predSession } = await svc
-          .from('table_session')
-          .insert({
-            casino_id: casinoId,
-            gaming_table_id: tableId,
-            status: 'CLOSED',
-            opened_by_staff_id: pitBossId,
-            closed_at: new Date().toISOString(),
-            closed_by_staff_id: pitBossId,
-            closing_inventory_snapshot_id: snapshotId,
-            gaming_day: new Date().toISOString().slice(0, 10),
-          })
-          .select('id')
-          .single();
+        await setupClient.from('table_session').insert({
+          casino_id: casinoId,
+          gaming_table_id: tableId,
+          status: 'CLOSED',
+          opened_by_staff_id: pitBossId,
+          closed_at: new Date().toISOString(),
+          closed_by_staff_id: pitBossId,
+          closing_inventory_snapshot_id: snapshotId,
+          gaming_day: new Date().toISOString().slice(0, 10),
+        });
 
-        // Open session (will link predecessor)
+        // Open session (will link predecessor) via authenticated client
         sessionId = await openSession();
 
-        // Cancel the OPEN session
-        await asPitBoss();
-        await svc.rpc('rpc_close_table_session', {
+        // Cancel the OPEN session via authenticated client
+        await pitBossClient.rpc('rpc_close_table_session', {
           p_table_session_id: sessionId,
           p_close_reason:
             'cancelled' as Database['public']['Enums']['close_reason_type'],
@@ -296,7 +339,8 @@ describeIntegration(
       });
 
       it('no attestation row exists for cancelled session', async () => {
-        const { data: attestations } = await svc
+        // Verify via setupClient (service-role, bypasses RLS)
+        const { data: attestations } = await setupClient
           .from('table_opening_attestation')
           .select('id')
           .eq('session_id', sessionId);
@@ -305,7 +349,8 @@ describeIntegration(
       });
 
       it('predecessor snapshot not consumed', async () => {
-        const { data: snapshot } = await svc
+        // Verify via setupClient
+        const { data: snapshot } = await setupClient
           .from('table_inventory_snapshot')
           .select('consumed_by_session_id')
           .eq('id', snapshotId)

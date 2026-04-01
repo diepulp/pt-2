@@ -1,6 +1,10 @@
 /**
  * PRD-059: table_opening_attestation RLS Policy — Integration Tests
  *
+ * Mode C JWT auth (ADR-024): authenticated anon clients per casino.
+ * Two authenticated clients (casinoAClient, casinoBClient) with separate
+ * casino contexts to verify cross-casino RLS isolation.
+ *
  * Tests:
  * AC-22: Direct INSERT from authenticated role denied
  * AC-23: Cross-casino SELECT denied
@@ -10,7 +14,7 @@
  * - Local Supabase running: `npx supabase start`
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
- * - SUPABASE_ANON_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  * - RUN_INTEGRATION_TESTS=true
  *
  * @see supabase/migrations/20260326020248_prd059_open_custody_schema.sql
@@ -24,8 +28,7 @@ import type { Database } from '../../../types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const supabaseAnonKey =
-  process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 const isIntegrationEnvironment =
   supabaseUrl &&
@@ -36,7 +39,12 @@ const isIntegrationEnvironment =
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 
 describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
-  let svc: SupabaseClient<Database>;
+  // setupClient: service-role, for fixture creation/teardown/verification
+  let setupClient: SupabaseClient<Database>;
+  // casinoAClient: authenticated anon client with Casino A staff_id JWT
+  let casinoAClient: SupabaseClient<Database>;
+  // casinoBClient: authenticated anon client with Casino B staff_id JWT
+  let casinoBClient: SupabaseClient<Database>;
 
   // Casino A entities
   let companyAId: string;
@@ -53,58 +61,44 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
   let pitBossBId: string;
   let pitBossBUserId: string;
 
-  /** Set RLS context as Casino A pit_boss */
-  async function asCasinoAPitBoss() {
-    await svc.rpc('set_rls_context_internal', {
-      p_actor_id: pitBossAId,
-      p_casino_id: casinoAId,
-      p_staff_role: 'pit_boss',
-    });
-  }
-
-  /** Set RLS context as Casino B pit_boss */
-  async function asCasinoBPitBoss() {
-    await svc.rpc('set_rls_context_internal', {
-      p_actor_id: pitBossBId,
-      p_casino_id: casinoBId,
-      p_staff_role: 'pit_boss',
-    });
-  }
+  const PB_A_EMAIL = `test-tc-mode-c-rls-a-${Date.now()}@test.com`;
+  const PB_B_EMAIL = `test-tc-mode-c-rls-b-${Date.now()}@test.com`;
+  const TEST_PASSWORD = 'TestPassword123!';
 
   beforeAll(async () => {
-    svc = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
+    setupClient = createClient<Database>(supabaseUrl!, supabaseServiceKey!);
 
     // -----------------------------------------------------------------------
     // Casino A setup
     // -----------------------------------------------------------------------
-    const { data: userA } = await svc.auth.admin.createUser({
-      email: `test-prd059-rls-a-${Date.now()}@example.com`,
-      password: 'test-password',
+    const { data: userA } = await setupClient.auth.admin.createUser({
+      email: PB_A_EMAIL,
+      password: TEST_PASSWORD,
       email_confirm: true,
     });
     pitBossAUserId = userA!.user!.id;
 
-    const { data: companyA } = await svc
+    const { data: companyA } = await setupClient
       .from('company')
       .insert({ name: 'PRD-059 RLS Casino A Co' })
       .select('id')
       .single();
     companyAId = companyA!.id;
 
-    const { data: casinoA } = await svc
+    const { data: casinoA } = await setupClient
       .from('casino')
       .insert({ name: 'PRD-059 RLS Casino A', company_id: companyA!.id })
       .select('id')
       .single();
     casinoAId = casinoA!.id;
 
-    await svc.from('casino_settings').insert({
+    await setupClient.from('casino_settings').insert({
       casino_id: casinoAId,
       gaming_day_start_time: '06:00',
       timezone: 'America/Los_Angeles',
     });
 
-    const { data: staffA } = await svc
+    const { data: staffA } = await setupClient
       .from('staff')
       .insert({
         user_id: pitBossAUserId,
@@ -118,7 +112,16 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .single();
     pitBossAId = staffA!.id;
 
-    const { data: tableA } = await svc
+    // Two-phase ADR-024: stamp staff_id for Casino A
+    await setupClient.auth.admin.updateUserById(pitBossAUserId, {
+      app_metadata: {
+        casino_id: casinoAId,
+        staff_id: pitBossAId,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    const { data: tableA } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: casinoAId,
@@ -131,23 +134,32 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .single();
     tableAId = tableA!.id;
 
+    // Sign in Casino A pit boss
+    casinoAClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+    const { error: signInAErr } =
+      await casinoAClient.auth.signInWithPassword({
+        email: PB_A_EMAIL,
+        password: TEST_PASSWORD,
+      });
+    if (signInAErr)
+      throw new Error(`Casino A sign-in failed: ${signInAErr.message}`);
+
     // Create an OPEN session and activate it (to get an attestation row)
-    await asCasinoAPitBoss();
-    const { data: sessionA } = await svc.rpc('rpc_open_table_session', {
-      p_gaming_table_id: tableAId,
-    });
+    const { data: sessionA } = await casinoAClient.rpc(
+      'rpc_open_table_session',
+      { p_gaming_table_id: tableAId },
+    );
     sessionAId = sessionA!.id;
 
-    await asCasinoAPitBoss();
-    await svc.rpc('rpc_activate_table_session', {
+    await casinoAClient.rpc('rpc_activate_table_session', {
       p_table_session_id: sessionAId,
       p_opening_total_cents: 50000,
       p_dealer_confirmed: true,
       p_opening_note: 'Bootstrap for RLS test',
     });
 
-    // Get the attestation ID
-    const { data: attRow } = await svc
+    // Get the attestation ID via setupClient
+    const { data: attRow } = await setupClient
       .from('table_opening_attestation')
       .select('id')
       .eq('session_id', sessionAId)
@@ -157,34 +169,34 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
     // -----------------------------------------------------------------------
     // Casino B setup
     // -----------------------------------------------------------------------
-    const { data: userB } = await svc.auth.admin.createUser({
-      email: `test-prd059-rls-b-${Date.now()}@example.com`,
-      password: 'test-password',
+    const { data: userB } = await setupClient.auth.admin.createUser({
+      email: PB_B_EMAIL,
+      password: TEST_PASSWORD,
       email_confirm: true,
     });
     pitBossBUserId = userB!.user!.id;
 
-    const { data: companyB } = await svc
+    const { data: companyB } = await setupClient
       .from('company')
       .insert({ name: 'PRD-059 RLS Casino B Co' })
       .select('id')
       .single();
     companyBId = companyB!.id;
 
-    const { data: casinoB } = await svc
+    const { data: casinoB } = await setupClient
       .from('casino')
       .insert({ name: 'PRD-059 RLS Casino B', company_id: companyB!.id })
       .select('id')
       .single();
     casinoBId = casinoB!.id;
 
-    await svc.from('casino_settings').insert({
+    await setupClient.from('casino_settings').insert({
       casino_id: casinoBId,
       gaming_day_start_time: '06:00',
       timezone: 'America/Los_Angeles',
     });
 
-    const { data: staffB } = await svc
+    const { data: staffB } = await setupClient
       .from('staff')
       .insert({
         user_id: pitBossBUserId,
@@ -197,84 +209,114 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
       .select('id')
       .single();
     pitBossBId = staffB!.id;
+
+    // Two-phase ADR-024: stamp staff_id for Casino B
+    await setupClient.auth.admin.updateUserById(pitBossBUserId, {
+      app_metadata: {
+        casino_id: casinoBId,
+        staff_id: pitBossBId,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // Sign in Casino B pit boss
+    casinoBClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
+    const { error: signInBErr } =
+      await casinoBClient.auth.signInWithPassword({
+        email: PB_B_EMAIL,
+        password: TEST_PASSWORD,
+      });
+    if (signInBErr)
+      throw new Error(`Casino B sign-in failed: ${signInBErr.message}`);
   });
 
   afterAll(async () => {
-    // Cleanup Casino A
-    await svc.from('audit_log').delete().eq('casino_id', casinoAId);
-    await svc
+    // Cleanup Casino A (via setupClient)
+    await setupClient.from('audit_log').delete().eq('casino_id', casinoAId);
+    await setupClient
       .from('table_opening_attestation')
       .delete()
       .eq('casino_id', casinoAId);
-    await svc.from('table_rundown_report').delete().eq('casino_id', casinoAId);
-    await svc.from('table_session').delete().eq('casino_id', casinoAId);
-    await svc
+    await setupClient
+      .from('table_rundown_report')
+      .delete()
+      .eq('casino_id', casinoAId);
+    await setupClient
+      .from('table_session')
+      .delete()
+      .eq('casino_id', casinoAId);
+    await setupClient
       .from('table_inventory_snapshot')
       .delete()
       .eq('casino_id', casinoAId);
-    await svc.from('table_drop_event').delete().eq('casino_id', casinoAId);
-    await svc.from('gaming_table').delete().eq('casino_id', casinoAId);
-    await svc.from('staff').delete().eq('casino_id', casinoAId);
-    await svc.from('casino_settings').delete().eq('casino_id', casinoAId);
-    await svc.from('casino').delete().eq('id', casinoAId);
-    await svc.from('company').delete().eq('id', companyAId);
-    await svc.auth.admin.deleteUser(pitBossAUserId);
+    await setupClient
+      .from('table_drop_event')
+      .delete()
+      .eq('casino_id', casinoAId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', casinoAId);
+    await setupClient.from('staff').delete().eq('casino_id', casinoAId);
+    await setupClient
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', casinoAId);
+    await setupClient.from('casino').delete().eq('id', casinoAId);
+    await setupClient.from('company').delete().eq('id', companyAId);
+    await setupClient.auth.admin.deleteUser(pitBossAUserId);
 
-    // Cleanup Casino B
-    await svc.from('audit_log').delete().eq('casino_id', casinoBId);
-    await svc
+    // Cleanup Casino B (via setupClient)
+    await setupClient.from('audit_log').delete().eq('casino_id', casinoBId);
+    await setupClient
       .from('table_opening_attestation')
       .delete()
       .eq('casino_id', casinoBId);
-    await svc.from('table_rundown_report').delete().eq('casino_id', casinoBId);
-    await svc.from('table_session').delete().eq('casino_id', casinoBId);
-    await svc.from('gaming_table').delete().eq('casino_id', casinoBId);
-    await svc.from('staff').delete().eq('casino_id', casinoBId);
-    await svc.from('casino_settings').delete().eq('casino_id', casinoBId);
-    await svc.from('casino').delete().eq('id', casinoBId);
-    await svc.from('company').delete().eq('id', companyBId);
-    await svc.auth.admin.deleteUser(pitBossBUserId);
+    await setupClient
+      .from('table_rundown_report')
+      .delete()
+      .eq('casino_id', casinoBId);
+    await setupClient
+      .from('table_session')
+      .delete()
+      .eq('casino_id', casinoBId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', casinoBId);
+    await setupClient.from('staff').delete().eq('casino_id', casinoBId);
+    await setupClient
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', casinoBId);
+    await setupClient.from('casino').delete().eq('id', casinoBId);
+    await setupClient.from('company').delete().eq('id', companyBId);
+    await setupClient.auth.admin.deleteUser(pitBossBUserId);
   });
 
   // =========================================================================
   // AC-22: Direct INSERT from authenticated role denied
   // =========================================================================
   describe('AC-22: direct INSERT denied', () => {
-    it('INSERT into table_opening_attestation fails via PostgREST (RLS + REVOKE)', async () => {
-      // Create an authenticated client (simulating a real user, not service_role)
-      const authClient = createClient<Database>(supabaseUrl!, supabaseAnonKey!);
-
-      // Sign in as Casino A pit boss
-      const { data: signIn } = await svc.auth.admin.generateLink({
-        type: 'magiclink',
-        email: `test-prd059-rls-a-${Date.now()}@example.com`,
-      });
-
-      // Even with service_role setting context, the RLS policy denies INSERT
-      // Test via service_role client with context set (to demonstrate RLS denial)
-      // Note: service_role bypasses RLS, so we test the policy with
-      // set_rls_context_internal + direct insert to the table
-      // The actual enforcement is that authenticated role has INSERT revoked
-      // + RLS WITH CHECK (false). We verify the REVOKE is in place.
-
-      // The service_role client can verify the policy exists
-      // by checking that non-RPC inserts are structurally blocked.
-      // Since service_role bypasses RLS, we verify the schema:
-      // the table has INSERT denied via both REVOKE and RLS WITH CHECK(false).
-
-      // Verify attestation was created by RPC (not direct insert)
-      const { data: attestation } = await svc
+    it('INSERT into table_opening_attestation fails from authenticated client (RLS + REVOKE)', async () => {
+      // Attempt direct INSERT via Casino A authenticated client
+      // The table has INSERT denied via both REVOKE and RLS WITH CHECK(false)
+      const { error } = await casinoAClient
         .from('table_opening_attestation')
-        .select('id, session_id, attested_by')
-        .eq('id', attestationAId)
-        .single();
+        .insert({
+          casino_id: casinoAId,
+          session_id: sessionAId,
+          opening_total_cents: 99999,
+          attested_by: pitBossAId,
+          dealer_confirmed: true,
+          provenance_source: 'par_bootstrap',
+        } as Record<string, unknown>);
 
-      expect(attestation).not.toBeNull();
-      expect(attestation!.session_id).toBe(sessionAId);
+      // Should fail — INSERT revoked for authenticated role
+      expect(error).not.toBeNull();
 
-      // Verify there is exactly one attestation for this session
-      // (RPC is the only write path)
-      const { data: allAttestations } = await svc
+      // Verify the RPC-created attestation is still the only one
+      const { data: allAttestations } = await setupClient
         .from('table_opening_attestation')
         .select('id')
         .eq('session_id', sessionAId);
@@ -288,36 +330,19 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
   // =========================================================================
   describe('AC-23: cross-casino SELECT denied', () => {
     it('Casino B context cannot see Casino A attestation', async () => {
-      // Set context to Casino B
-      await asCasinoBPitBoss();
-
-      // Try to read Casino A's attestation directly by ID
-      const { data: attestation } = await svc
+      // Casino B authenticated client tries to read Casino A's attestation
+      const { data: attestation } = await casinoBClient
         .from('table_opening_attestation')
         .select('*')
         .eq('id', attestationAId)
         .maybeSingle();
 
-      // RLS should filter this out — Casino B context cannot see Casino A data
-      // Note: with service_role, RLS is bypassed. This test documents the policy.
-      // In production, authenticated clients respect RLS.
-      // We verify the policy structure by confirming the casino_id scoping exists.
-
-      // Verify Casino A attestation has correct casino_id
-      const { data: aRow } = await svc
-        .from('table_opening_attestation')
-        .select('casino_id')
-        .eq('id', attestationAId)
-        .single();
-
-      expect(aRow!.casino_id).toBe(casinoAId);
-      expect(aRow!.casino_id).not.toBe(casinoBId);
+      // RLS filters this out — Casino B context cannot see Casino A data
+      expect(attestation).toBeNull();
     });
 
     it('Casino A context can see its own attestation', async () => {
-      await asCasinoAPitBoss();
-
-      const { data: attestations } = await svc
+      const { data: attestations } = await casinoAClient
         .from('table_opening_attestation')
         .select('id, casino_id')
         .eq('casino_id', casinoAId);
@@ -328,23 +353,21 @@ describeIntegration('PRD-059: table_opening_attestation RLS Policies', () => {
     });
 
     it('Casino B has no attestation rows for Casino A casino_id', async () => {
-      // Query with Casino A's casino_id from Casino B context
-      // With service_role this shows all, but the policy structure ensures
-      // that authenticated role with Casino B context would see nothing.
-      // We verify policy correctness by confirming the data isolation pattern.
-
-      const { data: casinoAAttestations } = await svc
+      // Casino B client queries with Casino A's casino_id filter
+      const { data: casinoAAttestations } = await casinoBClient
         .from('table_opening_attestation')
         .select('id')
         .eq('casino_id', casinoAId);
 
-      const { data: casinoBAttestations } = await svc
+      // RLS ensures Casino B sees nothing from Casino A
+      expect(casinoAAttestations).toHaveLength(0);
+
+      // Casino B also has no attestations (none created)
+      const { data: casinoBAttestations } = await casinoBClient
         .from('table_opening_attestation')
         .select('id')
         .eq('casino_id', casinoBId);
 
-      // Casino A has attestations, Casino B has none
-      expect(casinoAAttestations!.length).toBeGreaterThanOrEqual(1);
       expect(casinoBAttestations).toHaveLength(0);
     });
   });
