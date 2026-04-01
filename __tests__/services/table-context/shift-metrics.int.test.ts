@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * TableContext Shift Metrics Integration Tests
  *
@@ -27,7 +29,8 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const isIntegrationEnvironment =
   supabaseUrl &&
   supabaseServiceKey &&
-  process.env.RUN_INTEGRATION_TESTS === 'true';
+  (process.env.RUN_INTEGRATION_TESTS === 'true' ||
+    process.env.RUN_INTEGRATION_TESTS === '1');
 
 const describeIntegration = isIntegrationEnvironment ? describe : describe.skip;
 

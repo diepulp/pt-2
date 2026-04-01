@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * SLAD Compliance Tests: Player Identity Bounded Context Ownership
  *
