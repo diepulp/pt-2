@@ -84,7 +84,11 @@ function makeReward() {
 
 // === Round-Trip Tests ===
 
-describe('valuation policy round-trip', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('valuation policy round-trip', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('update rate → getActiveValuationCentsPerPoint returns new rate', async () => {

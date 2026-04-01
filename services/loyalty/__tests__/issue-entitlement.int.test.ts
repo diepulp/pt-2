@@ -71,7 +71,11 @@ function makeEntitlementReward(overrides: Record<string, unknown> = {}) {
   };
 }
 
-describe('issueEntitlement', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('issueEntitlement', () => {
   const mockRpc = jest.fn();
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();

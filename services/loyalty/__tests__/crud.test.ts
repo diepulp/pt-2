@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * LoyaltyService CRUD Unit Tests
  *

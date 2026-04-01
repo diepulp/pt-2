@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Promo Outbox Contract Integration Tests (PRD-028)
  *
@@ -53,7 +55,11 @@ interface TestFixture {
 // Test Suite
 // ============================================================================
 
-describe('loyalty_outbox promo RPC contract (PRD-028)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('loyalty_outbox promo RPC contract (PRD-028)', () => {
   let supabase: SupabaseClient<Database>;
   let fixture: TestFixture;
 

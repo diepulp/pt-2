@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Loyalty Accrual Lifecycle Integration Tests
  *
@@ -114,7 +116,11 @@ interface RatingSlipData {
 // Test Suite
 // ============================================================================
 
-describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   let supabase: SupabaseClient<Database>;
   let fixture: TestFixture;
   let playerCounter = 0;

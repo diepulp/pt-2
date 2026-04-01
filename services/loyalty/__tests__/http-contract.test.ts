@@ -1,6 +1,6 @@
+/** @jest-environment node */
+
 /**
- * @jest-environment node
- *
  * HTTP Client ↔ Route Handler Contract Tests
  *
  * Validates that every function in http.ts has a corresponding route export.
