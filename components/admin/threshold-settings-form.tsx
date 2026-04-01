@@ -322,12 +322,12 @@ export function ThresholdSettingsForm() {
           <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
           <div>
             <div
-              className="text-xs font-bold uppercase tracking-widest text-destructive"
+              className="text-base font-bold uppercase tracking-widest text-destructive"
               style={{ fontFamily: 'monospace' }}
             >
               Error Loading Settings
             </div>
-            <p className="mt-1 text-sm text-destructive/80">
+            <p className="mt-1 text-base text-destructive/80">
               Failed to load anomaly detection configuration. Please try again.
             </p>
           </div>
@@ -337,11 +337,11 @@ export function ThresholdSettingsForm() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="max-w-4xl space-y-8">
       {/* Last saved */}
       {settings?.updated_at && (
         <p
-          className="text-xs text-muted-foreground"
+          className="text-base text-muted-foreground"
           style={{ fontFamily: 'monospace' }}
         >
           Last saved: {formatTimestamp(settings.updated_at)}
@@ -351,27 +351,27 @@ export function ThresholdSettingsForm() {
       {/* Baseline configuration */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-accent" />
+          <SlidersHorizontal className="h-5 w-5 text-accent" />
           <h4
-            className="text-sm font-bold uppercase tracking-widest text-foreground"
+            className="text-lg font-bold uppercase tracking-widest text-foreground"
             style={{ fontFamily: 'monospace' }}
           >
             Baseline Engine
           </h4>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-base text-muted-foreground">
           Statistical parameters for anomaly detection algorithms.
         </p>
       </div>
-      <Card className="border-2 border-accent/30 bg-accent/[0.03]">
+      <Card className="border-2 border-accent/30 bg-accent/3">
         <CardHeader className="pb-3">
           <CardTitle
-            className="text-sm font-bold uppercase tracking-widest"
+            className="text-base font-bold uppercase tracking-widest"
             style={{ fontFamily: 'monospace' }}
           >
             Baseline Configuration
           </CardTitle>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-base text-muted-foreground">
             Window size, method, and minimum history for baseline computation.
           </p>
         </CardHeader>
@@ -380,7 +380,7 @@ export function ThresholdSettingsForm() {
             <div className="space-y-1.5">
               <Label
                 htmlFor="baseline-window-days"
-                className="text-xs text-muted-foreground"
+                className="text-base text-muted-foreground"
               >
                 Window (days)
               </Label>
@@ -390,7 +390,7 @@ export function ThresholdSettingsForm() {
                 min={1}
                 step={1}
                 value={currentValues.baseline.window_days}
-                className="font-mono tabular-nums"
+                className="font-mono tabular-nums text-base"
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val)) handleBaselineChange('window_days', val);
@@ -400,7 +400,7 @@ export function ThresholdSettingsForm() {
             <div className="space-y-1.5">
               <Label
                 htmlFor="baseline-method"
-                className="text-xs text-muted-foreground"
+                className="text-base text-muted-foreground"
               >
                 Method
               </Label>
@@ -410,7 +410,7 @@ export function ThresholdSettingsForm() {
               >
                 <SelectTrigger
                   id="baseline-method"
-                  className="font-mono text-sm"
+                  className="font-mono text-base"
                 >
                   <SelectValue />
                 </SelectTrigger>
@@ -423,7 +423,7 @@ export function ThresholdSettingsForm() {
             <div className="space-y-1.5">
               <Label
                 htmlFor="baseline-min-history"
-                className="text-xs text-muted-foreground"
+                className="text-base text-muted-foreground"
               >
                 Min History (days)
               </Label>
@@ -433,7 +433,7 @@ export function ThresholdSettingsForm() {
                 min={1}
                 step={1}
                 value={currentValues.baseline.min_history_days}
-                className="font-mono tabular-nums"
+                className="font-mono tabular-nums text-base"
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val))
@@ -452,15 +452,15 @@ export function ThresholdSettingsForm() {
           <div key={group.label} className="space-y-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <Icon className="h-4 w-4 text-muted-foreground" />
+                <Icon className="h-5 w-5 text-muted-foreground" />
                 <h4
-                  className="text-sm font-bold uppercase tracking-widest text-foreground"
+                  className="text-lg font-bold uppercase tracking-widest text-foreground"
                   style={{ fontFamily: 'monospace' }}
                 >
                   {group.label}
                 </h4>
               </div>
-              <p className="text-xs text-muted-foreground pl-6">
+              <p className="text-base text-muted-foreground pl-6">
                 {group.description}
               </p>
             </div>
@@ -497,7 +497,7 @@ export function ThresholdSettingsForm() {
       {isDirty && (
         <div className="flex items-center justify-between rounded-lg border-2 border-accent/30 bg-accent/5 px-4 py-3">
           <p
-            className="text-xs font-bold uppercase tracking-widest text-accent"
+            className="text-base font-bold uppercase tracking-widest text-accent"
             style={{ fontFamily: 'monospace' }}
           >
             Unsaved Changes
@@ -506,7 +506,7 @@ export function ThresholdSettingsForm() {
             onClick={() => setShowConfirm(true)}
             disabled={isPending}
             size="sm"
-            className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+            className="h-8 gap-1.5 text-base font-semibold uppercase tracking-wider"
           >
             {isPending ? 'Saving...' : 'Save Changes'}
           </Button>

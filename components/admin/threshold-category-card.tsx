@@ -36,8 +36,8 @@ export function ThresholdCategoryCard({
     <Card
       className={
         enabled
-          ? 'border-2 border-accent/20 transition-all duration-200 hover:border-accent/40'
-          : 'border-2 border-border/30 opacity-50 transition-all duration-200'
+          ? 'border-2 border-accent/30 bg-accent/[0.03] transition-all duration-200 hover:border-accent/50'
+          : 'border-2 border-border/50 transition-all duration-200'
       }
     >
       <CardHeader className="pb-3">
@@ -48,24 +48,25 @@ export function ThresholdCategoryCard({
                 <div className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
               )}
               <CardTitle
-                className="text-sm font-bold uppercase tracking-widest"
+                className="text-base font-bold uppercase tracking-widest"
                 style={{ fontFamily: 'monospace' }}
               >
                 {categoryLabel}
               </CardTitle>
             </div>
-            <p className="text-xs text-muted-foreground">{description}</p>
+            <p className="text-base text-muted-foreground">{description}</p>
           </div>
           <Switch
             checked={enabled}
             onCheckedChange={(checked) => onToggle(categoryKey, checked)}
             aria-label={`Enable ${categoryLabel}`}
+            className="data-[state=checked]:bg-green-500"
           />
         </div>
       </CardHeader>
       {enabled && (
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2">
             {fields.map((field) => {
               const fieldValue = value[field.key];
               const numValue = typeof fieldValue === 'number' ? fieldValue : 0;
@@ -74,7 +75,7 @@ export function ThresholdCategoryCard({
                 <div key={field.key} className="space-y-1.5">
                   <Label
                     htmlFor={`${categoryKey}-${field.key}`}
-                    className="text-xs text-muted-foreground"
+                    className="text-base text-muted-foreground"
                   >
                     {field.label}
                   </Label>
@@ -85,7 +86,7 @@ export function ThresholdCategoryCard({
                     min={field.type === 'percent' ? '0' : undefined}
                     max={field.type === 'percent' ? '100' : undefined}
                     value={numValue}
-                    className="font-mono tabular-nums"
+                    className="font-mono tabular-nums text-base"
                     onChange={(e) => {
                       const parsed =
                         field.type === 'int'
