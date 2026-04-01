@@ -1,40 +1,39 @@
 'use client';
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { Clock, Coins, ShieldAlert } from 'lucide-react';
 
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  SettingsSidebarNav,
+  type SettingsNavItem,
+} from '@/components/admin/settings-sidebar-nav';
+import { Separator } from '@/components/ui/separator';
 
-const SETTINGS_TABS = [
+const sidebarNavItems: SettingsNavItem[] = [
   {
-    value: 'operations',
-    label: 'Casino Operations',
+    title: 'Casino Operations',
     href: '/admin/settings/operations',
+    icon: Clock,
   },
   {
-    value: 'anomaly-detection',
-    label: 'Anomaly Detection',
+    title: 'Anomaly Detection',
     href: '/admin/settings/anomaly-detection',
+    icon: ShieldAlert,
   },
-  { value: 'loyalty', label: 'Loyalty', href: '/admin/settings/loyalty' },
-] as const;
-
-function getActiveTab(pathname: string): string {
-  if (pathname.includes('/anomaly-detection')) return 'anomaly-detection';
-  if (pathname.includes('/loyalty')) return 'loyalty';
-  return 'operations';
-}
+  {
+    title: 'Loyalty',
+    href: '/admin/settings/loyalty',
+    icon: Coins,
+  },
+];
 
 export default function SettingsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  const activeTab = getActiveTab(pathname);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 overflow-hidden">
+      {/* Page header */}
       <div className="space-y-1">
         <h1
           className="text-base font-bold uppercase tracking-widest"
@@ -47,17 +46,17 @@ export default function SettingsLayout({
         </p>
       </div>
 
-      <Tabs value={activeTab}>
-        <TabsList>
-          {SETTINGS_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} asChild>
-              <Link href={tab.href}>{tab.label}</Link>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <Separator />
 
-      {children}
+      {/* Two-column: sidebar nav + content */}
+      <div className="flex flex-1 flex-col space-y-6 overflow-hidden lg:flex-row lg:space-x-12 lg:space-y-0">
+        <aside className="top-0 w-full shrink-0 lg:sticky lg:w-52">
+          <SettingsSidebarNav items={sidebarNavItems} />
+        </aside>
+        <div className="flex w-full min-w-0 flex-1 overflow-y-hidden">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
