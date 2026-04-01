@@ -22,6 +22,8 @@
  * @see SERVICE_RESPONSIBILITY_MATRIX.md
  */
 
+import { randomUUID } from 'crypto';
+
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
@@ -33,6 +35,7 @@ import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Shared test fixtures UUIDs (deterministic for cleanup)
 const TEST_PREFIX = 'test-rs-int'; // rating-slip integration
@@ -60,6 +63,8 @@ describe('RatingSlipService Integration Tests', () => {
   let testTable2Id: string;
   let testInactiveTableId: string;
   let testActorId: string;
+  let authUserId: string;
+  let setupClient: SupabaseClient<Database>;
 
   // Track all created fixtures for cleanup
   const allFixtures: TestFixture[] = [];
@@ -67,15 +72,14 @@ describe('RatingSlipService Integration Tests', () => {
 
   beforeAll(async () => {
     // Use service role client for setup (bypasses RLS)
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    service = createRatingSlipService(supabase);
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // =========================================================================
     // Create shared test fixtures
     // =========================================================================
 
     // 0. Create test companies (ADR-043: company before casino)
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 1` })
       .select()
@@ -84,7 +88,7 @@ describe('RatingSlipService Integration Tests', () => {
     if (companyError) throw companyError;
     testCompanyId = company.id;
 
-    const { data: company2, error: company2Error } = await supabase
+    const { data: company2, error: company2Error } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 2` })
       .select()
@@ -94,7 +98,7 @@ describe('RatingSlipService Integration Tests', () => {
     testCompany2Id = company2.id;
 
     // 1. Create test casino
-    const { data: casino, error: casinoError } = await supabase
+    const { data: casino, error: casinoError } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
@@ -108,7 +112,7 @@ describe('RatingSlipService Integration Tests', () => {
     testCasinoId = casino.id;
 
     // 2. Create second casino for RLS tests
-    const { data: casino2, error: casino2Error2 } = await supabase
+    const { data: casino2, error: casino2Error2 } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
@@ -122,7 +126,7 @@ describe('RatingSlipService Integration Tests', () => {
     testCasino2Id = casino2.id;
 
     // 3. Create casino settings (required for compute_gaming_day)
-    await supabase.from('casino_settings').insert([
+    await setupClient.from('casino_settings').insert([
       {
         casino_id: testCasinoId,
         gaming_day_start_time: '06:00:00',
@@ -140,7 +144,7 @@ describe('RatingSlipService Integration Tests', () => {
     ]);
 
     // 4. Create active gaming table
-    const { data: table, error: tableError } = await supabase
+    const { data: table, error: tableError } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -156,7 +160,7 @@ describe('RatingSlipService Integration Tests', () => {
     testTableId = table.id;
 
     // 5. Create second active table (for multi-table tests)
-    const { data: table2, error: table2Error } = await supabase
+    const { data: table2, error: table2Error } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -172,7 +176,7 @@ describe('RatingSlipService Integration Tests', () => {
     testTable2Id = table2.id;
 
     // 6. Create inactive table (for validation tests)
-    const { data: inactiveTable, error: inactiveTableError } = await supabase
+    const { data: inactiveTable, error: inactiveTableError } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -187,23 +191,79 @@ describe('RatingSlipService Integration Tests', () => {
     if (inactiveTableError) throw inactiveTableError;
     testInactiveTableId = inactiveTable.id;
 
-    // 7. Create test actor (staff - dealer)
-    const { data: actor, error: actorError } = await supabase
+    // =========================================================================
+    // ADR-024 Mode C Auth Setup
+    // =========================================================================
+    const testEmail = `${TEST_PREFIX}-actor@test.com`;
+    const testPassword = 'TestPassword123!';
+
+    // Create auth user with initial metadata
+    const { data: authData, error: authError } =
+      await setupClient.auth.admin.createUser({
+        email: testEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: {
+          casino_id: testCasinoId,
+          staff_role: 'pit_boss',
+        },
+      });
+    if (authError || !authData.user)
+      throw authError ?? new Error('Auth user creation returned null');
+    authUserId = authData.user.id;
+
+    // Create staff record bound to auth user
+    const { data: actor, error: actorError } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasinoId,
+        user_id: authData.user.id,
         employee_id: `${TEST_PREFIX}-001`,
         first_name: 'Test',
         last_name: 'Actor',
-        email: `${TEST_PREFIX}-actor@test.com`,
-        role: 'dealer', // Dealers don't require user_id
+        email: testEmail,
+        role: 'pit_boss',
         status: 'active',
       })
       .select()
       .single();
-
     if (actorError) throw actorError;
     testActorId = actor.id;
+
+    // Stamp staff_id into app_metadata (ADR-024 two-phase)
+    await setupClient.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: testCasinoId,
+        staff_id: actor.id,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // Sign in → get JWT (use throwaway client to avoid mutating setupClient auth state)
+    const signInClient = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
+    const { data: signInData, error: signInError } =
+      await signInClient.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+    if (signInError || !signInData.session)
+      throw signInError ?? new Error('Sign-in returned no session');
+
+    // Create authenticated client (Mode C)
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    service = createRatingSlipService(supabase);
   });
 
   afterAll(async () => {
@@ -211,47 +271,56 @@ describe('RatingSlipService Integration Tests', () => {
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from('rating_slip').delete().eq('id', slipId);
+        await setupClient.from('rating_slip').delete().eq('id', slipId);
       }
       // Delete visit
-      await supabase
+      await setupClient
         .from('rating_slip')
         .delete()
         .eq('visit_id', fixture.visitId);
-      await supabase.from('visit').delete().eq('id', fixture.visitId);
+      await setupClient.from('visit').delete().eq('id', fixture.visitId);
       // Delete player enrollment and player
-      await supabase
+      await setupClient
         .from('player_casino')
         .delete()
         .eq('player_id', fixture.playerId);
-      await supabase
+      await setupClient
         .from('player_loyalty')
         .delete()
         .eq('player_id', fixture.playerId);
-      await supabase.from('player').delete().eq('id', fixture.playerId);
+      await setupClient.from('player').delete().eq('id', fixture.playerId);
     }
 
     // Delete staff
-    await supabase.from('staff').delete().eq('casino_id', testCasinoId);
-    await supabase.from('staff').delete().eq('casino_id', testCasino2Id);
+    await setupClient.from('staff').delete().eq('casino_id', testCasinoId);
+    await setupClient.from('staff').delete().eq('casino_id', testCasino2Id);
 
     // Delete tables
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasinoId);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasino2Id);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasino2Id);
 
     // Delete casino settings and casinos
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasinoId);
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasino2Id);
-    await supabase.from('casino').delete().eq('id', testCasinoId);
-    await supabase.from('casino').delete().eq('id', testCasino2Id);
-    await supabase.from('company').delete().eq('id', testCompanyId);
-    await supabase.from('company').delete().eq('id', testCompany2Id);
+    await setupClient.from('casino').delete().eq('id', testCasinoId);
+    await setupClient.from('casino').delete().eq('id', testCasino2Id);
+    await setupClient.from('company').delete().eq('id', testCompanyId);
+    await setupClient.from('company').delete().eq('id', testCompany2Id);
+
+    // Delete auth user
+    await setupClient.auth.admin.deleteUser(authUserId);
   });
 
   // =========================================================================
@@ -263,7 +332,7 @@ describe('RatingSlipService Integration Tests', () => {
     fixtureCounter++;
 
     // Create unique player
-    const { data: player, error: playerError } = await supabase
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -276,20 +345,24 @@ describe('RatingSlipService Integration Tests', () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: casino,
       status: 'active',
     });
 
     // Create visit
-    const { data: visit, error: visitError } = await supabase
+    const visitId = randomUUID();
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
+        id: visitId,
         player_id: player.id,
         casino_id: casino,
         started_at: new Date().toISOString(),
         ended_at: null,
+        visit_group_id: visitId,
+        gaming_day: '1970-01-01', // Overwritten by compute_gaming_day trigger
       })
       .select()
       .single();
@@ -316,7 +389,7 @@ describe('RatingSlipService Integration Tests', () => {
     fixtureCounter++;
 
     // Create unique player
-    const { data: player, error: playerError } = await supabase
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -329,20 +402,24 @@ describe('RatingSlipService Integration Tests', () => {
     if (playerError) throw playerError;
 
     // Enroll player at casino
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: testCasinoId,
       status: 'active',
     });
 
     // Create closed visit
-    const { data: visit, error: visitError } = await supabase
+    const visitId = randomUUID();
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
+        id: visitId,
         player_id: player.id,
         casino_id: testCasinoId,
         started_at: new Date(Date.now() - 3600000).toISOString(),
         ended_at: new Date().toISOString(),
+        visit_group_id: visitId,
+        gaming_day: '1970-01-01', // Overwritten by compute_gaming_day trigger
       })
       .select()
       .single();
@@ -735,13 +812,17 @@ describe('RatingSlipService Integration Tests', () => {
       // The ghost visit check is done at loyalty accrual time, not at creation time
 
       // Create a ghost visit (no player_id) directly in db
-      const { data: ghostVisit, error: ghostError } = await supabase
+      const ghostVisitId = randomUUID();
+      const { data: ghostVisit, error: ghostError } = await setupClient
         .from('visit')
         .insert({
+          id: ghostVisitId,
           player_id: null, // Ghost visit
           casino_id: testCasinoId,
           started_at: new Date().toISOString(),
           ended_at: null,
+          visit_group_id: ghostVisitId,
+          gaming_day: '1970-01-01', // Overwritten by compute_gaming_day trigger
         })
         .select()
         .single();
@@ -781,11 +862,7 @@ describe('RatingSlipService Integration Tests', () => {
       allFixtures[allFixtures.length - 1].slipIds.push(slip.id);
 
       // Verify slip can be closed (full lifecycle)
-      const closedSlip = await service.close(
-        testCasinoId,
-        testActorId,
-        slip.id,
-      );
+      const closedSlip = await service.close(slip.id);
       expect(closedSlip.status).toBe('closed');
       expect(closedSlip.duration_seconds).toBeGreaterThanOrEqual(0);
     });
@@ -1045,7 +1122,7 @@ describe('RatingSlipService Integration Tests', () => {
   describe('RLS Casino Isolation', () => {
     it('should not find slips from different casino via listForTable', async () => {
       // Create table and slip in casino 2
-      const { data: casino2Table } = await supabase
+      const { data: casino2Table } = await setupClient
         .from('gaming_table')
         .insert({
           casino_id: testCasino2Id,
@@ -1069,7 +1146,7 @@ describe('RatingSlipService Integration Tests', () => {
       }
 
       // Clean up
-      await supabase.from('gaming_table').delete().eq('id', casino2Table.id);
+      await setupClient.from('gaming_table').delete().eq('id', casino2Table.id);
     });
   });
 

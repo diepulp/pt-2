@@ -15,10 +15,11 @@
  * @see EXECUTION-SPEC-PRD-016.md
  */
 
+import { randomUUID } from 'crypto';
+
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-import { DomainError } from '@/lib/errors/domain-errors';
 import type { Database } from '@/types/database.types';
 
 import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
@@ -26,6 +27,7 @@ import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 // Shared test fixtures - use timestamp for uniqueness across runs
 const TEST_RUN_ID = Date.now().toString(36);
@@ -54,6 +56,8 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
   let testTable2Id: string;
   let testTable3Id: string;
   let testActorId: string;
+  let authUserId: string;
+  let setupClient: SupabaseClient<Database>;
 
   // Track all created fixtures for cleanup
   const allFixtures: TestFixture[] = [];
@@ -61,15 +65,14 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
 
   beforeAll(async () => {
     // Use service role client for setup (bypasses RLS)
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    service = createRatingSlipService(supabase);
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
     // =========================================================================
     // Create shared test fixtures
     // =========================================================================
 
     // 0. Create test companies (ADR-043: company before casino)
-    const { data: company, error: companyError } = await supabase
+    const { data: company, error: companyError } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 1` })
       .select()
@@ -78,7 +81,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     if (companyError) throw companyError;
     testCompanyId = company.id;
 
-    const { data: company2, error: company2Error } = await supabase
+    const { data: company2, error: company2Error } = await setupClient
       .from('company')
       .insert({ name: `${TEST_PREFIX} Company 2` })
       .select()
@@ -88,7 +91,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     testCompany2Id = company2.id;
 
     // 1. Create test casino
-    const { data: casino, error: casinoError } = await supabase
+    const { data: casino, error: casinoError } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 1`,
@@ -102,7 +105,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     testCasinoId = casino.id;
 
     // 2. Create second casino for RLS tests
-    const { data: casino2, error: casino2Error2 } = await supabase
+    const { data: casino2, error: casino2Error2 } = await setupClient
       .from('casino')
       .insert({
         name: `${TEST_PREFIX} Casino 2`,
@@ -116,7 +119,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     testCasino2Id = casino2.id;
 
     // 3. Create casino settings (required for compute_gaming_day)
-    await supabase.from('casino_settings').insert([
+    await setupClient.from('casino_settings').insert([
       {
         casino_id: testCasinoId,
         gaming_day_start_time: '06:00:00',
@@ -134,7 +137,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     ]);
 
     // 4. Create active gaming tables
-    const { data: table1 } = await supabase
+    const { data: table1 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -147,7 +150,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       .single();
     testTableId = table1!.id;
 
-    const { data: table2 } = await supabase
+    const { data: table2 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -160,7 +163,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       .single();
     testTable2Id = table2!.id;
 
-    const { data: table3 } = await supabase
+    const { data: table3 } = await setupClient
       .from('gaming_table')
       .insert({
         casino_id: testCasinoId,
@@ -173,31 +176,79 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       .single();
     testTable3Id = table3!.id;
 
-    // 5. Create test actor (staff)
-    const { data: actor, error: actorError } = await supabase
+    // =========================================================================
+    // ADR-024 Mode C Auth Setup
+    // =========================================================================
+    const testEmail = `${TEST_PREFIX}-actor@test.com`;
+    const testPassword = 'TestPassword123!';
+
+    // Create auth user with initial metadata
+    const { data: authData, error: authError } =
+      await setupClient.auth.admin.createUser({
+        email: testEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: {
+          casino_id: testCasinoId,
+          staff_role: 'pit_boss',
+        },
+      });
+    if (authError || !authData.user)
+      throw authError ?? new Error('Auth user creation returned null');
+    authUserId = authData.user.id;
+
+    // Create staff record bound to auth user
+    const { data: actor, error: actorError } = await setupClient
       .from('staff')
       .insert({
         casino_id: testCasinoId,
+        user_id: authData.user.id,
         employee_id: `${TEST_PREFIX}-001`,
         first_name: 'Test',
         last_name: 'Actor',
-        email: `${TEST_PREFIX}-actor@test.com`,
-        role: 'dealer',
+        email: testEmail,
+        role: 'pit_boss',
         status: 'active',
       })
       .select()
       .single();
-
-    if (actorError) {
-      throw new Error(
-        `Failed to create test actor: ${actorError.message}. Tests cannot run without database setup.`,
-      );
-    }
-    if (!actor) {
-      throw new Error('Test actor creation returned null. Tests cannot run.');
-    }
-
+    if (actorError) throw actorError;
     testActorId = actor.id;
+
+    // Stamp staff_id into app_metadata (ADR-024 two-phase)
+    await setupClient.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: testCasinoId,
+        staff_id: actor.id,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // Sign in → get JWT (use throwaway client to avoid mutating setupClient auth state)
+    const signInClient = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
+    const { data: signInData, error: signInError } =
+      await signInClient.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+    if (signInError || !signInData.session)
+      throw signInError ?? new Error('Sign-in returned no session');
+
+    // Create authenticated client (Mode C)
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    service = createRatingSlipService(supabase);
   });
 
   afterAll(async () => {
@@ -205,49 +256,58 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     for (const fixture of allFixtures) {
       // Delete rating slips
       for (const slipId of fixture.slipIds) {
-        await supabase.from('rating_slip').delete().eq('id', slipId);
+        await setupClient.from('rating_slip').delete().eq('id', slipId);
       }
       // Delete visit
-      await supabase
+      await setupClient
         .from('rating_slip')
         .delete()
         .eq('visit_id', fixture.visitId);
-      await supabase.from('visit').delete().eq('id', fixture.visitId);
+      await setupClient.from('visit').delete().eq('id', fixture.visitId);
       // Delete player enrollment and player
       if (fixture.playerId) {
-        await supabase
+        await setupClient
           .from('player_casino')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase
+        await setupClient
           .from('player_loyalty')
           .delete()
           .eq('player_id', fixture.playerId);
-        await supabase.from('player').delete().eq('id', fixture.playerId);
+        await setupClient.from('player').delete().eq('id', fixture.playerId);
       }
     }
 
     // Delete staff
-    await supabase.from('staff').delete().eq('casino_id', testCasinoId);
-    await supabase.from('staff').delete().eq('casino_id', testCasino2Id);
+    await setupClient.from('staff').delete().eq('casino_id', testCasinoId);
+    await setupClient.from('staff').delete().eq('casino_id', testCasino2Id);
 
     // Delete tables
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasinoId);
-    await supabase.from('gaming_table').delete().eq('casino_id', testCasino2Id);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasinoId);
+    await setupClient
+      .from('gaming_table')
+      .delete()
+      .eq('casino_id', testCasino2Id);
 
     // Delete casino settings and casinos
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasinoId);
-    await supabase
+    await setupClient
       .from('casino_settings')
       .delete()
       .eq('casino_id', testCasino2Id);
-    await supabase.from('casino').delete().eq('id', testCasinoId);
-    await supabase.from('casino').delete().eq('id', testCasino2Id);
-    await supabase.from('company').delete().eq('id', testCompanyId);
-    await supabase.from('company').delete().eq('id', testCompany2Id);
+    await setupClient.from('casino').delete().eq('id', testCasinoId);
+    await setupClient.from('casino').delete().eq('id', testCasino2Id);
+    await setupClient.from('company').delete().eq('id', testCompanyId);
+    await setupClient.from('company').delete().eq('id', testCompany2Id);
+
+    // Delete auth user
+    await setupClient.auth.admin.deleteUser(authUserId);
   }, 30000); // Increase timeout for cleanup
 
   // =========================================================================
@@ -256,7 +316,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
   async function createTestFixture(): Promise<TestFixture> {
     fixtureCounter++;
 
-    const { data: player } = await supabase
+    const { data: player } = await setupClient
       .from('player')
       .insert({
         first_name: 'Test',
@@ -266,19 +326,23 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       .select()
       .single();
 
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player!.id,
       casino_id: testCasinoId,
       status: 'active',
     });
 
-    const { data: visit } = await supabase
+    const visitId = randomUUID();
+    const { data: visit } = await setupClient
       .from('visit')
       .insert({
+        id: visitId,
         player_id: player!.id,
         casino_id: testCasinoId,
         started_at: new Date().toISOString(),
         ended_at: null,
+        visit_group_id: visitId,
+        gaming_day: '1970-01-01',
       })
       .select()
       .single();
@@ -379,7 +443,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       const pause2End = new Date(baseTime.getTime() + 500); // 200ms pause
 
       // 1. Start slip (bypass service to control timing)
-      const { data: slip } = await supabase
+      const { data: slip } = await setupClient
         .from('rating_slip')
         .insert({
           casino_id: testCasinoId,
@@ -394,7 +458,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       fixture.slipIds.push(slip!.id);
 
       // 2. Insert two pauses directly (testing compute_slip_final_seconds, not pause service)
-      await supabase.from('rating_slip_pause').insert([
+      await setupClient.from('rating_slip_pause').insert([
         {
           rating_slip_id: slip!.id,
           casino_id: testCasinoId,
@@ -413,7 +477,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
 
       // 3. Close slip
       const endTime = new Date(baseTime.getTime() + 1000); // 1 second total
-      await supabase
+      await setupClient
         .from('rating_slip')
         .update({
           status: 'closed',
@@ -422,7 +486,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
         .eq('id', slip!.id);
 
       // 4. Call compute_slip_final_seconds RPC
-      const { data: finalSeconds } = await supabase.rpc(
+      const { data: finalSeconds } = await setupClient.rpc(
         'compute_slip_final_seconds',
         { p_slip_id: slip!.id },
       );
@@ -447,7 +511,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
       fixture.slipIds.push(slip.id);
 
       // 2. Manually create an open pause (bypass service)
-      await supabase.from('rating_slip_pause').insert({
+      await setupClient.from('rating_slip_pause').insert({
         rating_slip_id: slip.id,
         casino_id: testCasinoId,
         started_at: new Date().toISOString(),
@@ -728,7 +792,7 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
     it('should return null for cross-casino visit query', async () => {
       // Create visit in casino2
       fixtureCounter++;
-      const { data: player } = await supabase
+      const { data: player } = await setupClient
         .from('player')
         .insert({
           first_name: 'Cross',
@@ -738,19 +802,23 @@ describe('RatingSlipService - PRD-016 Continuity (Integration)', () => {
         .select()
         .single();
 
-      await supabase.from('player_casino').insert({
+      await setupClient.from('player_casino').insert({
         player_id: player!.id,
         casino_id: testCasino2Id,
         status: 'active',
       });
 
-      const { data: visit } = await supabase
+      const visitId = randomUUID();
+      const { data: visit } = await setupClient
         .from('visit')
         .insert({
+          id: visitId,
           player_id: player!.id,
           casino_id: testCasino2Id,
           started_at: new Date().toISOString(),
           ended_at: null,
+          visit_group_id: visitId,
+          gaming_day: '1970-01-01',
         })
         .select()
         .single();

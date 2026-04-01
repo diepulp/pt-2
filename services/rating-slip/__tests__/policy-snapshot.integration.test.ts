@@ -25,6 +25,7 @@ import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const TEST_PREFIX = 'test-ps-int'; // policy-snapshot integration
 
@@ -35,6 +36,8 @@ interface TestFixture {
   playerId: string;
   visitId: string;
   slipIds: string[];
+  authToken: string;
+  authUserId: string;
   cleanup: () => Promise<void>;
 }
 
@@ -44,11 +47,18 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
   let fixture: TestFixture;
 
   beforeAll(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    service = createRatingSlipService(supabase);
+    const setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    fixture = await createTestFixture(setupClient);
 
-    // Create complete test fixture
-    fixture = await createTestFixture(supabase);
+    // Create authenticated client (Mode C)
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: { Authorization: `Bearer ${fixture.authToken}` },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    service = createRatingSlipService(supabase);
   });
 
   afterAll(async () => {
@@ -156,14 +166,9 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
       await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Close slip via service
-      const closed = await service.close(
-        fixture.casinoId,
-        fixture.actorId,
-        slip.id,
-        {
-          average_bet: 50,
-        },
-      );
+      const closed = await service.close(slip.id, {
+        average_bet: 50,
+      });
 
       expect(closed).toBeDefined();
       expect(closed.status).toBe('closed');
@@ -352,14 +357,9 @@ describe('Policy Snapshot Integration Tests (ISSUE-752833A6)', () => {
         expect(fullSlip?.accrual_kind).toBe('compliance_only');
 
         // Close slip
-        const closed = await service.close(
-          fixture.casinoId,
-          fixture.actorId,
-          slip.id,
-          {
-            average_bet: 25,
-          },
-        );
+        const closed = await service.close(slip.id, {
+          average_bet: 25,
+        });
 
         expect(closed.status).toBe('closed');
 
@@ -504,11 +504,15 @@ async function createIsolatedVisit(
   });
 
   // Create visit
+  const visitId = randomUUID();
   const { data: visit, error: visitError } = await supabase
     .from('visit')
     .insert({
+      id: visitId,
       player_id: player.id,
       casino_id: fixture.casinoId,
+      visit_group_id: visitId,
+      gaming_day: '1970-01-01',
       started_at: new Date().toISOString(),
       ended_at: null,
     })
@@ -601,15 +605,33 @@ async function createTestFixture(
     point_multiplier: 1.0,
   });
 
-  // 6. Create staff actor
+  // 6. ADR-024 Mode C Auth Setup
+  const testEmail = `${TEST_PREFIX}-auth-${randomUUID().slice(0, 8)}@test.com`;
+  const testPassword = 'TestPassword123!';
+
+  const { data: authData, error: authError } =
+    await supabase.auth.admin.createUser({
+      email: testEmail,
+      password: testPassword,
+      email_confirm: true,
+      app_metadata: {
+        casino_id: casino.id,
+        staff_role: 'pit_boss',
+      },
+    });
+  if (authError || !authData.user)
+    throw new Error(`Failed to create auth user: ${authError?.message}`);
+
+  // Create staff actor bound to auth user
   const { data: actor, error: actorError } = await supabase
     .from('staff')
     .insert({
       casino_id: casino.id,
+      user_id: authData.user.id,
       employee_id: `${TEST_PREFIX}-001`,
       first_name: 'Test',
       last_name: 'Actor',
-      email: `${TEST_PREFIX}-actor@test.com`,
+      email: testEmail,
       role: 'pit_boss',
       status: 'active',
     })
@@ -618,6 +640,27 @@ async function createTestFixture(
 
   if (actorError || !actor)
     throw new Error(`Failed to create actor: ${actorError?.message}`);
+
+  // Stamp staff_id into app_metadata (ADR-024 two-phase)
+  await supabase.auth.admin.updateUserById(authData.user.id, {
+    app_metadata: {
+      casino_id: casino.id,
+      staff_id: actor.id,
+      staff_role: 'pit_boss',
+    },
+  });
+
+  // Sign in → get JWT (use throwaway client to avoid mutating service-role auth state)
+  const signInClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: signInData, error: signInError } =
+    await signInClient.auth.signInWithPassword({
+      email: testEmail,
+      password: testPassword,
+    });
+  if (signInError || !signInData.session)
+    throw new Error(`Failed to sign in: ${signInError?.message}`);
 
   // 7. Create base player (not used directly, but placeholder for fixture)
   const { data: player, error: playerError } = await supabase
@@ -641,13 +684,17 @@ async function createTestFixture(
   });
 
   // 9. Create visit (base visit for fixture - each test creates isolated visits)
+  const baseVisitId = randomUUID();
   const { data: visit, error: visitError } = await supabase
     .from('visit')
     .insert({
+      id: baseVisitId,
       player_id: player.id,
       casino_id: casino.id,
       started_at: new Date().toISOString(),
       ended_at: null,
+      visit_group_id: baseVisitId,
+      gaming_day: '1970-01-01', // Overwritten by compute_gaming_day trigger
     })
     .select()
     .single();
@@ -682,6 +729,8 @@ async function createTestFixture(
     await supabase.from('casino').delete().eq('id', casino.id);
     // Delete company (ADR-043)
     await supabase.from('company').delete().eq('id', company.id);
+    // Delete auth user
+    await supabase.auth.admin.deleteUser(authData.user.id);
   };
 
   return {
@@ -691,6 +740,8 @@ async function createTestFixture(
     playerId: player.id,
     visitId: visit.id,
     slipIds: [],
+    authToken: signInData.session.access_token,
+    authUserId: authData.user.id,
     cleanup,
   };
 }

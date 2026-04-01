@@ -19,6 +19,8 @@
  * @see ADR-015 Connection Pooling Strategy
  */
 
+import { randomUUID } from 'crypto';
+
 import {
   describe,
   it,
@@ -30,17 +32,16 @@ import {
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import { DomainError } from '../../../lib/errors/domain-errors';
-import { injectRLSContext } from '../../../lib/supabase/rls-context';
 import type { Database } from '../../../types/database.types';
 import { createRatingSlipService, RatingSlipServiceInterface } from '../index';
 
 // Test environment
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 describe('Rating Slip Move - Connection Pooling Test', () => {
-  let supabase: SupabaseClient<Database>;
-  let service: RatingSlipServiceInterface;
+  let setupClient: SupabaseClient<Database>;
   let correlationId: string;
 
   beforeAll(() => {
@@ -49,13 +50,12 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
     // Connection pooling behavior is determined by the connection, not the port number.
     // The ADR-015 fix (RPC self-injection) works regardless of pooling mode.
 
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
       },
     });
-    service = createRatingSlipService(supabase);
   });
 
   beforeEach(() => {
@@ -64,20 +64,21 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
   afterEach(async () => {
     // Cleanup after each test
-    await cleanupTestFixtures(supabase, correlationId);
+    await cleanupTestFixtures(setupClient, correlationId);
   });
 
   describe('Move Endpoint Connection Pooling', () => {
     it('should successfully move player between tables with pooling enabled', async () => {
       // Arrange
-      const { casinoId, actorId } = await ensureStaffContext(supabase);
-      const playerId = await createTestPlayer(supabase, casinoId);
-      const visitId = await createTestVisit(supabase, casinoId, playerId);
-      const originTableId = await createTestTable(supabase, casinoId);
-      const destTableId = await createTestTable(supabase, casinoId);
+      const { casinoId, actorId, authedService } =
+        await ensureStaffContext(setupClient);
+      const playerId = await createTestPlayer(setupClient, casinoId);
+      const visitId = await createTestVisit(setupClient, casinoId, playerId);
+      const originTableId = await createTestTable(setupClient, casinoId);
+      const destTableId = await createTestTable(setupClient, casinoId);
 
       // Create rating slip at origin table
-      const originSlip = await service.start(casinoId, actorId, {
+      const originSlip = await authedService.start(casinoId, actorId, {
         visit_id: visitId,
         table_id: originTableId,
         seat_number: '1',
@@ -86,11 +87,11 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act
       // Simulate move endpoint flow
-      const closedSlip = await service.close(originSlip.id, {
+      const closedSlip = await authedService.close(originSlip.id, {
         average_bet: 50.0,
       });
 
-      const newSlip = await service.start(casinoId, actorId, {
+      const newSlip = await authedService.start(casinoId, actorId, {
         visit_id: visitId,
         table_id: destTableId,
         seat_number: '3', // Different seat
@@ -111,26 +112,45 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
     it('should handle concurrent moves with connection pooling', async () => {
       // Arrange
-      const { casinoId, actorId } = await ensureStaffContext(supabase);
+      const { casinoId, actorId, authedService } =
+        await ensureStaffContext(setupClient);
 
       // Create unique players for each fixture (constraint prevents multiple active visits per player)
       const players = await Promise.all([
-        createTestPlayer(supabase, casinoId),
-        createTestPlayer(supabase, casinoId),
-        createTestPlayer(supabase, casinoId),
+        createTestPlayer(setupClient, casinoId),
+        createTestPlayer(setupClient, casinoId),
+        createTestPlayer(setupClient, casinoId),
       ]);
 
       // Create multiple visits and slips for concurrent testing
       const fixtures = await Promise.all([
-        createMoveFixture(supabase, service, casinoId, actorId, players[0]),
-        createMoveFixture(supabase, service, casinoId, actorId, players[1]),
-        createMoveFixture(supabase, service, casinoId, actorId, players[2]),
+        createMoveFixture(
+          setupClient,
+          authedService,
+          casinoId,
+          actorId,
+          players[0],
+        ),
+        createMoveFixture(
+          setupClient,
+          authedService,
+          casinoId,
+          actorId,
+          players[1],
+        ),
+        createMoveFixture(
+          setupClient,
+          authedService,
+          casinoId,
+          actorId,
+          players[2],
+        ),
       ]);
 
       // Act - Run moves concurrently (simulates production load)
       const movePromises = fixtures.map(async (fixture) => {
-        const closedSlip = await service.close(fixture.slipId);
-        const newSlip = await service.start(casinoId, actorId, {
+        const closedSlip = await authedService.close(fixture.slipId);
+        const newSlip = await authedService.start(casinoId, actorId, {
           visit_id: fixture.visitId,
           table_id: fixture.destTableId,
           seat_number: '5',
@@ -151,26 +171,32 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
     it('should preserve context isolation between different casino scoping', async () => {
       // Arrange
-      const { casinoId: casino1Id, actorId: actor1Id } =
-        await ensureStaffContext(supabase);
-      const { casinoId: casino2Id, actorId: actor2Id } =
-        await ensureStaffContext(supabase); // Different casino
+      const {
+        casinoId: casino1Id,
+        actorId: actor1Id,
+        authedService: authedService1,
+      } = await ensureStaffContext(setupClient);
+      const {
+        casinoId: casino2Id,
+        actorId: actor2Id,
+        authedService: authedService2,
+      } = await ensureStaffContext(setupClient); // Different casino
 
-      const player1Id = await createTestPlayer(supabase, casino1Id);
-      const player2Id = await createTestPlayer(supabase, casino2Id);
+      const player1Id = await createTestPlayer(setupClient, casino1Id);
+      const player2Id = await createTestPlayer(setupClient, casino2Id);
 
-      const visit1Id = await createTestVisit(supabase, casino1Id, player1Id);
-      const visit2Id = await createTestVisit(supabase, casino2Id, player2Id);
-      const table1Id = await createTestTable(supabase, casino1Id);
-      const table2Id = await createTestTable(supabase, casino2Id);
+      const visit1Id = await createTestVisit(setupClient, casino1Id, player1Id);
+      const visit2Id = await createTestVisit(setupClient, casino2Id, player2Id);
+      const table1Id = await createTestTable(setupClient, casino1Id);
+      const table2Id = await createTestTable(setupClient, casino2Id);
 
-      const slip1 = await service.start(casino1Id, actor1Id, {
+      const slip1 = await authedService1.start(casino1Id, actor1Id, {
         visit_id: visit1Id,
         table_id: table1Id,
         seat_number: '1',
       });
 
-      const slip2 = await service.start(casino2Id, actor2Id, {
+      const slip2 = await authedService2.start(casino2Id, actor2Id, {
         visit_id: visit2Id,
         table_id: table2Id,
         seat_number: '2',
@@ -178,8 +204,8 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       // Act - Close both slips (different contexts)
       const [closed1, closed2] = await Promise.all([
-        service.close(slip1.id),
-        service.close(slip2.id),
+        authedService1.close(slip1.id),
+        authedService2.close(slip2.id),
       ]);
 
       // Assert - Each slip closed with correct context
@@ -193,12 +219,13 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
     it('should handle RPC retry with fresh connection from pool', async () => {
       // Arrange
-      const { casinoId, actorId } = await ensureStaffContext(supabase);
-      const playerId = await createTestPlayer(supabase, casinoId);
-      const visitId = await createTestVisit(supabase, casinoId, playerId);
-      const tableId = await createTestTable(supabase, casinoId);
+      const { casinoId, actorId, authedService } =
+        await ensureStaffContext(setupClient);
+      const playerId = await createTestPlayer(setupClient, casinoId);
+      const visitId = await createTestVisit(setupClient, casinoId, playerId);
+      const tableId = await createTestTable(setupClient, casinoId);
 
-      const slip = await service.start(casinoId, actorId, {
+      const slip = await authedService.start(casinoId, actorId, {
         visit_id: visitId,
         table_id: tableId,
       });
@@ -208,7 +235,7 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 
       let error: DomainError | null = null;
       try {
-        await service.close(slip.id);
+        await authedService.close(slip.id);
       } catch (e) {
         error = e as DomainError;
       }
@@ -222,13 +249,20 @@ describe('Rating Slip Move - Connection Pooling Test', () => {
 // Helper functions (test fixtures)
 // NOTE: supabase parameter is required as these are defined outside the describe block
 
-async function ensureStaffContext(
-  supabase: SupabaseClient<Database>,
-): Promise<{ casinoId: string; actorId: string; userId: string }> {
-  // Create a test user with staff metadata
+async function ensureStaffContext(supabase: SupabaseClient<Database>): Promise<{
+  casinoId: string;
+  actorId: string;
+  userId: string;
+  authedClient: SupabaseClient<Database>;
+  authedService: RatingSlipServiceInterface;
+}> {
+  const testEmail = `test-staff-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@test.com`;
+  const testPassword = 'TestPassword123!';
+
+  // Create a test user with initial metadata
   const { data, error } = await supabase.auth.admin.createUser({
-    email: `test-staff-${Date.now()}@test.com`,
-    password: 'test123',
+    email: testEmail,
+    password: testPassword,
     email_confirm: true,
     app_metadata: {
       staff_role: 'pit_boss',
@@ -237,10 +271,23 @@ async function ensureStaffContext(
 
   if (error) throw error;
 
+  // Create a test company (ADR-043: company before casino)
+  const { data: company, error: companyError } = await supabase
+    .from('company')
+    .insert({ name: `Test Company ${Date.now()}` })
+    .select()
+    .single();
+
+  if (companyError) throw companyError;
+
   // Create a test casino
   const { data: casino, error: casinoError } = await supabase
     .from('casino')
-    .insert({ name: `Test Casino ${Date.now()}`, status: 'active' })
+    .insert({
+      name: `Test Casino ${Date.now()}`,
+      status: 'active',
+      company_id: company.id,
+    })
     .select()
     .single();
 
@@ -272,10 +319,41 @@ async function ensureStaffContext(
 
   if (staffError) throw staffError;
 
+  // Stamp staff_id into app_metadata (ADR-024 two-phase)
+  await supabase.auth.admin.updateUserById(data.user.id, {
+    app_metadata: {
+      casino_id: casino.id,
+      staff_id: staff.id,
+      staff_role: 'pit_boss',
+    },
+  });
+
+  // Sign in to get JWT with stamped claims (throwaway client to avoid mutating service-role auth state)
+  const signInClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const { data: signInData, error: signInError } =
+    await signInClient.auth.signInWithPassword({
+      email: testEmail,
+      password: testPassword,
+    });
+  if (signInError || !signInData.session)
+    throw signInError ?? new Error('Sign-in failed');
+
+  // Create authenticated client (Mode C)
+  const authedClient = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+    global: {
+      headers: { Authorization: `Bearer ${signInData.session.access_token}` },
+    },
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
   return {
     casinoId: casino.id,
     actorId: staff.id,
     userId: data.user.id,
+    authedClient,
+    authedService: createRatingSlipService(authedClient),
   };
 }
 
@@ -310,11 +388,15 @@ async function createTestVisit(
   casinoId: string,
   playerId: string,
 ): Promise<string> {
+  const visitId = randomUUID();
   const { data, error } = await supabase
     .from('visit')
     .insert({
+      id: visitId,
       player_id: playerId,
       casino_id: casinoId,
+      visit_group_id: visitId,
+      gaming_day: '1970-01-01',
     })
     .select('id')
     .single();
@@ -344,7 +426,7 @@ async function createTestTable(
 
 async function createMoveFixture(
   supabase: SupabaseClient<Database>,
-  service: RatingSlipServiceInterface,
+  authedService: RatingSlipServiceInterface,
   casinoId: string,
   actorId: string,
   playerId: string,
@@ -353,7 +435,7 @@ async function createMoveFixture(
   const originTableId = await createTestTable(supabase, casinoId);
   const destTableId = await createTestTable(supabase, casinoId);
 
-  const slip = await service.start(casinoId, actorId, {
+  const slip = await authedService.start(casinoId, actorId, {
     visit_id: visitId,
     table_id: originTableId,
   });
