@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Loyalty Accrual Lifecycle Integration Tests
  *
@@ -10,10 +12,10 @@
  * 3. Player balance updates (current_balance)
  * 4. Theo and points calculation accuracy
  *
- * APPROACH: Uses direct SQL operations (service client) to:
- * - Bypass RPC auth requirements (ADR-024 requires auth.uid())
- * - Focus on business logic verification, not RLS enforcement
- * - Test the accrual calculation formula directly
+ * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation,
+ * authenticated anon client reserved for RPC operations if needed.
+ * This suite uses direct SQL for simulation so most operations remain on
+ * setupClient. The auth user + staff are created for ADR-024 consistency.
  *
  * @see ISSUE-47B1DFF1 Loyalty accrual never called on rating slip close
  * @see ADR-024 RLS Context Self-Injection Remediation
@@ -41,8 +43,9 @@ import type { Database } from '@/types/database.types';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const TEST_PREFIX = 'test-lac-int'; // loyalty-accrual-lifecycle integration
+const TEST_PREFIX = 'test-lac-mc'; // loyalty-accrual-lifecycle Mode C
 
 // Policy values used in calculations (must match fixture setup)
 const POLICY = {
@@ -58,7 +61,7 @@ const POLICY = {
 
 /**
  * Calculate theoretical win (theo) based on policy snapshot values.
- * Formula: avg_bet × (house_edge/100) × (duration_hours) × decisions_per_hour
+ * Formula: avg_bet * (house_edge/100) * (duration_hours) * decisions_per_hour
  */
 function calculateTheo(
   avgBet: number,
@@ -72,7 +75,7 @@ function calculateTheo(
 
 /**
  * Calculate loyalty points from theo.
- * Formula: ROUND(theo × points_conversion_rate × point_multiplier)
+ * Formula: ROUND(theo * points_conversion_rate * point_multiplier)
  */
 function calculatePoints(
   theo: number,
@@ -90,6 +93,7 @@ interface TestFixture {
   casinoId: string;
   tableId: string;
   actorId: string;
+  authUserId: string;
   cleanup: () => Promise<void>;
 }
 
@@ -115,6 +119,7 @@ interface RatingSlipData {
 // ============================================================================
 
 describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
+  let setupClient: SupabaseClient<Database>;
   let supabase: SupabaseClient<Database>;
   let fixture: TestFixture;
   let playerCounter = 0;
@@ -126,15 +131,78 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       );
     }
 
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
-    fixture = await createTestFixture(supabase);
-  });
+    // Phase 1: Service-role client for fixture setup
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+
+    // Phase 2-6: Create fixtures and Mode C auth user
+    fixture = await createTestFixture(setupClient);
+
+    // Phase 7: Create authenticated anon client (Mode C ADR-024)
+    const signInClient = createClient<Database>(supabaseUrl, supabaseServiceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+    const testEmail = `${TEST_PREFIX}-actor-${Date.now()}@test.local`;
+    const testPassword = 'TestPassword123!';
+
+    const { data: authData, error: authError } =
+      await setupClient.auth.admin.createUser({
+        email: testEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: {
+          casino_id: fixture.casinoId,
+          staff_role: 'pit_boss',
+        },
+      });
+
+    if (authError || !authData.user) {
+      throw new Error(`Failed to create auth user: ${authError?.message}`);
+    }
+
+    fixture.authUserId = authData.user.id;
+
+    // Stamp staff_id back to auth user (two-phase ADR-024)
+    await setupClient.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: fixture.casinoId,
+        staff_id: fixture.actorId,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // Link staff to auth user
+    await setupClient
+      .from('staff')
+      .update({ user_id: authData.user.id })
+      .eq('id', fixture.actorId);
+
+    // Sign in to get JWT
+    const { data: signInData, error: signInError } =
+      await signInClient.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+
+    if (signInError || !signInData.session) {
+      throw new Error(`Failed to sign in: ${signInError?.message}`);
+    }
+
+    // Create authenticated anon client with JWT
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${signInData.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+  }, 30_000);
 
   afterAll(async () => {
     if (fixture?.cleanup) {
       await fixture.cleanup();
     }
-  });
+  }, 15_000);
 
   // ==========================================================================
   // Helper: Create isolated player with visit and loyalty account
@@ -142,8 +210,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   async function createTestPlayer(): Promise<TestPlayer> {
     playerCounter++;
 
-    // 1. Create player
-    const { data: player, error: playerError } = await supabase
+    // 1. Create player (setupClient — fixture creation)
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Loyalty',
@@ -158,14 +226,14 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
     }
 
     // 2. Link player to casino
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: fixture.casinoId,
       status: 'active',
     });
 
     // 3. Create player_loyalty record (required for accrual)
-    await supabase.from('player_loyalty').insert({
+    await setupClient.from('player_loyalty').insert({
       player_id: player.id,
       casino_id: fixture.casinoId,
       current_balance: 0,
@@ -174,7 +242,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
     // 4. Create active visit
     const visitGroupId = randomUUID();
-    const { data: visit, error: visitError } = await supabase
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
         player_id: player.id,
@@ -193,12 +261,24 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
     // Cleanup function
     const cleanup = async () => {
-      await supabase.from('loyalty_ledger').delete().eq('player_id', player.id);
-      await supabase.from('rating_slip').delete().eq('visit_id', visit.id);
-      await supabase.from('visit').delete().eq('id', visit.id);
-      await supabase.from('player_loyalty').delete().eq('player_id', player.id);
-      await supabase.from('player_casino').delete().eq('player_id', player.id);
-      await supabase.from('player').delete().eq('id', player.id);
+      await setupClient
+        .from('loyalty_ledger')
+        .delete()
+        .eq('player_id', player.id);
+      await setupClient
+        .from('rating_slip')
+        .delete()
+        .eq('visit_id', visit.id);
+      await setupClient.from('visit').delete().eq('id', visit.id);
+      await setupClient
+        .from('player_loyalty')
+        .delete()
+        .eq('player_id', player.id);
+      await setupClient
+        .from('player_casino')
+        .delete()
+        .eq('player_id', player.id);
+      await setupClient.from('player').delete().eq('id', player.id);
     };
 
     return {
@@ -232,7 +312,12 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       captured_at: startTime.toISOString(),
     };
 
-    const { error: slipError } = await supabase.from('rating_slip').insert({
+    // Calculate computed_theo_cents (required by chk_closed_slip_has_theo constraint)
+    const theo = calculateTheo(avgBet, durationSeconds);
+    const computedTheoCents = Math.max(Math.round(theo * 100), 0);
+
+    // setupClient — fixture creation (direct INSERT bypasses RLS)
+    const { error: slipError } = await setupClient.from('rating_slip').insert({
       id: slipId,
       casino_id: fixture.casinoId,
       visit_id: player.visitId,
@@ -245,6 +330,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       duration_seconds: durationSeconds,
       policy_snapshot: policySnapshot,
       accrual_kind: 'loyalty',
+      computed_theo_cents: computedTheoCents,
     });
 
     if (slipError) {
@@ -264,85 +350,10 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
   }
 
   // ==========================================================================
-  // Helper: Create loyalty ledger entry (simulating what RPC does)
-  // ==========================================================================
-  async function createLoyaltyLedgerEntry(
-    slip: RatingSlipData,
-    idempotencyKey: string,
-  ): Promise<{
-    ledgerId: string;
-    pointsDelta: number;
-    theo: number;
-    balanceAfter: number;
-  }> {
-    // Calculate theo and points using the formula
-    const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
-    const pointsDelta = calculatePoints(theo);
-
-    // Insert ledger entry
-    const { data: ledgerEntry, error: ledgerError } = await supabase
-      .from('loyalty_ledger')
-      .insert({
-        casino_id: slip.casinoId,
-        player_id: slip.playerId,
-        rating_slip_id: slip.id,
-        visit_id: slip.visitId,
-        points_delta: pointsDelta,
-        reason: 'base_accrual',
-        idempotency_key: idempotencyKey,
-        source_kind: 'rating_slip',
-        source_id: slip.id,
-        metadata: {
-          theo,
-          avg_bet: slip.averageBet,
-          duration_seconds: slip.durationSeconds,
-          policy_snapshot: slip.policySnapshot,
-        },
-      })
-      .select()
-      .single();
-
-    if (ledgerError) {
-      throw new Error(`Failed to create ledger entry: ${ledgerError.message}`);
-    }
-
-    // Update player balance
-    const { data: balance, error: balanceError } = await supabase
-      .from('player_loyalty')
-      .update({ current_balance: supabase.rpc as unknown }) // Will use raw SQL below
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId)
-      .select()
-      .single();
-
-    // Use raw SQL to increment balance atomically
-
-    const { error: updateError } = await supabase.rpc('execute_sql' as string, {
-      query: `
-        UPDATE player_loyalty
-        SET current_balance = current_balance + ${pointsDelta}
-        WHERE player_id = '${slip.playerId}' AND casino_id = '${slip.casinoId}'
-      `,
-    });
-
-    // Get updated balance
-    const { data: updatedBalance } = await supabase
-      .from('player_loyalty')
-      .select('current_balance')
-      .eq('player_id', slip.playerId)
-      .eq('casino_id', slip.casinoId)
-      .single();
-
-    return {
-      ledgerId: ledgerEntry!.id,
-      pointsDelta,
-      theo,
-      balanceAfter: updatedBalance?.current_balance ?? pointsDelta,
-    };
-  }
-
-  // ==========================================================================
   // Helper: Simulate accrual and update balance directly
+  // Uses setupClient (service-role) for direct table manipulation.
+  // This simulates what rpc_accrue_on_close does, but via direct SQL
+  // to focus on business logic verification.
   // ==========================================================================
   async function simulateAccrual(
     slip: RatingSlipData,
@@ -354,8 +365,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
     balanceAfter: number;
     isExisting: boolean;
   }> {
-    // Check for existing entry with same idempotency key
-    const { data: existingEntry } = await supabase
+    // Check for existing entry with same idempotency key (setupClient — verification)
+    const { data: existingEntry } = await setupClient
       .from('loyalty_ledger')
       .select('*')
       .eq('idempotency_key', idempotencyKey)
@@ -363,7 +374,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
     if (existingEntry) {
       // Get current balance
-      const { data: balance } = await supabase
+      const { data: balance } = await setupClient
         .from('player_loyalty')
         .select('current_balance')
         .eq('player_id', slip.playerId)
@@ -383,8 +394,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
     const theo = calculateTheo(slip.averageBet, slip.durationSeconds);
     const pointsDelta = calculatePoints(theo);
 
-    // Insert ledger entry
-    const { data: ledgerEntry, error: ledgerError } = await supabase
+    // Insert ledger entry (setupClient — direct SQL simulation)
+    const { data: ledgerEntry, error: ledgerError } = await setupClient
       .from('loyalty_ledger')
       .insert({
         casino_id: slip.casinoId,
@@ -410,8 +421,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       throw new Error(`Failed to create ledger entry: ${ledgerError.message}`);
     }
 
-    // Get current balance and update
-    const { data: currentBalance } = await supabase
+    // Get current balance and update (setupClient — direct SQL simulation)
+    const { data: currentBalance } = await setupClient
       .from('player_loyalty')
       .select('current_balance')
       .eq('player_id', slip.playerId)
@@ -420,7 +431,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
     const newBalance = (currentBalance?.current_balance ?? 0) + pointsDelta;
 
-    await supabase
+    await setupClient
       .from('player_loyalty')
       .update({ current_balance: newBalance })
       .eq('player_id', slip.playerId)
@@ -474,8 +485,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       expect(result.balanceAfter).toBe(result.pointsDelta);
       expect(result.isExisting).toBe(false);
 
-      // 2. Verify loyalty_ledger entry in database
-      const { data: ledgerEntry } = await supabase
+      // 2. Verify loyalty_ledger entry in database (setupClient — verification)
+      const { data: ledgerEntry } = await setupClient
         .from('loyalty_ledger')
         .select('*')
         .eq('id', result.ledgerId)
@@ -488,8 +499,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       expect(ledgerEntry!.reason).toBe('base_accrual');
       expect(ledgerEntry!.points_delta).toBe(result.pointsDelta);
 
-      // 3. Verify player_loyalty balance in database
-      const { data: balance } = await supabase
+      // 3. Verify player_loyalty balance in database (setupClient — verification)
+      const { data: balance } = await setupClient
         .from('player_loyalty')
         .select('current_balance')
         .eq('player_id', testPlayer.id)
@@ -505,8 +516,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       const durationSeconds = 7200; // 2 hours
 
       // Expected calculation:
-      // theo = 50 × (1.5/100) × 2 × 70 = 105 cents
-      // points = ROUND(105 × 10) = 1050
+      // theo = 50 * (1.5/100) * 2 * 70 = 105 cents
+      // points = ROUND(105 * 10) = 1050
       const expectedTheo = calculateTheo(avgBet, durationSeconds);
       const expectedPoints = calculatePoints(expectedTheo);
 
@@ -556,8 +567,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       expect(secondResult.ledgerId).toBe(firstResult.ledgerId);
       expect(secondResult.pointsDelta).toBe(firstResult.pointsDelta);
 
-      // Verify only one ledger entry exists
-      const { data: entries } = await supabase
+      // Verify only one ledger entry exists (setupClient — verification)
+      const { data: entries } = await setupClient
         .from('loyalty_ledger')
         .select('id')
         .eq('rating_slip_id', slip.id);
@@ -573,8 +584,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       await simulateAccrual(slip, idempotencyKey);
       await simulateAccrual(slip, idempotencyKey);
 
-      // Balance should equal single accrual
-      const { data: balance } = await supabase
+      // Balance should equal single accrual (setupClient — verification)
+      const { data: balance } = await setupClient
         .from('player_loyalty')
         .select('current_balance')
         .eq('player_id', testPlayer.id)
@@ -615,7 +626,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 
       const expectedTotal = results.reduce((sum, r) => sum + r.pointsDelta, 0);
 
-      const { data: balance } = await supabase
+      // Verify accumulated balance (setupClient — verification)
+      const { data: balance } = await setupClient
         .from('player_loyalty')
         .select('current_balance')
         .eq('player_id', testPlayer.id)
@@ -655,7 +667,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       const slip = await createClosedRatingSlip(testPlayer, 100, 60);
       const result = await simulateAccrual(slip, randomUUID());
 
-      // Expected: 100 × 0.015 × (1/60) × 70 = 1.75 cents → 18 points
+      // Expected: 100 * 0.015 * (1/60) * 70 = 1.75 cents -> 18 points
       const expectedTheo = calculateTheo(100, 60);
       const expectedPoints = calculatePoints(expectedTheo);
 
@@ -668,7 +680,7 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       const slip = await createClosedRatingSlip(testPlayer, 50000, 14400);
       const result = await simulateAccrual(slip, randomUUID());
 
-      // Expected: 50000 × 0.015 × 4 × 70 = 210000 cents → 2,100,000 points
+      // Expected: 50000 * 0.015 * 4 * 70 = 210000 cents -> 2,100,000 points
       const expectedTheo = calculateTheo(50000, 14400);
       const expectedPoints = calculatePoints(expectedTheo);
 
@@ -704,8 +716,8 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
       );
       const result = await simulateAccrual(slip, randomUUID());
 
-      // Verify metadata contains calculation details
-      const { data: ledgerEntry } = await supabase
+      // Verify metadata contains calculation details (setupClient — verification)
+      const { data: ledgerEntry } = await setupClient
         .from('loyalty_ledger')
         .select('metadata')
         .eq('id', result.ledgerId)
@@ -726,10 +738,10 @@ describe('Loyalty Accrual Lifecycle Integration Tests (ISSUE-47B1DFF1)', () => {
 // ============================================================================
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>,
+  setupClient: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create company (ADR-043: company before casino)
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error: companyError } = await setupClient
     .from('company')
     .insert({ name: `${TEST_PREFIX} Company ${Date.now()}` })
     .select()
@@ -740,7 +752,7 @@ async function createTestFixture(
   }
 
   // 2. Create casino
-  const { data: casino, error: casinoError } = await supabase
+  const { data: casino, error: casinoError } = await setupClient
     .from('casino')
     .insert({
       name: `${TEST_PREFIX} Casino ${Date.now()}`,
@@ -755,7 +767,7 @@ async function createTestFixture(
   }
 
   // 3. Create casino settings
-  await supabase.from('casino_settings').insert({
+  await setupClient.from('casino_settings').insert({
     casino_id: casino.id,
     gaming_day_start_time: '06:00:00',
     timezone: 'America/Los_Angeles',
@@ -764,7 +776,7 @@ async function createTestFixture(
   });
 
   // 4. Create gaming table
-  const { data: table, error: tableError } = await supabase
+  const { data: table, error: tableError } = await setupClient
     .from('gaming_table')
     .insert({
       casino_id: casino.id,
@@ -781,7 +793,7 @@ async function createTestFixture(
   }
 
   // 5. Create game_settings for blackjack with known policy values
-  await supabase.from('game_settings').insert({
+  await setupClient.from('game_settings').insert({
     casino_id: casino.id,
     game_type: 'blackjack',
     name: 'Blackjack Standard',
@@ -792,7 +804,7 @@ async function createTestFixture(
   });
 
   // 6. Create staff actor (required for audit trail)
-  const { data: actor, error: actorError } = await supabase
+  const { data: actor, error: actorError } = await setupClient
     .from('staff')
     .insert({
       casino_id: casino.id,
@@ -810,26 +822,52 @@ async function createTestFixture(
     throw new Error(`Failed to create actor: ${actorError?.message}`);
   }
 
-  // Cleanup function
+  // Cleanup function (reverse dependency order)
   const cleanup = async () => {
-    await supabase.from('loyalty_ledger').delete().eq('casino_id', casino.id);
-    await supabase.from('rating_slip').delete().eq('casino_id', casino.id);
-    await supabase.from('visit').delete().eq('casino_id', casino.id);
-    await supabase.from('player_loyalty').delete().eq('casino_id', casino.id);
-    await supabase.from('player_casino').delete().eq('casino_id', casino.id);
-    await supabase.from('player').delete().like('last_name', 'Test%');
-    await supabase.from('staff').delete().eq('id', actor.id);
-    await supabase.from('game_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('gaming_table').delete().eq('id', table.id);
-    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('casino').delete().eq('id', casino.id);
-    await supabase.from('company').delete().eq('id', company.id);
+    await setupClient
+      .from('loyalty_ledger')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient
+      .from('rating_slip')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('visit').delete().eq('casino_id', casino.id);
+    await setupClient
+      .from('player_loyalty')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient
+      .from('player_casino')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('player').delete().like('last_name', 'Test%');
+    // Delete auth user if created
+    if (fixture?.authUserId) {
+      await setupClient.auth.admin.deleteUser(fixture.authUserId);
+    }
+    await setupClient.from('staff').delete().eq('id', actor.id);
+    await setupClient
+      .from('game_settings')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('gaming_table').delete().eq('id', table.id);
+    await setupClient
+      .from('casino_settings')
+      .delete()
+      .eq('casino_id', casino.id);
+    await setupClient.from('casino').delete().eq('id', casino.id);
+    await setupClient.from('company').delete().eq('id', company.id);
   };
 
-  return {
+  // Note: authUserId is set in beforeAll after auth user creation
+  const fixture: TestFixture = {
     casinoId: casino.id,
     tableId: table.id,
     actorId: actor.id,
+    authUserId: '', // set in beforeAll
     cleanup,
   };
+
+  return fixture;
 }

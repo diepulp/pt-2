@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Points Accrual Calculation Integration Tests (ISSUE-752833A6)
  *
@@ -5,10 +7,13 @@
  * Validates the theo and points formulas from ADR-019:
  *
  * Theo formula:
- *   theo = avg_bet × (house_edge/100) × (duration_seconds/3600) × decisions_per_hour
+ *   theo = avg_bet * (house_edge/100) * (duration_seconds/3600) * decisions_per_hour
  *
  * Points formula:
- *   points = ROUND(theo × points_conversion_rate)
+ *   points = ROUND(theo * points_conversion_rate)
+ *
+ * AUTH: Mode C (ADR-024) — setupClient (service-role) for fixture creation/teardown,
+ * authenticated anon client for RPC and service operations under test.
  *
  * Test Strategy:
  * - Create rating slips via service (populates policy_snapshot.loyalty)
@@ -18,6 +23,7 @@
  *
  * @see ISSUE-752833A6 Policy Snapshot Remediation
  * @see ADR-019 Loyalty Points Policy
+ * @see ADR-024 RLS Context Self-Injection Remediation
  */
 
 import { randomUUID } from 'crypto';
@@ -38,10 +44,11 @@ import {
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const TEST_PREFIX = 'test-pac-int'; // points-accrual-calculation integration
+const TEST_PREFIX = 'test-pac-mc'; // points-accrual-calculation Mode C
 
-// Tolerance for floating point comparison (±0.01 for theo, ±1 for points)
+// Tolerance for floating point comparison
 const THEO_TOLERANCE = 0.01;
 const POINTS_TOLERANCE = 1;
 
@@ -86,6 +93,7 @@ interface TestFixture {
   casinoId: string;
   tableId: string;
   actorId: string;
+  authUserId: string;
   cleanup: () => Promise<void>;
 }
 
@@ -99,73 +107,100 @@ interface IsolatedVisit {
 // ============================================================================
 
 describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => {
+  let setupClient: SupabaseClient<Database>;
   let supabase: SupabaseClient<Database>;
   let service: RatingSlipServiceInterface;
   let fixture: TestFixture;
   let visitCounter = 0;
 
   beforeAll(async () => {
-    supabase = createClient<Database>(supabaseUrl, supabaseServiceKey);
+    // Phase 1: Service-role client for fixture setup
+    setupClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
+
+    // Phase 2: Create shared test fixtures
+    fixture = await createTestFixture(setupClient);
+
+    // Phase 3: Create Mode C auth user (ADR-024)
+    const testEmail = `${TEST_PREFIX}-actor-${Date.now()}@test.local`;
+    const testPassword = 'TestPassword123!';
+
+    const { data: authData, error: authError } =
+      await setupClient.auth.admin.createUser({
+        email: testEmail,
+        password: testPassword,
+        email_confirm: true,
+        app_metadata: {
+          casino_id: fixture.casinoId,
+          staff_role: 'pit_boss',
+        },
+      });
+
+    if (authError || !authData.user) {
+      throw new Error(`Failed to create auth user: ${authError?.message}`);
+    }
+
+    fixture.authUserId = authData.user.id;
+
+    // Stamp staff_id back to auth user (two-phase ADR-024)
+    await setupClient.auth.admin.updateUserById(authData.user.id, {
+      app_metadata: {
+        casino_id: fixture.casinoId,
+        staff_id: fixture.actorId,
+        staff_role: 'pit_boss',
+      },
+    });
+
+    // Link staff to auth user
+    await setupClient
+      .from('staff')
+      .update({ user_id: authData.user.id })
+      .eq('id', fixture.actorId);
+
+    // Phase 4: Sign in to get JWT
+    const signInClient = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceKey,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+
+    const { data: signInData, error: signInError } =
+      await signInClient.auth.signInWithPassword({
+        email: testEmail,
+        password: testPassword,
+      });
+
+    if (signInError || !signInData.session) {
+      throw new Error(`Failed to sign in: ${signInError?.message}`);
+    }
+
+    // Phase 5: Create authenticated anon client with JWT
+    supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          Authorization: `Bearer ${signInData.session.access_token}`,
+        },
+      },
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Phase 6: Create service with authenticated client
     service = createRatingSlipService(supabase);
-    fixture = await createTestFixture(supabase);
-  });
+  }, 30_000);
 
   afterAll(async () => {
     if (fixture?.cleanup) {
       await fixture.cleanup();
     }
-
-    // Output telemetry summary
-    console.log('\n');
-    console.log('═'.repeat(80));
-    console.log('📊 POINTS ACCRUAL CALCULATION TELEMETRY REPORT');
-    console.log('═'.repeat(80));
-    console.log(`Timestamp: ${new Date().toISOString()}`);
-    console.log(`Issue: ISSUE-752833A6`);
-    console.log(`Total Tests: ${telemetryResults.length}`);
-    console.log(`Passed: ${telemetryResults.filter((t) => t.passed).length}`);
-    console.log(`Failed: ${telemetryResults.filter((t) => !t.passed).length}`);
-    console.log('─'.repeat(80));
-
-    for (const result of telemetryResults) {
-      console.log(`\n📌 ${result.scenario}`);
-      console.log(`   Test: ${result.testName}`);
-      console.log(`   Status: ${result.passed ? '✅ PASS' : '❌ FAIL'}`);
-      console.log(`   Execution: ${result.executionTimeMs}ms`);
-      console.log(`   Inputs:`);
-      console.log(`     avg_bet: $${result.inputs.avgBet}`);
-      console.log(`     house_edge: ${result.inputs.houseEdge}%`);
-      console.log(`     decisions/hr: ${result.inputs.decisionsPerHour}`);
-      console.log(
-        `     conversion_rate: ${result.inputs.pointsConversionRate}`,
-      );
-      console.log(
-        `     duration: ${result.inputs.durationSeconds}s (${(result.inputs.durationSeconds / 3600).toFixed(2)}h)`,
-      );
-      console.log(`   Expected:`);
-      console.log(`     theo: $${result.expected.theo.toFixed(4)}`);
-      console.log(`     points: ${result.expected.points}`);
-      console.log(`   Actual:`);
-      console.log(`     theo: $${result.actual.theo.toFixed(4)}`);
-      console.log(`     points: ${result.actual.points}`);
-      console.log(`     balance_after: ${result.actual.balanceAfter}`);
-      console.log(`   Variance:`);
-      console.log(`     theo_delta: ${result.variance.theoDelta.toFixed(6)}`);
-      console.log(`     points_delta: ${result.variance.pointsDelta}`);
-    }
-
-    console.log('\n' + '═'.repeat(80));
-    console.log('END TELEMETRY REPORT');
-    console.log('═'.repeat(80) + '\n');
-  });
+  }, 15_000);
 
   // ==========================================================================
   // Helper: Create isolated visit with unique player
+  // Uses setupClient — fixture creation
   // ==========================================================================
   async function createIsolatedVisit(): Promise<IsolatedVisit> {
     visitCounter++;
 
-    const { data: player, error: playerError } = await supabase
+    const { data: player, error: playerError } = await setupClient
       .from('player')
       .insert({
         first_name: 'Accrual',
@@ -179,13 +214,21 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       throw new Error(`Failed to create player: ${playerError?.message}`);
     }
 
-    await supabase.from('player_casino').insert({
+    await setupClient.from('player_casino').insert({
       player_id: player.id,
       casino_id: fixture.casinoId,
       status: 'active',
     });
 
-    const { data: visit, error: visitError } = await supabase
+    // Create player_loyalty record (required by rpc_accrue_on_close)
+    await setupClient.from('player_loyalty').insert({
+      player_id: player.id,
+      casino_id: fixture.casinoId,
+      current_balance: 0,
+      tier: 'bronze',
+    });
+
+    const { data: visit, error: visitError } = await setupClient
       .from('visit')
       .insert({
         player_id: player.id,
@@ -205,23 +248,24 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 
   // ==========================================================================
   // Helper: Cleanup isolated visit
+  // Uses setupClient — fixture teardown
   // ==========================================================================
   async function cleanupIsolatedVisit(visit: IsolatedVisit): Promise<void> {
-    await supabase
+    await setupClient
       .from('loyalty_ledger')
       .delete()
       .eq('player_id', visit.playerId);
-    await supabase.from('rating_slip').delete().eq('visit_id', visit.id);
-    await supabase.from('visit').delete().eq('id', visit.id);
-    await supabase
+    await setupClient.from('rating_slip').delete().eq('visit_id', visit.id);
+    await setupClient.from('visit').delete().eq('id', visit.id);
+    await setupClient
       .from('player_loyalty')
       .delete()
       .eq('player_id', visit.playerId);
-    await supabase
+    await setupClient
       .from('player_casino')
       .delete()
       .eq('player_id', visit.playerId);
-    await supabase.from('player').delete().eq('id', visit.playerId);
+    await setupClient.from('player').delete().eq('id', visit.playerId);
   }
 
   // ==========================================================================
@@ -242,6 +286,9 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 
   // ==========================================================================
   // Helper: Run accrual test with telemetry
+  // service.start/close use authenticated client (Mode C)
+  // rpc_accrue_on_close uses authenticated client (Mode C)
+  // fixture creation uses setupClient
   // ==========================================================================
   async function runAccrualTest(
     testName: string,
@@ -256,7 +303,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
     const testVisit = await createIsolatedVisit();
 
     try {
-      // Create slip via service (populates policy_snapshot.loyalty)
+      // Create slip via service (authenticated client — Mode C)
       const slip = await service.start(fixture.casinoId, fixture.actorId, {
         visit_id: testVisit.id,
         table_id: fixture.tableId,
@@ -264,26 +311,21 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         game_settings: { average_bet: avgBet },
       });
 
-      // Simulate time by updating start_time in the past
+      // Simulate time by updating start_time in the past (setupClient — fixture manipulation)
       const simulatedStartTime = new Date(Date.now() - durationSeconds * 1000);
-      await supabase
+      await setupClient
         .from('rating_slip')
         .update({ start_time: simulatedStartTime.toISOString() })
         .eq('id', slip.id);
 
-      // Close slip (this calculates duration_seconds based on start_time → now())
-      const closed = await service.close(
-        fixture.casinoId,
-        fixture.actorId,
-        slip.id,
-        {
-          average_bet: avgBet,
-        },
-      );
+      // Close slip (authenticated client — Mode C)
+      const closed = await service.close(slip.id, {
+        average_bet: avgBet,
+      });
 
       expect(closed.status).toBe('closed');
 
-      // Call rpc_accrue_on_close
+      // Call rpc_accrue_on_close (authenticated client — Mode C)
       const { data: accrualResult, error: accrualError } = await supabase.rpc(
         'rpc_accrue_on_close',
         {
@@ -341,14 +383,14 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       expect(theoDelta).toBeLessThanOrEqual(THEO_TOLERANCE);
       expect(pointsDelta).toBeLessThanOrEqual(POINTS_TOLERANCE);
 
-      // Cleanup ledger entry
+      // Cleanup ledger entry (setupClient — fixture teardown)
       if (result.ledger_id) {
-        await supabase
+        await setupClient
           .from('loyalty_ledger')
           .delete()
           .eq('id', result.ledger_id);
       }
-      await supabase.from('rating_slip').delete().eq('id', slip.id);
+      await setupClient.from('rating_slip').delete().eq('id', slip.id);
     } finally {
       await cleanupIsolatedVisit(testVisit);
     }
@@ -360,8 +402,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
   describe('Scenario 1: 2-hour Standard Session', () => {
     it('should calculate correct theo and points for 2hr session at $50 avg bet', async () => {
       // Expected calculation:
-      // theo = 50 × (1.5/100) × (7200/3600) × 70 = 50 × 0.015 × 2 × 70 = 105
-      // points = ROUND(105 × 10) = 1050
+      // theo = 50 * (1.5/100) * (7200/3600) * 70 = 50 * 0.015 * 2 * 70 = 105
+      // points = ROUND(105 * 10) = 1050
 
       await runAccrualTest(
         'should calculate correct theo and points for 2hr session at $50 avg bet',
@@ -378,8 +420,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
   describe('Scenario 2: 30-minute Short Session', () => {
     it('should calculate correct theo and points for 30min session', async () => {
       // Expected calculation:
-      // theo = 50 × (1.5/100) × (1800/3600) × 70 = 50 × 0.015 × 0.5 × 70 = 26.25
-      // points = ROUND(26.25 × 10) = 263
+      // theo = 50 * (1.5/100) * (1800/3600) * 70 = 50 * 0.015 * 0.5 * 70 = 26.25
+      // points = ROUND(26.25 * 10) = 263
 
       await runAccrualTest(
         'should calculate correct theo and points for 30min session',
@@ -396,8 +438,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
   describe('Scenario 3: 4-hour High-Roller Session', () => {
     it('should calculate correct theo and points for 4hr high-roller session at $500 avg bet', async () => {
       // Expected calculation:
-      // theo = 500 × (1.5/100) × (14400/3600) × 70 = 500 × 0.015 × 4 × 70 = 2100
-      // points = ROUND(2100 × 10) = 21000
+      // theo = 500 * (1.5/100) * (14400/3600) * 70 = 500 * 0.015 * 4 * 70 = 2100
+      // points = ROUND(2100 * 10) = 21000
 
       await runAccrualTest(
         'should calculate correct theo and points for 4hr high-roller session at $500 avg bet',
@@ -413,14 +455,9 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
   // ==========================================================================
   describe('Scenario 4: VIP Tier Elevated Conversion', () => {
     it('should calculate correct points with VIP-level conversion rate', async () => {
-      // This tests the points_conversion_rate from policy_snapshot
-      // VIP players might have higher conversion rates (e.g., 15.0 instead of 10.0)
-      // However, since policy_snapshot is populated from game_settings (casino-level),
-      // we test the standard calculation and verify policy snapshot is honored.
-      //
       // Expected calculation with standard settings:
-      // theo = 100 × (1.5/100) × (7200/3600) × 70 = 100 × 0.015 × 2 × 70 = 210
-      // points = ROUND(210 × 10) = 2100
+      // theo = 100 * (1.5/100) * (7200/3600) * 70 = 100 * 0.015 * 2 * 70 = 210
+      // points = ROUND(210 * 10) = 2100
 
       await runAccrualTest(
         'should calculate correct points with VIP-level conversion rate',
@@ -440,7 +477,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       const testVisit = await createIsolatedVisit();
 
       try {
-        // Create slip via service
+        // Create slip via service (authenticated client — Mode C)
         const slip = await service.start(fixture.casinoId, fixture.actorId, {
           visit_id: testVisit.id,
           table_id: fixture.tableId,
@@ -448,26 +485,20 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           game_settings: { average_bet: 100 },
         });
 
-        // Do NOT backdate start_time - close immediately for minimal duration
-        // Actually set start_time to NOW to ensure near-zero duration
-        await supabase
+        // Set start_time to NOW for near-zero duration (setupClient — fixture manipulation)
+        await setupClient
           .from('rating_slip')
           .update({ start_time: new Date().toISOString() })
           .eq('id', slip.id);
 
-        // Immediately close
-        const closed = await service.close(
-          fixture.casinoId,
-          fixture.actorId,
-          slip.id,
-          {
-            average_bet: 100,
-          },
-        );
+        // Immediately close (authenticated client — Mode C)
+        const closed = await service.close(slip.id, {
+          average_bet: 100,
+        });
 
         expect(closed.status).toBe('closed');
 
-        // Call rpc_accrue_on_close
+        // Call rpc_accrue_on_close (authenticated client — Mode C)
         const { data: accrualResult, error: accrualError } = await supabase.rpc(
           'rpc_accrue_on_close',
           {
@@ -482,7 +513,6 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         const result = accrualResult[0];
 
         // With near-zero duration, theo and points should be near zero
-        // Allow small tolerance for execution time between start and close
         const passed = result.theo <= 0.1 && result.points_delta <= 1;
 
         telemetryResults.push({
@@ -514,14 +544,14 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         expect(result.theo).toBeLessThanOrEqual(0.1);
         expect(result.points_delta).toBeLessThanOrEqual(1);
 
-        // Cleanup
+        // Cleanup (setupClient — fixture teardown)
         if (result.ledger_id) {
-          await supabase
+          await setupClient
             .from('loyalty_ledger')
             .delete()
             .eq('id', result.ledger_id);
         }
-        await supabase.from('rating_slip').delete().eq('id', slip.id);
+        await setupClient.from('rating_slip').delete().eq('id', slip.id);
       } finally {
         await cleanupIsolatedVisit(testVisit);
       }
@@ -537,7 +567,7 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
       const testVisit = await createIsolatedVisit();
 
       try {
-        // Create slip with initial game_settings
+        // Create slip with initial game_settings (authenticated client — Mode C)
         const slip = await service.start(fixture.casinoId, fixture.actorId, {
           visit_id: testVisit.id,
           table_id: fixture.tableId,
@@ -558,8 +588,8 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         const originalHouseEdge = Number(loyaltySnapshot.house_edge);
         const originalDecisions = Number(loyaltySnapshot.decisions_per_hour);
 
-        // NOW: Change the live game_settings (simulating policy update mid-session)
-        await supabase
+        // Change live game_settings (setupClient — fixture manipulation)
+        await setupClient
           .from('game_settings')
           .update({
             house_edge: 99.9, // Drastically different value
@@ -568,18 +598,19 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           .eq('casino_id', fixture.casinoId)
           .eq('game_type', 'blackjack');
 
-        // Simulate 1-hour session
+        // Simulate 1-hour session (setupClient — fixture manipulation)
         const simulatedStartTime = new Date(Date.now() - 3600 * 1000);
-        await supabase
+        await setupClient
           .from('rating_slip')
           .update({ start_time: simulatedStartTime.toISOString() })
           .eq('id', slip.id);
 
-        // Close and accrue
-        await service.close(fixture.casinoId, fixture.actorId, slip.id, {
+        // Close (authenticated client — Mode C)
+        await service.close(slip.id, {
           average_bet: 100,
         });
 
+        // Accrue (authenticated client — Mode C)
         const { data: accrualResult, error: accrualError } = await supabase.rpc(
           'rpc_accrue_on_close',
           {
@@ -627,12 +658,11 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
         });
 
         // Key assertion: theo should be based on original 1.5% not 99.9%
-        // If live settings were used, theo would be ~66x higher
         expect(result.theo).toBeLessThan(expectedTheo * 2); // Sanity check
         expect(theoDelta).toBeLessThanOrEqual(THEO_TOLERANCE);
 
-        // Cleanup: Restore original game_settings
-        await supabase
+        // Restore original game_settings (setupClient — fixture cleanup)
+        await setupClient
           .from('game_settings')
           .update({
             house_edge: 1.5,
@@ -641,13 +671,14 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
           .eq('casino_id', fixture.casinoId)
           .eq('game_type', 'blackjack');
 
+        // Cleanup (setupClient — fixture teardown)
         if (result.ledger_id) {
-          await supabase
+          await setupClient
             .from('loyalty_ledger')
             .delete()
             .eq('id', result.ledger_id);
         }
-        await supabase.from('rating_slip').delete().eq('id', slip.id);
+        await setupClient.from('rating_slip').delete().eq('id', slip.id);
       } finally {
         await cleanupIsolatedVisit(testVisit);
       }
@@ -660,10 +691,10 @@ describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => 
 // ============================================================================
 
 async function createTestFixture(
-  supabase: SupabaseClient<Database>,
+  setupClient: SupabaseClient<Database>,
 ): Promise<TestFixture> {
   // 1. Create company (ADR-043: company before casino)
-  const { data: company, error: companyError } = await supabase
+  const { data: company, error: companyError } = await setupClient
     .from('company')
     .insert({ name: `${TEST_PREFIX} Company` })
     .select()
@@ -674,7 +705,7 @@ async function createTestFixture(
   }
 
   // 2. Create casino
-  const { data: casino, error: casinoError } = await supabase
+  const { data: casino, error: casinoError } = await setupClient
     .from('casino')
     .insert({
       name: `${TEST_PREFIX} Casino`,
@@ -689,7 +720,7 @@ async function createTestFixture(
   }
 
   // 3. Create casino settings
-  await supabase.from('casino_settings').insert({
+  await setupClient.from('casino_settings').insert({
     casino_id: casino.id,
     gaming_day_start_time: '06:00:00',
     timezone: 'America/Los_Angeles',
@@ -698,7 +729,7 @@ async function createTestFixture(
   });
 
   // 4. Create gaming table
-  const { data: table, error: tableError } = await supabase
+  const { data: table, error: tableError } = await setupClient
     .from('gaming_table')
     .insert({
       casino_id: casino.id,
@@ -715,7 +746,7 @@ async function createTestFixture(
   }
 
   // 5. Create game_settings for blackjack with known policy values
-  await supabase.from('game_settings').upsert({
+  await setupClient.from('game_settings').upsert({
     casino_id: casino.id,
     game_type: 'blackjack',
     house_edge: 1.5, // 1.5%
@@ -725,14 +756,14 @@ async function createTestFixture(
   });
 
   // 6. Create staff actor
-  const { data: actor, error: actorError } = await supabase
+  const { data: actor, error: actorError } = await setupClient
     .from('staff')
     .insert({
       casino_id: casino.id,
       employee_id: `${TEST_PREFIX}-001`,
       first_name: 'Test',
       last_name: 'Actor',
-      email: `${TEST_PREFIX}-actor@test.com`,
+      email: `${TEST_PREFIX}-actor-${Date.now()}@test.local`,
       role: 'pit_boss',
       status: 'active',
     })
@@ -743,26 +774,49 @@ async function createTestFixture(
     throw new Error(`Failed to create actor: ${actorError?.message}`);
   }
 
-  // Cleanup function
-  const cleanup = async () => {
-    await supabase.from('loyalty_ledger').delete().eq('casino_id', casino.id);
-    await supabase.from('rating_slip').delete().eq('casino_id', casino.id);
-    await supabase.from('visit').delete().eq('casino_id', casino.id);
-    await supabase.from('player_casino').delete().eq('casino_id', casino.id);
-    await supabase.from('player_loyalty').delete().eq('casino_id', casino.id);
-    await supabase.from('player').delete().like('last_name', 'Test%');
-    await supabase.from('staff').delete().eq('id', actor.id);
-    await supabase.from('game_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('gaming_table').delete().eq('id', table.id);
-    await supabase.from('casino_settings').delete().eq('casino_id', casino.id);
-    await supabase.from('casino').delete().eq('id', casino.id);
-    await supabase.from('company').delete().eq('id', company.id);
-  };
-
-  return {
+  // Note: authUserId is set in beforeAll after auth user creation
+  const fixture: TestFixture = {
     casinoId: casino.id,
     tableId: table.id,
     actorId: actor.id,
-    cleanup,
+    authUserId: '', // set in beforeAll
+    cleanup: async () => {
+      await setupClient
+        .from('loyalty_ledger')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient
+        .from('rating_slip')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient.from('visit').delete().eq('casino_id', casino.id);
+      await setupClient
+        .from('player_casino')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient
+        .from('player_loyalty')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient.from('player').delete().like('last_name', 'Test%');
+      // Delete auth user if created
+      if (fixture.authUserId) {
+        await setupClient.auth.admin.deleteUser(fixture.authUserId);
+      }
+      await setupClient.from('staff').delete().eq('id', actor.id);
+      await setupClient
+        .from('game_settings')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient.from('gaming_table').delete().eq('id', table.id);
+      await setupClient
+        .from('casino_settings')
+        .delete()
+        .eq('casino_id', casino.id);
+      await setupClient.from('casino').delete().eq('id', casino.id);
+      await setupClient.from('company').delete().eq('id', company.id);
+    },
   };
+
+  return fixture;
 }

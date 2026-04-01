@@ -1,15 +1,22 @@
 /** @jest-environment node */
 
 /**
+ * NOTE: Despite the .int.test.ts naming, this file is a fully mocked unit test.
+ * It does not hit the database. The RUN_INTEGRATION_TESTS gate is retained for
+ * consistency but all operations are mocked via jest.mock().
+ * Reclassified as Unit (Mocked) per LOYALTY-POSTURE.md.
+ */
+
+/**
  * Valuation Policy Round-Trip Integration Tests (PRD-053 WS5f)
  *
- * Tests the full service flow: update rate → verify read returns new rate →
+ * Tests the full service flow: update rate -> verify read returns new rate ->
  * verify comp issuance uses the updated rate.
  *
  * Uses Supabase mocks (no live DB) but validates the integration between
  * service layer functions.
  *
- * @see EXEC-054 WS5f — Admin Surface Tests
+ * @see EXEC-054 WS5f -- Admin Surface Tests
  */
 
 import * as crud from '../crud';
