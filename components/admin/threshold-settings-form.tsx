@@ -46,73 +46,109 @@ interface CategoryConfig {
   fields: ThresholdField[];
 }
 
-const CATEGORIES: CategoryConfig[] = [
+// Categories organized by domain taxonomy with section grouping
+interface CategoryGroup {
+  label: string;
+  description: string;
+  categories: CategoryConfig[];
+}
+
+const CATEGORY_GROUPS: CategoryGroup[] = [
   {
-    key: 'table_idle',
-    label: 'Table Idle',
-    description: 'Alert when a table is open but has no activity.',
-    fields: [
-      { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
-      { key: 'critical_minutes', label: 'Critical (minutes)', type: 'int' },
+    label: 'Financial Anomalies',
+    description: 'Detect unusual financial patterns in drop and hold metrics.',
+    categories: [
+      {
+        key: 'drop_anomaly',
+        label: 'Drop Anomaly',
+        description: 'Detect unusual drop amounts using MAD analysis.',
+        fields: [
+          { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
+          { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'hold_deviation',
+        label: 'Hold Deviation',
+        description:
+          'Alert on hold percentage deviations. Disabled until trusted.',
+        fields: [
+          { key: 'deviation_pp', label: 'Deviation (pp)', type: 'float' },
+          { key: 'extreme_low', label: 'Extreme Low', type: 'float' },
+          { key: 'extreme_high', label: 'Extreme High', type: 'float' },
+        ],
+      },
     ],
   },
   {
-    key: 'slip_duration',
-    label: 'Slip Duration',
-    description: 'Alert for long-running rating slips.',
-    fields: [
-      { key: 'warn_hours', label: 'Warning (hours)', type: 'int' },
-      { key: 'critical_hours', label: 'Critical (hours)', type: 'int' },
+    label: 'Operational Alerts',
+    description:
+      'Monitor table activity, session duration, and pause thresholds.',
+    categories: [
+      {
+        key: 'table_idle',
+        label: 'Table Idle',
+        description: 'Alert when a table is open but has no activity.',
+        fields: [
+          { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
+          {
+            key: 'critical_minutes',
+            label: 'Critical (minutes)',
+            type: 'int',
+          },
+        ],
+      },
+      {
+        key: 'slip_duration',
+        label: 'Slip Duration',
+        description: 'Alert for long-running rating slips.',
+        fields: [
+          { key: 'warn_hours', label: 'Warning (hours)', type: 'int' },
+          { key: 'critical_hours', label: 'Critical (hours)', type: 'int' },
+        ],
+      },
+      {
+        key: 'pause_duration',
+        label: 'Pause Duration',
+        description: 'Alert when a paused session exceeds threshold.',
+        fields: [
+          { key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' },
+        ],
+      },
     ],
   },
   {
-    key: 'pause_duration',
-    label: 'Pause Duration',
-    description: 'Alert when a paused session exceeds threshold.',
-    fields: [{ key: 'warn_minutes', label: 'Warning (minutes)', type: 'int' }],
-  },
-  {
-    key: 'drop_anomaly',
-    label: 'Drop Anomaly',
-    description: 'Detect unusual drop amounts using MAD analysis.',
-    fields: [
-      { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
-      { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
-    ],
-  },
-  {
-    key: 'hold_deviation',
-    label: 'Hold Deviation',
-    description: 'Alert on hold percentage deviations. Disabled until trusted.',
-    fields: [
-      { key: 'deviation_pp', label: 'Deviation (pp)', type: 'float' },
-      { key: 'extreme_low', label: 'Extreme Low', type: 'float' },
-      { key: 'extreme_high', label: 'Extreme High', type: 'float' },
-    ],
-  },
-  {
-    key: 'promo_issuance_spike',
-    label: 'Promo Issuance Spike',
-    description: 'Detect unusual spikes in promotional issuance.',
-    fields: [
-      { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
-      { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
-    ],
-  },
-  {
-    key: 'promo_void_rate',
-    label: 'Promo Void Rate',
-    description: 'Alert when promo void rate exceeds threshold.',
-    fields: [{ key: 'warn_percent', label: 'Warning (%)', type: 'percent' }],
-  },
-  {
-    key: 'outstanding_aging',
-    label: 'Outstanding Aging',
-    description: 'Alert on uncleared promotional items exceeding limits.',
-    fields: [
-      { key: 'max_age_hours', label: 'Max Age (hours)', type: 'int' },
-      { key: 'max_value_dollars', label: 'Max Value ($)', type: 'float' },
-      { key: 'max_coupon_count', label: 'Max Coupon Count', type: 'int' },
+    label: 'Promotional Anomalies',
+    description:
+      'Track promotional issuance patterns, void rates, and outstanding aging.',
+    categories: [
+      {
+        key: 'promo_issuance_spike',
+        label: 'Promo Issuance Spike',
+        description: 'Detect unusual spikes in promotional issuance.',
+        fields: [
+          { key: 'mad_multiplier', label: 'MAD Multiplier', type: 'float' },
+          { key: 'fallback_percent', label: 'Fallback (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'promo_void_rate',
+        label: 'Promo Void Rate',
+        description: 'Alert when promo void rate exceeds threshold.',
+        fields: [
+          { key: 'warn_percent', label: 'Warning (%)', type: 'percent' },
+        ],
+      },
+      {
+        key: 'outstanding_aging',
+        label: 'Outstanding Aging',
+        description: 'Alert on uncleared promotional items exceeding limits.',
+        fields: [
+          { key: 'max_age_hours', label: 'Max Age (hours)', type: 'int' },
+          { key: 'max_value_dollars', label: 'Max Value ($)', type: 'float' },
+          { key: 'max_coupon_count', label: 'Max Coupon Count', type: 'int' },
+        ],
+      },
     ],
   },
 ];
@@ -255,39 +291,20 @@ export function ThresholdSettingsForm() {
         </p>
       )}
 
-      {/* Category cards */}
-      <div className="grid gap-4">
-        {CATEGORIES.map((cat) => {
-          const catValues =
-            (
-              currentValues as unknown as Record<
-                string,
-                Record<string, unknown>
-              >
-            )[cat.key] ?? {};
-
-          return (
-            <ThresholdCategoryCard
-              key={cat.key}
-              categoryKey={cat.key}
-              categoryLabel={cat.label}
-              description={cat.description}
-              fields={cat.fields}
-              value={catValues}
-              enabled={catValues.enabled !== false}
-              onChange={handleFieldChange}
-              onToggle={handleToggle}
-            />
-          );
-        })}
-      </div>
-
       {/* Baseline configuration */}
+      <div>
+        <h4 className="text-sm font-semibold text-foreground">
+          Baseline Engine Configuration
+        </h4>
+        <p className="text-sm text-muted-foreground mb-4">
+          Statistical parameters for anomaly detection algorithms.
+        </p>
+      </div>
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base">Baseline Configuration</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Statistical parameters for anomaly detection algorithms.
+            Window size, method, and minimum history for baseline computation.
           </p>
         </CardHeader>
         <CardContent>
@@ -339,6 +356,43 @@ export function ThresholdSettingsForm() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Category cards grouped by domain taxonomy */}
+      {CATEGORY_GROUPS.map((group) => (
+        <div key={group.label} className="space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold text-foreground">
+              {group.label}
+            </h4>
+            <p className="text-sm text-muted-foreground">{group.description}</p>
+          </div>
+          <div className="grid gap-4">
+            {group.categories.map((cat) => {
+              const catValues =
+                (
+                  currentValues as unknown as Record<
+                    string,
+                    Record<string, unknown>
+                  >
+                )[cat.key] ?? {};
+
+              return (
+                <ThresholdCategoryCard
+                  key={cat.key}
+                  categoryKey={cat.key}
+                  categoryLabel={cat.label}
+                  description={cat.description}
+                  fields={cat.fields}
+                  value={catValues}
+                  enabled={catValues.enabled !== false}
+                  onChange={handleFieldChange}
+                  onToggle={handleToggle}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ))}
 
       {/* Save button — only visible when dirty */}
       {isDirty && (

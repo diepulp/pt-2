@@ -7,22 +7,22 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const SETTINGS_TABS = [
   {
-    value: 'thresholds',
-    label: 'Alert Thresholds',
-    href: '/admin/settings/thresholds',
+    value: 'operations',
+    label: 'Casino Operations',
+    href: '/admin/settings/operations',
   },
-  { value: 'shifts', label: 'Shifts', href: '/admin/settings/shifts' },
   {
-    value: 'valuation',
-    label: 'Valuation',
-    href: '/admin/settings/valuation',
+    value: 'anomaly-detection',
+    label: 'Anomaly Detection',
+    href: '/admin/settings/anomaly-detection',
   },
+  { value: 'loyalty', label: 'Loyalty', href: '/admin/settings/loyalty' },
 ] as const;
 
 function getActiveTab(pathname: string): string {
-  if (pathname.includes('/shifts')) return 'shifts';
-  if (pathname.includes('/valuation')) return 'valuation';
-  return 'thresholds';
+  if (pathname.includes('/anomaly-detection')) return 'anomaly-detection';
+  if (pathname.includes('/loyalty')) return 'loyalty';
+  return 'operations';
 }
 
 export default function SettingsLayout({
@@ -38,7 +38,7 @@ export default function SettingsLayout({
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
         <p className="text-sm text-muted-foreground">
-          Configure casino alert thresholds and shift boundaries.
+          Configure casino operations, anomaly detection, and loyalty economics.
         </p>
       </div>
 

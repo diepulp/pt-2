@@ -19,7 +19,7 @@ const navItems = [
   },
   {
     title: 'Settings',
-    url: '/settings',
+    url: '/admin/settings/operations',
     icon: Settings,
   },
 ];
