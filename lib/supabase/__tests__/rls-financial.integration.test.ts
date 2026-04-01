@@ -7,13 +7,18 @@
  * Verifies that financial transactions are properly scoped by casino_id
  * and prevents cross-tenant data access.
  *
+ * Auth model: ADR-024 Mode C — authenticated anon clients carry JWT with staff_id
+ * in app_metadata; set_rls_context_from_staff() derives context server-side.
+ *
  * PREREQUISITES:
  * - Migration 20251211015115_prd009_player_financial_service.sql must be applied
  * - NEXT_PUBLIC_SUPABASE_URL environment variable set
  * - SUPABASE_SERVICE_ROLE_KEY environment variable set
+ * - NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable set
  *
  * @see docs/10-prd/PRD-009-player-financial-service.md
  * @see services/player-financial/index.ts
+ * @see docs/80-adrs/ADR-024-authoritative-context-derivation.md
  */
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
@@ -22,30 +27,10 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../../../types/database.types';
 
-/**
- * Service-role helper: injects RLS context via set_rls_context_internal RPC.
- * Tests use service_role clients (no auth.uid()), so they cannot call
- * set_rls_context_from_staff which requires an authenticated session.
- */
-async function setTestRLSContext(
-  client: SupabaseClient<Database>,
-  actorId: string,
-  casinoId: string,
-  staffRole: string,
-  correlationId?: string,
-): Promise<void> {
-  const { error } = await client.rpc('set_rls_context_internal', {
-    p_actor_id: actorId,
-    p_casino_id: casinoId,
-    p_staff_role: staffRole,
-    p_correlation_id: correlationId,
-  });
-  if (error) throw new Error(`setTestRLSContext failed: ${error.message}`);
-}
-
 // Test environment setup
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
@@ -54,9 +39,9 @@ const RUN_INTEGRATION =
 (RUN_INTEGRATION ? describe : describe.skip)(
   'RLS Financial Transaction Policies (PRD-009 WS5)',
   () => {
-    let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS
-    let authClient1: SupabaseClient<Database>; // Authenticated as Casino 1 staff
-    let authClient2: SupabaseClient<Database>; // Authenticated as Casino 2 staff
+    let serviceClient: SupabaseClient<Database>; // Service role bypasses RLS (fixture setup/teardown only)
+    let authClient1: SupabaseClient<Database>; // Mode C authenticated as Casino 1 staff
+    let authClient2: SupabaseClient<Database>; // Mode C authenticated as Casino 2 staff
 
     let testCompany1Id: string;
     let testCompany2Id: string;
@@ -73,80 +58,65 @@ const RUN_INTEGRATION =
     let testTxn1Id: string;
     let testTxn2Id: string;
 
+    const ts = Date.now();
+    const testEmail1 = `test-rls-t3-fin-pit_boss-${ts}@example.com`;
+    const testEmail2 = `test-rls-t3-fin-pit_boss-${ts + 1}@example.com`;
+    const testPassword = 'test-password-12345';
+
+    // Use current date for gaming_day / started_at to avoid STALE_GAMING_DAY_CONTEXT
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    const todayTs = `${today}T20:00:00Z`;
+
     beforeAll(async () => {
       // Service client for setup (bypasses RLS)
       serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
       // =========================================================================
-      // Create Test Users
+      // 1. Create Auth Users (two-phase ADR-024 setup — staff_id stamped after insert)
       // =========================================================================
 
       const { data: authUser1, error: authError1 } =
         await serviceClient.auth.admin.createUser({
-          email: 'test-rls-financial-1@example.com',
-          password: 'test-password-12345',
+          email: testEmail1,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         });
-
-      if (authError1) {
-        const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find(
-          (u) => u.email === 'test-rls-financial-1@example.com',
-        );
-        if (existing) {
-          testUser1Id = existing.id;
-        } else {
-          throw authError1;
-        }
-      } else {
-        testUser1Id = authUser1.user.id;
-      }
+      if (authError1) throw authError1;
+      testUser1Id = authUser1.user.id;
 
       const { data: authUser2, error: authError2 } =
         await serviceClient.auth.admin.createUser({
-          email: 'test-rls-financial-2@example.com',
-          password: 'test-password-12345',
+          email: testEmail2,
+          password: testPassword,
           email_confirm: true,
+          app_metadata: { staff_role: 'pit_boss' },
         });
-
-      if (authError2) {
-        const { data: existingUsers } =
-          await serviceClient.auth.admin.listUsers();
-        const existing = existingUsers?.users?.find(
-          (u) => u.email === 'test-rls-financial-2@example.com',
-        );
-        if (existing) {
-          testUser2Id = existing.id;
-        } else {
-          throw authError2;
-        }
-      } else {
-        testUser2Id = authUser2.user.id;
-      }
+      if (authError2) throw authError2;
+      testUser2Id = authUser2.user.id;
 
       // =========================================================================
-      // Create Test Companies (ADR-043: casino.company_id NOT NULL)
+      // 2. Create Test Companies (ADR-043: casino.company_id NOT NULL)
       // =========================================================================
 
-      const { data: company1 } = await serviceClient
+      const { data: company1, error: company1Error } = await serviceClient
         .from('company')
         .insert({ name: 'RLS Financial Test Company 1' })
         .select()
         .single();
-      if (!company1) throw new Error('Failed to create test company 1');
+      if (company1Error) throw company1Error;
       testCompany1Id = company1.id;
 
-      const { data: company2 } = await serviceClient
+      const { data: company2, error: company2Error } = await serviceClient
         .from('company')
         .insert({ name: 'RLS Financial Test Company 2' })
         .select()
         .single();
-      if (!company2) throw new Error('Failed to create test company 2');
+      if (company2Error) throw company2Error;
       testCompany2Id = company2.id;
 
       // =========================================================================
-      // Create Test Casinos
+      // 3. Create Test Casinos
       // =========================================================================
 
       const { data: casino1, error: casino1Error } = await serviceClient
@@ -194,7 +164,7 @@ const RUN_INTEGRATION =
       ]);
 
       // =========================================================================
-      // Create Test Staff
+      // 4. Create Test Staff
       // =========================================================================
 
       const { data: staff1, error: staff1Error } = await serviceClient
@@ -232,7 +202,74 @@ const RUN_INTEGRATION =
       testStaff2Id = staff2.id;
 
       // =========================================================================
-      // Create Test Players
+      // 5. Stamp staff_id into app_metadata (ADR-024 two-phase)
+      // =========================================================================
+
+      await serviceClient.auth.admin.updateUserById(testUser1Id, {
+        app_metadata: {
+          staff_id: testStaff1Id,
+          casino_id: testCasino1Id,
+          staff_role: 'pit_boss',
+        },
+      });
+      await serviceClient.auth.admin.updateUserById(testUser2Id, {
+        app_metadata: {
+          staff_id: testStaff2Id,
+          casino_id: testCasino2Id,
+          staff_role: 'pit_boss',
+        },
+      });
+
+      // =========================================================================
+      // 6. Sign in via throwaway clients → build Mode C authenticated anon clients
+      //
+      // Mode C clients are created early so they can be used for financial
+      // transaction fixture creation via rpc_create_financial_txn (which calls
+      // set_rls_context_from_staff() internally, satisfying the MTL bridge trigger).
+      // =========================================================================
+
+      const throwaway1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session1, error: signIn1Error } =
+        await throwaway1.auth.signInWithPassword({
+          email: testEmail1,
+          password: testPassword,
+        });
+      if (signIn1Error || !session1.session)
+        throw signIn1Error ?? new Error('Sign-in 1 returned no session');
+
+      const throwaway2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      const { data: session2, error: signIn2Error } =
+        await throwaway2.auth.signInWithPassword({
+          email: testEmail2,
+          password: testPassword,
+        });
+      if (signIn2Error || !session2.session)
+        throw signIn2Error ?? new Error('Sign-in 2 returned no session');
+
+      // Mode C clients (ADR-024): authenticated anon with Bearer JWT
+      authClient1 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${session1.session.access_token}`,
+          },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+      authClient2 = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+        global: {
+          headers: {
+            Authorization: `Bearer ${session2.session.access_token}`,
+          },
+        },
+        auth: { autoRefreshToken: false, persistSession: false },
+      });
+
+      // =========================================================================
+      // 7. Create Test Players
       // =========================================================================
 
       const { data: player1, error: player1Error } = await serviceClient
@@ -272,7 +309,7 @@ const RUN_INTEGRATION =
       ]);
 
       // =========================================================================
-      // Create Test Visits
+      // 8. Create Test Visits
       // =========================================================================
 
       const { data: visit1, error: visit1Error } = await serviceClient
@@ -280,7 +317,7 @@ const RUN_INTEGRATION =
         .insert({
           casino_id: testCasino1Id,
           player_id: testPlayer1Id,
-          started_at: '2025-01-15T20:00:00Z',
+          started_at: todayTs,
           visit_kind: 'gaming_identified_rated',
         })
         .select()
@@ -294,7 +331,7 @@ const RUN_INTEGRATION =
         .insert({
           casino_id: testCasino2Id,
           player_id: testPlayer2Id,
-          started_at: '2025-01-15T20:00:00Z',
+          started_at: todayTs,
           visit_kind: 'gaming_identified_rated',
         })
         .select()
@@ -304,55 +341,46 @@ const RUN_INTEGRATION =
       testVisit2Id = visit2.id;
 
       // =========================================================================
-      // Create Test Financial Transactions
+      // 9. Create Test Financial Transactions via rpc_create_financial_txn
+      //
+      // Using Mode C authenticated clients so the RPC can call
+      // set_rls_context_from_staff() — which satisfies the MTL bridge trigger
+      // (trg_derive_mtl_from_finance) G1 guardrail within the same transaction.
       // =========================================================================
 
-      const { data: txn1, error: txn1Error } = await serviceClient
-        .from('player_financial_transaction')
-        .insert({
-          casino_id: testCasino1Id,
-          player_id: testPlayer1Id,
-          visit_id: testVisit1Id,
-          amount: 500,
-          direction: 'in',
-          source: 'pit',
-          tender_type: 'cash',
-          created_by_staff_id: testStaff1Id,
-          gaming_day: '2025-01-15',
-          idempotency_key: 'rls-test-txn-1',
-        })
-        .select()
-        .single();
+      // ADR-040: casino_id and created_by_staff_id are derived from JWT context —
+      // do NOT pass them as parameters.
+      const { data: txn1, error: txn1Error } = await authClient1.rpc(
+        'rpc_create_financial_txn',
+        {
+          p_player_id: testPlayer1Id,
+          p_visit_id: testVisit1Id,
+          p_amount: 500,
+          p_direction: 'in',
+          p_source: 'pit',
+          p_tender_type: 'cash',
+          p_idempotency_key: `rls-test-txn-1-${ts}`,
+        },
+      );
 
       if (txn1Error) throw txn1Error;
-      testTxn1Id = txn1.id;
+      testTxn1Id = (txn1 as { id: string }).id;
 
-      const { data: txn2, error: txn2Error } = await serviceClient
-        .from('player_financial_transaction')
-        .insert({
-          casino_id: testCasino2Id,
-          player_id: testPlayer2Id,
-          visit_id: testVisit2Id,
-          amount: 1000,
-          direction: 'in',
-          source: 'cage',
-          tender_type: 'chips',
-          created_by_staff_id: testStaff2Id,
-          gaming_day: '2025-01-15',
-          idempotency_key: 'rls-test-txn-2',
-        })
-        .select()
-        .single();
+      const { data: txn2, error: txn2Error } = await authClient2.rpc(
+        'rpc_create_financial_txn',
+        {
+          p_player_id: testPlayer2Id,
+          p_visit_id: testVisit2Id,
+          p_amount: 1000,
+          p_direction: 'in',
+          p_source: 'cage',
+          p_tender_type: 'chips',
+          p_idempotency_key: `rls-test-txn-2-${ts}`,
+        },
+      );
 
       if (txn2Error) throw txn2Error;
-      testTxn2Id = txn2.id;
-
-      // =========================================================================
-      // Create Authenticated Clients
-      // =========================================================================
-
-      authClient1 = createClient<Database>(supabaseUrl, supabaseServiceKey);
-      authClient2 = createClient<Database>(supabaseUrl, supabaseServiceKey);
+      testTxn2Id = (txn2 as { id: string }).id;
     });
 
     afterAll(async () => {
@@ -409,14 +437,6 @@ const RUN_INTEGRATION =
 
     describe('Financial Transaction READ Policies', () => {
       it('should allow staff to read transactions from their own casino', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-read-own',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -433,14 +453,6 @@ const RUN_INTEGRATION =
       });
 
       it('should filter transactions by visit_id within casino context', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-filter-visit',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -457,14 +469,6 @@ const RUN_INTEGRATION =
       });
 
       it('should filter transactions by player_id within casino context', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-filter-player',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -480,14 +484,6 @@ const RUN_INTEGRATION =
       });
 
       it('should filter transactions by direction', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-filter-direction',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -503,25 +499,17 @@ const RUN_INTEGRATION =
       });
 
       it('should filter transactions by gaming_day', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-filter-gaming-day',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
-          .eq('gaming_day', '2025-01-15');
+          .eq('gaming_day', today);
 
         expect(error).toBeNull();
         expect(data).not.toBeNull();
 
         // All returned transactions should be for the specified gaming day
         data?.forEach((txn) => {
-          expect(txn.gaming_day).toBe('2025-01-15');
+          expect(txn.gaming_day).toBe(today);
         });
       });
     });
@@ -532,25 +520,7 @@ const RUN_INTEGRATION =
 
     describe('Casino Isolation', () => {
       it('should enforce casino isolation for concurrent requests', async () => {
-        // Request 1: Casino 1 context
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-concurrent-1',
-        );
-
-        // Request 2: Casino 2 context
-        await setTestRLSContext(
-          authClient2,
-          testStaff2Id,
-          testCasino2Id,
-          'pit_boss',
-          'test-fin-concurrent-2',
-        );
-
-        // Both queries should execute successfully
+        // Both queries execute with separate Mode C authenticated clients
         const { data: casino1Txns } = await authClient1
           .from('player_financial_transaction')
           .select('casino_id, amount');
@@ -569,14 +539,6 @@ const RUN_INTEGRATION =
       });
 
       it('should return correct transaction amounts per casino', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-amounts',
-        );
-
         const { data } = await authClient1
           .from('player_financial_transaction')
           .select('amount')
@@ -594,18 +556,8 @@ const RUN_INTEGRATION =
 
     describe('Financial Transaction Immutability', () => {
       it('should prevent direct inserts (must use RPC)', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-direct-insert',
-        );
-
-        // Note: With service role key, direct inserts work. In production with
-        // authenticated clients and proper RLS policies, direct inserts would
-        // be blocked in favor of the RPC.
-        // This test documents the expected behavior.
+        // Authenticated anon client — RLS enforced. Direct inserts are blocked
+        // in favor of the RPC; SELECT should still succeed within own casino.
         const { error } = await authClient1
           .from('player_financial_transaction')
           .select('id')
@@ -638,14 +590,6 @@ const RUN_INTEGRATION =
 
     describe('Visit Financial Summary View', () => {
       it('should aggregate transactions correctly for a visit', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-summary',
-        );
-
         const { data, error } = await authClient1
           .from('visit_financial_summary')
           .select('*')
@@ -664,22 +608,13 @@ const RUN_INTEGRATION =
       });
 
       it('should scope summary view by casino_id', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-summary-scope',
-        );
-
-        // Query with explicit casino_id filter (as would be done in production)
-        // With service role key, we must filter explicitly since RLS is bypassed
+        // Mode C authenticated client: RLS enforces casino scoping automatically
         const { data } = await authClient1
           .from('visit_financial_summary')
           .select('casino_id')
           .eq('casino_id', testCasino1Id);
 
-        // All summaries should belong to Casino 1 when filtered
+        // All summaries should belong to Casino 1
         data?.forEach((summary) => {
           expect(summary.casino_id).toBe(testCasino1Id);
         });
@@ -695,12 +630,12 @@ const RUN_INTEGRATION =
 
     describe('Idempotency Key Uniqueness', () => {
       it('should enforce unique idempotency keys within casino', async () => {
-        // Try to query by idempotency key
+        // Query by idempotency key (service client for authoritative lookup)
         const { data, error } = await serviceClient
           .from('player_financial_transaction')
           .select('*')
           .eq('casino_id', testCasino1Id)
-          .eq('idempotency_key', 'rls-test-txn-1')
+          .eq('idempotency_key', `rls-test-txn-1-${ts}`)
           .single();
 
         expect(error).toBeNull();
@@ -734,14 +669,6 @@ const RUN_INTEGRATION =
 
     describe('Staff Role Access', () => {
       it('should allow pit_boss to read financial transactions', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-pitboss-read',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -753,14 +680,6 @@ const RUN_INTEGRATION =
       });
 
       it('should verify staff can only see transactions they created', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-staff-created',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select('*')
@@ -781,14 +700,6 @@ const RUN_INTEGRATION =
 
     describe('Multi-Table Queries', () => {
       it('should join transactions with visits correctly', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-join-visit',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select(
@@ -812,14 +723,6 @@ const RUN_INTEGRATION =
       });
 
       it('should join transactions with players correctly', async () => {
-        await setTestRLSContext(
-          authClient1,
-          testStaff1Id,
-          testCasino1Id,
-          'pit_boss',
-          'test-fin-join-player',
-        );
-
         const { data, error } = await authClient1
           .from('player_financial_transaction')
           .select(
