@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * PRD-059: table_opening_attestation RLS Policy — Integration Tests
  *

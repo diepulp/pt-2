@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Shift Cash Observation Rollup Tests
  *

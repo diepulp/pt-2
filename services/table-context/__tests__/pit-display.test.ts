@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 import { derivePitDisplayBadge, PIT_DISPLAY_LABELS } from '../pit-display';
 import type { PitDisplayState } from '../pit-display';
 

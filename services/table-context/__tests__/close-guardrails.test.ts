@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Close Guardrail Tests (PRD-038A Gap A)
  *

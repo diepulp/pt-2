@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Table Rundown Mapper Unit Tests (ADR-027)
  *

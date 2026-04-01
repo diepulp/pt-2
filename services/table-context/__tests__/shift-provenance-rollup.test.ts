@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Shift Metrics Provenance Rollup Tests
  *

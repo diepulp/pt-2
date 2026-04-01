@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * PRD-059: rpc_close_table_session OPEN-Cancellation — Integration Tests
  *

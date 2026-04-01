@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * PRD-059: rpc_activate_table_session — Custody Gate Integration Tests
  *
