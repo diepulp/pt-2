@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Session Mapper Tests (PRD-038A)
  *

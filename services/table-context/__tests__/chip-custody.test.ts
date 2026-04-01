@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Chip Custody Unit Tests (STUB)
  *

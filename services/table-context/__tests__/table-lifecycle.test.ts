@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Table Lifecycle Unit Tests (STUB)
  *

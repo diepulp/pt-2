@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * PRD-057: Session Close Lifecycle Hardening — Integration Tests
  *

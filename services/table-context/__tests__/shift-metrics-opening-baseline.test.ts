@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Shift Metrics Opening Baseline Tests (PRD-036)
  *

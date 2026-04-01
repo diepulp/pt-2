@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * TableContextService Mappers Unit Tests
  *

@@ -35,6 +35,7 @@
     "test:slice:player": "jest --config jest.node.config.js --testPathPatterns='services/player/__tests__/.*\\.test\\.ts$'",
     "test:slice:visit": "jest --config jest.node.config.js --testPathPatterns='services/visit/__tests__/.*\\.test\\.ts$'",
     "test:slice:rating-slip": "jest --config jest.node.config.js --testPathPatterns='services/rating-slip/__tests__/.*\\.test\\.ts$'",
+    "test:slice:table-context": "jest --config jest.node.config.js --testPathPatterns='services/table-context/__tests__/.*\\.test\\.ts$'",
     "test:verify": "jest --config jest.node.config.js && RUN_INTEGRATION_TESTS=true jest --config jest.integration.config.js",
     "e2e:playwright": "playwright test",
     "e2e:playwright:ui": "playwright test --ui",

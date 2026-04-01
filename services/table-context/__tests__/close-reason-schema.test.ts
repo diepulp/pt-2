@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Close Reason Schema Validation Tests (PRD-038A Gap B)
  *

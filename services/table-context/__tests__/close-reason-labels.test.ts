@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Close Reason Labels Tests (PRD-038A WS4)
  *
