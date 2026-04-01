@@ -36,17 +36,6 @@ import { syncUserRLSClaims, clearUserRLSClaims } from '../auth-admin';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Skip tests if environment variables are not set
-const skipIfNoEnv = () => {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn(
-      'Skipping JWT claims integration tests: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set',
-    );
-    return true;
-  }
-  return false;
-};
-
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
   process.env.RUN_INTEGRATION_TESTS === '1';
@@ -67,10 +56,6 @@ const RUN_INTEGRATION =
     let testStaffId3: string;
 
     beforeAll(async () => {
-      if (skipIfNoEnv()) {
-        return;
-      }
-
       // Use service role client for setup (bypasses RLS)
       serviceClient = createClient<Database>(supabaseUrl, supabaseServiceKey);
 
@@ -210,10 +195,6 @@ const RUN_INTEGRATION =
     });
 
     afterAll(async () => {
-      if (skipIfNoEnv()) {
-        return;
-      }
-
       // Clean up test data (in reverse order of creation)
       if (testStaffId1) {
         await serviceClient.from('staff').delete().eq('id', testStaffId1);
@@ -267,8 +248,6 @@ const RUN_INTEGRATION =
 
     describe('JWT Claims Sync on Staff Creation', () => {
       it('should sync JWT claims when creating pit_boss via createStaff()', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-create-001';
 
@@ -299,8 +278,6 @@ const RUN_INTEGRATION =
       });
 
       it('should sync JWT claims when creating admin via createStaff()', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-create-002';
 
@@ -331,8 +308,6 @@ const RUN_INTEGRATION =
       });
 
       it('should not set JWT claims for dealer (no user_id)', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-create-003';
 
@@ -360,8 +335,6 @@ const RUN_INTEGRATION =
       });
 
       it('should have correct claims structure', async () => {
-        if (skipIfNoEnv()) return;
-
         // Verify the structure matches RLSClaims interface
         const { data: userData } =
           await serviceClient.auth.admin.getUserById(testUserId1);
@@ -394,8 +367,6 @@ const RUN_INTEGRATION =
 
     describe('JWT Claims Sync on Staff Update', () => {
       it('should update JWT claims when staff role changes (pit_boss → admin)', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-update-001';
 
@@ -423,8 +394,6 @@ const RUN_INTEGRATION =
       });
 
       it('should update JWT claims when staff casino_id changes', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-update-002';
 
@@ -454,8 +423,6 @@ const RUN_INTEGRATION =
       });
 
       it('should not update JWT claims when non-RLS fields change', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-update-003';
 
@@ -482,8 +449,6 @@ const RUN_INTEGRATION =
       });
 
       it('should update JWT claims when both role and casino_id change', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-update-004';
 
@@ -513,8 +478,6 @@ const RUN_INTEGRATION =
 
     describe('JWT Claims Clearing', () => {
       it('should clear JWT claims when staff user_id is set to NULL', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-clear-001';
         const testEmail = `test-jwt-clear-${Date.now()}@example.com`;
@@ -610,8 +573,6 @@ const RUN_INTEGRATION =
       });
 
       it('should not clear JWT claims when staff is deleted but user_id remains valid', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-clear-002';
 
@@ -681,8 +642,6 @@ const RUN_INTEGRATION =
 
     describe('Database Trigger Sync', () => {
       it('should automatically sync JWT claims when staff inserted via raw SQL', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-trigger-001';
 
@@ -743,8 +702,6 @@ const RUN_INTEGRATION =
       });
 
       it('should automatically sync JWT claims when staff updated via raw SQL', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-trigger-002';
 
@@ -794,8 +751,6 @@ const RUN_INTEGRATION =
       });
 
       it('should trigger on casino_id change', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-trigger-003';
 
@@ -845,8 +800,6 @@ const RUN_INTEGRATION =
       });
 
       it('should not trigger for non-RLS field updates', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-trigger-004';
 
@@ -881,8 +834,6 @@ const RUN_INTEGRATION =
 
     describe('RLS Policies with JWT Claims', () => {
       it('should verify hybrid policy fallback works (JWT when no SET LOCAL)', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-rls-001';
 
@@ -934,8 +885,6 @@ const RUN_INTEGRATION =
       });
 
       it('should demonstrate JWT claims provide tenant isolation', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-rls-002';
 
@@ -971,8 +920,6 @@ const RUN_INTEGRATION =
 
     describe('syncUserRLSClaims Function', () => {
       it('should successfully sync claims via direct function call', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-direct-001';
 
@@ -994,8 +941,6 @@ const RUN_INTEGRATION =
       });
 
       it('should overwrite existing claims with new values', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-direct-002';
 
@@ -1029,8 +974,6 @@ const RUN_INTEGRATION =
       });
 
       it('should throw error for non-existent user', async () => {
-        if (skipIfNoEnv()) return;
-
         // Correlation ID for traceability
         const correlationId = 'test-jwt-direct-003';
 

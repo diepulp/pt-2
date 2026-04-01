@@ -55,17 +55,6 @@ async function setTestRLSContext(
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-// Skip tests if environment variables are not set
-const skipIfNoEnv = () => {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.warn(
-      'Skipping RLS context integration tests: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set',
-    );
-    return true;
-  }
-  return false;
-};
-
 const RUN_INTEGRATION =
   process.env.RUN_INTEGRATION_TESTS === 'true' ||
   process.env.RUN_INTEGRATION_TESTS === '1';
