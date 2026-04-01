@@ -70,8 +70,10 @@ Pattern search: `createClient`, `set_rls_context`, `set_rls_context_internal`
 
 ## Known Issues
 
-1. **`wrapped-route.int.test.ts` misclassification** — File contains no database interaction and no Supabase client usage. The `.int.test.ts` suffix is misleading. `setupTestData`/`cleanupTestData` are called but their results are never used by the tests. Phase B recommendation: rename to `wrapped-route.test.ts`.
-
-2. **Auth path not exercised in integration tests** — All integration tests bypass auth via `skipAuth: true`. The full `withServerAction` → `withAuth` → `set_rls_context_from_staff()` → handler path has zero integration coverage. This is the highest-risk gap for the auth pipeline.
-
-3. **`helpers` module not audited** — `./helpers` exports `getTestSupabaseServiceClient`, `setupTestData`, `cleanupTestData`. Phase B should confirm helpers use `SUPABASE_SERVICE_ROLE_KEY` and not anon key, and that `setupTestData` seeds deterministic test fixtures.
+| ID | Severity | Description |
+|----|----------|-------------|
+| KI-001 | Medium | All integration tests use `skipAuth: true` — auth middleware branch has zero integration coverage |
+| KI-002 | Low | `wrapped-route.int.test.ts` contains no real I/O despite `.int.test.ts` naming convention |
+| KI-003 | Low | `setupTestData` / `cleanupTestData` imported but semantically unused in `wrapped-route.int.test.ts` |
+| KI-004 | Medium | No integration test validates ADR-030 write-path session-var enforcement (`set_rls_context_internal`) |
+| KI-005 | Low | `./helpers` module not audited — Phase B should confirm service role key usage and fixture seeding strategy |
