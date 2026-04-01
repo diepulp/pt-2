@@ -44,11 +44,21 @@ All `app/api/v1/rating-slips/**` route tests have `@jest-environment node`. **9 
 
 3. **modal-data route test (1 failure):** Has the directive but returns 500 — this is a functional bug in the test mock, not an env issue.
 
-### Verdict
+### Verdict (updated 2026-03-31)
 
-The rollout was **partial**. It remediated the `services/rating-slip/` unit layer and the route handlers, but:
-- **4 integration test files** still have the original jsdom problem (108 failing tests)
-- **10 files** across `rating-slip-modal`, hooks, components, and store have **no directive at all**
-- The `[ADVISORY]` warning fires on every non-remediated file, confirming they're running under legacy config
+**Environment remediation is now complete for the service layer.** The directive rollout was extended in commit `e8f562a`:
 
-The rating-slip domain has **~31 test files** total. **17 are remediated**, **14 are not**. Of those 14, 4 are actively broken (integration), and 10 are latent risks running under the wrong environment.
+- **4 integration test files** — `@jest-environment node` added. `fetch is not defined` eliminated. Remaining 102 failures are **ADR-024 auth context mismatches** (tests predate `set_rls_context_from_staff()`), not env issues.
+- **5 rating-slip-modal service tests** — `@jest-environment node` added. **124 tests PASS** under correct environment. No more `[ADVISORY]` warnings.
+- **Hooks, components, store** (4 files) — still missing directive. These are UI-layer tests that legitimately need jsdom, not node. Not in scope for this rollout.
+
+**Remaining work:** Integration tests need auth context rewrite (service-role → Mode C authenticated client). See `SESSION-HANDOFF-INTEGRATION-TESTS.md` for the fix pattern and execution plan.
+
+| Layer | Files | Directive | Status |
+|-------|-------|-----------|--------|
+| Service unit tests | 7 | `@jest-environment node` | **PASS** |
+| Route handlers | 10 | `@jest-environment node` | **9 PASS, 1 FAIL** (mock bug) |
+| Modal service tests | 5 | `@jest-environment node` (**added**) | **124 PASS** |
+| Integration tests | 4 | `@jest-environment node` (**added**) | **102 FAIL** (ADR-024 auth, not env) |
+| RPC contract | 1 | `@jest-environment node` | **112 PASS** |
+| Hooks/components/store | 4 | jsdom (correct for UI) | Mixed — separate remediation track |
