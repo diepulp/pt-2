@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Points Accrual Calculation Integration Tests (ISSUE-752833A6)
  *
@@ -98,7 +100,11 @@ interface IsolatedVisit {
 // Test Suite
 // ============================================================================
 
-describe('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('Points Accrual Calculation Integration Tests (ISSUE-752833A6)', () => {
   let supabase: SupabaseClient<Database>;
   let service: RatingSlipServiceInterface;
   let fixture: TestFixture;

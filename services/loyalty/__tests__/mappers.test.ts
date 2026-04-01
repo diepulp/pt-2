@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * LoyaltyService Mappers Unit Tests
  *

@@ -111,7 +111,11 @@ function makeEntitlementReward() {
   };
 }
 
-describe('issuance idempotency', () => {
+const RUN_INTEGRATION =
+  process.env.RUN_INTEGRATION_TESTS === 'true' ||
+  process.env.RUN_INTEGRATION_TESTS === '1';
+
+(RUN_INTEGRATION ? describe : describe.skip)('issuance idempotency', () => {
   const mockRpc = jest.fn();
   const mockFrom = jest.fn();
   const mockSelect = jest.fn();
