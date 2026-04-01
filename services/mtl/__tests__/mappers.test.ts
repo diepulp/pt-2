@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * MTLService Mappers Unit Tests
  *
