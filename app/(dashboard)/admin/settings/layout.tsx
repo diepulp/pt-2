@@ -35,9 +35,14 @@ export default function SettingsLayout({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Settings</h1>
-        <p className="text-sm text-muted-foreground">
+      <div className="space-y-1">
+        <h1
+          className="text-base font-bold uppercase tracking-widest"
+          style={{ fontFamily: 'monospace' }}
+        >
+          Settings
+        </h1>
+        <p className="text-xs text-muted-foreground">
           Configure casino operations, anomaly detection, and loyalty economics.
         </p>
       </div>

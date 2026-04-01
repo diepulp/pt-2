@@ -1,5 +1,12 @@
 'use client';
 
+import {
+  Activity,
+  AlertCircle,
+  DollarSign,
+  Gift,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { useState, useTransition } from 'react';
 
 import {
@@ -50,6 +57,7 @@ interface CategoryConfig {
 interface CategoryGroup {
   label: string;
   description: string;
+  icon: React.ComponentType<{ className?: string }>;
   categories: CategoryConfig[];
 }
 
@@ -57,6 +65,7 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
   {
     label: 'Financial Anomalies',
     description: 'Detect unusual financial patterns in drop and hold metrics.',
+    icon: DollarSign,
     categories: [
       {
         key: 'drop_anomaly',
@@ -84,6 +93,7 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Operational Alerts',
     description:
       'Monitor table activity, session duration, and pause thresholds.',
+    icon: Activity,
     categories: [
       {
         key: 'table_idle',
@@ -121,6 +131,7 @@ const CATEGORY_GROUPS: CategoryGroup[] = [
     label: 'Promotional Anomalies',
     description:
       'Track promotional issuance patterns, void rates, and outstanding aging.',
+    icon: Gift,
     categories: [
       {
         key: 'promo_issuance_spike',
@@ -264,9 +275,41 @@ export function ThresholdSettingsForm() {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-32 w-full rounded-lg" />
+      <div className="space-y-6">
+        {/* Baseline skeleton */}
+        <Card className="border-2 border-border/50">
+          <CardHeader className="pb-3">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="mt-2 h-3 w-72" />
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 sm:grid-cols-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="space-y-2">
+                  <Skeleton className="h-3 w-24" />
+                  <Skeleton className="h-9 w-full rounded-md" />
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+        {/* Category skeletons */}
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-4">
+            <Skeleton className="h-4 w-40" />
+            <Card className="border-2 border-border/50">
+              <CardHeader className="pb-3">
+                <Skeleton className="h-4 w-32" />
+              </CardHeader>
+              <CardContent>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  {[1, 2].map((j) => (
+                    <Skeleton key={j} className="h-9 w-full rounded-md" />
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         ))}
       </div>
     );
@@ -274,62 +317,101 @@ export function ThresholdSettingsForm() {
 
   if (error) {
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-4">
-        <p className="text-sm text-destructive">
-          Failed to load settings. Please try again.
-        </p>
-      </div>
+      <Card className="border-2 border-destructive/50 bg-destructive/5">
+        <CardContent className="flex items-center gap-3 py-6">
+          <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+          <div>
+            <div
+              className="text-xs font-bold uppercase tracking-widest text-destructive"
+              style={{ fontFamily: 'monospace' }}
+            >
+              Error Loading Settings
+            </div>
+            <p className="mt-1 text-sm text-destructive/80">
+              Failed to load anomaly detection configuration. Please try again.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Last saved */}
       {settings?.updated_at && (
-        <p className="text-xs text-muted-foreground">
+        <p
+          className="text-xs text-muted-foreground"
+          style={{ fontFamily: 'monospace' }}
+        >
           Last saved: {formatTimestamp(settings.updated_at)}
         </p>
       )}
 
       {/* Baseline configuration */}
-      <div>
-        <h4 className="text-sm font-semibold text-foreground">
-          Baseline Engine Configuration
-        </h4>
-        <p className="text-sm text-muted-foreground mb-4">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-4 w-4 text-accent" />
+          <h4
+            className="text-sm font-bold uppercase tracking-widest text-foreground"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Baseline Engine
+          </h4>
+        </div>
+        <p className="text-xs text-muted-foreground">
           Statistical parameters for anomaly detection algorithms.
         </p>
       </div>
-      <Card>
+      <Card className="border-2 border-accent/30 bg-accent/[0.03]">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Baseline Configuration</CardTitle>
-          <p className="text-sm text-muted-foreground">
+          <CardTitle
+            className="text-sm font-bold uppercase tracking-widest"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Baseline Configuration
+          </CardTitle>
+          <p className="text-xs text-muted-foreground">
             Window size, method, and minimum history for baseline computation.
           </p>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="baseline-window-days">Window (days)</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="baseline-window-days"
+                className="text-xs text-muted-foreground"
+              >
+                Window (days)
+              </Label>
               <Input
                 id="baseline-window-days"
                 type="number"
                 min={1}
                 step={1}
                 value={currentValues.baseline.window_days}
+                className="font-mono tabular-nums"
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val)) handleBaselineChange('window_days', val);
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="baseline-method">Method</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="baseline-method"
+                className="text-xs text-muted-foreground"
+              >
+                Method
+              </Label>
               <Select
                 value={currentValues.baseline.method}
                 onValueChange={(val) => handleBaselineChange('method', val)}
               >
-                <SelectTrigger id="baseline-method">
+                <SelectTrigger
+                  id="baseline-method"
+                  className="font-mono text-sm"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -338,14 +420,20 @@ export function ThresholdSettingsForm() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="baseline-min-history">Min History (days)</Label>
+            <div className="space-y-1.5">
+              <Label
+                htmlFor="baseline-min-history"
+                className="text-xs text-muted-foreground"
+              >
+                Min History (days)
+              </Label>
               <Input
                 id="baseline-min-history"
                 type="number"
                 min={1}
                 step={1}
                 value={currentValues.baseline.min_history_days}
+                className="font-mono tabular-nums"
                 onChange={(e) => {
                   const val = parseInt(e.target.value, 10);
                   if (!isNaN(val))
@@ -358,46 +446,68 @@ export function ThresholdSettingsForm() {
       </Card>
 
       {/* Category cards grouped by domain taxonomy */}
-      {CATEGORY_GROUPS.map((group) => (
-        <div key={group.label} className="space-y-4">
-          <div>
-            <h4 className="text-sm font-semibold text-foreground">
-              {group.label}
-            </h4>
-            <p className="text-sm text-muted-foreground">{group.description}</p>
-          </div>
-          <div className="grid gap-4">
-            {group.categories.map((cat) => {
-              const catValues =
-                (
-                  currentValues as unknown as Record<
-                    string,
-                    Record<string, unknown>
-                  >
-                )[cat.key] ?? {};
+      {CATEGORY_GROUPS.map((group) => {
+        const Icon = group.icon;
+        return (
+          <div key={group.label} className="space-y-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Icon className="h-4 w-4 text-muted-foreground" />
+                <h4
+                  className="text-sm font-bold uppercase tracking-widest text-foreground"
+                  style={{ fontFamily: 'monospace' }}
+                >
+                  {group.label}
+                </h4>
+              </div>
+              <p className="text-xs text-muted-foreground pl-6">
+                {group.description}
+              </p>
+            </div>
+            <div className="grid gap-4">
+              {group.categories.map((cat) => {
+                const catValues =
+                  (
+                    currentValues as unknown as Record<
+                      string,
+                      Record<string, unknown>
+                    >
+                  )[cat.key] ?? {};
 
-              return (
-                <ThresholdCategoryCard
-                  key={cat.key}
-                  categoryKey={cat.key}
-                  categoryLabel={cat.label}
-                  description={cat.description}
-                  fields={cat.fields}
-                  value={catValues}
-                  enabled={catValues.enabled !== false}
-                  onChange={handleFieldChange}
-                  onToggle={handleToggle}
-                />
-              );
-            })}
+                return (
+                  <ThresholdCategoryCard
+                    key={cat.key}
+                    categoryKey={cat.key}
+                    categoryLabel={cat.label}
+                    description={cat.description}
+                    fields={cat.fields}
+                    value={catValues}
+                    enabled={catValues.enabled !== false}
+                    onChange={handleFieldChange}
+                    onToggle={handleToggle}
+                  />
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
-      {/* Save button — only visible when dirty */}
+      {/* Save action bar — only visible when dirty */}
       {isDirty && (
-        <div className="flex justify-end">
-          <Button onClick={() => setShowConfirm(true)} disabled={isPending}>
+        <div className="flex items-center justify-between rounded-lg border-2 border-accent/30 bg-accent/5 px-4 py-3">
+          <p
+            className="text-xs font-bold uppercase tracking-widest text-accent"
+            style={{ fontFamily: 'monospace' }}
+          >
+            Unsaved Changes
+          </p>
+          <Button
+            onClick={() => setShowConfirm(true)}
+            disabled={isPending}
+            size="sm"
+            className="h-8 gap-1.5 text-xs font-semibold uppercase tracking-wider"
+          >
             {isPending ? 'Saving...' : 'Save Changes'}
           </Button>
         </div>
