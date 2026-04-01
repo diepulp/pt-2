@@ -1,6 +1,12 @@
 /** @jest-environment node */
 
 /**
+ * NOTE: Despite the .int.test.ts naming, this file tests pure URL construction
+ * and navigation logic. No database access. The RUN_INTEGRATION_TESTS gate is
+ * retained for consistency. Reclassified as Unit (Navigation) per ROOT-TESTS-POSTURE.md.
+ */
+
+/**
  * Player 360 Navigation Integration Tests
  *
  * Tests for the navigation flow between search and detail views.
