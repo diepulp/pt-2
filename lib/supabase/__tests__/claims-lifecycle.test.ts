@@ -1,3 +1,5 @@
+/** @jest-environment node */
+
 /**
  * Claims Lifecycle Tests — AUTH-HARDENING v0.1 WS3
  *
